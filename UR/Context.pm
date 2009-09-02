@@ -1383,10 +1383,10 @@ sub clear_cache {
                 . "\n"
             );
             if (my @changed = grep { $_->changed } @obj) {
-                require YAML::Syck;
+                require YAML;
                 $class->error_message(
                     "The following objects have changes:\n"
-                    . YAML::Syck::Dump(\@changed)
+                    . YAML::Dump(\@changed)
                     . "The clear_cache method cannot be called with unsaved changes on objects.\n"
                     . "Use reverse_all_changes() first to really undo everything, then clear_cache(),"
                     . " or call sync_database() and clear_cache() if you want to just lighten memory but keep your changes.\n"
@@ -1709,7 +1709,7 @@ sub _dump_change_snapshot {
     {
         $fh = "STDOUT";
     }
-
+    require YAML;
     $fh->print(YAML::Dump(\@c));
     $fh->close;
 }

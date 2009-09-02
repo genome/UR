@@ -549,8 +549,7 @@ sub _normalize_class_description {
     if (%old_class) {
         # this should have all been deleted above
         $DB::single = 1;
-        print Data::Dumper::Dumper(\%old_class);
-        Carp::confess("BAD CLASS DEFINITION ($class_name): " . YAML::Dump(\%old_class)) ;
+        Carp::confess("BAD CLASS DEFINITION ($class_name): " . Data::Dumper::Dumper(\%old_class)) ;
     };
     
     

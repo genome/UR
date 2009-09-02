@@ -8,7 +8,6 @@ package UR::Command;
 use strict;
 use warnings;
 use Cwd;
-use YAML;
 
 use UR;
 use Command;

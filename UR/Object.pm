@@ -13,7 +13,6 @@ our $VERSION = '0.01';
 use UR::DeletedRef;
 use Data::Dumper;
 use Scalar::Util qw(blessed);
-use YAML::Syck;
 
 sub class { ref($_[0]) || $_[0] }
 
@@ -344,6 +343,8 @@ sub create_object {
     my $id = $params->{id};
     unless (defined($id))
     {
+        $DB::single = 1;
+        $params = $class->preprocess_params(@_);
         Carp::confess(
             "No ID specified (or incomplete id params) for $class create_object.  Params were:\n" 
             . Dumper($params)

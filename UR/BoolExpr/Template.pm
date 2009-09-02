@@ -16,7 +16,6 @@ use strict;
 
 use Scalar::Util qw(blessed);
 use Data::Dumper;
-use FreezeThaw qw(freeze thaw);
 use UR;
 
 UR::Object::Type->define(

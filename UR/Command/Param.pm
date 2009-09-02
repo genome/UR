@@ -151,7 +151,7 @@ sub define {
     my $action_on_set = delete $extra{action_on_set};
     if (%extra) {
         Carp::confess("Unknown params for creating $class!: " .
-            YAML::Dump(\%extra)
+            Data::Dumper::Dumper(\%extra)
         );
     }   
     

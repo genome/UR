@@ -37,7 +37,6 @@ package UR::Object::Type;
 use warnings;
 use strict;
 
-use YAML;
 use Sys::Hostname;
 use Cwd;
 use Scalar::Util qw(blessed);
