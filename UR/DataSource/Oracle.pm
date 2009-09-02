@@ -35,14 +35,18 @@ my($self,$sp_name) = @_;
 }
 
 
-sub _init_created_dbh
-{
+sub _init_created_dbh {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
     $dbh->do("alter session set NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'");
     $dbh->do('alter session set "_hash_join_enabled"=FALSE');    
     return $dbh;
+}
+
+sub _dbi_connect_args {
+    my @args = shift->SUPER::_dbi_connect_args(@_);
+    $args[3]{ora_module_name} = UR::Context::Process->get_current->prog_name || $0;
 }
 
 sub _prepare_for_lob {
