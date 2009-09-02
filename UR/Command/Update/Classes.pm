@@ -868,7 +868,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
             my $class_name = $class->class_name;
             no warnings;
-            if ($table->remarks ne UR::Context->_s($table,'remarks')) {
+            if ($table->remarks ne UR::Context->_get_committed_property_value($table,'remarks')) {
                 $class->doc($table->remarks);
             }
             if ($table->data_source ne UR::Context->_get_committed_property_value($table,'data_source')) {
