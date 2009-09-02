@@ -15,6 +15,7 @@ UR::Object::Type->define(
                additional_attributes_data => { type => 'String'},
                umlet_type_string => { type => 'String' },
            ],
+    doc => 'Represents an object that is a picture element, but is not a relation',
 );
 
 # This class represents Umlet objects we don't care to manipulate

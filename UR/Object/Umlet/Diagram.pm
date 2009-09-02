@@ -15,7 +15,7 @@ UR::Object::Type->define(
                name => { type => 'String' },
            ],
     id_by => ['name'],
-
+    doc => 'Represents an entire umlet diagram',
 );
 
 

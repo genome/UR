@@ -36,6 +36,7 @@ UR::Object::Type->define(
               
           
            ],
+    doc => 'Represents one of the arrow-type elements of an umlet diagram',
 );
 
 

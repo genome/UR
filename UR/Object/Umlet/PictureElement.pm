@@ -137,26 +137,32 @@ sub additional_attributes { "<additional_attributes/>\n"; }
 
 # Does the rectangle bounding self and the target overlap?
 sub is_overlapping {
-my($self,$target) = @_;
+my($self,@targets) = @_;
 
     my $self_xmin = $self->x;
     my $self_xmax = $self_xmin + $self->width;
     my $self_ymin = $self->y;
     my $self_ymax = $self_ymin + $self->height;
     
-    my $target_xmin = $target->x;
-    my $target_xmax = $target_xmin + $target->width;
-    my $target_ymin = $target->y;
-    my $target_ymax = $target_ymin + $target->height;
+    foreach my $target ( @targets ) {
+        next if ($self eq $target);
+
+        my $target_xmin = $target->x;
+        my $target_xmax = $target_xmin + $target->width;
+        my $target_ymin = $target->y;
+        my $target_ymax = $target_ymin + $target->height;
  
-    if ( $self_xmin > $target_xmax ||
-         $target_xmin > $self_xmax ||
-         $self_ymin > $target_ymax ||
-         $target_ymin > $self_ymax) {
-        return 0;
-    } else {
-        return 1;
+        if ( $self_xmin > $target_xmax ||
+             $target_xmin > $self_xmax ||
+             $self_ymin > $target_ymax ||
+             $target_ymin > $self_ymax) {
+            #return 0;
+            next;
+        } else {
+            return $target;
+        }
     }
+    return;
 }
 
 

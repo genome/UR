@@ -14,7 +14,7 @@ UR::Object::Type->define(
         data_source => {type => 'String', doc => 'Which datasource to use', is_optional => 1},
         depth => { type => 'Integer', doc => 'Max distance of related tables to include.  Default is 1.  0 means show only the named tables, -1 means to include everything', is_optional => 1},
         file => { type => 'String', doc => 'Pathname of the Umlet (.uxf) file' },
-        show_columns => { type => 'Boolean', is_optional => 1, default => 1 },
+        show_columns => { type => 'Boolean', is_optional => 1, default => 1, doc => 'Include column names in the diagram' },
     ],
 );
 
@@ -53,7 +53,20 @@ $DB::single=1;
         return;
     }
 
-    my @initial_name_list = @{$params->{' '}};
+
+    # FIXME this is a workaround for a bug.  If you try to get Table objects filtered by namespace,
+    # you have to have already instantiated the namespace's data source objects into the object cache 
+    # first
+    map { $_->_singleton_object } $namespace->get_data_sources;
+
+    my @initial_name_list;
+    if ($params->{'depth'} == -1) {
+        # They wanted them all...  Ignore whatever is on the command line
+        @initial_name_list = map { $_->table_name}
+                                 UR::DataSource::RDBMS::Table->get(namespace => $namespace);
+    } else {
+        @initial_name_list = @{$params->{' '}};
+    }
 
     my $diagram;
     if (-f $params->{'file'}) {
@@ -65,18 +78,23 @@ $DB::single=1;
         $diagram = UR::Object::Umlet::Diagram->create(name => $params->{'file'});
     }
 
+
     # FIXME this can get removed when attribute defaults work correctly
     unless (exists $params->{'show_attributes'}) {
         $self->show_columns(1);
     }
         
-    my @involved_tables;
-    foreach my $table_name ( @initial_name_list ) {
-        push @involved_tables, UR::DataSource::RDBMS::Table->get(table_name => $table_name);
-    }
+    my @involved_tables = map { UR::DataSource::RDBMS::Table->get(table_name => $_, namespace => $namespace) }
+                            @initial_name_list;
+    #foreach my $table_name ( @initial_name_list ) {
+    #    # FIXME namespace dosen't work here either
+    #    push @involved_tables, UR::DataSource::RDBMS::Table->get(namespace => $namespace, table_name => $table_name);
+    #}
 
+$DB::single=1;
     push @involved_tables ,$self->_get_related_items( names => \@initial_name_list,
                                                       depth => $params->{'depth'},
+                                                      namespace => $namespace,
                                                       item_class => 'UR::DataSource::RDBMS::Table',
                                                       item_param => 'table_name',
                                                       related_class => 'UR::DataSource::RDBMS::FkConstraint',
@@ -96,6 +114,7 @@ $DB::single=1;
     
 
     # First, place all the tables' boxes
+    my @all_boxes = UR::Object::Umlet::Class->get( diagram_name => $diagram->name );
     foreach my $table ( @involved_tables ) {
         my $umlet_table = UR::Object::Umlet::Class->get(diagram_name => $diagram->name,
                                                         subject_id => $table->table_name);
@@ -108,42 +127,39 @@ $DB::single=1;
                                                              x => $x_coord,
                                                              y => $y_coord,
                                                            );
+                                                                        
+            if ($self->show_columns) {
+                my $attributes = $umlet_table->attributes || [];
+                my %attributes_already_in_diagram = map { $_->{'name'} => 1 } @{ $attributes };
+                my %pk_properties = map { $_ => 1 } $table->primary_key_constraint_column_names;
+    
+                my $line_count = scalar @$attributes;
+                foreach my $column_name ( $table->column_names ) {
+                    next if $attributes_already_in_diagram{$column_name};
+                    $line_count++;
+                    my $column = UR::DataSource::RDBMS::TableColumn->get(table_name => $table->table_name,
+                                                                         column_name => $column_name,
+                                                                         namespace => $namespace);
+                    push @$attributes, { is_id => $pk_properties{$column_name} ? '+' : ' ',
+                                         name => $column_name,
+                                         type => $column->data_type,
+                                         line => $line_count,
+                                       };
+                }
+                $umlet_table->attributes($attributes);
+            }
+
             # Make sure this box dosen't overlap other boxes
-            my @all_boxes = UR::Object::Umlet::Class->get( diagram_name => $diagram->name );
-            for (my $i = 0; $i < @all_boxes; $i++) {
-                next if ($umlet_table->subject_id eq $all_boxes[$i]->subject_id);  # don't check against ourselve+s
-                if ($umlet_table->is_overlapping($all_boxes[$i])) {
-                    # Yep, they overlap
+            while(my $overlapped = $umlet_table->is_overlapping(@all_boxes) ) {
                     if ($umlet_table->x > MAX_X_AUTO_POSITION) {
                         $umlet_table->x(20);
                         $umlet_table->y( $umlet_table->y + $y_inc);
                     } else {
-                        $umlet_table->x( $all_boxes[$i]->x + $all_boxes[$i]->width + $x_inc );
+                        $umlet_table->x( $overlapped->x + $overlapped->width + $x_inc );
                     }
-                    $i = 0;
-                    redo;  # Start the checking again
-                }
             }
-        }
-                                                            
-        if ($self->show_columns) {
-            my $attributes = $umlet_table->attributes || [];
-            my %attributes_already_in_diagram = map { $_->{'name'} => 1 } @{ $attributes };
-            my %pk_properties = map { $_ => 1 } $table->primary_key_constraint_column_names;
 
-            my $line_count = scalar @$attributes;
-            foreach my $column_name ( $table->column_names ) {
-                next if $attributes_already_in_diagram{$column_name};
-                $line_count++;
-                my $column = UR::DataSource::RDBMS::TableColumn->get(table_name => $table->table_name,
-                                                                     column_name => $column_name);
-                push @$attributes, { is_id => $pk_properties{$column_name} ? '+' : ' ',
-                                     name => $column_name,
-                                     type => $column->data_type,
-                                     line => $line_count,
-                                   };
-            }
-            $umlet_table->attributes($attributes);
+            push @all_boxes, $umlet_table;
         }
 
         if ($created) {
@@ -157,7 +173,7 @@ $DB::single=1;
 
     # Next, connect the tables together
     foreach my $table ( @involved_tables ) {
-        foreach my $fk ( UR::DataSource::RDBMS::FkConstraint->get(table_name => $table->table_name) )  {
+        foreach my $fk ( UR::DataSource::RDBMS::FkConstraint->get(table_name => $table->table_name, namespace => $namespace) )  {
 
             next unless ($involved_table_names{$fk->r_table_name});
 
@@ -198,11 +214,11 @@ my($self, %params) = @_;
     my $related_param = $params{'related_param'};
 
     # Get everything linked to the named things
-    my @related_names = map { $_->$related_param } $related_class->get($item_param => $params{'names'});
-    push @related_names, map { $_->$item_param } $related_class->get($related_param => $params{'names'});
+    my @related_names = map { $_->$related_param } $related_class->get($item_param => $params{'names'}, namespace => $params{'namespace'});
+    push @related_names, map { $_->$item_param } $related_class->get($related_param => $params{'names'}, namespace => $params{'namespace'});
     return unless @related_names;
 
-    my @objs = $item_class->get($item_param => \@related_names);
+    my @objs = $item_class->get($item_param => \@related_names, namespace => $params{'namespace'});
 
     # make a recursive call to get the related objects by name
     return ( @objs, $self->_get_related_items( %params, names => \@related_names, depth => --$params{'depth'}) );

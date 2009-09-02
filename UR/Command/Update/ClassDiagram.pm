@@ -14,8 +14,8 @@ UR::Object::Type->define(
         data_source => {type => 'String', doc => 'Which datasource to use', is_optional => 1},
         depth => { type => 'Integer', doc => 'Max distance of related classes to include.  Default is 1.  0 means show only the named class(es), -1 means to include everything', is_optional => 1},
         file => { type => 'String', doc => 'Pathname of the Umlet (.uxf) file' },
-        show_attributes => { type => 'Boolean', is_optional => 1, default => 1 },
-        show_methods => { type => 'Boolean', is_optional => 1, default => 0 },
+        show_attributes => { type => 'Boolean', is_optional => 1, default => 1, doc => 'Include class attributes in the diagram' },
+        show_methods => { type => 'Boolean', is_optional => 1, default => 0, doc => 'Include methods in the diagram (not implemented yet' },
     ],
 );
 
@@ -101,6 +101,7 @@ $DB::single=1;
     
 
     # First, place all the classes
+    my @all_boxes = UR::Object::Umlet::Class->get( diagram_name => $diagram->name );
     foreach my $class ( @involved_classes ) {
         my $umlet_class = UR::Object::Umlet::Class->get(diagram_name => $diagram->name,
                                                         subject_id => $class->class_name);
@@ -113,46 +114,42 @@ $DB::single=1;
                                                              x => $x_coord,
                                                              y => $y_coord,
                                                            );
+             # add the attributes
+             if ($self->show_attributes) {
+                my $attributes = $umlet_class->attributes || [];
+                my %attributes_already_in_diagram = map { $_->{'name'} => 1 } @{ $attributes };
+                my %id_properties = map { $_ => 1 } $class->id_property_names;
+    
+                my $line_count = scalar @$attributes;
+                foreach my $property_name ( $class->instance_property_names ) {
+                    next if $attributes_already_in_diagram{$property_name};
+                    $line_count++;
+                    my $property = UR::Object::Property->get(class_name => $class->class_name, property_name => $property_name);
+                    push @$attributes, { is_id => $id_properties{$property_name} ? '+' : ' ',
+                                         name => $property_name,
+                                         type => $property->data_type,
+                                         line => $line_count,
+                                       };
+                }
+                $umlet_class->attributes($attributes);
+            }
+
+            if ($self->show_methods) {
+                # Not implemented yet
+                # Use the same module the schemabrowser uses to get that info
+            }
+
             # Make sure this box dosen't overlap other boxes
-            my @all_boxes = UR::Object::Umlet::Class->get( diagram_name => $diagram->name );
-            for (my $i = 0; $i < @all_boxes; $i++) {
-                next if ($umlet_class->subject_id eq $all_boxes[$i]->subject_id);  # don't check against ourselves
-                if ($umlet_class->is_overlapping($all_boxes[$i])) {
-                    # Yep, they overlap
-                    if ($umlet_class->x > MAX_X_AUTO_POSITION) {
-                        $umlet_class->x(20);
-                        $umlet_class->y( $umlet_class->y + $y_inc);
-                    } else {
-                        $umlet_class->x( $all_boxes[$i]->x + $all_boxes[$i]->width + $x_inc );
-                    }
-                    $i = 0;
-                    redo;  # Start the checking again
+            while(my $overlapped = $umlet_class->is_overlapping(@all_boxes) ) {
+                if ($umlet_class->x > MAX_X_AUTO_POSITION) {
+                    $umlet_class->x(20);
+                    $umlet_class->y( $umlet_class->y + $y_inc);
+                } else {
+                    $umlet_class->x( $overlapped->x + $overlapped->width + $x_inc );
                 }
             }
-        }
                                                             
-        if ($self->show_attributes) {
-            my $attributes = $umlet_class->attributes || [];
-            my %attributes_already_in_diagram = map { $_->{'name'} => 1 } @{ $attributes };
-            my %id_properties = map { $_ => 1 } $class->id_property_names;
-
-            my $line_count = scalar @$attributes;
-            foreach my $property_name ( $class->instance_property_names ) {
-                next if $attributes_already_in_diagram{$property_name};
-                $line_count++;
-                my $property = UR::Object::Property->get(class_name => $class->class_name, property_name => $property_name);
-                push @$attributes, { is_id => $id_properties{$property_name} ? '+' : ' ',
-                                     name => $property_name,
-                                     type => $property->data_type,
-                                     line => $line_count,
-                                   };
-            }
-            $umlet_class->attributes($attributes);
-        }
-
-        if ($self->show_methods) {
-            # Not implemented yet
-            # Use the same module the schemabrowser uses to get that info
+            push @all_boxes, $umlet_class;
         }
 
         if ($created) {

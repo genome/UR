@@ -10,13 +10,14 @@ use XML::Simple;
 
 UR::Object::Type->define(
     class_name      => __PACKAGE__,
-    is => 'UR::Object::Umlet::PictureElement',
+    is => 'UR::Object::Umlet::Other',
     has => [
                attributes => { type => 'Object' },
                methods => { type => 'Object', is_optional => 1 },
                stored_width => { type => 'Integer', is_optional => 1 },
                stored_height => { type => 'Integer', is_optional => 1 },
            ],
+    doc => 'Represents one of the box-type items (classes or DB tables) on an umlet diagram',
 );
 
 sub umlet_type_string { return 'com.umlet.element.base.Class' };
