@@ -1,0 +1,48 @@
+
+=pod
+
+
+UR::Object::Type methods
+--------------------------
+
+Any object ($object) from a generated class can now do:
+
+  my $class_object = $object->get_class_object;
+
+similarly, any generated class ($class_name) can do:
+
+  my $class_object = $class_name->get_class_object;
+
+The resulting $class_object can then do things like the following:
+
+  $class_object->table_name
+  $class_object->property_names
+  $class_object->column_names
+  $class_object->id_property_names
+  $class_object->id_column_names
+  $class_object->unique_property_names
+  $class_object->columnless_property_names
+
+and respectively:
+
+  $class_object->inherited_table_names
+  $class_object->inherited_property_names
+  $class_object->inherited_column_names
+  $class_object->inherited_id_property_names
+  $class_object->inherited_id_column_names
+  $class_object->inherited_unique_property_names
+  $class_object->inherited_columnless_property_names
+
+and then combining the "regular" and the "inherited" we have:
+
+  $class_object->all_table_names
+  $class_object->all_property_names
+  $class_object->all_column_names
+  $class_object->all_id_property_names
+  $class_object->all_id_column_names
+  $class_object->all_unique_property_names
+  $class_object->all_columnless_property_names
+
+
+=cut
+

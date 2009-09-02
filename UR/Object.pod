@@ -1,0 +1,273 @@
+=pod
+
+use UR;
+
+UR::Object::Type->define(
+    class_name => 'UR::Object',
+    is => [],
+    english_name => 'entity',
+    is_abstract => 1,
+);
+
+=cut
+
+
+=pod
+
+=head1 NAME
+
+UR::Object - Abstract class for objects tracked centrally in the application
+
+=head1 SYNOPSIS
+
+  $new_obj = Some::Class->create(...);
+
+  $existing_obj  = Some::Class->get(...);
+  @existing_objs = Some::Class->get(...);
+
+  $current_value = $obj->some_property();
+
+  $obj->some_property($new_value);
+
+  @properties = $obj->property_names();
+
+  @problems = $obj->invalid;
+
+  @changes = $obj->changed;
+
+  @parent_classes = $obj->inheritance;
+
+=head1 BACKGROUND
+
+Like all App modules, this module is intended to centralize some aspect of the
+application, for the purpose of allowing other modules to work in an
+application-independant way.
+
+Since most applications have a core central data structure or structures
+from which they operate, this module centralizes that feature, allowing
+separately written modules to access the application's core data without knowing
+what application is running.
+
+=head1 DESCRIPTION
+
+UR::Object is a base class which provides the following general features
+to derived classes:
+
+=over 4
+
+=item 1.
+
+All objects have an "id" property which is a scalar value unique
+within their class.  The id is intended to be as meaningful as
+possible outside of the application, and usually correlates with a
+database primary key or has a host/pid for truly application-internal
+objects.
+
+=item 2.
+
+All UR::Objects are stored in a central hash inside the class, such
+that, once created in one part of the application, the object is
+retrievable in other parts of the application.  Objects only leave the
+application when explictly removed.
+
+=item 3.
+
+The class provides functionality to get an object by class/id or by
+class/key-value-list without knowing if the object(s) specified are
+already "in the application", or must be loaded from the outside.
+
+=item 4.
+
+Objects never directly reference other objects with a Perl reference.
+References are done by class/id pair, allowing references to objects
+which are not currently in the application, and supporting the dynamic
+instantiation of objects on an as-needed basis.
+
+=item 5.
+
+The actuall loading and saving of objects is handled in derived
+classes, supporting varying RDBMS vendors if necessary, and handling
+non RDBMS objects transparently as needed.
+
+=item 6.
+
+A basic self-reflection API is present to get a list of user-level
+properties.
+
+=item 7.
+
+All objects allow callbacks to be set for changes to their properties,
+supporting the model-view-controller design pattern nicely.
+
+=item 8.
+
+A special object for each subclass of UR::Object is available with meta-data
+for the class itself.  These objects are of type UR::Object::Type, and are
+also themselves UR::Objects.
+
+=back
+
+Most other classes in the App module set derive from UR::Object.
+
+=head1 INHERITANCE
+
+  UR           General OO features.
+    UR::ModuleBase         Extensions for error, warning, and status messages.
+      UR::Object          This class.
+
+=head1 DERIVED CLASSES
+
+Examples of derived classes include, but are not limited to:
+
+  UR::Entity   Objects which serialize to a row in an RDBMS table.
+  App::UI::Viewer     Objects which return a user interface widget.
+  App::Lock           Objects to represent a resource lock.
+
+Site-specific classes for logical entity types at the site will
+derive from UR::Object indirectly, typically via UR::Entity,
+with the intermediate class providing load/save logic and enforcing
+database constraints.
+
+=cut
+
+=pod
+
+=head1 METHODS
+
+The examples below use $obj where an actual object reference is required,
+and Class where the class name can be used.
+
+
+=head2 Making, finding, and destroying things:
+
+=over 4
+
+=item create
+
+  $obj = SomeClass->create(...);
+
+Make a new instance of $class.  This is not present outside of the application
+until it is sync'd to its database.
+
+=item delete
+
+  $obj->delete
+
+Takes an object reference an deletes it within the application.  This is not
+removed from the outside database until that database is sync'd.
+
+=item get
+
+  $obj = SomeClass->get($id);
+
+  $obj = SomeClass->get(property1 => value1, ...);
+
+  @obj = SomeClass->get(property1 => value1, ...);
+
+This is the core object retrieval method for all UR::Objects.
+
+It returns one or more objects as decribed by the parameters passed-in.
+
+This method will try SomeClass->is_loaded(@params) as described below, and
+failing that will try SomeClass->load(@params), hitting the underlying database
+only for objects not already active in the application.
+
+=back
+
+=head2 Basic identity information:
+
+=over 4
+
+=item class
+
+  $obj->class
+
+Returns the text string name of the class.
+Essentially just ref($self) for objects, and $self for classes.
+
+=item id
+
+  $obj->id
+
+A scalar value which uniquely identifies the object within its class.  In many cases,
+where there are super-classes beneath UR::Object, the ID identifies the object within the super-class as well.
+
+=back
+
+=head2 Manipulation of object properties:
+
+=over 4
+
+=item (some property name)
+
+  $obj->$property_name($new_value);
+  $old_value = $obj->$property_name;
+
+  There is a method for each property on the object which acts as an accessor.
+  Identity properties are read-only, while non-identity properties are read-write.
+  Assigning an invalid value is allowed, but the object will not be savable until corrected.
+
+=item set
+
+  $obj->set(property1 => $value1, property2 => $value2);
+
+  This is a special method for bulk access via key-value pair(s).
+
+=back
+
+=head2 Managing the internal set of objects active in the application:
+
+=over
+
+=item load
+
+ SomeClass->load(...)
+
+This is typically not called directly, but is called by get() when the
+specified object(s) are not already in the application.  The
+parameters are the same as those of get().
+
+Load will attempt to load the object from it's storage place outside
+of the application.  The exact logic must be specified in derived
+classes.
+
+=item unload
+
+  $obj->unload
+
+Removes an object from the application.  This will fail if the object is unsaved.
+
+Objects which have been unloaded are removed from the core internal hashes and re-blessed
+to throw execptions if the reference is used.
+
+Attempts to get() the same logical object will cause a new object to be created and made
+active in the application.
+
+=item get_loaded
+
+  $obj->get_loaded(...)
+
+This is also typically not called directly, but is called by get() to
+see if the specified object(s) are already in the application's
+central object cache.  It can be called directly when explicitly
+testing for an object's presence in the application.
+
+It returns an object or list of objects according to parameters, and
+returns true in a boolean context.
+
+=back
+
+=head1 BUGS
+
+Report bugs to <software@watson.wustl.edu>.
+
+=head1 SEE ALSO
+
+UR(3) 
+
+=head1 AUTHOR
+
+Scott Smith <ssmith@watson.wustl.edu>,
+
+=cut
+
