@@ -8,7 +8,6 @@ my %loading;
 
 sub dynamically_load_class {
     my ($class,$func,@params) = @_;
-
     # Don't even try to load unless we're done boostrapping somewhat.
     return unless $UR::initialized;
     return unless $Class::Autouse::orig_can->("UR::Object::Type","get");
@@ -40,13 +39,18 @@ sub dynamically_load_class {
         return $Class::Autouse::orig_can->($class,$func);
     }
 
-    return unless $class =~ /::/;
+    my ($namespace) = ($class =~ /^(.*?)::/);
+    return unless $namespace;
+
+    unless ($namespace->isa("UR::Namespace")) {
+        return;
+    }
 
     return if $loading{$class};    
     $loading{$class} = 1;
 
     # Attempt to get a class object, loading it as necessary (probably).
-    my $meta = UR::Object::Type->get(class_name => $class);
+    my $meta = $namespace->get_member_class($class);
     unless ($meta) {
         delete $loading{$class};
         return;
@@ -62,13 +66,13 @@ sub dynamically_load_class {
         unless ($namespace) {
             Carp::confess("Failed to resolve a namespace for Class object ".$meta->class_name);
         };
-        unless ($namespace eq 'App') {
+        unless ($namespace eq 'UR') {
             my $namespace_module_dir = $namespace->get_class_object->module_directory;
-            unless ($class =~ /^App::/ or index($class_module_dir,$namespace_module_dir) == 0) {
+            unless ($class =~ /^UR::/ or index($class_module_dir,$namespace_module_dir) == 0) {
                 Carp::confess(
                     "Attempt to load a module from outside the namespace tree!\n"
-                    . "class path $class_module_dir is not under\n"
-                    . "namespace  $namespace_module_dir!\n"
+                    . "class path $class_module_dir is not under "
+                    . "namespace $namespace_module_dir!\n"
                 );
             }
         }

@@ -16,6 +16,11 @@ UR::Object::Type->define(
     ],
 );
 
+sub get_member_class {
+    my $self = shift;
+    return UR::Object::Type->get(@_);
+}
+
 sub get_default_context
 {
     my $self = shift;
