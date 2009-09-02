@@ -5,12 +5,16 @@ use warnings;
 require UR;
 use Sys::Hostname;
 
+*namespace = \&get_namespace;
 UR::Object::Type->define(
     class_name => 'UR::DataSource',
     #is => ['UR::Singleton'],
     english_name => 'universal reflective datasource',
     is_abstract => 1,
     doc => 'A logical database, independent of prod/dev/testing considerations or login details.',
+    has => [
+        namespace => { calculate_from => ['id'] },
+    ],
 );
 
 sub get_namespace {
@@ -377,7 +381,7 @@ sub _get_template_data_for_loading {
                         push @delegated_properties, $property;
                     }
                     elsif ($property->is_calculated) {
-                        die "Query by calculated $property_name is unsupported!";
+                        $needs_further_boolexpr_evaluation_after_loading = 1;
                     }            
                     else {
                         die "Query by $property_name is unsupported!";
@@ -403,6 +407,7 @@ sub _get_template_data_for_loading {
             my %joins_done;
 
 $DB::single=1;
+            DELEGATED_PROPERTY:
             for my $delegated_property (@delegated_properties) {
                 my $last_alias_for_this_chain;
             
@@ -449,14 +454,36 @@ $DB::single=1;
         
                     my $foreign_class_name = $join->{foreign_class};
                     my $foreign_class_object = UR::Object::Type->get(class_name => $foreign_class_name);
-                    my $foreign_table_name = $foreign_class_object->table_name;
-                    next unless $foreign_table_name;
+                    my $foreign_table_name = $foreign_class_object->table_name; # TODO: switch to "base 'from' expr"
+
+                    unless ($foreign_table_name) {
+                        # If we can't make the join because there is no datasource representation
+                        # for this class, we're done following the joins for this property
+                        # and will NOT try to filter on it at the datasource level
+                        $needs_further_boolexpr_evaluation_after_loading = 1;
+                        next DELEGATED_PROPERTY;
+                    }
+
                     my @foreign_property_names = @{ $join->{foreign_property_names} };
-                    my @foreign_column_names = 
+                    my @foreign_property_meta = 
                         map {
-                            $foreign_class_object->get_property_meta_by_name($_)->column_name
+                            $foreign_class_object->get_property_meta_by_name($_)
                         }
                         @foreign_property_names;
+                    my @foreign_column_names = 
+                        map {
+                            # TODO: encapsulate
+                            $_->is_calculated ? (defined($_->calc_sql) ? ($_->calc_sql) : () ) : ($_->column_name)
+                        }
+                        @foreign_property_meta;
+                    unless (@foreign_column_names) {
+                        # all calculated properties: don't try to join any further
+                        last;
+                    }
+                    unless (@foreign_column_names == @foreign_property_meta) {
+                        # some calculated properties, be sure to re-check for a match after loading the object
+                        $needs_further_boolexpr_evaluation_after_loading = 1;
+                    }
                     
                     my $alias = $joins_done{$join->{id}};
                     unless ($alias) {            
@@ -486,8 +513,8 @@ $DB::single=1;
                         $joins_done{$join->{id}} = $alias;
                         $last_alias_for_this_chain = $alias;
                     }
-
-                    # Set these for the final pass
+                    
+		    # Set these for after all of the joins are done
                     $last_class_name = $foreign_class_name;
                     $last_class_object = $foreign_class_object;        
                     $last_table_alias = $alias;
@@ -495,15 +522,34 @@ $DB::single=1;
                     
                 } # next join
 
+                unless ($delegated_property->via) {
+                    next;
+                }
+
+                my $final_accessor_property_meta = $last_class_object->get_property_meta_by_name($final_accessor);
+                my $sql_lvalue;
+                if ($final_accessor_property_meta->is_calculated) {
+                    $sql_lvalue = $final_accessor_property_meta->calc_sql;
+                    unless (defined($sql_lvalue)) {
+                            $needs_further_boolexpr_evaluation_after_loading = 1;
+                        next;
+                    }
+                }
+                else {
+                    $sql_lvalue = $final_accessor_property_meta->column_name;
+                    unless (defined($sql_lvalue)) {
+                        Carp::confess("No column name set for non-delegated/calculated property $property_name of $class_name");
+                    }
+                }
+
                 my $operator       = $rule_template->operator_for_property_name($property_name);
                 my $value_position = $rule_template->value_position_for_property_name($property_name);                
-                if ($delegated_property->via) {
-                    push @sql_filters, 
-                        $final_table_name_with_alias => { 
-                            $final_accessor => { operator => $operator, value_position => $value_position } 
-                        };
-                }
-            }
+                push @sql_filters, 
+                    $final_table_name_with_alias => { 
+                        $sql_lvalue => { operator => $operator, value_position => $value_position } 
+                    };
+
+            } # next delegated property
             
             # Build the SELECT clause explicitly.
            
