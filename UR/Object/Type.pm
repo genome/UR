@@ -505,6 +505,17 @@ sub _load {
         Carp::confess("Non-class_name used to find a class object: @params");
     }
 
+    # Besides the common case of asking for a class by its name, the next most
+    # common thing is asking for multiple classes by their names.  Rather than doing the
+    # hard work of doing it "right" right here, just recursively call myself with each
+    # item in that list
+    if (ref $class_name eq 'ARRAY') {
+        # FIXME is there a more efficient way to add/remove class_name from the rule?
+        my $rule_without_class_name = $rule->remove_filter('class_name');
+        my @objs = map { $class->_load($rule_without_class_name->add_filter(class_name => $_)) } @$class_name;
+        return $class->context_return(@objs);
+    }
+        
     # If the class is loaded, we're done.
     # This is an un-documented unique constraint right now.
     my $class_obj = $class->is_loaded(class_name => $class_name);
