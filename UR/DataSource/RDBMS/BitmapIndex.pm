@@ -14,6 +14,8 @@ UR::Object::Type->define(
     properties => [
         bitmap_index_name                => { type => 'varchar', len => undef, sql => 'bitmap_index_name' },
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
+        data_source_obj                  => { type => 'UR::DataSource', id_by => 'data_source'},
+        namespace                        => { type => 'varchar', via => 'data_source_obj', to => 'namespace' },
         owner                            => { type => 'varchar', len => undef, is_optional => 1, sql => 'owner' },
         table_name                       => { type => 'varchar', len => undef, sql => 'table_name' },
     ],

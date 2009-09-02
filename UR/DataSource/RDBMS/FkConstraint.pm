@@ -13,6 +13,8 @@ UR::Object::Type->define(
     id_properties => [qw/data_source owner r_owner table_name r_table_name fk_constraint_name/],
     properties => [
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
+        data_source_obj                  => { type => 'UR::DataSource', id_by => 'data_source'},
+        namespace                        => { type => 'varchar', via => 'data_source_obj', to => 'namespace' },
         fk_constraint_name               => { type => 'varchar', len => undef, sql => 'fk_constraint_name' },
         owner                            => { type => 'varchar', len => undef, is_optional => 1, sql => 'owner' },
         r_owner                          => { type => 'varchar', len => undef, is_optional => 1, sql => 'r_owner' },

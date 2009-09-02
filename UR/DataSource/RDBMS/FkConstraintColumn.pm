@@ -14,6 +14,8 @@ UR::Object::Type->define(
     properties => [
         column_name                      => { type => 'varchar', len => undef, sql => 'column_name' },
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
+        data_source_obj                  => { type => 'UR::DataSource', id_by => 'data_source'},
+        namespace                        => { type => 'varchar', via => 'data_source_obj', to => 'namespace' },
         fk_constraint_name               => { type => 'varchar', len => undef, sql => 'fk_constraint_name' },
         owner                            => { type => 'varchar', len => undef, sql => 'owner' },
         table_name                       => { type => 'varchar', len => undef, sql => 'table_name' },
