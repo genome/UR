@@ -43,5 +43,13 @@ sub _database_file_path {
 EOS
 }
 
+sub execute {
+    my $self = shift;
+
+    $self->error_message("postponed until later, use 'ur define datasource rdbms' for now");
+    return 0;
+}
+
+
 1;
 

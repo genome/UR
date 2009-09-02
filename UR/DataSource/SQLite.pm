@@ -66,7 +66,7 @@ sub _init_database {
     my $dump_time   = (stat($dump_file))[9];  
 
     if (-e $db_file) {
-        if ($db_time < $dump_time) {
+        if ($dump_time && ($db_time < $dump_time)) {
             print "$db_time db $dump_time dump\n";
             my $bak_file = $db_file . '-bak';
             $self->warning_message("Dump file is newer than the db file.  Replacing db_file $db_file.");
