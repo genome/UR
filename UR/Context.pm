@@ -131,14 +131,28 @@ sub resolve_data_sources_for_class_meta_and_rule {
 
     # For data dictionary items
     } elsif ($class_name =~ m/^UR::DataSource::RDBMS::(.*)/) {
-if (!defined $boolexpr) {
-$DB::single=1;
-}
+        if (!defined $boolexpr) {
+            $DB::single=1;
+        }
+
         my $params = $boolexpr->legacy_params_hash;
         if ($params->{'namespace'}) {
             return $params->{'namespace'} . '::DataSource::Meta';
-        } elsif ($params->{'data_source'} && $params->{'data_source'}->can('get_namespace')) {
+
+        } elsif ($params->{'data_source'} &&
+                 ! ref($params->{'data_source'}) &&
+                 $params->{'data_source'}->can('get_namespace')) {
+
             my $namespace = $params->{'data_source'}->get_namespace;
+            return $namespace . '::DataSource::Meta';
+
+        } elsif ($params->{'data_source'} &&
+                 ref($params->{'data_source'}) eq 'ARRAY') {
+            my %namespaces = map { $_->get_namespace => 1 } @{$params->{'data_source'}};
+            unless (scalar(keys %namespaces) == 1) {
+                Carp::confess("get() across multiple namespaces is not supported");
+            }
+            my $namespace = $params->{'data_source'}->[0]->get_namespace;
             return $namespace . '::DataSource::Meta';
         } else {
             Carp::confess("Required parameter (namespace or data_source) missing");
@@ -497,7 +511,8 @@ sub _create_import_iterator_for_underlying_context {
                 $pending_db_object,
                 $object,
                 $rows,
-                %subclass_for_subtype_name
+                %subclass_for_subtype_name,
+                $needs_further_boolexpr_evaluation_after_loading,
             );
             use warnings;
 
