@@ -3,21 +3,20 @@ package UR::ModuleLoader;
 
 use strict;
 use warnings;
+use Class::Autouse;
+
+Class::Autouse->autouse(\&dynamically_load_class);
+Class::Autouse->sugar(\&define_class);
 
 my %loading;
 
-sub dynamically_load_class {
+sub define_class {
     my ($class,$func,@params) = @_;
-    # Don't even try to load unless we're done boostrapping somewhat.
     return unless $UR::initialized;
     return unless $Class::Autouse::orig_can->("UR::Object::Type","get");
 
-    # Note: params is not always set to the params which will be used on the first call.
-
-    # Some modules (Class::DBI, recently) call UNIVERSAL::can directly with things which don't even resemble
-    # class names.  Skip doing any work on anything which isn't at least a two-part class name.
-    # We refuse explicitly to handle top-level namespaces below anyway, and this will keep us from 
-    # slowing down other modules just to fail late.
+    #return if $loading{$class};    
+    #$loading{$class} = 1;
 
     # Handle the special case of defining a new class
     # This lets us have the effect of a UNIVERSAL::class method, w/o mucking with UNIVERSAL
@@ -36,8 +35,23 @@ sub dynamically_load_class {
         unless ($class_meta) {
             die "error defining class $class!";
         }
-        return $Class::Autouse::orig_can->($class,$func);
+        return sub { $class };
     }
+    else {
+        return;
+    }
+}
+
+sub dynamically_load_class {
+    my ($class,$func,@params) = @_;
+    # Don't even try to load unless we're done boostrapping somewhat.
+    return unless $UR::initialized;
+    return unless $Class::Autouse::orig_can->("UR::Object::Type","get");
+
+    # Some modules (Class::DBI, recently) call UNIVERSAL::can directly with things which don't even resemble
+    # class names.  Skip doing any work on anything which isn't at least a two-part class name.
+    # We refuse explicitly to handle top-level namespaces below anyway, and this will keep us from 
+    # slowing down other modules just to fail late.
 
     my ($namespace) = ($class =~ /^(.*?)::/);
     return unless $namespace;
@@ -91,7 +105,7 @@ sub dynamically_load_class {
     }
 
     delete $loading{$class};
-    
+
     # Return a descriptive error message for the caller.
     my $fref;
     if (defined $func) {
@@ -99,14 +113,11 @@ sub dynamically_load_class {
         unless ($fref) {
             Carp::confess("$class was auto-generated successfully but cannot find method $func");
         }
-    
         return $fref;
     }
 
     return 1;
 };
-
-use Class::Autouse \&dynamically_load_class;
 
 1;
 
