@@ -106,7 +106,8 @@ sub _get_class_data_for_loading {
             push @all_table_properties, 
                 map { [$co, $_, $table_name] }
                 sort { $a->property_name cmp $b->property_name }
-                grep { defined $_->column_name && $_->column_name ne '' }
+                grep { (defined $_->column_name && $_->column_name ne '') or
+                       (defined $_->calculate_sql && $_->calculate_sql ne '') }
                 UR::Object::Property->get( type_name => $co->type_name );
         }
     
@@ -473,7 +474,7 @@ $DB::single=1;
                     my @foreign_column_names = 
                         map {
                             # TODO: encapsulate
-                            $_->is_calculated ? (defined($_->calc_sql) ? ($_->calc_sql) : () ) : ($_->column_name)
+                            $_->is_calculated ? (defined($_->calculate_sql) ? ($_->calculate_sql) : () ) : ($_->column_name)
                         }
                         @foreign_property_meta;
                     unless (@foreign_column_names) {
@@ -529,7 +530,7 @@ $DB::single=1;
                 my $final_accessor_property_meta = $last_class_object->get_property_meta_by_name($final_accessor);
                 my $sql_lvalue;
                 if ($final_accessor_property_meta->is_calculated) {
-                    $sql_lvalue = $final_accessor_property_meta->calc_sql;
+                    $sql_lvalue = $final_accessor_property_meta->calculate_sql;
                     unless (defined($sql_lvalue)) {
                             $needs_further_boolexpr_evaluation_after_loading = 1;
                         next;
@@ -552,13 +553,24 @@ $DB::single=1;
             } # next delegated property
             
             # Build the SELECT clause explicitly.
-           
             $select_clause = '';
             for my $class_property (@all_table_properties) {
                 my ($sql_class,$sql_property,$sql_table_name) = @$class_property;
                 $sql_table_name ||= $sql_class->table_name;
                 $select_clause .= ($class_property == $all_table_properties[0] ? "" : ", ");
-                $select_clause .= $sql_table_name . "." . $sql_property->column_name;
+               
+                # FIXME - maybe a better way would be for these sql-calculated properties, the column_name()
+                # or maybe some other related property name) is actually calculated, so this logic
+                # gets encapsulated in there?
+                if (my $sql_function = $sql_property->calculate_sql) {
+                    my @calculate_from = ref($sql_property->calculate_from) eq 'ARRAY' ? @{$sql_property->calculate_from} : ( $sql_property->calculate_from );
+                    foreach my $sql_column_name ( @calculate_from ) {
+                        $sql_function =~ s/($sql_column_name)/$sql_table_name\.$1/g;
+                    }
+                    $select_clause .= $sql_function;
+                } else {
+                    $select_clause .= $sql_table_name . "." . $sql_property->column_name;
+                }
             }
            
             # Oracle places hints in a comment in the select 

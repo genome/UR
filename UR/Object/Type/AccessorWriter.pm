@@ -662,6 +662,12 @@ sub initialize_direct_accessors {
                 $calculation_method,
                 $calculate_from
             );
+        } 
+        elsif (my $calculate_sql = $property_data->{'calculate_sql'}) {
+            # The data gets filled in by the object loader behind the scenes.
+            # To the user, it's a read-only property
+            $self->mk_ro_accessor($class_name, $accessor_name, $calculate_sql);
+
         }
         elsif ($property_data->{is_many} or $property_data->{reverse_id_by}){
             my $reverse_id_by = $property_data->{reverse_id_by};
