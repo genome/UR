@@ -106,7 +106,6 @@ my @old = qw/source_class source_class_meta source_property_names foreign_class 
 my @new = qw/foreign_class foreign_class_meta foreign_property_names source_class source_class_meta source_property_names/;
 sub _get_joins {
     my $self = shift;
-    $DB::single = 1;
     unless ($self->{_get_joins}) {
         my $class_meta = UR::Object::Type->get(class_name => $self->class_name);
         my @joins;
@@ -128,7 +127,7 @@ sub _get_joins {
         else {
             my $source_class = $class_meta->class_name;            
             my $foreign_class = $self->data_type;
-            if ($foreign_class->can('get')) {
+            if (defined($foreign_class) and $foreign_class->can('get')) {
                 #print "class $foreign_class, joining...\n";
                 my $foreign_class_meta = $foreign_class->get_class_object;
                 my $property_name = $self->property_name;
