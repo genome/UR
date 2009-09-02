@@ -1067,7 +1067,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 data_type      => $column->data_type,
                 data_length    => $column->data_length,
                 is_optional    => $column->nullable eq "Y" ? 1 : 0,
-                doc            => $column->remarks
+                doc            => $column->remarks,
+                is_specified_in_module_header => 1, 
             );
             
             no warnings;

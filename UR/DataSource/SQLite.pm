@@ -304,6 +304,7 @@ sub column_info {
 sub foreign_key_info {
 my($dbh,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
 
+$DB::single=1;
     my($table_col_fk, $table_col_fk_rev) = &_get_fk_lists($dbh);
 
     my @ret_data;
@@ -313,7 +314,7 @@ my($dbh,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
         $fksth->execute() or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
 
         while (my $info = $fksth->fetchrow_hashref()) {
-            foreach my $fk_info (@{$table_col_fk->{$pk_table}->{$info->{'from'}}}) {
+            foreach my $fk_info (@{$table_col_fk->{uc $pk_table}->{uc $info->{'from'}}}) {
                 my $node = {};
                 $node->{'FK_NAME'} = $fk_info->{'fk_name'};
                 $node->{'FK_TABLE_NAME'} = $pk_table;
@@ -335,10 +336,10 @@ my($dbh,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
             $fksth->execute();
 
             while (my $info = $fksth->fetchrow_hashref()) {
-                next unless ($info->{'table'} eq $fk_table);
+                next unless (uc($info->{'table'}) eq uc($fk_table));
 
-                foreach my $fk_info ( @{$table_col_fk_rev->{$fk_table}->{$info->{'to'}}} ) {
-                    next unless ($fk_info->{'pk_table'} eq $table_name);
+                foreach my $fk_info ( @{$table_col_fk_rev->{uc $fk_table}->{uc $info->{'to'}}} ) {
+                    next unless (uc($fk_info->{'pk_table'}) eq uc($table_name));
                     my $node = {};
                     $node->{'FK_NAME'} = $fk_info->{'fk_name'};
                     $node->{'FK_TABLE_NAME'} = $table_name;
@@ -395,19 +396,19 @@ my($dbh) = @_;
             next EACH_TABLE if ($col =~ m/^PRIMARY KEY|^NOT NULL|^UNIQUE|^CHECK|^DEFAULT|^COLLATE/i);
 
             my($col_name) = ($col =~ m/(\w+)\s/);  # First part is the column name
-            my($fk_name, $fk_table,$fk_col) = ($col =~ m/CONSTRAINT (\w+) REFERENCES (\w+)\((\w+)\)/);
+            my($fk_name, $fk_table,$fk_col) = ($col =~ m/CONSTRAINT (\w+) REFERENCES (\w+)\((\w+)\)/i);
             next unless ($col_name && $fk_name && $fk_table && $fk_col);
 
-            push(@{$table_col_fk->{$row->{'name'}}->{$col_name}},
-                 { fk_name => $fk_name,
-                   fk_table => $fk_table,
-                   fk_col => $fk_col,
+            push(@{$table_col_fk->{uc $row->{'name'}}->{uc $col_name}},
+                 { fk_name => uc $fk_name,
+                   fk_table => uc $fk_table,
+                   fk_col => uc $fk_col,
                  }
                 );
-            push(@{$table_col_fk_rev->{$fk_table}->{$fk_col}},
-                 { fk_name => $fk_name,
-                   pk_table => $row->{'name'},
-                   pk_col => $col_name,
+            push(@{$table_col_fk_rev->{uc $fk_table}->{uc $fk_col}},
+                 { fk_name => uc $fk_name,
+                   pk_table => uc $row->{'name'},
+                   pk_col => uc $col_name,
                  }
                 );
         }
