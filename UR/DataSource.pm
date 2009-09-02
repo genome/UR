@@ -227,6 +227,14 @@ sub _get_template_data_for_loading {
         my $where_clause; # not currently used, since we build that on a per-value-set basis (because of nulls, in())
         my $connect_by_clause;
         #my $order_by_clause  ...is above with the class data
+
+        # _usually_ items freshly loaded from the DB don't need to be evaluated through the rule
+        # because the SQL gets constructed in such a way that all the items returned would pass anyway.
+        # But in certain cases (a delegated property trying to match a non-object value (which is a bug
+        # in the caller's code from one point of view) or with calculated non-sql properties, then the
+        # sql will return a superset of the items we're actually asking for, and the loader needs to
+        # validate them through the rule
+        my $needs_further_boolexpr_evaluation_after_loading; 
         
         my @sql_params;
         my @filter_specs;         
@@ -394,13 +402,18 @@ sub _get_template_data_for_loading {
 
             my %joins_done;
 
+$DB::single=1;
             for my $delegated_property (@delegated_properties) {
                 my $last_alias_for_this_chain;
             
                 my $property_name = $delegated_property->property_name;
-                my $relationship_name = $delegated_property->via;
                 my $final_accessor = $delegated_property->to;            
                 my @joins = $delegated_property->_get_joins;
+                my $relationship_name = $delegated_property->via;
+                unless ($relationship_name) {
+                   $relationship_name = $property_name;
+                   $needs_further_boolexpr_evaluation_after_loading = 1;
+                }
 
                 #print "$property_name needs join "
                 #    . " via $relationship_name "
@@ -484,10 +497,12 @@ sub _get_template_data_for_loading {
 
                 my $operator       = $rule_template->operator_for_property_name($property_name);
                 my $value_position = $rule_template->value_position_for_property_name($property_name);                
-                push @sql_filters, 
-                    $final_table_name_with_alias => { 
-                        $final_accessor => { operator => $operator, value_position => $value_position } 
-                    };
+                if ($delegated_property->via) {
+                    push @sql_filters, 
+                        $final_table_name_with_alias => { 
+                            $final_accessor => { operator => $operator, value_position => $value_position } 
+                        };
+                }
             }
             
             # Build the SELECT clause explicitly.
@@ -604,6 +619,8 @@ sub _get_template_data_for_loading {
             where_clause                                => $where_clause,
             connect_by_clause                           => $connect_by_clause,
             order_by_clause                             => $order_by_clause,
+
+            needs_further_boolexpr_evaluation_after_loading => $needs_further_boolexpr_evaluation_after_loading,
             
             sql_params                                  => \@sql_params,
             filter_specs                                => \@filter_specs,

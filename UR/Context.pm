@@ -375,6 +375,8 @@ sub _create_import_iterator_for_underlying_context {
     my $recurse_property_on_this_row                = $template_data->{recurse_property_on_this_row};
     my $recurse_property_referencing_other_rows     = $template_data->{recurse_property_referencing_other_rows};
 
+    my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
+
     #
     # if there is a property which specifies a sub-class for the objects, switch rule/values and call this again recursively
     #
@@ -848,7 +850,13 @@ sub _create_import_iterator_for_underlying_context {
                     # NOTE: until this is done indexes cannot be used to look-up an object
                     #$pending_db_object->signal_change('load_external');
                     $pending_db_object->signal_change('load');                    
-                }
+                
+                    #$DB::single = 1;
+                    if ($needs_further_boolexpr_evaluation_after_loading && ! $rule->evaluate($pending_db_object)) {
+                        $pending_db_object = undef;
+                        redo;
+                    }
+		}
                 
                 # When there is recursion in the query, we record data from each 
                 # recursive "level" as though the query was done individually.
