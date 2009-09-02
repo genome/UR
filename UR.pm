@@ -309,6 +309,7 @@ require UR::Change;
 require UR::Command::Param;
 require UR::Context::Base;
 require UR::Context::Process;
+require UR::Object::Tag;
 
 do {
     UR::Context::Base->_initialize_for_current_process();
