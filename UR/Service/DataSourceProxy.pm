@@ -9,12 +9,36 @@ UR::Object::Type->define(
     class_name => 'UR::Service::DataSourceProxy',
     is => 'UR::Object',
     properties => [
-        host => { type => 'String', is_transient => 1, default_value => '0.0.0.0', doc => 'The local address to listen on'},
-        port => { type => 'String', is_transient => 1, default_value => 10293, doc => 'The local port to listen on'},
-        listen_socket => { type => 'IO::Socket', is_transient => 1, is_optional => 1, doc => 'The listen socket'},
-        all_select => { type => 'IO::Select', is_transient => 1, is_optional => 1, doc => 'Select object for the listen socket and all the client sockets'},
-        sockets_select => { type => 'IO::Select', is_transient => 1, is_optional => 1, doc => 'Select object for just the client connected sockets'},
-        use_sigio => { type => 'Boolean', is_transient => 1, default_value => 0, doc => 'The program should use signals to handle requests automaticly' },
+        host =>           { type => 'String',
+                            is_transient => 1,
+                            default_value => '0.0.0.0',
+                            doc => 'The local address to listen on'},
+        port =>           { type => 'String',
+                            is_transient => 1,
+                            default_value => 10293,
+                           doc => 'The local port to listen on'},
+        listen_socket =>  { type => 'IO::Socket',
+                            is_transient => 1,
+                            is_optional => 1,
+                            doc => 'The listen socket'},
+        all_select =>     { type => 'IO::Select',
+                            is_transient => 1,
+                            is_optional => 1,
+                            doc => 'Select object for the listen socket and all the client sockets'},
+        sockets_select => { type => 'IO::Select',
+                            is_transient => 1,
+                            is_optional => 1,
+                            doc => 'Select object for just the client connected sockets'},
+        use_sigio =>      { type => 'Boolean',
+                            is_transient => 1,
+                            default_value => 0,
+                            doc => 'The program should use signals to handle requests automaticly' },
+        sync_through =>   { type => 'Boolean',
+                            is_transient => 1,
+                            is_optional => 1,
+                            default_value => 0,
+                            doc => 'When a client syncs changes to us, automaticly do a sync_database to propogate changes to our data sources',
+                          },
     ],
     id_by => ['host','port'],
     doc => 'An object to manage connections from other processes and appear as a data source to them',
@@ -140,11 +164,17 @@ sub process_message_from_client {
     my($return_command_value, @results);
 
     if ($cmd == 1)  {
+        # a remote get()
         my $rule = (FreezeThaw::thaw($string))[0]->[0];
         my $class = $rule->subject_class_name();
         @results = $class->get($rule);
 
         $return_command_value = $cmd | 128;  # High bit set means a result code
+    } elsif ($cmd == 2) {
+        # a remote sync_database()
+        my($objects_by_class_name) = FreezeThaw::thaw($string);
+        @results = $self->_merge_object_changes($objects_by_class_name);
+        $return_command_value = $cmd | 128;
     } else {
         $self->error_message("Unknown command request ID $cmd");
         $return_command_value = 255;
@@ -158,6 +188,93 @@ sub process_message_from_client {
 
     return 1;
 }
+
+
+sub _merge_object_changes {
+    my($self,$objects_by_class_name) = @_;
+
+    my $return_value = 0;
+
+$DB::single=1;
+    eval {
+        # FIXME this would be way cooler if we could lean on UR::Context::Transaction.  Before that could
+        # work, we'd need some way to ask a prior transaction what an object's state is.  And while we're
+        # at it, why not just get rid of the db_saved_uncommitted/db_committed nonsense and just use the
+        # transaction for that
+
+        # Pass 1 - make sure any of the proposed changes isn't a conflict with any of
+        # our local changes
+        
+        foreach my $class_name ( keys %$objects_by_class_name ) {
+            foreach my $their_obj ( @{$objects_by_class_name->{$class_name}} ) {
+                my $their_id = $their_obj->id;
+
+                my $my_obj;
+                if ($their_obj->isa('UR::Object::Ghost')) {
+                    my($my_class) = substr($class_name, 0, length($class_name) - 7);  # Remove ::Ghost
+                    $my_obj = $my_class->get($their_id);
+                    unless ($my_obj) {
+                        $self->error_message("Rejecting commit from remote client.  Remotely deleted $class_name id $their_id does not exist locally as $my_class");
+                        $return_value = 0;
+                        return 0;
+                    }
+                } else {
+                    $my_obj = $class_name->get($their_id);
+                }
+
+                if (! $my_obj && $their_obj->{'db_committed'}) {
+                    $self->error_message("Rejecting commit from remote client.  $class_name id $their_id is new locally, but transmitted as changed");
+                    $return_value = 0;
+                    return 0;
+
+                } elsif ($my_obj && $my_obj->changed()) {
+                    # FIXME is it worth going through all the properties to see if they're compatible?
+                    $self->error_message("Rejecting commit from remote client.  $class_name id $their_id is already changed");
+                    $return_value = 0;
+                    return 0;  
+
+                } else {
+                    $their_obj->{'__my_obj'} = $my_obj;
+                }
+            }
+        }
+
+        # Pass 2 - Apply changes to our transaction
+        foreach my $class_name ( keys %$objects_by_class_name ) {
+            foreach my $their_obj ( @{$objects_by_class_name->{$class_name}} ) {
+                my @changes = $their_obj->changed;
+                my @properties = map { $_->properties } @changes;   # Seems to be one Change for each changed property
+                
+                my $my_obj = $their_obj->{'__my_obj'};
+
+                if ($their_obj->isa('UR::Object::Ghost')) {
+                    $my_obj->delete();
+               
+                } elsif ($my_obj) {
+                    foreach my $property ( @properties ) {
+                        $my_obj->$property($their_obj->$property);
+                    }
+
+                } else {
+                    my %create_params = map { ( $_, $their_obj->$_ ) } @properties;
+                    $class_name->create(%create_params);
+                }
+            }
+        }
+
+        if ($self->sync_through) {
+            $return_value = UR::Context->commit();
+        } else {
+            $return_value = 1;
+        }
+    };
+
+    if ($@) {
+        $self->error_message($@);
+    }
+    return ($return_value, $self->error_text());
+}
+                 
 
 
 # go into a loop processing messages from all the connected sockets (and 

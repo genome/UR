@@ -79,8 +79,6 @@ our $data_source_mapping = {};
 
 sub set_data_sources {
     my $self = shift;
-#print "In set_data_sources\n";
-#$DB::single=1;
     while (my $class_name = shift) {
         my $data_source_detail = shift;
         unless (ref($data_source_detail) eq 'HASH') {
@@ -92,7 +90,24 @@ sub set_data_sources {
         }
         my $ds_list = $data_source_mapping->{$class_name} ||= [];
         push @$ds_list, $data_source_detail;
+        #$class_name->get_class_object->data_source($data_source_detail);
     } 
+}
+
+sub class_names_for_data_source {
+    my($self,$data_source_detail) = @_;
+
+    my $ds_id = $data_source_detail->id;
+
+    my @class_names;
+    foreach my $class_name ( keys %$data_source_mapping ) {
+        foreach my $override ( @{$data_source_mapping->{$class_name}} ) {
+            if ($override->{'data_source'}->id eq $ds_id) {
+                push @class_names, $class_name;
+            }
+        }
+    }
+    return @class_names;
 }
 
 sub resolve_data_sources_for_class_meta_and_rule {
@@ -100,9 +115,7 @@ sub resolve_data_sources_for_class_meta_and_rule {
     my $class_meta = shift;
     my $boolexpr = shift;  ## ignored in the default case    
 
-#print "in resolve_data_sources_for_class_meta_and_rule for class meta ".$class_meta->class_name."\n";
     my $class_name = $class_meta->class_name;
-#$DB::single=1;
 
     # These are some hard-coded cases for splitting up class-classes
     # and data dictionary entities into namespace-specific meta DBs.
@@ -169,9 +182,8 @@ sub resolve_data_sources_for_class_meta_and_rule {
 sub resolve_data_source_for_object {
     my $self = shift;
     my $object = shift;
-#print "in resolve_data_source_for_object for a ",$object->get_class_object->class_name,"\n";
-#$DB::single=1;
     my $class_meta = $object->get_class_object;
+    my $class_name = $class_meta->class_name;
     
     # FIXME this pattern match is going to get called a lot.
     # Make up something that's faster to do the job
@@ -179,8 +191,13 @@ sub resolve_data_source_for_object {
         my $data_source = $object->data_source;
         my($namespace) = ($data_source =~ m/(^\w+?)::DataSource/);
         return $namespace . '::DataSource::Meta';
+    } elsif ($data_source_mapping->{$class_name}) {
+        # FIXME This assummes there will ever only be one datasource override
+        # per class name.  It doesn't check the associated boolexpr
+        return $data_source_mapping->{$class_name}->[0]->{'data_source'};
     }
         
+    # Default behavior
     my $ds = $class_meta->data_source;
     return $ds;
 }
@@ -1489,24 +1506,24 @@ sub _sync_databases {
     for my $obj (@changed_objects) {
         my $data_source = $self->resolve_data_source_for_object($obj);
         next unless $data_source;
-        $data_source = $data_source->class;        
-        $ds_objects{$data_source} ||= [];
-        push @{ $ds_objects{$data_source} }, $obj;
+        #$data_source = $data_source->class;        
+        $ds_objects{$data_source} ||= { 'ds_obj' => $data_source, 'changed_objects' => []};
+        push @{ $ds_objects{$data_source}->{'changed_objects'} }, $obj;
     }
 
     my @ds_in_order = 
         sort {
-            ($a->can_savepoint <=> $b->can_savepoint)
+            ($a->{'ds_obj'}->can_savepoint <=> $b->{'ds_obj'}->can_savepoint)
             || 
-            ($a cmp $b)
+            ($a->{'ds_obj'}->class cmp $b->{'ds_obj'}->class)
         }
         keys %ds_objects;
 
     # save on each in succession
     my @done;
     my $rollback_on_non_savepoint_handle;
-    for my $data_source (@ds_in_order) {
-        my $obj_list = $ds_objects{$data_source};
+    for my $data_source_string (@ds_in_order) {
+        my $obj_list = $ds_objects{$data_source_string}->{'changed_objects'};
 
 # Testing code for sorting objects getting saved to try and validate UR with analyze traces
 ## Break into classes, sort by ID properties and then joing 'em all back together for testing
@@ -1522,6 +1539,7 @@ sub _sync_databases {
 #}
 #$obj_list = \@sorted_objs;
 
+        my $data_source = $ds_objects{$data_source_string}->{'ds_obj'};
         my $result = $data_source->_sync_database(
             %params,
             changed_objects => $obj_list,

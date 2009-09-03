@@ -182,6 +182,8 @@ sub _get_class_data_for_loading {
     return $class_data;
 }
 
+# FIXME - This method does a bunch of work to construct SQL statements, and DataSource::RemoteCache
+# needs to override it anyway.  Consider moving this method into DataSource::RDBMS later.
 sub _get_template_data_for_loading {
     my ($self, $rule_template) = @_;
     my $template_data = $rule_template->{loading_data_cache};
@@ -711,5 +713,112 @@ sub _get_template_data_for_loading {
 }
 
 sub _prepare_for_lob { };
+
+sub _set_specified_objects_saved_uncommitted {
+    my ($self,$objects_arrayref) = @_;
+    # Sets an objects as though the has been saved but tha changes have not been committed.
+    # This is called automatically by _sync_databases.
+
+    my %objects_by_class;
+    my $class_name;
+    for my $object (@$objects_arrayref) {
+        $class_name = ref($object);
+        $objects_by_class{$class_name} ||= [];
+        push @{ $objects_by_class{$class_name} }, $object;
+    }
+
+    for my $class_name (sort keys %objects_by_class) {
+        my $class_object = $class_name->get_class_object;
+        my @property_names =
+            map { $_->property_name }
+            grep { $_->column_name }
+            $class_object->get_all_property_objects;
+
+        for my $object (@{ $objects_by_class{$class_name} }) {
+            $object->{db_saved_uncommitted} ||= {};
+            my $db_saved_uncommitted = $object->{db_saved_uncommitted};
+            for my $property ( @property_names ) {
+                $db_saved_uncommitted->{$property} = $object->$property;
+            }
+        }
+    }
+    return 1;
+}
+
+sub _set_all_objects_saved_committed {
+    # called by UR::DBI on commit
+    my $self = shift;
+    my @objects = $self->_get_current_entities;
+    for my $obj (@objects)  {
+        unless ($self->_set_object_saved_committed($obj)) {
+            die "An error occurred setting " . $obj->display_name_full
+             . " to match the committed database state.  Exiting...";
+        }
+    }
+    return scalar(@objects) || "0 but true";
+}
+
+sub _set_object_saved_committed {
+    # called by the above, and some test cases
+    my ($self, $object) = @_;
+    if ($object->{db_saved_uncommitted}) {
+        if ($object->isa("UR::Object::Ghost")) {
+            $object->signal_change("commit");
+            $object->delete_object;
+        }
+        else {
+            %{ $object->{db_committed} } = (
+                ($object->{db_committed} ? %{ $object->{db_committed} } : ()),
+                %{ $object->{db_saved_uncommitted} }
+            );
+            delete $object->{db_saved_uncommitted};
+            $object->signal_change("commit");
+        }
+    }
+    return $object;
+}
+
+sub _set_all_objects_saved_rolled_back {
+    # called by UR::DBI on commit
+    my $self = shift;
+    my @objects = $self->_get_current_entities;
+    for my $obj (@objects)  {
+        unless ($self->_set_object_saved_rolled_back($obj)) {
+            die "An error occurred setting " . $obj->display_name_full
+             . " to match the rolled-back database state.  Exiting...";
+        }
+    }
+}
+
+
+sub _set_object_saved_rolled_back {
+    # called by the above, and some test cases
+    my ($self,$object) = @_;
+    delete $object->{db_saved_uncommitted};
+    return $object;
+}
+
+
+sub _get_current_entities {
+    my $self = shift;
+    my @class_meta = UR::Object::Type->is_loaded(
+        data_source => $self->id
+    );
+
+    push @class_meta, map { $_->get_class_object } UR::Context->class_names_for_data_source($self);
+
+    my @objects;
+    for my $class_meta (@class_meta) {
+        next unless $class_meta->generated();  # Ungenerated classes won't have any instances
+        my $class_name = $class_meta->class_name;
+        push @objects, $class_name->all_objects_loaded();
+    }
+    return @objects;
+}
+
+
+
+
+
 1;
 #$Header
