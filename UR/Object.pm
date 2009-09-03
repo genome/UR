@@ -200,7 +200,7 @@ sub create {
     
     # Whenever no params, or a set which has no ID, make an ID.
     unless (defined($id)) {            
-        $id = $class_meta->autogenerate_new_object_id;
+        $id = $class_meta->autogenerate_new_object_id($rule);
         unless (defined($id)) {
             $class->error_message("No ID for new $class!\n");
             return;

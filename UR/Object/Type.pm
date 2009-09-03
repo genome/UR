@@ -351,14 +351,36 @@ our $autogenerate_id_base = join(" ",hostname(), $$, time);
 our $autogenerate_id_iter = 10000;
 sub autogenerate_new_object_id {
     my $self = shift;
+    my $rule = shift;
+
     my ($data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($self);
     if ($data_source) {
-        return $data_source->autogenerate_new_object_id_for_class_name(
-            $self->class_name
+        return $data_source->autogenerate_new_object_id_for_class_name_and_rule(
+            $self->class_name,
+            $rule
         )
     }
     else {
+        my @id_property_names = $self->id_property_names;
+        if (@id_property_names > 1) {
+            # we really could (as you can see below), but it seems like if you 
+            # asked to do it, it _has_ to be a mistake.  If there's a legitimate
+            # reason, this check should be removed
+            $self->error_message("Can't autogenerate ID property values for multiple ID property class " . $self->class_name);
+            return;
+        }
         return $autogenerate_id_base . " " . (++$autogenerate_id_iter);
+
+        #my @id_parts;
+        #my $supplied_params = $rule->legacy_params_hash;
+        #foreach my $prop ( $self->id_property_names ) {
+        #    if (exists $supplied_params->{$prop}) {
+        #        push(@id_parts,$supplied_params->{$prop});
+        #    } else {
+        #        push(@id_parts, $autogenerate_id_base . " " . (++$autogenerate_id_iter));
+        #    }
+        #}
+        #return join("\t",@id_parts);
     }
 }
 
