@@ -2,6 +2,29 @@ package UR::DataSource::SQLite;
 use strict;
 use warnings;
 
+=pod
+
+=head1 NAME
+
+UR::DataSource::SQLite - base class for datasources using the SQLite3 RDBMS
+
+=head1 SYNOPSIS
+
+In the shell:
+
+    ur define datasource sqlite
+
+Or write the singleton to represent the source directly: 
+
+    class Acme::DataSource::MyDB1 {
+        is => 'UR::DataSource::SQLite',
+        has_constant => [
+            _database_file_path => '/var/lib/acme-app/mydb1.sqlitedb'
+        ]
+    };
+
+=cut
+
 require UR;
 
 UR::Object::Type->define(

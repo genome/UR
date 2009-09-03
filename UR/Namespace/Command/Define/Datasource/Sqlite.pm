@@ -15,6 +15,18 @@ sub help_brief {
    "Add a SQLite data source to the current namespace."
 }
 
+sub help_synopsis {
+    return <<EOS
+  cd Acme
+
+  ur define datasource sqlite --dsname MyDB1 
+  # writes Acme::DataSource::MyDB1 to work with Acme/DataSource/MyDB1.sqlite3
+  
+  ur define datasource sqlite --dsname MyDB2 --server /var/lib/acmeapp/mydb2.sqlite3
+  # writes Acme::DataSource::MyDB2 to work with the specified sqlite file
+EOS
+}
+
 sub _data_source_sub_class_name {
     "UR::DataSource::SQLite"
 }

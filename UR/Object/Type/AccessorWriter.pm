@@ -215,7 +215,7 @@ sub mk_indirect_ro_accessor {
                 $rule = shift;
             } else {
                 $r_class_name ||= $r_class_name_resolver->();
-                $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($r_class_name, @_);
+                $rule = UR::BoolExpr->resolve_normalized($r_class_name, @_);
             }
             @results = grep { $rule->evaluate($_) } @results;
         }

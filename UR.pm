@@ -10,7 +10,7 @@ use warnings FATAL => 'all';
 our $VERSION;
 
 BEGIN {
-    $VERSION = '0.5';
+    $VERSION = '0.6';
 }
 
 # Ensure we get detailed errors while starting up.
@@ -519,7 +519,7 @@ UR - rich declarative non-hierarchical transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.5
+This document describes UR version 0.6.
 
 =head1 SYNOPSIS
 
@@ -534,7 +534,7 @@ First create a Namespace class for your application, CdExample.pm
 
     1;
 
-Next, define a data source representing your database, CdExample/DataSource/DB.pm
+Next, define a data source representing your database, CdExample/DataSource/DB1.pm
 
     package CdExample::DataSource::DB1;
     use CdExample;
@@ -589,16 +589,17 @@ You can then use these classes in your application code
     # Enables auto-loading for modules in this Namespace
     use CdExample;  
     
-    # get back all Artist objects
+    # this would get back all Artist objects
     my @all_artists = CdExample::Artist->get();
 
-    # Iterate through Artist objects
+    # after the above, further requests would be cached
+    # if that set were large though, you might want to iterate gradually:
     my $artist_iter = CdExample::Artist->create_iterator();
 
     # Get the first object off of the iterator
     my $first_artist = $artist_iter->next();
 
-    # Get all the CDs published in 1997
+    # Get all the CDs published in 2007
     my @cds_2007 = CdExample::Cd->get(year => 2007);
     
     # Get a list of Artist objects where the name starts with 'John'
