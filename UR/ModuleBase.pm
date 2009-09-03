@@ -829,7 +829,7 @@ sub owner
 sub string
 {
     my $self = shift;
-    "$self->{time} $self->{type}: $self->{text}\n";
+    "$self->{time_stamp} $self->{type}: $self->{text}\n";
 }
 
 sub _stack_item_params
