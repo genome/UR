@@ -33,6 +33,7 @@ UR::Object::Type->define(
         coverage          => { is => 'Boolean', doc => 'Invoke Devel::Cover',                                                                is_optional => 1                       },
         perl_opts         => { is => 'String',  doc => 'Override options to the Perl interpreter when running the tests (-d:Profile, etc.)', is_optional => 1, default_value => ''  }, 
         script_opts       => { is => 'String',  doc => 'Override options to the test case when running the tests (--dump-sql --no-commit)',  is_optional=>  1, default_value => ''  },
+        callcount         => { is => 'Boolean', doc => 'Count the number of calls to each subroutine/method',                                is_optional => 1 },
     ],
 );
 
@@ -65,7 +66,11 @@ sub execute {
 
     # black magic to summon forth Devel::Cover 
     if ($self->coverage()) {
-        $ENV{'HARNESS_PERL_SWITCHES'} = '-MDevel::Cover';
+        $ENV{'HARNESS_PERL_SWITCHES'} .= ' -MDevel::Cover';
+    }
+
+    if ($self->callcount()) {
+        $ENV{'HARNESS_PERL_SWITCHES'} .= ' -d:callcount';
     }
 
     # nasty parsing of command line args
@@ -254,7 +259,7 @@ sub _run_tests {
     #exec($cmd);
 
     $verbose = $v;
-
+    
     local $My::Test::Harness::Straps::timelog_dir   = $timelog_dir;
     local $My::Test::Harness::Straps::timelog_sum   = $timelog_sum;
     local $My::Test::Harness::Straps::perl_opts     = $perl_opts;
@@ -271,7 +276,7 @@ sub _run_tests {
                 return grep { $_ ne $abs_cwd } @finc;
             },}
     );
-
+    
     eval { 
         no warnings;
         local %SIG = %SIG; 
@@ -398,7 +403,6 @@ sub _command_line {
         my @format = map { "\%$_" } qw/C e U S I K P/;
         $line = qq|/usr/bin/time -o '$timelog_file' -a -f "@format" $line|;
     }
-
     return $line;
 }
 
