@@ -5,7 +5,7 @@ use strict;
 use warnings FATAL => 'all';
 
 use version;
-our $VERSION = qv('0.3');
+our $VERSION = qv('0.4');
 
 # The UR module is itself a "UR::Namespace", besides being the root 
 # module which bootstraps the system.  The class definition itself
