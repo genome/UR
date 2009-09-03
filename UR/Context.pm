@@ -423,7 +423,7 @@ sub _get_template_data_for_loading {
 }
 
 
-# Used by _create_secondary_loading_comparitors to convert a rule against the primary data source
+# Used by _create_secondary_loading_comparators to convert a rule against the primary data source
 # to a rule that can be used against a secondary data source
 sub _create_secondary_rule_from_primary {
     my($self,$primary_rule, $delegated_properties, $secondary_template) = @_;
@@ -505,7 +505,7 @@ $DB::single=1;
     }
 
     my @secondary_object_importers;
-    my @addl_join_comparitors;
+    my @addl_join_comparators;
 
     # used to shift the apparent column position of the secondary loading template info
     my ($column_position_offset,$object_num_offset);
@@ -516,7 +516,7 @@ $DB::single=1;
         my $secondary_template = shift @addl_loading_info;
 
         # sets of triples where the first in the triple is the column index in the
-        # $secondary_db_row (in the join_comparitor closure below), the second is the
+        # $secondary_db_row (in the join_comparator closure below), the second is the
         # index in the $next_db_row.  And the last is a flag indicating if we should 
         # perform a numeric comparison.  This way we can preserve the order the comparisons
         # should be done in
@@ -573,7 +573,7 @@ $DB::single=1;
         # This one will return the data from this secondary DB's row if the passed-in
         # row successfully joins to this secondary db iterator.  It returns an empty list
         # if there were no matches, and returns false if there is no more data from the query
-        my $join_comparitor = sub {
+        my $join_comparator = sub {
             my $next_db_row = shift;  # From the primary DB
             READ_DB_ROW:
             while(1) {
@@ -613,7 +613,7 @@ $DB::single=1;
                 return $secondary_db_row;
             }
         };
-        push @addl_join_comparitors, $join_comparitor;
+        push @addl_join_comparators, $join_comparator;
  
 
         # And for the object importer/fabricator, here's where we need to shift the column order numbers
@@ -659,7 +659,7 @@ $DB::single=1;
 
    }
 
-    return (\@secondary_object_importers, \@addl_join_comparitors);
+    return (\@secondary_object_importers, \@addl_join_comparators);
 }
 
 
@@ -750,16 +750,16 @@ sub _create_import_iterator_for_underlying_context {
     # For joins across data sources, we need to create importers/fabricators for those
     # classes, as well as callbacks used to perform the equivalent of an SQL join in
     # UR-space
-    my @addl_join_comparitors;
+    my @addl_join_comparators;
     if (@addl_loading_info) {
-        my($addl_object_fabricators, $addl_join_comparitors) =
+        my($addl_object_fabricators, $addl_join_comparators) =
                 $self->_create_secondary_loading_closures( $template_data,
                                                            $rule,
                                                            @addl_loading_info
                                                       );
 
         unshift @importers, @$addl_object_fabricators;
-        push @addl_join_comparitors, @$addl_join_comparitors;
+        push @addl_join_comparators, @$addl_join_comparators;
     }
 
     # Make the iterator we'll return.
@@ -821,7 +821,7 @@ sub _create_import_iterator_for_underlying_context {
             # them into objects.  FIXME - fix this by setting the $needs_further_boolexpr_evaluation_after_loading
             # flag maybe?
             my @secondary_data;
-            foreach my $callback (@addl_join_comparitors) {
+            foreach my $callback (@addl_join_comparators) {
                 # FIXME - (no, not another one...) There's no mechanism for duplicating SQL join's
                 # behavior where if a row from a table joins to 2 rows in the secondary table, the 
                 # first table's data will be in the result set twice.
