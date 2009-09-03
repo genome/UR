@@ -47,7 +47,7 @@ UR::Object::Type->define(
     has_optional => [
         hints                           => { is => 'ARRAY' },
         recursion_desc                  => { is => 'ARRAY' },
-        is_paged                        => { is => "Boolean" },
+        is_paged                        => { is => "Boolean" },  # FIXME - this isn't set by anything below, shouldn't it be 'page'?
         order_by                        => { is => "Text" },
     ]
 );
@@ -68,6 +68,8 @@ our $empty_list     = $UR::BoolExpr::Util::empty_list;
 *values_to_value_id_frozen  = \&UR::BoolExpr::Util::values_to_value_id_frozen;
 *value_id_to_values_frozen  = \&UR::BoolExpr::Util::value_id_to_values_frozen;
 
+# Names of the optional flags you can add to a rule
+our @meta_param_names = qw(recursion_desc hints is_paged order_by);
 
 # Wrappers for regular properties
 
@@ -608,6 +610,16 @@ sub get {
     }, $sub_class_name;
     $UR::Object::rule_templates{$id} = $self;  
     return $self;
+}
+
+
+# Return true if the template has recursion_desc, hints, order or page set
+sub has_meta_options {
+    my $self = shift;
+    foreach my $opt ( @meta_param_names ) {
+        return 1 if (defined $self->$opt);
+    }
+    return 0;
 }
 
 

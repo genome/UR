@@ -177,6 +177,10 @@ sub value_position_for_property_name {
     $_[0]->get_rule_template()->value_position_for_property_name($_[1]);
 }
 
+sub has_meta_options {
+    $_[0]->get_rule_template()->has_meta_options();
+}
+
 # De-compose the rule back into its original form.
 
 sub params_list {
