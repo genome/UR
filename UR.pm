@@ -7,12 +7,10 @@ package UR;
 use strict;
 use warnings FATAL => 'all';
 
+# Set the version at compile time, since some other modules borrow it.
 use version;
-our $VERSION;
-
-BEGIN {
-    $VERSION = qv('0.10');
-}
+our $VERSION = qv('0.10');
+BEGIN { $VERSION = qv('0.10'); }
 
 # Ensure we get detailed errors while starting up.
 use Carp;
@@ -516,147 +514,66 @@ __END__
 
 =head1 NAME
 
-UR - rich declarative non-hierarchical transactional objects
+UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.7.
+This document describes UR version v0.10.
 
 =head1 SYNOPSIS
 
-First create a Namespace class for your application, CdExample.pm
+    use UR; 
 
-    package CdExample;
-    use UR;
+    ## no database
 
-    class CdExample {
-        is => 'UR::Namespace'
-    };
-
-    1;
-
-Next, define a data source representing your database, CdExample/DataSource/DB1.pm
-
-    package CdExample::DataSource::DB1;
-    use CdExample;
+    class Foo { is => 'Bar', has => [qw/prop1 prop2 prop3/] };
     
-    class CdExample::DataSource::DB1 {
-        is => ['UR::DataSource::Mysql'],
-        has_constant => [
-            server  => { value => 'mysql.example.com' },
-            login   => { value => 'mysqluser' },
-            auth    => { value => 'mysqlpasswd' },
-        ]
-    };
+    $o1 = Foo->create(prop1 => 111, prop2 => 222, prop3 => 333);
     
-    1;
+    @o = Foo->get(prop2 => 222, prop1 => [101,111,121], 'prop3 between' => [200, 400]);
+    # returns one object
 
-    or to get something going quickly, SQLite has smart defaults...
+    $o1->delete;
 
-    class CdExample::DataSource::DB1 {
-        is => 'UR::DataSource::SQLite',
-    };
+    @o = Foo->get(prop2 => 222, prop1 => [101,111,121], 'prop3 between' => [200, 400]);
+    # returns zero objects
     
+    @o = Foo->get(prop2 => 222, prop1 => [101,111,121], 'prop3 between' => [200, 400]);
+    # returns one object again
 
-Create a class to represent artists, who have many CDs, in CdExample/Artist.pm
 
-    package CdExample::Artist;
-    use CdExample;
+    ## database
 
-    class CdExample::Artist {
-        id_by => 'artist_id',
-        has => [ 
-            name => { is => 'Text' },
-            cds  => { is => 'CdExample::Cd', is_many => 1, reverse_as => 'artist' }
-        ],
-        data_source => 'CdExample::DataSource::DB1',
-        table_name => 'ARTISTS',
-    };
-    1;
-
-Create a class to represent CDs, in CdExample/Cd.pm
-
-    package CdExample::Cd;
-    use CdExample;
-            
-    class CdExample::Cd {
-        id_by => 'cd_id',
+    class Animal {
         has => [
-            artist => { is => 'CdExample::Artist', id_by => 'artist_id' },
-            title  => { is => 'Text' },
-            year   => { is => 'Integer' },
-            artist_name => { via => 'artist', to => 'name' },
+            favorite_food => { is => 'Text', doc => "what's yummy?" },
         ],
-        data_source => 'CdExample::DataSource::DB1',
-        table_name => 'CDS',
+        data_source => 'MyDB1',
+        table_name => 'Animal'
+    }
+
+    class Cat { 
+        is => 'Animal', 
+        has => [
+            feet    => { is => 'Number' },
+            fur     => { is => 'Text', valid_values => [qw/fluffy scruffy/] },
+        ],
+        data_source => 'MyDB1',
+        table_name => 'Cat'
     };
-    1;
 
-If the database existed already, you could have done this to get it to write the last 2 classes: 
+    Cat->create(feet => 4, fur => 'fluffy', favorite_food => 'taters');
 
-  cd CdExample;
-  ur update classes
+    @cats = Cat->get(favorite_food => ['taters','sea bass']);
 
-If the database does not exist, you can run this to generate the tables and columns from the classes you've written
-(very experimental):
-
-  cd CdExample
-  ur update schema
-
-You can then use these classes in your application code:
-
-    # Using the namespace enables auto-loading of modules upon first attempt to call a method
-    use CdExample;  
+    $c = $cats[0];
     
-    # This would get back all Artist objects:
-    my @all_artists = CdExample::Artist->get();
-
-    # After the above, further requests would be cached
-    # if that set were large though, you might want to iterate gradually:
-    my $artist_iter = CdExample::Artist->create_iterator();
-
-    # Get the first object off of the iterator
-    my $first_artist = $artist_iter->next();
-
-    # Get all the CDs published in 2007 for the first artist
-    my @cds_2007 = CdExample::Cd->get(year => 2007, artist => $first_artist);
-   
-    # Use non-equality operators:
-    my @same_some_artists = CdExample::Artist->get(
-        'name like' => 'John%',
-    );
-
-    # This will use a JOIN with the ARTISTS table internally to filter
-    # the data in the database.  @some_cds will contain CdExample::Cd objects.
-    # As a side effect, related Artist objects will be loaded into the cache
-    my @some_cds = CdExample::Cd->get(
-        year => '2001', 
-        'artist_name like' => 'Bob%' 
-    );
-
-    # These values would be cached...
-    my @artists_for_some_cds = map { $_->artist } @some_cds;
+    print $c->feet,"\n";
     
-    # This will use a join to prefetch Artist objects related to the
-    # objects that match the filter
-    my @other_cds = CdExample::Cd->get(
-        'title like' => '%White%',
-        -hints => ['artist']
-    );
-    my $other_artist_0 = $other_cds[0]->artist;  # already loaded so no query
-    
-    # create() instantiates a new object in the current "context", but does not save 
-    # it in the database.  It will autogenerate its own cd_id:
-    my $new_cd = CdExample::Cd->create(
-        title => 'Cool Album',
-        year  => 2009
-    );
+    $c->fur('scruffy');
 
-    # Assign it to an artist; fills in the artist_id field of $new_cd
-    $first_artist->add_cd($new_cd);
-    
-    # Save all changes back to the database
-    UR::Context->current->commit;
+    commit();
+
   
 =head1 DESCRIPTION
 
@@ -678,7 +595,7 @@ in-memory transactions for both.
 
 =head1 DOCUMENTATION
 
-=head1 Manuals
+=head2 Manuals
 
 L<UR::Manual::Overview> - UR from Ten Thousand Feet
 
@@ -694,7 +611,7 @@ L<UR::Object::Type::Initializer> - Defining classes
 
 L<UR::Manual::UR> - UR's command line tool
 
-=head1 Basic Entities
+=head2 Basic Entities
 
 L<UR::Object> - Pretty much everything is-a UR::Object
 
@@ -708,13 +625,150 @@ L<UR::Context> - Software transactions and More!
 
 L<UR::DataSource> - How and where to get data
 
+=head1 QUICK TUTORIAL 
+
+First create a Namespace class for your application, Music.pm:
+
+    package Music;
+    use UR;
+
+    class Music {
+        is => 'UR::Namespace'
+    };
+
+    1;
+
+Next, define a data source representing your database, Music/DataSource/DB1.pm
+
+    package Music::DataSource::DB1;
+    use Music;
+    
+    class Music::DataSource::DB1 {
+        is => ['UR::DataSource::Mysql'],
+        has_constant => [
+            server  => { value => 'mysql.example.com' },
+            login   => { value => 'mysqluser' },
+            auth    => { value => 'mysqlpasswd' },
+        ]
+    };
+    
+    or to get something going quickly, SQLite has smart defaults...
+
+    class Music::DataSource::DB1 {
+        is => 'UR::DataSource::SQLite',
+    };
+    
+
+Create a class to represent artists, who have many CDs, in Music/Artist.pm
+
+    package Music::Artist;
+    use Music;
+
+    class Music::Artist {
+        id_by => 'artist_id',
+        has => [ 
+            name => { is => 'Text' },
+            cds  => { is => 'Music::Cd', is_many => 1, reverse_as => 'artist' }
+        ],
+        data_source => 'Music::DataSource::DB1',
+        table_name => 'ARTISTS',
+    };
+
+Create a class to represent CDs, in Music/Cd.pm
+
+    package Music::Cd;
+    use Music;
+            
+    class Music::Cd {
+        id_by => 'cd_id',
+        has => [
+            artist => { is => 'Music::Artist', id_by => 'artist_id' },
+            title  => { is => 'Text' },
+            year   => { is => 'Integer' },
+            artist_name => { via => 'artist', to => 'name' },
+        ],
+        data_source => 'Music::DataSource::DB1',
+        table_name => 'CDS',
+    };
+
+
+If the database does not exist, you can run this to generate the tables and columns from the classes you've written
+(very experimental):
+
+  $ cd Music
+  $ ur update schema
+
+If the database existed already, you could have done this to get it to write the last 2 classes for you: 
+
+  $ cd Music;
+  $ ur update classes
+
+Regardless, if the classes and database tables are present, you can then use these classes in your application code:
+
+    # Using the namespace enables auto-loading of modules upon first attempt to call a method
+    use Music;  
+    
+    # This would get back all Artist objects:
+    my @all_artists = Music::Artist->get();
+
+    # After the above, further requests would be cached
+    # if that set were large though, you might want to iterate gradually:
+    my $artist_iter = Music::Artist->create_iterator();
+
+    # Get the first object off of the iterator
+    my $first_artist = $artist_iter->next();
+
+    # Get all the CDs published in 2007 for the first artist
+    my @cds_2007 = Music::Cd->get(year => 2007, artist => $first_artist);
+   
+    # Use non-equality operators:
+    my @same_some_artists = Music::Artist->get(
+        'name like' => 'John%',
+        'year between' => ['2004','2009']
+    );
+
+    # This will use a JOIN with the ARTISTS table internally to filter
+    # the data in the database.  @some_cds will contain Music::Cd objects.
+    # As a side effect, related Artist objects will be loaded into the cache
+    my @some_cds = Music::Cd->get(
+        year => '2007', 
+        'artist_name like' => 'Bob%' 
+    );
+
+    # These values would be cached...
+    my @artists_for_some_cds = map { $_->artist } @some_cds;
+    
+    # This will use a join to prefetch Artist objects related to the
+    # objects that match the filter
+    my @other_cds = Music::Cd->get(
+        'title like' => '%White%',
+        -hints => ['artist']
+    );
+    my $other_artist_0 = $other_cds[0]->artist;  # already loaded so no query
+    
+    # create() instantiates a new object in the current "context", but does not save 
+    # it in the database.  It will autogenerate its own cd_id:
+    my $new_cd = Music::Cd->create(
+        title => 'Cool Album',
+        year  => 2009
+    );
+
+    # Assign it to an artist; fills in the artist_id field of $new_cd
+    $first_artist->add_cd($new_cd);
+    
+    # Save all changes in the current transaction back to the database(s)
+    # which are behind the changed objects.
+    UR::Context->current->commit;
 
 =head1 Environment Variables
 
 UR uses several environment variables to do things like run with
-database commits disabled, dump SQL, control cache size, etc. 
+database commits disabled, watching SQL queries run, examine query plans, 
+and control cache size, etc.  
 
-See L<UR::Env>.
+These make development and debugging fast and easy.
+
+See L<UR::Env> for details.
 
 =head1 DEPENDENCIES
 
@@ -738,11 +792,11 @@ XML::Simple
 
 =head1 AUTHORS
 
-UR was built by the software development team at the Washington
-University Genome Center.  Incarnations of it run laboratory
-automation and analysis systems for high-throughput genomics.
+UR was built by the software development team at the Genome Center
+at Washington University School of Medicine.  Incarnations of it run 
+laboratory automation and analysis systems for high-throughput genomics.
  
- Scott Smith	    sakoht@cpan.org	Orginal Architecture
+ Scott Smith	    sakoht@cpan.org	    Orginal Architecture
  Anthony Brummett   brummett@cpan.org	Primary Development
 
  Craig Pohl
@@ -774,6 +828,7 @@ automation and analysis systems for high-throughput genomics.
  Jerome Peirick
  Ryan Richt
  John Osborne
+ Josh McMichael
  David Dooling
  
 =head1 LICENCE AND COPYRIGHT
