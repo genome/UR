@@ -3,6 +3,11 @@ use strict;
 use warnings;
 use Test::More tests => 44;
 
+# FIXME - This tests the simple case of a single indirect property.
+# Need to add a test for a doubly-indirect property crossing 2 data
+# sources, and a test where the numeric order of things is differen
+# than the alphabetic order
+
 use above 'URT'; # dummy namespace
 
 # Turn this on for debugging
