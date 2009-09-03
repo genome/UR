@@ -46,7 +46,6 @@ is($c->name('Joe'), 'Joe', 'we can set the value for name');
 is($c->name, 'Joe', 'And it returns the correct name after setting it');
 is($c->color, 'clear', 'color still returns the default value');
 
-$main::printer=1;
 $c = URT::SingleChild->_singleton_object;
 ok($c, 'Got an object for the child singleton class');
 is($c->name, 'Anonymous','name has the default value');
