@@ -417,6 +417,7 @@ sub autogenerate_new_object_id_for_class_name {
         $key = $keys[0];
     }
 
+    # FIXME Each class should have a way to override what sequence generator to use
     my $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $key);
 
     my $new_id = $self->_get_next_value_from_sequence($sequence);
