@@ -674,7 +674,7 @@ sub _shell_args_property_meta
 {
     my $self = shift;
     my $class_meta = $self->get_class_object;
-    my @property_meta = sort { $a->property_name cmp $b->property_name } $class_meta->get_all_property_objects(@_);
+    my @property_meta = sort { $b->property_name cmp $a->property_name } $class_meta->get_all_property_objects(@_);
     my @result;
     my %seen;
     for my $property_meta (@property_meta) {
