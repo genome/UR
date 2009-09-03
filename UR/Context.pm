@@ -2367,14 +2367,14 @@ sub rollback {
     $self->signal_change('prerollback');
 
     unless ($self->_reverse_all_changes) {
-        $self->signal_changed('rollback', 0);
+        $self->signal_change('rollback', 0);
         die "Application failure during reverse_all_changes?!";
     }
     unless ($self->_rollback_databases) {
-        $self->signal_changed('rollback', 0);
+        $self->signal_change('rollback', 0);
         die "Application failure during rollback!";
     }
-    $self->signal_changed('rollback', 1);
+    $self->signal_change('rollback', 1);
     return 1;
 }
 
