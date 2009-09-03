@@ -708,7 +708,6 @@ sub _load {
             # the class was somehow generated while we were checking other classes for it and failing.
             # this can happen b/c some class with a name which is a subset of the one we're looking
             # for might "use" the one we want.
-            $DB::single = 1;
             return $class_obj if $class_obj;
         } 
 

@@ -740,6 +740,11 @@ sub message_object
         {
             $callback->($message_object,$self,$type,$class_old,$object_old);
         }
+        elsif ($type eq 'status') {
+            my $t = $text;
+            chomp($t);
+            STDERR->print($t,"\n");
+        }
         elsif ($type ne 'debug')
         {
             # if no callback defined, print non-debug messages to stderr
