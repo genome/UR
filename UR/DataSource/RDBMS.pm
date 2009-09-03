@@ -562,7 +562,7 @@ sub create_iterator_closure_for_rule {
         Carp::confess($class->error_message);
     }    
     unless ($sth->execute(@all_sql_params)) {
-        $class->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Dumper(\@$sql_params) . "\n");
+        $class->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper(\@$sql_params) . "\n");
         Carp::confess($class->error_message);
     }    
 
