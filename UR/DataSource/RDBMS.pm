@@ -1013,7 +1013,7 @@ sub _sync_database {
 
             @ready_to_add = ($ordered_by_least_number_of_prerequisites[0]);
             warn "Circular dependency! Pushing @ready_to_add to brute-force the save.\n";
-            print STDERR Data::Dumper::Dumper(\%objects_by_class_name, \%prerequisites, \%dependants) . "\n";
+            #print STDERR Data::Dumper::Dumper(\%objects_by_class_name, \%prerequisites, \%dependants ) . "\n";
         }
         else
         {
