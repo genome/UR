@@ -167,6 +167,21 @@ sub new{
     return bless(\%args, $class);
 }
 
+sub _get_next_object_from_iterator {
+    my $self = shift;
+
+    my $obj;
+    for (1) {
+        $obj = eval { $self->{'iterator'}->next };
+        if ($@) {
+            UR::Object::Command::List->warning_message($@);
+            redo;
+        }
+    }
+    return $obj;
+}
+        
+
 sub _object_properties_to_string {
     my ($self, $o, $char) = @_;
     my @v;
@@ -202,7 +217,7 @@ sub format_and_print{
     }
 
     my $count = 0;
-    while (my $object = $self->{iterator}->next) {
+    while (my $object = $self->_get_next_object_from_iterator()) {
         $self->{output}->print($self->_get_object_string($object), "\n");
         $count++;
     }
@@ -239,7 +254,7 @@ sub format_and_print{
     }
 
     my $count = 0;
-    while (my $object = $self->{iterator}->next) {
+    while (my $object = $self->_get_next_object_from_iterator()) {
         $self->{output}->print($self->_get_object_string($object));
         $count++;
     }
@@ -299,7 +314,7 @@ sub format_and_print{
 	$doc->setDocumentElement($results_node);
 
 	my $count = 0;
-    while (my $object = $self->{iterator}->next) {
+    while (my $object = $self->_get_next_object_from_iterator()) {
 		my $object_node = $results_node->addChild( $doc->createElement("object") );
 
 		my $object_reftype = ref $object;
@@ -359,7 +374,7 @@ sub format_and_print{
     }
 
     my $count = 0;
-    while (my $object = $self->{iterator}->next) {
+    while (my $object = $self->_get_next_object_from_iterator()) {
         $tab_delimited .= $self->_get_object_string($object)."\n";
         $count++;
     }
@@ -483,4 +498,4 @@ text, csv, html, xml, pretty (inprogress)
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 49373 2009-07-29 19:08:47Z iferguso $
+#$Id: List.pm 50225 2009-08-21 21:52:38Z abrummet $
