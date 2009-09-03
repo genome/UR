@@ -163,9 +163,8 @@ sub warning
     UR::ModuleBase->warning_message(@_);
     if ($_[0] =~ /Deep recursion on subroutine/)
     {
-        print STDERR "Forced exit by App.pm on deep recursion.\n";
-        my @stack = split(/\n/,Carp::longmess());
-        print STDERR "Stack tail:\n@stack\n";
+        print STDERR "Forced exit by UR::Exit on deep recursion.\n";
+        print STDERR Carp::longmess("Stack tail:");
         exit 1;
     }
     return;
