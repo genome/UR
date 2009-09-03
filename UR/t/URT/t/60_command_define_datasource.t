@@ -7,14 +7,15 @@ use URT;
 use IO::File;
 use Test::More;
 
-eval "use DBD::mysql";
-eval "use DBD::pg";
-eval "use DBD::Oracle";
-my $oracle = $INC{"DBD/Oracle.pm"};
-my $mysql = $INC{"DBD/mysql.pm"};
-my $postgres = $INC{"DBD/pg.pm"};
-
+my ($oracle,$postgres,$mysql);
 BEGIN {
+    eval "use DBD::mysql";
+    eval "use DBD::Pg";
+    eval "use DBD::Oracle";
+    $oracle = $INC{"DBD/Oracle.pm"};
+    $mysql = $INC{"DBD/mysql.pm"};
+    $postgres = $INC{"DBD/Pg.pm"};
+    
     my $tests = 33;
     $tests += 12 if $oracle; 
     $tests += 12 if $postgres; 
