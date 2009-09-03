@@ -7,7 +7,7 @@ package URT::DataSource::SomePostgreSQL;
 
 use URT;
 class URT::DataSource::SomePostgreSQL {
-    is => ['UR::DataSource::PostgreSQL'],
+    is => ['UR::DataSource::Pg'],
     type_name => 'urt datasource somepostgresql',
 };
 
