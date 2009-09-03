@@ -568,7 +568,7 @@ sub get {
             normalized_positions_arrayref   => $normalized_positions_arrayref,
             normalization_extender_arrayref => $extenders,
         );
-    } # done generating smecial data for the "And" rule to normalize itself
+    } # done generating special data for the "And" rule to normalize itself
     else {
         @extra_params = (normalized_id => $id);
     }
