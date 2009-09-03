@@ -3,11 +3,13 @@ use warnings;
 
 use Test::More tests => 6;
 use File::Basename;
-use lib File::Basename::dirname(__FILE__)."/../..";
+use lib File::Basename::dirname(__FILE__)."/../..";   # For the Vending namespace
+use lib File::Basename::dirname(__FILE__)."/../../../..";   # For the UR namespace
 use Vending;
 
 my $machine = Vending::Machine->get();
 ok($machine, 'Got the Vending::Machine instance');
+$machine->_initialize_for_tests();
 
 ok($machine->insert('quarter'), 'Inserted a quarter');
 ok($machine->insert('quarter'), 'Inserted a quarter');

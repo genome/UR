@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use above 'UR';
 use above "Vending";
 
 Vending::Command->execute_with_shell_params_and_exit();

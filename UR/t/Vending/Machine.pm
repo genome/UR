@@ -36,7 +36,6 @@ sub insert {
     }
 
     my $loc = $self->coin_box();
-    #my $coin = $loc->add_item(subtype_name => 'Vending::Coin', type_id => $coin_type->type_id, machine_id => $self);
     my $coin = $loc->add_coin_item(type_id => $coin_type->type_id, machine_id => $self);
 
     return defined($coin);
@@ -187,6 +186,15 @@ sub _complete_purchase_and_make_change_for_selections {
 
     return @change;
 }
+
+sub _initialize_for_tests {
+    my $self = shift;
+
+    $_->delete foreach $self->inventory_items();
+    $_->delete foreach $self->products();
+    $_->delete foreach $self->items();
+} 
+    
 
 1;
   
