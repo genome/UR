@@ -433,7 +433,7 @@ sub generate
 sub print_formatted
 {
     my $class = shift;
-    my %params = @_;
+    my %params = (%application_default_params, @_);
     
     # sth       A statement handle from which the data comes.
     # sql       If no handle is specified, the SQL to use.
