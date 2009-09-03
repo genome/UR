@@ -54,7 +54,7 @@ sub get_default_handle {
         my $filename = $self->server;
         unless (-e $filename) {
             # file doesn't exist
-            my $fh = IO::File->new($filename, '>');
+            my $fh = IO::File->new($filename, '>>');
             unless ($fh) {
                 $self->error_message("$filename does not exist, and can't be created: $!");
                 return;
