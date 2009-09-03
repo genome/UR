@@ -304,49 +304,49 @@ package UR::Object::Command::List::Xml;
 use base 'UR::Object::Command::List::Style';
 
 sub format_and_print{
-	my $self = shift;
-	my $out;
+    my $self = shift;
+    my $out;
 
-	my $doc = XML::LibXML->createDocument();
-	my $results_node = $doc->createElement("results");
-	$results_node->addChild( $doc->createAttribute("generated-at",UR::Time->now()) );
+    my $doc = XML::LibXML->createDocument();
+    my $results_node = $doc->createElement("results");
+    $results_node->addChild( $doc->createAttribute("generated-at",UR::Time->now()) );
 
-	$doc->setDocumentElement($results_node);
+    $doc->setDocumentElement($results_node);
 
-	my $count = 0;
+    my $count = 0;
     while (my $object = $self->_get_next_object_from_iterator()) {
-		my $object_node = $results_node->addChild( $doc->createElement("object") );
+        my $object_node = $results_node->addChild( $doc->createElement("object") );
 
-		my $object_reftype = ref $object;
-		$object_node->addChild( $doc->createAttribute("type",$object_reftype) );
-		$object_node->addChild( $doc->createAttribute("id",$object->id) );
-		
-		for my $property ( @{$self->{show}} ) {
+        my $object_reftype = ref $object;
+        $object_node->addChild( $doc->createAttribute("type",$object_reftype) );
+        $object_node->addChild( $doc->createAttribute("id",$object->id) );
 
-			my $property_node = $object_node->addChild ($doc->createElement($property));
+        for my $property ( @{$self->{show}} ) {
 
-			my @items = $object->$property;
+             my $property_node = $object_node->addChild ($doc->createElement($property));
 
-            my $reftype = ref $items[0];
+             my @items = $object->$property;
 
-			if ($reftype && $reftype ne 'ARRAY' && $reftype ne 'HASH') {
-				foreach (@items) {
-					my $subobject_node = $property_node->addChild( $doc->createElement("object") );
-					$subobject_node->addChild( $doc->createAttribute("type",$reftype) );
-					$subobject_node->addChild( $doc->createAttribute("id",$_->id) );
-					#$subobject_node->addChild( $doc->createTextNode($_->id) );
-					#xIF
-				}
-			} else {
-				foreach (@items) {
-					$property_node->addChild( $doc->createTextNode($_) );
-				}
-			}
+             my $reftype = ref $items[0];
 
-		}
-		$count++;
-	}
-	$self->{output}->print($doc->toString(1));
+             if ($reftype && $reftype ne 'ARRAY' && $reftype ne 'HASH') {
+                 foreach (@items) {
+                     my $subobject_node = $property_node->addChild( $doc->createElement("object") );
+                     $subobject_node->addChild( $doc->createAttribute("type",$reftype) );
+                     $subobject_node->addChild( $doc->createAttribute("id",$_->id) );
+                     #$subobject_node->addChild( $doc->createTextNode($_->id) );
+                     #xIF
+                 }
+             } else {
+                 foreach (@items) {
+                     $property_node->addChild( $doc->createTextNode($_) );
+                 }
+             }
+
+         }
+        $count++;
+    }
+    $self->{output}->print($doc->toString(1));
 }
 
 package UR::Object::Command::List::Text;
@@ -498,4 +498,4 @@ text, csv, html, xml, pretty (inprogress)
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 50226 2009-08-21 21:58:48Z abrummet $
+#$Id: List.pm 50227 2009-08-21 22:01:34Z abrummet $
