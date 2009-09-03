@@ -4,25 +4,23 @@ use warnings;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-#use Test::More tests => 11;
-use Test::More skip_all => 'Known broken, will fix soon';
-
-$main::foobar = 0;
-&setup_classes_and_db();
+use Test::More tests => 19;
 
 # There are 2 things in the DB and one newly created thing that satisfy
 # the get() request.  But one of the DB items has been changed in the
 # object cache, and sorts in a different order than the order returned by
 # the DB query
 
+&setup_classes_and_db();
+
 # Change something in memory and see if it'll be honored in the results
+# It now sorts last in the DB, but first in the object cache
 my $o = URT::Thing->get(2);
 $o->data('aaaa');
 
 # Create a new thing 
 my $new_obj= URT::Thing->create(name => 'Bobert', data => 'abc');
 
-$main::foobar = 1;
 my @o = URT::Thing->get('name like' => 'Bob%', -order => ['data']);
 is(scalar(@o), 3, 'Got 3 things with name like Bob%');
 
@@ -35,6 +33,29 @@ is($o[1], $new_obj, 'Second item in the list is the newly created Thing');
 is($o[2]->id, 4, 'thing_id == 4 is third in the list');
 is($o[2]->name, 'Bobby', 'its name is Bobby');
 is($o[2]->data, 'baz', 'its data is baz');
+
+
+# This originally sorted first.  Change it so it sorts last
+$o = URT::Thing->get(1);
+$o->data('zzz');
+
+$new_obj = URT::Thing->create(name => 'Joeseph', data => 'mmm');
+
+@o = URT::Thing->get('name like' => 'Joe%', -order => ['data']);
+is(scalar(@o), 3, 'Got three things with name like Joe%');
+
+is($o[0]->id, 5, 'thing_id == 5 is first in the list');
+is($o[0]->name, 'Joey', 'its name is Joey');
+is($o[0]->data, 'ccc', 'its data is ccc');
+
+is($o[1], $new_obj, 'Second item in the list is the newly created Thing');
+
+is($o[2]->id, 1, 'thing_id == 1 is third in the list');  # The changed thing
+is($o[2]->name, 'Joe', 'its name is Joe');
+is($o[2]->data, 'zzz', 'its data is zzz');
+
+
+
 
 # Remove the test DB
 unlink(URT::DataSource::SomeSQLite->server);
@@ -49,10 +70,11 @@ sub setup_classes_and_db {
        'Created things table');
 
     my $insert = $dbh->prepare('insert into things (thing_id, name, data) values (?,?,?)');
-    foreach my $row ( ( [1, 'Joe', 'bar'],
-                        [2, 'Bob', 'foo'],
+    foreach my $row ( ( [1, 'Joe', 'aaa'],
+                        [2, 'Bob', 'zzz'],
                         [3, 'Fred', 'quux'],
                         [4, 'Bobby', 'baz'],
+                        [5, 'Joey', 'ccc'],
                     )) {
         unless ($insert->execute(@$row)) {
             die "Couldn't insert a row into 'things': $DBI::errstr";

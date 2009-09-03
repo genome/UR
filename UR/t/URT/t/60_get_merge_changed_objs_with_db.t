@@ -4,21 +4,18 @@ use warnings;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-#use Test::More tests => 5;
-use Test::More skip_all => 'Known broken, will fix soon';
-
-$main::foobar=0;
-&setup_classes_and_db();
+use Test::More tests => 7;
 
 # This tests the scenario where we have several objects in the
 # DB that fulfills a get() request.  But before performing that
 # get(), we change one of the objects so that it will no longer
 # match the later get().
 
+&setup_classes_and_db();
+
 my $o = URT::Thing->get(thing_id => 2);
 $o->name('Fred');  # This shouldn't match the below query anymore
 
-$main::foobar=1;
 my @o = URT::Thing->get(name => 'Bob');
 
 is(scalar(@o), 1, 'Get returned 1 object');

@@ -36,6 +36,9 @@ our $cache_size_highwater;                    # high water mark for cache size. 
 our $cache_size_lowwater;                     # low water mark for cache size
 our $GET_COUNTER = 1;                         # This is where the serial number for the __get_serial key comes from
 
+our $object_fabricators = {};         # Maps object fabricator closures to the hashref of things they want to put into all_params_loaded
+our $loading_iterators = [];          # 
+
 # For bootstrapping.
 $UR::Context::current = __PACKAGE__;
 
@@ -1160,6 +1163,16 @@ sub get_objects_for_class_and_rule {
         };
 
         Sub::Name::subname('UR::Context::__loading_iterator(closure)__',$loading_iterator);
+        
+        bless $loading_iterator, 'UR::Context::loading_iterator_tracker';
+
+        # Add ourselves to the list of outstanding loading iterators.  The underlying
+        # context iterator will need to know these
+        push @$UR::Context::loading_iterators, [ $loading_iterator . '',  # force to a string so the list doesn't hold a real ref
+                                                 $rule,
+                                                 $object_sorter,
+                                                 $cached,
+                                               ];
     }
     
     if ($return_closure) {
@@ -1197,6 +1210,19 @@ sub get_objects_for_class_and_rule {
         return $results[0];
     }
 }
+
+sub UR::Context::loading_iterator_tracker::DESTROY {
+    my $count = scalar(@$UR::Context::loading_iterators);
+    for (my $i = 0; $i < $count; $i++) {
+        if ($_[0] eq $UR::Context::loading_iterators->[$i]->[0]) {
+            # That's me!
+            splice(@$UR::Context::loading_iterators, $i, 1);
+            return;
+        }
+    }
+    Carp::carp('A loading iterator went out of scope, but could not be found in the loading_iterators list');
+}
+            
 
 # A wrapper around the method of the same name in UR::DataSource::* to iterate over the
 # possible data sources involved in a query.  The easy case (a query against a single data source)
@@ -1602,6 +1628,10 @@ sub _create_secondary_loading_closures {
 }
 
 
+# This returns an iterator that is used to bring objects in from an underlying
+# context into this context.  It will not return any objects that already exist
+# in the current context, even if the $db_iterator returns a row that belongs
+# to an already-existing object
 sub _create_import_iterator_for_underlying_context {
     my ($self, $rule, $dsx, $this_get_serial) = @_; 
 
@@ -1893,15 +1923,27 @@ sub _create_import_iterator_for_underlying_context {
                 push @imported, $imported_object;
             }
             
-            foreach (@imported) {
+            $object = $imported[-1];
+            my $this_object_was_already_cached = defined($object) && ref($object) && exists($object->{'__get_serial'});
+
+            foreach my $obj (@imported) {
                 # The object importer will return undef for an object if no object
                 # got created for that $next_db_row, and will return a string if the object
                 # needs to be subclassed before being returned.  Don't put serial numbers on
                 # these
-                next unless (defined && ref);
-                $_->{'__get_serial'} = $this_get_serial;
+                next unless (defined($obj) && ref($obj));
+
+                $obj->{'__get_serial'} = $this_get_serial;
             }
-            $object = $imported[-1];
+
+            if ($this_object_was_already_cached) {
+                # Don't return objects that already exist in the current context
+                # FIXME - when we can stack contexts in the same application, and the 
+                # loaded context is recorded on the object, use that context as the
+                # test above instead of the existence of a __get_serial
+                $object = undef;
+                redo LOAD_AN_OBJECT;
+            }
             
             if ($re_iterate) {
                 # It is possible that one or more objects go into subclasses which require more
@@ -1925,7 +1967,7 @@ sub _create_import_iterator_for_underlying_context {
                     ($object) = $sub_iterator->();
                     if (! defined $object) {
                         # the newly subclassed object 
-                        redo;
+                        redo LOAD_AN_OBJECT;
                     }
                 
                 #unless ($object->id eq $id) {
@@ -1938,19 +1980,19 @@ sub _create_import_iterator_for_underlying_context {
             } # end of handling a possible subordinate iterator delegate
             
             unless ($object) {
-                redo;
+                redo LOAD_AN_OBJECT;
             }
             
             unless ($group_by) {
                 if ( (ref($object) ne $class_name) and (not $object->isa($class_name)) ) {
                     $object = undef;
-                    redo;
+                    redo LOAD_AN_OBJECT;
                 }
             }
             
             if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($object)) {
                 $object = undef;
-                redo;
+                redo LOAD_AN_OBJECT;
             }
             
         } # end of loop until we have a defined object to return
@@ -2188,7 +2230,7 @@ sub __create_object_fabricator_for_loading_template {
                 # No db_committed key.  This object was "create"ed 
                 # even though it existed in the database, and now 
                 # we've tried to load it.  Raise an error.
-                die "$class $pending_db_object_id has just been loaded, but it exists in the application as a new unsaved object!\n" . Data::Dumper::Dumper($pending_db_object) . "\n";
+                Carp::croak("$class $pending_db_object_id has just been loaded, but it exists in the application as a new unsaved object!\n" . Data::Dumper::Dumper($pending_db_object) . "\n");
             }
             
             # TODO move up
@@ -2203,7 +2245,6 @@ sub __create_object_fabricator_for_loading_template {
             #    #$pending_db_object = undef;
             #    #redo;
             #}
-            
         } # end handling objects which are already loaded
         else {
             # Handle the case in which the object is completely new in the current context.
