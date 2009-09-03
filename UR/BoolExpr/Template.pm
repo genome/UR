@@ -310,6 +310,8 @@ sub get {
     my @constant_values;
     @constant_values = UR::BoolExpr::Template->value_id_to_values($constant_value_id) if defined $constant_value_id;;
 
+    my $subject_class_meta = $subject_class_name->get_class_object;
+
     my @extra_params;
     if ($logic_type eq "And") {
         # TODO: move into subclass
@@ -327,7 +329,7 @@ sub get {
             $id_related = {};
             $id_translations = [];
             $id_pos = {};
-            for my $iclass ($subject_class_name, $subject_class_name->inheritance) {
+            for my $iclass ($subject_class_name, $subject_class_meta->ancestry_class_names) {
                 last if $iclass eq "UR::Object";
                 next unless $iclass->isa("UR::Object");
                 my $iclass_meta = $iclass->get_class_object;

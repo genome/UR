@@ -121,7 +121,7 @@ $DB::single=1;
                 my %id_properties = map { $_ => 1 } $class->id_property_names;
     
                 my $line_count = scalar @$attributes;
-                foreach my $property_name ( $class->instance_property_names ) {
+                foreach my $property_name ( $class->direct_property_names ) {
                     next if $attributes_already_in_diagram{$property_name};
                     $line_count++;
                     my $property = UR::Object::Property->get(class_name => $class->class_name, property_name => $property_name);
