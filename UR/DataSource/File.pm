@@ -915,7 +915,7 @@ sub _sync_database {
     }
 
     unless (flock($read_fh,LOCK_EX)) {
-        die $self->class(). ": Can't get exclusive lock for its file: $!";
+        Carp::croak($self->class(). ": Can't get exclusive lock for its file: $!");
     }
 
     # write headers to the new file
