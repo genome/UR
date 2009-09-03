@@ -765,7 +765,8 @@ sub _use_safe {
     # load, then the error message below just tells the user that "Compilation failed in require"
     # and isn't propogating the error message about what caused the compile to fail
     if ($@) {
-        Carp::confess("ERROR DYNAMICALLY LOADING CLASS $target_class from @INC\n$@");
+        #local $SIG{__DIE__};
+        die ("ERROR DYNAMICALLY LOADING CLASS $target_class\n$@");
     }
 
     return 1;
