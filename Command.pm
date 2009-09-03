@@ -183,7 +183,8 @@ sub create
     if (%extra) {
         $extra{bare_args} = delete $extra{" "};
     }
-    my $self = $class->SUPER::create($rule->params_list, %extra);
+    my @params_list = $rule->params_list;
+    my $self = $class->SUPER::create(@params_list, %extra);
     return unless $self;
 
     # set non-optional boolean flags to false.
