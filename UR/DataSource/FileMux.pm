@@ -30,11 +30,15 @@ sub _delegate_data_source_class {
     'UR::DataSource::File';
 }
 
+sub sql_fh {
+    return UR::DBI->sql_fh();
+}
 
 my %WORKING_RULES; # Avoid recusion when infering values from rules
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
+    
     if ($WORKING_RULES{$rule->id}++) {
         my $subject_class = $rule->subject_class_name;
         $self->error_message("Recursive entry into create_iterator_closure_for_rule() for class $subject_class rule_id ".$rule->id);
@@ -44,6 +48,11 @@ sub create_iterator_closure_for_rule {
 
     my $context = UR::Context->get_current;
     my $required_for_get = $self->required_for_get;
+
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        $self->sql_fh->print("FILEMux: Resolving values for ".scalar(@$required_for_get)." params\n");
+    }
+
     my @all_resolver_params;
     for(my $i = 0; $i < @$required_for_get; $i++) {
         my $param_name = $required_for_get->[$i];
@@ -62,6 +71,10 @@ sub create_iterator_closure_for_rule {
 
         if (@values == 1 and ref($values[0]) eq 'ARRAY') {
             @values = @{$values[0]};
+        }
+
+        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+            $self->sql_fh->print("    FILEMux: $param_name: (",join(',',@values),")\n");
         }
 
         unless ($rule->specifies_value_for_property_name($param_name)) {
@@ -108,6 +121,10 @@ sub create_iterator_closure_for_rule {
                     " returned undef for params " . join(',',@$resolver_params);
             }
 
+            if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+                $self->sql_fh->print("FILEMux: $file_path is data source $sub_ds_id\n");
+            }
+
             $concrete_ds_type->define(
                           id => $sub_ds_id,
                           %sub_ds_params,
@@ -137,8 +154,20 @@ sub create_iterator_closure_for_rule {
     }
     delete $WORKING_RULES{$rule->id};
 
+    my($monitor_start_time,$monitor_printed_first_fetch);
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        $monitor_start_time = Time::HiRes::time();
+        $monitor_printed_first_fetch = 0;
+    }
+
     # Results are coming from more than one data source.  Make an iterator encompassing all of them
     my $iterator = sub {
+        if ($monitor_start_time and ! $monitor_printed_first_fetch) {
+            $self->sql_fh->printf("FILEMux: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+            $monitor_printed_first_fetch = 1;
+        }
+        
+
         while (@data_source_iterators) {
             my $ds_iterator = $data_source_iterators[0]->{'ds_iterator'};
             my @constant_values = @{$data_source_iterators[0]->{'constant_values'}};
@@ -148,6 +177,11 @@ sub create_iterator_closure_for_rule {
                 return $thing;
             }
             shift @data_source_iterators;
+        }
+
+        if ($monitor_start_time) {
+            $self->sql_fh->printf("FILEMux: TOTAL EXECUTE-FETCH TIME: %.4f s\n",
+                                  Time::HiRes::time() - $monitor_start_time);
         }
 
         return;

@@ -48,7 +48,7 @@ sub get_default_handle {
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
             $sql_fh = UR::DBI->sql_fh();
             my $time = time();
-            $sql_fh->printf("\nCSV OPEN AT %d [%s]\n\n",$time, scalar(localtime($time)));
+            $sql_fh->printf("\nFILE OPEN AT %d [%s]\n",$time, scalar(localtime($time)));
         }
 
         my $filename = $self->server;
@@ -71,7 +71,7 @@ sub get_default_handle {
         $self->_invalidate_cache();
 
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
-            $sql_fh->printf("\nCSV: opened %s fileno %d\n\n",$self->server, $fh->fileno);
+            $sql_fh->printf("FILE: opened %s fileno %d\n\n",$self->server, $fh->fileno);
         }
 
         $self->{'_fh'} = $fh;
@@ -510,7 +510,7 @@ sub create_iterator_closure_for_rule {
             push @filters_list, $filter_string;
         }
         my $filter_list = join("\n\t", @filters_list);
-        $sql_fh->printf("\nCSV: %s\nFILTERS %s\n\n", $self->server, $filter_list);
+        $sql_fh->printf("\nFILE: %s\nFILTERS %s\n\n", $self->server, $filter_list);
     }
 
     unless ($matched_in_cache) {
@@ -527,12 +527,12 @@ sub create_iterator_closure_for_rule {
     my $iterator = sub {
 
         if ($monitor_start_time && ! $monitor_printed_first_fetch) {
-            $sql_fh->printf("CSV: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+            $sql_fh->printf("FILE: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
             $monitor_printed_first_fetch = 1;
         }
 
         if ($self->{'_last_read_fingerprint'} != $fingerprint) {
-            $sql_fh->printf("CSV: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
+            $sql_fh->printf("FILE: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
             #$fh->getline() if ($self->skip_first_line());
@@ -563,7 +563,7 @@ sub create_iterator_closure_for_rule {
                     $self->_invalidate_cache();
                  
                     if ($monitor_start_time) {
-                        $sql_fh->printf("CSV: at EOF\nCSV: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+                        $sql_fh->printf("FILE: at EOF\nFILE: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
                     }
 
                     return;
@@ -594,7 +594,7 @@ sub create_iterator_closure_for_rule {
                     $self->file_cache_index($file_cache_index);
 
                     if ($monitor_start_time) {
-                        $sql_fh->printf("CSV: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+                        $sql_fh->printf("FILE: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
                     }
 
                     return;
@@ -632,7 +632,7 @@ sub UR::DataSource::File::Tracker::DESTROY {
 	# file handle and undef it so get_default_handle() will re-open if necessary
         my $fh = $ds->{'_fh'};
 
-        $sql_fh->printf("CSV: CLOSING fileno ".fileno($fh)."\n") if ($ENV{'UR_DBI_MONITOR_SQL'});
+        $sql_fh->printf("FILE: CLOSING fileno ".fileno($fh)."\n") if ($ENV{'UR_DBI_MONITOR_SQL'});
 	$fh->close();
 	$ds->{'_fh'} = undef;
     }
