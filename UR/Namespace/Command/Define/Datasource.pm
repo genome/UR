@@ -12,6 +12,8 @@ UR::Object::Type->define(
     is => "UR::Namespace::Command",
 );
 
+sub sub_command_sort_position { 2 }
+
 sub help_brief {
    "Add a data source to the current namespace.";
 }

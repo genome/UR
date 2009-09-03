@@ -12,7 +12,9 @@ UR::Object::Type->define(
     is => "Command",
 );
 
-sub help_description {
+sub sub_command_sort_position { 1 }
+
+sub help_brief {
    "Write a new namespace module."
 }
 

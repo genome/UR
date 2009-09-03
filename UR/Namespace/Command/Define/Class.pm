@@ -13,6 +13,8 @@ class UR::Namespace::Command::Define::Class {
     doc => 'Add one or more classes to the current namespace'
 };
 
+sub sub_command_sort_position { 3 }
+
 sub help_synopsis {
     return <<'EOS'
 
