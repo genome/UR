@@ -20,8 +20,80 @@ UR::Object::Type->define(
     is_abstract => 1,
     has => [
         bare_args   => { is => 'ARRAY', is_optional => 1 },
+        is_executed => { is => 'Boolean' },
+        result      => { is => 'Scalar' },
     ]
 );
+
+sub _init_subclass {
+    my $subclass_name = $_[0];
+    no strict;
+    no warnings;
+    #$DB::single = 1;
+    my $sym_table = \%{ $subclass_name . '::'};
+    if ($sym_table->{execute}) {
+        $sym_table->{_execute_body} = delete $sym_table->{execute};        
+        #print "execute switched in $subclass_name\n";
+    }
+    else {
+        #print "no execute in $subclass_name\n";
+    }
+    return 1;
+}
+
+sub execute {
+    # This is a wrapper for real execute() calls.
+    # All execute() methods are turned into _execute_body at class init, 
+    # so this will get direct control when execute() is called. 
+    my $self = shift;
+
+    # TODO: handle calls to SUPER::execute() from another execute().    
+
+    # handle calls as a class method
+    my $was_called_as_class_method = 0;
+    if (ref($self)) {
+        if ($self->is_executed) {
+            Carp::confess("Attempt to re-execute an already executed command.");
+        }
+    }
+    else {
+        # called as class method
+        # auto-create an instance and execute it
+        $self = $self->create(@_);
+        return unless $self;
+        $was_called_as_class_method = 1;
+    }
+
+    # handle invalid objects before execute
+    if (my @problems = $self->invalid) {
+        $self->usage_message($self->help_usage_complete_text);
+        for my $problem (@problems) {
+            $self->error_message($problem->desc);
+        }
+        $self->delete() if $was_called_as_class_method;
+        return;
+    }
+
+    my $result = $self->_execute_body(@_);
+
+    $self->is_executed(1);
+    $self->result($result);
+
+    return $self if $was_called_as_class_method;
+    return $result;
+}
+
+sub _execute_body
+{    
+    # default implementation in the base class
+    my $self = shift;
+    my $class = ref($self) || $self;
+    if ($class eq __PACKAGE__) {
+        die "The execute() method is not defined for $_[0]!";
+    }
+    return 1;
+}
+
 
 #
 # Standard external interface for two-line wrappers
@@ -93,14 +165,6 @@ sub _execute_with_shell_params_and_return_exit_code
 
     $DB::single = 1;
     
-    if (my @problems = $command_object->invalid) {
-        $class->usage_message($delegate_class->help_usage_complete_text);
-        for my $problem (@problems) {
-            $command_object->error_message($problem->desc);
-        }
-        $command_object->delete();
-        return 1;
-    }
  
     my $rv = $command_object->execute($params);
 
@@ -139,15 +203,9 @@ sub create
 # Methods to override in concrete subclasses.
 #
 
-sub execute 
-{    
-    my $self = shift;
-    my $class = ref($self) || $self;
-    if ($class eq __PACKAGE__) {
-        die "The execute() method is not defined for $_[0]!";
-    }
-    return 1;
-}
+# Override "execute" or "_execute_body" to implement the body of the command.
+# See above for details of internal implementation.
+
 
 # Translates a true/false value from the command module's execute()
 # from Perl (where positive means success), to shell (where 0 means success)
@@ -222,7 +280,7 @@ sub is_abstract
 sub is_executable 
 {
     my $self = shift;
-    if ($self->can("execute") eq __PACKAGE__->can("execute")) {
+    if ($self->can("_execute_body") eq __PACKAGE__->can("_execute_body")) {
         return;
     }
     elsif ($self->is_abstract) {
