@@ -175,7 +175,7 @@ $DB::single=1;
             }
         } else {
             # Don't update the Meta datasource, unless they specificly asked for it
-            @target_data_sources = grep { $_ !~ /::Meta$/ } @namespace_data_sources;
+            @target_data_sources = grep { $_->id !~ /::Meta$/ } @namespace_data_sources;
         }
 
         # Some data sources can't handle the magic required for automatic class updating...
