@@ -2154,7 +2154,7 @@ sub __create_object_fabricator_for_loading_template {
                 # No db_committed key.  This object was "create"ed 
                 # even though it existed in the database, and now 
                 # we've tried to load it.  Raise an error.
-                die "$class $pending_db_object_id has just been loaded, but it exists in the application as a new unsaved object!\n" . Dumper($pending_db_object) . "\n";
+                die "$class $pending_db_object_id has just been loaded, but it exists in the application as a new unsaved object!\n" . Data::Dumper::Dumper($pending_db_object) . "\n";
             }
             
             # TODO move up

@@ -19,6 +19,7 @@ UR::Object::Type->define(
     ],
 );
 
+sub sub_command_sort_position { 4 };
 
 sub help_brief {
     "Update an Umlet diagram based on the current class definitions"

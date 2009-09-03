@@ -24,6 +24,208 @@ UR::Object::Type->define(
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
+sub _resolve_ddl_for_table {
+    my ($self,$table) = @_;
+
+    my $table_name = $table->table_name;    
+
+    my $ddl;
+    
+    if ($table->{db_committed}) {
+        #$ddl = "alter table $table_name ";
+    }
+    else {
+        my @columns = $table->columns;
+        for my $column (@columns) {
+            next unless $column->last_object_revision eq '-';
+            my $column_name = $column->column_name;
+            $ddl = 'create table ' . $table_name . "(\n" unless defined $ddl;
+            $ddl .= "\t$column_name " . $column->data_type;
+            if ($column->data_length) {
+                $ddl .= '(' . $column->data_length . ')';
+            }
+            $ddl .= ",\n" unless $column eq $columns[-1];
+        }
+        $ddl .= "\n)" if defined $ddl;
+    }
+
+    return $ddl;
+}
+
+sub generate_schema_for_class_meta {
+    my ($self,$class_meta,$temp) = @_;
+
+    # We now support on-the-fly database introspection
+    # this gets called with the temp flag when _sync_database realizes 
+    # it knows nothing about the table in question.
+    
+    # We basically presume the schema is the one we would have generated if
+    # TODO: We still need to presume foreign keys are constrained.
+    my $method = ($temp ? '__define__' : 'create'); 
+
+    my @defined;
+    for my $p ($class_meta->parent_class_metas) {
+        next if $p->class_name eq 'UR::Object';
+        next unless $p->class_name->isa("UR::Object");
+        my @new = $self->generate_schema_for_class_meta($p);
+        push @defined, @new;
+    }
+
+    my %properties_with_expected_columns = 
+        map { $_->column_name => $_ } 
+        grep { $_->column_name }
+        $class_meta->direct_property_metas;    
+
+    my $table_name = $class_meta->table_name;
+    unless ($table_name) {
+        if (my @column_names = keys %properties_with_expected_columns) {
+            die "class " . $class_meta->__display_name__ . " has no table_name specified for columns @column_names!";
+        }
+        else {
+            # no table, but no storable columns.  all ok.
+            return;
+        }
+    }
+
+    my %expected_constraints = 
+        map { $_->column_name => $_ } 
+        grep { $_->class_meta eq $class_meta }
+        map { $class_meta->property_meta_for_name($_) }
+        map { @{ $_->id_by } }
+        grep { $_->id_by }  
+        $class_meta->all_property_metas;    
+    
+    ## print "handling table $table_name\n";
+    
+    my $t = '-'; 
+
+    my $table = $self->refresh_database_metadata_for_table_name($table_name);
+ 
+    my %existing_columns;
+    if ($table) {
+        ## print "found table $table_name\n";
+        %existing_columns = 
+            map { $_->column_name => $_ } 
+            grep { $_->column_name }
+            $table->columns;
+    }
+    else {
+        ## print "adding table $table_name\n";
+        $table = UR::DataSource::RDBMS::Table->$method(
+            table_name  => $table_name,
+            data_source => $self->id,
+            owner => $self->owner,
+            remarks => $class_meta->doc,
+            er_type => 'entity',
+            last_object_revision => $t,
+            table_type => ($table_name =~ /\s/ ? 'view' : 'table'),
+        );
+        die unless $table;
+        push @defined, $table;
+    }
+
+    my ($update,$add,$extra) = _intersect_lists([keys %properties_with_expected_columns],[keys %existing_columns]);
+
+    for my $column_name (@$extra) {
+        $self->warning_message("unused table column: $table_name.$column_name\n");
+    }   
+   
+    for my $column_name (@$add) {
+        my $property = $properties_with_expected_columns{$column_name}; 
+        print "adding column $column_name\n";
+        my $column = UR::DataSource::RDBMS::TableColumn->$method(
+            column_name => $column_name,
+            table_name => $table->table_name,
+            data_source => $table->data_source,
+            namespace => $table->namespace,
+            owner => $table->owner, 
+            data_type => $self->object_to_db_type($property->data_type) || 'Text',
+            data_length => $property->data_length,
+            nullable => $property->is_optional,
+            remarks => $property->doc,
+            last_object_revision => $t, 
+        );
+        push @defined, $column;
+    }
+
+    for my $column_name (@$update) {
+        my $property = $properties_with_expected_columns{$column_name}; 
+        my $column = $existing_columns{$column_name};
+        ##print "updating column $column_name with data from property " . $property->property_name . "\n";
+        if ($column->data_type) {
+            $column->data_type($self->object_to_db_type($property->data_type)) if $property->data_type;
+        }
+        else {
+            $column->data_type($self->object_to_db_type($property->data_type) || 'Text');
+        }
+        $column->data_length($property->data_length);
+        $column->nullable($property->is_optional);
+        $column->remarks($property->doc);
+        $column->last_object_revision($t);
+    }
+
+    # handle missing meta datasource on the fly...
+    if (@defined) {
+        my $ns = $class_meta->namespace;
+        my $exists = UR::Object::Type->get($ns . "::DataSource::Meta");
+        unless ($exists) {
+            UR::DataSource::Meta->generate_for_namespace($ns);
+        }
+    }
+
+    my $ddl = $self->_resolve_ddl_for_table($table);
+    ##print "DDL2: $ddl\n";
+    $t = UR::Time->now;
+    if (defined($ddl)) {
+        my $dbh = $table->data_source->get_default_handle;
+        $dbh->do($ddl) or die "Failed to modify the database schema!";
+        for my $o ($table, $table->columns) {
+            $o->last_object_revision($t);
+        }
+    }
+
+    return @defined;
+}
+
+# why isn't something like this in List::Util?
+sub _intersect_lists {
+    my ($m,$n) = @_;
+    my %shared;
+    my %monly;
+    my %nonly;
+    @monly{@$m} = @$m;
+    for my $v (@$n) {
+        if ($monly{$v}) {
+            $shared{$v} = delete $monly{$v};
+        }    
+        else{
+            $nonly{$v} = $v;
+        }
+    }
+    return (
+        [ values %shared ],
+        [ values %monly ],
+        [ values %nonly ],
+    );
+}
+
+# override in architecture-oriented subclasses
+sub object_to_db_type {
+    my ($self, $object_type) = @_;
+    my $db_type = $object_type;
+    # ...
+    return $db_type;
+}
+
+# override in architecture-oriented subclasses
+sub db_to_object_type {
+    my ($self, $db_type) = @_;
+    my $object_type = $db_type;
+    # ...
+    return $object_type;
+}
+
+
 # FIXME - shouldn't this be a property of the class instead of a method?
 sub does_support_joins { 1 } 
 
@@ -407,7 +609,459 @@ sub rollback_to_savepoint {
     die "Class $class didn't supply rollback_to_savepoint, but can_savepoint is true";
 }
 
+sub refresh_database_metadata_for_table_name {
+    my ($self,$table_name) = @_;
 
+    my $data_source = $self;
+
+    my @column_objects;
+    my @all_constraints;
+
+    # this must be on or before the actual data dictionary queries
+    my $revision_time = UR::Time->now();
+
+    # TABLE
+    my $table_sth = $data_source->get_table_details_from_data_dictionary('%', $data_source->owner, $table_name, "TABLE,VIEW");
+    my $table_data = $table_sth->fetchrow_hashref();
+    unless ($table_data && %$table_data) {
+        $self->error_message("No data for table $table_name in data source $data_source.");
+        return;
+    }
+
+    my $data_source_id = $data_source->id;
+    my $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source_id,
+                                                         table_name => $table_name);
+    if ($table_object) {
+        # Already exists, update the existing entry
+        # Instead of deleting and recreating the table object (the old way),
+        # modify its attributes in-place.  The name can't change but all the other
+        # stuff might.
+        $table_object->table_type($table_data->{TABLE_TYPE});
+        $table_object->owner($table_data->{TABLE_SCHEM});
+        $table_object->data_source($data_source->class);
+        $table_object->remarks($table_data->{REMARKS});
+        $table_object->last_object_revision($revision_time) if ($table_object->__changes__());
+
+    } else {
+        # Create a brand new one from scratch
+
+        $table_object = UR::DataSource::RDBMS::Table->create(
+            table_name => $table_name,
+            table_type => $table_data->{TABLE_TYPE},
+            owner => $table_data->{TABLE_SCHEM},
+            data_source => $data_source_id,
+            remarks => $table_data->{REMARKS},
+            last_object_revision => $revision_time,
+        );
+        unless ($table_object) {
+            Carp::confess("Failed to get/create table object for $table_name");
+        }
+    }
+
+
+    # COLUMNS
+    # mysql databases seem to require you to actually put in the database name in the first arg
+    my $db_name = ($data_source->can('db_name')) ? $data_source->db_name : '%';
+    my $column_sth = $data_source->get_column_details_from_data_dictionary($db_name, $data_source->owner, $table_name, '%');
+    unless ($column_sth) {
+        $self->error_message("Error getting column data for table $table_name in data source $data_source.");
+        return;
+    }
+    my $all_column_data = $column_sth->fetchall_arrayref({});
+    unless (@$all_column_data) {
+        $self->error_message("No column data for table $table_name in data source $data_source_id");
+        return;
+    }
+    
+    my %columns_to_delete = map {$_->column_name, $_} UR::DataSource::RDBMS::TableColumn->get(table_name => $table_name,
+                                                                                              data_source => $data_source_id);
+    
+    
+    
+    for my $column_data (@$all_column_data) {
+
+        #my $id = $table_name . '.' . $column_data->{COLUMN_NAME}
+        $column_data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
+        $column_data->{'COLUMN_NAME'} = uc($column_data->{'COLUMN_NAME'});
+        
+        delete $columns_to_delete{$column_data->{'COLUMN_NAME'}};
+        
+        my $column_obj = UR::DataSource::RDBMS::TableColumn->get(table_name => $table_name,
+                                                                 data_source => $data_source_id,
+                                                                 column_name => $column_data->{'COLUMN_NAME'});
+        if ($column_obj) {
+            # Already exists, change the attributes
+            $column_obj->owner($table_object->{owner});
+            $column_obj->data_source($table_object->{data_source});
+            $column_obj->data_type($column_data->{TYPE_NAME});
+            $column_obj->nullable(substr($column_data->{IS_NULLABLE}, 0, 1));
+            $column_obj->data_length($column_data->{COLUMN_SIZE});
+            $column_obj->remarks($column_data->{REMARKS});
+            $column_obj->last_object_revision($revision_time) if ($column_obj->__changes__());
+
+        } else {
+            # It's new, create it from scratch
+            
+            $column_obj = UR::DataSource::RDBMS::TableColumn->create(
+                column_name => $column_data->{COLUMN_NAME},
+                table_name  => $table_object->{table_name},
+                owner       => $table_object->{owner},
+                data_source => $table_object->{data_source},
+        
+                data_type   => $column_data->{TYPE_NAME},
+                nullable    => substr($column_data->{IS_NULLABLE}, 0, 1),
+                data_length => $column_data->{COLUMN_SIZE},
+                remarks     => $column_data->{REMARKS},
+                last_object_revision => $revision_time,
+            );
+        }
+
+        unless ($column_obj) {
+            Carp::confess("Failed to create a column ".$column_data->{'COLUMN_NAME'}." for table $table_name");
+        }
+
+        push @column_objects, $column_obj;
+    }
+    
+    for my $to_delete (values %columns_to_delete) {
+        $self->status_message("Detected column " . $to_delete->column_name . " has gone away.");
+        $to_delete->delete;
+    }
+
+
+    my $bitmap_data = $data_source->get_bitmap_index_details_from_data_dictionary($table_name);
+    for my $index (@$bitmap_data) {
+        #push @{ $embed{bitmap_index_names}{$table_object} }, $index->{'index_name'};
+
+        my $column_object = UR::DataSource::RDBMS::TableColumn->is_loaded(
+            table_name => uc($index->{'table_name'}),
+            data_source => $data_source_id,
+            column_name => uc($index->{'column_name'}),
+        );
+    }
+
+    
+    # Make a note of what FKs exist in the Meta DB involving this table
+    my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
+                                                                  table_name => $table_name);
+    push @fks_in_meta_db, UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
+                                                                   r_table_name => $table_name);
+    my %fks_in_meta_db_by_fingerprint;
+    foreach my $fk ( @fks_in_meta_db ) {
+        my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+        $fks_in_meta_db_by_fingerprint{$fingerprint} = $fk;
+    }
+
+    # constraints on this table against columns in other tables
+   
+
+    my $db_owner = $data_source->owner;
+    my $fk_sth = $data_source->get_foreign_key_details_from_data_dictionary('', $db_owner, $table_name, '', '', '');
+
+    my %fk;     # hold the fk constraints that this
+                # invocation of foreign_key_info created
+
+    my @constraints;
+    my %fks_in_real_db;
+    if ($fk_sth) {
+        while (my $data = $fk_sth->fetchrow_hashref()) {
+            #push @$ref_fks, [@$data{qw(FK_NAME FK_TABLE_NAME)}];
+    
+            foreach ( qw( FK_TABLE_NAME UK_TABLE_NAME FK_NAME FK_COLUMN_NAME UK_COLUMN_NAME ) ) {
+                $data->{$_} = uc($data->{$_});
+            }
+
+            my $fk = UR::DataSource::RDBMS::FkConstraint->get(table_name => $data->{'FK_TABLE_NAME'},
+                                                              data_source => $data_source_id,
+                                                              fk_constraint_name => $data->{'FK_NAME'},
+                                                              r_table_name => $data->{'UK_TABLE_NAME'},
+                                                             );
+    
+            unless ($fk) {
+                # Postgres puts quotes around things that look like keywords
+                foreach ( $data->{'FK_TABLE_NAME'}, $data->{'UK_TABLE_NAME'}, $data->{'UK_TABLE_NAME'}, $data->{'UK_COLUMN_NAME'}) {
+                    s/"|'//g;
+                }
+
+                $fk = UR::DataSource::RDBMS::FkConstraint->create(
+                    fk_constraint_name => $data->{'FK_NAME'},
+                    table_name      => $data->{'FK_TABLE_NAME'},
+                    r_table_name    => $data->{'UK_TABLE_NAME'},
+                    owner           => $table_object->{owner},
+                    r_owner         => $table_object->{owner},
+                    data_source     => $table_object->{data_source},
+                    last_object_revision => $revision_time,
+                );
+    
+                $fk{$fk->id} = $fk;
+            }
+    
+            if ($fk{$fk->id}) {
+                my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get_or_create(
+                    fk_constraint_name => $data->{'FK_NAME'},
+                    table_name      => $data->{'FK_TABLE_NAME'},
+                    column_name     => $data->{'FK_COLUMN_NAME'},
+                    r_table_name    => $data->{'UK_TABLE_NAME'},
+                    r_column_name   => $data->{'UK_COLUMN_NAME'},
+                    owner           => $table_object->{owner},
+                    data_source     => $table_object->{data_source},
+                );
+                    
+            }
+    
+            my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+            $fks_in_real_db{$fingerprint} = $fk;
+
+            push @constraints, $fk;
+        }
+    }
+
+    # get foreign_key_info the other way
+    # constraints on other tables against columns in this table
+
+    my $fk_reverse_sth = $data_source->get_foreign_key_details_from_data_dictionary('', '', '', '', $db_owner, $table_name);
+
+    %fk = ();   # resetting this prevents data_source referencing
+                # tables from fouling up their fk objects
+
+
+    if ($fk_reverse_sth) {
+        while (my $data = $fk_reverse_sth->fetchrow_hashref()) {
+
+            foreach ( qw( FK_TABLE_NAME UK_TABLE_NAME FK_NAME FK_COLUMN_NAME UK_COLUMN_NAME ) ) {
+                $data->{$_} = uc($data->{$_});
+            }
+
+            my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $data->{'FK_NAME'},
+                                                              table_name => $data->{'FK_TABLE_NAME'},
+                                                              r_table_name => $data->{'UK_TABLE_NAME'},
+                                                              data_source => $table_object->{'data_source'},
+                                                            );
+            unless ($fk) {
+                # Postgres puts quotes around things that look like keywords
+                foreach ( $data->{'FK_TABLE_NAME'}, $data->{'UK_TABLE_NAME'}, $data->{'UK_TABLE_NAME'}, $data->{'UK_COLUMN_NAME'}) {
+                    s/"|'//g;
+                }
+
+                $fk = UR::DataSource::RDBMS::FkConstraint->create(
+                    fk_constraint_name => $data->{'FK_NAME'},
+                    table_name      => $data->{'FK_TABLE_NAME'},
+                    r_table_name    => $data->{'UK_TABLE_NAME'},
+                    owner           => $table_object->{owner},
+                    r_owner         => $table_object->{owner},
+                    data_source     => $table_object->{data_source},
+                    last_object_revision => $revision_time,
+                );
+                unless ($fk) {
+                    #$DB::single=1;
+                    1;
+                }
+                $fk{$fk->fk_constraint_name} = $fk;
+            }
+    
+            if ($fk{$fk->fk_constraint_name}) {
+                 UR::DataSource::RDBMS::FkConstraintColumn->get_or_create(
+                    fk_constraint_name => $data->{'FK_NAME'},
+                    table_name      => $data->{'FK_TABLE_NAME'},
+                    column_name     => $data->{'FK_COLUMN_NAME'},
+                    r_table_name    => $data->{'UK_TABLE_NAME'},
+                    r_column_name   => $data->{'UK_COLUMN_NAME'},
+                    owner           => $table_object->{owner},
+                    data_source     => $table_object->{data_source},
+                 );
+            }
+    
+                
+            my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+            $fks_in_real_db{$fingerprint} = $fk;
+
+            push @constraints, $fk;
+        }
+    }
+
+    # Find FKs still in the Meta db that don't exist in the real database anymore
+    foreach my $fingerprint ( keys %fks_in_meta_db_by_fingerprint ) {
+        unless ($fks_in_real_db{$fingerprint}) {
+            my $fk = $fks_in_meta_db_by_fingerprint{$fingerprint};
+            my @fk_cols = $fk->get_related_column_objects();
+            $_->delete foreach @fk_cols;
+            $fk->delete;
+        }
+    }
+
+    # get primary_key_info
+
+    my $pk_sth = $data_source->get_primary_key_details_from_data_dictionary(undef, $db_owner, $table_name);
+
+    if ($pk_sth) {
+		my @new_pk;
+        while (my $data = $pk_sth->fetchrow_hashref()) {
+            $data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
+            my $pk = UR::DataSource::RDBMS::PkConstraintColumn->get(
+                            table_name => $table_name,
+                            data_source => $data_source_id,
+                            column_name => $data->{'COLUMN_NAME'},
+                          );
+            if ($pk) {
+				# Since the rank/order is pretty much all that might change, we
+				# just delete and re-create these.
+				# It's a no-op at save time if there are no changes.
+            	$pk->delete;
+            }
+			
+			push @new_pk, [
+				table_name => $table_name,
+				data_source => $data_source_id,
+				owner => $data_source->owner,
+				column_name => $data->{'COLUMN_NAME'},
+				rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
+			];
+			#        $table_object->{primary_key_constraint_name} = $data->{PK_NAME};
+			#        $embed{primary_key_constraint_column_names} ||= {};
+			#        $embed{primary_key_constraint_column_names}{$table_object} ||= [];
+			#        push @{ $embed{primary_key_constraint_column_names}{$table_object} }, $data->{COLUMN_NAME};
+        }
+		
+		for my $data (@new_pk) {
+        	my $pk = UR::DataSource::RDBMS::PkConstraintColumn->create(@$data);
+			unless ($pk) {
+				$self->error_message("Failed to create primary key @$data");
+				return;
+			}
+		}			
+    }
+
+    ## Get the unique constraints
+    ## Unfortunately, there appears to be no DBI catalog
+    ## method which will find these.  So we have to use
+    ## some custom SQL
+    #
+    # The SQL that used to live here was moved to the UR::DataSource::Oracle
+    # and each other DataSource class needs its own implementation
+
+    # The above was moved into each data source's class
+    if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($table_name)) {
+        my %uc = %$uc;
+
+        # check for redundant unique constraints
+        # there may be both an index and a constraint
+
+        for my $uc_name_1 ( keys %uc ) {
+
+            my $uc_columns_1 = $uc{$uc_name_1}
+                or next;
+            my $uc_columns_1_serial = join ',', sort @$uc_columns_1;
+
+            for my $uc_name_2 ( keys %uc ) {
+                next if ( $uc_name_2 eq $uc_name_1 );
+                my $uc_columns_2 = $uc{$uc_name_2}
+                    or next;
+                my $uc_columns_2_serial = join ',', sort @$uc_columns_2;
+
+                if ( $uc_columns_2_serial eq $uc_columns_1_serial ) {
+                    delete $uc{$uc_name_1};
+                }
+            }
+        }
+
+        # compare primary key constraints to unique constraints
+        my $pk_columns_serial = join(',', sort map { $_->column_name }
+                                            UR::DataSource::RDBMS::PkConstraintColumn->get(data_source => $data_source_id,
+                                                                                           table_name => $table_name,
+                                                                                           owner => $data_source->owner,
+                                                                                         ));
+        for my $uc_name ( keys %uc ) {
+
+            # see if primary key constraint has the same name as
+            # any unique constraints
+            # FIXME - disabling this for now, the Meta DB dosen't track PK constraint names
+            # Isn't it just as goot to check the involved columns?
+            #if ( $table_object->primary_key_constraint_name eq $uc_name ) {
+            #    delete $uc{$uc_name};
+            #    next;
+            #}
+
+            # see if any unique constraints cover the exact same column(s) as
+            # the primary key column(s)
+            my $uc_columns_serial = join ',',
+                sort @{ $uc{$uc_name} };
+
+            if ( $pk_columns_serial eq $uc_columns_serial ) {
+                delete $uc{$uc_name};
+            }
+        }
+
+        # Create new UniqueConstraintColumn objects for the columns that don't exist, and delete the
+        # objects if they don't apply anymore
+        foreach my $uc_name ( keys %uc ) {
+            my %constraint_objs = map { $_->column_name => $_ } UR::DataSource::RDBMS::UniqueConstraintColumn->get(
+                                                                            data_source => $data_source_id,
+                                                                            table_name => $table_name,
+                                                                            owner => $data_source->owner || '',
+                                                                            constraint_name => $uc_name,
+                                                                          );
+    
+            foreach my $col_name ( @{$uc{$uc_name}} ) {
+                if ($constraint_objs{$col_name} ) {
+                    delete $constraint_objs{$col_name};
+                } else {
+                    my $uc = UR::DataSource::RDBMS::UniqueConstraintColumn->create(
+                                                   data_source => $data_source_id,
+                                                   table_name => $table_name,
+                                                   owner => $data_source->owner,
+                                                   constraint_name => $uc_name,
+                                                   column_name => $col_name,
+                                              );
+                     1;
+                }
+            } 
+            foreach my $obj ( values %constraint_objs ) {
+                $obj->delete();
+            }
+        }
+    }
+
+    # Now that all columns know their foreign key constraints,
+    # have the column objects resolve the various names
+    # associated with the column.
+
+    #for my $col (@column_objects) { $col->resolve_names }
+
+    # Determine the ER type.
+    # We have 'validation item', 'entity', and 'bridge'
+
+    my $column_count = scalar($table_object->column_names) || 0;
+    my $pk_column_count = scalar($table_object->primary_key_constraint_column_names) || 0;
+    my $constraint_count = scalar($table_object->fk_constraint_names) || 0;
+
+    if ($column_count == 1 and $pk_column_count == 1)
+    {
+        $table_object->er_type('validation item');
+    }
+    else
+    {
+        if ($constraint_count == $column_count)
+        {
+            $table_object->er_type('bridge');
+        }
+        else
+        {
+            $table_object->er_type('entity');
+        }
+    }
+
+    return $table_object;
+}
+
+sub _make_foreign_key_fingerprint {
+    my($self,$fk) = @_;
+
+    my @fk_cols = sort {$a->column_name cmp $b->column_name} $fk->get_related_column_objects();
+    my $fingerprint = join(':', $fk->table_name,
+                                $fk->r_table_name,
+                                map { $_->column_name, $_->r_column_name } @fk_cols);
+    return $fingerprint;
+}
 
 # Derived classes should define a method to return a ref to an array of hash refs
 # describing all the bitmap indicies in the DB.  Each hash ref should contain
@@ -890,6 +1544,15 @@ sub _sync_database {
     for my $table_name (keys %all_tables) {
         my $table_object = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
                            UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
+
+        unless ($table_object) {
+            warn "looking up schema for RDBMS table $table_name...\n";
+            $table_object = $self->refresh_database_metadata_for_table_name($table_name);
+            unless ($table_object) {
+                die "Failed to generate table data for $table_name!";
+            }
+        }
+
         if (my @bitmap_index_names = $table_object->bitmap_index_names) {
             my $changes;
             if ($changes = $insert{$table_name} or $changes = $delete{$table_name}) {

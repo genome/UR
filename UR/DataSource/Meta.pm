@@ -20,13 +20,132 @@ sub _resolve_class_name_for_table_name_fixups {
         $_[0] = "DataSource::RDBMS::";
     }
 
-    #return $self->class . "::", @_;
     return @_;
 }
 
 # Do a DB dump at commit time
-sub dump_on_commit {
+sub dump_on_commit { 1; }
+
+# This is the template for the schema:
+our $METADATA_DB_SQL =<<EOS;
+CREATE TABLE IF NOT EXISTS dd_bitmap_index (
+    data_source varchar NOT NULL,
+    owner varchar,
+    table_name varchar NOT NULL,
+    bitmap_index_name varchar NOT NULL,
+    PRIMARY KEY (data_source, owner, table_name, bitmap_index_name)
+);
+CREATE TABLE IF NOT EXISTS dd_fk_constraint (
+    data_source varchar NOT NULL,
+    owner varchar,
+    r_owner varchar,
+    table_name varchar NOT NULL,
+    r_table_name varchar NOT NULL,
+    fk_constraint_name varchar NOT NULL,
+    last_object_revision timestamp NOT NULL,
+    PRIMARY KEY(data_source, owner, r_owner, table_name, r_table_name, fk_constraint_name)
+);
+CREATE TABLE IF NOT EXISTS dd_fk_constraint_column (
+    fk_constraint_name varchar NOT NULL,
+    data_source varchar NOT NULL,
+    owner varchar NOT NULL,
+    table_name varchar NOT NULL,
+    r_table_name varchar NOT NULL,
+    column_name varchar NOT NULL,
+    r_column_name varchar NOT NULL,
+
+    PRIMARY KEY(data_source, owner, table_name, fk_constraint_name, column_name)
+);
+CREATE TABLE IF NOT EXISTS dd_pk_constraint_column (
+    data_source varchar NOT NULL,
+    owner varchar,
+    table_name varchar NOT NULL,
+    column_name varchar NOT NULL,
+    rank integer NOT NULL,
+    PRIMARY KEY (data_source,owner,table_name,column_name,rank)
+);
+CREATE TABLE IF NOT EXISTS dd_table (
+     data_source varchar NOT NULL,
+     owner varchar,
+     table_name varchar NOT NULL,
+     table_type varchar NOT NULL,
+     er_type varchar NOT NULL,
+     last_ddl_time timestamp,
+     last_object_revision timestamp NOT NULL,
+     remarks varchar,
+     PRIMARY KEY(data_source, owner, table_name)
+);
+CREATE TABLE IF NOT EXISTS dd_table_column (
+    data_source varchar NOT NULL,
+    owner varchar,
+    table_name varchar NOT NULL,
+    column_name varchar NOT NULL,
+    data_type varchar NOT NULL,
+    data_length varchar,
+    nullable varchar NOT NULL,
+    last_object_revision timestamp NOT NULL,
+    remarks varchar,
+    PRIMARY KEY(data_source, owner, table_name, column_name)
+);
+CREATE TABLE IF NOT EXISTS dd_unique_constraint_column (
+    data_source varchar NOT NULL,
+    owner varchar,
+    table_name varchar NOT NULL,
+    constraint_name varchar NOT NULL,
+    column_name varchar NOT NULL,
+    PRIMARY KEY (data_source,owner,table_name,constraint_name,column_name)
+);
+EOS
+
+our $module_template=<<EOS;
+package %s;
+
+use warnings;
+use strict;
+
+use UR;
+
+%s
+
 1;
+EOS
+
+# This is a bit ugly until the db cache is symmetrical with the other transactional stuff
+# It is run by the "ur update schema" command 
+sub generate_for_namespace {
+    my $class = shift;
+    my $namespace_name = shift;
+    
+    my $namespace_path = $namespace_name->__meta__->module_path();
+
+    my $meta_datasource_name = $namespace_name . '::DataSource::Meta';
+    my $meta_datasource = UR::Object::Type->define(
+        class_name => $meta_datasource_name, 
+        is => 'UR::DataSource::Meta',
+        is_abstract => 0,
+    );
+    my $meta_datasource_src = $meta_datasource->resolve_module_header_source();
+    my $meta_datasource_filename = $meta_datasource->module_base_name();
+
+    my $meta_datasource_filepath = $namespace_path;
+    $meta_datasource_filepath =~ s/.pm//;
+    $meta_datasource_filepath .= '/DataSource';
+    mkdir($meta_datasource_filepath);
+    unless (-d $meta_datasource_filepath) {
+        die "Failed to create directory $meta_datasource_filepath: $!";
+    } 
+    $meta_datasource_filepath .= '/Meta.pm';
+ 
+    # Write the Meta DB datasource Module
+    my $fh = IO::File->new("> $meta_datasource_filepath");
+    unless ($fh) { die "Failed to create $meta_datasource_filepath: $!" };
+    $fh->printf($module_template, $meta_datasource_name, $meta_datasource_src);
+
+    # Write the skeleton SQLite file
+    my $meta_db_file = $meta_datasource->class_name->_data_dump_path;
+    IO::File->new(">$meta_db_file")->print($UR::DataSource::Meta::METADATA_DB_SQL);
+    
+    return ($meta_datasource, $meta_db_file);
 }
 
 1;
@@ -50,19 +169,8 @@ UR::DataSource::Meta - Data source for the MetaDB
 
 =head1 DESCRIPTION
 
-UR::DataSource::Meta is a datasource that encompases all the MetaDBs in
-the system.  All the MetaDB object types (L<UR::DataSource::RDBMS::Table>,
-L<UR::DataSource::RDBMS::TableColumn>, etc) have UR::DataSource::Meta
-as their data source.
-
-Internally, the Context looks at the get() parameters for these MetaDB
-classes, and switches to other Meta data sources to fulfil the request.
-Table information for the MyApp namespace is stored in the
-MyApp::DataSource::Meta data source.  Information about the MetaDB schema
-is stored in the UR::DataSource::Meta data source.
-
-The MetaDB is a SQLite database stored in the same directory as the Meta.pm
-file implementing the data source.
+UR::DataSource::Meta a datasource that contains all table/column meta
+data for the UR namespace itself.  Essentially the schema schema.
 
 =head1 INHERITANCE
 

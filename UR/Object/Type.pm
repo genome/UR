@@ -9,7 +9,6 @@ UR::Object::Class->define(
     english_name => 'entity type',
     id_properties => ['class_name'],
     properties => [
-        type_name                        => { type => 'VARCHAR2', len => 64 },
         class_name                       => { type => 'VARCHAR2', len => 64, is_optional => 1 },
         data_source                      => { type => 'VARCHAR2', len => 64, is_optional => 1 },
         doc                              => { type => 'VARCHAR2', len => 64, is_optional => 1 },
@@ -22,6 +21,7 @@ UR::Object::Class->define(
         short_name                       => { type => 'VARCHAR2', len => 16, is_optional => 1 },
         source                           => { type => 'VARCHAR2', len => 64, is_optional => 1 },
         table_name                       => { type => 'VARCHAR2', len => 64, is_optional => 1 },
+        ....BLAH...
     ],
     unique_constraints => [
         { properties => [qw/class_name/], sql => 'SUPER_FAKE_O2' },
@@ -62,6 +62,11 @@ our $bootstrapping = 1;
 our @partially_defined_classes;
 our $pwd_at_compile_time = cwd();
 
+sub property_metas {
+    my $self = $_[0];
+    my @a = map { $self->property_meta_for_name($_) } $self->all_property_names;    
+    return @a;
+}
 
 # Some accessor methods drawn from properties need to be overridden.
 # Some times because they need to operate during bootstrapping.  Sometimes

@@ -550,6 +550,13 @@ Next, define a data source representing your database, CdExample/DataSource/DB1.
     
     1;
 
+    or to get something going quickly, SQLite has smart defaults...
+
+    class CdExample::DataSource::DB1 {
+        is => 'UR::DataSource::SQLite',
+    };
+    
+
 Create a class to represent artists, who have many CDs, in CdExample/Artist.pm
 
     package CdExample::Artist;
@@ -584,53 +591,62 @@ Create a class to represent CDs, in CdExample/Cd.pm
     };
     1;
 
-You can then use these classes in your application code
+If the database existed already, you could have done this to get it to write the last 2 classes: 
 
-    # Enables auto-loading for modules in this Namespace
+  cd CdExample;
+  ur update classes
+
+If the database does not exist, you can run this to generate the tables and columns from the classes you've written
+(very experimental):
+
+  cd CdExample
+  ur update schema
+
+You can then use these classes in your application code:
+
+    # Using the namespace enables auto-loading of modules upon first attempt to call a method
     use CdExample;  
     
-    # this would get back all Artist objects
+    # This would get back all Artist objects:
     my @all_artists = CdExample::Artist->get();
 
-    # after the above, further requests would be cached
+    # After the above, further requests would be cached
     # if that set were large though, you might want to iterate gradually:
     my $artist_iter = CdExample::Artist->create_iterator();
 
     # Get the first object off of the iterator
     my $first_artist = $artist_iter->next();
 
-    # Get all the CDs published in 2007
-    my @cds_2007 = CdExample::Cd->get(year => 2007);
-    
-    # Get a list of Artist objects where the name starts with 'John'
-    my @some_artists = CdExample::Artist->get(
-        name => { operator => 'like', value => 'John%' }
+    # Get all the CDs published in 2007 for the first artist
+    my @cds_2007 = CdExample::Cd->get(year => 2007, artist => $first_artist);
+   
+    # Use non-equality operators:
+    my @same_some_artists = CdExample::Artist->get(
+        'name like' => 'John%',
+        'year between' => ['2004','2009']
     );
 
-    # Alternate syntax for non-equality operators
-    my @same_some_artists = CdExample::Artist->get('name like' => 'John%');
-    
     # This will use a JOIN with the ARTISTS table internally to filter
     # the data in the database.  @some_cds will contain CdExample::Cd objects.
     # As a side effect, related Artist objects will be loaded into the cache
-    my @some_cds = CdExample::Cd->get(i
+    my @some_cds = CdExample::Cd->get(
         year => '2001', 
-        artist_name => { operator => 'like', value => 'Bob%' }
+        'artist_name like' => 'Bob%' 
     );
 
+    # These values would be cached...
     my @artists_for_some_cds = map { $_->artist } @some_cds;
     
     # This will use a join to prefetch Artist objects related to the
-    # Cds that match the filter
+    # objects that match the filter
     my @other_cds = CdExample::Cd->get(
-        title => { operator => 'like',
-        value => '%White%' },
+        'title like' => '%White%',
         -hints => ['artist']
     );
     my $other_artist_0 = $other_cds[0]->artist;  # already loaded so no query
     
-    # create() instantiates a new object in the cache, but does not save 
-    # it in the database.  It will autogenerate its own cd_id
+    # create() instantiates a new object in the current "context", but does not save 
+    # it in the database.  It will autogenerate its own cd_id:
     my $new_cd = CdExample::Cd->create(
         title => 'Cool Album',
         year  => 2009
