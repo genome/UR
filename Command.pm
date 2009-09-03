@@ -10,8 +10,10 @@ use Term::ANSIColor;
 
 use UR::Object::Type;
 
-binmode STDOUT, ":utf8";
-binmode STDERR, ":utf8";
+eval {
+    binmode STDOUT, ":utf8";
+    binmode STDERR, ":utf8";
+};
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
