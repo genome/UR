@@ -226,6 +226,10 @@ sub _get_joins {
                     my $foreign_class = $self->data_type;
                     my $foreign_class_meta = $foreign_class->get_class_object;
                     my $foreign_property_via = $foreign_class_meta->get_property_meta_by_name($reverse_id_by);
+                    unless ($foreign_property_via) {
+                        Carp::confess("No property '$reverse_id_by' in class $foreign_class, needed to resolve property '" .
+                                      $self->property_name . "' of class " . $self->class_name);
+                    }
                     @joins = reverse $foreign_property_via->_get_joins();
                     for (@joins) { 
                         @$_{@new} = @$_{@old};
