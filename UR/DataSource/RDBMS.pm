@@ -2052,7 +2052,16 @@ sub _generate_template_data_for_loading {
             $join->{object_num} = 1 if not defined $join->{object_num};
             
             my $source_class_name = $join->{source_class};
-            my $source_class_object = $source_class_name->get_class_object;                    
+            my $source_class_object = $join->{'source_class_meta'} || $source_class_name->get_class_object;                    
+
+            my $foreign_class_name = $join->{foreign_class};
+            my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->get_class_object;
+            my($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
+            if ($foreign_data_source ne $self) {
+                # FIXME - do something smarter in the future where it can do a join-y thing in memory
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+                next DELEGATED_PROPERTY;
+            }
 
             my @source_property_names = @{ $join->{source_property_names} };
             #print "\tlast props @source_property_names\n";
@@ -2072,8 +2081,6 @@ sub _generate_template_data_for_loading {
 
             #print "source column names are @source_table_and_column_names for $property_name\n";            
 
-            my $foreign_class_name = $join->{foreign_class};
-            my $foreign_class_object = UR::Object::Type->get(class_name => $foreign_class_name);
             my $foreign_table_name = $foreign_class_object->table_name; # TODO: switch to "base 'from' expr"
 
             unless ($foreign_table_name) {
