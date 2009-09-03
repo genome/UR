@@ -429,11 +429,6 @@ sub generate_support_class_for_extension {
     my %id_property_names = map { $_ => 1 } @id_property_names;
     
     if ($extension_for_support_class eq 'Ghost') {
-        if ($subject_class_name eq 'URT::Person::Type') {
-            $DB::single = 1;    
-            print "";
-        }
-        
         my %class_params = map { $_ => $subject_class_obj->$_ } $subject_class_obj->property_names;
         delete $class_params{generated};
         delete $class_params{sub_classification_property_name};
@@ -583,6 +578,15 @@ sub _load {
 
     for (my $suffix_pos = $#parts; $suffix_pos >= 0; $suffix_pos--)
     {
+        $class_obj = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
+        if ($class_obj) {
+            # the class was somehow generated while we were checking other classes for it and failing.
+            # this can happen b/c some class with a name which is a subset of the one we're looking
+            # for might "use" the one we want.
+            $DB::single = 1;
+            return $class_obj if $class_obj;
+        } 
+
         my $base   = join("::", @parts[0 .. $suffix_pos-1]);
         my $suffix = join("::", @parts[$suffix_pos..$#parts]);
 
@@ -593,6 +597,7 @@ sub _load {
         # Acme::Equipment.
         my $full_base_class_name = $prefix . ($base ? "::" . $base : "");
         my $base_class_obj = UR::Object::Type->get(class_name => $full_base_class_name);
+
         if ($base_class_obj)
         {
             # If so, that class may be able to generate a support
