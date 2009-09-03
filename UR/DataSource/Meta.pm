@@ -7,7 +7,6 @@ use strict;
 use warnings;
 
 use UR;
-use File::Copy qw//;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::Meta',
