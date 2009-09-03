@@ -191,6 +191,7 @@ sub get_composite_id_decomposer {
                 }
                 else {
                     # Regular scalar ID.
+                    no warnings 'uninitialized';  # $_[0] can be undef in some cases...
                     return split($separator,$_[0])  
                 }
             };
