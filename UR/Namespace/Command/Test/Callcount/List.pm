@@ -37,7 +37,7 @@ class Test::Callcount::List::Items {
 class UR::Namespace::Command::Test::Callcount::List {
     is => 'UR::Object::Command::List',
     has => [
-        file => { is => 'String', doc => 'Specify the .callcount file' },
+        file => { is => 'String', doc => 'Specify the .callcount file', default_value => '/dev/null' },
         subject_class_name => { is_constant => 1, value => 'Test::Callcount::List::Items' },
         show => { default_value => 'count,subname,subloc,callers' },
 #        filter => { default_value => '' },
@@ -47,40 +47,18 @@ class UR::Namespace::Command::Test::Callcount::List {
 };
 
 
-
-sub create {
-    my $class = shift;
-
-    $DB::single=1;
-
-    my $self = $class->SUPER::create(@_);
+sub _fetch {
+    my $self = shift;
 
     my $filename = $self->file;
     unless (-r $filename ) {
         $self->error_message("File $filename does not exist or is not readable");
-        $self->delete;
         return;
     }
-
     $TheFile = $filename;
-    #my $ds = UR::Namespace::Command::Test::Callcount::List::DataSource->get();
-    #my $ds = UR::DataSource::File->create(
-    #             id => 'UR::Namespace::Command::Test::Callcount::List::DataSource',
-    #             server => $filename,
-    #         );
 
-    #my $ds = UR::DataSource->get('Test::Callcount::List::DataSource');
-    #unless ($ds) {
-    #    $self->error_message("Internal error: Can't create data source for the data file");
-    #    $self->delete;
-    #    return;
-    #}
-    ## HACK - server is an immutable property
-    #$ds->{'_fh'} = undef;
-    #$ds->{'_cached_server'} = undef;
-    #$ds->{'server'} = $self->file;
-
-    return $self;
+    $self->SUPER::_fetch(@_);
 }
+
 
 1;
