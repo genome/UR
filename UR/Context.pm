@@ -425,26 +425,47 @@ sub _get_template_data_for_loading {
             $operator ||= '=';  # FIXME - shouldn't the template return this for us?
             push @secondary_params, $delegated_property->to . ' ' . $operator;
 
+            my $class_meta = UR::Object::Type->get(class_name => $delegated_property->class_name);
             unless ($secondary_class) {
-                my $relation_property = UR::Object::Property->get(class_name => $delegated_property->class_name,
-                                                                  property_name => $delegated_property->via);
+                my $relation_property = $class_meta->get_property_meta_by_name($delegated_property->via);
      
                 $secondary_class ||= $relation_property->data_type;
             }
 
             # we can also add in any properties in the property's joins that also appear in the rule
-            if (@{$delegated_property->{'_get_joins'}} > 1) {
-                # What does it mean if there's more than one thing in here?
-                die sprintf("Property %s of class %s has more than one item in _get_joins.  I don't know what to do",
-                            $delegated_property->property_name, $delegated_property->class_name);
-            }
-                    
+
             my $reference = UR::Object::Reference->get(class_name => $delegated_property->class_name,
                                                        delegation_name => $delegated_property->via);
+            my $reverse = 0;
+            unless ($reference) {
+                # Reference objects are only created for forward-linking properties.  
+                # Maybe this is a reverse_id_by-type property?  Try the joins data structure...
+                my @joins = $delegated_property->_get_joins;
+                foreach my $join ( @joins ) {
+                    my @references = UR::Object::Reference->get(class_name   => $join->{'foreign_class'},
+                                                                r_class_name => $join->{'source_class'});
+                    if (@references == 1) {
+                        $reverse = 1;
+                        $reference = $references[0];
+                        last;
+                    } elsif (@references) {
+                        Carp::confess(sprintf("Don't know what to do with more than one %d Reference objects between %s and %s",
+                                               scalar(@references), $delegated_property->class_name, $join->{'foreign_class'}));
+                    }
+                }
+                unless ($reference) {
+                    # FIXME - should we just next instead of dying?
+                    my $linking_property = $class_meta->get_property_meta_by_name($delegated_property->via);
+                    Carp::confess(sprintf("No Reference link found between %s and %s", $delegated_property->class_name, $linking_property->data_type));
+                }
+            }
+
+                
             my @ref_properties = $reference->get_property_links();
+            my $property_getter = $reverse ? 'r_property_name' : 'property_name'; 
             foreach my $ref_property ( @ref_properties ) {
-                next if ($seen_properties{$ref_property->property_name});
-                my $ref_property_name = $ref_property->property_name;
+                next if ($seen_properties{$ref_property->$property_getter});
+                my $ref_property_name = $ref_property->$property_getter;
                 next unless ($rule_template->specifies_value_for_property_name($ref_property_name));
 
                 my $ref_operator = $rule_template->operator_for_property_name($ref_property_name);
@@ -485,10 +506,29 @@ sub _create_secondary_rule_from_primary {
 
         my $reference = UR::Object::Reference->get(class_name => $property->class_name,
                                                    delegation_name => $property->via);
+        my $reverse = 0;
+        unless ($reference) {
+            # FIXME - this code is almost exactly like the code in _get_template_data_for_loading
+            my @joins = $property->_get_joins;
+            foreach my $join ( @joins ) {
+                my @references = UR::Object::Reference->get(class_name   => $join->{'foreign_class'},
+                                                            r_class_name => $join->{'source_class'});
+                if (@references == 1) {
+                    $reverse = 1;
+                    $reference = $references[0];
+                    last;
+                } elsif (@references) {
+                    Carp::confess(sprintf("Don't know what to do with more than one %d Reference objects between %s and %s",
+                                           scalar(@references), $property->class_name, $join->{'foreign_class'}));
+                }
+            }
+        }
         next unless $reference;
+
         my @ref_properties = $reference->get_property_links();
+        my $property_getter = $reverse ? 'r_property_name' : 'property_name';
         foreach my $ref_property ( @ref_properties ) {
-            my $ref_property_name = $ref_property->property_name;
+            my $ref_property_name = $ref_property->$property_getter;
             next if ($seen_properties{$ref_property_name}++);
             $value = $primary_rule->specified_value_for_property_name($ref_property_name);
             next unless $value;
@@ -572,6 +612,7 @@ sub _create_secondary_loading_closures {
         my $this_ds_delegations = shift @addl_loading_info;
         my $secondary_rule_template = shift @addl_loading_info;
 
+$DB::single=1;
         my $secondary_rule = $self->_create_secondary_rule_from_primary (
                                               $rule,
                                               $this_ds_delegations,
@@ -1049,7 +1090,7 @@ sub _create_object_fabricator_for_loading_template {
     my %initial_object_data;
     if ($loading_template->{constant_property_names}) {
         my @constant_property_names  = @{ $loading_template->{constant_property_names} };
-        my @constant_property_values = @{ $loading_template->{constant_property_values} };
+        my @constant_property_values = map { $rule->specified_value_for_property_name($_) } @constant_property_names;
         @initial_object_data{@constant_property_names} = @constant_property_values;
     }
 
@@ -1724,9 +1765,22 @@ sub _get_objects_for_class_and_rule_from_cache {
             return @matches;
         }
         elsif ($strategy eq "index") {
+            # FIXME - optimize by using the rule (template?)'s param names directly to get the
+            # index id instead of re-figuring it out each time
+
+            my $class_meta = UR::Object::Type->get($rule->subject_class_name);
             my %params = $rule->params_list;
+            my $should_evaluate_later;
             for my $key (keys %params) {
                 delete $params{$key} if substr($key,0,1) eq '-' or substr($key,0,1) eq '_';
+                my $prop_meta = $class_meta->get_property_meta_by_name($key);
+                if ($prop_meta && $prop_meta->is_many) {
+                    # These indexes perform poorly in the general case if we try to index
+                    # the is_many properties.  Instead, strip them out from the basic param
+                    # list, and evaluate the superset of indexed objects through the rule
+                    $should_evaluate_later = 1;
+                    delete $params{$key};
+                }
             }
             
             my @properties = sort keys %params;
@@ -1765,8 +1819,11 @@ sub _get_objects_for_class_and_rule_from_cache {
                 return @matches;
             }
             
-            return $index->get_objects_matching(@values);
-            #return $index->get_objects_matching_rule($rule);  # Hrm bootstrapping doesn't work with this :(
+            if ($should_evaluate_later) {
+                return grep { $rule->evaluate($_) } $index->get_objects_matching(@values);
+            } else {
+                return $index->get_objects_matching(@values);
+            }
         }
     };
         
