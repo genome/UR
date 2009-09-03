@@ -23,6 +23,9 @@ UR::Object::Type->define(
         time              => { is => 'Boolean', doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
         long              => { is => 'Boolean', doc => 'Run tests including those flagged as long',                                          is_optional => 1                       },
         list              => { is => 'Boolean', doc => 'List the tests, but do not actually run them.'                                                                              },
+        noisy             => { is => 'Boolean', doc => "doesn't redirect stdout",is_optional => 1},
+
+        perl_opts         => { is => 'String',  doc => 'Override options to the Perl interpreter when running the tests (-d:Profile, etc.)', is_optional => 1, default_value => ''  }, 
         cover             => { is => 'List',    doc => 'Cover only this(these) modules',                                                     is_optional => 1                       },
         cover_svn_changes => { is => 'Boolean', doc => 'Cover modules modified in svn status',                                               is_optional => 1                       },
         cover_svk_changes => { is => 'Boolean', doc => 'Cover modules modified in svk status',                                               is_optional => 1                       },
@@ -52,6 +55,7 @@ EOS
 }
 
 sub execute {
+
     $DB::single = 1;
     my $self = shift;
     my $lib_path = $self->lib_path;
@@ -63,21 +67,21 @@ sub execute {
     if ($self->coverage()) {
         $ENV{'HARNESS_PERL_SWITCHES'} = '-MDevel::Cover';
     }
-    
+
     # nasty parsing of command line args
     # this may no longer be needed..
     my @tests = @{ $self->bare_args || [] }; 
-    
+
     if ($self->recurse) {
         if (@tests) {
             $self->error_message("Cannot currently combine the recurse option with a specific test list.");
             return;
         }
         File::Find::find(sub {
-            if ($File::Find::name =~ /\.t$/ and not -d $File::Find::name) {
-                push @tests, $File::Find::name;
-            }
-        }, $working_path);
+                if ($File::Find::name =~ /\.t$/ and not -d $File::Find::name) {
+                    push @tests, $File::Find::name;
+                }
+            }, $working_path);
         chomp @tests;
         @tests = sort @tests;
     }
@@ -96,7 +100,7 @@ sub execute {
     else {
         # rely on the @tests list from the cmdline
     }
-    
+
     if ($self->list) {
         $self->status_message("Tests:");
         for my $test (@tests) {
@@ -104,25 +108,36 @@ sub execute {
         }
         return 1;
     }
-    
+
     if (not @tests) {
         $self->error_message("No tests found under $working_path");
         return;
     }
 
-    return $self->_run_tests(@tests);
+    unless ($self->noisy) {
+        open(OLD_STDERR,">&STDERR") or die "Failed to save STDERR";
+        open(STDERR,">/dev/null") or die "Failed to redirect STDERR";
+    }
+
+    my $results = $self->_run_tests(@tests);
+
+    unless ($self->noisy) {
+        open(STDERR,">&OLD_STDERR") or die "Failed to restore STDERR";
+    }
+
+    return $results;
 }
 
 sub _run_tests {
     my $self = shift;    
     my @tests = @_;
-    
+
     my $perl_opts = $self->perl_opts;
     my $script_opts = $self->script_opts;
-    
+
     #my $parent = $dir;
     #$parent =~ s/\/t$//;
-   
+
     # this ensures that we don't see warnings
     # and error statuses when doing the bulk test
     no warnings;
@@ -143,9 +158,9 @@ sub _run_tests {
     my $cb = $Test::Harness::Strap->{callback};
     $Test::Harness::Strap = My::Test::Harness::Straps->new;
     $Test::Harness::Strap->{callback} = $cb;
-    
+
     $Test::Harness::Switches = "";
-    
+
     my $timelog_sum = "";
     my $timelog_dir = "";
 
@@ -162,7 +177,7 @@ sub _run_tests {
     }
 
     my @cover_specific_modules;
-    
+
     if (my $cover = $self->cover) {
         push @cover_specific_modules, @$cover;
     }
@@ -177,7 +192,7 @@ sub _run_tests {
         push @cover_specific_modules, get_status_file_list('cvs');
     }
 
-    
+
     if (@cover_specific_modules) {
         my $dbh = DBI->connect("dbi:SQLite:/gsc/var/cache/testsuite/coverage_metrics.sqlitedb","","");
         $dbh->{PrintError} = 0;
@@ -192,7 +207,7 @@ sub _run_tests {
                 push @{ $tests_covering_specified_modules{$test_name} }, $module_name;
             }
         }
-        
+
         if (@tests) {
             # specific tests were listed: only run the intersection of that set and the covering set
             my @filtered_tests;
@@ -228,16 +243,16 @@ sub _run_tests {
     for (@tests) {
         s/^$cwd\///;
     }
-    
+
     # turn on no-commit
     #$script_opts .= ' --no-commit'
     #    unless ($script_opts =~ /\-\-no\-commit/);
-    
+
     #my $cmd = "PERL_DL_NONLAZY=1 /gsc/bin/perl $perl_opts";
     #$cmd .= q{  -e 'use Test::Harness qw(&runtests $verbose); $verbose=} . $v . q{; runtests @ARGV;' } . $tests;
     #print "$cmd\n";
     #exec($cmd);
-    
+
     $verbose = $v;
 
     local $My::Test::Harness::Straps::timelog_dir   = $timelog_dir;
@@ -250,20 +265,20 @@ sub _run_tests {
     my $abs_cwd = Cwd::abs_path('.');
     Sub::Install::reinstall_sub(
         {into => 'Test::Harness',
-        as => '_filtered_inc',
-        code => sub {
+            as => '_filtered_inc',
+            code => sub {
                 my @finc = $sub->(); 
                 return grep { $_ ne $abs_cwd } @finc;
-        },}
+            },}
     );
-        
+
     eval { 
         no warnings;
         local %SIG = %SIG; 
         delete $SIG{__DIE__}; 
         $ENV{UR_DBI_NO_COMMIT} = 1;
         $DB::single=1;
-        
+
         runtests(@tests);
     };
     if ($@) {
