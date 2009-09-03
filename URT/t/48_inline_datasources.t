@@ -51,7 +51,7 @@ my @employees = eval { URT::Employee->get(division => 'NorthAmerica', department
 ok(! scalar(@employees), 'URT::Employee->get() with non-existent department correctly returns no objects');
 is($@, '', 'Correctly, no error message was generated');
 
-my @employees = eval { URT::Employee->get(division => 'NorthAmerica', department => 'finance') };
+@employees = eval { URT::Employee->get(division => 'NorthAmerica', department => 'finance') };
 is(scalar(@employees), 3, 'Loaded 3 employees from NorthAmerica/finance');
 
 
