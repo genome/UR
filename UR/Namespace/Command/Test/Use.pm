@@ -113,7 +113,7 @@ sub after {
         eval $src;
         $self->error_message($@) if $@;
     }
-    
+    return if $self->{failure}; 
     return 1;
 }
 
