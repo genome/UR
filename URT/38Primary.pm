@@ -9,12 +9,14 @@ UR::Object::Type->define(
     id_by => [ primary_id => { is => 'Integer' }, ],
     has => [
         primary_value  => { is => 'String' },
-        related_id     => { is => 'Integer'},
-        related_object => { is => 'URT::38Related', id_by => 'related_id' },
+        rel_id     => { is => 'Integer'},
+        related_object => { is => 'URT::38Related', id_by => 'rel_id' },
         related_value  => { via => 'related_object', to => 'related_value' },
     ],
     data_source => 'URT::DataSource::SomeSQLite1',
     table_name => 'primary_table',
 );
+
+
 1;
 

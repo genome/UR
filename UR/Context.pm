@@ -246,6 +246,177 @@ sub _light_cache {
 }
 
 
+# Given a rule, and a property name not mentioned in the rule,
+# can we infer the value of that property from what actually is in the rule?
+sub infer_property_value_from_rule {
+    my($self,$wanted_property_name,$rule) = @_;
+
+    # First, the easy case...  The property is directly mentioned in the rule
+    my $value = $rule->specified_value_for_property_name($wanted_property_name);
+    if (defined $value) {
+        return $value;
+    }
+
+    my $subject_class_name = $rule->subject_class_name;
+    my $subject_class_meta = UR::Object::Type->get($subject_class_name);
+    my $wanted_property_meta = $subject_class_meta->get_property_meta_by_name($wanted_property_name);
+    unless ($wanted_property_meta) {
+        $self->error_message("Class $subject_class_name has no property named $wanted_property_name");
+        return;
+    }
+
+    
+    if ($wanted_property_meta->is_delegated) {
+        $self->context_return($self->_infer_delegated_property_from_rule($wanted_property_name,$rule));
+    } else {
+        $self->context_return($self->_infer_direct_property_from_rule($wanted_property_name,$rule));
+    }
+}
+
+
+# This one works when the rule specifies the value of an indirect property, and we want
+# the value of a direct property of the class
+sub _infer_direct_property_from_rule {
+    my($self,$wanted_property_name,$rule) = @_;
+
+    my $rule_template = $rule->get_rule_template;
+    my @properties_in_rule = $rule_template->_property_names; # FIXME - why is this method private?
+    my $subject_class_name = $rule->subject_class_name;
+    my $subject_class_meta = UR::Object::Type->get($subject_class_name);
+
+
+    my($alternate_class,$alternate_get_property, $alternate_wanted_property);
+
+    my @r_values; # There may be multiple properties in the rule that will get to the wanted property
+    PROPERTY_IN_RULE:
+    foreach my $property_name ( @properties_in_rule) {
+        my $property_meta = $subject_class_meta->get_property_meta_by_name($property_name);
+        if ($property_meta->is_delegated) {
+
+            my $linking_property_meta = $subject_class_meta->get_property_meta_by_name($property_meta->via);
+            my($reference,$ref_name_getter, $ref_r_name_getter);
+            if ($linking_property_meta->reverse_id_by) {
+                eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
+                $reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
+                                                        delegation_name => $linking_property_meta->reverse_id_by);
+                $ref_name_getter = 'r_property_name';
+                $ref_r_name_getter = 'property_name';
+                $alternate_class = $reference->class_name;
+            } else {
+                $reference = UR::Object::Reference->get(class_name => $linking_property_meta->class_name,
+                                                        delegation_name => $linking_property_meta->property_name);
+                $ref_name_getter = 'property_name';
+                $ref_r_name_getter = 'r_property_name';
+                $alternate_class = $reference->r_class_name;
+            }
+
+            my @ref_properties = $reference->get_property_links;
+            foreach my $ref_property ( @ref_properties ) {
+                my $ref_property_name = $ref_property->$ref_name_getter;
+                if ($ref_property_name eq $wanted_property_name) {
+                    $alternate_wanted_property = $ref_property->$ref_r_name_getter;
+                }
+            }
+            $alternate_get_property = $property_meta->to;
+            #next PROPERTY_IN_RULE unless $alternate_wanted_property;
+        }
+
+        unless ($alternate_wanted_property) {
+            # Either this was also a direct property of the rule, or there's no
+            # obvious link between the indirect property and the wanted property.
+            # the caller probably just should have done a get()
+            $alternate_wanted_property = $wanted_property_name;
+            $alternate_get_property = $property_name;
+            $alternate_class = $subject_class_name;
+        }
+     
+        my $value_from_rule = $rule->specified_value_for_property_name($property_name);
+        my @alternate_values;
+        eval {
+            # Inside an eval in case the get() throws an exception, the next 
+            # property in the rule may succeed
+            my @alternate_objects = $alternate_class->get( $alternate_get_property  => $value_from_rule );
+            @alternate_values = map { $_->$alternate_wanted_property } @alternate_objects;
+        };
+        next unless (@alternate_values);
+
+        push @r_values, \@alternate_values;
+    }
+
+    if (@r_values == 0) {
+        # no solutions found
+        return;
+
+    } elsif (@r_values == 1) {
+        # there was only one solution
+        return @{$r_values[0]};
+
+    } else {
+        # multiple solutions.  Only return the intersection of them all
+        # FIXME - this totally won't work for properties that return objects, listrefs or hashrefs
+        # FIXME - this only works for AND rules - for now, that's all that exist
+        my %intersection = map { $_ => 1 } @{ shift @r_values };
+        foreach my $list ( @r_values ) {
+            %intersection = map { $_ => 1 } grep { $intersection{$_} } @$list;
+        }
+        return keys %intersection;
+    }
+}
+
+
+# we want the value of a delegated property, and the rule specifies
+# a direct value
+sub _infer_delegated_property_from_rule {
+    my($self, $wanted_property_name, $rule) = @_;
+
+    my $rule_template = $rule->get_rule_template;
+    my $subject_class_name = $rule->subject_class_name;
+    my $subject_class_meta = UR::Object::Type->get($subject_class_name);
+
+    my $wanted_property_meta = $subject_class_meta->get_property_meta_by_name($wanted_property_name);
+    unless ($wanted_property_meta->via) {
+        Carp::croak("There is no linking meta-property (via) on property $wanted_property_name on $subject_class_name");
+    }
+
+    my $linking_property_meta = $subject_class_meta->get_property_meta_by_name($wanted_property_meta->via);
+    my $alternate_wanted_property = $wanted_property_meta->to;
+
+    my($reference,$ref_name_getter,$ref_r_name_getter,$alternate_class);
+    if ($linking_property_meta->reverse_id_by) {
+        eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
+        $reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
+                                                delegation_name => $linking_property_meta->reverse_id_by);
+        $ref_name_getter = 'r_property_name';
+        $ref_r_name_getter = 'property_name';
+        $alternate_class = $reference->class_name;
+    } else {
+        $reference = UR::Object::Reference->get(class_name => $linking_property_meta->class_name,
+                                                delegation_name => $linking_property_meta->property_name);
+        $ref_name_getter = 'property_name';
+        $ref_r_name_getter = 'r_property_name';
+        $alternate_class = $reference->r_class_name;
+    }
+
+    my %alternate_get_params;
+    my @ref_properties = $reference->get_property_links;
+    foreach my $ref_property ( @ref_properties ) {
+        my $ref_property_name = $ref_property->$ref_name_getter;
+        if ($rule_template->specifies_value_for_property_name($ref_property_name)) {
+            my $value = $rule->specified_value_for_property_name($ref_property_name);
+            $alternate_get_params { $ref_property->$ref_r_name_getter } = $value;
+        }
+    }
+        
+    my @alternate_values;
+    eval {
+        my @alternate_objects = $alternate_class->get(%alternate_get_params);
+        @alternate_values = map { $_->$alternate_wanted_property } @alternate_objects;
+    };
+    return @alternate_values;
+}
+
+
+
 # this is the underlying method for get/load/is_loaded in ::Object
 
 sub get_objects_for_class_and_rule {
@@ -414,8 +585,6 @@ sub _get_template_data_for_loading {
     foreach my $secondary_data_source ( keys %{$primary_template->{'joins_across_data_sources'}} ) {
         my $this_ds_delegations = $primary_template->{'joins_across_data_sources'}->{$secondary_data_source};
 
-        my @secondary_params;
-        my $secondary_class;
         my %seen_properties;
         foreach my $delegated_property ( @$this_ds_delegations ) {
             my $delegated_property_name = $delegated_property->property_name;
@@ -423,14 +592,12 @@ sub _get_template_data_for_loading {
 
             my $operator = $rule_template->operator_for_property_name($delegated_property_name);
             $operator ||= '=';  # FIXME - shouldn't the template return this for us?
-            push @secondary_params, $delegated_property->to . ' ' . $operator;
+            my @secondary_params = ($delegated_property->to . ' ' . $operator);
 
             my $class_meta = UR::Object::Type->get(class_name => $delegated_property->class_name);
-            unless ($secondary_class) {
-                my $relation_property = $class_meta->get_property_meta_by_name($delegated_property->via);
+            my $relation_property = $class_meta->get_property_meta_by_name($delegated_property->via);
      
-                $secondary_class ||= $relation_property->data_type;
-            }
+            my $secondary_class = $relation_property->data_type;
 
             # we can also add in any properties in the property's joins that also appear in the rule
 
@@ -474,13 +641,14 @@ sub _get_template_data_for_loading {
                 push @secondary_params, $ref_property->r_property_name . ' ' . $ref_operator;
             }
 
-        }
-        my $secondary_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params($secondary_class, @secondary_params);
+            my $secondary_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params($secondary_class, @secondary_params);
 
-        push @addl_loading_info,
-                 $secondary_data_source,
-                 $this_ds_delegations,
-                 $secondary_rule_template;
+            # FIXME there should be a way to collect all the requests for the sama datasource together...
+            push @addl_loading_info,
+                     $secondary_data_source,
+                     [$delegated_property],
+                     $secondary_rule_template;
+        }
     }
 
     return ($primary_template, @addl_loading_info);
@@ -492,7 +660,6 @@ sub _get_template_data_for_loading {
 sub _create_secondary_rule_from_primary {
     my($self,$primary_rule, $delegated_properties, $secondary_rule_template) = @_;
 
-#$DB::single=1;
     my @secondary_values;
     my %seen_properties;  # FIXME - we've already been over this list in _get_template_data_for_loading()...
     # FIXME - is there ever a case where @$delegated_properties will be more than one item?
@@ -612,7 +779,6 @@ sub _create_secondary_loading_closures {
         my $this_ds_delegations = shift @addl_loading_info;
         my $secondary_rule_template = shift @addl_loading_info;
 
-$DB::single=1;
         my $secondary_rule = $self->_create_secondary_rule_from_primary (
                                               $rule,
                                               $this_ds_delegations,
@@ -673,8 +839,10 @@ $DB::single=1;
                                             $secondary_template->{'class_name'}, $property_name);
                             }
                             my $comparison_value = $rule->specified_value_for_property_name($primary_query_column_name);
+                            unless (defined $comparison_value) {
+                                $comparison_value = $self->infer_property_value_from_rule($primary_query_column_name, $rule);
+                            }
                             $comparison_position = \$comparison_value;
-                            next;
                         }
                         push @join_comparison_info, $column_position,
                                                     $comparison_position,

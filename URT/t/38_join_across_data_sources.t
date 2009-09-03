@@ -196,7 +196,7 @@ sub populate_databases {
     my $dbh = URT::DataSource::SomeSQLite1->get_default_dbh();
     ok($dbh, 'Got db handle for URT::DataSource::SomeSQLite1');
 
-    ok($dbh->do("create table primary_table (primary_id integer PRIMARY KEY, primary_value varchar, related_id integer)"),
+    ok($dbh->do("create table primary_table (primary_id integer PRIMARY KEY, primary_value varchar, rel_id integer)"),
        "create primary table");
     # This one will match one item in related
     ok($dbh->do("insert into primary_table values (1, 'One', 1)"),
