@@ -649,6 +649,7 @@ sub _normalize_property_description {
         [ id_by                           => qw//], 
         [ via                             => qw//], 
         [ to                              => qw//],             
+        [ where                           => qw/restrict filter/],
         [ implied_by                      => qw//],             
         [ calculate                       => qw//], 
         [ calculate_from                  => qw//],            

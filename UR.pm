@@ -211,6 +211,7 @@ UR::Object::Type->define(
         id_by                           => { type => 'ARRAY' , is_optional => 1},
         via                             => { type => 'Text' , is_optional => 1 },
         to                              => { type => 'Text' , is_optional => 1},
+        where                           => { type => 'ParamList', is_optional => 1 },
         id_by                           => { type => 'ARRAY', is_optional => 1 },
         reverse_id_by                   => { type => 'ARRAY', is_optional => 1 },
         implied_by                      => { type => 'Text' , is_optional => 1},
