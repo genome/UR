@@ -37,7 +37,7 @@ sub _initialize_for_current_process {
     }
     $UR::Context::root = $ENV{UR_CONTEXT_ROOT} ||= 'UR::Context::DefaultRoot';
     $UR::Context::base = $ENV{UR_CONTEXT_BASE} ||= $UR::Context::root;
-    $UR::Context::process = UR::Context::Process->_create_for_current_process(parent => $UR::Context::base);
+    $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base);
     $UR::Context::current = $UR::Context::process;
 }
 
