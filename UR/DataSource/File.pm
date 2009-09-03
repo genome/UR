@@ -44,13 +44,15 @@ class UR::DataSource::File {
 
 
 my $sql_fh;
-
+if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+    $sql_fh = UR::DBI->sql_fh();
+}
+ 
 sub get_default_handle {
     my $self = shift;
 
     unless ($self->{'_fh'}) {
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
-            $sql_fh = UR::DBI->sql_fh();
             my $time = time();
             $sql_fh->printf("\nFILE OPEN AT %d [%s]\n",$time, scalar(localtime($time)));
         }
@@ -234,6 +236,7 @@ sub _things_in_list_are_numeric {
     my $self = shift;
 
     foreach ( @{$_[0]} ) {
+        no warnings 'numeric';
         return 0 if ($_ + 0 ne $_);
     }
     return 1;
@@ -469,7 +472,6 @@ sub create_iterator_closure_for_rule {
         push @comparison_for_column, $comparison_function;
     }
 
-    my $fh = $self->get_default_handle();
     my $split_regex = $self->_regex();
 
     # A method to tell if there's been interleaved reads on the same file handle.  If the
@@ -549,12 +551,16 @@ sub create_iterator_closure_for_rule {
     my $max_cache_size = $MAX_CACHE_SIZE;
     my $record_separator = $self->record_separator;
 
-    # Lock the file for reading... we could put the lock code inside the iterator, after READ_LINE_FROM_FILE:
-    # but that would slow down read operations a bit.  If there ends up being a problem with lock 
-    # contention, go ahead and move it before $line = <$fh>;
-    flock($fh,LOCK_SH);
-
+    my $fh;  # File handle we'll be reading from
     my $iterator = sub {
+
+	unless (ref($fh)) {
+            $fh = $self->get_default_handle();
+            # Lock the file for reading...  For more fine-grained locking we could move this to
+            # after READ_LINE_FROM_FILE: but that would slow down read operations a bit.  If
+            # there ends up being a problem with lock contention, go ahead and move it before $line = <$fh>;
+            flock($fh,LOCK_SH);
+        }
 
         if ($monitor_start_time && ! $monitor_printed_first_fetch) {
             $sql_fh->printf("FILE: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
@@ -669,7 +675,7 @@ sub UR::DataSource::File::Tracker::DESTROY {
 	# file handle and undef it so get_default_handle() will re-open if necessary
         my $fh = $ds->{'_fh'};
 
-        $sql_fh->printf("FILE: CLOSING fileno ".fileno($fh)."\n") if ($ENV{'UR_DBI_MONITOR_SQL'});
+        $sql_fh->printf("FILE: CLOSING fileno ".fileno($fh)."\n") if ($ENV{'UR_DBI_MONITOR_SQL'} && $sql_fh);
         flock($fh,LOCK_UN);
 	$fh->close();
 	$ds->{'_fh'} = undef;

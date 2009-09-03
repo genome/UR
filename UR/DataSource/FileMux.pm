@@ -37,7 +37,6 @@ sub sql_fh {
 my %WORKING_RULES; # Avoid recusion when infering values from rules
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
-
     
     if ($WORKING_RULES{$rule->id}++) {
         my $subject_class = $rule->subject_class_name;
@@ -50,7 +49,9 @@ sub create_iterator_closure_for_rule {
     my $required_for_get = $self->required_for_get;
 
     if ($ENV{'UR_DBI_MONITOR_SQL'}) {
-        $self->sql_fh->print("FILEMux: Resolving values for ".scalar(@$required_for_get)." params\n");
+        $self->sql_fh->printf("FILEMux: Resolving values for %d params (%s)\n",
+                              scalar(@$required_for_get),
+                              join(',',@$required_for_get));
     }
 
     my @all_resolver_params;
@@ -66,7 +67,7 @@ sub create_iterator_closure_for_rule {
             # So... remove the evidence that we tried this in case the user is catching the die
             # below and will continue on
             $context->_forget_loading_was_done_with_class_and_rule($rule->subject_class_name, $rule);
-            die "Can't resolve data source: no $param_name specified in rule with id ".$rule->id;
+            Carp::croak "Can't resolve data source: no $param_name specified in rule with id ".$rule->id;
         }
 
         if (@values == 1 and ref($values[0]) eq 'ARRAY') {
@@ -90,7 +91,6 @@ sub create_iterator_closure_for_rule {
 
     # Each combination of params ends up being from a different data source.  Make an
     # iterator pulling from each of them
-    my @data_source_iterators;
     my $file_resolver = $self->{'file_resolver'};
     if (ref($file_resolver) ne 'CODE') {
         # Hack!  The data source is probably a singleton class and there's a file_resolver method
@@ -99,56 +99,15 @@ sub create_iterator_closure_for_rule {
     } 
 
     my $concrete_ds_type = $self->_delegate_data_source_class;
-    my %sub_ds_params = $self->_common_params_for_concrete_data_sources();
+    #my %sub_ds_params = $self->_common_params_for_concrete_data_sources();
+    my @constant_value_properties = @{$self->constant_values};
 
+    my @data_source_construction_data;
     foreach my $resolver_params ( @resolver_param_combinations ) {
-
-        my @sub_ds_name_parts;
-        my $this_ds_rule_params = $rule->legacy_params_hash;
-        for (my $i = 0; $i < @$required_for_get; $i++) {
-            push @sub_ds_name_parts, $required_for_get->[$i] . $resolver_params->[$i];
-            $this_ds_rule_params->{$required_for_get->[$i]} = $resolver_params->[$i];
-        }
-
-        my $sub_ds_id = join('::', $self->id, @sub_ds_name_parts);
-        my $sub_ds;
-        unless ($sub_ds = $concrete_ds_type->get($sub_ds_id)) {
-
-            my $file_path = $file_resolver->(@$resolver_params);
-            unless (defined $file_path) {
-                die "Can't resolve data source: resolver for " .
-                    $rule->subject_class_name .
-                    " returned undef for params " . join(',',@$resolver_params);
-            }
-
-            if ($ENV{'UR_DBI_MONITOR_SQL'}) {
-                $self->sql_fh->print("FILEMux: $file_path is data source $sub_ds_id\n");
-            }
-
-            $concrete_ds_type->define(
-                          id => $sub_ds_id,
-                          %sub_ds_params,
-                          server => $file_path,
-                      );
-            $UR::Context::all_objects_cache_size++;
-            $sub_ds = $concrete_ds_type->get($sub_ds_id);
-
-            # Since these $sub_ds objects have no data_source, this will indicate to
-            # UR::Context::prune_object_cache() that it's ok to go ahead and drop them
-            $sub_ds->weaken();
-        }
-        unless ($sub_ds) {
-            die "Can't get data source with ID $sub_ds_id";
-        }
-
-        my $this_ds_rule = UR::BoolExpr->resolve_for_class_and_params($rule->subject_class_name,%$this_ds_rule_params);
-
-        my @constant_value_properties = @{$self->constant_values};
-        my @constant_values = map { $this_ds_rule->specified_value_for_property_name($_) }
-                              @constant_value_properties;
-        push @data_source_iterators, { ds_iterator => $sub_ds->create_iterator_closure_for_rule($this_ds_rule),
-                                       constant_values => \@constant_values,
-                                     };
+        push @data_source_construction_data, { subject_class_name => $rule->subject_class_name,
+                                               file_resolver => $file_resolver,
+                                               file_resolver_params => $resolver_params,
+                                             };
  
         
     }
@@ -161,22 +120,53 @@ sub create_iterator_closure_for_rule {
     }
 
     # Results are coming from more than one data source.  Make an iterator encompassing all of them
+    my $base_sub_ds_name = $self->id;
+    my($ds_iterator,@constant_values);
     my $iterator = sub {
         if ($monitor_start_time and ! $monitor_printed_first_fetch) {
             $self->sql_fh->printf("FILEMux: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
             $monitor_printed_first_fetch = 1;
         }
         
+        while (@data_source_construction_data) {
+            unless ($ds_iterator) {
+                # data we stashed away from above
+                my $subject_class_name   = $data_source_construction_data[0]->{'subject_class_name'};
+                my $file_resolver        = $data_source_construction_data[0]->{'file_resolver'};
+                my $file_resolver_params = $data_source_construction_data[0]->{'file_resolver_params'};
 
-        while (@data_source_iterators) {
-            my $ds_iterator = $data_source_iterators[0]->{'ds_iterator'};
-            my @constant_values = @{$data_source_iterators[0]->{'constant_values'}};
+                # Construct the name of the subordinate data source and the params for a rule against it
+                my @sub_ds_name_parts;
+                my $this_ds_rule_params = $rule->legacy_params_hash;
+                for (my $i = 0; $i < @$required_for_get; $i++) {
+                    my $param_name = $required_for_get->[$i];
+                    my $param_value = $file_resolver_params->[$i];
+                    push @sub_ds_name_parts, $param_name . $param_value;
+                    $this_ds_rule_params->{$param_name} = $param_value;
+                }
+                my $sub_ds_id = join('::', $base_sub_ds_name, @sub_ds_name_parts);
+                  
+
+                my $resolved_file = $file_resolver->(@$file_resolver_params);
+                unless ($resolved_file) {
+                    Carp::croak "Can't create data source: file resolver for $sub_ds_id returned false for params "
+                                . join(',',@$file_resolver_params);
+                }
+                my $this_ds_obj  = $self->get_or_create_data_source($concrete_ds_type, $sub_ds_id, $resolved_file);
+                my $this_ds_rule = UR::BoolExpr->resolve_for_class_and_params($subject_class_name,%$this_ds_rule_params);
+
+                @constant_values = map { $this_ds_rule->specified_value_for_property_name($_) }
+                                       @constant_value_properties;
+
+                $ds_iterator = $this_ds_obj->create_iterator_closure_for_rule($this_ds_rule);
+            }
 
             while (my $thing = $ds_iterator->()) {
                 push @$thing, @constant_values;
                 return $thing;
             }
-            shift @data_source_iterators;
+            shift @data_source_construction_data;
+            $ds_iterator = undef;  # Next time we'll create an iterator for the next data source
         }
 
         if ($monitor_start_time) {
@@ -190,9 +180,40 @@ sub create_iterator_closure_for_rule {
 }
 
 
+sub get_or_create_data_source {
+    my($self, $concrete_ds_type, $sub_ds_id, $file_path) = @_;
+
+    my $sub_ds;
+    unless ($sub_ds = $concrete_ds_type->get($sub_ds_id)) {
+        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+            $self->sql_fh->print("FILEMux: $file_path is data source $sub_ds_id\n");
+        }
+
+        my %sub_ds_params = $self->_common_params_for_concrete_data_sources();
+        $concrete_ds_type->define(
+                      id => $sub_ds_id,
+                      %sub_ds_params,
+                      server => $file_path,
+                  );
+        $UR::Context::all_objects_cache_size++;
+        $sub_ds = $concrete_ds_type->get($sub_ds_id);
+         
+        unless ($sub_ds) {
+            Carp::croak "Can't create data source: retrieving newly defined data source $sub_ds_id returned nothing";
+        }
+
+        # Since these $sub_ds objects have no data_source, this will indicate to
+        # UR::Context::prune_object_cache() that it's ok to go ahead and drop them
+        $sub_ds->weaken();
+    }
+    return $sub_ds;
+}
+
+
 sub _generate_loading_templates_arrayref {
     my $self = shift;
     my $delegate_class = $self->_delegate_data_source_class();
+    $delegate_class->class;  # trigger the autoloader, if necessary
 
     my $function_name = $delegate_class . '::_generate_loading_templates_arrayref';
     no strict 'refs';
