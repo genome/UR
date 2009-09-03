@@ -424,9 +424,7 @@ sub resolve_class_and_params_for_argv
         }
     }
     
-    my %params;
-
-    my @spec = $self->_shell_args_getopt_specification;
+    my ($params_hash,@spec) = $self->_shell_args_getopt_specification;
     unless (grep { /^help\W/ } @spec) {
         push @spec, "help!";
     }
@@ -439,9 +437,10 @@ sub resolve_class_and_params_for_argv
 
     local @ARGV;
     @ARGV = @argv;
-    
-    unless (GetOptions(\%params,@spec)) {
-        my @failed = grep { /^--/ } grep { /\W*(\w+)/; not exists $params{$1} } @argv;
+   
+    $DB::single = 1;
+    unless (GetOptions($params_hash,@spec)) {
+        my @failed = grep { /^--/ } grep { /\W*(\w+)/; not exists $params_hash->{$1} } @argv;
         $self->error_message("Bad params ! @failed");
         return($self, undef);
     }
@@ -449,18 +448,30 @@ sub resolve_class_and_params_for_argv
     # Is there a standard getopt spec for capturing non-option paramters?
     # Perhaps that's not getting "options" :)
 
-    $params{" "} = [@ARGV];
+    $params_hash->{" "} = [@ARGV];
 
-    for my $key (keys %params) {
+    for my $key (keys %$params_hash) {
+        # handle any has-many comma-sep values
+        my $value = $params_hash->{$key};
+        if (ref($value)) {
+            my @new_value;
+            for my $v (@$value) {
+                my @parts = split(/,\s*/,$v);
+                push @new_value, @parts;
+            }
+            @$value = @new_value;
+        }
+
+        # turn dashes into underscores
         next unless $key =~ /-/;
         my $new_key = $key;
         $new_key =~ s/\-/_/g;
-        $params{$new_key} = delete $params{$key};
+        $params_hash->{$new_key} = delete $params_hash->{$key};
     }
 
-    $_resolved_params_from_get_options = \%params;
+    $_resolved_params_from_get_options = $params_hash;
 
-    return $self, \%params;
+    return $self, $params_hash;
 }
 
 #
@@ -712,8 +723,8 @@ sub _shell_args_property_meta
 
 sub _shell_arg_name_from_property_meta
 {
-    my ($self, $property_meta) = @_;
-    my $property_name = $property_meta->property_name;
+    my ($self, $property_meta,$singularize) = @_;
+    my $property_name = ($singularize ? $property_meta->singular_name : $property_meta->property_name);
     my $param_name = $property_name;
     $param_name =~ s/_/-/g;
     return $param_name; 
@@ -739,7 +750,12 @@ sub _shell_arg_usage_string_from_property_meta
         $string = "[$string]";
     }
     else {
-        $string .= '=?'; 
+        if ($property_meta->is_many) {
+            $string .= "=?[,?]";
+        }
+        else {
+            $string .= '=?'; 
+        }
         if ($property_meta->is_optional) {
             $string = "[$string]";
         }
@@ -747,18 +763,28 @@ sub _shell_arg_usage_string_from_property_meta
     return $string;
 }
 
+sub _shell_arg_getopt_specification_from_property_meta 
+{
+    my ($self,$property_meta) = @_;
+    my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
+    return (
+        $arg_name .  $self->_shell_arg_getopt_qualifier_from_property_meta($property_meta),
+        ($property_meta->is_many ? ($arg_name => []) : ())
+    );
+}
+
 sub _shell_args_getopt_specification 
 {
     my $self = shift;
-    my @getopt =
-        sort 
-        map { 
-            $self->_shell_arg_name_from_property_meta($_)
-            .
-            $self->_shell_arg_getopt_qualifier_from_property_meta($_)
-        }
-        $self->_shell_args_property_meta;
-    return @getopt; 
+    my @getopt;
+    my @params;
+    for my $meta ($self->_shell_args_property_meta) {
+        my ($spec, @params_addition) = $self->_shell_arg_getopt_specification_from_property_meta($meta);
+        push @getopt,$spec;
+        push @params, @params_addition; 
+    }
+    @getopt = sort @getopt;
+    return { @params}, @getopt; 
 }
 
 sub _shell_args_usage_string
