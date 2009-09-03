@@ -522,6 +522,7 @@ sub _normalize_class_description {
     # where present so they can be processed below.
     do {
         my @replacement;
+        my $pos = 0;
         for (my $n = 0; $n < @$id_properties; $n++) {
             my $name = $id_properties->[$n];
             
@@ -540,13 +541,17 @@ sub _normalize_class_description {
                 $old_class{id_implied}->{$name} ||= {};
                 push @replacement, $name;
             }
+            $old_class{id_implied}->{$name}->{'position_in_module_header'} = $pos++;
         }
         @$id_properties = @replacement;
     };
     
+
     # Flatten and format the property list(s) in the class description.
     # NOTE: we normalize the details at the end of normalizing the class description.
-    for my $key (grep { /has|attributes_have|id_implied/ } keys %old_class) {
+    my @keys = grep { /has|attributes_have/ } keys %old_class;
+    unshift @keys, qw(id_implied); # we want to hit this first to preserve position_ and is_specified_ keys
+    foreach my $key ( @keys ) {
         # parse the key to see if we're looking at instance or meta attributes,
         # and take the extra words as additional attribute meta-data. 
         my @added_property_meta;
@@ -607,8 +612,10 @@ sub _normalize_class_description {
                 $params = { @added_property_meta };
             }       
                      
-            $params->{position_in_module_header} = $pos;
-            $pos++;
+            unless (exists $params->{'position_in_module_header'}) {
+                $params->{position_in_module_header} = $pos;
+                $pos++;
+            }
 
             unless (exists $params->{is_specified_in_module_header}) {
                 $params->{is_specified_in_module_header} = $class_name . '::' . $key;
@@ -622,7 +629,7 @@ sub _normalize_class_description {
                 # this property already exists, but is also implied by some other property which added it to the end of the listed
                 # extend the existing definition
                 foreach my $key ( keys %$params ) {
-                    next if $key eq 'is_specified_in_module_header';
+                    next if ($key eq 'is_specified_in_module_header' || $key eq 'position_in_module_header');
                     $properties->{$name}->{$key} = $params->{$key};
                 }
             } else {

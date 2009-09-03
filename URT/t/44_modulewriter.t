@@ -55,6 +55,7 @@ my $test_class_definition =
     id_by => [
         another_id => { is => 'String', doc => 'blahblah' },
         related => { is => 'URT::Related', id_by => [ 'parent_id', 'related_id' ], doc => 'related' },
+        foobaz => { is => 'Integer' },
     ],
     has => [
         property_a => { is => 'String', meta_prop_a => 1 },
