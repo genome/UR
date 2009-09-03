@@ -15,7 +15,7 @@ class Vending::MachineLocation {
         is_buyable            => { is => 'integer' },
         cost_cents            => { is => 'integer', is_optional => 1 },
         items                 => { is => 'Vending::Content', reverse_as => 'machine_location', is_many => 1 },
-        coins                 => { is => 'Vending::Coin', reverse_as => 'machine_location', is_many => 1 },
+        coin_items            => { is => 'Vending::Coin', reverse_as => 'machine_location', is_many => 1 },
         count                 => { calculate => q(my @obj = $self->items; 
                                         return scalar(@obj);), 
                          doc => 'How many items are in this machine_location' },

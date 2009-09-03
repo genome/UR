@@ -10,7 +10,7 @@ use warnings FATAL => 'all';
 our $VERSION;
 
 BEGIN {
-    $VERSION = '0.7';
+    $VERSION = '0.8';
 }
 
 # Ensure we get detailed errors while starting up.
@@ -623,6 +623,7 @@ You can then use these classes in your application code:
     # Use non-equality operators:
     my @same_some_artists = CdExample::Artist->get(
         'name like' => 'John%',
+        'year between' => ['2004','2009']
     );
 
     # This will use a JOIN with the ARTISTS table internally to filter

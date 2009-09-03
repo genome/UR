@@ -30,6 +30,7 @@ require UR;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::SQLite',
     is => ['UR::DataSource::RDBMS'],
+    english_name => 'ur datasource sqlite',
     is_abstract => 1,
 );
 
@@ -53,20 +54,6 @@ sub login {
 
 sub auth {
     undef
-}
-
-sub database_exists {
-    my $self = shift;
-    return 1 if -e $self->_database_file_path;
-    return 1 if -e $self->_data_dump_path; # exists virtually, and will dynamicaly instantiate
-    return;
-}
-
-sub create_database {
-    my $self = shift;
-    die "Database exists!" if $self->database_exists;
-    my $path = $self->_database_file_path;
-    return 1 if IO::File->new(">$path");
 }
 
 sub can_savepoint { 0;}  # Dosen't support savepoints
@@ -96,7 +83,7 @@ sub _journal_file_path {
 }
 
 sub _init_database {
-    my $self = shift;
+    my $self = shift->_singleton_object();
     my $db_file     = $self->_database_file_path;
     my $dump_file   = $self->_data_dump_path;
 
