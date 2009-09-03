@@ -471,6 +471,8 @@ sub create_entity {
             return $sub_class_name->create(@_); 
         }
         else {
+            Carp::confess("Could not determine proper subclassing for abstract class $class during create()");
+
             Carp::confess("$class requires support for a 'type' class which has persistance.  Broken.  Fix me.");
             #my $params = $rule->legacy_params_hash;
             #my $sub_classification_meta_class_name = $class_meta->sub_classification_meta_class_name;
