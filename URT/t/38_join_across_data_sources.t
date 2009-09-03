@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 44;
+use Test::More tests => 50;
 
 # FIXME - This tests the simple case of a single indirect property.
 # Need to add a test for a doubly-indirect property crossing 2 data
@@ -14,15 +14,17 @@ use above 'URT'; # dummy namespace
 #$ENV{UR_DBI_MONITOR_SQL}=1;
 
 
-our $DB_FILE_1 = "/tmp/ur_testsuite_db1_$$.sqlite";
-our $DB_FILE_2 = "/tmp/ur_testsuite_db2_$$.sqlite";
+my $tmp_path = "/tmp/ur_testsuite$$";
+ok(mkdir($tmp_path), "mkdir temp dir");
+our $DB_FILE_1 = "$tmp_path/ur_testsuite_db1_$$.sqlite";
+our $DB_FILE_2 = "$tmp_path/ur_testsuite_db2_$$.sqlite";
 END {
-    unlink($DB_FILE_1, $DB_FILE_1);
+    &clean_tmp_dir($tmp_path);
 }
 
-&create_data_sources();
-&populate_databases();
-&create_test_classes();
+&create_data_sources($tmp_path);
+&populate_databases($tmp_path);
+&create_test_classes($tmp_path);
 
 
 # Set up subscriptions to count queries and loads
@@ -30,14 +32,16 @@ my($db1_query_count, $primary_load_count, $db2_query_count, $related_load_count)
 sub reset_counts {
     ($db1_query_count, $primary_load_count, $db2_query_count, $related_load_count) = (0,0,0,0);
 }
-ok(URT::Primary->create_subscription(
+
+
+ok(URT::38Primary->create_subscription(
                     method => 'load',
                     callback => sub {$primary_load_count++}),
-     'Created a subscription for URT::Primary load');
-ok(URT::Related->create_subscription(
+     'Created a subscription for URT::38Primary load');
+ok(URT::38Related->create_subscription(
                     method => 'load',
                     callback => sub {$related_load_count++}),
-     'Created a subscription for URT::Related load');
+     'Created a subscription for URT::38Related load');
 ok(URT::DataSource::SomeSQLite1->create_subscription(
                     method => 'query',
                     callback => sub {$db1_query_count++}),
@@ -49,7 +53,7 @@ ok(URT::DataSource::SomeSQLite2->create_subscription(
 
 
 &reset_counts();
-my @o = URT::Primary->get(related_value => '1');
+my @o = URT::38Primary->get(related_value => '1');
 is(scalar(@o), 1, "contained_value => 1 returns one Primary object");
 is($db1_query_count, 1, "Queried db 1 one time");
 is($primary_load_count, 1, "Loaded 1 Primary object");
@@ -58,7 +62,7 @@ is($related_load_count, 1, "Loaded 1 Related object");
 
 
 &reset_counts();
-@o = URT::Primary->get(primary_value => 'Two', related_value => '2');
+@o = URT::38Primary->get(primary_value => 'Two', related_value => '2');
 is(scalar(@o), 1, "container_value => 'Two',contained_value=>2 returns one Primary object");
 is($db1_query_count, 1, "Queried db 1 one time");
 is($primary_load_count, 1, "Loaded 1 Primary object");
@@ -68,7 +72,7 @@ is($related_load_count, 1, "Loaded 1 Related object");
 
 
 &reset_counts();
-@o = URT::Primary->get(related_value => '2');
+@o = URT::38Primary->get(related_value => '2');
 is(scalar(@o), 2, "contained_value => 2 returns two Primary objects");
 is($db1_query_count, 1, "Queried db 1 one time");
 is($primary_load_count, 1, "Loaded 1 Primary object");
@@ -83,7 +87,7 @@ is($related_load_count, 0, "Correctly loaded 0 Related objects (they're cached)"
 
 
 &reset_counts();
-@o = URT::Primary->get(related_value => '3');
+@o = URT::38Primary->get(related_value => '3');
 is(scalar(@o), 0, "contained_value => 3 correctly returns no Primary objects");
 is($db1_query_count, 1, "Queried db 1 one time");
 is($primary_load_count, 0, "correctly loaded 0 Primary objects");
@@ -98,7 +102,7 @@ is($related_load_count, 0, "Correctly loaded 0 Related object");
 
 
 &reset_counts();
-@o = URT::Primary->get(related_value => '4');
+@o = URT::38Primary->get(related_value => '4');
 is(scalar(@o), 0, "contained_value => 4 correctly returns no Primary objects");
 # Note - same thing here, the primary query fetches 1 row, but doesn't successfully
 # join to any rows in the secondary query, so no objects get loaded.
@@ -107,6 +111,18 @@ is($primary_load_count, 0, "correctly loaded 0 Primary objects");
 is($db2_query_count, 1, "Queried db 2 one time");
 is($related_load_count, 0, "correctly loaded 0 Related objects");
 
+
+
+&reset_counts();
+@o = URT::38Related->get(related_value => 2, primary_values => 'Two');
+is(scalar(@o), 1, 'URT::Related->get(primary_value => 2) returned 1 object');
+
+# This actually ends up being 4 because of the way the Indexes get created.  Don't think it's
+# useful to test it
+#is($db1_query_count, 1, "Queried db 1 one time");
+is($primary_load_count, 0, "correctly loaded 0 Primary objects");
+is($db2_query_count, 1, "Queried db 2 one time");
+is($related_load_count, 0, "correctly loaded 0 Related objects");
 
 
 
@@ -127,32 +143,51 @@ sub create_data_sources {
 
 
 sub create_test_classes {
-    ok(UR::Object::Type->define(
-        class_name => 'URT::Related',
-        id_by => [
-            related_id => { is => 'Integer' },
-        ],
-        has => [
-            related_value => { is => 'String' },
-        ],
-        data_source => 'URT::DataSource::SomeSQLite2',
-        table_name => 'related',
-    ), "create class URT::Related");
+return;
+    my $tmp_path = shift;
 
-    ok(UR::Object::Type->define(
-        class_name => 'URT::Primary',
-        id_by => [
-            primary_id => { is => 'Integer' },
-        ],
-        has => [
-            primary_value  => { is => 'String' },
-            related_id     => { is => 'Integer'},
-            related_object => { is => 'URT::Related', id_by => 'related_id' },
-            related_value  => { via => 'related_object', to => 'related_value' },
-        ],
-        data_source => 'URT::DataSource::SomeSQLite1',
-        table_name => 'primary_table',
-    ), "create class URT::Primary");
+    # We have to write them out as files instead of calling UR::Object::Type->define()
+    # because each class refers to the other
+
+    unshift(@INC, $tmp_path);
+
+    mkdir("$tmp_path/URT") || die "Can't create dir $tmp_path/URT";
+    my $f = IO::File->new("$tmp_path/URT/Related.pm",'>');
+    $f->print(q(
+use URT;
+UR::Object::Type->define(
+    class_name => 'URT::Related',
+    id_by => [ related_id => { is => 'Integer' }, ],
+    has => [
+        related_value   => { is => 'String' },
+        primary_objects => { is => 'URT::Primary', reverse_id_by => 'related_object', is_many => 1 },
+        primary_values  => { vis => 'primary_object', to => 'primary_value', is_many => 1 },
+    ],
+    data_source => 'URT::DataSource::SomeSQLite2',
+    table_name => 'related',
+)
+1;
+));
+    $f->close();
+
+    $f = IO::File->new("$tmp_path/URT/Primary.pm",'>');
+    $f->print(q(
+use URT;
+UR::Object::Type->define(
+    class_name => 'URT::Primary',
+    id_by => [ primary_id => { is => 'Integer' }, ],
+    has => [
+        primary_value  => { is => 'String' },
+        related_id     => { is => 'Integer'},
+        related_object => { is => 'URT::Related', id_by => 'related_id' },
+        related_value  => { via => 'related_object', to => 'related_value' },
+    ],
+    data_source => 'URT::DataSource::SomeSQLite1',
+    table_name => 'primary_table',
+);
+1;
+));
+    $f->close();
 }
 
 
@@ -194,4 +229,13 @@ sub populate_databases {
 }
     
 
+sub clean_tmp_dir {
+    my $tmp_dir = shift;
+
+    diag("Cleanup tmp dir");
+    # These _should_ be the only files in there...
+    ok(unlink($DB_FILE_1), 'Remove sqlite DB 1');
+    ok(unlink($DB_FILE_2), 'Remove sqlite DB 2');
+    ok(rmdir($tmp_dir), "Remove tmp dir $tmp_dir");
+}
 
