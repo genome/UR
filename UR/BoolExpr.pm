@@ -310,7 +310,7 @@ sub resolve_for_class_and_params {
         die "No meta for $subject_class?!";
     }    
 
-    my %subject_class_props = map {$_, 1}  ( $subject_class_meta->all_property_type_names, 'subclass_ext');
+    my %subject_class_props = map {$_, 1}  ( $subject_class_meta->all_property_type_names);
 
     my @in_params;
     if (ref($_[0]) eq "HASH") {
@@ -371,6 +371,10 @@ sub resolve_for_class_and_params {
                 }
             }
         }
+        else {
+            $property_name = $key;
+            $operator = '';
+        }
         
         if (ref($value) eq "HASH") {
             if (
@@ -386,35 +390,47 @@ sub resolve_for_class_and_params {
         }
         elsif (ref($value) eq "ARRAY") {
             $key .= " []";
+            
+            # replace the arrayref
+            $value = [ @$value ];
+            
+            # transform objects into IDs if applicable
             if (blessed($value->[0])) {
-                # replace the arrayref
-                $value = [ @$value ];
-                # transform objects into IDs
+                
                 my ($method) = ($key =~ /^(\w+)/);
                 if (my $subref = $subject_class->can($method) and $subject_class->isa("UR::Object")) {
                     for (@$value) { $_ =  $subref->($_) };
                 }
-                # sort
-		        no warnings;
-                @$value = sort { $a <=> $b or $a cmp $b } @$value;
-		        use warnings;
             }
-            else {
-                no warnings;
-                # sort and replace the arrayref
-                $value = [
-                    sort { $a <=> $b or $a cmp $b } 
-                    @$value
-                ];         
+
+            my $one_or_many = $subject_class_props{$property_name};
+            unless (defined $one_or_many) {
+                die "$subject_class: '$property_name' ($key => $value)\n" . Data::Dumper::Dumper({ @_ });
             }
             
-            if (@$value) {
+            my $is_many;
+            my $property_meta = $subject_class_meta->get_property_meta_by_name($property_name);
+            if ($property_meta) {
+                $is_many = $property_meta->is_many;
+            }
+            else {
+                if ($UR::initialized) {
+                    Carp::confess("no meta for property $subject_class $property_name?\n");
+                }
+                else {
+                    # this has to run during bootstrapping in 2 cases currently...
+                    $is_many = $subject_class_meta->{has}{$property_name}{is_many};
+                }
+            }
+            
+            unless ($is_many) {
                 no warnings;
+
                 # sort and replace the arrayref
-                $value = [
+                @$value = (
                     sort { $a <=> $b or $a cmp $b } 
                     @$value
-                ];
+                );         
                 
                 # identify duplicates
                 my $last = $value; # a safe value which can't be in the list
@@ -457,6 +473,7 @@ sub resolve_for_class_and_params {
                 unless ($property_meta) {
                     die "Failed to find meta for $key on " . $subject_class_meta->class_name . "?!";
                 }
+                $DB::single = 1;
                 my @joins = $property_meta->get_property_name_pairs_for_join();
                 for my $join (@joins) {
                     my ($my_method, $their_method) = @$join;
