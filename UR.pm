@@ -10,7 +10,7 @@ use warnings FATAL => 'all';
 our $VERSION;
 
 BEGIN {
-    $VERSION = '0.6';
+    $VERSION = '0.7';
 }
 
 # Ensure we get detailed errors while starting up.
@@ -519,7 +519,7 @@ UR - rich declarative non-hierarchical transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.6.
+This document describes UR version 0.7.
 
 =head1 SYNOPSIS
 
