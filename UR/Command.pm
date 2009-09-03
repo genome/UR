@@ -118,6 +118,48 @@ sub namespace_name {
     return $namespace_name;
 }
 
+sub _test_cases_in_tree
+{
+    my $self = shift;
+    my @test_cases;
+    unless (@_) {
+        my $lib_path = $self->lib_path;
+        my $namespace_subdir = $self->namespace_subdir;
+        unless ($namespace_subdir) {
+            die 'This command must be run in the top level of a UR::Namespace directory.  Run "ur create MyNamespace".';
+        }
+        @test_cases =  (grep { /\.t$/ } `cd $lib_path; find $namespace_subdir/*`);
+        chomp @test_cases;
+    }
+    else {
+        # this method takes either module paths or class names as params
+        # normalize to module paths
+        my $working_path = $self->working_path;
+        my $lib_path = $self->lib_path;
+        my $subdir = join("/", grep { $_ } $self->namespace_subdir,$self->working_subdir);
+
+        for my $name (@_) {
+            my $full_name = join("/",$working_path,$name);
+            my $lib_relative_name = join("/", $subdir, $name);
+            if (-e $full_name) {
+                if ($name =~ /\.t$/) {
+                    push @test_cases, $lib_relative_name;
+                }
+                elsif (-d $name) {
+                    my @more = (grep { /\.t$/ } `cd $lib_path; find $lib_relative_name`);
+                    chomp @more;
+                    for (@more) { s/\/\.\//\//g; s/\/[^\/]+\/\..\//\//g; }
+                    push @test_cases, @more;
+                }
+                else {
+                    next;
+                }
+            }
+        }
+    }
+    return sort @test_cases;
+}
+
 sub _modules_in_tree
 {
     my $self = shift;
