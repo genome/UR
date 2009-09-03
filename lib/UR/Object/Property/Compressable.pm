@@ -8,7 +8,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT = qw (compressed_attributes _do_bz_compress _do_bz_decompress _do_gz_compress _do_gz_decompress);
 
-use constant WIN32_BZIP_PATH => '//winsvr.gsc.wustl.edu/gsc/bin/bzip2.exe';
+our $WIN32_BZIP_PATH = 'bzip2.exe';
 
 BEGIN {
     if (($^O eq 'MSWin32' || $^O eq 'cygwin') and $] <= 5.008) {
@@ -85,8 +85,8 @@ my($self,$value) = @_;
 
     if (($^O eq 'MSWin32' || $^O eq 'cygwin') and $] <= 5.008) {
         # Compress::Bzip2 dosen't work on windows, but we do have a bzip2 exe
-        unless (-x WIN32_BZIP_PATH) {
-            croak "Can't execute bzip2 program " . WIN32_BZIP_PATH;
+        unless (-x $WIN32_BZIP_PATH) {
+            croak "Can't execute bzip2 program " . $WIN32_BZIP_PATH;
         }
 
         my $filename = "/bziptmp$$";
@@ -94,7 +94,7 @@ my($self,$value) = @_;
         $fh->print($value);
         $fh->close();
 
-        my $cmdline = WIN32_BZIP_PATH . " -z $filename";
+        my $cmdline = $WIN32_BZIP_PATH . " -z $filename";
         `$cmdline`;
 
         $filename .= ".bz2";
@@ -122,8 +122,8 @@ my($self,$value) = @_;
     my $new_decompressed;
 
     if (($^O eq 'MSWin32' || $^O eq 'cygwin') and $] <= 5.008) {
-        unless (-x WIN32_BZIP_PATH) {
-            croak "Can't execute bzip2 program " . WIN32_BZIP_PATH;
+        unless (-x $WIN32_BZIP_PATH) {
+            croak "Can't execute bzip2 program " . $WIN32_BZIP_PATH;
         }
 
         my $filename = "/bziptmp$$" . ".bz2";
@@ -131,7 +131,7 @@ my($self,$value) = @_;
         $fh->print($value);
         $fh->close();
 
-        my $cmdline = WIN32_BZIP_PATH . " -d $filename";
+        my $cmdline = $WIN32_BZIP_PATH . " -d $filename";
         `cmdline`;
 
         ($filename) = ($filename =~ m/(\w+)\.bz2$/);

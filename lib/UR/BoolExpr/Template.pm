@@ -83,6 +83,56 @@ sub _constant_values {
     return UR::BoolExpr::Util->value_id_to_values($constant_value_id);
 }
 
+# Indexability methods
+
+sub _indexable_property_names {
+    $_[0]->_resolve_indexing_params unless $_[0]->{_resolve_indexing_params};
+    @{ $_[0]->{_indexable_property_names} }
+}
+
+sub _indexable_property_positions {
+    $_[0]->_resolve_indexing_params unless $_[0]->{_resolve_indexing_params};
+    @{ $_[0]->{_indexable_property_positions} }
+}
+
+sub _is_fully_indexable {
+    $_[0]->_resolve_indexing_params unless $_[0]->{_resolve_indexing_params};
+    $_[0]->{_is_fully_indexable};
+}
+
+sub _resolve_indexing_params {
+    my $self = $_[0];
+
+    my $class_meta = UR::Object::Type->get($self->subject_class_name);
+
+    my @all_names = $self->_property_names;
+
+    for my $name (@all_names) {
+        my $m = $class_meta->property($name);
+        unless ($m) {
+            $DB::single = 1;
+            $class_meta->property($name);
+            $DB::single = 1;
+            $class_meta->property($name);
+        }
+    }
+    
+    my @indexable_names =
+        sort
+        map { $_->property_name }
+        grep { $_ } #and $_->is_indexable }
+        map { $class_meta->property_meta_for_name($_) }
+        @all_names;
+        
+    my @indexable_positions
+        = UR::Util::positions_of_values(\@all_names,\@indexable_names);
+    
+    $self->{_indexable_property_names} = \@indexable_names;
+    $self->{_indexable_property_positions} = \@indexable_positions;
+    $self->{_is_fully_indexable} = (@indexable_names == @all_names);
+    
+    return 1;
+}
 
 # This is set lazily currently
 

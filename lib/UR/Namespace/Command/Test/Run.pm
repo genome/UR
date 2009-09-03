@@ -430,7 +430,7 @@ END {
 
 =head1 NAME
 
-B<run tests> - run one or more test scripts
+ur test run - run one or more test scripts
 
 =head1 SYNOPSIS
 

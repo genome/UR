@@ -2,15 +2,21 @@
 
 =head1 NAME
 
-ur - Command line tool to manage metadata within a namespace
+ur - command-line tools for UR objects and apps
 
 =head1 SYNOPSIS
 
   ur define namespace MyApp
 
-  ur describe MyApp::Some::Class
+  cd MyApp
 
   ur update classes
+  
+  ur describe MyApp::Some::Class
+  
+  vim Another/Class.pm
+  
+  ur update schema 
 
 =head1 DESCRIPTION
 

@@ -32,7 +32,7 @@ sub _properties {
         my @matches = grep { $bx->evaluate($_) } $self->property_metas;
         return if not defined wantarray;
         return @matches if wantarray;
-        die UR::Messages::too_many_retvals() if @matches > 1;
+        die "Matched multiple meta-properties, but called in scalar context!" if @matches > 1;
         return $matches[0];
     }
     else {
@@ -41,12 +41,21 @@ sub _properties {
 }
 
 sub property {
-    my $p = (
-        @_ == 2 
-            ? 
-            $_[0]->properties(property_name => $_[1]) 
-            : shift->properties(@_)
-    );
+    # TODO: force scalar context a better way..
+    my $p;
+    if (@_ == 2) {
+        # optimize for the common case
+        $p = $_[0]->direct_property_meta($_[1]);
+        unless ($p) {
+            for (@{ $_[0]->{_ordered_inherited_class_names} }) {
+                $p = $_->__meta__->direct_property_meta($_[1]);
+                last if $p;
+            }
+        }
+    }
+    else {
+        $p = shift->properties(@_);
+    }
     return $p;
 }
 

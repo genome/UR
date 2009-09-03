@@ -35,9 +35,43 @@ sub deep_copy {
     return $copy;
 }
 
+sub value_positions_map {
+    my ($array) = @_;
+    my %value_pos;
+    my $a;
+    for (my $pos = 0; $pos < @$array; $pos++) {
+        my $value = $array->[$pos];
+        if (exists $value_pos{$value}) {
+            die "Array has duplicate values, which cannot unambiguously be given value positions!"
+                . Data::Dumper::Dumper($array);
+        }
+        $value_pos{$value} = $pos;
+    }
+    return \%value_pos;
+}
+
+sub positions_of_values {
+    # my @pos = positions_of_values(\@unordered_crap, \@correct_order);
+    # my @fixed = @unordered_crap[@pos];
+    my ($unordered_array,$ordered_array) = @_;
+    my $map = value_positions_map($unordered_array);
+    my @translated_positions;
+    $#translated_positions = $#$ordered_array;
+    for (my $pos = 0; $pos < @$ordered_array; $pos++) {
+        my $value = $ordered_array->[$pos];
+        my $unordered_position = $map->{$value};
+        $translated_positions[$pos] = $unordered_position;
+    }
+    # self-test:
+    #    my @now_ordered = @$unordered_array[@translated_positions];
+    #    unless ("@now_ordered" eq "@$ordered_array") {
+    #        Carp::confess()
+    #    }
+    return @translated_positions;
+}
+
 # generate a method
-sub _define_method
-{
+sub _define_method {
     my $class = shift;
     my (%opts) = @_;
 

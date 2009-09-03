@@ -8,6 +8,7 @@ use above "UR";
 
 use Data::Dumper;
 require Term::ANSIColor;
+require XML::LibXML;
 
 class UR::Object::Command::List {
     is => 'UR::Object::Command::FetchAndDo',
@@ -21,7 +22,7 @@ class UR::Object::Command::List {
             is => 'Text',
             is_optional => 1,
             default_value => 'text',
-            doc => 'Style of the list: text (default), csv, pretty',
+            doc => 'Style of the list: text (default), csv, pretty, html, xml',
         },
         noheaders => { 
             is => 'Boolean',
@@ -60,6 +61,7 @@ Listing Styles:
  csv - comma separated values
  pretty - objects listed singly with color enhancements
  html - html table
+ xml - xml document using elements
 
 EOS
 }
@@ -67,12 +69,13 @@ EOS
 ##############################
 
 sub valid_styles {
-    return (qw/ text csv pretty html/);
+    return (qw/ text csv pretty html xml/);
 }
 
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+	$DB::single=1;
 
     # validate style
     $self->error_message( 
@@ -282,6 +285,55 @@ sub _get_object_string{
     return $out;
 }
 
+package Xml;
+use base 'Style';
+
+sub format_and_print{
+	my $self = shift;
+	my $out;
+
+	my $doc = XML::LibXML->createDocument();
+	my $results_node = $doc->createElement("results");
+	$results_node->addChild( $doc->createAttribute("generated-at",UR::Time->now()) );
+
+	$doc->setDocumentElement($results_node);
+
+	my $count = 0;
+    while (my $object = $self->{iterator}->next) {
+		my $object_node = $results_node->addChild( $doc->createElement("object") );
+
+		my $object_reftype = ref $object;
+		$object_node->addChild( $doc->createAttribute("type",$object_reftype) );
+		$object_node->addChild( $doc->createAttribute("id",$object->id) );
+		
+		for my $property ( @{$self->{show}} ) {
+
+			my $property_node = $object_node->addChild ($doc->createElement($property));
+
+			my @items = $object->$property;
+
+            my $reftype = ref $items[0];
+
+			if ($reftype && $reftype ne 'ARRAY' && $reftype ne 'HASH') {
+				foreach (@items) {
+					my $subobject_node = $property_node->addChild( $doc->createElement("object") );
+					$subobject_node->addChild( $doc->createAttribute("type",$reftype) );
+					$subobject_node->addChild( $doc->createAttribute("id",$_->id) );
+					#$subobject_node->addChild( $doc->createTextNode($_->id) );
+					#xIF
+				}
+			} else {
+				foreach (@items) {
+					$property_node->addChild( $doc->createTextNode($_) );
+				}
+			}
+
+		}
+		$count++;
+	}
+	$self->{output}->print($doc->toString(1));
+}
+
 package Text;
 use base 'Style';
 
@@ -425,10 +477,10 @@ Overwrite the help_brief, help_synopsis and help_detail methods to provide speci
 
 =head1 List Styles
 
-text, csv, html, pretty (inprogress)
+text, csv, html, xml, pretty (inprogress)
 
 =cut
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/distro/ur-bundle/trunk/lib/UR/Object/Command/List.pm $
-#$Id: List.pm 47381 2009-05-29 21:04:40Z ssmith $
+#$Id: List.pm 49429 2009-07-30 23:17:00Z ssmith $

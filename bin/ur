@@ -12,29 +12,39 @@ ur
 
 =head1 DESCRIPTION
 
-The "ur" command has its first argument the name of a specific ur-related command.
-Run "ur" w/o arguments to see the complete list, or "ur --help" for more details.
+The "ur" command is the entry point for a suite of tools to manage a UR project.
+
+It also includes some built-in UR services.
 
 Every command and sub-command supports the --help option.
 
+=head1 SOFTWARE MODULE API
+
+Looking for the docs on UR.pm?  
+
+Try "perldoc UR.pm" or "man UR".  On some systems (Mac),
+perldoc will show this page for both "perldoc ur" and also "perldoc UR" due to
+filesystem case insensitivity.
+
 =head1 OPTIONS
 
-These depend on the specific sub-command.
+These depend on the specific sub-command.  Use ur SOMESUBCOMMAND --help for more details on a specific command.
 
 =head1 DEVELOPER NOTE
 
 Running this WITHIN a source tree under the Genome namespace will automatically "use lib" your tree.
+
 A message will appear to STDERR when this occurs.
 
 =head1 BUGS
 
-Report bugs to software@watson.wustl.edu
+Report bugs at http:://urobject.sourceforge.net 
 
 =head1 AUTHOR
 
-Scott Smith
+Scott Smith (sakoht)
 
-ssmith@watson.wustl.edu
+ at cpan.org
 
 =cut
 

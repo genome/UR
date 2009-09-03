@@ -9,14 +9,26 @@ use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
 use version;
-our $VERSION = qv('0.10');
-BEGIN { $VERSION = qv('0.10'); }
+our $VERSION;
+BEGIN { 
+    # the first CPAN deploy using "version" is failing to install.
+    # this is an attempt to get around it...
+
+    # for the cpan shell, and other parsers
+    $VERSION = 'v0.11';
+
+    # for actual inspection
+    ${VERSION} 
+        = qv('0.11'); 
+};
 
 # Ensure we get detailed errors while starting up.
+# This is disabled at the bottom of the module.
 use Carp;
 $SIG{__DIE__} = \&Carp::confess;
 
 # This speeds up using the module tree by pre-calculaing meta-queries.
+# NOTE: it is currently not used because of deployment issues.
 use Storable qw(store_fd fd_retrieve);
 BEGIN {
     my $ur_dir = substr($INC{'UR.pm'}, 0, length($INC{'UR.pm'})-5);
@@ -529,7 +541,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version v0.10.
+This document describes UR version v0.11.
 
 =head1 SYNOPSIS
 

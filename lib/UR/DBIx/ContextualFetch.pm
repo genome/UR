@@ -1,5 +1,19 @@
 package UR::DBIx::ContextualFetch;
 
+=pod 
+
+=head1 NAME
+
+UR::DBIx::ContextualFetch - subclass of DBIx::ContextualFetch which uses UR::DBI subclasses
+
+=head1 DESCRIPTION
+
+This module is used in some legacy parts of UR's database layer.
+
+It is deprecated.
+
+=cut
+
 $VERSION = '1.03';
 
 use strict;
@@ -13,6 +27,7 @@ use base 'UR::DBI::db';
 
 package UR::DBIx::ContextualFetch::st;
 use base 'UR::DBI::st';
+
 =cut
 sub execute {
 	my ($sth) = shift;

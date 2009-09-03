@@ -69,7 +69,7 @@ sub use_package {
 
 =head1 NAME
 
-use above
+above - auto "use lib" when a module is in the tree of the PWD 
 
 =head1 SYNOPSIS
 
@@ -77,18 +77,31 @@ use above "My::Module";
 
 =head1 DESCRIPTION
 
+Used by the command-line wrappers for Command modules which are developer tools.
+
+Do NOT use this in modules, or user applications.
+
 Uses a module as though the cwd and each of its parent directories were at the beginnig of @INC.
-Used by the command-line wrappers for Command modules.
+If found in that path, the parent directory is kept as though by "use lib".
 
-=head1 BUGS
+=head1 EXAMPLES
 
-Report bugs to software@watson.wustl.edu
+# given
+/home/me/perlsrc/My/Module.pm
+
+# in    
+/home/me/perlsrc/My/Module/Some/Path/
+
+# in myapp.pl:
+use above "My::Module";
+
+# does this ..if run anywhere under /home/me/perlsrc: 
+use lib '/home/me/perlsrc/'
+use My::Module;
 
 =head1 AUTHOR
 
 Scott Smith
-
-ssmith@watson.wustl.edu
 
 =cut
 
