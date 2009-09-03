@@ -27,6 +27,8 @@ my @FILES_TO_DELETE = map { $data_source_dir . $_ }
                        );
 push @FILES_TO_DELETE, '/tmp/TestcaseSqlite.sqlite3';
 
+chdir $data_source_dir;
+
 my $cleanup_files = sub { unlink @FILES_TO_DELETE };
 
 &$cleanup_files;
