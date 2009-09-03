@@ -1062,8 +1062,8 @@ sub _get_objects_for_class_and_sql {
 
 sub _cache_is_complete_for_class_and_normalized_rule {
     my ($self,$class,$normalized_rule) = @_;
+
     my ($id,$params,@objects,$cache_is_complete);
-    $DB::single=1 if $normalized_rule->id =~ /AddReads.*2509660674/;
     $params = $normalized_rule->legacy_params_hash;
     $id = $params->{id};
 
@@ -1347,39 +1347,33 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
             }
     keys %$params;
 
-    if (@property_names < 2) {
-        # we basically just tested for this above
-        return;
-    }
-    else {
-        for my $try_class ( $class, $class->inheritance ) {
-            # more than one property, seeeif individual checks have been done for any of these...
-            for my $property_name (@property_names) {
-                next unless ($try_class->get_class_object->get_property_meta_by_name($property_name));
+    for my $try_class ( $class, $class->inheritance ) {
+        # more than one property, seeeif individual checks have been done for any of these...
+        for my $property_name (@property_names) {
+            next unless ($try_class->get_class_object->get_property_meta_by_name($property_name));
 
-                my $key = $try_class->get_rule_for_params($property_name => $params->{$property_name})->id;
-                if (defined($key)
-                    && exists $all_params_loaded->{$try_class}->{$key}) {
-                    # DRY
-                    $all_params_loaded->{$try_class}->{$params->{_param_key}} = 1;
-                    my $new_key = $params->{_param_key};
-                    for my $obj ($try_class->all_objects_loaded) {
-                        my $load_data = $obj->{load};
-                        next unless $load_data;
-                        my $param_key_data = $load_data->{param_key};
-                        next unless $param_key_data;
-                        my $class_data = $param_key_data->{$try_class};
-                        next unless $class_data;
-                        $class_data->{$new_key}++;
-                    }
-                    return 1;
+            my $key = $try_class->get_rule_for_params($property_name => $params->{$property_name})->id;
+            if (defined($key)
+                && exists $all_params_loaded->{$try_class}->{$key}) {
+                # DRY
+                $all_params_loaded->{$try_class}->{$params->{_param_key}} = 1;
+                my $new_key = $params->{_param_key};
+                for my $obj ($try_class->all_objects_loaded) {
+                    my $load_data = $obj->{load};
+                    next unless $load_data;
+                    my $param_key_data = $load_data->{param_key};
+                    next unless $param_key_data;
+                    my $class_data = $param_key_data->{$try_class};
+                    next unless $class_data;
+                    $class_data->{$new_key}++;
                 }
+                return 1;
             }
-            # No sense looking further up the inheritance
-            # FIXME UR::ModuleBase is in the inheritance list, you can't call get_class_object() on it
-            # and I'm having trouble getting a UR class object defined for it...
-            last if ($try_class eq 'UR::Object'); 
         }
+        # No sense looking further up the inheritance
+        # FIXME UR::ModuleBase is in the inheritance list, you can't call get_class_object() on it
+        # and I'm having trouble getting a UR class object defined for it...
+        last if ($try_class eq 'UR::Object'); 
     }
     return;   
 }
