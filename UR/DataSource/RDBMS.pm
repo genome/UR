@@ -1516,7 +1516,7 @@ sub _sync_database {
             unless ($sth{$cmd->{sql}}->execute(@{$cmd->{params}}))
             {
                 #my $dbh = $cmd->{class}->dbh;
-                my $dbh = UR::Context->resolve_data_source_for_object($cmd->{class});
+                my $dbh = UR::Context->resolve_data_source_for_object($cmd->{class})->get_default_dbh;
                 push @failures, {cmd => $cmd, error_message => $dbh->errstr};
                 last if $skip_fault_tolerance_check;
             }
