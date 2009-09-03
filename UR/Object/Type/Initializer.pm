@@ -119,7 +119,7 @@ sub create {
             );
         }
     }
-    
+
     my $self = $class->_make_minimal_class_from_normalized_class_description($desc);
     Carp::confess("Failed to define class $class_name!") unless $self;
         
@@ -137,6 +137,37 @@ sub create {
     $self->signal_change("create");
     
     return $self;
+}
+
+sub _preprocess_subclass_description {
+    # allow a class to modify the description of any subclass before it instantiates
+    # this filtering allows a base class to specify policy, add meta properties, etc.
+    my ($self,$prev_desc) = @_;
+
+    my $current_desc = $prev_desc;
+
+    if (my $preprocessor = $self->subclass_description_preprocessor) {
+        # the preprocessor must me a method name in the class being adjusted
+        no strict 'refs';
+        unless ($self->class_name->can($preprocessor)) {
+            die "Class " . $self->class_name 
+                . " specifies a pre-processor for subclass descriptions "
+                . $preprocessor . " which is not defined in the " 
+                . $self->class_name . " package!";
+        }
+        $current_desc = $self->class_name->$preprocessor($current_desc);
+    }
+
+    my @parent_class_names = 
+        grep { $_->isa("UR::Object::Type") and $_ ne $self->class_name } 
+        $self->ordered_inherited_class_names();
+
+    for my $parent_class_name (@parent_class_names) {
+        my $parent_class = $parent_class_name->get_class_object;
+        $current_desc = $parent_class->_preprocess_subclass_description($current_desc);
+    }
+
+    return $current_desc;
 }
 
 sub _construction_params_for_desc {
@@ -190,8 +221,6 @@ sub _construction_params_for_desc {
 }
 
 sub define {
-    # This delegates to methods broken out into the UR::Object::Type::Initializer module.
-
     my $class = shift;
     my $desc = $class->_normalize_class_description(@_);
     
@@ -217,7 +246,7 @@ sub define {
         #Carp::cluck("Re-defining class $class_name?  Found $meta_class_name with id '$class_name'");
         return $self;
     }
-
+    
     $self = $class->_make_minimal_class_from_normalized_class_description($desc);
     Carp::confess("Failed to define class $class_name!") unless $self;
     
@@ -234,7 +263,7 @@ sub define {
     else {
         unless ($self->_inform_all_parent_classes_of_newly_loaded_subclass()) {
             Carp::confess(
-                "Failed to linkt to parent classes to complete definition of class $class_name!"
+                "Failed to link to parent classes to complete definition of class $class_name!"
                 . $class->error_message
             );            
         }
@@ -327,7 +356,7 @@ sub _normalize_class_description {
         [ composite_id_separator                => qw//],
         [ generate              => qw//],
         [ generated             => qw//],
-        
+        [ subclass_description_preprocessor => qw//],        
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                
         my @all_fields = ($primary_field_name, @alternate_field_names);
@@ -341,6 +370,23 @@ sub _normalize_class_description {
         elsif (@values == 1) {
             $new_class{$primary_field_name} = $values[0];
         }
+    }
+
+    if (my $pp = $new_class{subclass_description_preprocessor}) {
+        if (!ref($pp)) {
+            unless ($pp =~ /::/) {
+                # a method name, not fully qualified
+                $new_class{subclass_description_preprocessor} = 
+                    $new_class{class_name} 
+                        . '::' 
+                            . $new_class{subclass_description_preprocessor};
+            } else {
+                $new_class{subclass_description_preprocessor} = $pp;
+            }
+        }
+        elsif (ref($pp) ne 'CODE') {
+            die "unexpected " . ref($pp) . " reference for subclass_description_preprocessor for $class_name!";
+        } 
     }
 
     unless ($new_class{er_role}) {
@@ -612,20 +658,50 @@ sub _normalize_class_description {
         $new_class{extra} = \%old_class;
     };
     
+
+    #print "inheritance for $class_name has @additional_property_meta_attributes\n";
+    my $attributes_have = $new_class{attributes_have} ||= [];
     
+    # cascage extra meta attributes from the parent downward
+    unless ($bootstrapping) {
+        my @additional_property_meta_attributes;
+        for my $parent_class_name (@{ $new_class{is} }) {
+            my $parent_class = $parent_class_name->get_class_object;
+            if (my $attributes_have = $parent_class->{attributes_have}) {
+                push @additional_property_meta_attributes, @$attributes_have;
+            }
+        }
+        push @$attributes_have, @additional_property_meta_attributes;
+    }
+
     # normalize the data behind the property descriptions    
     my @properties = keys %$properties;
-    for my $property_name (@properties) {
-        
+    for my $property_name (@properties) {            
         my %old_property = %{ $properties->{$property_name} };        
         my %new_property = $class->_normalize_property_description($property_name, \%old_property, \%new_class);
         $properties->{$property_name} = \%new_property;        
     }
-        
+
+    # allow parent classes to adjust the description in systematic ways 
+    my $desc = \%new_class;
+    unless ($bootstrapping) {
+        for my $parent_class_name (@{ $new_class{is} }) {
+            unless ($parent_class_name->can("get_class_object")) {
+                warn "no class meta method for $parent_class_name!";
+                next;
+            }
+            my $parent_class = $parent_class_name->get_class_object;
+            unless ($parent_class) {
+                warn "no object for $parent_class_name!";
+                next;
+            }
+            $desc = $parent_class->_preprocess_subclass_description($desc);
+        }
+    }
+
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
-    $new_class{meta_class_name} = $meta_class_name;
-    
-    return \%new_class;
+    $desc->{meta_class_name} ||= $meta_class_name;
+    return $desc;
 }
 
 sub _normalize_property_description {
@@ -802,9 +878,24 @@ sub _normalize_property_description {
         @new_property{@names} = delete @old_property{@names};
     }
 
+    #    # extend the property definitions
+    #    for my $property_meta (values %{$new_class{has}}) {
+    #        my $unresolved = delete $property_meta->{unresolved_meta_attributes};
+    #        next unless $unresolved;
+    #        @$property_meta{@$attributes_have} 
+    #            = delete @$unresolved{@$attributes_have};
+    #        if (%$unresolved) {
+    #            my @tmp = %$unresolved;
+    #            die "unknown meta-attributes present for $class_name $property_meta->{property_name}: @tmp\n";
+    #        }
+    #        %$property_meta = $class->_normalize_property_description($property_meta->{property_name},$property_meta,\%new_class);
+    #    }
+
     if (my @unknown = keys %old_property) {
-        # some GSC classes have extra items which must survive this check
-        warn "Class $class_name has $property_name with unknown properties: @unknown";
+        die "unknown meta-attributes present for $class_name $property_name: @unknown\n";
+        #$new_property{unresolved_meta_attributes} = \%old_property;
+        #my @tmp = %old_property;
+        #print "noting for $new_property{property_name} on $class_name: @tmp\n";
     }
 
     if ($new_property{implied_by} and $new_property{implied_by} eq $property_name) {
@@ -818,7 +909,7 @@ sub _normalize_property_description {
 sub _make_minimal_class_from_normalized_class_description {
     my $class = shift;
     my $desc = shift;
-    
+   
     my $class_name = $desc->{class_name};
     unless ($class_name) {
         Carp::confess("No class name specified?");
@@ -857,7 +948,7 @@ sub _initilize_accessors_and_inheritance {
     $self->initialize_direct_accessors;
     
     my $class_name = $self->{class_name};
-    
+
     my @is = @{ $self->{is} };
     unless (@is) {
         @is = ('UR::ModuleBase') 
@@ -1070,7 +1161,18 @@ sub _complete_class_meta_object_definitions {
         # Acme::Employee::Attribute::Name::Type is both the class definition for the bridge,
         # and also the attribute/property metadata for 
         my $property_meta_class_name = $bridge_class_name . "::Type";
-        
+
+        # define a new class for the above, inheriting from UR::Object::Property
+        # all of the "attributes_have" get put into the class definition
+        # call the constructor below on that new class       
+        #UR::Object::Type->define(
+        ##    class_name => $property_meta_class_name,
+        #    is => 'UR::Object::Property', # TODO: go through the inheritance 
+        #    has => [
+        #        @{ $class_name->get_class_object->{attributes_have} }
+        #    ]
+        #)
+ 
         my $property_object = UR::Object::Property->define(%$pinfo);
         
         unless ($property_object) {
