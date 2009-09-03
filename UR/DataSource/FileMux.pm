@@ -8,11 +8,15 @@ use Sub::Name ();
 use Sub::Install ();
 
 class UR::DataSource::FileMux {
-    is => ['UR::DataSource', 'UR::Singleton'],
+    is => ['UR::DataSource'],
     doc => 'A factory for other datasource factories that is able to pivot depending on parameters in the rule used for get()',
 };
 
 
+# The file-specific parent data source classes will inherit from this one
+sub _delegate_data_source_class {
+    'UR::DataSource::SortedCsvFile';
+}
 
 
 # Called by the class initializer 
@@ -22,32 +26,34 @@ sub create_from_inline_class_data {
     my($namespace, $class_name) = ($class_data->{'class_name'} =~ m/^(\w+)::(.*)/);
     my $ds_name = "${namespace}::DataSource::${class_name}";
 
-$DB::single=1;
     my $ds_meta = UR::Object::Type->get($ds_name);
     if ($ds_meta) {
         $self->error_message($class_data->{'class_name'}.": Created/In-line data_source resolves to a data source that already exists ($ds_name)");
         return;
     }
-    my($path_resolver_closure, @required_for_get) = $self->_derive_file_resolver_details($ds_name,$class_data, $ds_data);
-    return unless $path_resolver_closure;
 
-    my $created_ds_name = UR::DataSource::SortedCsvFile->create_from_inline_class_data(
-        $class_data,
-        {   
-            delimiter       => $ds_data->{'delimiter'},
-            skip_first_line => $ds_data->{'skip_first_line'},
-            file_list       => $ds_data->{'file_list'},
-            column_order    => $ds_data->{'column_order'},
-            sort_order      => $ds_data->{'sort_order'},
-            is_sorted       => $ds_data->{'is_sorted'},
-            sort_order      => $ds_data->{'sort_order'},
-         }
+    # Define the class for the mux data source
+    my $mux_ds_meta = UR::Object::Type->define(
+        class_name => $ds_name,
+        is => __PACKAGE__,
     );
-
-    if ($created_ds_name ne $ds_name) {
-        $self->error_message("delegated create_from_inline_class_data() returned $created_ds_name, expected $ds_name");
+    unless ($mux_ds_meta) {
+        $self->error_message("Can't create inline data source class $ds_name");
         return;
     }
+
+    my($path_resolver_closure, @required_for_get) = $self->_normalize_file_resolver_details($ds_name,$class_data, $ds_data);
+    return unless $path_resolver_closure;
+
+    # This creates a class that all the file specific data sources inherit from.  This class collects
+    # the configuration data like delimiter, column_order, etc
+    my $file_specific_parent_ds_name = $ds_name->_file_specific_parent_ds_name;
+    $self->_define_file_specific_data_source_parent(
+        $file_specific_parent_ds_name,
+        $self->_delegate_data_source_class,
+        $ds_data,
+    );
+
     unless ($ds_meta = UR::Object::Type->get($ds_name)) {
         $self->error_message($class_data->{'class_name'}.": Failed to create inline data source");
         return;
@@ -65,7 +71,7 @@ $DB::single=1;
         }
 
     } elsif (@required_for_get) {
-        my %columns_from_ds = map { $_ => 1 } $created_ds_name->column_order;
+        my %columns_from_ds = map { $_ => 1 } $file_specific_parent_ds_name->column_order;
 
         foreach my $param_name ( @required_for_get ) {
             my $param_data = $class_data->{'has'}->{$param_name};
@@ -82,27 +88,13 @@ $DB::single=1;
 
     if (@constant_values) { 
         my $const_sub = sub { @constant_values };
-        Sub::Name::subname "${ds_name}::constant_values" => $const_sub;
+        Sub::Name::subname "${file_specific_parent_ds_name}::constant_values" => $const_sub;
         Sub::Install::reinstall_sub({
-            into => $ds_name,
+            into => $file_specific_parent_ds_name,
             as   => 'constant_values',
             code => $const_sub,
         });
-
-        my $gen_templates = sub {
-            my $self = $_[0];
-            my $subref = $self->super_can('_generate_loading_templates_arrayref');
-            my $templates = $subref->(@_);
-            $templates->[0]->{'constant_property_names'} = \@constant_values;
-            return $templates;
-        };
-        
-        Sub::Name::subname "${ds_name}::_generate_loading_templates_arrayref" => $gen_templates;
-        Sub::Install::reinstall_sub({
-            into => $ds_name,
-            as   => '_generate_loading_templates_arrayref',
-            code => $gen_templates,
-        });
+        $self->_setup_generate_load_tmpl_method($file_specific_parent_ds_name, \@constant_values);
     }
 
     if (@required_for_get) {
@@ -121,34 +113,20 @@ $DB::single=1;
                code => $path_resolver_closure,
     });
 
-    Sub::Install::install_sub({
-               into => $ds_name,
-               as   => 'create_iterator_closure_for_rule',
-               code => \&_factory_create_iterator_closure_for_rule,
-    });
-    
     return $ds_name;
 }
 
+ 
+# All the concrete, file-specific data sources will inherit from this class.  This is where we'll
+# put configuration information line delimiter, column_order, etc.
+sub _file_specific_parent_ds_name {
+    return $_[0] . '::_Parent';
+}
 
 
 my %WORKING_RULES; # Avoid recusion when infering values from rules
-# This ends up getting installed into the class' factory data_source as create_iterator_closure_for_rule
-# It's job is to examine the rule, create file-specific data sources if they don't exist yet, and
-# call create_iterator_closure_for_rule() on those file-specific DSs
-sub _factory_create_iterator_closure_for_rule {
+sub create_iterator_closure_for_rule {
         my($self,$rule) = @_;
-
-$DB::single=1;
-        #if ($self ne $ds_name) {
-        #    # The file-specific data sources inherit from the class' data source factory class
-        #    # which means create_iterator_closure_for_rule() gets us here for both cases of 
-        #    # when we need to create a file-specific DS, or when those specific DSs need to retrieve
-        #    # data.  We can differentiate those cases when $self ne $ds_name ($ds_name will be the
-        #    # class' DS factory).  If we're a file-specific DS, kick control up the chain.
-        #    # Seems a big hack...
-        #    return UR::DataSource::SortedCsvFile::create_iterator_closure_for_rule($self,$rule);
-        #}
 
         if ($WORKING_RULES{$rule->id}++) {
             my $subject_class = $rule->subject_class_name;
@@ -186,6 +164,10 @@ $DB::single=1;
         }
         my @resolver_param_combinations = &_get_combinations_of_resolver_params(@all_resolver_params);
 
+        unless (UR::Object::Type->get($self->_file_specific_parent_ds_name)) {
+            $self->_define_file_specific_data_source_parent($self->_file_specific_parent_ds_name,
+                                                            $self->_delegate_data_source_class);
+        }
 
         # Each combination of params ends up being from a different data source.  Make an
         # iterator pulling from each of them
@@ -214,21 +196,10 @@ $DB::single=1;
                     as   => 'server',
                     code => sub { $file_path },
                 });
-                my $c=UR::Object::Type->define(
+                UR::Object::Type->define(
                     class_name => $sub_ds_name,
-                    is => $self,
+                    is => $self->_file_specific_parent_ds_name,
                 );
-                # FIXME - ugly hack!  This is necessary because the file-specific data sources inherit from
-                # the class' DS factory (which inherits from the File data_source).  The factory's 
-                # resolve_iterator_closure_for_rule() needs to create file-specific DSs, but the file-specific
-                # DSs need to inherit resolve_iterator_closure_for_rule() from UR::DataSource::SortedCsvFile so
-                # they can read the actual file
-                Sub::Install::install_sub({
-                    into => $sub_ds_name,
-                    as => 'create_iterator_closure_for_rule',
-                    code => \&UR::DataSource::SortedCsvFile::create_iterator_closure_for_rule,
-                });
-                1;
             };
 
             my $ds = UR::Object::Type->get($sub_ds_name);
@@ -259,6 +230,13 @@ $DB::single=1;
 }
 
 
+sub _generate_template_data_for_loading {
+    my $self = shift;
+    my $delegate_class = $self->_file_specific_parent_ds_name();
+    return $delegate_class->_generate_template_data_for_loading(@_);
+}
+
+
 # Not a method!  Called from the create_iterator_closure_from_rule closures
 sub _get_combinations_of_resolver_params {
     my(@resolver_params) = @_;
@@ -278,7 +256,7 @@ sub _get_combinations_of_resolver_params {
 }
 
 
-sub _derive_file_resolver_details {
+sub _normalize_file_resolver_details {
     my($self, $ds_name, $class_data, $ds_data) = @_;
 
     my $path_resolver_closure;
@@ -366,6 +344,85 @@ sub _derive_file_resolver_details {
 
     return ($path_resolver_closure, @required_for_get);
 }
-                    
+
+
+
+sub _define_file_specific_data_source_parent {
+    my($self,$ds_name, $parent_ds_name, $ds_data) = @_;
+
+    my $ds_meta = UR::Object::Type->define(
+        class_name => $ds_name,
+        is => $parent_ds_name,
+    );
+    unless ($ds_meta) {
+        $self->error_message("Can't create class $ds_name");
+        return;
+    }
+
+    foreach my $param_name ( qw( delimiter skip_first_line file_list column_order sort_order is_sorted ) ) {
+        my $sub;
+        if ($ds_data) {
+            if (ref($ds_data->{$param_name}) eq 'ARRAY') {
+                my @data = @{$ds_data->{$param_name}};
+                $sub = sub { @data };
+            } elsif ($ds_data->{$param_name}) {
+                my $data = $ds_data->{$param_name};
+                $sub = sub { $data };
+            }
+        } else {
+            $sub = $self->can($param_name);
+        }
+
+        if ($sub) {
+            Sub::Name::subname "${ds_name}::${param_name}" => $sub;
+            Sub::Install::install_sub({
+                into => $ds_name,
+                as   => $param_name,
+                code => $sub,
+            });
+        }
+    }
+
+
+    my $constant_values;
+    if ($ds_data->{'constant_values'}) {
+        if (ref($ds_data->{'constant_values'}) eq 'ARRAY') {
+            $constant_values = $ds_data->{'constant_values'};
+        } else {
+            $constant_values = [ $ds_data->{'constant_values'} ];
+        }
+    } elsif ($self->can('constant_values')) {
+        $constant_values = [ $self->constant_values ];
+    }
+    if ($constant_values) {
+        $self->_setup_generate_load_tmpl_method($ds_name,$constant_values);
+    }
+ 
+    return $ds_name;    
+}
+
+
+sub _setup_generate_load_tmpl_method {
+    my($self,$target_class,$constant_values) = @_;
+
+    return unless(ref($constant_values) eq 'ARRAY');
+
+    my $gen_templates = sub {
+        my $self = $_[0];
+        my $subref = $self->super_can('_generate_loading_templates_arrayref');
+        my $templates = $subref->(@_);
+        $templates->[0]->{'constant_property_names'} = $constant_values;
+        return $templates;
+    };
+
+    Sub::Name::subname "${target_class}::_generate_loading_templates_arrayref" => $gen_templates;
+    Sub::Install::reinstall_sub({
+        into => $target_class,
+        as   => '_generate_loading_templates_arrayref',
+        code => $gen_templates,
+    });
+}
+    
+
  
 1;

@@ -2126,6 +2126,13 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
     return;
 }
 
+
+sub _forget_loading_was_done_with_class_and_rule {
+    my($self,$class_name, $rule) = @_;
+
+    delete $all_params_loaded->{$class_name}->{$rule->id};
+}
+
 # Given a list of values, returns a list of lists containing all subsets of
 # the input list, including the original list and the empty list
 sub _get_all_subsets_of_params {
