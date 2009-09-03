@@ -19,214 +19,123 @@ sub _delegate_data_source_class {
 }
 
 
-# Called by the class initializer 
-sub create_from_inline_class_data {
-    my($self, $class_data, $ds_data) = @_;
-
-    my($namespace, $class_name) = ($class_data->{'class_name'} =~ m/^(\w+)::(.*)/);
-    my $ds_name = "${namespace}::DataSource::${class_name}";
-
-    my $ds_meta = UR::Object::Type->get($ds_name);
-    if ($ds_meta) {
-        $self->error_message($class_data->{'class_name'}.": Created/In-line data_source resolves to a data source that already exists ($ds_name)");
-        return;
-    }
-
-    # Define the class for the mux data source
-    my $mux_ds_meta = UR::Object::Type->define(
-        class_name => $ds_name,
-        is => __PACKAGE__,
-    );
-    unless ($mux_ds_meta) {
-        $self->error_message("Can't create inline data source class $ds_name");
-        return;
-    }
-
-    my($path_resolver_closure, @required_for_get) = $self->_normalize_file_resolver_details($ds_name,$class_data, $ds_data);
-    return unless $path_resolver_closure;
-
-    # This creates a class that all the file specific data sources inherit from.  This class collects
-    # the configuration data like delimiter, column_order, etc
-    my $file_specific_parent_ds_name = $ds_name->_file_specific_parent_ds_name;
-    $self->_define_file_specific_data_source_parent(
-        $file_specific_parent_ds_name,
-        $self->_delegate_data_source_class,
-        $ds_data,
-    );
-
-    unless ($ds_meta = UR::Object::Type->get($ds_name)) {
-        $self->error_message($class_data->{'class_name'}.": Failed to create inline data source");
-        return;
-    }
-
-    my @constant_values;
-    if (exists($ds_data->{'constant_values'})) {
-        if (ref($ds_data->{'constant_values'}) eq 'ARRAY'  and  scalar(@{$ds_data->{'constant_values'}})) {
-            @constant_values = @{$ds_data->{'constant_values'}};
-        } elsif(! ref($ds_data->{'constant_values'})) {
-            @constant_values = ( $ds_data->{'constant_values'} );
-        } else {
-            $self->error_message("A data_source's constant_values must be a scalar or arrayref");
-            return;
-        }
-
-    } elsif (@required_for_get) {
-        my %columns_from_ds = map { $_ => 1 } $file_specific_parent_ds_name->column_order;
-
-        foreach my $param_name ( @required_for_get ) {
-            my $param_data = $class_data->{'has'}->{$param_name};
-            next unless $param_data;
-
-            my $param_column = $param_data->{'column_name'};
-            next unless $param_column;
-
-            unless ($columns_from_ds{$param_column}) {
-                push @constant_values, $param_name;
-            }
-        }
-    }
-
-    if (@constant_values) { 
-        my $const_sub = sub { @constant_values };
-        Sub::Name::subname "${file_specific_parent_ds_name}::constant_values" => $const_sub;
-        Sub::Install::reinstall_sub({
-            into => $file_specific_parent_ds_name,
-            as   => 'constant_values',
-            code => $const_sub,
-        });
-        $self->_setup_generate_load_tmpl_method($file_specific_parent_ds_name, \@constant_values);
-    }
-
-    if (@required_for_get) {
-        my $required_sub = sub { @required_for_get };
-        Sub::Name::subname "${ds_name}::required_for_get" => $required_sub;
-        Sub::Install::reinstall_sub({
-            into => $ds_name,
-            as   => 'required_for_get',
-            code => $required_sub,
-        });
-    }
-
-    Sub::Install::install_sub({
-               into => $ds_name,
-               as   => 'file_resolver',
-               code => $path_resolver_closure,
-    });
-
-    return $ds_name;
-}
-
- 
-# All the concrete, file-specific data sources will inherit from this class.  This is where we'll
-# put configuration information line delimiter, column_order, etc.
-sub _file_specific_parent_ds_name {
-    return $_[0] . '::_Parent';
-}
-
-
 my %WORKING_RULES; # Avoid recusion when infering values from rules
 sub create_iterator_closure_for_rule {
-        my($self,$rule) = @_;
+    my($self,$rule) = @_;
 
-        if ($WORKING_RULES{$rule->id}++) {
-            my $subject_class = $rule->subject_class_name;
-            $self->error_message("Recursive entry into create_iterator_closure_for_rule() for class $subject_class rule_id ".$rule->id);
-            $WORKING_RULES{$rule->id}--;
-            return;
+    if ($WORKING_RULES{$rule->id}++) {
+        my $subject_class = $rule->subject_class_name;
+        $self->error_message("Recursive entry into create_iterator_closure_for_rule() for class $subject_class rule_id ".$rule->id);
+        $WORKING_RULES{$rule->id}--;
+        return;
+    }
+
+    my $context = UR::Context->get_current;
+    my @required_for_get = $self->required_for_get;
+    my @all_resolver_params;
+    for(my $i = 0; $i < @required_for_get; $i++) {
+        my $param_name = $required_for_get[$i];
+        my @values = $context->infer_property_value_from_rule($param_name, $rule);
+        unless (@values) {
+            # Hack: the above infer...rule()  returned 0 objects, so $all_params_loaded made
+            # a note of it.  Later on, if the user supplies more params such that it would be
+            # able to resolve a file, we'll never get here, because the Context will see that a
+            # superset of the params (this current invocation without sufficient params) was already
+            # tried and results should be entirely in the cache - ie. no objects.
+            # So... remove the evidence that we tried this in case the user is catching the die
+            # below and will continue on
+            $context->_forget_loading_was_done_with_class_and_rule($rule->subject_class_name, $rule);
+            die "Can't resolve data source: no $param_name specified in rule with id ".$rule->id;
         }
 
-        my $context = UR::Context->get_current;
-        my @required_for_get = $self->required_for_get;
-        my @all_resolver_params;
-        for(my $i = 0; $i < @required_for_get; $i++) {
-            my $param_name = $required_for_get[$i];
-            my @values = $context->infer_property_value_from_rule($param_name, $rule);
-            unless (@values) {
-                # Hack: the above infer...rule()  returned 0 objects, so $all_params_loaded made
-                # a note of it.  Later on, if the user supplies more params such that it would be
-                # able to resolve a file, we'll never get here, because the Context will see that a
-                # superset of the params (this current invocation without sufficient params) was already
-                # tried and results should be entirely in the cache - ie. no objects.
-                # So... remove the evidence that we tried this in case the user is catching the die
-                # below and will continue on
-                $context->_forget_loading_was_done_with_class_and_rule($rule->subject_class_name, $rule);
-                die "Can't resolve data source: no $param_name specified in rule with id ".$rule->id;
-            }
-
-            unless ($rule->specifies_value_for_property_name($param_name)) {
-                if (scalar(@values) == 1) {
-                    $rule = $rule->add_filter($param_name => $values[0]);
-                } else {
-                    $rule = $rule->add_filter($param_name => \@values);
-                }
-            }
-            $all_resolver_params[$i] = \@values;
-        }
-        my @resolver_param_combinations = &_get_combinations_of_resolver_params(@all_resolver_params);
-
-        unless (UR::Object::Type->get($self->_file_specific_parent_ds_name)) {
-            $self->_define_file_specific_data_source_parent($self->_file_specific_parent_ds_name,
-                                                            $self->_delegate_data_source_class);
+        if (@values == 1 and ref($values[0]) eq 'ARRAY') {
+            @values = @{$values[0]};
         }
 
-        # Each combination of params ends up being from a different data source.  Make an
-        # iterator pulling from each of them
-        my @data_source_iterators;
-        my $file_resolver = $self->can('file_resolver');   # This will be called as a regular function, not a method!
-        foreach my $resolver_params ( @resolver_param_combinations ) {
-
-            my @sub_ds_name_parts;
-            my $this_ds_rule_params = $rule->legacy_params_hash;
-            for (my $i = 0; $i < @required_for_get; $i++) {
-                push @sub_ds_name_parts, $required_for_get[$i] . $resolver_params->[$i];
-                $this_ds_rule_params->{$required_for_get[$i]} = $resolver_params->[$i];
+        unless ($rule->specifies_value_for_property_name($param_name)) {
+            if (scalar(@values) == 1) {
+                $rule = $rule->add_filter($param_name => $values[0]);
+            } else {
+                $rule = $rule->add_filter($param_name => \@values);
             }
-            my $sub_ds_name = join('::', $self, @sub_ds_name_parts);
-
-            my $sub_data_source_creator_closure = sub {
-                my $file_path = $file_resolver->(@_);
-                unless (defined $file_path) {
-                    die "Can't resolve data source: resolver for " .
-                        $rule->subject_class_name .
-                        " returned undef for params " . join(',',@_);
-                }
-                # FIXME - when this is a proper property of a data sources, move it there...
-                Sub::Install::install_sub({
-                    into => $sub_ds_name,
-                    as   => 'server',
-                    code => sub { $file_path },
-                });
-                UR::Object::Type->define(
-                    class_name => $sub_ds_name,
-                    is => $self->_file_specific_parent_ds_name,
-                );
-            };
-
-            my $ds = UR::Object::Type->get($sub_ds_name);
-            unless ($ds) {
-                $sub_data_source_creator_closure->(@$resolver_params);
-            }
-
-            my $this_ds_rule = UR::BoolExpr->resolve_for_class_and_params($rule->subject_class_name,%$this_ds_rule_params);
-            push @data_source_iterators, $sub_ds_name->create_iterator_closure_for_rule($this_ds_rule);
         }
-        delete $WORKING_RULES{$rule->id};
+        $all_resolver_params[$i] = \@values;
+    }
+    my @resolver_param_combinations = &_get_combinations_of_resolver_params(@all_resolver_params);
 
-        # If we only made 1 (or 0), just return that one directly
-        return $data_source_iterators[0] if (@data_source_iterators < 2);
+    my $file_specific_parent_ds_name = $self->_file_specific_parent_ds_name;
+    unless (UR::Object::Type->get($file_specific_parent_ds_name)) {
+        $self->_define_file_specific_data_source_parent($file_specific_parent_ds_name,
+                                                        $self->_delegate_data_source_class);
+    }
 
-        # Results are coming from more than one data source.  Make an iterator encompassing all of them
-        my $iterator = sub {
-            while (@data_source_iterators) {
-                while (my $thing = $data_source_iterators[0]->()) {
-                    return $thing;
-                }
-                shift @data_source_iterators;
+    # Each combination of params ends up being from a different data source.  Make an
+    # iterator pulling from each of them
+    my @data_source_iterators;
+    my $file_resolver = $self->can('file_resolver');   # This will be called as a regular function, not a method!
+
+    foreach my $resolver_params ( @resolver_param_combinations ) {
+
+        my @sub_ds_name_parts;
+        my $this_ds_rule_params = $rule->legacy_params_hash;
+        for (my $i = 0; $i < @required_for_get; $i++) {
+            push @sub_ds_name_parts, $required_for_get[$i] . $resolver_params->[$i];
+            $this_ds_rule_params->{$required_for_get[$i]} = $resolver_params->[$i];
+        }
+
+        my $sub_ds_name = join('::', $self, @sub_ds_name_parts);
+        unless (my $ds = UR::Object::Type->get($sub_ds_name)) {
+
+            my $file_path = $file_resolver->(@$resolver_params);
+            unless (defined $file_path) {
+                die "Can't resolve data source: resolver for " .
+                    $rule->subject_class_name .
+                    " returned undef for params " . join(',',@$resolver_params);
             }
+            # FIXME - when this is a proper property of a data sources, move it there...
+            Sub::Install::install_sub({
+                into => $sub_ds_name,
+                as   => 'server',
+                code => sub { $file_path },
+            });
+            UR::Object::Type->define(
+                class_name => $sub_ds_name,
+                is => $file_specific_parent_ds_name,
+            );
+        }
 
-            return;
-        };
-        return $iterator;
+        my $this_ds_rule = UR::BoolExpr->resolve_for_class_and_params($rule->subject_class_name,%$this_ds_rule_params);
+
+        my @constant_values = map { $this_ds_rule->specified_value_for_property_name($_) }
+                              $self->constant_values();
+        #push @data_source_iterators, $sub_ds_name->create_iterator_closure_for_rule($this_ds_rule);
+        push @data_source_iterators, { ds_iterator => $sub_ds_name->create_iterator_closure_for_rule($this_ds_rule),
+                                       constant_values => \@constant_values,
+                                     };
+ 
+        
+    }
+    delete $WORKING_RULES{$rule->id};
+
+    # If we only made 1 (or 0), just return that one directly
+#    return $data_source_iterators[0] if (@data_source_iterators < 2);
+
+    # Results are coming from more than one data source.  Make an iterator encompassing all of them
+    my $iterator = sub {
+        while (@data_source_iterators) {
+            my $ds_iterator = $data_source_iterators[0]->{'ds_iterator'};
+            my @constant_values = @{$data_source_iterators[0]->{'constant_values'}};
+
+            while (my $thing = $ds_iterator->()) {
+                push @$thing, @constant_values;
+                return $thing;
+            }
+            shift @data_source_iterators;
+        }
+
+        return;
+    };
+    return $iterator;
 }
 
 
@@ -413,16 +322,49 @@ sub _define_file_specific_data_source_parent {
 }
 
 
+sub _find_unused_column_in_loading_templates {
+    my $templates = shift;
+    
+    my $last = -1;
+    foreach my $tmpl ( @$templates ) {
+        foreach my $col ( @{$tmpl->{'column_positions'}} ) {
+            if ($col > $last) {
+                $last = $col;
+            }
+        }
+    }
+    if ($last == -1) {
+        die "Couldn't determine last column in loading template";
+    }
+
+    return ++$last;
+}
+
+
 sub _setup_generate_load_tmpl_method {
     my($self,$target_class,$constant_values) = @_;
 
     return unless(ref($constant_values) eq 'ARRAY');
 
+#    my $gen_templates = sub {
+#        my $self = $_[0];
+#        my $subref = $self->super_can('_generate_loading_templates_arrayref');
+#        my $templates = $subref->(@_);
+#        $templates->[0]->{'constant_property_names'} = $constant_values;
+#        return $templates;
+#    };
+    # Any constant-value properties should get wedged in to the loading template and pretend
+    # to be real columns loaded from the data source.  The loading iterator will push them
+    # onto the end of the list getting returned upstream
     my $gen_templates = sub {
         my $self = $_[0];
         my $subref = $self->super_can('_generate_loading_templates_arrayref');
         my $templates = $subref->(@_);
-        $templates->[0]->{'constant_property_names'} = $constant_values;
+        my $col = &_find_unused_column_in_loading_templates($templates);
+        foreach my $prop ( @$constant_values ) {
+            push @{$templates->[0]->{'column_positions'}}, $col++;
+            push @{$templates->[0]->{'property_names'}}, $prop;
+        }
         return $templates;
     };
 
@@ -434,10 +376,124 @@ sub _setup_generate_load_tmpl_method {
     });
 }
 
+
 sub initializer_should_create_column_name_for_class_properties {
     1;
 }
     
+# No values are constant, by default
+sub constant_values {
+    return ();
+}
+
+
+
+# Called by the class initializer 
+sub create_from_inline_class_data {
+    my($self, $class_data, $ds_data) = @_;
+
+    my($namespace, $class_name) = ($class_data->{'class_name'} =~ m/^(\w+)::(.*)/);
+    my $ds_name = "${namespace}::DataSource::${class_name}";
+
+    my $ds_meta = UR::Object::Type->get($ds_name);
+    if ($ds_meta) {
+        $self->error_message($class_data->{'class_name'}.": Created/In-line data_source resolves to a data source that already exists ($ds_name)");
+        return;
+    }
+
+    # Define the class for the mux data source
+    my $mux_ds_meta = UR::Object::Type->define(
+        class_name => $ds_name,
+        is => __PACKAGE__,
+    );
+    unless ($mux_ds_meta) {
+        $self->error_message("Can't create inline data source class $ds_name");
+        return;
+    }
+
+    my($path_resolver_closure, @required_for_get) = $self->_normalize_file_resolver_details($ds_name,$class_data, $ds_data);
+    return unless $path_resolver_closure;
+
+    # This creates a class that all the file specific data sources inherit from.  This class collects
+    # the configuration data like delimiter, column_order, etc
+    my $file_specific_parent_ds_name = $ds_name->_file_specific_parent_ds_name;
+    $self->_define_file_specific_data_source_parent(
+        $file_specific_parent_ds_name,
+        $self->_delegate_data_source_class,
+        $ds_data,
+    );
+
+    unless ($ds_meta = UR::Object::Type->get($ds_name)) {
+        $self->error_message($class_data->{'class_name'}.": Failed to create inline data source");
+        return;
+    }
+
+    my @constant_values;
+    if (exists($ds_data->{'constant_values'})) {
+        if (ref($ds_data->{'constant_values'}) eq 'ARRAY'  and  scalar(@{$ds_data->{'constant_values'}})) {
+            @constant_values = @{$ds_data->{'constant_values'}};
+        } elsif(! ref($ds_data->{'constant_values'})) {
+            @constant_values = ( $ds_data->{'constant_values'} );
+        } else {
+            $self->error_message("A data_source's constant_values must be a scalar or arrayref");
+            return;
+        }
+
+    } elsif (@required_for_get) {
+        my %columns_from_ds = map { $_ => 1 } $file_specific_parent_ds_name->column_order;
+
+        foreach my $param_name ( @required_for_get ) {
+            my $param_data = $class_data->{'has'}->{$param_name};
+            next unless $param_data;
+
+            my $param_column = $param_data->{'column_name'};
+            next unless $param_column;
+
+            unless ($columns_from_ds{$param_column}) {
+                push @constant_values, $param_name;
+            }
+        }
+    }
+
+    if (@constant_values) { 
+        my $const_sub = sub { @constant_values };
+        Sub::Name::subname "${file_specific_parent_ds_name}::constant_values" => $const_sub;
+        Sub::Install::reinstall_sub({
+            #into => $file_specific_parent_ds_name,
+            into => $ds_name,
+            as   => 'constant_values',
+            code => $const_sub,
+        });
+        $self->_setup_generate_load_tmpl_method($file_specific_parent_ds_name, \@constant_values);
+    }
+
+    if (@required_for_get) {
+        my $required_sub = sub { @required_for_get };
+        Sub::Name::subname "${ds_name}::required_for_get" => $required_sub;
+        Sub::Install::reinstall_sub({
+            into => $ds_name,
+            as   => 'required_for_get',
+            code => $required_sub,
+        });
+    }
+
+    Sub::Install::install_sub({
+               into => $ds_name,
+               as   => 'file_resolver',
+               code => $path_resolver_closure,
+    });
+
+    return $ds_name;
+}
+
+ 
+# All the concrete, file-specific data sources will inherit from this class.  This is where we'll
+# put configuration information line delimiter, column_order, etc.
+sub _file_specific_parent_ds_name {
+    return $_[0] . '::_Parent';
+}
+
+
  
 1;
 

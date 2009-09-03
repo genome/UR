@@ -472,7 +472,8 @@ sub get_objects_for_class_and_rule {
                 $underlying_context_closure = undef;
 
             } elsif ($last_loaded_id eq $next_obj_underlying_context->id) {
-                # during a get() with -hints, it's possible that the join can produce the same main object
+                # during a get() with -hints or is_many+is_optional (ie. something with an
+                # outer join), it's possible that the join can produce the same main object
                 # as it's chewing through the (possibly) multiple objects joined to it.
                 # Since the objects will be returned sorted by their IDs, we only have to
                 # remember the last one we saw

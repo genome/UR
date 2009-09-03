@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More tests => 16;
 
 use IO::File;
 
@@ -23,6 +23,16 @@ is($obj->thing_color, 'red', 'Color is correct');
 
 $obj = URT::Thing->get(thing_id => 5, thing_type => 'person');
 ok(!$obj, 'Correctly found no person thing with id 5');
+
+
+my @objs = URT::Thing->get(thing_type => ['person','robot'], thing_id => 7);
+is(scalar(@objs),1, 'retrieved a thing with id 7 that is either a person or robot');
+is($objs[0]->thing_id, 7, 'The retrieved thing has the right id');
+is($objs[0]->thing_type, 'robot', 'The retrieved thing is a robot');
+is($objs[0]->thing_name, 'Gypsy', 'Name is correct');
+is($objs[0]->thing_color, 'purple', 'Color is correct');
+
+
 
 my $error_message;
 UR::Context->message_callback('error', sub { $DB::single=1; $error_message = $_[0]->text });
