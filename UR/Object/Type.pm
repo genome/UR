@@ -632,6 +632,7 @@ sub _load {
     if (ref $class_name eq 'ARRAY') {
         # FIXME is there a more efficient way to add/remove class_name from the rule?
         my $rule_without_class_name = $rule->remove_filter('class_name');
+        $rule_without_class_name = $rule_without_class_name->remove_filter('id');  # id is a synonym for class_name
         my @objs = map { $class->_load($rule_without_class_name->add_filter(class_name => $_)) } @$class_name;
         return $class->context_return(@objs);
     }
