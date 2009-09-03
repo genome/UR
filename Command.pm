@@ -21,9 +21,11 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is_abstract => 1,
     attributes_have => [
-        is_input    => { is => 'Boolean', is_optional => 1 },
-        is_output   => { is => 'Boolean', is_optional => 1 },
-        is_param    => { is => 'Boolean', is_optional => 1 },        
+        is_input            => { is => 'Boolean', is_optional => 1 },
+        is_output           => { is => 'Boolean', is_optional => 1 },
+        is_param            => { is => 'Boolean', is_optional => 1 },
+        shell_args_position => { is => 'Integer', is_optional => 1, 
+                                doc => 'when set, this can be used as a positional argument' },
     ],
     has => [
         bare_args   => { is => 'ARRAY',     is_optional => 1 },
@@ -218,6 +220,17 @@ sub create
 # Override "execute" or "_execute_body" to implement the body of the command.
 # See above for details of internal implementation.
 
+# By default, there are no bare arguments.
+sub _bare_shell_argument_names { 
+    my $self = shift;
+    my $meta = $self->get_class_object;
+    my @ordered_names = 
+        map { $_->property_name } 
+        sort { $a->{shell_args_position} <=> $b->{shell_args_position} }
+        grep { $_->{shell_args_position} }
+        $self->_shell_args_property_meta();
+    return @ordered_names;
+}
 
 # Translates a true/false value from the command module's execute()
 # from Perl (where positive means success), to shell (where 0 means success)
@@ -456,9 +469,41 @@ sub resolve_class_and_params_for_argv
         return($self, undef);
     }
 
-    # Is there a standard getopt spec for capturing non-option paramters?
+    # Q: Is there a standard getopt spec for capturing non-option paramters?
     # Perhaps that's not getting "options" :)
+    # A: Yes.  Use '<>'.  But we need to process this anyway, so it won't help us.
 
+    if (my @names = $self->_bare_shell_argument_names) {
+        # for now we only do this for selfes which explicitly implement the method
+        # this lets us stay backward compatible with old stuff for now
+        for (my $n=0; $n < @ARGV; $n++) {
+            my $name = $names[$n];
+            unless ($name) {
+                $self->error_message("Unexpected bare arguments: @ARGV[$n..$#ARGV]!");
+                return($self, undef);
+            }
+            my $value = $ARGV[$n];
+            my $meta = $self->get_class_object->get_property_meta_by_name($name);
+            if ($meta->is_many) {
+                if ($n == $#names) {
+                    # slurp the rest
+                    $params_hash->{$name} = [@ARGV[$n..$#ARGV]];
+                    last;
+                }
+                else {
+                    die "has-many property $name is not last in bare_shell_argument_names for $self?!";
+                }
+            }
+            else {
+                $params_hash->{$name} = $value;
+            }
+        }
+    }
+
+
+
+    # TODO: when everything is converted to use bare_shell_argument_names, 
+    # this should throw an error if there are any @ARGV left.
     $params_hash->{" "} = [@ARGV];
 
     for my $key (keys %$params_hash) {
@@ -639,6 +684,10 @@ sub help_options
     my $max_name_length = 0;
     for my $property_meta (@property_meta) {
         my $param_name = $self->_shell_arg_name_from_property_meta($property_meta);
+        if ($property_meta->{shell_args_position}) {
+            $param_name = uc($param_name);
+        }
+
         #$param_name = "--$param_name";
         my $doc = $property_meta->doc;
         unless ($doc) {
@@ -767,19 +816,30 @@ sub _shell_arg_usage_string_from_property_meta
 {
     my ($self, $property_meta) = @_;
     my $string = $self->_shell_arg_name_from_property_meta($property_meta);
-    $string = "--$string";
-    if (defined($property_meta->data_type) and $property_meta->data_type =~ /Boolean/) {
-        $string = "[$string]";
+    if ($property_meta->{shell_args_position}) {
+        $string = uc($string);
     }
-    else {
-        if ($property_meta->is_many) {
-            $string .= "=?[,?]";
-        }
-        else {
-            $string .= '=?'; 
-        }
+
+    if ($property_meta->{shell_args_position}) {
         if ($property_meta->is_optional) {
             $string = "[$string]";
+        }
+    }
+    else {
+        $string = "--$string";
+        if (defined($property_meta->data_type) and $property_meta->data_type =~ /Boolean/) {
+            $string = "[$string]";
+        }
+        else {
+            if ($property_meta->is_many) {
+                $string .= "=?[,?]";
+            }
+            else {
+                $string .= '=?'; 
+            }
+            if ($property_meta->is_optional) {
+                $string = "[$string]";
+            }
         }
     }
     return $string;
@@ -1059,4 +1119,4 @@ for my $type (qw/error warning status debug usage/) {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 39230 2008-09-30 23:27:54Z ssmith $
+#$Id: Command.pm 39433 2008-10-04 00:04:28Z ssmith $
