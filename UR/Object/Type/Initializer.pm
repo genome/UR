@@ -172,6 +172,7 @@ sub _construction_params_for_desc {
             my $parent_classes = $desc->{is};
             my @meta_parent_classes = map { $_ . '::Type' } @$parent_classes;
             for (@$parent_classes) {
+                eval "use $_"; ## ignore failures just try $_->class
                 eval "$_->class";
                 if ($@) {
                     die "Error with parent class $_ when defining $class_name! $@";
@@ -189,6 +190,7 @@ sub _construction_params_for_desc {
 
 sub define {
     # This delegates to methods broken out into the UR::Object::Type::Initializer module.
+
     my $class = shift;
     my $desc = $class->_normalize_class_description(@_);
     
