@@ -72,7 +72,7 @@ sub log_change
     # and we undo the wrapper, thereby undoing these
     # -> ignore any signal from a method which is wrapped by another signalling method which gets undone
     return if ($aspect eq "_create_object" or
-               $aspect eq "delete_object" or
+               $aspect eq "_delete_object" or
                $aspect eq "load" or
                $aspect eq "load_external"
               );
@@ -180,8 +180,14 @@ sub rollback
     # ending with the creation of the transaction object itself.
     local $log_all_changes = 0;
 
+
     my @changes_to_undo = reverse $self->get_changes();
     for my $change (@changes_to_undo) {
+        if ($change == $changes_to_undo[0]) {
+            # the transaction reverses itself in its own context,
+            # but the removal of the transaction itself happens in the parent context
+            $UR::Context::current = $parent;
+        }
         $change->undo;
         $change->delete;
     }

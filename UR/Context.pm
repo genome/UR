@@ -179,6 +179,7 @@ sub _light_cache {
 
 # Given a rule, and a property name not mentioned in the rule,
 # can we infer the value of that property from what actually is in the rule?
+
 sub infer_property_value_from_rule {
     my($self,$wanted_property_name,$rule) = @_;
 
@@ -204,6 +205,472 @@ sub infer_property_value_from_rule {
     }
 }
 
+our $sig_depth = 0;
+sub add_change_to_transaction_log {
+    my ($self,$subject, $property, @data) = @_;
+
+    my ($class,$id);
+    if (ref($subject)) {
+        $class = ref($subject);
+        $id = $subject->id;
+        unless ($property eq 'load' or $property eq 'define' or $property eq 'unload') {
+            $subject->{_change_count}++;
+            #print "changing $subject $property @data\n";    
+        }
+    }
+    else {
+        $class = $subject;
+        $subject = undef;
+        $id = undef;
+    }
+
+    if ($UR::Context::Transaction::log_all_changes) {
+        # eventually all calls to __signal_change__ will go directly here
+        UR::Context::Transaction->log_change($subject, $class, $id, $property, @data);
+    }
+
+    if (my $index_list = $UR::Object::Index::all_by_class_name_and_property_name{$class}{$property}) {
+        unless ($property eq 'create' or $property eq 'load' or $property eq 'define') {
+            for my $index (@$index_list) {
+                $index->_remove_object(
+                    $subject, 
+                    { $property => $data[0] }
+                ) 
+            }
+        }
+        
+        unless ($property eq 'delete' or $property eq 'unload') {
+            for my $index (@$index_list) {
+                $index->_add_object($subject)
+            }
+        }
+    }
+
+    # Before firing signals, we must update indexes to reflect the change.
+    # This is currently a standard callback.
+
+    my @check_classes  =
+        (
+            $class
+            ? (
+                $class,
+                (grep { $_->isa("UR::Object") } $class->inheritance),
+                ''
+            )
+            : ('')
+        );
+    my @check_properties    = ($property    ? ($property, '')    : ('') );
+    my @check_ids           = ($id          ? ($id, '')          : ('') );
+
+    #my @per_class  = grep { defined $_ } @$all_change_subscriptions{@check_classes};
+    #my @per_method = grep { defined $_ } map { @$_{@check_properties} } @per_class;
+    #my @per_id     = grep { defined $_ } map { @$_{@check_ids} } @per_method;
+    #my @matches = map { @$_ } @per_id;
+
+    my @matches =
+        map { @$_ }
+        grep { defined $_ } map { @$_{@check_ids} }
+        grep { defined $_ } map { @$_{@check_properties} }
+        grep { defined $_ } @$UR::Context::all_change_subscriptions{@check_classes};
+
+    return unless @matches;
+
+    #Carp::cluck() unless UR::Object::Subscription->can("class");
+    #my @s = UR::Object::Subscription->get(
+    ##    monitor_class_name => \@check_classes,
+    #    monitor_method_name => \@check_properties,
+    #    monitor_id => \@check_ids,
+    #);
+
+    #print STDOUT "fire __signal_change__: class $class id $id method $property data @data -> \n" . join("\n", map { "@$_" } @matches) . "\n";
+
+    $sig_depth++;
+    do {
+        no warnings;
+        @matches = sort { $a->[2] <=> $b->[2] } @matches;
+    };
+    
+    #print scalar(@matches) . " index matches\n";
+    foreach my $callback_info (@matches)
+    {
+        my ($callback, $note) = @$callback_info;
+        &$callback($subject, $property, @data)
+    }
+    $sig_depth--;
+
+    return scalar(@matches);
+}
+
+sub query {
+    my $self = shift;
+
+    # Fast optimization for the default case.
+    {
+        no warnings;
+        if (exists $UR::Context::all_objects_loaded->{$_[0]}
+            and my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}
+            )
+        {
+            $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
+            return $obj;
+        }
+    };
+
+    # Normal logic for finding objects smartly is below.
+
+    my $class = shift;
+
+    # Handle the case in which this is called as an object method.
+    # Functionality is completely different.
+
+    if(ref($class)) {
+        my @rvals;
+        foreach my $prop (@_) {
+            push(@rvals, $class->$prop());
+        }
+
+        if(wantarray) {
+            return @rvals;
+        }
+        else {
+            return \@rvals;
+        }
+    }
+    
+    my ($rule, @extra) = UR::BoolExpr->resolve($class,@_);        
+    
+    if (@extra) {
+        # remove this and have the developer go to the datasource 
+        if (scalar @extra == 2 and $extra[0] eq "sql") {
+            return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
+        }
+        
+        # keep this part: let the sub-class handle special params if it can
+        return $class->get_with_special_parameters($rule, @extra);
+    }
+
+    # This is here for bootstrapping reasons: we must be able to load class singletons
+    # in order to have metadata for regular loading....
+    if (!$rule->has_meta_options and ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value"))) {
+        my $normalized_rule = $rule->normalize;
+        
+        my @objects = $class->_load($normalized_rule);
+        
+        return unless defined wantarray;
+        return @objects if wantarray;
+        
+        if ( @objects > 1 and defined(wantarray)) {
+            my $params = $rule->params_list();
+            $DB::single=1;
+            print "Got multiple matches for class $class\nparams were: ".join(', ', map { "$_ => " . $params->{$_} } keys %$params) . "\nmatched objects were:\n";
+            foreach my $o (@objects) {
+               print "Object $o\n";
+               foreach my $k ( keys %$o) {
+                   print "$k => ".$o->{$k}."\n";
+               }
+            }
+            Carp::confess("Multiple matches for $class query!". Data::Dumper::Dumper([$rule->params_list]));
+            Carp::confess("Multiple matches for $class, ids: ",map {$_->id} @objects, "\nParams: ",
+                           join(', ', map { "$_ => " . $params->{$_} } keys %$params)) if ( @objects > 1 and defined(wantarray));
+        }
+        
+        return $objects[0];
+    }
+
+    return $UR::Context::current->get_objects_for_class_and_rule($class, $rule);
+}
+
+
+sub create_entity {
+    my $self = shift;
+
+    my $class = shift;        
+    my $class_meta = $class->__meta__;        
+    
+    # Few different ways for automagic subclassing...
+
+    # #1 - The class specifies that we should call this other method (sub_classification_method_name)
+    # to determine the correct subclass
+    if (my $method_name = $class_meta->first_sub_classification_method_name) {
+        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
+        my $sub_class_name = $class->$method_name(@_);
+        if (defined($sub_class_name) and ($sub_class_name ne $class)) {
+            # delegate to the sub-class to create the object
+            no warnings;
+            unless ($sub_class_name->can('create')) {
+                $DB::single = 1;
+                print $sub_class_name->can('create');
+                die "$class has determined via $method_name that the correct subclass for this object is $sub_class_name.  This class cannot create!" . join(",",$sub_class_name->inheritance);
+            }
+            return $sub_class_name->create(@_);
+        }
+        # fall through if the class names match
+    }
+
+    # #2 - The class create() was called on is abstract and has a subclassify_by property named.
+    # Extract the value of that property from the rule to determine the subclass create() should 
+    # really be called on
+    if ($class_meta->is_abstract) {
+        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
+
+        # Determine the correct subclass for this object
+        # and delegate to that subclass.
+        my $subclassify_by = $class_meta->subclassify_by;
+        if ($subclassify_by) {
+            unless ($rule->specifies_value_for($subclassify_by)) {
+                if ($class_meta->is_abstract) {
+                    Carp::confess(
+                        "Invalid parameters for $class create():"
+                        . " abstract class requires $subclassify_by to be specified"
+                        . "\nParams were: " . Data::Dumper::Dumper({ $rule->params_list })
+                    );               
+                }
+                else {
+                    ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $subclassify_by => $class, @_);
+                    unless ($rule and $rule->specifies_value_for($subclassify_by)) {
+                        die "Error setting $subclassify_by to $class!";
+                    }
+                } 
+            }           
+            my $sub_class_name = $rule->value_for($subclassify_by);
+            unless ($sub_class_name) {
+                die "no sub class found?!";
+            }
+            if ($sub_class_name eq $class) {
+                die "sub-classified as its own class $class!";
+            }
+            unless ($sub_class_name->isa($class)) {
+                die "class $sub_class_name is not a sub-class of $class!"; 
+            }
+            return $sub_class_name->create(@_); 
+        }
+        else {
+            Carp::confess("$class requires support for a 'type' class which has persistance.  Broken.  Fix me.");
+            #my $params = $rule->legacy_params_hash;
+            #my $sub_classification_meta_class_name = $class_meta->sub_classification_meta_class_name;
+            # there is some other class of object which typifies each of the subclasses of this abstract class
+            # let that object tell us the class this object goes into
+            #my $type = $sub_classification_meta_class_name->get($type_id);
+            #unless ($type) {
+            #    Carp::confess(
+            #        "Invalid parameters for $class create():"
+            #        . "Failed to find a $sub_classification_meta_class_name"
+            #        . " with identifier $type_id."
+            #    );
+            #}
+            #my $subclass_name = $type->subclass_name($class);
+            #unless ($subclass_name) {
+            #    Carp::confess(
+            #        "Invalid parameters for $class create():"
+            #        . "$sub_classification_meta_class_name '$type_id'"
+            #        . " failed to return a s sub-class name for $class"
+            #    );
+            #}
+            #return $subclass_name->create(@_);
+        }
+
+    }
+
+    # Normal case... just make a rule out of the passed-in params
+    my $rule = UR::BoolExpr->resolve_normalized($class, @_);
+
+    # Process parameters.  We do this here instead of 
+    # waiting for _create_object to do it so that we can ensure that
+    # we have an ID, and autogenerate an ID if necessary.
+    my $params = $rule->legacy_params_hash;
+    my $id = $params->{id};        
+
+    # Whenever no params, or a set which has no ID, make an ID.
+    unless (defined($id)) {            
+        $id = $class_meta->autogenerate_new_object_id($rule);
+        unless (defined($id)) {
+            $class->error_message("No ID for new $class!\n");
+            return;
+        }
+    }
+    
+    # @extra is extra values gotten by inheritance
+    my @extra;
+    
+    # %property_objects maps property names to UR::Object::Property objects
+    # by going through the reversed list of UR::Object::Type objects below
+    # We set up this hash to have the correct property objects for each property
+    # name.  This is important in the case of property name overlap via
+    # inheritance.  The property object used should be the one "closest"
+    # to the class.  In other words, a property directly on the class gets
+    # used instead of an inherited one.
+    my %property_objects;
+    my %direct_properties;
+    my %indirect_properties; 
+    my %set_properties;
+    my %default_values;
+    my %immutable_properties;
+    
+    for my $co ( reverse( $class_meta, $class_meta->ancestry_class_metas ) ) {
+        # Reverse map the ID into property values.
+        # This has to occur for all subclasses which represent table rows.
+        
+        my @id_property_names = $co->id_property_names;
+        my @values = $co->resolve_ordered_values_from_composite_id( $id );
+        $#values = $#id_property_names;
+        push @extra, map { $_ => shift(@values) } @id_property_names;
+        
+        # deal with %property_objects
+        my @property_objects = $co->direct_property_metas;
+        my @property_names = map { $_->property_name } @property_objects;
+        @property_objects{@property_names} = @property_objects;            
+        
+        foreach my $prop ( @property_objects ) {
+            my $name = $prop->property_name;
+            $default_values{ $prop->property_name } = $prop->default_value if (defined $prop->default_value);
+            if ($prop->is_many) {
+                $set_properties{$name} = $prop;
+            }
+            elsif ($prop->is_indirect) {
+                $indirect_properties{$name} = $prop;
+            }
+            else {
+                $direct_properties{$name} = $prop;
+            }
+            
+            unless ($prop->is_mutable) {
+                $immutable_properties{$name} = 1;
+            }
+        }
+    }
+    
+    my @indirect_property_names = keys %indirect_properties;
+    my @direct_property_names = keys %direct_properties;
+
+    $params = { %$params };
+
+    my $indirect_values = {}; # collection of key-value pairs for the EAV table
+    for my $property_name (keys %indirect_properties) {
+        $indirect_values->{ $property_name } =
+            delete $params->{ $property_name }
+                if ( exists $params->{ $property_name } );
+    }
+
+    my $set_values = {};
+    for my $property_name (keys %set_properties) {
+        $set_values->{ $property_name } =
+            delete $params->{ $property_name }
+                if ( exists $params->{ $property_name } );
+    }
+    
+    # create the object.
+    my $entity = $class->_create_object(%default_values, %$params, @extra, id => $id);
+    unless ($entity) {
+        return;
+    }
+
+    # add itesm for any multi properties
+    if (%$set_values) {
+        for my $property_name (keys %$set_values) {
+            my $meta = $set_properties{$property_name};
+            my $singular_name = $meta->singular_name;
+            my $adder = 'add_' . $singular_name;
+            my $value = $set_values->{$property_name};
+            unless (ref($value) eq 'ARRAY') {
+                die "odd non-array refrenced used for 'has-many' property $property_name for $class: $value!";
+            }
+            for my $item (@$value) {
+                if (ref($item) eq 'ARRAY') {
+                    $entity->$adder(@$item);
+                }
+                elsif (ref($item) eq 'HASH') {
+                    $entity->$adder(%$item);
+                }
+                else {
+                    $entity->$adder($item);
+                }
+            }
+        }
+    }    
+
+    # set any indirect properties        
+    if (%$indirect_values) {
+        for my $property_name (keys %$indirect_values) {
+            $entity->$property_name($indirect_values->{$property_name});
+        }
+    }
+
+    if (%immutable_properties) {
+        my @problems = $entity->__errors__();
+        if (@problems) {
+            my @errors_fatal_to_construction;
+            
+            my %problems_by_property_name;
+            for my $problem (@problems) {
+                my @problem_properties;
+                for my $name ($problem->properties) {
+                    if ($immutable_properties{$name}) {
+                        push @problem_properties, $name;                        
+                    }
+                }
+                if (@problem_properties) {
+                    push @errors_fatal_to_construction, join(" and ", @problem_properties) . ': ' . $problem->desc;
+                }
+            }
+            
+            if (@errors_fatal_to_construction) {
+                my $msg = 'Failed to create ' . $class . ' with invalid immutable properties:'
+                    . join("\n", @errors_fatal_to_construction);
+                #$entity->_delete_object;
+                #die $msg;
+            }
+        }
+    }
+    
+    $entity->__signal_change__("create");
+    return $entity;
+}
+
+sub delete_entity {
+    my ($self,$entity) = @_;
+
+    if (ref($entity)) {
+        # Delete the specified object.
+        if ($entity->{db_committed} || $entity->{db_saved_uncommitted}) {
+
+            # gather params for the ghost object
+            my $do_data_source;
+            my %ghost_params;
+            my @pn;
+            { no warnings 'syntax';
+               @pn = grep { $_ ne 'data_source_id' || ($do_data_source=1 and 0) } # yes this really is '=' and not '=='
+                     grep { exists $entity->{$_} }
+                     $entity->__meta__->all_property_names;
+            }
+            
+            # we're not really allowed to interrogate the data_source property directly
+            @ghost_params{@pn} = $entity->get(@pn);
+            if ($do_data_source) {
+                $ghost_params{'data_source_id'} = $entity->{'data_source_id'};
+            }    
+
+            # create ghost object
+            my $ghost = $entity->ghost_class->_create_object(id => $entity->id, %ghost_params);
+            unless ($ghost) {
+                $DB::single = 1;
+                Carp::confess("Failed to constructe a deletion record for an unsync'd delete.");
+            }
+            $ghost->__signal_change__("create");
+
+            for my $com (qw(db_committed db_saved_uncommitted)) {
+                $ghost->{$com} = $entity->{$com}
+                    if $entity->{$com};
+            }
+
+        }
+        $entity->__signal_change__('delete');
+        $entity->_delete_object;
+        return $entity;
+    }
+    else {
+        Carp::confess("Can't call delete as a class method.");
+    }
+}
 
 # This one works when the rule specifies the value of an indirect property, and we want
 # the value of a direct property of the class

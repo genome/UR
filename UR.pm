@@ -7,22 +7,26 @@ package UR;
 use strict;
 use warnings FATAL => 'all';
 
-our $VERSION = '0.5_rc1';
+our $VERSION;
+
+BEGIN {
+    $VERSION = '0.5';
+}
 
 # Ensure we get detailed errors while starting up.
 use Carp;
 $SIG{__DIE__} = \&Carp::confess;
 
-# This speeds up using the module tree by pre-calculaing meta-queries queries.
+# This speeds up using the module tree by pre-calculaing meta-queries.
 use Storable qw(store_fd fd_retrieve);
 BEGIN {
     my $ur_dir = substr($INC{'UR.pm'}, 0, length($INC{'UR.pm'})-5);
     #print "STDERR ur_dir is $ur_dir\n";
     my $dump;
     foreach my $dir ( '.', $ur_dir ) {
-        if (-f "$dir/ur_core.stor" and -s _) {
+        if (-f "$dir/ur_core.$VERSION.stor" and -s _) {
             #print STDERR "Loading rules dump from $dir/ur_core.stor\n";
-            open($dump, "$dir/ur_core.stor");
+            open($dump, "$dir/ur_core.$VERSION.stor");
             last;
         } elsif (-f "$dir/ur_core.stor.gz" and -s _) {
             #print STDERR "Loading gzipped rules dump from $dir/ur_core.stor.gz\n";
@@ -123,8 +127,6 @@ require UR::Object::Reference::Property;
 
 require UR::BoolExpr::Util;
 require UR::BoolExpr;                                  # has meta 
-
-require UR::BoolExpr::Normalizer;                      # has meta
 require UR::BoolExpr::Template;                        # has meta
 require UR::BoolExpr::Template::PropertyComparison;    # has meta
 require UR::BoolExpr::Template::Composite;             # has meta
@@ -143,8 +145,7 @@ require UR::Object::Index;
 
 UR::Object::Type->define(
     class_name => 'UR::Object',
-    english_name => 'entity',
-    is => [], # the default is to inherit from UR::Object, which is circular
+    is => [], # the default is to inherit from UR::Object, which is circular, so we explicitly say nothing
     is_abstract => 1,
     composite_id_separator => "\t",
     id_by => [
@@ -154,12 +155,9 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Inheritance',
-    english_name => 'type is a',
     extends => ['UR::Object'],
     id_properties => [qw/class_name parent_class_name/],
     properties => [
-        #parent_type_name                 => { is => 'Text', len => 256, source => 'data dictionary' },
-        #type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
         parent_class_name                => { is => 'Text', len => 256, source => 'data dictionary' },
         class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
         inheritance_priority             => { is => 'NUMBER', len => 2 },
@@ -168,28 +166,24 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => "UR::Object::Index",
-    english_name => "old index",
     id_by => ['indexed_class_name','indexed_property_string'],
     has => ['indexed_class_name','indexed_property_string'],
     is_transactional => 0,
 );
 
 UR::Object::Type->define(
-    english_name => 'entity ghost',
     class_name => 'UR::Object::Ghost',
     is_abstract => 1,
 );
 
 UR::Object::Type->define(
     class_name => 'UR::Entity',
-    english_name => 'table row',
     extends => ['UR::Object'],
     is_abstract => 1,
 );
 
 UR::Object::Type->define(
     class_name => 'UR::Entity::Ghost',
-    english_name => 'table row ghost',
     extends => ['UR::Object::Ghost'],
     is_abstract => 1,
 );
@@ -202,7 +196,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Type',
-    english_name => 'entity type',
     id_by => ['class_name'],
     sub_classification_method_name => '_resolve_meta_class_name',
     has => [
@@ -325,7 +318,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Property',
-    english_name => 'entity type attribute',
     id_properties => [
         class_name                      => { is => 'Text', len => 256 },        
         property_name                   => { is => 'Text', len => 256 },            
@@ -388,7 +380,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Reference::Property',
-    english_name => 'type attribute has a',
     id_properties => [qw/tha_id rank/],
     properties => [
         rank                            => { is => 'NUMBER', len => 2, source => 'data dictionary' },
@@ -412,7 +403,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Reference',
-    english_name => 'type has a',
     id_properties => ['tha_id'],
     properties => [
         tha_id                          => { is => 'Text', len => 128, source => 'data dictionary' },
@@ -436,7 +426,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Property::Unique',
-    english_name => 'entity type unique attribute',
     id_properties => [qw/type_name unique_group attribute_name/],
     properties => [
         class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
@@ -453,7 +442,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Property::ID',
-    english_name => 'entity type id',
     id_properties => [qw/type_name position/],
     properties => [
         position                         => { is => 'NUMBER', len => 2, source => 'data dictionary' },

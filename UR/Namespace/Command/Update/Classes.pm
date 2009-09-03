@@ -807,9 +807,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             #$DB::single = 1;
         }
         # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
+        my $committed_data_source_id = UR::Context->_get_committed_property_value($table,'data_source');
+        my $committed_table_name     = UR::Context->_get_committed_property_value($table,'table_name');
         my $class = UR::Object::Type->get(
-            data_source_id => UR::Context->_get_committed_property_value($table,'data_source'),
-            table_name     => UR::Context->_get_committed_property_value($table,'table_name'),
+            data_source_id => $committed_data_source_id, 
+            table_name     => $committed_table_name, 
         );
         unless ($class) {
             $self->status_message(sprintf("~ No class found for deleted table %-32s" . "\n",$table->id));

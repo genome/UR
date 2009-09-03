@@ -60,7 +60,7 @@ URT::Thing->unload();
 
 
 
-$iter = URT::Thing->create_iterator(thing_value => { operator => 'true', value => '1' });
+$iter = URT::Thing->create_iterator(thing_value => { operator => 'like', value => '%1%' });
 ok($iter, 'Created iterator with filter on thing_value');
 @objects = ();
 for ( my $i = 0; $i < 9; $i++) {
@@ -73,8 +73,8 @@ for ( my $i = 0; $i < 9; $i++) {
 is(scalar(@objects), 9, 'Loaded only the first 9 objects from the iterator');
 
 $iter = undef;
-@objects2 = URT::Thing->get(thing_value => { operator => 'true', value => '1' });
-is(scalar(@objects2), 19, 'get() with the same filter on thing_value returns all the objects');
+@objects2 = URT::Thing->get(thing_value => { operator => 'like', value => '%1%' });
+is(scalar(@objects2), 11, 'get() with the same filter on thing_value returns all the objects');
 
 
 URT::Thing->unload();
