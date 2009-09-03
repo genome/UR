@@ -1167,27 +1167,19 @@ sub _create_import_iterator_for_underlying_context {
                 # It is possible that one or more objects go into subclasses which require more
                 # data than is on the results row.  For each subclass (or set of subclasses),
                 # we make a more specific, subordinate iterator to delegate-to.
-                $DB::single = 1;               
  
-                # TODO: handle subclasses in other importers besides the primary one
                 my $subclass_name = $object;
 
-                # FIXME - this sidesteps the TODO issue mentioned above.  The resulting
-                # behavior is that it will complete the main query, and then do individual
-                # queries for all the resultant items that needed to be subclassed.  Correct
-                # behavior, but not optimal
-                #if (grep { not ref $_ } @imported[0..$#imported-1]) {
-                #    #die "No support for sub-classifying joined objects yet!";
-                #}
                 unless (grep { not ref $_ } @imported[0..$#imported-1]) {
-                
-                    my $sub_iterator = $subordinate_iterator_for_class{$subclass_name};
+                    my $subclass_meta = UR::Object::Type->get(class_name => $subclass_name);
+                    my $table_subclass = $subclass_meta->most_specific_subclass_with_table();
+                    my $sub_iterator = $subordinate_iterator_for_class{$table_subclass};
                     unless ($sub_iterator) {
                         #print "parallel iteration for loading $subclass_name under $class_name!\n";
                         my $sub_classified_rule_template = $rule_template->sub_classify($subclass_name);
                         my $sub_classified_rule = $sub_classified_rule_template->get_rule_for_values(@values);
                         $sub_iterator 
-                            = $subordinate_iterator_for_class{$subclass_name} 
+                            = $subordinate_iterator_for_class{$table_subclass} 
                                 = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx);
                     }
                     ($object) = $sub_iterator->();
@@ -2048,10 +2040,10 @@ sub _get_objects_for_class_and_rule_from_cache {
     return $results[0];
 }
 
-sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
+sub _X_loading_was_done_before_with_a_superset_of_this_params_hashref  {
     my ($self,$class,$params) = @_;
 
-    my @property_names =
+    my @params_property_names =
         grep {
             $_ ne "id"
                 and not (substr($_,0,1) eq "_")
@@ -2061,13 +2053,17 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
 
     for my $try_class ( $class, $class->inheritance ) {
         # more than one property, see if individual checks have been done for any of these...
-        for my $property_name (@property_names) {
-            next unless ($try_class->get_class_object->get_property_meta_by_name($property_name));
+        my $try_class_meta = $try_class->get_class_object;
+        next unless $try_class_meta;
+
+        # This only works if the prior load was via 1 param, but not if it
+        # used more than one.
+        for my $property_name (@params_property_names) {
+            next unless ($try_class_meta->get_property_meta_by_name($property_name));
 
             my $key = $try_class->get_rule_for_params($property_name => $params->{$property_name})->id;
-            if (defined($key)
-                && exists $all_params_loaded->{$try_class}->{$key}) {
-                # DRY
+            if (defined($key) && exists $all_params_loaded->{$try_class}->{$key}) {
+        
                 $all_params_loaded->{$try_class}->{$params->{_param_key}} = 1;
                 my $new_key = $params->{_param_key};
                 for my $obj ($try_class->all_objects_loaded) {
@@ -2089,6 +2085,71 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
     }
     return;   
 }
+
+
+sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
+    my ($self,$class,$input_params) = @_;
+
+    my @params_property_names =
+        grep {
+            $_ ne "id"
+                and not (substr($_,0,1) eq "_")
+                and not (substr($_,0,1) eq "-")
+            }
+    keys %$input_params;
+
+    for my $try_class ( $class, $class->inheritance ) {
+        # more than one property, see if individual checks have been done for any of these...
+        my $try_class_meta = $try_class->get_class_object;
+        next unless $try_class_meta;
+
+        my @param_combinations = $self->_get_all_subsets_of_params(
+                                     grep { $try_class_meta->get_property_meta_by_name($_) }
+                                          @params_property_names
+                                 );
+        # get rid of first (empty) entry.  For no params, this would
+        # have been caught by $all_objects_are_loaded
+        shift @param_combinations; 
+        foreach my $params ( @param_combinations ) {
+            my %get_hash = map { $_ => $input_params->{$_} } @$params;
+            #my $key = $try_class->get_rule_for_params(%get_hash)->id;
+            my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($try_class, %get_hash);
+            my $key = $rule->id;
+            if (defined($key) && exists $all_params_loaded->{$try_class}->{$key}) {
+
+                $all_params_loaded->{$try_class}->{$input_params->{_param_key}} = 1;
+                my $new_key = $input_params->{_param_key};
+                for my $obj ($try_class->all_objects_loaded) {
+                    my $load_data = $obj->{load};
+                    next unless $load_data;
+                    my $param_key_data = $load_data->{param_key};
+                    next unless $param_key_data;
+                    my $class_data = $param_key_data->{$try_class};
+                    next unless $class_data;
+                    $class_data->{$new_key}++;
+                }
+                return 1;
+            }
+        }
+        # No sense looking further up the inheritance
+        # FIXME UR::ModuleBase is in the inheritance list, you can't call get_class_object() on it
+        # and I'm having trouble getting a UR class object defined for it...
+        last if ($try_class eq 'UR::Object');
+    }
+    return;
+}
+
+# Given a list of values, returns a list of lists containing all subsets of
+# the input list, including the original list and the empty list
+sub _get_all_subsets_of_params {
+    my $self = shift;
+
+    return [] unless @_;
+    my $first = shift;
+    my @rest = $self->_get_all_subsets_of_params(@_);
+    return @rest, map { [$first, @$_ ] } @rest;
+}
+
 
 # all of these delegate to the current context...
 
