@@ -250,7 +250,12 @@ sub help_brief
             return "no sub-commands implemented!"
         }
     }
-    return "!!! define help_brief() in module $self!";
+    if (my $doc = $self->get_class_object->doc) {
+        return $doc;
+    }
+    else {
+        return "no description!!!: define 'doc' in $self";
+    }
 }
 
 sub help_bare_args
@@ -1054,4 +1059,4 @@ for my $type (qw/error warning status debug usage/) {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 39062 2008-09-25 14:26:19Z ssmith $
+#$Id: Command.pm 39230 2008-09-30 23:27:54Z ssmith $
