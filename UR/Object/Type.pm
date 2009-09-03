@@ -758,6 +758,9 @@ sub _use_safe {
         eval "use $target_class";
     };
 
+    # FIXME - if the use above failed because of a compilation error in the module we're trying to
+    # load, then the error message below just tells the user that "Compilation failed in require"
+    # and isn't propogating the error message about what caused the compile to fail
     if ($@) {
         Carp::confess("ERROR DYNAMICALLY LOADING CLASS $target_class from @INC\n$@");
     }
