@@ -1417,9 +1417,26 @@ sub clear_cache {
     1;
 }
 
+our $IS_SYNCING_DATABASE = 0;
 sub _sync_databases {
     my $self = shift;
     my %params = @_;
+
+    # Glue App::DB->sync_database with UR::Context->_sync_databases()
+    # and avoid endless recursion.
+    # FIXME Remove this when we're totally off of the old API
+    # You'll also want to remove all the gotos from this function and uncomment
+    # the returns
+    return 1 if $IS_SYNCING_DATABASE;
+    $IS_SYNCING_DATABASE = 1;
+    if ($App::DB::{'sync_database'}) {
+        unless (App::DB->sync_database() ) {
+            $IS_SYNCING_DATABASE = 0;
+            $self->error_message(App::DB->error_message());
+            return;
+        }
+    }
+    $IS_SYNCING_DATABASE = 0;  # This should be far down enough to avoid recursion, right?
     
     # Determine what has changed.
     my @changed_objects = (
@@ -1461,7 +1478,8 @@ sub _sync_databases {
                 . ".\n";
         }
         $self->error_message($msg . ": " . join("  ", @msg));
-        return;
+        goto PROBLEM_SAVING;
+        #return;
     }
 
     # group changed objects by data source
@@ -1518,11 +1536,18 @@ sub _sync_databases {
             for my $prev_data_source (@done) {
                 $prev_data_source->_reverse_sync_database;
             }
-            return;
+            goto PROBLEM_SAVING;
+            #return;
         }
     }
     
     return 1;
+
+    PROBLEM_SAVING:
+    if ($App::DB::{'rollback'}) {
+        App::DB->rollback();
+    }
+    return;
 }
 
 sub _reverse_all_changes {
@@ -1617,8 +1642,24 @@ sub _reverse_all_changes {
     return 1;
 }
 
+our $IS_COMMITTING_DATABASE = 0;
 sub _commit_databases {
     my $class = shift;
+
+    # Glue App::DB->commit() with UR::Context->_commit_databases()
+    # and avoid endless recursion.
+    # FIXME Remove this when we're totally off of the old API
+    return 1 if $IS_COMMITTING_DATABASE;
+    $IS_COMMITTING_DATABASE = 1;
+    if ($App::DB::{'commit'}) {
+        unless (App::DB->commit() ) {
+	    $IS_COMMITTING_DATABASE = 0;
+            $class->error_message(App::DB->error_message());
+            return;
+        }
+    }
+    $IS_COMMITTING_DATABASE = 0;
+
     unless ($class->_for_each_data_source("commit")) {
         if ($class->error_message eq "PARTIAL commit") {
             die "FRAGMENTED DISTRIBUTED TRANSACTION\n"
@@ -1631,8 +1672,25 @@ sub _commit_databases {
     return 1;
 }
 
+
+our $IS_ROLLINGBACK_DATABASE = 0;
 sub _rollback_databases {
     my $class = shift;
+
+    # Glue App::DB->rollback() with UR::Context->_rollback_databases()
+    # and avoid endless recursion.
+    # FIXME Remove this when we're totally off of the old API
+    return 1 if $IS_ROLLINGBACK_DATABASE;
+    $IS_ROLLINGBACK_DATABASE = 1;
+    if ($App::DB::{'rollback'}) {
+        unless (App::DB->rollback()) {
+            $IS_ROLLINGBACK_DATABASE = 0;
+            $class->error_message(App::DB->error_message());
+            return;
+        }
+    }
+    $IS_ROLLINGBACK_DATABASE = 0;
+
     $class->_for_each_data_source("rollback")
         or die "FAILED TO ROLLBACK!: " . $class->error_message;
     return 1;
