@@ -8,7 +8,9 @@ use Test::More tests => 50;
 # sources, and a test where the numeric order of things is differen
 # than the alphabetic order
 
-use above 'URT'; # dummy namespace
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT; # dummy namespace
 
 # Turn this on for debugging
 #$ENV{UR_DBI_MONITOR_SQL}=1;

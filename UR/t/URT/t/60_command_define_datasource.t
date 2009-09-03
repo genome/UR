@@ -5,8 +5,22 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use IO::File;
+use Test::More;
 
-use Test::More tests => 69;
+eval "use DBD::mysql";
+eval "use DBD::pg";
+eval "use DBD::Oracle";
+my $oracle = $INC{"DBD/Oracle.pm"};
+my $mysql = $INC{"DBD/mysql.pm"};
+my $postgres = $INC{"DBD/pg.pm"};
+
+BEGIN {
+    my $tests = 33;
+    $tests += 12 if $oracle; 
+    $tests += 12 if $postgres; 
+    $tests += 12 if $mysql;
+    plan tests => $tests;
+}
 
 BEGIN {
     use_ok('UR::Namespace::Command::Define::Datasource');
@@ -15,7 +29,6 @@ BEGIN {
     use_ok('UR::Namespace::Command::Define::Datasource::Mysql');
     use_ok('UR::Namespace::Command::Define::Datasource::Pg');
 }
-
 
 my $data_source_dir = URT->get_base_directory_name() . '/DataSource/';
 my @FILES_TO_DELETE = map { $data_source_dir . $_ }
@@ -110,6 +123,7 @@ my $cleanup_files = sub { unlink @FILES_TO_DELETE };
 
 
 # Oracle
+if($oracle)
 {
     my($delegate_class, $create_params) = UR::Namespace::Command::Define::Datasource->resolve_class_and_params_for_argv(
                       qw(oracle --dsname TestcaseOracle --owner foo --login me --auth passwd)
@@ -145,9 +159,15 @@ my $cleanup_files = sub { unlink @FILES_TO_DELETE };
 
     &$cleanup_files;
 }
+else {
+    diag "skipping Oracle tests since DBD::Oracle is not installed and configured";
+}
+
+
 
 
 # PostgreSQL
+if ($postgres)
 {
     my($delegate_class, $create_params) = UR::Namespace::Command::Define::Datasource->resolve_class_and_params_for_argv(
                       qw(pg --dsname TestcasePg --owner foo --login me --auth passwd)
@@ -183,8 +203,13 @@ my $cleanup_files = sub { unlink @FILES_TO_DELETE };
 
     &$cleanup_files;
 }
+else {
+    diag "skipping PostgreSQL tests since DBD::pg is not installed";
+}
+
 
 # MySQL
+if($mysql)
 {
     my($delegate_class, $create_params) = UR::Namespace::Command::Define::Datasource->resolve_class_and_params_for_argv(
                       qw(mysql --dsname TestcaseMysql --owner foo --login me --auth passwd)
@@ -220,7 +245,9 @@ my $cleanup_files = sub { unlink @FILES_TO_DELETE };
 
     &$cleanup_files;
 }
-
+else {
+    diag "skipping MySQL tests since DBD::mysql is not installed";
+}
 
 
 

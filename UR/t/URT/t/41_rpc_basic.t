@@ -1,12 +1,10 @@
 use strict;
 use warnings;
 use Test::More;
-plan skip_all => 'broken in new dir structure';
-#plan tests => 40;
-
+plan tests => 40;
 
 use File::Basename;
-use lib File::Basename::dirname(__FILE__)."../../";
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
 use IO::Socket;
@@ -15,7 +13,6 @@ ok(UR::Object::Type->define(
         class_name => 'URT::RPC::Thingy',
         is => 'UR::Service::RPC::Executer'),
    'Created class for RPC executor');
-
 
 my($to_server,$to_client) = IO::Socket->socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC);
 ok($to_server, 'Created socket');
