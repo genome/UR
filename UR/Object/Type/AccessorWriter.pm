@@ -498,10 +498,11 @@ sub mk_object_set_accessors {
             );
             #print "got " . join(", ", map { $_->id } @possible_relationships) . "\n";
             if (@possible_relationships > 1) {
-                die "There are " . scalar(@possible_relationships) 
-                    . " from $r_class_name to $class_name.  "
-                    . "The definition of $class_name has an ambiguous "
-                    . "property $singular_name which must be corrected with a 'reverse_id_by' specification.";
+                die "$class_name has an ambiguous definition for property \"$singular_name\"."
+                    . "  The target class $r_class_name has " . scalar(@possible_relationships) 
+                    . " relationships which reference back to $class_name."
+                    . "  Correct by adding \"reverse_id_by => X\" to ${class_name}'s \"$singular_name\" definition one of the following values:  " 
+                    . join(",",map { '"' . $_->delegation_name . '"' } @possible_relationships) . ".\n";
             }
             elsif (@possible_relationships == 0) {
                 die "No relationships found between $r_class_name and $class_name.  Error in definition for $class_name $singular_name!"
@@ -667,7 +668,7 @@ sub initialize_direct_accessors {
     my $self = shift;
     my $class_name = $self->{class_name};    
     my $type_name = $self->{type_name};
-    
+
     my %id_property_names;
     for my $property_name (@{ $self->{id_by} }) {
         $id_property_names{$property_name} = 1;
