@@ -268,6 +268,8 @@ sub _run_tests {
         $perl_opts .= ' -d:callcount';
     }
 
+    $ENV{'PERL5LIB'} = join(':', @INC);
+
     my $formatter = TAP::Formatter::Console->new( {
                         jobs => $self->jobs,
                         show_count => 1,
