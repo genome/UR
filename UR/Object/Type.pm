@@ -102,7 +102,7 @@ sub data_source {
     }
     #return $ds;
     return undef unless $ds;
-    my $obj = $ds->get();
+    my $obj = UR::DataSource->get($ds) || $ds->get();
     return $obj;
 }
 

@@ -148,7 +148,7 @@ sub setup_files_and_classes {
         data_source => {
             is => 'UR::DataSource::FileMux',
             delimiter => "\t",
-            column_order => [ qw( emp_id name office_id ) ],
+            column_order => [ 'emp_id', 'name', 'office_id' ],
             sort_order   => [ 'emp_id' ],
             constant_values => ['division','department'],
             required_for_get => ['division', 'department'],

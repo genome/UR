@@ -1149,8 +1149,8 @@ sub _complete_class_meta_object_definitions {
     if ($data_source and ref($data_source) eq 'HASH') {
         $self->{'__inline_data_source_data'} = $data_source;
         my $ds_class = $data_source->{'is'};
-        my $inline_ds_class = $ds_class->create_from_inline_class_data($self, $data_source);
-        $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $inline_ds_class;
+        my $inline_ds = $ds_class->create_from_inline_class_data($self, $data_source);
+        $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $inline_ds->id;
     }
 
     my $n = 1;
@@ -1193,9 +1193,9 @@ sub _complete_class_meta_object_definitions {
             }
         }
 
-        if (not defined $self->data_source) {
-            if (my $data_source = $parent_class->data_source) {
-                $self->data_source($data_source);
+        if (not defined $self->data_source_id) {
+            if (my $data_source_id = $parent_class->data_source_id) {
+                $self->data_source_id($data_source_id);
             }
         }
 

@@ -9,9 +9,13 @@ use URT; # dummy namespace
 
 # FIXME - this doesn't test the UR::DataSource::File internals like seeking and caching
 
-my $filename = URT::DataSource::SomeFile->server;
+my $ds = URT::DataSource::SomeFile->get();
+
+my $filename = $ds->server;
 ok($filename, 'URT::DataSource::SomeFile has a server');
 unlink $filename if -f $filename;
+
+my $rs = $ds->record_separator;
 
 our @data = ( [ 1, 'Bob', 'blue' ],
              [ 2, 'Fred', 'green' ],
@@ -19,10 +23,11 @@ our @data = ( [ 1, 'Bob', 'blue' ],
              [ 4, 'Frank', 'yellow' ],
            );
 
-&setup($filename);
+&setup($ds);
 
 
-my $fh = URT::DataSource::SomeFile->get_default_handle();
+
+my $fh = $ds->get_default_handle();
 ok($fh, "got a handle");
 isa_ok($fh, 'IO::Handle', 'Returned handle is the proper class');
 
@@ -67,13 +72,14 @@ unlink URT::DataSource::SomeFile->server;
 
 
 sub setup {
-    my $filename = shift;
+    my $ds = shift;
+    my $filename = $ds->server;
 
     my $fh = IO::File->new($filename, '>');
     ok($fh, 'opened file for writing');
 
-    my $delimiter = URT::DataSource::SomeFile->delimiter;
-    my $rs = URT::DataSource::SomeFile->record_separator;
+    my $delimiter = $ds->delimiter;
+    my $rs = $ds->record_separator;
 
     foreach my $line ( @data ) {
         $fh->print(join($delimiter, @$line),$rs);

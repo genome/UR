@@ -652,7 +652,7 @@ sub _get_template_data_for_loading {
             # FIXME - currently in the process of switching to object-based instead of class-based data sources
             # For now, data sources are still singleton objects, so this get() will work.  When we're fully on
             # regular-object-based data sources, then it'll probably change to UR::DataSource->get($secondary_data_source_id); 
-            my $secondary_data_source = $secondary_data_source_id->get();
+            my $secondary_data_source = UR::DataSource->get($secondary_data_source_id) || $secondary_data_source_id->get();
             push @addl_loading_info,
                      $secondary_data_source,
                      [$delegated_property],

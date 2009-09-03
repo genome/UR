@@ -16,21 +16,23 @@ use UR;
 use strict;
 use warnings;
 
-use Sub::Name ();
-use Sub::Install ();
-
-
-# FIXME child classes are required to define methods to return server (name of the file),
-# delimiter, column_order and sort_order.  These should be properties of the data source
-# and not methods in the namespace...
-
 class UR::DataSource::File {
-    is => ['UR::DataSource', 'UR::Singleton'],
-    is_abstract => 1,
-    has => [ 
-        last_read_fingerprint => { is => 'String', doc => 'Keeps track of the last request triggering a read' },
-        file_cache_index      => { is => 'Integer', doc => 'index into the file cache where the next read will ibe placed' },
+    is => ['UR::DataSource'],
+    has => [
+        delimiter             => { is => 'String', default_value => '\s*,\s*', doc => 'Delimiter between columns on the same line' },
+        record_separator      => { is => 'String', default_value => "\n", doc => 'Delimiter between lines in the file' },
+        column_order          => { is => 'ARRAY',  doc => 'Names of the columns in the file, in order' },
         cache_size            => { is => 'Integer', default_value => 100 },
+        skip_first_line       => { is => 'Integer', default_value => 0 },
+    ],
+    has_optional => [ 
+        server                => { is => 'String', doc => 'pathname to the data file' },
+        file_list             => { is => 'ARRAY',  doc => 'list of pathnames of equivalent files' },
+        sort_order            => { is => 'ARRAY',  doc => 'Names of the columns by which the data file is sorted' },
+        constant_values       => { is => 'ARRAY',  doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
+        
+        file_cache_index      => { is => 'Integer', doc => 'index into the file cache where the next read will be placed' },
+        _open_query_count      => { is => 'Integer', doc => 'number of queries currently using this data source, used internally' },
         
     ],
     doc => 'A read-only data source for line-oriented files',
@@ -40,7 +42,7 @@ class UR::DataSource::File {
 my $sql_fh;
 
 sub get_default_handle {
-    my $self = shift->_singleton_object;
+    my $self = shift;
 
     unless ($self->{'_fh'}) {
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
@@ -78,7 +80,7 @@ sub get_default_handle {
 }
 
 sub _regex {
-    my $self = shift->_singleton_object;
+    my $self = shift;
 
     unless ($self->{'_regex'}) {
         my $delimiter = $self->delimiter;
@@ -92,77 +94,30 @@ sub _regex {
     return $self->{'_regex'};
 }
 
-# Subclasses can override this to return a string containing the pathname of the file
-# to open.  Alternatively, the subclass can implement a method called file_list that returns 
-# a list of file paths, all of which should contain the same data - as a way to, say, load
-# balance NFS servers
+# We're overriding server() so everyone else can have a single way of getting
+# the file's pathname instead of having to know about both server and file_list
 sub server {
-    my $self = shift->_singleton_object;
+    my $self = shift;
 
     unless ($self->{'_cached_server'}) {
-        unless ($self->can('file_list')) {
-            my $class = ref($self);
-            die "Class $class didn't implement server() to specify file path";
+        if ($self->__server()) {
+            $self->{'_cached_server'} = $self->__server();
+        } elsif ($self->file_list) {
+            my $files = $self->file_list;
+            my $count = scalar(@$files);
+            my $idx = $$ % $count;
+            $self->{'_cached_server'} = $files->[$idx];
+        } else {
+            die "Data source ",$self->id," didn't specify either server or file_list";
         }
-
-        my @files = $self->file_list;
-        my $count = scalar(@files);
-        my $idx = $$ % $count;
-        $self->{'_cached_server'} = $files[$idx];
     }
     return $self->{'_cached_server'};
 }
 
 
-# Override if your file is delimited by something else
-sub delimiter {
-    '\s*,\s*';
-}
-
-sub record_separator {
-    "\n";
-}
-
-
-# FIXME Looks like the AccessorWriter doesn't properly make accessors for singleton classes?!
-# In the iterator below, we'll resort to poking the data in the hash directly
-#sub last_read_fingerprint {
-#    my $self = shift->_singleton_object;
-#
-#    if (@_) {
-#        $self->{'_last_read_fingerprint'} = shift;
-#    }
-#    $self->{'_last_read_fingerprint'};
-#}
-
-sub file_cache_index {
-    my $self = shift->_singleton_object;
-
-    if (@_) {
-        $self->{'_file_cache_index'} = shift;
-    }
-    $self->{'_file_cache_index'};
-}
-
-sub open_query_count {
-    my $self = shift->_singleton_object;
-
-    if (@_) {
-        $self->{'_open_query_count'} = shift;
-    }
-    $self->{'_open_query_count'} || 0;
-}
-
-
-# Derived classes can set this to 1 if the first line of the file
-# is a header and should be skipped
-sub skip_first_line {
-    0;
-}
-
 our $MAX_CACHE_SIZE = 100;
 sub _file_cache {
-    my $self = shift->_singleton_object;
+    my $self = shift;
 
     unless ($self->{'_file_cache'}) {
         my @cache = ();
@@ -176,7 +131,7 @@ sub _file_cache {
 }
 
 sub _invalidate_cache {
-    my $self = shift->_singleton_object;
+    my $self = shift;
  
     my $file_cache = $self->{'_file_cache'};
     undef($_) foreach @$file_cache;
@@ -184,12 +139,12 @@ sub _invalidate_cache {
 }
 
 sub _generate_loading_templates_arrayref {
-    my($class,$old_sql_cols) = @_;
+    my($self,$old_sql_cols) = @_;
 
-    my @columns_in_file = $class->column_order;
+    my $columns_in_file = $self->column_order;
     my %column_to_position_map;
-    for (my $i = 0; $i < @columns_in_file; $i++) {
-        $column_to_position_map{uc $columns_in_file[$i]} = $i;
+    for (my $i = 0; $i < @$columns_in_file; $i++) {
+        $column_to_position_map{uc $columns_in_file->[$i]} = $i;
     }
 
     # strip out columns that don't exist in the file
@@ -202,13 +157,33 @@ sub _generate_loading_templates_arrayref {
     }
 
     unless ($sql_cols) {
-        $class->error_message("Couldn't determine column information for data source $class");
+        $self->error_message("Couldn't determine column information for data source " . $self->id);
         return;
     }
 
     # reorder the requested columns to be in the same order as the file
     @$sql_cols = sort { $column_to_position_map{$a->[1]->column_name} <=> $column_to_position_map{$b->[1]->column_name}} @$sql_cols;
-    my $templates = $class->SUPER::_generate_loading_templates_arrayref($sql_cols);
+    my $templates = $self->SUPER::_generate_loading_templates_arrayref($sql_cols);
+
+    if (my $constant_values = $self->constant_values) {
+        # Find the first unused index in the loading template
+        my $next_template_slot = -1;
+        foreach my $tmpl ( @$templates ) {
+            foreach my $col ( @{$tmpl->{'column_positions'}} ) {
+                if ($col >= $next_template_slot) {
+                    $next_template_slot = $col + 1;
+                }
+            }
+        }
+        if ($next_template_slot == -1) {
+            die "Couldn't determine last column in loading template for data source" . $self->id;
+        }
+        
+        foreach my $prop ( @$constant_values ) {
+            push @{$templates->[0]->{'column_positions'}}, $next_template_slot++;
+            push @{$templates->[0]->{'property_names'}}, $prop;
+        }
+    }
  
     return $templates;
 }
@@ -420,25 +395,23 @@ sub create_iterator_closure_for_rule {
     my $class_meta = $class_name->get_class_object;
     my $rule_template = $rule->rule_template;
 
-    my @csv_column_order = $self->column_order;
-    my $csv_column_count = scalar @csv_column_order;
+    my $csv_column_order = $self->column_order;
+    my $csv_column_count = scalar @$csv_column_order;
     my %properties_in_rule = map { $_ => 1 }
                              grep { $rule->specifies_value_for_property_name($_) }
-                             @csv_column_order;
+                             @$csv_column_order;
 
-    my %sort_columns = map { $_ => 1 } $self->sort_order;
-    my @non_sort_columns = grep { ! exists($sort_columns{$_}) } @csv_column_order;
+    my $sort_order = $self->sort_order;
+    my %sort_columns = map { $_ => 1 } @$sort_order;
+    my @non_sort_columns = grep { ! exists($sort_columns{$_}) } @$csv_column_order;
 
     my %column_name_to_index_map;
-    for (my $i = 0; $i < @csv_column_order; $i++) {
-        $column_name_to_index_map{$csv_column_order[$i]} = $i;
+    for (my $i = 0; $i < @$csv_column_order; $i++) {
+        $column_name_to_index_map{$csv_column_order->[$i]} = $i;
     }
 
-    # FIXME - properties for these classes don't have the column_name field specified 
-    # we'll work around it for now by using the property_name, but column_name is really the right 
-    # thing to use
     my %property_metas = map { $_ => UR::Object::Property->get(class_name => $class_name, column_name => uc($_)) }
-                         @csv_column_order;
+                         @$csv_column_order;
 
     my @rule_columns_in_order;  # The order we should perform rule matches on - value is the index in @next_file_row to test
     my @comparison_for_column;  # closures to call to perform the match - same order as @rule_columns_in_order
@@ -446,7 +419,7 @@ sub create_iterator_closure_for_rule {
     my $looking_for_id_columns = 1;  
  
     my $next_candidate_row;  # This will be filled in by the closure below
-    foreach my $column_name ( $self->sort_order, @non_sort_columns ) {
+    foreach my $column_name ( @$sort_order, @non_sort_columns ) {
         if (! $properties_in_rule{$column_name}) {
             $looking_for_id_columns = 0;
             next;
@@ -486,8 +459,6 @@ sub create_iterator_closure_for_rule {
 
     my $file_cache = $self->_file_cache();
 
-    my $self_hash = $self->_singleton_object;
-
     # If there are ID columns mentioned in the rule, and there are items in the
     # cache, see if any of them are less than the comparators
     my $matched_in_cache = 0;
@@ -506,7 +477,7 @@ sub create_iterator_closure_for_rule {
                     # last row read is earlier than the data we're looking for; we can
                     # continue on from the next thing in the cache
                     $matched_in_cache = 1;
-                    $self_hash->{'_last_read_fingerprint'} = $fingerprint; # This will make the iterator skip resetting the position
+                    $self->{'_last_read_fingerprint'} = $fingerprint; # This will make the iterator skip resetting the position
                     $self->file_cache_index($file_cache_index + 1);
                     last SEARCH_CACHE;
     
@@ -528,7 +499,7 @@ sub create_iterator_closure_for_rule {
         my @filters_list;
         for (my $i = 0; $i < @rule_columns_in_order; $i++) {
             my $column = $rule_columns_in_order[$i];
-            my $column_name = $csv_column_order[$column];
+            my $column_name = $csv_column_order->[$column];
             my $is_sorted = $i <= $last_id_column_in_rule ? ' (sorted)' : '';
             my $operator = $rule->specified_operator_for_property_name($column_name) || '=';
             my $rule_value = $rule->specified_value_for_property_name($column_name);   
@@ -546,7 +517,7 @@ sub create_iterator_closure_for_rule {
         # this query either doesn't hit the leftmost sorted columns, or nothing
         # has been read from it yet
         $file_pos = 0;
-        $self_hash->{'_last_read_fingerprint'} = -1;  # This will force a seek and cache invalidation at the start of the iterator
+        $self->{'_last_read_fingerprint'} = -1;  # This will force a seek and cache invalidation at the start of the iterator
     }
 
     #my $max_cache_size = $self->cache_size;
@@ -560,7 +531,7 @@ sub create_iterator_closure_for_rule {
             $monitor_printed_first_fetch = 1;
         }
 
-        if ($self_hash->{'_last_read_fingerprint'} != $fingerprint) {
+        if ($self->{'_last_read_fingerprint'} != $fingerprint) {
             $sql_fh->printf("CSV: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
@@ -582,7 +553,7 @@ sub create_iterator_closure_for_rule {
             if ($file_cache->[$file_cache_index]) {
                 $next_candidate_row = $file_cache->[$file_cache_index++];
             } else {
-                $self_hash->{'_last_read_fingerprint'} = $fingerprint;
+                $self->{'_last_read_fingerprint'} = $fingerprint;
 
                 $line = <$fh>;
 
@@ -642,8 +613,8 @@ sub create_iterator_closure_for_rule {
         }
     }; # end sub $iterator
 
-    my $count = $self->open_query_count();
-    $self->open_query_count($count+1);
+    my $count = $self->_open_query_count() || 0;
+    $self->_open_query_count($count+1);
     bless $iterator, 'UR::DataSource::File::Tracker';
     $iterator_data_source{$iterator} = $self;
     
@@ -654,8 +625,8 @@ sub create_iterator_closure_for_rule {
 sub UR::DataSource::File::Tracker::DESTROY {
     my $iterator = shift;
     my $ds = delete $iterator_data_source{$iterator};
-    my $count = $ds->open_query_count();
-    $ds->open_query_count(--$count);
+    my $count = $ds->_open_query_count();
+    $ds->_open_query_count(--$count);
     if ($count == 0) {
 	# All open queries have supposedly been fulfilled.  Close the
 	# file handle and undef it so get_default_handle() will re-open if necessary
@@ -668,49 +639,13 @@ sub UR::DataSource::File::Tracker::DESTROY {
     }
 }
 
-
-sub column_order {
-    my $class = shift;
-    $class = ref($class) || $class;
-
-    Carp::carp "$class didn't specify column_order()";
-}
-
-sub sort_order {
-    return ();   # default is to assumme its not sorted
-    #my $class = shift;
-    #$class = ref($class) || $class;
-    #
-    #Carp::carp "$class didn't specify sort_order()";
-}
-
-
+# Names of creation params that we should force to be listrefs
+our %creation_param_is_list = map { $_ => 1 } qw( column_order file_list sort_order constant_values );
 sub create_from_inline_class_data {
-    my($self, $class_data, $ds_data) = @_;
+    my($class, $class_data, $ds_data) = @_;
 
-    my($namespace,$class_name) = ($class_data->{'class_name'} =~ m/^(\w+)::(.*)/);
-    my $ds_name = "${namespace}::DataSource::${class_name}";
-
-    if ($ds_data->{'is_sorted'} and $ds_data->{'sort_order'}) {
-        die $class_data->{'class_name'}.": cannot specify both 'is_sorted' and 'sort_order' in the class definition's inline data_source";
-    }
-    if (exists($ds_data->{'sort_order'}) and ref($ds_data->{'sort_order'}) ne 'ARRAY') {
-        die $class_data->{'class_name'}.": 'sort_order' must be an arrayref in the class definition's inline data_+source";
-    }
-    delete $ds_data->{'is_sorted'};
-
-
-    $ds_data->{'server'} ||= $ds_data->{'path'} || $ds_data->{'file'};
-    delete $ds_data->{'path'};
-    delete $ds_data->{'file'};
-
-    
-    if (exists($ds_data->{'column_order'})) {
-        unless (ref($ds_data->{'column_order'}) eq 'ARRAY') {
-            $self->error_message($class_data->{'class_name'}.": column_order must bt an arrayerf");
-            return;
-        }
-    } else {
+    # User didn't specify columns in the file.  Assumme every property is a column, and in the same order
+    unless (exists $ds_data->{'column_order'}) {
         $ds_data->{'column_order'} = [];
         foreach my $prop_name ( @{$class_data->{'__properties_in_class_definition_order'}} ) {
             my $prop_data = $class_data->{'has'}->{$prop_name};
@@ -720,64 +655,26 @@ sub create_from_inline_class_data {
         }
     }
 
-    $ds_data->{'file_list'} ||= $ds_data->{'files'};
-    if (defined $ds_data->{'file_list'}) {
-       unless(ref($ds_data->{'file_list'}) eq 'ARRAY') {
-           $self->error_message($class_data->{'class_name'}.": 'file_list' must be an arrayref");
-           return;
-       }
-    }
-    delete $ds_data->{'files'};
+    $ds_data->{'server'} ||= $ds_data->{'path'} || $ds_data->{'file'};
 
-    if ($ds_data->{'is_sorted'} and ! @{$ds_data->{'sort_order'}}) {
-        @{$ds_data->{'sort_order'}} = @{$ds_data->{'column_order'}};
-    }
-    
-    my %subs_to_create;
-    delete $ds_data->{'is'};
-    foreach my $key ( qw( server delimiter column_order sort_order skip_first_line file_list ) ) {
-        my $val = delete $ds_data->{$key};
-        next unless defined $val;
-        $subs_to_create{$key} = $val;
-    }
-    if (keys %$ds_data) {
-        die $class_data->{'class_name'}. ": Unrecognized parameters for inline data_source: (".join(',',keys %$ds_data).")";
-    }
-
-    # These methods need to return a list, but the user specifies them as a listref
-    foreach my $method_returns_list ( qw( sort_order column_order file_list ) ) {
-        if (my $list = delete $subs_to_create{$method_returns_list}) {
-           my @value = @$list;
-           my $sub = sub { @value };
-           Sub::Name::subname "${ds_name}::${method_returns_list}" => $sub;
-           Sub::Install::reinstall_sub({
-                into => $ds_name,
-                as   => $method_returns_list,
-                code => $sub,
-            });
+    my %ds_creation_params;
+    foreach my $param ( qw( delimieter record_separator column_order cache_size skip_first_line server file_list sort_order constant_values ) ) {
+        if (exists $ds_data->{$param}) {
+            if ($creation_param_is_list{$param} and ref($ds_data->{$param}) ne 'ARRAY') {
+                $ds_creation_params{$param} = \( $ds_data->{$param} );
+            } else {
+                $ds_creation_params{$param} = $ds_data->{$param};
+            }
         }
     }
-
-    # The rest of them return scalars
-    foreach my $key ( keys %subs_to_create ) {
-        my $value = $subs_to_create{$key};
-        my $sub = sub { $value };
-        Sub::Name::subname "${ds_name}::${key}" => $sub;
-        Sub::Install::reinstall_sub({
-                into => $ds_name,
-                as   => $key,
-                code => $sub,
-        });
-    }
-
-    my $c=UR::Object::Type->define(
-        class_name => $ds_name,
-        is => __PACKAGE__,
-    );
-        
-    return $ds_name;
+       
+    my($namespace, $class_name) = ($class_data->{'class_name'} =~ m/^(\w+?)::(.*)/);
+    my $ds_id = "${namespace}::DataSource::${class_name}";
+    my $ds_type = delete $ds_data->{'is'};
+    my $ds = $ds_type->create( %ds_creation_params, id => $ds_id );
+    return $ds;
 }
-
+        
 
 sub initializer_should_create_column_name_for_class_properties {
     1;
@@ -796,12 +693,12 @@ UR::DataSource::File - Parent class for file-based data sources
   
   package MyNamespace::DataSource::MyFile;
   class MyNamespace::DataSource::MyFile {
-      is => ['UR::DataSource::File'],
+      is => ['UR::DataSource::File', 'UR::Singleton'],
   };
   sub server { '/path/to/file' }
   sub delimiter { "\t" }
-  sub column_order { qw( thing_id thing_name thing_color ) }
-  sub sort_order { qw( thing_id ) }
+  sub column_order { ['thing_id', 'thing_name', 'thing_color' ] }
+  sub sort_order { ['thing_id'] }
 
   package main;
   class MyNamespace::Thing {
@@ -816,21 +713,22 @@ UR::DataSource::File - Parent class for file-based data sources
 Classes which wish to retrieve their data from a regular file can use a UR::DataSource::File-based
 data source.  The modules implementing these data sources live under the DataSource subdirectory
 of the application's Namespace, by convention.  Besides defining a class for your data source
-inheriting from UR::DataSource::File, the module should override the following methods:
+inheriting from UR::DataSource::File, it should have the following methods, either as properties
+or functions in the package.
 
 =head2 Configuration
 
-These methods determine the configuration for your data source.  They should require no arguments.
+These methods determine the configuration for your data source.
 
 =over 4
 
 =item server()
 
-The server() method should return a string representing the pathname of the file where the data is stored.
+server() should return a string representing the pathname of the file where the data is stored.
 
 =item file_list()
 
-The file_list() method should return a list (not a listref) of pathnames to one or more identical files
+The file_list() method should return a listref of pathnames to one or more identical files
 where data is stored.   Use file_list() instead of server() when you want to load-balance several NFS
 servers, for example.
 
@@ -856,13 +754,13 @@ example if the first line defines the columns in the file.
 
 =item column_order()
 
-column_order() should return a list of column names in the file (not a listref).  Your module must
-define column_order(); there is no default.
+column_order() should return a listref of column names in the file.  column_order is required; there
+is no default.
 
 =item sort_order()
 
-If the data file is sorted, you should define sort_order() to return a list of column names (which must
-exist in column_order) by which the file is sorted.  This gives the system a hint about how the file
+If the data file is sorted in some way, sort_order() should return a listref of column names (which must
+exist in column_order()) by which the file is sorted.  This gives the system a hint about how the file
 is structured, and is able to make shortcuts when reading the file to speed up data access.  The default
 is to assumme the file is not sorted.
 

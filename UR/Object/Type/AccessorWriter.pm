@@ -51,6 +51,7 @@ sub construct_class_from_data
 
 }
 
+
 sub mk_rw_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;
     $property_name ||= $accessor_name;
@@ -73,7 +74,7 @@ sub mk_rw_accessor {
             }
             return $new;
         }
-        return $_[0]->{ $property_name };  # FIXME what to do about properties with default_values?
+        return $_[0]->{ $property_name };  # properties with default values are filled in at create_object()
     };
 
     Sub::Install::reinstall_sub({
@@ -102,6 +103,7 @@ sub mk_rw_accessor {
             {$property_name} = $accessor_name;
     }
 }
+
 
 sub mk_ro_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name) = @_;
@@ -1053,14 +1055,13 @@ sub initialize_direct_accessors {
             #    push @$cols, $column_name;
             #}
 
+            my $maker;
             if ($id_property_names{$property_name} or not $property_data->{is_mutable}) {
-            	$accessor_type = 'ro';
+                $maker = 'mk_ro_accessor';
             }
             else {
-            	$accessor_type = 'rw';
+            	$maker = 'mk_rw_accessor';
             }
-							
-            my $maker = "mk_${accessor_type}_accessor";
             $self->$maker($class_name, $accessor_name, $column_name, $property_name,$is_transient);
         }
     }    
