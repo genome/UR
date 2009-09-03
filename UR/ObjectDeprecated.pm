@@ -105,8 +105,10 @@ sub _create_object {
         return;
     }
 
-    # get rid of internal flags (which start with '-')
-    delete $params->{$_} for ( grep { /^_/ } keys %$params );
+    # get rid of internal flags (which start with '-' or '_', unless it's a named property)
+    #delete $params->{$_} for ( grep { /^_/ } keys %$params );
+    my %subject_class_props = map {$_, 1}  ( $class->__meta__->all_property_type_names);
+    delete $params->{$_} foreach ( grep { substr($_, 0, 1) eq '_' and ! $subject_class_props{$_} } keys %$params );
 
     # TODO: The reference to UR::Entity can be removed when non-tablerow classes impliment property function for all critical internal data.
     # Make the object.
