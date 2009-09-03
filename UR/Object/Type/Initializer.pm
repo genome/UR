@@ -787,7 +787,7 @@ sub _normalize_property_description {
     ) {
         $new_property{column_name} = $new_property{property_name};            
     }
-    $new_property{column_name} = uc $new_property{column_name};
+    $new_property{column_name} = uc($new_property{column_name});
     
     unless ($new_property{attribute_name}) {
         $new_property{attribute_name} = $property_name;
