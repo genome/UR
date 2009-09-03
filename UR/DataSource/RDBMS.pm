@@ -1000,7 +1000,18 @@ sub _CopyToAlternateDB {
 sub _sync_database {
     my $self = shift;
     my %params = @_;
+    
     $DB::single=1; 
+
+    unless (ref($self)) {
+        if ($self->isa("UR::Singleton")) {
+            $self = $self->_singleton_object;
+        }
+        else {
+            die "Called as a class-method on a non-singleton datasource!";
+        }
+    }
+    
     my $changed_objects = delete $params{changed_objects};
     my %objects_by_class_name;
     for my $obj (@$changed_objects) {
@@ -1057,7 +1068,7 @@ sub _sync_database {
                     my $table_name = $change->{table_name};
                     my $id = $change->{id};                    
                     $all_tables{$table_name}++;
-                    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self) ||
+                    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
                                 UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
                     
                     if ($change->{type} eq 'insert')
@@ -1085,7 +1096,7 @@ sub _sync_database {
 
     my %tables_requiring_lock;
     for my $table_name (keys %all_tables) {
-        my $table_object = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self) ||
+        my $table_object = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
                            UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
         if (my @bitmap_index_names = $table_object->bitmap_index_names) {
             my $changes;
@@ -1123,7 +1134,7 @@ sub _sync_database {
     my %dependants;
 
     for my $table_name (keys %all_tables) {
-        my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self) ||
+        my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
                     UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
         
         my @fk = $table->fk_constraints;
@@ -1148,7 +1159,7 @@ sub _sync_database {
         for my $fk (@fk)
         {
             my $r_table_name = $fk->r_table_name;
-            my $r_table = UR::DataSource::RDBMS::Table->get(table_name => $r_table_name, data_source => $self) ||
+            my $r_table = UR::DataSource::RDBMS::Table->get(table_name => $r_table_name, data_source => $self->class) ||
                           UR::DataSource::RDBMS::Table->get(table_name => $r_table_name, data_source => 'UR::DataSource::Meta');
             
             # RULES:
@@ -1395,7 +1406,7 @@ $DB::single =1;
                 my $tables;
                 my @all_table_names = $class_object->all_table_names;                
                 for my $table_name (@all_table_names) {                    
-                    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self) ||
+                    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
                                 UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
                     push @$tables, $table;
                     $column_objects_by_class_and_column_name{$class_name} ||= {};             
@@ -1472,7 +1483,7 @@ $DB::single =1;
         $self->debug_message("Locking tables: @tables_requiring_lock.");
         my $max_failed_attempts = 10;
         for my $table_name (@tables_requiring_lock) {
-            my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self) ||
+            my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
                         UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
             my $dbh = $table->dbh;
             my $sth = $dbh->prepare("lock table $table_name in exclusive mode");
