@@ -23,9 +23,17 @@ UR::Object - Abstract class for objects tracked centrally in the application
 
 =head1 DESCRIPTION
 
-UR::Object is a base class which provides several general features
-to derived classes.  Most classes tracked through UR's object system
+UR::Object is the base class which provides several general features
+to all UR-based classes.  Most classes tracked through UR's object system
 will inherit from UR::Object.
+
+The goal of UR::Objects is that your application doesn't have to do 
+data management.  Just ask for what you want, use it, and let it go.  A 
+UR::Object works like a common software object, but it has a "context" 
+which manages its state, references, relationships, in-memory 
+transactions, queries and caching.
+
+UR::Objects support full reflection and meta-programming.
 
 =over 4
 
@@ -84,9 +92,8 @@ Most other classes in the UR module set derive from UR::Object.
 
 =head1 INHERITANCE
 
-  UR                  General OO features.
-    UR::ModuleBase    Extensions for error, warning, and status messages.
-      UR::Object      This class.
+  UR::ModuleBase    Extensions for error, warning, and status messages.
+    UR::Object      This class - general OO features
 
 =head1 DERIVED CLASSES
 

@@ -524,7 +524,7 @@ This document describes UR version 0.01
 
 =head1 SYNOPSIS
 
-First create a Namespace class for your application, Music.pm
+First create a Namespace class for your application, CdExample.pm
 
     package CdExample;
     use UR;
@@ -535,7 +535,7 @@ First create a Namespace class for your application, Music.pm
     
     1;
 
-Next, define a data source representing your database, Music/DataSource/DB.pm
+Next, define a data source representing your database, CdExample/DataSource/DB.pm
 
     package CdExample::DataSource::DB;
     use CdExample;
@@ -549,28 +549,28 @@ Next, define a data source representing your database, Music/DataSource/DB.pm
     sub auth { 'mysqlpasswd' }
     1;
 
-Create a class to represent artists, who have many CDs, in Music/Artist.pm
+Create a class to represent artists, who have many CDs, in CdExample/Artist.pm
 
     package CdExample::Artist;
     use CdExample;
 
-    class Artist {
+    class CdExample::Artist {
         id_by => 'artist_id',
         has => [ 
             name => { is => 'String' },
             cds  => { is => 'CdExample::Cd', is_many => 1, reverse_id_by => 'artist' }
         ],
-        data_source => 'CdExample::DataSource::DB',
+        data_source => 'CdExample::DataSource::DB1',
         table_name => 'ARTISTS',
     };
     1;
 
-Create a class to represent CDs, in Music/Cd.pm
+Create a class to represent CDs, in CdExample/Cd.pm
 
     package CdExample::Cd;
     use CdExample;
             
-    class Cd {
+    class CdExample::Cd {
         id_by => 'cd_id',
         has => [
             artist => { is => 'CdExample::Artist', id_by => 'artist_id' },
@@ -585,7 +585,7 @@ Create a class to represent CDs, in Music/Cd.pm
 
 You can then use these classes in your application code
 
-    use CdExample;  # Loads the Namespace
+    use CdExample;  # Enables auto-loading for modules in this Namespace
     
     # get back all Artist objects
     my @all_artists = CdExample::Artist->get();
@@ -593,10 +593,15 @@ You can then use these classes in your application code
     my $artist_iter = CdExample::Artist->create_iterator();
     # Get the first object off of the iterator
     my $first_artist = $artist_iter->next();
+
+    # Get all the CDs published in 1997
+    my @cds_1997 = CdExample::Cd->get(year => 1997);
     
     # Get a list of Artist objects where the name starts with 'John'
     my @some_artists = CdExample::Artist->get(name => { operator => 'like',
                                                         value => 'John%' });
+    # Alternate syntax for non-equality operators
+    my @same_some_artists = CdExample::Artist->get('name like' => 'John%');
     
     # This will use a JOIN with the ARTISTS table internally to filter
     # the data in the database.  @some_cds will contain CdExample::Cd objects.
@@ -628,8 +633,9 @@ You can then use these classes in your application code
 UR is a class framework and object/relational mapper for Perl.  It starts
 with the familiar Perl meme of the blessed hash reference as the basis for
 object instances, and extends its capabilities with ORM (object-relational
-mapping) capabilities, object cache, more formal class definitions,
-metadata, documentation system, iterators, command line tools, etc. 
+mapping) capabilities, object cache, in-memory transactions, more formal
+class definitions, metadata, documentation system, iterators, command line
+tools, etc. 
 
 UR can handle multiple column primary and foreign keys, SQL joins involving
 class inheritance and relationships, and does its best to avoid querying
