@@ -162,12 +162,21 @@ sub _hint_string {
     return;
 }
 
+sub _base_filter {
+    return;
+}
+
+sub _complete_filter {
+    my $self = shift;
+    return join(',',$self->_base_filter,$self->filter);
+}
+
 sub _fetch
 {
     my $self = shift;
     my ($bool_expr, %extra) = UR::BoolExpr->create_from_filter_string(
         $self->subject_class_name, 
-        $self->filter, 
+        $self->_complete_filter, 
         $self->_hint_string
     );
 
@@ -288,4 +297,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 =cut
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/FetchAndDo.pm $
-#$Id: FetchAndDo.pm 39821 2008-10-15 19:59:13Z ssmith $#
+#$Id: FetchAndDo.pm 41810 2008-12-11 19:40:48Z ssmith $#
