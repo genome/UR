@@ -635,6 +635,11 @@ sub _normalize_class_description {
             } else {
                 $properties->{$name} = $params;
             }
+
+            # a single calculate_from can be a simple string, convert to a listref
+            if (my $calculate_from = $params->{'calculate_from'}) {
+                $params->{'calculate_from'} = [ $calculate_from ] unless (ref($calculate_from) eq 'ARRAY');
+            }
             
             if (my $id_by = $params->{id_by}) {
                 $id_by = [ $id_by ] unless ref($id_by) eq 'ARRAY';
