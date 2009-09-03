@@ -1,4 +1,3 @@
-
 package UR::Namespace::Command::Test::Run;
 
 #
@@ -8,19 +7,23 @@ package UR::Namespace::Command::Test::Run;
 
 use warnings;
 use strict;
-use File::Temp qw/tempdir/;
-use Path::Class qw(file dir);
+use File::Temp; # qw/tempdir/;
+use Path::Class; # qw(file dir);
 use DBI;
 use Cwd;
 use UR;
 use File::Find;
+
+use TAP::Harness;
+use TAP::Formatter::Console;
+use TAP::Parser::Aggregator;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
     has => [
         recurse           => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.'                                                },
-        time              => { is => 'Boolean', doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
+        time              => { is => 'String', doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
         long              => { is => 'Boolean', doc => 'Run tests including those flagged as long',                                          is_optional => 1                       },
         list              => { is => 'Boolean', doc => 'List the tests, but do not actually run them.'                                                                              },
         noisy             => { is => 'Boolean', doc => "doesn't redirect stdout",is_optional => 1},
@@ -31,9 +34,14 @@ UR::Object::Type->define(
         cover_svk_changes => { is => 'Boolean', doc => 'Cover modules modified in svk status',                                               is_optional => 1                       },
         cover_cvs_changes => { is => 'Boolean', doc => 'Cover modules modified in cvs status',                                               is_optional => 1                       },
         coverage          => { is => 'Boolean', doc => 'Invoke Devel::Cover',                                                                is_optional => 1                       },
-        perl_opts         => { is => 'String',  doc => 'Override options to the Perl interpreter when running the tests (-d:Profile, etc.)', is_optional => 1, default_value => ''  }, 
         script_opts       => { is => 'String',  doc => 'Override options to the test case when running the tests (--dump-sql --no-commit)',  is_optional=>  1, default_value => ''  },
         callcount         => { is => 'Boolean', doc => 'Count the number of calls to each subroutine/method',                                is_optional => 1 },
+        jobs              => { is => 'Number', is_optional => 1, default_value => 1,
+                               doc => 'How many tests to run in parallel', },
+        lsf               => { is => 'Boolean', doc => 'If true, tests will be submitted as jobs via bsub' },
+        lsf_params        => { is => 'String', is_optional => 1, default_value => '-q short -R select[type=LINUX64]',
+                               doc => 'Params passed to bsub while submitting jobs to lsf' },
+        run_as_lsf_helper => { is => 'String', is_optional => 1, doc => 'Used internally by the test harness' },
     ],
 );
 
@@ -56,22 +64,19 @@ EOS
 }
 
 sub execute {
+    my $self = shift;
 
     $DB::single = 1;
-    my $self = shift;
+
+    if ($self->run_as_lsf_helper) {
+        $self->_lsf_test_worker($self->run_as_lsf_helper);
+        exit(0);
+    }
+
     my $lib_path = $self->lib_path;
     my $working_path = $self->working_path;
 
     $working_path ||= ".";
-
-    # black magic to summon forth Devel::Cover 
-    if ($self->coverage()) {
-        $ENV{'HARNESS_PERL_SWITCHES'} .= ' -MDevel::Cover';
-    }
-
-    if ($self->callcount()) {
-        $ENV{'HARNESS_PERL_SWITCHES'} .= ' -d:callcount';
-    }
 
     # nasty parsing of command line args
     # this may no longer be needed..
@@ -119,29 +124,57 @@ sub execute {
         return;
     }
 
-    unless ($self->noisy) {
-        open(OLD_STDERR,">&STDERR") or die "Failed to save STDERR";
-        open(STDERR,">/dev/null") or die "Failed to redirect STDERR";
-    }
-
     my $results = $self->_run_tests(@tests);
-
-    unless ($self->noisy) {
-        open(STDERR,">&OLD_STDERR") or die "Failed to restore STDERR";
-    }
 
     return $results;
 }
 
+# Run by the test harness when test are scheduled out via LSF
+# $master_spec is a string like "host:port"
+sub _lsf_test_worker {
+    my($self,$master_spec) = @_;
+
+    require IO::Socket;
+
+    open my $saved_stdout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
+    open my $saved_stderr, ">&STDERR"     or die "Can't dup STDERR: $!";
+
+    while(1) {
+        open STDOUT, ">&", $saved_stdout or die "Can't restore stdout \$saved_stdout: $!";
+        open STDERR, ">&", $saved_stderr or die "Can't restore stderr \$saved_stderr: $!";
+
+        my $socket = IO::Socket::INET->new( PeerAddr => $master_spec,
+                                            Proto => 'tcp');
+        unless ($socket) {
+            die "Can't connect to test master: $!";
+        }
+
+        $socket->autoflush(1);
+
+        my $line = <$socket>;
+        chomp($line);
+
+        if ($line eq '' or $line eq 'EXIT TESTS') {
+            # print STDERR "Closing\n";
+            $socket->close();
+            exit(0);
+        }
+
+        # print "Running >>$line<<\n";
+
+        open STDOUT, ">&", $socket or die "Can't redirect stdout: $!";
+        open STDERR, ">&", $socket or die "Can't redirect stderr: $!";
+
+        system($line);
+
+        $socket->close();
+    }
+}
+
+
 sub _run_tests {
     my $self = shift;    
     my @tests = @_;
-
-    my $perl_opts = $self->perl_opts;
-    my $script_opts = $self->script_opts;
-
-    #my $parent = $dir;
-    #$parent =~ s/\/t$//;
 
     # this ensures that we don't see warnings
     # and error statuses when doing the bulk test
@@ -153,28 +186,6 @@ sub _run_tests {
     use warnings;
 
     local $ENV{UR_DBI_NO_COMMIT} = 1;
-
-    # the following 4 lines are the start of
-    # some hackery (even moreso than this
-    # script in the first place).  It continues
-    # with the My::Test::Harness::Strap
-    # definition later on
-    use Test::Harness qw(&runtests $verbose);
-    my $cb = $Test::Harness::Strap->{callback};
-    $Test::Harness::Strap = My::Test::Harness::Straps->new;
-    $Test::Harness::Strap->{callback} = $cb;
-
-    $Test::Harness::Switches = "";
-
-    my $timelog_sum = "";
-    my $timelog_dir = "";
-
-    my $v = $self->verbose || 0;
-    my $t = $self->time;
-    if ($t) {
-        $timelog_sum = file($t);
-        $timelog_dir = dir(tempdir());
-    }   
 
     if($self->long) {
         # Make sure long tests run
@@ -249,34 +260,63 @@ sub _run_tests {
         s/^$cwd\///;
     }
 
-    # turn on no-commit
-    #$script_opts .= ' --no-commit'
-    #    unless ($script_opts =~ /\-\-no\-commit/);
+    my $perl_opts = $self->perl_opts;
+    if ($self->coverage()) {
+        $perl_opts .= ' -MDevel::Cover';
+    }
+    if ($self->callcount()) {
+        $perl_opts .= ' -d:callcount';
+    }
 
-    #my $cmd = "PERL_DL_NONLAZY=1 /gsc/bin/perl $perl_opts";
-    #$cmd .= q{  -e 'use Test::Harness qw(&runtests $verbose); $verbose=} . $v . q{; runtests @ARGV;' } . $tests;
-    #print "$cmd\n";
-    #exec($cmd);
+    my $formatter = TAP::Formatter::Console->new( {
+                        jobs => $self->jobs,
+                        show_count => 1,
+                    } );
+    $formatter->quiet();
 
-    $verbose = $v;
+    my %harness_args = ( formatter => $formatter );
+
+    $harness_args{'jobs'} = $self->jobs if ($self->jobs > 1);
+    $harness_args{'switches'} = $perl_opts if $perl_opts;
+    $harness_args{'test_args'} = $self->script_opts if $self->script_opts;
+
+    my $timelog_sum = $self->time();
+    my $timelog_dir;
+    if ($timelog_sum) {
+        $harness_args{'parser_class'} = 'My::TAP::Parser::Timer';
+        $timelog_sum = Path::Class::file($timelog_sum);
+        $timelog_dir = Path::Class::dir(File::Temp::tempdir('.timelog.XXXXXX', DIR => '.', CLEANUP => 1));
+        My::TAP::Parser::Timer->set_timer_info($timelog_dir,\@tests);
+    }
+
+    my $harness = TAP::Harness->new( \%harness_args);
+
+    if ($self->lsf) {
+        # There doesn't seem to be a clean way (either by configuring the harness,
+        # subclassing the harness or parser, or hooking to a callback) to pass
+        # down the user's requested lsf params from here.  So, looks like we
+        # need to hack it through here.  This means that multiple 'ur test' commands
+        # running concurrently and using lsf will always use the last object's lsf_params.
+        # though I doubt anyone would ever really need to do that...
+        My::TAP::Parser::IteratorFactory::LSF->lsf_params($self->lsf_params);
+
+        $harness->callback('parser_args',
+                           sub {
+                               my($args, $job_as_arrayref) = @_;
+                               $args->{'iterator_factory_class'} = 'My::TAP::Parser::IteratorFactory::LSF';
+                           });
+    }
+
+    my $aggregator = TAP::Parser::Aggregator->new();
     
-    local $My::Test::Harness::Straps::timelog_dir   = $timelog_dir;
-    local $My::Test::Harness::Straps::timelog_sum   = $timelog_sum;
-    local $My::Test::Harness::Straps::perl_opts     = $perl_opts;
-    local $My::Test::Harness::Straps::script_opts   = $script_opts;
-    local $My::Test::Harness::Straps::v             = $v;
-    use Sub::Install qw();#we need to keep Test::Harness from putting pwd at the beginning of @INC of spawned tests
-    my $sub = \&Test::Harness::_filtered_inc;
-    my $abs_cwd = Cwd::abs_path('.');
-    Sub::Install::reinstall_sub(
-        {into => 'Test::Harness',
-            as => '_filtered_inc',
-            code => sub {
-                my @finc = $sub->(); 
-                return grep { $_ ne $abs_cwd } @finc;
-            },}
-    );
-    
+    $aggregator->start();
+
+    my $old_stderr;
+    unless ($self->noisy) {
+        open $old_stderr ,">&STDERR" or die "Failed to save STDERR";
+        open(STDERR,">/dev/null") or die "Failed to redirect STDERR";
+    }
+
     eval { 
         no warnings;
         local %SIG = %SIG; 
@@ -284,19 +324,42 @@ sub _run_tests {
         $ENV{UR_DBI_NO_COMMIT} = 1;
         $DB::single=1;
 
-        runtests(@tests);
+        #runtests(@tests);
+        $harness->aggregate_tests( $aggregator, @tests );
     };
+
+    unless ($self->noisy) {
+        open(STDERR,">&", $old_stderr) or die "Failed to restore STDERR";
+    }
+
+    $aggregator->stop();
     if ($@) {
         $self->error_message($@);
         return;
     }
     else {
         if ($self->coverage()) {
+            # FIXME - is this GSC-specific?
             system("chmod -R g+rwx cover_db");
             system("/gsc/bin/cover | tee > coverage.txt");
         }
-        return 1;
+        $formatter->summary($aggregator);
     }
+
+    if ($timelog_sum) {
+        $timelog_sum->openw->print(
+            sort
+            map { $_->openr->getlines }
+            $timelog_dir->children
+        );
+        if (-z $timelog_sum) {
+            unlink $timelog_sum;
+            warn "Error producing time summary file!";
+        }
+        $timelog_dir->rmtree;
+    }
+
+    return 1;
 }
 
 
@@ -358,71 +421,253 @@ sub get_status_file_list {
 }
 
 
-# continuation of hackery from above
-package My::Test::Harness::Straps;
+package My::TAP::Parser::IteratorFactory::LSF;
 
-use base 'Test::Harness::Straps';
-use Path::Class qw(file dir);
+use IO::Socket;
+use IO::Select;
 
-# We used-to override analyze_file, which we copied into the subclass and modified.
-# Now that method calls _command_line() which is all we need to override.
+use base 'TAP::Parser::IteratorFactory';
 
-# NOTE: $perl_opts, $script_opts, $v and $timelog_dir
-# are defined above and are part of the method override below.
+# Besides being the factory for parser iterators, we're also the factory for 
+# LSF jobs
 
-our $perl_opts;
-our $script_opts;
-our $v;
+# In the TAP::* code, they mention that the iterator factory is never instantiated,
+# but may be in the future.  When that happens, move this state info into the
+# object that gets created/initialized
+my $state = { 'listen'     => undef, # The listening socket
+              'select'     => undef, # select object for the listen socket
+              idle_jobs    => [],    # holds a list of file handles of connected workers
+              # running_jobs => [],  # we're not tracking workers that are working for now...
+              lsf_jobids   => [],    # jobIDs of the worker processes
+              lsf_params   => '',    # params when running bsub
+            };
+
+END  {
+    # The worker processes should notice when the master goes away,
+    # but just in case, we'll kill them off
+    foreach my $jobid ( @{$state->{'lsf_jobids'}} ) {
+        print STDERR "bkilling LSF jobid $jobid\n";
+        `bkill $jobid`;
+    }
+}
+
+sub lsf_params {
+    my $proto = shift;
+
+    if (@_) {
+        $state->{'lsf_params'} = shift;
+    }
+    return $state->{'lsf_params'};
+}
+
+
+sub make_process_iterator {
+    my $proto = shift;
+
+    My::TAP::Parser::Iterator::Process::LSF->new(@_);
+}
+
+sub next_idle_worker {
+    my $proto = shift;
+
+    $proto->process_events();
+
+    my $did_create_worker = 0;
+    while(! @{$state->{'idle_jobs'}} ) {
+
+        $proto->create_new_worker unless ($did_create_worker++);
+
+        sleep(3);
+
+        $proto->process_events();
+    }
+
+    my $worker = shift @{$state->{'idle_jobs'}};
+    return $worker;
+}
+
+#sub worker_is_now_idle {
+#    my($proto, $worker) = @_;
+#
+#    for (my $i = 0; $i < @{$state->{'running_jobs'}}; $i++) {
+#        if ($state->{'running_jobs'}->[$i] eq $worker) {
+#            splice(@{$state->{'running_jobs'}}, $i, 1);
+#            last;
+#        }
+#    }
+#
+#    push @{$state->{'idle_workers'}}, $worker;
+#}
+
+sub create_new_worker {
+    my $proto = shift;
+
+    my $port = $state->{'listen'}->sockport;
+
+    my $host = $state->{'listen'}->sockhost;
+    if ($host eq '0.0.0.0') {
+        $host = $ENV{'HOST'};
+    }
+    $host .= ":$port";
+    
+    my $lsf_params = $state->{'lsf_params'} || '';
+    my $line = `bsub $lsf_params ur test run --run-as-lsf-helper $host`;
+    my ($jobid) = $line =~ m/Job \<(\d+)\>/;
+    unless ($jobid) {
+        Carp::croak("Couldn't parse jobid out of the line: $line");
+    }
+    push @{$state->{'lsf_jobids'}}, $jobid;
+}
+
+sub process_events {
+    my $proto = shift;
+
+    my $listen = $state->{'listen'};
+    unless ($listen) {
+        $listen = $state->{'listen'} = IO::Socket::INET->new(Listen => 5,
+                                                             Proto => 'tcp');
+        unless ($listen) {
+            Carp::croak("Unable to create listen socket: $!");
+        }
+    }
+
+    my $select = $state->{'select'};
+    unless ($select) {
+        $select = $state->{'select'} = IO::Select->new($listen);
+    }
+
+    while(1) {
+        my @ready = $select->can_read(0);
+        last unless (@ready);
+
+        foreach my $handle ( @ready ) {
+            if ($handle eq $listen) {
+                my $socket = $listen->accept();
+                unless ($socket) {
+                    Carp::croak("accept: $!");
+                }
+                $socket->autoflush(1);
+                push @{$state->{'idle_jobs'}}, $socket;
+    
+            } else {
+                # shoulnd't get here...
+            }
+        }
+    }
+}
+
+
+package My::TAP::Parser::Timer;
+
+use base 'TAP::Parser';
+
 our $timelog_dir;
-our $timelog_sum;
+our $test_list;
 
-sub _command_line {
+sub set_timer_info {
+    my($class,$time_dir,$testlist) = @_;
+
+    $timelog_dir = $time_dir;
+    $test_list = $testlist;
+}
+
+    
+sub make_iterator {
     my $self = shift;
-    my $file = shift;
 
-    my $command =  $self->_command();
-    my $switches = $self->_switches($file);
+    my $args = $_[0];
+    if (ref($args) eq 'HASH') {
+        # It's about to make a process iterator.  Prepend the stuff to
+        # run the timer, too
 
-    $file = qq["$file"] if ($file =~ /\s/) && ($file !~ /^".*"$/);
-
-    # modified from original
-    my $line = "$command $perl_opts $switches $file $script_opts";
-
-    # addition to original
-    print " $line ...\n" if $v;
-
-    # addition to original
-    if ($timelog_dir) {
-        my $timelog_file = file($file)->basename;
-        $timelog_file =~ s/\.t$/.time/;
         unless (-d $timelog_dir) {
-            mkdir $timelog_dir;
+            File::Path::mkpath("$timelog_dir");
         }
-        $timelog_file = $timelog_dir->file($timelog_file);
-        $timelog_file->openw->close;
-        my @format = map { "\%$_" } qw/C e U S I K P/;
-        $line = qq|/usr/bin/time -o '$timelog_file' -a -f "@format" $line|;
+
+        my $timelog_file = $self->_timelog_file_for_command_list($args->{'command'});
+
+        my $format = q('%C %e %U %S %I %K %P');  # yes, that's single quotes inside q()
+        unshift @{$args->{'command'}},
+                '/usr/bin/time', '-o', $timelog_file, '-a', '-f', $format;
     }
-    return $line;
+        
+    $self->SUPER::make_iterator(@_);
+}
+
+sub _timelog_file_for_command_list {
+    my($self,$command_list) = @_;
+
+    foreach my $test_file ( @$test_list ) {
+        foreach my $cmd_part ( reverse @$command_list ) {
+            if ($test_file eq $cmd_part) {
+                my $log_file = Path::Class::file($cmd_part)->basename;
+                $log_file =~ s/\.t$//;
+                $log_file .= sprintf('.%d.%d.time', time(), $$);  # Try to make the name unique
+                $log_file = $timelog_dir->file($log_file);
+                $log_file->openw->close();
+
+                return $log_file;
+            }
+        }
+    }
+    Carp::croak("Can't determine time log file for command line: ",join(' ',@$command_list));
 }
 
 
-END {
-    # The Test::Harness is hacked-up a bit already, so we're just controlling
-    # the command which goes into it and parsing output.
-    if ($timelog_dir) {
-        $timelog_sum->openw->print(
-            sort
-            map { $_->openr->getlines }
-            $timelog_dir->children
-        );
-        if (-z $timelog_sum) {
-            unlink $timelog_sum;
-            warn "Error producing time summary file!";
-        }
-        $timelog_dir->rmtree;
+
+package My::TAP::Parser::Iterator::Process::LSF;
+
+use base 'TAP::Parser::Iterator::Process';
+
+sub _initialize {
+    my($self, $args) = @_;
+
+    my @command = @{ delete $args->{command} || [] }
+      or die "Must supply a command to execute";
+
+    # From TAP::Parser::Iterator::Process
+    my $chunk_size = delete $args->{_chunk_size} || 65536;
+
+    if ( my $setup = delete $args->{setup} ) {
+        $setup->(@command);
     }
+
+    my $handle = My::TAP::Parser::IteratorFactory::LSF->next_idle_worker();
+
+    # Tell the worker to run the command
+    $handle->print(join(' ', @command) . "\n");
+
+    $self->{'out'} = $handle;
+    $self->{'err'} = '';
+    $self->{'sel'} = undef; #IO::Select->new($handle);
+    $self->{'pid'} = undef;
+    $self->{'chunk_size'} = $chunk_size;
+ 
+    if ( my $teardown = delete $args->{teardown} ) {
+        $self->{teardown} = sub {
+            $teardown->(@command);
+        };
+    }
+
+    return $self;
 }
+
+sub next_raw {
+    my $self = shift;
+
+    My::TAP::Parser::IteratorFactory::LSF->process_events();
+    $self->SUPER::next_raw(@_);
+}
+
+#sub _finish {
+#    my $self = shift;
+#
+#    $self->SUPER::_finish(@_);
+#
+#    My::TAP::Parser::IteratorFactory::LSF->worker_is_now_idle($handle);
+#}
+
+    
 
 1;
 
@@ -449,6 +694,10 @@ B<run tests> - run one or more test scripts
  # run only tests which cover the changes you have in Subversion
  cd my_sandbox/TheNamespace
  ur test run --cover-svn-changes
+
+ # run 5 tests in parallel as jobs scheduled via LSF
+ cd my_sandbox/TheNamespace
+  ur test run --lsf --jobs 5
 
 =head1 DESCRIPTION
 
@@ -494,9 +743,22 @@ directory, and runs ALL tests under that directory.
  directory with "GSC" in it, and get all of the changes in your perl_modules trunk.
  It will behave as though those modules were listed as individual --cover options.
 
-=head1 PENDING FEATURES
+=item --lsf
 
-=item automatically running in parallel on a remote compute cluster
+ Tests should not be run locally, instead they are submitted as jobs to the
+ LSF cluster with bsub.  
+
+=item --lsf-params
+
+ Parameters given to bsub when sceduling jobs.  The default is
+ "-q short -R select[type=LINUX64]"
+
+=item --jobs <number>
+
+ This many tests should be run in parallel.  If --lsf is also specified, then
+ these parallel tests will be submitted as LSF jobs.
+
+=head1 PENDING FEATURES
 
 =item automatic remote execution for tests requiring a distinct hardware platform
 
