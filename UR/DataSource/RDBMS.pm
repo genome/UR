@@ -2314,4 +2314,20 @@ sub _generate_template_data_for_loading {
     return $template_data;
 }
 
+
+# We're overriding the method in UR::Object because we support 2 more
+# event types: connect and query
+sub validate_subscription {
+    my ($self,$subscription_property) = @_;
+
+    my $retval = $self->SUPER::validate_subscription(@_);
+    return $retval if $retval;
+
+    return 1 if ($subscription_property eq 'connect' or
+                 $subscription_property eq 'query');
+
+    return;
+}
+
+
 1;
