@@ -593,6 +593,8 @@ sub get {
         return $class->get_with_special_parameters($rule, @extra);
     }
 
+    # This is here for bootstrapping reasons: we must be able to load class singletons
+    # in order to have metadata for regular loading....
     if ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton")) {
         my $normalized_rule = $rule->get_normalized_rule_equivalent;
         
