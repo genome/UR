@@ -147,7 +147,7 @@ sub create_dbh {
     unless (UR::Command::Param->argv_has_been_processed_successfully) {
         die("Invalid command-line parameters!: @ARGV\n");
     }
-    
+
     # get connection information
     my @connection = $self->_dbi_connect_args();
     
@@ -187,6 +187,13 @@ sub _init_created_dbh {
     # override in sub-classes
     1;
 }
+
+# The default is to ignore no tables, but derived classes
+# will probably override this
+sub _ignore_table {
+    0;
+}
+
 
 sub _get_table_names_from_data_dictionary {
     my $self = shift->_singleton_object;        
