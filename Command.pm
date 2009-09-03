@@ -705,8 +705,22 @@ sub help_options
 
         #$param_name = "--$param_name";
         my $doc = $property_meta->doc;
-        unless ($doc) {
-            $doc = "undocumented";
+        my $valid_values = $property_meta->valid_values;
+        if (!$doc) {
+            if (!$valid_values) {
+                $doc = "undocumented";
+            }
+            else {
+                $doc = '';
+            }
+        }
+        if ($valid_values) {
+            $doc .= "\nvalid values:\n";
+            for my $v (@$valid_values) {
+                $doc .= " " . $v . "\n"; 
+                $max_name_length = length($v)+2 if $max_name_length < length($v)+2;
+            }
+            chomp $doc;
         }
         $max_name_length = length($param_name) if $max_name_length < length($param_name);
         push @data, [$param_name, $doc];
@@ -807,6 +821,7 @@ sub _shell_args_property_meta
     my @property_meta = $class_meta->get_all_property_objects(@_);
     my @result;
     my %seen;
+    my (@positional,@required,@optional);
     for my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
         next if $property_name eq 'id';
@@ -821,9 +836,23 @@ sub _shell_args_property_meta
         next if $seen{$property_name};
         $seen{$property_name} = 1;
         next if $property_meta->is_constant;
-        push @result, $property_meta;
+        if ($property_meta->{shell_args_position}) {
+            push @positional, $property_meta;
+        }
+        elsif ($property_meta->is_optional) {
+            push @optional, $property_meta;
+        }
+        else {
+            push @required, $property_meta;
+        }
     }
-    @result = sort { $a->property_name cmp $b->property_name } @result;
+    
+    @result = ( 
+        (sort { $a->{shell_args_position} <=> $b->{shell_args_position} } @positional),
+        (sort { $a->property_name cmp $b->property_name } @required),
+        (sort { $a->property_name cmp $b->property_name } @optional)
+    );
+    
     return @result;
 }
 
@@ -1193,4 +1222,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 45050 2009-03-25 18:56:51Z adukes $
+#$Id: Command.pm 45739 2009-04-14 16:40:35Z ssmith $
