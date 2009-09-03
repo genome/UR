@@ -38,6 +38,12 @@ UR::Object::Type->define(
 
 =cut
 
+sub is_aggregate {
+    my $self = shift;
+    # TODO: calclulated properties, might auto-aggregate.  By default nothing does. 
+    return;
+}
+
 sub create_object {
     my $class = shift;
     my %params = $class->preprocess_params(@_);
