@@ -140,6 +140,7 @@ sub resolve_data_sources_for_class_meta_and_rule {
     #    return $namespace . '::DataSource::Meta';
     #}
 
+    my $data_source;
 
     if (my $mapping = $data_source_mapping->{$class_name}) {
         my $class_name = $boolexpr->subject_class_name;
@@ -147,7 +148,7 @@ sub resolve_data_sources_for_class_meta_and_rule {
             #my $ds_boolexpr_id = $possible_ds_data->{boolexpr_id};
             #my $ds_boolexpr = UR::BoolExpr->get($ds_boolexpr_id);
             #if ($boolexpr->might_overlap($ds_boolexpr)) {
-                return $possible_ds_data->{data_source};
+                $data_source = $possible_ds_data->{data_source};
             #}
         }
 
@@ -159,14 +160,14 @@ sub resolve_data_sources_for_class_meta_and_rule {
 
         my $params = $boolexpr->legacy_params_hash;
         if ($params->{'namespace'}) {
-            return $params->{'namespace'} . '::DataSource::Meta';
+            $data_source = $params->{'namespace'} . '::DataSource::Meta';
 
         } elsif ($params->{'data_source'} &&
                  ! ref($params->{'data_source'}) &&
                  $params->{'data_source'}->can('get_namespace')) {
 
             my $namespace = $params->{'data_source'}->get_namespace;
-            return $namespace . '::DataSource::Meta';
+            $data_source = $namespace . '::DataSource::Meta';
 
         } elsif ($params->{'data_source'} &&
                  ref($params->{'data_source'}) eq 'ARRAY') {
@@ -175,16 +176,22 @@ sub resolve_data_sources_for_class_meta_and_rule {
                 Carp::confess("get() across multiple namespaces is not supported");
             }
             my $namespace = $params->{'data_source'}->[0]->get_namespace;
-            return $namespace . '::DataSource::Meta';
+            $data_source = $namespace . '::DataSource::Meta';
         } else {
             Carp::confess("Required parameter (namespace or data_source) missing");
-            #return 'UR::DataSource::Meta';
+            #$data_source = 'UR::DataSource::Meta';
         }
 
     } else {
-        return $class_meta->data_source;
+        $data_source = $class_meta->data_source;
     }
+
+    if ($data_source && $data_source->can('resolve_data_sources_for_rule')) {
+        $data_source = $data_source->resolve_data_sources_for_rule($boolexpr);
+    }
+    return $data_source;
 }
+
 
 # this is used to determine which data source an object should be saved-to
 
@@ -368,11 +375,299 @@ sub get_objects_for_class_and_rule {
     }
 }
 
+# A wrapper around the method of the same name in UR::DataSource::* to iterate over the
+# possible data sources involved in a query.  The easy case (a query against a single data source)
+# will return the $primary_template data structure.  If the query involves more than one data source,
+# then this method also returns a list containing triples (@addl_loading_info) where each member is:
+# 1) The secondary data source name
+# 2) a listref of delegated properties joining the primary class to the secondary class
+# 3) a hashref containing a data structure like $primary_template, but that applies to the 
+#    secondary class
+sub _get_template_data_for_loading {
+    my($self,$primary_data_source,$rule_template) = @_;
+
+    my $primary_template = $primary_data_source->_get_template_data_for_loading($rule_template);
+
+    unless ($primary_template->{'joins_across_data_sources'}) {
+        # Common, easy case
+        return $primary_template;
+    }
+
+    my @addl_loading_info;
+    foreach my $secondary_data_source ( keys %{$primary_template->{'joins_across_data_sources'}} ) {
+        my $this_ds_delegations = $primary_template->{'joins_across_data_sources'}->{$secondary_data_source};
+
+        my @secondary_params;
+        my $secondary_class;
+        foreach my $delegated_property ( @$this_ds_delegations ) {
+            my $operator = $rule_template->operator_for_property_name($delegated_property->property_name);
+            $operator ||= '=';  # FIXME - shouldn't the template return this for us?
+            push @secondary_params, $delegated_property->to . " " . $operator;
+
+            unless ($secondary_class) {
+                my $relation_property = UR::Object::Property->get(class_name => $delegated_property->class_name,
+                                                                  property_name => $delegated_property->via);
+     
+                $secondary_class ||= $relation_property->data_type;
+            }
+        }
+        my $secondary_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params($secondary_class, @secondary_params);
+
+        push @addl_loading_info,
+                 $secondary_data_source,
+                 $this_ds_delegations,
+                 $self->_get_template_data_for_loading($secondary_data_source,$secondary_rule_template);
+    }
+
+    return ($primary_template, @addl_loading_info);
+}
+
+
+# Used by _create_secondary_loading_comparitors to convert a rule against the primary data source
+# to a rule that can be used against a secondary data source
+sub _create_secondary_rule_from_primary {
+    my($self,$primary_rule, $delegated_properties, $secondary_template) = @_;
+
+    my $secondary_rule_template = UR::BoolExpr::Template->get($secondary_template->{'rule_template_id'});
+    
+    my @secondary_values;
+    # FIXME - is there ever a case where @$delegated_properties will be more than one item?
+    foreach my $property ( @$delegated_properties ) {
+        my $value = $primary_rule->specified_value_for_property_name($property->property_name);
+
+        my $secondary_property_name = $property->to;
+        my $pos = $secondary_rule_template->value_position_for_property_name($secondary_property_name);
+        $secondary_values[$pos] = $value;
+    }
+
+    my $secondary_rule = $secondary_rule_template->get_rule_for_values(@secondary_values);
+
+    return $secondary_rule;
+}
+
+
+# Since we'll be appending more "columns" of data to the listrefs returned by
+# the primary datasource's query, we need to apply fixups to the column positions
+# to all the secondary loading templates
+# The column_position and object_num offsets needed for the next call of this method
+# are returned
+sub _fixup_secondary_loading_template_column_positions {
+    my($self,$primary_loading_templates, $secondary_loading_templates, $column_position_offset, $object_num_offset) = @_;
+
+    if (! defined($column_position_offset) or ! defined($object_num_offset)) {
+        $column_position_offset = 0;
+        foreach my $tmpl ( @{$primary_loading_templates} ) {
+            $column_position_offset += scalar(@{$tmpl->{'column_positions'}});
+        }
+        $object_num_offset = scalar(@{$primary_loading_templates});
+    }
+
+    my $this_template_column_count;
+    foreach my $tmpl ( @$secondary_loading_templates ) {
+        foreach ( @{$tmpl->{'column_positions'}} ) {
+            $_ += $column_position_offset;
+        }
+        foreach ( @{$tmpl->{'id_column_positions'}} ) {
+            $_ += $column_position_offset;
+        }
+        $tmpl->{'object_num'} += $object_num_offset;
+
+        $this_template_column_count += scalar(@{$tmpl->{'column_positions'}});
+    }
+
+
+    return ($column_position_offset + $this_template_column_count,
+            $object_num_offset + scalar(@$secondary_loading_templates) );
+}
+
+
+# For queries that have to hit multiple data sources, this method creates two lists of
+# closures.  The first is a list of object fabricators, where the loading templates
+# have been given fixups to the column positions (see _fixup_secondary_loading_template_column_positions())
+# The second is a list of closures for each data source (the @addl_loading_info stuff
+# from _get_template_data_for_loading) that's able to compare the row loaded from the
+# primary data source and see if it joins to a row from this secondary datasource's database
+sub _create_secondary_loading_closures {
+    my($self, $primary_template, $rule, @addl_loading_info) = @_;
+
+$DB::single=1;
+    my $loading_templates = $primary_template->{'loading_templates'};
+
+    # Make a mapping of property name to column positions returned by the primary query
+    my %primary_query_column_positions;
+    foreach my $tmpl ( @$loading_templates ) {
+        my $property_name_count = scalar(@{$tmpl->{'property_names'}});
+        for (my $i = 0; $i < $property_name_count; $i++) {
+            my $property_name = $tmpl->{'property_names'}->[$i];
+            my $pos = $tmpl->{'column_positions'}->[$i];
+            $primary_query_column_positions{$property_name} = $pos;
+        }
+    }
+
+    my @secondary_object_importers;
+    my @addl_join_comparitors;
+
+    # used to shift the apparent column position of the secondary loading template info
+    my ($column_position_offset,$object_num_offset);
+
+    while (@addl_loading_info) {
+        my $secondary_data_source = shift @addl_loading_info;
+        my $this_ds_delegations = shift @addl_loading_info;
+        my $secondary_template = shift @addl_loading_info;
+
+        # sets of triples where the first in the triple is the column index in the
+        # $secondary_db_row (in the join_comparitor closure below), the second is the
+        # index in the $next_db_row.  And the last is a flag indicating if we should 
+        # perform a numeric comparison.  This way we can preserve the order the comparisons
+        # should be done in
+        my @join_comparison_info;
+        foreach my $property ( @$this_ds_delegations ) {
+            # first, map column names in the joined class to column names in the primary class
+            my %foreign_property_name_map;
+            my @this_property_joins = $property->_get_joins();
+            foreach my $join ( @this_property_joins ) {
+                my @source_names = @{$join->{'source_property_names'}};
+                my @foreign_names = @{$join->{'foreign_property_names'}};
+                @foreign_property_name_map{@foreign_names} = @source_names;
+            }
+
+            # Now, find out which numbered column in the result query maps to those names
+            my $loading_templates = $secondary_template->{'loading_templates'};
+            foreach my $tmpl ( @$loading_templates ) {
+                my $property_name_count = scalar(@{$tmpl->{'property_names'}});
+                for (my $i = 0; $i < $property_name_count; $i++) {
+                    my $property_name = $tmpl->{'property_names'}->[$i];
+                    if ($foreign_property_name_map{$property_name}) {
+                        # This is the one we're interested in...  Where does it come from in the primary query?
+                        my $column_position = $tmpl->{'column_positions'}->[$i];
+
+                        # What are the types involved?
+                        my $primary_property_meta = UR::Object::Property->get(class_name => $primary_template->{'class_name'},
+                                                                              property_name => $foreign_property_name_map{$property_name});
+                        my $secondary_property_meta = UR::Object::Property->get(class_name => $secondary_template->{'class_name'},
+                                                                                property_name => $property_name);
+
+                        my $comparison_type;
+                        if ($primary_property_meta->is_numeric && $secondary_property_meta->is_numeric) {
+                            $comparison_type = 1;
+                        } 
+                        push @join_comparison_info, $column_position,
+                                                    $primary_query_column_positions{$foreign_property_name_map{$property_name}},
+                                                    $comparison_type;
+ 
+
+                    }
+                }
+            }
+        }
+
+        my $secondary_rule = $self->_create_secondary_rule_from_primary (
+                                              $rule,
+                                              $this_ds_delegations,
+                                              $secondary_template,
+                                       );
+        my $secondary_db_iterator = $secondary_data_source->create_iterator_closure_for_rule($secondary_rule);
+
+        my $secondary_db_row;
+        # For this closure, pass in the row we just loaded from the primary DB query.
+        # This one will return the data from this secondary DB's row if the passed-in
+        # row successfully joins to this secondary db iterator.  It returns an empty list
+        # if there were no matches, and returns false if there is no more data from the query
+        my $join_comparitor = sub {
+            my $next_db_row = shift;  # From the primary DB
+            READ_DB_ROW:
+            while(1) {
+                return unless ($secondary_db_iterator);
+                unless ($secondary_db_row) {
+                    ($secondary_db_row) = $secondary_db_iterator->();
+                    unless($secondary_db_row) {
+                        # No more data to load 
+                        $secondary_db_iterator = undef; 
+                        return;
+                    }
+                }
+
+                for (my $i = 0; $i < @join_comparison_info; $i += 3) {
+                    my $secondary_column = $join_comparison_info[$i]; 
+                    my $primary_column = $join_comparison_info[$i+1];
+                    my $comparison;
+                    # Numeric or string comparison?
+                    if ($join_comparison_info[$i+2]) {
+                        $comparison = $secondary_db_row->[$secondary_column] <=> $next_db_row->[$primary_column];
+                    } else {
+                        $comparison = $secondary_db_row->[$secondary_column] cmp $next_db_row->[$primary_column];
+                    }
+
+                    if ($comparison < 0) {
+                        # less than, get the next row from the secondary DB
+                        $secondary_db_row = undef;
+                        redo READ_DB_ROW;
+                    } elsif ($comparison == 0) {
+                        # This one was the same, keep looking at the others
+                    } else {
+                        # greater-than, there's no match for this primary DB row
+                        return 0;
+                    }
+                }
+                # All the joined columns compared equal, return the data
+                return $secondary_db_row;
+            }
+        };
+        push @addl_join_comparitors, $join_comparitor;
+ 
+
+        # And for the object importer/fabricator, here's where we need to shift the column order numbers
+        # over, because these closures will be called after all the db iterators' rows are concatenated
+        # together.  We also need to make a copy of the loading_templates list so as to not mess up the
+        # class' notion of where the columns are
+        # FIXME - it seems wasteful that we need to re-created this each time.  Look into some way of using 
+        # the original copy that lives in $primary_template->{'loading_templates'}?  Somewhere else?
+        my @secondary_loading_templates;
+        foreach my $tmpl ( @{$secondary_template->{'loading_templates'}} ) {
+            my %copy;
+            foreach my $key ( keys %$tmpl ) {
+                my $value_to_copy = $tmpl->{$key};
+                if (ref($value_to_copy) eq 'ARRAY') {
+                    $copy{$key} = [ @$value_to_copy ];
+                } elsif (ref($value_to_copy) eq 'HASH') {
+                    $copy{$key} = { %$value_to_copy };
+                } else {
+                    $copy{$key} = $value_to_copy;
+                }
+            }
+            push @secondary_loading_templates, \%copy;
+        }
+            
+        ($column_position_offset,$object_num_offset) =
+                $self->_fixup_secondary_loading_template_column_positions($primary_template->{'loading_templates'},
+                                                                          \@secondary_loading_templates,
+                                                                          $column_position_offset,$object_num_offset);
+ 
+        my($secondary_rule_template,@secondary_values) = $secondary_rule->get_template_and_values();
+        foreach my $secondary_loading_template ( @secondary_loading_templates ) {
+            my $secondary_object_importer = $self->_create_object_fabricator_for_loading_template(
+                                                       $secondary_loading_template,
+                                                       $secondary_template,
+                                                       $secondary_rule,
+                                                       $secondary_rule_template,
+                                                       \@secondary_values,
+                                                       $secondary_data_source
+                                                );
+            push @secondary_object_importers, $secondary_object_importer;
+        }
+                                                       
+
+   }
+
+    return (\@secondary_object_importers, \@addl_join_comparitors);
+}
+
+
 sub _create_import_iterator_for_underlying_context {
     my ($self, $rule, $dsx) = @_; 
 
     my ($rule_template, @values) = $rule->get_rule_template_and_values();
-    my $template_data = $dsx->_get_template_data_for_loading($rule_template);
+    my($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
     my $class_name = $template_data->{class_name};
 
     if (my $sub_typing_property) {
@@ -433,28 +728,50 @@ sub _create_import_iterator_for_underlying_context {
     
     my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
     
-    # make an iterator for the data source, and wrap it
+    # make an iterator for the primary data source
     my $db_iterator = $dsx->create_iterator_closure_for_rule($rule);    
+
     my %subordinate_iterator_for_class;
     
     # instead of making just one import iterator, we make one per loading template
     # we then have our primary iterator use these to fabricate objects for each db row
-    
     my @importers;
     for my $loading_template (@$loading_templates) {
-        my $object_fabricator = $self->_create_object_fabricator_for_loading_template($loading_template,$template_data,$rule,$rule_template,\@values, $dsx);
+        my $object_fabricator = $self->_create_object_fabricator_for_loading_template($loading_template, 
+                                                                                      $template_data,
+                                                                                      $rule,
+                                                                                      $rule_template,
+                                                                                      \@values,
+                                                                                      $dsx
+                                                                                    );
         unshift @importers, $object_fabricator;
     }
-    
+
+    # For joins across data sources, we need to create importers/fabricators for those
+    # classes, as well as callbacks used to perform the equivalent of an SQL join in
+    # UR-space
+    my @addl_join_comparitors;
+    if (@addl_loading_info) {
+        my($addl_object_fabricators, $addl_join_comparitors) =
+                $self->_create_secondary_loading_closures( $template_data,
+                                                           $rule,
+                                                           @addl_loading_info
+                                                      );
+
+        unshift @importers, @$addl_object_fabricators;
+        push @addl_join_comparitors, @$addl_join_comparitors;
+    }
+
     # Make the iterator we'll return.
     my $iterator = sub {
         my $object;
         
+        LOAD_AN_OBJECT:
         until ($object) { # note that we return directly when the db is out of data
             
             my ($next_db_row);
             ($next_db_row) = $db_iterator->() if ($db_iterator);
-            
+
             unless ($next_db_row) {
                 if ($rows == 0) {
                     # if we got no data at all from the sql then we give a status
@@ -492,12 +809,53 @@ sub _create_import_iterator_for_underlying_context {
             
             # we count rows processed mainly for more concise sanity checking
             $rows++;
+
+            # For multi-datasource queries, does this row successfully join with all the other datasources?
+            #
+            # Normally, the policy is for the data source query to return (possibly) more than what you
+            # asked for, and then we'd cache everything that may have been loaded.  In this case, we're
+            # making the choice not to.  Reason being that a join across databases is likely to involve
+            # a lot of objects, and we don't want to be stuffing our object cache with a lot of things
+            # we're not interested in.  FIXME - in order for this to be true, then we could never query
+            # these secondary data sources against, say, a calculated property because we're never turning
+            # them into objects.  FIXME - fix this by setting the $needs_further_boolexpr_evaluation_after_loading
+            # flag maybe?
+            my @secondary_data;
+            foreach my $callback (@addl_join_comparitors) {
+                # FIXME - (no, not another one...) There's no mechanism for duplicating SQL join's
+                # behavior where if a row from a table joins to 2 rows in the secondary table, the 
+                # first table's data will be in the result set twice.
+                my $secondary_db_row = $callback->($next_db_row);
+                unless (defined $secondary_db_row) {
+                    # That data source has no more data, so there can be no more joins even if the
+                    # primary data source has more data left to read
+                    return;
+                }
+                unless ($secondary_db_row) {  
+                    # It returned 0
+                    # didn't join (but there is still more data we can read later)... throw this row out.
+                    $object = undef;
+                    redo LOAD_AN_OBJECT;
+                }
+                # $next_db_row is a read-only value from DBI, so we need to track our additional 
+                # data seperately and smash them together before the object importer is called
+                push(@secondary_data, @$secondary_db_row);
+            }
             
             # get one or more objects from this row of results
             my $re_iterate = 0;
             my @imported;
             for my $callback (@importers) {
-                my $imported_object = $callback->($next_db_row);
+                # The usual case is that the query is just against one data source, and so the importer
+                # callback is just given the row returned from the DB query.  For multiple data sources,
+                # we need to smash together the primary and all the secondary lists
+                my $imported_object;
+                if (@secondary_data) {
+                    $imported_object = $callback->([@$next_db_row, @secondary_data]);
+                } else { 
+                    $imported_object = $callback->($next_db_row);
+                }
+                    
                 if ($imported_object and not ref($imported_object)) {
                     # object requires sub-classsification in a way which involves different db data.
                     $re_iterate = 1;
@@ -656,7 +1014,7 @@ sub _create_object_fabricator_for_loading_template {
         
         if ($loading_template != $template_data->{loading_templates}[0]) {
             # no handling for the non-primary class yet!
-            $DB::single = 1;
+            #$DB::single = 1;
         }
         
         my $pending_db_object_data = {};
@@ -1339,6 +1697,7 @@ sub _get_objects_for_class_and_rule_from_cache {
             }
             
             return $index->get_objects_matching(@values);
+            #return $index->get_objects_matching_rule($rule);  # Hrm bootstrapping doesn't work with this :(
         }
     };
         

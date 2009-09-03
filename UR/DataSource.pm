@@ -189,6 +189,9 @@ sub _generate_template_data_for_loading {
     # validate them through the rule
     my $needs_further_boolexpr_evaluation_after_loading; 
     
+    # Does fulfilling this request involve querying more than one data source?
+    my $is_join_across_data_source;
+
     my @sql_params;
     my @filter_specs;         
     my @property_names_in_resultset_order;
@@ -322,6 +325,7 @@ sub _generate_template_data_for_loading {
 
     my %joins_done;
     my @joins_done;
+    my $joins_across_data_sources;
 
     DELEGATED_PROPERTY:
     for my $delegated_property (@delegated_properties) {
@@ -344,11 +348,17 @@ sub _generate_template_data_for_loading {
         my $final_table_name_with_alias = $first_table_name; 
         
         for my $join (@joins) {
-            $DB::single = 1;
             #print "\tjoin $join\n";
 
             my $source_class_name = $join->{source_class};
-            my $source_class_object = $source_class_name->get_class_object;                    
+            my $source_class_object = $join->{'source_class_meta'};
+
+            my $foreign_class_name = $join->{foreign_class};
+            my $foreign_class_object = $join->{'foreign_class_meta'};
+            my($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
+            if ($foreign_data_source ne $self) {
+                push(@{$joins_across_data_sources->{$foreign_data_source}}, $delegated_property);
+            }
 
             my @source_property_names = @{ $join->{source_property_names} };
 
@@ -364,8 +374,6 @@ sub _generate_template_data_for_loading {
 
             #print "source column names are @source_table_and_column_names for $property_name\n";            
 
-            my $foreign_class_name = $join->{foreign_class};
-            my $foreign_class_object = UR::Object::Type->get(class_name => $foreign_class_name);
             my $foreign_table_name = $foreign_class_name;
 
             unless ($foreign_table_name) {
@@ -499,6 +507,8 @@ sub _generate_template_data_for_loading {
         recurse_property_referencing_other_rows     => $recurse_property_referencing_other_rows,
         
         loading_templates                           => $per_object_in_resultset_loading_detail,
+
+        joins_across_data_sources                   => $joins_across_data_sources,
     };
 
         
