@@ -2049,8 +2049,6 @@ sub _generate_template_data_for_loading {
     my %joins_done;
     my @joins_done;
 
-    $DB::single = $DB::stopper;
-
     DELEGATED_PROPERTY:
     for my $delegated_property (@delegated_properties) {
         my $last_alias_for_this_chain;
@@ -2357,8 +2355,6 @@ sub _generate_template_data_for_loading {
     # Build the FROM clause base.
     # Add joins to the from clause as necessary, then
     $from_clause = (defined $first_table_name ? "$first_table_name" : '');        
-    
-    $DB::single = $DB::stopper;
     
     my $cnt = 0;
     while (@sql_joins) {
