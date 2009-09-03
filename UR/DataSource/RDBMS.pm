@@ -1940,10 +1940,6 @@ sub _generate_template_data_for_loading {
                                 link_column_name => $prev_id_column_name 
                             }
                         };
-                # Not sure why this was here before we moved the logic around.
-                # It seems that worst case on removing it is overly redundant queries.
-                # The worst case on keeping it is leaving a filter out, which we don't want.
-                #delete $filters{ $id_property_objects[0]->property_name } if $pk_used;
             }
             $prev_table_name = $table_name;
             $prev_id_column_name = $id_property_objects[0]->column_name;
@@ -1956,7 +1952,6 @@ sub _generate_template_data_for_loading {
             my $operator       = $rule_template->operator_for_property_name($property_name);
             my $value_position = $rule_template->value_position_for_property_name($property_name);
             
-            delete $filters{$property_name};
             $pk_used = 1 if $id_properties{ $property_name };
             
             if ($property->can("expr_sql")) {
@@ -1986,6 +1981,7 @@ sub _generate_template_data_for_loading {
                         { 
                             $column_name => { operator => $operator, value_position => $value_position }
                         };
+                delete $filters{$property_name};
             }
             elsif ($property->is_legacy_eav) {
                 die "Old GSC EAV can be handled with a via/to/where/is_mutable=1";
@@ -1995,9 +1991,11 @@ sub _generate_template_data_for_loading {
             }
             elsif ($property->is_delegated) {
                 push @delegated_properties, $property;
+                delete $filters{$property_name};
             }
             elsif ($property->is_calculated) {
                 $needs_further_boolexpr_evaluation_after_loading = 1;
+                delete $filters{$property_name};
             }
             else {
                 next;
