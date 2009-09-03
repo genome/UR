@@ -45,7 +45,8 @@ sub create
         $lib_path = cwd();
     }        
     
-    my ($rule,%extra) = $class->get_rule_for_params(@_);    
+    #my ($rule,%extra) = $class->get_rule_for_params(@_);    
+    my ($rule,%extra) = UR::BoolExpr->resolve_for_class_and_params($class,@_);    
     
     return $class->SUPER::create(
         lib_path => $lib_path,

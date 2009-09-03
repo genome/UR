@@ -14,6 +14,34 @@ our $VERSION = '0.01';
 use Carp;
 $SIG{__DIE__} = \&Carp::confess;
 
+
+
+use Storable qw(store_fd fd_retrieve);
+BEGIN {
+    my $ur_dir = substr($INC{'UR.pm'}, 0, length($INC{'UR.pm'})-5);
+    #print "STDERR ur_dir is $ur_dir\n";
+    my $dump;
+    foreach my $dir ( '.', $ur_dir ) {
+        if (-f "$dir/ur_core.stor" and -s _) {
+            #print STDERR "Loading rules dump from $dir/ur_core.stor\n";
+            open($dump, "$dir/ur_core.stor");
+            last;
+        } elsif (-f "$dir/ur_core.stor.gz" and -s _) {
+            #print STDERR "Loading gzipped rules dump from $dir/ur_core.stor.gz\n";
+            open($dump, "gzip -dc $dir/ur_core.stor.gz |");
+            last;
+        }
+    }
+    if ($dump) {
+        $UR::DID_LOAD_FROM_DUMP = 1;
+
+        local $/;
+        my $data = fd_retrieve($dump);
+        ($UR::Object::rule_templates, $UR::Object::rules) = @$data;
+    }
+}
+
+
 # Ensure that, if the application changes directory, we do not 
 # change where we load modules while running.
 use Cwd;
@@ -464,6 +492,24 @@ do {
 
 require UR::Moose;          # a no-op unless UR_MOOSE is set to true currently
 require UR::ModuleLoader;   # signs us up with Class::Autouse
+
+
+sub main::ur_core {
+    print STDERR "Dumping rules and templates to ./ur_core.stor...\n";
+    my $dump;
+    unless(open($dump, ">ur_core.stor")) {
+        print STDERR "Can't open ur_core.stor for writing: $!";
+        exit;
+    }
+    store_fd([
+               $UR::Object::rule_templates,
+               $UR::Object::rules,
+              ],
+             $dump);
+    close $dump;
+    exit();
+}
+
 
 1;
 __END__

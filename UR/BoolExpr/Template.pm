@@ -32,7 +32,6 @@ UR::Object::Type->define(
         is_normalized                   => { is => 'Boolean' },
         is_id_only                      => { is => 'Boolean' },
         is_partial_id                   => { is => 'Boolean' },  # True if at least 1, but not all the ID props are mentioned
-        is_normalized                   => { is => 'Boolean' },
         is_unique                       => { is => 'Boolean' },
         matches_all                     => { is => 'Boolean' },
         key_op_hash                     => { is => 'HASH' },
@@ -289,7 +288,7 @@ sub get {
     die "Non-id params not supported for " . __PACKAGE__ . " yet!" if @_;
 
     # get if possible
-    my $self = $UR::Object::rule_templates{$id};
+    my $self = $UR::Object::rule_templates->{$id};
     return $self if $self;     
 
     my ($subject_class_name,$logic_type,$logic_detail,$constant_value_id,@extra) = split('/',$id);  
@@ -608,7 +607,7 @@ sub get {
         constant_value_id               => $constant_value_id,
         @extra_params
     }, $sub_class_name;
-    $UR::Object::rule_templates{$id} = $self;  
+    $UR::Object::rule_templates->{$id} = $self;  
     return $self;
 }
 

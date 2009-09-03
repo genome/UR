@@ -21,7 +21,8 @@ UR::Object::Type->define(
 
 sub create {
     my $class = shift;
-    my ($rule,%extra) = $class->get_rule_for_params(@_);
+    #my ($rule,%extra) = $class->get_rule_for_params(@_);
+    my ($rule,%extra) = UR::BoolExpr->resolve_for_class_and_params($class,@_);
     my $callback = delete $extra{callback};
     if (%extra) {
         die("Odd params!?" . Data::Dumper::Dumper(\%extra));

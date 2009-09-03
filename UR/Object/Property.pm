@@ -236,7 +236,8 @@ sub _get_joins {
                     @$where = reverse @$where;
                 }            
                 my $join = pop @joins;
-                my $where_rule = $join->{foreign_class}->get_rule_for_params(@$where);                
+                #my $where_rule = $join->{foreign_class}->get_rule_for_params(@$where);                
+                my $where_rule = UR::BoolExpr->resolve_for_class_and_params($join->{foreign_class}, @$where);                
                 my $id = $join->{id};
                 $id .= ' ' . $where_rule->id;
                 push @joins, { %$join, id => $id, where => $where };
@@ -265,7 +266,8 @@ sub _get_joins {
                 my $property_name = $self->property_name;
                 my $id = $source_class . '::' . $property_name;
                 if ($where) {
-                    my $where_rule = $foreign_class->get_rule_for_params(@$where);
+                    #my $where_rule = $foreign_class->get_rule_for_params(@$where);
+                    my $where_rule = UR::BoolExpr->resolve_for_class_and_params($foreign_class, @$where);
                     $id .= ' ' . $where_rule->id;
                 }
                 if (my $id_by = $self->id_by) { 

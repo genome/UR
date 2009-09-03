@@ -301,7 +301,15 @@ sub get_composite_id_resolver {
 
 # Replaced by ancestry_class_metas()
 sub ordered_inherited_class_objects {
+    #my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params(__PACKAGE__,'id');
+
+    # Can't use the speed optimization of getting a template here.  Using the Context to get 
+    # objects here causes endless recursion during bootstrapping
     map { __PACKAGE__->get($_) } shift->ordered_inherited_class_names;
+    #return map { $UR::Context::current->get_objects_for_class_and_rule(__PACKAGE__, $_) }
+    #       map { $rule_template->get_rule_for_values($_) }
+    #       shift->ordered_inherited_class_names;
+
 }
 
 # Kinda Replaced by all_property_metas(property_name => 'name')
@@ -309,8 +317,13 @@ sub ordered_inherited_class_objects {
 sub get_property_meta_by_name {
     my ($self, $property_name) = @_;
     my $property;
+
+    my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'class_name', 'property_name');
+
     for my $class ($self->class_name, $self->ordered_inherited_class_names) {
-        $property = UR::Object::Property->get(class_name => $class, property_name => $property_name);
+        #$property = UR::Object::Property->get(class_name => $class, property_name => $property_name);
+        my $rule = $rule_template->get_rule_for_values($class, $property_name);
+        $property = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $rule);
         return $property if $property;
     }
     return;
@@ -1056,8 +1069,11 @@ sub get_id_objects
 sub get_id_property_objects
 {
     my $self = _object(shift);
+    my $get_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'class_name', 'attribute_name');
     my @id_property_objects =
-        map { UR::Object::Property->get(class_name => $_->class_name, attribute_name => $_->attribute_name) }
+        #map { UR::Object::Property->get(class_name => $_->class_name, attribute_name => $_->attribute_name) }
+        map { $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $_) }
+        map { $get_rule_template->get_rule_for_values($_->class_name, $_->attribute_name) }
         $self->get_id_objects;
     if (@id_property_objects == 0) {
         @id_property_objects = $self->get_property_meta_by_name("id");
@@ -1132,7 +1148,11 @@ sub parent_class_names {
 # Replaced by ancestry_class_objects
 sub get_inherited_class_objects {
     my $self = shift;
+    #my $template = UR::BoolExpr::Template->resolve_for_class_and_params(__PACKAGE__, 'id');
     return map { __PACKAGE__->get($_) } $self->ordered_inherited_class_names;
+    #return map { $UR::Context::current->get_objects_for_class_and_rule(__PACKAGE__, $_) }
+    #       map { $template->get_rule_for_values($_) }
+    #       $self->ordered_inherited_class_names;
 }
 
 # Replaced by ancestry_property_metas
@@ -1289,9 +1309,13 @@ sub column_names
 sub id_property_names {    
     my $self = _object(shift);
     my @id_by;
+    #my $template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Type', 'class_name');
+
     unless ($self->{id_by} and @id_by = @{ $self->{id_by} }) {
         foreach my $parent ( @{ $self->{'is'} } ) {
             my $parent_class = UR::Object::Type->get(class_name => $parent);
+            #my $rule = $template->get_rule_for_values($parent);
+            #my $parent_class = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Type', $rule);
             next unless $parent_class;
             @id_by = $parent_class->id_property_names;
             last if @id_by;
@@ -1478,9 +1502,13 @@ sub all_property_type_names {
         return @{ $self->{_all_property_type_names} };
     }
     
+    #my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Type', 'id');
+
     my $all_property_type_names = $self->{_all_property_type_names} = [];
     for my $class_name ($self->class_name, $self->ordered_inherited_class_names) {
         my $class_meta = UR::Object::Type->get($class_name);
+        #my $rule = $rule_template->get_rule_for_values($class_name);
+        #my $class_meta = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Type',$rule);
         if (my $has = $class_meta->{has}) {            
             push @$all_property_type_names, sort keys %$has;
         }
@@ -1649,9 +1677,15 @@ sub get_property_object
     my $self = _object(shift);
     my %params = @_;
     warn 'you probably do not want to pass a type_name to get_property_object' if $params{ type_name };
+
+    my @param_keys = keys %params;
+    my @param_values = values %params;
+    my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'type_name', @param_keys);
     for my $co ( $self, $self->get_inherited_class_objects )
     {
-        my $po = UR::Object::Property->get( type_name => $co->type_name, %params );
+        #my $po = UR::Object::Property->get( type_name => $co->type_name, %params );
+        my $rule = $rule_template->get_rule_for_values($co->type_name, @param_values);
+        my $po = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property',$rule);
         return $po if $po;
     }
     return;

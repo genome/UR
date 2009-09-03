@@ -993,7 +993,8 @@ sub _create_import_iterator_for_underlying_context {
             if ($type_obj) {
                 my $subclass_name = $type_obj->subclass_name($class_name);
                 if ($subclass_name and $subclass_name ne $class_name) {
-                    $rule = $subclass_name->get_rule_for_params($rule->params_list, $sub_typing_property => $value);
+                    #$rule = $subclass_name->get_rule_for_params($rule->params_list, $sub_typing_property => $value);
+                    $rule = UR::BoolExpr->resolve_for_class_and_params($subclass_name, $rule->params_list, $sub_typing_property => $value);
                     return $self->_create_import_iterator_for_underlying_context($rule,$dsx);
                 }
             }
@@ -1005,10 +1006,15 @@ sub _create_import_iterator_for_underlying_context {
             #$DB::single = 1;
             # we're in a sub-class, and don't have the type specified
             # check to make sure we have a table, and if not add to the filter
-            my $rule = $class_name->get_rule_for_params(
-                $rule_template->get_rule_for_values(@values)->params_list, 
-                $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
-            );
+            #my $rule = $class_name->get_rule_for_params(
+            #    $rule_template->get_rule_for_values(@values)->params_list, 
+            #    $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
+            #);
+            my $rule = UR::BoolExpr->resolve_for_class_and_params(
+                           $class_name,
+                           $rule_template->get_rule_for_values(@values)->params_list,
+                           $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
+                        );
             return $self->_create_import_iterator_for_underlying_context($rule,$dsx)
         }
         else {
@@ -1290,7 +1296,8 @@ sub _create_object_fabricator_for_loading_template {
     my $load_class_name = $class;
     # $rule can contain params that may not apply to the subclass that's currently loading.
     # get_rule_for_params() in array context will return the portion of the rule that actually applies
-    my($load_rule, undef) = $load_class_name->get_rule_for_params($rule->params_list);
+    #my($load_rule, undef) = $load_class_name->get_rule_for_params($rule->params_list);
+    my($load_rule, undef) = UR::BoolExpr->resolve_for_class_and_params($load_class_name, $rule->params_list);
     my $load_rule_id = $load_rule->id;
 
     my @rule_properties_with_in_clauses =
@@ -1793,11 +1800,20 @@ sub _create_object_fabricator_for_loading_template {
                 # Log the smaller query which would get the hierarchically linked data directly as though it happened directly.
                 $recurse_property_value_found{$value_referencing_other_object} = 1;
                 # note that the direct query need not be done again
-                my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object);
+                #my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object);
+                my $equiv_params = UR::BoolExpr->resolve_for_class_and_params(
+                                       $class,
+                                       $recurse_property_on_this_row => $value_referencing_other_object,
+                                   );
                 my $equiv_param_key = $equiv_params->get_normalized_rule_equivalent->id;                
                 
                 # note that the recursive query need not be done again
-                my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object, -recurse => $recursion_desc);
+                #my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object, -recurse => $recursion_desc);
+                my $equiv_params2 = UR::BoolExpr->resolve_for_class_and_params(
+                                        $class,
+                                        $recurse_property_on_this_row => $value_referencing_other_object,
+                                        -recurse => $recursion_desc,
+                                     );
                 my $equiv_param_key2 = $equiv_params2->get_normalized_rule_equivalent->id;
                 
                 # For any of the hierarchically related data which is already loaded, 
@@ -1815,11 +1831,20 @@ sub _create_object_fabricator_for_loading_template {
             if ($recurse_property_value_found{$value_by_which_this_object_is_loaded_via_recursion}) {
                 # This row was expected because some other row in the hierarchical query referenced it.
                 # Up the object count, and note on the object that it is a result of this query.
-                my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
+                #my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
+                my $equiv_params = UR::BoolExpr->resolve_for_class_and_params(
+                                       $class,
+                                       $recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion,
+                                    );
                 my $equiv_param_key = $equiv_params->get_normalized_rule_equivalent->id;
                 
                 # note that the recursive query need not be done again
-                my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion, -recurse => $recursion_desc);
+                #my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion, -recurse => $recursion_desc);
+                my $equiv_params2 = UR::BoolExpr->resolve_for_class_and_params(
+                                        $class,
+                                        $recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion,
+                                        -recurse => $recursion_desc
+                                     );
                 my $equiv_param_key2 = $equiv_params2->get_normalized_rule_equivalent->id;
                 
                 $UR::Object::all_params_loaded->{$class}{$equiv_param_key}++;
@@ -1842,7 +1867,8 @@ sub _get_objects_for_class_and_sql {
     # only use it if you know what you're doing
     my ($self, $class, $sql) = @_;
     my $meta = $class->get_class_object;        
-    my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,$class->get_rule_for_params());    
+    #my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,$class->get_rule_for_params());    
+    my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,UR::BoolExpr->resolve_for_class_and_params($class));
     my @ids = $ds->_resolve_ids_from_class_name_and_sql($class,$sql);
     return unless @ids;
 

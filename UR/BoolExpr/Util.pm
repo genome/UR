@@ -70,7 +70,8 @@ sub values_to_value_id {
             $value_id .= $record_sep;
         }
         else {
-            if (ref($value) or $value =~ m/($unit_sep|$record_sep)/) {
+            #if ($value =~ m/($unit_sep|$record_sep)/o) {
+            if (ref($value) or index($value,$unit_sep) >= 0 or index($value,$record_sep) >= 0) { 
                 return $self->values_to_value_id_frozen(@_);
             }
             $value_id .= $value . $record_sep;

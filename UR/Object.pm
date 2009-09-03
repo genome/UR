@@ -16,7 +16,7 @@ use Scalar::Util qw(blessed);
 
 sub class { ref($_[0]) || $_[0] }
 
-sub get_class_object {
+sub get_class_object () {
     # for bootstrapping
     # subclasses set this specifically for efficiency
     my $class_name = shift;
@@ -36,7 +36,8 @@ sub get_boolexpr_for_params {
 
 sub get_object_set {
     my $class = shift;
-    my $rule = $class->get_rule_for_params(@_);
+    #my $rule = $class->get_rule_for_params(@_);
+    my $rule = UR::BoolExpr->resolve_for_class_and_params($class,@_);
     my $set_class = $class . "::Set";
     return $set_class->get($rule->id);    
 }
@@ -47,7 +48,8 @@ sub create_iterator {
     
     my $filter = delete $params{where};
     unless (blessed($filter)) {
-        $filter = $class->get_rule_for_params(@$filter)
+        #$filter = $class->get_rule_for_params(@$filter)
+        $filter = UR::BoolExpr->resolve_for_class_and_params($class,@$filter)
     }
     
     my $iterator = UR::Object::Iterator->create_for_filter_rule($filter);

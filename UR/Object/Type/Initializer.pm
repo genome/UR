@@ -273,8 +273,12 @@ sub define {
     
     # we do this for define() but not create()
     # FIXME - if there's a coderef in this struct, it'll spit out a warning
-    $self->{db_committed} = { %{ UR::Util::deep_copy($self) } };
-    delete $self->{db_committed}{id};
+    #$self->{db_committed} = { %{ UR::Util::deep_copy($self) } };
+    #delete $self->{db_committed}{id};
+    my %db_committed = %$self;
+    delete $db_committed{'id'};
+    delete $db_committed{'db_committed'};
+    $self->{'db_committed'} = \%db_committed;
 
     $self->_initilize_accessors_and_inheritance 
         or Carp::confess("Error initializing accessors for $class_name!");
@@ -326,7 +330,7 @@ sub initialize_bootstrap_classes
                 "Failed to complete definition of class $class_name!"
                 . $class_meta->error_message
             );
-        }                
+        }
     }    
     $bootstrapping = 0;
 
@@ -1022,7 +1026,7 @@ sub _make_minimal_class_from_normalized_class_description {
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => 'get_class_object',
-        code => Sub::Name::subname $full_name => sub {$self},
+        code => Sub::Name::subname $full_name => sub () {$self},
     });
 
     return $self;
@@ -1137,7 +1141,6 @@ sub _complete_class_meta_object_definitions {
         @{ $class_name . "::ISA" } = @$inheritance;
     }
 
-    
     # Create inline data source
     if ($data_source and ref($data_source) eq 'HASH') {
         $self->{'__inline_data_source_data'} = $data_source;
@@ -1325,6 +1328,8 @@ sub _complete_class_meta_object_definitions {
     }
 
     if ($constraints) {
+        my $property_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property','class_name','property_name');
+
         my $n = 1;
         for my $unique_set (sort { $a->{sql} cmp $b->{sql} } @$constraints) {
             my ($name,$properties,$group,$sql);
@@ -1340,10 +1345,12 @@ sub _complete_class_meta_object_definitions {
                 $n++;
             }
             for my $property_name (sort @$properties) {
-                my $property = UR::Object::Property->get(
-                    class_name => $class_name,
-                    property_name => $property_name,
-                );
+                #my $property = UR::Object::Property->get(
+                #    class_name => $class_name,
+                #    property_name => $property_name,
+                #);
+                my $prop_rule = $property_rule_template->get_rule_for_values($class_name,$property_name);
+                my $property = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $prop_rule);
                 unless ($property) {
                     die "Failed to find property $property_name on class $class_name!";
                 }
@@ -1362,6 +1369,8 @@ sub _complete_class_meta_object_definitions {
             }
         }
     }
+#print "constraints ",$t2-$t1,"\n" if $t2-$t1 > 0.001;
+#$t1=$t2;
 
     if ($relationships) {
         for (my $i = 0; $i < @$relationships; $i += 2) {
@@ -1462,11 +1471,17 @@ sub _complete_class_meta_object_definitions {
     }
 
     for my $obj ($self,@subordinate_objects) {
-        use Data::Dumper;
+        #use Data::Dumper;
         no strict;
-        my $db_committed = eval(Dumper($obj));
-        $obj->{db_committed} ||= $db_committed;        
-        delete $db_committed->{id};
+#print "Dumper ",$obj->{'id'},"\n";
+        #my $db_committed = eval(Dumper($obj));
+        #$obj->{db_committed} ||= $db_committed;        
+        #delete $db_committed->{id};
+
+        my %db_committed = %$obj;
+        delete $db_committed{'id'};
+        $obj->{'db_committed'} = \%db_committed;
+            
     };
 
     unless ($self->generate) {    
@@ -1523,9 +1538,9 @@ sub _complete_class_meta_object_definitions {
 # write the module from the existing data in the class object
 sub generate {
     my $self = shift;
-    return 1 if $self->generated;
+    return 1 if $self->{'generated'};
 
-    my %params = @_;
+    #my %params = @_;   # Doesn't seem to be used below...
 
 
     # The follwing code will override a lot intentionally.
@@ -1537,12 +1552,13 @@ sub generate {
     # the "new class"
     my $class_name = $self->class_name;
 
-    my $full_name = join( '::', $class_name, 'get_class_object' );
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => 'get_class_object',
-        code => Sub::Name::subname $full_name => sub {$self},
-    });
+    # this is done earlier in the class definition process in _make_minimal_class_from_normalized_class_description()
+    #my $full_name = join( '::', $class_name, 'get_class_object' );
+    #Sub::Install::reinstall_sub({
+    #    into => $class_name,
+    #    as   => 'get_class_object',
+    #    code => Sub::Name::subname $full_name => sub {$self},
+    #});
 
     my @parent_class_names = $self->parent_class_names;
     

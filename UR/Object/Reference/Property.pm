@@ -119,13 +119,18 @@ sub get {
                 Carp::confess('Failed to define relationship ' . $ref->delegation_name . " property $property_name");
             }
 
-            {
-                use Data::Dumper; 
-                no strict;
-                my $db_committed = eval(Data::Dumper::Dumper($rp));
-                $rp->{'db_committed'} ||= $db_committed;
-                delete $db_committed->{'id'};
-            }
+            #{
+                #use Data::Dumper; 
+                #no strict;
+                #my $db_committed = eval(Data::Dumper::Dumper($rp));
+                #$rp->{'db_committed'} ||= $db_committed;
+                #delete $db_committed->{'id'};
+                unless ($rp->{'db_committed'}) {
+                    my %db_committed = %$rp;
+                    delete $db_committed{'id'};
+                    $rp->{'db_committed'} = \%db_committed;
+                }
+            #}
 
             push @defined_objects, $rp;
         } # end for 0 .. $property_names_count

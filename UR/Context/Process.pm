@@ -133,7 +133,8 @@ sub _create_for_current_process {
 
     die "Process object for the current process already exists!" if $UR::Context::process;
 
-    my $rule = $class->get_rule_for_params(@_);        
+    #my $rule = $class->get_rule_for_params(@_);        
+    my $rule = UR::BoolExpr->resolve_for_class_and_params($class, @_);
     
     my $host_name = Sys::Hostname::hostname();
     
