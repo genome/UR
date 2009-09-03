@@ -993,6 +993,7 @@ from
     START WITH id = 0
     AND statement_id = '$UR::DBI::STATEMENT_ID'
 ) p
+full join dual on dummy = dummy
 left join all_indexes i
     on i.index_name = p.object_name
     and i.owner = p.object_owner
@@ -1015,6 +1016,7 @@ left join
     ) index_columns_stringified
     on index_columns_stringified.index_owner = i.owner
     and index_columns_stringified.index_name = i.index_name
+where p.object_name is not null
 ORDER BY p.id
 /;
 
