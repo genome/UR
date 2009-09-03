@@ -45,7 +45,7 @@ sub _init_subclass {
     #eval "no warnings;\n" . $src;
     eval $src;
     Carp::confess($@) if $@;
-    
+
     return 1;
 }
 
@@ -95,7 +95,20 @@ sub _concrete_load {
     my $varref = \${ $class . "::singleton" };
     unless ($$varref) {
         my $id = $class->_resolve_id_for_subclass_name($class);        
-        $$varref = $class->create_object(id => $id);    
+
+        my $class_object = $class->get_class_object;
+        my @prop_names = $class_object->all_property_names;
+        my %default_values;
+        foreach my $prop_name ( @prop_names ) {
+            my $prop = $class_object->property_meta_for_name($prop_name);
+            next unless $prop;
+            my $val = $prop->{'default_value'};
+            next unless defined $val;
+            $default_values{$prop_name} = $val;
+        }
+   
+
+        $$varref = $class->create_object(%default_values, id => $id);    
         $$varref->{db_committed} = { %$$varref };
         $$varref->signal_change("load");
         Scalar::Util::weaken($$varref);
@@ -153,6 +166,7 @@ sub create {
         
     return $subclass->SUPER::create(@_);
 }
+
 
 1;
 
