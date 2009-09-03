@@ -41,6 +41,10 @@ class UR::Object::Command::List {
 
 ##############################
 
+sub help_brief {
+    return "Fetches objects and lists them";
+}
+
 sub help_detail {
     my $self = shift;
     
@@ -57,6 +61,7 @@ Listing Styles:
 ---------------
  text - table like
  csv - comma separated values
+ pretty - objects listed singly with color enhancements
 
 EOS
 }
@@ -81,7 +86,14 @@ sub create {
     ) 
         and return unless grep { $self->style eq $_ } valid_styles();
      
-    # determine things to show
+    return $self;
+}
+
+sub _do
+{
+    my ($self, $iterator) = @_;    
+
+    # Determine things to show
     if ( my $show = $self->show ) {
         $self->show([ map { lc } split(/,/, $show) ]);
         #TODO validate things to show??
@@ -90,13 +102,6 @@ sub create {
         $self->show([ map { $_->property_name } $self->_subject_class_filterable_properties ]);
     }
     
-    return $self;
-}
-
-sub _do
-{
-    my ($self, $iterator) = @_;    
-
     # Handle
     my $handle_method = sprintf('_create_handle_for_%s', $self->style);
     my $h = $self->$handle_method
@@ -338,4 +343,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 36321 2008-07-08 20:19:48Z ebelter $
+#$Id: List.pm 36329 2008-07-08 21:09:07Z ebelter $
