@@ -565,73 +565,71 @@ sub create_from_command_line_format_filters {
             my @range_parts;
             
             if ($fdata->[1] eq "@") {
-            # file path
-            my $fh = IO::File->new($fdata->[2]);
-            unless ($fh) {
-                die "Failed to open file $fdata->[2]: $!\n";
-            }
-            @list_parts = $fh->getlines;
-            chomp @list_parts;
-            $fh->close;
+                # file path
+                my $fh = IO::File->new($fdata->[2]);
+                unless ($fh) {
+                    die "Failed to open file $fdata->[2]: $!\n";
+                }
+                @list_parts = $fh->getlines;
+                chomp @list_parts;
+                $fh->close;
             }
             else {
-            @list_parts = split(/\//,$fdata->[2]);
-            @range_parts = split(/-/,$fdata->[2]);
+                @list_parts = split(/\//,$fdata->[2]);
+                @range_parts = split(/-/,$fdata->[2]);
             }
             
             if (@list_parts > 1) {
-    
-            # rule component
-            $key .= " []";
-            $value = \@list_parts;
-    
-            $rule_filter = [$fdata->[0],"[]",\@list_parts];
+                # rule component
+                $key .= " []";
+                $value = \@list_parts;
+        
+                $rule_filter = [$fdata->[0],"[]",\@list_parts];
             }
             elsif (@range_parts >= 2) {
-            if (@range_parts > 2) {
-                if (@range_parts % 2) {
-                die "The \":\" operator expects a range sparated by a single dash: @range_parts ." . "\n";
+                if (@range_parts > 2) {
+                    if (@range_parts % 2) {
+                        die "The \":\" operator expects a range sparated by a single dash: @range_parts ." . "\n";
+                    }
+                    else {
+                        my $half = (@range_parts)/2;
+                        $a = join("-",@range_parts[0..($half-1)]);
+                        $b = join("-",@range_parts[$half..$#range_parts]);
+                    }
+                }
+                elsif (@range_parts == 2) {
+                    ($a,$b) = @range_parts;
                 }
                 else {
-                my $half = (@range_parts)/2;
-                $a = join("-",@range_parts[0..($half-1)]);
-                $b = join("-",@range_parts[$half..$#range_parts]);
+                    die 'The ":" operator expects a range sparated by a dash.' . "\n";
                 }
-            }
-            elsif (@range_parts == 2) {
-                ($a,$b) = @range_parts;
-            }
-            else {
-                die 'The ":" operator expects a range sparated by a dash.' . "\n";
-            }
-            
-            $key = $fdata->[0] . " between";
-            $value = [$a, $b];
-            $rule_filter = [$fdata->[0], "between", [$a, $b] ];
+                
+                $key = $fdata->[0] . " between";
+                $value = [$a, $b];
+                $rule_filter = [$fdata->[0], "between", [$a, $b] ];
             }
             else {
-            die 'The ":" operator expects a range sparated by a dash, or a slash-separated list.' . "\n";
+                die 'The ":" operator expects a range sparated by a dash, or a slash-separated list.' . "\n";
             }
             
         }
         # this accounts for cases where value is null
         elsif (length($fdata->[2])==0) {
             if ($fdata->[1] eq "=") {
-    
-            $key = $fdata->[0];
-            $value = undef;
-            $rule_filter = [ $fdata->[0], "=", undef ];
+                $key = $fdata->[0];
+                $value = undef;
+                $rule_filter = [ $fdata->[0], "=", undef ];
             }
             else {
-            $key = $fdata->[0] . " !=";
-            $value = undef;
-            $rule_filter = [ $fdata->[0], "!=", undef ];
+                $key = $fdata->[0] . " !=";
+                $value = undef;
+                $rule_filter = [ $fdata->[0], "!=", undef ];
             }
         }
         elsif ($fdata->[1] =~ /like/) {
-            $key = $fdata->[0] . " like-\\";
+            $key = $fdata->[0] . " like";
             $value = $fdata->[2];
-            $rule_filter = [ $fdata->[0], "like-\\", $fdata->[2] ];
+            $rule_filter = [ $fdata->[0], "like", $fdata->[2] ];
         } elsif ($fdata->[1] =~ /!=/) {
             $key = $fdata->[0] . " !=";
             $value = $fdata->[2];
