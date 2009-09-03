@@ -65,6 +65,7 @@ sub _initialize_for_current_process {
     $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base);
 
     if (exists $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || exists $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'}) {
+        $UR::Context::destroy_should_clean_up_all_objects_loaded = 1;
         $cache_size_highwater = $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'} || 0;
         $cache_size_lowwater = $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || 0;
     }
@@ -1599,7 +1600,7 @@ sub _create_object_fabricator_for_loading_template {
                             my %old_dbc = %$dbc;
                             @$dbc{@property_names} = @$pending_db_object_data{@property_names};
             
-                            Carp::confess(qq/
+                            Carp::confess(qq(
                                 A change has occurred in the database for
                                 $class property $property on object $pending_db_object->{id}
                                 from '$old_dbc{$property}' to '$pending_db_object_data->{$property}'.                                    
@@ -1608,7 +1609,7 @@ sub _create_object_fabricator_for_loading_template {
     
                                 The application should lock data which it will update 
                                 and might be updated by other applications. 
-                            /);
+                            ));
                         }
                     }
                 }
@@ -1822,7 +1823,7 @@ sub _create_object_fabricator_for_loading_template {
                                  my %old_dbc = %$dbc;
                                  @$dbc{@property_names} = @$pending_db_object_data{@property_names};
 
-                                 Carp::confess(qq/
+                                 Carp::confess(qq(
                                      A change has occurred in the database for
                                      $class property $property on object $pending_db_object->{id}
                                      from '$old_dbc{$property}' to '$pending_db_object_data->{$property}'.
@@ -1831,7 +1832,7 @@ sub _create_object_fabricator_for_loading_template {
          
                                      The application should lock data which it will update 
                                      and might be updated by other applications. 
-                                 /);
+                                 ));
                             } elsif ($already_loaded->{$property} ne $pending_db_object->{$property}) {
                                 $different = 1;
                                 last;
@@ -2070,7 +2071,7 @@ sub UR::Context::object_fabricator_tracker::finalize {
 
     my $this_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
 
-    foreach my $class ( %$this_all_params_loaded ) {
+    foreach my $class ( keys %$this_all_params_loaded ) {
         while(1) {
             my($rule_id,$val) = each %{$this_all_params_loaded->{$class}};
             last unless defined $rule_id;
@@ -2081,9 +2082,28 @@ sub UR::Context::object_fabricator_tracker::finalize {
 }
 sub UR::Context::object_fabricator_tracker::DESTROY {
     my $self = shift;
-    # Don't apply the changes.  Maybe the importer closure just went out of scope and
-    # hasn't read all the data
-    delete $UR::Context::object_fabricators->{$self};
+    # Don't apply the changes.  Maybe the importer closure just went out of scope before
+    # it read all the data
+    my $this_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
+    if ($this_all_params_loaded) {
+        # finalize wasn't called on this iterator; maybe the inporter closure went out
+        # of scope before it read all the data.
+        # Conditionally apply the changes from the local all_params_loaded.  If the Context's
+        # all_params_loaded is defined, then another query has successfully run to
+        # completion, and we should add our data to it.  Otherwise, we're the only query like
+        # this and all_params_loaded should be cleaned out
+        foreach my $class ( keys %$this_all_params_loaded ) {
+            while(1) {
+                my($rule_id, $val) = each %{$this_all_params_loaded->{$class}};
+                last unless $rule_id;
+                if (defined $UR::Context::all_params_loaded->{$class}->{$rule_id}) {
+                    $UR::Context::all_params_loaded->{$class}->{$rule_id} += $val;
+                } else {
+                    delete $UR::Context::all_params_loaded->{$class}->{$rule_id};
+                }
+            }
+        }
+    }
 }
 
     
@@ -2195,10 +2215,11 @@ sub _cache_is_complete_for_class_and_normalized_rule {
 
     # See if we need to do a load():
 
-#    no warnings;
     my $param_key = $params->{_param_key};
     my $loading_is_in_progress_on_another_iterator = 
-            grep { exists $_->{$class}
+            grep { exists $params->{_param_key}
+                   and
+                   exists $_->{$class}
                    and 
                    exists $_->{$class}->{$param_key}
                  }
