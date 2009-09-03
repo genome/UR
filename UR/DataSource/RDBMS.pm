@@ -2487,7 +2487,21 @@ sub _generate_template_data_for_loading {
     $connect_by_clause = ''; 
     if ($recursion_desc) {
         my ($this,$prior) = @{ $recursion_desc };
-        $connect_by_clause = "connect by $this = prior $prior\n";
+
+        my $this_property_meta = $class_meta->get_property_meta_by_name($this);
+        my $prior_property_meta = $class_meta->get_property_meta_by_name($prior);
+
+        my $this_class_meta = $this_property_meta->class_meta;
+        my $prior_class_meta = $prior_property_meta->class_meta;
+
+        my $this_table_name = $this_class_meta->table_name;
+        my $prior_table_name = $prior_class_meta->table_name;
+
+        my $this_column_name = $this_property_meta->column_name || $this;
+        my $prior_column_name = $prior_property_meta->column_name || $prior;
+        
+        $connect_by_clause = "connect by $this_table_name.$this_column_name = prior $prior_table_name.$prior_column_name\n";
+#        $DB::single = 1;
     }    
     
     for my $property_meta_array (@all_table_properties) {

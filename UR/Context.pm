@@ -1805,7 +1805,6 @@ sub _create_object_fabricator_for_loading_template {
             
             my $value_by_which_this_object_is_loaded_via_recursion = $dbc->{$recurse_property_on_this_row};
             my $value_referencing_other_object = $dbc->{$recurse_property_referencing_other_rows};
-            
             unless ($recurse_property_value_found{$value_referencing_other_object}) {
                 # This row points to another row which will be grabbed because the query is hierarchical.
                 # Log the smaller query which would get the hierarchically linked data directly as though it happened directly.
@@ -1838,8 +1837,10 @@ sub _create_object_fabricator_for_loading_template {
                     $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
                 }
             }
-            
-            if ($recurse_property_value_found{$value_by_which_this_object_is_loaded_via_recursion}) {
+           
+            # NOTE: if it were possible to use undef values in a connect-by, this could be a problem
+            # however, connect by in UR is always COL = COL, which would always fail on NULLs.
+            if (defined($value_by_which_this_object_is_loaded_via_recursion) and $recurse_property_value_found{$value_by_which_this_object_is_loaded_via_recursion}) {
                 # This row was expected because some other row in the hierarchical query referenced it.
                 # Up the object count, and note on the object that it is a result of this query.
                 #my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
