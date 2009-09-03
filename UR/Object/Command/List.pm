@@ -1,5 +1,3 @@
-#!/gsc/bin/perl
-
 package UR::Object::Command::List;
 
 use strict;
@@ -7,86 +5,90 @@ use warnings;
 
 use above "Genome";                 
 
+use Data::Dumper;
+require Term::ANSIColor;
+
 class UR::Object::Command::List {
-    is => 'Command',
+    is => 'UR::Object::Command::FetchAndDo',
     is_abstract => 1,
     has => [
-        subject_class  => { is => 'UR::Object::Type', id_by => 'subject_class_name' }, 
-    ],
-    has_optional => [
-        filter              => { is => 'Text',      doc => 'Limit which items are returned.' },
-        show                => { is => 'Text',      doc => 'Specify which columns to show, in order.' },
-        format              => { is => 'Text',      doc => 'Controls the formatting of the report.  By default, plain text.', default_value => 'text' },
-        #'summarize'        => { is => 'String',    doc => 'A list of show columns by which intermediate groupings (sub-totals, etc.) should be done.' },
-        #'summary_placement => { is => 'String',    doc => 'Either "top" or "bottom" or "middle".  Middle is the default.', default_value => 'middle' },
-        'rowlimit'         => { is => 'Integer',   doc => 'Limit the size of the list returned to n rows.' },
+    show => {
+        is => 'Text',
+        is_optional => 1,
+        doc => 'Specify which columns to show, in order.' 
+    },
+    style => { 
+        is => 'Text',
+        is_optional => 1,
+        default_value => 'text',
+        doc => 'Style of the list: text (default), csv',
+    },
+    noheaders => { 
+        is => 'Boolean',
+        is_optional => 1,
+        default => 0,
+        doc => 'Do not include headers',
+    },
+    #'summarize'        => { is => 'String',    doc => 'A list of show columns by which intermediate groupings (sub-totals, etc.) should be done.' },
+    #'summary_placement => { is => 'String',    doc => 'Either "top" or "bottom" or "middle".  Middle is the default.', default_value => 'middle' },
+    #rowlimit => {
+    #    is => 'Integer', 
+    #    is_optional => 1,
+    #    doc => 'Limit the size of the list returned to n rows.' 
+    #},
     ], 
 };
 
-sub sub_command_sort_position { 0 }
+##############################
 
-sub help_brief {         
-    my $self = shift;
-    if (!ref($self)) {
-        return "list items of various types, with controls for filtering and grouping"
+sub valid_styles {
+    return (qw/ text csv /);
+}
+
+sub _do
+{
+    my ($self, $iterator) = @_;    
+
+    my @show;
+    my @props = map { $_->property_name } $self->_subject_class_filterable_properties;
+    if ( $self->show ) {
+        @show = split(/,/, $self->show); 
+        #TODO validate things to show
     }
     else {
-        my $class = $self->subject_class_name;
-        my $doc = $class->get_class_object->doc;
-        return $doc;
-    }
-}
-
-sub help_synopsis {       
-#    return <<EOS
-#EOS
-}
-
-sub help_detail {          
-    my $self = shift;
-    my $class = $self->subject_class_name;
-    if (!$class) {
-        "list items of various types, with controls for filtering and grouping"
-    }
-    else {
-        my $doc = $class->get_class_object->doc;
-        return $doc;
-    }
-}
-
-sub execute {  
-    my $self = shift;    
-    $DB::single = 1;
-    
-    my $subject_class_name = $self->subject_class_name;
-
-    my $show = $self->show;
-    my @show = split(/,/,$show);
-    
-    my $filter = $self->filter;
-    my @filter = _command_line_filter_string_to_key_op_value_list($filter);
-    my ($filter_boolexpr, %extra) = UR::BoolExpr->create_from_command_line_format_filters($subject_class_name,@filter);
-
-    if (my @extra = sort keys %extra
-            #sort { $a cmp $b } 
-                #( (grep { not $subject_class_name->can($_) } @show), (keys %extra) )
-    ) {
-        for my $extra (@extra) {
-            $self->error_message("Unrecognized field $extra.");
-        }
-        return;
+        @show = @props;
     }
 
-    my $iterator = $subject_class_name->create_iterator(
-        where => $filter_boolexpr,
-        #optimize_for => \@show,
-    );
-    
-    unless ($iterator) {
-        $self->error_message("Failed to create iterator: " . $subject_class_name->error_message);
-        return;
+    # TODO set show
+    $self->{_show}=\@show;
+
+    # Handle
+    my $handle_method = sprintf('_create_handle_for_%s', $self->style);
+    my $h = $self->$handle_method
+        or return;
+     
+    # Header
+    unless ( $self->noheaders ) {
+        my $header_method = sprintf('_get_header_string_for_%s', $self->style);
+        $h->print($self->$header_method, "\n");
     }
 
+    # Body
+    my $body_method = sprintf('_get_%s_string_for_object', $self->style);
+    my $count = 0;
+    while (my $object = $iterator->next) {  
+        $h->print($self->$body_method($object), "\n");
+        $count++;
+    }
+    $h->close;
+    #print "$count rows output\n";
+
+    return 1;
+
+
+    ################################
+    ##############################
+    # TODO add more views
     my $cnt = '0 but true';
     unless ($self->format eq 'none') {
         # TODO: replace this with views, and handle terminal output as one type     
@@ -95,7 +97,9 @@ sub execute {
             $h->print(join("\t",map { uc($_) } @show),"\n");
             $h->print(join("\t",map { '-' x length($_) } @show),"\n");
             while (my $obj = $iterator->next) {  
-                my $row = join("\t",map { $obj->$_ } @show) . "\n";
+                my $row = join("\t",map { 
+                        ( defined $obj->$_ ? $obj->$_ : 'NULL' )
+                        } @show) . "\n";
                 $h->print($row);
                 $cnt++;
             }
@@ -107,7 +111,7 @@ sub execute {
             # todo: switch this to not use App::Report
             require App;
             my $report = App::Report->create();
-            my $title = $subject_class_name->get_class_object->type_name;
+            my $title = $self->subject_class_name->get_class_object->type_name;
             $title =~ s/::/ /g;
             my $v = $self->get_class_object->get_namespace->get_vocabulary;
             $title = join(" ", $v->convert_to_title_case(split(/\s+/,$title)));
@@ -120,27 +124,74 @@ sub execute {
             print $report->generate(format => ucfirst(lc($self->format)));
         }
     }
+
     return $cnt; 
 }
 
-sub _command_line_filter_string_to_key_op_value_list {
-    my $filter_string = shift;
-    my ($property, $op, $fof_indicator, $value);
-    no warnings;
-    my @filter =
-        map {
-            unless (
-                ($property, $op, $value) =
-                    ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|\:|\blike\b)\s*(.*)\s*$/)
-            ) {
-                die "Unable to process filter $_\n";
-            }
-            $op = "like" if $op eq "~";
+# Handle
+sub _create_handle {
+    my ($self, $command) = @_;
+    
+    my $handle = IO::File->new($command);
+    $self->error_message("Can't open command handle for tab2col: $!")
+        and return unless $handle;
 
-            [$property,$op,$value]
-        }
-        split(/,/,$filter_string);
-    return @filter;
+    return $handle;
+}
+
+sub _create_handle_for_text {
+    return shift->_create_handle("| tab2col --nocount");
+}
+
+sub _create_handle_for_csv {
+    return shift->_create_handle("| cat");
+}
+
+# Header
+sub _get_header_string_for_text {
+    my $self = shift;
+
+    return join (
+        "\n",
+        join("\t", map { uc } @{$self->{_show}}),
+        join("\t", map { '-' x length } @{$self->{_show}}),
+    );
+}
+
+sub _get_header_string_for_csv {
+    my $self = shift;
+
+    return join(",", map { lc } @{$self->{_show}});
+}
+
+# Body 
+sub _object_properties_to_string {
+    my ($self, $object, $char) = @_;
+
+    return join($char, map { ( defined $object->$_ ? $object->$_ : 'NULL' ) } @{$self->{_show}});
+}
+
+sub _get_text_string_for_object {
+    my ($self, $object) = @_;
+
+    return $self->_object_properties_to_string($object, "\t");
+}
+
+sub _get_pretty_string_for_object {
+    my ($self, $object) = @_;
+
+    my $row = $self->_object_to_plain_row($object);
+
+    return Term::ANSIColor::colored($row, 'blue');
+}
+
+sub _get_csv_string_for_object {
+    my ($self, $object) = @_;
+
+    return $self->_object_properties_to_string($object, ',');
 }
 
 1;
+
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
+#$Id: List.pm 36255 2008-07-07 20:15:50Z ebelter $
