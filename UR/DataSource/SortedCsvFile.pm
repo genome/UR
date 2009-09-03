@@ -9,6 +9,10 @@ use UR;
 use strict;
 use warnings;
 
+use Sub::Name ();
+use Sub::Install ();
+
+
 # FIXME child classes are required to define methods to return server (name of the file),
 # delimiter, column_order and sort_order.  These should be properties of the data source
 # and not methods in the namespace...
@@ -81,8 +85,6 @@ sub _regex {
     return $self->{'_regex'};
 }
 
-
-
 # Subclasses can override this to return a string containing the pathname of the file
 # to open.  Alternatively, the subclass can implement a method called file_list that returns 
 # a list of file paths, all of which should contain the same data - as a way to, say, load
@@ -90,7 +92,7 @@ sub _regex {
 sub server {
     my $self = shift->_singleton_object;
 
-    unless ($self->{'_chached_server'}) {
+    unless ($self->{'_cached_server'}) {
         unless ($self->can('file_list')) {
             my $class = ref($self);
             die "Class $class didn't implement server() to specify file path";
@@ -102,6 +104,16 @@ sub server {
         $self->{'_cached_server'} = $files[$idx];
     }
     return $self->{'_cached_server'};
+}
+
+
+# Override if your file is delimited by something else
+sub delimiter {
+    '\s*,\s*';
+}
+
+sub record_separator {
+    "\n";
 }
 
 
@@ -179,6 +191,11 @@ sub _generate_loading_templates_arrayref {
         next unless (exists $column_to_position_map{$propertys_column_name});
 
         push @$sql_cols, $column_data;
+    }
+
+    unless ($sql_cols) {
+        $class->error_message("Couldn't determine column information for data source $class");
+        return;
     }
 
     # reorder the requested columns to be in the same order as the file
@@ -517,6 +534,7 @@ sub create_iterator_closure_for_rule {
 
     #my $max_cache_size = $self->cache_size;
     my $max_cache_size = $MAX_CACHE_SIZE;
+    my $record_separator = $self->record_separator;
 
     my $iterator = sub {
 
@@ -529,7 +547,10 @@ sub create_iterator_closure_for_rule {
             $sql_fh->printf("CSV: Rewinding file position to the start\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
+            local $/;   # Make sure some wise guy hasn't changed this out from under us
+            $/ = $record_separator;
             $fh->getline() if ($self->skip_first_line());
+
             $self->_invalidate_cache();
         }
 
@@ -543,7 +564,11 @@ sub create_iterator_closure_for_rule {
                 $next_candidate_row = $file_cache->[$file_cache_index++];
             } else {
                 $self->last_read_fingerprint($fingerprint);
+
+                local $/;   # Make sure some wise guy hasn't changed this out from under us
+                $/ = $record_separator;
                 my $line = $fh->getline();
+
                 unless (defined $line) {
                     # at EOF.  Close up shop and return
                     $fh = undef;
@@ -553,6 +578,7 @@ sub create_iterator_closure_for_rule {
                 }
 
                 chomp $line;
+                # FIXME - to support record-oriented files, we need some replacement for this...
                 $next_candidate_row = [ split($split_regex, $line) ];
 
                 if ($file_cache_index > $max_cache_size) {
@@ -630,12 +656,106 @@ sub column_order {
 }
 
 sub sort_order {
-    my $class = shift;
-    $class = ref($class) || $class;
-
-    Carp::carp "$class didn't specify sort_order()";
+    return ();   # default is to assumme its not sorted
+    #my $class = shift;
+    #$class = ref($class) || $class;
+    #
+    #Carp::carp "$class didn't specify sort_order()";
 }
 
+
+sub create_from_inline_class_data {
+    my($self, $class_data, $ds_data) = @_;
+
+    my($namespace,$class_name) = ($class_data->{'class_name'} =~ m/^(\w+)::(.*)/);
+    my $ds_name = "${namespace}::DataSource::${class_name}";
+
+    if ($ds_data->{'is_sorted'} and $ds_data->{'sort_order'}) {
+        die $class_data->{'class_name'}.": cannot specify both 'is_sorted' and 'sort_order' in the class definition's inline data_source";
+    }
+    if (exists($ds_data->{'sort_order'}) and ref($ds_data->{'sort_order'}) ne 'ARRAY') {
+        die $class_data->{'class_name'}.": 'sort_order' must be an arrayref in the class definition's inline data_+source";
+    }
+    delete $ds_data->{'is_sorted'};
+
+
+    $ds_data->{'server'} ||= $ds_data->{'path'} || $ds_data->{'file'};
+    delete $ds_data->{'path'};
+    delete $ds_data->{'file'};
+
+    
+    if (exists($ds_data->{'column_order'})) {
+        unless (ref($ds_data->{'column_order'}) eq 'ARRAY') {
+            $self->error_message($class_data->{'class_name'}.": column_order must bt an arrayerf");
+            return;
+        }
+    } else {
+        $ds_data->{'column_order'} = [];
+        foreach my $prop_name ( @{$class_data->{'__properties_in_class_definition_order'}} ) {
+            my $prop_data = $class_data->{'has'}->{$prop_name};
+            next unless ($prop_data->{'column_name'});  # only interested in concrete properties
+             
+            push @{$ds_data->{'column_order'}}, $prop_name;
+        }
+    }
+
+    $ds_data->{'file_list'} ||= $ds_data->{'files'};
+    if (defined $ds_data->{'file_list'}) {
+       unless(ref($ds_data->{'file_list'}) eq 'ARRAY') {
+           $self->error_message($class_data->{'class_name'}.": 'file_list' must be an arrayref");
+           return;
+       }
+    }
+    delete $ds_data->{'files'};
+
+    if ($ds_data->{'is_sorted'} and ! @{$ds_data->{'sort_order'}}) {
+        @{$ds_data->{'sort_order'}} = @{$ds_data->{'column_order'}};
+    }
+    
+    my %subs_to_create;
+    delete $ds_data->{'is'};
+    foreach my $key ( qw( server delimiter column_order sort_order skip_first_line file_list ) ) {
+        my $val = delete $ds_data->{$key};
+        next unless defined $val;
+        $subs_to_create{$key} = $val;
+    }
+    if (keys %$ds_data) {
+        die $class_data->{'class_name'}. ": Unrecognized parameters for inline data_source: (".join(',',keys %$ds_data).")";
+    }
+
+    # These methods need to return a list, but the user specifies them as a listref
+    foreach my $method_returns_list ( qw( sort_order column_order file_list ) ) {
+        if (my $list = delete $subs_to_create{$method_returns_list}) {
+           my @value = @$list;
+           my $sub = sub { @value };
+           Sub::Name::subname "${ds_name}::${method_returns_list}" => $sub;
+           Sub::Install::reinstall_sub({
+                into => $ds_name,
+                as   => $method_returns_list,
+                code => $sub,
+            });
+        }
+    }
+
+    # The rest of them return scalars
+    foreach my $key ( keys %subs_to_create ) {
+        my $value = $subs_to_create{$key};
+        my $sub = sub { $value };
+        Sub::Name::subname "${ds_name}::${key}" => $sub;
+        Sub::Install::reinstall_sub({
+                into => $ds_name,
+                as   => $key,
+                code => $sub,
+        });
+    }
+
+    my $c=UR::Object::Type->define(
+        class_name => $ds_name,
+        is => __PACKAGE__,
+    );
+        
+    return $ds_name;
+}
 
 
 

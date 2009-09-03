@@ -957,4 +957,15 @@ sub get_default_handle {
 }
 
 
+# Subclasses should override this.
+# It's called by the class initializer when the data_source property in a class
+# definition contains a hashref with an 'is' key.  The method should accept this
+# hashref, create a data_source instance (if appropriate) and return the class_name
+# of this new datasource.
+sub create_from_inline_class_data {
+    my $class = shift;
+    die "Class $class does not implement create_from_inline_class_data() for on-the-fly data sources";
+}
+
+
 1;
