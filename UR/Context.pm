@@ -1458,9 +1458,9 @@ sub _sync_databases {
         my @msg;
         for my $obj (@invalid)
         {
+            no warnings;
             my @problems = $obj->invalid;
             push @msg,
-
                 $obj->display_name_full
                 . " has "
                 . join
