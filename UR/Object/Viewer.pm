@@ -59,6 +59,7 @@ UR::Object::Type->define(
         subject_class_name      => { is_abstract => 1, is_class_wide => 1, is_constant => 1, is_optional => 0 },   
         perspective             => { is_abstract => 1, is_class_wide => 1, is_constant => 1, is_optional => 0 },   
         toolkit                 => { is_abstract => 1, is_class_wide => 1, is_constant => 1, is_optional => 0 },
+        default_aspects         => { is => 'ARRAY', is_abstract => 1, is_class_wide => 1, is_constant => 1, is_optional => 1, default_value => [] },
         subject_id              => { },    
         _subject_object         => { is_transient => 1, default_value => undef },        
         _widget                 => { is_transient => 1, default_value => undef },
@@ -224,7 +225,7 @@ sub create_viewer {
     }
 
     my $subject_class_object = $subject_class_name->get_class_object;
-    my $vocabulary = $subject_class_object->get_namespace->get_vocabulary();
+    my $vocabulary = $subject_class_object->namespace->get_vocabulary();
 
     my $subclass_name = join("::",
         $subject_class_name,
@@ -259,6 +260,8 @@ sub create_viewer {
         toolkit => $toolkit
     );
     return unless $self;
+
+    $aspects ||= $self->default_aspects;
 
     if ($aspects) {
         my $position = 1;
@@ -319,17 +322,57 @@ sub get_aspects {
     return UR::Object::Viewer::Aspect->get(viewer_id => $self->id, @_);
 }
 
+sub default_aspects {
+    return [];
+}
+
 sub add_aspect {
     my $self = shift;    
     my @previous_aspects = $self->get_aspects();
-    my @creation_params;
+    my %aspect_creation_params;
     if (@_ == 1) {
-        @creation_params = (aspect_name => shift(@_), position => scalar(@previous_aspects)+1);
+        %aspect_creation_params = (aspect_name => shift(@_), position => scalar(@previous_aspects)+1);
     } 
     else {
-        @creation_params = (position => scalar(@previous_aspects)+1, @_);
+        %aspect_creation_params = (position => scalar(@previous_aspects)+1, @_);
     }
-    my $aspect = UR::Object::Viewer::Aspect->create(viewer_id => $self->id, @creation_params);
+    $aspect_creation_params{'method'} ||= $aspect_creation_params{'aspect_name'};
+
+    if ($aspect_creation_params{'perspective'} 
+        || $aspect_creation_params{'toolkit'}
+        || $aspect_creation_params{'aspects'}
+        || $aspect_creation_params{'subject_class_name'})
+    { 
+        # They're making a subordinate viewer for this aspect
+        my %subviewer_params;
+        foreach (qw( perspective toolkit aspects subject_class_name) ) {
+            next unless $aspect_creation_params{$_};
+            $subviewer_params{$_} = delete $aspect_creation_params{$_};
+        }
+        unless ($subviewer_params{'subject_class_name'}) {
+            my $class_meta = UR::Object::Type->get(class_name => $self->subject_class_name);
+
+            my $method = $aspect_creation_params{'method'};
+
+            my $property_meta = $class_meta->property_meta_for_name($method);
+            unless ($property_meta) {
+                Carp::confess("Failed to add aspect $aspect_creation_params{'aspect_name'}, no property meta for "
+                              . $self->subject_class_name . " $method");
+                return;
+            }
+            unless ($property_meta->data_type) {
+                # FIXME for indirect properties we could try harder and follow the joins...
+                Carp::confess("Can't determine delegate viewer class for aspect ".$aspect_creation_params{'aspect_name'});
+                return;
+            }
+            $subviewer_params{'subject_class_name'} = $property_meta->data_type;
+        }
+
+        my $delegate_viewer = UR::Object::Viewer->create_viewer(%subviewer_params);
+        $aspect_creation_params{'delegate_viewer_id'} = $delegate_viewer->id;
+    }
+
+    my $aspect = UR::Object::Viewer::Aspect->create(viewer_id => $self->id, %aspect_creation_params);
     if ($aspect and $self->_add_aspect($aspect)) {
         return 1;
     }
@@ -454,7 +497,7 @@ sub set_subject
 =item toolkit
 
 A class method indicating what toolkit is used to render the view.
-Possible values are Gtk, and hopefully Gtk2, Tk, Qt, HTML, Curses, etc.
+Possible values are Gtk, and hopefully Gtk2, Tk, Qt, HTML, Curses, text, etc.
 
 =item get_widget
 
@@ -556,7 +599,8 @@ sub _bind_subject
     # Wipe subscriptions from the last bound subscription(s).
     for (keys %$subscriptions) {
         my $s = delete $subscriptions->{$_};
-        $subject->cancel_change_subscription(@$s);
+        my ($class, $id, $method,$callback) = @$s;
+        $class->cancel_change_subscription($id, $method,$callback);
     }
 
     # Make a new subscription for this subject

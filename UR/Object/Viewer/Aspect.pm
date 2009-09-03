@@ -30,12 +30,17 @@ require UR;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    has => [qw/
-        viewer_id 
-        aspect_name
-        position         
-        delegate_viewer_id
-    /],
+    has => [
+        viewer_id   => { is => 'SCALAR', doc =>"ID of the Viewer object this is an aspect of" },
+        viewer      => { is => 'UR::Object::Viewer', id_by => 'viewer_id' },
+        aspect_name => { is => 'String', doc => 'display name for this aspect' },
+        method      => { is => 'String', doc => 'Name of the method in the subject class to retrieve the data to be displayed' },
+        position    => { is => 'Integer', doc => "The order to appear in the viewer" },
+    ],
+    has_optional => [
+        delegate_viewer_id => { is => 'SCALAR', doc => "This aspect gets rendered via another viewer" },
+        delegate_viewer    => { is => 'UR::Object::Viewer', id_by => 'delegate_viewer_id' },
+    ],
     id_properties => [qw/viewer_id position/],
 ) 
 or die ("Failed to make class metadata for " . __PACKAGE__);
@@ -45,10 +50,6 @@ sub name {
 }
 
 sub title {
-    shift->name;
-}
-
-sub method {
     shift->name;
 }
 

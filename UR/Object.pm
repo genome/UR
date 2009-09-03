@@ -1419,6 +1419,7 @@ sub cancel_change_subscription ($@)
     $id = '' if not defined $id;
 
     my $arrayref = $all_change_subscriptions->{$class}->{$property}->{$id};
+    return unless $arrayref;   # This thing didn't have a subscription in the first place
     my $index = 0;
 
     while ($index <= @$arrayref)

@@ -25,8 +25,48 @@ our @CLASS_PROPERTIES_NOT_TO_PRINT = qw(
 );
     
     
-
+our $viewer;
 sub for_each_class_object {
+    my $self = shift;
+    my $class_meta = shift;
+
+$DB::single=1;
+    $viewer ||= UR::Object::Viewer->create_viewer(
+                    subject_class_name => 'UR::Object::Type',
+                    perspective => 'default',
+                    toolkit => 'text',
+                    aspects => [
+                        'namespace', 'table_name', 'data_source_id', 'is_abstract', 'is_final',
+                        'is_singleton', 'is_transactional', 'schema_name', 'meta_class_name',
+                        'first_sub_classification_method_name', 'sub_classification_method_name',
+                        'Properties' => {
+                            method => 'all_property_metas',
+                            subject_class_name => 'UR::Object::Property',
+                            perspective => 'description line item',
+                            toolkit => 'text',
+                            aspects => ['is_id', 'property_name', 'column_name', 'data_type', 'is_optional' ],
+                        },
+                        'Relationships' => {
+                            method => 'reference_metas',
+                            perspective => 'description line item',
+                            toolkit => 'text',
+                        }
+                    ],
+                );
+    unless ($viewer) {
+        $self->error_message("Can't initialize viewer");
+        return;
+    }
+
+    $viewer->set_subject($class_meta);
+    $viewer->show();
+    print "\n";
+}
+
+    
+
+
+sub X_for_each_class_object {
     my $self = shift;
     my $class = shift;
 
@@ -59,11 +99,10 @@ $DB::single=1;
 
     my @data_sources = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($class);
     { no warnings 'uninitialized';
-      printf("    %16s  %s\n", 'data_source', join(',',map { $_->id } @data_sources));
+      printf("    %16s  %s\n", 'data_source', join(',',map { $_ and $_->id } @data_sources));
     }
     
-    delete @all_class_properties{@prop_list};
-    delete @all_class_properties{('id_by','is','class_name','source','data_source_id')};
+    delete @all_class_properties{(@prop_list, @CLASS_PROPERTIES_NOT_TO_PRINT, 'id_by','is','class_name','source','data_source_id')};
     foreach my $item ( sort keys %all_class_properties ) {
         next if $printed{$item}++;
 
@@ -80,13 +119,16 @@ $DB::single=1;
 
     
     my %id_properties = map { $_ => 1 } $class->all_id_property_names;
+    my %printed_properties;
     my @properties = 
         sort { 
             defined($id_properties{$a}) cmp defined($id_properties{$b})
             ||
             $a->property_name cmp $b->property_name 
         } 
+        grep { ! $printed_properties{$_->property_name}++ }
         $class->all_property_metas;
+
     print "\n  Properties:\n" if (@properties);
     foreach my $property ( @properties ) {
         my $nullable = $property->is_optional ? "NULLABLE" : "";

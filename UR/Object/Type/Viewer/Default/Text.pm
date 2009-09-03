@@ -5,10 +5,12 @@ use warnings;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Object::Type::Viewer::Default::Text'
+    is => 'UR::Object::Viewer::Default::Text',
+    has => [
+       default_aspects => { is => 'ARRAY', is_constant => 1, value => ['is','direct_property_names'], },
+    ],
 );
 
-# This will go away when UR::Object::Type stuff is all moved to UR::Object stuff
 
 1;
 
