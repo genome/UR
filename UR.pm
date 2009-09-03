@@ -438,8 +438,7 @@ UR::Object::Type->define(
         unique_group                     => { type => 'Text', len => 64, source => 'data dictionary' },
 
         class_meta                       => { type => 'UR::Object::Type', id_by => 'class_name' },
-        property_meta                    => { type => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
-        property_name                    => { via => 'property_metas', to => 'property_name', is_many => 1 },
+        property_metas                    => { type => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
     ],
 );
 
