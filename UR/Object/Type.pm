@@ -122,6 +122,27 @@ sub _resolve_meta_class_name {
     return $class->_resolve_meta_class_name_for_class_name($class_name);
 }
 
+
+sub first_sub_classification_method_name {
+    my $self = shift;
+    
+    # This may be one of many things which class meta-data should "inherit" from classes which 
+    # its instances inherit from.  This value is set to the value found on the most concrete class
+    # in the inheritance tree.
+
+    return $self->{___first_sub_classification_method_name} if exists $self->{___first_sub_classification_method_name};
+    
+    $self->{___first_sub_classification_method_name} = $self->sub_classification_method_name;
+    unless ($self->{___first_sub_classification_method_name}) {
+        for my $parent_class ($self->ordered_inherited_class_objects) {
+            last if ($self->{___first_sub_classification_method_name} = $parent_class->sub_classification_method_name);
+        }
+    }
+    
+    return $self->{___first_sub_classification_method_name};
+}
+
+
 sub resolve_composite_id_from_ordered_values {    
     my $self = shift;
     my $resolver = $self->get_composite_id_resolver;

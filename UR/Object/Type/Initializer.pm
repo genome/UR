@@ -145,10 +145,10 @@ sub define {
     
     no warnings;
     no strict;
-    *{$class_name . '::can'} = $Class::Autouse::ORIGINAL_CAN; 
-    *{$class_name . '::isa'} = $Class::Autouse::ORIGINAL_ISA; 
-    *{$meta_class_name . '::can'} = $Class::Autouse::ORIGINAL_CAN; 
-    *{$meta_class_name . '::isa'} = $Class::Autouse::ORIGINAL_ISA; 
+    #*{$class_name . '::can'} = $Class::Autouse::ORIGINAL_CAN; 
+    #*{$class_name . '::isa'} = $Class::Autouse::ORIGINAL_ISA; 
+    #*{$meta_class_name . '::can'} = $Class::Autouse::ORIGINAL_CAN; 
+    #*{$meta_class_name . '::isa'} = $Class::Autouse::ORIGINAL_ISA; 
     use warnings;
     use strict;
 
@@ -889,7 +889,7 @@ sub _complete_class_meta_object_definitions {
         # set
         @{ $class_name . "::ISA" } = @$inheritance;
     }
-    
+
     my $n = 1;
     for my $parent_class_name (@$inheritance) {
         my $parent_class = $parent_class_name->get_class_object;
@@ -904,10 +904,6 @@ sub _complete_class_meta_object_definitions {
             print Data::Dumper::Dumper($parent_class);
             $DB::single = 1;
             redo;
-        }
-
-        if ($parent_class->sub_classification_method_name and not $self->sub_classification_method_name) {
-            $self->first_sub_classification_method_name($parent_class->sub_classification_method_name);
         }
         
         my $obj =
