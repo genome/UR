@@ -102,7 +102,7 @@ sub _do
 {
     my ($self, $iterator) = @_;    
 
-    $DB::single = $DB::stopper;
+    #$DB::single = $DB::stopper;
     
     # prevent commits due to changes here
     # this can be prevented by careful use of environment variables if you REALLY want to use this to update data
@@ -445,4 +445,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 41805 2008-12-11 19:12:33Z ssmith $
+#$Id: List.pm 46525 2009-05-05 13:20:42Z abrummet $
