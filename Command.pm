@@ -262,17 +262,25 @@ sub help_brief
     if (my $doc = $self->get_class_object->doc) {
         return $doc;
     }
-    elsif ($self->is_sub_command_delegator) {
-        my @names = $self->sub_command_names;
-        if (@names) {
-            return ""
+    else {
+        my @parents = $self->get_class_object->ordered_inherited_class_objects;
+        for my $parent (@parents) {
+            if (my $doc = $parent->doc) {
+                return $doc;
+            }
+        }
+        if ($self->is_sub_command_delegator) {
+            my @names = $self->sub_command_names;
+            if (@names) {
+                return ""
+            }
+            else {
+                return "no sub-commands implemented!"
+            }
         }
         else {
-            return "no sub-commands implemented!"
+            return "no description!!!: define 'doc' in $self";
         }
-    }
-    else {
-        return "no description!!!: define 'doc' in $self";
     }
 }
 
@@ -725,6 +733,16 @@ sub help_options
     return $text;
 }
 
+sub sorted_sub_command_classes {
+    no warnings;
+    return sort {
+            ($a->sub_command_sort_position <=> $b->sub_command_sort_position)
+            ||
+            ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
+        } 
+        shift->sub_command_classes;
+}
+
 sub help_sub_commands
 {
     my $class = shift;
@@ -732,7 +750,7 @@ sub help_sub_commands
     my $command_name_method = 'command_name_brief';
     #my $command_name_method = ($params{brief} ? 'command_name_brief' : 'command_name');
     
-    my @sub_command_classes = $class->sub_command_classes;
+    my @sub_command_classes = $class->sorted_sub_command_classes;
     no warnings;
     local  $Text::Wrap::columns = 60;
     my @data =
@@ -753,11 +771,8 @@ sub help_sub_commands
                 ]
             } (1..$#rows)
         );
-    } sort {
-        ($a->sub_command_sort_position <=> $b->sub_command_sort_position)
-        ||
-        ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
     } 
+    
     @sub_command_classes;
 
     $DB::single = 1;
@@ -1179,4 +1194,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 41276 2008-11-23 03:46:27Z ssmith $
+#$Id: Command.pm 41803 2008-12-11 18:58:49Z ssmith $
