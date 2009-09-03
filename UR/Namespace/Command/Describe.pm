@@ -26,21 +26,29 @@ sub for_each_class_object {
         print " < @parent_class_names"
     }
 
+    my $class_meta = $class->get_class_object();
+
     print "\n  Class:\n";
     
-    my %all_class_properties = map { $_ => 1 } $class->get_class_object->all_property_names;
+    my %all_class_properties = map { $_ => 1 } $class_meta->all_property_names;
 
     # Print these first
-    my @prop_list = qw(is data_source table_name doc);
+    my @prop_list = qw(is table_name doc);
     foreach my $item ( @prop_list )  {
         my $val = eval { $class->$item };
         next unless defined $val;
         printf("    %16s  %s\n", $item, $val);
     }
+
+    my @data_sources = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($class_meta);
+    { no warnings 'uninitialized';
+      printf("    %16s  %s\n", 'data_source', join(',',@data_sources));
+    }
     
     delete @all_class_properties{@prop_list};
-    delete @all_class_properties{('id_by','is','class_name','source')};
+    delete @all_class_properties{('id_by','is','class_name','source','data_source')};
     foreach my $item ( sort keys %all_class_properties ) {
+
         my $val = eval { $class->$item };
         if ($item =~ /^is_/) {
             $val = ($val ? "TRUE" : "FALSE");
