@@ -271,8 +271,10 @@ sub _run_tests {
         return;
     }
     else {
-        system("chmod -R g+rwx cover_db");
-        system("/gsc/bin/cover");
+        if ($self->coverage()) {
+            system("chmod -R g+rwx cover_db");
+            system("/gsc/bin/cover | tee > coverage.txt");
+        }
         return 1;
     }
 }
