@@ -557,7 +557,10 @@ sub create_iterator_closure_for_rule {
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
             #$fh->getline() if ($self->skip_first_line());
-            scalar(<$fh>) if ($self->skip_first_line());
+            my $skip = $self->skip_first_line;
+            while ($skip-- > 0) {
+                scalar(<$fh>);
+            }
 
             $self->_invalidate_cache();
         }
