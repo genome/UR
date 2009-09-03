@@ -15,15 +15,28 @@ sub help_brief {
     "Outputs class description(s) to stdout.";
 }
 
+
+# The class metadata has lots of properties that we're not interested in
+our @CLASS_PROPERTIES_NOT_TO_PRINT = qw(
+    generated
+    short_name
+    is
+    all_class_metas
+);
+    
+    
+
 sub for_each_class_object {
     my $self = shift;
     my $class = shift;
 
+$DB::single=1;
     print $class->class_name;
 
-    my @parent_class_names = grep { $_ !~ qr/^(UR::Object|UR::Object|UR::Entity)$/ }$class->parent_class_names;
+    #my @parent_class_names = grep { $_ !~ qr/^(UR::Object|UR::Entity)$/ } $class->parent_class_names;
+    my @parent_class_names = $class->parent_class_names;
     if (@parent_class_names) {
-        print " < @parent_class_names"
+        print " < ", join(' ', @parent_class_names);
     }
 
     my $class_meta = $class->get_class_object();
@@ -33,21 +46,29 @@ sub for_each_class_object {
     my %all_class_properties = map { $_ => 1 } $class_meta->all_property_names;
 
     # Print these first
-    my @prop_list = qw(is table_name doc);
+    my %printed;
+    my @prop_list = qw(namespace table_name doc);
     foreach my $item ( @prop_list )  {
         my $val = eval { $class->$item };
+        $printed{$item} = 1;
         next unless defined $val;
         printf("    %16s  %s\n", $item, $val);
     }
 
-    my @data_sources = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($class_meta);
+    
+
+    my @data_sources = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($class);
     { no warnings 'uninitialized';
-      printf("    %16s  %s\n", 'data_source', join(',',@data_sources));
+      printf("    %16s  %s\n", 'data_source', join(',',map { $_->id } @data_sources));
     }
     
     delete @all_class_properties{@prop_list};
-    delete @all_class_properties{('id_by','is','class_name','source','data_source')};
+    delete @all_class_properties{('id_by','is','class_name','source','data_source_id')};
     foreach my $item ( sort keys %all_class_properties ) {
+        next if $printed{$item}++;
+
+        my $prop_meta = $class_meta->property_meta_for_name($item);
+        next if $prop_meta->is_delegated;  # Not interested in those delegated properties
 
         my $val = eval { $class->$item };
         if ($item =~ /^is_/) {
