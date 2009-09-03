@@ -28,7 +28,9 @@ sub get_data_source {
     return $UR::Context::current->resolve_data_source_for_object($self);
 }
 
-sub get_rule_for_params {
+*get_rule_for_params = \&get_boolexpr_for_params;
+ 
+sub get_boolexpr_for_params {
     return UR::BoolExpr->resolve_for_class_and_params(@_);
 }
 
