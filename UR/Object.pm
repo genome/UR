@@ -140,6 +140,7 @@ sub create {
         my $sub_class_name = $class->$method_name(@_);
         if (defined($sub_class_name) and ($sub_class_name ne $class)) {
             # delegate to the sub-class to create the object
+            no warnings;
             unless ($sub_class_name->can('create')) {
                 $DB::single = 1;
                 print $sub_class_name->can('create');
