@@ -305,10 +305,6 @@ UR::Object::Type->define(
     extends => ['UR::Namespace'],
 );
 
-my $x = UR::BoolExpr->resolve_for_class_and_params("UR::Object::Inheritance",class_name => "UR::Object", type_name => "foo", parent_class_name => 'PPP', parent_type_name => 'ppp', inheritance_priority => 1);
-#print Data::Dumper::Dumper($x, $x->legacy_params_hash);
-#exit;
-
 require UR::Context;
 UR::Object::Type->initialize_bootstrap_classes;
 
