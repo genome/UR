@@ -124,10 +124,16 @@ sub _get_joins {
             unless ($via_meta->data_type) {
                 die "No data type for $via?";
             }            
-            push @joins, $via_meta->_get_joins();            
+            push @joins, $via_meta->_get_joins();
             
-            my $to = $self->to;            
+            my $to = $self->to;
+            unless ($to) {
+                $to = $self->property_name;
+            }            
             my $to_meta = $via_meta->data_type->get_class_object->get_property_meta_by_name($to);
+            unless ($to_meta) {
+                die "No $to property found on " . $via_meta->data_type;
+            }
             push @joins, $to_meta->_get_joins();
         }
         else {
