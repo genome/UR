@@ -321,9 +321,20 @@ sub delete {
         if ($self->{db_committed} || $self->{db_saved_uncommitted}) {
 
             # gather params for the ghost object
+            my $do_data_source;
             my %ghost_params;
-            my @pn = grep { exists $self->{$_} } $self->property_names;
+            my @pn;
+            { no warnings 'syntax';
+               @pn = grep { $_ ne 'data_source' || ($do_data_source=1 and 0) } # yes this really is '=' and not '=='
+                     grep { exists $self->{$_} }
+                     $self->property_names;
+            }
+            
+            # we're not really allowed to interrogate the data_source property directly
             @ghost_params{@pn} = $self->get(@pn);
+            if ($do_data_source) {
+                $ghost_params{'data_source'} = $self->{'data_source'};
+            }    
 
             # create ghost object
             my $ghost = $self->ghost_class->create_object(id => $self->id, %ghost_params);
