@@ -318,7 +318,7 @@ sub initialize_bootstrap_classes
         }                    
         
     }
-    for my $class_meta (@partially_defined_classes) {
+    while (my $class_meta = shift @partially_defined_classes) {
         unless ($class_meta->_complete_class_meta_object_definitions()) {
             my $class_name = $class_meta->{class_name};
             Carp::confess(
