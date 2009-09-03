@@ -1,12 +1,12 @@
 
-package URT::33Subclass;
+package URT::34Subclass;
 
 use strict;
 use warnings;
-## dont "use URT::33Baseclass";
+## dont "use URT::34Baseclass";
 
-class URT::33Subclass {
-    isa => 'URT::33Baseclass',
+class URT::34Subclass {
+    isa => 'URT::34Baseclass',
     is_transactional => 0,
     has => [
         some_other_stuff => { is => 'SCALAR' },
