@@ -37,13 +37,10 @@ class UR::Object::Command::List {
             doc => 'output handle for list, defauls to STDOUT',
         },
     ], 
+    doc => 'fetches objects and lists them',
 };
 
 ##############################
-
-sub help_brief {
-    return "Fetches objects and lists them";
-}
 
 sub help_detail {
     my $self = shift;
@@ -448,4 +445,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 39821 2008-10-15 19:59:13Z ssmith $
+#$Id: List.pm 41805 2008-12-11 19:12:33Z ssmith $
