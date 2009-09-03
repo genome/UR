@@ -160,6 +160,7 @@ sub _object_properties_to_string {
     my @v;
     return join(
         $char, 
+        map { defined $_ ? $_ : '<NULL>' } 
         map { 
             if (substr($_,0,1) eq '(') {
                 @v = eval $_;
@@ -171,6 +172,7 @@ sub _object_properties_to_string {
                 @v = map { defined $_ ? $_ : '<NULL>' } $o->$_;
             }
             if (@v > 1) {
+                no warnings;
                 join(',',@v)
             }
             else {
@@ -434,4 +436,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 38662 2008-09-16 22:46:02Z ssmith $
+#$Id: List.pm 38667 2008-09-17 05:18:51Z ssmith $
