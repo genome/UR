@@ -861,6 +861,7 @@ sub _normalize_property_description {
         [ is_numeric                      => qw//],
         [ is_id                           => qw//],
         [ id_by                           => qw//], 
+        [ id_class_by                     => qw//],
         [ via                             => qw//], 
         [ to                              => qw//],             
         [ where                           => qw/restrict filter/],
