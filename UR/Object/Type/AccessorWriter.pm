@@ -214,19 +214,25 @@ sub mk_indirect_ro_accessor {
 sub mk_indirect_rw_accessor {
     my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
     my @where = ($where ? @$where : ());
-
+    my $adder = "add_" . $via;
+    $adder =~ s/s$//;
     my $full_name = join( '::', $class_name, $accessor_name );
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         my @bridges = $self->$via(@where);
         if (@_) {
-            unless (@bridges) {
-                Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: property is via $via which is not set!");
+            if (@bridges == 0) {
+                @bridges = $self->$adder(@where, $to => $_[0]);
+                unless (@bridges) {
+                    Carp::confess("Failed to add bridge for $accessor_name on $class_name $self->{id}: property is via $via!");
+                }
             }
-            if (@bridges > 1) {
+            elsif (@bridges > 1) {
                 Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
             }
-            return $bridges[0]->$to(@_);
+            else {
+                return $bridges[0]->$to(@_);
+            }
         }
         return unless @bridges;
         my @results = map { $_->$to } @bridges;
