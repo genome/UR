@@ -60,9 +60,9 @@ sub values_to_value_id {
                         $value_id .= $empty_string . $unit_sep;
                     }
                     else {
-            if ($value2 =~ m/($unit_sep|$record_sep)/) {
-                return $self->values_to_value_id_frozen(@_);
-            }
+                        if ($value2 =~ m/($unit_sep|$record_sep)/) {
+                            return $self->values_to_value_id_frozen(@_);
+                        }
                         $value_id .= $value2 . $unit_sep;
                     }                
                 }
@@ -70,9 +70,9 @@ sub values_to_value_id {
             $value_id .= $record_sep;
         }
         else {
-        if ($value =~ m/($unit_sep|$record_sep)/) {
-        return $self->values_to_value_id_frozen(@_);
-        }
+            if (ref($value) or $value =~ m/($unit_sep|$record_sep)/) {
+                return $self->values_to_value_id_frozen(@_);
+            }
             $value_id .= $value . $record_sep;
         }        
     }
