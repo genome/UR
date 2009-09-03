@@ -456,7 +456,8 @@ sub generate_support_class_for_extension {
         delete $class_params{sub_classification_property_name};
         delete $class_params{sub_classification_meta_class_name};
         delete $class_params{id};
-        
+
+        my $attributes_have = UR::Util::deep_copy($subject_class_obj->{attributes_have});
         my $class_props = UR::Util::deep_copy($subject_class_obj->{has});    
         for (values %$class_props) {
             delete $_->{class_name};
@@ -472,6 +473,7 @@ sub generate_support_class_for_extension {
                 is_abstract => 0,
                 type_name => $subject_class_obj->type_name . " ghost",
                 has => [%$class_props],
+                attributes_have => $attributes_have,
                 id_properties => \@id_property_names,
         );
         #print "D: $new_class_name" . Dumper(\%class_params);
