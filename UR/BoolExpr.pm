@@ -603,11 +603,15 @@ sub create_from_filter_string {
     my @filters = map {
         unless (
             ($property, $op, $value) =
-            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|\:|\blike\b)\s*['"]?([^'"]*)['"]?\s*$/)
+            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|\:|\blike\b)\s*['"]?([^'"]*)['"]?\s*$/)
         ) {
             die "Unable to process filter $_\n";
         }
-        $op = "like" if $op eq "~";
+        if ($op eq '~') {
+            $op = "like";
+        } elsif ($op eq '!~') {
+            $op = 'not like';
+        }
 
         [$property, $op, $value]
     } split(/,/, $filter_string);

@@ -316,6 +316,14 @@ sub _comparator_for_operator_and_property {
     } elsif ($operator eq 'like') {
         # 'like' is always a string comparison.  In addition, we can't know if we're ahead
         # or behind in the file's ID columns, so the only two return values are 0 and 1
+        
+        # Convert SQL-type wildcards to Perl-type wildcards
+        # Convert a % to a *, and _ to ., unless they're preceeded by \ to escape them.
+        # Not that this isn't precisely correct, as \\% should really mean a literal \
+        # followed by a wildcard, but we can't be correct in all cases without including 
+        # a real parser.  This will catch most cases.
+        $value =~ s/(?<!\\)%/*/;
+        $value =~ s/(?<!\\)_/./;
         my $regex = qr($value);
         return sub {
                    if ($$next_candidate_row->[$index] =~ $regex) {
@@ -324,6 +332,19 @@ sub _comparator_for_operator_and_property {
                        return 1;
                    }
                };
+
+    } elsif ($operator eq 'not like') {
+        $value =~ s/(?<!\\)%/*/;
+        $value =~ s/(?<!\\)_/./;
+        my $regex = qr($value);
+        return sub {
+                   if ($$next_candidate_row->[$index] =~ $regex) {
+                       return 1;
+                   } else {
+                       return 0;
+                   }
+               };
+
 
     # FIXME - should we only be testing the numericness of the property?
     } elsif ($property->is_numeric and $self->_things_in_list_are_numeric([$value])) {
