@@ -4,17 +4,14 @@ use warnings;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-#use Test::More tests => 7;
-use Test::More skip_all => 'Known broken, will fix soon';
-
-$main::foobar = 0;
-&setup_classes_and_db();
+use Test::More tests => 7;
 
 # When a different ordering is requested, make sure a get() that hits
 # the DB returns items in the same order as one that returns cached objects.
 # It should be sorted first by the requested key, then by ID
 
-$main::foobar = 1;
+&setup_classes_and_db();
+
 my @o = URT::Thing->get('name like' => 'Bob%', -order => ['data']);
 is(scalar(@o), 4, 'Got 2 things with name like Bob% ordered by data');
 

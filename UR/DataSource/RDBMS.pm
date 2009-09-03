@@ -1223,7 +1223,7 @@ sub create_iterator_closure_for_rule {
     my $where_clause                                = $template_data->{where_clause};
     my $connect_by_clause                           = $template_data->{connect_by_clause};
     my $group_by_clause                             = $template_data->{group_by_clause};
-    my $order_by_clause                             = $template_data->{order_by_clause};
+    my $order_by_columns                            = $template_data->{order_by_columns} || [];
     
     my $sql_params                                  = $template_data->{sql_params};
     my $filter_specs                                = $template_data->{filter_specs};
@@ -1254,6 +1254,8 @@ sub create_iterator_closure_for_rule {
     }
 
     # The full SQL statement for the template, besides the filter logic, is built here.    
+    my $order_by_clause = 'order by ' . join(', ',@$order_by_columns);
+
     my $sql = "\nselect ";
     if ($select_hint) {
         $sql .= $select_hint . " ";
@@ -2497,7 +2499,7 @@ sub _generate_class_data_for_loading {
     my $parent_class_data = $self->SUPER::_generate_class_data_for_loading($class_meta);
 
     my @class_hierarchy = ($class_meta->class_name,$class_meta->ancestry_class_names);
-    my $order_by_clause;
+    my $order_by_columns;
     do {
         my @id_column_names;    
         for my $inheritance_class_name (@class_hierarchy) {
@@ -2523,7 +2525,7 @@ sub _generate_class_data_for_loading {
                 
             last if (@id_column_names);
         }
-        $order_by_clause = "order by " . join(",", @id_column_names);
+        $order_by_columns = \@id_column_names;
     };
     
     my @all_table_properties;
@@ -2599,7 +2601,7 @@ sub _generate_class_data_for_loading {
         subclassify_by    => $subclassify_by,
         
         base_joins                          => \@base_joins,   
-        order_by_clause                     => $order_by_clause,
+        order_by_columns                    => $order_by_columns,
         
         lob_column_names                    => \@lob_column_names,
         lob_column_positions                => \@lob_column_positions,
@@ -2629,7 +2631,7 @@ sub _generate_template_data_for_loading {
     my @id_properties                       = @{ $class_data->{id_properties} };   
     my $id_property_sorter                  = $class_data->{id_property_sorter};    
     
-    my $order_by_clause                     = $class_data->{order_by_clause};
+    my $order_by_columns                    = $class_data->{order_by_columns} || [];
     
     my @lob_column_names                    = @{ $class_data->{lob_column_names} };
     my @lob_column_positions                = @{ $class_data->{lob_column_positions} };
@@ -3357,7 +3359,10 @@ sub _generate_template_data_for_loading {
         #$DB::single = 1;
         $group_by_clause = 'group by ' . $select_clause;
         
-        $order_by_clause = 'order by ' . $select_clause;
+        # FIXME - does it even make sense for the user to specify an order_by in the
+        # get() request for Set objects?  If so, then we need to concatonate these order_by_columns
+        # with the ones that already exist in $order_by_columns from the class data
+        $order_by_columns = $self->_select_clause_columns_for_table_property_data(@all_table_properties);
         
         # TODO: handle aggregates present in the class definition
         $select_clause .= ', count(*) count';
@@ -3378,7 +3383,14 @@ sub _generate_template_data_for_loading {
             push @data, $data;
         }
         if (@data) {
-            $order_by_clause = 'ORDER BY ' . $self->_select_clause_for_table_property_data(@data);
+            my $additional_order_by_columns = $self->_select_clause_columns_for_table_property_data(@data);
+
+            # Strip out columns named in the original $order_by_columns list that now appear in the
+            # additional order by list so we don't duplicate columns names, and the additional columns
+            # appear earlier in the list
+            my %additional_order_by_columns = map { $_ => 1 } @$additional_order_by_columns;
+            my @existing_order_by_columns = grep { ! $additional_order_by_columns{$_} } @$order_by_columns;
+            $order_by_columns = [ @$additional_order_by_columns, @existing_order_by_columns ];
         }
     }
 
@@ -3391,7 +3403,7 @@ sub _generate_template_data_for_loading {
         from_clause                                 => $from_clause,        
         connect_by_clause                           => $connect_by_clause,
         group_by_clause                             => $group_by_clause,
-        order_by_clause                             => $order_by_clause,        
+        order_by_columns                            => $order_by_columns,        
         filter_specs                                => \@filter_specs,
         sql_params                                  => \@sql_params,
         
@@ -3422,12 +3434,23 @@ sub validate_subscription {
 
 sub _select_clause_for_table_property_data {
     my $self = shift;
-    my $select_clause = '';
+
+    my $column_data = $self->_select_clause_columns_for_table_property_data(@_);
+
+    my $select_clause = join(', ',@$column_data);
+
+    return $select_clause;
+}
+
+sub _select_clause_columns_for_table_property_data {
+    my $self = shift;
+
+    my @column_data;
+
     for my $class_property (@_) {
         my ($sql_class,$sql_property,$sql_table_name) = @$class_property;
         $sql_table_name ||= $sql_class->table_name;
         my ($select_table_name) = ($sql_table_name =~ /(\S+)\s*$/s);
-        $select_clause .= ($class_property == $_[0] ? "" : ", ");
        
         # FIXME - maybe a better way would be for these sql-calculated properties, the column_name()
         # or maybe some other related property name) is actually calculated, so this logic
@@ -3437,12 +3460,12 @@ sub _select_clause_for_table_property_data {
             foreach my $sql_column_name ( @calculate_from ) {
                 $sql_function =~ s/($sql_column_name)/$sql_table_name\.$1/g;
             }
-            $select_clause .= $sql_function;
+            push(@column_data, $sql_function);
         } else {
-            $select_clause .= $select_table_name . "." . $sql_property->column_name;
+            push(@column_data, $select_table_name . "." . $sql_property->column_name);
         }
     }
-    return $select_clause;
+    return \@column_data;
 }
 
 
