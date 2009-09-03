@@ -8,7 +8,7 @@ use warnings;
 use URT;
 use DBI;
 use IO::Pipe;
-use Test::More tests => 76;
+use Test::More tests => 88;
 use UR::Namespace::Command::Update::Classes;
 UR::DBI->no_commit(1);
 
@@ -65,13 +65,22 @@ UR::Namespace::Command::Update::Classes->status_messages_callback(
     }
 );
 
-# This command will be used below multiple times.
+# We launch a similar command multiple times.
 
 my($delegate_class,$create_params) = UR::Namespace::Command::Update::Classes->resolve_class_and_params_for_argv(qw(--data-source URT::DataSource::SomeSQLite));
 ok($delegate_class, "Resolving parameters for update: class is $delegate_class");
+my $command_obj = sub {
+    my $command_obj = $delegate_class->create(%$create_params, _override_no_commit_for_filesystem_items => 1);
+    ok($command_obj, "created new command for " . join(" ", @_));
+    ok($command_obj->execute(), "executed new command for " . join(" ",@_));
+    return $command_obj->result;
+};
+bless ($command_obj,"DummyExecutor");
+sub DummyExecutor::execute {
+    shift->(@_);
+}
 
-my $command_obj = $delegate_class->create(%$create_params, _override_no_commit_for_filesystem_items => 1);
-ok($command_obj, "Created a command object for updating the classes");
+ok($command_obj, "Created a dummy command object for updating the classes");
 
 my $dbh = $ds_class->get_default_dbh();
 ok($dbh, 'Got database handle');
@@ -82,6 +91,7 @@ ok($dbh, 'Got database handle');
 my $trans;
 sub get_changes {
     my @changes =
+        grep { $_->changed_class_name ne 'UR::Namespace::Command::Update::Classes' }
         grep { $_->changed_class_name ne "UR::Namespace::CommandParam" }
         grep { $_->changed_class_name ne 'UR::DataSource::Meta' && substr($_->changed_aspect,0,1) ne '_'}
         $trans->get_change_summary();
