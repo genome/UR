@@ -1145,7 +1145,7 @@ sub get_all_property_objects
 {
     my $self = _object(shift);
     my @all_property_objects =
-        ( $self->get_inherited_property_objects(@_), $self->get_property_objects(@_) );
+        ( $self->get_property_objects(@_), $self->get_inherited_property_objects(@_), );
     return @all_property_objects;
 }
 
@@ -1153,7 +1153,7 @@ sub get_all_id_property_objects
 {
     my $self = _object(shift);
     my @all_id_property_objects =
-        ( $self->get_inherited_id_property_objects, $self->get_id_property_objects );
+        ( $self->get_id_property_objects, $self->get_inherited_id_property_objects );
     return @all_id_property_objects;
 }
 
