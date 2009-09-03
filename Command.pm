@@ -8,6 +8,8 @@ use Data::Dumper;
 use File::Basename;
 use Getopt::Long;
 use Term::ANSIColor;
+require Text::Wrap;
+$Text::Wrap::columns = 100;
 
 eval {
     binmode STDOUT, ":utf8";
@@ -76,6 +78,7 @@ sub execute {
     # handle invalid objects before execute
     if (my @problems = $self->invalid) {
         $self->usage_message($self->help_usage_complete_text);
+        #print $self->help_usage_complete_text;
         for my $problem (@problems) {
             $self->error_message($problem->desc);
         }
@@ -511,34 +514,40 @@ sub help_usage_complete_text
         my $required_args = $self->help_options(is_optional => 0);
         my $optional_args = $self->help_options(is_optional => 1);
         my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
-        $text =
-            "\n   "
-            .   $self->command_name . " " . $self->_shell_args_usage_string . "\n\n"
-            .   (
-                    $synopsis 
-                    ? "SYNOPSIS:\n\n" . $synopsis . "\n\n"
-                    : ''
-                )
-            .   (
-                    $required_args
-                    ? "REQUIRED ARGUMENTS:\n\n" . $required_args . "\n\n"
-                    : ''
-                )
-            .   (
-                    $optional_args
-                    ? "OPTIONAL ARGUMENTS:\n\n" . $optional_args . "\n\n"
-                    : ''
-                )
-            . "DESCRIPTION:\n\n"
-            .   $self->help_detail
-            . "\n"
-            .   (
-                    $sub_commands
-                    ? "SUB-COMMANDS:\n\n" . $sub_commands . "\n\n"
-                    : ''
-                );
+        $text = sprintf(
+            "\n%s\n%s\n\n%s%s%s%s%s\n",
+            Term::ANSIColor::colored('USAGE', 'underline'),
+            Text::Wrap::wrap(
+                ' ', 
+                '    ', 
+                Term::ANSIColor::colored($self->command_name, 'bold'),
+                $self->_shell_args_usage_string,
+            ),
+            ( $synopsis 
+                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
+                : ''
+            ),
+            ( $required_args 
+                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED ARGUMENTS", 'underline'), $required_args)
+                : ''
+            ),
+            ( $optional_args 
+                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL ARGUMENTS", 'underline'), $optional_args)
+                : ''
+            ),
+            sprintf(
+                "%s\n%s\n", 
+                Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
+                Text::Wrap::wrap(' ', ' ', $self->help_detail)
+            ),
+            ( $sub_commands 
+                ? sprintf("%s\n %s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
+                : ''
+            ),
+        );
     }
-    return "\n$text";
+
+    return $text;
 }
 
 sub help_usage_command_pod
@@ -547,7 +556,7 @@ sub help_usage_command_pod
 
     my $command_name = $self->command_name;
     my $pod;
-    
+
     if (not $self->is_executable) {
         # no execute implemented
         if ($self->is_sub_command_delegator) {
@@ -625,7 +634,7 @@ sub help_options
     my $max_name_length = 0;
     for my $property_meta (@property_meta) {
         my $param_name = $self->_shell_arg_name_from_property_meta($property_meta);
-        $param_name = "--$param_name";
+        #$param_name = "--$param_name";
         my $doc = $property_meta->doc;
         unless ($doc) {
             $doc = "undocumented";
@@ -639,10 +648,15 @@ sub help_options
             $text .= "\n=item " . $row->[0] . "\n  " . $row->[1] . "\n"; 
         }
         else {
-            $text .= $row->[0];
-            $text .= ' ' x ($max_name_length - length($row->[0]));
-            $text .= '    ' . $row->[1];
-            $text .= "\n"; 
+            $text .= sprintf(
+                " %s\n%s\n",
+                Term::ANSIColor::colored($row->[0], 'bold'),
+                Text::Wrap::wrap(
+                    "  ", # 1st line indent,
+                    "  ", # all other lines indent,
+                    $row->[1],
+                ),
+            );
         }
     }
 
@@ -999,7 +1013,7 @@ for my $type (qw/error warning status debug usage/) {
                 $code->($self,$msg);
             }
             if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
-                (ref($fh) ? $fh : $stderr)->print(($type eq "status" ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                (ref($fh) ? $fh : $stderr)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
             }
             if ($msgdata->{ "queue_" . $type . "_messages"}) {
                 my $a = $msgdata->{ $type . "_messages_arrayref" } ||= [];
