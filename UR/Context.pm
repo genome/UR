@@ -1083,7 +1083,7 @@ sub get_objects_for_class_and_rule {
     my $loading_iterator;
     if ($load) {
         # this returns objects from the underlying context after importing them into the current context
-        my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
+        my $underlying_context_iterator = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
 
         my $last_loaded_id;
         my($next_obj_current_context, $next_obj_underlying_context);
@@ -1091,12 +1091,12 @@ sub get_objects_for_class_and_rule {
         $loading_iterator = sub {
             GET_FROM_UNDERLYING_CONTEXT:
             ($next_obj_current_context) = shift @$cached unless ($next_obj_current_context);
-            ($next_obj_underlying_context) = $underlying_context_closure->(1) if ($underlying_context_closure && ! $next_obj_underlying_context);
+            ($next_obj_underlying_context) = $underlying_context_iterator->(1) if ($underlying_context_iterator && ! $next_obj_underlying_context);
 
             # We're turning off warnings to avoid complaining in the elsif()
             no warnings 'uninitialized';
             if (!$next_obj_underlying_context) {
-                $underlying_context_closure = undef;
+                $underlying_context_iterator = undef;
 
             } elsif ($last_loaded_id eq $next_obj_underlying_context->id) {
                 # during a get() with -hints or is_many+is_optional (ie. something with an
@@ -1686,7 +1686,7 @@ sub _create_import_iterator_for_underlying_context {
     
     # instead of making just one import iterator, we make one per loading template
     # we then have our primary iterator use these to fabricate objects for each db row
-    my @importers;
+    my @object_fabricators;
     if ($group_by) {
         # returning sets instead of instance objects...
         my $set_class = $class_name . '::Set';
@@ -1702,7 +1702,7 @@ sub _create_import_iterator_for_underlying_context {
             'And',
             join(",", @base_property_names, @non_aggregate_properties),
         );
-        push @importers, sub {
+        push @object_fabricators, sub {
             my $row = $_[0];
             # my $ss_rule = $template->get_rule_for_values(@values, @$row[0..$division_point]);
             # not sure why the above gets an error but this doesn't...
@@ -1728,7 +1728,7 @@ sub _create_import_iterator_for_underlying_context {
                     \@values,
                     $dsx,
                 );
-            unshift @importers, $object_fabricator;
+            unshift @object_fabricators, $object_fabricator;
         }
     }
 
@@ -1746,7 +1746,7 @@ sub _create_import_iterator_for_underlying_context {
                                                            @addl_loading_info
                                                       );
 
-        unshift @importers, @$addl_object_fabricators;
+        unshift @object_fabricators, @$addl_object_fabricators;
         push @addl_join_comparators, @$addl_join_comparators;
     }
 
@@ -1757,7 +1757,7 @@ sub _create_import_iterator_for_underlying_context {
     }
 
     # Make the iterator we'll return.
-    my $iterator = sub {
+    my $underlying_context_iterator = sub {
         my $object;
         
         LOAD_AN_OBJECT:
@@ -1809,7 +1809,7 @@ sub _create_import_iterator_for_underlying_context {
                 }
                 
                 # Apply changes to all_params_loaded that each importer has collected
-                foreach (@importers) {
+                foreach (@object_fabricators) {
                     $_->finalize if ref($_) ne 'CODE';
                 }
                 
@@ -1871,15 +1871,15 @@ sub _create_import_iterator_for_underlying_context {
             # get one or more objects from this row of results
             my $re_iterate = 0;
             my @imported;
-            for my $callback (@importers) {
+            for my $object_fabricator (@object_fabricators) {
                 # The usual case is that the query is just against one data source, and so the importer
                 # callback is just given the row returned from the DB query.  For multiple data sources,
                 # we need to smash together the primary and all the secondary lists
                 my $imported_object;
                 if (@secondary_data) {
-                    $imported_object = $callback->([@$next_db_row, @secondary_data]);
+                    $imported_object = $object_fabricator->([@$next_db_row, @secondary_data]);
                 } else { 
-                    $imported_object = $callback->($next_db_row);
+                    $imported_object = $object_fabricator->($next_db_row);
                 }
                     
                 if ($imported_object and not ref($imported_object)) {
@@ -1954,7 +1954,7 @@ sub _create_import_iterator_for_underlying_context {
         return $object;
     };
     
-    return $iterator;
+    return $underlying_context_iterator;
 }
 
 
