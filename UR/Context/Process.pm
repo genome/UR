@@ -134,7 +134,7 @@ the underlying context.
 =cut
 
 sub has_changes {
-    my $self = shift->_singleton_object;
+    my $self = shift;
     my @ns = UR::Namespace->all_objects_loaded();
     for my $ns (@ns) {
         my @ds = $ns->get_data_sources();
