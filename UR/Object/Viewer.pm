@@ -223,17 +223,20 @@ sub create_viewer {
         return;
     }
 
+    my $subject_class_object = $subject_class_name->get_class_object;
+    my $vocabulary = $subject_class_object->get_namespace->get_vocabulary();
+
     my $subclass_name = join("::",
         $subject_class_name,
         "Viewer",
         join ("",
-            App::Vocabulary->filter_vocabulary (
+            $vocabulary->convert_to_title_case (
                 map { ucfirst(lc($_)) }
                 split(/\s+/,$perspective)
             )
         ),
         join ("",
-            App::Vocabulary->filter_vocabulary (
+            $vocabulary->convert_to_title_case (
                 map { ucfirst(lc($_)) }
                 split(/\s+/,$toolkit)
             )
