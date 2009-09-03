@@ -5,6 +5,7 @@ package UR::Object::Type;
 
 use strict;
 use warnings;
+#use warnings FATAL => 'all';
 
 use Carp ();
 use Sub::Name ();
@@ -35,10 +36,10 @@ sub construct_class_from_data
         UR::Object::Type->mk_class_accessor($class_name,$property);
     }
 
-    no strict 'refs';
-
     my $props = [@id_properties, @other_properties];
     my $cols = [map { uc($_) } @$props];
+
+    no strict 'refs';
 
     my @isa = @{$class_name . '::ISA'};
     for my $base (@isa) {
@@ -54,16 +55,17 @@ sub mk_rw_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;
     $property_name ||= $accessor_name;
 
-    # The accessors may compare undef and an empty
-    # string.  For speed, we turn warnings off rather
-    # than add extra code to make the warning disappear.
-    no warnings;
-
     my $full_name = join( '::', $class_name, $accessor_name );
     my $accessor = Sub::Name::subname $full_name => sub {
         if (@_ > 1) {
             my $old = $_[0]->{ $property_name };
             my $new = $_[1];
+
+            # The accessors may compare undef and an empty
+            # string.  For speed, we turn warnings off rather
+            # than add extra code to make the warning disappear.
+            no warnings;
+
             if ($old ne $new)
             {
                 $_[0]->{ $property_name } = $new;
@@ -105,13 +107,14 @@ sub mk_ro_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name) = @_;
     $property_name ||= $accessor_name;
 
-    no warnings;
-
     my $full_name = join( '::', $class_name, $accessor_name );
     my $accessor = Sub::Name::subname $full_name => sub {
         if (@_ > 1) {
             my $old = $_[0]->{ $property_name};
             my $new = $_[1];
+
+            no warnings;
+
             if ($old ne $new)
             {
                 Carp::confess("Cannot change read-only property $accessor_name for class $class_name!"
@@ -150,14 +153,7 @@ sub mk_ro_accessor {
 }
 
 sub mk_id_based_object_accessor {
-    no warnings;
     my ($self, $class_name, $accessor_name, $id_by, $r_class_name) = @_;
-
-    # The accessors may compare undef and an empty
-    # string.  For speed, we turn warnings off rather
-    # than add extra code to make the warning disappear.
-    no warnings;
-    no strict 'refs';
 
     unless (ref($id_by)) {
         $id_by = [ $id_by ];
@@ -412,7 +408,6 @@ sub mk_dimension_identifying_accessor {
     my $class_name = $self->class_name;
 
     # Make the actual accessor for the id_by property
-    no warnings;    
     my $full_name = join( '::', $class_name, $accessor_name );
     my $accessor = Sub::Name::subname $full_name => sub {
         if (@_ > 1) {
