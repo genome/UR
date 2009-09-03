@@ -24,18 +24,21 @@ UR::Object::Type->define(
         is_param    => { is => 'Boolean', is_optional => 1 },        
     ],
     has => [
-        bare_args   => { is => 'ARRAY', is_optional => 1 },
-        is_executed => { is => 'Boolean', is_optional => 1 },
-        result      => { is => 'Scalar', is_optional => 1, is_output => 1 },
+        bare_args   => { is => 'ARRAY',     is_optional => 1 },
+        is_executed => { is => 'Boolean',   is_optional => 1 },
+        result      => { is => 'Scalar',    is_optional => 1, is_output => 1 },
     ],
 );
 
 sub _init_subclass {
+    # Each Command subclass has an automatic wrapper around execute().
+    # This ensures it can be called as a class or instance method, 
+    # and that proper handling occurs around it.
     my $subclass_name = $_[0];
     no strict;
     no warnings;
-    ## manipulating %{ $subclass_name . '::' } causes ptkdb to segfault perl
     if ($subclass_name->can('execute')) {
+        # NOTE: manipulating %{ $subclass_name . '::' } directly causes ptkdb to segfault perl
         my $new_symbol = "${subclass_name}::_execute_body";
         my $old_symbol = "${subclass_name}::execute";
         *$new_symbol = *$old_symbol;
@@ -671,10 +674,10 @@ sub help_sub_commands
         @sub_command_classes
     ;
     
-    my @max_width = (0,0,0);
+    my @max_width_found = (0,0,0);
     for (@data) {
         for my $c (0..2) {
-            $max_width[$c] = length($_->[$c]) if $max_width[$c] < length($_->[$c]);
+            $max_width_found[$c] = length($_->[$c]) if $max_width_found[$c] < length($_->[$c]);
         }
     }
     my $text = '';
@@ -683,7 +686,7 @@ sub help_sub_commands
             $text .= '  ';
             $text .= $row->[$c];
             $text .= ' ';
-            $text .= ' ' x ($max_width[$c]-length($row->[$c]));
+            $text .= ' ' x ($max_width_found[$c]-length($row->[$c]));
         }
         $text .= "\n";
     }
@@ -812,15 +815,17 @@ sub _shell_args_usage_string
 sub _shell_args_usage_string_abbreviated
 {
     my $self = shift;
-    my $detailed = $self->_shell_args_usage_string;
-    if (length($detailed) < 40) {
-        return $detailed;
-    }
-    elsif ($self->is_sub_command_delegator) {
+    if ($self->is_sub_command_delegator) {
         return "...";
     }
     else {
-        return "ARGS";
+        my $detailed = $self->_shell_args_usage_string;
+        if (length($detailed) < 40) {
+            return $detailed;
+        }
+        else {
+            return substr($detailed,0,17) . '...';
+        }
     }
 }
 
