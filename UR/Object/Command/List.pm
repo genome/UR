@@ -91,7 +91,7 @@ sub execute {
     unless ($self->format eq 'none') {
         # TODO: replace this with views, and handle terminal output as one type     
         if ($self->format eq 'text') {
-            my $h = IO::File->new("| tab2col");
+            my $h = IO::File->new("| tab2col --nocount");
             $h->print(join("\t",map { uc($_) } @show),"\n");
             $h->print(join("\t",map { '-' x length($_) } @show),"\n");
             while (my $obj = $iterator->next) {  
@@ -118,6 +118,8 @@ sub execute {
             print $report->generate(format => ucfirst(lc($self->format)));
         }
     }
+    # This replaces tab2col's item count, since it counts the header also
+    print "$cnt rows output\n";
     return $cnt; 
 }
 
