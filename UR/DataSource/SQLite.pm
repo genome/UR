@@ -51,11 +51,6 @@ sub _database_file_path {
     my $path = $self->get_class_object->module_path;
     $path =~ s/\.pm$/.sqlite3/ or Carp::confess("Odd module path $path");
     my $dir = File::Basename::dirname($path);
-    if (grep { /HARNESS/ } keys %ENV) {
-        local $SIG{__WARN__};
-        warn "changing $dir to writable to work with test suite...\n";
-        eval { chmod 0777, $dir };
-    }
     return $path; 
 }
 
