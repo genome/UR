@@ -45,7 +45,8 @@ $DB::single=1;
     }
 
     # Force an autoload of the namespace module
-    my $ret = above::use_package($namespace);
+    #my $ret = above::use_package($namespace);
+    eval "use $namespace";
     if ($@) {
         $self->error_message("Can't load namespace $namespace: $@");
         return;
