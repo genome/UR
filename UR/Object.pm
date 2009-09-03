@@ -1523,5 +1523,67 @@ sub preprocess_params {
     }
 }
 
+sub create_mock {
+    my $class = shift;
+    my %params = @_;
+    my $self = Test::MockObject->new();
+    my $subject_class_object = $class->get_class_object;
+    for my $class_object ($subject_class_object,$subject_class_object->get_inherited_class_objects) {
+        for my $property ($class_object->get_property_objects) {
+            my $property_name = $property->property_name;
+            if ($property->is_delegated && !exists($params{$property_name})) {
+                next;
+            }
+            if ($property->is_mutable || $property->is_calculated || $property->is_delegated) {
+                my $sub = sub {
+                    my $self = shift;
+                    if (@_) {
+                        if ($property->is_many) {
+                            $self->{'_'. $property_name} = @_;
+                        } else {
+                            $self->{'_'. $property_name} = shift;
+                        }
+                    }
+                    return $self->{'_'. $property_name};
+                };
+                $self->mock($property_name, $sub);
+                if ($property->is_optional) {
+                    if (exists($params{$property_name})) {
+                        $self->$property_name($params{$property_name});
+                    }
+                } else {
+                    unless (exists($params{$property_name})) {
+                        if (defined($property->default_value)) {
+                            $params{$property_name} = $property->default_value;
+                        } else {
+                            unless ($property->is_calculated) {
+                                die 'Failed to provide value for required mutable property '. $property_name;
+                            }
+                        }
+                    }
+                    $self->$property_name($params{$property_name});
+                }
+            } else {
+                unless (exists($params{$property_name})) {
+                    if (defined($property->default_value)) {
+                        $params{$property_name} = $property->default_value;
+                    } else {
+                        die 'Failed to provide value for required property '. $property_name;
+                    }
+                }
+                if ($property->is_many) {
+                    $self->set_list($property_name,$params{$property_name});
+                } else {
+                    $self->set_always($property_name,$params{$property_name});
+                }
+            }
+        }
+    }
+    my @classes = ($class, $subject_class_object->ordered_inherited_class_names);
+    $self->set_isa(@classes);
+    $UR::Context::all_objects_loaded->{$class}->{$self->id} = $self;
+    return $self;
+}
+
 1;
 
