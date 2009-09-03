@@ -69,7 +69,7 @@ EOS
 ##############################
 
 sub valid_styles {
-    return (qw/ text csv pretty html xml/);
+    return (qw/ text csv pretty html xml newtext/);
 }
 
 sub create {
@@ -420,6 +420,45 @@ sub tab2col{
     }
     return $output;
 }
+
+package UR::Object::Command::List::Newtext;
+use base 'UR::Object::Command::List::Text';
+
+sub format_and_print{
+    my $self = shift;
+    my $tab_delimited;
+
+$DB::single=1;
+    unless ($self->{noheaders}){
+        $tab_delimited .= $self->_get_header_string."\n";
+    }
+
+    my $viewer = UR::Object::Viewer->create_viewer(
+                       subject_class_name => 'UR::Object',
+                       perspective => 'lister',
+                       toolkit => 'text',
+                       aspects => [ @{$self->{'show'}} ],
+                  );
+
+    my $this_row_tab_delimited;
+    open(my $fh, '>',  \$this_row_tab_delimited);
+    $viewer->{'widget'} = $fh;
+
+    my $count = 0;
+    while (my $object = $self->_get_next_object_from_iterator()) {
+        $fh->seek(0,0);
+        $this_row_tab_delimited = '';
+
+        $viewer->set_subject($object);
+        $viewer->show();
+        $tab_delimited .= $this_row_tab_delimited;
+        #$tab_delimited .= $viewer->buf();
+        $count++;
+    }
+
+    $self->{output}->print($self->tab2col($tab_delimited));
+}
+
 1;
 =pod
 
@@ -498,4 +537,4 @@ text, csv, html, xml, pretty (inprogress)
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 50227 2009-08-21 22:01:34Z abrummet $
+#$Id: List.pm 50329 2009-08-25 20:10:00Z abrummet $
