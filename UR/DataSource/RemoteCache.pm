@@ -85,7 +85,7 @@ sub _init_created_socket {
 sub _remote_get_with_rule {
     my $self = shift;
 
-    my $string = FreezeThaw::freeze(\@_);
+    my $string = FreezeThaw::safeFreeze(\@_);
     my $socket = $self->socket;
 
     # First word is message length, second is command - 1 is "get"
@@ -127,7 +127,7 @@ sub _sync_database {
     }
 
     my $socket = $self->socket();
-    my $string = FreezeThaw::freeze(\%objects_by_class_name);
+    my $string = FreezeThaw::safeFreeze(\%objects_by_class_name);
     
     # Command 2 is sync_database
     $socket->print(pack("LL", length($string),2),$string);

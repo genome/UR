@@ -8,7 +8,7 @@ use warnings;
 
 use Scalar::Util qw(blessed);
 use Data::Dumper;
-use FreezeThaw qw(freeze thaw);
+use FreezeThaw;
 
 # Because the id is actually a full data structure we need some separators.
 # Note that these are used for the common case, where FreezeThaw is for arbitrarily complicated rule identifiers.
@@ -24,7 +24,7 @@ our $empty_list = chr(20);      # used for []
 sub values_to_value_id_frozen {
     my $self = shift;
     
-    my $frozen = freeze @_;
+    my $frozen = FreezeThaw::safeFreeze(@_);
     return "F:" . $frozen;
 }
 
@@ -32,7 +32,7 @@ sub value_id_to_values_frozen {
     my $self = shift;
     my $value_id = shift;
 
-    return thaw $value_id;
+    return FreezeThaw::thaw($value_id);
 }
 
 sub values_to_value_id {
