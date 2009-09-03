@@ -192,7 +192,7 @@ sub create
     for my $property_meta ($self->_shell_args_property_meta) {
         my $property_name = $property_meta->property_name;
         if (!$property_meta->is_optional and !defined($self->$property_name)) {
-            if ($property_meta->data_type =~ /Boolean/i) {
+            if (defined $property_meta->data_type and $property_meta->data_type =~ /Boolean/i) {
                 $self->$property_name(0);
             }
         }
