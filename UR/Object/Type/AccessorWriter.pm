@@ -64,11 +64,11 @@ sub mk_rw_accessor {
             if ($old ne $new)
             {
                 $_[0]->{ $property_name } = $new;
-                $_[0]->signal_change( $accessor_name, $old, $new ) unless $is_transient;
+                $_[0]->signal_change( $accessor_name, $old, $new ) unless $is_transient; # FIXME is $is_transient right here?  Maybe is_volitile instead (if at all)?
             }
             return $new;
         }
-        return $_[0]->{ $property_name };
+        return $_[0]->{ $property_name };  # FIXME what to do about properties with default_values?
     };
 
     no strict 'refs';
