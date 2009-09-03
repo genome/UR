@@ -618,13 +618,19 @@ sub _shell_args_property_meta
     my $class_meta = $self->get_class_object;
     my @property_meta = sort { $a->property_name cmp $b->property_name } $class_meta->get_all_property_objects(@_);
     my @result;
+    my %seen;
     for my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
+        next if $seen{$property_name};
+        $seen{$property_name} = 1;
         next if $property_name eq 'id';
-        next if $property_name =~ /^_/;
         next if $property_name eq 'bare_args';
+        next if $property_name =~ /^_/;
         next if defined($property_meta->data_type) and $property_meta->data_type =~ /::/;
-        push @result, $property_meta;    
+        next if not $property_meta->is_mutable;
+        next if $property_meta->is_delegated;
+        next if $property_meta->is_calculated;
+        push @result, $property_meta;
     }
     return @result;
 }
