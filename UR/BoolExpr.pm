@@ -336,25 +336,40 @@ sub resolve_for_class_and_params {
             push @constant_values, $value;
             next;
         }
-        elsif (substr($key,0,1)  eq "_") {
+        
+        if (substr($key,0,1)  eq "_") {
             # skip the param
             next;
         } 
-        # account for the case where this parameter does
-        # not match an actual property 
-        elsif (!exists $subject_class_props{$key}) {            
-            if (my $attr = $subject_class_meta->get_property_object(property_name => $key)) {
-                die "Property found but not in array of properties?";
-                $DB::single = 1;
-                $key .= '_id';
-                $value = $value->id;
+        
+        my ($property_name,$operator);
+        if (!exists $subject_class_props{$key}) {
+            if (my $pos = index($key,' ')) {
+                $property_name = substr($key,0,$pos);
+                $operator = substr($key,$pos+1);
+                if (substr($operator,0,1) eq ' ') {
+                   $operator =~ s/^\s+//; 
+                }
             }
             else {
-                push @extra, ($key => $value);
-                next;
+                $property_name = $key;
+                $operator = '';
             }
-        }	    
-        elsif (ref($value) eq "HASH") {
+            
+            # account for the case where this parameter does
+            # not match an actual property 
+            if (!exists $subject_class_props{$property_name}) {
+                if (my $attr = $subject_class_meta->get_property_object(property_name => $property_name)) {
+                    die "Property found but not in array of properties?";
+                }
+                else {
+                    push @extra, ($key => $value);
+                    next;
+                }
+            }
+        }
+        
+        if (ref($value) eq "HASH") {
             if (
                 exists $value->{operator}
                 and exists $value->{value}
