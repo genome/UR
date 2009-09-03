@@ -510,6 +510,7 @@ sub has_table {
         return 0;
     }
     return 1 if $self->table_name;
+    # FIXME - shouldn't this call inheritance() instead of parent_classes()?
     my @parent_classes = $self->parent_classes;
     for my $class_name (@parent_classes) {
         next if $class_name eq "UR::Object";
@@ -526,6 +527,33 @@ sub has_property {
     my $property_name = shift;
     return ($self->{has}{$property_name} ? 1 : '');
 }
+
+
+
+sub most_specific_subclass_with_table {
+    my $self = shift;
+
+    return $self->class_name if $self->table_name;
+
+    foreach my $class_name ( $self->class_name->inheritance ) {
+        my $class_obj = UR::Object::Type->get(class_name => $class_name);
+        return $class_name if ($class_obj && $class_obj->table_name);
+    }
+    return;
+}
+
+sub most_general_subclass_with_table {
+    my $self = shift;
+
+    my @subclass_list = reverse ( $self->class_name, $self->class_name->inheritance );
+    foreach my $class_name ( $self->inheritance ) {
+        my $class_obj = UR::Object::Type->get(class_name => $class_name);
+        return $class_name if ($class_obj && $class_obj->table_name);
+    }
+    return;
+}
+
+    
 
 sub _load {
     my $class = shift;
