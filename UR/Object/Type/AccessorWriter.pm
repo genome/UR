@@ -725,7 +725,7 @@ sub mk_object_set_accessors {
             if (@_ > 1) {
                 die "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
             }
-            my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name } };
+            my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name} };
             return $matches[0] if @matches < 2;
             return $self->context_return(@matches); 
         }
