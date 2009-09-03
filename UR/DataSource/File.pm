@@ -396,6 +396,14 @@ sub _comparator_for_operator_and_property {
             return sub {
                        $$next_candidate_row->[$index] ge $value ? 0 : -1;
                    };
+        } elsif ($operator eq 'true') {
+            return sub {
+                       $$next_candidate_row->[$index] ? 0 : 1;
+                   };
+        } elsif ($operator eq 'false') {
+            return sub {
+                       $$next_candidate_row->[$index] ? 1 : 0;
+                   };
         }
     }
 }
@@ -761,7 +769,6 @@ sub create_from_inline_class_data {
         
     return $ds_name;
 }
-
 
 
 1;
