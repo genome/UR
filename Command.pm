@@ -976,7 +976,7 @@ sub sub_command_classes
         grep {
             ($_->is_sub_command_delegator or !$_->is_abstract) 
         }
-        grep { $_->isa('Command') }
+        grep { $_ and $_->isa('Command') }
         map { $class->class_for_sub_command($_) }
         map { s/_/-/g; $_ }
         map { basename($_) }
@@ -1179,4 +1179,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 41274 2008-11-23 01:46:19Z ssmith $
+#$Id: Command.pm 41276 2008-11-23 03:46:27Z ssmith $
