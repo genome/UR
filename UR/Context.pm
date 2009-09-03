@@ -785,6 +785,7 @@ sub _get_template_data_for_loading {
 
 # Used by _create_secondary_loading_comparators to convert a rule against the primary data source
 # to a rule that can be used against a secondary data source
+# FIXME this might be made simpler be leaning on infer_property_value_from_rule()?
 sub _create_secondary_rule_from_primary {
     my($self,$primary_rule, $delegated_properties, $secondary_rule_template) = @_;
 

@@ -21,21 +21,6 @@ sub get_member_class {
     return UR::Object::Type->get(@_);
 }
 
-sub get_default_context
-{
-    my $self = shift;
-    my @contexts = $self->get_base_contexts;
-    if (@contexts == 0) {
-        return "UR::Context::DefaultRoot";
-    }
-    elsif (@contexts == 1) {
-        return $contexts[0];
-    }
-    else {
-        Carp::confess("Namespace $self has multiple contexts, and does not override get_default_context() to specify a default!");
-    }
-}
-
 
 # FIXME  These should change to using the namespace metadata DB when
 # that's in place, rather than trolling through the directory tree
