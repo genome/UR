@@ -23,12 +23,12 @@ UR::Object::Type->define(
         'thing_id' => { is => 'Number' },
     ],
     has => [
-        params => { is => 'URT::Param', reverse_id_by => 'thing', is_many => 1 },
+        params => { is => 'URT::Param', reverse_as => 'thing', is_many => 1 },
         # Actually, either of these property definitions will work
         interesting_param_values => { via => 'params', to => 'value', is_many => 1, is_mutable => 1,
                                       where => [ name => 'interesting'] },
 
-        #interesting_params => { is => 'URT::Param', reverse_id_by => 'thing', is_many => 1,
+        #interesting_params => { is => 'URT::Param', reverse_as => 'thing', is_many => 1,
         #                        where => [name => 'interesting']},
         #interesting_param_values => { via => 'interesting_params', to => 'value', is_many => 1, is_mutable => 1 },
     ],

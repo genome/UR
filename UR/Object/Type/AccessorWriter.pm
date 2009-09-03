@@ -611,11 +611,11 @@ $DB::single=1;
 
 
 sub mk_object_set_accessors {
-    my ($self, $class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name, $where) = @_;
+    my ($self, $class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where) = @_;
 
     unless ($plural_name) {
-        # TODO: we can handle a reverse_id_by when there is only one item.  We're just not coded-to yet.
-        die "Bad property description for $class_name $singular_name: expected is_many with reverse_id_by!";
+        # TODO: we can handle a reverse_as when there is only one item.  We're just not coded-to yet.
+        die "Bad property description for $class_name $singular_name: expected is_many with reverse_as!";
     }
 
     # These are set by the resolver closure below, and kept in scope by the other closures
@@ -633,7 +633,7 @@ sub mk_object_set_accessors {
                 $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
             };
         }
-        if ($r_class_meta and not $reverse_id_by) {
+        if ($r_class_meta and not $reverse_as) {
             # we have a real class on the other end, and it did not specify how to link back to us
             # try to infer how, otherwise fall back to the same logic we use with "primitives"
             my @possible_relationships = UR::Object::Reference->get(
@@ -645,35 +645,35 @@ sub mk_object_set_accessors {
                 die "$class_name has an ambiguous definition for property \"$singular_name\"."
                     . "  The target class $r_class_name has " . scalar(@possible_relationships) 
                     . " relationships which reference back to $class_name."
-                    . "  Correct by adding \"reverse_id_by => X\" to ${class_name}'s \"$singular_name\" definition one of the following values:  " 
+                    . "  Correct by adding \"reverse_as => X\" to ${class_name}'s \"$singular_name\" definition one of the following values:  " 
                     . join(",",map { '"' . $_->delegation_name . '"' } @possible_relationships) . ".\n";
             }
             elsif (@possible_relationships == 1) {
-                $reverse_id_by = $possible_relationships[0]->delegation_name;
+                $reverse_as = $possible_relationships[0]->delegation_name;
             }
             elsif (@possible_relationships == 0) {
                 # we now fall through to the logic below and try direct arrayref storage
                 #die "No relationships found between $r_class_name and $class_name.  Error in definition for $class_name $singular_name!"
             }
         }
-        if ($reverse_id_by) {
+        if ($reverse_as) {
             # join to get the data...
-            my $property_meta = $r_class_meta->property_meta_for_name($reverse_id_by);
+            my $property_meta = $r_class_meta->property_meta_for_name($reverse_as);
             unless ($property_meta) {
-                die "Cannot process reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_id_by";
+                die "Cannot process reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_as";
             }
             my @property_links = $property_meta->id_by_property_links;
-            #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_id_by); 
+            #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_as); 
             unless (@property_links) {
                 #$DB::single = 1;
-                Carp::confess("No property links for $r_class_name -> $reverse_id_by?  Cannot build accessor for $singular_name/$plural_name relationship.");
+                Carp::confess("No property links for $r_class_name -> $reverse_as?  Cannot build accessor for $singular_name/$plural_name relationship.");
             }
             my %get_params;            
             for my $link (@property_links) {
                 my $my_property_name = $link->r_property_name;
                 push @property_names, $my_property_name;
                 unless ($obj->can($my_property_name)) {
-                    die "Cannot handle indirect relationship $r_class_name -> $reverse_id_by.  Class $class_name has no property named $my_property_name";
+                    die "Cannot handle indirect relationship $r_class_name -> $reverse_as.  Class $class_name has no property named $my_property_name";
                 }
                 $get_params{$link->property_name}  = $obj->$my_property_name;
             }
@@ -787,7 +787,7 @@ sub mk_object_set_accessors {
         # handle the case of has-many primitives
         return unless $r_class_meta;
 
-        my $r_ids = $r_class_meta->property_meta_for_name($reverse_id_by)->{id_by};
+        my $r_ids = $r_class_meta->property_meta_for_name($reverse_as)->{id_by};
         my @id_property_names = $r_class_name->get_class_object->id_property_names;
         @params_prefix = 
             grep { 
@@ -1038,8 +1038,8 @@ sub initialize_direct_accessors {
             $self->mk_ro_accessor($class_name, $accessor_name, $calculate_sql);
 
         }
-        elsif ($property_data->{is_many} or $property_data->{reverse_id_by}){
-            my $reverse_id_by = $property_data->{reverse_id_by};
+        elsif ($property_data->{is_many} or $property_data->{reverse_as}){
+            my $reverse_as = $property_data->{reverse_as};
             my $r_class_name = $property_data->{data_type};
             my $singular_name;
             my $plural_name;
@@ -1051,7 +1051,7 @@ sub initialize_direct_accessors {
             else {
                 $singular_name = $accessor_name;
             }
-            $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name, $where);
+            $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where);
         }        
         elsif ($property_data->{'is_class_wide'}) {
             my $value = $property_data->{'default_value'};

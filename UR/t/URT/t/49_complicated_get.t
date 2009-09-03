@@ -77,7 +77,7 @@ sub setup_classes_and_db {
         ],
         has => [
             type_name => { is => 'String' },
-            params => { is => 'URT::Param', reverse_id_by => 'type_obj', is_many => 1 },
+            params => { is => 'URT::Param', reverse_as => 'type_obj', is_many => 1 },
             alignment => { via => 'params', to => 'value', where => [param_type => 'alignment'] },
         ],
         is_abstract => 1,

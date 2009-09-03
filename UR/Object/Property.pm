@@ -191,10 +191,10 @@ sub _get_direct_join_linkage {
             );        
 
     }
-    elsif (my $reverse_id_by = $self->reverse_id_by) {
+    elsif (my $reverse_as = $self->reverse_as) {
         my $r_class_name = $self->data_type;
         @obj = 
-            $r_class_name->get_class_object->property_meta_for_name($reverse_id_by)->_get_direct_join_linkage();
+            $r_class_name->get_class_object->property_meta_for_name($reverse_as)->_get_direct_join_linkage();
     }
     return @obj;
 }
@@ -293,12 +293,12 @@ sub _get_joins {
                         where => $where,
                     }
                 }
-                elsif (my $reverse_id_by = $self->reverse_id_by) { 
+                elsif (my $reverse_as = $self->reverse_as) { 
                     my $foreign_class = $self->data_type;
                     my $foreign_class_meta = $foreign_class->get_class_object;
-                    my $foreign_property_via = $foreign_class_meta->property_meta_for_name($reverse_id_by);
+                    my $foreign_property_via = $foreign_class_meta->property_meta_for_name($reverse_as);
                     unless ($foreign_property_via) {
-                        Carp::confess("No property '$reverse_id_by' in class $foreign_class, needed to resolve property '" .
+                        Carp::confess("No property '$reverse_as' in class $foreign_class, needed to resolve property '" .
                                       $self->property_name . "' of class " . $self->class_name);
                     }
                     @joins = reverse $foreign_property_via->_get_joins();
@@ -307,7 +307,7 @@ sub _get_joins {
                     }
 
                 } else {
-                    $self->error_message("Property $id has no 'id_by' or 'reverse_id_by' property metadata");
+                    $self->error_message("Property $id has no 'id_by' or 'reverse_as' property metadata");
                 }
             }
             else {
@@ -379,7 +379,7 @@ sub id_by_property_links {
 
 sub r_id_by_property_links {
     my $self = shift;
-    my $r_id_by = $self->reverse_id_by;
+    my $r_id_by = $self->reverse_as;
     my $r_class_name = $self->data_type;
     my @r = sort { $a->rank <=> $b->rank } UR::Object::Reference::Property->get(tha_id => $self->class_name . "::" . $self->property_name);
     return @r;

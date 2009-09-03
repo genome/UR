@@ -17,7 +17,7 @@ class Animal {
         # ..and they're writable.
 
         # one is to a regular property
-        limbs => { is => 'Animal::Limb', reverse_id_by => 'animal', is_mutable => 1, is_many => 1 },
+        limbs => { is => 'Animal::Limb', reverse_as => 'animal', is_mutable => 1, is_many => 1 },
         foreleg_flexibility_score => { 
             via => 'limbs', 
             where => [ number => 1 ], 
@@ -26,7 +26,7 @@ class Animal {
         },
         
         # one is "to" an id property, 
-        notes => { is => 'Animal::Note', reverse_id_by => 'animal', is_mutable => 1, is_many => 1 },
+        notes => { is => 'Animal::Note', reverse_as => 'animal', is_mutable => 1, is_many => 1 },
         primary_note_text   => { 
             via => 'notes', 
             where => [ type => 'primary' ],

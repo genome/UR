@@ -17,11 +17,11 @@ class Vending::Machine {
         address       => { is => 'Text', is_optional => 1 },
     ],
     has_many => [
-        products        => { is => 'Vending::Product', reverse_id_by => 'machine' },
-        items           => { is => 'Vending::Content', reverse_id_by => 'machine' },
-        inventory_items => { is => 'Vending::Merchandise', reverse_id_by => 'machine' },
-        item_types      => { is => 'Vending::ContentType', reverse_id_by => 'machine' },
-        machine_locations           => { is => 'Vending::MachineLocation', reverse_id_by => 'machine' },
+        products        => { is => 'Vending::Product', reverse_as => 'machine' },
+        items           => { is => 'Vending::Content', reverse_as => 'machine' },
+        inventory_items => { is => 'Vending::Merchandise', reverse_as => 'machine' },
+        item_types      => { is => 'Vending::ContentType', reverse_as => 'machine' },
+        machine_locations           => { is => 'Vending::MachineLocation', reverse_as => 'machine' },
     ],
     data_source => 'Vending::DataSource::Machine',
 };

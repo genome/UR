@@ -62,7 +62,7 @@ $rule = UR::BoolExpr->resolve_for_class_and_params('URT::43Related', related_id 
 ok($rule, 'Create rule');
 @values = $context->infer_property_value_from_rule('primary_values', $rule);
 @values = sort {$a cmp $b} @values;
-is(scalar(@values), 2, 'infer an indirect, reverse_id_by property with a rule containing a direct property');
+is(scalar(@values), 2, 'infer an indirect, reverse_as property with a rule containing a direct property');
 is($values[0], 'Three', 'first inferred value was correct');
 is($values[1], 'Two', 'first inferred value was correct');
 
@@ -70,13 +70,13 @@ is($values[1], 'Two', 'first inferred value was correct');
 $rule = UR::BoolExpr->resolve_for_class_and_params('URT::43Related', primary_values => 'One');
 ok($rule, 'Create rule');
 $value = $context->infer_property_value_from_rule('related_value', $rule);
-is($value, '1', 'infer direct property with a rule containing an indirect, reverse_id_by property');
+is($value, '1', 'infer direct property with a rule containing an indirect, reverse_as property');
 
 
 $rule = UR::BoolExpr->resolve_for_class_and_params('URT::43Related', primary_values => 'Two');
 ok($rule, 'Create rule');
 $value = $context->infer_property_value_from_rule('related_value', $rule);
-is($value, '2', 'infer direct property with a rule containing an indirect, reverse_id_by property');
+is($value, '2', 'infer direct property with a rule containing an indirect, reverse_as property');
 
 
 

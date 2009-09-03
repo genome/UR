@@ -385,9 +385,9 @@ sub _get_display_fields_for_property {
             $seen{'to'} = 1;
         }
     }
-    if ($property->reverse_id_by) {
-        push @fields, "reverse_id_by => '" . $property->reverse_id_by . "'";
-        $seen{'reverse_id_by'} = 1;
+    if ($property->reverse_as) {
+        push @fields, "reverse_as => '" . $property->reverse_as . "'";
+        $seen{'reverse_as'} = 1;
     }
 
     if ($property->constraint_name) {

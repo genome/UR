@@ -73,8 +73,8 @@ sub setup {
                                         calculate_sql  => 'upper(first_name)' 
                                     },
             company             =>  { type => "String" },
-            employees           =>  { is => 'URT::Employee', is_many => 1, reverse_id_by => 'boss' },
-            secret_employees    =>  { is => 'URT::Employee', is_many => 1, reverse_id_by => 'boss', where => [is_secret => 1] },
+            employees           =>  { is => 'URT::Employee', is_many => 1, reverse_as => 'boss' },
+            secret_employees    =>  { is => 'URT::Employee', is_many => 1, reverse_as => 'boss', where => [is_secret => 1] },
 
         ],
         table_name => 'BOSS',

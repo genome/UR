@@ -146,7 +146,7 @@ UR::Object::Type->define(
     is_abstract => 1,
     composite_id_separator => "\t",
     id_by => [
-        id  => { type => 'Scalar' }
+        id  => { is => 'Scalar' }
     ]
 );
 
@@ -156,11 +156,11 @@ UR::Object::Type->define(
     extends => ['UR::Object'],
     id_properties => [qw/class_name parent_class_name/],
     properties => [
-        parent_type_name                 => { type => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { type => 'Text', len => 256, source => 'data dictionary' },
-        parent_class_name                => { type => 'Text', len => 256, source => 'data dictionary' },
-        class_name                       => { type => 'Text', len => 256, source => 'data dictionary' },
-        inheritance_priority             => { type => 'NUMBER', len => 2 },
+        parent_type_name                 => { is => 'Text', len => 256, source => 'data dictionary' },
+        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
+        parent_class_name                => { is => 'Text', len => 256, source => 'data dictionary' },
+        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
+        inheritance_priority             => { is => 'NUMBER', len => 2 },
     ],
 );
 
@@ -204,63 +204,63 @@ UR::Object::Type->define(
     id_by => ['class_name'],
     sub_classification_method_name => '_resolve_meta_class_name',
     has => [
-        type_name                        => { type => 'Text', len => 256, source => 'data dictionary' },
-        class_name                       => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        doc                              => { type => 'Text', len => 1024, is_optional => 1, source => 'data dictionary' },
-        er_role                          => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary', default_value => 'entity' },
-        schema_name                      => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        data_source_id                      => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        #data_source_meta                 => { type => 'UR::DataSource', id_by => 'data_source_id', is_optional => 1, source => 'data dictionary' },
-        namespace                        => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
+        class_name                       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        doc                              => { is => 'Text', len => 1024, is_optional => 1, source => 'data dictionary' },
+        er_role                          => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary', default_value => 'entity' },
+        schema_name                      => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        data_source_id                      => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        #data_source_meta                 => { is => 'UR::DataSource', id_by => 'data_source_id', is_optional => 1, source => 'data dictionary' },
+        namespace                        => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
 
-        is_abstract                      => { type => 'Boolean', default_value => 0 },
-        is_final                         => { type => 'Boolean', default_value => 0 },
-        is_singleton                     => { type => 'Boolean', default_value => 0 },
-        is_transactional                 => { type => 'Boolean', default_value => 1 },
+        is_abstract                      => { is => 'Boolean', default_value => 0 },
+        is_final                         => { is => 'Boolean', default_value => 0 },
+        is_singleton                     => { is => 'Boolean', default_value => 0 },
+        is_transactional                 => { is => 'Boolean', default_value => 1 },
 
-        generated                        => { type => 'Boolean', is_transient => 1, default_value => 0 },
-        meta_class_name                  => { type => 'Text' },
+        generated                        => { is => 'Boolean', is_transient => 1, default_value => 0 },
+        meta_class_name                  => { is => 'Text' },
 
-        short_name                       => { type => 'Text', len => 16, is_optional => 1, source => 'data dictionary' },
-        source                           => { type => 'Text', len => 256 , default_value => 'data dictionary', is_optional => 1 }, # This is obsolete and should be removed later
-        composite_id_separator           => { type => 'Text', len => 2 , default_value => "\t", is_optional => 1},        
+        short_name                       => { is => 'Text', len => 16, is_optional => 1, source => 'data dictionary' },
+        source                           => { is => 'Text', len => 256 , default_value => 'data dictionary', is_optional => 1 }, # This is obsolete and should be removed later
+        composite_id_separator           => { is => 'Text', len => 2 , default_value => "\t", is_optional => 1},        
         
         # These are part of refactoring away ::TableRow
-        table_name                       => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },        
-        query_hint                       => { type => 'Text', len => 1024 , is_optional => 1},        
-        id_sequence_generator_name       => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary', doc => 'override the default choice for sequence generator name' },
+        table_name                       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },        
+        query_hint                       => { is => 'Text', len => 1024 , is_optional => 1},        
+        id_sequence_generator_name       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary', doc => 'override the default choice for sequence generator name' },
 
         # Different ways of handling subclassing at object load time
-        subclassify_by                      => { type => 'Text', len => 256, is_optional => 1},
-        sub_classification_meta_class_name  => { type => 'Text', len => 1024 , is_optional => 1},
-        sub_classification_method_name      => { type => 'Text', len => 256, is_optional => 1},
-        first_sub_classification_method_name => { type => 'Text', len => 256, is_optional => 1 },
+        subclassify_by                      => { is => 'Text', len => 256, is_optional => 1},
+        sub_classification_meta_class_name  => { is => 'Text', len => 1024 , is_optional => 1},
+        sub_classification_method_name      => { is => 'Text', len => 256, is_optional => 1},
+        first_sub_classification_method_name => { is => 'Text', len => 256, is_optional => 1 },
         subclass_description_preprocessor   => { is => 'MethodName', len => 255, is_optional => 1 },
 
     ### Relationships with the other meta-classes ###
 
         # UR::Namespaces are singletons referenced through their name
-        namespace_meta                  => { type => 'UR::Namespace', id_by => 'namespace' },
-        is                              => { type => 'ARRAY', is_mutable => 0, doc => 'List of the parent class names' },  
+        namespace_meta                  => { is => 'UR::Namespace', id_by => 'namespace' },
+        is                              => { is => 'ARRAY', is_mutable => 0, doc => 'List of the parent class names' },  
         
 
         # linking to the direct parents, and the complete ancestry
-        parent_class_metas              => { type => 'UR::Object::Type', id_by => 'is',
+        parent_class_metas              => { is => 'UR::Object::Type', id_by => 'is',
                                              doc => 'The list of UR::Object::Type objects for the classes that are direct parents of this class' },#, is_many => 1 },
         parent_class_names              => { via => 'parent_class_metas', to => 'class_name', is_many => 1 },
         parent_meta_class_names         => { via => 'parent_class_metas', to => 'meta_class_name', is_many => 1 },
         ancestry_meta_class_names       => { via => 'ancestry_class_metas', to => 'meta_class_name', is_many => 1 },
-        ancestry_class_metas            => { type => 'UR::Object::Type', id_by => 'is',  where => [-recurse => [class_name => 'is']],
+        ancestry_class_metas            => { is => 'UR::Object::Type', id_by => 'is',  where => [-recurse => [class_name => 'is']],
                                              doc => 'Climb the ancestry tree and return the class objects for all of them' },
         ancestry_class_names            => { via => 'ancestry_class_metas', to => 'class_name', is_many => 1 },
         # This one isn't useful on its own, but is used to build the all_* accessors below
-        all_class_metas                 => { type => 'UR::Object::Type', calculate => 'return ($self, $self->ancestry_class_metas)' },
+        all_class_metas                 => { is => 'UR::Object::Type', calculate => 'return ($self, $self->ancestry_class_metas)' },
 
         # Properties defined on this class, parent classes, etc.
         # There's also a property_meta_by_name() method defined in the class
-        direct_property_metas            => { type => 'UR::Object::Property', reverse_id_by => 'class_meta', is_many => 1 },
+        direct_property_metas            => { is => 'UR::Object::Property', reverse_as => 'class_meta', is_many => 1 },
         direct_property_names            => { via => 'direct_property_metas', to => 'property_name', is_many => 1 },
-        #direct_id_property_metas         => { type => 'UR::Object::Property', reverse_id_by => 'class_meta', where => [ is_id => 1 ], is_many => 1 },
+        #direct_id_property_metas         => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [ is_id => 1 ], is_many => 1 },
         #direct_id_property_names         => { via => 'direct_property_metas', to => 'property_name', is_many => 1, where => [ is_id => 1 ] },
         direct_id_property_metas         => { via => 'direct_id_token_metas', to => 'property_meta', is_many => 1 },
         direct_id_property_names         => { via => 'direct_id_token_metas', to => 'property_name', is_many => 1 },
@@ -277,14 +277,14 @@ UR::Object::Type->define(
         all_id_property_names            => { via => 'all_id_token_metas', to => 'property_name', is_many => 1 },
 
         # these should go away when the is_id meta-property is working, since they don't seem that useful
-        direct_id_token_metas            => { type => 'UR::Object::Property::ID', reverse_id_by => 'class_meta', is_many => 1 },
+        direct_id_token_metas            => { is => 'UR::Object::Property::ID', reverse_as => 'class_meta', is_many => 1 },
         direct_id_token_names            => { via => 'direct_id_token_metas', to => 'property_name', is_many => 1 },
         ancestry_id_token_metas          => { via => 'ancestry_class_metas', to => 'direct_id_token_metas', is_many => 1 },
         ancestry_id_token_names          => { via => 'ancestry_id_token_metas', to => 'property_name', is_many => 1 },
         all_id_token_metas               => { via => 'all_class_metas', to => 'direct_id_token_metas', is_many => 1 },
 
         # Unique contstraint trackers
-        direct_unique_metas              => { type => 'UR::Object::Property::Unique', reverse_id_by => 'class_meta', is_many => 1 },
+        direct_unique_metas              => { is => 'UR::Object::Property::Unique', reverse_as => 'class_meta', is_many => 1 },
         direct_unique_property_metas     => { via => 'direct_unique_metas', to => 'property_meta', is_many => 1 },
         direct_unique_property_names     => { via => 'direct_unique_metas', to => 'property_name', is_many => 1 },
         ancestry_unique_property_metas   => { via => 'ancestry_class_metas', to => 'direct_unique_property_metas', is_many => 1 },
@@ -298,7 +298,7 @@ UR::Object::Type->define(
         ancestry_column_names            => { via => 'ancestry_class_metas', to => 'direct_column_names', is_many => 1 },
         ancestry_id_column_names         => { via => 'ancestry_class_metas', to => 'direct_id_column_names', is_many => 1 },
         # Are these *columnless* properties actually necessary?  The user could just use direct_property_metas(column_name => undef)
-        direct_columnless_property_metas => { is => 'UR::Object::Property', reverse_id_by => 'class_meta', where => [column_name => undef], is_many => 1 },
+        direct_columnless_property_metas => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [column_name => undef], is_many => 1 },
         direct_columnless_property_names => { via => 'direct_columnless_property_metas', to => 'property_name', is_many => 1 },
         ancestry_columnless_property_metas => { via => 'ancestry_class_metas', to => 'direct_columnless_property_metas', is_many => 1 },
         ancestry_columnless_property_names => { via => 'ancestry_columnless_property_metas', to => 'property_name', is_many => 1 },
@@ -310,8 +310,8 @@ UR::Object::Type->define(
         all_columnless_property_names    => { via => 'all_class_metas', to => 'direct_columnless_property_names', is_many => 1 },
 
         # Reference objects
-        reference_metas                  => { type => 'UR::Object::Reference', reverse_id_by => 'class_meta', is_many => 1 },
-        reference_property_metas         => { type => 'UR::Object::Reference::Property', via => 'reference_metas', to => 'reference_property_metas', is_many => 1 },
+        reference_metas                  => { is => 'UR::Object::Reference', reverse_as => 'class_meta', is_many => 1 },
+        reference_property_metas         => { is => 'UR::Object::Reference::Property', via => 'reference_metas', to => 'reference_property_metas', is_many => 1 },
         all_reference_metas              => { via => 'all_class_metas', to => 'reference_metas', is_many => 1 },
         
     ],    
@@ -326,56 +326,56 @@ UR::Object::Type->define(
     english_name => 'entity type attribute',
     id_properties => [qw/class_name property_name/],
     properties => [
-        property_type                   => { type => 'Text', len => 256 , is_optional => 1},
-        class_name                      => { type => 'Text', len => 256 },        
-        property_name                   => { type => 'Text', len => 256 },            
-        type_name                       => { type => 'Text', len => 256 },        
-        attribute_name                  => { type => 'Text', len => 256 },
-        column_name                     => { type => 'Text', len => 256, is_optional => 1 },        
-        data_length                     => { type => 'Text', len => 32, is_optional => 1 },
-        data_type                       => { type => 'Text', len => 256, is_optional => 1 },
+        property_type                   => { is => 'Text', len => 256 , is_optional => 1},
+        class_name                      => { is => 'Text', len => 256 },        
+        property_name                   => { is => 'Text', len => 256 },            
+        type_name                       => { is => 'Text', len => 256 },        
+        attribute_name                  => { is => 'Text', len => 256 },
+        column_name                     => { is => 'Text', len => 256, is_optional => 1 },        
+        data_length                     => { is => 'Text', len => 32, is_optional => 1 },
+        data_type                       => { is => 'Text', len => 256, is_optional => 1 },
         default_value                   => { is_optional => 1 },
         valid_values                    => { is => 'ARRAY', is_optional => 1, },
-        doc                             => { type => 'Text', len => 1000, is_optional => 1 },
-        is_id                           => { type => 'Boolean', default_value => 0, doc => 'denotes this is an ID property of the class' },
-        is_optional                     => { type => 'Boolean' , default_value => 0},
-        is_transient                    => { type => 'Boolean' , default_value => 0},
-        is_constant                     => { type => 'Boolean' , default_value => 0},  # never changes
-        is_mutable                      => { type => 'Boolean' , default_value => 1},  # can be changed explicitly via accessor (cannot be constant)
-        is_volatile                     => { type => 'Boolean' , default_value => 0},  # changes w/o a signal: (cannot be constant or transactional)
-        is_class_wide                   => { type => 'Boolean' , default_value => 0},
-        is_delegated                    => { type => 'Boolean' , default_value => 0},
-        is_calculated                   => { type => 'Boolean' , default_value => 0},
-        is_transactional                => { type => 'Boolean' , default_value => 1},  # STM works on these, and the object can possibly save outside the app
-        is_abstract                     => { type => 'Boolean' , default_value => 0},
-        is_concrete                     => { type => 'Boolean' , default_value => 1},
-        is_final                        => { type => 'Boolean' , default_value => 0},  
-        is_many                         => { type => 'Boolean' , default_value => 0},
-        is_aggregate                    => { type => 'Boolean' , default_value => 0},
-        is_deprecated                   => { type => 'Boolean', default_value => 0},
+        doc                             => { is => 'Text', len => 1000, is_optional => 1 },
+        is_id                           => { is => 'Boolean', default_value => 0, doc => 'denotes this is an ID property of the class' },
+        is_optional                     => { is => 'Boolean' , default_value => 0},
+        is_transient                    => { is => 'Boolean' , default_value => 0},
+        is_constant                     => { is => 'Boolean' , default_value => 0},  # never changes
+        is_mutable                      => { is => 'Boolean' , default_value => 1},  # can be changed explicitly via accessor (cannot be constant)
+        is_volatile                     => { is => 'Boolean' , default_value => 0},  # changes w/o a signal: (cannot be constant or transactional)
+        is_class_wide                   => { is => 'Boolean' , default_value => 0},
+        is_delegated                    => { is => 'Boolean' , default_value => 0},
+        is_calculated                   => { is => 'Boolean' , default_value => 0},
+        is_transactional                => { is => 'Boolean' , default_value => 1},  # STM works on these, and the object can possibly save outside the app
+        is_abstract                     => { is => 'Boolean' , default_value => 0},
+        is_concrete                     => { is => 'Boolean' , default_value => 1},
+        is_final                        => { is => 'Boolean' , default_value => 0},  
+        is_many                         => { is => 'Boolean' , default_value => 0},
+        is_aggregate                    => { is => 'Boolean' , default_value => 0},
+        is_deprecated                   => { is => 'Boolean', default_value => 0},
         is_numeric                      => { calculate_from => ['data_type'], },
-        id_by                           => { type => 'ARRAY' , is_optional => 1},
-        reverse_id_by                   => { type => 'ARRAY', is_optional => 1 },
-        implied_by                      => { type => 'Text' , is_optional => 1},
-        via                             => { type => 'Text' , is_optional => 1 },
-        to                              => { type => 'Text' , is_optional => 1},
-        where                           => { type => 'ARRAY', is_optional => 1},
-        calculate                       => { type => 'Text' , is_optional => 1},
-        calculate_from                  => { type => 'ARRAY' , is_optional => 1},
-        calculate_perl                  => { type => 'Perl' , is_optional => 1},
-        calculate_sql                   => { type => 'SQL'  , is_optional => 1},
-        calculate_js                    => { type => 'JavaScript' , is_optional => 1},
-        constraint_name                 => { type => 'Text' , is_optional => 1},
-        is_legacy_eav                   => { type => 'Boolean' , is_optional => 1},
-        is_dimension                    => { type => 'Boolean', is_optional => 1},
-        is_specified_in_module_header   => { type => 'Boolean', default_value => 0 },
-        position_in_module_header       => { type => 'Integer', is_optional => 1, doc => "Line in the class definition source's section this property appears" },
-        #rank                            => { type => 'Integer', is_optional => 1, doc => 'Order in which the properties are discovered while parsing the class definition' },
-        singular_name                   => { type => 'Text' },
-        plural_name                     => { type => 'Text' },
+        id_by                           => { is => 'ARRAY' , is_optional => 1},
+        reverse_as                      => { is => 'ARRAY', is_optional => 1 },
+        implied_by                      => { is => 'Text' , is_optional => 1},
+        via                             => { is => 'Text' , is_optional => 1 },
+        to                              => { is => 'Text' , is_optional => 1},
+        where                           => { is => 'ARRAY', is_optional => 1},
+        calculate                       => { is => 'Text' , is_optional => 1},
+        calculate_from                  => { is => 'ARRAY' , is_optional => 1},
+        calculate_perl                  => { is => 'Perl' , is_optional => 1},
+        calculate_sql                   => { is => 'SQL'  , is_optional => 1},
+        calculate_js                    => { is => 'JavaScript' , is_optional => 1},
+        constraint_name                 => { is => 'Text' , is_optional => 1},
+        is_legacy_eav                   => { is => 'Boolean' , is_optional => 1},
+        is_dimension                    => { is => 'Boolean', is_optional => 1},
+        is_specified_in_module_header   => { is => 'Boolean', default_value => 0 },
+        position_in_module_header       => { is => 'Integer', is_optional => 1, doc => "Line in the class definition source's section this property appears" },
+        #rank                            => { is => 'Integer', is_optional => 1, doc => 'Order in which the properties are discovered while parsing the class definition' },
+        singular_name                   => { is => 'Text' },
+        plural_name                     => { is => 'Text' },
 
-        class_meta                      => { type => 'UR::Object::Type', id_by => 'class_name' },
-        unique_meta                     => { type => 'UR::Object::Property::Unique', reverse_id_by => 'property_meta', is_many => 1 },
+        class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
+        unique_meta                     => { is => 'UR::Object::Property::Unique', reverse_as => 'property_meta', is_many => 1 },
     ],
     unique_constraints => [
         { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },
@@ -388,20 +388,20 @@ UR::Object::Type->define(
     english_name => 'type attribute has a',
     id_properties => [qw/tha_id rank/],
     properties => [
-        rank                            => { type => 'NUMBER', len => 2, source => 'data dictionary' },
-        tha_id                          => { type => 'Text', len => 128, source => 'data dictionary' },
-        attribute_name                  => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        r_attribute_name                => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        property_name                   => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        r_property_name                 => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        rank                            => { is => 'NUMBER', len => 2, source => 'data dictionary' },
+        tha_id                          => { is => 'Text', len => 128, source => 'data dictionary' },
+        attribute_name                  => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        r_attribute_name                => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        property_name                   => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        r_property_name                 => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
          
-        reference_meta                  => { type => 'UR::Object::Reference', id_by => 'tha_id' },
+        reference_meta                  => { is => 'UR::Object::Reference', id_by => 'tha_id' },
 
-        class_meta                      => { type => 'UR::Object::Type', via => 'reference_meta', to => 'class_meta' },
+        class_meta                      => { is => 'UR::Object::Type', via => 'reference_meta', to => 'class_meta' },
         class_name                      => { via => 'class_meta', to => 'class_name' },
 	property_meta                   => { is => 'UR::Object::Property', id_by => [ 'class_name', 'property_name' ] },
 
-        r_class_meta                    => { type => 'UR::Object::Type', via => 'reference_meta', to => 'r_class_meta' },
+        r_class_meta                    => { is => 'UR::Object::Type', via => 'reference_meta', to => 'r_class_meta' },
         r_class_name                    => { via => 'r_class_meta', to => 'class_name' },
         r_property_meta                 => { is => 'UR::Object::Property', id_by => [ 'r_class_name', 'r_property_name'] },
     ],
@@ -412,22 +412,22 @@ UR::Object::Type->define(
     english_name => 'type has a',
     id_properties => ['tha_id'],
     properties => [
-        tha_id                          => { type => 'Text', len => 128, source => 'data dictionary' },
-        class_name                      => { type => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        type_name                       => { type => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        delegation_name                 => { type => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        r_class_name                    => { type => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        r_type_name                     => { type => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        #r_delegation_name               => { type => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        constraint_name                 => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        source                          => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        description                     => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        accessor_name_for_id            => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        accessor_name_for_object        => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        tha_id                          => { is => 'Text', len => 128, source => 'data dictionary' },
+        class_name                      => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
+        type_name                       => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
+        delegation_name                 => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
+        r_class_name                    => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
+        r_type_name                     => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
+        #r_delegation_name               => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
+        constraint_name                 => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        source                          => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        description                     => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        accessor_name_for_id            => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        accessor_name_for_object        => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
 
-        reference_property_metas        => { type => 'UR::Object::Reference::Property', reverse_id_by => 'reference_meta', is_many => 1 },
-        class_meta                      => { type => 'UR::Object::Type', id_by => 'class_name' },
-        r_class_meta                    => { type => 'UR::Object::Type', id_by => 'r_class_name' },
+        reference_property_metas        => { is => 'UR::Object::Reference::Property', reverse_as => 'reference_meta', is_many => 1 },
+        class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
+        r_class_meta                    => { is => 'UR::Object::Type', id_by => 'r_class_name' },
     ],
 );
 
@@ -436,14 +436,14 @@ UR::Object::Type->define(
     english_name => 'entity type unique attribute',
     id_properties => [qw/type_name unique_group attribute_name/],
     properties => [
-        class_name                       => { type => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { type => 'Text', len => 256, source => 'data dictionary' },
-        property_name                    => { type => 'Text', len => 256, source => 'data dictionary' },
-        attribute_name                   => { type => 'Text', len => 256, source => 'data dictionary' },
-        unique_group                     => { type => 'Text', len => 256, source => 'data dictionary' },
+        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
+        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
+        property_name                    => { is => 'Text', len => 256, source => 'data dictionary' },
+        attribute_name                   => { is => 'Text', len => 256, source => 'data dictionary' },
+        unique_group                     => { is => 'Text', len => 256, source => 'data dictionary' },
 
-        class_meta                       => { type => 'UR::Object::Type', id_by => 'class_name' },
-        property_metas                   => { type => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
+        class_meta                       => { is => 'UR::Object::Type', id_by => 'class_name' },
+        property_metas                   => { is => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
     ],
 );
 
@@ -453,14 +453,14 @@ UR::Object::Type->define(
     english_name => 'entity type id',
     id_properties => [qw/type_name position/],
     properties => [
-        position                         => { type => 'NUMBER', len => 2, source => 'data dictionary' },
-        class_name                       => { type => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { type => 'Text', len => 256, source => 'data dictionary' },
-        attribute_name                   => { type => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        property_name                    => { type => 'Text', len => 256, source => 'data dictionary' },
+        position                         => { is => 'NUMBER', len => 2, source => 'data dictionary' },
+        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
+        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
+        attribute_name                   => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        property_name                    => { is => 'Text', len => 256, source => 'data dictionary' },
 
-        class_meta                       => { type => 'UR::Object::Type', id_by => 'class_name' },
-        property_meta                    => { type => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
+        class_meta                       => { is => 'UR::Object::Type', id_by => 'class_name' },
+        property_meta                    => { is => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
     ],
 );
 
@@ -532,11 +532,11 @@ First create a Namespace class for your application, CdExample.pm
 
     package CdExample;
     use UR;
-    
+
     class CdExample {
         is => 'UR::Namespace'
     };
-    
+
     1;
 
 Next, define a data source representing your database, CdExample/DataSource/DB.pm
@@ -545,12 +545,14 @@ Next, define a data source representing your database, CdExample/DataSource/DB.p
     use CdExample;
     
     class CdExample::DataSource::DB {
-        is => ['UR::DataSource::Mysql', 'UR::Singleton'],
+        is => ['UR::DataSource::Mysql'],
+        has_constant => [
+            server  => { value => 'mysql.example.com' },
+            login   => { value => 'mysqluser' },
+            auth    => { value => 'mysqlpasswd' },
+        ]
     };
     
-    sub server { 'mysql.example.com' }
-    sub login { 'mysqluser' }
-    sub auth { 'mysqlpasswd' }
     1;
 
 Create a class to represent artists, who have many CDs, in CdExample/Artist.pm
@@ -561,8 +563,8 @@ Create a class to represent artists, who have many CDs, in CdExample/Artist.pm
     class CdExample::Artist {
         id_by => 'artist_id',
         has => [ 
-            name => { is => 'String' },
-            cds  => { is => 'CdExample::Cd', is_many => 1, reverse_id_by => 'artist' }
+            name => { is => 'Text' },
+            cds  => { is => 'CdExample::Cd', is_many => 1, reverse_as => 'artist' }
         ],
         data_source => 'CdExample::DataSource::DB1',
         table_name => 'ARTISTS',

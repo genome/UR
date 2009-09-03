@@ -73,7 +73,7 @@ my $test_class_definition =
     ],
     has_many => [
         property_cs => { is => 'String', is_optional => 1 },
-        remotes => { is => 'URT::Remote', reverse_id_by => 'testobj' },
+        remotes => { is => 'URT::Remote', reverse_as => 'testobj' },
     ],
     has_optional => [
         property_d => { is => 'Number' },

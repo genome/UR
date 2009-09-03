@@ -121,7 +121,7 @@ sub setup_classes_and_db {
         id_by => 'thing_id',
         has => [
             name => { is => 'String' },
-            datas => { is => 'URT::Data', reverse_id_by => 'thing', is_many => 1 },
+            datas => { is => 'URT::Data', reverse_as => 'thing', is_many => 1 },
         ],
         data_source => 'URT::DataSource::SomeSQLite',
         table_name => 'thing',

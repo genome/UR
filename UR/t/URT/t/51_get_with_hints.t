@@ -150,7 +150,7 @@ sub setup_classes_and_db {
         id_by => 'thing_id',
         has => [
             name => { is => 'String' },
-            attribs => { is => 'URT::Attrib', reverse_id_by => 'thing', is_many => 1 },
+            attribs => { is => 'URT::Attrib', reverse_as => 'thing', is_many => 1 },
         ],
         data_source => 'URT::DataSource::SomeSQLite',
         table_name => 'thing',
@@ -173,7 +173,7 @@ sub setup_classes_and_db {
         id_by => 'person_id',
         has => 'name',
         has_many_optional => [
-           bridges => { is => 'URT::Bridge', reverse_id_by => 'persons' },
+           bridges => { is => 'URT::Bridge', reverse_as => 'persons' },
            params => { via => 'bridges', to => 'params' },
         ],
         data_source => 'URT::DataSource::SomeSQLite',

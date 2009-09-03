@@ -164,7 +164,7 @@ UR::Object::Type->define(
     id_by => [ related_id => { is => 'Integer' }, ],
     has => [
         related_value   => { is => 'String' },
-        primary_objects => { is => 'URT::Primary', reverse_id_by => 'related_object', is_many => 1 },
+        primary_objects => { is => 'URT::Primary', reverse_as => 'related_object', is_many => 1 },
         primary_values  => { vis => 'primary_object', to => 'primary_value', is_many => 1 },
     ],
     data_source => 'URT::DataSource::SomeSQLite2',

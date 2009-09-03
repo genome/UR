@@ -354,7 +354,7 @@ tracks:
          artist_id => { is => 'INTEGER' },
          title    => { is => 'TEXT' },
          year     => { is => 'INTEGER' },
-         tracks   => { is => 'CdExample::Track', reverse_id_by => 'cd', is_many => 1 },  # This is the new line
+         tracks   => { is => 'CdExample::Track', reverse_as => 'cd', is_many => 1 },  # This is the new line
      ],
      schema_name => 'Example',
      data_source => 'CdExample::DataSource::Example',
@@ -380,7 +380,7 @@ relationships. For example, if you edit Artist.pm to add a couple of lines:
       ],
       has => [
           name     => { is => 'TEXT' },
-          cds      => { is => 'CdExample::Cd', reverse_id_by => 'artist', is_many => 1 },
+          cds      => { is => 'CdExample::Cd', reverse_as => 'artist', is_many => 1 },
           tracks   => { is => 'CdExample::Track', via => 'cds', to => 'tracks', is_many => 1},
       ],
       schema_name => 'Example',

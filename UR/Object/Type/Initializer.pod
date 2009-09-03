@@ -304,7 +304,7 @@ the object is created. It is a synonym for having is mutable = 0
 =item is_many
 
 Indicates that this returns a list of values.  Usually used with
-reverse_id_by properties.
+reverse_as properties.
 
 =item is_optional
 
@@ -425,7 +425,7 @@ Many Things can point back to the same Person.
       id_by => 'person_id',
       has => ['name'],
       has_many => [
-          things => { is => 'Thing', reverse_id_by => 'owner' },
+          things => { is => 'Thing', reverse_as => 'owner' },
       ]
   };
   class Thing {
@@ -435,7 +435,7 @@ Many Things can point back to the same Person.
       ],
   };
 
-Note that the value for C<reverse_id_by> needs to be the name of the relation
+Note that the value for C<reverse_as> needs to be the name of the relation
 property in the related class that would point back to "me".  Yes, it's a bit
 obtuse, but it's the best we have for now.
 

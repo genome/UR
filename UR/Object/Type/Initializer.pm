@@ -863,7 +863,7 @@ sub _normalize_property_description {
         [ calculate_perl                  => qw/calc_perl/],
         [ calculate_sql                   => qw/calc_sql/],
         [ calculate_js                    => qw//],
-        [ reverse_id_by                   => qw//],
+        [ reverse_as                      => qw/reverse_id_by im_its/],
         [ is_legacy_eav                   => qw//],
         [ is_dimension                    => qw//],
         [ is_specified_in_module_header   => qw//],
@@ -915,7 +915,7 @@ sub _normalize_property_description {
     if ($new_property{via} 
         || $new_property{to} 
         || $new_property{id_by} 
-        || $new_property{reverse_id_by}         
+        || $new_property{reverse_as}         
     ) {
         $new_property{is_delegated} = 1;
         unless (defined $new_property{to}) {

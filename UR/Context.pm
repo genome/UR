@@ -225,10 +225,10 @@ sub _infer_direct_property_from_rule {
 
             my $linking_property_meta = $subject_class_meta->property_meta_for_name($property_meta->via);
             my($reference,$ref_name_getter, $ref_r_name_getter);
-            if ($linking_property_meta->reverse_id_by) {
+            if ($linking_property_meta->reverse_as) {
                 eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
                 $reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
-                                                        delegation_name => $linking_property_meta->reverse_id_by);
+                                                        delegation_name => $linking_property_meta->reverse_as);
                 $ref_name_getter = 'r_property_name';
                 $ref_r_name_getter = 'property_name';
                 $alternate_class = $reference->class_name;
@@ -312,10 +312,10 @@ sub _infer_delegated_property_from_rule {
     my $alternate_wanted_property = $wanted_property_meta->to;
 
     my($reference,$ref_name_getter,$ref_r_name_getter,$alternate_class);
-    if ($linking_property_meta->reverse_id_by) {
+    if ($linking_property_meta->reverse_as) {
         eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
         $reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
-                                                delegation_name => $linking_property_meta->reverse_id_by);
+                                                delegation_name => $linking_property_meta->reverse_as);
         $ref_name_getter = 'r_property_name';
         $ref_r_name_getter = 'property_name';
         $alternate_class = $reference->class_name;
@@ -735,7 +735,7 @@ sub _get_template_data_for_loading {
             my $reverse = 0;
             unless ($reference) {
                 # Reference objects are only created for forward-linking properties.  
-                # Maybe this is a reverse_id_by-type property?  Try the joins data structure...
+                # Maybe this is a reverse_as-type property?  Try the joins data structure...
                 my @joins = $delegated_property->_get_joins;
                 foreach my $join ( @joins ) {
                     my @references = UR::Object::Reference->get(class_name   => $join->{'foreign_class'},

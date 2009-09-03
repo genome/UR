@@ -83,14 +83,14 @@ pointing back to the container it's a part of.
      ],
      has => [
          container => { is => 'TheNamespace::Container',
-                        reverse_id_by => 'contained',
+                        reverse_as => 'contained',
                         is_many => 1 },
          contained_value => { is => 'Varchar' },
      ],
      data_source => 'TheNamsapce::DataSource::TheDatabase',
   };
 
-Note that the reverse_id_by parameter of the container property actually
+Note that the reverse_as parameter of the container property actually
 points to the object accessor, not the id accessor. It doesn't make sense,
 but that's how it is for now. Hopefully we'll come up with a better syntax. 
 
@@ -114,7 +114,7 @@ The contained class/table has a foreign key pointing to the container it's a par
 To create a reverse relationship, you must first create a forward
 relationship on the related class pointing back to the primary class. Then,
 creating the reverse relationship involves adding a property where the 'is'
-is the name of the related class, and a 'reverse_id_by' indicating which
+is the name of the related class, and a 'reverse_as' indicating which
 property on the related class describes the forward relationship between
 that related class and the primary class. 
 
@@ -126,7 +126,7 @@ that related class and the primary class.
      has => [
          value => { is => 'Varchar' },
          containeds => { is => 'TheNamespace::Contained',
-                         reverse_id_by => 'container',
+                         reverse_as => 'container',
                          is_many => 1 },
      ],
      data_source => 'TheNamespace::DataSource::TheDatabase',
@@ -182,7 +182,7 @@ list of all the objects satisfying the relationship through the bridge table.
      ],
      has_many => [
          bridges =>    { is => 'TheNamespace::Bridge',
-                         reverse_id_by => 'container' },
+                         reverse_as => 'container' },
          containeds => { is => 'TheNamespace::Contained',
                          via => 'bridge',
                          to => 'contained' },
@@ -215,7 +215,7 @@ list of all the objects satisfying the relationship through the bridge table.
      ],
      has_many => [
          bridges =>    { is => 'TheNamespace::Bridge',
-                         reverse_id_by => 'contained' },
+                         reverse_as => 'contained' },
          containers => { is => 'TheNamespace::Container',
                          via => 'bridge',
                          to => 'container' },
@@ -266,7 +266,7 @@ is has-many
      ],
      has => [
          containeds => { is => 'TheNamespace::Contained',
-                         reverse_id_by => 'container',
+                         reverse_as => 'container',
                          is_many => 1 },
          contained_values => { via => 'containeds',
                                to => 'container_value',
@@ -310,7 +310,7 @@ Combining the has-many relationship and the doubly indirect recipe
      ],
      has => [
          containeds       => { is => 'TheNamsepace::Contained',
-                               reverse_id_by => 'container',
+                               reverse_as => 'container',
                                is_many => 1},
          inner_containeds => { is => 'TheNamespace::InnerContained,
                                via => 'contained',

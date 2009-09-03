@@ -4,7 +4,7 @@ use Test::More;
 plan tests => 40;
 
 use File::Basename;
-use lib File::Basename::dirname(__FILE__)."/../..";
+BEGIN { use lib File::Basename::dirname(__FILE__)."/../.."; }
 use URT;
 
 use IO::Socket;
