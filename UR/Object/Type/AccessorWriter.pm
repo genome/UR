@@ -481,15 +481,8 @@ sub mk_class_accessor
 
 
 sub mk_object_set_accessors {
-    no warnings;
     my ($self, $class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name, $where) = @_;
 
-    # The accessors may compare undef and an empty
-    # string.  For speed, we turn warnings off rather
-    # than add extra code to make the warning disappear.
-    no warnings;
-    no strict 'refs';
-    
     # These are set by the resolver closure below, and kept in scope by the other closures
     my $rule_template;
     my @property_names;
@@ -533,7 +526,7 @@ sub mk_object_set_accessors {
         $rule_template = $tmp_rule->get_rule_template;
     };
 
-    my $rule_accessor = sub {
+    my $rule_accessor = Sub::Name::subname $class_name ."::__$singular_name" . '_rule' => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         if (@_ or @where) {
@@ -544,8 +537,14 @@ sub mk_object_set_accessors {
             return $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
         }
     };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => "__$singular_name" . '_rule',
+        code => $rule_accessor,
+    });
 
-    my $list_accessor = sub {
+
+    my $list_accessor = Sub::Name::subname $class_name ."::$plural_name" => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
@@ -556,18 +555,38 @@ sub mk_object_set_accessors {
             return $r_class_name->get($rule);
         }
     };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $plural_name,
+        code => $list_accessor,
+    });
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $singular_name . '_list',
+        code => $list_accessor,
+    });
     
-    my $arrayref_accessor = sub {
+    my $arrayref_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_arrayref' => sub {
         return [ $list_accessor->(@_) ];
     };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $singular_name . '_arrayref',
+        code => $arrayref_accessor,
+    });
 
-    my $iterator_accessor = sub {
+    my $iterator_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_iterator' => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
         
         return UR::Object::Iterator->create_for_filter_rule($rule);
     };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $singular_name . '_iterator',
+        code => $iterator_accessor,
+    });
 
     # These will behave specially if the rule does not specify the ID, or all of the ID.
     my @params_prefix;
@@ -587,7 +606,7 @@ sub mk_object_set_accessors {
         $params_prefix_resolved = 1;
     };
 
-    my $single_accessor = sub {
+    my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
@@ -600,8 +619,13 @@ sub mk_object_set_accessors {
             return my $obj = $r_class_name->get($rule);
         }
     };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $singular_name,
+        code => $single_accessor,
+    });
 
-    my $add_accessor = sub {
+    my $add_accessor = Sub::Name::subname $class_name ."::add_$singular_name" => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         $params_prefix_resolver->() unless $params_prefix_resolved;
@@ -609,8 +633,13 @@ sub mk_object_set_accessors {
         my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);        
         $r_class_name->create($rule->params_list,@_);
     };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => "add_$singular_name",
+        code => $add_accessor,
+    });
 
-    my $remove_accessor = sub {
+    my $remove_accessor = Sub::Name::subname $class_name ."::remove_$singular_name" => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
@@ -624,16 +653,12 @@ sub mk_object_set_accessors {
         $trans->commit;
         return @matches;
     };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => "remove_$singular_name",
+        code => $remove_accessor,
+    });
 
-    no strict 'refs';
-    *{$class_name ."::__$singular_name" . '_rule'}      = $rule_accessor;
-    *{$class_name ."::$plural_name"}                    = $list_accessor;
-    *{$class_name ."::$singular_name" . '_list'}        = $list_accessor;
-    *{$class_name ."::$singular_name" . '_arrayref'}    = $arrayref_accessor;
-    *{$class_name ."::$singular_name" . '_iterator'}    = $iterator_accessor;
-    *{$class_name ."::$singular_name"}                  = $single_accessor;
-    *{$class_name ."::add_$singular_name"}              = $add_accessor;
-    *{$class_name ."::remove_$singular_name"}           = $remove_accessor;
 }
 
 use Data::Dumper;
