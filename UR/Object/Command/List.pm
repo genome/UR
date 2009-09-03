@@ -194,7 +194,6 @@ sub _get_object_string{
 
 package Text;
 use base 'Style';
-use UR::Object::Command::List::Tab2Col;
 
 sub _get_header_string{
     my $self = shift;
@@ -356,4 +355,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 36976 2008-07-25 17:18:12Z adukes $
+#$Id: List.pm 36979 2008-07-25 17:50:17Z adukes $
