@@ -55,6 +55,8 @@ sub get_default_handle {
             return;
         }
 
+        $self->_invalidate_cache();
+
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
             $sql_fh->printf("\nCSV: opened %s fileno %d\n\n",$self->server, $fh->fileno);
         }
@@ -121,6 +123,16 @@ sub file_cache_index {
     }
     $self->{'_file_cache_index'};
 }
+
+sub open_query_count {
+    my $self = shift->_singleton_object;
+
+    if (@_) {
+        $self->{'_open_query_count'} = shift;
+    }
+    $self->{'_open_query_count'} || 0;
+}
+
 
 # Derived classes can set this to 1 if the first line of the file
 # is a header and should be skipped
@@ -366,6 +378,7 @@ sub _comparator_for_operator_and_property {
         
 
 our $READ_FINGERPRINT = 0;
+our %iterator_data_source; 
 
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
@@ -565,6 +578,7 @@ sub create_iterator_closure_for_rule {
                         $sql_fh->printf("CSV: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
                     }
 
+
                     return;
                 
                 } elsif ($comparison != 0) {
@@ -580,9 +594,29 @@ sub create_iterator_closure_for_rule {
             return $next_candidate_row;
         }
     }; # end sub $iterator
-           
+
+    my $count = $self->open_query_count();
+    $self->open_query_count($count+1);
+    bless $iterator, 'UR::DataSource::SortedCsvFile::Tracker';
+    $iterator_data_source{$iterator} = $self;
+    
     return $iterator;
 } 
+
+
+sub UR::DataSource::SortedCsvFile::Tracker::DESTROY {
+    my $iterator = shift;
+    my $ds = delete $iterator_data_source{$iterator};
+    my $count = $ds->open_query_count();
+    $ds->open_query_count(--$count);
+    if ($count == 0) {
+	# All open queries have supposedly been fulfilled.  Close the
+	# file handle and undef it so get_default_handle() will re-open if necessary
+	my $self_obj = $ds->_singleton_object;
+	$self_obj->{'_fh'}->close();
+	$self_obj->{'_fh'} = undef;
+    }
+}
 
 
 sub column_order {
