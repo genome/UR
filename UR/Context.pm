@@ -1120,7 +1120,18 @@ sub _create_import_iterator_for_underlying_context {
                 }
 
                 # Apply changes to all_params_loaded that each importer has collected
-                $_->commit foreach @importers;
+                $_->finalize foreach @importers;
+
+                # Each of these iterators should be at the end, too.  Call them one more time
+                # so they'll finalize their object fabricators.
+                foreach my $class ( keys %subordinate_iterator_for_class ) {
+                    my $obj = $subordinate_iterator_for_class{$class}->();
+                    if ($obj) {
+                        warn "Leftover objects in subordinate iterator for $class";
+                        while ($obj = $subordinate_iterator_for_class{$class}->()) {1;}
+                    }
+                }
+
                 return;
             }
             
@@ -1366,7 +1377,7 @@ sub _create_object_fabricator_for_loading_template {
         }
     }
     
-    my %all_params_loaded_items;
+    my $all_params_loaded_items = {};
 
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
@@ -1594,10 +1605,12 @@ sub _create_object_fabricator_for_loading_template {
             if ($loading_base_object and not $rule_specifies_id) {
                 if ($rule_class_name ne $load_class_name) {
                     $pending_db_object->{load}{param_key}{$load_class_name}{$load_rule_id}++;
-                    $all_params_loaded_items{$load_class_name}{$load_rule_id}++;    
+                    $UR::Context::all_params_loaded->{$load_class_name}{$load_rule_id} = undef;
+                    $all_params_loaded_items->{$load_class_name}{$load_rule_id}++;
                 }
                 $pending_db_object->{load}{param_key}{$rule_class_name}{$rule_id}++;
-                $all_params_loaded_items{$rule_class_name}{$rule_id}++;
+                $UR::Context::all_params_loaded->{$rule_class_name}{$rule_id} = undef;
+                $all_params_loaded_items->{$rule_class_name}{$rule_id}++;
 
                 if (@rule_properties_with_in_clauses) {
                     # FIXME - confirm that all the object properties are filled in at this point, right?
@@ -1607,7 +1620,8 @@ sub _create_object_fabricator_for_loading_template {
                     #}
                     my $r = $rule_template_without_in_clause->get_normalized_rule_for_values(@values);
                     
-                    $all_params_loaded_items{$rule_class_name}{$r->id}++;
+                    $UR::Context::all_params_loaded->{$rule_class_name}{$r->id} = undef;
+                    $all_params_loaded_items->{$rule_class_name}{$r->id}++;
                 }
             }
             
@@ -1795,7 +1809,8 @@ sub _create_object_fabricator_for_loading_template {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
                     my $rule_tmpl = $hint_data->[1];
                     my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
-                    $all_params_loaded_items{$rule_tmpl->subject_class_name}->{$related_obj_rule->id}++;
+                    $UR::Context::all_params_loaded->{$rule_tmpl->subject_class_name}->{$related_obj_rule->id} = undef;
+                    $all_params_loaded_items->{$rule_tmpl->subject_class_name}->{$related_obj_rule->id}++;
                  }
             }
         }
@@ -1835,8 +1850,10 @@ sub _create_object_fabricator_for_loading_template {
                 # note on those objects that they are part of that query.  These may have loaded earlier in this
                 # query, or in a previous query.  Anything NOT already loaded will be hit later by the if-block below.
                 my @subset_loaded = $class->is_loaded($recurse_property_on_this_row => $value_referencing_other_object);
-                $all_params_loaded_items{$class}{$equiv_param_key} = scalar(@subset_loaded);
-                $all_params_loaded_items{$class}{$equiv_param_key2} = scalar(@subset_loaded);
+                $UR::Context::all_params_loaded->{$class}{$equiv_param_key} = undef;
+                $UR::Context::all_params_loaded->{$class}{$equiv_param_key2} = undef;
+                $all_params_loaded_items->{$class}{$equiv_param_key} = scalar(@subset_loaded);
+                $all_params_loaded_items->{$class}{$equiv_param_key2} = scalar(@subset_loaded);
                 for my $pending_db_object (@subset_loaded) {
                     $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
                     $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
@@ -1864,8 +1881,10 @@ sub _create_object_fabricator_for_loading_template {
                                      );
                 my $equiv_param_key2 = $equiv_params2->get_normalized_rule_equivalent->id;
                 
-                $all_params_loaded_items{$class}{$equiv_param_key}++;
-                $all_params_loaded_items{$class}{$equiv_param_key2}++;
+                $UR::Context::all_params_loaded->{$class}{$equiv_param_key} = undef;
+                $UR::Context::all_params_loaded->{$class}{$equiv_param_key2} = undef;
+                $all_params_loaded_items->{$class}{$equiv_param_key}++;
+                $all_params_loaded_items->{$class}{$equiv_param_key2}++;
                 $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
                 $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
             }
@@ -1884,14 +1903,14 @@ sub _create_object_fabricator_for_loading_template {
     # and the second query only returns the objects that were loaded during the first query.
     #
     # The new behavior builds up changes to be made to all_params_loaded, and someone
-    # needs to call $object_fabricator->commit() to apply these changes
+    # needs to call $object_fabricator->finalize() to apply these changes
     bless $object_fabricator, 'UR::Context::object_fabricator_tracker';
-    $UR::Context::object_fabricators->{$object_fabricator} = \%all_params_loaded_items;
+    $UR::Context::object_fabricators->{$object_fabricator} = $all_params_loaded_items;
     
     return $object_fabricator;
 }
 
-sub UR::Context::object_fabricator_tracker::commit {
+sub UR::Context::object_fabricator_tracker::finalize {
     my $self = shift;
 
     my $this_apl = delete $UR::Context::object_fabricators->{$self};
@@ -1899,6 +1918,7 @@ sub UR::Context::object_fabricator_tracker::commit {
         while(1) {
             my($rule_id,$val) = each %{$this_apl->{$class}};
             last unless defined $rule_id;
+            next unless exists $UR::Context::all_params_loaded->{$class}->{$rule_id};  # Has unload() removed this one earlier?
             $UR::Context::all_params_loaded->{$class}->{$rule_id} += $val; 
         }
     }
@@ -2020,13 +2040,22 @@ sub _cache_is_complete_for_class_and_normalized_rule {
     # See if we need to do a load():
 
 #    no warnings;
+    my $param_key = $params->{_param_key};
+    my $loading_is_in_progress_on_another_iterator = 
+            grep { exists $_->{$class}
+                   and 
+                   exists $_->{$class}->{$param_key}
+                 }
+            values %$UR::Context::object_fabricators;
+
+    return 0 if $loading_is_in_progress_on_another_iterator;
 
     my $loading_was_done_before_with_these_params =
             # complex (non-single-id) params
             exists($params->{_param_key}) 
             && (
                 # exact match to previous attempt
-                exists ($UR::Object::all_params_loaded->{$class}->{$params->{_param_key}})
+                exists ($UR::Object::all_params_loaded->{$class}->{$param_key})
                 ||
                 # this is a subset of a previous attempt
                 ($self->_loading_was_done_before_with_a_superset_of_this_params_hashref($class,$params))
@@ -2308,7 +2337,7 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
             #my $key = $try_class->get_rule_for_params(%get_hash)->id;
             my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($try_class, %get_hash);
             my $key = $rule->id;
-            if (defined($key) && exists $all_params_loaded->{$try_class}->{$key}) {
+            if (defined($key) and exists $all_params_loaded->{$try_class}->{$key} and defined $all_params_loaded->{$try_class}->{$key}) {
 
                 $all_params_loaded->{$try_class}->{$input_params->{_param_key}} = 1;
                 my $new_key = $input_params->{_param_key};

@@ -449,6 +449,11 @@ sub delete_object {
         {
             for my $param_string (keys %$param_strings_hashref) {
                 delete $UR::Object::all_params_loaded->{$class}->{$param_string};
+
+                foreach my $local_apl ( values %$UR::Context::object_fabricators ) {
+                    next unless ($local_apl and exists $local_apl->{$class});
+                    delete $local_apl->{$class}->{$param_string};
+                }
             }
         }
     }
