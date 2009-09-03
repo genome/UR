@@ -143,10 +143,10 @@ sub define {
     
     no warnings;
     no strict;
-    *{$class_name . '::can'} = $Class::Autouse::orig_can; 
-    *{$class_name . '::isa'} = $Class::Autouse::orig_isa; 
-    *{$meta_class_name . '::can'} = $Class::Autouse::orig_can; 
-    *{$meta_class_name . '::isa'} = $Class::Autouse::orig_isa; 
+    *{$class_name . '::can'} = $Class::Autouse::ORIGINAL_CAN; 
+    *{$class_name . '::isa'} = $Class::Autouse::ORIGINAL_ISA; 
+    *{$meta_class_name . '::can'} = $Class::Autouse::ORIGINAL_CAN; 
+    *{$meta_class_name . '::isa'} = $Class::Autouse::ORIGINAL_ISA; 
     use warnings;
     use strict;
 

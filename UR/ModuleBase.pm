@@ -14,8 +14,8 @@ BEGIN {
     use Class::Autouse;
     no strict;
     no warnings;
-    *can = $Class::Autouse::orig_can;
-    *isa = $Class::Autouse::orig_isa;
+    *can = $Class::Autouse::ORIGINAL_CAN;
+    *isa = $Class::Autouse::ORIGINAL_ISA;
 }
 
 =pod

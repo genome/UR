@@ -13,7 +13,7 @@ my %loading;
 sub define_class {
     my ($class,$func,@params) = @_;
     return unless $UR::initialized;
-    return unless $Class::Autouse::orig_can->("UR::Object::Type","get");
+    return unless $Class::Autouse::ORIGINAL_CAN->("UR::Object::Type","get");
 
     #return if $loading{$class};    
     #$loading{$class} = 1;
@@ -46,7 +46,7 @@ sub dynamically_load_class {
     my ($class,$func,@params) = @_;
     # Don't even try to load unless we're done boostrapping somewhat.
     return unless $UR::initialized;
-    return unless $Class::Autouse::orig_can->("UR::Object::Type","get");
+    return unless $Class::Autouse::ORIGINAL_CAN->("UR::Object::Type","get");
 
     # Some modules (Class::DBI, recently) call UNIVERSAL::can directly with things which don't even resemble
     # class names.  Skip doing any work on anything which isn't at least a two-part class name.
