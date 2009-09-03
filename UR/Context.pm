@@ -2505,6 +2505,7 @@ sub _reverse_all_changes {
                         # primary key
                         next if ($id_props{$property_name} ||
                                  $property_names{$property_name}->is_indirect ||
+                                 ! $property_names{$property_name}->is_mutable ||
                                  $property_names{$property_name}->is_transient);
                         $object->$property_name($saved->{$property_name});
                     }
