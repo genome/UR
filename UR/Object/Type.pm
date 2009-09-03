@@ -62,6 +62,18 @@ our $bootstrapping = 1;
 our @partially_defined_classes;
 our $pwd_at_compile_time = cwd();
 
+sub get_namespace {
+    my $self = shift;
+
+    my $class_name = $self->class_name;
+    my $pos = index($class_name,"::");
+    return $class_name if ($pos < 1);  # The top-level namespace class is in its namespace
+
+    my $namespace = substr($class_name,0,$pos);
+    return $namespace;
+}
+
+
 sub data_source {
     my $self = shift;
     my $ds = $self->__data_source(@_);
