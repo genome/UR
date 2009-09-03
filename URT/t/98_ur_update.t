@@ -129,12 +129,12 @@ sub undo_log_summary {
 }
 
 
+# Hack - These get filled in at the bottom initialize_check_changes_data_structure()
+our($check_changes_1, $check_changes_2, $check_changes_3);
 # Empty schema
 
 $trans = UR::Context::Transaction->begin();
 ok($trans, "began transaction");
-
-print Data::Dumper::Dumper($UR::Object::all_objects_loaded->{'UR::DataSource::RDBMS::Table::Ghost'});
 
     ok($command_obj->execute(),'Executing update on an empty schema');
 
@@ -153,10 +153,14 @@ $trans = UR::Context::Transaction->begin();
 ok($trans, "CREATED PERSON and began transaction");
 
         ok($command_obj->execute(),'Executing update after creating person table');
+
+        initialize_check_change_data_structures();
         @changes = get_changes();
         # FIXME The test should probably break out each type of changed thing and check
         # that the counts of each type are correct, and not just the count of all changes
-        is(scalar(@changes), 11, "found changes for the new table and class");
+        my $changes_as_hash = convert_change_list_for_checking(@changes);
+$DB::single=1;
+        is_deeply($changes_as_hash, $check_changes_1, "Change list is correct");
 
         my $personclass = UR::Object::Type->get('URT::Person');
         isa_ok($personclass, 'UR::Object::Type');  # FIXME why isn't this a UR::Object::Type
@@ -199,7 +203,8 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
 
     ok($command_obj->execute(), 'Updating schema');
     @changes = get_changes();
-    is(scalar(@changes), 47, "found changes for two new tables, and one modified table");
+    $changes_as_hash = convert_change_list_for_checking(@changes);
+    is_deeply($changes_as_hash, $check_changes_2, "Change list is correct");
 
     # Verify the Person.pm and Employee.pm modules exist
 
@@ -268,7 +273,8 @@ ok($trans, "DROPPED CAR and began transaction");
 
     ok($command_obj->execute(), 'Updating schema');
     @changes = get_changes();
-    is(scalar(@changes), 33, "found changes for one dropped table");
+    $changes_as_hash = convert_change_list_for_checking(@changes);
+    is_deeply($changes_as_hash, $check_changes_3, "Change list is correct");
 
     ok($personclass = UR::Object::Type->get('URT::Person'),'Loaded Person class');
     ok($employeeclass = UR::Object::Type->get('URT::Employee'), 'Loaded Employee class');
@@ -390,5 +396,479 @@ my $dbfile = shift;
 }
 
 
+# Convert the list of changes to a data structure matching the expected changes
+sub convert_change_list_for_checking {
+    my(@changes_list) = @_;
+
+    my $changes = {};
+    foreach my $change ( @changes_list ) {
+        my $changed_class_name = $change->{'changed_class_name'};
+        my $changed_id = $change->{'changed_id'};
+        my $changed_aspect = $change->{'changed_aspect'};
+        my $undo_data = $change->{'undo_data'};
+        if (exists $changes->{$changed_class_name}->{$changed_id}->{$changed_aspect}) {
+            die "Two types of changes for the same thing in the same transaction!?";
+        }
+
+        $changes->{$changed_class_name}->{$changed_id}->{$changed_aspect} = defined($undo_data);
+    }
+
+    return $changes;
+}
+    
+
+    
+# These expected change data structures work like this:
+# Based on the UR::Change objects, the first level hash key is
+# the changed_class_name, second level key is the changed_id,
+# the third level key is the changed_aspect, and the final value
+# is whether the undo_data is defined or not.
+#
+# Note that because of the way this testcase works, by creating a
+# transaction, updating metadata, and the rolling back the transaction,
+# all these metadata objects are always "created" as new, and not
+# modifications of existing things.
+#
+# There should probably be tests for the usual case where you would be
+# updating existing classes based on DB changes
+
+# Changes after creating the person table and running ur update classes
+
+sub initialize_check_change_data_structures {
+    $check_changes_1 = {
+    'UR::DataSource::RDBMS::Table' => {
+        "URT::DataSource::SomeSQLite\t\tPERSON" => {
+            create => '',    # Meta DB object is created for the person table
+            er_type => '',    # And ur update classes fills in an er_type
+         },
+    },
+    'UR::DataSource::RDBMS::TableColumn' => {
+        # The (new) person table has 2 (new) columns, person_id and name
+        "URT::DataSource::SomeSQLite\t\tPERSON\tPERSON_ID" => {
+            create => ''
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tNAME" => {
+            create => ''
+        },
+    },
+    'UR::DataSource::RDBMS::PkConstraintColumn' => {
+        # person_id is the first and only primary column constraint
+        "URT::DataSource::SomeSQLite\t\tPERSON\tperson_id\t1" => {
+            create => ''
+        },
+    },
+    'UR::Object::Type' => {
+        # A new metaclass gets created for the person table
+        'URT::Person::Type' => {
+            create => ''
+        },
+    },
+    'URT::Person::Type' => {
+        'URT::Person' => {
+            create => '', # And then the class that goes with the table
+            rewrite_module_header => 1, # And a record that we wrote a perl module on the filesystem
+        },
+    },
+    'UR::Object::Property' => {
+        # Two new properties for the person class, name and person_id
+        "URT::Person\tname" => {
+            create => ''
+        }, 
+        "URT::Person\tperson_id" => {
+            create => ''
+        },
+    },
+    'UR::Object::Property::ID' => {
+        "person\t1" => { # and the ID property that goes with the primary key constraint
+            create => ''
+        },
+    }
+};
+                        
+
+# Changes after creating the car and employee tables, and adding postal_address column to person
+    $check_changes_2 = {
+    'UR::DataSource::RDBMS::Table' => {
+        # 3 tables: person, employee and car
+        "URT::DataSource::SomeSQLite\t\tPERSON" => {
+            create => '',
+            er_type => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE" => {
+            create => '',
+            er_type => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tCAR" => {
+            create => '',
+            er_type => '',
+        },
+    },
+
+    'UR::DataSource::RDBMS::TableColumn' => {
+        # Table person now has 3 columns: person_id, name and postal_address
+        "URT::DataSource::SomeSQLite\t\tPERSON\tPERSON_ID" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tNAME" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tPOSTAL_ADDRESS" => {
+            create => '',
+        },
+        # table employee has 2 columns: employee_id and rank
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tEMPLOYEE_ID" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tRANK" => {
+            create => '',
+        },
+        # table car has these columns: car_id, make, model, color and cost
+        "URT::DataSource::SomeSQLite\t\tCAR\tCAR_ID" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tCAR\tMAKE" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tCAR\tMODEL" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tCAR\tCOLOR" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tCAR\tCOST" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tCAR\tOWNER_ID" => {
+            create => '',
+        },
+    },
+
+    'UR::DataSource::RDBMS::FkConstraint' => {
+       # Both employee and car tables have foreign keys to person
+        "URT::DataSource::SomeSQLite\t\t\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\t\tCAR\tPERSON\tFK_PERSON_ID2" => {
+            create => '',
+        },
+    },
+
+    'UR::DataSource::RDBMS::FkConstraintColumn' => {
+        # The employee table FK points from employee_id to person_id
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tFK_PERSON_ID\tEMPLOYEE_ID" => {
+            create => '',
+        },
+        # The car table FK points from owner_id to person_id
+        "URT::DataSource::SomeSQLite\t\tCAR\tFK_PERSON_ID2\tOWNER_ID" => {
+            create => '',
+        }
+    },
+
+    'UR::DataSource::RDBMS::PkConstraintColumn' => {
+        # All three tables have PK constraints for their ID columns
+        "URT::DataSource::SomeSQLite\t\tPERSON\tperson_id\t1" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\temployee_id\t1" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tCAR\tcar_id\t1" => {
+            create => '',
+        },
+    },
+
+    # running ur update classes makes 3 new classes
+    'UR::Object::Type' => {
+        "URT::Car::Type" => {
+            create => '',
+        },
+        "URT::Employee::Type" => {
+            create => '',
+        },
+        "URT::Person::Type" => {
+            create => '',
+        },
+    },
+  
+    # Each class has a property for the respective tablecolumn
+    'UR::Object::Property' => {
+        "URT::Car\tcar_id" => {
+            create => '',
+        },
+        "URT::Car\tcolor" => {
+            create => '',
+        },
+        "URT::Car\tcost" => {
+            create => '',
+        },
+        "URT::Car\tmake" => {
+            create => '',
+        },
+        "URT::Car\tmodel" => {
+            create => '',
+        },
+        "URT::Car\towner_id" => {
+            create => '',
+        },
+
+        "URT::Employee\temployee_id" => {
+           create => '',
+        },
+        "URT::Employee\trank" => {
+           create => '',
+        },
+
+        "URT::Person\tname" => {
+           create => '',
+        },
+        "URT::Person\tperson_id" => {
+           create => '',
+        },
+        "URT::Person\tpostal_address" => {
+           create => '',
+        },
+    },
+
+    # Each class has an ID property
+    'UR::Object::Property::ID' => {
+        "car\t1" => {
+            create => '',
+        },
+        "employee\t1" => {
+            create => '',
+        },
+        "person\t1" => {
+            create => '',
+        },
+    },
+
+    # each foreign key has a related reference 
+    'UR::Object::Reference' => {
+        'URT::Car::person_owner' => {
+            create => '',
+        },
+        'URT::Employee::person_employee' => {
+            create => '',
+        },
+    },
+
+    # and each FK column has a related reference property
+    'UR::Object::Reference::Property' => {
+        "URT::Employee::person_employee\t1" => {
+            create => '',
+        },
+        "URT::Car::person_owner\t1" => {
+            create => '',
+        },
+    },
+
+    # There a record of creating an instance of each class, and 
+    # that we wrote a perl module on the filesystem
+    'URT::Car::Type' => {
+        'URT::Car' => {
+            create => '',
+            rewrite_module_header => 1,
+        },
+    },
+    'URT::Employee::Type' => {
+        'URT::Employee' => {
+            create => '',
+            rewrite_module_header => 1,
+        },
+    },
+    'URT::Person::Type' => {
+        'URT::Person' => {
+            create => '',
+            rewrite_module_header => 1,
+        },
+    },
+
+    # Because we rolled back the previous transaction, the old metadata
+    # objects became ghosts.  This is suboptimal and makes little sense
+    # but there it is...
+    'UR::DataSource::RDBMS::Table::Ghost' => {
+        "URT::DataSource::SomeSQLite\t\tPERSON" => {
+            delete => 1,
+        },
+    },
+    'UR::DataSource::RDBMS::TableColumn::Ghost' => {
+        "URT::DataSource::SomeSQLite\t\tPERSON\tPERSON_ID" => {
+            delete => 1,
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tNAME" => {
+            delete => 1,
+        },
+    },
+    'UR::DataSource::RDBMS::PkConstraintColumn::Ghost' => {
+        "URT::DataSource::SomeSQLite\t\tPERSON\tperson_id\t1" => {
+            delete => 1,
+        },
+    },
+};
+
+
+
+# After removing the car table
+    $check_changes_3 = {
+    # FIXME Why are there no ghost objects for the dropped car stuff?
+
+    'UR::DataSource::RDBMS::Table' => {
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE" => {
+            create => '',
+            er_type => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON" => {
+            create => '',
+            er_type => '',
+        },
+    },
+
+    'UR::DataSource::RDBMS::TableColumn' => {
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tEMPLOYEE_ID" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tRANK" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tPERSON_ID" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tNAME" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tPOSTAL_ADDRESS" => {
+            create => '',
+        },
+    },
+
+    'UR::DataSource::RDBMS::FkConstraint' => {
+        "URT::DataSource::SomeSQLite\t\t\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+            create => '',
+        },
+    },
+
+    'UR::DataSource::RDBMS::FkConstraintColumn' => {
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tFK_PERSON_ID\tEMPLOYEE_ID" => {
+            create => '',
+        },
+    },
+
+    'UR::DataSource::RDBMS::PkConstraintColumn' => {
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\temployee_id\t1" => {
+            create => '',
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tperson_id\t1" => {
+            create => '',
+        },
+    },
+
+
+    'URT::Employee::Type' => {
+        'URT::Employee' => {
+            create => '',
+            rewrite_module_header => 1,
+        },
+    },
+    'URT::Person::Type' => {  
+        'URT::Person' => {
+           create => '',
+            rewrite_module_header => 1,
+        },
+    },
+
+    'UR::Object::Type' => {
+        'URT::Person::Type' => {
+            create => '',
+        },
+        'URT::Employee::Type' => {
+            create => '',
+        },
+    },
+
+    'UR::Object::Property' => {
+        "URT::Employee\temployee_id" => {
+            create => '',
+        },
+        "URT::Employee\trank" => {
+            create => '',
+        },
+        "URT::Person\tperson_id" => {
+            create => '',
+        },
+        "URT::Person\tname" => {
+            create => '',
+        },
+        "URT::Person\tpostal_address" => {
+            create => '',
+        },
+    },
+
+    'UR::Object::Property::ID' => {
+        "employee\t1" => {
+            create => '',
+        },
+        "person\t1" => {
+            create => '',
+        },
+    },
+
+    'UR::Object::Reference' => {
+        "URT::Employee::person_employee" => {
+            create => '',
+        },
+    },
+
+    'UR::Object::Reference::Property' => {
+        "URT::Employee::person_employee\t1" => {
+            create => '',
+        },
+    },
+
+    'UR::DataSource::RDBMS::Table::Ghost' => {
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE" => {
+            delete => 1,
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON" => {
+            delete => 1,
+        },
+    },
+    'UR::DataSource::RDBMS::TableColumn::Ghost' => {
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tEMPLOYEE_ID" => {
+            delete => 1,
+        },
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tRANK" => {
+            delete => 1,
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tPERSON_ID" => {
+            delete => 1,
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tNAME" => {
+            delete => 1,
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tPOSTAL_ADDRESS" => {
+            delete => 1,
+        },
+    },
+    'UR::DataSource::RDBMS::FkConstraint::Ghost' => {
+        "URT::DataSource::SomeSQLite\t\t\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+            delete => 1,
+        },
+    },
+    'UR::DataSource::RDBMS::FkConstraintColumn::Ghost' => {
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\tFK_PERSON_ID\tEMPLOYEE_ID" => {
+            delete => 1,
+        },
+    },
+    'UR::DataSource::RDBMS::PkConstraintColumn::Ghost' => {
+        "URT::DataSource::SomeSQLite\t\tEMPLOYEE\temployee_id\t1" => {
+            delete => 1,
+        },
+        "URT::DataSource::SomeSQLite\t\tPERSON\tperson_id\t1" => {
+            delete => 1,
+        },
+    },
+
+};
+}
 
 1;
