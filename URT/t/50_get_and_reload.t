@@ -67,7 +67,10 @@ foreach my $class ( 'URT::Thing', 'URT::SubclassedThing' ) {
          qr/A change has occurred in the database for $class property color on object 3 from 'red' to 'orange'. At the same time, this application has made a change to that value to blue./,
          'Error message looks correct');
     is($things[0]->color, 'blue', 'color remains what we set it to');
-    is($things[0]->{'db_committed'}->{'color'}, 'orange', 'db_committed for the color was updated to what we set the database to');
+    #is($things[0]->{'db_committed'}->{'color'}, 'orange', 'db_committed for the color was updated to what we set the database to');
+    is(UR::Context->_get_committed_property_value($things[0],'color'),
+       'orange',
+       'db_committed for the color was updated to what we set the database to');
     
     # We now have to make that last object look like it's unchanged or the next get() will
     # also throw an exception
