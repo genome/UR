@@ -138,9 +138,11 @@ sub create {
     if (my $method_name = $class_meta->first_sub_classification_method_name) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
         my $sub_class_name = $class->$method_name(@_);
-        if ($sub_class_name ne $class) {
+        if (defined($sub_class_name) and ($sub_class_name ne $class)) {
             # delegate to the sub-class to create the object
             unless ($sub_class_name->can('create')) {
+                $DB::single = 1;
+                print $sub_class_name->can('create');
                 die "$class has determined via $method_name that the correct subclass for this object is $sub_class_name.  This class cannot create!" . join(",",$sub_class_name->inheritance);
             }
             return $sub_class_name->create(@_);
@@ -148,7 +150,7 @@ sub create {
         # fall through if the class names match
     }
     
-    if ($class_meta->is_abstract) {        
+    if ($class_meta->is_abstract) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
 
         # Determine the correct subclass for this object
