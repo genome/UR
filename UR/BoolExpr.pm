@@ -5,6 +5,9 @@ use strict;
 use Scalar::Util qw(blessed);
 require UR;
 
+use overload ('""' => 'desc');
+
+
 our $VERSION = '0.1';
 
 # Borrow from the util package.
@@ -50,7 +53,7 @@ sub desc {
     $s =~ s/^\s*{//; 
     $s =~ s/\}\s*$//;
     $s =~ s/\"(\w+)\" \=\> / $1 => /g;
-    return $self->subject_class_name . ':' . $s;
+    return __PACKAGE__ . '=(' . $self->subject_class_name . ':' . $s . ')';
 }
 
 *get_rule_template = \&rule_template;
