@@ -255,9 +255,10 @@ sub get_objects_for_class_and_rule {
     if (!$load and !$return_closure) {
         #print "shortcutting out\n";
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
-        return @c if wantarray;
+        return @c if wantarray;           # array context
+        return unless defined wantarray;  # null context
         Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
-        return $c[0];
+        return $c[0];                     # scalar context
     }
 
     
@@ -386,7 +387,7 @@ sub _create_import_iterator_for_underlying_context {
         warn "Implement me carefully";
         
         if ($rule_template_specifies_value_for_subtype) {
-            $DB::single = 1;
+            #$DB::single = 1;
             my $sub_classification_meta_class_name          = $template_data->{sub_classification_meta_class_name};
             my $value = $rule->specified_value_for_property_name($sub_typing_property);
             my $type_obj = $sub_classification_meta_class_name->get($value);
@@ -402,7 +403,7 @@ sub _create_import_iterator_for_underlying_context {
             }
         }
         elsif (not $class_table_name) {
-            $DB::single = 1;
+            #$DB::single = 1;
             # we're in a sub-class, and don't have the type specified
             # check to make sure we have a table, and if not add to the filter
             my $rule = $class_name->get_rule_for_params(
@@ -616,7 +617,6 @@ sub _create_object_fabricator_for_loading_template {
     }
 
     
-    
     my %subclass_is_safe_for_re_bless;
     my %subclass_for_subtype_name;  
     my %recurse_property_value_found;
@@ -627,6 +627,10 @@ sub _create_object_fabricator_for_loading_template {
     my $multi_column_id     = (@id_positions > 1 ? 1 : 0);
     my $composite_id_resolver = $class_meta->get_composite_id_resolver;
     
+    my $rule_class_name = $rule_template->subject_class_name;
+    my $load_class_name = $class;
+    my $load_rule_id = $load_class_name->get_rule_for_params($rule->params_list)->id;
+
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
         
@@ -842,8 +846,12 @@ sub _create_object_fabricator_for_loading_template {
             }
             
             if ($loading_base_object and not $rule_specifies_id) {
-                $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
-                $UR::Object::all_params_loaded->{$class}{$rule_id}++;    
+                if ($rule_class_name ne $load_class_name) {
+		    $pending_db_object->{load}{param_key}{$load_class_name}{$load_rule_id}++;
+                    $UR::Object::all_params_loaded->{$load_class_name}{$load_rule_id}++;    
+		}
+		$pending_db_object->{load}{param_key}{$rule_class_name}{$rule_id}++;
+		$UR::Object::all_params_loaded->{$rule_class_name}{$rule_id}++;    
             }
             
             unless ($subclass_name eq $class) {
@@ -897,6 +905,7 @@ sub _create_object_fabricator_for_loading_template {
                     else {
                         if ($loading_base_object) {
                             $loading_info = $dsx->_get_object_loading_info($pending_db_object);
+                            $dsx->_record_that_loading_has_occurred($loading_info);
                             $loading_info->{$subclass_name} = delete $loading_info->{$class};
                             $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
                         }
@@ -1137,13 +1146,12 @@ sub _cache_is_complete_for_class_and_normalized_rule {
 
     no warnings;
 
-$DB::single=1;
     my $loading_was_done_before_with_these_params =
             # complex (non-single-id) params
             exists($params->{_param_key}) 
             && (
                 # exact match to previous attempt
-                exists ($all_params_loaded->{$class}->{$params->{_param_key}})
+                exists ($UR::Object::all_params_loaded->{$class}->{$params->{_param_key}})
                 ||
                 # this is a subset of a previous attempt
                 ($self->_loading_was_done_before_with_a_superset_of_this_params_hashref($class,$params))
@@ -1338,9 +1346,8 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
         return;
     }
     else {
-        for my $try_class ( $class , $class->inheritance ) {
-
-            # more than one property, see if individual checks have been done for any of these...
+        for my $try_class ( $class, $class->inheritance ) {
+            # more than one property, seeeif individual checks have been done for any of these...
             for my $property_name (@property_names) {
                 next unless ($try_class->get_class_object->get_property_meta_by_name($property_name));
 
