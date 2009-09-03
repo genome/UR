@@ -666,7 +666,18 @@ sub _normalize_class_description {
     unless ($bootstrapping) {
         my @additional_property_meta_attributes;
         for my $parent_class_name (@{ $new_class{is} }) {
+            unless ($parent_class_name->can("get_class_object")) {
+                eval "use $parent_class_name";
+                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@" if $@; 
+            }
+            unless ($parent_class_name->can("get_class_object")) {
+                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method 'get_class_object' on $parent_class_name!"; 
+            }
             my $parent_class = $parent_class_name->get_class_object;
+            unless ($parent_class) {
+                warn "no class metadata bject for $parent_class_name!";
+                next;
+            }
             if (my $attributes_have = $parent_class->{attributes_have}) {
                 push @additional_property_meta_attributes, @$attributes_have;
             }
@@ -686,15 +697,7 @@ sub _normalize_class_description {
     my $desc = \%new_class;
     unless ($bootstrapping) {
         for my $parent_class_name (@{ $new_class{is} }) {
-            unless ($parent_class_name->can("get_class_object")) {
-                warn "no class meta method for $parent_class_name!";
-                next;
-            }
             my $parent_class = $parent_class_name->get_class_object;
-            unless ($parent_class) {
-                warn "no object for $parent_class_name!";
-                next;
-            }
             $desc = $parent_class->_preprocess_subclass_description($desc);
         }
     }
@@ -1573,4 +1576,5 @@ sub generate {
 
 
 1;
+
 
