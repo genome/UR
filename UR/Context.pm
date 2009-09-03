@@ -1368,6 +1368,7 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
             last if ($try_class eq 'UR::Object'); 
         }
     }
+    return;   
 }
 
 # all of these delegate to the current context...
