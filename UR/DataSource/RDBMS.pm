@@ -2898,7 +2898,20 @@ sub _generate_template_data_for_loading {
         my $delegate_class_meta = $delegated_property->class_meta;
         my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
         my $final_accessor = $delegated_property->to;
-        if (my $final_accessor_meta = $via_accessor_meta->data_type->__meta__->property_meta_for_name($final_accessor)) {
+        my $final_accessor_class_meta = $via_accessor_meta->data_type->__meta__;
+
+        # Follow all the via/to indirectedness to where the data ultimately comes from
+        if (my $final_accessor_meta = $final_accessor_class_meta->property_meta_for_name($final_accessor)) {
+
+            if ($final_accessor_meta->id eq "UR::Object\tid") {
+                # This is the generic 'id' property that won't be in the database.  See if the class 
+                # has a single, alternate ID property we can swap in here
+                my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
+                if (@id_properties == 1) {
+                    $final_accessor_meta = $id_properties[0];
+                    $final_accessor_class_meta = $final_accessor_meta->class_meta;
+                }
+            }
             while($final_accessor_meta && $final_accessor_meta->via) {
                 $final_accessor_meta = $final_accessor_meta->to_property_meta();
             }
@@ -2918,8 +2931,8 @@ sub _generate_template_data_for_loading {
         my %aliases_for_this_delegate;
         while (my $object_join = shift @joins) {
             #$DB::single = 1;
-            #print "\tjoin $join\n";
-            #        print Data::Dumper::Dumper($join);
+            #print "\tjoin $object_join\n";
+            #        print Data::Dumper::Dumper($object_join);
             
             $last_object_num = $object_num;
             $object_num++;
@@ -3163,7 +3176,9 @@ sub _generate_template_data_for_loading {
                         #print "found alias for $property_name on $foreign_class_name: $alias\n";
                     }
                     else {
-                        #print "no alias for $property_name on $foreign_class_name\n";
+                        # The thing we're joining to isn't a database-backed column (maybe calculated?)
+                        $needs_further_boolexpr_evaluation_after_loading = 1;
+                        next DELEGATED_PROPERTY;
                     }
                 }
                 
