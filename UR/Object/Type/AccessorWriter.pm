@@ -170,12 +170,12 @@ sub mk_id_based_object_accessor {
 }
 
 sub mk_indirect_ro_accessor {
-    my ($self, $class_name, $accessor_name, $via, $to) = @_;
-
+    my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
+    my @where = ($where ? @$where : ());
     my $accessor = sub {
         my $self = shift;
         Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
-        my @bridges = $self->$via;
+        my @bridges = $self->$via(@where);
         return unless @bridges;
         my @results = map { $_->$to } @bridges;
         $self->context_return(@results); 
@@ -186,11 +186,12 @@ sub mk_indirect_ro_accessor {
 }
 
 sub mk_indirect_rw_accessor {
-    my ($self, $class_name, $accessor_name, $via, $to) = @_;
+    my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
+    my @where = ($where ? @$where : ());
 
     my $accessor = sub {
         my $self = shift;
-        my @bridges = $self->$via;
+        my @bridges = $self->$via(@where);
         if (@_) {
             unless (@bridges) {
                 Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: property is via $via which is not set!");
@@ -443,7 +444,7 @@ sub mk_class_accessor
 
 sub mk_object_set_accessors {
     no warnings;
-    my ($self, $class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name) = @_;
+    my ($self, $class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name, $where) = @_;
 
     # The accessors may compare undef and an empty
     # string.  For speed, we turn warnings off rather
@@ -454,6 +455,7 @@ sub mk_object_set_accessors {
     # These are set by the resolver closure below, and kept in scope by the other closures
     my $rule_template;
     my @property_names;
+    my @where = ($where ? @$where : ());
     
     my $rule_resolver = sub {
         my ($obj) = @_;        
@@ -490,29 +492,35 @@ sub mk_object_set_accessors {
             $get_params{$link->property_name}  = $obj->$my_property_name;
         }
         my $tmp_rule = $r_class_name->get_rule_for_params(%get_params);
-        $rule_template = $tmp_rule->get_rule_template;        
+        $rule_template = $tmp_rule->get_rule_template;
     };
 
     my $rule_accessor = sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
-        return $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
+        if (@_ or @where) {
+            my $tmp_rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
+            return $r_class_name->get_rule_for_params($tmp_rule->params_list,@where, @_);
+        }
+        else {
+            return $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
+        }
     };
 
     my $list_accessor = sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-        
-        return $r_class_name->get($rule);
+        if (@_ or @where) {
+            return $r_class_name->get($rule->params_list,@where,@_);
+        }
+        else {
+            return $r_class_name->get($rule);
+        }
     };
     
     my $arrayref_accessor = sub {
-        my $self = shift;
-        $rule_resolver->($self) unless ($rule_template);
-        my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-        
-        return [ $r_class_name->get($rule) ];
+        return [ $list_accessor->(@_) ];
     };
 
     my $iterator_accessor = sub {
@@ -641,6 +649,7 @@ sub initialize_direct_accessors {
         my $column_name = $property_data->{column_name};
         my $attribute_name = $property_data->{attribute_name};
         my $is_transient = $property_data->{is_transient};
+        my $where = $property_data->{where};
         
         #my ($props, $cols) = $class_name->_all_properties_columns;
         
@@ -667,10 +676,10 @@ sub initialize_direct_accessors {
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
             if ($property_data->{is_mutable}) {
-                $self->mk_indirect_rw_accessor($class_name,$accessor_name,$via,$to,$is_transient);
+                $self->mk_indirect_rw_accessor($class_name,$accessor_name,$via,$to,$where);
             }
             else {
-                $self->mk_indirect_ro_accessor($class_name,$accessor_name,$via,$to);
+                $self->mk_indirect_ro_accessor($class_name,$accessor_name,$via,$to,$where);
             }
         }
         elsif (my $calculate = $property_data->{calculate}) {
@@ -702,7 +711,7 @@ sub initialize_direct_accessors {
             else {
                 $singular_name = $accessor_name;
             }
-            $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name);
+            $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name, $where);
         }        
         else {        
             if ($self->has_table and not $column_name) {
