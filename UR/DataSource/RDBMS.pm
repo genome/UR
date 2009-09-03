@@ -646,6 +646,10 @@ sub refresh_database_metadata_for_table_name {
     # this must be on or before the actual data dictionary queries
     my $revision_time = UR::Time->now();
 
+    # We'll count a table object as changed even if any of the columns,
+    # FKs, etc # were changed
+    my $data_was_changed_for_this_table = 0;
+
     # TABLE
     my $table_sth = $data_source->get_table_details_from_data_dictionary('%', $data_source->owner, $table_name, "TABLE,VIEW");
     my $table_data = $table_sth->fetchrow_hashref();
@@ -723,7 +727,10 @@ sub refresh_database_metadata_for_table_name {
             $column_obj->nullable(substr($column_data->{IS_NULLABLE}, 0, 1));
             $column_obj->data_length($column_data->{COLUMN_SIZE});
             $column_obj->remarks($column_data->{REMARKS});
-            $column_obj->last_object_revision($revision_time) if ($column_obj->__changes__());
+            if ($column_obj->__changes__()) {
+                $column_obj->last_object_revision($revision_time);
+                $data_was_changed_for_this_table = 1;
+            }
 
         } else {
             # It's new, create it from scratch
@@ -740,6 +747,8 @@ sub refresh_database_metadata_for_table_name {
                 remarks     => $column_data->{REMARKS},
                 last_object_revision => $revision_time,
             );
+
+            $data_was_changed_for_this_table = 1;
         }
 
         unless ($column_obj) {
@@ -750,8 +759,9 @@ sub refresh_database_metadata_for_table_name {
     }
     
     for my $to_delete (values %columns_to_delete) {
-        $self->status_message("Detected column " . $to_delete->column_name . " has gone away.");
+        #$self->status_message("Detected column " . $to_delete->column_name . " has gone away.");
         $to_delete->delete;
+        $data_was_changed_for_this_table = 1;
     }
 
 
@@ -820,6 +830,7 @@ sub refresh_database_metadata_for_table_name {
                 );
     
                 $fk{$fk->id} = $fk;
+                $data_was_changed_for_this_table = 1;
             }
     
             if ($fk{$fk->id}) {
@@ -883,6 +894,7 @@ sub refresh_database_metadata_for_table_name {
                     1;
                 }
                 $fk{$fk->fk_constraint_name} = $fk;
+                $data_was_changed_for_this_table = 1;
             }
     
             if ($fk{$fk->fk_constraint_name}) {
@@ -920,7 +932,7 @@ sub refresh_database_metadata_for_table_name {
     my $pk_sth = $data_source->get_primary_key_details_from_data_dictionary(undef, $db_owner, $table_name);
 
     if ($pk_sth) {
-		my @new_pk;
+        my @new_pk;
         while (my $data = $pk_sth->fetchrow_hashref()) {
             $data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
             my $pk = UR::DataSource::RDBMS::PkConstraintColumn->get(
@@ -929,32 +941,32 @@ sub refresh_database_metadata_for_table_name {
                             column_name => $data->{'COLUMN_NAME'},
                           );
             if ($pk) {
-				# Since the rank/order is pretty much all that might change, we
-				# just delete and re-create these.
-				# It's a no-op at save time if there are no changes.
+                # Since the rank/order is pretty much all that might change, we
+                # just delete and re-create these.
+                # It's a no-op at save time if there are no changes.
             	$pk->delete;
             }
 			
-			push @new_pk, [
-				table_name => $table_name,
-				data_source => $data_source_id,
-				owner => $data_source->owner,
-				column_name => $data->{'COLUMN_NAME'},
-				rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
-			];
-			#        $table_object->{primary_key_constraint_name} = $data->{PK_NAME};
-			#        $embed{primary_key_constraint_column_names} ||= {};
-			#        $embed{primary_key_constraint_column_names}{$table_object} ||= [];
-			#        push @{ $embed{primary_key_constraint_column_names}{$table_object} }, $data->{COLUMN_NAME};
+            push @new_pk, [
+                            table_name => $table_name,
+                            data_source => $data_source_id,
+                            owner => $data_source->owner,
+                            column_name => $data->{'COLUMN_NAME'},
+                            rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
+                          ];
+            #        $table_object->{primary_key_constraint_name} = $data->{PK_NAME};
+            #        $embed{primary_key_constraint_column_names} ||= {};
+            #        $embed{primary_key_constraint_column_names}{$table_object} ||= [];
+            #        push @{ $embed{primary_key_constraint_column_names}{$table_object} }, $data->{COLUMN_NAME};
         }
 		
-		for my $data (@new_pk) {
-        	my $pk = UR::DataSource::RDBMS::PkConstraintColumn->create(@$data);
-			unless ($pk) {
-				$self->error_message("Failed to create primary key @$data");
-				return;
-			}
-		}			
+        for my $data (@new_pk) {
+            my $pk = UR::DataSource::RDBMS::PkConstraintColumn->create(@$data);
+            unless ($pk) {
+                $self->error_message("Failed to create primary key @$data");
+                return;
+            }
+        }			
     }
 
     ## Get the unique constraints
@@ -1046,6 +1058,8 @@ sub refresh_database_metadata_for_table_name {
             }
         }
     }
+
+    $table_object->last_object_revision($revision_time) if ($data_was_changed_for_this_table);
 
     # Now that all columns know their foreign key constraints,
     # have the column objects resolve the various names
