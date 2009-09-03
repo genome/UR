@@ -80,7 +80,7 @@ $DB::single=1;
         print " < ", join(' ', @parent_class_names);
     }
 
-    my $class_meta = $class->get_class_object();
+    my $class_meta = $class->__meta__();
 
     print "\n  Class:\n";
     

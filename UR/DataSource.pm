@@ -128,10 +128,10 @@ sub _generate_class_data_for_loading {
     my $sub_typing_property = $class_meta->subclassify_by;
 
     my $class_table_name = $class_meta->table_name;
-    my @type_names_under_class_with_no_table;
-    unless($class_table_name) {
-        my @type_names_under_class_with_no_table = ($class_meta->type_name, $class_meta->all_derived_type_names);
-    }
+    #my @type_names_under_class_with_no_table;
+    #unless($class_table_name) {
+    #    my @type_names_under_class_with_no_table = ($class_meta->type_name, $class_meta->all_derived_type_names);
+    #}
 
     my $class_data = {
         class_name                          => $class_name,
@@ -153,7 +153,7 @@ sub _generate_class_data_for_loading {
         # "table" concept is stretched to mean any valid structure identifier 
         # within the datasource.
         first_table_name                    => $first_table_name,
-        type_names_under_class_with_no_table => \@type_names_under_class_with_no_table,
+        #type_names_under_class_with_no_table => \@type_names_under_class_with_no_table,
         class_table_name                    => $class_table_name,
     };
     
@@ -170,7 +170,7 @@ sub _generate_template_data_for_loading {
     # class-based values
     
     my $class_name = $rule_template->subject_class_name;
-    my $class_meta = $class_name->get_class_object;
+    my $class_meta = $class_name->__meta__;
     my $class_data = $self->_get_class_data_for_loading($class_meta);       
 
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
@@ -193,7 +193,7 @@ sub _generate_template_data_for_loading {
 
     my $sub_typing_property                 = $class_data->{sub_typing_property};
     my $class_table_name                    = $class_data->{class_table_name};
-    my @type_names_under_class_with_no_table= @{ $class_data->{type_names_under_class_with_no_table} };
+    #my @type_names_under_class_with_no_table= @{ $class_data->{type_names_under_class_with_no_table} };
     
     # individual query/boolexpr based
     
@@ -365,7 +365,7 @@ sub _generate_template_data_for_loading {
         my $delegate_class_meta = $delegated_property->class_meta;
         my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
         my $final_accessor = $delegated_property->to;            
-        my $final_accessor_meta = $via_accessor_meta->data_type->get_class_object->property_meta_for_name($final_accessor);
+        my $final_accessor_meta = $via_accessor_meta->data_type->__meta__->property_meta_for_name($final_accessor);
         while($final_accessor_meta->is_delegated) {
             $final_accessor_meta = $final_accessor_meta->to_property_meta();
         }
@@ -404,7 +404,7 @@ sub _generate_template_data_for_loading {
                     unless ($p) {
                         Carp::confess("No property $_ for class $source_class_object->{class_name}\n");
                     }
-                    [$p->class_name->get_class_object->class_name, $p->property_name];
+                    [$p->class_name->__meta__->class_name, $p->property_name];
                 }
                 @source_property_names;
 
@@ -670,7 +670,7 @@ sub _get_object_loading_info {
         while (my ($class,$param_strings_hashref) = each %{ $obj->{load}->{param_key} }) {
             for my $param_string (keys %$param_strings_hashref) {
                 $param_load_hash{$class}{$param_string}=
-                    $UR::Object::all_params_loaded->{$class}{$param_string};
+                    $UR::Context::all_params_loaded->{$class}{$param_string};
             }
         }
     }
@@ -697,7 +697,7 @@ sub _record_that_loading_has_occurred {
     foreach my $class (keys %$param_load_hash) {
         my $param_data = $param_load_hash->{$class};
         foreach my $param_string (keys %$param_data) {
-            $UR::Object::all_params_loaded->{$class}{$param_string} ||=
+            $UR::Context::all_params_loaded->{$class}{$param_string} ||=
                 $param_data->{$param_string};
         }
     }
@@ -714,7 +714,7 @@ sub _first_class_in_inheritance_with_a_table {
         $DB::single = 1;
         Carp::confess("No class?");
     }
-    my $class_object = $class->get_class_object;
+    my $class_object = $class->__meta__;
     my $found = "";
     for ($class_object, $class_object->ancestry_class_metas)
     {                
@@ -778,7 +778,7 @@ sub _CopyToAlternateDB {
         my $class = shift @isa;
         next if $class_tables{$class};
 
-        my $class_obj = $class->get_class_object;
+        my $class_obj = $class->__meta__;
         next unless $class_obj;
 
         my $table_name = $class_obj->table_name;
@@ -800,7 +800,7 @@ sub _CopyToAlternateDB {
     foreach my $class ( keys %class_tables ) {
         next if (! $class_tables{$class} || $ALTERNATE_DB{$dbname}->{'tables'}->{$class_tables{$class}}++);
 
-        my $class_obj = $class->get_class_object();
+        my $class_obj = $class->__meta__();
         $class_obj->mk_table($dbh);
         #unless ($class_obj->mk_table($dbh)) {
         #    $dbh->rollback();
@@ -848,7 +848,7 @@ sub _get_current_entities {
     for my $class_meta (@class_meta) {
         next unless $class_meta->generated();  # Ungenerated classes won't have any instances
         my $class_name = $class_meta->class_name;
-        push @objects, $class_name->all_objects_loaded();
+        push @objects, $UR::Context::current->all_objects_loaded($class_name);
     }
     return @objects;
 }
@@ -870,7 +870,7 @@ sub _set_specified_objects_saved_uncommitted {
     }
 
     for my $class_name (sort keys %objects_by_class) {
-        my $class_object = $class_name->get_class_object;
+        my $class_object = $class_name->__meta__;
         my @property_names =
             map { $_->property_name }
             grep { $_->column_name }
@@ -893,7 +893,7 @@ sub _set_all_objects_saved_committed {
     my @objects = $self->_get_current_entities;
     for my $obj (@objects)  {
         unless ($self->_set_object_saved_committed($obj)) {
-            die "An error occurred setting " . $obj->display_name_full
+            die "An error occurred setting " . $obj->__display_name__
              . " to match the committed database state.  Exiting...";
         }
     }
@@ -926,7 +926,7 @@ sub _set_all_objects_saved_rolled_back {
     my @objects = $self->_get_current_entities;
     for my $obj (@objects)  {
         unless ($self->_set_object_saved_rolled_back($obj)) {
-            die "An error occurred setting " . $obj->display_name_full
+            die "An error occurred setting " . $obj->__display_name__
              . " to match the rolled-back database state.  Exiting...";
         }
     }

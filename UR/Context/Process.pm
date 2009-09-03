@@ -104,7 +104,7 @@ the underlying context.
 
 sub has_changes {
     my $self = shift;
-    my @ns = UR::Namespace->all_objects_loaded();
+    my @ns = $self->all_objects_loaded('UR::Namespace');
     for my $ns (@ns) {
         my @ds = $ns->get_data_sources();
         for my $ds (@ds) {
@@ -133,7 +133,7 @@ sub _create_for_current_process {
 
     die "Process object for the current process already exists!" if $UR::Context::process;
 
-    #my $rule = $class->get_rule_for_params(@_);        
+    #my $rule = $class->define_boolexpr(@_);        
     my $rule = UR::BoolExpr->resolve_for_class_and_params($class, @_);
     
     my $host_name = Sys::Hostname::hostname();

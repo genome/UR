@@ -139,7 +139,7 @@ sub dbic_resolve_module_header_source {
         my $reltype = $self->_dbic_relation_type_for_property($property);
                
         # Wow, there should be a shorter way to get this
-        my $dbic_r_class_name = $r_property->class_name->get_class_object->dbic_resolve_package_name_for_class_name;
+        my $dbic_r_class_name = $r_property->class_name->__meta__->dbic_resolve_package_name_for_class_name;
 
         $perl .= sprintf("__PACKAGE__->%s('%s','%s','%s');\n",
                          $reltype,
@@ -193,7 +193,7 @@ $DB::single=1;
     }
 
     # Make sure that all the reverse properties point to the same class
-    my @remote_properties_classes = map { $_->class_name->get_class_object->dbic_resolve_package_name_for_class_name }
+    my @remote_properties_classes = map { $_->class_name->__meta__->dbic_resolve_package_name_for_class_name }
                                      @remote_properties;
 
     my $dbic_r_class_name = shift @remote_properties_classes;

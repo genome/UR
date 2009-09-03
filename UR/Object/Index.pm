@@ -38,13 +38,15 @@ sub data_tree
 
 sub create {
     my $class = shift;
-    my $params = $class->preprocess_params(@_);
-    
-    $params->{data_tree} ||= {};
-    
-    my $self = $class->create_object($params);        
+    #my $params = $class->preprocess_params(@_);
+    #$params->{data_tree} ||= {};
+    #my $self = $class->create_object($params);
+    #return unless $self;
+
+    my $self = $class->create_object(@_);
     return unless $self;
-    
+    $self->{data_tree} ||= {};   
+ 
     $self->_build_data_tree;
     $self->_setup_change_subscription;
     
@@ -303,8 +305,7 @@ sub _build_data_tree
     # _add_object in bulk.
     no warnings;
     my ($object,@values,$hr,$value);
-    for my $object ($self->indexed_class_name->all_objects_loaded)
-    {            
+    for my $object ($UR::Context::current->all_objects_loaded($self->indexed_class_name)) {            
         @values = map { $object->$_ } @indexed_property_names;
         $hr = $hr_base;
         for $value (@values)

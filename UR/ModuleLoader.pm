@@ -83,7 +83,7 @@ sub dynamically_load_class {
             Carp::confess("Failed to resolve a namespace for Class object ".$meta->class_name);
         };
         unless ($namespace eq 'UR') {
-            my $namespace_module_dir = $namespace->get_class_object->module_directory;
+            my $namespace_module_dir = $namespace->__meta__->module_directory;
             unless ($class =~ /^UR::/ or index($class_module_dir,$namespace_module_dir) == 0) {
                 Carp::confess(
                     "Attempt to load a module from outside the namespace tree!\n"

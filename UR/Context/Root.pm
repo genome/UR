@@ -67,7 +67,7 @@ sub set_current {
             . "This does not inherit from UR::Context."
     }
     
-    unless ($ENV{UR_CONTEXT_ROOT}->get_class_object) {
+    unless ($ENV{UR_CONTEXT_ROOT}->__meta__) {
         die "The context at application initialization is set to "
             . $ENV{UR_CONTEXT_ROOT} . ".\n"
             . "This is not defined with UR::Object::Type metadata!"

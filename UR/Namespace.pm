@@ -86,7 +86,7 @@ sub get_vocabulary
 sub get_base_directory_name
 {
     my $class = shift->_singleton_class_name;
-    my $dir = $class->get_class_object->module_path;
+    my $dir = $class->__meta__->module_path;
     $dir =~ s/\.pm$//;
     return $dir;
 }
@@ -94,7 +94,7 @@ sub get_base_directory_name
 sub get_deleted_module_directory_name
 {
     my $self = shift;
-    my $meta = $self->get_class_object;
+    my $meta = $self->__meta__;
     my $path = $meta->module_path;
     $path =~ s/.pm$//g;
     $path .= "/.deleted";

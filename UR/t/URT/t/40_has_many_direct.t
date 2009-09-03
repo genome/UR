@@ -23,7 +23,7 @@ class Line {
     ],
 };
 
-#print Data::Dumper::Dumper(Line->get_class_object);
+#print Data::Dumper::Dumper(Line->__meta__);
 
 my $o = Order->create(
     lines => [ 1, 2, 17 ]
@@ -40,8 +40,8 @@ class FileList {
     ]
 };
 
-#print Data::Dumper::Dumper(MyCommand->get_class_object);
-#my $m = MyCommand->get_class_object->property_meta_for_name("files");
+#print Data::Dumper::Dumper(MyCommand->__meta__);
+#my $m = MyCommand->__meta__->property_meta_for_name("files");
 #print Data::Dumper::Dumper($m);
 
 my $list1 = FileList->create(

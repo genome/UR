@@ -51,7 +51,7 @@ sub create {
 sub get_name {
     my $self = shift;
 
-    my $class_meta = $self->get_class_object;
+    my $class_meta = $self->__meta__;
     return sprintf("%s=%s:%s", $class_meta->class_name, $self->host, $self->port);
 }
 
@@ -185,7 +185,7 @@ sub _get_template_data_for_loading {
 
     unless ($template_data) {
         my $class_name = $rule_template->subject_class_name;
-        my $class_meta = $class_name->get_class_object;
+        my $class_meta = $class_name->__meta__;
         my $class_data = $self->_get_class_data_for_loading($class_meta);
     
         my $recursion_desc = $rule_template->recursion_desc;
@@ -196,7 +196,7 @@ sub _get_template_data_for_loading {
             $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for_property_name($sub_typing_property)
         }
 
-        my @property_names = $class_name->property_names;
+        my @property_names = $class_name->__meta__->all_property_names;
 
         $template_data = $rule_template->{loading_data_cache} = {
             select_clause                               => '',

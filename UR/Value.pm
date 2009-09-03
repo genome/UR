@@ -25,7 +25,7 @@ sub _load {
     }
     my $obj = $class->create_object($rule);
     
-    my $class_meta = $class->get_class_object;
+    my $class_meta = $class->__meta__;
     if (my $method_name = $class_meta->sub_classification_method_name) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, $rule);
         my $sub_class_name = $obj->$method_name;

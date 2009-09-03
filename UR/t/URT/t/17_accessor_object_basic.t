@@ -29,7 +29,7 @@ UR::Object::Type->define(
     ]
 );
 
-my $c = Acme::Employee->get_class_object;
+my $c = Acme::Employee->__meta__;
 my @p = sort $c->all_property_names;
 is_deeply(\@p, [qw/boss_id name/], "got expected old-style properties");
 

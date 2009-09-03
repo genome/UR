@@ -48,7 +48,7 @@ sub _data_dump_path {
 # FIXME is there a way to make this an object parameter instead of a method
 sub _database_file_path {
     my $self = shift->_singleton_object();
-    my $path = $self->get_class_object->module_path;
+    my $path = $self->__meta__->module_path;
     $path =~ s/\.pm$/.sqlite3/ or Carp::confess("Odd module path $path");
     my $dir = File::Basename::dirname($path);
     return $path; 

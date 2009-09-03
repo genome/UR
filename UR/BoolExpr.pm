@@ -162,7 +162,7 @@ sub specified_value_for_property_name {
         # No value found under that name... try decomposing the id 
         return if $property_name eq 'id';
         my $id_value = $self->specified_value_for_property_name('id');
-        my $class_meta = $self->subject_class_name->get_class_object();
+        my $class_meta = $self->subject_class_name->__meta__();
         my @id_property_values = $class_meta->get_composite_id_decomposer->($id_value);
         
         my @id_property_names = $class_meta->id_property_names;
@@ -332,7 +332,7 @@ sub resolve_for_class_and_params {
 
     # The class to which the parameters apply.
     my $subject_class = shift;
-    my $subject_class_meta = $subject_class->get_class_object;
+    my $subject_class_meta = $subject_class->__meta__;
     unless ($subject_class_meta) {
         die "No meta for $subject_class?!";
     }    
@@ -498,7 +498,7 @@ sub resolve_for_class_and_params {
                 my $property_type = $subject_class_meta->property_meta_for_name($key);
                 unless ($property_type) {
                     for my $class_name ($subject_class_meta->ancestry_class_names) {
-                        my $class_object = $class_name->get_class_object;
+                        my $class_object = $class_name->__meta__;
                         $property_type = $subject_class_meta->property_meta_for_name($key);
                         last if $property_type;
                     }
@@ -792,7 +792,7 @@ sub create_from_subject_class_name_keys_and_values {
 
 =head1 SYNOPSIS
     
-    my $r = GSC::Clone->get_rule_for_params(
+    my $r = GSC::Clone->define_boolexpr(
         "status" => "active",
         "chromosome" => [2,4,7],
         "clone_name like" => "Foo%",

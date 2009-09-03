@@ -77,7 +77,8 @@ sub _initialize_for_current_process {
 
 # the current context is either the process context, or the current transaction on-top of it
 
-sub get_current {
+*get_current = \&current;
+sub current {
     return $UR::Context::current;
 }
 
@@ -150,7 +151,7 @@ sub resolve_data_sources_for_class_meta_and_rule {
 sub resolve_data_source_for_object {
     my $self = shift;
     my $object = shift;
-    my $class_meta = $object->get_class_object;
+    my $class_meta = $object->__meta__;
     my $class_name = $class_meta->class_name;
     
     if ($class_name->isa('UR::DataSource::RDBMS::Entity')) {
@@ -397,7 +398,7 @@ sub prune_object_cache {
     #$main::did_prune=1;
     #my $t1 = Time::HiRes::time();
 
-    my $index_id_sep = UR::Object::Index->get_class_object->composite_id_separator() || "\t";
+    my $index_id_sep = UR::Object::Index->__meta__->composite_id_separator() || "\t";
 
     my %classes_to_prune;
     my %data_source_for_class;
@@ -505,7 +506,7 @@ sub get_objects_for_class_and_rule {
     # an identifier for all objects gotten in this request will be set/updated on each of them for pruning later
     my $this_get_serial = $GET_COUNTER++;
     
-    my $meta = $class->get_class_object();    
+    my $meta = $class->__meta__();    
 
     # If $load is undefined, and there is no underlying context, we define it to FALSE explicitly
     # TODO: instead of checking for a data source, skip this
@@ -1122,7 +1123,7 @@ sub _create_import_iterator_for_underlying_context {
         my ($rule_template, @values) = $rule->get_rule_template_and_values();
         my $rule_template_specifies_value_for_subtype   = $template_data->{rule_template_specifies_value_for_subtype};
         my $class_table_name                            = $template_data->{class_table_name};
-        my @type_names_under_class_with_no_table        = @{ $template_data->{type_names_under_class_with_no_table} };
+        #my @type_names_under_class_with_no_table        = @{ $template_data->{type_names_under_class_with_no_table} };
    
         warn "Implement me carefully";
         
@@ -1134,7 +1135,7 @@ sub _create_import_iterator_for_underlying_context {
             if ($type_obj) {
                 my $subclass_name = $type_obj->subclass_name($class_name);
                 if ($subclass_name and $subclass_name ne $class_name) {
-                    #$rule = $subclass_name->get_rule_for_params($rule->params_list, $sub_typing_property => $value);
+                    #$rule = $subclass_name->define_boolexpr($rule->params_list, $sub_typing_property => $value);
                     $rule = UR::BoolExpr->resolve_for_class_and_params($subclass_name, $rule->params_list, $sub_typing_property => $value);
                     return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial);
                 }
@@ -1147,14 +1148,15 @@ sub _create_import_iterator_for_underlying_context {
             #$DB::single = 1;
             # we're in a sub-class, and don't have the type specified
             # check to make sure we have a table, and if not add to the filter
-            #my $rule = $class_name->get_rule_for_params(
+            #my $rule = $class_name->define_boolexpr(
             #    $rule_template->get_rule_for_values(@values)->params_list, 
             #    $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
             #);
+            die "No longer supported!";
             my $rule = UR::BoolExpr->resolve_for_class_and_params(
                            $class_name,
                            $rule_template->get_rule_for_values(@values)->params_list,
-                           $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
+                           #$sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
                         );
             return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial)
         }
@@ -1273,11 +1275,11 @@ sub _create_import_iterator_for_underlying_context {
                     my $rule_template_is_id_only = $template_data->{rule_template_is_id_only};
                     if ($rule_template_is_id_only) {
                         my $id = $rule->specified_value_for_id;
-                        $UR::Object::all_objects_loaded->{$class_name}->{$id} = undef;
+                        $UR::Context::all_objects_loaded->{$class_name}->{$id} = undef;
                     }
                     else {
                         my $rule_id = $rule->id;
-                        $UR::Object::all_params_loaded->{$class_name}->{$rule_id} = 0;
+                        $UR::Context::all_params_loaded->{$class_name}->{$rule_id} = 0;
                     }
                 }
                 
@@ -1300,7 +1302,7 @@ sub _create_import_iterator_for_underlying_context {
                 
                 if ($recursion_desc) {
                     my @results = $class_name->is_loaded($rule_without_recursion_desc);
-                    $UR::Object::all_params_loaded->{$class_name}{$rule_without_recursion_desc->id} = scalar(@results);
+                    $UR::Context::all_params_loaded->{$class_name}{$rule_without_recursion_desc->id} = scalar(@results);
                     for my $object (@results) {
                         $object->{load}{param_key}{$class_name}{$rule_without_recursion_desc->id}++;
                     }
@@ -1457,7 +1459,7 @@ sub _create_object_fabricator_for_loading_template {
     my $class_name                                  = $loading_template->{final_class_name};
     $class_name or die "No final_class_name is loading template?";
     
-    my $class_meta                                  = $class_name->get_class_object;
+    my $class_meta                                  = $class_name->__meta__;
     my $class_data                                  = $dsx->_get_class_data_for_loading($class_meta);
     my $class = $class_name;
     
@@ -1520,8 +1522,8 @@ sub _create_object_fabricator_for_loading_template {
     my $rule_class_name = $rule_template->subject_class_name;
     my $load_class_name = $class;
     # $rule can contain params that may not apply to the subclass that's currently loading.
-    # get_rule_for_params() in array context will return the portion of the rule that actually applies
-    #my($load_rule, undef) = $load_class_name->get_rule_for_params($rule->params_list);
+    # define_boolexpr() in array context will return the portion of the rule that actually applies
+    #my($load_rule, undef) = $load_class_name->define_boolexpr($rule->params_list);
     my($load_rule, undef) = UR::BoolExpr->resolve_for_class_and_params($load_class_name, $rule->params_list);
     my $load_rule_id = $load_rule->id;
 
@@ -1549,7 +1551,7 @@ sub _create_object_fabricator_for_loading_template {
     my %rule_hints;
     if (!$loading_base_object && $rule_template->hints) {
         #$DB::single=1; 
-        my $query_class_meta = $rule_template->subject_class_name->get_class_object;
+        my $query_class_meta = $rule_template->subject_class_name->__meta__;
         foreach my $hint ( @{ $rule_template->hints } ) {
             my $delegated_property_meta = $query_class_meta->property_meta_for_name($hint);
             next unless $delegated_property_meta;
@@ -1557,7 +1559,7 @@ sub _create_object_fabricator_for_loading_template {
                 next unless ($join->{'foreign_class'} eq $loading_template->{'data_class_name'});
 
                 # Is this the equivalent of loading by the class' ID?
-                my $foreign_class_meta = $join->{'foreign_class'}->get_class_object;
+                my $foreign_class_meta = $join->{'foreign_class'}->__meta__;
                 my %join_properties = map { $_ => 1 } @{$join->{'foreign_property_names'}};
                 my $join_has_all_id_props = 1;
                 foreach my $foreign_id_prop ( $foreign_class_meta->all_id_property_metas ) {
@@ -1610,7 +1612,7 @@ sub _create_object_fabricator_for_loading_template {
         # skip if this object has been deleted but not committed
         do {
             no warnings;
-            if ($UR::Object::all_objects_loaded->{$ghost_class}{$pending_db_object_id}) {
+            if ($UR::Context::all_objects_loaded->{$ghost_class}{$pending_db_object_id}) {
                 return;
                 #$pending_db_object = undef;
                 #redo;
@@ -1618,7 +1620,7 @@ sub _create_object_fabricator_for_loading_template {
         };
 
         # Handle the object based-on whether it is already loaded in the current context.
-        if ($pending_db_object = $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id}) {
+        if ($pending_db_object = $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id}) {
             # The object already exists.            
             my $dbsu = $pending_db_object->{db_saved_uncommitted};
             my $dbc = $pending_db_object->{db_committed};
@@ -1682,7 +1684,7 @@ sub _create_object_fabricator_for_loading_template {
             #    # The object is changed in memory and no longer matches the query rule (= where clause)
             #    if ($loading_base_object and $rule_specifies_id) {
             #        $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
-            #        $UR::Object::all_params_loaded->{$class}{$rule_id}++;
+            #        $UR::Context::all_params_loaded->{$class}{$rule_id}++;
             #    }
             #    $pending_db_object->signal_change('load');
             #    return;
@@ -1742,7 +1744,7 @@ sub _create_object_fabricator_for_loading_template {
                                 unless (UR::Object::Type->get($some_subclass_name)->is_abstract) {
                                     next;
                                 }                
-                                my $some_subclass_meta = $some_subclass_name->get_class_object;
+                                my $some_subclass_meta = $some_subclass_name->__meta__;
                                 my $some_subclass_type_class = 
                                                 $some_subclass_meta->sub_classification_meta_class_name;
                                 if ($type_obj = $some_subclass_type_class->get($subtype_name)) {
@@ -1798,13 +1800,13 @@ sub _create_object_fabricator_for_loading_template {
             
             # store the object
             # note that we do this on the base class even if we know it's going to be put into a subclass below
-            $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id} = $pending_db_object;
+            $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id} = $pending_db_object;
             $UR::Context::all_objects_cache_size++;
             #$pending_db_object->signal_change('create_object', $pending_db_object_id)
             
             # If we're using a light cache, weaken the reference.
             if ($UR::Context::light_cache and substr($class,0,5) ne 'App::') {
-                Scalar::Util::weaken($UR::Object::all_objects_loaded->{$class_name}->{$pending_db_object_id});
+                Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class_name}->{$pending_db_object_id});
             }
             
             # Make a note in all_params_loaded (essentially, the query cache) that we've made a
@@ -1835,10 +1837,10 @@ sub _create_object_fabricator_for_loading_template {
             unless ($subclass_name eq $class) {
                 # we did this above, but only checked the base class
                 my $subclass_ghost_class = $subclass_name->ghost_class;
-                if ($UR::Object::all_objects_loaded->{$subclass_ghost_class}{$pending_db_object_id}) {
+                if ($UR::Context::all_objects_loaded->{$subclass_ghost_class}{$pending_db_object_id}) {
                     # We put it in the object cache a few lines above.
                     # FIXME - why not wait until we know we're keeping it before putting it in there?
-                    delete $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id};
+                    delete $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id};
                     $UR::Context::all_objects_cache_size--;
                     return;
                     #$pending_db_object = undef;
@@ -1933,8 +1935,8 @@ sub _create_object_fabricator_for_loading_template {
                         my $prev_class_name = $pending_db_object->class;
                         my $id = $pending_db_object->id;
                         $pending_db_object->signal_change("unload");
-                        delete $UR::Object::all_objects_loaded->{$prev_class_name}->{$id};
-                        delete $UR::Object::all_objects_are_loaded->{$prev_class_name};
+                        delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$id};
+                        delete $UR::Context::all_objects_are_loaded->{$prev_class_name};
                         if ($already_loaded) {
                             # The new object should replace the old object.  Since other parts of the user's program
                             # may have references to this object, we need to copy the values from the new object into
@@ -1943,7 +1945,7 @@ sub _create_object_fabricator_for_loading_template {
                             $pending_db_object = $already_loaded;
                         } else {
                             # This is a completely new object
-                            $UR::Object::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
+                            $UR::Context::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
                         }
                         bless $pending_db_object, $subclass_name;
                         $pending_db_object->signal_change("load");
@@ -2040,7 +2042,7 @@ sub _create_object_fabricator_for_loading_template {
                 # Log the smaller query which would get the hierarchically linked data directly as though it happened directly.
                 $recurse_property_value_found{$value_referencing_other_object} = 1;
                 # note that the direct query need not be done again
-                #my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object);
+                #my $equiv_params = $class->define_boolexpr($recurse_property_on_this_row => $value_referencing_other_object);
                 my $equiv_params = UR::BoolExpr->resolve_for_class_and_params(
                                        $class,
                                        $recurse_property_on_this_row => $value_referencing_other_object,
@@ -2048,7 +2050,7 @@ sub _create_object_fabricator_for_loading_template {
                 my $equiv_param_key = $equiv_params->get_normalized_rule_equivalent->id;                
                 
                 # note that the recursive query need not be done again
-                #my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object, -recurse => $recursion_desc);
+                #my $equiv_params2 = $class->define_boolexpr($recurse_property_on_this_row => $value_referencing_other_object, -recurse => $recursion_desc);
                 my $equiv_params2 = UR::BoolExpr->resolve_for_class_and_params(
                                         $class,
                                         $recurse_property_on_this_row => $value_referencing_other_object,
@@ -2075,7 +2077,7 @@ sub _create_object_fabricator_for_loading_template {
             if (defined($value_by_which_this_object_is_loaded_via_recursion) and $recurse_property_value_found{$value_by_which_this_object_is_loaded_via_recursion}) {
                 # This row was expected because some other row in the hierarchical query referenced it.
                 # Up the object count, and note on the object that it is a result of this query.
-                #my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
+                #my $equiv_params = $class->define_boolexpr($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
                 my $equiv_params = UR::BoolExpr->resolve_for_class_and_params(
                                        $class,
                                        $recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion,
@@ -2083,7 +2085,7 @@ sub _create_object_fabricator_for_loading_template {
                 my $equiv_param_key = $equiv_params->get_normalized_rule_equivalent->id;
                 
                 # note that the recursive query need not be done again
-                #my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion, -recurse => $recursion_desc);
+                #my $equiv_params2 = $class->define_boolexpr($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion, -recurse => $recursion_desc);
                 my $equiv_params2 = UR::BoolExpr->resolve_for_class_and_params(
                                         $class,
                                         $recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion,
@@ -2165,8 +2167,8 @@ sub _get_objects_for_class_and_sql {
     # this is a depracated back-door to get objects with raw sql
     # only use it if you know what you're doing
     my ($self, $class, $sql) = @_;
-    my $meta = $class->get_class_object;        
-    #my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,$class->get_rule_for_params());    
+    my $meta = $class->__meta__;        
+    #my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,$class->define_boolexpr());    
     my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,UR::BoolExpr->resolve_for_class_and_params($class));
     my @ids = $ds->_resolve_ids_from_class_name_and_sql($class,$sql);
     return unless @ids;
@@ -2289,7 +2291,7 @@ sub _cache_is_complete_for_class_and_normalized_rule {
             exists($params->{_param_key}) 
             && (
                 # exact match to previous attempt
-                exists ($UR::Object::all_params_loaded->{$class}->{$param_key})
+                exists ($UR::Context::all_params_loaded->{$class}->{$param_key})
                 ||
                 # this is a subset of a previous attempt
                 ($self->_loading_was_done_before_with_a_superset_of_this_params_hashref($class,$params))
@@ -2310,6 +2312,23 @@ sub _cache_is_complete_for_class_and_normalized_rule {
         return;
     }
 } # done setting $load, and possibly filling $cached/$cache_is_complete as a side-effect
+
+
+sub all_objects_loaded  {
+    my $self = shift;
+    my $class = $_[0];
+    return(
+        grep {$_}
+        map { values %{ $UR::Context::all_objects_loaded->{$_} } } 
+        $class, $class->subclasses_loaded
+    );  
+}
+
+sub all_objects_loaded_unsubclassed  {
+    my $self = shift;
+    my $class = $_[0];
+    return (grep {$_} values %{ $UR::Context::all_objects_loaded->{$class} } );
+}
 
 
 sub _get_objects_for_class_and_rule_from_cache {
@@ -2337,7 +2356,7 @@ sub _get_objects_for_class_and_rule_from_cache {
     my @results = eval {
     
         if ($strategy eq "all") {
-            return $class->all_objects_loaded();
+            return $self->all_objects_loaded($class);
         }
         elsif ($strategy eq "id") {
             my $id = $rule->specified_value_for_id();
@@ -2457,7 +2476,7 @@ sub _get_objects_for_class_and_rule_from_cache {
             if ($UR::Debug::verify_indexes) {
                 my @matches = $index->get_objects_matching(@values);        
                 @matches = sort @matches;
-                my @matches2 = sort grep { $rule->evaluate($_) } $class->all_objects_loaded();
+                my @matches2 = sort grep { $rule->evaluate($_) } $self->all_objects_loaded($class);
                 unless ("@matches" eq "@matches2") {
                     print "@matches\n";
                     print "@matches2\n";
@@ -2542,7 +2561,7 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
 
     for my $try_class ( $class, $class->inheritance ) {
         # more than one property, see if individual checks have been done for any of these...
-        my $try_class_meta = $try_class->get_class_object;
+        my $try_class_meta = $try_class->__meta__;
         next unless $try_class_meta;
 
         my @param_combinations = $self->_get_all_subsets_of_params(
@@ -2554,14 +2573,14 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
         shift @param_combinations; 
         foreach my $params ( @param_combinations ) {
             my %get_hash = map { $_ => $input_params->{$_} } @$params;
-            #my $key = $try_class->get_rule_for_params(%get_hash)->id;
+            #my $key = $try_class->define_boolexpr(%get_hash)->id;
             my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($try_class, %get_hash);
             my $key = $rule->id;
             if (defined($key) and exists $all_params_loaded->{$try_class}->{$key} and defined $all_params_loaded->{$try_class}->{$key}) {
 
                 $all_params_loaded->{$try_class}->{$input_params->{_param_key}} = 1;
                 my $new_key = $input_params->{_param_key};
-                for my $obj ($try_class->all_objects_loaded) {
+                for my $obj ($self->all_objects_loaded($try_class)) {
                     my $load_data = $obj->{load};
                     next unless $load_data;
                     my $param_key_data = $load_data->{param_key};
@@ -2574,7 +2593,7 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
             }
         }
         # No sense looking further up the inheritance
-        # FIXME UR::ModuleBase is in the inheritance list, you can't call get_class_object() on it
+        # FIXME UR::ModuleBase is in the inheritance list, you can't call __meta__() on it
         # and I'm having trouble getting a UR class object defined for it...
         last if ($try_class eq 'UR::Object');
     }
@@ -2676,8 +2695,18 @@ sub rollback {
     return 1;
 }
 
+sub _tmp_self {
+    my $self = shift;
+    if (ref($self)) {
+        return ($self,ref($self));
+    }
+    else {
+        return ($UR::Context::current, $self);
+    }
+}
+
 sub clear_cache {
-    my $class = shift;
+    my ($self,$class) = _tmp_self(shift @_);
     my %args = @_;
 
     # dont unload any of the infrastructional classes, or any classes
@@ -2700,7 +2729,7 @@ sub clear_cache {
         next if $class_name eq "UR::Command::Param";
         next if $class_name->isa('UR::Singleton');
         
-        my $class_obj = $class_name->get_class_object;
+        my $class_obj = $class_name->__meta__;
         #if ($class_obj->data_source and $class_obj->is_transactional) {
         #    # normal
         #}
@@ -2723,7 +2752,7 @@ sub clear_cache {
 
         next if $class_obj->is_meta;
 
-        for my $obj ($class_name->all_objects_loaded_unsubclassed()) {
+        for my $obj ($self->all_objects_loaded_unsubclassed($class_name)) {
             # Check the type against %local_dont_unload again, because all_objects_loaded()
             # will return child class objects, as well as the class you asked for.  For example,
             # GSC::DNA->a_o_l() will also return GSC::ReadExp objects, and the user may have wanted
@@ -2735,7 +2764,7 @@ sub clear_cache {
                      grep {$obj_type->isa($_) } @{$args{'dont_unload'}});
             $obj->unload;
         }
-        my @obj = grep { defined($_) } values %{ $UR::Object::all_objects_loaded->{$class_name} };
+        my @obj = grep { defined($_) } values %{ $UR::Context::all_objects_loaded->{$class_name} };
         if (@obj) {
             $class->warning_message("Skipped unload of $class_name objects during clear_cache: "
                 . join(",",map { $_->id } @obj )
@@ -2754,9 +2783,9 @@ sub clear_cache {
                 exit 1;
             }
         }
-        delete $UR::Object::all_objects_loaded->{$class_name};
-        delete $UR::Object::all_objects_are_loaded->{$class_name};
-        delete $UR::Object::all_params_loaded->{$class_name};
+        delete $UR::Context::all_objects_loaded->{$class_name};
+        delete $UR::Context::all_objects_are_loaded->{$class_name};
+        delete $UR::Context::all_params_loaded->{$class_name};
     }
     1;
 }
@@ -2784,8 +2813,8 @@ sub _sync_databases {
     
     # Determine what has changed.
     my @changed_objects = (
-        UR::Object::Ghost->all_objects_loaded,
-        grep { $_->changed } UR::Object->all_objects_loaded
+        $self->all_objects_loaded('UR::Object::Ghost'),
+        grep { $_->changed } $self->all_objects_loaded('UR::Object')
     );
 
     return 1 unless (@changed_objects);
@@ -2803,7 +2832,7 @@ sub _sync_databases {
             no warnings;
             my @problems = $obj->invalid;
             push @msg,
-                $obj->display_name_full
+                $obj->__display_name__
                 . " has "
                 . join
                 (
@@ -2812,9 +2841,9 @@ sub _sync_databases {
                         map
                         {
                             $_->desc . "  Problems on "
-                            . join(",", $_->property_names)
+                            . join(",", $_->__meta__->all_property_names)
                             . " values ("
-                            . join(",", map { $obj->$_ } $_->property_names)
+                            . join(",", map { $obj->$_ } $_->__meta__->all_property_names)
                             . ")"
                         } @problems
                     )
@@ -2881,7 +2910,15 @@ sub _sync_databases {
 }
 
 sub _reverse_all_changes {
-    my $class = shift;
+    my $self = shift;
+    my $class;
+    if (ref($self)) {
+        $class = ref($self);
+    }
+    else {
+        $class = $self;
+        $self = $UR::Context::current;
+    }
 
     @UR::Context::Transaction::open_transaction_stack = ();
     @UR::Context::Transaction::change_log = ();
@@ -2894,9 +2931,9 @@ sub _reverse_all_changes {
     my %delete_objects;
     my @all_subclasses_loaded = sort UR::Object->subclasses_loaded;
     for my $class_name (@all_subclasses_loaded) { 
-        next unless $class_name->can('get_class_object');
+        next unless $class_name->can('__meta__');
         
-        my @objects_this_class = $class_name->all_objects_loaded_unsubclassed();
+        my @objects_this_class = $self->all_objects_loaded_unsubclassed($class_name);
         next unless @objects_this_class;
         
         $delete_objects{$class_name} = \@objects_this_class;
@@ -2904,7 +2941,7 @@ sub _reverse_all_changes {
     
     # do the reverses
     for my $class_name (keys %delete_objects) {
-        my $co = $class_name->get_class_object;
+        my $co = $class_name->__meta__;
         next unless $co->is_transactional;
 
         my $objects_this_class = $delete_objects{$class_name};
@@ -2994,7 +3031,7 @@ sub _commit_databases {
     unless ($class->_for_each_data_source("commit")) {
         if ($class->error_message eq "PARTIAL commit") {
             die "FRAGMENTED DISTRIBUTED TRANSACTION\n"
-                . Data::Dumper::Dumper($UR::Object::all_objects_loaded)
+                . Data::Dumper::Dumper($UR::Context::all_objects_loaded)
         }
         else {
             die "FAILED TO COMMIT!: " . $class->error_message;
@@ -3036,7 +3073,7 @@ sub _disconnect_databases {
 sub _for_each_data_source {
     my($class,$method) = @_;
 
-    my @ds = UR::DataSource->all_objects_loaded();
+    my @ds = $UR::Context::current->all_objects_loaded('UR::DataSource');
     foreach my $ds ( @ds ) {
        unless ($ds->$method) {
            $class->error_message("$method failed on DataSource ",$ds->get_name);
@@ -3064,7 +3101,7 @@ sub _dump_change_snapshot {
     my $class = shift;
     my %params = @_;
 
-    my @c = grep { $_->changed } UR::Object->all_objects_loaded;
+    my @c = grep { $_->changed } $UR::Context::current->all_objects_loadedi('UR::Object');
 
     my $fh;
     if (my $filename = $params{filename})
@@ -3085,6 +3122,37 @@ sub _dump_change_snapshot {
     $fh->close;
 }
 
+sub reload {
+    my $self = shift;
+
+    # this is here for backward external compatability
+    # get() now goes directly to the context
+    
+    my $class = shift;
+    if (ref $class) {
+         # Trying to reload a specific object?
+         if (@_) {
+             Carp::confess("load() on an instance with parameters is not supported");
+             return;
+         }
+         @_ = ('id' ,$class->id());
+         $class = ref $class;
+    }
+
+    my ($rule, @extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class,@_);        
+    
+    if (@extra) {
+        if (scalar @extra == 2 and $extra[0] eq "sql") {
+            return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
+        }
+        else {
+            die "Odd parameters passed directly to $class load(): @extra.\n"
+                . "Processable params were: "
+                . Data::Dumper::Dumper({ $rule->params_list });
+        }
+    }
+    return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,1);
+}
 
 ## This is old, untested code that we may wany to resurrect at some point
 #
@@ -3110,16 +3178,16 @@ sub _dump_change_snapshot {
 #    my $dumper;
 #    if ($dumpall) {  # Go ahead and dump everything
 #        $dumper = Data::Dumper->new([$CORE_DUMP_VERSION,
-#                                     $UR::Object::all_objects_loaded,
-#                                     $UR::Object::all_objects_are_loaded,
-#                                     $UR::Object::all_params_loaded,
-#                                     $UR::Object::all_change_subscriptions],
+#                                     $UR::Context::all_objects_loaded,
+#                                     $UR::Context::all_objects_are_loaded,
+#                                     $UR::Context::all_params_loaded,
+#                                     $UR::Context::all_change_subscriptions],
 #                                    ['dump_version','all_objects_loaded','all_objects_are_loaded',
 #                                     'all_params_loaded','all_change_subscriptions']);
 #    } else {
 #        my %DONT_UNLOAD =
 #            map {
-#                my $co = $_->get_class_object;
+#                my $co = $_->__meta__;
 #                if ($co and not $co->is_transactional) {
 #                    ($_ => 1)
 #                }
@@ -3127,15 +3195,15 @@ sub _dump_change_snapshot {
 #                    ()
 #                }
 #            }
-#            UR::Object->all_objects_loaded;
+#             $UR::Context::current->all_objects_loaded('UR::Object');
 #
-#        my %aol = map { ($_ => $UR::Object::all_objects_loaded->{$_}) }
-#                     grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_objects_loaded;
-#        my %aoal = map { ($_ => $UR::Object::all_objects_are_loaded->{$_}) }
-#                      grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_objects_are_loaded;
-#        my %apl = map { ($_ => $UR::Object::all_params_loaded->{$_}) }
-#                      grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_params_loaded;
-#        # don't dump $UR::Object::all_change_subscriptions
+#        my %aol = map { ($_ => $UR::Context::all_objects_loaded->{$_}) }
+#                     grep { ! $DONT_UNLOAD{$_} } keys %$UR::Context::all_objects_loaded;
+#        my %aoal = map { ($_ => $UR::Context::all_objects_are_loaded->{$_}) }
+#                      grep { ! $DONT_UNLOAD{$_} } keys %$UR::Context::all_objects_are_loaded;
+#        my %apl = map { ($_ => $UR::Context::all_params_loaded->{$_}) }
+#                      grep { ! $DONT_UNLOAD{$_} } keys %$UR::Context::all_params_loaded;
+#        # don't dump $UR::Context::all_change_subscriptions
 #        $dumper = Data::Dumper->new([$CORE_DUMP_VERSION,\%aol, \%aoal, \%apl],
 #                                    ['dump_version','all_objects_loaded','all_objects_are_loaded',
 #                                     'all_params_loaded']);
@@ -3186,7 +3254,7 @@ sub _dump_change_snapshot {
 #
 #    my %DONT_UNLOAD =
 #        map {
-#            my $co = $_->get_class_object;
+#            my $co = $_->__meta__;
 #            if ($co and not $co->is_transactional) {
 #                ($_ => 1)
 #            }
@@ -3194,28 +3262,28 @@ sub _dump_change_snapshot {
 #                ()
 #            }
 #        }
-#        UR::Object->all_objects_loaded;
+#        $UR::Context::current->all_objects_loaded('UR::Object');
 #
 #    # Go through the loaded all_objects_loaded, prune out the things that
 #    # are in %DONT_UNLOAD
 #    my %loaded_classes;
 #    foreach ( keys %$all_objects_loaded ) {
 #        next if ($DONT_UNLOAD{$_});
-#        $UR::Object::all_objects_loaded->{$_} = $all_objects_loaded->{$_};
+#        $UR::Context::all_objects_loaded->{$_} = $all_objects_loaded->{$_};
 #        $loaded_classes{$_} = 1;
 #
 #    }
 #    foreach ( keys %$all_objects_are_loaded ) {
 #        next if ($DONT_UNLOAD{$_});
-#        $UR::Object::all_objects_are_loaded->{$_} = $all_objects_are_loaded->{$_};
+#        $UR::Context::all_objects_are_loaded->{$_} = $all_objects_are_loaded->{$_};
 #        $loaded_classes{$_} = 1;
 #    }
 #    foreach ( keys %$all_params_loaded ) {
 #        next if ($DONT_UNLOAD{$_});
-#        $UR::Object::all_params_loaded->{$_} = $all_params_loaded->{$_};
+#        $UR::Context::all_params_loaded->{$_} = $all_params_loaded->{$_};
 #        $loaded_classes{$_} = 1;
 #    }
-#    # $UR::Object::all_change_subscriptions is basically a bunch of coderef
+#    # $UR::Context::all_change_subscriptions is basically a bunch of coderef
 #    # callbacks that can't reliably be dumped anyway, so we skip it
 #
 #    # Now, get the classes to instantiate themselves

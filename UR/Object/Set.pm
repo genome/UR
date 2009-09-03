@@ -58,7 +58,7 @@ sub AUTOSUB {
     my $member_class_name = $class;
     $member_class_name =~ s/::Set$//g; 
     return unless $member_class_name; 
-    my $member_class_meta = $member_class_name->get_class_object;
+    my $member_class_meta = $member_class_name->__meta__;
     my $member_property_meta = $member_class_meta->property_meta_for_name($method);
     return unless $member_property_meta;
     return sub {

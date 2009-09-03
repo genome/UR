@@ -11,7 +11,7 @@ use URT;
 use DBI;
 use IO::Pipe;
 use Test::More;
-if (grep { /HARNESS/ } keys %ENV) {
+if ($INC{"UR.pm"} =~ /blib/) {
     plan skip_all => 'The test harness insists on making our db unwritable.  Run me individually or fix me!';
 }
 else {
@@ -112,30 +112,34 @@ sub get_changes {
 }
 
 sub cached_dd_objects {
+    my $cx = UR::Context->current;
     my @obj =
         grep { ref($_) =~ /::DB::/ }
-        UR::Object->all_objects_loaded, UR::Object::Ghost->all_objects_loaded;
+        $cx->all_objects_loaded('UR::Object'), $cx->all_objects_loaded('UR::Object::Ghost');
 }
 
 sub cached_dd_object_count {
+    my $cx = UR::Context->current;
     my @obj =
         grep { ref($_) =~ /::DB::/ }
-        UR::Object->all_objects_loaded, UR::Object::Ghost->all_objects_loaded;
+        $cx->all_objects_loaded('UR::Object'), $cx->all_objects_loaded('UR::Object::Ghost');
     return scalar(@obj);
 }
 
 sub cached_class_object_count {
+    my $cx = UR::Context->current;
     my @obj =
         grep { ref($_) =~ /UR::Object::/ }
-        UR::Object->all_objects_loaded, UR::Object::Ghost->all_objects_loaded;
+        $cx->all_objects_loaded('UR::Object'), $cx->all_objects_loaded('UR::Object::Ghost');
     return scalar(@obj);
 }
 
 sub cached_person_dd_objects {
+    my $cx = UR::Context->current;
     my @obj =
         grep { $_->{table_name} eq "person" }
         grep { ref($_) =~ /::DB::/ }
-        UR::Object->all_objects_loaded, UR::Object::Ghost->all_objects_loaded;
+        $cx->all_objects_loaded('UR::Object'), $cx->all_objects_loaded('UR::Object::Ghost');
 }
 
 sub cached_person_summary {
@@ -237,7 +241,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     is_deeply([sort $personclass->direct_column_names],
             ['NAME','PERSON_ID','POSTAL_ADDRESS'],
             'Person object has all the right columns');
-    is_deeply([sort $personclass->class_name->property_names],
+    is_deeply([sort $personclass->class_name->__meta__->all_property_names],
             ['name','person_id','postal_address'],
             'Person object has all the right properties');
     is_deeply([$personclass->direct_id_column_names],
@@ -260,7 +264,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     is_deeply([sort $employeeclass->direct_column_names],
             ['EMPLOYEE_ID','RANK'],
             'Employee object has all the right columns');
-    is_deeply([sort $employeeclass->class_name->property_names],
+    is_deeply([sort $employeeclass->class_name->__meta__->all_property_names],
             ['employee_id','person_employee','rank'],
             'Employee object has all the right properties');
     is_deeply([$employeeclass->direct_id_column_names],
@@ -279,7 +283,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
             ['CAR_ID','COLOR','COST','MAKE','MODEL','OWNER_ID'],
             'Car object has all the right columns');
     # Is owner a property through owner_id?
-    is_deeply([sort $carclass->class_name->property_names],
+    is_deeply([sort $carclass->class_name->__meta__->all_property_names],
             ['car_id','color','cost','make','model','owner_id','person_owner'],
             'Car object has all the right properties');
     is_deeply([$carclass->direct_id_column_names],
@@ -359,7 +363,7 @@ ok($command_obj->execute(), 'Updating schema anew.');
     is_deeply([sort $personclass->direct_column_names],
             ['PERSON_ID','POSTAL_ADDRESS'],
             'Person object has all the right columns');
-    is_deeply([sort $personclass->class_name->property_names],
+    is_deeply([sort $personclass->class_name->__meta__->all_property_names],
             ['person_id','postal_address'],
             'Person object has all the right properties');
     is_deeply([$personclass->direct_id_column_names],

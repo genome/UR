@@ -80,7 +80,7 @@ sub mk_ro_accessor {
             {
 $DB::single=1;
                 Carp::confess("Cannot change read-only property $accessor_name for class $class_name!"
-                . "  Failed to update " . $_[0]->display_name_full . " property: $property_name from $old to $new");
+                . "  Failed to update " . $_[0]->__display_name__ . " property: $property_name from $old to $new");
             }
             return $new;
         }
@@ -137,7 +137,7 @@ sub mk_id_based_object_accessor {
             # $cd->artist($different_artist);
             # to switch which artist object this cd points to
             my $object_value = shift;
-            $id_decomposer ||= $r_class_name->get_class_object->get_composite_id_decomposer;
+            $id_decomposer ||= $r_class_name->__meta__->get_composite_id_decomposer;
             @id = ( defined($object_value) ? $id_decomposer->($object_value->id) : () );
             for my $id_property_name (@$id_by) {
                 $self->$id_property_name(shift @id);
@@ -145,7 +145,7 @@ sub mk_id_based_object_accessor {
             return $object_value;
         }
         else {
-            $id_resolver ||= $r_class_name->get_class_object->get_composite_id_resolver;
+            $id_resolver ||= $r_class_name->__meta__->get_composite_id_resolver;
             @id = map { $self->$_ } @$id_by;
             $id = $id_resolver->(@id);
             return if not defined $id;
@@ -251,14 +251,14 @@ sub mk_indirect_rw_accessor {
             # this is only allowed when the remote object has no direct properties
             # which are not id properties.
         
-            $via_property_meta ||= $class_name->get_class_object->property_meta_for_name($via);
+            $via_property_meta ||= $class_name->__meta__->property_meta_for_name($via);
             unless ($via_property_meta) {
-                $via_property_meta = $class_name->get_class_object->property_meta_for_name($via);
+                $via_property_meta = $class_name->__meta__->property_meta_for_name($via);
                 die "no meta for $via in $class_name!?" unless $via_property_meta;
             }
             $adder = "add_" . $via_property_meta->singular_name;
             $r_class_name ||= $via_property_meta->data_type;
-            my @r_id_property_names = $r_class_name->get_class_object->id_property_names;
+            my @r_id_property_names = $r_class_name->__meta__->id_property_names;
             if (grep { $_ eq $to } @r_id_property_names) {
                 $update_strategy = 'delete-create'
             }
@@ -677,7 +677,7 @@ sub mk_object_set_accessors {
                 }
                 $get_params{$link->property_name}  = $obj->$my_property_name;
             }
-            my $tmp_rule = $r_class_name->get_rule_for_params(%get_params);
+            my $tmp_rule = $r_class_name->define_boolexpr(%get_params);
             $rule_template = $tmp_rule->get_rule_template;
             unless ($rule_template) {
                 die "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
@@ -697,7 +697,7 @@ sub mk_object_set_accessors {
         }
         if (@_ or @where) {
             my $tmp_rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-            return $r_class_name->get_rule_for_params($tmp_rule->params_list,@where, @_);
+            return $r_class_name->define_boolexpr($tmp_rule->params_list,@where, @_);
         }
         else {
             return $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
@@ -788,7 +788,7 @@ sub mk_object_set_accessors {
         return unless $r_class_meta;
 
         my $r_ids = $r_class_meta->property_meta_for_name($reverse_as)->{id_by};
-        my @id_property_names = $r_class_name->get_class_object->id_property_names;
+        my @id_property_names = $r_class_name->__meta__->id_property_names;
         @params_prefix = 
             grep { 
                 my $id_property_name = $_;
@@ -885,7 +885,7 @@ sub mk_object_set_accessors {
                 # object
                 my @remove;
                 my @keep;
-                my $rule = $r_class_name->get_rule_for_params(@_);
+                my $rule = $r_class_name->define_boolexpr(@_);
                 for my $value (@{ $self->{$plural_name} }) {
                     if ($rule->evaluate($value)) {
                         push @keep, $value;
@@ -961,7 +961,7 @@ sub initialize_direct_accessors {
             my $dimension_class_name = $property_data->{data_type};
             $dimensions_by_fk{$id_by->[0]} = $dimension_class_name;
              
-            my $ref_class_meta = $dimension_class_name->get_class_object;
+            my $ref_class_meta = $dimension_class_name->__meta__;
             my %remote_id_properties = map { $_ => 1 } $ref_class_meta->id_property_names;
             my @non_id_properties = grep { not $remote_id_properties{$_} } $ref_class_meta->all_property_names;        
             for my $expected_delegate_property_name (@non_id_properties) {
@@ -1086,7 +1086,7 @@ sub initialize_direct_accessors {
     # 2. the indirect properties created for the dimensional relationship
     for my $dimension_id (keys %dimensions_by_fk) {
         my $dimension_class_name = $dimensions_by_fk{$dimension_id};
-        my $ref_class_meta = $dimension_class_name->get_class_object;
+        my $ref_class_meta = $dimension_class_name->__meta__;
         my %remote_id_properties = map { $_ => 1 } $ref_class_meta->id_property_names;
         my @non_id_properties = grep { not $remote_id_properties{$_} } $ref_class_meta->all_property_names;        
         for my $added_property_name (@non_id_properties) {

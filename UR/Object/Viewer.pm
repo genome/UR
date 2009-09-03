@@ -225,7 +225,7 @@ sub create_viewer {
         return;
     }
 
-    my $subject_class_object = $subject_class_name->get_class_object;
+    my $subject_class_object = $subject_class_name->__meta__;
     my $vocabulary = $subject_class_object->namespace->get_vocabulary();
 
     my $subclass_name = join("::",

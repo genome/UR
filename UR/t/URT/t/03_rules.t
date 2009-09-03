@@ -27,7 +27,7 @@ class URT::FancyItem {
 };
 
 
-my $m = URT::FancyItem->get_class_object;
+my $m = URT::FancyItem->__meta__;
 ok($m, "got metadata for test class");
 
 my @p = $m->id_property_names;
@@ -39,7 +39,7 @@ ok($p, "made a parent object");
 my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins');
 ok($c, "made a child object which references it");
 
-my $r = URT::FancyItem->get_rule_for_params(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
+my $r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
 ok($r, "got a rule to get objects using -recurse");
 
 is($r->value_position_for_property_name('foo'),0, "position is as expected for variable param 1");
@@ -73,17 +73,17 @@ is_deeply(
 )
     or print Dumper([$r->params_list]);
 
-$r = URT::FancyItem->get_rule_for_params(foo => { operator => "between", value => [10,30] }, bar => { operator => "like", value => 'x%y' });
+$r = URT::FancyItem->define_boolexpr(foo => { operator => "between", value => [10,30] }, bar => { operator => "like", value => 'x%y' });
 $t = $r->get_rule_template();
 is($t->operator_for_property_name('foo'),'between', "operator for param 1 is correct");
 is($t->operator_for_property_name('bar'),'like', "operator for param 2 is correct");
 
-$r = URT::FancyItem->get_rule_for_params(foo => 10, bar => { operator => "like", value => 'x%y' });
+$r = URT::FancyItem->define_boolexpr(foo => 10, bar => { operator => "like", value => 'x%y' });
 $t = $r->get_rule_template();
 is($t->operator_for_property_name('foo'),'', "operator for param 1 is correct");
 is($t->operator_for_property_name('bar'),'like', "operator for param 2 is correct");
 
-$r = URT::FancyItem->get_rule_for_params(foo => { operator => "between", value => [10,30] }, bar => 20);
+$r = URT::FancyItem->define_boolexpr(foo => { operator => "between", value => [10,30] }, bar => 20);
 $t = $r->get_rule_template();
 is($t->operator_for_property_name('foo'),'between', "operator for param 1 is correct");
 is($t->operator_for_property_name('bar'),'', "operator for param 2 is correct");

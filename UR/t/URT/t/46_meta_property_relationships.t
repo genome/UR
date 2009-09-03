@@ -17,10 +17,10 @@ plan tests => 21;
 
 sub test_relations {
 
-    my $p_class = URT::43Primary->get_class_object();
+    my $p_class = URT::43Primary->__meta__();
     ok($p_class, 'Loaded URT::43Primary class');
 
-    my $r_class = URT::43Related->get_class_object();
+    my $r_class = URT::43Related->__meta__();
     ok($r_class, 'Loaded URT::43Related class');
 
     my @props = $p_class->direct_property_metas();

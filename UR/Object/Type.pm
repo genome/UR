@@ -669,12 +669,12 @@ sub generate_support_class_for_extension {
     
     if ($extension_for_support_class eq 'Ghost') {
         my $subject_class_metaobj = UR::Object::Type->get($self->meta_class_name);  # Class object for the subject_class
-        #my %class_params = map { $_ => $subject_class_obj->$_ } $subject_class_obj->property_names;
+        #my %class_params = map { $_ => $subject_class_obj->$_ } $subject_class_obj->__meta__->all_property_names;
         my %class_params = map { $_ => $subject_class_obj->$_ }
                            grep { my $p = $subject_class_metaobj->property_meta_for_name($_);
                                   unless($p) { die "can't property_meta_for_name for $_"; }
                                   ! $p->is_delegated and ! $p->is_calculated }
-                           $subject_class_obj->property_names;
+                           $subject_class_obj->__meta__->all_property_names;
         delete $class_params{generated};
         delete $class_params{meta_class_name};
         delete $class_params{subclassify_by};
@@ -1084,24 +1084,24 @@ sub mk_table {
 
 sub _object
 {
-    return ref($_[0]) ? $_[0] : $_[0]->get_class_object;
+    return ref($_[0]) ? $_[0] : $_[0]->__meta__;
 }
 
 
 # FIXME These *type_names methods should be replaced via the new metadata API.
 # also of note, type_names are going away, so maybe don't bother
 # What exactly are these used for?
-sub derived_type_names
+sub Xderived_type_names
 {
     #Carp::confess();
     my $self = shift;
-    my $type_name = $self->type_name;
-    my @sub_type_links = UR::Object::Inheritance->get(parent_type_name => $type_name);
-    my @sub_type_names = map { $_->type_name } @sub_type_links;
+    my $class_name = $self->class_name;
+    my @sub_class_links = UR::Object::Inheritance->get(parent_class_name => $class_name);
+    my @sub_type_names = map { $_->type_name } @sub_class_links;
     return @sub_type_names;
 }
 
-sub all_derived_type_names
+sub Xall_derived_type_names
 {
     #Carp::confess();
     my $self = shift;
@@ -1447,8 +1447,6 @@ sub get_with_special_parameters
     }
     return $class->SUPER::get_with_special_parameters($rule,@_);
 }
-
-sub load_all_on_first_access { 0 }
 
 sub signal_change {
     my $self = shift;

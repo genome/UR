@@ -98,7 +98,7 @@ $DB::single=1;
     my($page) = ($req->Path =~ m/\/?(.*)\.html$/);
     $page ||= 'Index';
     $page = ucfirst $page;
-    my $page_class = $self->get_class_object->class_name . '::' . $page;
+    my $page_class = $self->__meta__->class_name . '::' . $page;
 
     our %PAGE_OBJ_CACHE;
     my $page_obj = $PAGE_OBJ_CACHE{$page_class} ||= eval { $page_class->new(ur_namespace => $self->subject_class_name) };

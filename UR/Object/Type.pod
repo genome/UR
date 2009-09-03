@@ -23,8 +23,8 @@ UR::Object::Type - Class representing metadata about other classes
   my $obj1 = MyClass->get(id_prop1 => 5);
   my $obj2 = MyClass->get(id_prop2 => 'Hello', property_a => 'There');
 
-  $class_obj = $obj1->get_class_object;
-  $class_obj = MyClass->get_class_object;
+  $class_obj = $obj1->__meta__;
+  $class_obj = MyClass->__meta__;
   
   my @myclass_prop_names = $class_obj->direct_property_names;
   my @all_prop_names     = $class_obj->all_property_names;

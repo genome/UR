@@ -1,45 +1,81 @@
-
 package UR::Object;
 
 use warnings;
 use strict;
+require UR;
 
-#with 'UR::Module';      
-use UR::ModuleBase;
-our @ISA = ('UR::ModuleBase');
-
-our $VERSION = '0.01';
-
-use UR::DeletedRef;
-use Data::Dumper;
 use Scalar::Util qw(blessed);
+
+our @ISA = ('UR::ModuleBase');
+our $VERSION = '0.01';
 
 sub class { ref($_[0]) || $_[0] }
 
-*get_class_meta = \&get_class_object;
-sub get_class_object  {
+sub __meta__  {
     # for bootstrapping
     # subclasses set this specifically for efficiency
     my $class_name = shift;
-    return $UR::Object::all_objects_loaded{"UR::Object::Type"}{$class_name};
+    return $UR::Context::all_objects_loaded->{"UR::Object::Type"}{$class_name};
 }
 
-*get_rule_for_params = \&get_boolexpr_for_params;
-sub get_boolexpr_for_params {
+sub __label_name__ {
+    # This is typically set in derived classes to the "entity name".
+    # As a fallback we just use the class.
+    my $self = $_[0];
+    my $class = ref($self) || $self;
+    my ($label) = ($class =~ /([^:]+)$/);
+    $label =~ s/([a-z])([A-Z])/$1 $2/g;
+    $label =~ s/([A-Z])([A-Z]([a-z]|\s|$))/$1 $2/g;
+    $label = uc($label) if $label =~ /_id$/i;
+    return $label;
+}
+
+sub __display_name__ {
+    my $self = shift;
+    my $context = shift;
+    
+    my $name = $_[0]->id;
+    $name =~ s/\t/ /g;
+    return $name;
+
+    if (not $context) {
+        # no context.
+        # the object is identified globally
+        return $self->label_name . ' ' . $name;
+    }
+    elsif ($context eq ref($self)) {
+        # the class is completely known
+        # show only the core display name
+        # -> less text, more context
+        return $name
+    }
+    else {
+        # some intermediate base class is known,
+        # TODO: make this smarter
+        # For now, just show the whole class name with the ID
+        return $self->label_name . ' ' . $name;
+    }
+}
+
+sub context {
+    # For efficiency, all context switches update this value.
+    # We will ultimately need to support objects knowing their context explicitly
+    # for things such as data maintenance operations.
+    $UR::Context::current;
+}
+
+sub define_boolexpr {
     return UR::BoolExpr->resolve_for_class_and_params(@_);
 }
 
-sub get_object_set {
+sub define_set {
     my $class = shift;
-    #my $rule = $class->get_rule_for_params(@_);
+    $class = ref($class) || $class;
     my $rule = UR::BoolExpr->resolve_for_class_and_params($class,@_);
     my $set_class = $class . "::Set";
     return $set_class->get($rule->id);    
 }
 
-# UR::Object::Iterator isn't a UR-based class, just a regular Perl package.
-# So, load it by hand
-use UR::Object::Iterator;
 sub create_iterator {
     my $class = shift;
     my %params = @_;
@@ -53,8 +89,8 @@ sub create_iterator {
         $filter = \@_;
     }
   
-    unless (blessed($filter)) {
-        #$filter = $class->get_rule_for_params(@$filter)
+    unless (Scalar::Util::blessed($filter)) {
+        #$filter = $class->define_boolexpr(@$filter)
         $filter = UR::BoolExpr->resolve_for_class_and_params($class,@$filter)
     }
     
@@ -89,22 +125,7 @@ sub create_viewer {
     return $viewer;
 }
 
-# These live in UR::Context, where they may switch to point to 
-# different data structures depending on sub-context, transaction, etc.
-
-# They are aliased here for backward compatability, since many parts 
-# of the system use $UR::Object::whatever to work with them directly.
-
-our ($all_objects_loaded, $all_change_subscriptions, $all_objects_are_loaded, $all_params_loaded);
-
-*all_objects_loaded         = \$UR::Context::all_objects_loaded;
-*all_change_subscriptions   = \$UR::Context::all_change_subscriptions;
-*all_objects_are_loaded     = \$UR::Context::all_objects_are_loaded;
-*all_params_loaded          = \$UR::Context::all_params_loaded;
-
-
 # Handle weak references in the object cache.
-
 sub DESTROY {
     my $obj = shift;
 
@@ -112,19 +133,15 @@ sub DESTROY {
     # the cache_size_highwater mark is a valid value
     if ($UR::Context::destroy_should_clean_up_all_objects_loaded) {
         my $class = ref($obj);
-        #if ($class->isa("UR::Singleton") or $obj->get_class_object->is_meta or $obj->get_class_object->is_meta_meta or $obj->changed) {
-        if ($obj->get_class_object->is_meta_meta or $obj->changed) {
-            my $obj_from_cache = delete $UR::Object::all_objects_loaded->{$class}{$obj->{id}};
+        if ($obj->__meta__->is_meta_meta or $obj->changed) {
+            my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$obj->{id}};
             die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$obj->{id}!" unless $obj eq $obj_from_cache;
-            $UR::Object::all_objects_loaded->{$class}{$obj->{id}} = $obj;
+            $UR::Context::all_objects_loaded->{$class}{$obj->{id}} = $obj;
             print "KEEPING $obj.  Found $obj .\n";
             return;
         }
         else {
-            #delete $UR::Object::all_objects_loaded->{$class}{$obj->{id}};
             $obj->unload();
-
-            #$obj = delete $UR::Object::all_objects_loaded->{$class}{$obj->{id}};
             #print "TOSSING $obj.  Found $obj .\n";
             return $obj->SUPER::DESTROY();
         }
@@ -135,7 +152,6 @@ sub DESTROY {
 };
 
 # Turn off monitoring of the DESTROY handler at application exit.
-
 END {
     # setting the typeglob to undef does not work. -sms
     delete $UR::Object::{DESTROY};
@@ -163,12 +179,12 @@ sub strengthen {
 }
 
 
-# BASE ::Object API
+# Base object API 
     
 sub create {
     my $class = shift;        
     
-    my $class_meta = $class->get_class_object;        
+    my $class_meta = $class->__meta__;        
     
     # Few different ways for automagic subclassing...
 
@@ -423,7 +439,7 @@ sub delete {
             { no warnings 'syntax';
                @pn = grep { $_ ne 'data_source_id' || ($do_data_source=1 and 0) } # yes this really is '=' and not '=='
                      grep { exists $self->{$_} }
-                     $self->property_names;
+                     $self->__meta__->all_property_names;
             }
             
             # we're not really allowed to interrogate the data_source property directly
@@ -458,15 +474,11 @@ sub delete {
 sub create_object {
     my $class = shift;
  
-    no warnings;
+    #my $params = { $class->define_bx(@_)->params_list };
     my $params = $class->preprocess_params(@_);
-    use warnings;
 
     my $id = $params->{id};
-    unless (defined($id))
-    {
-        $DB::single = 1;
-        $params = $class->preprocess_params(@_);
+    unless (defined($id)) {
         Carp::confess(
             "No ID specified (or incomplete id params) for $class create_object.  Params were:\n" 
             . Dumper($params)
@@ -474,22 +486,19 @@ sub create_object {
     }
 
     # Ensure that we're not remaking things which exist.
-    if ($all_objects_loaded->{$class}->{$id})
-    {
-        # The object exists.
-        # This is not an error.  We just return false to indicate
-        # That the object is not creatable.
+    if ($UR::Context::all_objects_loaded->{$class}->{$id}) {
+        # The object exists.  This is not an exception for some reason?  
+        # We just return false to indicate that the object is not creatable.
         $class->error_message("An object of class $class already exists with id value '$id'");
         return;
     }
 
-    # get rid of internal flags (which start with '_')
+    # get rid of internal flags (which start with '-')
     delete $params->{$_} for ( grep { /^_/ } keys %$params );
 
     # TODO: The reference to UR::Entity can be removed when non-tablerow classes impliment property function for all critical internal data.
     # Make the object.
-    my $self = bless
-    {
+    my $self = bless {
         map { $_ => $params->{$_} }
         grep { $class->can($_) or not $class->isa('UR::Entity') }
         keys %$params
@@ -497,8 +506,7 @@ sub create_object {
 
     # See if we're making something which was previously deleted and is pending save.
     # We must capture the old db_committed data to ensure eventual saving is done correctly.
-    if (my $ghost = $all_objects_loaded->{$class . "::Ghost"}->{$id})
-    {	
+    if (my $ghost = $UR::Context::all_objects_loaded->{$class . "::Ghost"}->{$id}) {	
         # Note this object's database state in the new object so saves occurr correctly,
         # as an update instead of an insert.
         if (my $committed_data = $ghost->{db_committed})
@@ -515,11 +523,11 @@ sub create_object {
     }
 
     # Put the object in the master repository of objects for the application.
-    $all_objects_loaded->{$class}->{$id} = $self;
+    $UR::Context::all_objects_loaded->{$class}->{$id} = $self;
 
     # If we're using a light cache, weaken the reference.
     if ($UR::Context::light_cache and substr($class,0,5) ne 'App::') {
-        Scalar::Util::weaken($all_objects_loaded->{$class}->{$id});
+        Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$id});
     }
 
     # Return the new object.
@@ -538,8 +546,8 @@ sub delete_object {
     }
 
     # Remove the object from the main hash.
-    delete $all_objects_loaded->{$class}->{$id};
-    delete $all_objects_are_loaded->{$class};
+    delete $UR::Context::all_objects_loaded->{$class}->{$id};
+    delete $UR::Context::all_objects_are_loaded->{$class};
 
     # Decrement all of the param_keys it is using.
     if ($self->{load} and $self->{load}->{param_key})
@@ -547,7 +555,7 @@ sub delete_object {
         while (my ($class,$param_strings_hashref) = each %{ $self->{load}->{param_key} })
         {
             for my $param_string (keys %$param_strings_hashref) {
-                delete $UR::Object::all_params_loaded->{$class}->{$param_string};
+                delete $UR::Context::all_params_loaded->{$class}->{$param_string};
 
                 foreach my $local_apl ( values %$UR::Context::object_fabricators ) {
                     next unless ($local_apl and exists $local_apl->{$class});
@@ -570,7 +578,7 @@ sub define {
     # Simply assert they already existed externally, and act as though they were just loaded...
 
     my $class = shift;
-    my $class_meta = $class->get_class_object;    
+    my $class_meta = $class->__meta__;    
     if (my $method_name = $class_meta->sub_classification_method_name) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
         my $sub_class_name = $class->$method_name(@_);
@@ -587,101 +595,13 @@ sub define {
     return $self;
 }
 
-sub load {
-    # this is here for backward external compatability
-    # get() now goes directly to the context
-    
-    my $class = shift;
-    if (ref $class) {
-         # Trying to reload a specific object?
-         if (@_) {
-             Carp::confess("load() on an instance with parameters is not supported");
-             return;
-         }
-         @_ = ('id' ,$class->id());
-         $class = ref $class;
-    }
-
-    my ($rule, @extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class,@_);        
-    
-    if (@extra) {
-        if (scalar @extra == 2 and $extra[0] eq "sql") {
-            return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
-        }
-        else {
-            die "Odd parameters passed directly to $class load(): @extra.\n"
-                . "Processable params were: "
-                . Data::Dumper::Dumper({ $rule->params_list });
-        }
-    }
-    return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,1);
-}
-
-sub _load {
-    Carp::cluck();
-    my ($class,$rule) = @_;
-    return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,1);
-}
-
-sub unload {
-    my $proto = shift;
-    my ($self, $class);
-    ref $proto ? $self = $proto : $class = $proto;
-
-    if ( $self )
-    {
-        # object method
-
-        # The only things which can be unloaded are things committed to
-        # their database in the exact same state.  Everything else must
-        # be reverted or deleted.
-        return unless $self->{db_committed};
-        if ($self->changed) {
-            #warn "NOT UNLOADING CHANGED OBJECT! $self $self->{id}\n";
-            return;
-        }
-
-        $self->signal_change('unload');
-        $self->delete_object;
-        return $self;
-    }
-    else
-    {
-        # class method
-
-        # unload the objects in the class
-        # where there are subclasses of the class
-        # delegate to them
-
-        my @unloaded;
-
-        # unload all objects of this class
-        for my $obj ($class->all_objects_loaded_unsubclassed)
-        {
-            push @unloaded, $obj->unload;
-        }
-
-        # unload any objects that belong to any subclasses
-        for my $subclass ($class->subclasses_loaded)
-        {
-            push @unloaded, $subclass->unload;
-        }
-
-        # get rid of the param_key hash for this class
-        # this specifically gets rid of any cache for
-        # param_keys that returned 0 objects
-        delete $UR::Object::all_params_loaded->{$class};
-
-        return @unloaded;
-    }
-}
 
 sub get {
     # Fast optimization for the default case.
     {
         no warnings;
-        if (exists $all_objects_loaded->{$_[0]}
-            and my $obj = $all_objects_loaded->{$_[0]}->{$_[1]}
+        if (exists $UR::Context::all_objects_loaded->{$_[0]}
+            and my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}
             )
         {
             $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
@@ -789,149 +709,6 @@ sub set  {
     }
 }
 
-sub is_loaded {
-    # this is just here for backward compatability for external calls
-    # get() now goes to the context for data
-    
-    # This shortcut handles the most common case rapidly.
-    # A single ID is passed-in, and the class name used is
-    # not a super class of the specified object.
-    # This logic is in both get() and is_loaded().
-
-    my $quit_early = 0;
-    if ( @_ == 2 &&  !ref($_[1]) )
-    {
-        unless (defined($_[1])) {
-            Carp::confess();
-        }
-        my $obj = $all_objects_loaded->{$_[0]}->{$_[1]};
-        return $obj if $obj;
-        # we could safely return nothing right now, except 
-        # that a subclass of this type may have the object
-    }
-
-    my $class = shift;
-    my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class,@_);
-    return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);    
-}
-
-sub _is_loaded {
-    Carp::cluck();
-    my ($class,$rule) = @_;
-    return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
-}
-    
-
-# THIS LOGIC PROBABLY GOES INTO THE CONTEXT
-
-sub dbh {
-    Carp::confess("Attempt to call dbh() on a UR::Object.\n" 
-                  . "Objects no longer have DB handles, data_sources do\n"
-                  . "use resolve_data_sources_for_class_meta_and_rule() on a UR::Context instead");
-    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(shift->get_class_object);
-    return $ds->get_default_dbh;
-}
-
-sub db_committed { shift->{db_committed} }
-
-sub db_saved_uncommitted { shift->{db_saved_uncommitted} }
-
-# THESE SHOULD PROBABLY GO ON THE CLASS META    
-
-sub subclasses_loaded  {
-    no strict 'refs';
-    no warnings;    
-    return @{ $UR::Object::_init_subclasses_loaded{$_[0]} };
-}
-
-sub all_objects_loaded  {
-    my $class = $_[0];
-    return(
-        grep {$_}
-        map { values %{ $all_objects_loaded->{$_} } }
-        $class, $class->subclasses_loaded
-    );
-}
-
-sub all_objects_loaded_unsubclassed  {
-    my $class = $_[0];
-    return (grep {$_} values %{ $all_objects_loaded->{$class} } );
-}
-
-sub all_objects_are_loaded  {
-    # Keep track of which classes claim that they are completely loaded, and that no more loading should be done.
-    # Classes which have the above function return true should set this after actually loading everything.
-    # This class will do just that if it has to load everything itself.
-
-    my $class = shift;
-    #$meta = $class->get_class_object;
-    if (@_) {
-        # Setting the attribute
-        $all_objects_are_loaded->{$class} = shift;
-    } elsif (! exists $all_objects_are_loaded->{$class}) {
-        # unknown... ask the parent classes and remember the answer
-        foreach my $parent_class ( $class->inheritance ) {
-            if (exists $all_objects_are_loaded->{$parent_class}) {
-                $all_objects_are_loaded->{$class} = $all_objects_are_loaded->{$parent_class};
-                last;
-            }
-        }
-    }
-    return $all_objects_are_loaded->{$class};
-}
-
-# This group should probably be moved into Viewer classes
-sub core_label_name {
-    # This is typically set in derived classes to the "entity name".
-    # As a fallback we just use the class.
-    my $self = $_[0];
-    my $class = ref($self) || $self;
-    my ($label) = ($class =~ /([^:]+)$/);
-    $label =~ s/([a-z])([A-Z])/$1 $2/g;
-    $label =~ s/([A-Z])([A-Z]([a-z]|\s|$))/$1 $2/g;
-    $label = uc($label) if $label =~ /_id$/i;
-    return $label;
-}
-
-sub _core_display_name {
-    # This is an object-level fucntion to provide a freindly name for objects of this class.
-    # It presumes that the type of the object need not be indicated in the name, just the identity within the class.
-    my $name = $_[0]->id;
-    $name =~ s/\t/ /g;
-    return $name;
-}
-
-*label_name = \&core_label_name;
-
-# For backward compatability.
-*display_name_full = \&display_name;
-
-sub display_name {
-    my $self = shift;
-    my $context = shift;
-    if (not $context)
-    {
-        # no context.
-        # the object is identified globally
-        return $self->label_name . ' ' . $self->_core_display_name;
-    }
-    elsif ($context eq ref($self))
-    {
-        # the class is completely known
-        # show only the core display name
-        # -> less text, more context
-        return $self->_core_display_name
-    }
-    else
-    {
-        # some intermediate base class is known,
-        # TODO: make this smarter
-        # For now, just show the whole class name with the ID
-        return $self->label_name . ' ' . $self->_core_display_name;
-    }
-}
-
-
 sub property_diff {
     # Ret hashref of the differences between the object and some other object.
     # The "other object" may be a hashref or hash, in which case it will
@@ -950,7 +727,7 @@ sub property_diff {
     no warnings;
     my $self_value;
     my $other_value;
-    my $class_object = $self->get_class_object;
+    my $class_object = $self->__meta__;
     for my $property ($class_object->all_property_names)
     {
         if (ref($other) eq 'HASH')
@@ -975,7 +752,7 @@ sub changed {
     
     return unless $self->{_change_count};
     #print "changes on $self! $self->{_change_count}\n";
-    my $meta = $self->get_class_object;
+    my $meta = $self->__meta__;
     if (!$meta->is_transactional and !$meta->is_meta_meta) {
         return;
     }
@@ -1017,14 +794,8 @@ sub changed {
 sub invalid {
     my ($self,@property_names) = @_;
 
-    my $class_object = $self->get_class_object;
+    my $class_object = $self->__meta__;
     my $type_name = $class_object->type_name;
-
-#    my @properties = UR::Object::Property->get
-#    (
-#        type_name => $type_name,
-#        (@property_names ? (property_name => \@property_names) : () )
-#    );
 
     unless (scalar @property_names) {
         @property_names = $class_object->all_property_names;    
@@ -1035,8 +806,7 @@ sub invalid {
     } @property_names;
 
     my @tags;
-    for my $property_metadata (@properties)
-    {
+    for my $property_metadata (@properties) {
         # For now we don't validate these.
         # Ultimately, we should delegate to the property metadata object for value validation.
         next if $property_metadata->is_delegated;
@@ -1066,8 +836,7 @@ sub invalid {
         my $generic_data_type = $property_metadata->generic_data_type || "";
         my $data_length       = $property_metadata->data_length;
 
-        if ($generic_data_type eq 'Float')
-        {
+        if ($generic_data_type eq 'Float') {
             $value =~ s/\s//g;
             $value = $value + 0;
 
@@ -1095,8 +864,7 @@ sub invalid {
             # Cleanup for size check below.
             $value = '.' x $length;
         }
-        elsif ($generic_data_type eq 'Integer')
-        {
+        elsif ($generic_data_type eq 'Integer') {
             $value =~ s/\s//g;
             $value = $value + 0;
             if ($value !~ /^(\+|\-)?[0-9]*$/)
@@ -1111,20 +879,18 @@ sub invalid {
             # Cleanup for size check below.
             $value =~ s/[\+\-]//g;
         }
-        elsif ($generic_data_type eq 'DateTime')
-        {
-            if (1)
-            {
+        elsif ($generic_data_type eq 'DateTime') {
+            # This check is currently disabled b/c of time format irrecularities
+            # We rely on underlying database constraints for real invalidity checking.
+            # TODO: fix me
+            if (1) {
 
             }
-            elsif ($value =~ /^\s*\d\d\d\d\-\d\d-\d\d\s*(\d\d:\d\d:\d\d|)\s*$/)
-            {
+            elsif ($value =~ /^\s*\d\d\d\d\-\d\d-\d\d\s*(\d\d:\d\d:\d\d|)\s*$/) {
                 # TODO more validation here for a real date.
             }
-            else
-            {
-                push @tags, UR::Object::Tag->create
-                (
+            else {
+                push @tags, UR::Object::Tag->create (
                     type => 'invalid',
                     properties => [$property_name],
                     desc => 'Invalid date string.'
@@ -1133,10 +899,8 @@ sub invalid {
         }
 
         # Check size
-        if ($generic_data_type ne 'DateTime')
-        {
-            if ( defined($data_length) and ($data_length < length($value)) )
-            {
+        if ($generic_data_type ne 'DateTime') {
+            if ( defined($data_length) and ($data_length < length($value)) ) {
                 push @tags, 
                     UR::Object::Tag->create(
                         type => 'invalid',
@@ -1177,18 +941,16 @@ sub invalid {
         }
 
         # Check FK if it is easy to do.
-        if (0)
-        {
+        # TODO: This is a heavy weight check, and is disabled for performance reasons.
+        # Ideally we'd check a foreign key value _if_ it was changed only, since
+        # saved foreign keys presumably could not have been save if they were invalid.
+        if (0) {
             my $r_class;
-            # FIXME
-            unless ($r_class->get(id => $value))
-            {
-
-                push @tags, UR::Object::Tag->create
-                (
+            unless ($r_class->get(id => $value)) {
+                push @tags, UR::Object::Tag->create (
                     type => 'invalid',
                     properties => [$property_name],
-                    desc => "$value does not reference a valid " . $r_class->label_name . '.'
+                    desc => "$value does not reference a valid " . $r_class . '.'
                 );
             }
         }
@@ -1197,8 +959,7 @@ sub invalid {
     return @tags;
 }
 
-# Observer pattern (new)
-
+# Observer pattern
 sub add_observer {
     my $self = shift;
     my %params = @_;
@@ -1223,111 +984,9 @@ sub add_observer {
     return $observer;
 }
 
-# Observer pattern (old)
-
-sub create_subscription  {
-    my $self = shift;
-    my %params = @_;
-
-    # parse parameters
-    my ($class,$id,$method,$callback,$note,$priority);
-    $class = $self->class;
-    $method = delete $params{method};
-    $callback = delete $params{callback};
-    $note = delete $params{note};
-    $priority = delete $params{priority};
-    unless (defined($priority)) {
-        $priority = 1;
-    }
-    if (exists $params{id}) {
-        $id = delete $params{id};
-    }
-    elsif (ref($self)) {
-        $id = $self->id;
-    }
-
-    if (my @unknown = keys %params) {
-        die "Unknown options @unknown passed to create_subscription!";
-    }
-
-    # print STDOUT "Caught subscription class $class id $id property $property callback $callback $note\n";
-
-    # validate
-    if (my @bad_params = %params) {
-        die "Bad params passed to add_listener: @bad_params";
-    }
-
-    # Allow the class to know that it is getting a subscription.
-    # It may choose to turn on/off optimizations depending on whether anyone is watching it.
-    # It may also reject all subscriptions because it knows it is too busy to signal changes.
-    unless($class->validate_subscription($method,$id,$callback)) {
-        $DB::single = 1;
-        $class->validate_subscription($method,$id,$callback);
-        Carp::confess("Failed to validate requested subscription: @_\n");
-        return 0; # If/when the above is removed.
-    }
-
-    # Handle global subscriptions.
-    $class = undef if ($class eq __PACKAGE__);
-
-    # This will not work currently because of a circular dep.
-    # In the future, we'll have subscriptions be regular objects.
-
-    #my $s = UR::Object::Subscription->create(
-    #    monitor_class_name => $class,
-    #    monitor_method_name => $method,
-    #    monitor_id => $id,
-    #    callback => $callback,
-    #    note => $note,
-    #    priority => $priority,
-    #);
-    #
-    #unless ($s) {
-    #    Carp::confess("Failed to create subscription @_");
-    #}
-
-
-    # Record amd return the subscription.
-    no warnings;
-    push @{ $all_change_subscriptions->{$class}->{$method}->{$id} }, [$callback,$note,$priority];
-    return [$class,$id,$method,$callback,$note];
-}
-
-sub validate_subscription
-{
-    my ($self,$subscription_property) = @_;
-
-    Carp::confess("The create_object and delete_object signals are no longer emitted!") 
-        if defined($subscription_property) 
-            and ($subscription_property eq 'create_object' or $subscription_property eq 'delete_object');
-
-    # Undefined attributes indicate that the subscriber wants any changes at all to generate a callback.
-    return 1 if (!defined($subscription_property));
-
-    # All standard creation and destruction methods emit a signal.
-    return 1 if ($subscription_property =~ /^(create_object|delete_object|create|delete|commit|rollback|load|unload|load_external)$/);
-
-    # A defined attribute in our property list indicates the caller wants callbacks from our properties.
-    my $class_object = $self->get_class_object;
-    for my $property ($class_object->all_property_names)
-    {
-        return 1 if $property eq $subscription_property;
-    }
-
-    # Bad subscription request.
-    return;
-}
-
-sub inform_subscription_cancellation
-{
-    # This can be overridden in derived classes if the class wants to know
-    # when subscriptions are cancelled.
-    return 1;
-}
-
+# TODO: move this into the context
 our $sig_depth = 0;
-sub signal_change
-{
+sub signal_change {
     my ($self, $property, @data) = @_;
 
     my ($class,$id);
@@ -1392,7 +1051,7 @@ sub signal_change
         map { @$_ }
         grep { defined $_ } map { @$_{@check_ids} }
         grep { defined $_ } map { @$_{@check_properties} }
-        grep { defined $_ } @$all_change_subscriptions{@check_classes};
+        grep { defined $_ } @$UR::Context::all_change_subscriptions{@check_classes};
 
     return unless @matches;
 
@@ -1422,235 +1081,11 @@ sub signal_change
     return scalar(@matches);
 }
 
-sub cancel_change_subscription ($@)
-{
-    my ($class,$id,$property,$callback,$note);
-
-    if (@_ >= 4)
-    {
-        ($class,$id,$property,$callback,$note) = @_;
-        die "Bad parameters." if ref($class);
-    }
-    elsif ( (@_==3) or (@_==2) )
-    {
-        ($class, $property, $callback) = @_;
-        if (ref($_[0]))
-        {
-            $class = ref($_[0]);
-            $id = $_[0]->id;
-        }
-    }
-    else
-    {
-        die "Bad parameters.";
-    }
-
-    # Handle global subscriptions.  Subscriptions to UR::Object affect all objects.
-    # This can be removed when the signal_change method uses inheritance.
-
-    $class = undef if ($class eq __PACKAGE__);
-
-    # Look for the callback
-
-    $class = '' if not defined $class;
-    $property = '' if not defined $property;
-    $id = '' if not defined $id;
-
-    my $arrayref = $all_change_subscriptions->{$class}->{$property}->{$id};
-    return unless $arrayref;   # This thing didn't have a subscription in the first place
-    my $index = 0;
-
-    while ($index <= @$arrayref)
-    {
-        my ($cancel_callback, $note) = @{ $arrayref->[$index] };
-
-        if
-        (
-            (not defined($callback))
-            or
-            ($callback eq $cancel_callback)
-            or
-            ($note =~ $callback)
-        )
-        {
-            # Remove the callback from the subscription list.
-
-            my $found = splice(@$arrayref,$index,1);
-            #die "Bad splice $found $index @$arrayref!" unless $found eq $arrayref->[$index];
-
-            # Prune the $all_change_subscriptions hash tree.
-
-            #print STDOUT Dumper($all_change_subscriptions);
-
-            if (@$arrayref == 0)
-            {
-                $arrayref = undef;
-
-                delete $all_change_subscriptions->{$class}->{$property}->{$id};
-
-                if (keys(%{ $all_change_subscriptions->{$class}->{$property} }) == 0)
-                {
-                    delete $all_change_subscriptions->{$class}->{$property};
-                }
-            }
-
-            #print STDOUT Dumper($all_change_subscriptions);
-
-            # Tell the class that a subscription has been cancelled, if it cares
-            # (most classes do not impliment this, and the default UR::Object version is ignored.
-
-            unless($class->inform_subscription_cancellation($property,$id,$callback))
-            {
-                Carp::confess("Failed to validate requested subscription cancellation: @_\n");
-                return 0; # If/when the above is removed.
-            }
-
-            # Return a ref to the callback removed.  This is "true", but better than true.
-
-            return $found;
-        }
-        else
-        {
-            # Increment only if we did not splice-out a value.
-            $index++;
-        }
-    }
-
-    # Return nothing if we found no subscription.
-
-    return;
-}
-
-# This should go away when we shift to fully to a transaction log for deletions.
-
-sub ghost_class {
-    my $class = $_[0]->class;
-    $class = $class . '::Ghost';
-    return $class;
-}
-
-
-# KEEP FUNCTIONALITY, BUT RENAME/REFACTOR
-
-sub generate_support_class {
-    # A class Foo can implement this method to have a chance to auto-define Foo::Bar 
-    # TODO: make a Class::Autouse::ExtendNamespace Foo => sub { } to handle this.
-    # Right now, UR::ModuleLoader will try it after "use".
-    my $class  = shift;
-    my $ext = shift;
-    my $class_meta = $class->get_class_object;
-    return $class_meta->generate_support_class_for_extension($ext);
-}
-
-sub matches {
-    no warnings;
-    my $self = shift;
-    my %param = $self->preprocess_params(@_);
-    for my $key (keys %param) {
-        next unless $self->can($key);
-        return 0 unless $self->$key eq $param{$key}
-    }
-    return 1;
-}
-
-
-# DEFINITELY REFACTOR AWAY
-# All calls to these methods should go to the class meta object directly.
-
-## PRUNE
-sub property_names {
-    my $class = shift;
-    my $meta = $class->get_class_object;
-    return $meta->all_property_names;
-}
-
-sub load_all_on_first_access  {
-    # For some objects, it is more efficient to load the whole set as soon as any are used.
-    # Derived classes can override this when that is the case.
-
-    my $self = shift;
-    return () if $self->class eq "UR::Entity";
-    my $type = $self->get_class_object;
-    return unless $type;
-    return ( (defined($type->er_role) and $type->er_role eq 'validation item') or ($type->class_name =~ /Type$/) ? 1 : 0);
-}
-
-sub _resolve_composite_id {
-    return shift->get_class_object->resolve_composite_id_from_ordered_values(@_);
-}
-
-sub decomposed_id {
-    return shift->get_class_object->resolve_ordered_values_from_composite_id(@_);
-}
-
-# Most code should go right to ->get_rule_for_params(), 
-# which can return the same info as preprocessed params
-# including a ->legacy_params_hash().
-
-# Old things still use this directly, though.
-
-sub preprocess_params {
-    if (@_ == 2 and ref($_[1]) eq 'HASH') {
-        # already processed, just throw it back to the caller
-        if (wantarray) {
-            # ... after flattening it out
-            return %{ $_[1] };
-        }
-        else {
-            # .. just the reference
-            return $_[1];
-        }
-    }
-    else {
-        my $class = shift;
-        $class = (ref($class)?ref($class):$class);
-
-        # get the rule object, which has the old params pre-cached
-        my ($rule, @extra) = $class->can("get_rule_for_params")->($class,@_);
-        my $normalized_rule = $rule->get_normalized_rule_equivalent;
-        my $rule_params = $normalized_rule->legacy_params_hash;
-
-        # catch only case where sql is passed in
-        if (@extra == 2 && $extra[0] eq "sql"
-            && $rule_params->{_unique} == 0
-            && $rule_params->{_none} == 1
-            && (keys %$rule_params) == 2
-        ) {
-
-            push @extra,
-                "_unique" => 0,
-                "_param_key" => (
-                    ref($extra[1])
-                        ? join("\n", map { defined($_) ? "'$_'" : "undef"} @{$extra[1]})
-                        : $extra[1]
-                );
-
-            if (wantarray) {
-                return @extra;
-            }
-            else {
-                return { @extra }
-            }
-        }
-
-        if (wantarray) {
-            # flatten out the cached params hash
-            #return %{ $rule->{legacy_params_hash} };
-            return %{ $rule_params }, @extra;
-        }
-        else {
-            # duplicate the reference, and return the duplicate
-            #return { %{ $rule->{legacy_params_hash} } };
-            return { %{ $rule_params }, @extra };
-        }
-    }
-}
-
 sub create_mock {
     my $class = shift;
     my %params = @_;
     my $self = Test::MockObject->new();
-    my $subject_class_object = $class->get_class_object;
+    my $subject_class_object = $class->__meta__;
     for my $class_object ($subject_class_object,$subject_class_object->ancestry_class_metas) {
         for my $property ($class_object->direct_property_metas) {
             my $property_name = $property->property_name;
@@ -1707,6 +1142,9 @@ sub create_mock {
     $UR::Context::all_objects_loaded->{$class}->{$self->id} = $self;
     return $self;
 }
+
+# This module implements the deprecated parts of the UR::Object API
+require UR::ObjectDeprecated;
 
 1;
 

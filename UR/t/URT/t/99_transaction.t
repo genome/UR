@@ -41,6 +41,8 @@ sub dump_states {
     IO::File->new(">after.yml")->print(YAML::Dump($after));    
 }
 
+diag("this is a slow test because it coppies does deep diffs of large data trees at each step");
+
 ###########################################
 
 sub take_state_snapshot {
@@ -54,11 +56,13 @@ $DB::single=1;
         UR::Object::Reference::Property->get(tha_id => $ref->tha_id);
     }
 
+    my $cx = $UR::Context::current;
+
     my @classes = sort UR::Object->subclasses_loaded;
     for my $class_name (@classes) {
         next if $class_name->isa("UR::Singleton");
         my @objects = sort { $a->id cmp $b->id }
-            $class_name->all_objects_loaded_unsubclassed;
+            $cx->all_objects_loaded_unsubclassed($class_name);
         next unless @objects;
         next if $class_name eq "UR::Object::Index";
         next if $class_name eq "UR::Namespace::CommandParam";
@@ -76,6 +80,7 @@ $DB::single=1;
                 delete $copy->{_ordered_inherited_class_names};
                 delete $copy->{_all_property_type_names};
                 delete $copy->{'_unique_property_sets'};
+                delete $copy->{_all_property_names};
                 delete $copy->{_all_id_property_names};
                 delete $copy->{_id_property_sorter};
                 delete $copy->{_sorter};

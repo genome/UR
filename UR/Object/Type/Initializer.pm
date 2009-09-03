@@ -188,7 +188,7 @@ sub _preprocess_subclass_description {
         $self->ancestry_class_names();
 
     for my $parent_class_name (@parent_class_names) {
-        my $parent_class = $parent_class_name->get_class_object;
+        my $parent_class = $parent_class_name->__meta__;
         $current_desc = $parent_class->_preprocess_subclass_description($current_desc);
     }
 
@@ -267,7 +267,7 @@ sub define {
         $meta_class_name = __PACKAGE__;
     }
     
-    $self = $UR::Object::all_objects_loaded->{$meta_class_name}{$class_name};
+    $self = $UR::Context::all_objects_loaded->{$meta_class_name}{$class_name};
     if ($self) {
         $DB::single = 1;
         #Carp::cluck("Re-defining class $class_name?  Found $meta_class_name with id '$class_name'");
@@ -520,7 +520,7 @@ sub _normalize_class_description {
     if (not exists $new_class{id_by}) {
         if ($new_class{is}) {
             #print "no id for $class_name, is $new_class{is}\n";
-            #$id_properties = $new_class{id_by} = [ @{ $new_class{is}[0]->get_class_object->id_property_names } ];
+            #$id_properties = $new_class{id_by} = [ @{ $new_class{is}[0]->__meta__->id_property_names } ];
             $id_properties = $new_class{id_by} = [];
         }
         else {
@@ -736,14 +736,14 @@ sub _normalize_class_description {
         my @additional_property_meta_attributes;
         for my $parent_class_name (@{ $new_class{is} }) {
             no warnings;
-            unless ($parent_class_name->can("get_class_object")) {
+            unless ($parent_class_name->can("__meta__")) {
                 eval "use $parent_class_name";
                 die "Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@" if $@; 
             }
-            unless ($parent_class_name->can("get_class_object")) {
-                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method 'get_class_object' on $parent_class_name!"; 
+            unless ($parent_class_name->can("__meta__")) {
+                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name!"; 
             }
-            my $parent_class = $parent_class_name->get_class_object;
+            my $parent_class = $parent_class_name->__meta__;
             unless ($parent_class) {
                 warn "no class metadata bject for $parent_class_name!";
                 next;
@@ -760,7 +760,7 @@ sub _normalize_class_description {
         # class' class name
         PARENT_CLASS:
         foreach my $parent_class_name ( @{ $new_class{'is'} }) {
-            my $parent_class_meta = $parent_class_name->get_class_object();
+            my $parent_class_meta = $parent_class_name->__meta__();
             foreach my $ancestor_class_meta ( $parent_class_meta->all_class_metas ) {
                 if (my $subclassify_by = $ancestor_class_meta->subclassify_by) {
                     $instance_properties->{$subclassify_by} ||= { property_name => $subclassify_by,
@@ -790,7 +790,7 @@ sub _normalize_class_description {
     my $desc = \%new_class;
     unless ($bootstrapping) {
         for my $parent_class_name (@{ $new_class{is} }) {
-            my $parent_class = $parent_class_name->get_class_object;
+            my $parent_class = $parent_class_name->__meta__;
             $desc = $parent_class->_preprocess_subclass_description($desc);
         }
     }
@@ -1040,11 +1040,11 @@ sub _make_minimal_class_from_normalized_class_description {
 
     my $self =  bless { id => $class_name, %$desc }, $meta_class_name;
     
-    $UR::Object::all_objects_loaded->{$meta_class_name}{$class_name} = $self;
-    my $full_name = join( '::', $class_name, 'get_class_object' );
+    $UR::Context::all_objects_loaded->{$meta_class_name}{$class_name} = $self;
+    my $full_name = join( '::', $class_name, '__meta__' );
     Sub::Install::reinstall_sub({
         into => $class_name,
-        as   => 'get_class_object',
+        as   => '__meta__',
         code => Sub::Name::subname $full_name => sub {$self},
     });
 
@@ -1170,10 +1170,10 @@ sub _complete_class_meta_object_definitions {
 
     my $n = 1;
     for my $parent_class_name (@$inheritance) {
-        my $parent_class = $parent_class_name->get_class_object;
+        my $parent_class = $parent_class_name->__meta__;
         unless ($parent_class) {
             $DB::single = 1;
-            $parent_class = $parent_class_name->get_class_object;
+            $parent_class = $parent_class_name->__meta__;
             $self->error_message("Failed to find parent class $parent_class_name\n");
             return;
         }
@@ -1185,8 +1185,6 @@ sub _complete_class_meta_object_definitions {
         }
         my $obj =
             UR::Object::Inheritance->define(
-                type_name => $self->type_name,
-                parent_type_name => $parent_class->type_name,
                 class_name => $self->class_name,
                 parent_class_name => $parent_class->class_name,
             )
@@ -1260,7 +1258,7 @@ sub _complete_class_meta_object_definitions {
                         my $data = $r_class_ancestor->{has}{$r_id_properties[$n]};
                         ($data ? ($data) : ());
                     }
-                    ($r_class_name, $r_class_name->get_class_object->ancestry_class_names);
+                    ($r_class_name, $r_class_name->__meta__->ancestry_class_names);
                 unless ($r_property) {
                     $DB::single = 1;
                     Carp::confess("No r_property found for relationship $r_class_name, $r_id_properties[$n]\n");
@@ -1301,7 +1299,7 @@ sub _complete_class_meta_object_definitions {
         ##    class_name => $property_meta_class_name,
         #    is => 'UR::Object::Property', # TODO: go through the inheritance 
         #    has => [
-        #        @{ $class_name->get_class_object->{attributes_have} }
+        #        @{ $class_name->__meta__->{attributes_have} }
         #    ]
         #)
  
@@ -1436,7 +1434,7 @@ sub _complete_class_meta_object_definitions {
             #    next;
             #}
             #my $r_type_name = $r_class_obj->type_name;
-            #my @r_class_inheritance = ($r_class_name, $r_class_name->get_class_object->ancestry_class_names);
+            #my @r_class_inheritance = ($r_class_name, $r_class_name->__meta__->ancestry_class_names);
             #my @r_property_names = $r_class_obj->id_property_names;
             #my @r_attribute_names =
             #    map {
@@ -1566,10 +1564,10 @@ sub generate {
     my $class_name = $self->class_name;
 
     # this is done earlier in the class definition process in _make_minimal_class_from_normalized_class_description()
-    my $full_name = join( '::', $class_name, 'get_class_object' );
+    my $full_name = join( '::', $class_name, '__meta__' );
     Sub::Install::reinstall_sub({
         into => $class_name,
-        as   => 'get_class_object',
+        as   => '__meta__',
         code => Sub::Name::subname $full_name => sub {$self},
     });
 

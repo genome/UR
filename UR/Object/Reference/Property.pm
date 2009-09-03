@@ -42,7 +42,7 @@ sub get {
             @refs = UR::Object::Reference->get($_[0]);
             %params = $_[0]->params_list;
         } else {
-            my($tha_id, $rank) = $class->get_class_object->resolve_ordered_values_from_composite_id($_[0]);
+            my($tha_id, $rank) = $class->__meta__->resolve_ordered_values_from_composite_id($_[0]);
             @refs = UR::Object::Reference->get(tha_id => $tha_id);
             @params{'tha_id','rank'} = ($tha_id, $rank);
         } 

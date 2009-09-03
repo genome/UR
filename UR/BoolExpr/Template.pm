@@ -116,7 +116,7 @@ sub is_unique {
         # satisfy at least one unique constraint,
         # then we have uniqueness in the parameters.
 
-        if (my @ps = $self->subject_class_name->get_class_object->unique_property_sets) {  
+        if (my @ps = $self->subject_class_name->__meta__->unique_property_sets) {  
             my $property_meta_hash = $self->_property_meta_hash;      
             for my $property_set (@ps) 
             {
@@ -311,7 +311,7 @@ sub get {
     my @constant_values;
     @constant_values = UR::BoolExpr::Template->value_id_to_values($constant_value_id) if defined $constant_value_id;;
 
-    my $subject_class_meta = $subject_class_name->get_class_object;
+    my $subject_class_meta = $subject_class_name->__meta__;
 
     my @extra_params;
     if ($logic_type eq "And") {
@@ -333,7 +333,7 @@ sub get {
             for my $iclass ($subject_class_name, $subject_class_meta->ancestry_class_names) {
                 last if $iclass eq "UR::Object";
                 next unless $iclass->isa("UR::Object");
-                my $iclass_meta = $iclass->get_class_object;
+                my $iclass_meta = $iclass->__meta__;
                 my @id_props = $iclass_meta->id_property_names;
                 next unless @id_props;
                 next if @id_props == 1 and $id_props[0] eq "id";
@@ -649,7 +649,7 @@ sub legacy_params_hash {
     my $logic_detail        = $self->logic_detail;    
     my @keys_sorted         = $self->_underlying_keys;
     
-    my $subject_class_meta  = $subject_class_name->get_class_object;
+    my $subject_class_meta  = $subject_class_name->__meta__;
     
     if (
         (@keys_sorted and not $logic_detail)
@@ -765,10 +765,10 @@ sub sorter {
     my $sort_meta;
     if ($self->group_by) {
         my $set_class = $class . "::Set";
-        $sort_meta = $set_class->get_class_object;
+        $sort_meta = $set_class->__meta__;
     }
     else {
-        $sort_meta = $class->get_class_object;
+        $sort_meta = $class->__meta__;
     }
 
     my $sorter;

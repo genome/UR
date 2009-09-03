@@ -322,7 +322,7 @@ sub resolve_class_name_for_table_name {
     my $vocabulary = $namespace->get_vocabulary;
 
     my @words;
-    $vocabulary = 'UR::Vocabulary' unless eval { $vocabulary->get_class_object };
+    $vocabulary = 'UR::Vocabulary' unless eval { $vocabulary->__meta__ };
     if ($vocabulary) {
         @words = 
             map { $vocabulary->convert_to_title_case($_) } 
@@ -357,9 +357,9 @@ sub resolve_type_name_for_table_name {
     
     my $namespace = $self->get_namespace;
     my $vocabulary = $namespace->get_vocabulary;
-    $vocabulary = 'UR::Vocabulary' unless eval { $vocabulary->get_class_object };
+    $vocabulary = 'UR::Vocabulary' unless eval { $vocabulary->__meta__ };
     
-    my $vocab_obj = eval { $vocabulary->get_class_object };
+    my $vocab_obj = eval { $vocabulary->__meta__ };
     my @words =         
     (
         (
@@ -761,7 +761,7 @@ sub _resolve_ids_from_class_name_and_sql {
         $query = $sql;
     }
     
-    my $class_meta = $class_name->get_class_object;
+    my $class_meta = $class_name->__meta__;
     my @id_columns = 
         map {
             $class_meta->property_meta_for_name($_)->column_name
@@ -1198,7 +1198,7 @@ sub _sync_database {
             }
             
             my $tables = $table_objects_by_class_name{$class_name};
-            my $class_object = $class_name->get_class_object;
+            my $class_object = $class_name->__meta__;
             unless ($tables) {                
                 my $tables;
                 my @all_table_names = $class_object->all_table_names;                
@@ -1495,8 +1495,8 @@ sub _id_values_for_primary_key {
         Carp::confess("Both table and class object should be passed for $self!");
     }
     
-    my $class_obj; # = $object_to_save->get_class_object;
-    foreach my $possible_class_obj ($object_to_save->get_class_object->all_class_metas) {
+    my $class_obj; # = $object_to_save->__meta__;
+    foreach my $possible_class_obj ($object_to_save->__meta__->all_class_metas) {
         if (lc($possible_class_obj->table_name) eq lc($table_obj->table_name)) {
             $class_obj = $possible_class_obj;
             last;
@@ -1535,7 +1535,7 @@ sub _default_save_sql_for_object {
     #    return;
     #}
     
-    my $class_object = $object_to_save->get_class_object;
+    my $class_object = $object_to_save->__meta__;
     
     # This object may have uncommitted changes already saved.  
     # If so, work from the last saved data.
@@ -1914,7 +1914,7 @@ sub _generate_template_data_for_loading {
     # class-based values
 
     my $class_name = $rule_template->subject_class_name;
-    my $class_meta = $class_name->get_class_object;
+    my $class_meta = $class_name->__meta__;
     my $class_data = $self->_get_class_data_for_loading($class_meta);       
 
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
@@ -2176,7 +2176,7 @@ sub _generate_template_data_for_loading {
         my $delegate_class_meta = $delegated_property->class_meta;
         my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
         my $final_accessor = $delegated_property->to;
-        if (my $final_accessor_meta = $via_accessor_meta->data_type->get_class_object->property_meta_for_name($final_accessor)) {
+        if (my $final_accessor_meta = $via_accessor_meta->data_type->__meta__->property_meta_for_name($final_accessor)) {
             while($final_accessor_meta && $final_accessor_meta->via) {
                 $final_accessor_meta = $final_accessor_meta->to_property_meta();
             }
@@ -2210,10 +2210,10 @@ sub _generate_template_data_for_loading {
                 $joins_for_object++;
             
                 my $source_class_name = $join->{source_class};
-                my $source_class_object = $join->{'source_class_meta'} || $source_class_name->get_class_object;                    
+                my $source_class_object = $join->{'source_class_meta'} || $source_class_name->__meta__;                    
     
                 my $foreign_class_name = $join->{foreign_class};
-                my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->get_class_object;
+                my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
                 my($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
                 if ($foreign_data_source ne $self) {
                     # FIXME - do something smarter in the future where it can do a join-y thing in memory

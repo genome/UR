@@ -13,7 +13,7 @@ UR::Object::Type->define(
 
 sub server { 
     my $self = shift->_singleton_object();
-    my $path = $self->get_class_object->module_path;
+    my $path = $self->__meta__->module_path;
     $path =~ s/\.pm$/.db/ or Carp::confess("Bad module path for resolving server!");
     unless (-e $path) {
         # initialize a new database from the one in the base class

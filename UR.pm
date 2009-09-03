@@ -106,6 +106,9 @@ require UR::DBI;            # this needs a new name, and need only be used by UR
 require UR::ModuleBase;     # this should be switched to a role
 require UR::ModuleConfig;   # used by ::Time, and also App's ::Lock ::Daemon
 
+require UR::Object::Iterator;
+require UR::DeletedRef;
+
 require UR::Object;         
 require UR::Object::Type;
 
@@ -156,8 +159,8 @@ UR::Object::Type->define(
     extends => ['UR::Object'],
     id_properties => [qw/class_name parent_class_name/],
     properties => [
-        parent_type_name                 => { is => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
+        #parent_type_name                 => { is => 'Text', len => 256, source => 'data dictionary' },
+        #type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
         parent_class_name                => { is => 'Text', len => 256, source => 'data dictionary' },
         class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
         inheritance_priority             => { is => 'NUMBER', len => 2 },
@@ -513,7 +516,6 @@ sub main::ur_core {
     close $dump;
     exit();
 }
-
 
 1;
 __END__

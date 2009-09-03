@@ -417,7 +417,7 @@ sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
     my $class_name = $rule->subject_class_name;
-    my $class_meta = $class_name->get_class_object;
+    my $class_meta = $class_name->__meta__;
     my $rule_template = $rule->rule_template;
 
     my $csv_column_order = $self->column_order;

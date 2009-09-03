@@ -14,7 +14,7 @@ UR::Object::Type->define(
 
 sub _init_subclass {
     my $class_name = shift;
-    my $class_meta_object = $class_name->get_class_object;
+    my $class_meta_object = $class_name->__meta__;
 
     # Write into the class's namespace the correct singleton overrides
     # to standard UR::Object methods.
@@ -55,12 +55,14 @@ sub _init_subclass {
 
 sub _abstract_load {
     my $class = shift;
-    my $params = $class->preprocess_params(@_);
-    unless ($params->{id}) {
+    my $bx = $class->define_boolexpr(@_);
+    my $id = $bx->specified_value_for_id;
+    unless (defined $id) {
         use Data::Dumper;
+        my $params = { $bx->params_list };
         Carp::confess("Cannot load a singleton ($class) except by specific identity. " . Dumper($params));
     }
-    my $subclass_name = $class->_resolve_subclass_name_for_id($params->{id});
+    my $subclass_name = $class->_resolve_subclass_name_for_id($id);
     eval "use $subclass_name";    
     if ($@) {
         undef $@;
@@ -96,7 +98,7 @@ sub _concrete_load {
     unless ($$varref) {
         my $id = $class->_resolve_id_for_subclass_name($class);        
 
-        my $class_object = $class->get_class_object;
+        my $class_object = $class->__meta__;
         my @prop_names = $class_object->all_property_names;
         my %default_values;
         foreach my $prop_name ( @prop_names ) {
@@ -154,11 +156,14 @@ sub _resolve_id_for_subclass_name {
 
 sub create {
     my $class = shift;
-    my $params = $class->preprocess_params(@_);
-    
-    Carp::confess("No singleton ID class specified for constructor?") unless $params->{id};
-    my $subclass = $class->_resolve_subclass_name_for_id($params->{id});
-    
+    my $bx = $class->define_boolexpr(@_);
+    my $id = $bx->specified_value_for_id;
+    unless (defined $id) {
+        use Data::Dumper;
+        my $params = { $bx->params_list };
+        Carp::confess("No singleton ID class specified for constructor?");
+    }
+    my $subclass = $class->_resolve_subclass_name_for_id($id);
     eval "use $subclass";
     unless ($subclass->isa(__PACKAGE__)) {
         eval '@' . $subclass . "::ISA = ('" . __PACKAGE__ . "')";

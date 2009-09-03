@@ -145,7 +145,7 @@ sub create {
 
 sub define {
     my $class = shift;
-    #my ($rule, %extra) = $class->get_rule_for_params(@_);    
+    #my ($rule, %extra) = $class->define_boolexpr(@_);    
     my ($rule, %extra) = UR::BoolExpr->resolve_for_class_and_params($class, @_);
 
     # see above for details on why action_on_set has issues

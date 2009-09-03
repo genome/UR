@@ -123,7 +123,7 @@ $DB::single=1;
         if ($specified_class_name_arrayref) {
             $ds_table_list = [
                 map { [$_->data_source, $_->table_name] }
-                map { $_->get_class_object } 
+                map { $_->__meta__ } 
                 @$specified_class_name_arrayref
             ];        
         }
@@ -215,14 +215,15 @@ $DB::single=1;
         #
     
         #$DB::single = 1;
-    
+   
+        my $cx = UR::Context->current; 
         for my $dd_class (qw/UR::DataSource::RDBMS::Table UR::DataSource::RDBMS::FkConstraint UR::DataSource::RDBMS::TableColumn/) {
             push @data_dictionary_objects, 
                 grep { $force_rewrite_all_classes ? 1 : $_->changed } 
-                $dd_class->all_objects_loaded;
+                $cx->all_objects_loaded($dd_class);
     
             my $ghost_class = $dd_class . "::Ghost";
-            push @data_dictionary_objects, $ghost_class->all_objects_loaded;
+            push @data_dictionary_objects, $cx->all_objects_loaded($ghost_class);
         }
         
     }
@@ -321,6 +322,7 @@ $DB::single=1;
 
     #$DB::single = 1;
 
+    my $cx = UR::Context->current;
     my @changed_class_meta_objects;
     my %changed_classes;
     my $module_update_success = eval {
@@ -333,10 +335,10 @@ $DB::single=1;
             UR::Object::Reference
             UR::Object::Reference::Property
         /) {
-            push @changed_class_meta_objects, grep { $_->changed } $meta_class->all_objects_loaded;
+            push @changed_class_meta_objects, grep { $_->changed } $cx->all_objects_loaded($meta_class);
 
             my $ghost_class = $meta_class . "::Ghost";
-            push @changed_class_meta_objects, $ghost_class->all_objects_loaded;
+            push @changed_class_meta_objects, $cx->all_objects_loaded($ghost_class);
         }
 
         for my $obj (
@@ -1141,7 +1143,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         #    data_source => $table->data_source,
         #    table_name => $table->table_name,
         #);
-        #my $class = $table->get_class_meta();
+        #my $class = $table->__meta__();
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table_name);
         my $class_name = $class->class_name;
@@ -1232,7 +1234,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         #    data_source => $table->data_source,
         #    table_name => $table->table_name,
         #);
-        #my $class = $table->get_class_meta();
+        #my $class = $table->__meta__();
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table->table_name);
         my $class_name = $class->class_name;
@@ -1558,7 +1560,7 @@ sub _sync_filesystem {
             if ($class_obj->{is}[0] =~ /::Type$/ and $class_obj->{is}[0]->isa('UR::Object::Type')) {
                 next;
             }
-            if ($class_obj->db_committed) {
+            if ($class_obj->{db_committed}) {
                 $status_message_this_update .= "U " . $class_obj->module_path;
             }
             else {

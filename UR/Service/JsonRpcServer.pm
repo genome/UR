@@ -181,7 +181,7 @@ sub _api_entry_classes {
 
     if ($method eq '_get_class_info') { # called when the other end gets a class object
         eval {
-            my $class_object = $class->get_class_object;
+            my $class_object = $class->__meta__;
             my %id_names = map { $_ => 1 } $class_object->all_id_property_names();
             my @id_names = keys(%id_names);
        

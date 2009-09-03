@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use File::Basename;
-use lib File::Basename::dirname(__FILE__).'/../..';
+BEGIN { use lib File::Basename::dirname(__FILE__).'/../..'; }
 use URT;
 use above "UR";
 use Test::More;# skip_all => "fork() causes intermittent failure in TAP output";
@@ -51,10 +51,10 @@ END {
 #plan tests => 28;
 sleep(1);  # Give the child a change to get started
 
-my $to_server = IO::Socket::INET->new(PeerHost => 'localhost',
+my $to_server = IO::Socket::INET->new(PeerHost => '127.0.0.1',
                                       PeerPort => $PORT);
 
-ok($to_server, 'Created a socket connected to the child process');
+ok($to_server, 'Created a socket connected to the child process ' . $!);
 
 
 my @join_args = ('one','two','three','four');

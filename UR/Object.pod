@@ -277,9 +277,9 @@ and obey the same scoping rules as any normal Perl reference.
 
 =over 4
 
-=item get_class_object
+=item __meta__
 
-  $class_obj = $obj->get_class_object();
+  $class_obj = $obj->__meta__();
 
 Returns the class metadata object for the given object's class.  Class objects
 are from the class L<UR::Object::Type>, and hold information about the class' 

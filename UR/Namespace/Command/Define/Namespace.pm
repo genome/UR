@@ -190,7 +190,7 @@ sub create_meta_db_skeleton {
     my($self,$meta_datasource) = @_;
 
     unless (ref $meta_datasource) {
-        $meta_datasource = $meta_datasource->get_class_object;
+        $meta_datasource = $meta_datasource->__meta__;
     }
 
     my $meta_db_file = $meta_datasource->class_name->_data_dump_path;

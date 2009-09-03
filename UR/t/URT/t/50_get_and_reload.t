@@ -22,15 +22,16 @@ foreach my $class ( 'URT::Thing', 'URT::SubclassedThing' ) {
     is($thing->name, 'Bob', 'name is correct');
     is($thing->color, 'green', 'color is correct');
 
-    my $table_name = $class->get_class_object->table_name;
+    my $table_name = $class->__meta__->table_name;
     my $sth = $dbh->prepare("update $table_name set color = 'purple' where thing_id = 1");
     ok($sth->execute(), 'updated the color');
     $sth->finish;
     $dbh->commit;
     
     is($thing->color, 'green', 'Before load() it still has the old color');
-    
-    ok($thing->load(), 'Called load()');
+   
+    my $cx = UR::Context->current; 
+    ok($cx->reload($thing), 'Called load()');
     
     is($thing->color, 'purple', 'After load() it has the new color');
 
@@ -44,7 +45,7 @@ foreach my $class ( 'URT::Thing', 'URT::SubclassedThing' ) {
     $sth->finish;
     $dbh->commit;
     
-    @things = $class->load(name => 'Fred');
+    @things = $cx->reload($class, name => 'Fred');
     is(scalar(@things),1, 'Again, got one thing named Fred');
     is($things[0]->color, 'yellow', 'new color is correct');
     
@@ -60,7 +61,7 @@ foreach my $class ( 'URT::Thing', 'URT::SubclassedThing' ) {
     $dbh->commit;
     
     ok($things[0]->color('blue'), 'updated the color on the object');
-    my $worked = eval { $things[0]->load() };
+    my $worked = eval { $cx->reload($things[0]) };
     ok(! $worked, 'calling load() on the changed object correctly fails');
     
     my $message = $@;
@@ -84,9 +85,9 @@ foreach my $class ( 'URT::Thing', 'URT::SubclassedThing' ) {
     ok($sth->execute(), 'updated the color for all things');
     $sth->finish;
     $dbh->commit;
-    $thing = $class->load(1);
+    $thing = $cx->reload($class, 1);
     is($thing->color, 'white', 'load() for thing_id 1 has the changed color');
-    @things = $class->load();
+    @things = $cx->reload($class);
     foreach my $thing ( @things ) {
         is($thing->color, 'white', 'load() for all things has the changed color for this object');
     }

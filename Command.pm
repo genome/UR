@@ -198,7 +198,7 @@ sub _execute_with_shell_params_and_return_exit_code
 sub create 
 {
     my $class = shift;
-    my ($rule,%extra) = $class->get_rule_for_params(@_);
+    my ($rule,%extra) = $class->define_boolexpr(@_);
     my $bare_args = delete $extra{" "};
     my @params_list = $rule->params_list;
     my $self = $class->SUPER::create(@params_list, %extra);
@@ -228,7 +228,7 @@ sub create
 # By default, there are no bare arguments.
 sub _bare_shell_argument_names { 
     my $self = shift;
-    my $meta = $self->get_class_object;
+    my $meta = $self->__meta__;
     my @ordered_names = 
         map { $_->property_name } 
         sort { $a->{shell_args_position} <=> $b->{shell_args_position} }
@@ -259,11 +259,11 @@ sub exit_code_for_return_value
 sub help_brief 
 {
     my $self = shift;
-    if (my $doc = $self->get_class_object->doc) {
+    if (my $doc = $self->__meta__->doc) {
         return $doc;
     }
     else {
-        my @parents = $self->get_class_object->ancestry_class_metas;
+        my @parents = $self->__meta__->ancestry_class_metas;
         for my $parent (@parents) {
             if (my $doc = $parent->doc) {
                 return $doc;
@@ -316,7 +316,7 @@ sub is_abstract
 {
     # Override when writing an subclass which is also abstract.
     my $self = shift;
-    my $class_meta = $self->get_class_object;
+    my $class_meta = $self->__meta__;
     return $class_meta->is_abstract;
 }
 
@@ -499,7 +499,7 @@ sub resolve_class_and_params_for_argv
                 return($self, undef);
             }
             my $value = $ARGV[$n];
-            my $meta = $self->get_class_object->property_meta_for_name($name);
+            my $meta = $self->__meta__->property_meta_for_name($name);
             if ($meta->is_many) {
                 if ($n == $#names) {
                     # slurp the rest
@@ -821,7 +821,7 @@ sub help_sub_commands
 sub _shell_args_property_meta
 {
     my $self = shift;
-    my $class_meta = $self->get_class_object;
+    my $class_meta = $self->__meta__;
     my @property_meta = $class_meta->get_all_property_metas(@_);
     my @result;
     my %seen;
@@ -1226,4 +1226,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 46818 2009-05-13 17:19:14Z eclark $
+#$Id: Command.pm 47134 2009-05-22 02:40:04Z ssmith $

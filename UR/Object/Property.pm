@@ -61,10 +61,13 @@ sub is_numeric {
 
 sub create_object {
     my $class = shift;
-    my %params = $class->preprocess_params(@_);
+    my ($bx,%extra) = $class->define_boolexpr(@_);
+    my %params = ($bx->params_list,%extra);
     #print Data::Dumper::Dumper(\%params);
     #%params = $class->preprocess_params(@_);
-    
+   
+=cut
+ 
     if ($params{attribute_name} and not $params{property_name}) {
         my $property_name = $params{attribute_name};
         $property_name =~ s/ /_/g;
@@ -86,6 +89,8 @@ sub create_object {
             $params{type_name} = $class_obj->type_name;
         } 
     }
+
+=cut
     
     my ($singular_name,$plural_name);
     if ($params{is_many}) {
@@ -112,7 +117,7 @@ sub table_and_column_name_for_property {
     # Shortcut - this property has a column_name, so the class should have the right
     # table_name
     if ($self->column_name) {
-        return ($self->class_name->get_class_object->table_name, $self->column_name);
+        return ($self->class_name->__meta__->table_name, $self->column_name);
     }
 
     my $property_name = $self->property_name;
@@ -194,7 +199,7 @@ sub _get_direct_join_linkage {
     elsif (my $reverse_as = $self->reverse_as) {
         my $r_class_name = $self->data_type;
         @obj = 
-            $r_class_name->get_class_object->property_meta_for_name($reverse_as)->_get_direct_join_linkage();
+            $r_class_name->__meta__->property_meta_for_name($reverse_as)->_get_direct_join_linkage();
     }
     return @obj;
 }
@@ -230,14 +235,14 @@ sub _get_joins {
                     @$where = reverse @$where;
                 }            
                 my $join = pop @joins;
-                #my $where_rule = $join->{foreign_class}->get_rule_for_params(@$where);                
+                #my $where_rule = $join->{foreign_class}->define_boolexpr(@$where);                
                 my $where_rule = UR::BoolExpr->resolve_for_class_and_params($join->{foreign_class}, @$where);                
                 my $id = $join->{id};
                 $id .= ' ' . $where_rule->id;
                 push @joins, { %$join, id => $id, where => $where };
             }
             unless ($to eq 'self') {
-                my $to_meta = $via_meta->data_type->get_class_object->property_meta_for_name($to);
+                my $to_meta = $via_meta->data_type->__meta__->property_meta_for_name($to);
                 unless ($to_meta) {
                     my $property_name = $self->property_name;
                     my $class_name = $self->class_name;
@@ -256,11 +261,11 @@ sub _get_joins {
             
             if (defined($foreign_class) and $foreign_class->can('get')) {
                 #print "class $foreign_class, joining...\n";
-                my $foreign_class_meta = $foreign_class->get_class_object;
+                my $foreign_class_meta = $foreign_class->__meta__;
                 my $property_name = $self->property_name;
                 my $id = $source_class . '::' . $property_name;
                 if ($where) {
-                    #my $where_rule = $foreign_class->get_rule_for_params(@$where);
+                    #my $where_rule = $foreign_class->define_boolexpr(@$where);
                     my $where_rule = UR::BoolExpr->resolve_for_class_and_params($foreign_class, @$where);
                     $id .= ' ' . $where_rule->id;
                 }
@@ -295,7 +300,7 @@ sub _get_joins {
                 }
                 elsif (my $reverse_as = $self->reverse_as) { 
                     my $foreign_class = $self->data_type;
-                    my $foreign_class_meta = $foreign_class->get_class_object;
+                    my $foreign_class_meta = $foreign_class->__meta__;
                     my $foreign_property_via = $foreign_class_meta->property_meta_for_name($reverse_as);
                     unless ($foreign_property_via) {
                         Carp::confess("No property '$reverse_as' in class $foreign_class, needed to resolve property '" .

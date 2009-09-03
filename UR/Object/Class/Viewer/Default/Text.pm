@@ -41,7 +41,7 @@ my $self = shift;
         $string .= "  no related table\n";
     }
 
-    my %all_class_properties = map { $_ => 1 } $class->get_class_object->all_property_names;
+    my %all_class_properties = map { $_ => 1 } $class->__meta__->all_property_names;
 
     # Print these first
     my @prop_list = qw(is data_source table_name doc);
