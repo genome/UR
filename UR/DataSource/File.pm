@@ -373,6 +373,18 @@ sub _comparator_for_operator_and_property {
             return sub { 
                        $$next_candidate_row->[$index] >= $value ? 0 : -1;
                    };
+        } elsif ($operator eq 'true') {
+            return sub {
+                       $$next_candidate_row->[$index] ? 0 : -1;
+                   };
+        } elsif ($operator eq 'false') {
+            return sub {
+                       $$next_candidate_row->[$index] ? 1 : 0;
+                   };
+        } elsif ($operator eq '!=' or $operator eq 'ne') {
+             return sub {
+                       $$next_candidate_row->[$index] != $value ? 0 : -1;
+             }
         }
 
     } else {
@@ -399,12 +411,16 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq 'true') {
             return sub {
-                       $$next_candidate_row->[$index] ? 0 : 1;
+                       $$next_candidate_row->[$index] ? 0 : -1;
                    };
         } elsif ($operator eq 'false') {
             return sub {
                        $$next_candidate_row->[$index] ? 1 : 0;
                    };
+        } elsif ($operator eq '!=' or $operator eq 'ne') {
+             return sub {
+                       $$next_candidate_row->[$index] ne $value ? 0 : -1;
+             }
         }
     }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 49;
+use Test::More tests => 50;
 
 use IO::File;
 
@@ -40,7 +40,11 @@ is($thing->thing_id, 2, 'thing_id is correct');
 is($thing->thing_name, 'Fred', 'thing_name is correct');
 is($thing->thing_color, 'green', 'thing_color is correct');
 
-my @things = URT::Things->get();
+my @things = URT::Things->get('thing_color ne' => 'red');
+is(scalar(@things), 3, 'Get where color ne "red" returned 3 items');
+
+
+@things = URT::Things->get();
 is(scalar(@things), scalar(@data), 'multiple get() returned the right number of objects');
 for (my $i = 0; $i < @data; $i++) {
     # They should get returned in the same order, since @data is sorted
