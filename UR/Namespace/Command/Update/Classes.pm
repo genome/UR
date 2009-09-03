@@ -1861,6 +1861,7 @@ sub _update_database_metadata_objects_for_table_changes {
     my $pk_sth = $dbh->primary_key_info(undef, $db_owner, $table_name);
 
     if ($pk_sth) {
+		my @new_pk;
         while (my $data = $pk_sth->fetchrow_hashref()) {
             $data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
             my $pk = UR::DataSource::RDBMS::PkConstraintColumn->get(
@@ -1869,25 +1870,32 @@ sub _update_database_metadata_objects_for_table_changes {
                             column_name => $data->{'COLUMN_NAME'},
                           );
             if ($pk) {
-                my $rank = $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'};
-                if ($pk->rank != $rank) {
-                    # PK column order changed
-                    $pk->rank($rank);
-                }
-            } else {
-                UR::DataSource::RDBMS::PkConstraintColumn->create(
-                                        table_name => $table_name,
-                                        data_source => $data_source,
-                                        owner => $data_source->owner,
-                                        column_name => $data->{'COLUMN_NAME'},
-                                        rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
-                              );
-             }
-    #        $table_object->{primary_key_constraint_name} = $data->{PK_NAME};
-    #        $embed{primary_key_constraint_column_names} ||= {};
-    #        $embed{primary_key_constraint_column_names}{$table_object} ||= [];
-    #        push @{ $embed{primary_key_constraint_column_names}{$table_object} }, $data->{COLUMN_NAME};
+				# Since the rank/order is pretty much all that might change, we
+				# just delete and re-create these.
+				# It's a no-op at save time if there are no changes.
+            	$pk->delete;
+            }
+			
+			push @new_pk, [
+				table_name => $table_name,
+				data_source => $data_source,
+				owner => $data_source->owner,
+				column_name => $data->{'COLUMN_NAME'},
+				rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
+			];
+			#        $table_object->{primary_key_constraint_name} = $data->{PK_NAME};
+			#        $embed{primary_key_constraint_column_names} ||= {};
+			#        $embed{primary_key_constraint_column_names}{$table_object} ||= [];
+			#        push @{ $embed{primary_key_constraint_column_names}{$table_object} }, $data->{COLUMN_NAME};
         }
+		
+		for my $data (@new_pk) {
+        	my $pk = UR::DataSource::RDBMS::PkConstraintColumn->create(@$data);
+			unless ($pk) {
+				$self->error_message("Failed to create primary key @$data");
+				return;
+			}
+		}			
     }
 
     ## Get the unique constraints
