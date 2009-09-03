@@ -83,7 +83,7 @@ sub execute {
             $resp_msg_args{'return_values'} = \@retval unless ($@);
         } elsif (defined $wantarray) {
             my $retval;
-            eval { no strict 'refs'; $retval = &{$method_name}(@arglist); };
+            eval { no strict 'refs'; no warnings; $retval = &{$method_name}(@arglist); };
             $resp_msg_args{'return_values'} = [$retval] unless ($@);
         } else {
             eval { no strict 'refs'; &{$method_name}(@arglist); };
