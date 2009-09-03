@@ -30,10 +30,12 @@ sub _init_subclass {
     no strict;
     no warnings;
     #$DB::single = 1;
-    my $sym_table = \%{ $subclass_name . '::'};
-    if ($sym_table->{execute}) {
-        $sym_table->{_execute_body} = delete $sym_table->{execute};        
-        #print "execute switched in $subclass_name\n";
+    ## manipulating %{ $subclass_name . '::' } causes ptkdb to segfault perl
+    if ($subclass_name->can('execute')) {
+        my $new_symbol = "${subclass_name}::_execute_body";
+        my $old_symbol = "${subclass_name}::execute";
+        *$new_symbol = *$old_symbol;
+        undef *$old_symbol;
     }
     else {
         #print "no execute in $subclass_name\n";
