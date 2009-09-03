@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use URT;
 use Test::More tests => 22;
+use Data::Dumper;
 
 class URT::Item {
     id_by => [qw/name group/],
