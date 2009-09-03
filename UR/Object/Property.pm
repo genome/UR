@@ -69,7 +69,6 @@ sub create_object {
     my $class = shift;
     my %params = $class->preprocess_params(@_);
     #print Data::Dumper::Dumper(\%params);
-    #$DB::single = 1;
     #%params = $class->preprocess_params(@_);
     
     if ($params{attribute_name} and not $params{property_name}) {
@@ -160,29 +159,50 @@ sub _get_joins {
                 my $property_name = $self->property_name;
                 my $class_name = $self->class_name;
                 Carp::croak "Can't resolve property $property_name of $class_name: No data type for '$via'?";
-            }            
+            }
             push @joins, $via_meta->_get_joins();
             
             my $to = $self->to;
             unless ($to) {
                 $to = $self->property_name;
-            }            
-            my $to_meta = $via_meta->data_type->get_class_object->get_property_meta_by_name($to);
-            unless ($to_meta) {
-                my $property_name = $self->property_name;
-                my $class_name = $self->class_name;
-                Carp::croak "Can't resolve property $property_name of $class_name: No '$to' property found on " . $via_meta->data_type;
             }
-            push @joins, $to_meta->_get_joins();
+            if (my $where = $self->where) {
+                if ($where->[1] eq 'name') {
+                    @$where = reverse @$where;
+                }            
+                my $join = pop @joins;
+                my $where_rule = $join->{foreign_class}->get_rule_for_params(@$where);                
+                my $id = $join->{id};
+                $id .= ' ' . $where_rule->id;
+                push @joins, { %$join, id => $id, where => $where };
+            }
+            unless ($to eq 'self') {
+                my $to_meta = $via_meta->data_type->get_class_object->get_property_meta_by_name($to);
+                unless ($to_meta) {
+                    my $property_name = $self->property_name;
+                    my $class_name = $self->class_name;
+                    Carp::croak "Can't resolve property $property_name of $class_name: No '$to' property found on " . $via_meta->data_type;
+                }
+                push @joins, $to_meta->_get_joins();
+            }
         }
         else {
             my $source_class = $class_meta->class_name;            
             my $foreign_class = $self->data_type;
+            my $where = $self->where;
+            if (defined($where) and defined($where->[1]) and $where->[1] eq 'name') {
+                @$where = reverse @$where;
+            }
+            
             if (defined($foreign_class) and $foreign_class->can('get')) {
                 #print "class $foreign_class, joining...\n";
                 my $foreign_class_meta = $foreign_class->get_class_object;
                 my $property_name = $self->property_name;
                 my $id = $source_class . '::' . $property_name;
+                if ($where) {
+                    my $where_rule = $foreign_class->get_rule_for_params(@$where);
+                    $id .= ' ' . $where_rule->id;
+                }
                 if (my $id_by = $self->id_by) { 
                     my(@source_property_names, @foreign_property_names);
                     # This ensures the linking properties will be in the right order
@@ -190,7 +210,7 @@ sub _get_joins {
                         push @source_property_names, $ref_property->property_name;
                         push @foreign_property_names, $ref_property->r_property_name;
                     }
-
+                    
                     push @joins, {
                         id => $id,
                         source_class => $source_class,
@@ -199,6 +219,7 @@ sub _get_joins {
                         foreign_class => $foreign_class,
                         foreign_class_meta => $foreign_class_meta,
                         foreign_property_names => \@foreign_property_names,
+                        where => $where,
                     }
                 }
                 elsif (my $reverse_id_by = $self->reverse_id_by) { 
