@@ -6,7 +6,7 @@ use UR;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => "UR::Command::Define::Datasource::RDBMS",
+    is => "UR::Command::Define::Datasource::Rdbms",
 );
 
 sub help_brief {

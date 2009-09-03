@@ -8,7 +8,7 @@ use IO::File;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => "UR::Command",
+    is => 'UR::Command',
     has => [
                 dsname => {
                         type => 'String',
