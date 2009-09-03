@@ -999,7 +999,7 @@ sub _CopyToAlternateDB {
 sub _sync_database {
     my $self = shift;
     my %params = @_;
-    
+    $DB::single=1; 
     my $changed_objects = delete $params{changed_objects};
     my %objects_by_class_name;
     for my $obj (@$changed_objects) {
@@ -1143,6 +1143,7 @@ sub _sync_database {
         }
 
         # Go through the constraints.
+        my $tmparray;
         for my $fk (@fk)
         {
             my $r_table_name = $fk->r_table_name;
@@ -1157,26 +1158,38 @@ sub _sync_database {
 
             if ($insert{$table_name} and $insert{$r_table_name})
             {
-                $prerequisites{"insert $table_name"}{"insert $r_table_name"} = $fk;
-                $dependants{"insert $r_table_name"}{"insert $table_name"} = $fk;
+                $tmparray = $prerequisites{"insert $table_name"}{"insert $r_table_name"} ||= [];
+                push @$tmparray, $fk;
+
+                $tmparray = $dependants{"insert $r_table_name"}{"insert $table_name"} ||= [];
+                push @$tmparray, $fk;
             }
 
             if ($update{$table_name} and $insert{$r_table_name})
             {
-                $prerequisites{"update $table_name"}{"insert $r_table_name"} = $fk;
-                $dependants{"insert $r_table_name"}{"update $table_name"} = $fk;
+                $tmparray = $prerequisites{"update $table_name"}{"insert $r_table_name"} ||= [];
+                push @$tmparray, $fk;
+
+                $tmparray = $dependants{"insert $r_table_name"}{"update $table_name"} ||= [];
+                push @$tmparray, $fk;
             }
 
             if ($delete{$r_table_name} and $delete{$table_name})
             {
-                $prerequisites{"delete $r_table_name"}{"delete $table_name"} = $fk;
-                $dependants{"delete $table_name"}{"delete $r_table_name"} = $fk;
+                $tmparray = $prerequisites{"delete $r_table_name"}{"delete $table_name"} ||= [];
+                push @$tmparray, $fk;
+
+                $tmparray = $dependants{"delete $table_name"}{"delete $r_table_name"} ||= [];
+                push @$tmparray, $fk;
             }
 
             if ($delete{$r_table_name} and $update{$table_name})
             {
-                $prerequisites{"delete $r_table_name"}{"update $table_name"} = $fk;
-                $dependants{"update $table_name"}{"delete $r_table_name"} = $fk;
+                $tmparray = $prerequisites{"delete $r_table_name"}{"update $table_name"} ||= [];
+                push @$tmparray, $fk;
+                
+                $tmparray = $dependants{"update $table_name"}{"delete $r_table_name"} ||= [];
+                push @$tmparray, $fk;
             }
         }
     }
@@ -1186,7 +1199,7 @@ sub _sync_database {
     # Note that the general command is something like "insert EMPLOYEES",
     # while the explicit command is an exact insert statement with params.
     #
-
+$DB::single =1;
     my @general_commands_in_order;
     my %self_referencing_table_commands;
 
@@ -1289,11 +1302,13 @@ sub _sync_database {
         my ($dml_type,$table_name) = split(/\s+/,$general_command);
 
 
-        if (my $circular_fk = $self_referencing_table_commands{$general_command})
+        if (my $circular_fk_list = $self_referencing_table_commands{$general_command})
         {
             # A circular foreign key requires that the
             # items be inserted in a specific order.
-            my (@rcol) = $circular_fk->column_names;
+            my (@rcol_sets) = 
+                map { [ $_->column_names ] } 
+                @$circular_fk_list;
 
             # Get the IDs and objects which need to be saved.
             my @cmds = @{ $explicit_commands_by_type_and_table{$dml_type}{$table_name} };
@@ -1311,14 +1326,23 @@ sub _sync_database {
             my %unsorted_cmds = map { $_->{id} => $_ } @cmds;
             my $add;
             my @local_explicit_commands;
+            my %adding;
             $add = sub {
                 my ($cmd) = @_;
-                my $obj = $objs{$cmd->{id}};
-                my $pid = $obj->class->composite_id(map { $obj->$_ } @rcol);
-                if (defined $pid) {   # This recursive foreign key dep may have been optional
-                    my $pcmd = delete $unsorted_cmds{$pid};
-                    $add->($pcmd) if $pcmd;
+                if ($adding{$cmd}) {
+                    $DB::single = 1;
+                    Carp::confess("Circular foreign key!") unless $main::skip_croak;
                 }
+                $adding{$cmd} = 1;
+                my $obj = $objs{$cmd->{id}};
+                for my $rcol_set (@rcol_sets) {
+                    my $pid = $obj->class->composite_id(map { $obj->$_ } @$rcol_set);
+                    if (defined $pid) {   # This recursive foreign key dep may have been optional
+                        my $pcmd = delete $unsorted_cmds{$pid};
+                        $add->($pcmd) if $pcmd;
+                    }
+                }
+                delete $adding{$cmd};
                 push @local_explicit_commands, $cmd;
             };
             for my $cmd (@cmds) {
