@@ -129,7 +129,7 @@
  content_value_dollars: 
 +slot_id: integer
  count: 
- coin_items: Vending::Coin
+ coins: Vending::Coin
  price: 
  machine: UR::Singleton
  is_buyable: integer

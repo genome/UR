@@ -36,7 +36,7 @@ sub insert {
     }
 
     my $loc = $self->coin_box();
-    my $coin = $loc->add_coin_item(type_id => $coin_type->type_id, machine_id => $self);
+    my $coin = $loc->add_coin(type_id => $coin_type->type_id, machine_id => $self);
 
     return defined($coin);
 }
@@ -164,7 +164,7 @@ sub _complete_purchase_and_make_change_for_selections {
     # Make change for the user
     MAKING_CHANGE:
     foreach my $coin_name ( @available_coin_types ) {
-        my $coin_iter = $change_dispenser->coin_item_iterator(name => $coin_name);
+        my $coin_iter = $change_dispenser->coin_iterator(name => $coin_name);
         unless ($coin_iter) {
             die "Can't create iterator for Vending::Coin::Change\n";
         }
