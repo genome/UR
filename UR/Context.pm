@@ -638,8 +638,8 @@ $DB::single=1;
             }
 
             # Now, find out which numbered column in the result query maps to those names
-            my $loading_templates = $secondary_template->{'loading_templates'};
-            foreach my $tmpl ( @$loading_templates ) {
+            my $secondary_loading_templates = $secondary_template->{'loading_templates'};
+            foreach my $tmpl ( @$secondary_loading_templates ) {
                 my $property_name_count = scalar(@{$tmpl->{'property_names'}});
                 for (my $i = 0; $i < $property_name_count; $i++) {
                     my $property_name = $tmpl->{'property_names'}->[$i];
@@ -648,8 +648,9 @@ $DB::single=1;
                         my $column_position = $tmpl->{'column_positions'}->[$i];
 
                         # What are the types involved?
+                        my $primary_query_column_name = $foreign_property_name_map{$property_name};
                         my $primary_property_meta = UR::Object::Property->get(class_name => $primary_template->{'class_name'},
-                                                                              property_name => $foreign_property_name_map{$property_name});
+                                                                              property_name => $primary_query_column_name);
                         my $secondary_property_meta = UR::Object::Property->get(class_name => $secondary_template->{'class_name'},
                                                                                 property_name => $property_name);
 
@@ -657,8 +658,26 @@ $DB::single=1;
                         if ($primary_property_meta->is_numeric && $secondary_property_meta->is_numeric) {
                             $comparison_type = 1;
                         } 
+
+                        my $comparison_position;
+                        if (exists $primary_query_column_positions{$primary_query_column_name} ) {
+                            $comparison_position = $primary_query_column_positions{$primary_query_column_name};
+
+                        } else {
+                            # This isn't a real column we can get from the data source.  Maybe it's
+                            # in the constant_property_names of the primary_loading_template?
+                            unless (grep { $_ eq $primary_query_column_name}
+                                    @{$loading_templates->[0]->{'constant_property_names'}}) {
+                                die sprintf("Can't resolve datasource comparison to join %s::%s to %s:%s",
+                                            $primary_template->{'class_name'}, $primary_query_column_name,
+                                            $secondary_template->{'class_name'}, $property_name);
+                            }
+                            my $comparison_value = $rule->specified_value_for_property_name($primary_query_column_name);
+                            $comparison_position = \$comparison_value;
+                            next;
+                        }
                         push @join_comparison_info, $column_position,
-                                                    $primary_query_column_positions{$foreign_property_name_map{$property_name}},
+                                                    $comparison_position,
                                                     $comparison_type;
  
 
@@ -691,12 +710,22 @@ $DB::single=1;
                 for (my $i = 0; $i < @join_comparison_info; $i += 3) {
                     my $secondary_column = $join_comparison_info[$i]; 
                     my $primary_column = $join_comparison_info[$i+1];
+                    my $is_numeric = $join_comparison_info[$i+2];
+
                     my $comparison;
-                    # Numeric or string comparison?
-                    if ($join_comparison_info[$i+2]) {
-                        $comparison = $secondary_db_row->[$secondary_column] <=> $next_db_row->[$primary_column];
+                    if (ref $primary_column) {
+                        # This was one of those constant value items
+                        if ($is_numeric) {
+                            $comparison = $secondary_db_row->[$secondary_column] <=> $$primary_column;
+                        } else {
+                            $comparison = $secondary_db_row->[$secondary_column] cmp $$primary_column;
+                        }
                     } else {
-                        $comparison = $secondary_db_row->[$secondary_column] cmp $next_db_row->[$primary_column];
+                        if ($join_comparison_info[$i+2]) {
+                            $comparison = $secondary_db_row->[$secondary_column] <=> $next_db_row->[$primary_column];
+                        } else {
+                            $comparison = $secondary_db_row->[$secondary_column] cmp $next_db_row->[$primary_column];
+                        }
                     }
 
                     if ($comparison < 0) {
@@ -768,6 +797,9 @@ $DB::single=1;
 sub _create_import_iterator_for_underlying_context {
     my ($self, $rule, $dsx) = @_; 
 
+    # make an iterator for the primary data source
+    my $db_iterator = $dsx->create_iterator_closure_for_rule($rule);    
+
     my ($rule_template, @values) = $rule->get_rule_template_and_values();
     my($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
     my $class_name = $template_data->{class_name};
@@ -830,9 +862,6 @@ sub _create_import_iterator_for_underlying_context {
     
     my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
     
-    # make an iterator for the primary data source
-    my $db_iterator = $dsx->create_iterator_closure_for_rule($rule);    
-
     my %subordinate_iterator_for_class;
     
     # instead of making just one import iterator, we make one per loading template
