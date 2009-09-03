@@ -90,7 +90,8 @@ sub execute {
         # Step 3 - Make and write a new Meta DataSource module 
         # and also, the SQL source for a new, empty metadata DB
         my ($meta_datasource, $meta_db_file) = 
-            UR::DataSource::Meta->generate_for_namepace($name);
+            UR::DataSource::Meta->generate_for_namespace($name);
+        my $meta_datasource_name = $meta_datasource->id;
         $self->status_message("A   $meta_datasource_name (UR::DataSource::Meta)\n");
         $self->status_message("A   $meta_db_file (Metadata DB skeleton)");
     }

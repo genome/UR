@@ -463,9 +463,18 @@ sub module_path {
     my $path = $INC{$base_name};
     return _abs_path_relative_to_pwd_at_compile_time($path) if $path;
     #warn "Module $base_name is not in \%INC!\n";
-    my $namespace = $base_name;
-    $namespace =~ s/\/.*$//;
-    $namespace .= ".pm";
+
+    my $namespace;
+    my $first_slash = index($base_name, '/');
+    if ($first_slash >= 0) {
+        # Normal case...
+        $namespace = substr($base_name, 0, $first_slash);
+        $namespace .= ".pm";
+    } else {
+        # This module must _be_ the namespace
+        $namespace = $base_name;
+    }
+
     for my $dir (map { _abs_path_relative_to_pwd_at_compile_time($_) } grep { -d $_ } @INC) {
         if (-e $dir . "/" . $namespace) {
             #warn "Found $base_name in $dir...\n";
