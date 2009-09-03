@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 23;
+use Test::More tests => 49;
 
 use IO::File;
 
@@ -41,6 +41,26 @@ for (my $i = 0; $i < @data; $i++) {
     is($things[$i]->thing_name, $data[$i]->[1], "Object $i thing_name is correct");
     is($things[$i]->thing_color, $data[$i]->[2], "Object $i thing_color is correct");
 }
+
+
+my $iter1 = URT::Things->create_iterator();
+my $iter2 = URT::Things->create_iterator();
+for (my $i = 0; $i < @data; $i++) {
+    my $obj = $iter1->next();
+    is($obj->thing_id, $data[$i]->[0], 'Iterator 1, thing_id is correct');
+    is($obj->thing_name, $data[$i]->[1], 'Iterator 1, thing_name is correct');
+    is($obj->thing_color, $data[$i]->[2], 'Iterator 1, thing_color is correct');
+
+    $obj = $iter2->next();
+    is($obj->thing_id, $data[$i]->[0], 'Iterator 2, thing_id is correct');
+    is($obj->thing_name, $data[$i]->[1], 'Iterator 2, thing_name is correct');
+    is($obj->thing_color, $data[$i]->[2], 'Iterator 2, thing_color is correct');
+}
+
+my $obj = $iter1->next();
+ok(! defined($obj), 'Iterator 1 returns undef when all data is exhausted');
+$obj = $iter2->next();
+ok(! defined($obj), 'Iterator 2 returns undef when all data is exhausted');
 
 
 unlink URT::DataSource::SomeFile->server;

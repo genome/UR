@@ -459,7 +459,7 @@ sub get_objects_for_class_and_rule {
         
         # this returns objects from the underlying context after importing them into the current context
         my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule,$ds);
-        
+
         my $last_loaded_id;
         # this will interleave the above with any data already present in the current context
         $loading_iterator = sub {
@@ -1118,6 +1118,9 @@ sub _create_import_iterator_for_underlying_context {
                         $object->{load}{param_key}{$class_name}{$rule_without_recursion_desc->id}++;
                     }
                 }
+
+                # Apply changes to all_params_loaded that each importer has collected
+                $_->commit foreach @importers;
                 return;
             }
             
@@ -1226,7 +1229,7 @@ sub _create_import_iterator_for_underlying_context {
                 redo;
             }
             
-        }; # end of loop until we have a defined object to return
+        } # end of loop until we have a defined object to return
         
         return $object;
     };
@@ -1363,6 +1366,8 @@ sub _create_object_fabricator_for_loading_template {
         }
     }
     
+    my %all_params_loaded_items;
+
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
         
@@ -1589,10 +1594,10 @@ sub _create_object_fabricator_for_loading_template {
             if ($loading_base_object and not $rule_specifies_id) {
                 if ($rule_class_name ne $load_class_name) {
                     $pending_db_object->{load}{param_key}{$load_class_name}{$load_rule_id}++;
-                    $UR::Object::all_params_loaded->{$load_class_name}{$load_rule_id}++;    
+                    $all_params_loaded_items{$load_class_name}{$load_rule_id}++;    
                 }
                 $pending_db_object->{load}{param_key}{$rule_class_name}{$rule_id}++;
-                $UR::Object::all_params_loaded->{$rule_class_name}{$rule_id}++;
+                $all_params_loaded_items{$rule_class_name}{$rule_id}++;
 
                 if (@rule_properties_with_in_clauses) {
                     # FIXME - confirm that all the object properties are filled in at this point, right?
@@ -1602,7 +1607,7 @@ sub _create_object_fabricator_for_loading_template {
                     #}
                     my $r = $rule_template_without_in_clause->get_normalized_rule_for_values(@values);
                     
-                    $UR::Object::all_params_loaded->{$rule_class_name}{$r->id}++;
+                    $all_params_loaded_items{$rule_class_name}{$r->id}++;
                 }
             }
             
@@ -1790,7 +1795,7 @@ sub _create_object_fabricator_for_loading_template {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
                     my $rule_tmpl = $hint_data->[1];
                     my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
-                    $UR::Context::all_params_loaded->{$rule_tmpl->subject_class_name}->{$related_obj_rule->id}++;
+                    $all_params_loaded_items{$rule_tmpl->subject_class_name}->{$related_obj_rule->id}++;
                  }
             }
         }
@@ -1830,8 +1835,8 @@ sub _create_object_fabricator_for_loading_template {
                 # note on those objects that they are part of that query.  These may have loaded earlier in this
                 # query, or in a previous query.  Anything NOT already loaded will be hit later by the if-block below.
                 my @subset_loaded = $class->is_loaded($recurse_property_on_this_row => $value_referencing_other_object);
-                $UR::Object::all_params_loaded->{$class}{$equiv_param_key} = scalar(@subset_loaded);
-                $UR::Object::all_params_loaded->{$class}{$equiv_param_key2} = scalar(@subset_loaded);
+                $all_params_loaded_items{$class}{$equiv_param_key} = scalar(@subset_loaded);
+                $all_params_loaded_items{$class}{$equiv_param_key2} = scalar(@subset_loaded);
                 for my $pending_db_object (@subset_loaded) {
                     $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
                     $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
@@ -1859,8 +1864,8 @@ sub _create_object_fabricator_for_loading_template {
                                      );
                 my $equiv_param_key2 = $equiv_params2->get_normalized_rule_equivalent->id;
                 
-                $UR::Object::all_params_loaded->{$class}{$equiv_param_key}++;
-                $UR::Object::all_params_loaded->{$class}{$equiv_param_key2}++;
+                $all_params_loaded_items{$class}{$equiv_param_key}++;
+                $all_params_loaded_items{$class}{$equiv_param_key2}++;
                 $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
                 $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
             }
@@ -1869,11 +1874,44 @@ sub _create_object_fabricator_for_loading_template {
         return $pending_db_object;
         
     }; # end of per-class object fabricator
+
+    # remember all the changes to $UR::Context::all_params_loaded that should be made.
+    # This fixes the problem where you create an iterator for a query, read back some of
+    # the items, but not all, then later make the same query.  The old behavior made
+    # entries in all_params_loaded as objects got loaded from the DB, so that at the time
+    # the second query is made, UR::Context::_cache_is_complete_for_class_and_normalized_rule()
+    # sees there are entries in all_params_loaded, and so reports yes, the cache is complete,
+    # and the second query only returns the objects that were loaded during the first query.
+    #
+    # The new behavior builds up changes to be made to all_params_loaded, and someone
+    # needs to call $object_fabricator->commit() to apply these changes
+    bless $object_fabricator, 'UR::Context::object_fabricator_tracker';
+    $UR::Context::object_fabricators->{$object_fabricator} = \%all_params_loaded_items;
     
     return $object_fabricator;
 }
 
+sub UR::Context::object_fabricator_tracker::commit {
+    my $self = shift;
 
+    my $this_apl = delete $UR::Context::object_fabricators->{$self};
+    foreach my $class ( %$this_apl ) {
+        while(1) {
+            my($rule_id,$val) = each %{$this_apl->{$class}};
+            last unless defined $rule_id;
+            $UR::Context::all_params_loaded->{$class}->{$rule_id} += $val; 
+        }
+    }
+}
+sub UR::Context::object_fabricator_tracker::DESTROY {
+    my $self = shift;
+    # Don't apply the changes.  Maybe the importer closure just went out of scope and
+    # hasn't read all the data
+    delete $UR::Context::object_fabricators->{$self};
+}
+
+    
+    
 sub _get_objects_for_class_and_sql {
     # this is a depracated back-door to get objects with raw sql
     # only use it if you know what you're doing
