@@ -19,18 +19,17 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
     has => [
-        recurse => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.' },
-        time    => { is => 'Boolean', doc => 'Write timelog sum to specified file', is_optional => 1 },
-        long    => { is => 'Boolean', doc => 'Run tests including those flagged as long', is_optional => 1 },
-        list    => { is => 'Boolean', doc => 'List the tests, but do not actually run them.' },
-        cover   => { is => 'List', doc => 'Cover only this(these) modules', is_optional => 1 },
-        cover_svn_changes => { is_optional => 1, is => 'Boolean', doc => 'Cover modules modified in svn status' },
-        cover_svk_changes => { is => 'Boolean', doc => 'Cover modules modified in svk status', is_optional => 1 },
-        cover_cvs_changes => { is => 'Boolean', doc => 'Cover modules modified in cvs status', is_optional => 1 },
-        perl_opts       =>  { is => 'String', is_optional => 1, default_value => '',  
-                                doc => 'Override optiosn to the Perl interpreter when running the tests (-d:Profile, etc.)', },
-        script_opts     => { is => 'String', is_optional => 1, default_value => '',
-                                doc => 'Override optiosn to the test case when running the tests (--dump-sql --no-commit)', },
+        recurse           => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.'                                                },
+        time              => { is => 'Boolean', doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
+        long              => { is => 'Boolean', doc => 'Run tests including those flagged as long',                                          is_optional => 1                       },
+        list              => { is => 'Boolean', doc => 'List the tests, but do not actually run them.'                                                                              },
+        cover             => { is => 'List',    doc => 'Cover only this(these) modules',                                                     is_optional => 1                       },
+        cover_svn_changes => { is => 'Boolean', doc => 'Cover modules modified in svn status',                                               is_optional => 1                       },
+        cover_svk_changes => { is => 'Boolean', doc => 'Cover modules modified in svk status',                                               is_optional => 1                       },
+        cover_cvs_changes => { is => 'Boolean', doc => 'Cover modules modified in cvs status',                                               is_optional => 1                       },
+        coverage          => { is => 'Boolean', doc => 'Invoke Devel::Cover',                                                                is_optional => 1                       },
+        perl_opts         => { is => 'String',  doc => 'Override options to the Perl interpreter when running the tests (-d:Profile, etc.)', is_optional => 1, default_value => ''  }, 
+        script_opts       => { is => 'String',  doc => 'Override options to the test case when running the tests (--dump-sql --no-commit)',  is_optional=>  1, default_value => ''  },
     ],
 );
 
@@ -60,6 +59,11 @@ sub execute {
 
     $working_path ||= ".";
 
+    # black magic to summon forth Devel::Cover 
+    if ($self->coverage()) {
+        $ENV{'HARNESS_PERL_SWITCHES'} = '-MDevel::Cover';
+    }
+    
     # nasty parsing of command line args
     # this may no longer be needed..
     my @tests = @{ $self->bare_args || [] }; 
@@ -267,6 +271,8 @@ sub _run_tests {
         return;
     }
     else {
+        system("chmod -R g+rwx cover_db");
+        system("/gsc/bin/cover");
         return 1;
     }
 }
