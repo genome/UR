@@ -36,7 +36,4 @@ L<UR::Context> - Software transactions and More!
 
 L<UR::DataSource> - How and where to get data
 
-L<UR::Command> - Commands can be command-line tools, or linked within another
-program
-
 
