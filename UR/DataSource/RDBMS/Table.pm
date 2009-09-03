@@ -13,7 +13,8 @@ UR::Object::Type->define(
     properties => [
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
         data_source_obj                  => { type => 'UR::DataSource', id_by => 'data_source'}, 
-        namespace                        => { type => 'varchar', via => 'data_source_obj', to => 'namespace' },
+        namespace                        => { calculate_from => [ 'data_source'],
+                                              calculate => q( (split(/::/,$data_source))[0] ) },
         owner                            => { type => 'varchar', len => undef, is_optional => 1, sql => 'owner' },
         table_name                       => { type => 'varchar', len => undef, sql => 'table_name' },
         er_type                          => { type => 'varchar', len => undef, sql => 'er_type' },
