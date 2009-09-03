@@ -305,7 +305,6 @@ sub column_info {
 sub foreign_key_info {
 my($dbh,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
 
-$DB::single=1;
     my($table_col_fk, $table_col_fk_rev) = &_get_fk_lists($dbh);
 
     my @ret_data;

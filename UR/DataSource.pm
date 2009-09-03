@@ -407,7 +407,6 @@ sub _get_template_data_for_loading {
 
             my %joins_done;
 
-$DB::single=1;
             DELEGATED_PROPERTY:
             for my $delegated_property (@delegated_properties) {
                 my $last_alias_for_this_chain;

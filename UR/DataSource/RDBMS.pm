@@ -1699,8 +1699,6 @@ sub _default_save_sql_for_object {
     
     # Handle each table.  There is usually only one, unless,
     # there is inheritance within the schema.
-$DB::single=1;
-    
     my @save_table_names = 
         map  { uc }
         grep { $_ }

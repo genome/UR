@@ -188,7 +188,7 @@ sub execute {
         # Get updates to it first.
         #
         
-        $DB::single=1;
+        #$DB::single=1;
         
         for my $data_source (@target_data_sources) {
             # ensure the class has been lazy-loaded until UNIVERSAL::can is smarter...
@@ -208,7 +208,7 @@ sub execute {
         # Summarize the database changes by table.  We'll create/update/delete the class which goes with that table.
         #
     
-        $DB::single = 1;
+        #$DB::single = 1;
     
         for my $dd_class (qw/UR::DataSource::RDBMS::Table UR::DataSource::RDBMS::FkConstraint UR::DataSource::RDBMS::TableColumn/) {
             push @data_dictionary_objects, 
@@ -257,7 +257,7 @@ sub execute {
     # Update the classes based-on changes to the database schemas
     #
 
-    $DB::single = 1;
+    #$DB::single = 1;
 
     if (@data_dictionary_objects) {
         $self->status_message("Found " . keys(%changed_tables) . " tables with changes.") unless $force_rewrite_all_classes;
@@ -282,7 +282,7 @@ sub execute {
     # At this point we allow the namespace to adjust the class tree as it chooses.
     #
 
-    $DB::single = 1;
+    #$DB::single = 1;
 
     $namespace->class;
     if (
@@ -311,7 +311,7 @@ sub execute {
     # Right now, it's done with a _load() override, no data_source, and this block of code. :(
     #
 
-    $DB::single = 1;
+    #$DB::single = 1;
 
     my @changed_class_meta_objects;
     my %changed_classes;
@@ -819,7 +819,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 $id_property_link->delete;
             }
             $class->delete;
-            ##$DB::single = 1;
+            #$DB::single = 1;
             $self->status_message(
                 #sprintf("D %-40s deleted for deleted table %-32s" . "\n",$class_name,$table_name)
                 sprintf("D %-40s deleted for deleted table %s" . "\n",$class_name,$table_name)
@@ -834,7 +834,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     # but rolls back transactions between those calls.
     $self->{'_class_meta_cache'} = {};
 
-    $DB::single = 1;
+    #$DB::single = 1;
 
     #
     # EXISTING DD OBJECTS
@@ -988,7 +988,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                                                           table_name => $table->table_name);
 
         unless ($class) {
-            $DB::single = 1;
+            #$DB::single = 1;
             $class = $self->_get_class_meta_for_table_name(data_source => $data_source,
                                                           table_name => $table->table_name);
             Carp::confess("Class object missing for table " . $table->table_name) unless $class;
@@ -1120,7 +1120,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         unless (@properties) {
             print "no properties on class $class_name?";
-            $DB::single = 1;
+            #$DB::single = 1;
         }
 
         my @id_properties =
@@ -1181,7 +1181,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
     $self->status_message("Updating class unique constraints...\n");
 
-    $DB::single = 1;
+    #$DB::single = 1;
 
     # UNIQUE CONSTRAINT / UNIQUE INDEX -> UNIQUE GROUP (loop table objecs since we have no PK DD objects)
     for my $table (sort $sorter @{ $dd_changes_by_class{'UR::DataSource::RDBMS::Table'} }) {
