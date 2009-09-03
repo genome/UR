@@ -345,7 +345,7 @@ ok($trans, "DROPPED EMPLOYEE AND UPDATED PERSON began transaction");
 
     ok($command_obj->execute(), 'Updating schema');
     @changes = get_changes();
-    is(scalar(@changes), 15, "found changes for two more dropped tables");
+    is(scalar(@changes), 16, "found changes for two more dropped tables");
 
 
 $trans = UR::Context::Transaction->begin();
@@ -519,7 +519,8 @@ sub initialize_check_change_data_structures {
             create => ''
         }, 
         "URT::Person\tperson_id" => {
-            create => ''
+            create => '',
+            is_id  => 1,   # Created as an ID property
         },
     },
     'UR::Object::Property::ID' => {
@@ -638,6 +639,7 @@ sub initialize_check_change_data_structures {
     'UR::Object::Property' => {
         "URT::Car\tcar_id" => {
             create => '',
+            is_id  => 1,
         },
         "URT::Car\tcolor" => {
             create => '',
@@ -660,6 +662,7 @@ sub initialize_check_change_data_structures {
 
         "URT::Employee\temployee_id" => {
            create => '',
+           is_id  => 1,
         },
         "URT::Employee\trank" => {
            create => '',
@@ -673,6 +676,7 @@ sub initialize_check_change_data_structures {
         },
         "URT::Person\tperson_id" => {
            create => '',
+           is_id  => 1,
         },
         "URT::Person\tpostal_address" => {
            create => '',
@@ -838,6 +842,7 @@ sub initialize_check_change_data_structures {
     'UR::Object::Property' => {
         "URT::Employee\temployee_id" => {
             create => '',
+            is_id  => 1,
         },
         "URT::Employee\trank" => {
             create => '',
@@ -848,6 +853,7 @@ sub initialize_check_change_data_structures {
 
         "URT::Person\tperson_id" => {
             create => '',
+            is_id  => 1,
         },
         "URT::Person\tname" => {
             create => '',
