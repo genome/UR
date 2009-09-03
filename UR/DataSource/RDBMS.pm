@@ -1936,7 +1936,7 @@ sub _generate_template_data_for_loading {
         @delegated_properties,    
         %outer_joins,
     );
-    
+$DB::single = 1; 
     for my $co ( $class_meta, @parent_class_objects ) {
         my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
@@ -1950,11 +1950,18 @@ sub _generate_template_data_for_loading {
             $first_table_name ||= $table_name;
             if ($prev_table_name) {
                 die "Database-level inheritance cannot be used with multi-value-id classes ($class_name)!" if @id_property_objects > 1;
+                my $prev_table_alias;
+                if ($prev_table_name =~ /.*\s+(\w+)\s*$/) {
+                    $prev_table_alias = $1;
+                }
+                else {
+                    $prev_table_alias = $prev_table_name;
+                }
                 push @sql_joins,
                     $table_name =>
                         {
                             $id_property_objects[0]->column_name => { 
-                                link_table_name => $prev_table_name, 
+                                link_table_name => $prev_table_alias, 
                                 link_column_name => $prev_id_column_name 
                             }
                         };
