@@ -2062,7 +2062,8 @@ sub _generate_template_data_for_loading {
                             $id_property_objects[0]->column_name => { 
                                 link_table_name => $prev_table_alias, 
                                 link_column_name => $prev_id_column_name 
-                            }
+                            },
+                            -is_required => 1,
                         };
             }
             $prev_table_name = $table_name;
