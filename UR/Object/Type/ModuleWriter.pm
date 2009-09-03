@@ -70,19 +70,23 @@ sub resolve_class_description_perl {
                                                $self->{'attributes_have'}->{$b}->{'position_in_module_header'} }
                                             keys %{$self->{'attributes_have'}};
         foreach my $meta_name ( @property_meta_property_names ) {
-            my @this_meta_properties;
             my $this_meta_struct = $self->{'attributes_have'}->{$meta_name};
 
+            # The attributes_have structure gets propogated to subclasses, but it only needs to appear
+            # in the class definition of the most-parent class
+            my $expected_name = $class_name . '::attributes_have';
+            next unless ( $this_meta_struct->{'is_specified_in_module_header'} eq $expected_name);
+
             # We want these to appear first
+            my @this_meta_properties;
             push @this_meta_properties, sprintf("is => '%s'", $this_meta_struct->{'is'}) if (exists $this_meta_struct->{'is'});
             push @this_meta_properties, sprintf("is_optional => %d", $this_meta_struct->{'is_optional'}) if (exists $this_meta_struct->{'is_optional'});
 
             foreach my $key ( sort keys %$this_meta_struct ) {
                 next if grep { $key eq $_ } qw( is is_optional is_specified_in_module_header position_in_module_header );  # skip the ones we've already done
                 my $value = $this_meta_struct->{$key};
-                my $is_number = ($value + 0) eq $value;
                 
-                my $format = $is_number ? "%s => %s" : "%s => '%s'";
+                my $format = $self->_is_number($value) ? "%s => %s" : "%s => '%s'";
                 push @this_meta_properties, sprintf($format, $key, $value);
             }
             push @property_meta_property_strings, "$meta_name => { " . join(', ', @this_meta_properties) . " },";
@@ -93,13 +97,16 @@ sub resolve_class_description_perl {
                  join("\n        ", @property_meta_property_strings) .
                  "\n    ],\n";
     }
+
+    if (exists $self->{'first_sub_classification_method_name'}) {
+        # This gets overridden by UR::Object::Type to cache the value it finds from parent
+        # classes, so we can't just get the property through the normal channels
+        $perl .= "    first_sub_classification_method_name => '" . $self->{'first_sub_classification_method_name'} ."',\n";
+    }
             
-    $DB::single=1;
-
-
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->get_class_object->all_property_type_names;
-    my @specified = qw/class_name type_name table_name id_by er_role is_abstract generated data_source schema_name doc namespace id/;
+    my @specified = qw/class_name type_name table_name id_by er_role is_abstract generated data_source schema_name doc namespace id first_sub_classification_method_name/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
         my $property_obj = $class_meta_meta->get_property_object(property_name => $property_name);
@@ -122,15 +129,16 @@ sub resolve_class_description_perl {
            }
     }
 
-    my @properties = $self->get_property_objects;
     my %properties_by_section;
+    my %id_property_names = map { $_->property_name => 1 } $self->get_id_objects;
+    my @properties = $self->get_property_objects;
     foreach my $property_meta ( @properties ) {
         my $mentioned_section = $property_meta->is_specified_in_module_header;
         next unless $mentioned_section;  # skip implied properites
         ($mentioned_section) = ($mentioned_section =~ m/::(\w+)$/);
          
         if (($mentioned_section and $mentioned_section eq 'id_implied')
-            or $property_meta->isa('UR::Object::Property::ID')) {
+            or $id_property_names{$property_meta->property_name}) {
 
             push @{$properties_by_section{'id_by'}}, $property_meta;
 
@@ -182,7 +190,7 @@ sub resolve_class_description_perl {
             $section_src .= $line;
         }
 
-        $perl .= "    $section => [\n$section_src\n    ],\n";
+        $perl .= "    $section => [\n$section_src    ],\n";
     }
 
     if (my @unique_constraint_props = sort { $a->unique_group cmp $b->unique_group }
@@ -268,6 +276,9 @@ sub resolve_module_header_source {
     return $perl;
 }
 
+my $next_line_prefix = "\n" . (" " x 25);
+my $deep_indent_prefix = "\n" . (" " x 55);
+
 sub _get_display_fields_for_property {
     my $self = shift;
     my $property = shift;
@@ -278,9 +289,6 @@ sub _get_display_fields_for_property {
         # unless they have their own docs, a specified column, etc.
         return();
     }    
-
-    my $next_line_prefix = "\n" . (" " x 25);
-    my $deep_indent_prefix = "\n" . (" " x 55);
     
     my @fields;    
     my %seen;
@@ -297,23 +305,6 @@ sub _get_display_fields_for_property {
         $seen{'data_length'} = 1;
     }
     
-    # show defined values
-    for my $std_field_name (qw//) {
-        my $property_name = "is_" . $std_field_name;
-        push @fields, "$property_name => " . $property->$property_name if defined $property->$property_name;
-        $seen{$property_name} = 1;
-    }
-
-    # show only true values, false is default
-    my $section = $params{'section'};
-    $section =~ s/^has_//;
-    for my $std_field_name (qw/optional abstract transient constant class_wide many/) {
-        $seen{$property_name} = 1;
-        next if ($section eq $std_field_name);  # Don't print is_optional if we're in the has_optional section
-        my $property_name = "is_" . $std_field_name;
-        push @fields, "$property_name => " . $property->$property_name if $property->$property_name;
-    }
-
     #$line .= "references => '???', ";
     if ($property->is_legacy_eav) { 
         # temp hack for entity attribute values
@@ -334,15 +325,21 @@ sub _get_display_fields_for_property {
                 push @calc_fields, "calculate_from => [ '" . join("', '", @$calc_from) . "' ]";
             }
         }
+
+        my $calc_source;
         foreach my $calc_type ( qw( calculate calculate_sql calculate_perl calculate_js ) ) {
             if ($property->$calc_type) {
-                push @calc_fields, "$calc_type => '" . $property->$calc_type . "'";
+                $calc_source = 1;
+                push @calc_fields, "$calc_type => q(" . $property->$calc_type . ")";
             }
         }
+
+        push @calc_fields, 'is_calculated => 1' unless ($calc_source);
+
         push @fields, join(",$next_line_prefix", @calc_fields);
         $seen{'is_calculated'} = 1;
-    }
-    elsif ($params{has_table}) {
+    } 
+    elsif ($params{has_table} && ! $property->is_transient) {
         unless ($property->column_name) {
             die("no column for property on class with table: " . $property->property_name .
                 " class: " . $self->class_name . "?");
@@ -351,6 +348,15 @@ sub _get_display_fields_for_property {
             push @fields,  "column_name => '" . $property->column_name . "'";
         }
         $seen{'column_name'} = 1;
+    }
+
+    if (defined($property->default_value)) {
+        my $value = $property->default_value;
+        if (! $self->_is_number($value)) {
+            $value = "'$value'";
+        }
+        push @fields, "default_value => $value";
+        $seen{'default_value'} = 1;
     }
     
     my $implied_property = 0;
@@ -391,12 +397,25 @@ sub _get_display_fields_for_property {
         push @fields, 'where => [ ' . join(', ', map { sprintf("%s => '%s'", $_, $where{$_}) } keys %where) . ' ]';
     }
 
+    # All the things like is_optional, is_many, etc
+    # show only true values, false is default
+    # section can be things like 'has', 'has_optional' or 'has_transient_many_optional'
+    my $section = $params{'section'};
+    $section =~ m/^has_(.*)/;
+    my @sections = split('_',$1 || '');
+    
+    for my $std_field_name (qw/optional abstract transient constant class_wide many deprecated/) {
+        $seen{$property_name} = 1;
+        next if (grep { $std_field_name eq $_ } @sections); # Don't print is_optional if we're in the has_optional section
+        my $property_name = "is_" . $std_field_name;
+        push @fields, "$property_name => " . $property->$property_name if $property->$property_name;
+    }
+
+
     foreach my $meta_property ( @{$params{'attributes_have'}} ) {
         my $value = $property->{$meta_property};
         if (defined $value) {
-            no warnings 'numeric';
-            my $is_number = ($value + 0) eq $value;
-            my $format = $is_number ? "%s => %s" : "%s => '%s'";
+            my $format = $self->_is_number($value) ? "%s => %s" : "%s => '%s'";
             push @fields, sprintf($format, $meta_property, $value);
         }
     }
@@ -697,5 +716,14 @@ sub _should_write_to_class_definition {
 
     return $default_value ne $property_value;
 }
+
+
+sub _is_number {
+    my($self,$value) = @_;
+    no warnings 'numeric';
+    my $is_number = ($value + 0) eq $value;
+    return $is_number;
+}
+
 
 1;
