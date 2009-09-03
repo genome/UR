@@ -507,6 +507,7 @@ sub get {
         # Sort the keys, and make an arrayref which will 
         # re-order the values to match.
         my @keys_sorted = sort @keys;
+        my $matches_all = scalar(@keys_sorted) == 0 ? 1 : 0;
         my $normalized_positions_arrayref = [];
         my $constant_value_normalized_positions = [];
         my $recursion_desc = undef;
@@ -524,7 +525,9 @@ sub get {
             else {
                 push @$normalized_positions_arrayref, $pos;
             }
-        }            
+        }
+
+        $id_only = 0 if ($matches_all);
     
         if (@$constant_value_normalized_positions > 1) {
             Carp::confess("Not Implemented: multiple '-' options.  Fix me!");
@@ -540,7 +543,7 @@ sub get {
             is_id_only                      => $id_only,
             is_partial_id                   => $partial_id,
             is_unique                       => undef, # assigned on first use
-            matches_all                     => (scalar(@keys_sorted) == 0 ? 1 : 0),
+            matches_all                     => $matches_all,
     
             key_op_hash                     => $key_op_hash,
             num_values                      => $num_values,
