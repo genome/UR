@@ -367,7 +367,7 @@ sub _normalize_class_description {
         [ is_transactional      => qw//],        
         [ id_by                 => qw/id_properties/],
         [ has                   => qw/properties/],        
-        [ type_has      => qw//],
+        [ type_has              => qw//],
         [ attributes_have       => qw//],
         [ er_role               => qw/er_type/],        
         [ doc                   => qw/description/],        
@@ -378,7 +378,7 @@ sub _normalize_class_description {
         [ data_source_id        => qw/data_source instance/],                
         [ table_name            => qw/sql dsmap/],
         [ query_hint            => qw/query_hint/],
-        [ sub_classification_property_name      => qw//],
+        [ subclassify_by        => qw/sub_classification_property_name/],
         [ sub_classification_meta_class_name    => qw//],
         [ sub_classification_method_name        => qw//],
         [ first_sub_classification_method_name  => qw//],
@@ -447,19 +447,10 @@ sub _normalize_class_description {
         and ($new_class{class_name} !~ /^Command(::|)$/)
         and ($new_class{data_source_id})
     ) {
-        unless ($new_class{sub_classification_property_name} or $new_class{sub_classification_method_name}) {
+        unless ($new_class{subclassify_by} or $new_class{sub_classification_method_name}) {
             $class->error_message(
-                "The sub_classification_method_name or sub_classification_property_name and sub_classification_meta_class_name"
+                "The sub_classification_method_name or subclassify_by and sub_classification_meta_class_name"
                 . " are required for abstract classes like $class_name!"
-            );
-            return;
-        }
-    }
-    else {
-        if ($new_class{sub_classification_property_name} or $new_class{sub_classification_meta_class_name}) {
-            $class->error_message(
-                "sub_classification_property_name and sub_classification_meta_class"
-                . " are ONLY for abstract classes  ...error in $class_name!"
             );
             return;
         }
@@ -714,7 +705,7 @@ sub _normalize_class_description {
     $new_class{'__properties_in_class_definition_order'} = \@properties_in_class_definition_order;
     
     unless ($new_class{type_name}) {
-        if ($new_class{table_name}) {
+        if ($new_class{table_name} and $new_class{table_name} !~ /\s/) {
             $new_class{type_name} = lc($new_class{table_name});
             $new_class{type_name} =~ s/_/ /g;
         }
@@ -843,6 +834,7 @@ sub _normalize_property_description {
         [ data_length                     => qw/len/],
         [ data_type                       => qw/type is isa is_a/],
         [ default_value                   => qw/default value/],
+        [ valid_values                    => qw//],
         [ doc                             => qw/description/],
         [ is_optional                     => qw/is_nullable nullable optional/],
         [ is_transient                    => qw//],
@@ -933,7 +925,7 @@ sub _normalize_property_description {
     
     if (!defined($new_property{is_mutable})) {
         if ($new_property{is_delegated} or $new_property{is_calculated}) {
-            $new_property{is_mutable} = 0;        
+            $new_property{is_mutable} = 0;
         }
         else {
             $new_property{is_mutable} = 1;

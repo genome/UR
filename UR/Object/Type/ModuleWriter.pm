@@ -400,6 +400,12 @@ sub _get_display_fields_for_property {
         push @fields, 'where => [ ' . join(', ', map { sprintf("%s => '%s'", $_, $where{$_}) } keys %where) . ' ]';
     }
 
+    if (my $values_arrayref = $property->valid_values) {
+        $seen{'valid_values'} = 1;
+        my $value_string = Data::Dumper->new([$values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+        push @fields, "valid_values => $value_string";
+    }
+
     # All the things like is_optional, is_many, etc
     # show only true values, false is default
     # section can be things like 'has', 'has_optional' or 'has_transient_many_optional'

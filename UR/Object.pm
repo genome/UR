@@ -158,19 +158,19 @@ sub create {
 
         # Determine the correct subclass for this object
         # and delegate to that subclass.
-        my $sub_classification_property_name = $class_meta->sub_classification_property_name;
-        unless ($sub_classification_property_name) {
+        my $subclassify_by = $class_meta->subclassify_by;
+        unless ($subclassify_by) {
              Carp::confess("$class is abstract, but cannot dynamically resolve an appropriate subclass.");
         }
-        unless ($rule->specifies_value_for_property_name($sub_classification_property_name)) {
+        unless ($rule->specifies_value_for_property_name($subclassify_by)) {
             Carp::confess(
                 "Invalid parameters for $class create():"
-                . " abstract class requires $sub_classification_property_name to be specified"
+                . " abstract class requires $subclassify_by to be specified"
                 . "\nParams were: " . Data::Dumper::Dumper({ $rule->params_list })
             );                
         }            
         my $params = $rule->legacy_params_hash;
-        my $type_id = $params->{$sub_classification_property_name};
+        my $type_id = $params->{$subclassify_by};
         my $sub_classification_meta_class_name = $class_meta->sub_classification_meta_class_name;
         # there is some other class of object which typifies each of the subclasses of this abstract class
         # let that object tell us the class this object goes into
@@ -225,6 +225,7 @@ sub create {
     my %indirect_properties; 
     my %set_properties;
     my %default_values;
+    my %immutable_properties;
     
     for my $co ( reverse( $class_meta, $class_meta->get_inherited_class_objects ) ) {
         # Reverse map the ID into property values.
@@ -251,6 +252,10 @@ sub create {
             }
             else {
                 $direct_properties{$name} = $prop;
+            }
+            
+            unless ($prop->is_mutable) {
+                $immutable_properties{$name} = 1;
             }
         }
     }
@@ -311,8 +316,35 @@ sub create {
         }
     }
 
+    if (%immutable_properties) {
+        my @problems = $self->invalid();
+        if (@problems) {
+            my @errors_fatal_to_construction;
+            
+            my %problems_by_property_name;
+            for my $problem (@problems) {
+                my @problem_properties;
+                for my $name ($problem->properties) {
+                    if ($immutable_properties{$name}) {
+                        push @problem_properties, $name;                        
+                    }
+                }
+                if (@problem_properties) {
+                    push @errors_fatal_to_construction, join(" and ", @problem_properties) . ': ' . $problem->desc;
+                }
+            }
+            
+            if (@errors_fatal_to_construction) {
+                my $msg = 'Failed to create ' . $class . ' with invalid immutable properties:'
+                    . join("\n", @errors_fatal_to_construction);
+                $self->delete_object;
+                die $msg;
+            }
+        }
+    }
+    
     $self->signal_change("create");
-    return $self;    
+    return $self;
 }
 
 sub delete {
@@ -944,7 +976,7 @@ sub invalid {
         my $property_name = $property_metadata->property_name;
         
         my @values = $self->$property_name;
-        next if @values > 1;        
+        next if @values > 1;
         my $value = $values[0];
 
         unless ($property_metadata->is_optional) {
@@ -1036,16 +1068,42 @@ sub invalid {
         {
             if ( defined($data_length) and ($data_length < length($value)) )
             {
-                push @tags, UR::Object::Tag->create
-                (
-                    type => 'invalid',
-                    properties => [$property_name],
-                    desc => sprintf('Value too long (%s of %s has length of %d and should be <= %d).',
-                                    $property_name,
-                                    $self->$property_name,
-                                    length($value),
-                                    $data_length)
-                );
+                push @tags, 
+                    UR::Object::Tag->create(
+                        type => 'invalid',
+                        properties => [$property_name],
+                        desc => sprintf('Value too long (%s of %s has length of %d and should be <= %d).',
+                                        $property_name,
+                                        $self->$property_name,
+                                        length($value),
+                                        $data_length)
+                    );
+            }
+        }
+
+        # Check valid values if there is an explicit list
+        if (my $constraints = $property_metadata->valid_values) {
+            my $valid = 0;
+            for my $valid_value (@$constraints) {
+                no warnings; # undef == ''
+                if ($value eq $valid_value) {
+                    $valid = 1;
+                    last;
+                }
+            }
+            unless ($valid) {
+                my $value_list = join(', ',@$constraints);
+                push @tags,
+                    UR::Object::Tag->create(
+                        type => 'invalid',
+                        properties => [$property_name],
+                        desc => sprintf(
+                                'The value %s is not in the list of valid values for %s.  Valid values are: %s',
+                                $value,
+                                $property_name,
+                                $value_list
+                            )
+                    );
             }
         }
 

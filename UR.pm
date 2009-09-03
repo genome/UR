@@ -228,11 +228,11 @@ UR::Object::Type->define(
         query_hint                       => { type => 'Text', len => 1024 , is_optional => 1},        
 
         # Different ways of handling subclassing at object load time
+        subclassify_by                      => { type => 'Text', len => 256, is_optional => 1},
         sub_classification_meta_class_name  => { type => 'Text', len => 1024 , is_optional => 1},
-        sub_classification_property_name    => { type => 'Text', len => 256, is_optional => 1},
-        sub_classification_method_name   => { type => 'Text', len => 256, is_optional => 1},
+        sub_classification_method_name      => { type => 'Text', len => 256, is_optional => 1},
         first_sub_classification_method_name => { type => 'Text', len => 256, is_optional => 1 },
-        subclass_description_preprocessor => { is => 'MethodName', len => 255, is_optional => 1 },
+        subclass_description_preprocessor   => { is => 'MethodName', len => 255, is_optional => 1 },
 
     ### Relationships with the other meta-classes ###
 
@@ -332,6 +332,7 @@ UR::Object::Type->define(
         data_length                     => { type => 'Text', len => 32, is_optional => 1 },
         data_type                       => { type => 'Text', len => 64, is_optional => 1 },
         default_value                   => { is_optional => 1 },
+        valid_values                    => { is => 'ARRAY', is_optional => 1, },
         doc                             => { type => 'Text', len => 1000, is_optional => 1 },
         is_id                           => { type => 'Boolean', default_value => 0, doc => 'denotes this is an ID property of the class' },
         is_optional                     => { type => 'Boolean' , default_value => 0},

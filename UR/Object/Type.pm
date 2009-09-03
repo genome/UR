@@ -495,7 +495,7 @@ sub generate_support_class_for_extension {
                            $subject_class_obj->property_names;
         delete $class_params{generated};
         delete $class_params{meta_class_name};
-        delete $class_params{sub_classification_property_name};
+        delete $class_params{subclassify_by};
         delete $class_params{sub_classification_meta_class_name};
         delete $class_params{id};
         delete $class_params{is};

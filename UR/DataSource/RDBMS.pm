@@ -1810,7 +1810,7 @@ sub _generate_class_data_for_loading {
     my @direct_table_properties;
     my $first_table_name;
     my $sub_classification_method_name;
-    my ($sub_classification_meta_class_name, $sub_classification_property_name);
+    my ($sub_classification_meta_class_name, $subclassify_by);
     
     my @base_joins;
     my $prev_table_name;
@@ -1823,7 +1823,7 @@ sub _generate_class_data_for_loading {
         $first_table_name ||= $co->table_name;
         $sub_classification_method_name ||= $co->sub_classification_method_name;
         $sub_classification_meta_class_name ||= $co->sub_classification_meta_class_name;
-        $sub_classification_property_name   ||= $co->sub_classification_property_name;
+        $subclassify_by   ||= $co->subclassify_by;
         
         push @all_table_properties, 
             map { [$co, $_, $table_name, 0] }
@@ -1876,7 +1876,7 @@ sub _generate_class_data_for_loading {
         first_table_name                    => $first_table_name,
         sub_classification_method_name      => $sub_classification_method_name,
         sub_classification_meta_class_name  => $sub_classification_meta_class_name,
-        sub_classification_property_name    => $sub_classification_property_name,
+        subclassify_by    => $subclassify_by,
         
         base_joins                          => \@base_joins,   
         order_by_clause                     => $order_by_clause,
@@ -1898,7 +1898,7 @@ sub _generate_template_data_for_loading {
 
     my $class_name = $rule_template->subject_class_name;
     my $class_meta = $class_name->get_class_object;
-
+$DB::single = 1;
     my $class_data = $self->_get_class_data_for_loading($class_meta);       
 
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };

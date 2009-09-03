@@ -53,15 +53,21 @@ my $test_class_definition =
         meta_prop_a => { is => 'Boolean', is_optional => 1 },
         meta_prop_b => { is => 'String' },
     ],
+    subclassify_by => 'my_subclass_name',
     id_by => [
-        another_id => { is => 'String', doc => 'blahblah' },
-        related => { is => 'URT::Related', id_by => [ 'parent_id', 'related_id' ], doc => 'related' },
+        another_id => { is => 'String', 
+            doc => 'blahblah' },
+        related => { is => 'URT::Related', id_by => [ 'parent_id', 'related_id' ], 
+                      doc => 'related' },
         foobaz => { is => 'Integer' },
     ],
     has => [
-        property_a => { is => 'String', meta_prop_a => 1 },
-        property_b => { is => 'Integer', is_abstract => 1, meta_prop_b => 'metafoo', doc => 'property_b' },
-        calc_sql   => { calculate_sql => q(to_upper(property_b)) },
+        property_a          => { is => 'String', meta_prop_a => 1 },
+        property_b          => { is => 'Integer', is_abstract => 1, meta_prop_b => 'metafoo', doc => 'property_b' },
+        calc_sql            => { calculate_sql => q(to_upper(property_b)) },
+        some_enum           => { is => 'Integer', valid_values => [100,200,300] },
+        another_enum        => { is => 'String', valid_values => ["one","two","three",3,"four"] },
+        my_subclass_name    => { is => 'Text', calculate_from => [ 'property_a', 'property_b' ], calculate => q("URT::TestClass") },
     ],
     has_many => [
         property_cs => { is => 'String', is_optional => 1 },
@@ -101,6 +107,9 @@ if ($string ne $test_class_definition) {
     #is($string, $test_class_definition, 'Rewritten class definition matches original');
     diag("Original definition string:\n$orig_test_class\n");
     diag("Generated definition:\n$orig_string\n");
+    IO::File->new('>/tmp/old')->print($orig_test_class);
+    IO::File->new('>/tmp/new')->print($orig_string);
+    system "kdiff3 /tmp/old /tmp/new";
 } else {
     ok(1, 'Rewritten class definition matches original');
 }

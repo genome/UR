@@ -1254,7 +1254,7 @@ sub _create_object_fabricator_for_loading_template {
     my @values = @$values;
 
     my $class_name                                  = $loading_template->{final_class_name};
-    $class_name or die;
+    $class_name or die "No final_class_name is loading template?";
     
     my $class_meta                                  = $class_name->get_class_object;
     my $class_data                                  = $dsx->_get_class_data_for_loading($class_meta);
@@ -1262,7 +1262,7 @@ sub _create_object_fabricator_for_loading_template {
     
     my $ghost_class                                 = $class_data->{ghost_class};
     my $sub_classification_meta_class_name          = $class_data->{sub_classification_meta_class_name};
-    my $sub_classification_property_name            = $class_data->{sub_classification_property_name};
+    my $subclassify_by            = $class_data->{subclassify_by};
     my $sub_classification_method_name              = $class_data->{sub_classification_method_name};
 
     # FIXME, right now, we don't have a rule template for joined entities...
@@ -1504,8 +1504,12 @@ sub _create_object_fabricator_for_loading_template {
             # determine the subclass name for classes which automatically sub-classify
             my $subclass_name;
             if (    
-                    ($sub_classification_meta_class_name or $sub_classification_method_name)
-                    and                                    
+                    (
+                        $sub_classification_method_name
+                        or $subclassify_by
+                        or $sub_classification_meta_class_name 
+                    )
+                    and
                     (ref($pending_db_object) eq $class) # not already subclased  
             ) {
                 if ($sub_classification_method_name) {
@@ -1515,14 +1519,14 @@ sub _create_object_fabricator_for_loading_template {
                             "Failed to sub-classify $class using method " 
                             . $sub_classification_method_name
                         );
-                    }        
+                    }
                 }
-                else {    
+                elsif ($sub_classification_meta_class_name) {
                     #$DB::single = 1;
                     # Group objects requiring reclassification by type, 
                     # and catch anything which doesn't need reclassification.
                     
-                    my $subtype_name = $pending_db_object->$sub_classification_property_name;
+                    my $subtype_name = $pending_db_object->$subclassify_by;
                     
                     $subclass_name = $subclass_for_subtype_name{$subtype_name};
                     unless ($subclass_name) {
@@ -1575,14 +1579,15 @@ sub _create_object_fabricator_for_loading_template {
                     }
                     $subclass_for_subtype_name{$subtype_name} = $subclass_name;
                 }
+                else {
+                    $subclass_name = $pending_db_object->$subclassify_by;
+                }
                 
                 # note: we check this again with the real base class, but this keeps junk objects out of the core hash
                 unless ($subclass_name->isa($class)) {
                     # We may have done a load on the base class, and not been able to use properties to narrow down to the correct subtype.
                     # The resultset returned more data than we needed, and we're filtering out the other subclasses here.
                     return;
-                    #$pending_db_object = undef;
-                    #redo; 
                 }
             }
             else {

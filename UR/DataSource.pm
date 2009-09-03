@@ -97,7 +97,7 @@ sub _generate_class_data_for_loading {
 
     my @parent_class_objects = $class_meta->ordered_inherited_class_objects;
     my $sub_classification_method_name;
-    my ($sub_classification_meta_class_name, $sub_classification_property_name);
+    my ($sub_classification_meta_class_name, $subclassify_by);
     
     my @all_properties;
     my $first_table_name;
@@ -107,7 +107,7 @@ sub _generate_class_data_for_loading {
         $first_table_name ||= $table_name;
         $sub_classification_method_name ||= $co->sub_classification_method_name;
         $sub_classification_meta_class_name ||= $co->sub_classification_meta_class_name;
-        $sub_classification_property_name   ||= $co->sub_classification_property_name;
+        $subclassify_by   ||= $co->subclassify_by;
         
         push @all_properties, 
             map { [$co, $_, $table_name, 0] }
@@ -115,7 +115,7 @@ sub _generate_class_data_for_loading {
             UR::Object::Property->get( type_name => $co->type_name );
     }
 
-    my $sub_typing_property = $class_meta->sub_classification_property_name;
+    my $sub_typing_property = $class_meta->subclassify_by;
 
     my $class_table_name = $class_meta->table_name;
     my @type_names_under_class_with_no_table;
@@ -130,7 +130,7 @@ sub _generate_class_data_for_loading {
         parent_class_objects                => [$class_meta->get_inherited_class_objects], ##
         sub_classification_method_name      => $sub_classification_method_name,
         sub_classification_meta_class_name  => $sub_classification_meta_class_name,
-        sub_classification_property_name    => $sub_classification_property_name,
+        subclassify_by    => $subclassify_by,
         
         all_properties                      => \@all_properties,
         all_id_property_names               => [$class_meta->all_id_property_names()],
@@ -167,7 +167,7 @@ sub _generate_template_data_for_loading {
     my @all_properties                      = @{ $class_data->{all_properties} };
 #    my $first_table_name                    = $class_data->{first_table_name};
     my $sub_classification_meta_class_name  = $class_data->{sub_classification_meta_class_name};
-    my $sub_classification_property_name    = $class_data->{sub_classification_property_name};
+    my $subclassify_by    = $class_data->{subclassify_by};
     
     my @all_id_property_names               = @{ $class_data->{all_id_property_names} };
     my @id_properties                       = @{ $class_data->{id_properties} };   
