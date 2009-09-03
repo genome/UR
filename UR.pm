@@ -196,15 +196,16 @@ UR::Object::Type->define(
         is_transient                    => { type => 'Boolean' , default_value => 0},
         is_constant                     => { type => 'Boolean' , default_value => 0},  # never changes
         is_mutable                      => { type => 'Boolean' , default_value => 1},  # can be changed explicitly via accessor (cannot be constant)
-        #is_volatile                     => { type => 'Boolean' , default_value => 0},  # changes w/o a signal: (cannot be constant or transactional)
+        is_volatile                     => { type => 'Boolean' , default_value => 0},  # changes w/o a signal: (cannot be constant or transactional)
         is_class_wide                   => { type => 'Boolean' , default_value => 0},
         is_delegated                    => { type => 'Boolean' , default_value => 0},
         is_calculated                   => { type => 'Boolean' , default_value => 0},
-        is_transactional                => { type => 'Boolean' , default_value => 1},
+        is_transactional                => { type => 'Boolean' , default_value => 1},  # STM works on these, and the object can possibly save outside the app
         is_abstract                     => { type => 'Boolean' , default_value => 0},
         is_concrete                     => { type => 'Boolean' , default_value => 1},
         is_final                        => { type => 'Boolean' , default_value => 0},  
         is_many                         => { type => 'Boolean' , default_value => 0},
+        is_deprecated                   => { type => 'Boolean', default_value => 0},
         id_by                           => { type => 'ARRAY' , is_optional => 1},
         via                             => { type => 'Text' , is_optional => 1 },
         to                              => { type => 'Text' , is_optional => 1},

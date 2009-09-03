@@ -211,7 +211,7 @@ sub mk_indirect_rw_accessor {
 
 
 sub mk_calculation_accessor {
-    my ($self, $class_name, $accessor_name, $calculation_src, $calculate_from) = @_;
+    my ($self, $class_name, $accessor_name, $calculation_src, $calculate_from, $params, $is_constant) = @_;
 
     my $accessor;
     my @src;
@@ -243,11 +243,27 @@ sub mk_calculation_accessor {
             '}'
         );
     }
-    else {
+    elsif($is_constant) {
+        # memoize on a per-object basis
         @src = ( 
             "sub ${class_name}::${accessor_name} {",
             'my $self = $_[0];',
+            "return \$self->{$accessor_name} if exists \$self->{$accessor_name};",
             (map { "my \$$_ = \$self->$_;" } @$calculate_from),
+            "\$self->{$accessor_name} = eval {",
+            $calculation_src,
+            "};",
+            'die $@ if $@;',
+            "return \$self->{$accessor_name};",
+            '}'
+        );
+    }    
+    else {
+        @src = ( 
+            "sub ${class_name}::${accessor_name} {",
+            ($params ? 'my ($self,%params) = @_;' : 'my $self = $_[0];'),
+            (map { "my \$$_ = \$self->$_;" } @$calculate_from),
+            ($params ? (map { "my \$$_ = delete \$params{'$_'};" } @$params) : ()),
             $calculation_src,
             '}'
         );
@@ -259,6 +275,7 @@ sub mk_calculation_accessor {
     }
     elsif (@src) {
         my $src = join("\n",@src);
+        #print ">>$src<<\n";
         eval $src;
         if ($@) {
             die "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$@\n";
@@ -458,7 +475,10 @@ sub mk_object_set_accessors {
             }
             $reverse_id_by = $possible_relationships[0]->delegation_name;
         }
-        my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_id_by); 
+        my $class_meta = UR::Object::Type->get(class_name => $r_class_name);
+        my $property_meta = $class_meta->get_property_meta_by_name($reverse_id_by);
+        my @property_links = $property_meta->id_by_property_links;
+        #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_id_by); 
         unless (@property_links) {
             $DB::single = 1;
             Carp::confess("No property links for $r_class_name -> $reverse_id_by?  Cannot build accessor for $singular_name/$plural_name relationship.");
@@ -654,13 +674,13 @@ sub initialize_direct_accessors {
             }
         }
         elsif (my $calculate = $property_data->{calculate}) {
-            my $calculation_method = $property_data->{calculate};
-            my $calculate_from = $property_data->{calculate_from};
             $self->mk_calculation_accessor(
                 $class_name,
                 $accessor_name,
-                $calculation_method,
-                $calculate_from
+                $property_data->{calculate},
+                $property_data->{calculate_from},
+                $property_data->{calculate_params},
+                $property_data->{is_constant},
             );
         } 
         elsif (my $calculate_sql = $property_data->{'calculate_sql'}) {

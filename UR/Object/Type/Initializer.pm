@@ -20,7 +20,7 @@ use warnings;
     er_role            => 'entity',
     is_final           => 0,
     is_singleton       => 0,
-    is_transactional   => 1,        
+    is_transactional   => 1,
     is_mutable         => 1,
     is_many            => 0,
     is_abstract        => 0,
@@ -42,7 +42,8 @@ use warnings;
     is_final         => 0,
     is_many          => 0,
     is_specified_in_module_header => 1,
-    position_in_module_header => -1,    
+    is_deprecated    => 1,
+    position_in_module_header => -1,
 );
 
 
@@ -638,7 +639,8 @@ sub _normalize_property_description {
         [ is_abstract                     => qw//], 
         [ is_concrete                     => qw//], 
         [ is_final                        => qw//], 
-        [ is_many                         => qw//],            
+        [ is_many                         => qw//],
+        [ is_deprecated                   => qw//],
         [ id_by                           => qw//], 
         [ via                             => qw//], 
         [ to                              => qw//],             

@@ -63,19 +63,17 @@ sub _get_class_data_for_loading {
         my @all_id_property_names = $class_meta->all_id_property_names();
         my @id_properties = $class_meta->id_property_names;    
         my $id_property_sorter = $class_meta->id_property_sorter;    
-    
+        my @class_hierarchy = ($class_meta->class_name,$class_meta->ordered_inherited_class_names);
+
         my $order_by_clause;
         do {            
             my @id_column_names;    
-            for my $inheritance_class_name (
-                $class_meta->class_name, 
-                $class_meta->ordered_inherited_class_names
-            ) {
+            for my $inheritance_class_name (@class_hierarchy) {
                 my $inheritance_class_object = UR::Object::Type->get($inheritance_class_name);
                 unless ($inheritance_class_object->table_name) {
                     next;
                 }
-                @id_column_names = 
+                @id_column_names =
                     map { $inheritance_class_object->table_name . '.' . $_ }
                     grep { defined }
                     map { 
@@ -88,10 +86,11 @@ sub _get_class_data_for_loading {
             $order_by_clause = "order by " . join(",", @id_column_names);
         };
         
-        my @parent_class_objects = $class_meta->get_inherited_class_objects;
+        $DB::single = 1;
+        my @parent_class_objects = $class_meta->ordered_inherited_class_objects;
         my @all_table_properties;
         my $first_table_name;
-        my $sub_classification_method_name = $class_meta->sub_classification_method_name;
+        my $sub_classification_method_name;
         my ($sub_classification_meta_class_name, $sub_classification_property_name);
         
         for my $co ( $class_meta, @parent_class_objects )
@@ -100,6 +99,7 @@ sub _get_class_data_for_loading {
             next unless $table_name;
             
             $first_table_name ||= $co->table_name;
+            $sub_classification_method_name ||= $co->sub_classification_method_name;
             $sub_classification_meta_class_name ||= $co->sub_classification_meta_class_name;
             $sub_classification_property_name   ||= $co->sub_classification_property_name;
             
@@ -158,7 +158,7 @@ sub _get_class_data_for_loading {
             parent_class_objects                => [$class_meta->get_inherited_class_objects], ##
             all_table_properties                => \@all_table_properties,
             first_table_name                    => $first_table_name,
-            sub_classification_method_name      => $class_meta->sub_classification_method_name,
+            sub_classification_method_name      => $sub_classification_method_name,
             sub_classification_meta_class_name  => $sub_classification_meta_class_name,
             sub_classification_property_name    => $sub_classification_property_name,
             
