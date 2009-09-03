@@ -46,7 +46,7 @@ use Sub::Install ();
     is_final         => 0,
     is_many          => 0,
     is_numeric       => 0,
-    is_specified_in_module_header => 1,
+    is_specified_in_module_header => 0,
     is_deprecated    => 0,
     position_in_module_header => -1,
 );
