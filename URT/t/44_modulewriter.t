@@ -84,7 +84,9 @@ my $string = $test_class_meta->resolve_class_description_perl();
 my $orig_string = $string;
 
 # Normalize them by removing newlines, and multiple spaces
+$test_class_definition =~ s/\n//gm;
 $test_class_definition =~ s/\s+/ /gm;
+$string =~ s/\n//gm;
 $string =~ s/\s+/ /gm;
 
 if ($string ne $test_class_definition) {

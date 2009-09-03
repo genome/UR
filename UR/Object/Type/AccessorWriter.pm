@@ -152,8 +152,12 @@ sub mk_ro_accessor {
     }
 }
 
+
+# FIXME - this is kinda ugly.  I've co-opted this to work for is_many with id_by where the thing
+# we're id-ing_by is an ARRAY.  This case should probably be broken out to make something like mk_object_set_accessors,
+# or change mk_object_set_accessors to support this
 sub mk_id_based_object_accessor {
-    my ($self, $class_name, $accessor_name, $id_by, $r_class_name) = @_;
+    my ($self, $class_name, $accessor_name, $id_by, $r_class_name, $where) = @_;
 
     unless (ref($id_by)) {
         $id_by = [ $id_by ];
@@ -166,7 +170,10 @@ sub mk_id_based_object_accessor {
     my $full_name = join( '::', $class_name, $accessor_name );
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
-        if (@_) {
+        if (@_ == 1) {
+            # This one is to support syntax like this
+            # $cd->artist($different_artist);
+            # to switch which artist object this cd points to
             my $object_value = shift;
             $id_decomposer ||= $r_class_name->get_class_object->get_composite_id_decomposer;
             @id = ( defined($object_value) ? $id_decomposer->($object_value->id) : () );
@@ -180,7 +187,12 @@ sub mk_id_based_object_accessor {
             @id = map { $self->$_ } @$id_by;
             $id = $id_resolver->(@id);
             return if not defined $id;
-            return $r_class_name->get($id);
+            if (@_ || $where) { 
+                # There were additional params passed in 
+                return $r_class_name->get(id => $id, @_, @$where);
+            } else {
+                return $r_class_name->get($id);
+            }
         }
     };
 
@@ -195,6 +207,9 @@ sub mk_indirect_ro_accessor {
     my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
     my @where = ($where ? @$where : ());
     my $full_name = join( '::', $class_name, $accessor_name );
+    my $filterable_accessor_name = 'get_' . $accessor_name;
+    my $filterable_full_name = join( '::', $class_name, $filterable_accessor_name );
+
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
@@ -209,7 +224,47 @@ sub mk_indirect_ro_accessor {
         as   => $accessor_name,
         code => $accessor,
     });
+
+    my $r_class_name;
+    my $r_class_name_resolver = sub {
+        return $r_class_name if $r_class_name;
+
+        my $linking_property = UR::Object::Property->get(class_name => $class_name, property_name => $via);
+        unless ($linking_property->data_type) {
+            die "Property ${class_name}::${accessor_name}: via refers to a property with no data_type.  Can't process filter";
+        }
+        my $final_property = UR::Object::Property->get(class_name => $linking_property->data_type, 
+                                                       property_name => $to);
+        unless ($final_property->data_type) {
+            die "Property ${class_name}::${accessor_name}: to refers to a property with no data_type.  Can't process filter";
+        }
+        $r_class_name = $final_property->data_type;
+    };
+
+    my $filterable_accessor = Sub::Name::subname $filterable_full_name => sub {
+        my $self = shift;
+        #my @results = $accessor->($self);
+        my @results = $self->$accessor_name();
+        if (@_) {
+            my $rule;
+            if (@_ == 1 and ref($_[0]) and $_[0]->isa('UR::BoolExpr')) {
+                $rule = shift;
+            } else {
+                $r_class_name ||= $r_class_name_resolver->();
+                $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($r_class_name, @_);
+            }
+            @results = grep { $rule->evaluate($_) } @results;
+        }
+        $self->context_return(@results);
+    };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $filterable_accessor_name,
+        code => $filterable_accessor,
+    });
+
 }
+
 
 sub mk_indirect_rw_accessor {
     my ($self, $class_name, $accessor_name, $via, $to, $where, $singular_name) = @_;
@@ -526,15 +581,14 @@ sub mk_class_accessor
     $variable_name ||= $accessor_name;
     no strict 'refs';
     my $full_accessor_name = $class_name . "::" . $accessor_name;
-    my $src =
-    "
+    my $src = qq(
         sub $full_accessor_name {
             if (\@_ > 1) {
                 \$$variable_name = pop;
             }
             return \$$variable_name;
         }
-    ";
+    );
     print "class accessor: $src\n";
     eval $src;
     if ($@) {
@@ -943,7 +997,7 @@ sub initialize_direct_accessors {
         my @calculation_fields = (qw/calculate calc_perl calc_sql calculate_from/);
         if (my $id_by = $property_data->{id_by}) {
             my $r_class_name = $property_data->{data_type};
-            $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name);
+            $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where);
         }
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};

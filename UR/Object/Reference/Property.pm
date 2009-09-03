@@ -174,24 +174,24 @@ sub _reference_class
     }
 }
 
-sub get_reference
-{
-    my $self = shift;
-    return $self->_reference_class->get($self->tha_id);
-}
+#sub get_reference
+#{
+#    my $self = shift;
+#    return $self->_reference_class->get($self->tha_id);
+#}
 
-sub class_name
-{
-    my $self = shift;
-    my $r = $self->get_reference;
-    return $r->class_name;
-}
-
-
-sub r_class_name
-{
-    shift->get_reference->r_class_name
-}
+#sub class_name
+#{
+#    my $self = shift;
+#    my $r = $self->get_reference;
+#    return $r->class_name;
+#}
+#
+#
+#sub r_class_name
+#{
+#    shift->get_reference->r_class_name
+#}
 
 sub get_with_special_parameters 
 {

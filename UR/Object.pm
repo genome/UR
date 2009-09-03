@@ -617,7 +617,7 @@ sub get {
 
     # This is here for bootstrapping reasons: we must be able to load class singletons
     # in order to have metadata for regular loading....
-    if ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value")) {
+    if (!$rule->has_meta_options and ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value"))) {
         my $normalized_rule = $rule->get_normalized_rule_equivalent;
         
         my @objects = $class->_load($normalized_rule);
@@ -650,11 +650,12 @@ sub get_with_special_parameters {
     my $class = shift;
     my $rule = shift;        
     Carp::confess(
-        "Unknown parameters to $class get()."
+        "Unknown parameters to $class get().  "
         . "Implement get_with_special_parameters() to handle non-standard"
         . " (non-property) query options.\n"
         . "The special params were " 
         . Dumper(\@_)
+        . "Rule ID: " . $rule->id . "\n"
     );
 }
 
