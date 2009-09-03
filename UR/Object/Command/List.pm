@@ -2,6 +2,7 @@ package UR::Object::Command::List;
 
 use strict;
 use warnings;
+use IO::File;
 
 use above "UR";                 
 
@@ -85,6 +86,11 @@ sub create {
         ) 
     ) 
         and return unless grep { $self->style eq $_ } valid_styles();
+    unless ( ref $self->output ){
+        my $ofh = IO::File->new("> ".$self->output);
+        $self->error_message("Can't open file handle to output param ".$self->output) and die unless $ofh;
+        $self->output($ofh);
+    }
 
     return $self;
 }
@@ -436,4 +442,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 38667 2008-09-17 05:18:51Z ssmith $
+#$Id: List.pm 38672 2008-09-17 15:15:06Z adukes $
