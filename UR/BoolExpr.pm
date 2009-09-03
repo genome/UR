@@ -308,11 +308,9 @@ sub resolve_for_class_and_params {
         die "No meta for $subject_class?!";
     }    
 
-    #my %subject_class_props = map {$_, 1}  ( $subject_class->property_names, qw/id subclass_ext ref_class_name base_string gff_type begin_position end_position collaborator_name role_name/);
     my %subject_class_props = map {$_, 1}  ( $subject_class_meta->all_property_type_names, 'subclass_ext');
 
     my @in_params;
-
     if (ref($_[0]) eq "HASH") {
 	   @in_params = %{$_[0]};
     } else {
