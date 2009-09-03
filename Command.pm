@@ -10,15 +10,6 @@ use Getopt::Long;
 use Term::ANSIColor;
 require Text::Wrap;
 
-# This is changed with "local" where used in some places
-$Text::Wrap::columns = 100;
-
-eval {
-    binmode STDOUT, ":utf8";
-    binmode STDERR, ":utf8";
-};
-
-# NOTE: the "class {}" syntax only works for things _under_ a UR namespace pm
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is_abstract => 1,
@@ -38,6 +29,25 @@ UR::Object::Type->define(
         result      => { is => 'Scalar', is_output => 1 },
     ],
 );
+
+# This is changed with "local" where used in some places
+$Text::Wrap::columns = 100;
+
+# Required for color output
+eval {
+    binmode STDOUT, ":utf8";
+    binmode STDERR, ":utf8";
+};
+
+sub import {
+    my $class = $_[0];
+    if ($ENV{GETOPT_COMPLETE_CACHE}) {
+        # This environment variable is used to interrogate the module
+        # when building a cache of options.
+        our @OPTS_SPEC = $class->resolve_option_completion_spec();
+    }
+    shift->SUPER::import(@_);
+}
 
 sub _init_subclass {
     # Each Command subclass has an automatic wrapper around execute().
@@ -135,6 +145,14 @@ My::Command->execute_with_shell_params_and_exit;
 |;
     }
 
+    if ($ENV{COMP_LINE}) {
+        require Getopt::Complete;
+        my @spec = $class->resolve_option_completion_spec();
+        my $options = Getopt::Complete::Options->new(@spec);
+        $options->handle_shell_completion;
+        die "error: failed to exit after handling shell completion!";
+    }
+
     my @argv = @ARGV;
     @ARGV = ();
     my $exit_code = $class->_execute_with_shell_params_and_return_exit_code(@argv);
@@ -149,7 +167,6 @@ sub _execute_with_shell_params_and_return_exit_code
 
     # make --foo=bar equivalent to --foo bar
     @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
-
     my ($delegate_class, $params) = $class->resolve_class_and_params_for_argv(@argv);
 
     unless ($delegate_class) {
@@ -431,6 +448,69 @@ sub command_name_brief
 my $_resolved_params_from_get_options = {};
 sub _resolved_params_from_get_options {
     return $_resolved_params_from_get_options;
+}
+
+sub resolve_option_completion_spec {
+    my ($class,@argv) = @_;
+    my @completion_spec;
+
+    # todo: this should not be needed b/c
+    # things wanting caching will find the cache data upstream
+
+    my $my_path = $class->__meta__->module_path;
+    my $cached_opts_path  = $my_path . '.opts';
+    if (-e $cached_opts_path) {
+        my $my_mtime = (stat($my_path))[9];
+        my $cache_mtime = (stat($cached_opts_path))[9];
+        if ($cache_mtime >= $my_mtime) {
+            my $content = join('',IO::File->new($cached_opts_path)->getlines);
+            no strict;
+            no warnings;
+            my $data = eval $content;
+            @completion_spec = @$data;
+            return @completion_spec;
+        }
+        else {
+            warn "\nstale cache, removing $cached_opts_path";
+            unlink $cached_opts_path;
+        }
+    }
+
+    if ($class->is_sub_command_delegator) {
+        my @sub = $class->sub_command_names;
+        for my $sub (@sub) {
+            my $sub_class = $class->class_for_sub_command($sub); 
+            my $v =  $sub_class;
+            my $sub_tree = \$v; 
+            push @completion_spec, '>' . $sub, $sub_tree;
+        }
+        push @completion_spec, "help!" => undef;
+    }
+    else {
+        my $params_hash;
+        ($params_hash,@completion_spec) = $class->_shell_args_getopt_complete_specification;
+        no warnings;
+        unless (grep { /^help\W/ } @completion_spec) {
+            push @completion_spec, "help!" => undef;
+        }
+    }
+    
+    # TODO: this should be auto-created by the Getopt::Complete::Cache module
+    # when we have some more hooks in place.
+    unless (-e $cached_opts_path) {
+        eval {
+            my $fh = IO::File->new('>' . $cached_opts_path);
+            if ($fh) {
+                warn "caching options for $class...\n";
+                my $src = Data::Dumper::Dumper(\@completion_spec);
+                $src =~ s/^\$VAR1/\$${class}::OPTS_SPEC/;
+                #print STDERR ">> $src\n";
+                $fh->print($src);
+            }
+        };
+    }
+
+    return @completion_spec;
 }
 
 sub resolve_class_and_params_for_argv
@@ -874,11 +954,13 @@ sub _shell_arg_name_from_property_meta
 sub _shell_arg_getopt_qualifier_from_property_meta
 {
     my ($self, $property_meta) = @_;
+
+    my $many = ($property_meta->is_many ? '@' : ''); 
     if (defined($property_meta->data_type) and $property_meta->data_type =~ /Boolean/) {
-        return '!';
+        return '!' . $many;
     }
     else {
-        return '=s';
+        return '=s' . $many;
     }
 }
 
@@ -925,6 +1007,28 @@ sub _shell_arg_getopt_specification_from_property_meta
     );
 }
 
+
+sub _shell_arg_getopt_complete_specification_from_property_meta 
+{
+    my ($self,$property_meta) = @_;
+    my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
+    my $completions = $property_meta->valid_values;
+    unless ($completions) {
+        my $type = $property_meta->data_type;
+        if ($type =~ /File(system|)(Path|)/i) {
+            $completions = 'files';
+        }
+        elsif ($type =~ /Directory(Path|)/i) {
+            $completions = 'directories'
+        }
+    }
+    return (
+        $arg_name .  $self->_shell_arg_getopt_qualifier_from_property_meta($property_meta),
+        $completions, 
+        ($property_meta->is_many ? ($arg_name => []) : ())
+    );
+}
+
 sub _shell_args_getopt_specification 
 {
     my $self = shift;
@@ -936,6 +1040,19 @@ sub _shell_args_getopt_specification
         push @params, @params_addition; 
     }
     @getopt = sort @getopt;
+    return { @params}, @getopt; 
+}
+
+sub _shell_args_getopt_complete_specification
+{
+    my $self = shift;
+    my @getopt;
+    my @params;
+    for my $meta ($self->_shell_args_property_meta) {
+        my ($spec, $completions, @params_addition) = $self->_shell_arg_getopt_specification_from_property_meta($meta);
+        push @getopt,$spec, $completions;
+        push @params, @params_addition; 
+    }
     return { @params}, @getopt; 
 }
 
