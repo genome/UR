@@ -39,14 +39,6 @@ our ($all_objects_loaded, $all_change_subscriptions, $all_objects_are_loaded, $a
 *all_objects_are_loaded     = \$UR::Context::all_objects_are_loaded;
 *all_params_loaded          = \$UR::Context::all_params_loaded;
 
-sub _resolve_composite_id {
-    return shift->__meta__->resolve_composite_id_from_ordered_values(@_);
-}
-
-sub decomposed_id {
-    return shift->__meta__->resolve_ordered_values_from_composite_id(@_);
-}
-
 # These live in UR::Context, where they may switch to point to 
 # different data structures depending on sub-context, transaction, etc.
 

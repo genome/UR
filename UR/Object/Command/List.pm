@@ -434,5 +434,5 @@ text, csv, html, pretty (inprogress)
 =cut
 
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 46825 2009-05-13 20:29:11Z abrummet $
+#$HeadURL: /gscpan/distro/ur-bundle/releases/UR-Bundle-0.01/lib/UR/Object/Command/List.pm $
+#$Id: /gscpan/distro/ur-bundle/releases/UR-Bundle-0.01/lib/UR/Object/Command/List.pm 46839 2009-05-14T06:17:40.665014Z ssmith  $

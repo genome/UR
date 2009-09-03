@@ -788,7 +788,7 @@ sub _resolve_ids_from_class_name_and_sql {
 		$data->{uc($key)} = delete $data->{$key};
 	}
         my @id_vals = map {$data->{uc($_)}} @id_columns;
-        my $cid = $class_name->__meta__->resolve_composite_id_from_ordered_values(@id_vals);
+        my $cid = $class_name->_resolve_composite_id(@id_vals);
         push @id_fetch_set, $cid;       
     }
     
@@ -1145,7 +1145,7 @@ sub _sync_database {
                 $adding{$cmd} = 1;
                 my $obj = $objs{$cmd->{id}};
                 for my $rcol_set (@rcol_sets) {
-                    my $pid = $obj->class->__meta__->resolve_composite_id_from_ordered_values(map { $obj->$_ } @$rcol_set);
+                    my $pid = $obj->class->_resolve_composite_id(map { $obj->$_ } @$rcol_set);
                     if (defined $pid) {   # This recursive foreign key dep may have been optional
                         my $pcmd = delete $unsorted_cmds{$pid};
                         $add->($pcmd) if $pcmd;
@@ -1507,8 +1507,7 @@ sub _id_values_for_primary_key {
     }
 
     my @pk_cols = $table_obj->primary_key_constraint_column_names;
-    # this previously went to $object_to_save->__meta__, which is nearly the same thing but not quite
-    my @values = $class_obj->resolve_ordered_values_from_composite_id($object_to_save->id);
+    my @values = $object_to_save->decomposed_id($object_to_save->id);
     my @columns = $class_obj->direct_id_column_names;
 
     my $i=0;    

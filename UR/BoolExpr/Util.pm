@@ -21,10 +21,9 @@ our $null_value = chr(21);      # used for undef/null
 our $empty_string = chr(28);    # used for ""
 our $empty_list = chr(20);      # used for []
 
-# These are used when there is any sort of complicated data in the rule.
-
 sub values_to_value_id_frozen {
     my $self = shift;
+    
     my $frozen = FreezeThaw::safeFreeze(@_);
     return "F:" . $frozen;
 }
@@ -32,10 +31,9 @@ sub values_to_value_id_frozen {
 sub value_id_to_values_frozen {
     my $self = shift;
     my $value_id = shift;
+
     return FreezeThaw::thaw($value_id);
 }
-
-# These are used for the simple common-case rules.
 
 sub values_to_value_id {
     my $self = shift;

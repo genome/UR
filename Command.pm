@@ -1225,5 +1225,5 @@ sub system_inhibit_std_out_err {
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 47134 2009-05-22 02:40:04Z ssmith $
+#$HeadURL: /gscpan/distro/ur-bundle/releases/UR-Bundle-0.01/lib/Command.pm $
+#$Id: /gscpan/distro/ur-bundle/releases/UR-Bundle-0.01/lib/Command.pm 47136 2009-05-22T02:47:05.598584Z ssmith  $

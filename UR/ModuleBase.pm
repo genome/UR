@@ -3,8 +3,7 @@
 package UR::ModuleBase;
 
 BEGIN {
-    use Class::Autouse_1_99_02;
-    $INC{"Class/Autouse.pm"} = $INC{"Class/Autouse_1_99_02.pm"};
+    use Class::Autouse;
     no strict;
     no warnings;
     *can = $Class::Autouse::ORIGINAL_CAN;
