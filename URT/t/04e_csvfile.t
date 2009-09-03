@@ -7,10 +7,10 @@ use IO::File;
 
 use URT; # dummy namespace
 
-# FIXME - this doesn't test the SortedCsvFile internals like seeking and caching
+# FIXME - this doesn't test the UR::DataSource::File internals like seeking and caching
 
-my $filename = URT::DataSource::SomeCsvFile->server;
-ok($filename, 'URT::DataSource::SomeCsvFile has a server');
+my $filename = URT::DataSource::SomeFile->server;
+ok($filename, 'URT::DataSource::SomeFile has a server');
 unlink $filename if -f $filename;
 
 our @data = ( [ 1, 'Bob', 'blue' ],
@@ -43,7 +43,7 @@ for (my $i = 0; $i < @data; $i++) {
 }
 
 
-unlink URT::DataSource::SomeCsvFile->server;
+unlink URT::DataSource::SomeFile->server;
 
 
 sub setup {
@@ -52,10 +52,11 @@ sub setup {
     my $fh = IO::File->new($filename, '>');
     ok($fh, 'opened file for writing');
 
-    my $delimiter = URT::DataSource::SomeCsvFile->delimiter;
+    my $delimiter = URT::DataSource::SomeFile->delimiter;
+    my $rs = URT::DataSource::SomeFile->record_seperator;
 
     foreach my $line ( @data ) {
-        $fh->print(join($delimiter, @$line),"\n");
+        $fh->print(join($delimiter, @$line),$rs);
     }
     $fh->close;
 
@@ -69,7 +70,7 @@ sub setup {
             thing_color => { is => 'String' },
         ],
         table_name => 'FILE',
-        data_source => 'URT::DataSource::SomeCsvFile'
+        data_source => 'URT::DataSource::SomeFile'
     );
 
     ok($c, 'Created class');

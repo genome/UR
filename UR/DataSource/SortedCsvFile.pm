@@ -1,9 +1,16 @@
-package UR::DataSource::SortedCsvFile;
+package UR::DataSource::File;
 
 # A data source implementation for text files where the fields
-# are delimited by commas (or anything else really), and the
-# lines in the file are already sorted by the ID properties of 
-# the class the files are backing up
+# are delimited by commas (or anything else really).  Usually,
+# the lines in the file will be sorted by one or more columns,
+# but it isn't strictly necessary
+#
+# For now, it's structured around files where the record is delimited by
+# newlines, and the fields are delimited by qr(\s*,\s*).  Those are
+# overridable in concrete data sources by specifying record_seperator() and
+# delimiter().
+# FIXME - work out a way to support record-oriented data as well as line-oriented data
+
 
 use UR;
 use strict;
@@ -17,7 +24,7 @@ use Sub::Install ();
 # delimiter, column_order and sort_order.  These should be properties of the data source
 # and not methods in the namespace...
 
-class UR::DataSource::SortedCsvFile {
+class UR::DataSource::File {
     is => ['UR::DataSource', 'UR::Singleton'],
     is_abstract => 1,
     has => [ 
@@ -26,7 +33,7 @@ class UR::DataSource::SortedCsvFile {
         cache_size            => { is => 'Integer', default_value => 100 },
         
     ],
-    doc => 'A read-only data source for files where the lines are already sorted by its ID columns',
+    doc => 'A read-only data source for line-oriented files',
 };
 
 
@@ -507,11 +514,9 @@ sub create_iterator_closure_for_rule {
         $monitor_start_time = Time::HiRes::time();
         $monitor_printed_first_fetch = 0;
         my @filters_list;
-        #foreach my $column ( @rule_columns_in_order ) {
         for (my $i = 0; $i < @rule_columns_in_order; $i++) {
             my $column = $rule_columns_in_order[$i];
             my $column_name = $csv_column_order[$column];
-            #my $is_sorted = $column <= $last_id_column_in_rule ? ' (sorted)' : '';
             my $is_sorted = $i <= $last_id_column_in_rule ? ' (sorted)' : '';
             my $operator = $rule->specified_operator_for_property_name($column_name) || '=';
             my $rule_value = $rule->specified_value_for_property_name($column_name);   
@@ -623,14 +628,14 @@ sub create_iterator_closure_for_rule {
 
     my $count = $self->open_query_count();
     $self->open_query_count($count+1);
-    bless $iterator, 'UR::DataSource::SortedCsvFile::Tracker';
+    bless $iterator, 'UR::DataSource::File::Tracker';
     $iterator_data_source{$iterator} = $self;
     
     return $iterator;
 } 
 
 
-sub UR::DataSource::SortedCsvFile::Tracker::DESTROY {
+sub UR::DataSource::File::Tracker::DESTROY {
     my $iterator = shift;
     my $ds = delete $iterator_data_source{$iterator};
     my $count = $ds->open_query_count();

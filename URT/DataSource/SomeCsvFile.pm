@@ -1,13 +1,13 @@
 
-package URT::DataSource::SomeCsvFile;
+package URT::DataSource::SomeFile;
 use strict;
 use warnings;
 
 use UR::Object::Type;
 use URT;
 class URT::DataSource::SomeCsvFile {
-    is => ['UR::DataSource::SortedCsvFile'],
-    type_name => 'urt datasource somecsvfile',
+    is => ['UR::DataSource::File'],
+    type_name => 'urt datasource somefile',
 };
 
 our $FILE = "/tmp/ur_testsuite_db_$$.csv";

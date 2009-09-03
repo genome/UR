@@ -95,7 +95,7 @@ sub setup_files_and_classes {
         ],
         data_source => {
             # This one fills in all the required info
-            is => 'UR::DataSource::SortedCsvFile',
+            is => 'UR::DataSource::File',
             file => $office_data_files[0],
             column_order => ['office_id', 'address'],
             sort_order => ['office_id'],
@@ -113,7 +113,7 @@ sub setup_files_and_classes {
             address => { is => 'String' },
         ],
         data_source => {
-            is => 'UR::DataSource::SortedCsvFile',
+            is => 'UR::DataSource::File',
             file_list => \@office_data_files,   
         },
     );

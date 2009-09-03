@@ -15,7 +15,7 @@ class UR::DataSource::FileMux {
 
 # The file-specific parent data source classes will inherit from this one
 sub _delegate_data_source_class {
-    'UR::DataSource::SortedCsvFile';
+    'UR::DataSource::File';
 }
 
 
