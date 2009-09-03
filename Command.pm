@@ -475,7 +475,6 @@ sub resolve_class_and_params_for_argv
     local @ARGV;
     @ARGV = @argv;
    
-    $DB::single = 1;
     unless (GetOptions($params_hash,@spec)) {
         my @failed = grep { /^--/ } grep { /\W*(\w+)/; not exists $params_hash->{$1} } @argv;
         $self->error_message("Bad params ! @failed");
@@ -1194,4 +1193,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 42780 2009-01-16 22:43:03Z gsanders $
+#$Id: Command.pm 45050 2009-03-25 18:56:51Z adukes $
