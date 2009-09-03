@@ -290,8 +290,9 @@ The returned iterator works by first asking the C<$db_iterator> for the next
 row of data as a listref.  Asks the secondary data source joiners whether
 there is any matching data.  Calls the object fabricator closures to convert
 the data source data into UR objects.  If any of the object requires
-subclassing, then additional importing iterators is created to handle that.
-Finally, the object against the rule's class is returned to the caller.
+subclassing, then additional importing iterators are created to handle that.
+Finally, the objects matching the rule are returned to the caller one at a
+time.
 
 =item _get_template_data_for_loading
 
@@ -528,7 +529,7 @@ false otherwise.
 
   $bool = $context->_reverse_all_changes();
 
-_sync_databases() is the workhorse behind L</rollback>.  
+_reverse_all_changes() is the workhorse behind L</rollback>.  
 
 For each class, it goes through each object of that class.  If the object
 is a L<UR::Object::Ghost>, representing a deleted object, it converts the
@@ -542,8 +543,8 @@ by using each property's accessor method.
 =head1 The Object Cache
 
 The object cache is integral to the way the Context works, and also the main
-difference between UR and other Perl ORMs.  Other systems do no caching
-and require the calling application to hold references to any objects it 
+difference between UR and other ORMs.  Other systems do no caching and
+require the calling application to hold references to any objects it 
 is interested in.  Say one part of the app loads data from the database and
 gives up its references, then if another part of the app does the same or
 similar query, it will have to ask the database again.
@@ -597,7 +598,7 @@ C<$obj-E<gt>{load}-E<gt>{param_key}>.  This is a copy of the data in
 C<$UR::Context::all_params_loaded-E<gt>{$class_name}>.  For each rule
 ID, it will have a count of the number of times that rule was used in a get().
 
-=head2 Delted Objects and Ghosts
+=head2 Deleted Objects and Ghosts
 
 Calling delete() on an object is tracked in a different way.  First, a new
 object is created, called a ghost.  Ghost classes exist for every
@@ -627,11 +628,11 @@ it can avoid asking the underlying context/datasource for that class' data.
 =head2 all_params_loaded
 
 C<$UR::Context::all_params_loaded> is a two-level hashref.  The first level
-is class names.  The second level is rule IDs.  The values is how many times
-that class and rule have been involved in a get().  This data is used by
-L</_loading_was_done_before_with_a_superset_of_this_params_hashref> to 
-determine if the requested data will be found in the object cache for non-id
-queries.
+is class names.  The second level is rule (L<UR::BoolExpr>) IDs.  The values
+are how many times that class and rule have been involved in a get().  This
+data is used by L</_loading_was_done_before_with_a_superset_of_this_params_hashref>
+to determine if the requested data will be found in the object cache for
+non-id queries.
 
 =head2 all_objects_loaded
 

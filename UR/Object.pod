@@ -206,7 +206,7 @@ Assigning an invalid value is allowed, but the object will not be savable until 
 
   $obj->set(property1 => $value1, property2 => $value2);
 
-  This is a special method for bulk access via key-value pair(s).
+This is a special method for bulk access via key-value pair(s).
 
 =back
 
@@ -285,7 +285,7 @@ Returns the class metadata object for the given object's class.  Class objects
 are from the class L<UR::Object::Type>, and hold information about the class' 
 properties, data source, relationships to other classes, etc.
 
-=item strengthem
+=item strengthen
 
   $obj->strengthen();
 

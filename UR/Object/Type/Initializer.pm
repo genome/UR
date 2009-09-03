@@ -95,31 +95,28 @@ our @partially_defined_classes;
 # they contain things like coderefs
 our @keys_to_delete_from_db_committed = qw( id db_committed _id_property_sorter get_composite_id_resolver get_composite_id_decomposer );
 
-=pod
-
-=head Stages of Class Initialization
-
-=item define() is called to indicate the class structure (create() may also be called by the db sync command to make new classes)
-
-=item the parameters to define()/create() are normalized by _normalize_class_description()
-
-=item a basic functional class meta object is created by _define_minimal_class_from_normalized_class_description()
-
-  accessors are created
-
-=item if we're still bootstrapping:
-
-  the class is stashed in an array so the post-boostrapping stages can be done in bulk
-
-  we exit define()
-  
-=item if we're done bootstrapping:
-
- _inform_all_parent_classes_of_newly_loaded_subclass() sets up an internal map of known subclasses of each base class
-
- _complete_class_meta_object_definitions() decomposes the definition into normalized objects
-
-=cut
+# Stages of Class Initialization
+#
+# define() is called to indicate the class structure (create() may also be called by the db sync command to make new classes)
+#
+# the parameters to define()/create() are normalized by _normalize_class_description()
+#
+# a basic functional class meta object is created by _define_minimal_class_from_normalized_class_description()
+#
+#  accessors are created
+#
+# if we're still bootstrapping:
+#
+#  the class is stashed in an array so the post-boostrapping stages can be done in bulk
+#
+#  we exit define()
+#  
+# if we're done bootstrapping:
+#
+# _inform_all_parent_classes_of_newly_loaded_subclass() sets up an internal map of known subclasses of each base class
+#
+# _complete_class_meta_object_definitions() decomposes the definition into normalized objects
+#
 
 sub create {
     my $class = shift;
