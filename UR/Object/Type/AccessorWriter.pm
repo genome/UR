@@ -777,27 +777,21 @@ sub initialize_direct_accessors {
             $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name, $where);
         }        
         else {        
-            if ($self->has_table and not $column_name) {
-                # Independent objects are made for these.
-                $accessor_type = 'attribute_value';
-            }        
-            else {
-                # Just use key/value pairs in the hash for normal
-                # table stuff, and also non-database stuff.
-                
-                #if ($column_name) {
-                #    push @$props, $property_name;
-                #    push @$cols, $column_name;
-                #}
-                
-                if ($id_property_names{$property_name} or not $property_data->{is_mutable}) {
-                    $accessor_type = 'ro';
-                }
-                else {
-                    $accessor_type = 'rw';
-                }
+            # Just use key/value pairs in the hash for normal
+            # table stuff, and also non-database stuff.
+
+            #if ($column_name) {
+            #    push @$props, $property_name;
+            #    push @$cols, $column_name;
+            #}
+
+            if ($id_property_names{$property_name} or not $property_data->{is_mutable}) {
+            	$accessor_type = 'ro';
             }
-            
+            else {
+            	$accessor_type = 'rw';
+            }
+							
             my $maker = "mk_${accessor_type}_accessor";
             $self->$maker($class_name, $accessor_name, $column_name, $property_name,$is_transient);
         }
