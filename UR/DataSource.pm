@@ -9,7 +9,6 @@ use Sys::Hostname;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource',
-    #is => ['UR::Singleton'],
     english_name => 'universal reflective datasource',
     is_abstract => 1,
     doc => 'A logical database, independent of prod/dev/testing considerations or login details.',
@@ -19,12 +18,12 @@ UR::Object::Type->define(
 );
 
 sub get_namespace {
-    my $class = shift->_singleton_class_name;
+    my $class = shift->class;
     return substr($class,0,index($class,"::DataSource"));
 }
 
 sub get_name {
-    my $class = shift->_singleton_class_name;
+    my $class = shift->class;
     return lc(substr($class,index($class,"::DataSource")+14));
 }
 

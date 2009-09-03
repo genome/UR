@@ -630,12 +630,11 @@ sub UR::DataSource::File::Tracker::DESTROY {
     if ($count == 0) {
 	# All open queries have supposedly been fulfilled.  Close the
 	# file handle and undef it so get_default_handle() will re-open if necessary
-	my $self_obj = $ds->_singleton_object;
-        my $fh = $self_obj->{'_fh'};
+        my $fh = $ds->{'_fh'};
 
         $sql_fh->printf("CSV: CLOSING fileno ".fileno($fh)."\n") if ($ENV{'UR_DBI_MONITOR_SQL'});
 	$fh->close();
-	$self_obj->{'_fh'} = undef;
+	$ds->{'_fh'} = undef;
     }
 }
 
