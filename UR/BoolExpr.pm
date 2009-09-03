@@ -62,7 +62,7 @@ sub decomposed_id {
      return (substr($id,0,$pos), substr($id,$pos+1));
 }
 
-sub composite_id {
+sub _resolve_composite_id {
     shift;
     return join($id_sep,@_);
 }
@@ -284,7 +284,7 @@ sub resolve_normalized_rule_for_class_and_params {
 sub resolve_for_template_id_and_values {
     my ($class,$template_id, @values)  = @_;
     my $value_id = $class->values_to_value_id(@values);
-    my $rule_id = $class->composite_id($template_id,$value_id);
+    my $rule_id = $class->_resolve_composite_id($template_id,$value_id);
     $class->get($rule_id);
 }
 

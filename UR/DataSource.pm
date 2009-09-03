@@ -574,7 +574,7 @@ sub _generate_loading_templates_arrayref {
             my $class_name = $template->{data_class_name};
             $template->{id_resolver} = sub {
                 my $self = shift;
-                return $class_name->composite_id(@$self[@id_column_positions]);
+                return $class_name->_resolve_composite_id(@$self[@id_column_positions]);
             }                    
         }
         else {

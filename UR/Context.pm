@@ -1310,7 +1310,7 @@ sub _get_objects_for_class_and_rule_from_cache {
             }
             
             # find or create the index
-            my $index_id = UR::Object::Index->composite_id($class,join(",",@properties));
+            my $index_id = UR::Object::Index->_resolve_composite_id($class,join(",",@properties));
             #my $index_id2 = $rule->index_id;
             #unless ($index_id eq $index_id2) {
             #    Carp::confess("Index ids don't match: $index_id, $index_id2\n");

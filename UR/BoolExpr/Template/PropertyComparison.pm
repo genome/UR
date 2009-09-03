@@ -127,7 +127,7 @@ sub _get_for_subject_class_name_and_logic_detail {
     
     my ($property_name, $comparison_operator) = split(' ',$logic_detail, 2);    
     my $subclass_name = $class->resolve_subclass_for_comparison_operator($comparison_operator);    
-    my $id = $subclass_name->composite_id($subject_class_name, 'PropertyComparison', $logic_detail);
+    my $id = $subclass_name->_resolve_composite_id($subject_class_name, 'PropertyComparison', $logic_detail);
     
     return $subclass_name->get_or_create($id);
 }

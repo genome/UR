@@ -29,7 +29,7 @@ sub get_underlying_rules_for_values {
     for my $template (@underlying_templates) {
         my $n = $template->num_values;
         my $value_id = $template->values_to_value_id(splice(@values,0,$n));
-        my $rule_id = UR::BoolExpr->composite_id($template->id,$value_id);
+        my $rule_id = UR::BoolExpr->_resolve_composite_id($template->id,$value_id);
         my $rule = UR::BoolExpr->get($rule_id);
         push @underlying_rules, $rule;
     }

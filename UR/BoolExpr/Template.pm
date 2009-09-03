@@ -162,7 +162,7 @@ sub get_normalized_template_equivalent {
 sub get_rule_for_values {
     my $self = shift;
     my $value_id = $self->values_to_value_id(@_);    
-    my $rule_id = UR::BoolExpr->composite_id($self->id,$value_id);
+    my $rule_id = UR::BoolExpr->_resolve_composite_id($self->id,$value_id);
     return UR::BoolExpr->get($rule_id);
 }
 
@@ -480,7 +480,7 @@ sub get {
                             # we have translations of that ID into underlying properties
                             #print "ADDING ID for " . join(",",keys %id_parts) . "\n";
                             my @id_pos = sort { $a <=> $b } keys %id_parts;
-                            push @$extenders, [ [@id_parts{@id_pos}], "composite_id" ];
+                            push @$extenders, [ [@id_parts{@id_pos}], "_resolve_composite_id" ]; #TODO was this correct?
                             $key_op_hash->{id} ||= {};
                             $key_op_hash->{id}{$op}++;                        
                             push @keys, "id"; 
@@ -536,7 +536,7 @@ sub get {
         # Determine the rule template's ID.
         # The normalizer will store this.  Below, we'll
         # find or create the template for this ID.
-        my $normalized_id = UR::BoolExpr::Template->composite_id($subject_class_name, "And", join(",",@keys_sorted), $constant_value_id);
+        my $normalized_id = UR::BoolExpr::Template->_resolve_composite_id($subject_class_name, "And", join(",",@keys_sorted), $constant_value_id);
         
         @extra_params = (
             id_position                     => $id_position,        

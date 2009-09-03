@@ -1430,7 +1430,7 @@ sub load_all_on_first_access  {
     return ( (defined($type->er_role) and $type->er_role eq 'validation item') or ($type->class_name =~ /Type$/) ? 1 : 0);
 }
 
-sub composite_id {
+sub _resolve_composite_id {
     return shift->get_class_object->resolve_composite_id_from_ordered_values(@_);
 }
 

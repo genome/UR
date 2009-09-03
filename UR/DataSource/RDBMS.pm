@@ -756,7 +756,7 @@ sub _resolve_ids_from_class_name_and_sql {
 		$data->{uc($key)} = delete $data->{$key};
 	}
         my @id_vals = map {$data->{uc($_)}} @id_columns;
-        my $cid = $class_name->composite_id(@id_vals);
+        my $cid = $class_name->_resolve_composite_id(@id_vals);
         push @id_fetch_set, $cid;       
     }
     
@@ -1113,7 +1113,7 @@ sub _sync_database {
                 $adding{$cmd} = 1;
                 my $obj = $objs{$cmd->{id}};
                 for my $rcol_set (@rcol_sets) {
-                    my $pid = $obj->class->composite_id(map { $obj->$_ } @$rcol_set);
+                    my $pid = $obj->class->_resolve_composite_id(map { $obj->$_ } @$rcol_set);
                     if (defined $pid) {   # This recursive foreign key dep may have been optional
                         my $pcmd = delete $unsorted_cmds{$pid};
                         $add->($pcmd) if $pcmd;
