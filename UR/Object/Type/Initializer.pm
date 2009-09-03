@@ -582,10 +582,16 @@ sub _normalize_class_description {
     }
     $new_class{id_by} = $id_properties;
     
+    # FIXME - is there a canonical list of has_* => is_* mappings, or do we
+    # support anything the user might want to put in there?
     for my $key (keys %old_class) {
         next unless $key =~ /has/;
         my @words = map { 'is_' . $_ } grep { $_ ne 'has' } split(/[_-]/,$key);
         my $list = delete $old_class{$key};
+        unless (ref($list) =~ m/^ARRAY/) {
+            $class->error_message("Bad class definition while parsing key $key: expected ARRAY ref, got $list (missing has => [] section?)");
+            return;
+        }
         for (my $n = 0; $n < @$list; $n+=2) {
             my $name = $list->[$n];
             my $data = $list->[$n+1];
