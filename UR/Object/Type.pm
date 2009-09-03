@@ -993,6 +993,9 @@ sub get_id_property_objects
     my @id_property_objects =
         map { UR::Object::Property->get(class_name => $_->class_name, attribute_name => $_->attribute_name) }
         $self->get_id_objects;
+    if (@id_property_objects == 0) {
+        @id_property_objects = $self->get_property_meta_by_name("id");
+    }
     return @id_property_objects;
 }
 

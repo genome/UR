@@ -64,6 +64,7 @@ sub take_state_snapshot {
                 delete $copy->{'_unique_property_sets'};
                 delete $copy->{_all_id_property_names};
                 delete $copy->{_id_property_sorter};
+                delete $copy->{get_composite_id_resolver};
             }
             for my $key (keys %$copy) {
                 if (! defined $copy->{$key}) {

@@ -21,6 +21,12 @@ our @change_log;
 our @open_transaction_stack;
 our $last_transaction_id = 0;
 
+sub delete {
+    my $self = shift;
+    $DB::single = 1;
+    $self->rollback;
+}
+
 sub begin 
 {
     my $class = shift;
@@ -30,10 +36,17 @@ sub begin
     my $begin_point = @change_log;
     $log_all_changes = 1;
 
+    my $last_trans = $open_transaction_stack[-1];
+    if ($last_trans and $last_trans != $UR::Context::current) {
+        die "Current transaction does not match the top of the transaction stack!?"
+    }
+    $last_trans ||= $UR::Context::current;
+
     my $self = $class->create(
         id => $id,
         begin_point => $begin_point,
         state => "open",
+        parent => $last_trans,
         @_
     );
 
@@ -42,6 +55,9 @@ sub begin
     }
 
     push @open_transaction_stack, $self;
+
+    $UR::Context::current = $self;
+
     return $self;
 }
 
@@ -155,6 +171,11 @@ sub rollback
         }
     }
 
+    my $parent = $self->parent;
+    if ($open_transaction_stack[-2] and $open_transaction_stack[-2] != $parent) {
+        die "Parent transaction $parent is not below this one on the stack $open_transaction_stack[-2]?";
+    }
+
     # Reverse each change, starting from the most recent, and
     # ending with the creation of the transaction object itself.
     local $log_all_changes = 0;
@@ -172,7 +193,8 @@ sub rollback
         Carp::confess("Odd number of changes after rollback");
     }
 
-    #pop @open_transaction_stack;
+    pop @open_transaction_stack;
+    $UR::Context::current = $parent;
 
     return 1;
 }

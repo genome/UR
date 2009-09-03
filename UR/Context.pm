@@ -8,19 +8,38 @@ require UR;
 
 UR::Object::Type->define(
     class_name => 'UR::Context',    
-    english_name => 'ur context',
     is_abstract => 1,
-    doc => 'Represents the composite state of all objects in a given context.  May be the defaykt base context, an alternate base context, or a transaction context.',
+    has => [
+        parent  => { is => 'UR::Context', id_by => 'parent_id', is_optional => 1 }
+    ],
+    doc => <<EOS
+The environment in which oo-activity occurs in UR.  Subclasses exist for in-memory transactions,
+and also the process itself, the environment in which activity occurs at an organization (the root).
+This is responsible for mapping object requests to database requests, managing caching, transaction
+consistency, locking, etc.
+EOS
 );
-
-# This will eventually just point to the current context object, 
-# and will change when the context changes, but for now everything will work as a class method
-$UR::Context::current = __PACKAGE__;
 
 our $all_objects_loaded ||= {};               # Master index of all tracked objects by class and then id.
 our $all_change_subscriptions ||= {};         # Index of other properties by class, property_name, and then value.
 our $all_objects_are_loaded ||= {};           # Track when a class informs us that all objects which exist are loaded.
 our $all_params_loaded ||= {};                # Track parameters used to load by class then _param_key
+
+# for bootstrapping
+$UR::Context::current = __PACKAGE__;
+
+# called by UR.pm during bootstraping
+my $initialized = 0;
+sub _initialize_for_current_process {
+    my $class = shift;
+    if ($initialized) {
+        die "Attempt to re-initialize the current process?";
+    }
+    $UR::Context::root = $ENV{UR_CONTEXT_ROOT} ||= 'UR::Context::DefaultRoot';
+    $UR::Context::base = $ENV{UR_CONTEXT_BASE} ||= $UR::Context::root;
+    $UR::Context::process = UR::Context::Process->_create_for_current_process(parent => $UR::Context::base);
+    $UR::Context::current = $UR::Context::process;
+}
 
 sub get_default_data_source {
     # TODO: a context should be able to specify a specific place to go for general data.
@@ -29,43 +48,33 @@ sub get_default_data_source {
     return $ds[0];
 }
 
-# the base context is the root snapshot of reality the application is using
+# the rot context is the root snapshot of reality the application is using
 # it only varies when we flip to development/testing etc.
 
-sub get_base {
-    shift;
-    UR::Context::Base->get_current(@_);
+sub get_root {
+    return $UR::Context::root;
 }
 
-sub set_base {
-    shift;
-    UR::Context::Base->set_current(@_);
+# the base context is whatever context is immediately outside the process: typically the root context
+
+sub get_base {
+    return $UR::Context::base;
 }
 
 # the process context is the perspective on the data from the current process/thread
 # this is primarily for buffering, when the process is the current process
 
 sub get_process {
-    shift;
-    UR::Context::Process->get_current(@_);
+    return $UR::Context::process;
 }
 
 # the current context is either the process context, or the current transaction on-top of it
 
 sub get_current {
-    my $context;
-    
-    $context = $UR::Context::Transaction::open_transaction_stack[-1];
-    return $context if $context;
-    
-    $context = UR::Context::Process->get_current();
-    return $context if $context;
-    
-    $context = UR::Context::Base->get_current();
-    return $context if $context;
-    
-    return;
+    return $UR::Context::current;
 }
+
+# how did this get here?
 
 sub send_email {
     my $self = shift;
@@ -360,41 +369,226 @@ sub get_objects_for_class_and_rule {
 }
 
 sub _create_import_iterator_for_underlying_context {
-
     my ($self, $rule, $dsx) = @_; 
 
-    my ($rule_template, @values) = $rule->get_rule_template_and_values();    
-    my $template_data = $dsx->_get_template_data_for_loading($rule_template); 
+    my ($rule_template, @values) = $rule->get_rule_template_and_values();
+    my $template_data = $dsx->_get_template_data_for_loading($rule_template);
+    my $class_name = $template_data->{class_name};
 
-    #
-    # the template has general class data
-    #
-
-    my $ghost_class                                 = $template_data->{ghost_class};
-    my $class_name                                  = $template_data->{class_name};
-    my $class = $class_name;
-
-    my @parent_class_objects                        = @{ $template_data->{parent_class_objects} };
-    my @all_table_properties                        = @{ $template_data->{all_table_properties} };
-    my $first_table_name                            = $template_data->{first_table_name};
-    my $sub_classification_meta_class_name          = $template_data->{sub_classification_meta_class_name};
-    my $sub_classification_property_name            = $template_data->{sub_classification_property_name};
-    my $sub_classification_method_name              = $template_data->{sub_classification_method_name};
-
-    my @all_id_property_names                       = @{ $template_data->{all_id_property_names} };           
-    my @id_properties                               = @{ $template_data->{id_properties} };               
-    my $id_property_sorter                          = $template_data->{id_property_sorter};                    
+    if (my $sub_typing_property) {
+        # When the rule has a property specified which indicates a specific sub-type, catch this and re-call
+        # this method recursively with the specific subclass name.
+        
+        my $rule_template_specifies_value_for_subtype   = $template_data->{rule_template_specifies_value_for_subtype};
+        my $class_table_name                            = $template_data->{class_table_name};
+        my @type_names_under_class_with_no_table        = @{ $template_data->{type_names_under_class_with_no_table} };
+   
+        warn "Implement me carefully";
+        
+        if ($rule_template_specifies_value_for_subtype) {
+            $DB::single = 1;
+            my $sub_classification_meta_class_name          = $template_data->{sub_classification_meta_class_name};
+            my $value = $rule->specified_value_for_property_name($sub_typing_property);
+            my $type_obj = $sub_classification_meta_class_name->get($value);
+            if ($type_obj) {
+                my $subclass_name = $type_obj->subclass_name($class_name);
+                if ($subclass_name and $subclass_name ne $class_name) {
+                    $rule = $subclass_name->get_rule_for_params($rule->params_list, $sub_typing_property => $value);
+                    return $self->_create_import_iterator_for_underlying_context($rule,$dsx);
+                }
+            }
+            else {
+                die "No $value for $class_name?\n";
+            }
+        }
+        elsif (not $class_table_name) {
+            $DB::single = 1;
+            # we're in a sub-class, and don't have the type specified
+            # check to make sure we have a table, and if not add to the filter
+            my $rule = $class_name->get_rule_for_params(
+                $rule_template->get_rule_for_values(@values)->params_list, 
+                $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
+            );
+            return $self->_create_import_iterator_for_underlying_context($rule,$dsx)
+        }
+        else {
+            # continue normally
+            # the logic below will handle sub-classifying each returned entity
+        }
+    }
     
+    
+    my $loading_templates = $template_data->{loading_templates};
     my $sub_typing_property                         = $template_data->{sub_typing_property};
-    my $class_table_name                            = $template_data->{class_table_name};
-    my @type_names_under_class_with_no_table        = @{ $template_data->{type_names_under_class_with_no_table} };
-
-    #
-    # the template has explicit template data
-    #  
+    my $next_db_row;
+    my $rows = 0;       # number of rows the query returned
     
-    my @property_names_in_resultset_order           = @{ $template_data->{property_names_in_resultset_order} };
-    my $properties_for_params                       = $template_data->{properties_for_params};
+    my $recursion_desc                              = $template_data->{recursion_desc};
+    my $rule_template_without_recursion_desc;
+    my $rule_without_recursion_desc;
+    if ($recursion_desc) {
+        $rule_template_without_recursion_desc        = $template_data->{rule_template_without_recursion_desc};
+        $rule_without_recursion_desc                 = $rule_template_without_recursion_desc->get_rule_for_values(@values);    
+    }
+    
+    my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
+    
+    # make an iterator for the data source, and wrap it
+    my $db_iterator = $dsx->create_iterator_closure_for_rule($rule);    
+    my %subordinate_iterator_for_class;
+    
+    # instead of making just one import iterator, we make one per loading template
+    # we then have our primary iterator use these to fabricate objects for each db row
+    
+    my @importers;
+$DB::single=1;
+    for my $loading_template (@$loading_templates) {
+        my $object_fabricator = $self->_create_object_fabricator_for_loading_template($loading_template,$template_data,$rule,$rule_template,\@values, $dsx);
+        unshift @importers, $object_fabricator;
+    }
+    
+    # Make the iterator we'll return.
+    my $iterator = sub {
+        my $object;
+        
+        until ($object) { # note that we return directly when the db is out of data
+            
+            my ($next_db_row);
+            ($next_db_row) = $db_iterator->() if ($db_iterator);
+            
+            unless ($next_db_row) {
+                if ($rows == 0) {
+                    # if we got no data at all from the sql then we give a status
+                    # message about it and we update all_params_loaded to indicate
+                    # that this set of parameters yielded 0 objects
+                    
+                    my $rule_template_is_id_only                    = $template_data->{rule_template_is_id_only};
+                    if ($rule_template_is_id_only) {
+                        my $id = $rule->specified_value_for_id;
+                        $UR::Object::all_objects_loaded->{$class_name}->{$id} = undef;
+                    }
+                    else {
+                        my $rule_id = $rule->id;
+                        $UR::Object::all_params_loaded->{$class_name}->{$rule_id} = 0;
+                    }
+                }
+                
+                if ( $template_data->{rule_matches_all} ) {
+                    # No parameters.  We loaded the whole class.
+                    # Doing a load w/o a specific ID w/o custom SQL loads the whole class.
+                    # Set a flag so that certain optimizations can be made, such as 
+                    # short-circuiting future loads of this class.        
+                    $class_name->all_objects_are_loaded(1);        
+                }
+                
+                if ($recursion_desc) {
+                    my @results = $class_name->is_loaded($rule_without_recursion_desc);
+                    $UR::Object::all_params_loaded->{$class_name}{$rule_without_recursion_desc->id} = scalar(@results);
+                    for my $object (@results) {
+                        $object->{load}{param_key}{$class_name}{$rule_without_recursion_desc->id}++;
+                    }
+                }
+                return;
+            }
+            
+            # we count rows processed mainly for more concise sanity checking
+            $rows++;
+            
+            # get one or more objects from this row of results
+            my $re_iterate = 0;
+            my @imported;
+            for my $callback (@importers) {
+                my $imported_object = $callback->($next_db_row);
+                if ($imported_object and not ref($imported_object)) {
+                    # object requires sub-classsification in a way which involves different db data.
+                    $re_iterate = 1;
+                }
+                push @imported, $imported_object;
+            }
+            $object = $imported[-1];
+            
+            if ($re_iterate) {
+                # It is possible that one or more objects go into subclasses which require more
+                # data than is on the results row.  For each subclass (or set of subclasses),
+                # we make a more specific, subordinate iterator to delegate-to.
+                $DB::single = 1;               
+ 
+                # TODO: handle subclasses in other importers besides the primary one
+                my $subclass_name = $object;
+
+                # FIXME - this sidesteps the TODO issue mentioned above.  The resulting
+                # behavior is that it will complete the main query, and then do individual
+                # queries for all the resultant items that needed to be subclassed.  Correct
+                # behavior, but not optimal
+                #if (grep { not ref $_ } @imported[0..$#imported-1]) {
+                #    #die "No support for sub-classifying joined objects yet!";
+                #}
+                unless (grep { not ref $_ } @imported[0..$#imported-1]) {
+                
+                    my $sub_iterator = $subordinate_iterator_for_class{$subclass_name};
+                    unless ($sub_iterator) {
+                        #print "parallel iteration for loading $subclass_name under $class_name!\n";
+                        my $sub_classified_rule_template = $rule_template->sub_classify($subclass_name);
+                        my $sub_classified_rule = $sub_classified_rule_template->get_rule_for_values(@values);
+                        $sub_iterator 
+                            = $subordinate_iterator_for_class{$subclass_name} 
+                                = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx);
+                    }
+                    ($object) = $sub_iterator->();
+                    if (! defined $object) {
+                        # the newly subclassed object 
+                        redo;
+                    }
+                
+                #unless ($object->id eq $id) {
+                #    Carp::cluck("object id $object->{id} does not match expected id $id");
+                #    $DB::single = 1;
+                #    print "";
+                #    die;
+                #}
+               }
+            } # end of handling a possible subordinate iterator delegate
+            
+            unless ($object) {
+                redo;
+            }
+            
+            if ( (ref($object) ne $class_name) and (not $object->isa($class_name)) ) {
+                $object = undef;
+                redo;
+            }
+            
+            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($object)) {
+                $object = undef;
+                redo;
+            }
+            
+        }; # end of loop until we have a defined object to return
+        
+        return $object;
+    };
+    
+    return $iterator;
+}
+
+
+sub _create_object_fabricator_for_loading_template {
+    my ($self, $loading_template, $template_data, $rule, $rule_template, $values, $dsx) = @_;
+    my @values = @$values;
+
+    my $class_name                                  = $loading_template->{final_class_name};
+    $class_name or die;
+    
+    my $class_meta                                  = $class_name->get_class_object;
+    my $class_data                                  = $dsx->_get_class_data_for_loading($class_meta);
+    my $class = $class_name;
+    
+    my $ghost_class                                 = $class_data->{ghost_class};
+    my $sub_classification_meta_class_name          = $class_data->{sub_classification_meta_class_name};
+    my $sub_classification_property_name            = $class_data->{sub_classification_property_name};
+    my $sub_classification_method_name              = $class_data->{sub_classification_method_name};
+
+    # FIXME, right now, we don't have a rule template for joined entities...
     
     my $rule_template_id                            = $template_data->{rule_template_id};
     my $rule_template_without_recursion_desc        = $template_data->{rule_template_without_recursion_desc};
@@ -409,552 +603,432 @@ sub _create_import_iterator_for_underlying_context {
     my $recurse_property_referencing_other_rows     = $template_data->{recurse_property_referencing_other_rows};
 
     my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
+    
+    my $rule_id = $rule->id;    
+    my $rule_without_recursion_desc = $rule_template_without_recursion_desc->get_rule_for_values(@values);    
+    
+    my $loading_base_object;
+    if ($loading_template == $template_data->{loading_templates}[0]) {
+        $loading_base_object = 1;
+    }
+    else {
+        $loading_base_object = 0;
+        $needs_further_boolexpr_evaluation_after_loading = 0;
+    }
 
-    #
-    # if there is a property which specifies a sub-class for the objects, switch rule/values and call this again recursively
-    #
+    
+    
+    my %subclass_is_safe_for_re_bless;
+    my %subclass_for_subtype_name;  
+    my %recurse_property_value_found;
+    
+    my @property_names      = @{ $loading_template->{property_names} };
+    my @column_positions    = @{ $loading_template->{column_positions} };
+    my @id_positions        = @{ $loading_template->{id_column_positions} };
+    my $multi_column_id     = (@id_positions > 1 ? 1 : 0);
+    my $composite_id_resolver = $class_meta->get_composite_id_resolver;
+    
+    my $object_fabricator = sub {
+        my $next_db_row = $_[0];
+        
+        if ($loading_template != $template_data->{loading_templates}[0]) {
+            # no handling for the non-primary class yet!
+            $DB::single = 1;
+        }
+        
+        my $pending_db_object_data = {};
+        @$pending_db_object_data{@property_names} = @$next_db_row[@column_positions];
+        
+        # resolve id
+        my $pending_db_object_id;
+        if ($multi_column_id) {
+            $pending_db_object_id = $composite_id_resolver->(@$next_db_row[@id_positions]);
+        }
+        else {
+            $pending_db_object_id = $next_db_row->[$id_positions[0]];
+        }
+        
+        unless (defined $pending_db_object_id) {
+            Carp::confess(
+                "no id found in object data for $class_name?\n" 
+                . Data::Dumper::Dumper($pending_db_object_data)
+            );
+        }
+        
+        my $pending_db_object;
+        
+        # skip if this object has been deleted but not committed
+        do {
+            no warnings;
+            if ($UR::Object::all_objects_loaded->{$ghost_class}{$pending_db_object_id}) {
+                return;
+                #$pending_db_object = undef;
+                #redo;
+            }
+        };
 
-    if (my $sub_typing_property) {
-        warn "Implement me carefully";
-        if ($rule_template_specifies_value_for_subtype) {
-            $DB::single = 1;           
-            my @values = @_;
-            my $rule = $rule_template->get_rule_for_values(@values);
-            my $value = $rule->specified_value_for_property_name($sub_typing_property);
-            my $type_obj = $sub_classification_meta_class_name->get($value);
-            if ($type_obj) {
-                my $subclass_name = $type_obj->subclass_name($class);
-                if ($subclass_name and $subclass_name ne $class) {
-                    $rule = $subclass_name->get_rule_for_params($rule->params_list, $sub_typing_property => $value);
-                    return $self->create_iterator_closure_for_rule($rule,$dsx);
+        # Handle the object based-on whether it is already loaded in the current context.
+        if ($pending_db_object = $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id}) {
+            # The object already exists.            
+            my $dbsu = $pending_db_object->{db_saved_uncommitted};
+            my $dbc = $pending_db_object->{db_committed};
+            if ($dbsu) {
+                # Update its db_saved_uncommitted snapshot.
+                %$dbsu = (%$dbsu, %$pending_db_object_data);
+            }
+            elsif ($dbc) {
+                # only go over property names as a joined query may pull back columns that
+                # are not properties (e.g. find DNA for PSE ID 1001 would get PSE attributes in the query)
+                for my $property (@property_names) {
+                    no warnings;
+                    if ($pending_db_object_data->{$property} ne $dbc->{$property}) {
+                        # This has changed in the database since we loaded the object.
+                        
+                        # Ensure that none of the outside changes conflict with 
+                        # any inside changes, then apply the outside changes.
+                        if ($pending_db_object->{$property} eq $dbc->{$property}) {
+                            # no changes to this property in the application
+                            # update the underlying db_committed
+                            $dbc->{$property} = $pending_db_object_data->{$property};
+                            # update the regular state of the object in the application
+                            $pending_db_object->$property($pending_db_object_data->{$property}); 
+                        }
+                        else {
+                            # conflicting change!
+                            Carp::confess(qq/
+                                A change has occurred in the database for
+                                $class property $property on object $pending_db_object->{id}
+                                from '$dbc->{$property}' to '$pending_db_object_data->{$property}'.                                    
+                                At the same time, this application has made a change to 
+                                that value to $pending_db_object->{$property}.
+    
+                                The application should lock data which it will update 
+                                and might be updated by other applications. 
+                            /);
+                        }
+                    }
+                }
+                # Update its db_committed snapshot.
+                %$dbc = (%$dbc, %$pending_db_object_data);
+            }
+            
+            if ($dbc || $dbsu) {
+                $dsx->debug_message("object was already loaded", 4);
+            }
+            else {
+                # No db_committed key.  This object was "create"ed 
+                # even though it existed in the database, and now 
+                # we've tried to load it.  Raise an error.
+                die "$class $pending_db_object_id has just been loaded, but it exists in the application as a new unsaved object!\n" . Dumper($pending_db_object) . "\n";
+            }
+            
+            # TODO move up
+            #if ($loading_base_object and not $rule_without_recursion_desc->evaluate($pending_db_object)) {
+            #    # The object is changed in memory and no longer matches the query rule (= where clause)
+            #    if ($loading_base_object and $rule_specifies_id) {
+            #        $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
+            #        $UR::Object::all_params_loaded->{$class}{$rule_id}++;
+            #    }
+            #    $pending_db_object->signal_change('load');
+            #    return;
+            #    #$pending_db_object = undef;
+            #    #redo;
+            #}
+            
+        } # end handling objects which are already loaded
+        else {
+            # Handle the case in which the object is completely new in the current context.
+            
+            # Create a new object for the resultset row
+            $pending_db_object = bless { %$pending_db_object_data, id => $pending_db_object_id }, $class;
+            $pending_db_object->{db_committed} = $pending_db_object_data;
+            
+            # determine the subclass name for classes which automatically sub-classify
+            my $subclass_name;
+            if (    
+                    ($sub_classification_meta_class_name or $sub_classification_method_name)
+                    and                                    
+                    (ref($pending_db_object) eq $class) # not already subclased  
+            ) {
+                if ($sub_classification_method_name) {
+                    $subclass_name = $class->$sub_classification_method_name($pending_db_object);
+                    unless ($subclass_name) {
+                        Carp::confess(
+                            "Failed to sub-classify $class using method " 
+                            . $sub_classification_method_name
+                        );
+                    }        
+                }
+                else {    
+                    #$DB::single = 1;
+                    # Group objects requiring reclassification by type, 
+                    # and catch anything which doesn't need reclassification.
+                    
+                    my $subtype_name = $pending_db_object->$sub_classification_property_name;
+                    
+                    $subclass_name = $subclass_for_subtype_name{$subtype_name};
+                    unless ($subclass_name) {
+                        my $type_obj = $sub_classification_meta_class_name->get($subtype_name);
+                        
+                        unless ($type_obj) {
+                            # The base type may give the final subclass, or an intermediate
+                            # either choice has trade-offs, but we support both.
+                            # If an intermediate subclass is specified, that subclass
+                            # will join to a table with another field to indicate additional 
+                            # subclassing.  This means we have to do this part the hard way.
+                            # TODO: handle more than one level.
+                            my @all_type_objects = $sub_classification_meta_class_name->get();
+                            for my $some_type_obj (@all_type_objects) {
+                                my $some_subclass_name = $some_type_obj->subclass_name($class);
+                                unless (UR::Object::Type->get($some_subclass_name)->is_abstract) {
+                                    next;
+                                }                
+                                my $some_subclass_meta = $some_subclass_name->get_class_object;
+                                my $some_subclass_type_class = 
+                                                $some_subclass_meta->sub_classification_meta_class_name;
+                                if ($type_obj = $some_subclass_type_class->get($subtype_name)) {
+                                    # this second-tier subclass works
+                                    last;
+                                }       
+                                else {
+                                    # try another subclass, and check the subclasses under it
+                                    #print "skipping $some_subclass_name: no $subtype_name for $some_subclass_type_class\n";
+                                }
+                            }
+                        }
+                        
+                        if ($type_obj) {                
+                            $subclass_name = $type_obj->subclass_name($class);
+                        }
+                        else {
+                            warn "Failed to find $class_name sub-class for type '$subtype_name'!";
+                            $subclass_name = $class_name;
+                        }
+                        
+                        unless ($subclass_name) {
+                            Carp::confess(
+                                "Failed to sub-classify $class using " 
+                                . $type_obj->class
+                                . " '" . $type_obj->id . "'"
+                            );
+                        }        
+                        
+                        $subclass_name->class;
+                    }
+                    $subclass_for_subtype_name{$subtype_name} = $subclass_name;
+                }
+                
+                # note: we check this again with the real base class, but this keeps junk objects out of the core hash
+                unless ($subclass_name->isa($class)) {
+                    # We may have done a load on the base class, and not been able to use properties to narrow down to the correct subtype.
+                    # The resultset returned more data than we needed, and we're filtering out the other subclasses here.
+                    return;
+                    #$pending_db_object = undef;
+                    #redo; 
                 }
             }
             else {
-                die "No $value for $class?\n";
+                # regular, non-subclassifier
+                $subclass_name = $class;
             }
-        }
-        elsif (not $class_table_name) {
-            $DB::single = 1;
-            # we're in a sub-class, and don't have the type specified
-            # check to make sure we have a table, and if not add to the filter
-            my $rule = $class_name->get_rule_for_params(
-                $rule_template->get_rule_for_values(@values)->params_list, 
-                $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
-            );
-            return $self->create_iterator_closure_for_rule($rule,$dsx)
-        }
-        else {
-            # continue normally
-            # the logic below will handle sub-classifying each returned entity
-        }
-    }
-
-    # gather the data specific to this group of values
-    # we don't cache these on the rule since a rule is typically only loaded once anyway
-
-    my $rule_id = $rule->id;    
-    my $rule_without_recursion_desc = $rule_template_without_recursion_desc->get_rule_for_values(@values);    
-    my $id = $rule->specified_value_for_id;
-        
-    # the iterator may need subordinate iterators if the objects are subclassable
-    my %subclass_is_safe_for_re_bless;
-    my %subclass_for_subtype_name;  
-    my %subordinate_rule_template_for_class;
-    my %subordinate_iterator_for_class;
-    my %recurse_property_value_found;
-
-    # buffers for the iterator
-    my $next_object;
-    my $pending_db_object;
-    my $pending_db_object_data;
-    my $pending_cached_object;
-    my $next_db_row;
-    my $object;
-    my $rows = 0;       # number of rows the query returned
-
-    # make an iterator for the data source, and wrap it
-    my $db_iterator = $dsx->create_iterator_closure_for_rule($rule);
-
-    my $iterator = sub {
-        # This is the number of items we're expected to return.
-        # It is 1 by default for iterators, and -1 for a basic get() which returns everything.
-        my $countdown = $_[0] || 1;
-        
-        my @return_objects;
-        
-        while ($countdown != 0) {
-            # This block is necessary because Perl only looks 2 levels up for closure pad members.
-            # It ensures the above variables hold their value in this closure
-            no warnings;
-            (
-                $dsx, 
-                $rule_template, 
-                @values,
-                $template_data,
-                $ghost_class,
-                $class_name,
-                $class,
-                @parent_class_objects,
-                @all_table_properties,
-                $first_table_name,
-                $sub_classification_meta_class_name,
-                $sub_classification_property_name,
-                $sub_classification_method_name,
-                @all_id_property_names,
-                @id_properties,
-                $id_property_sorter,
-                $sub_typing_property,
-                $class_table_name,
-                @type_names_under_class_with_no_table,
-                $recursion_desc,
-                $recurse_property_on_this_row,
-                $recurse_property_referencing_other_rows,
-                $properties_for_params,
-                @property_names_in_resultset_order,
-                $rule_template_id,
-                $rule_template_without_recursion_desc,
-                $rule_template_id_without_recursion_desc,
-                $rule_matches_all,
-                $rule_template_is_id_only,
-                $rule_template_specifies_value_for_subtype,
-                $rule_specifies_id,
-                $rule,
-                $rule_id,
-                $rule_without_recursion_desc,
-                %recurse_property_value_found,
-                $id,
-                %subclass_is_safe_for_re_bless,
-                %subordinate_rule_template_for_class,
-                %subordinate_iterator_for_class,
-                $next_object,
-                $pending_db_object,
-                $object,
-                $rows,
-                %subclass_for_subtype_name,
-                $needs_further_boolexpr_evaluation_after_loading,
-            );
-            use warnings;
-
-            # this loop will redo when the data returned no longer matches the rule in the current STM
-            for (1) {
-                $pending_db_object = undef;
-
-                my $pending_db_object_data;
-                ($pending_db_object_data) = $db_iterator->() if ($db_iterator);
-                unless ($pending_db_object_data) {
-                    if ($rows == 0) {
-                        # if we got no data at all from the sql then we give a status
-                        # message about it and we update all_params_loaded to indicate
-                        # that this set of parameters yielded 0 objects
-                        
-                        if ($rule_template_is_id_only) {
-                            $UR::Object::all_objects_loaded->{$class}->{$id} = undef;
-                        }
-                        else {
-                            $UR::Object::all_params_loaded->{$class}->{$rule_id} = 0;
-                        }
-                    }
-                    
-                    if ( $rule_matches_all ) {
-                        # No parameters.  We loaded the whole class.
-                        # Doing a load w/o a specific ID w/o custom SQL loads the whole class.
-                        # Set a flag so that certain optimizations can be made, such as 
-                        # short-circuiting future loads of this class.        
-                        $class->all_objects_are_loaded(1);        
-                    }
-                    
-                    if ($recursion_desc) {
-                        my @results = $class->is_loaded($rule_without_recursion_desc);
-                        $UR::Object::all_params_loaded->{$class}{$rule_without_recursion_desc->id} = scalar(@results);
-                        for my $object (@results) {
-                            $object->{load}{param_key}{$class}{$rule_without_recursion_desc->id}++;
-                        }
-                    }
-                    last;
+            
+            # store the object
+            # note that we do this on the base class even if we know it's going to be put into a subclass below
+            $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id} = $pending_db_object;
+            #$pending_db_object->signal_change('create_object', $pending_db_object_id)
+            
+            # If we're using a light cache, weaken the reference.
+            if ($UR::Context::light_cache and substr($class,0,5) ne 'App::') {
+                Scalar::Util::weaken($UR::Object::all_objects_loaded->{$class_name}->{$pending_db_object_id});
+            }
+            
+            if ($loading_base_object and not $rule_specifies_id) {
+                $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
+                $UR::Object::all_params_loaded->{$class}{$rule_id}++;    
+            }
+            
+            unless ($subclass_name eq $class) {
+                # we did this above, but only checked the base class
+                my $subclass_ghost_class = $subclass_name->ghost_class;
+                if ($UR::Object::all_objects_loaded->{$subclass_ghost_class}{$pending_db_object_id}) {
+                    return;
+                    #$pending_db_object = undef;
+                    #redo;
                 }
                 
-                # we count rows processed mainly for more concise sanity checking
-                $rows++;
-               
-                # resolve id
-                my $pending_db_object_id = (@id_properties > 1)
-                    ? $class->composite_id(@{$pending_db_object_data}{@id_properties})
-                    : $pending_db_object_data->{$id_properties[0]};                
-                unless (defined $pending_db_object_id) {
-                    Carp::confess(
-                        "no id found in object data?\n" 
-                        . Data::Dumper::Dumper($pending_db_object_data, \@id_properties)
-                    );
+                my $re_bless = $subclass_is_safe_for_re_bless{$subclass_name};
+                if (not defined $re_bless) {
+                    $re_bless = $dsx->_class_is_safe_to_rebless_from_parent_class($subclass_name, $class);
+                    $re_bless ||= 0;
+                    $subclass_is_safe_for_re_bless{$subclass_name} = $re_bless;
                 }
-            
-                # skip if this object has been deleted but not committed
-                # TODO: MOVE
-                do {
-                    no warnings;
-                    if ($UR::Object::all_objects_loaded->{$ghost_class}{$pending_db_object_id}) {
-                        $pending_db_object = undef;
-                        redo;
-                    }
-                };
-
-                # ensure that we're not remaking things which have already been loaded
-                # TODO: MOVE
-                if ($pending_db_object = $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id}) {
-                    # The object already exists.            
-                    my $dbsu = $pending_db_object->{db_saved_uncommitted};
-                    my $dbc = $pending_db_object->{db_committed};
-                    if ($dbsu) {
-                        # Update its db_saved_uncommitted snapshot.
-                        %$dbsu = (%$dbsu, %$pending_db_object_data);
-                    }
-                    elsif ($dbc) {
-                        # only go over property names as a joined query may pull back columns that
-                        # are not properties (e.g. find DNA for PSE ID 1001 would get PSE attributes in the query)
-                        for my $property ($class->property_names) {
-                            no warnings;
-                            if ($pending_db_object_data->{$property} ne $dbc->{$property}) {
-                                # This has changed in the database since we loaded the object.
-                                
-                                # Ensure that none of the outside changes conflict with 
-                                # any inside changes, then apply the outside changes.
-                                if ($pending_db_object->{$property} eq $dbc->{$property}) {
-                                    # no changes to this property in the application
-                                    # update the underlying db_committed
-                                    $dbc->{$property} = $pending_db_object_data->{$property};
-                                    # update the regular state of the object in the application
-                                    $pending_db_object->$property($pending_db_object_data->{$property}); 
-                                }
-                                else {
-                                    # conflicting change!
-                                    Carp::confess(qq/
-                                        A change has occurred in the database for
-                                        $class property $property on object $pending_db_object->{id}
-                                        from '$dbc->{$property}' to '$pending_db_object_data->{$property}'.                                    
-                                        At the same time, this application has made a change to 
-                                        that value to $pending_db_object->{$property}.
-            
-                                        The application should lock data which it will update 
-                                        and might be updated by other applications. 
-                                    /);
-                                }
-                            }
-                        }
-                        # Update its db_committed snapshot.
-                        %$dbc = (%$dbc, %$pending_db_object_data);
-                    }
-                    
-                    if ($dbc || $dbsu) {
-                        $dsx->debug_message("object was already loaded", 4);
-                    }
-                    else {
-                        # No db_committed key.  This object was "create"ed 
-                        # even though it existed in the database, and now 
-                        # we've tried to load it.  Raise an error.
-                        die "$class $pending_db_object_id has just been loaded, but it exists in the application as a new unsaved object!\n" . Dumper($pending_db_object) . "\n";
-                    }
-                    
-                    unless ($rule_without_recursion_desc->evaluate($pending_db_object)) {
-                        # The object is changed in memory and no longer matches the query rule (= where clause)
-                        unless ($rule_specifies_id) {
-                            $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
-                            $UR::Object::all_params_loaded->{$class}{$rule_id}++;                    
-                        }
-                        $pending_db_object->signal_change('load');                        
-                        $pending_db_object = undef;
-                        redo;
-                    }
-                    
-                } # end handling objects which are already loaded
-                else {        
-                    # create a new object for the resultset row
-                    $pending_db_object = bless { %$pending_db_object_data, id => $pending_db_object_id }, $class;
-                    $pending_db_object->{db_committed} = $pending_db_object_data;    
-                    
-                    # determine the subclass name for classes which automatically sub-classify
-                    my $subclass_name;
-                    if (    
-                            ($sub_classification_meta_class_name or $sub_classification_method_name)
-                            and                                    
-                            (ref($pending_db_object) eq $class) # not already subclased  
-                    ) {
-                        if ($sub_classification_method_name) {
-                            $subclass_name = $class->$sub_classification_method_name($pending_db_object);
-                            unless ($subclass_name) {
-                                Carp::confess(
-                                    "Failed to sub-classify $class using method " 
-                                    . $sub_classification_method_name
-                                );
-                            }        
-                        }
-                        else {    
-                            #$DB::single = 1;
-                            # Group objects requiring reclassification by type, 
-                            # and catch anything which doesn't need reclassification.
-                            
-                            my $subtype_name = $pending_db_object->$sub_classification_property_name;
-                            
-                            $subclass_name = $subclass_for_subtype_name{$subtype_name};
-                            unless ($subclass_name) {
-                                my $type_obj = $sub_classification_meta_class_name->get($subtype_name);
-                                
-                                unless ($type_obj) {
-                                    # The base type may give the final subclass, or an intermediate
-                                    # either choice has trade-offs, but we support both.
-                                    # If an intermediate subclass is specified, that subclass
-                                    # will join to a table with another field to indicate additional 
-                                    # subclassing.  This means we have to do this part the hard way.
-                                    # TODO: handle more than one level.
-                                    my @all_type_objects = $sub_classification_meta_class_name->get();
-                                    for my $some_type_obj (@all_type_objects) {
-                                        my $some_subclass_name = $some_type_obj->subclass_name($class);
-                                        unless (UR::Object::Type->get($some_subclass_name)->is_abstract) {
-                                            next;
-                                        }                
-                                        my $some_subclass_meta = $some_subclass_name->get_class_object;
-                                        my $some_subclass_type_class = 
-                                                        $some_subclass_meta->sub_classification_meta_class_name;
-                                        if ($type_obj = $some_subclass_type_class->get($subtype_name)) {
-                                            # this second-tier subclass works
-                                            last;
-                                        }       
-                                        else {
-                                            # try another subclass, and check the subclasses under it
-                                            print "skipping $some_subclass_name: no $subtype_name for $some_subclass_type_class\n";
-                                        }
-                                        print "";
-                                    }
-                                }
-                                
-                                if ($type_obj) {                
-                                    $subclass_name = $type_obj->subclass_name($class);
-                                }
-                                else {
-                                    warn "Failed to find $class_name sub-class for type '$subtype_name'!";
-                                    $subclass_name = $class_name;
-                                }
-                                
-                                unless ($subclass_name) {
-                                    Carp::confess(
-                                        "Failed to sub-classify $class using " 
-                                        . $type_obj->class
-                                        . " '" . $type_obj->id . "'"
-                                    );
-                                }        
-                                
-                                $subclass_name->class;
-                            }
-                            $subclass_for_subtype_name{$subtype_name} = $subclass_name;
+                
+                my $loading_info;
+                if ($re_bless) {
+                    # Performance shortcut.
+                    # These need to be subclassed, but there is no added data to load.
+                    # Just remove and re-add from the core data structure.
+                    if (my $already_loaded = $subclass_name->is_loaded($pending_db_object->id)) {
+                        if ($pending_db_object == $already_loaded) {
+                            print "ALREADY LOADED SAME OBJ?\n";
+                            $DB::single = 1;
+                            die "The loaded object already exists in its target subclass?!";
                         }
                         
-                        unless ($subclass_name->isa($class)) {
-                            # We may have done a load on the base class, and not been able to use properties to narrow down to the correct subtype.
-                            # The resultset returned more data than we needed, and we're filtering out the other subclasses here.
-                            $pending_db_object = undef;
-                            redo; 
-                        }
-                    }
-                    else {
-                        # regular, non-subclassifier
-                        $subclass_name = $class;
-                    }
-                    
-                    # store the object
-                    # note that we do this on the base class even if we know it's going to be put into a subclass below
-                    # TODO: MOVE
-                    $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id} = $pending_db_object;
-                    #$pending_db_object->signal_change('create_object', $pending_db_object_id);                        
-                    
-                    # If we're using a light cache, weaken the reference.
-                    # TODO: MOVE
-                    if ($UR::Context::light_cache and substr($class,0,5) ne 'App::') {
-                        Scalar::Util::weaken($UR::Object::all_objects_loaded->{$class_name}->{$pending_db_object_id});
-                    }
-                    
-                    # TODO: MOVE
-                    unless ($rule_specifies_id) {
-                        $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
-                        $UR::Object::all_params_loaded->{$class}{$rule_id}++;    
-                    }
-                    
-                    unless ($subclass_name eq $class) {
-                        # we did this above, but only checked the base class
-                        my $subclass_ghost_class = $subclass_name->ghost_class;
-                        # TODO: MOVE
-                        if ($UR::Object::all_objects_loaded->{$subclass_ghost_class}{$pending_db_object_id}) {
-                            $pending_db_object = undef;
-                            redo;
-                        }
-                        
-                        my $re_bless = $subclass_is_safe_for_re_bless{$subclass_name};
-                        if (not defined $re_bless) {
-                            $re_bless = $dsx->_class_is_safe_to_rebless_from_parent_class($subclass_name, $class);
-                            $re_bless ||= 0;
-                            $subclass_is_safe_for_re_bless{$subclass_name} = $re_bless;
-                        }
-                        if ($re_bless) {
-                            # Performance shortcut.
-                            # These need to be subclassed, but there is no added data to load.
-                            # Just remove and re-add from the core data structure.
-                            if (my $already_loaded = $subclass_name->is_loaded($pending_db_object->id)) {
+                        if ($loading_base_object) {
+                            # Get our records about loading this object
+                            $loading_info = $dsx->_get_object_loading_info($pending_db_object);
                             
-                                if ($pending_db_object == $already_loaded) {
-                                    print "ALREADY LOADED SAME OBJ?\n";
-                                    $DB::single = 1;
-                                    print "";            
-                                }
-                                
-                                my $loading_info = $dsx->_get_object_loading_info($pending_db_object);
-                                
-                                # Transfer the load info for the load we _just_ did to the subclass too.
-                                $loading_info->{$subclass_name} = $loading_info->{$class};
-                                $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
-                                
-                                # This will wipe the above data from the object and the contex...
-                                $pending_db_object->unload;
-                                
-                                # ...now we put it back for both.
-                                $dsx->_add_object_loading_info($already_loaded, $loading_info);
-                                $dsx->_record_that_loading_has_occurred($loading_info);
-                                
-                                $pending_db_object = $already_loaded;
-                            }
-                            else {
-                                my $loading_info = $dsx->_get_object_loading_info($pending_db_object);
-                                $loading_info->{$subclass_name} = delete $loading_info->{$class};
-                                
-                                $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
-                                
-                                my $prev_class_name = $pending_db_object->class;
-                                my $id = $pending_db_object->id;            
-                                $pending_db_object->signal_change("unload");
-                                delete $UR::Object::all_objects_loaded->{$prev_class_name}->{$id};
-                                delete $UR::Object::all_objects_are_loaded->{$prev_class_name};
-                                bless $pending_db_object, $subclass_name;
-                                $UR::Object::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
-                                $pending_db_object->signal_change("load");            
-                                
-                                $dsx->_add_object_loading_info($pending_db_object, $loading_info);
-                                $dsx->_record_that_loading_has_occurred($loading_info);
-                            }
-                        }
-                        else
-                        {
-                            # This object cannot just be re-classified into a subclass because the subclass joins to additional tables.
-                            # We'll make a parallel iterator for each subclass we encounter.
-                            
-                            # Decrement all of the param_keys it is using.
-                            my $loading_info = $dsx->_get_object_loading_info($pending_db_object);
+                            # Transfer the load info for the load we _just_ did to the subclass too.
+                            $loading_info->{$subclass_name} = $loading_info->{$class};
                             $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
-                            my $id = $pending_db_object->id;
-                            $pending_db_object->unload;
+                        }
+                        
+                        # This will wipe the above data from the object and the contex...
+                        $pending_db_object->unload;
+                        
+                        if ($loading_base_object) {
+                            # ...now we put it back for both.
+                            $dsx->_add_object_loading_info($already_loaded, $loading_info);
                             $dsx->_record_that_loading_has_occurred($loading_info);
-
-                            my $sub_iterator = $subordinate_iterator_for_class{$subclass_name};
-                            unless ($sub_iterator) {
-                                #print "parallel iteration for loading $subclass_name under $class!\n";
-                                my $sub_classified_rule_template = $rule_template->sub_classify($subclass_name);
-                                my $sub_classified_rule = $sub_classified_rule_template->get_rule_for_values(@values);
-                                $sub_iterator 
-                                    = $subordinate_iterator_for_class{$subclass_name} 
-                                        = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx);
-                            }
-                            my $last_db_object = $pending_db_object;
-                            ($pending_db_object) = $sub_iterator->();
-                            if (! defined $pending_db_object) {
-                                # the newly subclassed object 
-                                redo;
-                            }
-                            unless ($pending_db_object->id eq $id) {
-                                Carp::cluck("object id $pending_db_object->{id} does not match expected id $id");
-                                $DB::single = 1;
-                                print "";
-                                die;
-                            }
                         }
                         
-                        # the object may no longer match the rule after subclassifying...
-                        unless ($rule->evaluate($pending_db_object)) {
-                            #print "Object does not match rule!" . Dumper($pending_db_object,[$rule->params_list]) . "\n";
-                            $pending_db_object = undef;
-                            redo;
-                        }
-                        
-                    } # end of sub-classification code
-                    
-                    # Signal that the object has been loaded
-                    # NOTE: until this is done indexes cannot be used to look-up an object
-                    #$pending_db_object->signal_change('load_external');
-                    $pending_db_object->signal_change('load');                    
-                
-                    #$DB::single = 1;
-                    if ($needs_further_boolexpr_evaluation_after_loading && ! $rule->evaluate($pending_db_object)) {
-                        $pending_db_object = undef;
-                        redo;
+                        $pending_db_object = $already_loaded;
                     }
-		}
-                
-                # When there is recursion in the query, we record data from each 
-                # recursive "level" as though the query was done individually.
-                if ($recursion_desc) {                    
-                    # if we got a row from a query, the object must have
-                    # a db_committed or db_saved_committed                                
-                    my $dbc = $pending_db_object->{db_committed} || $pending_db_object->{db_saved_uncommitted};
-                    die 'this should not happen' unless defined $dbc;
-                    
-                    my $value_by_which_this_object_is_loaded_via_recursion = $dbc->{$recurse_property_on_this_row};
-                    my $value_referencing_other_object = $dbc->{$recurse_property_referencing_other_rows};
-                    
-                    unless ($recurse_property_value_found{$value_referencing_other_object}) {
-                        # This row points to another row which will be grabbed because the query is hierarchical.
-                        # Log the smaller query which would get the hierarchically linked data directly as though it happened directly.
-                        $recurse_property_value_found{$value_referencing_other_object} = 1;
-                        # note that the direct query need not be done again
-                        my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object);
-                        my $equiv_param_key = $equiv_params->get_normalized_rule_equivalent->id;                
-                        
-                        # note that the recursive query need not be done again
-                        my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object, -recurse => $recursion_desc);
-                        my $equiv_param_key2 = $equiv_params2->get_normalized_rule_equivalent->id;
-                        
-                        # For any of the hierarchically related data which is already loaded, 
-                        # note on those objects that they are part of that query.  These may have loaded earlier in this
-                        # query, or in a previous query.  Anything NOT already loaded will be hit later by the if-block below.
-                        my @subset_loaded = $class->is_loaded($recurse_property_on_this_row => $value_referencing_other_object);
-                        $UR::Object::all_params_loaded->{$class}{$equiv_param_key} = scalar(@subset_loaded);
-                        $UR::Object::all_params_loaded->{$class}{$equiv_param_key2} = scalar(@subset_loaded);
-                        for my $pending_db_object (@subset_loaded) {
-                            $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
-                            $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
+                    else {
+                        if ($loading_base_object) {
+                            $loading_info = $dsx->_get_object_loading_info($pending_db_object);
+                            $loading_info->{$subclass_name} = delete $loading_info->{$class};
+                            $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
                         }
-                    }
-                    
-                    if ($recurse_property_value_found{$value_by_which_this_object_is_loaded_via_recursion}) {
-                        # This row was expected because some other row in the hierarchical query referenced it.
-                        # Up the object count, and note on the object that it is a result of this query.
-                        my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
-                        my $equiv_param_key = $equiv_params->get_normalized_rule_equivalent->id;
                         
-                        # note that the recursive query need not be done again
-                        my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion, -recurse => $recursion_desc);
-                        my $equiv_param_key2 = $equiv_params2->get_normalized_rule_equivalent->id;
+                        my $prev_class_name = $pending_db_object->class;
+                        my $id = $pending_db_object->id;
+                        $pending_db_object->signal_change("unload");
+                        delete $UR::Object::all_objects_loaded->{$prev_class_name}->{$id};
+                        delete $UR::Object::all_objects_are_loaded->{$prev_class_name};
+                        bless $pending_db_object, $subclass_name;
+                        $UR::Object::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
+                        $pending_db_object->signal_change("load");
                         
-                        $UR::Object::all_params_loaded->{$class}{$equiv_param_key}++;
-                        $UR::Object::all_params_loaded->{$class}{$equiv_param_key2}++;
-                        $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
-                        $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;                
+                        $dsx->_add_object_loading_info($pending_db_object, $loading_info);
+                        $dsx->_record_that_loading_has_occurred($loading_info);
                     }
                 }
-            }; # end of the for(1) block which gets the next db row (runs once unless it hits objects to skip)
+                else {
+                    # This object cannot just be re-classified into a subclass because the subclass joins to additional tables.
+                    # We'll make a parallel iterator for each subclass we encounter.
+                    
+                    # Note that we let the calling db-based iterator do that, so that if multiple objects on the row need 
+                    # sub-classing, we do them all at once.
+                    
+                    # Decrement all of the param_keys it is using.
+                    if ($loading_base_object) {
+                        $loading_info = $dsx->_get_object_loading_info($pending_db_object);
+                        $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
+                    }
+                    
+                    $pending_db_object->unload;
+                    
+                    if ($loading_base_object) {
+                        $dsx->_record_that_loading_has_occurred($loading_info);
+                    }
+                    
+                    # NOTE: we're returning a class name instead of an object
+                    # this tells the caller to re-do the entire row using a subclass to get the real data.
+                    # Hack?  Probably so...
+                    return $subclass_name;
+                }
+                
+                # the object may no longer match the rule after subclassifying...
+                if ($loading_base_object and not $rule->evaluate($pending_db_object)) {
+                    #print "Object does not match rule!" . Dumper($pending_db_object,[$rule->params_list]) . "\n";
+                    $DB::single = 1;
+                    $rule->evaluate($pending_db_object);
+                    $DB::single = 1;
+                    $rule->evaluate($pending_db_object);
+                    return;
+                    #$pending_db_object = undef;
+                    #redo;
+                }
+            } # end of sub-classification code
             
-            last unless $pending_db_object;
-            push @return_objects, $pending_db_object;
-            $countdown--;
-        }
+            # Signal that the object has been loaded
+            # NOTE: until this is done indexes cannot be used to look-up an object
+            #$pending_db_object->signal_change('load_external');
+            $pending_db_object->signal_change('load');
         
-        return @return_objects;
-    }; # end of iterator closure
+            #$DB::single = 1;
+            if (
+                $loading_base_object
+                and
+                $needs_further_boolexpr_evaluation_after_loading 
+                and 
+                not $rule->evaluate($pending_db_object)
+            ) {
+                return;
+                #$pending_db_object = undef;
+                #redo;
+            }
+        } # end handling newly loaded objects
+        
+        # When there is recursion in the query, we record data from each 
+        # recursive "level" as though the query was done individually.
+        if ($recursion_desc and $loading_base_object) {
+            # if we got a row from a query, the object must have
+            # a db_committed or db_saved_committed                                
+            my $dbc = $pending_db_object->{db_committed} || $pending_db_object->{db_saved_uncommitted};
+            die 'No save info found in recursive data?' unless defined $dbc;
+            
+            my $value_by_which_this_object_is_loaded_via_recursion = $dbc->{$recurse_property_on_this_row};
+            my $value_referencing_other_object = $dbc->{$recurse_property_referencing_other_rows};
+            
+            unless ($recurse_property_value_found{$value_referencing_other_object}) {
+                # This row points to another row which will be grabbed because the query is hierarchical.
+                # Log the smaller query which would get the hierarchically linked data directly as though it happened directly.
+                $recurse_property_value_found{$value_referencing_other_object} = 1;
+                # note that the direct query need not be done again
+                my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object);
+                my $equiv_param_key = $equiv_params->get_normalized_rule_equivalent->id;                
+                
+                # note that the recursive query need not be done again
+                my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_referencing_other_object, -recurse => $recursion_desc);
+                my $equiv_param_key2 = $equiv_params2->get_normalized_rule_equivalent->id;
+                
+                # For any of the hierarchically related data which is already loaded, 
+                # note on those objects that they are part of that query.  These may have loaded earlier in this
+                # query, or in a previous query.  Anything NOT already loaded will be hit later by the if-block below.
+                my @subset_loaded = $class->is_loaded($recurse_property_on_this_row => $value_referencing_other_object);
+                $UR::Object::all_params_loaded->{$class}{$equiv_param_key} = scalar(@subset_loaded);
+                $UR::Object::all_params_loaded->{$class}{$equiv_param_key2} = scalar(@subset_loaded);
+                for my $pending_db_object (@subset_loaded) {
+                    $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
+                    $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
+                }
+            }
+            
+            if ($recurse_property_value_found{$value_by_which_this_object_is_loaded_via_recursion}) {
+                # This row was expected because some other row in the hierarchical query referenced it.
+                # Up the object count, and note on the object that it is a result of this query.
+                my $equiv_params = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
+                my $equiv_param_key = $equiv_params->get_normalized_rule_equivalent->id;
+                
+                # note that the recursive query need not be done again
+                my $equiv_params2 = $class->get_rule_for_params($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion, -recurse => $recursion_desc);
+                my $equiv_param_key2 = $equiv_params2->get_normalized_rule_equivalent->id;
+                
+                $UR::Object::all_params_loaded->{$class}{$equiv_param_key}++;
+                $UR::Object::all_params_loaded->{$class}{$equiv_param_key2}++;
+                $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
+                $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
+            }
+        } # end of handling recursion
+            
+        return $pending_db_object;
+        
+    }; # end of per-class object fabricator
     
-    return $iterator;
+    return $object_fabricator;
 }
 
 
@@ -1577,7 +1651,7 @@ sub _reverse_all_changes {
     @UR::Context::Transaction::open_transaction_stack = ();
     @UR::Context::Transaction::change_log = ();
     $UR::Context::Transaction::log_all_changes = 0;
-    
+    $UR::Context::current = $UR::Context::process;
     
     # aggregate the objects to be deleted
     # this prevents cirucularity, since some objects 

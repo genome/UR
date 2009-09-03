@@ -22,6 +22,22 @@ for my $dir (@INC) {
     $dir = Cwd::abs_path($dir);
 }
 
+for my $e (keys %ENV) {
+    next unless substr($e,0,3) eq 'UR_';
+    eval "use UR::Env::$e";
+    if ($@) {
+        my $path = __FILE__;
+        $path =~ s/.pm$//;
+        my @files = glob($path . '/Env/*');
+        my @vars = map { /UR\/Env\/(.*).pm/; $1 } @files; 
+        print STDERR "Environment variable $e set to $ENV{$e} but there were errors using UR::Env::$e:\n"
+            . "Available variables:\n\t" 
+            . join("\n\t",@vars)
+            . "\n";
+        exit 1;
+    }
+}
+
 #
 # Because UR modules execute code when compiling to define their classes,
 # and require each other for that code to execute, there are bootstrapping 
@@ -314,13 +330,12 @@ $UR::initialized = 1;
 
 require UR::Change;
 require UR::Command::Param;
-require UR::Context::Base;
+require UR::Context::Root;
 require UR::Context::Process;
 require UR::Object::Tag;
 
 do {
-    UR::Context::Base->_initialize_for_current_process();
-    UR::Context::Process->_initialize_for_current_process();
+    UR::Context->_initialize_for_current_process();
 };
 
 require UR::Moose;          # a no-op unless UR_MOOSE is set to true currently
@@ -361,9 +376,13 @@ TODO
 
 =head1 DEPENDENCIES
 
-metaclass
+Date::Calc
 
-Moose
+Class::Autouse
+
+Sub::Installer
+
+Sub::Name
 
 =head1 INCOMPATIBILITIES
 
@@ -373,7 +392,7 @@ TODO
 
 TODO
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 <Scott Smith>  C<< <<ssmith@genome.wustl.edu>> >>
 <Todd Hepler>  C<< <<thepler@genome.wustl.edu>> >>

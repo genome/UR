@@ -66,23 +66,6 @@ UR::Object::Type->define(
     ]
 );
 
-our $this_process;
-
-# this is called automatically by UR.pm at the end of the module
-# the only time other process objects are in the system is if they are "gotten" for IPC, etc.
-
-my $initialized = 0;
-
-sub _initialize_for_current_process {
-    my $class = shift;
-    if ($initialized) {
-        die "Attempt to re-initialize the current process?";
-    }
-    $this_process = __PACKAGE__->define();
-    $UR::Context::current = $this_process;
-    #UR::Command::Param->add(@base_options);
-}
-
 =pod
 
 =head1 METHODS
@@ -92,21 +75,6 @@ associated with an application.
 
 =over 4
 
-=item is_initialized 
-
- $bool = UR::Context::Process->is_initialized();
- 
-This value is set to true at the end of compiliation of UR.pm, indicating that
-we are done boostrapping the system and the ->get_current() method will return 
-the process object for the current process.
-
-=cut
-
-
-sub is_initialized {
-    return $initialized;
-}
-
 =pod 
 
 =item get_current
@@ -115,16 +83,18 @@ sub is_initialized {
 
 This is the context which represents the current process.
 
+Also available as UR::Context->get_process();
+
 =cut
 
 
 sub get_current {
-    return $this_process;
+    return $UR::Context::process;
 }
 
 =pod 
 
-=item get_current
+=item has_changes()
 
  $bool = UR::Context::Process->has_changes();
 
@@ -147,17 +117,23 @@ sub has_changes {
 
 =pod 
 
-=item define
+=item _create_for_current_process
 
- $ctx = UR::Context::Process->define(@PARAMS)
+ $ctx = UR::Context::Process->_create_for_current_process(@PARAMS)
 
 This is only used internally by UR.
 It materializes a new object to represent a real process somewhere.
 
+TODO: Remove the exception from create(), and allow other processes to be
+created explicitly w/ the appropriate characteristics.
+
 =cut
 
-sub define {
+sub _create_for_current_process {
     my $class = shift;
+
+    die "Process object for the current process already exists!" if $UR::Context::process;
+
     my $rule = $class->get_rule_for_params(@_);        
     
     my $host_name = Sys::Hostname::hostname();
@@ -168,8 +144,15 @@ sub define {
     return $self;
 }
 
-# TODO: the remaining methods are from the old UR::Context::Process module
-# they should be re-written to work as class methods on $this_process, or 
+sub create {
+    # Note that the above method does creation by going straight to SUPER::create()
+    # for the current process only.
+    die "Creation of parallel/child processes not yet supported!"
+}
+
+# TODO: the remaining methods are from the old App::Name module.
+# They currently only work for the current process, and operate as class methods.
+# They should be re-written to work as class methods on $this_process, or 
 # instance methods on any process.  For now, only the class methods are needed.
 
 =pod

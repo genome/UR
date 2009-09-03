@@ -6,7 +6,7 @@ use UR::Object::Type;
 
 use URT;
 class URT::Context::Testing {
-    is => ['UR::Context::Base'],
+    is => ['UR::Context::Root'],
     type_name => 'urt context testing',
     doc => 'Used by the automated test suite.',
 };

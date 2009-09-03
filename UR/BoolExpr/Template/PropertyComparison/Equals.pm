@@ -15,9 +15,20 @@ sub evaluate_subject_and_values {
     my $subject = shift;
     my $comparison_value = shift;    
     my $property_name = $self->property_name;    
-    my $property_value = $subject->$property_name;
+    my @property_value = $subject->$property_name;
     no warnings;
-    return ($property_value eq $comparison_value ? 1 : '');
+    if (@property_value == 1) {
+        return ($property_value[0] eq $comparison_value ? 1 : '');
+    }
+    elsif (@property_value == 0) {
+        return ($comparison_value eq '' ? 1 : '');
+    }
+    else {
+        for (@property_value) {
+            return 1 if $_ eq $comparison_value
+        }
+        return '';
+    }
 }
 
 

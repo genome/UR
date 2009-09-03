@@ -26,7 +26,7 @@ sub get_default_context
     my $self = shift;
     my @contexts = $self->get_base_contexts;
     if (@contexts == 0) {
-        return "UR::Context::DefaultBase";
+        return "UR::Context::DefaultRoot";
     }
     elsif (@contexts == 1) {
         return $contexts[0];

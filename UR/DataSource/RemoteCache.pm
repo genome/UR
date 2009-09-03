@@ -196,6 +196,7 @@ sub _get_template_data_for_loading {
             $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for_property_name($sub_typing_property)
         }
 
+        my @property_names = $class_name->property_names;
 
         $template_data = $rule_template->{loading_data_cache} = {
             select_clause                               => '',
@@ -206,10 +207,11 @@ sub _get_template_data_for_loading {
             order_by_clause                             => '',
 
             needs_further_boolexpr_evaluation_after_loading => undef,
+            loading_templates                           => [],
 
             sql_params                                  => [],
             filter_specs                                => [],
-            property_names_in_resultset_order           => [],
+            property_names_in_resultset_order           => \@property_names,
             properties_for_params                       => [],
 
             rule_template_id                            => $rule_template->id,
@@ -240,12 +242,18 @@ sub create_iterator_closure_for_rule {
     # iterator can fetch one item back at a time
     my @results = $self->_remote_get_with_rule($rule);
 
-    my $iterator = sub {
-        my $items_to_return = $_[0] || 1;
-     
-        return unless @results;
-        my @return = splice(@results,0, $items_to_return);
+    # TODO Also, this is getting objects back, but is now expected to return an array of values.
+    # Switch to sending a list of properties, getting a list of value arrays.
+    my $loading_data = $self->_get_template_data_for_loading($rule->get_rule_template);
+    my @names = @{ $loading_data->{property_names_in_resultset_order} };
 
+    my $iterator = sub {
+        return unless @results;
+$DB::single=1;
+        my $items_to_return = $_[0] || 1;
+        my @return = 
+            map { [ @$_{@names} ] } 
+            splice(@results,0, $items_to_return);
         return @return;
     };
 
