@@ -3156,6 +3156,11 @@ sub commit {
         die "Application failure during commit!";
     }
     $self->__signal_change__('commit',1);
+
+    foreach ( $self->all_objects_loaded('UR::Object') ) {
+        delete $_->{'_change_count'};
+    }
+
     return 1;
 }
 
@@ -3525,6 +3530,7 @@ sub _commit_databases {
             die "FAILED TO COMMIT!: " . $class->error_message;
         }
     }
+
     return 1;
 }
 
