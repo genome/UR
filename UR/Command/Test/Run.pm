@@ -207,6 +207,12 @@ sub _run_tests_in_dir_with_include_dir {
             @tests = glob("$dir/*.t");
         }
     }
+
+    use Cwd;
+    my $cwd = cwd();
+    for (@tests) {
+        s/^$cwd\///;
+    }
     
     # turn on no-commit
     #$script_opts .= ' --no-commit'
