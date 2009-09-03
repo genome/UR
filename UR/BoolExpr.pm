@@ -150,7 +150,24 @@ sub specified_value_for_property_name {
     my $self = shift;
     my $property_name = shift; 
     my $h = $self->legacy_params_hash;
-    my $v = $h->{$property_name};
+    my $v;
+    if (exists $h->{$property_name}) {
+        $v = $h->{$property_name};
+    } else {
+        # No value found under that name... try decomposing the id 
+        return if $property_name eq 'id';
+        my $id_value = $self->specified_value_for_property_name('id');
+        my $class_meta = $self->subject_class_name->get_class_object();
+        my @id_property_values = $class_meta->get_composite_id_decomposer->($id_value);
+        
+        my @id_property_names = $class_meta->id_property_names;
+        for (my $i = 0; $i < @id_property_names; $i++) {
+            if ($id_property_names[$i] eq $property_name) {
+                $v = $id_property_values[$i];
+                last;
+            }
+        }
+    }
     return $v unless ref($v);
     return $v->{value} if ref($v) eq "HASH";
     return [@$v];
