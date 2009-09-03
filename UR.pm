@@ -534,7 +534,7 @@ UR - The base module for the UR framework
 
 =head1 VERSION
 
-This document describes UR version 0.02
+This document describes UR version 0.4
 
 =head1 SYNOPSIS
 
@@ -551,10 +551,10 @@ First create a Namespace class for your application, CdExample.pm
 
 Next, define a data source representing your database, CdExample/DataSource/DB.pm
 
-    package CdExample::DataSource::DB;
+    package CdExample::DataSource::DB1;
     use CdExample;
     
-    class CdExample::DataSource::DB {
+    class CdExample::DataSource::DB1 {
         is => ['UR::DataSource::Mysql'],
         has_constant => [
             server  => { value => 'mysql.example.com' },
@@ -594,55 +594,67 @@ Create a class to represent CDs, in CdExample/Cd.pm
             year   => { is => 'Integer' },
             artist_name => { via => 'artist', to => 'name' },
         ],
-        data_source => 'CdExample::DataSource::DB',
+        data_source => 'CdExample::DataSource::DB1',
         table_name => 'CDS',
     };
     1;
 
 You can then use these classes in your application code
 
-    use CdExample;  # Enables auto-loading for modules in this Namespace
+    # Enables auto-loading for modules in this Namespace
+    use CdExample;  
     
     # get back all Artist objects
     my @all_artists = CdExample::Artist->get();
+
     # Iterate through Artist objects
     my $artist_iter = CdExample::Artist->create_iterator();
+
     # Get the first object off of the iterator
     my $first_artist = $artist_iter->next();
 
     # Get all the CDs published in 1997
-    my @cds_1997 = CdExample::Cd->get(year => 1997);
+    my @cds_2007 = CdExample::Cd->get(year => 2007);
     
     # Get a list of Artist objects where the name starts with 'John'
-    my @some_artists = CdExample::Artist->get(name => { operator => 'like',
-                                                        value => 'John%' });
+    my @some_artists = CdExample::Artist->get(
+        name => { operator => 'like', value => 'John%' }
+    );
+
     # Alternate syntax for non-equality operators
     my @same_some_artists = CdExample::Artist->get('name like' => 'John%');
     
     # This will use a JOIN with the ARTISTS table internally to filter
     # the data in the database.  @some_cds will contain CdExample::Cd objects.
     # As a side effect, related Artist objects will be loaded into the cache
-    my @some_cds = CdExample::Cd->get(year => '2001', 
-                                      artist_name => { operator => 'like',
-                                                       value => 'Bob%' });
+    my @some_cds = CdExample::Cd->get(i
+        year => '2001', 
+        artist_name => { operator => 'like', value => 'Bob%' }
+    );
+
     my @artists_for_some_cds = map { $_->artist } @some_cds;
     
     # This will use a join to prefetch Artist objects related to the
     # Cds that match the filter
-    my @other_cds = CdExample::Cd->get(title => { operator => 'like',
-                                                  value => '%White%' },
-                                       -hints => [ 'artist' ]);
+    my @other_cds = CdExample::Cd->get(
+        title => { operator => 'like',
+        value => '%White%' },
+        -hints => ['artist']
+    );
     my $other_artist_0 = $other_cds[0]->artist;  # already loaded so no query
     
     # create() instantiates a new object in the cache, but does not save 
     # it in the database.  It will autogenerate its own cd_id
-    my $new_cd = CdExample::Cd->create(title => 'Cool Album',
-                                       year  => 2009 );
+    my $new_cd = CdExample::Cd->create(
+        title => 'Cool Album',
+        year  => 2009
+    );
+
     # Assign it to an artist; fills in the artist_id field of $new_cd
     $first_artist->add_cd($new_cd);
     
     # Save all changes back to the database
-    UR::Context->commit;
+    UR::Context->current->commit;
   
 =head1 DESCRIPTION
 
@@ -659,49 +671,67 @@ the database unless the requested data has not been loaded before.  It has
 support for SQLite, Oracle, Mysql and Postgres databases, and the ability
 to use a text file as a table.
 
+UR uses the same syntax to define non-persistent objects, and supports
+in-memory transactions for both.
+
 =head1 DOCUMENTATION
 
-L<UR::Manual> lists the other documentation pages in the UR distribution
+=head1 Manuals
+
+L<UR::Manual::Overview> - UR from Ten Thousand Feet
+
+L<UR::Manual::Tutorial> - Getting started with UR 
+
+L<UR::Manual::Presentation> - Slides for a presentation on UR
+
+L<UR::Manual::Cookbook> - Recepies for getting stuff working 
+
+L<UR::Manual::Metadata> - UR's metadata system
+
+L<UR::Object::Type::Initializer> - Defining classes 
+
+L<UR::Manual::UR> - UR's command line tool
+
+=head1 Basic Entities
+
+L<UR::Object> - Pretty much everything is-a UR::Object
+
+L<UR::Object::Type> - Metadata class for Classes 
+
+L<UR::Object::Property> - Metadata class for Properties
+
+L<UR::Namespace> - Manage packages and classes 
+
+L<UR::Context> - Software transactions and More!
+
+L<UR::DataSource> - How and where to get data
+
 
 =head1 Environment Variables
 
-UR uses several environment variables to change its behavior.  See
-L<UR::Env>.
+UR uses several environment variables to do things like run with
+database commits disabled, dump SQL, control cache size, etc. 
+
+See L<UR::Env>.
 
 =head1 DEPENDENCIES
 
 Class::Autouse
-
 Cwd
-
 Data::Dumper
-
 Date::Calc
-
 Date::Parse
-
 DBI
-
 File::Basename
-
 FindBin
-
 FreezeThaw
-
 Path::Class
-
 Scalar::Util
-
 Sub::Installer
-
 Sub::Name
-
 Sys::Hostname
-
 Text::Diff
-
 Time::HiRes
-
 XML::Simple
 
 =head1 AUTHORS
