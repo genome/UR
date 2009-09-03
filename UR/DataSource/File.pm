@@ -765,3 +765,99 @@ sub create_from_inline_class_data {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::File - Parent class for file-based data sources
+
+=head1 SYNOPSIS
+  
+  package MyNamespace::DataSource::MyFile;
+  class MyNamespace::DataSource::MyFile {
+      is => ['UR::DataSource::File'],
+  };
+  sub server { '/path/to/file' }
+  sub delimiter { "\t" }
+  sub column_order { qw( thing_id thing_name thing_color ) }
+  sub sort_order { qw( thing_id ) }
+
+  package main;
+  class MyNamespace::Thing {
+      id_by => 'thing_id',
+      has => [ 'thing_id', 'thing_name', 'thing_color' ],
+      data_source => 'MyNamespace::DataSource::MyFile',
+  }
+  my @objs = MyNamespace::Thing->get(thing_name => 'Bob');
+
+=head1 DESCRIPTION
+
+Classes which wish to retrieve their data from a regular file can use a UR::DataSource::File-based
+data source.  The modules implementing these data sources live under the DataSource subdirectory
+of the application's Namespace, by convention.  Besides defining a class for your data source
+inheriting from UR::DataSource::File, the module should override the following methods:
+
+=head2 Configuration
+
+These methods determine the configuration for your data source.  They should require no arguments.
+
+=over 4
+
+=item server()
+
+The server() method should return a string representing the pathname of the file where the data is stored.
+
+=item file_list()
+
+The file_list() method should return a list (not a listref) of pathnames to one or more identical files
+where data is stored.   Use file_list() instead of server() when you want to load-balance several NFS
+servers, for example.
+
+You must have either server() or file_list() in your module, but not both.  The existence of server()
+takes precedence over file_list().
+
+=item delimiter()
+
+delimiter() should return a string representing how the fields in each record are split into
+columns.  This string is interpreted as a regex internally.  The default delimiter is "\s*,\s*"
+meaning that the file is separated by commas.
+
+=item record_separator()
+
+record_separator() should return a string that gets stored in $/ before getline() is called on the
+file's filehandle.  The default record_separator() is "\n" meaning that the file's records are 
+separated by newlines.
+
+=item skip_first_line()
+
+skip_first_line() should return a boolean value.  If true, the first line of the file is ignored, for
+example if the first line defines the columns in the file.
+
+=item column_order()
+
+column_order() should return a list of column names in the file (not a listref).  Your module must
+define column_order(); there is no default.
+
+=item sort_order()
+
+If the data file is sorted, you should define sort_order() to return a list of column names (which must
+exist in column_order) by which the file is sorted.  This gives the system a hint about how the file
+is structured, and is able to make shortcuts when reading the file to speed up data access.  The default
+is to assumme the file is not sorted.
+
+=back
+
+=head1 INHERITANCE
+
+  UR::DataSource
+
+=head1 SEE ALSO
+
+UR, UR::DataSource
+
+=head1 AUTHOR
+
+Anthony Brummett <abrummet@watson.wustl.edu>
+
+=cut

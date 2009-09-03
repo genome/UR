@@ -359,7 +359,7 @@ sub _define_file_specific_data_source_parent {
         return;
     }
 
-    foreach my $param_name ( qw( delimiter skip_first_line file_list column_order sort_order is_sorted ) ) {
+    foreach my $param_name ( qw( delimiter skip_first_line file_list column_order sort_order is_sorted record_separator ) ) {
         my $sub;
         if ($ds_data) {
             if (ref($ds_data->{$param_name}) eq 'ARRAY') {
@@ -423,6 +423,139 @@ sub _setup_generate_load_tmpl_method {
     });
 }
     
-
  
 1;
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::FileMux - Parent class for datasources which can multiplex many files together
+
+=head1 SYNOPSIS
+
+  package MyNamespace::DataSource::MyFileMux;
+  class MyNamespace::DataSource::MyFileMux {
+      is => ['UR::DataSource::FileMux'],
+  };
+  sub column_order { qw( thing_id thing_name thing_color ) }
+  sub sort_order { qw( thing_id ) }
+  sub delimiter { "\t" }
+  sub constant_values { qw( thing_type ) }
+  sub required_for_get { qw( thing_type ) }
+  sub file_resolver {
+      my $thing_type = shift;
+      return '/base/path/to/files/' . $thing_type;
+  }
+
+  package main;
+  class MyNamespace::ThingMux {
+      id_by => ['thing_id', 'thing_type' ],
+      has => ['thing_id', 'thing_type', 'thing_name','thing_color'],
+      data_source => 'MyNamespace::DataSource::MyFileMux',
+  };
+
+  my @objs = MyNamespace::Thing->get(thing_type => 'people', thing_name => 'Bob');
+
+=head1 DESCRIPTION
+
+UR::DataSource::FileMux provides a framework for file-based data sources where the
+data files are split up between one or more parameters of the class.  For example,
+in the synopsis above, the data for the class is stored in several files in the
+directory /base/path/to/files/.  Each file may have a name such as 'people' and 'cars'.
+
+When a get() request is made on the class, the parameter 'thing_type' must be present
+in the rule, and the value of that parameter is used to complete the file's pathname,
+via the file_resolver() function.  Note that even though the 'thing_type' parameter
+is not actually stored in the file, its value for the loaded objects gets filled in
+because that paremeter exists in the constant_values() configuration list, and in
+the get() request.
+
+=head2 Configuration
+
+These methods determine the configuration for your data source.  They should require no arguments.
+
+=over 4
+
+=item delimiter()
+
+=item record_separator()
+
+=item skip_first_line()
+
+=item column_order()
+
+=item sort_order()
+
+These configuration items behave the same as in a UR::DataSource::File-based data source.
+
+=item required_for_get()
+
+required_for_get() should return a list of parameter names.  Whenever a get() request is
+made on the class, the listed parameters must appear in the rule, or be derivable via
+UR::Context::infer_property_value_from_rule().  
+
+=item file_resolver()
+
+file_resolver() is called as a function (not a method).  It should accept the same number
+of parameters as are mentioned in required_for_get().  When a get() request is made,
+those named parameters are extracted from the rule and passed in to the file_resolver()
+function in the same order.  file_resolver() must return a string that is used as the
+pathname to the file that contains the needed data.
+
+=item constant_values()
+
+constant_values() should return a list of parameter names.  These parameter names are used by
+the object loader system to fill in data that may not be present in the data files.  If the
+class has parameters that are not actually stored in the data files, then the parameter
+values are extracted from the rule and stored in the loaded object instances before being
+returned to the user.  
+
+In the synopsis above, thing_type is not stored in the data files, even though it exists
+as a parameter of the MyNamespace::ThingMux class.
+
+=back
+
+=head2 Theory of Operation
+
+As part of the data-loading infrastructure inside UR, the parameters in a get() 
+request are transformed into a UR::BoolExpr instance, also called a rule.  
+UR::DataSource::FilMux hooks into that infrastructure by implementing
+create_iterator_closure_for_rule().  It first collects the values for all the
+parameters mentioned in required_for_get() by passing the rule and needed
+parameter to infer_property_value_from_rule() of the current Context.  If any
+of the needed parameters is not resolvable, an excpetion is raised.
+
+If it does not already exist, a class (called the file-specific data source parent)
+is created, inheriting from UR::DataSource::File, and all the configuration
+parameters needed for UR::DataSource::File are copied from the user's data source
+to this parent class - all parameters except server().
+
+Some of the rule's parameters may have multiple values.  In those cases, all the 
+combinations of values are expanded.  For example of param_a has 2 values, and
+param_b has 3 values, then there are 6 possible combinations.
+
+For each combination of values, the file_resolver() function is called and 
+returns a pathname.  For each pathname, a file-specific data source is created
+(if it does not already exist), the server() configuration parameter created
+to return that pathname.  This data source inherits from the file-specific
+data source parent so as to return all the other configuration parameters.
+create_iterator_closure_for_rule() is called on each of those data sources.
+
+Finally, an iterator is created to wrap all of those iterators, and is returned.
+  
+=head1 INHERITANCE
+
+UR::DataSource
+
+=head1 SEE ALSO
+
+UR, UR::DataSource, UR::DataSource::File
+
+=head1 AUTHOR
+
+Anthony Brummett <abrummet@watson.wustl.edu>
+
+
+=cut
+
