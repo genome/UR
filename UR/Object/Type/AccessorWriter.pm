@@ -11,6 +11,8 @@ use Carp ();
 use Sub::Name ();
 use Sub::Install ();
 
+our @CARP_NOT = qw( UR::Object UR::Context );
+
 sub mk_rw_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;
     $property_name ||= $accessor_name;
@@ -79,7 +81,6 @@ sub mk_ro_accessor {
 
             if ($old ne $new)
             {
-$DB::single=1;
                 Carp::confess("Cannot change read-only property $accessor_name for class $class_name!"
                 . "  Failed to update " . $_[0]->__display_name__ . " property: $property_name from $old to $new");
             }
@@ -581,7 +582,6 @@ sub mk_ro_class_accessor {
 
             if ($old ne $new)
             {
-$DB::single=1;
                 Carp::confess("Cannot change read-only class-wide property $accessor_name for class $class_name from $old to $new!");
             }
             return $new;
@@ -732,6 +732,10 @@ sub mk_object_set_accessors {
             }
             else {
                 return unless $self->{$plural_name};
+                if (ref($self->{$plural_name}) ne 'ARRAY') {
+                    Carp::carp("$class_name with id ".$self->id." does not hold an arrayref in its $plural_name property");
+                    $self->{$plural_name} = [ $self->{$plural_name} ];
+                }
                 return @{ $self->{$plural_name} };
             }
         }
@@ -840,9 +844,14 @@ sub mk_object_set_accessors {
         }
         else {
             return unless $self->{$plural_name};
+            return unless @_;  # Can't compare our list to nothing...
             if (@_ > 1) {
                 Carp::croak "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
             }
+            unless (ref($self->{$plural_name}) eq 'ARRAY') {
+                Carp::croak("${class_name}::$singular_name($_[0]): $plural_name does not contain an arrayref");
+            }
+            no warnings 'uninitialized';
             my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name} };
             return $matches[0] if @matches < 2;
             return $self->context_return(@matches); 
