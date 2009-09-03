@@ -197,7 +197,7 @@ sub create {
     # we have an ID, and autogenerate an ID if necessary.
     my $params = $rule->legacy_params_hash;
     my $id = $params->{id};        
-    
+
     # Whenever no params, or a set which has no ID, make an ID.
     unless (defined($id)) {            
         $id = $class_meta->autogenerate_new_object_id($rule);
@@ -280,18 +280,23 @@ sub create {
     # add itesm for any multi properties
     if (%$set_values) {
         for my $property_name (keys %$set_values) {
-            my $adder = 'add_' . $property_name;
+            my $meta = $set_properties{$property_name};
+            my $singular_name = $meta->singular_name;
+            my $adder = 'add_' . $singular_name;
             my $value = $set_values->{$property_name};
-            if (ref($value)) {
-                unless (ref($value) eq 'ARRAY') {
-                    die "odd non-array refrenced used for 'has-many' property $property_name for $class: $value!";
+            unless (ref($value) eq 'ARRAY') {
+                die "odd non-array refrenced used for 'has-many' property $property_name for $class: $value!";
+            }
+            for my $item (@$value) {
+                if (ref($item) eq 'ARRAY') {
+                    $self->$adder(@$item);
                 }
-                for my $item (@$value) {
+                elsif (ref($item) eq 'HASH') {
+                    $self->$adder(%$item);
+                }
+                else {
                     $self->$adder($item);
                 }
-            }
-            else {
-                $self->$adder($value);
             }
         }
     }    

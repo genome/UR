@@ -221,18 +221,21 @@ sub mk_indirect_rw_accessor {
         my $self = shift;
         my @bridges = $self->$via(@where);
         if (@_) {
-            if (@bridges == 0) {
+            if (@bridges > 1) {
+                Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
+            }
+            else {
+                if (@bridges == 1) {
+                    $bridges[0]->delete;
+                }
                 @bridges = $self->$adder(@where, $to => $_[0]);
                 unless (@bridges) {
                     Carp::confess("Failed to add bridge for $accessor_name on $class_name $self->{id}: property is via $via!");
                 }
             }
-            elsif (@bridges > 1) {
-                Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
-            }
-            else {
-                return $bridges[0]->$to(@_);
-            }
+            #else {
+            #    return $bridges[0]->$to(@_);
+            #}
         }
         return unless @bridges;
         my @results = map { $_->$to } @bridges;
@@ -599,11 +602,12 @@ sub mk_object_set_accessors {
     my @params_prefix;
     my $params_prefix_resolved = 0;
     my $params_prefix_resolver = sub {
+        my $r_ids = $r_class_name->get_class_object->get_property_meta_by_name($reverse_id_by)->{id_by};
         my @id_property_names = $r_class_name->get_class_object->id_property_names;
         @params_prefix = 
             grep { 
                 my $id_property_name = $_;
-                ( (grep { $id_property_name eq $_ } @property_names) ? 0 : 1)
+                ( (grep { $id_property_name eq $_ } @$r_ids) ? 0 : 1)
             }
             @id_property_names;
         
@@ -626,6 +630,7 @@ sub mk_object_set_accessors {
             return my $obj = $r_class_name->get($rule);
         }
     };
+
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $singular_name,
