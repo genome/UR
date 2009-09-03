@@ -18,12 +18,18 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
     has => [
+        recurse => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.' },
         time    => { is => 'Boolean', doc => 'Write timelog sum to specified file', is_optional => 1 },
         long    => { is => 'Boolean', doc => 'Run tests including those flagged as long', is_optional => 1 },
+        list    => { is => 'Boolean', doc => 'List the tests, but do not actually run them.' },
         cover   => { is => 'List', doc => 'Cover only this(these) modules', is_optional => 1 },
         cover_svn_changes => { is_optional => 1, is => 'Boolean', doc => 'Cover modules modified in svn status' },
         cover_svk_changes => { is => 'Boolean', doc => 'Cover modules modified in svk status', is_optional => 1 },
         cover_cvs_changes => { is => 'Boolean', doc => 'Cover modules modified in cvs status', is_optional => 1 },
+        perl_opts       =>  { is => 'String', is_optional => 1, default_value => '',  
+                                doc => 'Override optiosn to the Perl interpreter when running the tests (-d:Profile, etc.)', },
+        script_opts     => { is => 'String', is_optional => 1, default_value => '',
+                                doc => 'Override optiosn to the test case when running the tests (--dump-sql --no-commit)', },
     ],
 );
 
@@ -32,8 +38,9 @@ sub help_brief { "Run the test suite against the source tree." }
 sub help_synopsis {
     return <<EOS
 cd MyNamespace
+ur test run --recurse                   # run all tests in the namespace
 ur test run                             # runs all tests in the t/ directory under pwd
-ur test run t/mytest1.t t/mytest2.t     # run specific tests
+ur test run t/mytest1.t My/Class.t      # run specific tests
 ur test run -v -t --cover-svk-changes   # run tests to cover latest svk updates
 EOS
 }
@@ -49,29 +56,54 @@ sub execute {
     my $self = shift;
     my $lib_path = $self->lib_path;
     my $working_path = $self->working_path;
-    my @dirs = `find $working_path`;
-    chomp @dirs;
-    @dirs = grep { $_ =~ /\/t$/ and -d $_ } @dirs;
-    if (@dirs == 0) {
-        die "No 't' directories found!.  Write some tests...\n";
+    
+    # nasty parsing of command line args
+    # this may no longer be needed..
+    my @tests = @{ $self->bare_args || [] }; 
+    
+    if ($self->recurse) {
+        if (@tests) {
+            $self->error_message("Cannot currently combine the recurse option with a specific test list.");
+            return;
+        }
+        @tests = `find $working_path | grep "\\.t\$"`;
     }
-    for my $dir (@dirs) {
-        print "Running tests in $dir:\n";
-        #my $cmd = "cd $parent;\nruntests -I $lib_path\n";
-        #system $cmd;
-        $self->_run_tests_in_dir_with_include_dir($dir,$lib_path);
-    } 
+    elsif (not @tests) {
+        my @dirs = `find $working_path`;
+        chomp @dirs;
+        @dirs = grep { $_ =~ /\/t$/ and -d $_ } @dirs;
+        if (@dirs == 0) {
+            die "No 't' directories found!.  Write some tests...\n";
+        }
+        for my $dir (@dirs) {
+            # use all in the current t directory
+            push @tests, glob("$dir/*.t");
+        }
+    }
+    else {
+        # rely on the @tests list from the cmdline
+    }
+    
+    if ($self->list) {
+        $self->status_message("Tests:");
+        for my $test (@tests) {
+            $self->status_message($test);
+        }
+        return 1;
+    }
+    
+    return $self->_run_tests(@tests);
 }
 
-sub _run_tests_in_dir_with_include_dir {
-    my $self = shift;
-    my $dir = shift;
+sub _run_tests {
+    my $self = shift;    
+    my @tests = @_;
+    
+    my $perl_opts = $self->perl_opts;
+    my $script_opts = $self->script_opts;
     
     #my $parent = $dir;
     #$parent =~ s/\/t$//;
-
-    my $lib_path = shift;
-    my $argv = $self->bare_args; 
    
     # this ensures that we don't see warnings
     # and error statuses when doing the bulk test
@@ -96,12 +128,8 @@ sub _run_tests_in_dir_with_include_dir {
     
     $Test::Harness::Switches = "";
     
-    my $perl_opts = '';
-    my $script_opts = '';
-    my @tests;
     my $timelog_sum = "";
     my $timelog_dir = "";
-    my $ps;     # does this look like a perl or script option
 
     my $v = $self->verbose || 0;
     my $t = $self->time;
@@ -131,30 +159,6 @@ sub _run_tests_in_dir_with_include_dir {
         push @cover_specific_modules, get_status_file_list('cvs');
     }
 
-    # nasty parsing of command line args
-    for (my $n = 0; $n < @$argv; $n++) {
-        $_ = $argv->[$n];
-        
-        if (/^-/) {
-            if (/^--/) {
-                $script_opts .= "$_ ";
-                $ps = 's';
-            }
-            else {
-                $perl_opts .= "$_ ";
-                $ps = 'p';
-            }
-        }
-        elsif (/\.t$/ or /^t\//) {
-            push @tests, $_;
-        }
-        elsif($ps eq 's') {
-            $script_opts .= "$_ ";
-        }
-        else {
-            $perl_opts .= "$_ ";
-        }
-    }
     
     if (@cover_specific_modules) {
         my $dbh = DBI->connect("dbi:SQLite:/gsc/var/cache/testsuite/coverage_metrics.sqlitedb","","");
@@ -199,13 +203,6 @@ sub _run_tests_in_dir_with_include_dir {
         print "Running the " . scalar(@tests) . " tests which load the specified modules.\n";
     }
     else {
-        if (@tests) {
-            # use the specified list
-        }
-        else {
-            # use all in the current t directory
-            @tests = glob("$dir/*.t");
-        }
     }
 
     use Cwd;
@@ -344,7 +341,7 @@ sub _command_line {
 
 END {
     # The Test::Harness is hacked-up a bit already, so we're just controlling
-    # the command which goes into it an parsing output.
+    # the command which goes into it and parsing output.
     if ($timelog_dir) {
         $timelog_sum->openw->print(
             sort
