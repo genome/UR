@@ -1478,7 +1478,7 @@ sub _sync_filesystem {
         my $class_obj;
         my $prev;
         if ($class_obj = UR::Object::Type->get(class_name => $class_name)) {
-            if ($class_obj->{is}[0] eq 'UR::Object::Type') {
+            if ($class_obj->{is}[0] =~ /::Type$/ and $class_obj->{is}[0]->isa('UR::Object::Type')) {
                 next;
             }
             if ($class_obj->db_committed) {

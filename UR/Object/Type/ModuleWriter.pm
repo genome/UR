@@ -522,6 +522,10 @@ sub rewrite_module_header {
     my $self = shift;
     my $package = $self->class_name;
 
+if ($package->isa("UR::Object::Type")) {
+    print Carp::longmess($package);
+}
+
     $DB::single = 1;
 
     # generate new class metadata

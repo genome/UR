@@ -15,7 +15,6 @@ sub evaluate_subject_and_values {
     my $subject = shift;
     my $comparison_value = shift;    
     my $escape = shift;    
-    
     my $regex = $self->
         comparison_value_and_escape_character_to_regex(
             $comparison_value,
@@ -34,6 +33,7 @@ sub comparison_value_and_escape_character_to_regex {
     # Handle the escape sequence    
     if (defined $escape)
     {
+        $escape =~ s/\\/\\\\/g; # replace \ with \\
         $regex =~ s/(?<!${escape})\%/\.\*/g;
         $regex =~ s/(?<!${escape})\_/./g;
         #LSF: Take away the escape characters.

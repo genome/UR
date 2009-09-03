@@ -114,8 +114,7 @@ sub create {
         else {
             #print "class $meta_class_name creating!\n"; 
             __PACKAGE__->create(
-                class_name => $meta_class_name,
-                is => __PACKAGE__
+                __PACKAGE__->_construction_params_for_desc($desc)
             );
         }
     }
@@ -139,36 +138,77 @@ sub create {
     return $self;
 }
 
+sub _construction_params_for_desc {
+    my $class = shift;
+    my $desc = shift;
+
+    my $class_name = $desc->{class_name};
+    my $meta_class_name = $desc->{meta_class_name};
+    my @extended_metadata;
+    if ($desc->{type_has}) {
+        $DB::single = 1;
+        @extended_metadata = ( has => [ @{ $desc->{type_has} } ] );
+    }
+
+    if (
+        $meta_class_name eq __PACKAGE__ 
+        #or 
+        #$meta_class_name->isa(__PACKAGE__)
+    ) {
+        if (@extended_metadata) {
+            die "Cannot extend class metadata of $class_name because it is a class involved in UR boostrapping.";
+        }
+        return();
+    }
+    else {
+        if ($bootstrapping) {
+            return (
+                class_name => $meta_class_name,
+                is => __PACKAGE__,
+                @extended_metadata,
+            );
+        }
+        else {
+            my $parent_classes = $desc->{is};
+            my @meta_parent_classes = map { $_ . '::Type' } @$parent_classes;
+            for (@$parent_classes) {
+                eval "$_->class";
+                if ($@) {
+                    die "Error with parent class $_ when defining $class_name! $@";
+                }
+            }
+            return (
+                class_name => $meta_class_name,
+                is => \@meta_parent_classes,
+                @extended_metadata,
+            );
+        }
+    }
+
+}
+
 sub define {
     # This delegates to methods broken out into the UR::Object::Type::Initializer module.
     my $class = shift;
     my $desc = $class->_normalize_class_description(@_);
     
     my $class_name = $desc->{class_name} ||= (caller(0))[0];
-    my $meta_class_name = $desc->{meta_class_name};
-    
-    no warnings;
-    no strict;
-    #*{$class_name . '::can'} = $Class::Autouse::ORIGINAL_CAN; 
-    #*{$class_name . '::isa'} = $Class::Autouse::ORIGINAL_ISA; 
-    #*{$meta_class_name . '::can'} = $Class::Autouse::ORIGINAL_CAN; 
-    #*{$meta_class_name . '::isa'} = $Class::Autouse::ORIGINAL_ISA; 
-    use warnings;
-    use strict;
+    $desc->{class_name} = $class_name;
 
-    unless (
-        $meta_class_name eq __PACKAGE__ 
-        or 
-        $meta_class_name->isa(__PACKAGE__)
-    ) {
-        #print "making class $meta_class_name for $class_name\n";
-        __PACKAGE__->define(
-            class_name => $meta_class_name,
-            is => __PACKAGE__
-        );
+    my $self; 
+
+    my %params = $class->_construction_params_for_desc($desc);
+    my $meta_class_name;
+    if (%params) {
+        $self = __PACKAGE__->define(%params);
+        return unless $self;
+        $meta_class_name = $params{class_name};
+    }
+    else {
+        $meta_class_name = __PACKAGE__;
     }
     
-    my $self = $UR::Object::all_objects_loaded->{$meta_class_name}{$class_name};
+    $self = $UR::Object::all_objects_loaded->{$meta_class_name}{$class_name};
     if ($self) {
         $DB::single = 1;
         #Carp::cluck("Re-defining class $class_name?  Found $meta_class_name with id '$class_name'");
@@ -177,7 +217,6 @@ sub define {
 
     $self = $class->_make_minimal_class_from_normalized_class_description($desc);
     Carp::confess("Failed to define class $class_name!") unless $self;
-
     
     # we do this for define() but not create()
     $self->{db_committed} = { %$self };
@@ -267,7 +306,7 @@ sub _normalize_class_description {
         [ is_transactional      => qw//],        
         [ id_by                 => qw/id_properties/],
         [ has                   => qw/properties/],        
-        [ sub_classes_have      => qw//],
+        [ type_has      => qw//],
         [ attributes_have       => qw//],
         [ er_role               => qw/er_type/],        
         [ doc                   => qw/description/],        
@@ -559,8 +598,9 @@ sub _normalize_class_description {
  
     if (%old_class) {
         # this should have all been deleted above
-        $DB::single = 1;
-        Carp::confess("BAD CLASS DEFINITION ($class_name): " . Data::Dumper::Dumper(\%old_class)) ;
+        # we actually process it later, since these may be related to parent classes extending
+        # the class definition
+        $new_class{extra} = \%old_class;
     };
     
     
@@ -825,9 +865,9 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
     my $class_name = $self->class_name;
     
     #print "init (bs) $class_name\n";
-    #if ($class_name eq 'URT::Person') {
+    if ($class_name eq 'Genome::Model::Command::Ghost') {
     #    print Carp::longmess();
-    #}
+    }
     Carp::confess("re-initializing class $class_name") if $_inform_all_parent_classes_of_newly_loaded_subclass{$class_name};
     $_inform_all_parent_classes_of_newly_loaded_subclass{$class_name} = 1;    
     
@@ -1211,6 +1251,24 @@ sub _complete_class_meta_object_definitions {
         for my $property_object (@subordinate_objects) { $property_object->unload }
         $self->unload;
         return;
+    }
+
+    if (my $extra = $self->{extra}) {
+        # some class characteristics may be only present in subclasses of UR::Object
+        # we handle these at this point, since the above is needed for boostrapping
+        $DB::single = 1;
+        my %still_not_found;
+        for my $key (sort keys %$extra) {
+            if ($self->can($key)) {
+                $self->$key($extra->{$key});
+            }
+            else {
+                $still_not_found{$key} = $extra->{$key};
+            }
+        }
+        if (%still_not_found) {
+            Carp::confess("BAD CLASS DEFINITION ($class_name): " . Data::Dumper::Dumper(%still_not_found));
+        }
     }
 
     $self->signal_change("load");
