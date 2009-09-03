@@ -2,7 +2,7 @@ use above 'UR';
 
 use Data::Dumper;
 use Test::More;
-plan tests => 11;
+plan tests => 13;
 
 UR::Object::Type->define(
     class_name => 'URT::Param',
