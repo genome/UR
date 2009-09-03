@@ -263,7 +263,7 @@ sub help_brief
         return $doc;
     }
     else {
-        my @parents = $self->get_class_object->ordered_inherited_class_objects;
+        my @parents = $self->get_class_object->ancestry_class_metas;
         for my $parent (@parents) {
             if (my $doc = $parent->doc) {
                 return $doc;
@@ -1222,4 +1222,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 45825 2009-04-15 15:37:10Z abrummet $
+#$Id: Command.pm 45847 2009-04-15 19:57:22Z jwalker $
