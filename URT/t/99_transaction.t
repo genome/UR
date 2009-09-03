@@ -43,6 +43,15 @@ sub dump_states {
 
 sub take_state_snapshot {
     my $state = {};
+
+    # Reference::Property objects are created/defined on demand now
+    # trick them into existance
+    my @refs = UR::Object::Reference->is_loaded();
+$DB::single=1;
+    foreach my $ref ( @refs ) {
+        UR::Object::Reference::Property->get(tha_id => $ref->tha_id);
+    }
+
     my @classes = sort UR::Object->subclasses_loaded;
     for my $class_name (@classes) {
         next if $class_name->isa("UR::Singleton");
@@ -253,6 +262,7 @@ for my $test_class_data (@test_input) {
     init($test_class_name, @test_property_names);
     clear();
     my $state_after_first_init_and_clear_for_class = take_state_snapshot();
+$DB::single=1;
     is_deeply(	$state_after_first_init_and_clear_for_class,
         $state_after_initial_clear,
         "clear returns restores state after init"
