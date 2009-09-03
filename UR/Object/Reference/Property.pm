@@ -26,6 +26,95 @@ sub reference_id {
     shift->tha_id
 }
 
+
+# We're overriding get() so these objects can get created on the fly
+sub get {
+    my $class = shift;
+
+    # Do they already exist?
+    my @o = $class->SUPER::get(@_);
+    return $class->context_return(@o) if (@o);
+
+    my %params = @_;
+    unless ($params{'tha_id'}) {
+        if ($params{'class_name'} and $params{'property_name'}) {
+            $params{'tha_id'} = $params{'class_name'} . '::' . $params{'property_name'};
+        } else {
+            Carp::confess("Required parameter (tha_id) missing");
+        }
+    }
+    my $tha_id = $params{'tha_id'};
+    my $ref = UR::Object::Reference->get(id => $tha_id);
+    unless ($ref) {
+        if (ref($tha_id) eq 'ARRAY') {
+            $tha_id = '[' . join(',',@$tha_id) . ']: ' . scalar(@$tha_id) . ' items';
+        }
+        return;  # If there's no reference object, there can't be any reference properties
+    }
+
+    my $class_name = $ref->class_name;
+    my $class_meta = UR::Object::Type->get(class_name => $class_name);
+    my $delegation_property_meta = $class_meta->get_property_meta_by_name($ref->delegation_name);
+    unless ($delegation_property_meta) {
+        # FIXME - the update_classes testcase trips this conditional up and causes a die here when
+        # it's updating the Car class.  A Reference gets created from Car to Person through the foreign key
+        # called person_owner, but there's no class property, therefore no reference property
+        # But the testcase also implies that it's not expecting a person_owner property, so maybe we just
+        # return nothing?
+        #Carp::confess("Couldn't find a property called " . $ref->delegation_name . " on class $class_name");
+        return;
+    }
+
+    my @property_names = @{$delegation_property_meta->{'id_by'}};
+
+    my $r_class_name = $ref->r_class_name;
+    my $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
+    my @r_property_names = $r_class_meta->id_property_names;
+
+    unless (scalar(@property_names) == scalar(@r_property_names)) {
+        Carp::confess('Unequal property counts describing reference $tha_id.   Property has ' .
+                      scalar(@property_names) . " while class $r_class_name has " .
+                      scalar(@r_property_names) . ' id properties.');
+    }
+
+    my $rank = 0;
+    my @defined_objects;
+    for (my $i = 0; $i < @property_names; $i++) {
+        my $property_name = $property_names[$i];
+        my $property_meta = $class_meta->get_property_meta_by_name($property_name);
+        my $attribute_name = $property_meta->attribute_name;
+
+        my $r_property_name = $r_property_names[$i];
+        #my $r_property_meta = UR::Object::Property->get(class_name => $r_class_name, property_name => $r_property_name);
+        my $r_property_meta = $r_class_meta->get_property_meta_by_name($r_property_name);
+        my $r_attribute_name = $r_property_meta->attribute_name;
+
+        my $rp = UR::Object::Reference::Property->define(
+                     tha_id           => $tha_id,
+                     rank             => $i+1,
+                     property_name    => $property_name,
+                     attribute_name   => $attribute_name,
+                     r_property_name  => $r_property_name,
+                     r_attribute_name => $r_attribute_name,
+                 );
+        unless ($rp) {
+            Carp::confess('Failed to define relationship ' . $ref->delegation_name . " property $property_name");
+        }
+
+        {
+            use Data::Dumper; 
+            no strict;
+            my $db_committed = eval(Data::Dumper::Dumper($rp));
+            $rp->{'db_committed'} ||= $db_committed;
+            delete $db_committed->{'id'};
+        }
+
+        push @defined_objects, $rp;
+    }
+
+    $class->context_return(@defined_objects);
+}
+
 sub create_object
 {
     my $class = shift;
