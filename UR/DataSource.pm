@@ -77,8 +77,6 @@ sub _generate_class_data_for_loading {
     my $class_name = $class_meta->class_name;
     my $ghost_class = $class_name->ghost_class;
 
-$DB::single = 1 if $class_name =~ /Acme::Person/;
-
     my @all_id_property_names = $class_meta->all_id_property_names();
     my @id_properties = $class_meta->id_property_names;    
     my $id_property_sorter = $class_meta->id_property_sorter;    
