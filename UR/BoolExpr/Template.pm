@@ -254,7 +254,7 @@ sub sub_classify {
 
 
 # flyweight constructor
-# NOTE: this caches outside of the regulary system since these are stateless objects
+# NOTE: this caches outside of the regular system since these are stateless objects
 
 sub get_by_subject_class_name_logic_type_and_logic_detail {
     my $class = shift;
@@ -264,6 +264,17 @@ sub get_by_subject_class_name_logic_type_and_logic_detail {
     my $constant_value_id = $class->values_to_value_id(); # intentionally an empty list of values
     return $class->get(join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id));
 }
+
+
+# The analogue of resolve_for_class_and_params in UR::BoolExpr.  @params_list is a list if
+# strings containing properties and operators separated by a space.  For ex: "some_param ="
+sub resolve_for_class_and_params {
+    my($class,$subject_class_name, @params_list) = @_;
+
+    return $class->get_by_subject_class_name_logic_type_and_logic_detail($subject_class_name, "And", join(',',@params_list));
+}
+
+    
 
 sub get {
     my $class = shift;
