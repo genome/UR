@@ -4,8 +4,6 @@ use strict;
 use warnings;
 require UR;
 
-print "hi\n";
-
 sub create {
     my $class = shift;
     my $set = $class->define_set(@_);
