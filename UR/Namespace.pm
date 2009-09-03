@@ -66,6 +66,15 @@ sub get_material_classes
     return @classes;
 }
 
+# Subclasses can override this method to tell the dynamic module loader 
+# whether it should go ahead and load the given module name or not.
+# The default behavior is to go ahead and try for them all
+sub should_dynamically_load_class {
+    # my($self,$class_name) = @_;
+    return 1;
+}
+
+
 sub get_material_class_names
 {
     return map {$_->class_name} $_[0]->get_material_classes();

@@ -63,6 +63,8 @@ sub dynamically_load_class {
     return if $loading{$class};    
     $loading{$class} = 1;
 
+    return unless ($namespace->should_dynamically_load_class($class));
+
     # Attempt to get a class object, loading it as necessary (probably).
     my $meta = $namespace->get_member_class($class);
     unless ($meta) {
