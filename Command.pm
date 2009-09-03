@@ -610,7 +610,7 @@ sub help_usage_complete_text {
                 Text::Wrap::wrap(' ', ' ', $self->help_detail)
             ),
             ( $sub_commands 
-                ? sprintf("%s\n %s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
+                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
                 : ''
             ),
         );
@@ -1226,4 +1226,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 45943 2009-04-19 15:49:51Z ssmith $
+#$Id: Command.pm 45950 2009-04-20 00:15:49Z ssmith $
