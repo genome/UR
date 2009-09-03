@@ -245,7 +245,7 @@ UR::Object::Type->define(
         implied_by                      => { type => 'Text' , is_optional => 1},
         via                             => { type => 'Text' , is_optional => 1 },
         to                              => { type => 'Text' , is_optional => 1},
-        where                           => { type => 'ParamList', is_optional => 1 },
+        where                           => { type => 'ARRAY', is_optional => 1},
         calculate                       => { type => 'Text' , is_optional => 1},
         calculate_from                  => { type => 'ARRAY' , is_optional => 1},
         calculate_perl                  => { type => 'Perl' , is_optional => 1},
