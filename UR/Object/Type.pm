@@ -1309,17 +1309,21 @@ sub all_property_names {
     if ($self->{_all_property_names}) {
         return @{ $self->{_all_property_names} };
     }
-    
+ 
+    my %seen = ();   
     my $all_property_names = $self->{_all_property_names} = [];
     for my $class_name ($self->class_name, $self->ordered_inherited_class_names) {
         my $class_meta = UR::Object::Type->get($class_name);
-        if (my $has = $class_meta->{has}) {            
+        if (my $has = $class_meta->{has}) {
             push @$all_property_names, 
                 grep { 
                     not exists $has->{$_}{id_by}
                 }
-                grep { $_ ne "id" } 
+                grep { $_ ne "id" && !exists $seen{$_} } 
                 sort keys %$has;
+            foreach (@$all_property_names) {
+                $seen{$_} = 1;
+            }
         }
     }
     return @$all_property_names;
