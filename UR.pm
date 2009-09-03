@@ -165,8 +165,10 @@ UR::Object::Type->define(
         table_name                       => { type => 'Text', len => 64, is_optional => 1, source => 'data dictionary' },        
         query_hint                       => { type => 'Text', len => 1024 , is_optional => 1},        
         sub_classification_meta_class_name  => { type => 'Text', len => 1024 , is_optional => 1},
-        sub_classification_property_name    => { type => 'Text', len => 1024 , is_optional => 1},
-        sub_classification_method_name   => { type => 'Text', len => 1024, is_optional => 1},
+        sub_classification_property_name    => { type => 'Text', len => 256, is_optional => 1},
+        sub_classification_method_name   => { type => 'Text', len => 256, is_optional => 1},
+
+        first_sub_classification_method_name => { type => 'Text', len => 256, is_optional => 1 },
         
         composite_id_separator           => { type => 'Text', len => 2 , default_value => "\t", is_optional => 1},        
     ],    

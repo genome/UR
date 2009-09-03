@@ -135,7 +135,7 @@ sub create {
     
     my $class_meta = $class->get_class_object;        
     
-    if (my $method_name = $class_meta->sub_classification_method_name) {
+    if (my $method_name = $class_meta->first_sub_classification_method_name) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
         my $sub_class_name = $class->$method_name(@_);
         if ($sub_class_name ne $class) {

@@ -273,6 +273,7 @@ sub _normalize_class_description {
         [ sub_classification_property_name      => qw//],
         [ sub_classification_meta_class_name    => qw//],
         [ sub_classification_method_name        => qw//],
+        [ first_sub_classification_method_name  => qw//],
         [ composite_id_separator                => qw//],
         [ generate              => qw//],
         [ generated             => qw//],
@@ -905,6 +906,13 @@ sub _complete_class_meta_object_definitions {
             redo;
         }
 
+        if ($class_name =~ /Genome::Model::/) {
+            $DB::single = 1;
+        } 
+        if ($parent_class->sub_classification_method_name and not $self->sub_classification_method_name) {
+            $self->first_sub_classification_method_name($parent_class->sub_classification_method_name);
+        }
+        
         my $obj =
             UR::Object::Inheritance->define(
                 type_name => $self->type_name,
