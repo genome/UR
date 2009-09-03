@@ -2317,9 +2317,9 @@ sub _sync_databases {
 
     my @ds_in_order = 
         sort {
-            ($a->{'ds_obj'}->can_savepoint <=> $b->{'ds_obj'}->can_savepoint)
+            ($ds_objects{$a}->{'ds_obj'}->can_savepoint <=> $ds_objects{$b}->{'ds_obj'}->can_savepoint)
             || 
-            ($a->{'ds_obj'}->class cmp $b->{'ds_obj'}->class)
+            ($ds_objects{$a}->{'ds_obj'}->class cmp $ds_objects{$b}->{'ds_obj'}->class)
         }
         keys %ds_objects;
 
