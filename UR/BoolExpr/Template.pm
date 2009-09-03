@@ -31,6 +31,7 @@ UR::Object::Type->define(
     has => [
         is_normalized                   => { is => 'Boolean' },
         is_id_only                      => { is => 'Boolean' },
+        is_partial_id                   => { is => 'Boolean' },  # True if at least 1, but not all the ID props are mentioned
         is_normalized                   => { is => 'Boolean' },
         is_unique                       => { is => 'Boolean' },
         matches_all                     => { is => 'Boolean' },
@@ -367,6 +368,7 @@ sub get {
         
         # Note whether there are properties not involved in the ID
         my $id_only = 1;
+        my $partial_id = 0;
         
         my $key_op_hash = {};
         if (@$id_translations and @{$id_translations->[0]} == 1) {
@@ -401,9 +403,9 @@ sub get {
                         $key_op_hash->{$alias->[0]}{$op}++;
                         ## print ">> extend for @$alias with op $op.\n";
                     }
-                unless ($op =~ m/^(=|eq|in|\[\]|)$/) {
-                $id_only = 0;
-            }
+                    unless ($op =~ m/^(=|eq|in|\[\]|)$/) {
+                        $id_only = 0;
+                    }
                 }    
                 else {
                     $id_only = 0;
@@ -488,7 +490,8 @@ sub get {
                 else {
                     # not all parts of the id are there
                     ## print "partial id property $property on class $subject_class\n";
-                    $id_only = 0
+                    $id_only = 0;
+                    $partial_id = 1;
                 }
             }
         }
@@ -535,6 +538,7 @@ sub get {
         @extra_params = (
             id_position                     => $id_position,        
             is_id_only                      => $id_only,
+            is_partial_id                   => $partial_id,
             is_unique                       => undef, # assigned on first use
             matches_all                     => (scalar(@keys_sorted) == 0 ? 1 : 0),
     
