@@ -27,6 +27,7 @@ UR::Object::Type->define(
         is_delegated                     => { type => 'BOOL', len => undef },
         is_calculated                    => { type => 'BOOL', len => undef },
         is_mutable                       => { type => 'BOOL', len => undef },
+        is_numeric                       => { calculate_from => ['data_type'], },
         property_name                    => { type => 'VARCHAR2', len => 64 },
         property_type                    => { type => 'VARCHAR2', len => 64 },
         source                           => { type => 'VARCHAR2', len => 64 },
@@ -43,6 +44,25 @@ sub is_aggregate {
     # TODO: calclulated properties, might auto-aggregate.  By default nothing does. 
     return;
 }
+
+# Implements the is_numeric calculated property - returns true if it's ok to use
+# numeric comparisons (==, <, <=>, etc) on the property
+our %NUMERIC_TYPES = (
+        'INTEGER' => 1,
+        'NUMBER'  => 1,
+        'FLOAT'   => 1,
+);
+sub is_numeric {
+    my $self = shift;
+
+    unless (defined($self->{'_is_numeric'})) {
+        my $type = uc($self->data_type);
+        $self->{'_is_numeric'} = $NUMERIC_TYPES{$type} || 0;
+    }
+    return $self->{'_is_numeric'};
+}    
+        
+        
 
 sub create_object {
     my $class = shift;

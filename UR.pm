@@ -224,6 +224,7 @@ UR::Object::Type->define(
         is_final                        => { type => 'Boolean' , default_value => 0},  
         is_many                         => { type => 'Boolean' , default_value => 0},
         is_deprecated                   => { type => 'Boolean', default_value => 0},
+        is_numeric                      => { calculate_from => ['data_type'], },
         id_by                           => { type => 'ARRAY' , is_optional => 1},
         via                             => { type => 'Text' , is_optional => 1 },
         to                              => { type => 'Text' , is_optional => 1},
