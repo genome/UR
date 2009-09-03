@@ -1129,7 +1129,26 @@ for my $type (qw/error warning status debug usage/) {
     *$array_subname     = $array_subref;
 }
 
+# Run the given command-line with stdout and stderr redirected to /dev/null
+sub system_inhibit_std_out_err {
+    my($self,$cmdline) = @_;
+
+    open my $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
+    open my $olderr, ">&", \*STDERR or die "Can't dup STDERR: $!";
+
+    open(STDOUT,'>/dev/null');
+    open(STDERR,'>/dev/null');
+
+    my $ec = system ( $cmdline );
+
+    open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
+    open STDERR, ">&", $olderr or die "Can't dup \$olderr: $!";
+
+    return $ec;
+}
+
+
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 39742 2008-10-14 18:35:26Z eclark $
+#$Id: Command.pm 40022 2008-10-21 16:33:05Z abrummet $
