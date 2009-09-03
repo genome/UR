@@ -64,6 +64,10 @@ my %sub_env_map = ( monitor_sql => 'UR_DBI_MONITOR_SQL',
                     no_commit => 'UR_DBI_NO_COMMIT',
                     monitor_every_fetch => 'UR_DBI_MONITOR_EVERY_FETCH',
                   );
+
+our ($monitor_sql,$monitor_dml,$no_commit,$monitor_every_fetch,
+    $explain_sql_slow,$explain_sql_if,$explain_sql_match);
+
 while ( my($subname, $envname) = each ( %sub_env_map ) ) {
     no strict 'refs';
     # There's a scalar of the same name as the sub to hold the value, hook them together
@@ -74,15 +78,15 @@ while ( my($subname, $envname) = each ( %sub_env_map ) ) {
                       }
                       return $$subname;
                   };
+    if ($subname =~ /explain/) {
+        eval "\$$subname = '' if not defined \$$subname";
+    }
+    else {
+        eval "\$$subname = 0 if not defined \$$subname";
+    }
+    die $@ if $@;
     *$subname = $subref;
 }
-
-# I guess there's no way to make a "dynamic" our or use vars so the loop below
-# can define them, and the code in the rest of this file won't complain...
-our ($monitor_sql,$monitor_dml,$no_commit,$monitor_every_fetch,
-     $explain_sql_slow,$explain_sql_if,$explain_sql_match) = (0,0,0,0,'','','');  # includes the default values
-
-
 
 # by default, monitored SQL goes to STDOUT
 # FIXME change this 'our' back to a 'my' after we're transisitioned off of the old App API
