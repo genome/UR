@@ -10,25 +10,29 @@ use UR;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
-    has => [
+    has_optional => [
         dsid => {
-            type => 'String',
-            doc => "The class name to give this data source. You must supply dsid or dsname",
-            is_optional => 1,
+            is => 'Text',
+            doc => "The full class name to give this data source.",
         },
         dsname => {
-            type => 'String',
-            doc => "Basic name to give this data source.  The class name will become namespace::DataSource::dsname",
-            is_optional => 1,
+            is => 'Text',
+            shell_args_position => 1,
+            doc => "The distinctive part of the class name for this data source.  Will be prefixed with the namespace then '::DataSource::'.",
        },
     ],
+    doc => 'add a data source to the current namespace'
 );
 
-sub sub_command_sort_position { 2 }
-
-sub help_brief {
-   "Add a data source to the current namespace.";
+sub dsid {
+    shift->full_name(@_);
 }
+
+sub dsname {
+    shift->name(@_);
+}
+
+sub sub_command_sort_position { 2 }
 
 sub data_source_module_pathname {
     my $self = shift;

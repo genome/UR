@@ -15,7 +15,7 @@ use Command;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
-    has => [ 
+    has_transient => [ 
         lib_path            =>  {   type => "FilesystemPath", 
                                     is_optional => 1,
                                     doc => "The directory under which the namespace module resides.  Auto-detected normally."
