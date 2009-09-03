@@ -175,6 +175,9 @@ sub execute {
             # Don't update the Meta datasource, unless they specificly asked for it
             @target_data_sources = grep { $_ !~ /::Meta$/ } @namespace_data_sources;
         }
+
+        # Some data sources can't handle the magic required for automatic class updating...
+        @target_data_sources = grep { $_->can('get_table_names') } @target_data_sources;
         
         $self->status_message("Found data sources: " 
             .   join(", " , 
