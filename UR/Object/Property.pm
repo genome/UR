@@ -72,7 +72,6 @@ sub create_object {
     #$DB::single = 1;
     #%params = $class->preprocess_params(@_);
     
-    
     if ($params{attribute_name} and not $params{property_name}) {
         my $property_name = $params{attribute_name};
         $property_name =~ s/ /_/g;
@@ -185,14 +184,21 @@ sub _get_joins {
                 my $property_name = $self->property_name;
                 my $id = $source_class . '::' . $property_name;
                 if (my $id_by = $self->id_by) { 
+                    my(@source_property_names, @foreign_property_names);
+                    # This ensures the linking properties will be in the right order
+                    foreach my $ref_property ( $self->id_by_property_links ) {
+                        push @source_property_names, $ref_property->property_name;
+                        push @foreign_property_names, $ref_property->r_property_name;
+                    }
+
                     push @joins, {
                         id => $id,
                         source_class => $source_class,
                         source_class_meta => $class_meta,
-                        source_property_names => [ @$id_by ],
+                        source_property_names => \@source_property_names,
                         foreign_class => $foreign_class,
                         foreign_class_meta => $foreign_class_meta,
-                        foreign_property_names => [ $foreign_class_meta->id_property_names ],
+                        foreign_property_names => \@foreign_property_names,
                     }
                 }
                 elsif (my $reverse_id_by = $self->reverse_id_by) { 
