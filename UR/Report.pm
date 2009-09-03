@@ -8,11 +8,8 @@ UR::Report - a database report interface
 
 =head1 SYNOPSIS
 
-  ##- use App;
   ##- use UR::Report;  
   UR::Report->use_standard_cmdline_options();
-  
-  App->init();  
   UR::Report->generate(sql => \@ARGV);
   
 
