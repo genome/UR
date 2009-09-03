@@ -19,7 +19,7 @@ sub column_order {
 }
 
 sub sort_order {
-    return [' thing_id' ] ;
+    return ['thing_id' ] ;
 }
 
 sub delimiter { "\t" }

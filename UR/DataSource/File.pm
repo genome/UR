@@ -16,6 +16,10 @@ use UR;
 use strict;
 use warnings;
 
+use Fcntl qw(:DEFAULT :flock);
+use File::Temp;
+use File::Basename;
+
 class UR::DataSource::File {
     is => ['UR::DataSource'],
     has => [
@@ -545,6 +549,11 @@ sub create_iterator_closure_for_rule {
     my $max_cache_size = $MAX_CACHE_SIZE;
     my $record_separator = $self->record_separator;
 
+    # Lock the file for reading... we could put the lock code inside the iterator, after READ_LINE_FROM_FILE:
+    # but that would slow down read operations a bit.  If there ends up being a problem with lock 
+    # contention, go ahead and move it before $line = <$fh>;
+    flock($fh,LOCK_SH);
+
     my $iterator = sub {
 
         if ($monitor_start_time && ! $monitor_printed_first_fetch) {
@@ -583,6 +592,7 @@ sub create_iterator_closure_for_rule {
 
                 unless (defined $line) {
                     # at EOF.  Close up shop and return
+                    flock($fh,LOCK_UN);
                     $fh = undef;
                     $self->_invalidate_cache();
                  
@@ -621,6 +631,7 @@ sub create_iterator_closure_for_rule {
                         $sql_fh->printf("FILE: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
                     }
 
+                    flock($fh,LOCK_UN);
                     return;
                 
                 } elsif ($comparison) {
@@ -657,6 +668,7 @@ sub UR::DataSource::File::Tracker::DESTROY {
         my $fh = $ds->{'_fh'};
 
         $sql_fh->printf("FILE: CLOSING fileno ".fileno($fh)."\n") if ($ENV{'UR_DBI_MONITOR_SQL'});
+        flock($fh,LOCK_UN);
 	$fh->close();
 	$ds->{'_fh'} = undef;
     }
@@ -697,6 +709,284 @@ sub create_from_inline_class_data {
     my $ds = $ds_type->create( %ds_creation_params, id => $ds_id );
     return $ds;
 }
+
+
+# The string used to join fields of a row together
+#
+# Since the 'delimiter' property is interpreted as a regex in the reading
+# code, we'll try to be smart about making a real string from that.
+#
+# subclasses can override this to provide a different implementation
+sub join_pattern {
+    my $self = shift;
+
+    my $join_pattern = $self->delimiter;
+
+    # make some common substitutions...
+    if ($join_pattern eq '\s*,\s*') {
+        # The default...
+        return ', ';
+    }
+
+    $join_pattern =~ s/\\s*//g;  # Turn 0-or-more whitespaces to nothing
+    $join_pattern =~ s/\\t/\t/;  # tab
+    $join_pattern =~ s/\\s/ /;   # whitespace
+    
+    return $join_pattern;
+}
+
+
+
+sub _sync_database {
+    my $self = shift;
+    my %params = @_;
+
+    unless (ref($self)) {
+        if ($self->isa("UR::Singleton")) {
+            $self = $self->_singleton_object;
+        }
+        else {
+            die "Called as a class-method on a non-singleton datasource!";
+        }
+    }
+
+    my $read_fh = $self->get_default_handle();
+
+    my $original_data_file = $self->server;
+    my $original_data_dir  = File::Basename::dirname($original_data_file);
+    my $use_quick_rename;
+    if (-w $original_data_dir) {
+        $use_quick_rename = 1;  # We can write to the data dir
+    } elsif (! -w $original_data_file) {
+        $self->error_message("Neither the directory nor the file for $original_data_file are writable - cannot sync_database");
+        return;
+    }
+
+
+    my $split_regex = $self->_regex();
+    my $join_pattern = $self->join_pattern;
+    my $record_separator = $self->record_separator;
+    local $/;   # Make sure some wise guy hasn't changed this out from under us
+    $/ = $record_separator;
+
+    my $csv_column_order = $self->column_order;
+    $_ = uc foreach @$csv_column_order;  # Force all column-namey things to upper-case
+    my $csv_column_count = scalar(@$csv_column_order);
+    my %column_name_to_index_map;
+    for (my $i = 0; $i < @$csv_column_order; $i++) {
+        $column_name_to_index_map{$csv_column_order->[$i]} = $i;
+    }
+
+    my $changed_objects = delete $params{changed_objects};
+
+
+    # We're going to assumme all the passed-in objects are of the same class *gulp*
+    my $class_name = $changed_objects->[0]->class;
+    my $class_meta = UR::Object::Type->get(class_name => $class_name);
+    my %column_name_to_property_meta = map { uc($_->column_name) => $_ }
+                                       grep { $_->column_name }
+                                       $class_meta->all_property_metas;
+    my @property_names_in_column_order;
+    foreach my $column_name ( @$csv_column_order ) {
+        my $prop_meta = $column_name_to_property_meta{$column_name};
+        unless ($prop_meta) {
+            die "Data source " . $self->class . " id " . $self->id . 
+                " could not resolve a $class_name property for the data source's column named $column_name";
+        }
+
+        push @property_names_in_column_order, $prop_meta->property_name;
+    }
+
+    my $insert = [];
+    my $update = {};
+    my $delete = {};
+    foreach my $obj ( @$changed_objects ) {
+        if ($obj->isa('UR::Object::Ghost')) {
+            # This should be removed from the file
+            my $original = $obj->{'db_committed'};
+            my $line = join($join_pattern, @{$original}{@property_names_in_column_order}) . $record_separator;
+            $delete->{$line} = $obj;
+
+        } elsif ($obj->{'db_committed'}) {
+            # This object is changed since it was read in the file
+            my $original = $obj->{'db_committed'};
+            my $original_line = join($join_pattern, @{$original}{@property_names_in_column_order}) . $record_separator;
+            my $changed_line = join($join_pattern, @{$obj}{@property_names_in_column_order}) . $record_separator;
+            $update->{$original_line} = $changed_line;
+        
+        } else {
+            # This object is new and should be added to the file
+            push @$insert, [ @{$obj}{@property_names_in_column_order} ];
+        }
+    }
+
+    my $sort_order = $self->sort_order;
+    $_ = uc foreach @$sort_order;  # Force all column-namey things to upper-case
+    my $file_is_sorted = scalar(@$sort_order);
+    my %column_sorts_numerically = map { $_->column_name => $_->is_numeric }
+                                   values %column_name_to_property_meta;
+    my $row_sort_sub = sub ($$) {
+                           my $comparison;
+                           foreach my $column_name ( @$sort_order ) {
+                               my $i = $column_name_to_index_map{$column_name};
+                               if ($column_sorts_numerically{$column_name}) {
+                                   $comparison = $_[0]->[$i] <=> $_[1]->[$i];
+                               } else {
+                                   $comparison = $_[0]->[$i] cmp $_[1]->[$i];
+                               }
+                               return $comparison if $comparison != 0;
+                           }
+                           return 0;
+                       };
+    if ($sort_order && $file_is_sorted && scalar(@$insert)) {
+        # the inserted things should be sorted the same way as the file
+        my @sorted = sort $row_sort_sub @$insert;
+        $insert = \@sorted;
+    }
+
+    my $write_fh;
+    if ($use_quick_rename) {
+        $write_fh = File::Temp->new(DIR => $original_data_dir, UNLINK => 0);
+    } else {
+        $write_fh = File::Temp->new(UNLINK => 1);
+    }
+    unless ($write_fh) {
+        die "Can't create temporary file for writing: $!";
+    }
+
+    my $monitor_start_time;
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        $monitor_start_time = Time::HiRes::time();
+        my $time = time();
+        $sql_fh->printf("\nFILE: SYNC_DATABASE AT %d [%s].  Started transaction for %s to temp file %s\n",
+                        $time, scalar(localtime($time)), $original_data_file, $write_fh->filename);
+
+    }
+
+    unless (flock($read_fh,LOCK_EX)) {
+        die $self->class(). ": Can't get exclusive lock for its file: $!";
+    }
+
+    # write headers to the new file
+    for (my $i = 0; $i < $self->skip_first_line; $i++) {
+        my $line = <$read_fh>;
+        $write_fh->print($line);
+    }
+
+    
+    my $line;
+    READ_A_LINE:
+    while(1) {
+        unless ($line) {
+            $line = <$read_fh>;
+            last unless defined $line;
+        }
+
+        if ($file_is_sorted && scalar(@$insert)) {
+            # there are sorted things waiting to insert
+            my $chomped = $line;
+            chomp $chomped;
+            my $row = [ split($split_regex, $chomped, $csv_column_count) ];
+            my $comparison = $row_sort_sub->($row, $insert->[0]);
+            if ($comparison > 0) {
+                # write the object's data
+                my $new_row = shift @$insert;
+                my $new_line = join($join_pattern, @$new_row) . $record_separator;
+
+                if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+                    $sql_fh->print("INSERT >>$new_line<<\n");
+                }
+
+                $write_fh->print($new_line);
+                # Don't undef the last line read, meaning it could still be written to the output...
+                next READ_A_LINE;
+            }
+        }
+
+        if (my $obj = delete $delete->{$line}) {
+            if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+                $sql_fh->print("DELETE >>$line<<\n");
+            }
+            $line = undef;
+            next;
+           
+        } elsif (my $changed = delete $update->{$line}) {
+            if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+                $sql_fh->print("UPDATE replace >>$line<< with >>$changed<<\n");
+            }
+            $write_fh->print($changed);
+            $line = undef;
+            next;
+            
+         } else {
+            # This line from the file was unchanged in the app
+            $write_fh->print($line);
+            $line = undef;
+        }
+    }
+
+    if (keys %$delete) {
+        $self->warning_message("There were ",scalar(keys %$delete)," deleted $class_name objects that did not match data in the file");
+    }
+    if (keys %$update) {
+        $self->warning_message("There were ",scalar(keys %$update)," updated $class_name objects that did not match data in the file");
+    }
+
+    # finish out by writing the rest of the new data
+    foreach my $new_row ( @$insert ) {
+        my $new_line = join($join_pattern, @$new_row) . $record_separator;
+        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+            $sql_fh->print("INSERT >>$new_line<<\n");
+        }
+        $write_fh->print($new_line);
+    }
+    $write_fh->close();
+    my $temp_file_name = $write_fh->filename;
+    
+    if ($use_quick_rename) {
+        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+            $sql_fh->print("FILE: COMMIT rename $temp_file_name over $original_data_file\n");
+        }
+
+        unless(rename($temp_file_name, $original_data_file)) {
+            $self->error_message("Can't rename the temp file over the original file: $!");
+            return;
+        }
+    } else {
+        # We have to copy the data from the temp file to the original file
+
+        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+            $sql_fh->print("FILE: COMMIT write over $original_data_file in place\n");
+        }
+        my $new_write_fh = IO::File->new($original_data_file, O_WRONLY|O_TRUNC);
+        unless ($new_write_fh) {
+            $self->error_message("Can't open $original_data_file for writing: $!");
+            return;
+        }
+
+        my $temp_file_fh = IO::File->new($temp_file_name);
+        unless ($temp_file_fh) {
+            $self->error_message("Can't open $temp_file_name for reading: $!");
+            return;
+        }
+ 
+        while(<$temp_file_fh>) {
+            $new_write_fh->print($_);
+        }
+        
+        $new_write_fh->close();
+    }
+
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        $sql_fh->printf("FILE: TOTAL COMMIT TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+    }
+
+    flock($read_fh, LOCK_UN);
+    $read_fh->close();
+
+    return 1;
+}
+
         
 
 sub initializer_should_create_column_name_for_class_properties {

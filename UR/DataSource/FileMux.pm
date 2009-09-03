@@ -307,7 +307,6 @@ sub _normalize_file_resolver_details {
                 return;
             }
         } else {
-            $DB::single=1;
             $class->error_message("Unrecognized layout for 'resolve_path_with'");
             return;
         }
@@ -391,7 +390,127 @@ sub create_from_inline_class_data {
 
     return $ds;
 }
+
+
+sub _sync_database {
+    my $self = shift;
+    my %params = @_;
+
+    unless (ref($self)) {
+        if ($self->isa("UR::Singleton")) {
+            $self = $self->_singleton_object;
+        }
+        else {
+            die "Called as a class-method on a non-singleton datasource!";
+        }
+    }
+
+    my $changed_objects = delete $params{'changed_objects'};
+
+    my $context = UR::Context->get_current;
+    my $required_for_get = $self->required_for_get;
+
+    my $file_resolver = $self->{'file_resolver'};
+    if (ref($file_resolver) ne 'CODE') {
+        # Hack!  The data source is probably a singleton class and there's a file_resolver method
+        # defined
+        $file_resolver = $self->can('file_resolver');
+    }
+
+    my $monitor_start_time;
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        $monitor_start_time = Time::HiRes::time();
+        my $time = time();
+        $self->sql_fh->print("FILEMux: SYNC_DATABASE AT %d [%s].\n", $time, scalar(localtime($time)));
+    }
+
+    my $concrete_ds_type = $self->_delegate_data_source_class;
+    my %sub_ds_params = $self->_common_params_for_concrete_data_sources();
+
+    my %datasource_for_dsid;
+    my %objects_by_datasource;
+    foreach my $obj ( @$changed_objects ) {
+        my @obj_values;
+        for (my $i = 0; $i < @$required_for_get; $i++) {
         
+            my $property = $required_for_get->[$i];
+            my $value = $obj->$property;
+            unless ($value) {
+                my $class = $obj->class;
+                my $id = $obj->id;
+                $self->error_message("No value for required-for-get property $property on object of class $class id $id");
+                return;
+            }
+            if (ref $value) {
+                my $class = $obj->class;
+                my $id = $obj->id;
+                $self->error_message("Pivoting based on a non-scalar property is not supported.  $class object id $id property $property did not return a scalar value");
+                return;
+            }
+
+            push @obj_values, $value;
+        }
+
+        my @sub_ds_name_parts;
+        for (my $i = 0; $i < @obj_values; $i++) {
+            push @sub_ds_name_parts, $required_for_get->[$i] . $obj_values[$i];
+        }
+        my $sub_ds_id = join('::', $self->id, @sub_ds_name_parts);
+
+        my $sub_ds = $datasource_for_dsid{$sub_ds_id} || $concrete_ds_type->get($sub_ds_id);
+        unless ($sub_ds) {
+            my $file_path = $file_resolver->(@obj_values);
+            unless (defined $file_path) {
+                die "Can't resolve data source: resolver for " .
+                    $self->class .
+                    " returned undef for params " . join(',',@obj_values);
+            }
+
+            if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+                $self->sql_fh->print("FILEMux: $file_path is data source $sub_ds_id\n");
+            }
+
+            $concrete_ds_type->define(
+                          id => $sub_ds_id,
+                          %sub_ds_params,
+                          server => $file_path,
+                      );
+            $UR::Context::all_objects_cache_size++;
+            $sub_ds = $concrete_ds_type->get($sub_ds_id);
+
+            # Since these $sub_ds objects have no data_source, this will indicate to
+            # UR::Context::prune_object_cache() that it's ok to go ahead and drop them
+            $sub_ds->weaken();
+        }
+        unless ($sub_ds) {
+            die "Can't get data source with ID $sub_ds_id";
+        }
+        $datasource_for_dsid{$sub_ds_id} ||= $sub_ds;
+
+
+        unless ($objects_by_datasource{$sub_ds_id}) {
+            $objects_by_datasource{$sub_ds_id}->{'ds_obj'} = $sub_ds;
+            $objects_by_datasource{$sub_ds_id}->{'changed_objects'} = [];
+        }
+        push(@{$objects_by_datasource{$sub_ds_id}->{'changed_objects'}}, $obj);
+    }
+
+    foreach my $h ( values %objects_by_datasource ) {
+        my $sub_ds = $h->{'ds_obj'};
+        my $changed_objects = $h->{'changed_objects'};
+
+        $sub_ds->_sync_database(changed_objects => $changed_objects);
+    }
+
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        $self->sql_fh->printf("FILEMux: TOTAL COMMIT TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+    }
+
+    return 1;
+}
+
+
+            
 
 1;
 
