@@ -490,7 +490,7 @@ do {
 
 require UR::Moose;          # a no-op unless UR_MOOSE is set to true currently
 require UR::ModuleLoader;   # signs us up with Class::Autouse
-
+require UR::Value::Iterator;
 
 sub main::ur_core {
     print STDERR "Dumping rules and templates to ./ur_core.stor...\n";
@@ -515,7 +515,7 @@ __END__
 
 =head1 NAME
 
-UR - The base module for the UR framework
+UR - rich declarative non-hierarchical transactional objects
 
 =head1 VERSION
 

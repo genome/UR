@@ -770,7 +770,6 @@ sub mk_object_set_accessors {
             }
         }
         else {
-            die "value iterator not implemented.  its simple!  please do it...";
             return UR::Value::Iterator->create_for_value_arrayref($self->{$plural_name} || []);
         }
     };
@@ -780,6 +779,29 @@ sub mk_object_set_accessors {
         code => $iterator_accessor,
     });
     
+    my $set_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_set' => sub {
+        my $self = shift;
+        $rule_resolver->($self) unless ($rule_template);
+        if ($rule_template) {
+            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
+            if (@_ or @where) {
+                return $r_class_name->define_set($rule->params_list,@where,@_);
+            } else {
+                return $rule; 
+            }
+        }
+        else {
+            # this is a bit inside-out, but works for primitives
+            my @members = $self->$plural_name;
+            return UR::Value->define_set(id => \@members);
+        }
+    };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $singular_name . '_set',
+        code => $set_accessor,
+    });
+
     # These will behave specially if the rule does not specify the ID, or all of the ID.
     my @params_prefix;
     my $params_prefix_resolved = 0;
