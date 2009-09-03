@@ -9,15 +9,15 @@ class UR::Object::Command::FetchAndDo {
     is => 'Command',
     is_abstract => 1,
     has => [
-    subject_class => {
-        is => 'UR::Object::Type', 
-        id_by => 'subject_class_name',
-    }, 
-    filter => {
-        is => 'Text',  
-        is_optional => 1,
-        doc => 'Filter results based on the parameters.  See below for how to.'
-    },
+        subject_class => {
+            is => 'UR::Object::Type', 
+            id_by => 'subject_class_name',
+        }, 
+        filter => {
+            is => 'Text',  
+            is_optional => 1,
+            doc => 'Filter results based on the parameters.  See below for how to.'
+        },
     ], 
 };
 
@@ -276,4 +276,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 =cut
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/FetchAndDo.pm $
-#$Id: FetchAndDo.pm 36363 2008-07-09 16:49:57Z eclark $#
+#$Id: FetchAndDo.pm 37193 2008-08-02 19:52:35Z ssmith $#
