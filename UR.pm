@@ -580,7 +580,7 @@ Create a class to represent CDs, in CdExample/Cd.pm
         id_by => 'cd_id',
         has => [
             artist => { is => 'CdExample::Artist', id_by => 'artist_id' },
-            title  => { is => 'String' },
+            title  => { is => 'Text' },
             year   => { is => 'Integer' },
             artist_name => { via => 'artist', to => 'name' },
         ],
@@ -659,16 +659,17 @@ UR uses several environment variables to change its behavior.
 
 =over 4
 
-=item UR_CONTEXT_BASE <string>
-
-The name of the base Context to instantiate when the program initializes.  It
-defaults to whatever Root context exists.
-
 =item UR_CONTEXT_ROOT <string>
 
 The name of the Root context to instantiate when the program initializes.
 The default is UR::Context::DefaultRoot.  Other Root Contexts can be used,
 for example, to connect to alternate databases when running in test mode.
+
+=item UR_CONTEXT_BASE <string>
+
+This value only changes in a sub-process which goes to its parent
+process for object I/O instead of the root (which is the default
+value for the base context in an application).
 
 =item UR_CONTEXT_CACHE_SIZE_HIGHWATER <integer>
 
@@ -684,7 +685,9 @@ L<UR::Context/object_cache_size_lowwater>
 
 If this is true, most interactions with data sources such as connecting,
 disconnecting and querying will print messages to STDERR.  Same as
-C<UR::DBI-E<gt>monitor_sql()>.
+C<UR::DBI-E<gt>monitor_sql()>.  Note that this affects non-DBI
+data sources as well, such as file-based data sources, which will
+render file I/O information instead of SQL.
 
 =item UR_DBI_MONITOR_EVERY_FETCH <bool>
 
@@ -773,21 +776,48 @@ XML::Simple
 
 =head1 AUTHORS
 
- Scott Smith  ssmith@genome.wustl.edu
- Anthony Brummett abrummet@genome.wustl.edu
- Todd Hepler thepler@genome.wustl.edu
+UR was built by the software development team at the Washington
+University Genome Center.  Incarnations of it run laboratory
+automation and analysis systems for high-throughput genomics.
 
+ Scott Smith         sakoht@cpan.org
+ Anthony Brummet      
+ 
+ Craig Pohl
+ Todd Hepler
+ Ben Oberkfell
+ Kevin Crouse
+ Adam Dukes
+ Indraniel Das
+ Shin Leong
+ Eddie Belter
+ Ken Swanson
+ Scott Abbott
+ Alice Diec
+ William Schroeder
+ Eric Clark
+ Shawn Leonard
+ Lynn Carmichael
+ Jason Walker
+ Amy Hawkins
+ Gabe Sanderson
+ James Weible
+ James Eldred
+ Michael Kiwala
+ Mark Johnson
+ Kyung Kim
+ Jon Schindler
+ Justin Lolofie
+ Chris Harris
+ Jerome Peirick
+ Ryan Richt
+ John Osborne
+ David Dooling
+ 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (C) 2009, Washington University in St. Louis
+Copyright (C) 2002-2009 Washington University in St. Louis
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+This sofware is licensed under the same terms as Perl itself.
+See the LICENSE file in this distribution.
 
