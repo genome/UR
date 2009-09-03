@@ -47,7 +47,8 @@ $DB::single=1;
                             aspects => ['is_id', 'property_name', 'column_name', 'data_type', 'is_optional' ],
                         },
                         'Relationships' => {
-                            method => 'reference_metas',
+                            method => 'all_reference_metas',
+                            subject_class_name => 'UR::Object::Reference',
                             perspective => 'description line item',
                             toolkit => 'text',
                         }

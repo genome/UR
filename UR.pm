@@ -310,6 +310,7 @@ UR::Object::Type->define(
         # Reference objects
         reference_metas                  => { type => 'UR::Object::Reference', reverse_id_by => 'class_meta', is_many => 1 },
         reference_property_metas         => { type => 'UR::Object::Reference::Property', via => 'reference_metas', to => 'reference_property_metas', is_many => 1 },
+        all_reference_metas              => { via => 'all_class_metas', to => 'reference_metas', is_many => 1 },
         
     ],    
     unique_constraints => [

@@ -49,6 +49,7 @@ sub _update_widget_from_subject {
                     $value = $delegate_viewer->buf();
                 }
             }
+            no warnings 'uninitialized';
             $aspect_text .= join(", ", @value);
         }
         else {
