@@ -159,7 +159,6 @@ ok($trans, "CREATED PERSON and began transaction");
         # FIXME The test should probably break out each type of changed thing and check
         # that the counts of each type are correct, and not just the count of all changes
         my $changes_as_hash = convert_change_list_for_checking(@changes);
-$DB::single=1;
         is_deeply($changes_as_hash, $check_changes_1, "Change list is correct");
 
         my $personclass = UR::Object::Type->get('URT::Person');
@@ -185,7 +184,6 @@ $DB::single=1;
 
         ok(! UR::Object::Type->get('URT::NonExistantClass'), 'Correctly cannot load a non-existant class');
 
-        $DB::single = 1;
         $trans->rollback;
         ok($trans->isa("UR::DeletedRef"), "rolled-back transaction");
         is(cached_dd_object_count(), $expected_dd_object_count, "no data dictionary objects cached after rollback");
@@ -300,11 +298,6 @@ ok($trans, "DROPPED EMPLOYEE AND UPDATED PERSON began transaction");
     is(scalar(@changes), 15, "found changes for two more dropped tables");
 
 
-#    $trans->rollback;
-#    ok($trans->isa("UR::DeletedRef"), "rolled-back transaction");
-#    is(cached_dd_object_count(), $expected_dd_object_count, "no data dictionary objects cached after rollback");
-#
-#$DB::single = 1;
 $trans = UR::Context::Transaction->begin();
 ok($trans, "Restarted transaction since some data is not really sync'd at sync_filesystem");
 ok($command_obj->execute(), 'Updating schema anew.');
