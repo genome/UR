@@ -259,7 +259,10 @@ sub exit_code_for_return_value
 sub help_brief 
 {
     my $self = shift;
-    if ($self->is_sub_command_delegator) {
+    if (my $doc = $self->get_class_object->doc) {
+        return $doc;
+    }
+    elsif ($self->is_sub_command_delegator) {
         my @names = $self->sub_command_names;
         if (@names) {
             return ""
@@ -267,9 +270,6 @@ sub help_brief
         else {
             return "no sub-commands implemented!"
         }
-    }
-    if (my $doc = $self->get_class_object->doc) {
-        return $doc;
     }
     else {
         return "no description!!!: define 'doc' in $self";
@@ -296,7 +296,7 @@ sub help_detail
 sub sub_command_sort_position 
 { 
     # override to do something besides alpha sorting by name
-    return $_[0]->command_name_brief;
+    return '9999999999 ' . $_[0]->command_name_brief;
 }
 
 
@@ -737,7 +737,7 @@ sub help_sub_commands
     local  $Text::Wrap::columns = 60;
     my @data =
     map {
-        my @rows = split("\n",Text::Wrap::wrap('', ' ', ucfirst $_->help_brief));
+        my @rows = split("\n",Text::Wrap::wrap('', ' ', $_->help_brief));
         chomp @rows;
         (
             [
@@ -968,10 +968,15 @@ sub sub_command_classes
     @paths = 
         grep { s/\.pm$// } 
         map { glob("$_/*") } 
+        grep { -d $_ }
         grep { defined($_) and length($_) } 
         @paths;
     return unless @paths;
     my @classes =
+        grep {
+            ($_->is_sub_command_delegator or !$_->is_abstract) 
+        }
+        grep { $_->isa('Command') }
         map { $class->class_for_sub_command($_) }
         map { s/_/-/g; $_ }
         map { basename($_) }
@@ -1174,4 +1179,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 41122 2008-11-18 20:50:23Z ebelter $
+#$Id: Command.pm 41274 2008-11-23 01:46:19Z ssmith $
