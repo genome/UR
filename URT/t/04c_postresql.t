@@ -5,7 +5,9 @@ use Test::More skip_all => "enable after configuring PostgreSQL";
 
 use URT; # dummy namespace
 
-my $dbh = URT::DataSource::SomePostgreSQL->get_default_dbh;
+my $dbh = URT::DataSource::SomePostgreSQL->get_default_handle;
 ok($dbh, "got a handle");
+isa_ok($dbh, 'UR::DBI::db', 'Returned handle is the proper class');
+
 
 1;

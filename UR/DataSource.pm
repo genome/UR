@@ -327,7 +327,7 @@ sub _generate_template_data_for_loading {
         
     if ( my @errors = keys(%filters) ) { 
         my $class_name = $class_meta->class_name;
-        $self->error_message("Unknown param(s) >@errors< used to generate SQL for $class_name!");
+        $self->error_message('Unknown param(s) (' . join(',',@errors) . ") used to generate SQL for $class_name!");
         Carp::confess();
     }
 
@@ -919,6 +919,8 @@ sub _set_object_saved_rolled_back {
 }
 
 
+# These are part of the basic DataSource API.  Subclasses will want to override these
+
 sub _sync_database {
     my $class = shift;
     my %args = @_;
@@ -945,6 +947,11 @@ sub rollback {
 
     $class->warning_message("rollback() ignored for data source $class");
     return 1;
+}
+
+# basic, dumb datasources do not have a handle
+sub get_default_handle {
+    return;
 }
 
 

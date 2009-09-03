@@ -73,7 +73,7 @@ sub dbi_data_source_name {
     return 'dbi:' . $driver . ':' . $server;
 }
 
-sub get_default_dbh {    
+sub get_default_handle {    
     my $self = shift->_singleton_object;    
     my $dbh = $self->_default_dbh;
     unless ($dbh && $dbh->{Active}) {
@@ -82,12 +82,15 @@ sub get_default_dbh {
     }    
     return $dbh;
 }
+*get_default_dbh = \&get_default_handle;
 
-sub has_default_dbh {
+sub has_default_handle {
     my $self = shift->_singleton_object;
     return 1 if $self->_default_dbh;
     return;
 }
+*has_default_dbh = \&has_default_handle;
+
 
 sub disconnect_default_dbh {
     my $self = shift->_singleton_object;
