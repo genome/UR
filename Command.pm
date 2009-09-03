@@ -3,26 +3,31 @@ package Command;
 use strict;
 use warnings;
 
+use UR;
 use Data::Dumper;
 use File::Basename;
 use Getopt::Long;
 use Term::ANSIColor;
-
-use UR::Object::Type;
 
 eval {
     binmode STDOUT, ":utf8";
     binmode STDERR, ":utf8";
 };
 
+# NOTE: the "class {}" syntax only works for things _under_ a UR namespace pm
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is_abstract => 1,
+    attributes_have => [
+        is_input    => { is => 'Boolean', is_optional => 1 },
+        is_output   => { is => 'Boolean', is_optional => 1 },
+        is_param    => { is => 'Boolean', is_optional => 1 },        
+    ],
     has => [
         bare_args   => { is => 'ARRAY', is_optional => 1 },
         is_executed => { is => 'Boolean', is_optional => 1 },
-        result      => { is => 'Scalar', is_optional => 1 },
-    ]
+        result      => { is => 'Scalar', is_optional => 1, is_output => 1 },
+    ],
 );
 
 sub _init_subclass {
