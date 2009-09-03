@@ -3,6 +3,8 @@ package UR::Object::Iterator;
 use strict;
 use warnings;
 
+our @CARP_NOT = qw( UR::Object );
+
 # These are no longer UR Objects.  They're regular blessed references that
 # get garbage collected in the regular ways
 
