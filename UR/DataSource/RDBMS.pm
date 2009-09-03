@@ -1,4 +1,5 @@
 package UR::DataSource::RDBMS;
+
 use strict;
 use warnings;
 use Scalar::Util;
@@ -24,32 +25,69 @@ UR::Object::Type->define(
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
+
+sub database_exists {
+    my $self = shift;
+    warn $self->class . " failed to implement the database_exists() method.  Testing connection as a surrogate.  FIXME here!\n";
+    eval {
+        my $c = $self->create_dbh();
+    };
+    if ($@) {
+        return;
+    }
+    return 1;
+}
+
+
+sub create_database {
+    my $self = shift;
+    die $self->class . " failed to implement the create_database() method!"
+        . "  Unable to initialize a new database for this data source "
+        . $self->__display_name__ . " FIXME here.\n";
+}
+
+
 sub _resolve_ddl_for_table {
     my ($self,$table) = @_;
 
-    my $table_name = $table->table_name;    
+    my $table_name = $table->table_name;
 
-    my $ddl;
-    
+    my @ddl;
+
     if ($table->{db_committed}) {
-        #$ddl = "alter table $table_name ";
+        my @columns = $table->columns;
+        for my $column (@columns) {
+            next unless $column->last_object_revision eq '-';
+            my $column_name = $column->column_name;
+            my $ddl = "alter table $table_name add column ";
+
+            $ddl .= "\t$column_name " . $column->data_type;
+            if ($column->data_length) {
+                $ddl .= '(' . $column->data_length . ')';
+            }
+            push @ddl, $ddl;
+        }
     }
     else {
+        my $ddl;
         my @columns = $table->columns;
         for my $column (@columns) {
             next unless $column->last_object_revision eq '-';
             my $column_name = $column->column_name;
             $ddl = 'create table ' . $table_name . "(\n" unless defined $ddl;
+
             $ddl .= "\t$column_name " . $column->data_type;
             if ($column->data_length) {
                 $ddl .= '(' . $column->data_length . ')';
             }
+
             $ddl .= ",\n" unless $column eq $columns[-1];
         }
         $ddl .= "\n)" if defined $ddl;
+        push @ddl, $ddl;
     }
 
-    return $ddl;
+    return @ddl;
 }
 
 sub generate_schema_for_class_meta {
@@ -59,7 +97,8 @@ sub generate_schema_for_class_meta {
     # this gets called with the temp flag when _sync_database realizes 
     # it knows nothing about the table in question.
     
-    # We basically presume the schema is the one we would have generated if
+    # We basically presume the schema is the one we would have generated 
+    # given the current class definitions
     # TODO: We still need to presume foreign keys are constrained.
     my $method = ($temp ? '__define__' : 'create'); 
 
@@ -79,7 +118,7 @@ sub generate_schema_for_class_meta {
     my $table_name = $class_meta->table_name;
     unless ($table_name) {
         if (my @column_names = keys %properties_with_expected_columns) {
-            die "class " . $class_meta->__display_name__ . " has no table_name specified for columns @column_names!";
+            Carp::confess "class " . $class_meta->__display_name__ . " has no table_name specified for columns @column_names!";
         }
         else {
             # no table, but no storable columns.  all ok.
@@ -108,6 +147,7 @@ sub generate_schema_for_class_meta {
             map { $_->column_name => $_ } 
             grep { $_->column_name }
             $table->columns;
+        push @defined, ($table,$table->columns);
     }
     else {
         ## print "adding table $table_name\n";
@@ -120,19 +160,20 @@ sub generate_schema_for_class_meta {
             last_object_revision => $t,
             table_type => ($table_name =~ /\s/ ? 'view' : 'table'),
         );
-        die unless $table;
+        Carp::confess("Failed to create metadata or table $table_name") unless $table;
         push @defined, $table;
     }
 
     my ($update,$add,$extra) = _intersect_lists([keys %properties_with_expected_columns],[keys %existing_columns]);
 
     for my $column_name (@$extra) {
-        $self->warning_message("unused table column: $table_name.$column_name\n");
+        my $column = $existing_columns{$column_name};
+        $column->last_object_revision('?');
     }   
    
     for my $column_name (@$add) {
         my $property = $properties_with_expected_columns{$column_name}; 
-        print "adding column $column_name\n";
+        #print "adding column $column_name\n";
         my $column = UR::DataSource::RDBMS::TableColumn->$method(
             column_name => $column_name,
             table_name => $table->table_name,
@@ -161,7 +202,6 @@ sub generate_schema_for_class_meta {
         $column->data_length($property->data_length);
         $column->nullable($property->is_optional);
         $column->remarks($property->doc);
-        $column->last_object_revision($t);
     }
 
     # handle missing meta datasource on the fly...
@@ -173,14 +213,15 @@ sub generate_schema_for_class_meta {
         }
     }
 
-    my $ddl = $self->_resolve_ddl_for_table($table);
-    ##print "DDL2: $ddl\n";
+    my @ddl = $self->_resolve_ddl_for_table($table);
     $t = UR::Time->now;
-    if (defined($ddl)) {
+    if (@ddl) {
         my $dbh = $table->data_source->get_default_handle;
-        $dbh->do($ddl) or die "Failed to modify the database schema!";
-        for my $o ($table, $table->columns) {
-            $o->last_object_revision($t);
+        for my $ddl (@ddl) {
+            $dbh->do($ddl) or Carp::confess("Failed to modify the database schema!: $ddl\n" . $dbh->errstr);
+            for my $o ($table, $table->columns) {
+                $o->last_object_revision($t);
+            }
         }
     }
 
@@ -371,8 +412,8 @@ sub create_dbh {
     if ($self->can("_init_created_dbh")) {
         unless ($self->_init_created_dbh($dbh)) {
             $dbh->disconnect;
-            die "Failed to initialize new database connection!\n"
-                . $self->error_message . "\n";
+            Carp::confess("Failed to initialize new database connection!\n"
+                . $self->error_message . "\n");
         }
     }
 
@@ -609,7 +650,7 @@ sub refresh_database_metadata_for_table_name {
     my $table_sth = $data_source->get_table_details_from_data_dictionary('%', $data_source->owner, $table_name, "TABLE,VIEW");
     my $table_data = $table_sth->fetchrow_hashref();
     unless ($table_data && %$table_data) {
-        $self->error_message("No data for table $table_name in data source $data_source.");
+        #$self->error_message("No data for table $table_name in data source $data_source.");
         return;
     }
 
@@ -1222,7 +1263,7 @@ sub create_iterator_closure_for_rule {
         Carp::confess($class->error_message);
     }
     
-    die unless $sth;
+    die unless $sth;   # FIXME - this has no effect, right?  
 
     $self->__signal_change__('query',$sql);
 
