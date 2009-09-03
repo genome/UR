@@ -751,7 +751,6 @@ sub sub_command_dirs
 
 sub sub_command_classes
 {
-    $DB::single=1;
     my $class = shift;
     my @paths = $class->sub_command_dirs;
     return unless @paths;
