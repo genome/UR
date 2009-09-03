@@ -410,6 +410,7 @@ sub prune_object_cache {
     foreach my $class ( keys %$UR::Context::all_objects_loaded ) {
         next if (substr($class,0,-6) eq '::Type'); # skip class objects
 
+        next unless exists $UR::Context::all_objects_loaded->{$class . '::Type'};
         my $class_meta = $UR::Context::all_objects_loaded->{$class . '::Type'}->{$class};
         next unless $class_meta;
         next unless ($class_meta->is_uncachable());
