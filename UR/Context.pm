@@ -459,13 +459,21 @@ sub get_objects_for_class_and_rule {
         # this returns objects from the underlying context after importing them into the current context
         my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule,$ds);
         
+        my %loaded_ids;
         # this will interleave the above with any data already present in the current context
         $loading_iterator = sub {
+            GET_FROM_UNDERLYING_CONTEXT:
             my ($next_obj_current_context) = shift @$cached;
             my ($next_obj_underlying_context) = $underlying_context_closure->(1) if $underlying_context_closure;
             if (!$next_obj_underlying_context) {
                 $underlying_context_closure = undef;
+
+            } elsif ($loaded_ids{$next_obj_underlying_context->id}++) {
+                # during a get() with -hints, it's possible that the join can produce the same main object
+                # as it's chewing through the (possibly) multiple objects joined to it
+                goto GET_FROM_UNDERLYING_CONTEXT;
             }
+
             
             # decide which pending object to return next
             # both the cached list and the list from the database are sorted separately,
