@@ -639,6 +639,7 @@ sub _normalize_property_description {
         [ doc                             => qw/description/],
         [ is_optional                     => qw/is_nullable nullable optional/],
         [ is_transient                    => qw//],
+        [ is_volatile                     => qw//],
         [ is_constant                     => qw//], 
         [ is_class_wide                   => qw//], 
         [ is_delegated                    => qw//],

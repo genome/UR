@@ -93,7 +93,7 @@ sub data_source {
         or $caller eq 'UR::Object::changed'
         or $caller eq 'UR::Object::invalid'
         or $caller eq 'UR::Object::Type::resolve_class_description_perl'
-        or $caller eq 'UR::Command::Update::Classes::_update_class_metadata_objects_to_match_database_metadata_changes'
+        or $caller eq 'UR::Namespace::Command::Update::Classes::_update_class_metadata_objects_to_match_database_metadata_changes'
     ) {
         Carp::cluck("Attempt to access the data_source property of a class in $caller. "
             . "Calls should instead go to the current context:")

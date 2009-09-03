@@ -1067,6 +1067,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 data_type      => $column->data_type,
                 data_length    => $column->data_length,
                 is_optional    => $column->nullable eq "Y" ? 1 : 0,
+                is_volatile    => 0,
                 doc            => $column->remarks,
                 is_specified_in_module_header => 1, 
             );
@@ -1119,7 +1120,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my @properties = UR::Object::Property->get(class_name => $class_name);
 
         unless (@properties) {
-            print "no properties on class $class_name?";
+            $self->warning_message("no properties on class $class_name?");
             #$DB::single = 1;
         }
 
@@ -1665,7 +1666,7 @@ sub _update_database_metadata_objects_for_table_changes {
     }
     
     for my $to_delete (values %columns_to_delete) {
-        $self->status_message("Detected column " . $to_delete->column_name . " is gone away");
+        $self->status_message("Detected column " . $to_delete->column_name . " has gone away.");
         $to_delete->delete;
     }
 
