@@ -36,7 +36,6 @@ This module subclasses DBI, and provides a few extra methods useful when using a
 require 5.6.0;
 use warnings;
 use strict;
-no strict qw(refs);
 our $VERSION = '0.1';
 
 # set up module
@@ -54,88 +53,46 @@ use Time::HiRes;
 # UR::DBI control flags
 #
 
-# the --dump-sql cmndline option
-my $monitor_sql = ($ENV{UR_DBI_MONITOR_SQL} ||= 0);
-sub monitor_sql
-{ 
-    if (@_ > 1) {
-        $monitor_sql = $_[1];
-        $ENV{UR_DBI_MONITOR_SQL} = $_[1];
-    }        
-    return $monitor_sql;
+# Build a few class methods to manipulate the environment variables
+# that control SQL monitoring
+
+my %sub_env_map = ( monitor_sql => 'UR_DBI_MONITOR_SQL',
+                    monitor_dml => 'UR_DBI_MONITOR_DML',
+                    explain_sql_if => 'UR_DBI_EXPLAIN_SQL_IF',
+                    explain_sql_slow => 'UR_DBI_EXPLAIN_SQL_SLOW',
+                    explain_sql_match => 'UR_DBI_EXPLAIN_SQL_MATCH',
+                    no_commit => 'UR_DBI_NO_COMMIT',
+                    monitor_every_fetch => 'UR_DBI_MONITOR_EVERY_FETCH',
+                  );
+while ( my($subname, $envname) = each ( %sub_env_map ) ) {
+    no strict 'refs';
+    # There's a scalar of the same name as the sub to hold the value, hook them together
+    *{$subname} = \$ENV{$envname};
+    my $subref = sub {
+                      if (@_ > 1) {
+                          $$subname = $_[1];
+                      }
+                      return $$subname;
+                  };
+    *$subname = $subref;
 }
 
-my $monitor_dml = ($ENV{UR_DBI_MONITOR_DML} ||= 0);
-sub monitor_dml{ 
-    if (@_ > 1) {
-        $monitor_dml = $_[1];
-        $ENV{UR_DBI_MONITOR_DML} = $_[1];
-    }        
-    return $monitor_dml;
-}
+# I guess there's no way to make a "dynamic" our or use vars so the loop below
+# can define them, and the code in the rest of this file won't complain...
+our ($monitor_sql,$monitor_dml,$no_commit,$monitor_every_fetch,
+     $explain_sql_slow,$explain_sql_if,$explain_sql_match) = (0,0,0,0,'','','');  # includes the default values
 
-# developer-only conditional expression eval'd on each first fetch
-my $explain_sql_if = ($ENV{UR_DBI_EXPLAIN_SQL_IF} ||= '');
-sub explain_sql_if
-{ 
-    if (@_ > 1) {
-        $explain_sql_if = $_[1];
-        $ENV{UR_DBI_EXPLAIN_SQL_IF} = $_[1];
-    }        
-    return $explain_sql_if;
-}
 
-# explain query plan when the time exceeds this value
-my $explain_sql_slow = ($ENV{UR_DBI_EXPLAIN_SQL_SLOW} ||= '');
-sub explain_sql_slow
-{ 
-    if (@_ > 1) {
-        $explain_sql_slow = $_[1];
-        $ENV{UR_DBI_EXPLAIN_SQL_SLOW} = $_[1];
-    }        
-    return $explain_sql_slow;
-}
-
-# explain query plan when the sql matches this regex
-my $explain_sql_match = ($ENV{UR_DBI_EXPLAIN_SQL_MATCH} ||= '');
-sub explain_sql_match
-{ 
-    if (@_ > 1) {
-        $explain_sql_match = $_[1];
-        $ENV{UR_DBI_EXPLAIN_SQL_MATCH} = $_[1];
-    }        
-    return $explain_sql_match;
-}
-
-# set flag to not commit changes
-our $no_commit = ($ENV{UR_DBI_NO_COMMIT} ||= 0);
-sub no_commit
-{
-    my $class = shift;
-    if (@_) {
-        ($no_commit) = @_;
-        ($ENV{UR_DBI_NO_COMMIT}) = @_;
-    }
-    return $no_commit;
-}
 
 # by default, monitored SQL goes to STDOUT
-my $sql_fh = IO::Handle->new;
+# FIXME change this 'our' back to a 'my' after we're transisitioned off of the old App API
+our $sql_fh = IO::Handle->new;
 $sql_fh->fdopen(fileno(STDERR), 'w');
 $sql_fh->autoflush(1);
 sub sql_fh
 {
     $sql_fh = $_[1] if @_ > 1;
     return $sql_fh;
-}
-
-my $monitor_every_fetch = $ENV{UR_DBI_MONITOR_EVERY_FETCH} ||= 0;
-sub monitor_every_fetch {
-    if (@_ > 1) {
-        $monitor_every_fetch = $_[1];
-        $ENV{UR_DBI_MONITOR_EVERY_FETCH} = $_[1];
-    }
-    return $monitor_every_fetch;
 }
 
 #

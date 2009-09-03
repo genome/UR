@@ -1933,7 +1933,6 @@ sub _set_object_saved_committed {
 sub _set_all_objects_saved_rolled_back {
     # called by UR::DBI on commit
     my $self = shift;
-    $DB::single = 1;
     my @objects = $self->_get_current_entities;        
     for my $obj (@objects)  {
         unless ($self->_set_object_saved_rolled_back($obj)) {
