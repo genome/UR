@@ -60,8 +60,13 @@ sub for_each_module_file {
     my $namespace_name = $self->namespace_name;
     my %libs_before = map { $_ => 1 } @INC;
     my %mods_before = %INC if $self->summarize_externals;
+
     local $SIG{__DIE__};
+    local $ENV{UR_DBI_MONITOR_SQL} = 1;
+    local $ENV{APP_DBI_MONITOR_SQL} = 1;
+
     eval "require '$module_file'";
+
     my %new_libs = map { $_ => 1 } grep { not $libs_before{$_} } @INC;
     my %new_mods = 
         map { $_ => $module_file } 
