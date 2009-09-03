@@ -1811,7 +1811,7 @@ sub _default_save_sql_for_object {
                 push @values, $changes_for_this_table->{$property};
             }
             
-            $object_to_save->debug_message("Changed cols: @changed_cols", 4);
+            #$object_to_save->debug_message("Changed cols: @changed_cols", 4);
             
             if (@changed_cols)
             {
