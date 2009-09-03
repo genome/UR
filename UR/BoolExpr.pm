@@ -229,6 +229,8 @@ sub add_filter {
     return __PACKAGE__->resolve_for_class_and_params($self->subject_class_name, $self->params_list, @_);
 }
 
+# FIXME this method seems misnamed.... it doesn't remove a filter on a rule, it returns 
+# a new rule with all the same filters as the original one, less the one you specified
 sub remove_filter {
     my $self = shift;
     my $property_name = shift;
