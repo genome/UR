@@ -6,7 +6,7 @@ package UR::DataSource::RDBMS::Table;
 use UR::Object::Type;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::Table',
-    is => ['UR::Entity'],
+    is => ['UR::DataSource::RDBMS::Entity'],
     english_name => 'dd table',
     dsmap => 'dd_table',
     id_properties => [qw/data_source owner table_name/],
@@ -42,25 +42,13 @@ UR::DataSource::Meta::RDBMS::Table - Object-oriented class for RDBMS table objec
 
 =head1 DESCRIPTION
 
-This is the old POD for App::DB::Table.  Some of it does not apply to
-UR::DataSource::Meta::RDBMS::Table.
-
-Objects of this class are instantiated from the default application database
-on demand to represent tables in the current database schema.
-
-When a table object is first created, its associated table column (App::DB::TableColumn)
-and foreign key constraint (App::DB::FKConstraint) objects are also created.  Object
-creation also causes the automatic instantiation of a new class to represent objects
-stored in the given database table.  In most cases, the developer does not interact
-with these objects.  When an unknown class is referenced, a table object is created
-to cause the instantiation of the class which stores data in the table.
-
-This class inherits from UR::Object, from which most of its general external
-methods are inherited.
+Objects of this class represent a table in another database.  They are 
+primarily used by the class updating logic in the command line tool
+C<ur update classes>, but can be retrieved and used in any application.
+Their instances come from from the MetaDB (L<UR::DataSource::Meta>) which
+is partitioned and has one physical database per Namespace.
 
 =cut
-
-
 
 sub _related_class_name {
 my($self,$subject) = @_;
@@ -148,7 +136,7 @@ my $self = shift;
 
 
 sub primary_key_constraint_column_names {
-    return map { $_->column_name } shift->primary_key_constraint_columns;
+    return map { uc($_->column_name) } shift->primary_key_constraint_columns;
 }
 
 

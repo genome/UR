@@ -6,7 +6,7 @@ package UR::DataSource::RDBMS::FkConstraintColumn;
 use UR;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::FkConstraintColumn',
-    is => ['UR::Entity'],
+    is => ['UR::DataSource::RDBMS::Entity'],
     english_name => 'dd fk constraint column',
     dsmap => 'dd_fk_constraint_column',
     er_role => 'bridge',

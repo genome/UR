@@ -6,7 +6,7 @@ package UR::DataSource::RDBMS::BitmapIndex;
 use UR;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::BitmapIndex',
-    is => ['UR::Entity'],
+    is => ['UR::DataSource::RDBMS::Entity'],
     english_name => 'dd bitmap index',
     dsmap => 'dd_bitmap_index',
     er_role => '',

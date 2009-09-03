@@ -105,7 +105,7 @@ sub resolve_data_sources_for_class_meta_and_rule {
     my $data_source;
 
     # For data dictionary items
-    if ($class_name =~ m/^UR::DataSource::RDBMS::(.*)/) {
+    if ($class_name->isa('UR::DataSource::RDBMS::Entity')) {
         if (!defined $boolexpr) {
             $DB::single=1;
         }
@@ -153,9 +153,7 @@ sub resolve_data_source_for_object {
     my $class_meta = $object->get_class_object;
     my $class_name = $class_meta->class_name;
     
-    # FIXME this pattern match is going to get called a lot.
-    # Make up something that's faster to do the job
-    if ($class_meta->class_name =~ m/^UR::DataSource::RDBMS::/) {
+    if ($class_name->isa('UR::DataSource::RDBMS::Entity')) {
         my $data_source = $object->data_source;
         my($namespace) = ($data_source =~ m/(^\w+?)::DataSource/);
         my $ds_name = $namespace . '::DataSource::Meta';
@@ -887,6 +885,7 @@ sub _create_secondary_loading_closures {
 
     my $loading_templates = $primary_template->{'loading_templates'};
 
+$DB::single=1;
     # Make a mapping of property name to column positions returned by the primary query
     my %primary_query_column_positions;
     foreach my $tmpl ( @$loading_templates ) {
@@ -1547,7 +1546,7 @@ sub _create_object_fabricator_for_loading_template {
         }
         
         unless (defined $pending_db_object_id) {
-            $DB::single = $DB::stopper;
+            #$DB::single = $DB::stopper;
             return undef;
             Carp::confess(
                 "no id found in object data for $class_name?\n" 

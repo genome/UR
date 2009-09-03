@@ -6,7 +6,7 @@ package UR::DataSource::RDBMS::TableColumn;
 use UR;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::TableColumn',
-    is => ['UR::Entity'],
+    is => ['UR::DataSource::RDBMS::Entity'],
     english_name => 'dd table column',
     dsmap => 'dd_table_column',
     er_role => '',
