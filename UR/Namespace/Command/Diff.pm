@@ -14,6 +14,7 @@ sub help_brief {
     "Show a diff for various kinds of other ur commands."
 }
 
+# FIXME - change to use tmpfile or in-memory filehandles
 sub for_each_class_object_delegate_used_by_sub_commands {
     my $self = shift;
     my $class = shift;

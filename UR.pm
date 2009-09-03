@@ -524,52 +524,250 @@ This document describes UR version 0.01
 
 =head1 SYNOPSIS
 
-use UR;
+First create a Namespace class for your application, Music.pm
 
-TODO
+    package CdExample;
+    use UR;
+    
+    class CdExample {
+        is => 'UR::Namespace'
+    };
+    
+    1;
+
+Next, define a data source representing your database, Music/DataSource/DB.pm
+
+    package CdExample::DataSource::DB;
+    use CdExample;
+    
+    class CdExample::DataSource::DB {
+        is => ['UR::DataSource::Mysql', 'UR::Singleton'],
+    };
+    
+    sub server { 'mysql.example.com' }
+    sub login { 'mysqluser' }
+    sub auth { 'mysqlpasswd' }
+    1;
+
+Create a class to represent artists, who have many CDs, in Music/Artist.pm
+
+    package CdExample::Artist;
+    use CdExample;
+
+    class Artist {
+        id_by => 'artist_id',
+        has => [ 
+            name => { is => 'String' },
+            cds  => { is => 'CdExample::Cd', is_many => 1, reverse_id_by => 'artist' }
+        ],
+        data_source => 'CdExample::DataSource::DB',
+        table_name => 'ARTISTS',
+    };
+    1;
+
+Create a class to represent CDs, in Music/Cd.pm
+
+    package CdExample::Cd;
+    use CdExample;
+            
+    class Cd {
+        id_by => 'cd_id',
+        has => [
+            artist => { is => 'CdExample::Artist', id_by => 'artist_id' },
+            title  => { is => 'String' },
+            year   => { is => 'Integer' },
+            artist_name => { via => 'artist', to => 'name' },
+        ],
+        data_source => 'CdExample::DataSource::DB',
+        table_name => 'CDS',
+    };
+    1;
+
+You can then use these classes in your application code
+
+    use CdExample;  # Loads the Namespace
+    
+    # get back all Artist objects
+    my @all_artists = CdExample::Artist->get();
+    # Iterate through Artist objects
+    my $artist_iter = CdExample::Artist->create_iterator();
+    # Get the first object off of the iterator
+    my $first_artist = $artist_iter->next();
+    
+    # Get a list of Artist objects where the name starts with 'John'
+    my @some_artists = CdExample::Artist->get(name => { operator => 'like',
+                                                        value => 'John%' });
+    
+    # This will use a JOIN with the ARTISTS table internally to filter
+    # the data in the database.  @some_cds will contain CdExample::Cd objects.
+    # As a side effect, related Artist objects will be loaded into the cache
+    my @some_cds = CdExample::Cd->get(year => '2001', 
+                                      artist_name => { operator => 'like',
+                                                       value => 'Bob%' });
+    my @artists_for_some_cds = map { $_->artist } @some_cds;
+    
+    # This will use a join to prefetch Artist objects related to the
+    # Cds that match the filter
+    my @other_cds = CdExample::Cd->get(title => { operator => 'like',
+                                                  value => '%White%' },
+                                       -hints => [ 'artist' ]);
+    my $other_artist_0 = $other_cds[0]->artist;  # already loaded so no query
+    
+    # create() instantiates a new object in the cache, but does not save 
+    # it in the database.  It will autogenerate its own cd_id
+    my $new_cd = CdExample::Cd->create(title => 'Cool Album',
+                                       year  => 2009 );
+    # Assign it to an artist; fills in the artist_id field of $new_cd
+    $first_artist->add_cd($new_cd);
+    
+    # Save all changes back to the database
+    UR::Context->commit;
   
 =head1 DESCRIPTION
 
-TODO
+UR is a class framework and object/relational mapper for Perl.  It starts
+with the familiar Perl meme of the blessed hash reference as the basis for
+object instances, and extends its capabilities with ORM (object-relational
+mapping) capabilities, object cache, more formal class definitions,
+metadata, documentation system, iterators, command line tools, etc. 
 
-=head1 INTERFACE 
+UR can handle multiple column primary and foreign keys, SQL joins involving
+class inheritance and relationships, and does its best to avoid querying
+the database unless the requested data has not been loaded before.  It has
+support for SQLite, Oracle, Mysql and Postgres databases, and the ability
+to use a text file as a table.
 
-TODO
+=head1 DOCUMENTATION
 
-=head1 DIAGNOSTICS
+L<UR::Manual> lists the other documentation pages in the UR distribution
 
-TODO
+=head1 Environment Variables
 
-=head1 CONFIGURATION AND ENVIRONMENT
+UR uses several environment variables to change its behavior.
 
-TODO
+=over 4
+
+=item UR_CONTEXT_BASE <string>
+
+The name of the base Context to instantiate when the program initializes.  It
+defaults to whatever Root context exists.
+
+=item UR_CONTEXT_ROOT <string>
+
+The name of the Root context to instantiate when the program initializes.
+The default is UR::Context::DefaultRoot.  Other Root Contexts can be used,
+for example, to connect to alternate databases when running in test mode.
+
+=item UR_CONTEXT_CACHE_SIZE_HIGHWATER <integer>
+
+Set the object count highwater mark for the object cache pruner.  See also
+L<UR::Context/object_cache_size_highwater>
+
+=item UR_CONTEXT_CACHE_SIZE_LOWWATER <integer>
+
+Set the object count lowwater mark for the object cache pruner.  See also
+L<UR::Context/object_cache_size_lowwater>
+
+=item UR_DBI_MONITOR_SQL <bool>
+
+If this is true, most interactions with data sources such as connecting,
+disconnecting and querying will print messages to STDERR.  Same as
+C<UR::DBI-E<gt>monitor_sql()>.
+
+=item UR_DBI_MONITOR_EVERY_FETCH <bool>
+
+Used in conjunction with UR_DBI_MONITOR_SQL, tells the data sources to also
+print messages to STDERR for each row fetched from the underlying data
+source. Same as C<UR::DBI-E<gt>monitor_every_fetch()>.
+
+=item UR_DBI_DUMP_STACK_ON_CONNECT <bool>
+
+Print a message to STDERR only when connecting to an underlying data source.
+Same as C<UR::DBI-E<gt>dump_stack_on_connect()>
+
+=item UR_DBI_EXPLAIN_SQL_MATCH <string>
+
+If the query to a data source matches the given string (interpreted as a
+regex), then it will attempt to do an "explain plan" and print the results
+before executing the query. Same as C<UR::DBI-E<gt>explain_sql_match()>
+
+=item UR_DBI_EXPLAIN_SQL_SLOW <float>
+
+If the time between a prepare and the first fetch of a query is longer than
+the given number of seconds, then it will do an "explain plan" and print the
+results.  Same as C<UR::DBI-E<gt>explain_sql_slow()>
+
+=item UR_DBI_EXPLAIN_SQL_CALLSTACK <bool>
+
+Used in conjunction with UR_DBI_EXPLAIN_SQL_MATCH and UR_DBI_EXPLAIN_SQL_SLOW,
+prints a stack trace with Carp::longmess.  Same as C<UR::DBI-E<gt>explain_sql_callstack()>
+
+=item UR_DBI_MONITOR_DML <bool>
+
+Like UR_DBI_MONITOR_SQL, but only prints information during data-altering
+statements, like INSERT, UPDATE or DELETE.  Same as C<UR::DBI-E<gt>monitor_dml()>
+
+=item UR_DBI_NO_COMMIT <bool>
+
+If true, data source commits will be ignored.  Note that saving still occurs.
+If you are working with a RDBMS database, this means During
+UR::Context->commit(), the insert, update and delete SQL statements will be
+issued, but the changes will not be committed.  Useful for testing.  Same
+as C<UR::DBI-E<gt>no_commit()>
+
+=item UR_USE_DUMMY_AUTOGENERATED_IDS <bool>
+
+If true, objects created without ID params will use a special algorithm to
+generate IDs.  Objects with these special IDs will never be saved to a
+data source.  Useful during testing.  Same as C<UR::DataSource-E<gt>use_dummy_autogenerated_ids>
+
+=back
 
 =head1 DEPENDENCIES
 
+Class::Autouse
+
+Cwd
+
+Data::Dumper
+
 Date::Calc
 
-Class::Autouse
+Date::Parse
+
+DBI
+
+File::Basename
+
+FindBin
+
+FreezeThaw
+
+Path::Class
+
+Scalar::Util
 
 Sub::Installer
 
 Sub::Name
 
-=head1 INCOMPATIBILITIES
+Sys::Hostname
 
-TODO
+Text::Diff
 
-=head1 BUGS AND LIMITATIONS
+Time::HiRes
 
-TODO
+XML::Simple
 
 =head1 AUTHORS
 
-<Scott Smith>  C<< <<ssmith@genome.wustl.edu>> >>
-<Todd Hepler>  C<< <<thepler@genome.wustl.edu>> >>
+ Scott Smith  ssmith@genome.wustl.edu
+ Anthony Brummett abrummet@genome.wustl.edu
+ Todd Hepler thepler@genome.wustl.edu
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (C) 2007, Washington University in St. Louis
+Copyright (C) 2009, Washington University in St. Louis
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

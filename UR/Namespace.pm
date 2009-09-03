@@ -152,3 +152,78 @@ sub _get_class_names_under_dir
 
 1;
 
+
+=pod
+
+=head1 NAME 
+
+UR::Namespace - Manage collections of packages and classes
+
+=head1 SYNOPSIS
+
+In a file called MyApp.pm:
+
+  use UR;
+  UR::Object::Type->define(
+      class_name => 'MyApp',
+      is => 'UR::Namespace',
+  );
+
+Other programs, as well as modules in the MyApp subdirectory can now put
+
+  use MyApp;
+
+in their code, and they will have access to all the classes and data under
+the MyApp tree.  
+
+=head1 DESCRIPTION
+
+A UR namespace is the top-level object that represents your data's class
+structure in the most general way.  After use-ing a namespace module, the
+program gets access to the module autoloader, which will automaticaly use
+modules on your behalf if you attempt to interact with their packages in
+a UR-y way, such as calling get().
+
+Most programs will not interact with the Namespace, except to C<use> its
+package.
+
+=head1 Methods
+
+=over 4
+
+=item get_material_classes
+
+  my @class_metas = $namespace->get_material_classes();
+
+Return a list of L<UR::Object::Type> class metadata object that exist in
+the given Namespace.  Note that this uses File::Find to find C<*.pm> files
+under the Namespace directory and calls C<UR::Object::Type-E<gt>get($name)
+for each package name to get the autoloader to use the package.  It's likely
+to be pretty slow.
+
+=item get_material_class_names
+
+  my @class_names = $namespace->get_material_class_names()
+
+Return just the names of the classes produced by C<get_material_classes>.
+
+=item get_data_sources
+
+  my @data_sources = $namespace->get_data_sources()
+
+Return the data source objects it finds defined under the DataSource
+subdirectory of the namespace.
+
+=item get_base_directory_name
+
+  my $path = $namespace->get_base_directory_name()
+
+Returns the directory path where the Namespace module was loaded from.
+
+=back
+
+=head1 SEE ALSO
+
+L<UR::Object::Type>, L<UR::DataSource>, L<UR::Context>
+
+=cut
