@@ -7,7 +7,7 @@ package UR;
 use strict;
 use warnings FATAL => 'all';
 
-our $VERSION = '0.4';
+our $VERSION = '0.5_rc1';
 
 # Ensure we get detailed errors while starting up.
 use Carp;
