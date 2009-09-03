@@ -842,9 +842,9 @@ sub _normalize_property_description {
         || $new_property{reverse_id_by}         
     ) {
         $new_property{is_delegated} = 1;
-		unless (defined $new_property{to}) {
-			$new_property{to} = $property_name;
-		}
+        unless (defined $new_property{to}) {
+            $new_property{to} = $property_name;
+        }
     }
     
     if (!defined($new_property{is_mutable})) {
