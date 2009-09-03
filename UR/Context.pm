@@ -441,7 +441,6 @@ sub _create_import_iterator_for_underlying_context {
     # we then have our primary iterator use these to fabricate objects for each db row
     
     my @importers;
-$DB::single=1;
     for my $loading_template (@$loading_templates) {
         my $object_fabricator = $self->_create_object_fabricator_for_loading_template($loading_template,$template_data,$rule,$rule_template,\@values, $dsx);
         unshift @importers, $object_fabricator;
@@ -1049,7 +1048,7 @@ sub _get_objects_for_class_and_sql {
 sub _cache_is_complete_for_class_and_normalized_rule {
     my ($self,$class,$normalized_rule) = @_;
     my ($id,$params,@objects,$cache_is_complete);
-    
+    $DB::single=1 if $normalized_rule->id =~ /AddReads.*2509660674/;
     $params = $normalized_rule->legacy_params_hash;
     $id = $params->{id};
 
@@ -1146,7 +1145,7 @@ sub _cache_is_complete_for_class_and_normalized_rule {
                 exists ($all_params_loaded->{$class}->{$params->{_param_key}})
                 ||
                 # this is a subset of a previous attempt
-                ($self->_loading_was_done_before_with_a_superset_of_this_params_hashref($params))
+                ($self->_loading_was_done_before_with_a_superset_of_this_params_hashref($class,$params))
             );
     
     my $object_is_loaded_or_non_existent =
