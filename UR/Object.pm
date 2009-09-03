@@ -7,7 +7,7 @@ require UR;
 use Scalar::Util qw(blessed);
 
 our @ISA = ('UR::ModuleBase');
-our $VERSION = '0.01';
+our $VERSION = $UR::VERSION;;
 
 sub class { ref($_[0]) || $_[0] }
 
@@ -34,7 +34,7 @@ sub __display_name__ {
     my $self = shift;
     my $context = shift;
     
-    my $name = $_[0]->id;
+    my $name = $self->id;
     $name =~ s/\t/ /g;
     return $name;
 
@@ -310,7 +310,7 @@ sub create {
         # This has to occur for all subclasses which represent table rows.
         
         my @id_property_names = $co->id_property_names;
-        my @values = $co->class_name->decomposed_id( $id );
+        my @values = $co->resolve_ordered_values_from_composite_id( $id );
         $#values = $#id_property_names;
         push @extra, map { $_ => shift(@values) } @id_property_names;
         

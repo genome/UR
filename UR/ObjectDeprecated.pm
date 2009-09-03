@@ -326,24 +326,7 @@ sub generate_support_class {
     return $class_meta->generate_support_class_for_extension($ext);
 }
 
-
-# DEFINITELY REFACTOR AWAY
-# All calls to these methods should go to the class meta object directly.
-
-## PRUNE
-sub _resolve_composite_id {
-    return shift->__meta__->resolve_composite_id_from_ordered_values(@_);
-}
-
-sub decomposed_id {
-    return shift->__meta__->resolve_ordered_values_from_composite_id(@_);
-}
-
-# Most code should go right to ->define_boolexpr(), 
-# which can return the same info as preprocessed params
-# including a ->legacy_params_hash().
-
-# Old things still use this directly, though.
+# Old things still use this directly, sadly.
 
 sub preprocess_params {
     if (@_ == 2 and ref($_[1]) eq 'HASH') {

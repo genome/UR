@@ -42,9 +42,9 @@ ok($c, "made a child object which references it");
 my $r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
 ok($r, "got a rule to get objects using -recurse");
 
-is($r->value_position_for_property_name('foo'),0, "position is as expected for variable param 1");
-is($r->value_position_for_property_name('bar'),1, "position is as expected for variable param 2");
-is($r->value_position_for_property_name('-recurse'),0, "position is as expected for constant param 1");
+is($r->template->value_position_for_property_name('foo'),0, "position is as expected for variable param 1");
+is($r->template->value_position_for_property_name('bar'),1, "position is as expected for variable param 2");
+is($r->template->value_position_for_property_name('-recurse'),0, "position is as expected for constant param 1");
 
 is_deeply(
     [$r->params_list],
@@ -80,13 +80,13 @@ is($t->operator_for_property_name('bar'),'like', "operator for param 2 is correc
 
 $r = URT::FancyItem->define_boolexpr(foo => 10, bar => { operator => "like", value => 'x%y' });
 $t = $r->get_rule_template();
-is($t->operator_for_property_name('foo'),'', "operator for param 1 is correct");
+is($t->operator_for_property_name('foo'),'=', "operator for param 1 is correct");
 is($t->operator_for_property_name('bar'),'like', "operator for param 2 is correct");
 
 $r = URT::FancyItem->define_boolexpr(foo => { operator => "between", value => [10,30] }, bar => 20);
 $t = $r->get_rule_template();
 is($t->operator_for_property_name('foo'),'between', "operator for param 1 is correct");
-is($t->operator_for_property_name('bar'),'', "operator for param 2 is correct");
+is($t->operator_for_property_name('bar'),'=', "operator for param 2 is correct");
 
 
 

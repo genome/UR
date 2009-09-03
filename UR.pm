@@ -4,7 +4,7 @@ package UR;
 use strict;
 use warnings FATAL => 'all';
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 # The UR module is itself a "UR::Namespace", besides being the root 
 # module which bootstraps the system.  The class definition itself
@@ -14,8 +14,7 @@ our $VERSION = '0.01';
 use Carp;
 $SIG{__DIE__} = \&Carp::confess;
 
-
-
+# This speeds up using the module tree by pre-calculaing meta-queries queries.
 use Storable qw(store_fd fd_retrieve);
 BEGIN {
     my $ur_dir = substr($INC{'UR.pm'}, 0, length($INC{'UR.pm'})-5);
@@ -50,6 +49,9 @@ for my $dir (@INC) {
     $dir = Cwd::abs_path($dir);
 }
 
+# UR supports several environment variables, found under UR/ENV
+# Any UR_* variable which is set but does NOT corresponde to a module found will cause an exit
+# (a hedge against typos such as UR_DBI_NO_COMMMMIT=1 leading to unexpected behavior)
 for my $e (keys %ENV) {
     next unless substr($e,0,3) eq 'UR_';
     eval "use UR::Env::$e";
@@ -66,7 +68,6 @@ for my $e (keys %ENV) {
     }
 }
 
-# UR supports several environment variables, found under UR/ENV
 # These two dump info about used modules and libraries at program exit.
 END {
     if ($ENV{UR_USED_LIBS}) {
@@ -104,7 +105,7 @@ require UR::Report;         # this is used by UR::DBI
 require UR::DBI;            # this needs a new name, and need only be used by UR::DataSource::RDBMS
 
 require UR::ModuleBase;     # this should be switched to a role
-require UR::ModuleConfig;   # used by ::Time, and also App's ::Lock ::Daemon
+require UR::ModuleConfig;   # used by ::Time, and also ::Lock ::Daemon
 
 require UR::Object::Iterator;
 require UR::DeletedRef;
@@ -327,11 +328,12 @@ UR::Object::Type->define(
 UR::Object::Type->define(
     class_name => 'UR::Object::Property',
     english_name => 'entity type attribute',
-    id_properties => [qw/class_name property_name/],
-    properties => [
-        property_type                   => { is => 'Text', len => 256 , is_optional => 1},
+    id_properties => [
         class_name                      => { is => 'Text', len => 256 },        
         property_name                   => { is => 'Text', len => 256 },            
+    ],
+    has_optional => [
+        property_type                   => { is => 'Text', len => 256 , is_optional => 1},
         type_name                       => { is => 'Text', len => 256 },        
         attribute_name                  => { is => 'Text', len => 256 },
         column_name                     => { is => 'Text', len => 256, is_optional => 1 },        
@@ -378,7 +380,7 @@ UR::Object::Type->define(
         plural_name                     => { is => 'Text' },
 
         class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
-        unique_meta                     => { is => 'UR::Object::Property::Unique', reverse_as => 'property_meta', is_many => 1 },
+        unique_metas                    => { is => 'UR::Object::Property::Unique', reverse_as => 'property_meta', is_many => 1 },
     ],
     unique_constraints => [
         { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },
@@ -446,7 +448,7 @@ UR::Object::Type->define(
         unique_group                     => { is => 'Text', len => 256, source => 'data dictionary' },
 
         class_meta                       => { is => 'UR::Object::Type', id_by => 'class_name' },
-        property_metas                   => { is => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
+        property_meta                    => { is => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
     ],
 );
 
@@ -479,6 +481,10 @@ UR::Object::Type->define(
     class_name => 'UR',
     extends => ['UR::Namespace'],
 );
+
+#my $src = shift(@ARGV);
+#eval $src;
+#die $@ if $@;
 
 require UR::Context;
 UR::Object::Type->initialize_bootstrap_classes;

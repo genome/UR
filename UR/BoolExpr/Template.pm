@@ -63,10 +63,6 @@ our $unit_sep       = $UR::BoolExpr::Util::unit_sep;
 our $null_value     = $UR::BoolExpr::Util::null_value;
 our $empty_string   = $UR::BoolExpr::Util::empty_string;
 our $empty_list     = $UR::BoolExpr::Util::empty_list;
-*values_to_value_id         = \&UR::BoolExpr::Util::values_to_value_id;
-*value_id_to_values         = \&UR::BoolExpr::Util::value_id_to_values;
-*values_to_value_id_frozen  = \&UR::BoolExpr::Util::values_to_value_id_frozen;
-*value_id_to_values_frozen  = \&UR::BoolExpr::Util::value_id_to_values_frozen;
 
 # Names of the optional flags you can add to a rule
 our @meta_param_names = qw(recursion_desc hints is_paged order_by group_by);
@@ -80,11 +76,11 @@ sub _property_names {
 sub _constant_values {
     my $self = shift;
     if (@_) {
-        $self->constant_value_id($self->values_to_value_id(@_));
+        $self->constant_value_id(UR::BoolExpr::Util->values_to_value_id(@_));
     }
     my $constant_value_id = $self->constant_value_id;
     return unless $constant_value_id;
-    return $self->value_id_to_values($constant_value_id);
+    return UR::BoolExpr::Util->value_id_to_values($constant_value_id);
 }
 
 
@@ -168,8 +164,8 @@ sub get_normalized_template_equivalent {
 
 sub get_rule_for_values {
     my $self = shift;
-    my $value_id = $self->values_to_value_id(@_);    
-    my $rule_id = UR::BoolExpr->_resolve_composite_id($self->id,$value_id);
+    my $value_id = UR::BoolExpr::Util->values_to_value_id(@_);    
+    my $rule_id = UR::BoolExpr->__meta__->resolve_composite_id_from_ordered_values($self->id,$value_id);
     return UR::BoolExpr->get($rule_id);
 }
 
@@ -188,7 +184,7 @@ sub get_normalized_rule_for_values {
     # before re-ordering it.
     my $extenders = $self->normalization_extender_arrayref;
     if (@$extenders) {
-        my $subject_class = $self->subject_class_name;
+        my $subject_class = $self->subject_class_name->__meta__;
         for my $extender (@$extenders) {
             my ($input_positions_arrayref,$subref) = @$extender;
             my @more_values = @unnormalized_values[@$input_positions_arrayref];            
@@ -221,7 +217,7 @@ sub value_position_for_property_name {
 
 sub operator_for_property_name {
     if (exists $_[0]{_property_meta_hash}{$_[1]}) {
-        return $_[0]{_property_meta_hash}{$_[1]}{operator};
+        return $_[0]{_property_meta_hash}{$_[1]}{operator} || '=';
     } else {
         return undef;
     }
@@ -268,7 +264,7 @@ sub get_by_subject_class_name_logic_type_and_logic_detail {
     my $subject_class_name = shift;
     my $logic_type = shift;
     my $logic_detail = shift;
-    my $constant_value_id = $class->values_to_value_id(); # intentionally an empty list of values
+    my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(); # intentionally an empty list of values
     return $class->get(join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id));
 }
 
@@ -309,7 +305,7 @@ sub get {
     }
 
     my @constant_values;
-    @constant_values = UR::BoolExpr::Template->value_id_to_values($constant_value_id) if defined $constant_value_id;;
+    @constant_values = UR::BoolExpr::Util->value_id_to_values($constant_value_id) if defined $constant_value_id;;
 
     my $subject_class_meta = $subject_class_name->__meta__;
 
@@ -387,7 +383,7 @@ sub get {
         # Add value extenders for any cases of id-related properties,
         # or aliases.
         my $extenders = [];    
-        my $rule_template_id;    
+        my $template_id;    
         
         # Note whether there are properties not involved in the ID
         my $id_only = 1;
@@ -462,7 +458,7 @@ sub get {
                         }
                         else {
                             push @keys, @new_keys; 
-                            push @$extenders, [ [$key_pos], "decomposed_id" ];
+                            push @$extenders, [ [$key_pos], "resolve_ordered_values_from_composite_id" ];
                             for (@$alias) {
                                 $key_op_hash->{$_} ||= {};
                                 $key_op_hash->{$_}{$op}++;
@@ -503,7 +499,7 @@ sub get {
                             # we have translations of that ID into underlying properties
                             #print "ADDING ID for " . join(",",keys %id_parts) . "\n";
                             my @id_pos = sort { $a <=> $b } keys %id_parts;
-                            push @$extenders, [ [@id_parts{@id_pos}], "_resolve_composite_id" ]; #TODO was this correct?
+                            push @$extenders, [ [@id_parts{@id_pos}], "resolve_composite_id_from_ordered_values" ]; #TODO was this correct?
                             $key_op_hash->{id} ||= {};
                             $key_op_hash->{id}{$op}++;                        
                             push @keys, "id"; 
@@ -577,7 +573,7 @@ sub get {
         # Determine the rule template's ID.
         # The normalizer will store this.  Below, we'll
         # find or create the template for this ID.
-        my $normalized_id = UR::BoolExpr::Template->_resolve_composite_id($subject_class_name, "And", join(",",@keys_sorted), $constant_value_id);
+        my $normalized_id = UR::BoolExpr::Template->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, "And", join(",",@keys_sorted), $constant_value_id);
         
         @extra_params = (
             id_position                     => $id_position,        
@@ -640,7 +636,7 @@ sub legacy_params_hash {
     
     $legacy_params_hash = {};    
     
-    my $rule_template_id = $self->id;
+    my $template_id = $self->id;
     my $key_op_hash = $self->key_op_hash;
     my $id_only = $self->is_id_only;    
         

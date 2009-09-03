@@ -7,44 +7,46 @@ require UR;
 
 use overload ('""' => 'desc');
 
-
 our $VERSION = '0.1';
-
-# Borrow from the util package.
-# This will go away with refactoring.
-
-our $id_sep         = $UR::BoolExpr::Util::id_sep;
-our $record_sep     = $UR::BoolExpr::Util::record_sep;
-our $unit_sep       = $UR::BoolExpr::Util::unit_sep;
-our $null_value     = $UR::BoolExpr::Util::null_value;
-our $empty_string   = $UR::BoolExpr::Util::empty_string;
-our $empty_list     = $UR::BoolExpr::Util::empty_list;
-*values_to_value_id         = \&UR::BoolExpr::Util::values_to_value_id;
-*value_id_to_values         = \&UR::BoolExpr::Util::value_id_to_values;
-*values_to_value_id_frozen  = \&UR::BoolExpr::Util::values_to_value_id_frozen;
-*value_id_to_values_frozen  = \&UR::BoolExpr::Util::value_id_to_values_frozen;
 
 # All of the meta-data is not in the meta class yet.
 
 UR::Object::Type->define(
     class_name => 'UR::BoolExpr',
-    composite_id_separator => $id_sep,
+    composite_id_separator => $UR::BoolExpr::Util::id_sep,
     id_by => [
-        rule_template_id    => { type => 'BLOB' },
+        template_id         => { type => 'BLOB' },
         value_id            => { type => 'BLOB' },
     ],
     has => [
-        rule_template       => { is => 'UR::BoolExpr::Template', id_by => 'rule_template_id' },
-        subject_class_name  => { via => 'rule_template' },
-        logic_type          => { via => 'rule_template' },
-        logic_detail        => { via => 'rule_template' },
-        num_values          => { via => 'rule_template' },
-        is_normalized       => { via => 'rule_template' },
-        is_id_only          => { via => 'rule_template' }, 
+        template            => { is => 'UR::BoolExpr::Template', id_by => 'template_id' },
+        subject_class_name  => { via => 'template' },
+        logic_type          => { via => 'template' },
+        logic_detail        => { via => 'template' },
+
+        num_values          => { via => 'template' },
+        is_normalized       => { via => 'template' },
+        is_id_only          => { via => 'template' },
+        has_meta_options    => { via => 'template' },
     ],
     is_transactional => 0,
 );
 
+
+# for performance
+sub UR::BoolExpr::Type::resolve_composite_id_from_ordered_values {
+    shift;
+    return join($UR::BoolExpr::Util::id_sep,@_);
+}
+
+# only respect the first delimiter instead of splitting
+sub UR::BoolExpr::Type::resolve_ordered_values_from_composite_id {
+     my ($self,$id) = @_;
+     my $pos = index($id,$UR::BoolExpr::Util::id_sep);
+     return (substr($id,0,$pos), substr($id,$pos+1));
+}
+
+# this is used in stringification overload
 sub desc {
     my $self = shift;
     my %b = $self->params_list;
@@ -56,64 +58,22 @@ sub desc {
     return __PACKAGE__ . '=(' . $self->subject_class_name . ':' . $s . ')';
 }
 
-*get_rule_template = \&rule_template;
+# Legacy API
 
-# These versions of the id accessors keep the values underlying the ID from getting their own hash keys.
-# Update the id accessors in general to do this for composite ids?
-
-sub decomposed_id {
-     my $self = shift;
-     my $id = $self->id;
-     my $pos = index($id,$id_sep);
-     return (substr($id,0,$pos), substr($id,$pos+1));
-}
-
-sub _resolve_composite_id {
-    shift;
-    return join($id_sep,@_);
-}
-
-# Behind the id properties:
-
-*get_rule_template_and_values = \&get_template_and_values;
-
-sub get_template_and_values {
-    my $self = shift;
-    my ($template_id, $value_id) = $self->decomposed_id;
-    return (UR::BoolExpr::Template->get($template_id), $self->value_id_to_values($value_id));
-}
-
-
-sub get_values {
-    my $self = shift;
-    if ($self->{values}) {
-        return @{ $self->{values}}
-    }
-    my $value_id = $self->value_id;    
-    return unless defined($value_id) and length($value_id);
-    return $self->value_id_to_values($value_id);
-}
-
-sub specified_value_for_id {
-    my $self = shift;
-    my $t = $self->get_rule_template;
-    my $position = $t->id_position;
-    return unless defined $position;
-    return $self->specified_value_for_position($position);
-}
-
-
-sub specified_value_for_position {
-    my ($self, $pos) = @_;
-    return ($self->get_values)[$pos];    
-}
-
-sub operator_for_property_name {
-    my $self = shift;
-    my $t = $self->get_rule_template;
-    return $t->operator_for_property_name(@_);
-}
-
+*get_rule_template = \&template;
+*rule_template = \&template;
+*template_id = \&template_id;
+*get_rule_template_and_values = \&template_and_values;
+*get_template_and_values = \&template_and_values;
+*get_values = \&values;
+*get_underlying_rules = \&underlying_rules;
+*specifies_value_for_property_name = \&specifies_value_for;
+*specified_operator_for_property_name = \&operator_for;
+*operator_for_property_name = \&operator_for;
+*specified_value_for_id = \&value_for_id;
+*specified_value_for_position = \&value_for_position;
+*specified_value_for_property_name = \&value_for;
+*get_normalized_rule_equivalent = \&normalize;
 
 # The primary function: evaluate a subject object as matching the rule or not.
 
@@ -125,32 +85,40 @@ sub evaluate {
     return $template->evaluate_subject_and_values($subject,@values);
 }
 
-# Examine the rule
-# This only works with the composite "And" rule comparing properties.
+# Behind the id properties:
 
-sub get_underlying_rules { # refactor: what does this mean for non-composites?
-    my $self = shift;    
-    my @values = $self->get_values;    
-    return $self->get_rule_template->get_underlying_rules_for_values(@values);
+sub template_and_values {
+    my $self = shift;
+    my ($template_id, $value_id) = UR::BoolExpr::Type->resolve_ordered_values_from_composite_id($self->id);
+    return (UR::BoolExpr::Template->get($template_id), UR::BoolExpr::Util->value_id_to_values($value_id));
 }
 
-sub specifies_value_for_property_name {
+
+sub values {
+    my $self = shift;
+    if ($self->{values}) {
+        return @{ $self->{values}}
+    }
+    my $value_id = $self->value_id;    
+    return unless defined($value_id) and length($value_id);
+    return UR::BoolExpr::Util->value_id_to_values($value_id);
+}
+
+sub value_for_id {
+    my $self = shift;
+    my $t = $self->get_rule_template;
+    my $position = $t->id_position;
+    return unless defined $position;
+    return $self->specified_value_for_position($position);
+}
+
+sub specifies_value_for {
     my $self = shift;
     my $rule_template = $self->get_rule_template;
     return $rule_template->specifies_value_for_property_name(@_);
 }
 
-sub specified_operator_for_property_name {
-    my $self = shift;
-    my $property_name = shift; 
-    my $h = $self->legacy_params_hash;
-    my $v = $h->{$property_name};
-    return "=" unless ref($v);
-    return $v->{operator} if ref($v) eq "HASH";
-    return "[]";
-}
-
-sub specified_value_for_property_name {
+sub value_for {
     # TODO: refactor to be more efficient
     my $self = shift;
     my $property_name = shift; 
@@ -178,12 +146,21 @@ sub specified_value_for_property_name {
     return [@$v];
 }
 
-sub value_position_for_property_name {
-    $_[0]->get_rule_template()->value_position_for_property_name($_[1]);
+sub value_for_position {
+    my ($self, $pos) = @_;
+    return ($self->get_values)[$pos];    
 }
 
-sub has_meta_options {
-    $_[0]->get_rule_template()->has_meta_options();
+sub operator_for {
+    my $self = shift;
+    my $t = $self->get_rule_template;
+    return $t->operator_for_property_name(@_);
+}
+
+sub underlying_rules { 
+    my $self = shift;    
+    my @values = $self->get_values;    
+    return $self->get_rule_template->get_underlying_rules_for_values(@values);
 }
 
 # De-compose the rule back into its original form.
@@ -284,9 +261,9 @@ sub sub_classify {
 sub get {
     my $rule_id = pop;
     unless (exists $UR::Object::rules->{$rule_id}) {
-        my $pos = index($rule_id,$id_sep);
+        my $pos = index($rule_id,$UR::BoolExpr::Util::id_sep);
         my ($template_id,$value_id) = (substr($rule_id,0,$pos), substr($rule_id,$pos+1));
-        my $rule = { id => $rule_id, rule_template_id => $template_id, value_id => $value_id };    
+        my $rule = { id => $rule_id, template_id => $template_id, value_id => $value_id };    
         bless ($rule, "UR::BoolExpr");
         $UR::Object::rules->{$rule_id} = $rule;
     }
@@ -310,8 +287,8 @@ sub resolve_normalized_rule_for_class_and_params {
 
 sub resolve_for_template_id_and_values {
     my ($class,$template_id, @values)  = @_;
-    my $value_id = $class->values_to_value_id(@values);
-    my $rule_id = $class->_resolve_composite_id($template_id,$value_id);
+    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
+    my $rule_id = $class->__meta__->resolve_composite_id_from_ordered_values($template_id,$value_id);
     $class->get($rule_id);
 }
 
@@ -540,11 +517,11 @@ sub resolve_for_class_and_params {
         push @values, $value;
     }
 
-    my $value_id = UR::BoolExpr->values_to_value_id(@values);
+    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
     my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);
     
-    my $rule_template_id = $subject_class . '/And/' . join(",",@keys) . "/" . $constant_value_id;
-    my $rule_id = join($id_sep,$rule_template_id,$value_id);
+    my $template_id = $subject_class . '/And/' . join(",",@keys) . "/" . $constant_value_id;
+    my $rule_id = join($UR::BoolExpr::Util::id_sep,$template_id,$value_id);
 
     my $rule = __PACKAGE__->get($rule_id);
 
@@ -565,7 +542,6 @@ sub resolve_for_class_and_params {
     }
 }
 
-*get_normalized_rule_equivalent = \&normalize;
 sub normalize {
     my $self = shift;
     
@@ -771,11 +747,11 @@ sub create_from_subject_class_name_keys_and_values {
     my @constant_values = @{ $params{constant_values} || [] };
     my @keys            = @{ $params{keys} || [] };
 
-    my $value_id = UR::BoolExpr->values_to_value_id(@values);
+    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
     my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);
     
-    my $rule_template_id = $subject_class_name . '/And/' . join(",",@keys) . "/" . $constant_value_id;
-    my $rule_id = join($id_sep,$rule_template_id,$value_id);
+    my $template_id = $subject_class_name . '/And/' . join(",",@keys) . "/" . $constant_value_id;
+    my $rule_id = join($UR::BoolExpr::Util::id_sep,$template_id,$value_id);
 
     my $rule = __PACKAGE__->get($rule_id);
 
@@ -867,7 +843,7 @@ A rule has an "id", which completely describes the rule in stringified form,
 and a method called evaluate($o) which tests the rule on a given object.
 
 The id is composed of two parts:
-- A rule_template_id. 
+- A template_id. 
 - A value_id.  
 
 Nearly all real work delegates to the template to avoid duplication of cached details.

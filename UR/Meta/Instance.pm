@@ -1,6 +1,6 @@
 package UR::Meta::Instance;
 
-our $VERSION = '0.01';
+our $VERSION = $UR::VERSION;;
 
 use UR::Moose;
 extends( 'Moose::Meta::Instance', 'UR::Object' );
