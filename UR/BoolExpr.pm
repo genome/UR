@@ -180,10 +180,11 @@ sub params_list {
     my ($v,$c) = (0,0);
     for (my $k=0; $k<@keys_sorted; $k++) {
         my $key = $keys_sorted[$k];                        
-        if (substr($key,0,1) eq "_") {
-            next;
-        }
-        elsif (substr($key,0,1) eq '-') {
+        #if (substr($key,0,1) eq "_") {
+        #    next;
+        #}
+        #elsif (substr($key,0,1) eq '-') {
+        if (substr($key,0,1) eq '-') {
             my $value = $constant_values_sorted[$c];
             push @params, $key, $value;        
             $c++;
@@ -338,7 +339,7 @@ sub resolve {
             next;
         }
         
-        if (substr($key,0,1)  eq '_') {
+        if ((substr($key,0,1)  eq '_') and ! $subject_class_props{$key}) {
             # skip the param
             next;
         } 
@@ -394,18 +395,21 @@ sub resolve {
                 $value = [ @$value ];
                 
                 # transform objects into IDs if applicable
-                my $is_all_objects = 1;
-                for (@$value) { 
-                    unless (blessed($_)) {
-                        $is_all_objects = 0;
-                        last;
+                my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
+                if ($property_meta && $property_meta->is_delegated) {
+                    my $is_all_objects = 1;
+                    for (@$value) { 
+                        unless (blessed($_)) {
+                            $is_all_objects = 0;
+                            last;
+                        }
                     }
-                }
-                if ($is_all_objects) {
-                    
-                    my ($method) = ($key =~ /^(\w+)/);
-                    if (my $subref = $subject_class->can($method) and $subject_class->isa("UR::Object")) {
-                        for (@$value) { $_ =  $subref->($_) };
+                    if ($is_all_objects) {
+                        
+                        my ($method) = ($key =~ /^(\w+)/);
+                        if (my $subref = $subject_class->can($method) and $subject_class->isa("UR::Object")) {
+                            for (@$value) { $_ =  $subref->($_) };
+                        }
                     }
                 }
     
@@ -416,7 +420,6 @@ sub resolve {
                 
                 my $is_many;
                 my $data_type;
-                my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
                 if ($property_meta) {
                     $is_many = $property_meta->is_many;
                     $data_type = $property_meta->data_type;
