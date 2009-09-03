@@ -557,7 +557,7 @@ sub create_iterator_closure_for_rule {
         }
 
         if ($self->last_read_fingerprint() ne $fingerprint) {
-            $sql_fh->printf("CSV: Rewinding file position to the start\n") if $ENV{'UR_DBI_MONITOR_SQL'};
+            $sql_fh->printf("CSV: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
             local $/;   # Make sure some wise guy hasn't changed this out from under us
