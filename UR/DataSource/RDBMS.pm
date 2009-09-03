@@ -1481,14 +1481,23 @@ sub _id_values_for_primary_key {
         Carp::confess("Both table and class object should be passed for $self!");
     }
     
-    my $class_obj = $object_to_save->get_class_object;
+    my $class_obj; # = $object_to_save->get_class_object;
+    foreach my $possible_class_obj ($object_to_save->get_class_object->all_class_metas) {
+        if (lc($possible_class_obj->table_name) eq lc($table_obj->table_name)) {
+            $class_obj = $possible_class_obj;
+            last;
+        }
+    }
+    unless (defined $class_obj) {
+        Carp::confess("Can't find class object for this table! " . $table_obj->table_name);
+    }
+
     my @pk_cols = $table_obj->primary_key_constraint_column_names;
     my @values = $object_to_save->decomposed_id($object_to_save->id);
     my @columns = $class_obj->id_column_names;
 
     my $i=0;    
     my %column_index = map { $_ => $i++ } @columns;
-
     my @id_values_in_pk_order = @values[@column_index{@pk_cols}];
     
     return @id_values_in_pk_order;
