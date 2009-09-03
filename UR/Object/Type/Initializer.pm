@@ -7,6 +7,10 @@ package UR::Object::Type;
 use strict;
 use warnings;
 
+use Carp ();
+use Sub::Name ();
+use Sub::Install ();
+
 # keys are class property names (like er_role, is_final, etc) and values are
 # the default value to use if it's not specified in the class definition
 #
@@ -788,8 +792,13 @@ sub _make_minimal_class_from_normalized_class_description {
     my $self =  bless { id => $class_name, %$desc }, $meta_class_name;
     
     $UR::Object::all_objects_loaded->{$meta_class_name}{$class_name} = $self;
-    do { no warnings; no strict 'refs'; *{$class_name . '::get_class_object'}  = sub {$self}; };
-    
+    my $full_name = join( '::', $class_name, 'get_class_object' );
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => 'get_class_object',
+        code => Sub::Name::subname $full_name => sub {$self},
+    });
+
     return $self;
 }
     
@@ -1248,11 +1257,12 @@ sub generate {
     # the "new class"
     my $class_name = $self->class_name;
 
-    do {
-        no warnings;
-        no strict 'refs';
-        *{$class_name . '::get_class_object'}  = sub {$self};
-    };
+    my $full_name = join( '::', $class_name, 'get_class_object' );
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => 'get_class_object',
+        code => Sub::Name::subname $full_name => sub {$self},
+    });
 
     my @parent_class_names = $self->parent_class_names;
     

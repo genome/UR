@@ -6,11 +6,13 @@ package UR::Object::Type;
 use strict;
 use warnings;
 
+use Carp ();
+use Sub::Name ();
+use Sub::Install ();
+
 sub construct_class_from_data
 {
     my $self = shift;
-
-    no strict 'refs';
 
     my %params = @_;
     my $class_name = $params{"class_name"};
@@ -33,6 +35,8 @@ sub construct_class_from_data
         UR::Object::Type->mk_class_accessor($class_name,$property);
     }
 
+    no strict 'refs';
+
     my $props = [@id_properties, @other_properties];
     my $cols = [map { uc($_) } @$props];
 
@@ -47,7 +51,6 @@ sub construct_class_from_data
 }
 
 sub mk_rw_accessor {
-    no warnings;
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;
     $property_name ||= $accessor_name;
 
@@ -55,9 +58,9 @@ sub mk_rw_accessor {
     # string.  For speed, we turn warnings off rather
     # than add extra code to make the warning disappear.
     no warnings;
-    no strict 'refs';
 
-    my $accessor = sub {
+    my $full_name = join( '::', $class_name, $accessor_name );
+    my $accessor = Sub::Name::subname $full_name => sub {
         if (@_ > 1) {
             my $old = $_[0]->{ $property_name };
             my $new = $_[1];
@@ -71,17 +74,25 @@ sub mk_rw_accessor {
         return $_[0]->{ $property_name };  # FIXME what to do about properties with default_values?
     };
 
-    no strict 'refs';
-
-    *{$class_name ."::$accessor_name"}  = $accessor;
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
 
     #$column_name = uc($column_name);
 
     if ($column_name)
     {
-        *{$class_name ."::" . $column_name} = $accessor;
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => $column_name,
+            code => $accessor,
+        });
 
         # These are for backward-compatability with old modules.  Remove asap.
+        no strict 'refs';
+
         ${$class_name . '::column_for_property'}
             {$property_name} = $column_name;
 
@@ -91,11 +102,13 @@ sub mk_rw_accessor {
 }
 
 sub mk_ro_accessor {
-    no warnings;
-    no strict 'refs';
     my ($self, $class_name, $accessor_name, $column_name, $property_name) = @_;
     $property_name ||= $accessor_name;
-    my $accessor = sub {
+
+    no warnings;
+
+    my $full_name = join( '::', $class_name, $accessor_name );
+    my $accessor = Sub::Name::subname $full_name => sub {
         if (@_ > 1) {
             my $old = $_[0]->{ $property_name};
             my $new = $_[1];
@@ -109,16 +122,25 @@ sub mk_ro_accessor {
         return $_[0]->{ $property_name };
     };
 
-
-    *{$class_name ."::$accessor_name"} = $accessor;
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
 
     $column_name = uc($column_name);
     
     if ($column_name)
     {
-        *{$class_name ."::" . $column_name}  = $accessor;
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => $column_name,
+            code => $accessor,
+        });
 
         # These are for backward-compatability with old modules.  Remove asap.
+        no strict 'refs';
+
         ${$class_name . '::column_for_property'}
             {$property_name} = $column_name;
 
@@ -145,7 +167,8 @@ sub mk_id_based_object_accessor {
     my $id_decomposer;
     my @id;
     my $id;
-    my $accessor = sub {
+    my $full_name = join( '::', $class_name, $accessor_name );
+    my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         if (@_) {
             my $object_value = shift;
@@ -165,14 +188,18 @@ sub mk_id_based_object_accessor {
         }
     };
 
-    no strict 'refs';
-    *{$class_name ."::$accessor_name"}  = $accessor;
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
 }
 
 sub mk_indirect_ro_accessor {
     my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
     my @where = ($where ? @$where : ());
-    my $accessor = sub {
+    my $full_name = join( '::', $class_name, $accessor_name );
+    my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
         my @bridges = $self->$via(@where);
@@ -181,15 +208,19 @@ sub mk_indirect_ro_accessor {
         $self->context_return(@results); 
     };
 
-    no strict 'refs';
-    *{$class_name ."::$accessor_name"}  = $accessor;
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
 }
 
 sub mk_indirect_rw_accessor {
     my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
     my @where = ($where ? @$where : ());
 
-    my $accessor = sub {
+    my $full_name = join( '::', $class_name, $accessor_name );
+    my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         my @bridges = $self->$via(@where);
         if (@_) {
@@ -206,8 +237,11 @@ sub mk_indirect_rw_accessor {
         $self->context_return(@results); 
     };
 
-    no strict 'refs';
-    *{$class_name ."::$accessor_name"}  = $accessor;
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
 }
 
 
@@ -271,8 +305,13 @@ sub mk_calculation_accessor {
     }
 
     if ($accessor) {
-        no strict 'refs';
-        *{$class_name ."::$accessor_name"}  = $accessor;
+        my $full_name = join( '::', $class_name, $accessor_name );
+        $accessor = Sub::Name::subname $full_name => $accessor;
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => $accessor_name,
+            code => $accessor,
+        });
     }
     elsif (@src) {
         my $src = join("\n",@src);
@@ -298,7 +337,8 @@ sub mk_dimension_delegate_accessors {
     # Make EAV-like accessors for all of the remote properties
     my $class_name = $self->class_name;
     
-    my $other_accessor = sub {
+    my $full_name = join( '::', $class_name, $other_accessor_name );
+    my $other_accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         my $delegate_id = $self->{$accessor_name};
         if (defined($delegate_id)) {
@@ -353,12 +393,11 @@ sub mk_dimension_delegate_accessors {
         }
     };
     
-    do {
-        no strict 'refs';
-        no warnings;
-        *{$class_name ."::$other_accessor_name"}  = $other_accessor;
-    };
-    
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $other_accessor_name,
+        code => $other_accessor,
+    });
 }
 
 sub mk_dimension_identifying_accessor {
@@ -374,7 +413,8 @@ sub mk_dimension_identifying_accessor {
 
     # Make the actual accessor for the id_by property
     no warnings;    
-    my $accessor = sub {
+    my $full_name = join( '::', $class_name, $accessor_name );
+    my $accessor = Sub::Name::subname $full_name => sub {
         if (@_ > 1) {
             my $old = $_[0]->{ $accessor_name };
             my $new = $_[1];
@@ -398,8 +438,11 @@ sub mk_dimension_identifying_accessor {
         return $_[0]->{ $accessor_name };
     };
     
-    no strict 'refs';    
-    *{$class_name ."::$accessor_name"}  = $accessor;
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
 }
 
 sub mk_class_accessor
