@@ -190,15 +190,6 @@ sub _get_next_value_from_sequence {
 }
 
 
-#BEGIN {
-#    # Insert the column_info function into its namespace
-#    our $ADDL_METHODS_INSERTED;
-#    unless ($ADDL_METHODS_INSERTED++) {
-#        *DBD::SQLite::db::column_info = \&column_info;
-#        *DBD::SQLite::db::foreign_key_info = \&foreign_key_info;
-#    }
-#}
-
 # DBD::SQLite doesn't implement column_info.  This is the UR::DataSource version of the same thing
 sub get_column_details_from_data_dictionary {
     my($self,$catalog,$schema,$table,$column) = @_;
@@ -256,61 +247,178 @@ sub get_column_details_from_data_dictionary {
 }
 
 
-# Same thing here.
-sub get_foreign_key_details_from_data_dictionary {
-my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
+# SQLite doesn't store the name of a foreign key constraint in its metadata directly.
+# We can guess at it from the SQL used in the table creation.  These regexes are probably
+# sloppy. We could replace them if there were a good SQL parser.
+sub _resolve_fk_name {
+    my($self, $table_name, $column_list, $r_table_name, $r_column_list) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    if (@$column_list != @$r_column_list) {
+        Carp::confess('There are '.scalar(@$column_list).' pk columns and '.scalar(@$r_column_list).' fk columns');
+    }
 
-    my($table_col_fk, $table_col_fk_rev) = &_get_fk_lists($dbh);
+    my($table_info) = $self->_get_info_from_sqlite_master($table_name, 'table');
+    return unless $table_info;
 
-    my @ret_data;
-    if ($pk_table) {
-        my $fksth = $dbh->prepare_cached("PRAGMA foreign_key_list($pk_table)")
-                          or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
-        $fksth->execute() or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
-
-        while (my $info = $fksth->fetchrow_hashref()) {
-            foreach my $fk_info (@{$table_col_fk->{uc $pk_table}->{uc $info->{'from'}}}) {
-                my $node = {};
-                $node->{'FK_NAME'} = $fk_info->{'fk_name'};
-                $node->{'FK_TABLE_NAME'} = $pk_table;
-                $node->{'FK_COLUMN_NAME'} = $info->{'from'};
-                $node->{'UK_TABLE_NAME'} = $info->{'table'};
-                $node->{'UK_COLUMN_NAME'} = $info->{'to'};
-
-                push(@ret_data, $node);
-            }
+    my $col_str = $table_info->{'sql'};
+    $col_str =~ s/^\s+|\s+$//g;  # Remove leading and trailing whitespace
+    $col_str =~ s/\s{2,}/ /g;    # Remove multiple spaces
+    if ($col_str =~ m/^CREATE TABLE (\w+)\s*?\((.*?)\)$/i) {
+        unless ($1 eq $table_name) {
+            Carp::confess("SQL for $table_name is inconsistent");
         }
-    } elsif ($fk_table) {
-        # We'll have to loop through each table in the DB and find FKs that reference
-        # the named table
-        my @table_names = keys %$table_col_fk;
+        $col_str = $2;
+    } else {
+        Carp::confess("Couldn't parse SQL for $table_name");
+    }
 
-        foreach my $table_name ( @table_names ) {
-            my $fksth = $dbh->prepare_cached("PRAGMA foreign_key_list($table_name)")
-                          or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
-            $fksth->execute();
 
-            while (my $info = $fksth->fetchrow_hashref()) {
-                next unless (uc($info->{'table'}) eq uc($fk_table));
+    my $fk_name;
+    if (@$column_list > 1) {
+        # Multiple column FKs must be specified as a table-wide constraint, and has a well-known format
+        my $fk_list = join('\s*,\s*', @$column_list);
+        my $uk_list = join('\s*,\s*', @$r_column_list);
+        my $expected_to_find = sprintf('FOREIGN KEY \(%s\) REFERENCES %s\s*\(%s\)',
+                               $fk_list,
+                               $r_table_name,
+                               $uk_list);
+        my $regex = qr($expected_to_find)i;
 
-                foreach my $fk_info ( @{$table_col_fk_rev->{uc $fk_table}->{uc $info->{'to'}}} ) {
-                    next unless (uc($fk_info->{'pk_table'}) eq uc($table_name));
-                    my $node = {};
-                    $node->{'FK_NAME'} = $fk_info->{'fk_name'};
-                    $node->{'FK_TABLE_NAME'} = $table_name;
-                    $node->{'FK_COLUMN_NAME'} = $info->{'from'};
-                    $node->{'UK_TABLE_NAME'} = $fk_table;
-                    $node->{'UK_COLUMN_NAME'} = $info->{'to'};
+        if ($col_str =~ m/$regex/) {
+            ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY \($fk_list\)/i);
+        } else {
+            # Didn't find anything...
+            return;
+        }
 
-                    push(@ret_data, $node);
+    } else {
+        # single-column FK constraints can be specified a couple of ways...
+        # First, try as a table-wide constraint
+        my $col = $column_list->[0];
+        my $r_col = $r_column_list->[0];
+        if ($col_str =~ m/FOREIGN KEY \($col\) REFERENCES $r_table_name\s*\($r_col\)/i) {
+            ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY \($col\)/i);
+        } else {
+            while ($col_str) {
+                # Try parsing each of the column definitions
+                # commas can't appear in here except to separate each column, right?
+                my $this_col;
+                if ($col_str =~ m/^(.*?)\s*,\s*(.*)/) {
+                    $this_col = $1;
+                    $col_str = $2;
+                } else {
+                    $this_col = $col_str;
+                    $col_str = '';
+                }
+                
+                my($col_name, $col_type) = ($this_col =~ m/^(\w+) (\w+)/);
+                next unless ($col_name and
+                             $col_name eq $col);
+
+                if ($this_col =~ m/REFERENCES $r_table_name\s*\($r_col\)/i) {
+                    # It's the right column, and there's a FK constraint on it
+                    # Did the FK get a name?
+                    ($fk_name) = ($this_col =~ m/CONSTRAINT (\w+) REFERENCES/i);
+                    last;
+                } else {   
+                    # It's the right column, but there's no FK
+                    return;
                 }
             }
         }
     }
 
-        my $sponge = DBI->connect("DBI:Sponge:", '','')
+    # The constraint didn't have a name.  Make up something that'll likely be unique
+    $fk_name ||= join('_', $table_name, @$column_list, $r_table_name, @$r_column_list, 'fk');
+    return $fk_name;
+}
+
+
+# We'll only support specifying $fk_table or $pk_table but not both
+# $fk_table refers to the table where the fk is attached
+# $pk_table refers to the table the pk points to - where the primary key exists
+sub get_foreign_key_details_from_data_dictionary {
+my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
+
+    my $dbh = $self->get_default_dbh();
+
+    # So we're all on the same page...
+    # FIXME - looks like 'ur update classes' standarized on upper case :(
+    $fk_table = lc($fk_table);
+    $pk_table = lc($pk_table);
+
+    #my($table_col_fk, $table_col_fk_rev) = &_get_fk_lists($dbh);
+
+    # first, build a data structure to collect columns of the same foreign key together
+    my %fk_info;
+    if ($fk_table) {
+        my $fksth = $dbh->prepare_cached("PRAGMA foreign_key_list($fk_table)")
+                      or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
+        unless ($fksth->execute()) {
+            $self->error_message("foreign_key_list execute failed: $DBI::errstr");
+            return;
+        }
+
+        #my($id, $seq, $to_table, $from, $to);
+        # This will generate an error message when there are no result rows
+        #$fksth->bind_columns(\$id, \$seq, \$to_table, \$from, \$to);
+
+        while (my $row = $fksth->fetchrow_arrayref) {
+            my($id, $seq, $to_table, $from, $to) = @$row;
+            $fk_info{$id} ||= [];
+            $fk_info{$id}->[$seq] = { from_table => $fk_table, to_table => $to_table, from => $from, to => $to };
+        }
+
+    } elsif ($pk_table) {
+        # We'll have to loop through each table in the DB and find FKs that reference
+        # the named table
+
+        my @tables = $self->_get_info_from_sqlite_master(undef,'table');
+        my $id = 0;
+        foreach my $table_data ( @tables ) {
+            my $from_table = $table_data->{'table_name'};
+            $id++;
+            my $fksth = $dbh->prepare_cached("PRAGMA foreign_key_list($from_table)")
+                      or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
+            unless ($fksth->execute()) {
+                $self->error_message("foreign_key_list execute failed: $DBI::errstr");
+                return;
+            }
+            #my($id, $seq, $to_table, $from, $to);
+            #$fksth->bind_columns(\$id, \$seq, \$to_table, \$from, \$to);
+
+            while (my $row = $fksth->fetchrow_arrayref) {
+                my(undef, $seq, $to_table, $from, $to) = @$row;
+                next unless $to_table eq $pk_table;  # Only interested in fks pointing to $pk_table
+                $fk_info{$id} ||= [];
+                $fk_info{$id}->[$seq] = { from_table => $from_table, to_table => $to_table, from => $from, to => $to };
+            }
+        }
+    } else {
+        Carp::confess("either $pk_table or $fk_table are required");
+    }
+
+    # next, format it to get returned as a sth
+    my @ret_data;
+    foreach my $fk_info ( values %fk_info ) {
+        my @column_list = map { $_->{'from'} } @$fk_info;
+        my @r_column_list = map { $_->{'to'} } @$fk_info;
+        my $fk_name = $self->_resolve_fk_name($fk_info->[0]->{'from_table'},
+                                              \@column_list,
+                                              $fk_info->[0]->{'to_table'},  # They'll all have the same table, right?
+                                              \@r_column_list);
+        foreach my $fk_info_col (@$fk_info) {
+            my $node;
+            $node->{'FK_NAME'}        = $fk_name;
+            $node->{'FK_TABLE_NAME'}  = $fk_info_col->{'from_table'};
+            $node->{'FK_COLUMN_NAME'} = $fk_info_col->{'from'};
+            $node->{'UK_TABLE_NAME'}  = $fk_info_col->{'to_table'};
+            $node->{'UK_COLUMN_NAME'} = $fk_info_col->{'to'};
+            push @ret_data, $node;
+        }
+    }
+            
+    my $sponge = DBI->connect("DBI:Sponge:", '','')
         or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
 
     my @returned_names = qw( FK_NAME UK_TABLE_NAME UK_COLUMN_NAME FK_TABLE_NAME FK_COLUMN_NAME );
@@ -325,9 +433,18 @@ my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_
 }
 
 
+# FIXME - use 'pragma foreign_key_list(table_name) to get the data instead, it returns 5 columns:
+#    id - integer ID for this foreign key starting at 0 for this table
+#    seq - integer sequence for this column in this foreign key.  Multi-column FKs will have the same id but different seq
+#    table - the name of the other table we're referencing 
+#    from - the name of the column in the local table
+#    to - the name of the column in the referencing table (column 3)
+# We'll still need to parse the table construction definition to get the constraint names, though
+
 # Return a hashref of foreign key mappings keyed by primary table,
 # and another keyed by referred table
-sub _get_fk_lists {
+our $FK_AUTOGEN = 0;
+sub _X_get_fk_lists {
 my($dbh) = @_;
 
     my $sql = q(select name,sql from sqlite_master where type='table');
@@ -353,7 +470,11 @@ my($dbh) = @_;
             next EACH_TABLE if ($col =~ m/^PRIMARY KEY|^NOT NULL|^UNIQUE|^CHECK|^DEFAULT|^COLLATE/i);
 
             my($col_name) = ($col =~ m/(\w+)\s/);  # First part is the column name
-            my($fk_name, $fk_table,$fk_col) = ($col =~ m/CONSTRAINT (\w+) REFERENCES (\w+)\((\w+)\)/i);
+            my ($fk_name) = ($col =~ m/CONSTRAINT (\w+)/i);
+            unless ($fk_name) {
+                $fk_name = 'FK_' . $FK_AUTOGEN++; 
+            }
+            my($fk_table,$fk_col) = ($col =~ m/REFERENCES (\w+)\((\w+)\)/i);
             next unless ($col_name && $fk_name && $fk_table && $fk_col);
 
             push(@{$table_col_fk->{uc $row->{'name'}}->{uc $col_name}},
@@ -448,5 +569,60 @@ sub commit {
     # Shouldn't get here...
     return;
 }
+
+
+# Get info out of the sqlite_master table.  Returns a hashref keyed by 'name'
+# columns are:
+#     type - 'table' or 'index'
+#     name - Name of the object
+#     table_name - name of the table this object references.  For tables, it's the same as name, 
+#            for indexes, it's the name of the table it's indexing
+#     rootpage - Used internally by sqlite
+#     sql - The sql used to create the thing
+sub _get_info_from_sqlite_master {
+    my($self, $name,$type) = @_;
+
+    my(@where, @exec_values);
+    if ($name) {
+        # lower case both of them so we'll find 'em
+        $name = lc($name); 
+        push @where, 'lower(name) = ?';
+        push @exec_values, $name;
+    }
+    if ($type) {
+        $type = lc($type);  # object types are always lower case
+        push @where, 'type = ?';
+        push @exec_values, $type;
+    }
+    my $sql = 'select * from sqlite_master';
+    if (@where) {
+        $sql .= ' where '.join(' and ', @where);
+    }
+
+    my $dbh = $self->get_default_dbh();
+    my $sth = $dbh->prepare($sql);
+    unless ($sth) {
+        no warnings;
+        $self->error_message("Can't get table details for name $name and type $type: ".$dbh->errstr);
+        return;
+    }
+
+    unless ($sth->execute(@exec_values)) {
+        no warnings;
+        $self->error_message("Can't get table details for name $name and type $type: ".$dbh->errstr);
+        return;
+    }
+
+    my @rows;
+    while (my $row = $sth->fetchrow_arrayref()) {
+        my $item;
+        @$item{'type','name','table_name','rootpage','sql'} = @$row;
+        # Force all names to lower case so we can find them later
+        push @rows, $item;
+    }
+
+    return @rows;
+}
+
 
 1;
