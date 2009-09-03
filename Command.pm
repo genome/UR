@@ -840,7 +840,6 @@ sub _shell_args_property_meta
         next if $seen{$property_name};
         $seen{$property_name} = 1;
         next if $property_meta->is_constant;
-        next if $property_meta->{is_output};
         if ($property_meta->{shell_args_position}) {
             push @positional, $property_meta;
         }
@@ -1227,4 +1226,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 46008 2009-04-20 20:56:35Z eclark $
+#$Id: Command.pm 46009 2009-04-20 21:01:26Z eclark $
