@@ -25,15 +25,29 @@ class UR::DataSource::SortedCsvFile {
     doc => 'A read-only data source for files where the lines are already sorted by its ID columns',
 };
 
+
+my $sql_fh;
+
 sub _fh {
     my $self = shift->_singleton_object;
 
     unless ($self->{'_fh'}) {
+        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+            $sql_fh = UR::DBI->sql_fh();
+            my $time = time();
+            $sql_fh->printf("CSV OPEN AT %d [%s]\n",$time, scalar(localtime($time)));
+        }
+
         my $fh = IO::File->new($self->server);
         unless($fh) {
             $self->error_message("Can't open ".$self->server." for reading: $!");
             return;
         }
+
+        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+            $sql_fh->printf("CSV: opened %s fileno %d\n",$self->server, $fh->fileno);
+        }
+
         $self->{'_fh'} = $fh;
     }
     return $self->{'_fh'};
@@ -73,6 +87,11 @@ sub file_cache_index {
     $self->{'_file_cache_index'};
 }
 
+# Derived classes can set this to 1 if the first line of the file
+# is a header and should be skipped
+sub skip_first_line {
+    0;
+}
 
 our $MAX_CACHE_SIZE = 100;
 sub _file_cache {
@@ -94,7 +113,6 @@ sub _invalidate_cache {
  
     my $file_cache = $self->{'_file_cache'};
     undef($_) foreach @$file_cache;
-
     $self->file_cache_index(0);
 }
 
@@ -117,16 +135,14 @@ $DB::single=1;
 
         push @$sql_cols, $column_data;
     }
-        
+
     # reorder the requested columns to be in the same order as the file
     @$sql_cols = sort { $column_to_position_map{$a->[1]->column_name} <=> $column_to_position_map{$b->[1]->column_name}} @$sql_cols;
-
     my $templates = $class->SUPER::_generate_loading_templates_arrayref($sql_cols);
  
     return $templates;
 }
     
-
 
 #sub _generate_class_data_for_loading {
 #    my($self,$class_meta) = @_;
@@ -424,6 +440,17 @@ $DB::single=1;
         }
     }
 
+    my($monitor_start_time,$monitor_printed_first_fetch);
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        $monitor_start_time = Time::HiRes::time();
+        $monitor_printed_first_fetch = 0;
+        my $filter_list = join("\n\t",
+                               map { $csv_column_order[$_] . ($_ <= $last_id_column_in_rule ? ' (sorted)' : '')  }
+                                   @rule_columns_in_order
+                              );
+        $sql_fh->printf("CSV: %s\nFILTERS %s\n\n", $self->server, $filter_list);
+    }
+
     unless ($matched_in_cache) {
         # this query either doesn't hit the leftmost sorted columns, or nothing
         # has been read from it yet
@@ -437,9 +464,15 @@ $DB::single=1;
     my $iterator = sub {
 
 $DB::single=1;
+        if ($monitor_start_time && ! $monitor_printed_first_fetch) {
+            $sql_fh->printf("CSV: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+            $monitor_printed_first_fetch = 1;
+        }
+
         if ($self->last_read_fingerprint() ne $fingerprint) {
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
+            $fh->getline() if ($self->skip_first_line());
             $self->_invalidate_cache();
         }
 
@@ -482,6 +515,11 @@ $DB::single=1;
                 if ($comparison > 0 and $i <= $last_id_column_in_rule) {
                     # We've gone past the last thing that could possibly match
                     $self->file_cache_index($file_cache_index);
+
+                    if ($monitor_start_time) {
+                        $sql_fh->printf("CSV: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+                    }
+
                     return;
                 
                 } elsif ($comparison != 0) {
