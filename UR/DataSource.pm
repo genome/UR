@@ -382,7 +382,7 @@ sub _generate_template_data_for_loading {
                     ! $foreign_data_source->does_support_joins
                 )
             {
-                push(@{$joins_across_data_sources->{$foreign_data_source}}, $delegated_property);
+                push(@{$joins_across_data_sources->{$foreign_data_source->id}}, $delegated_property);
                 next DELEGATED_PROPERTY;
             }
 
@@ -832,7 +832,7 @@ sub _CopyToAlternateDB {
 sub _get_current_entities {
     my $self = shift;
     my @class_meta = UR::Object::Type->is_loaded(
-        data_source => $self->id
+        data_source_id => $self->id
     );
     my @objects;
     for my $class_meta (@class_meta) {

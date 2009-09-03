@@ -7,7 +7,7 @@ use above 'URT';
 
 plan tests => 21;
 
-# This re-uses classes from testcases 34 and 38
+# This re-uses classes from testcase 43
 
 &test_relations();
 
@@ -15,18 +15,18 @@ plan tests => 21;
 
 sub test_relations {
 
-    my $p_class = URT::38Primary->get_class_object();
-    ok($p_class, 'Loaded URT::38Primary class');
+    my $p_class = URT::43Primary->get_class_object();
+    ok($p_class, 'Loaded URT::43Primary class');
 
-    my $r_class = URT::38Related->get_class_object();
-    ok($r_class, 'Loaded URT::38Related class');
+    my $r_class = URT::43Related->get_class_object();
+    ok($r_class, 'Loaded URT::43Related class');
 
     my @props = $p_class->direct_property_metas();
-    is(scalar(@props), 5, 'URT::38Primary has 5 properites');
+    is(scalar(@props), 5, 'URT::43Primary has 5 properites');
     my @names = sort map { $_->property_name } @props;
     is_deeply(\@names,
               [ qw( primary_id primary_value rel_id related_object related_value ) ],
-              'URT::38Primary property names check out');
+              'URT::43Primary property names check out');
 
     my $prop = $p_class->direct_property_meta(property_name => 'related_value');
     ok($prop, 'singular property accessor works');
@@ -35,7 +35,7 @@ sub test_relations {
     my $c = $prop->class_meta;
     ok($c, 'class_meta() on a property');
     isa_ok($c, 'UR::Object::Type');
-    is($c->class_name, 'URT::38Primary');
+    is($c->class_name, 'URT::43Primary');
 
     my @ids = $p_class->direct_id_property_metas();
     is(scalar(@ids), 1, 'id_property_metas returned 1 object');

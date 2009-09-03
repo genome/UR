@@ -375,7 +375,7 @@ sub _normalize_class_description {
         [ constraints           => qw/unique_constraints/],
         [ namespace             => qw//],
         [ schema_name           => qw//],                
-        [ data_source           => qw/instance/],                
+        [ data_source_id        => qw/data_source instance/],                
         [ table_name            => qw/sql dsmap/],
         [ query_hint            => qw/query_hint/],
         [ sub_classification_property_name      => qw//],
@@ -445,7 +445,7 @@ sub _normalize_class_description {
         and $new_class{is_abstract}  
         and ($new_class{class_name} !~ /^(App|UR)::/)
         and ($new_class{class_name} !~ /^Command(::|)$/)
-        and ($new_class{data_source})
+        and ($new_class{data_source_id})
     ) {
         unless ($new_class{sub_classification_property_name} or $new_class{sub_classification_method_name}) {
             $class->error_message(
@@ -727,8 +727,8 @@ sub _normalize_class_description {
         }
     }
     
-    if (($new_class{data_source} and not ref($new_class{data_source})) and not $new_class{schema_name}) {
-        my $s = $new_class{data_source};
+    if (($new_class{data_source_id} and not ref($new_class{data_source_id})) and not $new_class{schema_name}) {
+        my $s = $new_class{data_source_id};
         $s =~ s/^.*::DataSource:://;
         $new_class{schema_name} = $s;
     }
@@ -943,11 +943,11 @@ sub _normalize_property_description {
     # For classes that have (or pretend to have) tables, the Property objects
     # should get their column_name property automatically filled in
     my $the_data_source;
-    if (ref($new_class{'data_source'}) eq 'HASH') {
+    if (ref($new_class{'data_source_id'}) eq 'HASH') {
         # This is an inline-defined data source
-        $the_data_source = $new_class{'data_source'}->{'is'};
+        $the_data_source = $new_class{'data_source_id'}->{'is'};
     } else {
-        $the_data_source = $new_class{'data_source'};
+        $the_data_source = $new_class{'data_source_id'};
     }
     # UR::DataSource::File-backed classes don't have table_names, but for querying/saving to
     # work property, their properties still have to have column_name filled in
@@ -1122,7 +1122,7 @@ sub _complete_class_meta_object_definitions {
     my %id_properties = map { $_ => 1 } @$id_properties;
     my $relationships = $self->{relationships} || [];
     my $constraints = $self->{constraints};
-    my $data_source = $self->{'data_source'};
+    my $data_source = $self->{'data_source_id'};
     
     # mark id/non-id properites
     foreach my $pinfo ( values %$properties ) {
@@ -1150,7 +1150,7 @@ sub _complete_class_meta_object_definitions {
         $self->{'__inline_data_source_data'} = $data_source;
         my $ds_class = $data_source->{'is'};
         my $inline_ds_class = $ds_class->create_from_inline_class_data($self, $data_source);
-        $self->{'data_source'} = $self->{'db_committed'}->{'data_source'} = $inline_ds_class;
+        $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $inline_ds_class;
     }
 
     my $n = 1;

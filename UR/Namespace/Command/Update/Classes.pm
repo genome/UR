@@ -158,16 +158,17 @@ $DB::single=1;
             @target_data_sources = ();
             my %data_source_is_specified = map { $_ => 1 } @$specified_data_source_arrayref;
             for my $ds (@namespace_data_sources) {
-                if ($data_source_is_specified{$ds}) {
+                if ($data_source_is_specified{$ds->id}) {
                     push @target_data_sources, $ds;
+                    delete $data_source_is_specified{$ds->id};
                 }
             }
-            delete @data_source_is_specified{@namespace_data_sources};
+            #delete @data_source_is_specified{@namespace_data_sources};
             if (my @unknown = keys %data_source_is_specified) {
                 $self->error_message(
                     "Unknown data source(s) for namespace $namespace: @unknown!\n"
                     . "Select from:\n"
-                    . join("\n",@namespace_data_sources)
+                    . join("\n",map { $_->id } @namespace_data_sources)
                     . "\n"
                 );
                 return;
@@ -183,6 +184,7 @@ $DB::single=1;
         $self->status_message("Found data sources: " 
             .   join(", " , 
                     map { /${namespace}::DataSource::(.*)$/; $1 || $_ } 
+                    map { $_->id }
                     @target_data_sources
                 )
         );
@@ -197,7 +199,7 @@ $DB::single=1;
         for my $data_source (@target_data_sources) {
             # ensure the class has been lazy-loaded until UNIVERSAL::can is smarter...
             $data_source->class;
-            $self->status_message("Checking $data_source for schema changes ...");
+            $self->status_message("Checking " . $data_source->id . " for schema changes ...");
             my $success =
                 $self->_update_database_metadata_objects_for_schema_changes(
                     data_source => $data_source,
@@ -431,7 +433,7 @@ sub _update_database_metadata_objects_for_schema_changes {
     my $force_check_all_tables = delete $params{force_check_all_tables};
     die "unknown params " . Dumper(\%params) if keys %params;
 
-    $data_source = $data_source->class;
+    #$data_source = $data_source->class;
 
     my @changed;
 
@@ -456,7 +458,7 @@ sub _update_database_metadata_objects_for_schema_changes {
     # handle tables which are new/updated by updating the class
     my (@create,@delete,@update);
     my $pattern = '%-42s';
-    my ($dsn) = ($data_source =~ /^.*::DataSource::(.*?)$/);
+    my ($dsn) = ($data_source->id =~ /^.*::DataSource::(.*?)$/);
     for my $table_name (keys %all_table_names) {
         my $last_actual_ddl_time = $last_ddl_time_for_table_name->{$table_name};
 
@@ -469,7 +471,7 @@ sub _update_database_metadata_objects_for_schema_changes {
 
             # Using the above doesn't account for a table switching databases, which happens.
             # Once the data source is _part_ of the id we'll just have a delete/add, but for now it's an update.
-            $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source,
+            $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source->id,
                                                               table_name => $table_name);
         };
 
@@ -527,7 +529,7 @@ sub _update_database_metadata_objects_for_schema_changes {
                 )
             );
             my $table_object = UR::DataSource::RDBMS::Table->get(
-                                       data_source => $data_source->class,
+                                       data_source => $data_source->id,
                                        table_name => $table_name,
                                    );
             $table_object->delete;
@@ -557,7 +559,7 @@ sub _get_class_meta_for_table_name {
     my ($obj) = 
         grep { not $_->isa("UR::Object::Ghost") } 
         UR::Object::Type->is_loaded(
-            data_source => $data_source,
+            data_source_id => $data_source,
             table_name => $table_name
         );
     return $obj if $obj;
@@ -566,7 +568,7 @@ sub _get_class_meta_for_table_name {
     unless ($self->{'_class_meta_cache'}{$data_source_name}) {
         my @classes =
             grep { not $_->class_name->isa('UR::Object::Ghost') } 
-            UR::Object::Type->get(data_source => $data_source);
+            UR::Object::Type->get(data_source_id => $data_source);
             
         for my $class (@classes) {
             my $table_name = $class->table_name;
@@ -683,13 +685,13 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
         my $class = 
             UR::Object::Type->get(
-                data_source => $table->data_source,
-                table_name => $table->table_name,
+                data_source_id => $table->data_source,
+                table_name     => $table->table_name,
             )
             ||
             UR::Object::Type::Ghost->get(
-                data_source => $table->data_source,
-                table_name => $table->table_name,
+                data_source_id => $table->data_source,
+                table_name     => $table->table_name,
             );
 
         unless ($class) {
@@ -730,8 +732,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
         my $class = UR::Object::Type->get(
-            data_source => $table->data_source,
-            table_name => $table->table_name,
+            data_source_id => $table->data_source,
+            table_name     => $table->table_name,
         );
         unless ($class) {
             $self->status_message(sprintf("~ No class found for deleted column %-32s %-32s\n", $table->table_name, $column_name));
@@ -804,8 +806,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
         # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
         my $class = UR::Object::Type->get(
-            data_source => UR::Context->_get_committed_property_value($table,'data_source'),
-            table_name => UR::Context->_get_committed_property_value($table,'table_name'),
+            data_source_id => UR::Context->_get_committed_property_value($table,'data_source'),
+            table_name     => UR::Context->_get_committed_property_value($table,'table_name'),
         );
         unless ($class) {
             $self->status_message(sprintf("~ No class found for deleted table %-32s" . "\n",$table->id));
@@ -961,7 +963,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                             class_name => $class_name,
                             type_name => $type_name,
                             doc => ($table->remarks ? $table->remarks: undef),
-                            data_source => $data_source,
+                            data_source_id => $data_source,
                             table_name => $table_name,
                             er_role => $table->er_type,
                             # generate => 0,
@@ -1591,7 +1593,8 @@ sub _update_database_metadata_objects_for_table_changes {
         return undef;
     }
 
-    my $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source,
+    my $data_source_id = $data_source->id;
+    my $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source_id,
                                                          table_name => $table_name);
     if ($table_object) {
         # Already exists, update the existing entry
@@ -1611,7 +1614,7 @@ sub _update_database_metadata_objects_for_table_changes {
             table_name => $table_name,
             table_type => $table_data->{TABLE_TYPE},
             owner => $table_data->{TABLE_SCHEM},
-            data_source => $data_source->class,
+            data_source => $data_source_id,
             remarks => $table_data->{REMARKS},
             last_object_revision => $revision_time,
         );
@@ -1631,12 +1634,12 @@ sub _update_database_metadata_objects_for_table_changes {
     }
     my $all_column_data = $column_sth->fetchall_arrayref({});
     unless (@$all_column_data) {
-        $self->error_message("No column data for table $table_name in data source $data_source");
+        $self->error_message("No column data for table $table_name in data source $data_source_id");
         return;
     }
     
     my %columns_to_delete = map {$_->column_name, $_} UR::DataSource::RDBMS::TableColumn->get(table_name => $table_name,
-                                                                                              data_source => $data_source);
+                                                                                              data_source => $data_source_id);
     
     
     
@@ -1649,7 +1652,7 @@ sub _update_database_metadata_objects_for_table_changes {
         delete $columns_to_delete{$column_data->{'COLUMN_NAME'}};
         
         my $column_obj = UR::DataSource::RDBMS::TableColumn->get(table_name => $table_name,
-                                                                 data_source => $data_source,
+                                                                 data_source => $data_source_id,
                                                                  column_name => $column_data->{'COLUMN_NAME'});
         if ($column_obj) {
             # Already exists, change the attributes
@@ -1697,16 +1700,16 @@ sub _update_database_metadata_objects_for_table_changes {
 
         my $column_object = UR::DataSource::RDBMS::TableColumn->is_loaded(
             table_name => uc($index->{'table_name'}),
-            data_source => $data_source,
+            data_source => $data_source_id,
             column_name => uc($index->{'column_name'}),
         );
     }
 
     
     # Make a note of what FKs exist in the Meta DB involving this table
-    my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source,
+    my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
                                                                   table_name => $table_name);
-    push @fks_in_meta_db, UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source,
+    push @fks_in_meta_db, UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
                                                                    r_table_name => $table_name);
     my %fks_in_meta_db_by_fingerprint;
     foreach my $fk ( @fks_in_meta_db ) {
@@ -1734,7 +1737,7 @@ sub _update_database_metadata_objects_for_table_changes {
             }
 
             my $fk = UR::DataSource::RDBMS::FkConstraint->get(table_name => $data->{'FK_TABLE_NAME'},
-                                                              data_source => $data_source,
+                                                              data_source => $data_source_id,
                                                               fk_constraint_name => $data->{'FK_NAME'},
                                                               r_table_name => $data->{'UK_TABLE_NAME'},
                                                              );
@@ -1861,7 +1864,7 @@ sub _update_database_metadata_objects_for_table_changes {
             $data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
             my $pk = UR::DataSource::RDBMS::PkConstraintColumn->get(
                             table_name => $table_name,
-                            data_source => $data_source,
+                            data_source => $data_source_id,
                             column_name => $data->{'COLUMN_NAME'},
                           );
             if ($pk) {
@@ -1873,7 +1876,7 @@ sub _update_database_metadata_objects_for_table_changes {
 			
 			push @new_pk, [
 				table_name => $table_name,
-				data_source => $data_source,
+				data_source => $data_source_id,
 				owner => $data_source->owner,
 				column_name => $data->{'COLUMN_NAME'},
 				rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
@@ -1928,7 +1931,7 @@ sub _update_database_metadata_objects_for_table_changes {
 
         # compare primary key constraints to unique constraints
         my $pk_columns_serial = join(',', sort map { $_->column_name }
-                                            UR::DataSource::RDBMS::PkConstraintColumn->get(data_source => $data_source,
+                                            UR::DataSource::RDBMS::PkConstraintColumn->get(data_source => $data_source_id,
                                                                                            table_name => $table_name,
                                                                                            owner => $data_source->owner,
                                                                                          ));
@@ -1957,7 +1960,7 @@ sub _update_database_metadata_objects_for_table_changes {
         # objects if they don't apply anymore
         foreach my $uc_name ( keys %uc ) {
             my %constraint_objs = map { $_->column_name => $_ } UR::DataSource::RDBMS::UniqueConstraintColumn->get(
-                                                                            data_source => $data_source,
+                                                                            data_source => $data_source_id,
                                                                             table_name => $table_name,
                                                                             owner => $data_source->owner || '',
                                                                             constraint_name => $uc_name,
@@ -1968,7 +1971,7 @@ sub _update_database_metadata_objects_for_table_changes {
                     delete $constraint_objs{$col_name};
                 } else {
                     my $uc = UR::DataSource::RDBMS::UniqueConstraintColumn->create(
-                                                   data_source => $data_source,
+                                                   data_source => $data_source_id,
                                                    table_name => $table_name,
                                                    owner => $data_source->owner,
                                                    constraint_name => $uc_name,

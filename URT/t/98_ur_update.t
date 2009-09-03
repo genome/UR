@@ -180,7 +180,7 @@ ok($trans, "CREATED PERSON and began transaction");
         is($personclass->type_name, 'person', 'Person class type_name is correct');
         is($personclass->class_name, 'URT::Person', 'Person class class_name is correct');
         is($personclass->table_name, 'PERSON', 'Person class table_name is correct');
-        is($UR::Context::current->resolve_data_sources_for_class_meta_and_rule($personclass), $ds_class, 'Person class data_source is correct');
+        is($UR::Context::current->resolve_data_sources_for_class_meta_and_rule($personclass)->id, $ds_class, 'Person class data_source is correct');
         is_deeply([sort $personclass->column_names],
                 ['NAME','PERSON_ID'],
                 'Person object has all the right columns');

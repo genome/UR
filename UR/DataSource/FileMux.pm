@@ -8,7 +8,7 @@ use Sub::Name ();
 use Sub::Install ();
 
 class UR::DataSource::FileMux {
-    is => ['UR::DataSource'],
+    is => ['UR::DataSource','UR::Singleton'],
     doc => 'A factory for other datasource factories that is able to pivot depending on parameters in the rule used for get()',
 };
 
@@ -83,7 +83,7 @@ sub create_iterator_closure_for_rule {
             $this_ds_rule_params->{$required_for_get[$i]} = $resolver_params->[$i];
         }
 
-        my $sub_ds_name = join('::', $self, @sub_ds_name_parts);
+        my $sub_ds_name = join('::', $self->id, @sub_ds_name_parts);
         unless (my $ds = UR::Object::Type->get($sub_ds_name)) {
 
             my $file_path = $file_resolver->(@$resolver_params);
@@ -490,7 +490,12 @@ sub create_from_inline_class_data {
 # All the concrete, file-specific data sources will inherit from this class.  This is where we'll
 # put configuration information line delimiter, column_order, etc.
 sub _file_specific_parent_ds_name {
-    return $_[0] . '::_Parent';
+    my $self = shift;
+    
+    unless (ref $self) {
+        $self = $self->get();
+    }
+    return $self->id . '::_Parent';
 }
 
 

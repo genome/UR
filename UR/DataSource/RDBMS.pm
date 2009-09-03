@@ -260,8 +260,21 @@ sub get_table_names {
 }
 
 sub get_tables {
-    my $class = shift->_singleton_class_name;
-    return UR::DataSource::RDBMS::Table->get(data_source => $class);
+    my $self = shift;
+
+    #my $class = shift->_singleton_class_name;
+    #return UR::DataSource::RDBMS::Table->get(data_source_id => $class);
+    my $ds_id;
+    if (ref $self) {
+        if ($self->can('id')) {
+            $ds_id = $self->id;
+        } else {
+            $ds_id = ref $self;
+        }
+    } else {
+        $ds_id = $self;
+    }
+    return UR::DataSource::RDBMS::Table->get(data_source => $ds_id);
 }
 
 # TODO: make "env" an optional characteristic of a class attribute
@@ -450,7 +463,7 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
         }
     }
 
-    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self);
+    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->id);
 
     unless ($table_name && $table) {
         Carp::confess("Failed to find a table for class $class_name!");

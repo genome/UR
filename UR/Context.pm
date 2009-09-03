@@ -180,7 +180,7 @@ sub resolve_data_sources_for_class_meta_and_rule {
             my $namespace = $params->{'data_source'}->[0]->get_namespace;
             $data_source = $namespace . '::DataSource::Meta';
         } else {
-            Carp::confess("Required parameter (namespace or data_source) missing");
+            Carp::confess("Required parameter (namespace or data_source_id) missing");
             #$data_source = 'UR::DataSource::Meta';
         }
 
@@ -208,7 +208,8 @@ sub resolve_data_source_for_object {
     if ($class_meta->class_name =~ m/^UR::DataSource::RDBMS::/) {
         my $data_source = $object->data_source;
         my($namespace) = ($data_source =~ m/(^\w+?)::DataSource/);
-        return $namespace . '::DataSource::Meta';
+        my $ds_name = $namespace . '::DataSource::Meta';
+        return $ds_name->get();
     } elsif ($data_source_mapping->{$class_name}) {
         # FIXME This assummes there will ever only be one datasource override
         # per class name.  It doesn't check the associated boolexpr
@@ -586,8 +587,8 @@ sub _get_template_data_for_loading {
     }
 
     my @addl_loading_info;
-    foreach my $secondary_data_source ( keys %{$primary_template->{'joins_across_data_sources'}} ) {
-        my $this_ds_delegations = $primary_template->{'joins_across_data_sources'}->{$secondary_data_source};
+    foreach my $secondary_data_source_id ( keys %{$primary_template->{'joins_across_data_sources'}} ) {
+        my $this_ds_delegations = $primary_template->{'joins_across_data_sources'}->{$secondary_data_source_id};
 
         my %seen_properties;
         foreach my $delegated_property ( @$this_ds_delegations ) {
@@ -647,7 +648,11 @@ sub _get_template_data_for_loading {
 
             my $secondary_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params($secondary_class, @secondary_params);
 
-            # FIXME there should be a way to collect all the requests for the sama datasource together...
+            # FIXME there should be a way to collect all the requests for the same datasource together...
+            # FIXME - currently in the process of switching to object-based instead of class-based data sources
+            # For now, data sources are still singleton objects, so this get() will work.  When we're fully on
+            # regular-object-based data sources, then it'll probably change to UR::DataSource->get($secondary_data_source_id); 
+            my $secondary_data_source = $secondary_data_source_id->get();
             push @addl_loading_info,
                      $secondary_data_source,
                      [$delegated_property],
@@ -1286,6 +1291,11 @@ sub _create_object_fabricator_for_loading_template {
     my $multi_column_id     = (@id_positions > 1 ? 1 : 0);
     my $composite_id_resolver = $class_meta->get_composite_id_resolver;
     
+    # The old way of specifying that some values were constant for all objects returned
+    # by a get().  The data source would wrap the method that builds the loading template
+    # and wedge in some constant_property_names.  The new way is to add columns to the
+    # loading template, and then add the values onto the list returned by the data source
+    # iterator.  
     my %initial_object_data;
     if ($loading_template->{constant_property_names}) {
         my @constant_property_names  = @{ $loading_template->{constant_property_names} };
@@ -2532,9 +2542,9 @@ sub _sync_databases {
     for my $obj (@changed_objects) {
         my $data_source = $self->resolve_data_source_for_object($obj);
         next unless $data_source;
-        #$data_source = $data_source->class;        
-        $ds_objects{$data_source} ||= { 'ds_obj' => $data_source, 'changed_objects' => []};
-        push @{ $ds_objects{$data_source}->{'changed_objects'} }, $obj;
+        my $data_source_id = $data_source->id;
+        $ds_objects{$data_source_id} ||= { 'ds_obj' => $data_source, 'changed_objects' => []};
+        push @{ $ds_objects{$data_source_id}->{'changed_objects'} }, $obj;
     }
 
     my @ds_in_order = 
@@ -2548,8 +2558,8 @@ sub _sync_databases {
     # save on each in succession
     my @done;
     my $rollback_on_non_savepoint_handle;
-    for my $data_source_string (@ds_in_order) {
-        my $obj_list = $ds_objects{$data_source_string}->{'changed_objects'};
+    for my $data_source_id (@ds_in_order) {
+        my $obj_list = $ds_objects{$data_source_id}->{'changed_objects'};
 
 # Testing code for sorting objects getting saved to try and validate UR with analyze traces
 ## Break into classes, sort by ID properties and then joing 'em all back together for testing
@@ -2565,7 +2575,7 @@ sub _sync_databases {
 #}
 #$obj_list = \@sorted_objs;
 
-        my $data_source = $ds_objects{$data_source_string}->{'ds_obj'};
+        my $data_source = $ds_objects{$data_source_id}->{'ds_obj'};
         my $result = $data_source->_sync_database(
             %params,
             changed_objects => $obj_list,
@@ -2576,7 +2586,7 @@ sub _sync_databases {
         }
         else {
             $self->error_message(
-                "Failed to sync data source: $data_source: "
+                "Failed to sync data source: $data_source_id: "
                 . $data_source->error_message
             );
             for my $prev_data_source (@done) {

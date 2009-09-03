@@ -13,7 +13,7 @@ foreach my $class_name ( qw( URT::Office URT::Office2 URT::Employee
 
     my @ds_name_parts = $class_name =~ m/^(\w+)::(.*)/;
     my $expected_ds_name = join('::', shift(@ds_name_parts), 'DataSource', @ds_name_parts);
-    is($class_meta->{'data_source'}, $expected_ds_name, "It has a data source named");
+    is($class_meta->{'data_source_id'}, $expected_ds_name, "It has a data source named");
 
 #    my $ds_meta = UR::DataSource->get($class_meta->data_source);
 #    ok($ds_meta, 'Loaded data source meta object');

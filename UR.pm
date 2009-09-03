@@ -207,7 +207,8 @@ UR::Object::Type->define(
         doc                              => { type => 'Text', len => 1024, is_optional => 1, source => 'data dictionary' },
         er_role                          => { type => 'Text', len => 64, is_optional => 1, source => 'data dictionary', default_value => 'entity' },
         schema_name                      => { type => 'Text', len => 64, is_optional => 1, source => 'data dictionary' },
-        data_source                      => { type => 'Text', len => 64, is_optional => 1, source => 'data dictionary' },
+        data_source_id                      => { type => 'Text', len => 64, is_optional => 1, source => 'data dictionary' },
+        #data_source_meta                 => { type => 'UR::DataSource', id_by => 'data_source_id', is_optional => 1, source => 'data dictionary' },
         namespace                        => { type => 'Text', len => 64, is_optional => 1, source => 'data dictionary' },
 
         is_abstract                      => { type => 'Boolean', default_value => 0 },
@@ -236,8 +237,7 @@ UR::Object::Type->define(
     ### Relationships with the other meta-classes ###
 
         # UR::Namespaces are singletons referenced through their name
-        namespace                       => { type => 'String' , is_optional => 1 },
-        namespace_meta                  => { type => 'UR::Namespace', id_by => 'namespace' },  # FIXME this ends up returning a hash, not an object?!  Same thing happens with Namespace->_singleton_object
+        namespace_meta                  => { type => 'UR::Namespace', id_by => 'namespace' },
         is                              => { type => 'ARRAY', is_mutable => 0, doc => 'List of the parent class names' },  
         #id_by                           => { type => 'ARRAY', is_mutable => 0, doc => 'List of the id property names' },
         

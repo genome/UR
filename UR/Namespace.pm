@@ -80,13 +80,17 @@ sub get_material_class_names
     return map {$_->class_name} $_[0]->get_material_classes();
 }
 
+
 sub get_data_sources
 {
     my $class = shift;
     if ($class eq 'UR' or (ref($class) and $class->id eq 'UR')) {
         return 'UR::DataSource::Meta';  # UR only has 1 "real" data source, the other stuff in that dir are base classes
     } else {
-        return $class->_get_class_names_under_dir("DataSource");
+        #return $class->_get_class_names_under_dir("DataSource");
+        my @ds_names = $class->_get_class_names_under_dir("DataSource");
+        my @ds_objs = map { $_->get() } @ds_names;
+        return @ds_objs;
     }
 }
 
