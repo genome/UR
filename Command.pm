@@ -678,9 +678,10 @@ sub _shell_args_property_meta
 {
     my $self = shift;
     my $class_meta = $self->get_class_object;
-    my @property_meta = sort { $b->property_name cmp $a->property_name } $class_meta->get_all_property_objects(@_);
+    my @property_meta = $class_meta->get_all_property_objects(@_);
     my @result;
     my %seen;
+    $DB::single = 1;
     for my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
         next if $property_name eq 'id';
@@ -693,9 +694,11 @@ sub _shell_args_property_meta
         next if $property_meta->is_delegated;
         next if $property_meta->is_calculated;
         next if $seen{$property_name};
-        push @result, $property_meta;
         $seen{$property_name} = 1;
+        next if $property_meta->is_constant;
+        push @result, $property_meta;
     }
+    @result = sort { $a->property_name cmp $b->property_name } @result;
     return @result;
 }
 
