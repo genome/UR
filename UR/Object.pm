@@ -732,7 +732,18 @@ sub all_objects_are_loaded  {
 
     my $class = shift;
     #$meta = $class->get_class_object;
-    $all_objects_are_loaded->{$class} = shift if (@_);
+    if (@_) {
+        # Setting the attribute
+        $all_objects_are_loaded->{$class} = shift;
+    } elsif (! exists $all_objects_are_loaded->{$class}) {
+        # unknown... ask the parent classes and remember the answer
+        foreach my $parent_class ( $class->inheritance ) {
+            if (exists $all_objects_are_loaded->{$parent_class}) {
+                $all_objects_are_loaded->{$class} = $all_objects_are_loaded->{$parent_class};
+                last;
+            }
+        }
+    }
     return $all_objects_are_loaded->{$class};
 }
 
