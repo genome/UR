@@ -394,12 +394,32 @@ and L<Mock::Object>.
 Takes the same sort of parameters as get(), but returns a L<UR::Object::Iterator>
 for the matching objects.
 
-The  next() method will return one object from the resulting set each time it is 
+The next() method will return one object from the resulting set each time it is 
 called, and undef when the results have been exhausted.
 
 C<UR::Object::Iterator> instances are normal object references in the current 
 process, not context-oriented UR::Objects.  They vanish upon dereference,
 and cannot be retrieved by querying the context.
+
+When using an iterator, the system attempts to return objects matching the params
+at the time the iterator is created, even if those objects do not match the
+params at the time they are returned from next().  Consider this case:
+
+  # many objects in the DB match this
+  my $iter = SomeClass->create_iterator(job => 'cleaner');
+
+  my $an_obj = SomeClass->get(job => 'cleaner', id => 1);
+  $an_obj->job('messer-upper');    # This no longer matches the iterator's params
+
+  my @iter_objs;
+  while (my $o = $iter->next) {
+      push @iter_objs, $o;
+  }
+
+At the end, @iter_objs will contain several objects, including the object with id 1,
+even though its job is no longer 'cleaner'.  However, if an object matching the
+iterator's params is deleted between the time the iterator is created and the time
+next() would return that object, then next() will throw an exception.
 
 =item define_set 
 
