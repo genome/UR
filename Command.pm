@@ -181,12 +181,11 @@ sub create
 {
     my $class = shift;
     my ($rule,%extra) = $class->get_rule_for_params(@_);
-    if (%extra) {
-        $extra{bare_args} = delete $extra{" "};
-    }
+    my $bare_args = delete $extra{" "};
     my @params_list = $rule->params_list;
     my $self = $class->SUPER::create(@params_list, %extra);
     return unless $self;
+    $self->bare_args($bare_args) if $bare_args;
 
     # set non-optional boolean flags to false.
     for my $property_meta ($self->_shell_args_property_meta) {
@@ -438,7 +437,7 @@ sub resolve_class_and_params_for_argv
     
     unless (GetOptions(\%params,@spec)) {
         my @failed = grep { /^--/ } grep { /\W*(\w+)/; not exists $params{$1} } @argv;
-        $self->error_message("Bad params! @failed");
+        $self->error_message("Bad params ! @failed");
         return($self, undef);
     }
 
