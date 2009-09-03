@@ -1,0 +1,9 @@
+#!/gsc/bin/perl
+
+use strict;
+use warnings;
+
+use above "Vending";
+
+Vending::Command->execute_with_shell_params_and_exit();
+
