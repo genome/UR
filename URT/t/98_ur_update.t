@@ -8,7 +8,14 @@ use warnings;
 use URT;
 use DBI;
 use IO::Pipe;
-use Test::More tests => 90;
+use Test::More;
+if (grep { /HARNESS/ } keys %ENV) {
+    plan skip_all => 'The test harness insists on making our db unwritable.  Run me individually or fix me!';
+}
+else {
+    plan tests => 90;
+}
+
 use UR::Namespace::Command::Update::Classes;
 UR::DBI->no_commit(1);
 
