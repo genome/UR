@@ -1901,7 +1901,7 @@ sub _sync_database {
             for my $n (0 .. $#column_objects) {
                 if ($column_objects[$n]->data_type eq 'BLOB')
                 {
-                    $sth->bind_param($n+1, undef, { ora_type => 113,  ora_field => $column_objects[$n]->column_name });
+                    $sth->bind_param($n+1, undef, { ora_type => 23 });
                 }
             }
         }
