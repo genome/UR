@@ -830,7 +830,11 @@ sub sub_command_classes
     my $class = shift;
     my @paths = $class->sub_command_dirs;
     return unless @paths;
-    @paths = grep { s/\.pm$// } map { glob("$_/*") } @paths;
+    @paths = 
+        grep { s/\.pm$// } 
+        map { glob("$_/*") } 
+        grep { defined($_) and length($_) } 
+        @paths;
     return unless @paths;
     my @classes =
         map { $class->class_for_sub_command($_) }
