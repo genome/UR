@@ -2052,7 +2052,19 @@ sub _get_objects_for_class_and_rule_from_cache {
                 if (not defined $id) {
                     Carp::cluck("Undefined id passed as params!");
                 }
-                my $match = $all_objects_loaded->{$class}->{$id};
+                my $match;
+                # FIXME This is a performance optimization for class metadata to avoid the search through
+                # @subclasses_loaded a few lines further down.  When 100s of classes are loaded it gets
+                # a bit slow.  Maybe UR::Object::Type should override get() instad and put it there?
+                if (! $UR::Object::Type::bootstrapping and $class eq 'UR::Object::Type') {
+                    my $meta_class_name = $id . '::Type';
+                    $match = $all_objects_loaded->{$meta_class_name}->{$id}
+                             ||
+                             $all_objects_loaded->{'UR::Object::Type'}->{$id};
+                    return $match;
+                }   
+
+                $match = $all_objects_loaded->{$class}->{$id};
     
                 # We're done if we found anything.  If not we keep checking.
                 return $match if $match;
