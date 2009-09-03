@@ -248,7 +248,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
             ['EMPLOYEE_ID','RANK'],
             'Employee object has all the right columns');
     is_deeply([sort $employeeclass->class_name->property_names],
-            ['employee_id','rank'],
+            ['employee_id','person_employee','rank'],
             'Employee object has all the right properties');
     is_deeply([$employeeclass->direct_id_column_names],
              ['EMPLOYEE_ID'],
@@ -267,7 +267,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
             'Car object has all the right columns');
     # Is owner a property through owner_id?
     is_deeply([sort $carclass->class_name->property_names],
-            ['car_id','color','cost','make','model','owner_id'],
+            ['car_id','color','cost','make','model','owner_id','person_owner'],
             'Car object has all the right properties');
     is_deeply([$carclass->direct_id_column_names],
             ['CAR_ID'],
@@ -635,12 +635,18 @@ sub initialize_check_change_data_structures {
         "URT::Car\towner_id" => {
             create => '',
         },
+        "URT::Car\tperson_owner" => {
+            create => '',
+        },
 
         "URT::Employee\temployee_id" => {
            create => '',
         },
         "URT::Employee\trank" => {
            create => '',
+        },
+        "URT::Employee\tperson_employee" => {
+            create => '',
         },
 
         "URT::Person\tname" => {
@@ -817,6 +823,10 @@ sub initialize_check_change_data_structures {
         "URT::Employee\trank" => {
             create => '',
         },
+        "URT::Employee\tperson_employee" => {
+            create => '',
+        },
+
         "URT::Person\tperson_id" => {
             create => '',
         },
