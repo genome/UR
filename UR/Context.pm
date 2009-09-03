@@ -106,25 +106,20 @@ sub resolve_data_sources_for_class_meta_and_rule {
     my $data_source;
 
     # For data dictionary items
-    # When the FileMux datasource is more generalized and works for
-    # any kind of underlying datasource, this code can move from here 
-    # and into the base class for Meta datasources
     if ($class_name->isa('UR::DataSource::RDBMS::Entity')) {
         if (!defined $boolexpr) {
             $DB::single=1;
         }
 
         my $params = $boolexpr->legacy_params_hash;
-        my $namespace;
         if ($params->{'namespace'}) {
-            $namespace = $params->{'namespace'};
             $data_source = $params->{'namespace'} . '::DataSource::Meta';
 
         } elsif ($params->{'data_source'} &&
                  ! ref($params->{'data_source'}) &&
                  $params->{'data_source'}->can('get_namespace')) {
 
-            $namespace = $params->{'data_source'}->get_namespace;
+            my $namespace = $params->{'data_source'}->get_namespace;
             $data_source = $namespace . '::DataSource::Meta';
 
         } elsif ($params->{'data_source'} &&
@@ -133,26 +128,11 @@ sub resolve_data_sources_for_class_meta_and_rule {
             unless (scalar(keys %namespaces) == 1) {
                 Carp::confess("get() across multiple namespaces is not supported");
             }
-            $namespace = $params->{'data_source'}->[0]->get_namespace;
+            my $namespace = $params->{'data_source'}->[0]->get_namespace;
             $data_source = $namespace . '::DataSource::Meta';
         } else {
             Carp::confess("Required parameter (namespace or data_source_id) missing");
             #$data_source = 'UR::DataSource::Meta';
-        }
-
-        if (my $exists = UR::Object::Type->get($data_source)) {
-            # switch the terminology above to stop using $data_source for the class name
-            # now it's the object..
-            $data_source = $data_source->get();
-        }
-        else {
-            $self->warning_message("no data source $data_source: generating for $namespace...");
-            UR::DataSource::Meta->generate_for_namespace($namespace);
-            $data_source = $data_source->get();
-        }
-
-        unless ($data_source) {
-            Carp::confess "Failed to find or generate a data source for meta data for namespace $namespace!";
         }
 
     } else {
@@ -643,8 +623,6 @@ sub create_entity {
     }
     
     $entity->__signal_change__("create");
-    $entity->{'__get_serial'} = $UR::Context::GET_COUNTER++;
-    $UR::Context::all_objects_cache_size++;
     return $entity;
 }
 
@@ -1392,6 +1370,7 @@ sub _create_secondary_loading_closures {
 
     my $loading_templates = $primary_template->{'loading_templates'};
 
+$DB::single=1;
     # Make a mapping of property name to column positions returned by the primary query
     my %primary_query_column_positions;
     foreach my $tmpl ( @$loading_templates ) {
@@ -3175,11 +3154,6 @@ sub commit {
         die "Application failure during commit!";
     }
     $self->__signal_change__('commit',1);
-
-    foreach ( $self->all_objects_loaded('UR::Object') ) {
-        delete $_->{'_change_count'};
-    }
-
     return 1;
 }
 
@@ -3549,7 +3523,6 @@ sub _commit_databases {
             die "FAILED TO COMMIT!: " . $class->error_message;
         }
     }
-
     return 1;
 }
 

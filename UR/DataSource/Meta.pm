@@ -116,8 +116,6 @@ sub generate_for_namespace {
     my $class = shift;
     my $namespace_name = shift;
     
-    Carp::confess('Refusing to make MetaDB for the UR namespace') if $namespace_name eq 'UR';
-
     my $namespace_path = $namespace_name->__meta__->module_path();
 
     my $meta_datasource_name = $namespace_name . '::DataSource::Meta';
@@ -139,13 +137,8 @@ sub generate_for_namespace {
     $meta_datasource_filepath .= '/Meta.pm';
  
     # Write the Meta DB datasource Module
-    if (-e $meta_datasource_filepath) {
-        Carp::croak("Can't create new MetaDB datasource Module $meta_datasource_filepath: File already exists");
-    }
     my $fh = IO::File->new("> $meta_datasource_filepath");
-    unless ($fh) {
-        Carp::croak("Can't create MetaDB datasource Module $meta_datasource_filepath: $!");
-    }
+    unless ($fh) { die "Failed to create $meta_datasource_filepath: $!" };
     $fh->printf($module_template, $meta_datasource_name, $meta_datasource_src);
 
     # Write the skeleton SQLite file

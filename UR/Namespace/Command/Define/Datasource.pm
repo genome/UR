@@ -24,6 +24,14 @@ UR::Object::Type->define(
     doc => 'add a data source to the current namespace'
 );
 
+sub dsid {
+    shift->full_name(@_);
+}
+
+sub dsname {
+    shift->name(@_);
+}
+
 sub sub_command_sort_position { 2 }
 
 sub data_source_module_pathname {

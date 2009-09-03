@@ -107,7 +107,6 @@ sub get_changes {
         grep { $_->changed_class_name ne 'UR::Namespace::Command::Update::Classes' }
         grep { $_->changed_class_name ne "UR::Namespace::CommandParam" }
         grep { $_->changed_class_name ne 'UR::DataSource::Meta' && substr($_->changed_aspect,0,1) ne '_'}
-        grep { $_->changed_aspect ne 'query' }
         $trans->get_change_summary();
     return @changes;
 }
@@ -448,7 +447,6 @@ sub convert_change_list_for_checking {
         my $changed_class_name = $change->{'changed_class_name'};
         my $changed_id = $change->{'changed_id'};
         my $changed_aspect = $change->{'changed_aspect'};
-        next if $changed_aspect eq 'query';
         my $undo_data = $change->{'undo_data'};
         if (exists $changes->{$changed_class_name}->{$changed_id}->{$changed_aspect}) {
             die "Two types of changes for the same thing in the same transaction!?";
