@@ -159,7 +159,7 @@ sub via_property_meta {
 sub to_property_meta {
     my $self = shift;
 
-    return unless ($self->is_delegated && $self->via && $self->to);
+    return unless ($self->is_delegated && $self->to);
 
     my $via_meta = $self->via_property_meta();
     return unless $via_meta;
