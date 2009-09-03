@@ -159,7 +159,7 @@ sub _generate_template_data_for_loading {
 
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
     my @all_properties                      = @{ $class_data->{all_properties} };
-    my $first_table_name                    = $class_data->{first_table_name};
+#    my $first_table_name                    = $class_data->{first_table_name};
     my $sub_classification_meta_class_name  = $class_data->{sub_classification_meta_class_name};
     my $sub_classification_property_name    = $class_data->{sub_classification_property_name};
     
@@ -229,10 +229,10 @@ sub _generate_template_data_for_loading {
     );
 
     for my $co ( $class_meta, @parent_class_objects ) {
-        my $table_name = $co->table_name;
-        next unless $table_name;
+#        my $table_name = $co->table_name;
+#        next unless $table_name;
 
-        $first_table_name ||= $table_name;
+#        $first_table_name ||= $table_name;
 
         my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
@@ -245,7 +245,7 @@ sub _generate_template_data_for_loading {
             @id_property_objects = $co->get_property_meta_by_name("id");
             if (@id_property_objects == 0) {
                 $DB::single = 1;
-                Carp::confess("$class_name $table_name $type_name\n");
+                Carp::confess("Couldn't determine ID properties for $class_name\n");
             }
         }
         
@@ -254,20 +254,20 @@ sub _generate_template_data_for_loading {
             map { $_->column_name }
             @id_property_objects;
         
-        if ($prev_table_name)
-        {
-            # die "Database-level inheritance cannot be used with multi-value-id classes ($class_name)!" if @id_property_objects > 1;
-            Carp::confess("No table for class $co->{class_name}") unless $table_name; 
-            push @sql_joins,
-                $table_name =>
-                    {
-                        $id_property_objects[0]->column_name => { 
-                            link_table_name => $prev_table_name, 
-                            link_column_name => $prev_id_column_name 
-                        }
-                    };
-            delete $filters{ $id_property_objects[0]->property_name } if $pk_used;
-        }
+#        if ($prev_table_name)
+#        {
+#            # die "Database-level inheritance cannot be used with multi-value-id classes ($class_name)!" if @id_property_objects > 1;
+#            Carp::confess("No table for class $co->{class_name}") unless $table_name; 
+#            push @sql_joins,
+#                $table_name =>
+#                    {
+#                        $id_property_objects[0]->column_name => { 
+#                            link_table_name => $prev_table_name, 
+#                            link_column_name => $prev_id_column_name 
+#                        }
+#                    };
+#            delete $filters{ $id_property_objects[0]->property_name } if $pk_used;
+#        }
 
         for my $property_name (sort keys %filters)
         {                
@@ -280,17 +280,17 @@ sub _generate_template_data_for_loading {
             delete $filters{$property_name};
             $pk_used = 1 if $id_properties{ $property_name };
             
-            if ($property->can("expr_sql")) {
-                my $expr_sql = $property->expr_sql;
-                push @sql_filters, 
-                    $table_name => 
-                        { 
-                            # cheap hack of putting a whitespace differentiates 
-                            # from a regular column below
-                            " " . $expr_sql => { operator => $operator, value_position => $value_position }
-                        };
-                next;
-            }
+#            if ($property->can("expr_sql")) {
+#                my $expr_sql = $property->expr_sql;
+#                push @sql_filters, 
+#                    $table_name => 
+#                        { 
+#                            # cheap hack of putting a whitespace differentiates 
+#                            # from a regular column below
+#                            " " . $expr_sql => { operator => $operator, value_position => $value_position }
+#                        };
+#                next;
+#            }
             
             if ($property->is_legacy_eav) {
                 die "Old GSC EAV can be handled with a via/to/where/is_mutable=1";
@@ -314,7 +314,7 @@ sub _generate_template_data_for_loading {
             }
         }
         
-        $prev_table_name = $table_name;
+#        $prev_table_name = $table_name;
         $prev_id_column_name = $id_property_objects[0]->column_name;
         
     } # end of inheritance loop
@@ -327,7 +327,7 @@ sub _generate_template_data_for_loading {
 
     my $last_class_name = $class_name;
     my $last_class_object = $class_meta;        
-    my $last_table_alias = $last_class_object->table_name; 
+#    my $last_table_alias = $last_class_object->table_name; 
     my $alias_num = 1;
 
     my %joins_done;
@@ -352,7 +352,7 @@ sub _generate_template_data_for_loading {
         #    . " to $final_accessor"
         #    . " using joins ";
         
-        my $final_table_name_with_alias = $first_table_name; 
+        #my $final_table_name_with_alias = $first_table_name; 
         
         for my $join (@joins) {
             #print "\tjoin $join\n";
@@ -448,8 +448,8 @@ sub _generate_template_data_for_loading {
             $last_class_name = $foreign_class_name;
             $last_class_object = $foreign_class_object;
             $last_alias_for_this_chain = $alias;
-            $last_table_alias = $alias;
-            $final_table_name_with_alias = "$foreign_table_name $alias";
+            #$last_table_alias = $alias;
+            #$final_table_name_with_alias = "$foreign_table_name $alias";
             
         } # next join
 
@@ -475,10 +475,10 @@ sub _generate_template_data_for_loading {
 
         my $operator       = $rule_template->operator_for_property_name($property_name);
         my $value_position = $rule_template->value_position_for_property_name($property_name);                
-        push @sql_filters, 
-            $final_table_name_with_alias => { 
-                $sql_lvalue => { operator => $operator, value_position => $value_position } 
-            };
+        #push @sql_filters, 
+        #    $final_table_name_with_alias => { 
+        #        $sql_lvalue => { operator => $operator, value_position => $value_position } 
+        #    };
     } # next delegated property
     
     for my $property_meta_array (@all_properties) {
