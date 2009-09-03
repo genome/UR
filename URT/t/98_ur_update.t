@@ -29,6 +29,10 @@ if ($working_dir !~ m/\/URT/) {
 # Make a fresh sqlite database in tmp.
 
 my $ds_class = 'URT::DataSource::SomeSQLite';
+$ds_class->class;
+my $path = $INC{"UR.pm"};
+system "chmod -R o+w $path";
+
 my $sqlite_file = $ds_class->server;
 
 cleanup_files();
