@@ -421,6 +421,7 @@ sub create_iterator_closure_for_rule {
     my $rule_template = $rule->rule_template;
 
     my @csv_column_order = $self->column_order;
+    my $csv_column_count = scalar @csv_column_order;
     my %properties_in_rule = map { $_ => 1 }
                              grep { $rule->specifies_value_for_property_name($_) }
                              @csv_column_order;
@@ -599,7 +600,8 @@ sub create_iterator_closure_for_rule {
 
                 chomp $line;
                 # FIXME - to support record-oriented files, we need some replacement for this...
-                $next_candidate_row = [ split($split_regex, $line) ];
+                $next_candidate_row = [ split($split_regex, $line, $csv_column_count) ];
+                $#{$a} = $csv_column_count-1;
 
                 if ($file_cache_index > $max_cache_size) {
                     # cache is full
