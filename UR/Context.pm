@@ -1144,16 +1144,6 @@ sub get_objects_for_class_and_rule {
         # this will interleave the above with any data already present in the current context
         $loading_iterator = sub {
             PICK_NEXT_OBJECT_FOR_LOADING:
-            ($next_obj_current_context) = shift @$cached unless ($next_obj_current_context);
-
-            if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
-                 my $obj_to_complain_about = $next_obj_current_context;
-                 # undef it in case the user traps the exception, next time we'll pull another off the list
-                 $next_obj_current_context = undef;
-                 Carp::croak("Attempt to fetch an object which matched $rule when the iterator was created, but was deleted in the meantime:\n"
-                             . Data::Dumper::Dumper($obj_to_complain_about) );
-             }
-
             if ($underlying_context_iterator && ! $next_obj_underlying_context) {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
  
@@ -1164,6 +1154,16 @@ sub get_objects_for_class_and_rule {
                     $self->_inject_object_into_other_loading_iterators($next_obj_underlying_context, $me_loading_iterator_as_string);
                 }
             }
+
+            ($next_obj_current_context) = shift @$cached unless ($next_obj_current_context);
+            if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
+                 my $obj_to_complain_about = $next_obj_current_context;
+                 # undef it in case the user traps the exception, next time we'll pull another off the list
+                 $next_obj_current_context = undef;
+                 Carp::croak("Attempt to fetch an object which matched $rule when the iterator was created, but was deleted in the meantime:\n"
+                             . Data::Dumper::Dumper($obj_to_complain_about) );
+             }
+
 
             # We're turning off warnings to avoid complaining in the elsif()
             no warnings 'uninitialized';
@@ -1739,6 +1739,7 @@ sub _create_secondary_loading_closures {
                                                        \@secondary_values,
                                                        $secondary_data_source
                                                 );
+            next unless $secondary_object_importer;
             push @secondary_object_importers, $secondary_object_importer;
         }
                                                        
@@ -1883,6 +1884,7 @@ sub _create_import_iterator_for_underlying_context {
                     \@values,
                     $dsx,
                 );
+            next unless $object_fabricator;
             unshift @object_fabricators, $object_fabricator;
         }
     }
@@ -2045,7 +2047,9 @@ sub _create_import_iterator_for_underlying_context {
             }
             
             $object = $imported[-1];
-            my $this_object_was_already_cached = defined($object) && ref($object) && exists($object->{'__get_serial'});
+            my $this_object_was_already_cached = defined($object)
+                                              && ref($object)
+                                              && exists($object->{'__get_serial'});
 
             foreach my $obj (@imported) {
                 # The object importer will return undef for an object if no object
@@ -2132,7 +2136,11 @@ sub __create_object_fabricator_for_loading_template {
     my @values = @$values;
 
     my $class_name                                  = $loading_template->{final_class_name};
-    $class_name or Carp::croak("No final_class_name in loading template?");
+    #$class_name or Carp::croak("No final_class_name in loading template?");
+    unless ($class_name) {
+        Carp::carp("No final_class_name in loading template for rule $rule");
+        return;   # This join doesn't result in an object?
+    }
     
     my $class_meta                                  = $class_name->__meta__;
     my $class_data                                  = $dsx->_get_class_data_for_loading($class_meta);
