@@ -80,7 +80,7 @@ keeping I/O logic orthogonally to "business logic", and hopefully making code
 around I/O unnecessary to write at all for most programs.
 
 Rather than explicitly constructing and serializing/deserializing objects, the 
-application layer just requests objects crom the current "context", according to 
+application layer just requests objects from the current "context", according to 
 their characteristics.  The context manages database connections, object state 
 changes, references, relationships, in-memory transactions, queries and caching in 
 tunable ways.
@@ -143,7 +143,7 @@ context for all object construction.
 The create() method will always create something new or will return undef if
 the identity is already known to be in use.
 
-The get() method lets the context internally decidewhether to return a cached 
+The get() method lets the context internally decide whether to return a cached 
 reference for the specified logical entities or to construct new objects 
 by loading data from the outside.
 
@@ -151,7 +151,7 @@ by loading data from the outside.
 
 The examples below use $obj where an actual object reference is required,
 and SomeClass where the class name can be used.  In some cases the 
-example in the synopsisis continued for deeper illustration.
+example in the synopsisis is continued for deeper illustration.
 
 =head2 Base API
 
@@ -195,7 +195,7 @@ and that is only required for objects which do not autogenerate their
 own ids.  This requirement may be overridden in subclasses to be 
 more restrictive.
  
-If entities of this type persist in an underlying  context, the entity will
+If entities of this type persist in an underlying context, the entity will
 not appear there until commit.  (i.e. no insert is done until just before
 a real database commit)  The object in question does not need to pass its own 
 constraints when initially created, but must be fully valid before the
@@ -257,7 +257,7 @@ Identity properties are read-only, while non-identity properties are read-write
 unless is_mutable is explicitly set to false.
 
 Assigning an invalid value is allowed temporarily, but the current transaction
-will be in an invalid state until correct, and will not be commitable.
+will be in an invalid state until corrected, and will not be commitable.
 
 The return value of an the accessor when it mutates the object is
 the value of the property after the mutation has occurred.
@@ -271,7 +271,8 @@ By default, properties are expected to return a single value.
 
 =item NAME
 
-Regular accessors have the same name as the property, as declared, and work as is commonly expected:
+Regular accessors have the same name as the property, as declared, and also work
+as mutators as is commonly expected:
 
   $value = $obj->property_name;
   $obj->property_name($new_value);
@@ -606,7 +607,7 @@ In some cases, when the possibility of failure is "not-exceptional", the method 
 return false.  In scalar context this will be undef.  In list context an empty list.  
 
 When there is ambiguity as to whether this is an error or not (get() for instance, might 
-simply match zero items, ...or fail to understand your parameters), and exception is used.
+simply match zero items, ...or fail to understand your parameters), an exception is used.
 
 =over 4
 
