@@ -41,7 +41,7 @@ sub dump_states {
     IO::File->new(">after.yml")->print(YAML::Dump($after));    
 }
 
-diag("this is a slow test because it coppies does deep diffs of large data trees at each step");
+diag("this is a slow test because it copies does deep diffs of large data trees at each step");
 
 ###########################################
 
