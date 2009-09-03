@@ -40,6 +40,8 @@ UR::Object::Type->define(
 
 =cut
 
+our @CARP_NOT = qw( UR::DataSource::RDBMS );
+
 # Implements the is_numeric calculated property - returns true if it's ok to use
 # numeric comparisons (==, <, <=>, etc) on the property
 our %NUMERIC_TYPES = (
@@ -218,12 +220,17 @@ sub _get_joins {
             unless ($via_meta) {
                 my $property_name = $self->property_name;
                 my $class_name = $self->class_name;
-                Carp::croak "Can't resolve property $property_name of $class_name: No via meta for '$via'?";
+                Carp::croak "Can't resolve property '$property_name' of $class_name: No via meta for '$via'?";
             }
+
+            if ($via_meta->to eq '-filter') {
+                return $via_meta->_get_joins;
+            }
+
             unless ($via_meta->data_type) {
                 my $property_name = $self->property_name;
                 my $class_name = $self->class_name;
-                Carp::croak "Can't resolve property $property_name of $class_name: No data type for '$via'?";
+                Carp::croak "Can't resolve property '$property_name' of $class_name: No data type for '$via'?";
             }
             push @joins, $via_meta->_get_joins();
             
@@ -242,12 +249,12 @@ sub _get_joins {
                 $id .= ' ' . $where_rule->id;
                 push @joins, { %$join, id => $id, where => $where };
             }
-            unless ($to eq 'self') {
+            unless ($to eq 'self' or $to eq '-filter') {
                 my $to_meta = $via_meta->data_type->__meta__->property_meta_for_name($to);
                 unless ($to_meta) {
                     my $property_name = $self->property_name;
                     my $class_name = $self->class_name;
-                    Carp::croak "Can't resolve property $property_name of $class_name: No '$to' property found on " . $via_meta->data_type;
+                    Carp::croak "Can't resolve property '$property_name' of $class_name: No '$to' property found on " . $via_meta->data_type;
                 }
                 push @joins, $to_meta->_get_joins();
             }
@@ -311,6 +318,7 @@ sub _get_joins {
                     for (@joins) { 
                         @$_{@new} = @$_{@old};
                     }
+                    $joins[0]->{'where'} = $where if $where;
 
                 } else {
                     $self->error_message("Property $id has no 'id_by' or 'reverse_as' property metadata");

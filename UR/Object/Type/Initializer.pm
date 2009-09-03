@@ -11,6 +11,8 @@ use Carp ();
 use Sub::Name ();
 use Sub::Install ();
 
+our @CARP_NOT = qw( UR::ModuleLoader Class::Autouse );
+
 # keys are class property names (like er_role, is_final, etc) and values are
 # the default value to use if it's not specified in the class definition
 #
@@ -781,6 +783,26 @@ sub _normalize_class_description {
         my %old_property = %{ $instance_properties->{$property_name} };        
         my %new_property = $class->_normalize_property_description($property_name, \%old_property, \%new_class);
         $instance_properties->{$property_name} = \%new_property;
+    }
+    # Find 'via' properties where the to is '-filter' and rewrite them to 
+    # copy some attributes from the source property 
+    # This feels like a hack, but it makes other parts of the system easier by
+    # not having to deal with -filter
+    foreach my $property_name ( keys %$instance_properties ) {
+        my $property_data = $instance_properties->{$property_name};
+        if ($property_data->{'to'} && $property_data->{'to'} eq '-filter') {
+            my $via = $property_data->{'via'};
+            my $via_property_data = $instance_properties->{$via};
+            unless ($via_property_data) {
+                Carp::croak "Property $class_name '$property_name' filters '$via', but there is no property '$via'.";
+            }
+            
+            $property_data->{'data_type'} = $via_property_data->{'data_type'};
+            $property_data->{'reverse_as'} = $via_property_data->{'reverse_as'};
+            if ($via_property_data->{'where'}) {
+                unshift @{$property_data->{'where'}}, @{$via_property_data->{'where'}};
+            }
+        }
     }
 
     # allow parent classes to adjust the description in systematic ways 

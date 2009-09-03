@@ -615,7 +615,7 @@ sub mk_object_set_accessors {
 
     unless ($plural_name) {
         # TODO: we can handle a reverse_as when there is only one item.  We're just not coded-to yet.
-        die "Bad property description for $class_name $singular_name: expected is_many with reverse_as!";
+        Carp::croak "Bad property description for $class_name $singular_name: expected is_many with reverse_as!";
     }
 
     # These are set by the resolver closure below, and kept in scope by the other closures
@@ -642,7 +642,7 @@ sub mk_object_set_accessors {
             );
             #print "got " . join(", ", map { $_->id } @possible_relationships) . "\n";
             if (@possible_relationships > 1) {
-                die "$class_name has an ambiguous definition for property \"$singular_name\"."
+                Carp::croak "$class_name has an ambiguous definition for property \"$singular_name\"."
                     . "  The target class $r_class_name has " . scalar(@possible_relationships) 
                     . " relationships which reference back to $class_name."
                     . "  Correct by adding \"reverse_as => X\" to ${class_name}'s \"$singular_name\" definition one of the following values:  " 
@@ -666,14 +666,14 @@ sub mk_object_set_accessors {
             #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_as); 
             unless (@property_links) {
                 #$DB::single = 1;
-                Carp::confess("No property links for $r_class_name -> $reverse_as?  Cannot build accessor for $singular_name/$plural_name relationship.");
+                Carp::croak("No property links for $r_class_name -> $reverse_as?  Cannot build accessor for $singular_name/$plural_name relationship.");
             }
-            my %get_params;            
+            my %get_params;
             for my $link (@property_links) {
                 my $my_property_name = $link->r_property_name;
                 push @property_names, $my_property_name;
                 unless ($obj->can($my_property_name)) {
-                    die "Cannot handle indirect relationship $r_class_name -> $reverse_as.  Class $class_name has no property named $my_property_name";
+                    Carp::croak "Cannot handle indirect relationship $r_class_name -> $reverse_as.  Class $class_name has no property named $my_property_name";
                 }
                 $get_params{$link->property_name}  = $obj->$my_property_name;
             }
@@ -831,8 +831,8 @@ sub mk_object_set_accessors {
             my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
             $params_prefix_resolver->() unless $params_prefix_resolved;
             unshift @_, @params_prefix if @_ == 1;
-            if (@_) {
-                return my $obj = $r_class_name->get($rule->params_list,@_);
+            if (@where or @_) {
+                return my $obj = $r_class_name->get($rule->params_list,@where,@_);
             }
             else {
                 return my $obj = $r_class_name->get($rule);
@@ -841,7 +841,7 @@ sub mk_object_set_accessors {
         else {
             return unless $self->{$plural_name};
             if (@_ > 1) {
-                die "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
+                Carp::croak "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
             }
             my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name} };
             return $matches[0] if @matches < 2;
