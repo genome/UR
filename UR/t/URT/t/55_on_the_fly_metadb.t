@@ -16,12 +16,8 @@ use warnings;
 plan tests => 20;
 
 # Make a data source
-# There is a bug w/ the file temp path generated on Mac OS X and SQLite.
-# Fix, and restore this to use File::Temp.
-my $db_file = '/tmp/pid' . $$; 
-END {
-    unlink $db_file;
-}
+my $db_file = File::Temp->new();
+$db_file->close();
 # Hrm... seems that 'server' still isn't a proper property yet
 my $ds = UR::Object::Type->define(
              class_name => 'URT::DataSource::OnTheFly',
