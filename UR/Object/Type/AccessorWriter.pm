@@ -177,6 +177,8 @@ sub mk_indirect_ro_accessor {
         Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
         my @bridges = $self->$via(@where);
         return unless @bridges;
+        return $self->context_return(@bridges) if ($to eq '-filter');
+
         my @results = map { $_->$to } @bridges;
         $self->context_return(@results); 
     };
@@ -536,30 +538,22 @@ sub mk_dimension_identifying_accessor {
     });
 }
 
-sub mk_class_accessor
+sub mk_rw_class_accessor
 {
-    no warnings;
-    my ($self, $class_name, $accessor_name, $column_name, $variable_name) = @_;
-    $variable_name ||= $accessor_name;
-    no strict 'refs';
+    my ($self, $class_name, $accessor_name, $column_name, $variable_value) = @_;
+
     my $full_accessor_name = $class_name . "::" . $accessor_name;
-    my $src = qq(
-        sub $full_accessor_name {
-            if (\@_ > 1) {
-                \$$variable_name = pop;
+    my $accessor = Sub::Name::subname $full_accessor_name => sub {
+            if (@_ > 1) {
+                $variable_value = pop;
             }
-            return \$$variable_name;
-        }
-    );
-    print "class accessor: $src\n";
-    eval $src;
-    if ($@) {
-        die "Cannot generate class accessor $accessor_name: $@";
-    }
-    my $accessor;
-    unless ($accessor = $class_name->can($accessor_name)) {
-        die "Error generating class accessor $accessor_name.  Not found after eval.";
-    }
+            return $variable_value;
+    };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
 
     if ($column_name)
     {
@@ -573,6 +567,47 @@ sub mk_class_accessor
             {$column_name} = $accessor_name;
     }
 }
+
+sub mk_ro_class_accessor {
+    my($self, $class_name, $accessor_name, $column_name, $variable_value) = @_;
+
+    my $full_accessor_name = $class_name . "::" . $accessor_name;
+    my $accessor = Sub::Name::subname $full_accessor_name => sub {
+        if (@_ > 1) {
+            my $old = $variable_value;
+            my $new = $_[1];
+
+            no warnings;
+
+            if ($old ne $new)
+            {
+$DB::single=1;
+                Carp::confess("Cannot change read-only class-wide property $accessor_name for class $class_name from $old to $new!");
+            }
+            return $new;
+        }
+        return $variable_value;
+    };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
+
+    if ($column_name)
+    {
+        *{$class_name ."::" . $column_name}  = $accessor;
+
+        # These are for backward-compatability with old modules.  Remove asap.
+        ${$class_name . '::column_for_property'}
+            {$accessor_name} = $column_name;
+
+        ${$class_name . '::property_for_column'}
+            {$column_name} = $accessor_name;
+    }
+}
+
+    
 
 
 sub mk_object_set_accessors {
@@ -622,6 +657,9 @@ sub mk_object_set_accessors {
         if ($reverse_id_by) {
             # join to get the data...
             my $property_meta = $r_class_meta->property_meta_for_name($reverse_id_by);
+            unless ($property_meta) {
+                die "Cannot process reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_id_by";
+            }
             my @property_links = $property_meta->id_by_property_links;
             #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_id_by); 
             unless (@property_links) {
@@ -632,6 +670,9 @@ sub mk_object_set_accessors {
             for my $link (@property_links) {
                 my $my_property_name = $link->r_property_name;
                 push @property_names, $my_property_name;
+                unless ($obj->can($my_property_name)) {
+                    die "Cannot handle indirect relationship $r_class_name -> $reverse_id_by.  Class $class_name has no property named $my_property_name";
+                }
                 $get_params{$link->property_name}  = $obj->$my_property_name;
             }
             my $tmp_rule = $r_class_name->get_rule_for_params(%get_params);
@@ -720,7 +761,11 @@ sub mk_object_set_accessors {
         $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) {
             my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-            return UR::Object::Iterator->create_for_filter_rule($rule);
+            if (@_ or @where) {
+                return $r_class_name->create_iterator($rule->params_list,@where,@_);
+            } else {
+                return UR::Object::Iterator->create_for_filter_rule($rule);
+            }
         }
         else {
             die "value iterator not implemented.  its simple!  please do it...";
@@ -1006,6 +1051,14 @@ sub initialize_direct_accessors {
             }
             $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name, $where);
         }        
+        elsif ($property_data->{'is_class_wide'}) {
+            my $value = $property_data->{'default_value'};
+            if ($property_data->{'is_constant'}) {
+                $self->mk_rw_class_accessor($class_name,$accessor_name,'',$value);
+            } else {
+                $self->mk_ro_class_accessor($class_name,$accessor_name,'',$value);
+            }
+        }
         else {        
             # Just use key/value pairs in the hash for normal
             # table stuff, and also non-database stuff.
