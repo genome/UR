@@ -1498,7 +1498,7 @@ sub _default_save_sql_for_object {
     # and get a specific change summary if we're doing an update.
     
     my ($action,$change_summary);
-    if ($object_to_save->isa('UR::Entity::Ghost'))
+    if ($object_to_save->isa('UR::Object::Ghost'))
     {
         $action = 'delete';
     }                    
@@ -1753,10 +1753,16 @@ sub _generate_class_data_for_loading {
                 next;
             }
             @id_column_names =
-                map { $inheritance_class_object->table_name . '.' . $_ }
+                map { 
+                    my $t = $inheritance_class_object->table_name;
+                    ($t) = ($t =~ /(\S+)\s*$/); 
+                    $t . '.' . $_ 
+                }
                 grep { defined }
                 map { 
-                    $inheritance_class_object->get_property_object(property_name => $_)->column_name 
+                    my $p = $inheritance_class_object->get_property_object(property_name => $_);
+                    die ("No property $_ found for " . $inheritance_class_object->class_name . "?") unless $p;
+                    $p->column_name;
                 } 
                 $inheritance_class_object->id_property_names;
                 
@@ -2244,6 +2250,7 @@ sub _generate_template_data_for_loading {
     for my $class_property (@all_table_properties) {
         my ($sql_class,$sql_property,$sql_table_name) = @$class_property;
         $sql_table_name ||= $sql_class->table_name;
+        my ($select_table_name) = ($sql_table_name =~ /(\S+)\s*$/);
         $select_clause .= ($class_property == $all_table_properties[0] ? "" : ", ");
        
         # FIXME - maybe a better way would be for these sql-calculated properties, the column_name()
@@ -2256,7 +2263,7 @@ sub _generate_template_data_for_loading {
             }
             $select_clause .= $sql_function;
         } else {
-            $select_clause .= $sql_table_name . "." . $sql_property->column_name;
+            $select_clause .= $select_table_name . "." . $sql_property->column_name;
         }
     }
    
@@ -2268,6 +2275,7 @@ sub _generate_template_data_for_loading {
     # Build the FROM clause base.
     # Add joins to the from clause as necessary, then
     $from_clause = (defined $first_table_name ? "$first_table_name" : '');        
+    
     my $cnt = 0;
     while (@sql_joins) {
         my $table_name = shift (@sql_joins);
