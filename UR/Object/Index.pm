@@ -156,6 +156,27 @@ use warnings;
                             }
                             @hr = grep { $_ } @thr;
                         }
+
+                    } elsif ($op =~ /^true$/i) {
+                        my @thr;
+                        foreach my $h ( @hr ) {
+                            foreach my $k ( keys %$h ) {
+                                if ($k) {
+                                    push @thr, $h->{$k};
+                                }
+                            }
+                        }
+                        @hr = grep { $_ } @thr;
+                    } elsif ($op =~ /^false$/i) {
+                        my @thr;
+                        foreach my $h ( @hr ) {
+                            foreach my $k ( keys %$h ) {
+                                unless ($k) {
+                                    push @thr, $h->{$k};
+                                }
+                            }
+                        }
+                        @hr = grep { $_ } @thr;
                     } elsif($op =~ /^\!\=$/) {                        
                         my @thr;
                         foreach my $h (@hr) {
