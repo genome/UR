@@ -16,6 +16,10 @@ use URT::DataSource::SomeSQLite;
 # inherits that table/column from a parent.  It also needed to traverse delegated properties
 # to arbitrary depth to know what the final accessor is.
 
+END {
+    unlink URT::DataSource::SomeSQLite->server;
+}
+
 &setup_classes_and_db();
 
 my $thing = URT::Thing::Person->get(job => 'cook');
