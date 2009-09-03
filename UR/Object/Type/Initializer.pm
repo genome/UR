@@ -91,6 +91,10 @@ our %meta_classes = map { $_ => 1 }
 our $bootstrapping = 1;
 our @partially_defined_classes;
 
+# When copying the object hash to create its db_committed, these keys should be removed because
+# they contain things like coderefs
+our @keys_to_delete_from_db_committed = qw( id db_committed _id_property_sorter get_composite_id_resolver get_composite_id_decomposer );
+
 =pod
 
 =head Stages of Class Initialization
@@ -273,11 +277,13 @@ sub define {
     
     # we do this for define() but not create()
     # FIXME - if there's a coderef in this struct, it'll spit out a warning
+#YOYO
     #$self->{db_committed} = { %{ UR::Util::deep_copy($self) } };
     #delete $self->{db_committed}{id};
     my %db_committed = %$self;
-    delete $db_committed{'id'};
-    delete $db_committed{'db_committed'};
+    delete @db_committed{@keys_to_delete_from_db_committed};
+    #delete $db_committed{'id'};
+    #delete $db_committed{'db_committed'};
     $self->{'db_committed'} = \%db_committed;
 
     $self->_initilize_accessors_and_inheritance 
@@ -1474,12 +1480,14 @@ sub _complete_class_meta_object_definitions {
         #use Data::Dumper;
         no strict;
 #print "Dumper ",$obj->{'id'},"\n";
+#YOYO
         #my $db_committed = eval(Dumper($obj));
         #$obj->{db_committed} ||= $db_committed;        
         #delete $db_committed->{id};
 
         my %db_committed = %$obj;
-        delete $db_committed{'id'};
+        #delete $db_committed{'id'};
+        delete @db_committed{@keys_to_delete_from_db_committed};
         $obj->{'db_committed'} = \%db_committed;
             
     };
