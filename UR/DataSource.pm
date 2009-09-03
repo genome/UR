@@ -366,7 +366,6 @@ sub _generate_template_data_for_loading {
             my $source_class_name = $join->{source_class};
             my $source_class_object = $join->{'source_class_meta'};
 
-$DB::single=1;
             my $foreign_class_name = $join->{foreign_class};
             my $foreign_class_object = $join->{'foreign_class_meta'};
             my($foreign_data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
@@ -918,6 +917,36 @@ sub _set_object_saved_rolled_back {
     delete $object->{db_saved_uncommitted};
     return $object;
 }
+
+
+sub _sync_database {
+    my $class = shift;
+    my %args = @_;
+    $class = ref($class) || $class;
+
+    $class->warning_message("Data source $class does not support saving objects to storage.  " . 
+                            scalar(@{$args{'changed_objects'}}) . " objects will not be saved");
+    return 1;
+}
+
+sub commit {
+    my $class = shift;
+    my %args = @_;
+    $class = ref($class) || $class;
+
+    $class->warning_message("commit() ignored for data source $class");
+    return 1;
+}
+
+sub rollback {
+    my $class = shift;
+    my %args = @_;
+    $class = ref($class) || $class;
+
+    $class->warning_message("rollback() ignored for data source $class");
+    return 1;
+}
+
 
 1;
 #$Header
