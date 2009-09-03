@@ -63,7 +63,7 @@ my $self = shift;
     $string .= join("\n", map { "\t$_" } reverse $class->inheritance);
     $string .= "\n";
 
-    my @properties = sort { $a->property_name cmp $b->property_name } $class->get_all_property_objects;
+    my @properties = sort { $a->property_name cmp $b->property_name } $class->all_property_metas;
     my %id_properties = map { $_ => 1 } $class->all_id_property_names;
     $string .= "\nProperties\n" if (@properties);
     foreach my $property ( @properties ) {

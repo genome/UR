@@ -62,7 +62,7 @@ sub dbic_resolve_module_header_source {
     use strict;
 
     my $class_name = $self->class_name;
-    my @parent_classes = $self->get_parent_class_objects;
+    my @parent_classes = $self->parent_class_metas;
     my $has_table = $self->has_table;
 
     unless ($has_table) {

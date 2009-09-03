@@ -741,7 +741,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
         my $class_name = $class->class_name;
 
-        my ($property) = $class->get_property_objects(
+        my ($property) = $class->direct_property_metas(
             column_name => $column_name
         );
         unless ($property) {
@@ -1021,7 +1021,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $class_name = $class->class_name;
         my $property;
         $column_name = uc($column_name);
-        foreach my $prop_object ( $class->get_property_objects ) {
+        foreach my $prop_object ( $class->direct_property_metas ) {
             if (uc($prop_object->column_name) eq $column_name) {
                 $property = $prop_object;
                 last;
@@ -1158,7 +1158,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 class_name=> $class_name
             );
         
-        my @expected_pk_cols = map { $class->get_property_meta_by_name($_->property_name)->column_name } @old_id_properties;
+        my @expected_pk_cols = map { $class->property_meta_for_name($_->property_name)->column_name } @old_id_properties;
         
         my @pk_cols = $table->primary_key_constraint_column_names;
         

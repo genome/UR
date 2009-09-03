@@ -135,7 +135,7 @@ $DB::single=1;
         my $class_obj = eval {UR::Object::Type->get(class_name => $parent_class) };
         next unless $class_obj;
         
-        if (grep {$_ eq __PACKAGE__} $class_obj->ordered_inherited_class_names) {
+        if (grep {$_ eq __PACKAGE__} $class_obj->ancestry_class_names) {
             my $isa_name = $parent_class . '::' . $page_class . '::ISA';
             my $schemabrowser_class_name = __PACKAGE__ . '::' . $page_class;
             no strict 'refs';

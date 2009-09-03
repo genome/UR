@@ -16,6 +16,7 @@ use Scalar::Util qw(blessed);
 
 sub class { ref($_[0]) || $_[0] }
 
+*get_class_meta = \&get_class_object;
 sub get_class_object  {
     # for bootstrapping
     # subclasses set this specifically for efficiency
@@ -260,7 +261,7 @@ sub create {
     my %default_values;
     my %immutable_properties;
     
-    for my $co ( reverse( $class_meta, $class_meta->get_inherited_class_objects ) ) {
+    for my $co ( reverse( $class_meta, $class_meta->ancestry_class_metas ) ) {
         # Reverse map the ID into property values.
         # This has to occur for all subclasses which represent table rows.
         
@@ -270,7 +271,7 @@ sub create {
         push @extra, map { $_ => shift(@values) } @id_property_names;
         
         # deal with %property_objects
-        my @property_objects = $co->get_property_objects;
+        my @property_objects = $co->direct_property_metas;
         my @property_names = map { $_->property_name } @property_objects;
         @property_objects{@property_names} = @property_objects;            
         
@@ -848,6 +849,58 @@ sub all_objects_are_loaded  {
     return $all_objects_are_loaded->{$class};
 }
 
+# This group should probably be moved into Viewer classes
+sub core_label_name {
+    # This is typically set in derived classes to the "entity name".
+    # As a fallback we just use the class.
+    my $self = $_[0];
+    my $class = ref($self) || $self;
+    my ($label) = ($class =~ /([^:]+)$/);
+    $label =~ s/([a-z])([A-Z])/$1 $2/g;
+    $label =~ s/([A-Z])([A-Z]([a-z]|\s|$))/$1 $2/g;
+    $label = uc($label) if $label =~ /_id$/i;
+    return $label;
+}
+
+sub _core_display_name {
+    # This is an object-level fucntion to provide a freindly name for objects of this class.
+    # It presumes that the type of the object need not be indicated in the name, just the identity within the class.
+    my $name = $_[0]->id;
+    $name =~ s/\t/ /g;
+    return $name;
+}
+
+*label_name = \&core_label_name;
+
+# For backward compatability.
+*display_name_full = \&display_name;
+
+sub display_name {
+    my $self = shift;
+    my $context = shift;
+    if (not $context)
+    {
+        # no context.
+        # the object is identified globally
+        return $self->label_name . ' ' . $self->_core_display_name;
+    }
+    elsif ($context eq ref($self))
+    {
+        # the class is completely known
+        # show only the core display name
+        # -> less text, more context
+        return $self->_core_display_name
+    }
+    else
+    {
+        # some intermediate base class is known,
+        # TODO: make this smarter
+        # For now, just show the whole class name with the ID
+        return $self->label_name . ' ' . $self->_core_display_name;
+    }
+}
+
+
 sub property_diff {
     # Ret hashref of the differences between the object and some other object.
     # The "other object" may be a hashref or hash, in which case it will
@@ -905,7 +958,7 @@ sub changed {
         my $class_name = $meta->class_name;
         @changed =
             grep {
-                my $property_meta = $meta->get_property_meta_by_name($_);
+                my $property_meta = $meta->property_meta_for_name($_);
                 ( ((!$property_meta) or $property_meta->is_transient) ? 0 : 1 );
             }
             grep { $self->can($_) and not UR::Object->can($_) }
@@ -1450,22 +1503,22 @@ sub generate_support_class {
     return $class_meta->generate_support_class_for_extension($ext);
 }
 
-## PRUNE
-#sub matches {
-#    no warnings;
-#    my $self = shift;
-#    my %param = $self->preprocess_params(@_);
-#    for my $key (keys %param) {
-#        next unless $self->can($key);
-#        return 0 unless $self->$key eq $param{$key}
-#    }
-#    return 1;
-#}
+sub matches {
+    no warnings;
+    my $self = shift;
+    my %param = $self->preprocess_params(@_);
+    for my $key (keys %param) {
+        next unless $self->can($key);
+        return 0 unless $self->$key eq $param{$key}
+    }
+    return 1;
+}
 
 
 # DEFINITELY REFACTOR AWAY
 # All calls to these methods should go to the class meta object directly.
 
+## PRUNE
 sub property_names {
     my $class = shift;
     my $meta = $class->get_class_object;
@@ -1559,8 +1612,8 @@ sub create_mock {
     my %params = @_;
     my $self = Test::MockObject->new();
     my $subject_class_object = $class->get_class_object;
-    for my $class_object ($subject_class_object,$subject_class_object->get_inherited_class_objects) {
-        for my $property ($class_object->get_property_objects) {
+    for my $class_object ($subject_class_object,$subject_class_object->ancestry_class_metas) {
+        for my $property ($class_object->direct_property_metas) {
             my $property_name = $property->property_name;
             if ($property->is_delegated && !exists($params{$property_name})) {
                 next;
@@ -1610,7 +1663,7 @@ sub create_mock {
             }
         }
     }
-    my @classes = ($class, $subject_class_object->ordered_inherited_class_names);
+    my @classes = ($class, $subject_class_object->ancestry_class_names);
     $self->set_isa(@classes);
     $UR::Context::all_objects_loaded->{$class}->{$self->id} = $self;
     return $self;

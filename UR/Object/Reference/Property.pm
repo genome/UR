@@ -69,7 +69,7 @@ sub get {
 
         my $class_name = $ref->class_name;
         my $class_meta = UR::Object::Type->get(class_name => $class_name);
-        my $delegation_property_meta = $class_meta->get_property_meta_by_name($ref->delegation_name);
+        my $delegation_property_meta = $class_meta->property_meta_for_name($ref->delegation_name);
         unless ($delegation_property_meta) {
             return;
         }
@@ -95,11 +95,11 @@ sub get {
         my $rank = 0;
         for (my $i = 0; $i < $property_names_count; $i++) {
             my $property_name = $property_names[$i];
-            my $property_meta = $class_meta->get_property_meta_by_name($property_name);
+            my $property_meta = $class_meta->property_meta_for_name($property_name);
             my $attribute_name = $property_meta->attribute_name;
 
             my $r_property_name = $r_property_names[$i];
-            my $r_property_meta = $r_class_meta->get_property_meta_by_name($r_property_name);
+            my $r_property_meta = $r_class_meta->property_meta_for_name($r_property_name);
             my $r_attribute_name = $r_property_meta->attribute_name;
 
             my %get_define_params = ( 

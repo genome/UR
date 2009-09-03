@@ -65,7 +65,7 @@ sub for_each_class_object {
             ||
             $a->property_name cmp $b->property_name 
         } 
-        $class->get_all_property_objects;
+        $class->all_property_metas;
     print "\n  Properties:\n" if (@properties);
     foreach my $property ( @properties ) {
         my $nullable = $property->is_optional ? "NULLABLE" : "";

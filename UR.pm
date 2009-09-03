@@ -269,10 +269,10 @@ UR::Object::Type->define(
         ancestry_id_property_names       => { via => 'ancestry_id_property_metas', to => 'property_name', is_many => 1 },
 
         all_property_metas               => { via => 'all_class_metas', to => 'direct_property_metas', is_many => 1 },
-        Pall_property_names               => { via => 'all_property_metas', to => 'property_name', is_many => 1 },
+        all_property_names               => { via => 'all_property_metas', to => 'property_name', is_many => 1 },
         #all_id_property_metas            => { via => 'ancestry_property_metas', to => 'all_property_metas', where => [is_id => 1] },
         all_id_property_metas            => { via => 'all_id_token_metas', to => 'property_meta', is_many => 1 },
-        Pall_id_property_names            => { via => 'all_id_token_metas', to => 'property_name', is_many => 1 },
+        all_id_property_names            => { via => 'all_id_token_metas', to => 'property_name', is_many => 1 },
 
         # these should go away when the is_id meta-property is working, since they don't seem that useful
         direct_id_token_metas            => { type => 'UR::Object::Property::ID', reverse_id_by => 'class_meta', is_many => 1 },
@@ -288,7 +288,7 @@ UR::Object::Type->define(
         ancestry_unique_property_metas   => { via => 'ancestry_class_metas', to => 'direct_unique_property_metas', is_many => 1 },
         ancestry_unique_property_names   => { via => 'ancestry_class_metas', to => 'direct_unique_property_names', is_many => 1 },
         all_unique_property_metas        => { via => 'all_class_metas', to => 'direct_unique_property_metas', is_many => 1 },
-        Pall_unique_property_names        => { via => 'all_class_metas', to => 'direct_unique_property_names', is_many => 1 },
+        all_unique_property_names        => { via => 'all_class_metas', to => 'direct_unique_property_names', is_many => 1 },
 
         # Datasource related stuff
         direct_column_names              => { via => 'direct_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true' }] },
@@ -301,11 +301,11 @@ UR::Object::Type->define(
         ancestry_columnless_property_metas => { via => 'ancestry_class_metas', to => 'direct_columnless_property_metas', is_many => 1 },
         ancestry_columnless_property_names => { via => 'ancestry_columnless_property_metas', to => 'property_name', is_many => 1 },
         ancestry_table_names             => { via => 'ancestry_class_metas', to => 'table_name', is_many => 1 },
-        Pall_table_names                  => { via => 'all_class_metas', to => 'table_name', is_many => 1 },
-        Pall_column_names                 => { via => 'all_class_metas', to => 'direct_column_names', is_many => 1 },
-        Pall_id_column_names              => { via => 'all_class_metas', to => 'direct_id_column_names', is_many => 1 },
+        all_table_names                  => { via => 'all_class_metas', to => 'table_name', is_many => 1 },
+        all_column_names                 => { via => 'all_class_metas', to => 'direct_column_names', is_many => 1 },
+        all_id_column_names              => { via => 'all_class_metas', to => 'direct_id_column_names', is_many => 1 },
         all_columnless_property_metas    => { via => 'all_class_metas', to => 'direct_columnless_property_metas', is_many => 1 },
-        Pall_columnless_property_names    => { via => 'all_class_metas', to => 'direct_columnless_property_names', is_many => 1 },
+        all_columnless_property_names    => { via => 'all_class_metas', to => 'direct_columnless_property_names', is_many => 1 },
 
         # Reference objects
         reference_metas                  => { type => 'UR::Object::Reference', reverse_id_by => 'class_meta', is_many => 1 },
@@ -439,7 +439,7 @@ UR::Object::Type->define(
         unique_group                     => { type => 'Text', len => 64, source => 'data dictionary' },
 
         class_meta                       => { type => 'UR::Object::Type', id_by => 'class_name' },
-        property_metas                    => { type => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
+        property_metas                   => { type => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
     ],
 );
 

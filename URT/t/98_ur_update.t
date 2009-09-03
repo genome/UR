@@ -181,10 +181,10 @@ ok($trans, "CREATED PERSON and began transaction");
         is($personclass->class_name, 'URT::Person', 'Person class class_name is correct');
         is($personclass->table_name, 'PERSON', 'Person class table_name is correct');
         is($UR::Context::current->resolve_data_sources_for_class_meta_and_rule($personclass)->id, $ds_class, 'Person class data_source is correct');
-        is_deeply([sort $personclass->column_names],
+        is_deeply([sort $personclass->direct_column_names],
                 ['NAME','PERSON_ID'],
                 'Person object has all the right columns');
-        is_deeply([$personclass->id_column_names],
+        is_deeply([$personclass->direct_id_column_names],
                 ['PERSON_ID'],
                 'Person object has all the right id column names');
 
@@ -221,13 +221,13 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
 
     $personclass = UR::Object::Type->get('URT::Person');
     ok($personclass, 'Person class loaded');
-    is_deeply([sort $personclass->column_names],
+    is_deeply([sort $personclass->direct_column_names],
             ['NAME','PERSON_ID','POSTAL_ADDRESS'],
             'Person object has all the right columns');
     is_deeply([sort $personclass->class_name->property_names],
             ['name','person_id','postal_address'],
             'Person object has all the right properties');
-    is_deeply([$personclass->id_column_names],
+    is_deeply([$personclass->direct_id_column_names],
             ['PERSON_ID'],
             'Person object has all the right id column names');
 
@@ -244,13 +244,13 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     ok(! $employeeclass->isa('URT::Car'), 'Employee class is correctly not a Car');
     ok($employeeclass->module_source_lines, 'Employee class module has at least one line');
 
-    is_deeply([sort $employeeclass->column_names],
+    is_deeply([sort $employeeclass->direct_column_names],
             ['EMPLOYEE_ID','RANK'],
             'Employee object has all the right columns');
     is_deeply([sort $employeeclass->class_name->property_names],
             ['employee_id','rank'],
             'Employee object has all the right properties');
-    is_deeply([$employeeclass->id_column_names],
+    is_deeply([$employeeclass->direct_id_column_names],
              ['EMPLOYEE_ID'],
             'Employee object has all the right id column names');
     ok($employeeclass->table_name eq 'EMPLOYEE', 'URT::Employee object comes from the employee table');
@@ -262,14 +262,14 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     isa_ok($carclass,'UR::Object::Type');
     ok(! $carclass->class_name->isa('URT::Person'), 'Car class is correctly not a Person');
 
-    is_deeply([sort $carclass->column_names],
+    is_deeply([sort $carclass->direct_column_names],
             ['CAR_ID','COLOR','COST','MAKE','MODEL','OWNER_ID'],
             'Car object has all the right columns');
     # Is owner a property through owner_id?
     is_deeply([sort $carclass->class_name->property_names],
             ['car_id','color','cost','make','model','owner_id'],
             'Car object has all the right properties');
-    is_deeply([$carclass->id_column_names],
+    is_deeply([$carclass->direct_id_column_names],
             ['CAR_ID'],
             'Car object has all the right id column names');
         ok($carclass->table_name eq 'CAR', 'Car object comes from the car table');
@@ -343,13 +343,13 @@ ok($command_obj->execute(), 'Updating schema anew.');
     $DB::single = 1;
     $personclass->generate;
     ok($personclass, 'Person class loaded');
-    is_deeply([sort $personclass->column_names],
+    is_deeply([sort $personclass->direct_column_names],
             ['PERSON_ID','POSTAL_ADDRESS'],
             'Person object has all the right columns');
     is_deeply([sort $personclass->class_name->property_names],
             ['person_id','postal_address'],
             'Person object has all the right properties');
-    is_deeply([$personclass->id_column_names],
+    is_deeply([$personclass->direct_id_column_names],
             ['PERSON_ID'],
             'Person object has all the right id column names');
 

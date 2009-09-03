@@ -92,9 +92,9 @@ sub _generate_class_data_for_loading {
     my @all_id_property_names = $class_meta->all_id_property_names();
     my @id_properties = $class_meta->id_property_names;    
     my $id_property_sorter = $class_meta->id_property_sorter;    
-    my @class_hierarchy = ($class_meta->class_name,$class_meta->ordered_inherited_class_names);
+    my @class_hierarchy = ($class_meta->class_name,$class_meta->ancestry_class_names);
 
-    my @parent_class_objects = $class_meta->ordered_inherited_class_objects;
+    my @parent_class_objects = $class_meta->ancestry_class_metas;
     my $sub_classification_method_name;
     my ($sub_classification_meta_class_name, $subclassify_by);
     
@@ -126,7 +126,7 @@ sub _generate_class_data_for_loading {
         class_name                          => $class_name,
         ghost_class                         => $class_name->ghost_class,
         
-        parent_class_objects                => [$class_meta->get_inherited_class_objects], ##
+        parent_class_objects                => [$class_meta->ancestry_class_metas], ##
         sub_classification_method_name      => $sub_classification_method_name,
         sub_classification_meta_class_name  => $sub_classification_meta_class_name,
         subclassify_by    => $subclassify_by,
@@ -244,10 +244,10 @@ sub _generate_template_data_for_loading {
         
         last if ( ($class_name eq 'UR::Object') or (not $class_name->isa("UR::Object")) );
         
-        my @id_property_objects = $co->get_id_property_objects;
+        my @id_property_objects = $co->direct_id_property_metas;
         
         if (@id_property_objects == 0) {
-            @id_property_objects = $co->get_property_meta_by_name("id");
+            @id_property_objects = $co->property_meta_for_name("id");
             if (@id_property_objects == 0) {
                 $DB::single = 1;
                 Carp::confess("Couldn't determine ID properties for $class_name\n");
@@ -389,7 +389,7 @@ sub _generate_template_data_for_loading {
 
             my @source_table_and_column_names = 
                 map {
-                    my $p = $source_class_object->get_property_meta_by_name($_);
+                    my $p = $source_class_object->property_meta_for_name($_);
                     unless ($p) {
                         Carp::confess("No property $_ for class $source_class_object->{class_name}\n");
                     }
@@ -412,7 +412,7 @@ sub _generate_template_data_for_loading {
             my @foreign_property_names = @{ $join->{foreign_property_names} };
             my @foreign_property_meta = 
                 map {
-                    $foreign_class_object->get_property_meta_by_name($_)
+                    $foreign_class_object->property_meta_for_name($_)
                 }
                 @foreign_property_names;
             
@@ -475,7 +475,7 @@ sub _generate_template_data_for_loading {
             next;
         }
 
-        my $final_accessor_property_meta = $last_class_object->get_property_meta_by_name($final_accessor);
+        my $final_accessor_property_meta = $last_class_object->property_meta_for_name($final_accessor);
         my $sql_lvalue;
         if ($final_accessor_property_meta->is_calculated) {
             $sql_lvalue = $final_accessor_property_meta->calculate_sql;
@@ -705,7 +705,7 @@ sub _first_class_in_inheritance_with_a_table {
     }
     my $class_object = $class->get_class_object;
     my $found = "";
-    for ($class_object, $class_object->get_inherited_class_objects)
+    for ($class_object, $class_object->ancestry_class_metas)
     {                
         if ($_->table_name)
         {
@@ -774,7 +774,7 @@ sub _CopyToAlternateDB {
         next unless $table_name;
         $class_tables{$class} = $table_name;
 
-        foreach my $col ( $class_obj->column_names ) {
+        foreach my $col ( $class_obj->direct_column_names ) {
             # FIXME Why are some of the returned column_names undef?
             next unless defined($col); # && defined($data->{$col});
             $tables{$table_name}->{$col} = $data->{$col} 
@@ -863,7 +863,7 @@ sub _set_specified_objects_saved_uncommitted {
         my @property_names =
             map { $_->property_name }
             grep { $_->column_name }
-            $class_object->get_all_property_objects;
+            $class_object->all_property_metas;
 
         for my $object (@{ $objects_by_class{$class_name} }) {
             $object->{db_saved_uncommitted} ||= {};

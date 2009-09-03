@@ -185,7 +185,7 @@ sub _preprocess_subclass_description {
 
     my @parent_class_names = 
         grep { $_->isa("UR::Object::Type") and $_ ne $self->class_name } 
-        $self->ordered_inherited_class_names();
+        $self->ancestry_class_names();
 
     for my $parent_class_name (@parent_class_names) {
         my $parent_class = $parent_class_name->get_class_object;
@@ -1239,7 +1239,7 @@ sub _complete_class_meta_object_definitions {
                         my $data = $r_class_ancestor->{has}{$r_id_properties[$n]};
                         ($data ? ($data) : ());
                     }
-                    ($r_class_name, $r_class_name->get_class_object->ordered_inherited_class_names);
+                    ($r_class_name, $r_class_name->get_class_object->ancestry_class_names);
                 unless ($r_property) {
                     $DB::single = 1;
                     Carp::confess("No r_property found for relationship $r_class_name, $r_id_properties[$n]\n");
@@ -1415,7 +1415,7 @@ sub _complete_class_meta_object_definitions {
             #    next;
             #}
             #my $r_type_name = $r_class_obj->type_name;
-            #my @r_class_inheritance = ($r_class_name, $r_class_name->get_class_object->ordered_inherited_class_names);
+            #my @r_class_inheritance = ($r_class_name, $r_class_name->get_class_object->ancestry_class_names);
             #my @r_property_names = $r_class_obj->id_property_names;
             #my @r_attribute_names =
             #    map {
@@ -1610,7 +1610,7 @@ sub generate {
     my @property_objects =
         UR::Object::Property->get(class_name => $self->class_name);
 
-    my @id_property_objects = $self->get_id_property_objects;
+    my @id_property_objects = $self->direct_id_property_metas;
     my %id_property;
     for my $ipo (@id_property_objects) {
         $id_property{$ipo->property_name} = 1;

@@ -750,7 +750,7 @@ sub _resolve_ids_from_class_name_and_sql {
     my $class_meta = $class_name->get_class_object;
     my @id_columns = 
         map {
-            $class_meta->get_property_object(property_name => $_)->column_name
+            $class_meta->property_meta_for_name($_)->column_name
         } 
         $class_meta->id_property_names;
 
@@ -1208,7 +1208,7 @@ sub _sync_database {
                     my $column = $column_objects_by_class_and_column_name{$class_name}{$_};
                     unless ($column) {
                         print "looking at parent classes for $class_name\n";
-                        for my $ancestor_class_name ($class_object->ordered_inherited_class_names) {
+                        for my $ancestor_class_name ($class_object->ancestry_class_names) {
                                     $column = $column_objects_by_class_and_column_name{$ancestor_class_name}{$_};
                                         if ($column) {
                                     $column_objects_by_class_and_column_name{$class_name}{$_} = $column;
@@ -1494,7 +1494,7 @@ sub _id_values_for_primary_key {
 
     my @pk_cols = $table_obj->primary_key_constraint_column_names;
     my @values = $object_to_save->decomposed_id($object_to_save->id);
-    my @columns = $class_obj->id_column_names;
+    my @columns = $class_obj->direct_id_column_names;
 
     my $i=0;    
     my %column_index = map { $_ => $i++ } @columns;
@@ -1778,7 +1778,7 @@ sub _generate_class_data_for_loading {
 
     my $parent_class_data = $self->SUPER::_generate_class_data_for_loading($class_meta);
 
-    my @class_hierarchy = ($class_meta->class_name,$class_meta->ordered_inherited_class_names);
+    my @class_hierarchy = ($class_meta->class_name,$class_meta->ancestry_class_names);
     my $order_by_clause;
     do {
         my @id_column_names;    
@@ -1795,7 +1795,7 @@ sub _generate_class_data_for_loading {
                 }
                 grep { defined }
                 map { 
-                    my $p = $inheritance_class_object->get_property_object(property_name => $_);
+                    my $p = $inheritance_class_object->property_meta_for_name($_);
                     die ("No property $_ found for " . $inheritance_class_object->class_name . "?") unless $p;
                     $p->column_name;
                 } 
@@ -1980,7 +1980,7 @@ sub _generate_template_data_for_loading {
     for my $co ( $class_meta, @parent_class_objects ) {
         my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
-        my @id_property_objects = $co->get_id_property_objects;
+        my @id_property_objects = $co->direct_id_property_metas;
         my %id_properties = map { $_->property_name => 1 } @id_property_objects;
         my @id_column_names =
             map { $_->column_name }
@@ -2176,7 +2176,7 @@ sub _generate_template_data_for_loading {
                             $_;
                         }
                         map {
-                            my $p = $source_class_object->get_property_meta_by_name($_);
+                            my $p = $source_class_object->property_meta_for_name($_);
                             unless ($p) {
                                 Carp::confess("No property $_ for class ".$source_class_object->class_name);
                             }
@@ -2195,7 +2195,7 @@ sub _generate_template_data_for_loading {
                 my @foreign_property_names = @{ $join->{foreign_property_names} };
                 my @foreign_property_meta = 
                     map {
-                        $foreign_class_object->get_property_meta_by_name($_)
+                        $foreign_class_object->property_meta_for_name($_)
                     }
                     @foreign_property_names;
                 my $foreign_table_name;
@@ -2258,7 +2258,7 @@ sub _generate_template_data_for_loading {
                             }
                             my @foreign_filter_property_meta = 
                                 map {
-                                    $foreign_class_object->get_property_meta_by_name($_)
+                                    $foreign_class_object->property_meta_for_name($_)
                                 }
                                 @keys;
                                 
@@ -2337,7 +2337,7 @@ sub _generate_template_data_for_loading {
                     $last_class_object_excluding_inherited_joins = $last_class_object if ($last_class_object->property_meta_for_name($final_accessor));
                     # on the first iteration, we figure out the remaining inherited iterations
                     # TODO: get this into the join logic itself in the property meta
-                    my @parents = grep { $_->table_name } $foreign_class_object->ordered_inherited_class_objects;
+                    my @parents = grep { $_->table_name } $foreign_class_object->ancestry_class_metas;
                     if (@parents) {
                         my @last_id_property_names = $foreign_class_object->id_property_names;
                         for my $parent (@parents) {
@@ -2365,7 +2365,7 @@ sub _generate_template_data_for_loading {
             next;
         }
 
-        my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->get_property_meta_by_name($final_accessor);
+        my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
         unless ($final_accessor_property_meta) {
             die "Failed to find property $final_accessor for class " . $last_class_object_excluding_inherited_joins->class_name . "!";
         }
@@ -2515,8 +2515,8 @@ sub _generate_template_data_for_loading {
     if ($recursion_desc) {
         my ($this,$prior) = @{ $recursion_desc };
 
-        my $this_property_meta = $class_meta->get_property_meta_by_name($this);
-        my $prior_property_meta = $class_meta->get_property_meta_by_name($prior);
+        my $this_property_meta = $class_meta->property_meta_for_name($this);
+        my $prior_property_meta = $class_meta->property_meta_for_name($prior);
 
         my $this_class_meta = $this_property_meta->class_meta;
         my $prior_class_meta = $prior_property_meta->class_meta;

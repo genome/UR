@@ -117,6 +117,31 @@ sub class
     return $class;
 }
 
+=pod
+
+=item C<super_class>
+
+  $obj->super_class->super_class_method1();
+  $obj->super_class->super_class_method2();
+
+This returns the super-class name of a class or an object.
+It is exactly equivalent to:
+    $self->class . "::SUPER"
+
+Note that MyClass::SUPER is specially defined to include all
+of the items in the classes in @MyClass::ISA, so in a multiple
+inheritance scenario:
+
+  $obj->super_class->super_class_method1();
+  $obj->super_class->super_class_method2();
+
+...could have super_class_method1() in one parent class
+and super_class_method2() in another parent class.
+
+=cut
+
+sub super_class { shift->class . "::SUPER" }
+
 =pod 
 
 =item C<super_can>

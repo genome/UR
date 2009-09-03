@@ -11,48 +11,6 @@ use Carp ();
 use Sub::Name ();
 use Sub::Install ();
 
-##PRUNE
-#sub construct_class_from_data
-#{
-#    my $self = shift;
-#
-#    my %params = @_;
-#    my $class_name = $params{"class_name"};
-#    my @id_properties = @{ $params{id_properties} };
-#    my @other_properties = @{ $params{other_properties} };
-#    my @class_properties = ($params{class_properties} ? @{ $params{class_properties} } : ());
-#
-#    for my $property (@id_properties)
-#    {
-#        UR::Object::Type->mk_ro_accessor($class_name,$property,uc($property));
-#    }
-#
-#    for my $property (@other_properties)
-#    {
-#        UR::Object::Type->mk_rw_accessor($class_name,$property,uc($property));
-#    }
-#
-#    for my $property (@class_properties)
-#    {
-#        UR::Object::Type->mk_class_accessor($class_name,$property);
-#    }
-#
-#    my $props = [@id_properties, @other_properties];
-#    my $cols = [map { uc($_) } @$props];
-#
-#    no strict 'refs';
-#
-#    my @isa = @{$class_name . '::ISA'};
-#    for my $base (@isa) {
-#        my $isl = ${$base . '::immediate_subclasses_loaded'} ||= [];
-#        push @$isl, $class_name;
-#        $isl = ${$base . '::Ghost::immediate_subclasses_loaded'} ||= [];
-#        push @$isl, $class_name . '::Ghost';
-#    }
-#
-#}
-
-
 sub mk_rw_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;
     $property_name ||= $accessor_name;
@@ -120,6 +78,7 @@ sub mk_ro_accessor {
 
             if ($old ne $new)
             {
+$DB::single=1;
                 Carp::confess("Cannot change read-only property $accessor_name for class $class_name!"
                 . "  Failed to update " . $_[0]->display_name_full . " property: $property_name from $old to $new");
             }
@@ -210,7 +169,7 @@ sub mk_indirect_ro_accessor {
     my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
     my @where = ($where ? @$where : ());
     my $full_name = join( '::', $class_name, $accessor_name );
-    my $filterable_accessor_name = 'get_' . $accessor_name;
+    my $filterable_accessor_name = 'get_' . $accessor_name;  # FIXME we need a better name for 
     my $filterable_full_name = join( '::', $class_name, $filterable_accessor_name );
 
     my $accessor = Sub::Name::subname $full_name => sub {
@@ -290,9 +249,9 @@ sub mk_indirect_rw_accessor {
             # this is only allowed when the remote object has no direct properties
             # which are not id properties.
         
-            $via_property_meta ||= $class_name->get_class_object->get_property_meta_by_name($via);
+            $via_property_meta ||= $class_name->get_class_object->property_meta_for_name($via);
             unless ($via_property_meta) {
-                $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
+                $via_property_meta = $class_name->get_class_object->property_meta_for_name($via);
                 die "no meta for $via in $class_name!?" unless $via_property_meta;
             }
             $adder = "add_" . $via_property_meta->singular_name;
@@ -662,7 +621,7 @@ sub mk_object_set_accessors {
         }
         if ($reverse_id_by) {
             # join to get the data...
-            my $property_meta = $r_class_meta->get_property_meta_by_name($reverse_id_by);
+            my $property_meta = $r_class_meta->property_meta_for_name($reverse_id_by);
             my @property_links = $property_meta->id_by_property_links;
             #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_id_by); 
             unless (@property_links) {
@@ -781,7 +740,7 @@ sub mk_object_set_accessors {
         # handle the case of has-many primitives
         return unless $r_class_meta;
 
-        my $r_ids = $r_class_meta->get_property_meta_by_name($reverse_id_by)->{id_by};
+        my $r_ids = $r_class_meta->property_meta_for_name($reverse_id_by)->{id_by};
         my @id_property_names = $r_class_name->get_class_object->id_property_names;
         @params_prefix = 
             grep { 

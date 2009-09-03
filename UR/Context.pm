@@ -190,7 +190,7 @@ sub infer_property_value_from_rule {
 
     my $subject_class_name = $rule->subject_class_name;
     my $subject_class_meta = UR::Object::Type->get($subject_class_name);
-    my $wanted_property_meta = $subject_class_meta->get_property_meta_by_name($wanted_property_name);
+    my $wanted_property_meta = $subject_class_meta->property_meta_for_name($wanted_property_name);
     unless ($wanted_property_meta) {
         $self->error_message("Class $subject_class_name has no property named $wanted_property_name");
         return;
@@ -221,10 +221,10 @@ sub _infer_direct_property_from_rule {
     my @r_values; # There may be multiple properties in the rule that will get to the wanted property
     PROPERTY_IN_RULE:
     foreach my $property_name ( @properties_in_rule) {
-        my $property_meta = $subject_class_meta->get_property_meta_by_name($property_name);
+        my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
         if ($property_meta->is_delegated) {
 
-            my $linking_property_meta = $subject_class_meta->get_property_meta_by_name($property_meta->via);
+            my $linking_property_meta = $subject_class_meta->property_meta_for_name($property_meta->via);
             my($reference,$ref_name_getter, $ref_r_name_getter);
             if ($linking_property_meta->reverse_id_by) {
                 eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
@@ -304,12 +304,12 @@ sub _infer_delegated_property_from_rule {
     my $subject_class_name = $rule->subject_class_name;
     my $subject_class_meta = UR::Object::Type->get($subject_class_name);
 
-    my $wanted_property_meta = $subject_class_meta->get_property_meta_by_name($wanted_property_name);
+    my $wanted_property_meta = $subject_class_meta->property_meta_for_name($wanted_property_name);
     unless ($wanted_property_meta->via) {
         Carp::croak("There is no linking meta-property (via) on property $wanted_property_name on $subject_class_name");
     }
 
-    my $linking_property_meta = $subject_class_meta->get_property_meta_by_name($wanted_property_meta->via);
+    my $linking_property_meta = $subject_class_meta->property_meta_for_name($wanted_property_meta->via);
     my $alternate_wanted_property = $wanted_property_meta->to;
 
     my($reference,$ref_name_getter,$ref_r_name_getter,$alternate_class);
@@ -719,7 +719,7 @@ sub _get_template_data_for_loading {
             my @secondary_params = ($delegated_property->to . ' ' . $operator);
 
             my $class_meta = UR::Object::Type->get(class_name => $delegated_property->class_name);
-            my $relation_property = $class_meta->get_property_meta_by_name($delegated_property->via);
+            my $relation_property = $class_meta->property_meta_for_name($delegated_property->via);
      
             my $secondary_class = $relation_property->data_type;
 
@@ -746,7 +746,7 @@ sub _get_template_data_for_loading {
                 }
                 unless ($reference) {
                     # FIXME - should we just next instead of dying?
-                    my $linking_property = $class_meta->get_property_meta_by_name($delegated_property->via);
+                    my $linking_property = $class_meta->property_meta_for_name($delegated_property->via);
                     Carp::confess(sprintf("No Reference link found between %s and %s", $delegated_property->class_name, $linking_property->data_type));
                 }
             }
@@ -2346,7 +2346,7 @@ sub _get_objects_for_class_and_rule_from_cache {
             my $should_evaluate_later;
             for my $key (keys %params) {
                 delete $params{$key} if substr($key,0,1) eq '-' or substr($key,0,1) eq '_';
-                my $prop_meta = $class_meta->get_property_meta_by_name($key);
+                my $prop_meta = $class_meta->property_meta_for_name($key);
                 if ($prop_meta && $prop_meta->is_many) {
                     # These indexes perform poorly in the general case if we try to index
                     # the is_many properties.  Instead, strip them out from the basic param
@@ -2440,7 +2440,7 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
         next unless $try_class_meta;
 
         my @param_combinations = $self->_get_all_subsets_of_params(
-                                     grep { $try_class_meta->get_property_meta_by_name($_) }
+                                     grep { $try_class_meta->property_meta_for_name($_) }
                                           @params_property_names
                                  );
         # get rid of first (empty) entry.  For no params, this would
@@ -2845,7 +2845,7 @@ sub _reverse_all_changes {
                 my %property_names =
                     map { $_->property_name => $_ }
                     grep { defined $_->column_name }
-                    $co->get_all_property_objects
+                    $co->all_property_metas
                 ;
         
                 # find columns which make up the primary key
@@ -2995,14 +2995,14 @@ sub _dump_change_snapshot {
 }
 
 
-##PRUNE
+## This is old, untested code that we may wany to resurrect at some point
+#
 #our $CORE_DUMP_VERSION = 1;
 ## Use Data::Dumper to save a representation of the object cache to a file.  Args are:
 ## filename => the name of the file to save to
 ## dumpall => boolean flagging whether to dump _everything_, or just the things
 ##            that would actually be loaded later in core_restore()
 #
-##PRUNE
 #sub _core_dump {
 #    my $class = shift;
 #    my %args = @_;
@@ -3060,9 +3060,7 @@ sub _dump_change_snapshot {
 #
 #    return $filename;
 #}
-
-
-##PRUNE
+#
 ## Read a file previously generated with core_dump() and repopulate the object cache.  Args are:
 ## filename => name of the coredump file
 ## force => boolean flag whether to go ahead and attempt to load the file even if it thinks

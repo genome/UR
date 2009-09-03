@@ -62,6 +62,11 @@ our $bootstrapping = 1;
 our @partially_defined_classes;
 our $pwd_at_compile_time = cwd();
 
+# Some accessor methods drawn from properties need to be overridden.
+# Some times because they need to operate during bootstrapping.  Sometimes
+# because the method needs some special behavior like sorting or filtering.
+# Sometimes to optimize performance or cache data
+
 # This needs to remain overridden to enforce the restriction on callers
 sub data_source {
     my $self = shift;
@@ -94,6 +99,188 @@ sub data_source {
     return $obj;
 }
 
+sub ancestry_class_metas {
+    #my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params(__PACKAGE__,'id');
+
+    # Can't use the speed optimization of getting a template here.  Using the Context to get 
+    # objects here causes endless recursion during bootstrapping
+    map { __PACKAGE__->get($_) } shift->ancestry_class_names;
+    #return map { $UR::Context::current->get_objects_for_class_and_rule(__PACKAGE__, $_) }
+    #       map { $rule_template->get_rule_for_values($_) }
+    #       shift->ancestry_class_names;
+
+}
+
+sub property_meta_for_name {
+    my ($self, $property_name) = @_;
+    my $property;
+
+    my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'class_name', 'property_name');
+
+    for my $class ($self->class_name, $self->ancestry_class_names) {
+        #$property = UR::Object::Property->get(class_name => $class, property_name => $property_name);
+        my $rule = $rule_template->get_rule_for_values($class, $property_name);
+        $property = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $rule);
+        return $property if $property;
+    }
+    return;
+}
+
+# FIXME This does pretty much exactly the same work as the property's code generated
+# by the class initializer, except that it sorts the items before returning
+# them.  Without this sorting, relation properties stop working correctly...
+# When properties can specify their sort order, try removing this override
+sub direct_id_token_metas
+{
+    my $self = _object(shift);
+    my @id_objects =
+        sort { $a->position <=> $b->position }
+        UR::Object::Property::ID->get( class_name => $self->class_name );
+   return @id_objects;
+}
+
+# FIXME Same sorting issues apply here, too
+sub direct_id_property_metas
+{
+    my $self = _object(shift);
+    my $get_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'class_name', 'attribute_name');
+    my @id_property_objects =
+        #map { UR::Object::Property->get(class_name => $_->class_name, attribute_name => $_->attribute_name) }
+        map { $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $_) }
+        map { $get_rule_template->get_rule_for_values($_->class_name, $_->attribute_name) }
+        $self->direct_id_token_metas;
+    if (@id_property_objects == 0) {
+        @id_property_objects = $self->property_meta_for_name("id");
+    }
+    return @id_property_objects;
+}
+
+sub parent_class_names {
+    my $self = shift;   
+    return @{ $self->{is} };
+}
+
+# FIXME Take a look at id_property_names and all_id_property_names.  
+# They look extremely similar, but tests start dying if you replace one
+# with the other, or remove both and rely on the property's accessor method
+sub id_property_names {    
+    my $self = _object(shift);
+    my @id_by;
+    #my $template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Type', 'class_name');
+
+    unless ($self->{id_by} and @id_by = @{ $self->{id_by} }) {
+        foreach my $parent ( @{ $self->{'is'} } ) {
+            my $parent_class = UR::Object::Type->get(class_name => $parent);
+            #my $rule = $template->get_rule_for_values($parent);
+            #my $parent_class = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Type', $rule);
+            next unless $parent_class;
+            @id_by = $parent_class->id_property_names;
+            last if @id_by;
+        }
+    }   
+    return @id_by;    
+}
+
+sub all_id_property_names {
+# return shift->id_property_names(@_); This makes URT/t/99_transaction.t fail
+    my $self = shift;
+    unless ($self->{_all_id_property_names}) {
+        my ($tmp,$last) = ('','');
+        $self->{_all_id_property_names} = [
+            grep { $tmp = $last; $last = $_; $tmp ne $_ }
+            sort 
+            map { @{ $_->{id_by} } } 
+            map { __PACKAGE__->get($_) }
+            ($self->class_name, $self->ancestry_class_names)
+        ];
+    }
+    return @{ $self->{_all_id_property_names} };
+}
+
+sub direct_id_column_names
+{
+    my $self = _object(shift);
+    my @id_column_names =
+        map { $_->column_name }
+        $self->direct_id_property_metas;
+    return @id_column_names;
+}
+
+
+sub ancestry_table_names
+{
+    my $self = _object(shift);
+    my @inherited_table_names =
+        grep { defined($_) }
+        map { $_->table_name }
+        $self->ancestry_class_metas;
+    return @inherited_table_names;
+}
+
+sub all_table_names
+{
+    my $self = _object(shift);
+    my @table_names =
+        grep { defined($_) }
+        ( $self->table_name, $self->ancestry_table_names );
+    return @table_names;
+}
+
+sub ancestry_class_names {
+    my $self = shift;
+    
+    if ($self->{_ordered_inherited_class_names}) {
+        return @{ $self->{_ordered_inherited_class_names} };
+    }
+    
+    my $ordered_inherited_class_names = $self->{_ordered_inherited_class_names} = [ @{ $self->{is} } ];    
+    my @unchecked = @$ordered_inherited_class_names;
+    my %seen = ( $self->{class_name} => 1 );
+    while (my $ancestor_class_name = shift @unchecked) {
+        next if $seen{$ancestor_class_name};
+        $seen{$ancestor_class_name} = 1;
+        my $class_meta = UR::Object::Type->is_loaded($ancestor_class_name);
+        Carp::confess("Can't find meta for $ancestor_class_name!") unless $class_meta;
+        next unless $class_meta->{is};
+        push @$ordered_inherited_class_names, @{ $class_meta->{is} };
+        unshift @unchecked, $_ for reverse @{ $class_meta->{is} };
+    }    
+    #print "Set for $self->{class_name} to @$ordered_inherited_class_names\n";
+    return @$ordered_inherited_class_names;
+}
+
+sub all_property_names {
+    my $self = shift;
+    
+    if ($self->{_all_property_names}) {
+        return @{ $self->{_all_property_names} };
+    }
+ 
+    my %seen = ();   
+    my $all_property_names = $self->{_all_property_names} = [];
+    for my $class_name ($self->class_name, $self->ancestry_class_names) {
+        my $class_meta = UR::Object::Type->get($class_name);
+        if (my $has = $class_meta->{has}) {
+            push @$all_property_names, 
+                grep { 
+                    not exists $has->{$_}{id_by}
+                }
+                grep { $_ ne "id" && !exists $seen{$_} } 
+                sort keys %$has;
+            foreach (@$all_property_names) {
+                $seen{$_} = 1;
+            }
+        }
+    }
+    return @$all_property_names;
+    
+}
+
+
+########################################################################
+# End of overridden property methods
+########################################################################
+
 sub _resolve_meta_class_name_for_class_name {
     my $class = shift;
     my $class_name = shift;
@@ -116,7 +303,7 @@ sub _resolve_meta_class_name {
 }
 
 
-# Replaced by nothing, at the moment.  This method can go away when we have the is_cached meta-property
+# This method can go away when we have the is_cached meta-property
 sub first_sub_classification_method_name {
     my $self = shift;
     
@@ -128,7 +315,7 @@ sub first_sub_classification_method_name {
     
     $self->{___first_sub_classification_method_name} = $self->sub_classification_method_name;
     unless ($self->{___first_sub_classification_method_name}) {
-        for my $parent_class ($self->ordered_inherited_class_objects) {
+        for my $parent_class ($self->ancestry_class_metas) {
             last if ($self->{___first_sub_classification_method_name} = $parent_class->sub_classification_method_name);
         }
     }
@@ -200,7 +387,7 @@ sub _resolve_composite_id_separator {
     # and only have it dump it if it differs from its parent
     my $self = shift;
     my $separator = "\t";
-    for my $class_meta ($self, $self->ordered_inherited_class_objects) {
+    for my $class_meta ($self, $self->ancestry_class_metas) {
         if ($class_meta->composite_id_separator) {
             $separator = $class_meta->composite_id_separator;
             last;
@@ -291,52 +478,6 @@ sub get_composite_id_resolver {
         }
     }
 
-# Replaced by ancestry_class_metas()
-sub ordered_inherited_class_objects {
-    #my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params(__PACKAGE__,'id');
-
-    # Can't use the speed optimization of getting a template here.  Using the Context to get 
-    # objects here causes endless recursion during bootstrapping
-    map { __PACKAGE__->get($_) } shift->ordered_inherited_class_names;
-    #return map { $UR::Context::current->get_objects_for_class_and_rule(__PACKAGE__, $_) }
-    #       map { $rule_template->get_rule_for_values($_) }
-    #       shift->ordered_inherited_class_names;
-
-}
-
-## Kinda Replaced by all_property_metas(property_name => 'name')
-##*get_property_object_for_name = \&get_property_meta_by_name; 
-sub get_property_meta_by_name {
-    my ($self, $property_name) = @_;
-    my $property;
-
-    my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'class_name', 'property_name');
-
-    for my $class ($self->class_name, $self->ordered_inherited_class_names) {
-        #$property = UR::Object::Property->get(class_name => $class, property_name => $property_name);
-        my $rule = $rule_template->get_rule_for_values($class, $property_name);
-        $property = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $rule);
-        return $property if $property;
-    }
-    return;
-}
-
-
-# Replaces the above!
-#*get_property_meta_by_name = \&property_meta_for_name;
-sub property_meta_for_name {
-    my($self, $property_name) = @_;
-
-    my $property = $self->direct_property_metas(property_name => $property_name);
-    return $property if $property;
-
-    # Make a depth-first search for a direct_property_meta with that name
-    foreach my $parent_class_meta ( $self->parent_class_metas ) {
-        $property = $parent_class_meta->property_meta_for_name($property_name);
-        return $property if $property;
-    }
-    return;
-}
 
 # Return a closure that sort can use to sort objects by all their ID properties
 # This should be the same order that an SQL query with 'order by ...' would return them
@@ -506,7 +647,7 @@ sub generate_support_class_for_extension {
         #my %class_params = map { $_ => $subject_class_obj->$_ } $subject_class_obj->property_names;
         my %class_params = map { $_ => $subject_class_obj->$_ }
                            grep { my $p = $subject_class_metaobj->property_meta_for_name($_);
-                                  unless($p) { die "can't get_property_meta_by_name for $_"; }
+                                  unless($p) { die "can't property_meta_for_name for $_"; }
                                   ! $p->is_delegated and ! $p->is_calculated }
                            $subject_class_obj->property_names;
         delete $class_params{generated};
@@ -579,15 +720,6 @@ sub has_table {
     }
     return;
 }
-
-# Replaced by direct_property_metas(property_name => 'name');
-sub has_property {
-    my $self = shift;
-    my $property_name = shift;
-    return ($self->{has}{$property_name} ? 1 : '');
-}
-
-
 
 sub most_specific_subclass_with_table {
     my $self = shift;
@@ -874,7 +1006,7 @@ sub mk_table {
 
     my $table_name = $self->table_name();
     # we only care about properties backed up by a real column
-    my @props = grep { $_->column_name } $self->get_property_objects();
+    my @props = grep { $_->column_name } $self->direct_property_metas();
 
     my $sql = "create table $table_name (";
 
@@ -891,7 +1023,7 @@ sub mk_table {
     }
     $sql .= join(',',@cols);
 
-    my @id_cols = $self->id_column_names();
+    my @id_cols = $self->direct_id_column_names();
     $sql .= ", PRIMARY KEY (" . join(',',@id_cols) . ")" if (@id_cols);
 
     # Should we also check for the unique properties?
@@ -937,97 +1069,8 @@ sub _object
 }
 
 
-
-###################################################
-# methods that may go away when delegation is done
-###################################################
-
-
-##########################################
-# Accessors for core metadata object sets
-##########################################
-
-# Replaced by direct_property_metas
-sub get_property_objects
-{
-    my $self = _object(shift);
-    my $table_name = $self->table_name;
-    my @property_objects =
-        UR::Object::Property->get( class_name => $self->class_name, @_ );
-    return @property_objects;
-}
-
-# Replaced by direct_id_token_metas
-sub get_id_objects
-{
-    my $self = _object(shift);
-    my @id_objects =
-        sort { $a->position <=> $b->position }
-        UR::Object::Property::ID->get( class_name => $self->class_name );
-    return @id_objects;
-}
-
-# Replaced by direct_id_property_metas
-sub get_id_property_objects
-{
-    my $self = _object(shift);
-    my $get_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'class_name', 'attribute_name');
-    my @id_property_objects =
-        #map { UR::Object::Property->get(class_name => $_->class_name, attribute_name => $_->attribute_name) }
-        map { $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $_) }
-        map { $get_rule_template->get_rule_for_values($_->class_name, $_->attribute_name) }
-        $self->get_id_objects;
-    if (@id_property_objects == 0) {
-        @id_property_objects = $self->get_property_meta_by_name("id");
-    }
-    return @id_property_objects;
-}
-
-########################################
-# Accessors for parent object sets
-########################################
-
-# Replaced by parent_class_metas
-sub get_parent_class_objects {
-    my $self = shift;
-    return map { __PACKAGE__->get($_) } $self->parent_class_names
-}
-
-# Replaced by is() or parent_class_names
-sub parent_class_names {
-    my $self = shift;   
-    return @{ $self->{is} };
-}
-
-########################################
-# Accessors for inheritance object sets
-########################################
-
-# Replaced by ancestry_class_objects
-sub get_inherited_class_objects {
-    my $self = shift;
-    #my $template = UR::BoolExpr::Template->resolve_for_class_and_params(__PACKAGE__, 'id');
-    return map { __PACKAGE__->get($_) } $self->ordered_inherited_class_names;
-    #return map { $UR::Context::current->get_objects_for_class_and_rule(__PACKAGE__, $_) }
-    #       map { $template->get_rule_for_values($_) }
-    #       $self->ordered_inherited_class_names;
-}
-
-# Replaced by ancestry_property_metas
-sub get_inherited_property_objects
-{
-    my $self = _object(shift);
-    my @inherited_property_objects =
-        map { $_->get_property_objects(@_) }
-        $self->get_inherited_class_objects;
-    return @inherited_property_objects;
-}
-
-########################################
-# Accessors for derived object sets
-########################################
-
-# Replaced by nothing?
+# FIXME These *type_names methods should be replaced via the new metadata API.
+# also of note, type_names are going away, so maybe don't bother
 # What exactly are these used for?
 sub derived_type_names
 {
@@ -1054,136 +1097,7 @@ sub all_derived_type_names
     return @all_sub_type_names;
 }
 
-# Replaced by all_property_metas
-sub get_all_property_objects
-{
-    my $self = _object(shift);
-    my @all_property_objects =
-        ( $self->get_property_objects(@_), $self->get_inherited_property_objects(@_), );
-    return @all_property_objects;
-}
-
-# Replaced by direct_column_names
-sub column_names
-{
-    my $self = _object(shift);
-    my @column_names =
-        map { $_->column_name }
-        $self->get_property_objects;
-    return @column_names;
-}
-
-# Replaced by all_id_property_names
-# see also UR::Object::id_properties
-sub id_property_names {    
-    my $self = _object(shift);
-    my @id_by;
-    #my $template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Type', 'class_name');
-
-    unless ($self->{id_by} and @id_by = @{ $self->{id_by} }) {
-        foreach my $parent ( @{ $self->{'is'} } ) {
-            my $parent_class = UR::Object::Type->get(class_name => $parent);
-            #my $rule = $template->get_rule_for_values($parent);
-            #my $parent_class = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Type', $rule);
-            next unless $parent_class;
-            @id_by = $parent_class->id_property_names;
-            last if @id_by;
-        }
-    }   
-    return @id_by;    
-}
-
-# Replaced by direct_id_column_names
-sub id_column_names
-{
-    my $self = _object(shift);
-    my @id_column_names =
-        map { $_->column_name }
-        $self->get_id_property_objects;
-    return @id_column_names;
-}
-
-# Replaced by ancestry_table_names
-sub inherited_table_names
-{
-    my $self = _object(shift);
-    my @inherited_table_names =
-        grep { defined($_) }
-        map { $_->table_name }
-        $self->get_inherited_class_objects;
-    return @inherited_table_names;
-}
-
-# Replaced by the same name...
-sub all_table_names
-{
-    my $self = _object(shift);
-    my @table_names =
-        grep { defined($_) }
-        ( $self->table_name, $self->inherited_table_names );
-    return @table_names;
-}
-
-# Replaced by ancestry_class_names
-sub ordered_inherited_class_names {
-    my $self = shift;
-    
-    if ($self->{_ordered_inherited_class_names}) {
-        return @{ $self->{_ordered_inherited_class_names} };
-    }
-    
-    my $ordered_inherited_class_names = $self->{_ordered_inherited_class_names} = [ @{ $self->{is} } ];    
-    my @unchecked = @$ordered_inherited_class_names;
-    my %seen = ( $self->{class_name} => 1 );
-    while (my $ancestor_class_name = shift @unchecked) {
-        next if $seen{$ancestor_class_name};
-        $seen{$ancestor_class_name} = 1;
-        my $class_meta = UR::Object::Type->is_loaded($ancestor_class_name);
-        Carp::confess("Can't find meta for $ancestor_class_name!") unless $class_meta;
-        next unless $class_meta->{is};
-        push @$ordered_inherited_class_names, @{ $class_meta->{is} };
-        unshift @unchecked, $_ for reverse @{ $class_meta->{is} };
-    }    
-    #print "Set for $self->{class_name} to @$ordered_inherited_class_names\n";
-    return @$ordered_inherited_class_names;
-}
-
-# old verstion gets only bc4nf properties
-# Replaced by property with the same name...
-# Note that the old one filters out object relation accessors
-sub all_property_names {
-    my $self = shift;
-    
-    if ($self->{_all_property_names}) {
-        return @{ $self->{_all_property_names} };
-    }
- 
-    my %seen = ();   
-    my $all_property_names = $self->{_all_property_names} = [];
-    for my $class_name ($self->class_name, $self->ordered_inherited_class_names) {
-        my $class_meta = UR::Object::Type->get($class_name);
-        if (my $has = $class_meta->{has}) {
-            push @$all_property_names, 
-                grep { 
-                    not exists $has->{$_}{id_by}
-                }
-                grep { $_ ne "id" && !exists $seen{$_} } 
-                sort keys %$has;
-            foreach (@$all_property_names) {
-                $seen{$_} = 1;
-            }
-        }
-    }
-    return @$all_property_names;
-    
-    #my @all_property_names =
-    #    map { $_->property_name }
-    #    $self->get_all_property_objects(@_);
-    #return @all_property_names;
-}
-
 # new version gets everything, including "id" itself and object ref properties
-# Replaced by nothing?
 sub all_property_type_names {
     my $self = shift;
     
@@ -1194,7 +1108,7 @@ sub all_property_type_names {
     #my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Type', 'id');
 
     my $all_property_type_names = $self->{_all_property_type_names} = [];
-    for my $class_name ($self->class_name, $self->ordered_inherited_class_names) {
+    for my $class_name ($self->class_name, $self->ancestry_class_names) {
         my $class_meta = UR::Object::Type->get($class_name);
         #my $rule = $rule_template->get_rule_for_values($class_name);
         #my $class_meta = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Type',$rule);
@@ -1203,23 +1117,6 @@ sub all_property_type_names {
         }
     }
     return @$all_property_type_names;
-}
-
-# Replaced by the same name
-# This seems to filter out duplicates?
-sub all_id_property_names {
-    my $self = shift;
-    unless ($self->{_all_id_property_names}) {
-        my ($tmp,$last) = ('','');
-        $self->{_all_id_property_names} = [
-            grep { $tmp = $last; $last = $_; $tmp ne $_ }
-            sort 
-            map { @{ $_->{id_by} } } 
-            map { __PACKAGE__->get($_) }
-            ($self->class_name, $self->ordered_inherited_class_names)
-        ];
-    }
-    return @{ $self->{_all_id_property_names} };
 }
 
 sub column_for_property
@@ -1234,7 +1131,7 @@ sub column_for_property
      $column_name = ${$class_name . "::column_for_property"}{ $property_name };
     };
     return $column_name if $column_name;
-    for my $class_object ( $self->get_inherited_class_objects )
+    for my $class_object ( $self->ancestry_class_metas )
     {
         my $cn = $class_object->class_name;
         do { 
@@ -1256,7 +1153,7 @@ sub property_for_column
     my $class_name = $self->class_name;
     my $property_name = ${$class_name . "::property_for_column"}{ $column_name };
     return $property_name if $property_name;
-    for my $class_object ( $self->get_inherited_class_objects )
+    for my $class_object ( $self->ancestry_class_metas )
     {
         my $cn = $class_object->class_name;
         $property_name = ${$cn . "::property_for_column"}{ $column_name };
@@ -1267,29 +1164,9 @@ sub property_for_column
     return;
 }
 
-# not sure why this is here
-# Replaced by all_property_metas(%params)
-sub get_property_object
-{
-    my $self = _object(shift);
-    my %params = @_;
-    warn 'you probably do not want to pass a type_name to get_property_object' if $params{ type_name };
-
-    my @param_keys = keys %params;
-    my @param_values = values %params;
-    my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'type_name', @param_keys);
-    for my $co ( $self, $self->get_inherited_class_objects )
-    {
-        #my $po = UR::Object::Property->get( type_name => $co->type_name, %params );
-        my $rule = $rule_template->get_rule_for_values($co->type_name, @param_values);
-        my $po = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property',$rule);
-        return $po if $po;
-    }
-    return;
-}
-
 # ::Object unique_properties
-# Replaced by ???   Not sure what this returns yet...
+# FIXME The new API doesn't have a replacement for this
+# Not sure what this returns yet...
 sub unique_property_sets
 {
     my $self = shift; 
@@ -1299,7 +1176,7 @@ sub unique_property_sets
 
     my $unique_property_sets = $self->{_unique_property_sets} = [];
 
-    for my $class_name ($self->class_name, $self->ordered_inherited_class_names) {
+    for my $class_name ($self->class_name, $self->ancestry_class_names) {
         my $class_meta = UR::Object::Type->get($class_name);
         if ($class_meta->{constraints}) {            
             for my $spec (@{ $class_meta->{constraints} }) {
@@ -1334,7 +1211,7 @@ sub unique_property_sets
 
 
 # Used by the class meta meta data constructors to make changes in the 
-# flat-format data stored in the class object's hash.  These should really
+# raw data stored in the class object's hash.  These should really
 # only matter while running ur update
 
 # Args are:
@@ -1347,27 +1224,27 @@ sub _property_change_callback {
 
     return if ($method eq 'load' || $method eq 'unload' || $method eq 'create_object' || $method eq 'delete_object');
 
-    my $class = UR::Object::Type->get(class_name => $property_obj->class_name);
+    my $class_obj = UR::Object::Type->get(class_name => $property_obj->class_name);
     my $property_name = $property_obj->property_name;
 
     if ($method eq 'create') {
-        unless ($class->has_property($property_name)) {
+        unless ($class_obj->{'has'}->{$property_name}) {
             my @attr = qw( class_name attribute_name data_length data_type is_delegated is_optional property_name type_name );
 
             my %new_property;
             foreach my $attr_name (@attr ) {
                 $new_property{$attr_name} = $property_obj->$attr_name();
             }
-            $class->{'has'}->{$property_name} = \%new_property;
+            $class_obj->{'has'}->{$property_name} = \%new_property;
         }
 
     } elsif ($method eq 'delete') {
-        delete $class->{'has'}->{$property_name};
+        delete $class_obj->{'has'}->{$property_name};
 
-    } elsif (exists $class->{'has'}->{$property_name}->{$method}) {
+    } elsif (exists $class_obj->{'has'}->{$property_name}->{$method}) {
         my $old_val = shift;
         my $new_val = shift;
-        $class->{'has'}->{$property_name}->{$method} = $new_val;
+        $class_obj->{'has'}->{$property_name}->{$method} = $new_val;
     } #elsif ($method ne 'is_optional') {
       #  $DB::single=1;
       #  1;

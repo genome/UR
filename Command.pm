@@ -818,7 +818,7 @@ sub _shell_args_property_meta
 {
     my $self = shift;
     my $class_meta = $self->get_class_object;
-    my @property_meta = $class_meta->get_all_property_objects(@_);
+    my @property_meta = $class_meta->get_all_property_metas(@_);
     my @result;
     my %seen;
     my (@positional,@required,@optional);
@@ -1222,4 +1222,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 45739 2009-04-14 16:40:35Z ssmith $
+#$Id: Command.pm 45825 2009-04-15 15:37:10Z abrummet $

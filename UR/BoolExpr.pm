@@ -383,7 +383,7 @@ sub resolve_for_class_and_params {
             # account for the case where this parameter does
             # not match an actual property 
             if (!exists $subject_class_props{$property_name}) {
-                if (my $attr = $subject_class_meta->get_property_object(property_name => $property_name)) {
+                if (my $attr = $subject_class_meta->property_meta_for_name($property_name)) {
                     die "Property found but not in array of properties?";
                 }
                 else {
@@ -440,7 +440,7 @@ sub resolve_for_class_and_params {
                 
                 my $is_many;
                 my $data_type;
-                my $property_meta = $subject_class_meta->get_property_meta_by_name($property_name);
+                my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
                 if ($property_meta) {
                     $is_many = $property_meta->is_many;
                     $data_type = $property_meta->data_type;
@@ -489,11 +489,11 @@ sub resolve_for_class_and_params {
                 }
             }
             elsif (blessed($value)) {
-                my $property_type = $subject_class_meta->get_property_object(property_name => $key);
+                my $property_type = $subject_class_meta->property_meta_for_name($key);
                 unless ($property_type) {
-                    for my $class_name ($subject_class_meta->ordered_inherited_class_names) {
+                    for my $class_name ($subject_class_meta->ancestry_class_names) {
                         my $class_object = $class_name->get_class_object;
-                        $property_type = $subject_class_meta->get_property_object(property_name => $key);
+                        $property_type = $subject_class_meta->property_meta_for_name($key);
                         last if $property_type;
                     }
                     unless ($property_type) {
@@ -502,7 +502,7 @@ sub resolve_for_class_and_params {
                 }
 
                 if ($property_type->is_delegated) {
-                    my $property_meta = $subject_class_meta->get_property_meta_by_name($key);
+                    my $property_meta = $subject_class_meta->property_meta_for_name($key);
                     unless ($property_meta) {
                         die "Failed to find meta for $key on " . $subject_class_meta->class_name . "?!";
                     }

@@ -45,7 +45,7 @@ sub resolve_class_description_perl {
     }
 
     my $class_name = $self->class_name;
-    my @parent_classes = $self->get_parent_class_objects;
+    my @parent_classes = $self->parent_class_metas;
     my $has_table = $self->has_table;
 
     # For getting default values for some of the properties
@@ -59,7 +59,7 @@ sub resolve_class_description_perl {
     $perl .= "    type_name => '" . $self->type_name . "',\n" unless $self->type_name eq $class_name;
     $perl .= "    table_name => " . ($self->table_name ? "'" . $self->table_name . "'" : 'undef') . ",\n" if $self->data_source_id;
     $perl .= "    is_abstract => 1,\n" if $self->is_abstract;
-    $perl .= "    er_role => '" . $self->er_role . "',\n" if ($self->er_role and ($self->er_role ne $class_meta_meta->get_property_object(property_name => 'er_role')->default_value));
+    $perl .= "    er_role => '" . $self->er_role . "',\n" if ($self->er_role and ($self->er_role ne $class_meta_meta->property_meta_for_name('er_role')->default_value));
 
     # Meta-property attributes
     my @property_meta_property_names;
@@ -110,7 +110,7 @@ sub resolve_class_description_perl {
     my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas reference_metas reference_property_metas meta_class_name/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
-        my $property_obj = $class_meta_meta->get_property_object(property_name => $property_name);
+        my $property_obj = $class_meta_meta->property_meta_for_name($property_name);
         next if ($property_obj->is_calculated or $property_obj->is_delegated);
 
         my $property_value = $self->$property_name;
@@ -133,8 +133,8 @@ sub resolve_class_description_perl {
     }
 
     my %properties_by_section;
-    my %id_property_names = map { $_->property_name => 1 } $self->get_id_objects;
-    my @properties = $self->get_property_objects;
+    my %id_property_names = map { $_->property_name => 1 } $self->direct_id_token_metas;
+    my @properties = $self->direct_property_metas;
     foreach my $property_meta ( @properties ) {
         my $mentioned_section = $property_meta->is_specified_in_module_header;
         next unless $mentioned_section;  # skip implied properites

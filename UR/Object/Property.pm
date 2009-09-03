@@ -194,7 +194,7 @@ sub _get_direct_join_linkage {
     elsif (my $reverse_id_by = $self->reverse_id_by) {
         my $r_class_name = $self->data_type;
         @obj = 
-            $r_class_name->get_class_object->get_property_meta_by_name($reverse_id_by)->_get_direct_join_linkage();
+            $r_class_name->get_class_object->property_meta_for_name($reverse_id_by)->_get_direct_join_linkage();
     }
     return @obj;
 }
@@ -208,7 +208,7 @@ sub _get_joins {
         my @joins;
         
         if (my $via = $self->via) {
-            my $via_meta = $class_meta->get_property_meta_by_name($via);
+            my $via_meta = $class_meta->property_meta_for_name($via);
             unless ($via_meta) {
                 my $property_name = $self->property_name;
                 my $class_name = $self->class_name;
@@ -237,7 +237,7 @@ sub _get_joins {
                 push @joins, { %$join, id => $id, where => $where };
             }
             unless ($to eq 'self') {
-                my $to_meta = $via_meta->data_type->get_class_object->get_property_meta_by_name($to);
+                my $to_meta = $via_meta->data_type->get_class_object->property_meta_for_name($to);
                 unless ($to_meta) {
                     my $property_name = $self->property_name;
                     my $class_name = $self->class_name;
@@ -286,7 +286,7 @@ sub _get_joins {
                 elsif (my $reverse_id_by = $self->reverse_id_by) { 
                     my $foreign_class = $self->data_type;
                     my $foreign_class_meta = $foreign_class->get_class_object;
-                    my $foreign_property_via = $foreign_class_meta->get_property_meta_by_name($reverse_id_by);
+                    my $foreign_property_via = $foreign_class_meta->property_meta_for_name($reverse_id_by);
                     unless ($foreign_property_via) {
                         Carp::confess("No property '$reverse_id_by' in class $foreign_class, needed to resolve property '" .
                                       $self->property_name . "' of class " . $self->class_name);

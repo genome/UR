@@ -5,10 +5,6 @@ use warnings;
 use strict;
 use Data::Dumper;
 
-sub return_true  { return 1 }
-
-sub return_false { return }
-
 sub null_sub { }
 
 sub used_libs {
@@ -28,29 +24,6 @@ sub used_libs_perl5lib_prefix {
     return $prefix;
 }
 
-sub system_propagate_inc {
-    local %ENV = %ENV;
-    my $prefix = used_libs_perl5lib_prefix();
-    print "prefix: $prefix\n";
-    $ENV{PERL5LIB} = $prefix . $ENV{PERL5LIB};
-    print "perl5lib: $ENV{PERL5LIB}\n";
-    system @_;
-}
-
-sub backticks_propagate_inc {
-    local %ENV = %ENV;
-    my $prefix = used_libs_perl5lib_prefix();
-    print "prefix: $prefix\n";
-    $ENV{PERL5LIB} = $prefix . $ENV{PERL5LIB};
-    print "pelr5lib: $ENV{PERL5LIB}\n";
-    `@_`;
-}
-
-
-sub sh_env_prefix {
-    my $prefix = used_libs_perl5lib_prefix();
-    return "PERL5LIB=${prefix}\$PERL5LIB"
-}
 
 sub deep_copy { 
     require Data::Dumper;
@@ -59,16 +32,6 @@ sub deep_copy {
     my $src = "no strict; no warnings;\n" . Data::Dumper::Dumper($original) . "\n\$VAR1;";
     my $copy = eval($src);
     return $copy;
-}
-
-sub module_path_for_package {
-    my $package = $_[0];
-    my $module = join('/',split(/::/,$package)) . '.pm';
-    for my $dir (@INC) {
-        my $path = $dir . '/' . $module;
-        return $path if (-e $path);
-    }
-    return;
 }
 
 # generate a method
