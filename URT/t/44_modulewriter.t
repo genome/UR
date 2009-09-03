@@ -60,7 +60,7 @@ my $test_class_definition =
     has => [
         property_a => { is => 'String', meta_prop_a => 1 },
         property_b => { is => 'Integer', is_abstract => 1, meta_prop_b => 'metafoo', doc => 'property_b' },
-        calc_sql   => { calculate_sql => 'to_upper(property_b)' },
+        calc_sql   => { calculate_sql => q(to_upper(property_b)) },
     ],
     has_many => [
         property_cs => { is => 'String', is_optional => 1 },
@@ -69,7 +69,7 @@ my $test_class_definition =
     has_optional => [
         property_d => { is => 'Number' },
         calc_perl  => { calculate_from => [ 'property_a', 'property_b' ],
-                        calculate => '$property_a . $property_b' },
+                        calculate => q($property_a . $property_b) },
         another_related => { is => 'URT::Related', id_by => [ 'rel_id1', 'rel_id2' ], where => [ property_a => 'foo' ] },
         related_value => { is => 'StringSubclass', via => 'another_related' },
         related_value2 => { is => 'StringSubclass', via => 'another_related', to => 'related_value' },
