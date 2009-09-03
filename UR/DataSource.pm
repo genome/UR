@@ -387,13 +387,13 @@ sub _generate_template_data_for_loading {
         my $final_accessor = $delegated_property->to;            
         my $final_accessor_meta = $via_accessor_meta->data_type->__meta__->property_meta_for_name($final_accessor);
         unless ($final_accessor_meta) {
-            Carp::croak("No property $final_accessor on class " . $via_accessor_meta->data_type .
+            Carp::croak("No property '$final_accessor' on class " . $via_accessor_meta->data_type .
                           " while resolving property $property_name on class $class_name");
         }
         while($final_accessor_meta->is_delegated) {
             $final_accessor_meta = $final_accessor_meta->to_property_meta();
             unless ($final_accessor_meta) {
-                Carp::croak("No property $final_accessor on class " . $via_accessor_meta->data_type .
+                Carp::croak("No property '$final_accessor' on class " . $via_accessor_meta->data_type .
                               " while resolving property $property_name on class $class_name");
             }
         }

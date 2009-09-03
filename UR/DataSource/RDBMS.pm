@@ -2850,6 +2850,7 @@ sub _generate_template_data_for_loading {
         my $alias_for_property_value;
     
         my $property_name = $delegated_property->property_name;
+#$DB::single=1;
         my @joins = $delegated_property->_get_joins;
         my $relationship_name = $delegated_property->via;
         unless ($relationship_name) {
@@ -3252,7 +3253,7 @@ sub _generate_template_data_for_loading {
                 $from_clause .= "${link_table_name}.${link_column_name} = $expr_sql";
             }
             elsif (defined $value_position) {
-                die "Joins cannot use variable values currently!"
+                Carp::croak "Joins cannot use variable values currently!"
             }
             else {
                 my ($more_sql, @more_params) = 

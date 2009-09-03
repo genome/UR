@@ -1184,7 +1184,7 @@ sub get_objects_for_class_and_rule {
         return unless defined wantarray;
         return @results if wantarray;
         if (@results > 1) {
-            die sprintf("Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results:\n%s\n",
+            Carp::confess sprintf("Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results:\n%s\n",
                         $rule->subject_class_name,
                         join(',', $rule->params_list),
                         scalar(@results),
