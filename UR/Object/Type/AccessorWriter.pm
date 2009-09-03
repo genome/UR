@@ -214,28 +214,65 @@ sub mk_indirect_ro_accessor {
 sub mk_indirect_rw_accessor {
     my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
     my @where = ($where ? @$where : ());
-    my $adder = "add_" . $via;
-    $adder =~ s/s$//;
     my $full_name = join( '::', $class_name, $accessor_name );
+    
+    my $update_strategy; # defined the first time we "set" a value through this
+    my $adder;
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         my @bridges = $self->$via(@where);
-        if (@_) {
-            if (@bridges > 1) {
-                Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
-            }
-            else {
-                if (@bridges == 1) {
-                    $bridges[0]->delete;
+        if (@_) {            
+            unless (defined $update_strategy) {
+                # Resolve the strategy.  We need to figure out if $to 
+                # refers to an id-property.  This is only called once, when the
+                # accessor is first used.
+                
+                # If we reference a remote object, and go to one of its id properties
+                # we must do a delete/create instead of property change.  Note that
+                # this is only allowed when the remote object has no direct properties
+                # which are not id properties.
+                
+                my $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
+                unless ($via_property_meta) {
+                    $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
+                    die "no meta for $via in $class_name!?" unless $via_property_meta;
                 }
-                @bridges = $self->$adder(@where, $to => $_[0]);
+                my $r_class_name = $via_property_meta->data_type;
+                my @r_id_property_names = $r_class_name->get_class_object->id_property_names;
+                if (grep { $_ eq $to } @r_id_property_names) {
+                    $adder = "add_" . $via_property_meta->singular_name;
+                    $update_strategy = 'delete-create'
+                }
+                else {
+                    $update_strategy = 'change';
+                }
+            }
+            if ($update_strategy eq 'change') {
                 unless (@bridges) {
-                    Carp::confess("Failed to add bridge for $accessor_name on $class_name $self->{id}: property is via $via!");
+                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: property is via $via which is not set!");
+                }
+                if (@bridges > 1) {
+                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
+                }
+                #print "updating $bridges[0] $to to @_\n";
+                return $bridges[0]->$to(@_);
+            }
+            elsif ($update_strategy eq 'delete-create') {
+                if (@bridges > 1) {
+                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
+                }
+                else {
+                    if (@bridges) {
+                        #print "deleting $bridges[0]\n";
+                        $bridges[0]->delete;
+                    }
+                    #print "adding via $adder @where :::> $to @_\n";
+                    @bridges = $self->$adder(@where, $to => $_[0]);
+                    unless (@bridges) {
+                        Carp::confess("Failed to add bridge for $accessor_name on $class_name $self->{id}: property is via $via!");
+                    }
                 }
             }
-            #else {
-            #    return $bridges[0]->$to(@_);
-            #}
         }
         return unless @bridges;
         my @results = map { $_->$to } @bridges;
@@ -492,15 +529,27 @@ sub mk_class_accessor
 sub mk_object_set_accessors {
     my ($self, $class_name, $singular_name, $plural_name, $reverse_id_by, $r_class_name, $where) = @_;
 
+    unless ($plural_name) {
+        # TODO: we can handle a reverse_id_by when there is only one item.  We're just not coded-to yet.
+        die "Bad property description for $class_name $singular_name: expected is_many with reverse_id_by!";
+    }
+
     # These are set by the resolver closure below, and kept in scope by the other closures
     my $rule_template;
+    my $r_class_meta;
     my @property_names;
     my @where = ($where ? @$where : ());
     
     my $rule_resolver = sub {
         my ($obj) = @_;        
-        $r_class_name->class;
-        unless ($reverse_id_by) {
+        eval {
+            eval "use $r_class_name";
+            $r_class_name->class;
+            $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
+        };
+        if ($r_class_meta and not $reverse_id_by) {
+            # we have a real class on the other end, and it did not specify how to link back to us
+            # try to infer how, otherwise fall back to the same logic we use with "primitives"
             my @possible_relationships = UR::Object::Reference->get(
                 class_name => $r_class_name,
                 r_class_name => $class_name
@@ -513,32 +562,47 @@ sub mk_object_set_accessors {
                     . "  Correct by adding \"reverse_id_by => X\" to ${class_name}'s \"$singular_name\" definition one of the following values:  " 
                     . join(",",map { '"' . $_->delegation_name . '"' } @possible_relationships) . ".\n";
             }
-            elsif (@possible_relationships == 0) {
-                die "No relationships found between $r_class_name and $class_name.  Error in definition for $class_name $singular_name!"
+            elsif (@possible_relationships == 1) {
+                $reverse_id_by = $possible_relationships[0]->delegation_name;
             }
-            $reverse_id_by = $possible_relationships[0]->delegation_name;
+            elsif (@possible_relationships == 0) {
+                # we now fall through to the logic below and try direct arrayref storage
+                #die "No relationships found between $r_class_name and $class_name.  Error in definition for $class_name $singular_name!"
+            }
         }
-        my $class_meta = UR::Object::Type->get(class_name => $r_class_name);
-        my $property_meta = $class_meta->get_property_meta_by_name($reverse_id_by);
-        my @property_links = $property_meta->id_by_property_links;
-        #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_id_by); 
-        unless (@property_links) {
-            $DB::single = 1;
-            Carp::confess("No property links for $r_class_name -> $reverse_id_by?  Cannot build accessor for $singular_name/$plural_name relationship.");
+        if ($reverse_id_by) {
+            # join to get the data...
+            my $property_meta = $r_class_meta->get_property_meta_by_name($reverse_id_by);
+            my @property_links = $property_meta->id_by_property_links;
+            #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_id_by); 
+            unless (@property_links) {
+                $DB::single = 1;
+                Carp::confess("No property links for $r_class_name -> $reverse_id_by?  Cannot build accessor for $singular_name/$plural_name relationship.");
+            }
+            my %get_params;            
+            for my $link (@property_links) {
+                my $my_property_name = $link->r_property_name;
+                push @property_names, $my_property_name;
+                $get_params{$link->property_name}  = $obj->$my_property_name;
+            }
+            my $tmp_rule = $r_class_name->get_rule_for_params(%get_params);
+            $rule_template = $tmp_rule->get_rule_template;
+            unless ($rule_template) {
+                die "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
+            }
         }
-        my %get_params;            
-        for my $link (@property_links) {
-            my $my_property_name = $link->r_property_name;
-            push @property_names, $my_property_name;
-            $get_params{$link->property_name}  = $obj->$my_property_name;
+        else {
+            # data is stored locally on the hashref
+            #die "No relationships found between $r_class_name and $class_name.  Error in definition for $class_name $singular_name!"
         }
-        my $tmp_rule = $r_class_name->get_rule_for_params(%get_params);
-        $rule_template = $tmp_rule->get_rule_template;
     };
 
     my $rule_accessor = Sub::Name::subname $class_name ."::__$singular_name" . '_rule' => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
+        unless ($rule_template) {
+            die "no indirect rule available for locally-stored 'has-many' relationship";
+        }
         if (@_ or @where) {
             my $tmp_rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
             return $r_class_name->get_rule_for_params($tmp_rule->params_list,@where, @_);
@@ -557,19 +621,36 @@ sub mk_object_set_accessors {
     my $list_accessor = Sub::Name::subname $class_name ."::$plural_name" => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
-        my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-        if (@_ or @where) {
-            return $r_class_name->get($rule->params_list,@where,@_);
+        if ($rule_template) { 
+            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
+            if (@_ or @where) {
+                return $r_class_name->get($rule->params_list,@where,@_);
+            }
+            else {
+                return $r_class_name->get($rule);
+            }
         }
         else {
-            return $r_class_name->get($rule);
+            if (@_) {
+                if (@_ != 1 or ref($_[0]) ne 'ARRAY' ) {
+                    die "expected a single arrayref when setting a multi-value $class_name $plural_name!  Got @_";
+                }
+                $self->{$plural_name} = [ @{$_[0]} ];
+                return @{$_[0]};
+            }
+            else {
+                return unless $self->{$plural_name};
+                return @{ $self->{$plural_name} };
+            }
         }
     };
+    
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $plural_name,
         code => $list_accessor,
     });
+    
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $singular_name . '_list',
@@ -588,21 +669,29 @@ sub mk_object_set_accessors {
     my $iterator_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_iterator' => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
-        my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-        
-        return UR::Object::Iterator->create_for_filter_rule($rule);
+        if ($rule_template) {
+            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
+            return UR::Object::Iterator->create_for_filter_rule($rule);
+        }
+        else {
+            die "value iterator not implemented.  its simple!  please do it...";
+            return UR::Value::Iterator->create_for_value_arrayref($self->{$plural_name} || []);
+        }
     };
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $singular_name . '_iterator',
         code => $iterator_accessor,
     });
-
+    
     # These will behave specially if the rule does not specify the ID, or all of the ID.
     my @params_prefix;
     my $params_prefix_resolved = 0;
     my $params_prefix_resolver = sub {
-        my $r_ids = $r_class_name->get_class_object->get_property_meta_by_name($reverse_id_by)->{id_by};
+        # handle the case of has-many primitives
+        return unless $r_class_meta;
+
+        my $r_ids = $r_class_meta->get_property_meta_by_name($reverse_id_by)->{id_by};
         my @id_property_names = $r_class_name->get_class_object->id_property_names;
         @params_prefix = 
             grep { 
@@ -620,17 +709,27 @@ sub mk_object_set_accessors {
     my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
-        my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
-        $params_prefix_resolver->() unless $params_prefix_resolved;
-        unshift @_, @params_prefix if @_ == 1;
-        if (@_) {
-            return my $obj = $r_class_name->get($rule->params_list,@_);
+        if ($rule_template) {
+            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
+            $params_prefix_resolver->() unless $params_prefix_resolved;
+            unshift @_, @params_prefix if @_ == 1;
+            if (@_) {
+                return my $obj = $r_class_name->get($rule->params_list,@_);
+            }
+            else {
+                return my $obj = $r_class_name->get($rule);
+            }
         }
         else {
-            return my $obj = $r_class_name->get($rule);
+            return unless $self->{$plural_name};
+            if (@_ > 1) {
+                die "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
+            }
+            my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name } };
+            return $matches[0] if @matches < 2;
+            return $self->context_return(@matches); 
         }
     };
-
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $singular_name,
@@ -638,12 +737,29 @@ sub mk_object_set_accessors {
     });
 
     my $add_accessor = Sub::Name::subname $class_name ."::add_$singular_name" => sub {
+        # TODO: this handles only a single item when making objects: support a list of hashrefs
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
-        $params_prefix_resolver->() unless $params_prefix_resolved;
-        unshift @_, @params_prefix if @_ == 1;
-        my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);        
-        $r_class_name->create($rule->params_list,@_);
+        if ($rule_template) {
+            $params_prefix_resolver->() unless $params_prefix_resolved;
+            unshift @_, @params_prefix if @_ == 1;
+            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);        
+            $r_class_name->create($rule->params_list,@_);
+        }
+        else {
+            if ($r_class_meta) {
+                my $new = $r_class_name->create(@_);
+                return unless $new;
+                push @{ $self->{$plural_name} ||= [] }, $new;
+            }
+            else { 
+                if (@_ != 1) {
+                    die "$class_name add_$singular_name expects a single value to add.  Got @_";
+                }
+                push @{ $self->{$plural_name} ||= [] }, $_[0];
+                return $_[0];
+            }
+        }
     };
     Sub::Install::reinstall_sub({
         into => $class_name,
@@ -654,16 +770,56 @@ sub mk_object_set_accessors {
     my $remove_accessor = Sub::Name::subname $class_name ."::remove_$singular_name" => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
-        my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
-        $params_prefix_resolver->() unless $params_prefix_resolved;
-        unshift @_, @params_prefix if @_ == 1;        
-        my @matches = $r_class_name->get($rule->params_list,@_);
-        my $trans = UR::Context::Transaction->begin;
-        @matches = map {
-            $_->delete or die "Error deleting $r_class_name " . $_->id . " for remove_$singular_name!: " . $_->error_message;
-        } @matches;
-        $trans->commit;
-        return @matches;
+        if ($rule_template) {
+            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
+            $params_prefix_resolver->() unless $params_prefix_resolved;
+            unshift @_, @params_prefix if @_ == 1;        
+            my @matches = $r_class_name->get($rule->params_list,@_);
+            my $trans = UR::Context::Transaction->begin;
+            @matches = map {
+                $_->delete or die "Error deleting $r_class_name " . $_->id . " for remove_$singular_name!: " . $_->error_message;
+            } @matches;
+            $trans->commit;
+            return @matches;
+        }
+        else {
+            # direct storage in an arrayref
+            $self->{$plural_name} ||= []; 
+            if ($r_class_meta) {
+                # object
+                my @remove;
+                my @keep;
+                my $rule = $r_class_name->get_rule_for_params(@_);
+                for my $value (@{ $self->{$plural_name} }) {
+                    if ($rule->evaluate($value)) {
+                        push @keep, $value;
+                    }
+                    else {
+                        push @remove, $value;
+                    }
+                }
+                if (@remove) {
+                    @{ $self->{$plural_name} } = @keep;
+                }
+                return @remove;
+            }
+            else {
+                # value (or non-ur object)
+                if (@_ == 1) {
+                    # remove specific value
+                    my @remove = grep { $_ eq $_[0] } @{ $self->{$plural_name} };
+                    die "Failed to find item @_ in $class_name $plural_name!";
+                    return $remove[0];
+                }
+                elsif (@_ == 0) {
+                    # remove all if no params are specified
+                    @{ $self->{$plural_name} ||= [] } = ();
+                }
+                else {
+                    die "$class_name remove_$singular_name should be called with a specific value.  Params are only usable for ur objects!  Got: @_";
+                }
+            }
+        }
     };
     Sub::Install::reinstall_sub({
         into => $class_name,
