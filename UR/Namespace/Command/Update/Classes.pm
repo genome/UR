@@ -508,7 +508,7 @@ sub _update_database_metadata_objects_for_schema_changes {
                     print;
                 }
                 my @changes =
-                    grep { not  ($_->properties == 1 and ($_->properties)[0] eq "last_object_revision") }
+                #    grep { not  ($_->properties == 1 and ($_->properties)[0] eq "last_object_revision") }
                     $table_object->__changes__;
                 if (@changes) {
                     $self->status_message(
@@ -733,6 +733,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     #  to function as it did before.
 
     # DELETED COLUMNS
+    my @saved_removed_column_messages;  # Delete them now, but report about them later in the 'Updating class properties' section
     for my $column (sort $sorter @{ $dd_changes_by_class{"UR::DataSource::RDBMS::TableColumn::Ghost"} }) {
         my $table = $column->get_table;
         unless ($table) {
@@ -795,12 +796,12 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
 
         unless ($table->isa("UR::DataSource::RDBMS::Table::Ghost")) {
-            $self->status_message(
-                sprintf(
-                    "D %-32s deleted from class %-40s for deleted column %-32s" . "\n",
-                    $property->property_name,
-                    $class->class_name,
-                    $column->column_name
+            push(@saved_removed_column_messages, 
+                sprintf("D %-40s property %-16s for removed column %s.%s\n",
+                        $class->class_name,
+                        $property->property_name,
+                        $column->table_name, 
+                        $column->column_name,
                 )
             );
         }
@@ -818,7 +819,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         # Though we create classes for tables, we don't immediately delete them, just deflate them.
         my $table_name = $table->table_name;
         unless ($table_name) {
-            $self->status_message("~ No table_name for delete table object ".$table->id);
+            $self->status_message("~ No table_name for deleted table object ".$table->id);
             next;
         }
 
@@ -855,7 +856,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             } sort keys %ancestory;
         if (@ancestors_with_tables) {
             $self->status_message(
-                sprintf("U %-40s is now detached from deleted table %-32s.  It still inherits from classes with persistent storage." . "\n",$class_name,$table_name)
+                sprintf("U %-40s class is now detached from deleted table %-32s.  It still inherits from classes with persistent storage." . "\n",$class_name,$table_name)
             );
         }
         else {
@@ -870,8 +871,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             $class->delete;
             #$DB::single = 1;
             $self->status_message(
-                #sprintf("D %-40s deleted for deleted table %-32s" . "\n",$class_name,$table_name)
-                sprintf("D %-40s deleted for deleted table %s" . "\n",$class_name,$table_name)
+                sprintf("D %-40s class deleted for deleted table %s" . "\n",$class_name,$table_name)
             );
         }
     } # next deleted table
@@ -926,11 +926,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             
             if ($class->__changes__) {
                 $self->status_message(
-                    #sprintf("U %-40s uses table %-40s" . "\n",$class_name,$table_name)
-                    sprintf("U %-40s uses %s %s %s" . "\n",$class_name,
-                                                           $table->data_source->get_name,
-                                                           lc($table->table_type),
-                                                           $table_name)
+                    sprintf("U %-40s class uses %s %s %s" . "\n",
+                            $class_name,
+                            $table->data_source->get_name,
+                            lc($table->table_type),
+                            $table_name)
                 );
             }
         }
@@ -959,12 +959,12 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             }
 
             $self->status_message(
-                     #sprintf("A %-40s uses table %-40s" . "\n",$class_name,$table_name)
-                     sprintf("A %-40s uses %s %s %s" . "\n",$class_name,
-                                                            $table->data_source->get_name,
-                                                            lc($table->table_type),
-                                                            $table_name)
-                  );
+                     sprintf("A %-40s class uses %s %s %s" . "\n",
+                             $class_name,
+                             $table->data_source->get_name,
+                             lc($table->table_type),
+                             $table_name)
+                     );
 
             my $type_name = $data_source->resolve_type_name_for_table_name($table_name);
             $type_name .= ' view' if ($table->table_type =~ m/view/i);
@@ -1015,6 +1015,9 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     } # next table
 
     $self->status_message("Updating class properties...\n");
+
+    $self->status_message($_) foreach @saved_removed_column_messages;
+
     # COLUMN
     my @column_property_translations = (
         ['data_type'    => 'data_type'],
@@ -1081,9 +1084,9 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             if ($property->__changes__) {
                 no warnings;
                 $self->status_message(
-                    #sprintf("U %-40s uses table %-40s" . "\n",$class_name,$table_name)
-                    sprintf("U %-40s has updated column %s.%s (%s %s)\n",
+                    sprintf("U %-40s property %-20s for column %s.%s (%s %s)\n",
                                                             $class_name,
+                                                            $property->property_name,
                                                             $table->table_name, 
                                                             $column_name,
                                                             $column->data_type,
@@ -1127,8 +1130,9 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
             no warnings;
             $self->status_message(
-                sprintf("A %-40s has new column %s.%s (%s %s)\n",
+                sprintf("A %-40s property %-16s for column %s.%s (%s %s)\n",
                                                         $class_name,
+                                                        $property_name,
                                                         $table->table_name, 
                                                         $column_name,
                                                         $column->data_type,
@@ -1243,9 +1247,33 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             my $name = $property->property_name;
             if ($pk_cols{$name}) {
                 $property->is_optional(0);
+                $property->is_id(1);
             }
         }
     } # next table (looking just for PK constraint changes)
+
+    # Make another pass to make sure if a class has a property called 'id' with a column attached,
+    # then it must be the only ID property of that class
+    my %classes_to_check_id_properties;
+    foreach my $thing ( qw(UR::DataSource::RDBMS::Table UR::DataSource::RDBMS::TableColumn ) ) {
+        foreach my $item ( @{ $dd_changes_by_class{$thing} } ) {
+            my $class_meta = $self->_get_class_meta_for_table_name(data_source => $item->data_source,
+                                                                   table_name => $item->table_name);
+            $classes_to_check_id_properties{$class_meta->class_name} ||= $class_meta;
+        }
+    }
+    foreach my $class_name ( keys %classes_to_check_id_properties ) {
+        my $class_meta = $classes_to_check_id_properties{$class_name};
+        my $property_meta = $class_meta->property_meta_for_name('id');
+        if ($property_meta && $property_meta->column_name && scalar($class_meta->direct_id_property_metas) > 1) {
+            $self->warning_message("Class $class_name cannot have multiple ID properties when one concrete ID property is named 'id'");
+        }
+        unless ($property_meta->is_id) {
+            $self->warning_message("Class $class_name has a property named 'id' that is not an ID property.  It will likely not function correctly unless it is renamed");
+        }
+    }
+                                         
+
 
     $self->status_message("Updating class unique constraints...\n");
 
