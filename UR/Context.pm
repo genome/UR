@@ -461,7 +461,7 @@ sub _create_import_iterator_for_underlying_context {
                     # message about it and we update all_params_loaded to indicate
                     # that this set of parameters yielded 0 objects
                     
-                    my $rule_template_is_id_only                    = $template_data->{rule_template_is_id_only};
+                    my $rule_template_is_id_only = $template_data->{rule_template_is_id_only};
                     if ($rule_template_is_id_only) {
                         my $id = $rule->specified_value_for_id;
                         $UR::Object::all_objects_loaded->{$class_name}->{$id} = undef;
@@ -1137,6 +1137,7 @@ sub _cache_is_complete_for_class_and_normalized_rule {
 
     no warnings;
 
+$DB::single=1;
     my $loading_was_done_before_with_these_params =
             # complex (non-single-id) params
             exists($params->{_param_key}) 
@@ -1337,25 +1338,34 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
         return;
     }
     else {
-        # more than one property, see if individual checks have been done for any of these...
-        for my $property_name (@property_names) {
-            my $key = $class->get_rule_for_params($property_name => $params->{$property_name})->id;
-            if (defined($key)
-                && exists $all_params_loaded->{$class}->{$key}) {
-                # DRY
-                $all_params_loaded->{$class}->{$params->{_param_key}} = 1;
-                my $new_key = $params->{_param_key};
-                for my $obj ($class->all_objects_loaded) {
-                    my $load_data = $obj->{load};
-                    next unless $load_data;
-                    my $param_key_data = $load_data->{param_key};
-                    next unless $param_key_data;
-                    my $class_data = $param_key_data->{$class};
-                    next unless $class_data;
-                    $class_data->{$new_key}++;
+        for my $try_class ( $class , $class->inheritance ) {
+
+            # more than one property, see if individual checks have been done for any of these...
+            for my $property_name (@property_names) {
+                next unless ($try_class->get_class_object->get_property_meta_by_name($property_name));
+
+                my $key = $try_class->get_rule_for_params($property_name => $params->{$property_name})->id;
+                if (defined($key)
+                    && exists $all_params_loaded->{$try_class}->{$key}) {
+                    # DRY
+                    $all_params_loaded->{$try_class}->{$params->{_param_key}} = 1;
+                    my $new_key = $params->{_param_key};
+                    for my $obj ($try_class->all_objects_loaded) {
+                        my $load_data = $obj->{load};
+                        next unless $load_data;
+                        my $param_key_data = $load_data->{param_key};
+                        next unless $param_key_data;
+                        my $class_data = $param_key_data->{$try_class};
+                        next unless $class_data;
+                        $class_data->{$new_key}++;
+                    }
+                    return 1;
                 }
-                return 1;
             }
+            # No sense looking further up the inheritance
+            # FIXME UR::ModuleBase is in the inheritance list, you can't call get_class_object() on it
+            # and I'm having trouble getting a UR class object defined for it...
+            last if ($try_class eq 'UR::Object'); 
         }
     }
 }
