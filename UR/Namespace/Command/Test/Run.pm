@@ -241,11 +241,25 @@ sub _run_tests {
     local $My::Test::Harness::Straps::perl_opts     = $perl_opts;
     local $My::Test::Harness::Straps::script_opts   = $script_opts;
     local $My::Test::Harness::Straps::v             = $v;
+    use Sub::Install qw();#we need to keep Test::Harness from putting pwd at the beginning of @INC of spawned tests
+    my $sub = \&Test::Harness::_filtered_inc;
+    my $abs_cwd = Cwd::abs_path('.');
+    Sub::Install::reinstall_sub(
+        {into => 'Test::Harness',
+        as => '_filtered_inc',
+        code => sub {
+                my @finc = $sub->(); 
+                return grep { $_ ne $abs_cwd } @finc;
+        },}
+    );
+        
     eval { 
         no warnings;
         local %SIG = %SIG; 
         delete $SIG{__DIE__}; 
         $ENV{UR_DBI_NO_COMMIT} = 1;
+        $DB::single=1;
+        
         runtests(@tests);
     };
     if ($@) {
