@@ -56,11 +56,11 @@ sub undo {
     }
 
 
-    if ($changed_aspect eq "create_object") {
-        #$changed_obj->delete_object();
+    if ($changed_aspect eq "_create_object") {
+        #$changed_obj->_delete_object();
     }
-    elsif ($changed_aspect eq "delete_object") {
-        #$changed_obj = $changed_class_name->create_object(%$changed_obj);
+    elsif ($changed_aspect eq "_delete_object") {
+        #$changed_obj = $changed_class_name->_create_object(%$changed_obj);
     }
     elsif ($changed_aspect eq "create") {
         UR::Object::delete($changed_obj);
@@ -85,8 +85,8 @@ sub undo {
     elsif ($changed_aspect eq "load_external") {
     }
     elsif ($changed_aspect eq "unload") {
-        $changed_obj = UR::Object::create_object($changed_class_name,%$changed_obj);
-        UR::Object::signal_change($changed_obj,"load") if $changed_obj;
+        $changed_obj = UR::Object::_create_object($changed_class_name,%$changed_obj);
+        UR::Object::__signal_change__($changed_obj,"load") if $changed_obj;
     }
     elsif ($changed_aspect eq "commit") {
         Carp::confess();

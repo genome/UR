@@ -21,9 +21,9 @@ sub _init_subclass {
 }
 
 
-sub create { die "Cannot create() ghosts.  Use create_object." }
+sub create { die "Cannot create() ghosts.  Use _create_object." }
 
-sub delete { die "Cannot delete() ghosts.  Use delete_object." }
+sub delete { die "Cannot delete() ghosts.  Use _delete_object." }
 
 sub _load {
     shift->is_loaded(@_);

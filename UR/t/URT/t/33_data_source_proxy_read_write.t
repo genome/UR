@@ -145,8 +145,8 @@ sub server_process {
     diag("server process PID is $$");
 
     # A couple objects the client process can load from us
-    my $test_obj = Acme::Person->define(name => $$, person_id => 1);
-    my $delete_obj = Acme::Person->define(name => 'deleteme', person_id => 100);
+    my $test_obj = Acme::Person->__define__(name => $$, person_id => 1);
+    my $delete_obj = Acme::Person->__define__(name => 'deleteme', person_id => 100);
 
     # FIXME these are the default values.  Calling create with no args isn't working for some reason
     my $proxy = UR::Service::DataSourceProxy->create(host => '0.0.0.0', port => 10293);

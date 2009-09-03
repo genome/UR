@@ -27,7 +27,7 @@ sub data_tree
         if ($old ne $new)
         {
             $_[0]->{data_tree} = $new;
-            $_[0]->signal_change('data_tree', $old, $new);
+            $_[0]->__signal_change__('data_tree', $old, $new);
         }
         return $new;
     }
@@ -40,17 +40,17 @@ sub create {
     my $class = shift;
     #my $params = $class->preprocess_params(@_);
     #$params->{data_tree} ||= {};
-    #my $self = $class->create_object($params);
+    #my $self = $class->_create_object($params);
     #return unless $self;
 
-    my $self = $class->create_object(@_);
+    my $self = $class->_create_object(@_);
     return unless $self;
     $self->{data_tree} ||= {};   
  
     $self->_build_data_tree;
     $self->_setup_change_subscription;
     
-    $self->signal_change("create");        
+    $self->__signal_change__("create");        
     return $self;
 }
 
@@ -269,14 +269,14 @@ sub get_objects_matching
 
 # this is called by delete() and unload() to do cleanup
 
-sub delete_object
+sub _delete_object
 {
     my $self = shift;
     if (my $subscription = delete $self->{_get_change_subscription})
     {
         # cancel this
     }
-    return $self->SUPER::delete_object(@_);
+    return $self->SUPER::_delete_object(@_);
 }
 
 # private methods
@@ -360,7 +360,7 @@ sub _setup_change_subscription
     if (1) {            
         # This is a new indexing strategy which pays at index creation time instead of use.
         
-        my @properties_to_watch = (@indexed_property_names, qw/create delete load unload define/);
+        my @properties_to_watch = (@indexed_property_names, qw/create delete load unload/);
         #print "making index $self->{id}\n";
         for my $class ($indexed_class_name, @{ $UR::Object::_init_subclasses_loaded{$indexed_class_name} }) {        
             for my $property (@properties_to_watch) {
@@ -374,9 +374,9 @@ sub _setup_change_subscription
     }
     
     # This will be ignored for now.
-    # If the signal_change/subscription system is improved, it may be better to go back?
+    # If the __signal_change__/subscription system is improved, it may be better to go back?
     
-    my %properties_to_watch = map { $_ => 1 } (@indexed_property_names, qw/create delete load unload define/);
+    my %properties_to_watch = map { $_ => 1 } (@indexed_property_names, qw/create delete load unload/);
     
     $self->{_get_change_subscription} = $indexed_class_name->create_subscription(            
         callback => 
@@ -397,7 +397,7 @@ sub _setup_change_subscription
                 $self->_remove_object(
                     $changed_object, 
                     { $changed_property => $old_value }
-                ) unless $changed_property =~ /^(create|load|define)$/;
+                ) unless $changed_property =~ /^(create|load|__define__)$/;
                 
                 $self->_add_object($changed_object) unless $changed_property =~ /^(delete|unload)$/;
             },

@@ -29,11 +29,11 @@ sub mk_rw_accessor {
             if ($old ne $new)
             {
                 $_[0]->{ $property_name } = $new;
-                $_[0]->signal_change( $accessor_name, $old, $new ) unless $is_transient; # FIXME is $is_transient right here?  Maybe is_volitile instead (if at all)?
+                $_[0]->__signal_change__( $accessor_name, $old, $new ) unless $is_transient; # FIXME is $is_transient right here?  Maybe is_volitile instead (if at all)?
             }
             return $new;
         }
-        return $_[0]->{ $property_name };  # properties with default values are filled in at create_object()
+        return $_[0]->{ $property_name };  # properties with default values are filled in at _create_object()
     };
 
     Sub::Install::reinstall_sub({
@@ -462,7 +462,7 @@ sub mk_dimension_delegate_accessors {
                             $self->{$property} = $delegate->$property;
                         }
                     }
-                    $self->signal_change( $other_accessor_name, $old, $new ) unless $is_transient;
+                    $self->__signal_change__( $other_accessor_name, $old, $new ) unless $is_transient;
                     return $new;
                 }
             }
@@ -476,7 +476,7 @@ sub mk_dimension_delegate_accessors {
                 if ($old ne $new)
                 {
                     $self->{ $other_accessor_name } = $new;
-                    $self->signal_change( $other_accessor_name, $old, $new ) unless $is_transient;
+                    $self->__signal_change__( $other_accessor_name, $old, $new ) unless $is_transient;
                 }
                 return $new;
             }
@@ -514,7 +514,7 @@ sub mk_dimension_identifying_accessor {
             if ($old ne $new)
             {
                 $_[0]->{ $accessor_name } = $new;
-                $_[0]->signal_change( $accessor_name, $old, $new ) unless $is_transient;
+                $_[0]->__signal_change__( $accessor_name, $old, $new ) unless $is_transient;
             }
             return $new;
         }

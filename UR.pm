@@ -495,7 +495,6 @@ require Command;
 $UR::initialized = 1;
 
 require UR::Change;
-require UR::Command::Param;
 require UR::Context::Root;
 require UR::Context::Process;
 require UR::Object::Tag;

@@ -227,7 +227,7 @@ $DB::single=1;
                     $return_value = 0;
                     return 0;
 
-                } elsif ($my_obj && $my_obj->changed()) {
+                } elsif ($my_obj && $my_obj->__changes__()) {
                     # FIXME is it worth going through all the properties to see if they're compatible?
                     $self->error_message("Rejecting commit from remote client.  $class_name id $their_id is already changed");
                     $return_value = 0;
@@ -242,7 +242,7 @@ $DB::single=1;
         # Pass 2 - Apply changes to our transaction
         foreach my $class_name ( keys %$objects_by_class_name ) {
             foreach my $their_obj ( @{$objects_by_class_name->{$class_name}} ) {
-                my @changes = $their_obj->changed;
+                my @changes = $their_obj->__changes__;
                 my @properties = map { $_->properties } @changes;   # Seems to be one Change for each changed property
                 
                 my $my_obj = $their_obj->{'__my_obj'};

@@ -153,11 +153,6 @@ sub _dbi_connect_args {
 sub create_dbh {
     my $self = shift->_singleton_object;
     
-    # invalid command-line parameters may contain typos of things like no-commit
-    unless (UR::Command::Param->argv_has_been_processed_successfully) {
-        die("Invalid command-line parameters!: @ARGV\n");
-    }
-
     # get connection information
     my @connection = $self->_dbi_connect_args();
     
@@ -188,7 +183,7 @@ sub create_dbh {
     $all_dbh_hashref->{$dbh} = $dbh;
     Scalar::Util::weaken($all_dbh_hashref->{$dbh});
 
-    $self->signal_change("connect");
+    $self->__signal_change__("connect");
     
     return $dbh;
 }
@@ -590,7 +585,7 @@ sub create_iterator_closure_for_rule {
     
     die unless $sth;
 
-    $self->signal_change('query',$sql);
+    $self->__signal_change__('query',$sql);
 
     # buffers for the iterator
     my $next_db_row;
@@ -605,7 +600,7 @@ sub create_iterator_closure_for_rule {
         }
  
         $next_db_row = $sth->fetchrow_arrayref;
-        #$self->signal_change('fetch',$next_db_row);  # FIXME: commented out because it may make fetches too slow
+        #$self->__signal_change__('fetch',$next_db_row);  # FIXME: commented out because it may make fetches too slow
         
         unless ($next_db_row) {
             $sth->finish;

@@ -201,7 +201,7 @@ For example, if this object is the only TestClass object where C<foo> is
 the value 'bar', it can infer that the TestClass property C<baz> must
 have the value 'blah' in the current context.
 
-  my $obj = TestClass->define(id => 1, foo => 'bar', baz=> 'blah');
+  my $obj = TestClass->create(id => 1, foo => 'bar', baz=> 'blah');
   my $rule = UR::BoolExpr->resolve('TestClass', foo => 'bar);
   my $val = $context->infer_property_value_from_rule('baz', $rule);
   # val now is 'blah'
@@ -276,7 +276,7 @@ key.
 It works by first getting an iterator for the data source (the
 C<$db_iterator>).  It calls L</_get_template_data_for_loading> to find out
 how data is to be loaded and whether this request spans multiple data
-sources.  It calls L</_create_object_fabricator_for_loading_template> to get
+sources.  It calls L</__create_object_fabricator_for_loading_template> to get
 a list of closures to transform the primary data source's data into UR
 objects, and L</_create_secondary_loading_closures> (if necessary) to get
 more closures that can load and join data from the primary to the secondaty
@@ -384,9 +384,9 @@ successfully joins to the primary data.  You can think of these closures as
 performing the same work as an SQL C<join> between data in different data
 sources.
 
-=item _create_object_fabricator_for_loading_template
+=item __create_object_fabricator_for_loading_template
 
-  $subref = $context->_create_object_fabricator_for_loading_template(
+  $subref = $context->__create_object_fabricator_for_loading_template(
                           $loading_tmpl_hashref,
                           $template_data,
                           $boolexpr,

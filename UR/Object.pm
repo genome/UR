@@ -1,4 +1,5 @@
 package UR::Object;
+#sub define { shift->__define__(@_) }
 
 use warnings;
 use strict;
@@ -133,7 +134,7 @@ sub DESTROY {
     # the cache_size_highwater mark is a valid value
     if ($UR::Context::destroy_should_clean_up_all_objects_loaded) {
         my $class = ref($obj);
-        if ($obj->__meta__->is_meta_meta or $obj->changed) {
+        if ($obj->__meta__->is_meta_meta or $obj->__changes__) {
             my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$obj->{id}};
             die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$obj->{id}!" unless $obj eq $obj_from_cache;
             $UR::Context::all_objects_loaded->{$class}{$obj->{id}} = $obj;
@@ -279,7 +280,7 @@ sub create {
     my $rule = UR::BoolExpr->resolve_normalized($class, @_);
 
     # Process parameters.  We do this here instead of 
-    # waiting for create_object to do it so that we can ensure that
+    # waiting for _create_object to do it so that we can ensure that
     # we have an ID, and autogenerate an ID if necessary.
     my $params = $rule->legacy_params_hash;
     my $id = $params->{id};        
@@ -363,7 +364,7 @@ sub create {
     }
     
     # create the object.
-    my $self = $class->create_object(%default_values, %$params, @extra, id => $id);
+    my $self = $class->_create_object(%default_values, %$params, @extra, id => $id);
     unless ($self) {
         return;
     }
@@ -400,7 +401,7 @@ sub create {
     }
 
     if (%immutable_properties) {
-        my @problems = $self->invalid();
+        my @problems = $self->__errors__();
         if (@problems) {
             my @errors_fatal_to_construction;
             
@@ -420,13 +421,13 @@ sub create {
             if (@errors_fatal_to_construction) {
                 my $msg = 'Failed to create ' . $class . ' with invalid immutable properties:'
                     . join("\n", @errors_fatal_to_construction);
-                #$self->delete_object;
+                #$self->_delete_object;
                 #die $msg;
             }
         }
     }
     
-    $self->signal_change("create");
+    $self->__signal_change__("create");
     return $self;
 }
 
@@ -454,12 +455,12 @@ sub delete {
             }    
 
             # create ghost object
-            my $ghost = $self->ghost_class->create_object(id => $self->id, %ghost_params);
+            my $ghost = $self->ghost_class->_create_object(id => $self->id, %ghost_params);
             unless ($ghost) {
                 $DB::single = 1;
                 Carp::confess("Failed to constructe a deletion record for an unsync'd delete.");
             }
-            $ghost->signal_change("create");
+            $ghost->__signal_change__("create");
 
             for my $com (qw(db_committed db_saved_uncommitted)) {
                 $ghost->{$com} = $self->{$com}
@@ -467,8 +468,8 @@ sub delete {
             }
 
         }
-        $self->signal_change('delete');
-        $self->delete_object;
+        $self->__signal_change__('delete');
+        $self->_delete_object;
         return $self;
     }
     else {
@@ -476,7 +477,7 @@ sub delete {
     }
 }
 
-sub create_object {
+sub _create_object {
     my $class = shift;
  
     #my $params = { $class->define_bx(@_)->params_list };
@@ -485,7 +486,7 @@ sub create_object {
     my $id = $params->{id};
     unless (defined($id)) {
         Carp::confess(
-            "No ID specified (or incomplete id params) for $class create_object.  Params were:\n" 
+            "No ID specified (or incomplete id params) for $class _create_object.  Params were:\n" 
             . Dumper($params)
         );
     }
@@ -523,8 +524,8 @@ sub create_object {
         {
             $self->{'db_saved_uncommitted'} = { %$unsaved_data };
         }
-        $ghost->signal_change("delete");
-        $ghost->delete_object;
+        $ghost->__signal_change__("delete");
+        $ghost->_delete_object;
     }
 
     # Put the object in the master repository of objects for the application.
@@ -539,7 +540,7 @@ sub create_object {
     return $self;
 }
 
-sub delete_object {
+sub _delete_object {
     my $self = $_[0];
     my $class = $self->class;
     my $id = $self->id;
@@ -581,7 +582,7 @@ sub delete_object {
     return $self;
 }
 
-sub define {
+sub __define__ {
     # This is to "virtually load" things.
     # Simply assert they already existed externally, and act as though they were just loaded...
 
@@ -596,10 +597,10 @@ sub define {
         }
     }
 
-    my $self = $class->create_object(@_);
+    my $self = $class->_create_object(@_);
     return unless $self;
     $self->{db_committed} = { %$self };
-    $self->signal_change("load");
+    $self->__signal_change__("load");
     return $self;
 }
 
@@ -753,7 +754,7 @@ sub property_diff {
     return $diff;
 }
 
-sub changed {
+sub __changes__ {
     # This is really never overridden in subclasses.
     # Return attributes for all changes.
     my ($self,$optional_property) = @_;
@@ -761,6 +762,10 @@ sub changed {
     return unless $self->{_change_count};
     #print "changes on $self! $self->{_change_count}\n";
     my $meta = $self->__meta__;
+    if (ref($meta) eq 'UR::DeletedRef') {
+        print Data::Dumper::Dumper($self,$meta);
+        Carp::confess("Meta is deleted for object requesting changes: $self\n");
+    }
     if (!$meta->is_transactional and !$meta->is_meta_meta) {
         return;
     }
@@ -799,7 +804,7 @@ sub changed {
 
 # This is the basis for software constraint checking.
 
-sub invalid {
+sub __errors__ {
     my ($self,@property_names) = @_;
 
     my $class_object = $self->__meta__;
@@ -994,7 +999,7 @@ sub add_observer {
 
 # TODO: move this into the context
 our $sig_depth = 0;
-sub signal_change {
+sub __signal_change__ {
     my ($self, $property, @data) = @_;
 
     my ($class,$id);
@@ -1013,7 +1018,7 @@ sub signal_change {
     }
 
     if ($UR::Context::Transaction::log_all_changes) {
-        # eventually all calls to signal_change will go directly here
+        # eventually all calls to __signal_change__ will go directly here
         UR::Context::Transaction->log_change($self, $class, $id, $property, @data);
     }
 
@@ -1070,7 +1075,7 @@ sub signal_change {
     #    monitor_id => \@check_ids,
     #);
 
-    #print STDOUT "fire signal_change: class $class id $id method $property data @data -> \n" . join("\n", map { "@$_" } @matches) . "\n";
+    #print STDOUT "fire __signal_change__: class $class id $id method $property data @data -> \n" . join("\n", map { "@$_" } @matches) . "\n";
 
     $sig_depth++;
     do {

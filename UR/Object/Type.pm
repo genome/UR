@@ -45,7 +45,7 @@ require UR;
 
 our @ISA = qw(UR::Object);
 our $VERSION = $UR::VERSION;;
-
+sub define { shift->__define__(@_) }
 # This module implements define(), and most everything behind it.
 use UR::Object::Type::Initializer;
 
@@ -61,6 +61,7 @@ our %meta_classes;
 our $bootstrapping = 1;
 our @partially_defined_classes;
 our $pwd_at_compile_time = cwd();
+
 
 # Some accessor methods drawn from properties need to be overridden.
 # Some times because they need to operate during bootstrapping.  Sometimes
@@ -1253,13 +1254,13 @@ sub unique_property_sets
 
 # Args are:
 # 1) An UR::Object::Property object with attribute_name, class_name, id, property_name, type_name
-# 2) The method called: create_object, load, 
+# 2) The method called: _create_object, load, 
 # 3) An id?
 sub _property_change_callback {
     my $property_obj = shift;
     my $method = shift;
 
-    return if ($method eq 'load' || $method eq 'unload' || $method eq 'create_object' || $method eq 'delete_object');
+    return if ($method eq 'load' || $method eq 'unload' || $method eq '_create_object' || $method eq '_delete_object');
 
     my $class_obj = UR::Object::Type->get(class_name => $property_obj->class_name);
     my $property_name = $property_obj->property_name;
@@ -1302,7 +1303,7 @@ sub _id_property_change_callback {
     my $property_obj = shift;
     my $method = shift;
 
-    return if ($method eq 'load' || $method eq 'unload' || $method eq 'create_object' || $method eq 'delete_object');
+    return if ($method eq 'load' || $method eq 'unload' || $method eq '_create_object' || $method eq '_delete_object');
 
     my $class = UR::Object::Type->get(class_name => $property_obj->class_name);
     
@@ -1340,7 +1341,7 @@ sub _unique_property_change_callback {
     my $unique_obj = shift;
     my $method = shift;
 
-    return if ($method eq 'load' || $method eq 'unload' || $method eq 'create_object' || $method eq 'delete_object');
+    return if ($method eq 'load' || $method eq 'unload' || $method eq '_create_object' || $method eq '_delete_object');
 
     my $class = UR::Object::Type->get(class_name => $unique_obj->class_name);
     my $property_name = $unique_obj->property_name;
@@ -1382,13 +1383,13 @@ sub _unique_property_change_callback {
 
 # Args here are:  
 # 1) an UR::Object::Inheritance object with class_name, id, parent_class_name, type_name, parent_type_name
-# 2) method called to fire this off:  create_object, load, 
+# 2) method called to fire this off:  _create_object, load, 
 # 3) Some kind of id property's value?
 sub _inheritance_change_callback {
     my $inh_obj = shift;
     my $method = shift;
 
-    return if ($method eq 'load' || $method eq 'unload' || $method eq 'create_object' || $method eq 'delete_object');
+    return if ($method eq 'load' || $method eq 'unload' || $method eq '_create_object' || $method eq '_delete_object');
 
     my $class = UR::Object::Type->get(class_name => $inh_obj->class_name);
     # The inheritance_priority is 1-based, while the list in the class object is 0-based,
@@ -1448,9 +1449,9 @@ sub get_with_special_parameters
     return $class->SUPER::get_with_special_parameters($rule,@_);
 }
 
-sub signal_change {
+sub __signal_change__ {
     my $self = shift;
-    my @rv = $self->SUPER::signal_change(@_);
+    my @rv = $self->SUPER::__signal_change__(@_);
     if ($_[0] eq "delete") {
         my $class_name = $self->{class_name};
         $self->ungenerate();
@@ -1505,7 +1506,7 @@ sub ungenerate {
 #        # Changed things with no data source can just be thrown away, right?
 #        if ($ds) {
 #            foreach (@objs) {
-#                if ($_->changed) {
+#                if ($_->__changes__) {
 #                    die "Can't unload class object for $class_name, object instance with id ".$_->id." is changed";
 #                }
 #            }

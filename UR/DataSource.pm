@@ -9,13 +9,14 @@ use Sys::Hostname;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource',
-    english_name => 'universal reflective datasource',
     is_abstract => 1,
     doc => 'A logical database, independent of prod/dev/testing considerations or login details.',
     has => [
         namespace => { calculate_from => ['id'] },
     ],
 );
+
+sub define { shift->__define__(@_) }
 
 sub get_namespace {
     my $class = shift->class;
@@ -905,8 +906,8 @@ sub _set_object_saved_committed {
     my ($self, $object) = @_;
     if ($object->{db_saved_uncommitted}) {
         if ($object->isa("UR::Object::Ghost")) {
-            $object->signal_change("commit");
-            $object->delete_object;
+            $object->__signal_change__("commit");
+            $object->_delete_object;
         }
         else {
             %{ $object->{db_committed} } = (
@@ -914,7 +915,7 @@ sub _set_object_saved_committed {
                 %{ $object->{db_saved_uncommitted} }
             );
             delete $object->{db_saved_uncommitted};
-            $object->signal_change("commit");
+            $object->__signal_change__("commit");
         }
     }
     return $object;

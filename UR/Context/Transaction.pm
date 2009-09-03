@@ -71,7 +71,7 @@ sub log_change
     # wrappers (create/delete/load/unload/define) signal change also
     # and we undo the wrapper, thereby undoing these
     # -> ignore any signal from a method which is wrapped by another signalling method which gets undone
-    return if ($aspect eq "create_object" or
+    return if ($aspect eq "_create_object" or
                $aspect eq "delete_object" or
                $aspect eq "load" or
                $aspect eq "load_external"

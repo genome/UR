@@ -156,7 +156,7 @@ sub create {
         
     $self->generated(0);
     
-    $self->signal_change("create");
+    $self->__signal_change__("create");
     
     return $self;
 }
@@ -244,7 +244,7 @@ sub _construction_params_for_desc {
 
 }
 
-sub define {
+sub __define__ {
     my $class = shift;
     my $desc = $class->_normalize_class_description(@_);
     
@@ -256,7 +256,7 @@ sub define {
     my %params = $class->_construction_params_for_desc($desc);
     my $meta_class_name;
     if (%params) {
-        $self = __PACKAGE__->define(%params);
+        $self = __PACKAGE__->__define__(%params);
         return unless $self;
         $meta_class_name = $params{class_name};
     }
@@ -1181,7 +1181,7 @@ sub _complete_class_meta_object_definitions {
             redo;
         }
         my $obj =
-            UR::Object::Inheritance->define(
+            UR::Object::Inheritance->__define__(
                 class_name => $self->class_name,
                 parent_class_name => $parent_class->class_name,
             )
@@ -1292,7 +1292,7 @@ sub _complete_class_meta_object_definitions {
         # define a new class for the above, inheriting from UR::Object::Property
         # all of the "attributes_have" get put into the class definition
         # call the constructor below on that new class       
-        #UR::Object::Type->define(
+        #UR::Object::Type->__define__(
         ##    class_name => $property_meta_class_name,
         #    is => 'UR::Object::Property', # TODO: go through the inheritance 
         #    has => [
@@ -1300,7 +1300,7 @@ sub _complete_class_meta_object_definitions {
         #    ]
         #)
  
-        my $property_object = UR::Object::Property->define(%$pinfo);
+        my $property_object = UR::Object::Property->__define__(%$pinfo);
         
         unless ($property_object) {
             $self->error_message("Error creating property $property_name for class " . $self->class_name . ": " . $class->error_message);
@@ -1321,7 +1321,7 @@ sub _complete_class_meta_object_definitions {
             my $attribute_name = $property_name;
             $attribute_name =~ s/_/ /g;
             
-            my $id_indicator_object = UR::Object::Property::ID->define(
+            my $id_indicator_object = UR::Object::Property::ID->__define__(
                 type_name => $type_name,
                 class_name => $class_name,
                 attribute_name => $attribute_name,
@@ -1368,7 +1368,7 @@ sub _complete_class_meta_object_definitions {
                     die "Failed to find property $property_name on class $class_name!";
                 }
                 my $attribute_name = $property->attribute_name;
-                my $u = UR::Object::Property::Unique->define(
+                my $u = UR::Object::Property::Unique->__define__(
                     type_name => $type_name,
                     class_name => $class_name,
                     unique_group => $name,
@@ -1445,7 +1445,7 @@ sub _complete_class_meta_object_definitions {
             #        } @r_class_inheritance
             #    } @r_property_names;
 
-            my $tha = UR::Object::Reference->define(
+            my $tha = UR::Object::Reference->__define__(
                 id => $class_name . "::" . $delegation_name,
                 class_name => $class_name,
                 type_name => $type_name,
@@ -1467,7 +1467,7 @@ sub _complete_class_meta_object_definitions {
             #    my $r_property_name = shift @r_property_names;
             #    my $r_attribute_name = shift @r_attribute_names;
             #    $rank++;
-            #    my $rp = UR::Object::Reference::Property->define(
+            #    my $rp = UR::Object::Reference::Property->__define__(
             #        tha_id => $tha->tha_id,
             #        rank => $rank,
             #        property_name => $property_name,
@@ -1517,7 +1517,7 @@ sub _complete_class_meta_object_definitions {
         }
     }
 
-    $self->signal_change("load");
+    $self->__signal_change__("load");
 
     # We've made changes since SUPER::define, but it wasn't defined in its
     # true initinal state.  Rewrite now.

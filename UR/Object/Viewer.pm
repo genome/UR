@@ -291,7 +291,7 @@ sub create_viewer {
     return $self;
 }
 
-sub delete_object {
+sub _delete_object {
     # This covers the needs of both unload() and delete().
     # Ensure that we clean up after deletion of any kind.
     my $self = shift;
@@ -300,7 +300,7 @@ sub delete_object {
         my ($class, $id, $callback) = @$subscription;
         $class->cancel_change_subscription($id, $callback);
     }    
-    return $self->SUPER::delete_object(@_);
+    return $self->SUPER::_delete_object(@_);
 }
 
 sub show_modal {

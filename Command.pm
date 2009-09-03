@@ -82,8 +82,8 @@ sub execute {
         $was_called_as_class_method = 1;
     }
 
-    # handle invalid objects before execute
-    if (my @problems = $self->invalid) {
+    # handle __errors__ objects before execute
+    if (my @problems = $self->__errors__) {
         $self->usage_message($self->help_usage_complete_text);
         #print $self->help_usage_complete_text;
         for my $problem (@problems) {
@@ -183,7 +183,7 @@ sub _execute_with_shell_params_and_return_exit_code
 
     my $rv = $command_object->execute($params);
 
-    if ($command_object->invalid) {
+    if ($command_object->__errors__) {
         $command_object->delete;
     }
 

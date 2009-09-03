@@ -2,32 +2,57 @@
 
 =head1 NAME
 
-UR::Object - Abstract class for objects tracked centrally in the application
+UR::Object - base class for objects 
 
 =head1 SYNOPSIS
 
-  $new_obj = Some::Class->create(...);
+The constructor adds a new object to the current context:
 
-  $existing_obj  = Some::Class->get(...);
-  @existing_objs = Some::Class->get(...);
+  $elmo = Acme::Puppet->create(
+    name => 'Elmo',
+    father => $ernie,
+    mother => $bigbird,
+    jobs => [$dance, $sing],
+    favorite_color => 'red',
+  );
 
-  $current_value = $obj->some_property();
+Plain accessors:
 
-  $obj->some_property($new_value);
+  $color = $elmo->favorite_color();
+  $elmo->favorite_color('blue');
 
-  @problems = $obj->invalid;
+Query the current context:
 
-  @changes = $obj->changed;
+  $existing_obj  = Acme::Puppet->get(name => 'Elmo');
 
-  @parent_classes = $obj->inheritance;
+  @existing_objs = Acme::Puppet->get(
+    favorite_color => ['red','yellow'],
+  );
+  # this will not get elmo because his favorite color is now blue  
+
+Save our changes:
+  
+  UR::Context->current->commit;
+  
+Too many puppets:
+
+ $elmo->delete;
+ 
+ $elmo->dance; # this will throw an exception now
+ 
+ $elmo = Acme::Puppet->get(name => 'Elmo'); # this returns nothing
+
+Just kidding:
+
+  UR::Context->current->rollback; # this is not a database rollback, it's an STM rollback
+
+  $elmo = Acme::Puppet->get(name => 'Elmo'); # back again!
 
 =head1 DESCRIPTION
 
-UR::Object is the base class which provides several general features
-to all UR-based classes.  Most classes tracked through UR's object system
-will inherit from UR::Object.
+UR::Object is the default base class for objects.
 
-The goal of UR::Objects is that your application doesn't have to do 
+The goal of UR::Object is that your application doesn't have to do 
 data management.  Just ask for what you want, use it, and let it go.  A 
 UR::Object works like a common software object, but it has a "context" 
 which manages its state, references, relationships, in-memory 
@@ -102,7 +127,7 @@ derive from UR::Object indirectly, typically via UR::Entity,
 with the intermediate class providing load/save logic and enforcing
 database constraints.
 
-=head1 CONSTRUCTORS
+=head1 CONSTRUCTOR
 
 =over 4
 
@@ -110,19 +135,9 @@ database constraints.
 
   $obj = SomeClass->create(...);
 
-Make a new instance of SomeClass.  This instance will not be visable outside
-the application until it is committed to its data source.
-
-=item define
-
-  $obj = SomeClass->define(...);
-
-Creates a new instance of SomeClass within the application.  define()
-differs from create() in that define() simply asserts that the specified
-object exists in the current Context, not that it is a newly created object.
-
-Objects that exist because of define(), and whose properties have not been
-altered since their definition, will not be saved outside the application.
+Make a new instance of SomeClass in the current context.  This instance will 
+not be visable outside this context until it the context commits its active
+transaction.
 
 =back
 
@@ -246,18 +261,6 @@ reference is used.
 Attempts to get() the same logical object will cause a new object to be
 created and made active in the application.
 
-=item is_loaded
-
-  $obj->is_loaded(...)
-
-This is also typically not called directly, but is called by get() to
-see if the specified object(s) are already in the application's
-central object cache.  It can be called directly when explicitly
-testing for an object's presence in the application.
-
-It returns an object or list of objects according to parameters, and
-returns true in a boolean context.
-
 =item create_iterator
 
   $iter = SomeClass->create_iterator(...);
@@ -316,7 +319,7 @@ describing which properties have been changed.
 
 =item invalid
 
-  @tags = $obj->invalid()
+  @tags = $obj->__errors__()
 
 Check the validity of an object by applying any constraints layed out in the
 class such as making sure any non-optional properties contain values, numeric

@@ -465,7 +465,7 @@ sub prune_object_cache {
                      ( exists $obj->{'__get_serial'}
                        and $obj->{'__get_serial'} <= $target_serial
                        and ($data_source_for_class{$class} or exists $obj->{'__weakened'})
-                       and ! $obj->changed
+                       and ! $obj->__changes__
                      )
                    )
                 {
@@ -1091,7 +1091,7 @@ $DB::single=1;
         #my($secondary_rule_template,@secondary_values) = $secondary_rule->get_template_and_values();
         my @secondary_values = $secondary_rule->values();
         foreach my $secondary_loading_template ( @secondary_loading_templates ) {
-            my $secondary_object_importer = $self->_create_object_fabricator_for_loading_template(
+            my $secondary_object_importer = $self->__create_object_fabricator_for_loading_template(
                                                        $secondary_loading_template,
                                                        $secondary_template,
                                                        $secondary_rule,
@@ -1231,7 +1231,7 @@ sub _create_import_iterator_for_underlying_context {
         # regular instances
         for my $loading_template (@$loading_templates) {
             my $object_fabricator = 
-                $self->_create_object_fabricator_for_loading_template(
+                $self->__create_object_fabricator_for_loading_template(
                     $loading_template, 
                     $template_data,
                     $rule,
@@ -1304,7 +1304,7 @@ sub _create_import_iterator_for_underlying_context {
                     # we can set it to true.  This is needed in the case where the user
                     # gets an iterator for all the objects of some class, but unloads
                     # one or more of the instances (be calling unload or through the 
-                    # cache pruner) before the iterator completes.  If so, delete_object()
+                    # cache pruner) before the iterator completes.  If so, _delete_object()
                     # will have removed the key from the hash
                     if (exists($UR::Context::all_objects_are_loaded->{$class_name})) {
                         $class_name->all_objects_are_loaded(1);
@@ -1462,7 +1462,7 @@ sub _create_import_iterator_for_underlying_context {
 }
 
 
-sub _create_object_fabricator_for_loading_template {
+sub __create_object_fabricator_for_loading_template {
     my ($self, $loading_template, $template_data, $rule, $rule_template, $values, $dsx) = @_;
 
     my @values = @$values;
@@ -1697,7 +1697,7 @@ sub _create_object_fabricator_for_loading_template {
             #        $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
             #        $UR::Context::all_params_loaded->{$class}{$rule_id}++;
             #    }
-            #    $pending_db_object->signal_change('load');
+            #    $pending_db_object->__signal_change__('load');
             #    return;
             #    #$pending_db_object = undef;
             #    #redo;
@@ -1813,7 +1813,7 @@ sub _create_object_fabricator_for_loading_template {
             # note that we do this on the base class even if we know it's going to be put into a subclass below
             $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id} = $pending_db_object;
             $UR::Context::all_objects_cache_size++;
-            #$pending_db_object->signal_change('create_object', $pending_db_object_id)
+            #$pending_db_object->__signal_change__('_create_object', $pending_db_object_id)
             
             # If we're using a light cache, weaken the reference.
             if ($UR::Context::light_cache and substr($class,0,5) ne 'App::') {
@@ -1945,7 +1945,7 @@ sub _create_object_fabricator_for_loading_template {
                         
                         my $prev_class_name = $pending_db_object->class;
                         my $id = $pending_db_object->id;
-                        $pending_db_object->signal_change("unload");
+                        $pending_db_object->__signal_change__("unload");
                         delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$id};
                         delete $UR::Context::all_objects_are_loaded->{$prev_class_name};
                         if ($already_loaded) {
@@ -1959,7 +1959,7 @@ sub _create_object_fabricator_for_loading_template {
                             $UR::Context::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
                         }
                         bless $pending_db_object, $subclass_name;
-                        $pending_db_object->signal_change("load");
+                        $pending_db_object->__signal_change__("load");
                         
                         $dsx->_add_object_loading_info($pending_db_object, $loading_info);
                         $dsx->_record_that_loading_has_occurred($loading_info);
@@ -2006,8 +2006,8 @@ sub _create_object_fabricator_for_loading_template {
             
             # Signal that the object has been loaded
             # NOTE: until this is done indexes cannot be used to look-up an object
-            #$pending_db_object->signal_change('load_external');
-            $pending_db_object->signal_change('load');
+            #$pending_db_object->__signal_change__('load_external');
+            $pending_db_object->__signal_change__('load');
         
             #$DB::single = 1;
             if (
@@ -2676,33 +2676,33 @@ sub get_time_ymdhms {
 
 sub commit {
     my $self = shift;
-    $self->signal_change('precommit');
+    $self->__signal_change__('precommit');
 
     unless ($self->_sync_databases) {
-        $self->signal_change('commit',0);
+        $self->__signal_change__('commit',0);
         return;
     }
     unless ($self->_commit_databases) {
-        $self->signal_change('commit',0);
+        $self->__signal_change__('commit',0);
         die "Application failure during commit!";
     }
-    $self->signal_change('commit',1);
+    $self->__signal_change__('commit',1);
     return 1;
 }
 
 sub rollback {
     my $self = shift;
-    $self->signal_change('prerollback');
+    $self->__signal_change__('prerollback');
 
     unless ($self->_reverse_all_changes) {
-        $self->signal_change('rollback', 0);
+        $self->__signal_change__('rollback', 0);
         die "Application failure during reverse_all_changes?!";
     }
     unless ($self->_rollback_databases) {
-        $self->signal_change('rollback', 0);
+        $self->__signal_change__('rollback', 0);
         die "Application failure during rollback!";
     }
-    $self->signal_change('rollback', 1);
+    $self->__signal_change__('rollback', 1);
     return 1;
 }
 
@@ -2781,7 +2781,7 @@ sub clear_cache {
                 . join(",",map { $_->id } @obj )
                 . "\n"
             );
-            if (my @changed = grep { $_->changed } @obj) {
+            if (my @changed = grep { $_->__changes__ } @obj) {
                 require YAML;
                 $class->error_message(
                     "The following objects have changes:\n"
@@ -2821,18 +2821,24 @@ sub _sync_databases {
         }
     }
     $IS_SYNCING_DATABASE = 0;  # This should be far down enough to avoid recursion, right?
-    
+ 
+    my @o = grep { ref($_) eq 'UR::DeletedRef' } $self->all_objects_loaded('UR::Object');
+    if (@o) {
+        print Data::Dumper::Dumper(\@o);
+        Carp::confess();
+    }
+
     # Determine what has changed.
     my @changed_objects = (
         $self->all_objects_loaded('UR::Object::Ghost'),
-        grep { $_->changed } $self->all_objects_loaded('UR::Object')
+        grep { $_->__changes__ } $self->all_objects_loaded('UR::Object')
     );
 
     return 1 unless (@changed_objects);
 
     # Ensure validity.
     # This is primarily to catch custom validity logic in class overrides.
-    my @invalid = grep { $_->invalid } @changed_objects;
+    my @invalid = grep { $_->__errors__ } @changed_objects;
     if (@invalid) {
         # Create a helpful error message for the developer.
         my $msg = "Invalid data for save!";
@@ -2841,7 +2847,7 @@ sub _sync_databases {
         for my $obj (@invalid)
         {
             no warnings;
-            my @problems = $obj->invalid;
+            my @problems = $obj->__errors__;
             push @msg,
                 $obj->__display_name__
                 . " has "
@@ -2939,7 +2945,7 @@ sub _reverse_all_changes {
     # aggregate the objects to be deleted
     # this prevents cirucularity, since some objects 
     # can seem re-reversible (like ghosts)
-    my %delete_objects;
+    my %_delete_objects;
     my @all_subclasses_loaded = sort UR::Object->subclasses_loaded;
     for my $class_name (@all_subclasses_loaded) { 
         next unless $class_name->can('__meta__');
@@ -2947,15 +2953,15 @@ sub _reverse_all_changes {
         my @objects_this_class = $self->all_objects_loaded_unsubclassed($class_name);
         next unless @objects_this_class;
         
-        $delete_objects{$class_name} = \@objects_this_class;
+        $_delete_objects{$class_name} = \@objects_this_class;
     }
     
     # do the reverses
-    for my $class_name (keys %delete_objects) {
+    for my $class_name (keys %_delete_objects) {
         my $co = $class_name->__meta__;
         next unless $co->is_transactional;
 
-        my $objects_this_class = $delete_objects{$class_name};
+        my $objects_this_class = $_delete_objects{$class_name};
 
         if ($class_name->isa("UR::Object::Ghost")) {
             # ghose placeholder for a deleted object
@@ -3112,7 +3118,7 @@ sub _dump_change_snapshot {
     my $class = shift;
     my %params = @_;
 
-    my @c = grep { $_->changed } $UR::Context::current->all_objects_loadedi('UR::Object');
+    my @c = grep { $_->__changes__ } $UR::Context::current->all_objects_loadedi('UR::Object');
 
     my $fh;
     if (my $filename = $params{filename})

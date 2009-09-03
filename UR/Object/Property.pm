@@ -47,6 +47,7 @@ our %NUMERIC_TYPES = (
         'NUMBER'  => 1,
         'FLOAT'   => 1,
 );
+
 sub is_numeric {
     my $self = shift;
 
@@ -59,7 +60,7 @@ sub is_numeric {
         
         
 
-sub create_object {
+sub _create_object {
     my $class = shift;
     my ($bx,%extra) = $class->define_boolexpr(@_);
     my %params = ($bx->params_list,%extra);
@@ -103,7 +104,7 @@ sub create_object {
         $plural_name = Lingua::EN::Inflect::PL($singular_name);
     }
 
-    return $class->SUPER::create_object(plural_name => $plural_name, singular_name => $singular_name, %params);
+    return $class->SUPER::_create_object(plural_name => $plural_name, singular_name => $singular_name, %params);
 }
 
 

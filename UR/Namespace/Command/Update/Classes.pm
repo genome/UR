@@ -86,13 +86,13 @@ $DB::single=1;
     my $force_rewrite_all_classes = $self->force_rewrite_all_classes;
     
     # Hack because some parts of the schema are only visible to the rw user.
-    my $access_level_param = UR::Command::Param->get(command_id => 'main', name => 'access');
-    if ($access_level_param) {
-        my $access_level = $access_level_param->value;
-        unless (defined $access_level and $access_level eq "rw") {
-            $access_level_param->value("rw");
-        }
-    }
+    #my $access_level_param = UR::Command::Param->get(command_id => 'main', name => 'access');
+    #if ($access_level_param) {
+    #    my $access_level = $access_level_param->value;
+    #    unless (defined $access_level and $access_level eq "rw") {
+    #        $access_level_param->value("rw");
+    #    }
+    #}
 
     if (@{ $self->bare_args }) {
         $self->error_message("Bare paramters not supported: @{ $self->bare_args }\n");
@@ -219,7 +219,7 @@ $DB::single=1;
         my $cx = UR::Context->current; 
         for my $dd_class (qw/UR::DataSource::RDBMS::Table UR::DataSource::RDBMS::FkConstraint UR::DataSource::RDBMS::TableColumn/) {
             push @data_dictionary_objects, 
-                grep { $force_rewrite_all_classes ? 1 : $_->changed } 
+                grep { $force_rewrite_all_classes ? 1 : $_->__changes__ } 
                 $cx->all_objects_loaded($dd_class);
     
             my $ghost_class = $dd_class . "::Ghost";
@@ -335,7 +335,7 @@ $DB::single=1;
             UR::Object::Reference
             UR::Object::Reference::Property
         /) {
-            push @changed_class_meta_objects, grep { $_->changed } $cx->all_objects_loaded($meta_class);
+            push @changed_class_meta_objects, grep { $_->__changes__ } $cx->all_objects_loaded($meta_class);
 
             my $ghost_class = $meta_class . "::Ghost";
             push @changed_class_meta_objects, $cx->all_objects_loaded($ghost_class);
@@ -508,7 +508,7 @@ sub _update_database_metadata_objects_for_schema_changes {
                 }
                 my @changes =
                     grep { not  ($_->properties == 1 and ($_->properties)[0] eq "last_object_revision") }
-                    $table_object->changed;
+                    $table_object->__changes__;
                 if (@changes) {
                     $self->status_message(
                         sprintf("U  $pattern Last updated on $last_update.  Newer schema changes on $this_update."
@@ -902,7 +902,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 $class->data_source($table->data_source);
             }
             
-            if ($class->changed) {
+            if ($class->__changes__) {
                 $self->status_message(
                     #sprintf("U %-40s uses table %-40s" . "\n",$class_name,$table_name)
                     sprintf("U %-40s uses %s %s %s" . "\n",$class_name,
@@ -1050,13 +1050,13 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             $property->data_type($column->data_type);
             # lengths for these data types are based on the number of bytes used internally in the
             # database.  The UR-based objects will store the text version, which will always be longer,
-            # making $obj->invalid() complain about the length being out of bounds
+            # making $obj->__errors__() complain about the length being out of bounds
             $property->data_length($column->is_time_data ? undef : $column->data_length);
 
             $property->is_optional($column->nullable eq "Y" ? 1 : 0);
             $property->doc($column->remarks);
             
-            if ($property->changed) {
+            if ($property->__changes__) {
                 no warnings;
                 $self->status_message(
                     #sprintf("U %-40s uses table %-40s" . "\n",$class_name,$table_name)
@@ -1650,7 +1650,7 @@ sub _update_database_metadata_objects_for_table_changes {
         $table_object->owner($table_data->{TABLE_SCHEM});
         $table_object->data_source($data_source->class);
         $table_object->remarks($table_data->{REMARKS});
-        $table_object->last_object_revision($revision_time) if ($table_object->changed());
+        $table_object->last_object_revision($revision_time) if ($table_object->__changes__());
 
     } else {
         # Create a brand new one from scratch
@@ -1707,7 +1707,7 @@ sub _update_database_metadata_objects_for_table_changes {
             $column_obj->nullable(substr($column_data->{IS_NULLABLE}, 0, 1));
             $column_obj->data_length($column_data->{COLUMN_SIZE});
             $column_obj->remarks($column_data->{REMARKS});
-            $column_obj->last_object_revision($revision_time) if ($column_obj->changed());
+            $column_obj->last_object_revision($revision_time) if ($column_obj->__changes__());
 
         } else {
             # It's new, create it from scratch

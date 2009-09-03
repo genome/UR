@@ -29,7 +29,7 @@ UR::Object::Type->define(
 
 no warnings;
 
-sub create_object {
+sub _create_object {
     my $class = shift;
     my %params = @_;
     unless ($params{class_name} and $params{type_name}) {
@@ -54,7 +54,7 @@ sub create_object {
             $params{r_type_name} = $r_class_obj->type_name;
         }
     }
-    return $class->SUPER::create_object(%params);
+    return $class->SUPER::_create_object(%params);
 }
 
 sub get_property_links

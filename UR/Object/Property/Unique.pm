@@ -22,7 +22,7 @@ UR::Object::Type->define(
 
 our $VERSION = $UR::VERSION;;
 
-sub create_object {
+sub _create_object {
     my $class = shift;
     my %params = @_;
     if ($params{attribute_name} and not $params{property_name}) {
@@ -46,7 +46,7 @@ sub create_object {
             $params{type_name} = $class_obj->type_name;
         } 
     }  
-    return $class->SUPER::create_object(%params);
+    return $class->SUPER::_create_object(%params);
 }
 
 
