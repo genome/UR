@@ -206,7 +206,7 @@ sub now
         return $class->numbers_to_datetime($s, $min, $h, $d, $mon, $y);
     }
     # else try to get time from database
-    if (my @db_now = UR::Context->get_current->get_time_ymdhms()) {
+    if (my @db_now = $UR::Context::current->get_time_ymdhms()) {
         
         # get machine time
         my (@now) = Date::Calc::Today_and_Now;

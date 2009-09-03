@@ -55,15 +55,14 @@ require UR;
 UR::Object::Type->define(
     class_name => 'UR::Context::Process',
     is => ['UR::Context'],
-    english_name => 'ur context process',
-    doc => 'A context for a given process.',
     is_transactional => 0,
     has => [
         host_name       => { is => 'Text' },
         process_id      => { is => 'Integer' },
         access_level    => { is => 'Text', default_value => '??' },
         debug_level     => { is => 'Integer' },
-    ]
+    ],
+    doc => 'A context for a given process.',
 );
 
 =pod

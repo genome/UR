@@ -707,6 +707,7 @@ sub _normalize_class_description {
     unless ($bootstrapping) {
         my @additional_property_meta_attributes;
         for my $parent_class_name (@{ $new_class{is} }) {
+            no warnings;
             unless ($parent_class_name->can("get_class_object")) {
                 eval "use $parent_class_name";
                 die "Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@" if $@; 

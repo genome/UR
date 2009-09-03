@@ -603,6 +603,7 @@ sub _load {
 
     # Handle deleted classes.
     # This is written in non-oo notation for bootstrapping.
+    no warnings;
     if (
         $class_name ne "UR::Object::Type::Ghost"
         and

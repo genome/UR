@@ -13,20 +13,22 @@ UR::Object::Type->define(
         parent  => { is => 'UR::Context', id_by => 'parent_id', is_optional => 1 }
     ],
     doc => <<EOS
-The environment in which oo-activity occurs in UR.  Subclasses exist for in-memory transactions,
-and also the process itself, the environment in which activity occurs at an organization (the root).
+The environment in which oo-activity occurs in UR.  The current context represents the current state 
+of everything.  It acts at the intermediary between the current application and underlying database(s).
 This is responsible for mapping object requests to database requests, managing caching, transaction
-consistency, locking, etc.
+consistency, locking, etc. by delegating to the correct components to handle these tasks.
 EOS
 );
 
-# These are all owned by the "process" context.
+# These references all point to internal structures of the current process context.
+# They are created here for boostrapping purposes, because they must exist before the object itself does.
+
 our $all_objects_loaded ||= {};               # Master index of all tracked objects by class and then id.
 our $all_change_subscriptions ||= {};         # Index of other properties by class, property_name, and then value.
 our $all_objects_are_loaded ||= {};           # Track when a class informs us that all objects which exist are loaded.
 our $all_params_loaded ||= {};                # Track parameters used to load by class then _param_key
 
-# for bootstrapping
+# For bootstrapping.
 $UR::Context::current = __PACKAGE__;
 
 # called by UR.pm during bootstraping
@@ -66,33 +68,15 @@ sub get_default_data_source {
     return $ds[0];
 }
 
-# the rot context is the root snapshot of reality the application is using
-# it only varies when we flip to development/testing etc.
-
-sub get_root {
-    return $UR::Context::root;
-}
-
-# the base context is whatever context is immediately outside the process: typically the root context
-
-sub get_base {
-    return $UR::Context::base;
-}
-
-# the process context is the perspective on the data from the current process/thread
-# this is primarily for buffering, when the process is the current process
-
-sub get_process {
-    return $UR::Context::process;
-}
-
 # the current context is either the process context, or the current transaction on-top of it
 
 sub get_current {
     return $UR::Context::current;
 }
 
-# how did this get here?
+# TODO: This is present to preserve old functionality, in which critical failures notify 
+# IT support of fundamental breakage.  It includes cases where a distributed trasaction fails.
+# Give it a better name.
 
 sub send_email {
     my $self = shift;
