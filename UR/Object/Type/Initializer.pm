@@ -1161,7 +1161,6 @@ sub _complete_class_meta_object_definitions {
             $DB::single = 1;
             redo;
         }
-       $DB::single = 1; 
         my $obj =
             UR::Object::Inheritance->define(
                 type_name => $self->type_name,
