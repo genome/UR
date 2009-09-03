@@ -241,7 +241,7 @@ sub remove_filter {
     my ($subject_class_name, $logic_type, $logic_detail) = split("/",$self->id);
     my @keys = grep { $_ !~ /^${filter}\b/ } split(',',$logic_detail);
     my $new_id = join('/',$subject_class_name,$logic_type,join(',',@keys));
-    print "$new_id\n";
+    #print "$new_id\n";
     return $self->class->get($new_id);
 }
 
@@ -295,7 +295,7 @@ sub get {
         # TODO: move into subclass
         my (@keys, $num_values);
             
-        @keys = split(',',$logic_detail);
+        @keys = split(',',$logic_detail || '');
         $num_values = scalar(@keys);
     
         # See what properties are id-related for the class
