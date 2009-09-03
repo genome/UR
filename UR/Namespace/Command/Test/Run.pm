@@ -13,6 +13,7 @@ use Path::Class qw(file dir);
 use DBI;
 use Cwd;
 use UR;
+use File::Find;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -66,8 +67,13 @@ sub execute {
             $self->error_message("Cannot currently combine the recurse option with a specific test list.");
             return;
         }
-        @tests = sort `find $working_path | grep "\\.t\$"`;
+        File::Find::find(sub {
+            if ($File::Find::name =~ /\.t$/ and not -d $File::Find::name) {
+                push @tests, $File::Find::name;
+            }
+        }, $working_path);
         chomp @tests;
+        @tests = sort @tests;
     }
     elsif (not @tests) {
         my @dirs = `find $working_path`;
