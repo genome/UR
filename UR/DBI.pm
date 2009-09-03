@@ -64,9 +64,10 @@ my %sub_env_map = ( monitor_sql => 'UR_DBI_MONITOR_SQL',
                     explain_sql_callstack => 'UR_DBI_EXPLAIN_SQL_CALLSTACK',
                     no_commit => 'UR_DBI_NO_COMMIT',
                     monitor_every_fetch => 'UR_DBI_MONITOR_EVERY_FETCH',
+                    dump_stack_on_connect => 'UR_DBI_DUMP_STACK_ON_CONNECT',
                   );
 
-our ($monitor_sql,$monitor_dml,$no_commit,$monitor_every_fetch,
+our ($monitor_sql,$monitor_dml,$no_commit,$monitor_every_fetch,$dump_stack_on_connect,
     $explain_sql_slow,$explain_sql_if,$explain_sql_match,$explain_sql_callstack);
 
 while ( my($subname, $envname) = each ( %sub_env_map ) ) {
@@ -148,11 +149,15 @@ sub connect
     my $self = shift;
     my @params = @_;
 
-    if ($monitor_sql) {
+    if ($monitor_sql or $dump_stack_on_connect) {
         my $time = time;
         my $time_string = join(' ', $time, '[' . localtime($time) . ']');
         $sql_fh->print("DB CONNECT AT: $time_string");    
     }
+    if ($dump_stack_on_connect) {
+        $sql_fh->print(Carp::longmess());
+    }
+    
     $params[2] = 'xxx';
     my $params_stringified = join(",", map { defined($_) ? "'$_'" : 'undef' } @params);  
     UR::DBI::before_execute("connecting with params: ($params_stringified)");
