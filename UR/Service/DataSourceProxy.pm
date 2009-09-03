@@ -182,7 +182,7 @@ sub process_message_from_client {
         
     my $encoded = '';
     if (@results) {
-        $encoded = FreezeThaw::freeze(\@results);
+        $encoded = FreezeThaw::safeFreeze(\@results);
     }
     $socket->print(pack("LL", length($encoded), $return_command_value), $encoded);
 
