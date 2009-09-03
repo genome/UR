@@ -192,7 +192,7 @@ sub create_meta_db_skeleton {
     }
 
     my $meta_db_file = $meta_datasource->class_name->_data_dump_path;
-    IO::File->new("> $meta_db_file")->print($METADATA_DB_SQL);
+    IO::File->new(">$meta_db_file")->print($METADATA_DB_SQL);
     return $meta_db_file;
 }
 
