@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More tests => 12;
+use Test::More tests => 17;
 use above "URT"; 
 use strict;
 use warnings;
@@ -45,4 +45,20 @@ ok($ay->b_thing($by), "Changed ay b_thing to by");
 
 isnt($ax->b_thing,$ay->b_thing,"ax b_thing is not ay b_thing");
 isnt($ax->b_thing->value,$ay->b_thing->value,"ax->b_thing value is not ay->b_thing value");
+
+class TestClassC {
+    has => [ 
+        foo => { is => 'ARRAY' }
+    ]
+};
+
+my $c;
+ok($c = TestClassC->create,"Created TestClassC with no properties");
+ok($c->foo([qw{foo bar baz}]),"Set foo");
+is_deeply($c->foo,[qw{foo bar baz}],'Checking array');
+
+ok($c = TestClassC->create(
+    foo => [qw{foo bar baz}]
+),"Created TestClassC with foo arrayref");
+is_deeply($c->foo,[qw{foo bar baz}],'Checking array for alpha-sort');
 
