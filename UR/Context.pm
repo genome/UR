@@ -633,6 +633,24 @@ sub _create_object_fabricator_for_loading_template {
     my($load_rule, undef) = $load_class_name->get_rule_for_params($rule->params_list);
     my $load_rule_id = $load_rule->id;
 
+    my @rule_properties_with_in_clauses =
+        grep { $rule_template_without_recursion_desc->operator_for_property_name($_) eq '[]' } 
+             $rule_template_without_recursion_desc->_property_names;
+
+    #my $rule_template_without_in_clause = $rule_template_without_recursion_desc;
+    my $rule_template_without_in_clause;
+    if (@rule_properties_with_in_clauses) {
+        my $rule_template_id_without_in_clause = $rule_template_without_recursion_desc->id;
+        foreach my $property_name ( @rule_properties_with_in_clauses ) {
+            # FIXME - removing and re-adding the filter should have the same effect as the substitute below,
+            # but the two result in different rules in the end.
+            #$rule_template_without_in_clause = $rule_template_without_in_clause->remove_filter($property_name);
+            #$rule_template_without_in_clause = $rule_template_without_in_clause->add_filter($property_name);
+            $rule_template_id_without_in_clause =~ s/($property_name) \[\]/$1/;
+        }
+        $rule_template_without_in_clause = UR::BoolExpr::Template->get($rule_template_id_without_in_clause);
+    }
+
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
         
@@ -847,13 +865,26 @@ sub _create_object_fabricator_for_loading_template {
                 Scalar::Util::weaken($UR::Object::all_objects_loaded->{$class_name}->{$pending_db_object_id});
             }
             
+            # Make a note in all_params_loaded (essentially, the query cache) that we've made a
+            # match on this rule, and some equivalent rules
             if ($loading_base_object and not $rule_specifies_id) {
                 if ($rule_class_name ne $load_class_name) {
-		    $pending_db_object->{load}{param_key}{$load_class_name}{$load_rule_id}++;
+                    $pending_db_object->{load}{param_key}{$load_class_name}{$load_rule_id}++;
                     $UR::Object::all_params_loaded->{$load_class_name}{$load_rule_id}++;    
-		}
-		$pending_db_object->{load}{param_key}{$rule_class_name}{$rule_id}++;
-		$UR::Object::all_params_loaded->{$rule_class_name}{$rule_id}++;    
+                }
+                $pending_db_object->{load}{param_key}{$rule_class_name}{$rule_id}++;
+                $UR::Object::all_params_loaded->{$rule_class_name}{$rule_id}++;
+
+                if (@rule_properties_with_in_clauses) {
+                    # FIXME - confirm that all the object properties are filled in at this point, right?
+                    my @values = @$pending_db_object{@rule_properties_with_in_clauses};
+                    #foreach my $property_name ( @rule_properties_with_in_clauses ) {
+                    #    push @values, $pending_db_object->$property_name;
+                    #}
+                    my $r = $rule_template_without_in_clause->get_normalized_rule_for_values(@values);
+                    
+                    $UR::Object::all_params_loaded->{$rule_class_name}{$r->id}++;
+                }
             }
             
             unless ($subclass_name eq $class) {
@@ -1148,7 +1179,7 @@ sub _cache_is_complete_for_class_and_normalized_rule {
 
     # See if we need to do a load():
 
-    no warnings;
+#    no warnings;
 
     my $loading_was_done_before_with_these_params =
             # complex (non-single-id) params
@@ -1175,7 +1206,6 @@ sub _cache_is_complete_for_class_and_normalized_rule {
         # Load according to params
         return;
     }
-    
 } # done setting $load, and possibly filling $cached/$cache_is_complete as a side-effect
 
 
@@ -1346,7 +1376,7 @@ sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
     keys %$params;
 
     for my $try_class ( $class, $class->inheritance ) {
-        # more than one property, seeeif individual checks have been done for any of these...
+        # more than one property, see if individual checks have been done for any of these...
         for my $property_name (@property_names) {
             next unless ($try_class->get_class_object->get_property_meta_by_name($property_name));
 
