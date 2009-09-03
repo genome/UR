@@ -1,19 +1,11 @@
-
-=head1 NAME
-
-UR::BoolExpr - a boolean expression functional on any UR::Object of a given class
-
-=cut
-
 package UR::BoolExpr;
-
-our $VERSION = '0.1';
 
 use warnings;
 use strict;
-
 use Scalar::Util qw(blessed);
-use UR;
+require UR;
+
+our $VERSION = '0.1';
 
 # Borrow from the util package.
 # This will go away with refactoring.
@@ -49,6 +41,17 @@ UR::Object::Type->define(
     ],
     is_transactional => 0,
 );
+
+sub desc {
+    my $self = shift;
+    my %b = $self->params_list;
+    my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+    $s =~ s/\n/ /gs;
+    $s =~ s/^\s*{//; 
+    $s =~ s/\}\s*$//;
+    $s =~ s/\"(\w+)\" \=\> / $1 => /g;
+    return $self->subject_class_name . ':' . $s;
+}
 
 *get_rule_template = \&rule_template;
 
@@ -559,7 +562,8 @@ sub resolve_for_class_and_params {
     }
 }
 
-sub get_normalized_rule_equivalent {
+*get_normalized_rule_equivalent = \&normalize;
+sub normalize {
     my $self = shift;
     
     my $rule_template = $self->get_rule_template;
@@ -928,6 +932,12 @@ my $rt = $r->get_rule_template();
 my @rt = $rt->get_underlying_rule_templates();
 
 $r = $rt->get_rule_for_values(@v);
+
+=head1 NAME
+
+UR::BoolExpr - a boolean expression functional on any UR::Object of a given class
+
+=cut
 
 =over 4
 

@@ -203,7 +203,6 @@ sub _construction_params_for_desc {
     my $meta_class_name = $desc->{meta_class_name};
     my @extended_metadata;
     if ($desc->{type_has}) {
-        $DB::single = 1;
         @extended_metadata = ( has => [ @{ $desc->{type_has} } ] );
     }
 
@@ -1162,7 +1161,7 @@ sub _complete_class_meta_object_definitions {
             $DB::single = 1;
             redo;
         }
-        
+       $DB::single = 1; 
         my $obj =
             UR::Object::Inheritance->define(
                 type_name => $self->type_name,

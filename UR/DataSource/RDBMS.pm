@@ -25,8 +25,7 @@ UR::Object::Type->define(
 );
 
 # FIXME - shouldn't this be a property of the class instead of a method?
-sub does_support_joins { 1;} 
-
+sub does_support_joins { 1 } 
 
 sub get_class_meta_for_table {
     my $self = shift;
@@ -512,7 +511,7 @@ sub create_iterator_closure_for_rule {
 
     my ($rule_template, @values) = $rule->get_rule_template_and_values();    
     my $template_data = $self->_get_template_data_for_loading($rule_template); 
-
+    
     #
     # the template has general class data
     #
@@ -528,13 +527,14 @@ sub create_iterator_closure_for_rule {
 
     #
     # the template has explicit template data
-    #  
-
-    my $select_clause                              = $template_data->{select_clause};
-    my $select_hint                                = $template_data->{select_hint};
-    my $from_clause                                = $template_data->{from_clause};
-    my $where_clause                               = $template_data->{where_clause};
-    my $connect_by_clause                          = $template_data->{connect_by_clause};    
+    #
+    
+    my $select_clause                               = $template_data->{select_clause};
+    my $select_hint                                 = $template_data->{select_hint};
+    my $from_clause                                 = $template_data->{from_clause};
+    my $where_clause                                = $template_data->{where_clause};
+    my $connect_by_clause                           = $template_data->{connect_by_clause};
+    my $group_by_clause                             = $template_data->{group_by_clause};
     my $order_by_clause                             = $template_data->{order_by_clause};
     
     my $sql_params                                  = $template_data->{sql_params};
@@ -545,7 +545,7 @@ sub create_iterator_closure_for_rule {
     # TODO: we get 90% of the way to a full where clause in the template, but 
     # actually have to build it here since ther is no way to say "in (?)" and pass an arrayref :( 
     # It _is_ possible, however, to process all of the filter specs with a constant number of params.
-    # This would optimize the common case.   
+    # This would optimize the common case.
     my @all_sql_params = @$sql_params;
     for my $filter_spec (@$filter_specs) {
         my ($expr_sql, $operator, $value_position) = @$filter_spec;
@@ -573,7 +573,8 @@ sub create_iterator_closure_for_rule {
     $sql .= $select_clause;
     $sql .= "\nfrom $from_clause";
     $sql .= "\n$where_clause" if defined($where_clause) and length($where_clause);
-    $sql .= "\n$connect_by_clause" if $connect_by_clause;           
+    $sql .= "\n$connect_by_clause" if $connect_by_clause;
+    $sql .= "\n$group_by_clause" if $group_by_clause;
     $sql .= "\n$order_by_clause"; 
 
     my $dbh = $self->get_default_dbh;    
@@ -581,13 +582,13 @@ sub create_iterator_closure_for_rule {
     unless ($sth) {
         $class->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
         Carp::confess($class->error_message);
-    }    
+    }
     unless ($sth->execute(@all_sql_params)) {
         $class->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper(\@$sql_params) . "\n");
         Carp::confess($class->error_message);
-    }    
-
-    die unless $sth;    
+    }
+    
+    die unless $sth;
 
     $self->signal_change('query',$sql);
 
@@ -1841,7 +1842,7 @@ sub _generate_class_data_for_loading {
         $subclassify_by   ||= $co->subclassify_by;
         
         push @all_table_properties, 
-            map { [$co, $_, $table_name, 0] }
+            map { [$co, $_, $table_name, 0 ] }
             sort { $a->property_name cmp $b->property_name }
             grep { (defined $_->column_name && $_->column_name ne '') or
                    (defined $_->calculate_sql && $_->calculate_sql ne '') }
@@ -1908,7 +1909,8 @@ sub _generate_class_data_for_loading {
 
 sub _generate_template_data_for_loading {
     my ($self, $rule_template) = @_;
-        
+$DB::single = 1;
+    
     # class-based values
 
     my $class_name = $rule_template->subject_class_name;
@@ -1940,18 +1942,59 @@ sub _generate_template_data_for_loading {
     my $recurse_property_referencing_other_rows;
     if ($recursion_desc) {
         ($recurse_property_on_this_row,$recurse_property_referencing_other_rows) = @$recursion_desc;        
-    }        
-
-    my $hints = $rule_template->hints;   
-    my $is_paged = $rule_template->is_paged;
-    if ($is_paged) {
     }
+    
+    my $hints    = $rule_template->hints;
+    my $order_by = $rule_template->order_by;
+    my $group_by = $rule_template->group_by;
+    my $is_paged = $rule_template->is_paged;
+
+    my %group_by_property_names;
+    if ($group_by) {
+        # we only pull back columns we're grouping by if there is grouping happening
+        for my $name (@$group_by) {
+            unless ($class_name->can($name)) {
+                die "$class_name has no property/method $name.  Cannot group by it!";
+            }
+            $group_by_property_names{$name} = 1;
+        }
+        for my $data (@all_table_properties) {
+            my $name = $data->[1]->property_name;
+            if ($group_by_property_names{$name}) {
+                $group_by_property_names{$name} = $data;
+            }
+        }
+        @all_table_properties = grep { ref($_) } values %group_by_property_names; 
+    }
+
+    my %order_by_property_names;
+    if ($order_by) {
+        # we only pull back columns we're ordering by if there is ordering happening
+        for my $name (@$order_by) {
+            unless ($class_name->can($name)) {
+                die "$class_name has no property/method $name.  Cannot order by it!";
+            }
+            $order_by_property_names{$name} = 1;
+        }
+        for my $data (@all_table_properties) {
+            my $name = $data->[1]->property_name;
+            if ($order_by_property_names{$name}) {
+                $order_by_property_names{$name} = $data;
+            }
+        }
+    }
+
+    #my @group_table_debug = %group_by_property_names;
+    #print "GROUP STARTING WITH @group_table_debug\n" if $group_by;
+    #my @order_table_debug = %order_by_property_names;  
+    #print "ORDER STARTING WITH @order_table_debug\n" if $order_by;
 
     # the following two sets of variables hold the net result of the logic
     my $select_clause;
     my $select_hint;
     my $from_clause;
     my $connect_by_clause;
+    my $group_by_clause;
 
     # _usually_ items freshly loaded from the DB don't need to be evaluated through the rule
     # because the SQL gets constructed in such a way that all the items returned would pass anyway.
@@ -2024,12 +2067,17 @@ sub _generate_template_data_for_loading {
             $prev_table_name = $table_name;
             $prev_id_column_name = $id_property_objects[0]->column_name;
         }
-
-        my @properties_to_query = (sort (keys(%filters), ($hints ? @$hints : ())) );
+        
+        my @properties_to_query = sort 
+                keys(%filters), 
+                ($hints ? @$hints : ()),
+                ($order_by ? @$order_by : ()),
+                ($group_by ? @$group_by : ());
+        
         while (my $property_name = shift @properties_to_query) {
-            my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);                
+            my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);
             next unless $property;
-                    
+                  
             my ($operator, $value_position); 
             if (exists $filters{$property_name}) {
                 $operator       = $rule_template->operator_for_property_name($property_name);
@@ -2145,6 +2193,7 @@ sub _generate_template_data_for_loading {
         my $final_join = $joins[-1];
 
         my @source_table_and_column_names;
+        my %aliases_for_this_delegate;
         while (my $object_join = shift @joins) {
             #$DB::single = 1;
             #print "\tjoin $join\n";
@@ -2253,6 +2302,7 @@ sub _generate_template_data_for_loading {
                 my $foreign_class_loading_data = $self->_get_class_data_for_loading($foreign_class_object);
                 
                 my $alias = $joins_done{$join->{id}};
+
                 unless ($alias) {            
                     $alias = "${relationship_name}_${alias_num}";
                     $alias_num++;
@@ -2313,31 +2363,78 @@ sub _generate_template_data_for_loading {
                         
                         # Add all of the columns in the join table to the return list
                         # Note that we increment the object numbers.
-                        push @all_table_properties, 
-                            map {
-                                my $new = [@$_]; 
-                                $new->[2] = $alias,
-                                $new->[3] = $object_num; 
-                                $new 
-                            }
-                            @{ $foreign_class_loading_data->{direct_table_properties} };                
-
+                        # Note: we add grouping columns individually instead of in chunks
+                        if ($group_by) {
+                            $DB::single = 1;
+                        }
+                        else {
+                            push @all_table_properties,
+                                map {
+                                    my $new = [@$_]; 
+                                    $new->[2] = $alias;
+                                    $new->[3] = $object_num; 
+                                    $new 
+                                }
+                                @{ $foreign_class_loading_data->{direct_table_properties} };                
+                        }
                         $last_alias_for_this_chain = $alias;
                     }
+                }
+                
+                if ($group_by) {
+                    if ($group_by_property_names{$property_name}) {
+                        my ($p) = 
+                            map {
+                                my $new = [@$_]; 
+                                $new->[2] = $alias;
+                                $new->[3] = 0; 
+                                $new 
+                            }
+                            grep { $_->[1]->property_name eq $final_accessor }
+                            @{ $foreign_class_loading_data->{direct_table_properties} };
+                        push @all_table_properties, $p;
+                        #print "PROPERTY $property_name IS INVOLVED IN GROUPING: $p\n";
+                    }
+                    #else {
+                    #    $DB::single = 1;
+                    #    #print "PROPERTY $property_name IS NOT INVOLVDED IN GROUPING!\n";
+                    #}
+                }
+
+                if ($order_by) {
+                    if ($order_by_property_names{$property_name}) {
+                        my ($p) = 
+                            map {
+                                my $new = [@$_]; 
+                                $new->[2] = $alias;
+                                $new->[3] = 0; 
+                                $new 
+                            }
+                            grep { $_->[1]->property_name eq $final_accessor }
+                            @{ $foreign_class_loading_data->{direct_table_properties} };
+                        $order_by_property_names{$property_name} = $p if $p;
+                        #print "PROPERTY $property_name IS INVOLVED IN ORDERING: $p\n";
+                    }
+                    #else {
+                    #    $DB::single = 1;
+                    #    #print "PROPERTY $property_name IS NOT INVOLVDED IN ORDERING!\n";
+                    #}
+                    #my @order_table_debug = %order_by_property_names;  
+                    #print "  ORDER HAS @order_table_debug\n" if $order_by;
                 }
                 
                 unless ($is_optional) {
                     # if _any_ part requires this, mark it required
                     $alias_sql_join{$alias}{-is_required} = 1;
                 }
-    
+                
                 $joins_done{$join->{id}} = $alias;
                 push @joins_done, $join;
                 
                 # Set these for after all of the joins are done
                 $last_class_name = $foreign_class_name;
                 $last_class_object = $foreign_class_object;
-    
+                
                 if (!@joins and not $alias_for_property_value) {
                     if (grep { $_->[1]->property_name eq $final_accessor } @{ $foreign_class_loading_data->{direct_table_properties} }) {
                         $alias_for_property_value = $alias;
@@ -2372,18 +2469,27 @@ sub _generate_template_data_for_loading {
                         next;
                     }
                 }
-
+                
             } # next join for this object
         } # next object join
 
         unless ($delegated_property->via) {
             next;
         }
-
+        
         my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
         unless ($final_accessor_property_meta) {
             die "Failed to find property $final_accessor for class " . $last_class_object_excluding_inherited_joins->class_name . "!";
         }
+
+        # we don't know for all of the joined properties how they connect back,
+        # but we do know for those which drove the joining
+        #for my $pmeta (reverse @all_table_properties) {
+        #    if ($pmeta->[1] == $final_accessor_property_meta) {
+        #        $pmeta->[4] = $property_name;
+        #    }
+        #}
+        
         my $sql_lvalue;
         if ($final_accessor_property_meta->is_calculated) {
             $sql_lvalue = $final_accessor_property_meta->calculate_sql;
@@ -2415,28 +2521,9 @@ sub _generate_template_data_for_loading {
     } # next delegated property
     
     # Build the SELECT clause explicitly.
-    $select_clause = '';
-    for my $class_property (@all_table_properties) {
-        my ($sql_class,$sql_property,$sql_table_name) = @$class_property;
-        $sql_table_name ||= $sql_class->table_name;
-        my ($select_table_name) = ($sql_table_name =~ /(\S+)\s*$/s);
-        $select_clause .= ($class_property == $all_table_properties[0] ? "" : ", ");
-       
-        # FIXME - maybe a better way would be for these sql-calculated properties, the column_name()
-        # or maybe some other related property name) is actually calculated, so this logic
-        # gets encapsulated in there?
-        if (my $sql_function = $sql_property->calculate_sql) {
-            my @calculate_from = ref($sql_property->calculate_from) eq 'ARRAY' ? @{$sql_property->calculate_from} : ( $sql_property->calculate_from );
-            foreach my $sql_column_name ( @calculate_from ) {
-                $sql_function =~ s/($sql_column_name)/$sql_table_name\.$1/g;
-            }
-            $select_clause .= $sql_function;
-        } else {
-            $select_clause .= $select_table_name . "." . $sql_property->column_name;
-        }
-    }
-   
-    # Oracle places hints in a comment in the select 
+    $select_clause = $self->_select_clause_for_table_property_data(@all_table_properties);
+
+    # Oracle places group_by in a comment in the select 
     $select_hint = $class_meta->query_hint;
 
     #print Data::Dumper::Dumper(\@sql_joins, \@sql_filters);
@@ -2543,18 +2630,51 @@ sub _generate_template_data_for_loading {
         my $prior_column_name = $prior_property_meta->column_name || $prior;
         
         $connect_by_clause = "connect by $this_table_name.$this_column_name = prior $prior_table_name.$prior_column_name\n";
-#        $DB::single = 1;
+        #$DB::single = 1;
     }    
     
     for my $property_meta_array (@all_table_properties) {
         push @property_names_in_resultset_order, $property_meta_array->[1]->property_name; 
     }
     
-    #$DB::single = 1;    
-    my $per_object_in_resultset_loading_detail = $self->_generate_loading_templates_arrayref(\@all_table_properties);
-    #print Data::Dumper::Dumper($per_object_in_resultset_loading_detail);
+    # this is only used when making a real instance object instead of a "set"
+    my $per_object_in_resultset_loading_detail;
+    unless ($group_by) {
+        $per_object_in_resultset_loading_detail = $self->_generate_loading_templates_arrayref(\@all_table_properties);
+    }
 
     my $parent_template_data = $self->SUPER::_generate_template_data_for_loading($rule_template);
+
+    if ($group_by) {
+        # when grouping, we're making set objects instead of regular objects
+        # this means that we re-constitute the select clause and add a group_by clause
+        $DB::single = 1;
+        $group_by_clause = 'group by ' . $select_clause;
+        
+        $order_by_clause = 'order by ' . $select_clause;
+        
+        # TODO: handle aggregates present in the class definition
+        $select_clause .= ', count(*) count';
+
+        unless (@$group_by == @all_table_properties) {
+            print "mismatch table properties vs group by!\n";
+        }
+    }
+
+    my @order_table_debug = %order_by_property_names;  
+    if ($order_by) {
+        my @data;
+        for my $name (@$order_by) {
+            my $data = $order_by_property_names{$name};
+            unless (ref($data)) {
+                next;
+            }
+            push @data, $data;
+        }
+        if (@data) {
+            $order_by_clause = 'ORDER BY ' . $self->_select_clause_for_table_property_data(@data);
+        }
+    }
 
     my $template_data = $rule_template->{loading_data_cache} = {
         %$parent_template_data,
@@ -2564,6 +2684,7 @@ sub _generate_template_data_for_loading {
         select_hint                                 => $select_hint,
         from_clause                                 => $from_clause,        
         connect_by_clause                           => $connect_by_clause,
+        group_by_clause                             => $group_by_clause,
         order_by_clause                             => $order_by_clause,        
         filter_specs                                => \@filter_specs,
         sql_params                                  => \@sql_params,
@@ -2591,6 +2712,31 @@ sub validate_subscription {
                  $subscription_property eq 'query');
 
     return;
+}
+
+sub _select_clause_for_table_property_data {
+    my $self = shift;
+    my $select_clause = '';
+    for my $class_property (@_) {
+        my ($sql_class,$sql_property,$sql_table_name) = @$class_property;
+        $sql_table_name ||= $sql_class->table_name;
+        my ($select_table_name) = ($sql_table_name =~ /(\S+)\s*$/s);
+        $select_clause .= ($class_property == $_[0] ? "" : ", ");
+       
+        # FIXME - maybe a better way would be for these sql-calculated properties, the column_name()
+        # or maybe some other related property name) is actually calculated, so this logic
+        # gets encapsulated in there?
+        if (my $sql_function = $sql_property->calculate_sql) {
+            my @calculate_from = ref($sql_property->calculate_from) eq 'ARRAY' ? @{$sql_property->calculate_from} : ( $sql_property->calculate_from );
+            foreach my $sql_column_name ( @calculate_from ) {
+                $sql_function =~ s/($sql_column_name)/$sql_table_name\.$1/g;
+            }
+            $select_clause .= $sql_function;
+        } else {
+            $select_clause .= $select_table_name . "." . $sql_property->column_name;
+        }
+    }
+    return $select_clause;
 }
 
 

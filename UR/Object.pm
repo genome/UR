@@ -25,7 +25,6 @@ sub get_class_object  {
 }
 
 *get_rule_for_params = \&get_boolexpr_for_params;
- 
 sub get_boolexpr_for_params {
     return UR::BoolExpr->resolve_for_class_and_params(@_);
 }
@@ -193,38 +192,59 @@ sub create {
         # Determine the correct subclass for this object
         # and delegate to that subclass.
         my $subclassify_by = $class_meta->subclassify_by;
-        unless ($subclassify_by) {
-             Carp::confess("$class is abstract, but cannot dynamically resolve an appropriate subclass.");
+        if ($subclassify_by) {
+            unless ($rule->specifies_value_for_property_name($subclassify_by)) {
+                if ($class_meta->is_abstract) {
+                    Carp::confess(
+                        "Invalid parameters for $class create():"
+                        . " abstract class requires $subclassify_by to be specified"
+                        . "\nParams were: " . Data::Dumper::Dumper({ $rule->params_list })
+                    );               
+                }
+                else {
+                    ($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, $subclassify_by => $class, @_);
+                    unless ($rule and $rule->specifies_value_for_property_name($subclassify_by)) {
+                        die "Error setting $subclassify_by to $class!";
+                    }
+                } 
+            }           
+            my $sub_class_name = $rule->specified_value_for_property_name($subclassify_by);
+            unless ($sub_class_name) {
+                die "no sub class found?!";
+            }
+            if ($sub_class_name eq $class) {
+                die "sub-classified as its own class $class!";
+            }
+            unless ($sub_class_name->isa($class)) {
+                die "class $sub_class_name is not a sub-class of $class!"; 
+            }
+            return $sub_class_name->create(@_); 
         }
-        unless ($rule->specifies_value_for_property_name($subclassify_by)) {
-            Carp::confess(
-                "Invalid parameters for $class create():"
-                . " abstract class requires $subclassify_by to be specified"
-                . "\nParams were: " . Data::Dumper::Dumper({ $rule->params_list })
-            );                
-        }            
-        my $params = $rule->legacy_params_hash;
-        my $type_id = $params->{$subclassify_by};
-        my $sub_classification_meta_class_name = $class_meta->sub_classification_meta_class_name;
-        # there is some other class of object which typifies each of the subclasses of this abstract class
-        # let that object tell us the class this object goes into
-        my $type = $sub_classification_meta_class_name->get($type_id);
-        unless ($type) {
-            Carp::confess(
-                "Invalid parameters for $class create():"
-                . "Failed to find a $sub_classification_meta_class_name"
-                . " with identifier $type_id."
-            );
+        else {
+            Carp::confess("$class requires support for a 'type' class which has persistance.  Broken.  Fix me.");
+            #my $params = $rule->legacy_params_hash;
+            #my $sub_classification_meta_class_name = $class_meta->sub_classification_meta_class_name;
+            # there is some other class of object which typifies each of the subclasses of this abstract class
+            # let that object tell us the class this object goes into
+            #my $type = $sub_classification_meta_class_name->get($type_id);
+            #unless ($type) {
+            #    Carp::confess(
+            #        "Invalid parameters for $class create():"
+            #        . "Failed to find a $sub_classification_meta_class_name"
+            #        . " with identifier $type_id."
+            #    );
+            #}
+            #my $subclass_name = $type->subclass_name($class);
+            #unless ($subclass_name) {
+            #    Carp::confess(
+            #        "Invalid parameters for $class create():"
+            #        . "$sub_classification_meta_class_name '$type_id'"
+            #        . " failed to return a s sub-class name for $class"
+            #    );
+            #}
+            #return $subclass_name->create(@_);
         }
-        my $subclass_name = $type->subclass_name($class);
-        unless ($subclass_name) {
-            Carp::confess(
-                "Invalid parameters for $class create():"
-                . "$sub_classification_meta_class_name '$type_id'"
-                . " failed to return a s sub-class name for $class"
-            );
-        }
-        return $subclass_name->create(@_);
+
     }
     
     my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
@@ -770,6 +790,7 @@ sub is_loaded {
     # not a super class of the specified object.
     # This logic is in both get() and is_loaded().
 
+    my $quit_early = 0;
     if ( @_ == 2 &&  !ref($_[1]) )
     {
         unless (defined($_[1])) {
@@ -777,11 +798,13 @@ sub is_loaded {
         }
         my $obj = $all_objects_loaded->{$_[0]}->{$_[1]};
         return $obj if $obj;
+        # we could safely return nothing right now, except 
+        # that a subclass of this type may have the object
     }
 
     my $class = shift;
     my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class,@_);
-    $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);    
+    return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);    
 }
 
 sub _is_loaded {

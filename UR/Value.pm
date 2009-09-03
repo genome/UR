@@ -7,8 +7,7 @@ require UR;
 
 UR::Object::Type->define(
     class_name => 'UR::Value',
-    is => ['UR::Object'],
-    english_name => 'ur value',
+    is => 'UR::Object',
 );
 
 sub _load {
@@ -45,3 +44,4 @@ sub _load {
 }
 
 1;
+

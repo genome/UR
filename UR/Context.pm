@@ -491,7 +491,6 @@ sub prune_object_cache {
 
 sub get_objects_for_class_and_rule {
     my ($self, $class, $rule, $load, $return_closure) = @_;
-
     #my @params = $rule->params_list;
     #print "GET: $class @params\n";
 
@@ -502,21 +501,31 @@ sub get_objects_for_class_and_rule {
 
         $self->prune_object_cache();
     }
-
-    # this is a no-op if the rule is already normalized
-    my $normalized_rule = $rule->get_normalized_rule_equivalent;
     
-    # if $load is undefined, and there is no underlying context, we define it to FALSE explicitly
+    # an identifier for all objects gotten in this request will be set/updated on each of them for pruning later
+    my $this_get_serial = $GET_COUNTER++;
+    
     my $meta = $class->get_class_object();    
-    my $id_property_sorter = $meta->id_property_sorter;
-    my ($ds) = $self->resolve_data_sources_for_class_meta_and_rule($meta,$rule);
-    if (! $ds or $meta->class_name =~ m/::Ghost$/) {
-        # Classes without data sources and Ghosts can only ever come from the cache
-        $load = 0;  
-    } 
-    
+
+    # If $load is undefined, and there is no underlying context, we define it to FALSE explicitly
+    # TODO: instead of checking for a data source, skip this
+    # We'll always go to the underlying context, even if it has nothing. 
+    # This optimization only works by coincidence since we don't stack contexts currently beyond 1.
+    my $ds;
+    if (!defined($load) or $load) {
+        ($ds) = $self->resolve_data_sources_for_class_meta_and_rule($meta,$rule);
+        if (! $ds or $class =~ m/::Ghost$/) {
+            # Classes without data sources and Ghosts can only ever come from the cache
+            $load = 0;  
+        } 
+    }
+ 
     # this is an arrayref of all of the cached data
+    # it is set in one of two places below
     my $cached;
+    
+    # this is a no-op if the rule is already normalized
+    my $normalized_rule = $rule->normalize;
     
     # see if we need to load if load was not defined
     unless (defined $load) {
@@ -526,13 +535,9 @@ sub get_objects_for_class_and_rule {
         $load = ($cache_is_complete ? 0 : 1);
     }
 
-    my $this_get_serial = $GET_COUNTER++;
-
-    # optimize
+    # optimization for the common case
     if (!$load and !$return_closure) {
-        #print "shortcutting out\n";
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
-        #$_->{'__get_serial'} = $this_get_serial foreach @c;
         foreach ( @c ) {
             unless (exists $_->{'__get_serial'}) {
                 # This is a weakened reference.  Convert it back to a regular ref
@@ -543,21 +548,23 @@ sub get_objects_for_class_and_rule {
             }
             $_->{'__get_serial'} = $this_get_serial;
         }
-
         return @c if wantarray;           # array context
         return unless defined wantarray;  # null context
         Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
         return $c[0];                     # scalar context
     }
 
+    my $normalized_rule_template = $normalized_rule->rule_template;
+    my $object_sorter = $normalized_rule_template->sorter();
+
     # the above process might have found all of the cached data required as a side-effect in which case
     # we have a value for this early 
     # either way: ensure the cached data is known and sorted
     if ($cached) {
-        @$cached = sort $id_property_sorter @$cached;
+        @$cached = sort $object_sorter @$cached;
     }
     else {
-        $cached = [ sort $id_property_sorter $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule) ];
+        $cached = [ sort $object_sorter $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule) ];
     }
     foreach ( @$cached ) {
         unless (exists $_->{'__get_serial'}) {
@@ -574,9 +581,8 @@ sub get_objects_for_class_and_rule {
     # make a loading iterator if loading must be done for this rule
     my $loading_iterator;
     if ($load) {
-        
         # this returns objects from the underlying context after importing them into the current context
-        my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule,$ds, $this_get_serial);
+        my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
 
         my $last_loaded_id;
         # this will interleave the above with any data already present in the current context
@@ -607,7 +613,7 @@ sub get_objects_for_class_and_rule {
             # we're merging these into one return stream here
             my $comparison_result;
             if ($next_obj_underlying_context && $next_obj_current_context) {
-                $comparison_result = $id_property_sorter->($next_obj_underlying_context, $next_obj_current_context);
+                $comparison_result = $object_sorter->($next_obj_underlying_context, $next_obj_current_context);
             }
             
             my $next_object;
@@ -1094,17 +1100,26 @@ $DB::single=1;
 sub _create_import_iterator_for_underlying_context {
     my ($self, $rule, $dsx, $this_get_serial) = @_; 
 
-    # make an iterator for the primary data source
-    my $db_iterator = $dsx->create_iterator_closure_for_rule($rule);    
+    # TODO: instead of taking a data source, resolve this internally.
+    # The underlying context itself should be responsible for its data sources.
+
+    # Make an iterator for the primary data source.
+    # Primary here meaning the one for the class we're explicitly requesting.
+    # We may need to join to other data sources to complete the query.
+    my ($db_iterator) 
+        = $dsx->create_iterator_closure_for_rule($rule);
 
     my ($rule_template, @values) = $rule->get_rule_template_and_values();
-    my($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
+    my ($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
     my $class_name = $template_data->{class_name};
+
+    my $group_by = $rule_template->group_by;
+    my $order_by = $rule_template->order_by;
 
     if (my $sub_typing_property) {
         # When the rule has a property specified which indicates a specific sub-type, catch this and re-call
         # this method recursively with the specific subclass name.
-        
+        my ($rule_template, @values) = $rule->get_rule_template_and_values();
         my $rule_template_specifies_value_for_subtype   = $template_data->{rule_template_specifies_value_for_subtype};
         my $class_table_name                            = $template_data->{class_table_name};
         my @type_names_under_class_with_no_table        = @{ $template_data->{type_names_under_class_with_no_table} };
@@ -1121,7 +1136,7 @@ sub _create_import_iterator_for_underlying_context {
                 if ($subclass_name and $subclass_name ne $class_name) {
                     #$rule = $subclass_name->get_rule_for_params($rule->params_list, $sub_typing_property => $value);
                     $rule = UR::BoolExpr->resolve_for_class_and_params($subclass_name, $rule->params_list, $sub_typing_property => $value);
-                    return $self->_create_import_iterator_for_underlying_context($rule,$dsx);
+                    return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial);
                 }
             }
             else {
@@ -1141,7 +1156,7 @@ sub _create_import_iterator_for_underlying_context {
                            $rule_template->get_rule_for_values(@values)->params_list,
                            $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
                         );
-            return $self->_create_import_iterator_for_underlying_context($rule,$dsx)
+            return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial)
         }
         else {
             # continue normally
@@ -1150,10 +1165,10 @@ sub _create_import_iterator_for_underlying_context {
     }
     
     
-    my $loading_templates = $template_data->{loading_templates};
+    my $loading_templates                           = $template_data->{loading_templates};
     my $sub_typing_property                         = $template_data->{sub_typing_property};
     my $next_db_row;
-    my $rows = 0;       # number of rows the query returned
+    my $rows = 0;                                   # number of rows the query returned
     
     my $recursion_desc                              = $template_data->{recursion_desc};
     my $rule_template_without_recursion_desc;
@@ -1170,15 +1185,49 @@ sub _create_import_iterator_for_underlying_context {
     # instead of making just one import iterator, we make one per loading template
     # we then have our primary iterator use these to fabricate objects for each db row
     my @importers;
-    for my $loading_template (@$loading_templates) {
-        my $object_fabricator = $self->_create_object_fabricator_for_loading_template($loading_template, 
-                                                                                      $template_data,
-                                                                                      $rule,
-                                                                                      $rule_template,
-                                                                                      \@values,
-                                                                                      $dsx
-                                                                                    );
-        unshift @importers, $object_fabricator;
+    if ($group_by) {
+        # returning sets instead of instance objects...
+        my $set_class = $class_name . '::Set';
+        my $logic_type = $rule_template->logic_type;
+        my @base_property_names = $rule_template->_property_names;
+        
+        my @non_aggregate_properties = @$group_by;
+        my @aggregate_properties = ('count'); # TODO: make non-hard-coded
+        my $division_point = $#non_aggregate_properties;
+    
+        my $template = UR::BoolExpr::Template->get_by_subject_class_name_logic_type_and_logic_detail(
+            $class_name,
+            'And',
+            join(",", @base_property_names, @non_aggregate_properties),
+        );
+        push @importers, sub {
+            my $row = $_[0];
+            # my $ss_rule = $template->get_rule_for_values(@values, @$row[0..$division_point]);
+            # not sure why the above gets an error but this doesn't...
+            my @a = @$row[0..$division_point];
+            my $ss_rule = $template->get_rule_for_values(@values, @a); 
+            my $set = $set_class->get($ss_rule->id);
+            unless ($set) {
+                die "Failed to fabricate $set_class for rule $ss_rule!";
+            }
+            @$set{@aggregate_properties} = @$row[$division_point+1..$#$row];
+            return $set;
+        };
+    }
+    else {
+        # regular instances
+        for my $loading_template (@$loading_templates) {
+            my $object_fabricator = 
+                $self->_create_object_fabricator_for_loading_template(
+                    $loading_template, 
+                    $template_data,
+                    $rule,
+                    $rule_template,
+                    \@values,
+                    $dsx,
+                );
+            unshift @importers, $object_fabricator;
+        }
     }
 
     # For joins across data sources, we need to create importers/fabricators for those
@@ -1186,6 +1235,9 @@ sub _create_import_iterator_for_underlying_context {
     # UR-space
     my @addl_join_comparators;
     if (@addl_loading_info) {
+        if ($group_by) {
+            die "cross-datasource group-by is not supported yet!";
+        }
         my($addl_object_fabricators, $addl_join_comparators) =
                 $self->_create_secondary_loading_closures( $template_data,
                                                            $rule,
@@ -1198,7 +1250,7 @@ sub _create_import_iterator_for_underlying_context {
 
     # Insert the key into all_objects_are_loaded to indicate that when we're done loading, we'll
     # have everything
-    if ($template_data->{'rule_matches_all'}) {
+    if ($template_data->{'rule_matches_all'} and not $group_by) {
         $class_name->all_objects_are_loaded(undef);
     }
 
@@ -1253,10 +1305,12 @@ sub _create_import_iterator_for_underlying_context {
                         $object->{load}{param_key}{$class_name}{$rule_without_recursion_desc->id}++;
                     }
                 }
-
+                
                 # Apply changes to all_params_loaded that each importer has collected
-                $_->finalize foreach @importers;
-
+                foreach (@importers) {
+                    $_->finalize if ref($_) ne 'CODE';
+                }
+                
                 # Each of these iterators should be at the end, too.  Call them one more time
                 # so they'll finalize their object fabricators.
                 foreach my $class ( keys %subordinate_iterator_for_class ) {
@@ -1374,9 +1428,11 @@ sub _create_import_iterator_for_underlying_context {
                 redo;
             }
             
-            if ( (ref($object) ne $class_name) and (not $object->isa($class_name)) ) {
-                $object = undef;
-                redo;
+            unless ($group_by) {
+                if ( (ref($object) ne $class_name) and (not $object->isa($class_name)) ) {
+                    $object = undef;
+                    redo;
+                }
             }
             
             if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($object)) {
@@ -1395,6 +1451,7 @@ sub _create_import_iterator_for_underlying_context {
 
 sub _create_object_fabricator_for_loading_template {
     my ($self, $loading_template, $template_data, $rule, $rule_template, $values, $dsx) = @_;
+
     my @values = @$values;
 
     my $class_name                                  = $loading_template->{final_class_name};
@@ -1436,7 +1493,6 @@ sub _create_object_fabricator_for_loading_template {
         $loading_base_object = 0;
         $needs_further_boolexpr_evaluation_after_loading = 0;
     }
-
     
     my %subclass_is_safe_for_re_bless;
     my %subclass_for_subtype_name;  
@@ -1527,11 +1583,6 @@ sub _create_object_fabricator_for_loading_template {
 
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
-        
-        if ($loading_template != $template_data->{loading_templates}[0]) {
-            # no handling for the non-primary class yet!
-            #$DB::single = 1;
-        }
         
         my $pending_db_object_data = { %initial_object_data };
         @$pending_db_object_data{@property_names} = @$next_db_row[@column_positions];
@@ -2104,7 +2155,6 @@ sub UR::Context::object_fabricator_tracker::DESTROY {
         }
     }
 }
-
     
     
 sub _get_objects_for_class_and_sql {
@@ -2124,6 +2174,8 @@ sub _get_objects_for_class_and_sql {
 
 sub _cache_is_complete_for_class_and_normalized_rule {
     my ($self,$class,$normalized_rule) = @_;
+
+    # TODO: convert this to use the rule object instead of going back to the legacy hash format
 
     my ($id,$params,@objects,$cache_is_complete);
     $params = $normalized_rule->legacy_params_hash;
@@ -2205,6 +2257,8 @@ sub _cache_is_complete_for_class_and_normalized_rule {
     if ($cache_is_complete) {
         # if the $cache_is_comlete, the $cached list DEFINITELY represents all objects we need to return        
         # we know that loading is NOT necessary because what we've found cached must be the entire set
+    
+        # Because we happen to have that set, we return it in addition to the boolean flag
         return wantarray ? (1, \@objects) : ();
     }
     
@@ -2257,8 +2311,8 @@ sub _cache_is_complete_for_class_and_normalized_rule {
 sub _get_objects_for_class_and_rule_from_cache {
     # Get all objects which are loaded in the application which match
     # the specified parameters.
-    my ($self, $class, $rule, $load) = @_;
-    my $template = $rule->get_rule_template;
+    my ($self, $class, $rule) = @_;
+    my ($template,@values) = $rule->get_rule_template_and_values;
     
     #my @param_list = $rule->params_list;
     #print "CACHE-GET: $class @param_list\n";
@@ -2423,7 +2477,6 @@ sub _get_objects_for_class_and_rule_from_cache {
     # Handle passing-through any exceptions.
     die $@ if $@;
 
-    #if (my $recurse = $params->{-recurse}) {
     if (my $recurse = $template->recursion_desc) {        
         my ($this,$prior) = @$recurse;
         my @values = map { $_->$prior } @results;
@@ -2435,6 +2488,16 @@ sub _get_objects_for_class_and_rule_from_cache {
             push @results, map { $class->get($this => $_, -recurse => $recurse) } @values;
         }
     }
+    
+    if (@results > 1) {
+        my $sorter = $template->sorter;
+        @results = sort $sorter @results;
+    }
+
+    if (my $group_by = $template->group_by) {
+        # return sets instead of the actual objects
+        @results = _group_objects($template,\@values,$group_by,\@results);
+    }
 
     # Return in the standard way.
     return @results if (wantarray);
@@ -2442,6 +2505,25 @@ sub _get_objects_for_class_and_rule_from_cache {
     return $results[0];
 }
 
+sub _group_objects {
+    my ($template,$values,$group_by,$objects)  = @_;
+    my $sub_template = $template;
+    for my $property (@$group_by) {
+        $sub_template = $sub_template->add_filter($property);
+    }
+    my $set_class = $template->subject_class_name . '::Set';
+    my @groups;
+    my %seen;
+    for my $result (@$objects) {
+        my @extra_values = map { $result->$_ } @$group_by;
+        my $bx = $sub_template->get_rule_for_values(@$values,@extra_values);
+        next if $seen{$bx};
+        $seen{$bx} = 1;
+        my $group = $set_class->get($bx->id); 
+        push @groups, $group;
+    }
+    return @groups;
+}
 
 sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
     my ($self,$class,$input_params) = @_;
@@ -2763,21 +2845,6 @@ sub _sync_databases {
     my $rollback_on_non_savepoint_handle;
     for my $data_source_id (@ds_in_order) {
         my $obj_list = $ds_objects{$data_source_id}->{'changed_objects'};
-
-# Testing code for sorting objects getting saved to try and validate UR with analyze traces
-## Break into classes, sort by ID properties and then joing 'em all back together for testing
-#my %objs_by_class;
-#foreach my $obj ( @$obj_list ) {
-#  my $class_name = $obj->get_class_object->class_name;
-#  push @{$objs_by_class{$class_name}}, $obj;
-#}
-#my @sorted_objs;
-#foreach my $class_name ( sort keys %objs_by_class ) {
-#  my $sorter = App::Object::Class->get(class_name => $class_name)->id_property_sorter;
-#  push @sorted_objs, sort $sorter @{$objs_by_class{$class_name}};
-#}
-#$obj_list = \@sorted_objs;
-
         my $data_source = $ds_objects{$data_source_id}->{'ds_obj'};
         my $result = $data_source->_sync_database(
             %params,

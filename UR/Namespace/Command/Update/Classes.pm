@@ -1175,6 +1175,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             @pk_cols = $table->column_names;
         }
 
+        my %pk_cols;
         for my $pos (1 .. @pk_cols) {
             my $pk_col = $pk_cols[$pos-1];
             my ($property) = grep { defined($_->column_name) and (uc($_->column_name) eq uc($pk_col)) } @properties;
@@ -1205,6 +1206,15 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                     "Failed to create identity specification for $class_name/$property_name ($pos)!"
                     . UR::Object::Property::Unique->error_message
                 );
+            }
+            $pk_cols{$property_name} = 1;
+        }
+
+        # all primary key properties are non-nullable, regardless of what the DB allows
+        for my $property (@properties) {
+            my $name = $property->property_name;
+            if ($pk_cols{$name}) {
+                $property->is_optional(0);
             }
         }
     } # next table (looking just for PK constraint changes)

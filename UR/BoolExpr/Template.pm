@@ -47,7 +47,8 @@ UR::Object::Type->define(
         hints                           => { is => 'ARRAY' },
         recursion_desc                  => { is => 'ARRAY' },
         is_paged                        => { is => "Boolean" },  # FIXME - this isn't set by anything below, shouldn't it be 'page'?
-        order_by                        => { is => "Text" },
+        order_by                        => { is => 'ARRAY' },
+        group_by                        => { is => 'ARRAY' },
     ]
 );
 
@@ -68,7 +69,7 @@ our $empty_list     = $UR::BoolExpr::Util::empty_list;
 *value_id_to_values_frozen  = \&UR::BoolExpr::Util::value_id_to_values_frozen;
 
 # Names of the optional flags you can add to a rule
-our @meta_param_names = qw(recursion_desc hints is_paged order_by);
+our @meta_param_names = qw(recursion_desc hints is_paged order_by group_by);
 
 # Wrappers for regular properties
 
@@ -535,7 +536,8 @@ sub get {
         my $constant_value_normalized_positions = [];
         my $recursion_desc = undef;
         my $hints = undef;
-        my $order = undef;
+        my $order_by = undef;
+        my $group_by = undef;
         my $page = undef;
         for my $key (@keys_sorted) {
             my $pos_list = $key_positions{$key};
@@ -545,17 +547,20 @@ sub get {
                 if ($key eq '-recurse') {
                     $recursion_desc = shift @constant_values;
                 }
-                elsif ($key eq '-hints') {
+                elsif ($key eq '-hint' or $key eq '-hints') {
                     $hints = shift @constant_values; 
                 }
-                elsif ($key eq '-order') {
-                    $order = shift @constant_values;
+                elsif ($key eq '-order' or $key eq '-order_by') {
+                    $order_by = shift @constant_values;
+                }
+                elsif ($key eq '-group_by') {
+                    $group_by = shift @constant_values;
                 }
                 elsif ($key eq '-page') {
                     $page = shift @constant_values;
                 }
                 else {
-                    die "Unknown special param $key.  Expected -recurse or -hints.";
+                    die "Unknown special param $key.  Expected one of: @meta_param_names";
                 }
             }
             else {
@@ -588,8 +593,9 @@ sub get {
     
             recursion_desc                  => $recursion_desc,
             hints                           => $hints,
-            order                           => $order,
+            order_by                        => $order_by,
             page                            => $page,
+            group_by                        => $group_by,
     
             is_normalized                   => ($id eq $normalized_id ? 1 : 0),
             normalized_id                   => $normalized_id,        
@@ -744,6 +750,36 @@ sub legacy_params_hash {
 
     $self->{legacy_params_hash} = $legacy_params_hash;
     return $legacy_params_hash;
+}
+
+sub sorter {
+    my $self = shift;
+
+    # return a standard sorter for expressions using this template
+    # the template might contain a group_by or order_by clause which affects it...
+
+    die "this method takes no paramters!" if @_;
+
+    my $class = $self->subject_class_name;
+
+    my $sort_meta;
+    if ($self->group_by) {
+        my $set_class = $class . "::Set";
+        $sort_meta = $set_class->get_class_object;
+    }
+    else {
+        $sort_meta = $class->get_class_object;
+    }
+
+    my $sorter;
+    if (my $order_by = $self->order_by) {
+        $sorter = $sort_meta->sorter(@$order_by);
+    }
+    else {
+        $sorter = $sort_meta->sorter();
+    }
+
+    return $sorter;
 }
 
 1;

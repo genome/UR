@@ -483,19 +483,25 @@ sub get_composite_id_resolver {
 # This should be the same order that an SQL query with 'order by ...' would return them
 sub id_property_sorter {
     my $self = shift;
+    return $self->{'_id_property_sorter'} ||= $self->sorter(); 
+}
 
-    unless ($self->{'_id_property_sorter'}) {
-        my @id_properties = $self->id_property_names;
-        $self->{'_id_property_sorter'} = sub ($$) {
-            foreach my $property ( @id_properties ) {
-                no warnings;   # don't print a warning about non-numeric comparison with <=> on the next line
-                my $cmp = ($_[0]->$property <=> $_[1]->$property || $_[0]->$property cmp $_[1]->$property);
-                return $cmp if $cmp;
-            }
-        };
-    }
-
-    return $self->{'_id_property_sorter'};
+#TODO: make this take +/- indications of ascending/descending
+#TODO: make it into a closure for speed
+#TODO: there are possibilities of it sorting different than a DB on mixed numbers and alpha data
+sub sorter {
+    my ($self,@properties) = @_;
+    push @properties, $self->id_property_names;
+    my $key = join(",",@properties);
+    my $sorter = $self->{_sorter}{$key} ||= sub($$) {
+        no warnings;   # don't print a warning about non-numeric comparison with <=> on the next line
+        for my $property (@properties) {
+            my $cmp = ($_[0]->$property <=> $_[1]->$property || $_[0]->$property cmp $_[1]->$property);
+            return $cmp if $cmp;
+        }
+        return 0;
+    };
+    return $sorter;
 }
 
 sub is_meta {
@@ -680,25 +686,18 @@ sub generate_support_class_for_extension {
         #print "D: $new_class_name" . Dumper(\%class_params);
         $class_obj = UR::Object::Type->define(%class_params);
     }
-    elsif ($extension_for_support_class eq '::Set') {
-        $class_obj = UR::Object::Set->_generate_class_for_member_class_name($subject_class_name);
-    }
+    #elsif ($extension_for_support_class =~ /Edit/) {
+    #    $class_obj = UR::Object::Type->define(
+    #        class_name => $subject_class_name . "::" . $extension_for_support_class,
+    #        is => \@parent_class_names,
+    #        has => [ $subject_class_obj->all_property_names ],
+    #        id_by => [ $subject_class_obj->id_property_names ]
+    #    );
+    #}
     else {
-        Carp::confess() unless $extension_for_support_class;
-        $class_obj = UR::Object::Type->define
-        (
+        $class_obj = UR::Object::Type->define(
             class_name => $subject_class_name . "::" . $extension_for_support_class,
             is => \@parent_class_names,
-            (
-                $extension_for_support_class =~ /Edit/
-                ?
-                (
-                    properties => [ $subject_class_obj->all_property_names ],
-                    id_properties => [ $subject_class_obj->id_property_names ]
-                )          
-                :
-                ()
-            ),
         );
     }
     return $class_obj;

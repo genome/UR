@@ -30,8 +30,8 @@ sub delete {
 sub begin 
 {
     my $class = shift;
-    #my $id = $last_transaction_id++;
-    my $id = @open_transaction_stack;
+    my $id = $last_transaction_id++;
+    #my $id = @open_transaction_stack;
 
     my $begin_point = @change_log;
     $log_all_changes = 1;
@@ -221,8 +221,10 @@ sub commit
     }
 
     $self->state("committed");
-    #pop @open_transaction_stack;
+    pop @open_transaction_stack;
     #$self->delete();
+
+    $UR::Context::current = $self->parent;
     return 1;
 }
 
