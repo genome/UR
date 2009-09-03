@@ -474,7 +474,7 @@ sub _normalize_class_description {
         }
     }
 
-    $new_class{table_name} = uc($new_class{table_name}) if ($new_class{table_name});
+    $new_class{table_name} = uc($new_class{table_name}) if ($new_class{table_name} and $new_class{table_name} !~ /\s/);
 
     unless ($new_class{'doc'}) {
         $new_class{'doc'} = undef;
