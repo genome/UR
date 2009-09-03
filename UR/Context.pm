@@ -2348,23 +2348,33 @@ sub get_time_ymdhms {
 
 sub commit {
     my $self = shift;
+    $self->signal_change('precommit');
+
     unless ($self->_sync_databases) {
+        $self->signal_change('commit',0);
         return;
     }
     unless ($self->_commit_databases) {
+        $self->signal_change('commit',0);
         die "Application failure during commit!";
     }
+    $self->signal_change('commit',1);
     return 1;
 }
 
 sub rollback {
     my $self = shift;
+    $self->signal_change('prerollback');
+
     unless ($self->_reverse_all_changes) {
+        $self->signal_changed('rollback', 0);
         die "Application failure during reverse_all_changes?!";
     }
     unless ($self->_rollback_databases) {
+        $self->signal_changed('rollback', 0);
         die "Application failure during rollback!";
     }
+    $self->signal_changed('rollback', 1);
     return 1;
 }
 
