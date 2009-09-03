@@ -16,7 +16,7 @@ UR::Object::Type->define(
         last_name => { type => "String" },
         full_name => { 
             calculate_from => ['first_name','last_name'], 
-            calculate => sub { $DB::single = 1; return $_[0] . ' ' . $_[1] }, 
+            calculate => '$first_name . " " . $last_name', 
         },
         user_name => {
             calculate_from => ['first_name','last_name'],
