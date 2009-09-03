@@ -4,6 +4,9 @@ use warnings;
 use strict;
 use Scalar::Util qw(blessed);
 require UR;
+use Carp;
+
+our @CARP_NOT = ('UR::Context');
 
 our $VERSION = $UR::VERSION;;
 
@@ -312,10 +315,11 @@ sub resolve {
     }
     
     # Handle the single ID.
-    # Also handle the odd-number of params case, 
-    # which is supported in older code.
-    if (@in_params % 2 == 1) {
+    #if (@in_params % 2 == 1) {
+    if (@in_params == 1) {
         unshift @in_params, "id";
+    } elsif (@in_params % 2 == 1) {
+        Carp::carp("Odd number of params while creating $class: (",join(',',@in_params),")");
     }
 
     # Split the params into keys and values
