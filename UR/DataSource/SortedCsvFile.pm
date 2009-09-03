@@ -35,7 +35,7 @@ sub get_default_handle {
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
             $sql_fh = UR::DBI->sql_fh();
             my $time = time();
-            $sql_fh->printf("CSV OPEN AT %d [%s]\n",$time, scalar(localtime($time)));
+            $sql_fh->printf("\nCSV OPEN AT %d [%s]\n\n",$time, scalar(localtime($time)));
         }
 
         my $filename = $self->server;
@@ -56,7 +56,7 @@ sub get_default_handle {
         }
 
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
-            $sql_fh->printf("CSV: opened %s fileno %d\n\n",$self->server, $fh->fileno);
+            $sql_fh->printf("\nCSV: opened %s fileno %d\n\n",$self->server, $fh->fileno);
         }
 
         $self->{'_fh'} = $fh;
@@ -452,11 +452,20 @@ sub create_iterator_closure_for_rule {
     if ($ENV{'UR_DBI_MONITOR_SQL'}) {
         $monitor_start_time = Time::HiRes::time();
         $monitor_printed_first_fetch = 0;
-        my $filter_list = join("\n\t",
-                               map { $csv_column_order[$_] . ($_ <= $last_id_column_in_rule ? ' (sorted)' : '')  }
-                                   @rule_columns_in_order
-                              );
-        $sql_fh->printf("CSV: %s\nFILTERS %s\n\n", $self->server, $filter_list);
+        my @filters_list;
+        foreach my $column ( @rule_columns_in_order ) {
+            my $column_name = $csv_column_order[$column];
+            my $is_sorted = $column <= $last_id_column_in_rule ? ' (sorted)' : '';
+            my $operator = $rule->specified_operator_for_property_name($column_name) || '=';
+            my $rule_value = $rule->specified_value_for_property_name($column_name);   
+            if (ref $rule_value eq 'ARRAY') {
+                $rule_value = '[' . join(',', @$rule_value) . ']';
+            }
+            my $filter_string = $column_name . " $operator $rule_value" . $is_sorted;
+            push @filters_list, $filter_string;
+        }
+        my $filter_list = join("\n\t", @filters_list);
+        $sql_fh->printf("\nCSV: %s\nFILTERS %s\n\n", $self->server, $filter_list);
     }
 
     unless ($matched_in_cache) {
