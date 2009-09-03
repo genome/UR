@@ -666,15 +666,33 @@ sub delete_entity {
             # gather params for the ghost object
             my $do_data_source;
             my %ghost_params;
-            my @pn;
-            { no warnings 'syntax';
-               @pn = grep { $_ ne 'data_source_id' || ($do_data_source=1 and 0) } # yes this really is '=' and not '=='
-                     grep { exists $entity->{$_} }
-                     $entity->__meta__->all_property_names;
+            #my @pn;
+            #{ no warnings 'syntax';
+            #   @pn = grep { $_ ne 'data_source_id' || ($do_data_source=1 and 0) } # yes this really is '=' and not '=='
+            #         grep { exists $entity->{$_} }
+            #         $entity->__meta__->all_property_names;
+            #}
+            my(@prop_names, @many_prop_names);
+            foreach my $prop_name ( $entity->__meta__->all_property_names) {
+                next unless exists $entity->{$prop_name};  # skip non-directly-stored properties
+                if ($prop_name eq 'data_source_id') {
+                    $do_data_source = 1;
+                    next;
+                }
+                if (ref($entity->{$prop_name}) eq 'ARRAY') {
+                    push @many_prop_names, $prop_name;
+                } else {
+                    push @prop_names, $prop_name;
+                }
             }
+ 
             
             # we're not really allowed to interrogate the data_source property directly
-            @ghost_params{@pn} = $entity->get(@pn);
+            @ghost_params{@prop_names} = $entity->get(@prop_names);  # hrm doesn't work for is_many properties :(
+            foreach my $prop_name ( @many_prop_names ) {
+                my @values = $entity->get($prop_name);
+                $ghost_params{$prop_name} = \@values;
+            }
             if ($do_data_source) {
                 $ghost_params{'data_source_id'} = $entity->{'data_source_id'};
             }    
