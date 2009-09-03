@@ -729,7 +729,7 @@ sub create_from_filters {
         push @values, $value;
     } 
 
-    $DB::single = $DB::stopper;
+    #$DB::single = $DB::stopper;
     if ($usage_hints or $order or $page) {
         # todo: incorporate hints in a smarter way
         my %p;
