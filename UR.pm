@@ -623,7 +623,6 @@ You can then use these classes in your application code:
     # Use non-equality operators:
     my @same_some_artists = CdExample::Artist->get(
         'name like' => 'John%',
-        'year between' => ['2004','2009']
     );
 
     # This will use a JOIN with the ARTISTS table internally to filter
