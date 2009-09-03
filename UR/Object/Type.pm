@@ -1258,6 +1258,15 @@ sub inherited_id_property_names
     return @inherited_id_property_names;
 }
 
+sub inherited_id_column_names
+{
+    my $self = _object(shift);
+    my @inherited_id_property_names =
+        map { $_->id_column_names }
+        $self->get_inherited_class_objects;
+    return @inherited_id_property_names;
+}
+
 sub inherited_unique_property_names
 {
     my $self = _object(shift);
@@ -1406,7 +1415,7 @@ sub all_id_column_names
     my $self = _object(shift);
     my @all_id_column_names =
         map { $_->column_name }
-        $self->get_all_id_column_objects;
+        $self->get_all_id_property_objects;
     return @all_id_column_names;
 }
 
