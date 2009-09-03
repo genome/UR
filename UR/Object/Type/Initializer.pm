@@ -498,12 +498,30 @@ sub _normalize_class_description {
         $new_class{'doc'} = undef;
     }
   
+#    for my $field (qw/is id_by has relationships constraints/) {
+#        if (exists $new_class{$field}
+#            and
+#            not ref($new_class{$field}) eq "ARRAY"
+#        ) {
+#            $new_class{$field} = [ $new_class{$field} ];
+#        }
+#    }
     for my $field (qw/is id_by has relationships constraints/) {
-        if (exists $new_class{$field}
-            and
-            not ref($new_class{$field}) eq "ARRAY"
-        ) {
+        next unless exists $new_class{$field};
+        my $reftype = ref($new_class{$field});
+        if (! $reftype) {
+            # It's a plain string, wrap it in an arrayref
             $new_class{$field} = [ $new_class{$field} ];
+        } elsif ($reftype eq 'HASH') {
+            # Later code expects it to be a listref - convert it
+            my @params_as_list;
+            foreach my $attr_name ( keys (%{$new_class{$field}}) ) {
+                push @params_as_list, $attr_name;
+                push @params_as_list, $new_class{$field}->{$attr_name};
+            }
+            $new_class{$field} = \@params_as_list;
+        } elsif ($reftype ne 'ARRAY') {
+            die "Class $class_name cannot initialize because its $field section is not a string, arrayref or hashref";
         }
     }
     
