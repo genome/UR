@@ -116,6 +116,7 @@ sub get_for_dbh {
     my $class = shift;
     my $dbh = shift;
     my $ds_name = $dbh->{"private_UR::DataSource::RDBMS_name"};
+    return unless($ds_name);
     my $ds = UR::DataSource->get($ds_name);
     return $ds;
 }

@@ -181,7 +181,7 @@ sub commit_all_app_db_objects {
     }
     
     unless ($data_source) {
-        Carp::confess("No data source found for database handle! $handle")
+        return;
     }
 
     return $data_source->_set_all_objects_saved_committed();
