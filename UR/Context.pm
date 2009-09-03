@@ -623,6 +623,8 @@ sub create_entity {
     }
     
     $entity->__signal_change__("create");
+    $entity->{'__get_serial'} = $UR::Context::GET_COUNTER++;
+    $UR::Context::all_objects_cache_size++;
     return $entity;
 }
 
