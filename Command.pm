@@ -800,7 +800,7 @@ sub help_sub_commands
         }
     }
 
-    my @colors = (qw/ red cyan blue /);
+    my @colors = (qw/ red   bold /);
     my $text = '';
     for my $row (@data) {
         for my $c (0..2) {
@@ -1226,4 +1226,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 46009 2009-04-20 21:01:26Z eclark $
+#$Id: Command.pm 46818 2009-05-13 17:19:14Z eclark $

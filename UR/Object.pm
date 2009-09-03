@@ -1012,12 +1012,19 @@ sub invalid {
     my $class_object = $self->get_class_object;
     my $type_name = $class_object->type_name;
 
-    my @properties = UR::Object::Property->get
-    (
-        type_name => $type_name,
-        (@property_names ? (property_name => \@property_names) : () )
-    );
+#    my @properties = UR::Object::Property->get
+#    (
+#        type_name => $type_name,
+#        (@property_names ? (property_name => \@property_names) : () )
+#    );
 
+    unless (scalar @property_names) {
+        @property_names = $class_object->all_property_names;    
+    }
+
+    my @properties = map {
+        $class_object->property_meta_for_name($_);
+    } @property_names;
 
     my @tags;
     for my $property_metadata (@properties)

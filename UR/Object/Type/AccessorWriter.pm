@@ -626,11 +626,13 @@ sub mk_object_set_accessors {
     
     my $rule_resolver = sub {
         my ($obj) = @_;        
-        eval {
-            eval "use $r_class_name";
-            $r_class_name->class;
-            $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
-        };
+        if (defined $r_class_name) {
+            eval {
+                eval "use $r_class_name";
+                $r_class_name->class;
+                $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
+            };
+        }
         if ($r_class_meta and not $reverse_id_by) {
             # we have a real class on the other end, and it did not specify how to link back to us
             # try to infer how, otherwise fall back to the same logic we use with "primitives"

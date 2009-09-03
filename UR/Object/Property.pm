@@ -349,7 +349,8 @@ our %generic_data_type_for_vendor_data_type =
     'NUMBER'      => 'Float',  # not true, but sometimes true
     
     'DATE'        => 'DateTime',
-    
+    'TIMESTAMP'   => 'DateTime',
+ 
     'BLOB'        => 'Ugly',
     'CLOB'        => 'Ugly',
     'NCLOB'       => 'Ugly',
