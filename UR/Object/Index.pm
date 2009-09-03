@@ -324,6 +324,36 @@ use warnings;
         }
         
     }
+
+    # FIXME maybe objects in an index should always be weakend?
+    sub weaken_reference_for_object {
+        my $self = shift;
+        my $object = shift;
+        my $overrides = shift;   # FIXME copied from _remove_object - what's this for?
+ 
+        no warnings;
+        my @indexed_property_names = $self->indexed_property_names;
+        my @values = 
+            map
+            {
+                ($overrides && exists($overrides->{$_}))
+                ?
+                $overrides->{$_}
+                :
+                $object->$_
+            }
+            @indexed_property_names;
+
+        my $hr = $self->{data_tree};
+        my $value;
+        for $value (@values)
+        {
+            $hr = $hr->{$value};
+            return unless $hr;
+        }
+        Scalar::Util::weaken($hr->{$object->id});
+    }
+ 
     
     sub _setup_change_subscription
     {

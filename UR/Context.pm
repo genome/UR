@@ -28,6 +28,13 @@ our $all_change_subscriptions ||= {};         # Index of other properties by cla
 our $all_objects_are_loaded ||= {};           # Track when a class informs us that all objects which exist are loaded.
 our $all_params_loaded ||= {};                # Track parameters used to load by class then _param_key
 
+# These items are used by prune_object_cache() to control the cache size
+our $all_objects_cache_size ||= 0;            # count of the unloadable objects we've loaded from data sources
+our $cache_last_prune_serial ||= 0;           # serial number the last time we pruned objects
+our $cache_size_highwater;                    # high water mark for cache size.  Start pruning when $all_objects_cache_size goes over
+our $cache_size_lowwater;                     # low water mark for cache size
+our $GET_COUNTER = 1;                         # This is where the serial number for the __get_serial key comes from
+
 # For bootstrapping.
 $UR::Context::current = __PACKAGE__;
 
@@ -56,6 +63,11 @@ sub _initialize_for_current_process {
     }
 
     $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base);
+
+    if (exists $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || exists $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'}) {
+        $cache_size_highwater = $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'} || 0;
+        $cache_size_lowwater = $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || 0;
+    }
 
     # This changes when we initiate in-memory transactions on-top of the basic, heavier weight one for the process.
     $UR::Context::current = $UR::Context::process;
@@ -226,6 +238,7 @@ sub resolve_data_source_for_object {
 sub _light_cache {
     if (@_ > 1) {
         $UR::Context::light_cache = $_[1];
+        $UR::Context::destroy_should_clean_up_all_objects_loaded = $UR::Context::light_cache;
     }
     return $UR::Context::light_cache;
 }
@@ -401,7 +414,147 @@ sub _infer_delegated_property_from_rule {
 }
 
 
+sub object_cache_size_highwater {
+    my $self = shift;
 
+    if (@_) {
+        my $value = shift;
+        $cache_size_highwater = $value;
+
+        if (defined $value) {
+            if ($cache_size_lowwater and $value <= $cache_size_lowwater) {
+                Carp::confess("Can't set the highwater mark less than or equal to the lowwater mark");
+                return;
+            }
+            $UR::Context::destroy_should_clean_up_all_objects_loaded = 1;
+            $self->prune_object_cache();
+        } else {
+            # turn it off
+            $UR::Context::destroy_should_clean_up_all_objects_loaded = 0;
+        }
+    }
+    return $cache_size_highwater;
+}
+
+sub object_cache_size_lowwater {
+    my $self = shift;
+    if (@_) {
+        my $value = shift;
+        $cache_size_lowwater = $value;
+
+        if ($cache_size_highwater and $value >= $cache_size_highwater) {
+            Carp::confess("Can't set the lowwater mark greater than or equal to the highwater mark");
+            return;
+        }
+    }
+    return $cache_size_lowwater;
+}
+
+
+
+our $is_pruning = 0;
+sub prune_object_cache {
+    my $self = shift;
+
+    return if ($is_pruning);  # Don't recurse into here
+
+    #$DB::single=1;
+    return unless ($all_objects_cache_size > $cache_size_highwater);
+
+    $is_pruning = 1;
+    #$main::did_prune=1;
+    #my $t1 = Time::HiRes::time();
+
+    my $index_id_sep = UR::Object::Index->get_class_object->composite_id_separator() || "\t";
+
+    my %classes_to_prune;
+    my %data_source_for_class;
+    foreach my $class ( keys %$UR::Context::all_objects_loaded ) {
+        next if (substr($class,0,-6) eq '::Type'); # skip class objects
+
+        my $class_meta = $UR::Context::all_objects_loaded->{$class . '::Type'}->{$class};
+        next unless $class_meta;
+        next unless ($class_meta->is_uncachable());
+        $data_source_for_class{$class} = $class_meta->data_source_id;
+        #next unless $class_meta->{'data_source_id'};  # Can't unload objects with no data source
+        $classes_to_prune{$class} = 1;
+    }
+
+    # NOTE: This pokes right into the object cache and futzes with Index IDs directly.
+    # We can't get the Index objects though get() because we'd recurse right back into here
+    my %indexes_by_class;
+    foreach my $idx_id ( keys %{$UR::Context::all_objects_loaded->{'UR::Object::Index'}} ) {
+        my $class = substr($idx_id, 0, index($idx_id, $index_id_sep));
+        next unless $classes_to_prune{$class};
+        push @{$indexes_by_class{$class}}, $UR::Context::all_objects_loaded->{'UR::Object::Index'}->{$idx_id};
+    }
+
+    #my $deleted_count;
+    #my $pass = 0;
+
+    # Make a guess about that the target serial number should be
+    # This one goes 10% between the last time we pruned, and the last get serial
+    # and increases by another 10% each attempt
+    #my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * $cache_size_lowwater / $cache_size_highwater );
+    my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * 0.1);
+    my $target_serial = $cache_last_prune_serial;
+    CACHE_IS_TOO_BIG:
+    while ($all_objects_cache_size > $cache_size_lowwater) {
+        #$pass++;
+
+        $target_serial += $target_serial_increment;
+        last if ($target_serial > $GET_COUNTER);
+
+        foreach my $class (keys %classes_to_prune) {
+            my $objects_for_class = $UR::Context::all_objects_loaded->{$class};
+            $indexes_by_class{$class} ||= [];
+            
+            foreach my $id ( keys ( %$objects_for_class ) ) {
+                my $obj = $objects_for_class->{$id};
+
+                # Objects marked strengthened are never purged
+                next if exists $obj->{'__strengthened'};
+
+                # classes with data sources get their objects pruned immediately if
+                # they're marked weakened, or at the usual time (serial is under the
+                # target) if not
+                # Classes without data sources get instances purged if the serial
+                # number is under the target _and_ they're marked weakened
+                if (
+                     ( $data_source_for_class{$class} and exists $obj->{'__weakened'} )
+                     or
+                     ( exists $obj->{'__get_serial'}
+                       and $obj->{'__get_serial'} <= $target_serial
+                       and ($data_source_for_class{$class} or exists $obj->{'__weakened'})
+                       and ! $obj->changed
+                     )
+                   )
+                {
+                    foreach my $index ( @{$indexes_by_class{$class}} ) {
+                        $index->weaken_reference_for_object($obj);
+                    }
+
+                    delete $obj->{'__get_serial'};
+                    Scalar::Util::weaken($objects_for_class->{$id});
+                    
+                    $all_objects_cache_size--;
+                    #$deleted_count++;
+                }
+            }
+        }
+    }
+    $is_pruning = 0;
+
+    $cache_last_prune_serial = $target_serial;
+    #my $t2 = Time::HiRes::time();
+    #printf("*** Done pruning, we deleted $deleted_count objects after $pass passes in %.4f sec\n\n\n",$t2-$t1);
+    if ($all_objects_cache_size > $cache_size_lowwater) {
+        #$DB::single=1;
+        warn "After several passes of pruning the object cache, there are still $all_objects_cache_size objects";
+    }
+}
+
+   
 # this is the underlying method for get/load/is_loaded in ::Object
 
 sub get_objects_for_class_and_rule {
@@ -409,6 +562,14 @@ sub get_objects_for_class_and_rule {
 
     #my @params = $rule->params_list;
     #print "GET: $class @params\n";
+
+    if ($cache_size_highwater
+        and
+        $all_objects_cache_size > $cache_size_highwater)
+    {
+
+        $self->prune_object_cache();
+    }
 
     # this is a no-op if the rule is already normalized
     my $normalized_rule = $rule->get_normalized_rule_equivalent;
@@ -433,17 +594,32 @@ sub get_objects_for_class_and_rule {
         $load = ($cache_is_complete ? 0 : 1);
     }
 
+    my $this_get_serial = $GET_COUNTER++;
+
     # optimize
     if (!$load and !$return_closure) {
         #print "shortcutting out\n";
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
+        #$_->{'__get_serial'} = $this_get_serial foreach @c;
+        foreach ( @c ) {
+            unless (exists $_->{'__get_serial'}) {
+                # This is a weakened reference.  Convert it back to a regular ref
+                my $class = ref $_;
+                my $id = $_->id;
+                my $ref = $UR::Context::all_objects_loaded->{$class}->{$id};
+                $UR::Context::all_objects_loaded->{$class}->{$id} = $ref;
+            }
+            $_->{'__get_serial'} = $this_get_serial;
+        }
+
         return @c if wantarray;           # array context
         return unless defined wantarray;  # null context
         Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
         return $c[0];                     # scalar context
     }
 
-    # the above process might have found all of the cached data required as a side-effect in which case we have a value for this early (ugly but DRY)
+    # the above process might have found all of the cached data required as a side-effect in which case
+    # we have a value for this early 
     # either way: ensure the cached data is known and sorted
     if ($cached) {
         @$cached = sort $id_property_sorter @$cached;
@@ -451,14 +627,24 @@ sub get_objects_for_class_and_rule {
     else {
         $cached = [ sort $id_property_sorter $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule) ];
     }
-    
+    foreach ( @$cached ) {
+        unless (exists $_->{'__get_serial'}) {
+            # This is a weakened reference.  Convert it back to a regular ref
+            my $class = ref $_;
+            my $id = $_->id;
+            my $ref = $UR::Context::all_objects_loaded->{$class}->{$id};
+            $UR::Context::all_objects_loaded->{$class}->{$id} = $ref;
+        }
+        $_->{'__get_serial'} = $this_get_serial;
+    }
+
     
     # make a loading iterator if loading must be done for this rule
     my $loading_iterator;
     if ($load) {
         
         # this returns objects from the underlying context after importing them into the current context
-        my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule,$ds);
+        my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule,$ds, $this_get_serial);
 
         my $last_loaded_id;
         # this will interleave the above with any data already present in the current context
@@ -972,7 +1158,7 @@ sub _create_secondary_loading_closures {
 
 
 sub _create_import_iterator_for_underlying_context {
-    my ($self, $rule, $dsx) = @_; 
+    my ($self, $rule, $dsx, $this_get_serial) = @_; 
 
     # make an iterator for the primary data source
     my $db_iterator = $dsx->create_iterator_closure_for_rule($rule);    
@@ -1076,6 +1262,12 @@ sub _create_import_iterator_for_underlying_context {
         push @addl_join_comparators, @$addl_join_comparators;
     }
 
+    # Insert the key into all_objects_are_loaded to indicate that when we're done loading, we'll
+    # have everything
+    if ($template_data->{'rule_matches_all'}) {
+        $class_name->all_objects_are_loaded(undef);
+    }
+
     # Make the iterator we'll return.
     my $iterator = sub {
         my $object;
@@ -1108,7 +1300,16 @@ sub _create_import_iterator_for_underlying_context {
                     # Doing a load w/o a specific ID w/o custom SQL loads the whole class.
                     # Set a flag so that certain optimizations can be made, such as 
                     # short-circuiting future loads of this class.        
-                    $class_name->all_objects_are_loaded(1);        
+                    #
+                    # If the key still exists in the all_objects_are_loaded hash, then
+                    # we can set it to true.  This is needed in the case where the user
+                    # gets an iterator for all the objects of some class, but unloads
+                    # one or more of the instances (be calling unload or through the 
+                    # cache pruner) before the iterator completes.  If so, delete_object()
+                    # will have removed the key from the hash
+                    if (exists($UR::Context::all_objects_are_loaded->{$class_name})) {
+                        $class_name->all_objects_are_loaded(1);
+                    }
                 }
                 
                 if ($recursion_desc) {
@@ -1189,6 +1390,15 @@ sub _create_import_iterator_for_underlying_context {
                     $re_iterate = 1;
                 }
                 push @imported, $imported_object;
+            }
+            
+            foreach (@imported) {
+                # The object importer will return undef for an object if no object
+                # got created for that $next_db_row, and will return a string if the object
+                # needs to be subclassed before being returned.  Don't put serial numbers on
+                # these
+                next unless (defined && ref);
+                $_->{'__get_serial'} = $this_get_serial;
             }
             $object = $imported[-1];
             
@@ -1377,6 +1587,8 @@ sub _create_object_fabricator_for_loading_template {
         }
     }
     
+    # This is a local copy of what we want to put in all_params_loaded, when the object fabricator is
+    # finalized
     my $all_params_loaded_items = {};
 
     my $object_fabricator = sub {
@@ -1598,6 +1810,7 @@ sub _create_object_fabricator_for_loading_template {
             # store the object
             # note that we do this on the base class even if we know it's going to be put into a subclass below
             $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id} = $pending_db_object;
+            $UR::Context::all_objects_cache_size++;
             #$pending_db_object->signal_change('create_object', $pending_db_object_id)
             
             # If we're using a light cache, weaken the reference.
@@ -1637,6 +1850,7 @@ sub _create_object_fabricator_for_loading_template {
                     # We put it in the object cache a few lines above.
                     # FIXME - why not wait until we know we're keeping it before putting it in there?
                     delete $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id};
+                    $UR::Context::all_objects_cache_size--;
                     return;
                     #$pending_db_object = undef;
                     #redo;
@@ -1666,7 +1880,7 @@ sub _create_object_fabricator_for_loading_template {
                             ) {
                                  # conflicting change!
 
-                                 # Since the user may be trapping expections, first clean up the object in the
+                                 # Since the user may be trapping exceptions, first clean up the object in the
                                  # cache under the un-subclassed slot, and reload the object's notion of what
                                  # is in the database
                                  delete $UR::Context::all_objects_loaded->{$already_loaded->class}->{$already_loaded->id};
@@ -1708,7 +1922,8 @@ sub _create_object_fabricator_for_loading_template {
                         }
                         
                         # This will wipe the above data from the object and the contex...
-                        $pending_db_object->unload;
+                        #$pending_db_object->unload;
+                        delete $UR::Context::all_objects_loaded->{$class}->{$pending_db_object_id};
                         
                         if ($loading_base_object) {
                             # ...now we put it back for both.
@@ -1761,8 +1976,9 @@ sub _create_object_fabricator_for_loading_template {
                         $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
                     }
                     
-                    $pending_db_object->unload;
-                    
+                    #$pending_db_object->unload;
+                    delete $UR::Context::all_objects_loaded->{$class}->{$pending_db_object_id};
+
                     if ($loading_base_object) {
                         $dsx->_record_that_loading_has_occurred($loading_info);
                     }
@@ -1918,10 +2134,11 @@ sub _create_object_fabricator_for_loading_template {
 sub UR::Context::object_fabricator_tracker::finalize {
     my $self = shift;
 
-    my $this_apl = delete $UR::Context::object_fabricators->{$self};
-    foreach my $class ( %$this_apl ) {
+    my $this_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
+
+    foreach my $class ( %$this_all_params_loaded ) {
         while(1) {
-            my($rule_id,$val) = each %{$this_apl->{$class}};
+            my($rule_id,$val) = each %{$this_all_params_loaded->{$class}};
             last unless defined $rule_id;
             next unless exists $UR::Context::all_params_loaded->{$class}->{$rule_id};  # Has unload() removed this one earlier?
             $UR::Context::all_params_loaded->{$class}->{$rule_id} += $val; 
@@ -2145,7 +2362,11 @@ sub _get_objects_for_class_and_rule_from_cache {
                     $match = $all_objects_loaded->{$meta_class_name}->{$id}
                              ||
                              $all_objects_loaded->{'UR::Object::Type'}->{$id};
-                    return $match;
+                    if ($match) {
+                        return $match;
+                    } else {
+                        return;
+                    }
                 }   
 
                 $match = $all_objects_loaded->{$class}->{$id};
@@ -2499,6 +2720,7 @@ sub clear_cache {
         #    # okay
         #}
 
+        next unless $class_obj->is_uncachable;
         next if $class_obj->is_meta_meta;
         next unless $class_obj->is_transactional;
 

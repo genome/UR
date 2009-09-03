@@ -36,7 +36,7 @@ $load_count = 0;
 $query_count = 0;
 @o = URT::Child->get();
 is(scalar(@o),   1, 'URT::Child->get returned 1 child object');
-is($load_count,  0, 'currectly loaded 0 objects - gotten from the cache');
+is($load_count,  0, 'correctly loaded 0 objects - gotten from the cache');
 is($query_count, 0, 'get() correctly triggered 0 queries');
 
 $load_count = 0;

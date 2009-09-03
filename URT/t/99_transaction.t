@@ -66,6 +66,7 @@ $DB::single=1;
             my $copy = UR::Util::deep_copy($object);
             delete $copy->{_change_count};
             delete $copy->{_request_count};
+            delete $copy->{__get_serial};
             if ($class_name->isa('UR::Object::Type')) {
                 delete $copy->{get_composite_id_decomposer};
                 delete $copy->{_ordered_inherited_class_names};

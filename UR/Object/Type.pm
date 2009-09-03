@@ -380,6 +380,32 @@ sub is_meta_meta {
     return;
 }
 
+# Things that can't safely be removed from the object cache.
+our %uncachable_types = ( ( map { $_ => 0 } keys %UR::Object::Type::meta_classes),   # meta-classes are locked in the cache...
+                          'UR::Object' => 1,        # .. except for UR::Object
+                          'UR::Object::Ghost' => 0,
+                          'UR::DataSource' => 0,
+                          'UR::Context' => 0,
+                          'UR::Object::Index' => 0,
+                        );
+sub is_uncachable {
+    my $self = shift;
+
+    my $class_name = $self->class_name;
+    unless (exists $uncachable_types{$class_name}) {
+        foreach my $type ( keys %uncachable_types ) {
+            if ($class_name->isa($type)) {
+                $uncachable_types{$class_name} = $uncachable_types{$type};
+                last;
+            }
+        }
+        unless (exists $uncachable_types{$class_name}) {
+            die "Couldn't determine is_uncachable() for $class_name";
+        }
+    }
+    return $uncachable_types{$class_name};
+}
+
 # Support the autogeneration of unique IDs for objects which require them.
 # We use the host, time, and pid.
 our $autogenerate_id_base = join(" ",hostname(), $$, time);

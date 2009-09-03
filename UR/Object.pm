@@ -42,6 +42,9 @@ sub get_object_set {
     return $set_class->get($rule->id);    
 }
 
+# UR::Object::Iterator isn't a UR-based class, just a regular Perl package.
+# So, load it by hand
+use UR::Object::Iterator;
 sub create_iterator {
     my $class = shift;
     my %params = @_;
@@ -101,17 +104,23 @@ our ($all_objects_loaded, $all_change_subscriptions, $all_objects_are_loaded, $a
 
 sub DESTROY {
     my $obj = shift;
-    if ($UR::Context::light_cache) {
+
+    # $destroy_should_clean_up_all_objects_loaded will be true if either light_cache is on, or
+    # the cache_size_highwater mark is a valid value
+    if ($UR::Context::destroy_should_clean_up_all_objects_loaded) {
         my $class = ref($obj);
-        if ($class->isa("UR::Singleton") or $obj->get_class_object->is_meta or $obj->get_class_object->is_meta_meta or $obj->changed) {
-            my $obj = delete $UR::Object::all_objects_loaded->{$class}{$obj->{id}};
-            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$obj->{id}!" unless $obj eq $obj;
+        #if ($class->isa("UR::Singleton") or $obj->get_class_object->is_meta or $obj->get_class_object->is_meta_meta or $obj->changed) {
+        if ($obj->get_class_object->is_meta_meta or $obj->changed) {
+            my $obj_from_cache = delete $UR::Object::all_objects_loaded->{$class}{$obj->{id}};
+            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$obj->{id}!" unless $obj eq $obj_from_cache;
             $UR::Object::all_objects_loaded->{$class}{$obj->{id}} = $obj;
-            #print "KEEPING $obj.  Found $obj .\n";
+            print "KEEPING $obj.  Found $obj .\n";
             return;
         }
         else {
-            delete $UR::Object::all_objects_loaded->{$class}{$obj->{id}};
+            #delete $UR::Object::all_objects_loaded->{$class}{$obj->{id}};
+            $obj->unload();
+
             #$obj = delete $UR::Object::all_objects_loaded->{$class}{$obj->{id}};
             #print "TOSSING $obj.  Found $obj .\n";
             return $obj->SUPER::DESTROY();
@@ -128,6 +137,27 @@ END {
     # setting the typeglob to undef does not work. -sms
     delete $UR::Object::{DESTROY};
 };
+
+
+# Mark this object as unloadable by the object cache pruner.
+#
+# If the class has a data source, then a weakened object is dropped
+# at the first opportunity, reguardless of its __get_serial number.
+# For classes without a data source, then it will be dropped according to
+# the normal rules w/r/t the __get_serial (classes without data sources
+# normally are never dropped by the pruner)
+sub weaken {
+    my $self = $_[0];
+    delete $self->{'__strengthened'};
+    $self->{'__weakened'} = 1;
+}
+
+# Indicate this object should never be unloaded by the object cache pruner
+sub strengthen {
+    my $self = $_[0];
+    delete $self->{'__weakened'};
+    $self->{'__strengthened'} = 1;
+}
 
 
 # BASE ::Object API
@@ -469,8 +499,18 @@ sub delete_object {
     my $class = $self->class;
     my $id = $self->id;
 
+    if ($self->{'__get_serial'}) {
+        # Keep a correct accounting of objects.  This one is getting deleted by a method
+        # other than UR::Context::prune_object_cache
+        $UR::Context::all_objects_cache_size--;
+    }
+
     # Remove the object from the main hash.
     # Setting undef instead of doing delete shortens later searches.
+    #foreach my $load_class ( $class, keys(%{$self->{'load'}->{'param_key'}}) ) {
+    #    delete $all_objects_loaded->{$load_class}->{$id};
+    #    delete $all_objects_are_loaded->{$load_class};
+    #}
     delete $all_objects_loaded->{$class}->{$id};
     delete $all_objects_are_loaded->{$class};
 
@@ -512,7 +552,7 @@ sub define {
             return $sub_class_name->define(@_);
         }
     }
-    
+
     my $self = $class->create_object(@_);
     return unless $self;
     $self->{db_committed} = { %$self };
@@ -617,6 +657,7 @@ sub get {
             and my $obj = $all_objects_loaded->{$_[0]}->{$_[1]}
             )
         {
+            $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
             return $obj;
         }
     };
