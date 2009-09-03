@@ -1534,6 +1534,9 @@ sub _create_object_fabricator_for_loading_template {
                 # we did this above, but only checked the base class
                 my $subclass_ghost_class = $subclass_name->ghost_class;
                 if ($UR::Object::all_objects_loaded->{$subclass_ghost_class}{$pending_db_object_id}) {
+                    # We put it in the object cache a few lines above.
+                    # FIXME - why not wait until we know we're keeping it before putting it in there?
+                    delete $UR::Object::all_objects_loaded->{$class}{$pending_db_object_id};
                     return;
                     #$pending_db_object = undef;
                     #redo;
