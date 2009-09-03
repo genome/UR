@@ -1,5 +1,6 @@
 use above 'UR';
 
+use Data::Dumper;
 use Test::More;
 plan tests => 11;
 
@@ -51,4 +52,18 @@ is($params[2]->name, 'interesting', "param 3's name is interesting");
 is($params[0]->value, '123', "param 1's value is correct");
 is($params[1]->value, 'abc', "param 2's value is correct");
 is($params[2]->value, 'def', "param 3's value is correct");
+
+# Try to get the object again w/ id
+my $o2 = URT::Thing->get(2);
+ok($o2, 'Got thingy w/ id 2');
+is_deeply([ $o->interesting_param_values ], [ $o2->interesting_param_values ], 'Ineresting values match those from orginal object');
+
+# Try to get the object again w/ id and ineresting values
+# FIXME does not work
+#my $o3 = URT::Thing->get(
+#    thing_id => 2,
+#    interesting_param_values => ['abc','def'],
+#);
+#ok($o3, 'Got thingy w/ id 2 and interesting_param_values => [qw/abc def/]');
+#is_deeply([ $o->interesting_param_values ], [ $o3->interesting_param_values ], 'Ineresting values match those from original object');
 
