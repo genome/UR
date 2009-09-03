@@ -2073,11 +2073,12 @@ sub _generate_template_data_for_loading {
         my $delegate_class_meta = $delegated_property->class_meta;
         my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
         my $final_accessor = $delegated_property->to;
-        my $final_accessor_meta = $via_accessor_meta->data_type->get_class_object->property_meta_for_name($final_accessor);
-        while($final_accessor_meta->is_delegated) {
-            $final_accessor_meta = $final_accessor_meta->to_property_meta();
+        if (my $final_accessor_meta = $via_accessor_meta->data_type->get_class_object->property_meta_for_name($final_accessor)) {
+            while($final_accessor_meta && $final_accessor_meta->via) {
+                $final_accessor_meta = $final_accessor_meta->to_property_meta();
+            }
+            $final_accessor = $final_accessor_meta->property_name;
         }
-        $final_accessor = $final_accessor_meta->property_name;
 
         #print "$property_name needs join "
         #    . " via $relationship_name "
@@ -2127,7 +2128,10 @@ sub _generate_template_data_for_loading {
                     @source_table_and_column_names =
                         map {
                             if ($_->[0] =~ /^(.*)\s+(\w+)\s*$/s) {
+                                # This "table_name" was actually a bit of SQL with an inline view and an alias
+                                # FIXME - this won't work if they used the optional "as" keyword
                                 $_->[0] = $1;
+                                $_->[2] = $2;
                             }
                             $_;
                         }
@@ -2238,12 +2242,14 @@ sub _generate_template_data_for_loading {
                                 {
                                     (
                                         map {
-                                            $foreign_property_names[$_] => { 
-                                                link_table_name     => $last_alias_for_this_chain || $source_table_and_column_names[$_][0],
+                                            $foreign_column_names[$_] => { 
+                                                link_table_name     => $last_alias_for_this_chain                # join alias
+                                                                       || $source_table_and_column_names[$_][2]  # SQL inline view alias
+                                                                       || $source_table_and_column_names[$_][0], # table_name
                                                 link_column_name    => $source_table_and_column_names[$_][1] 
                                             }
                                         }
-                                        (0..$#foreign_property_names)
+                                        (0..$#foreign_column_names)
                                     ),
                                     @extra_filters,
                                 };
@@ -2288,7 +2294,7 @@ sub _generate_template_data_for_loading {
                 }
                 
                 if ($joins_for_object == 1) {
-                    $last_class_object_excluding_inherited_joins = $last_class_object;
+                    $last_class_object_excluding_inherited_joins = $last_class_object if ($last_class_object->property_meta_for_name($final_accessor));
                     # on the first iteration, we figure out the remaining inherited iterations
                     # TODO: get this into the join logic itself in the property meta
                     my @parents = grep { $_->table_name } $foreign_class_object->ordered_inherited_class_objects;
