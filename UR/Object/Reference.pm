@@ -86,6 +86,18 @@ sub delete
     return $self->SUPER::delete();
 }
 
+# Experimental unloading of classes code
+#sub unload 
+#{ 
+#    my $self = shift;
+#    my @property_links = $self->get_property_links;
+#    for my $link (@property_links) {
+#        $link->unload;
+#    }
+#    return $self->SUPER::unload();
+#}
+
+
 sub property_link_names
 {
     map { $_->property_name } shift->get_property_links(@_);

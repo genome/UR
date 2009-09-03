@@ -2201,5 +2201,78 @@ sub ungenerate {
     $self->{'generated'} = 0;
 }
 
+
+
+# Experimental unloading of classes code
+#sub unload {
+#    my $self = shift;
+#    my $class_name = $self->class_name;
+#    return if ($class_name eq 'UR::Object::Type');  # A big no-no
+#
+#    # Unload instances of this class
+#    if (substr($class_name, -6) ne '::Type') {
+#        my @objs = $class_name->get();
+#        my $ds = UR::Context->resolve_data_sources_for_class_meta_and_rule($self);
+#        # Changed things with no data source can just be thrown away, right?
+#        if ($ds) {
+#            foreach (@objs) {
+#                if ($_->changed) {
+#                    die "Can't unload class object for $class_name, object instance with id ".$_->id." is changed";
+#                }
+#            }
+#        }
+#        $_->unload foreach @objs;
+#    }
+#
+#    # unload the associated ghost class.  Note that ghosts don't have ghosts of their own
+#    if (substr($class_name, -7,) ne '::Ghost') {
+#        my $ghost_class = $class_name . '::Ghost';
+#        my $ghost_class_meta = UR::Object::Type->is_loaded(class_name => $ghost_class);
+#        if ($ghost_class_meta) {
+#            eval { $ghost_class_meta->unload() };
+#            if ($@) {
+#                die "Can't unload class object for $class_name: unloading ghost class $ghost_class had errors:\n@_\n";
+#            }
+#        }
+#    }
+#
+#    # Associated meta-class?
+#    my $meta_class_object = UR::Object::Type->get(class_name => $self->meta_class_name);
+#    eval {$meta_class_object->unload(); };
+#    if ($@) {
+#        die "Can't unload class object for $class_name: unloading meta class object had errors:\n@_\n";
+#    }
+#
+#
+#    # try unloading any child classes
+#    foreach my $inh ( UR::Object::Inheritance->get(parent_class_name => $class_name) ) {
+#        my $child_class = $inh->class_name;
+#        my $child_class_meta = UR::Object::Type->get(class_name => $child_class);
+#        eval { $child_class_meta->unload() };
+#        if ($@) {
+#            die "Can't unload class object for $class_name: unloading child class $child_class had errors:\n@_\n";
+#        }
+#    }
+#
+#    # Infrastructurey, hang-off data.  Things we can get via their class_name
+#    foreach my $meta_type ( qw( UR::Object::Inheritance UR::Object::Property
+#                                UR::Object::Reference 
+#                                UR::Object::Property::Unique UR::Object::Property::ID
+#                                UR::Object::Property::Calculated::From ) )
+#    {
+#        my @things = $meta_type->get(class_name => $class_name);
+#        $_->unload() foreach @things;
+#    }
+#    # And once more for Indexes
+#    {
+#        my @things = UR::Object::Index->get(indexed_class_name => $class_name);
+#         $_->unload() foreach @things;
+#    }
+#
+#    $self->ungenerate();
+#
+#    $self->SUPER::unload();
+#}
+    
 1;
 
