@@ -386,6 +386,7 @@ sub _normalize_class_description {
         [ generate              => qw//],
         [ generated             => qw//],
         [ subclass_description_preprocessor => qw//],        
+        [ id_sequence_generator_name => qw//],
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                
         my @all_fields = ($primary_field_name, @alternate_field_names);

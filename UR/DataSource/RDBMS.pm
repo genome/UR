@@ -12,6 +12,11 @@ UR::Object::Type->define(
     english_name => 'ur datasource rdbms',
     is_abstract => 1,
     properties => [
+        server       => { is => 'String', doc => 'the "server" part of the DBI connect string' },
+        login        => { is => 'String', doc => 'user name to connect as', is_optional => 1 },
+        auth         => { is => 'String', doc => 'authentication for the given user', is_optional => 1 },
+        owner        => { is => 'String', doc => 'Schema/owner name to connect to', is_optional => 1  },
+
         _all_dbh_hashref                 => { type => 'HASH',       len => undef, is_transient => 1 },
         _default_dbh                     => { type => 'DBI::db',    len => undef, is_transient => 1 },
         _last_savepoint                  => { type => 'String',     len => undef, is_transient => 1 },
@@ -482,7 +487,10 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
     }
 
     # FIXME Each class should have a way to override what sequence generator to use
-    my $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $key);
+    my $sequence;
+    unless ($sequence = $class->id_sequence_generator_name) {
+        $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $key);
+    }
 
     my $new_id = $self->_get_next_value_from_sequence($sequence);
     return $new_id;

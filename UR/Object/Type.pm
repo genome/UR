@@ -654,6 +654,7 @@ sub generate_support_class_for_extension {
         delete $class_params{meta_class_name};
         delete $class_params{subclassify_by};
         delete $class_params{sub_classification_meta_class_name};
+        delete $class_params{id_sequence_generator_name};
         delete $class_params{id};
         delete $class_params{is};
 
@@ -1117,6 +1118,24 @@ sub all_property_type_names {
         }
     }
     return @$all_property_type_names;
+}
+
+sub table_for_property
+{
+    my $self = _object(shift);
+    die 'must pass a property_name to table_for_property' unless @_;
+    my $property_name = shift;
+    for my $class_object ( $self, $self->ancestry_class_metas )
+    {
+        my $property_object = UR::Object::Property->get( class_name => $class_object->class_name, property_name => $property_name );
+        if ( $property_object )
+        {
+            return unless $property_object->column_name;
+            return $class_object->table_name;
+        }
+    }
+
+    return;
 }
 
 sub column_for_property

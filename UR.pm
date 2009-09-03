@@ -226,6 +226,7 @@ UR::Object::Type->define(
         # These are part of refactoring away ::TableRow
         table_name                       => { type => 'Text', len => 64, is_optional => 1, source => 'data dictionary' },        
         query_hint                       => { type => 'Text', len => 1024 , is_optional => 1},        
+        id_sequence_generator_name       => { type => 'Text', len => 64, is_optional => 1, source => 'data dictionary', doc => 'override the default choice for sequence generator name' },
 
         # Different ways of handling subclassing at object load time
         subclassify_by                      => { type => 'Text', len => 256, is_optional => 1},
@@ -239,7 +240,6 @@ UR::Object::Type->define(
         # UR::Namespaces are singletons referenced through their name
         namespace_meta                  => { type => 'UR::Namespace', id_by => 'namespace' },
         is                              => { type => 'ARRAY', is_mutable => 0, doc => 'List of the parent class names' },  
-        #id_by                           => { type => 'ARRAY', is_mutable => 0, doc => 'List of the id property names' },
         
 
         # linking to the direct parents, and the complete ancestry
