@@ -639,7 +639,7 @@ sub _extend_sql_for_column_operator_and_value {
 
     $op ||= '';
     if ($op eq '[]' and not ref($val) eq 'ARRAY') {
-        $DB::single = 1;
+        #$DB::single = 1;
         $val = [];
     }    
 
@@ -1139,7 +1139,7 @@ sub _sync_database {
             $add = sub {
                 my ($cmd) = @_;
                 if ($adding{$cmd}) {
-                    $DB::single = 1;
+                    #$DB::single = 1;
                     Carp::confess("Circular foreign key!") unless $main::skip_croak;
                 }
                 $adding{$cmd} = 1;
@@ -1230,7 +1230,7 @@ sub _sync_database {
                                         }
                         }
                         unless ($column) {
-                            $DB::single = 1;
+                            #$DB::single = 1;
                             die "Failed to find a column object column $_ for class $class_name";
                         }
                     }
@@ -1909,7 +1909,7 @@ sub _generate_class_data_for_loading {
 
 sub _generate_template_data_for_loading {
     my ($self, $rule_template) = @_;
-$DB::single = 1;
+#$DB::single = 1;
     
     # class-based values
 
@@ -2365,7 +2365,7 @@ $DB::single = 1;
                         # Note that we increment the object numbers.
                         # Note: we add grouping columns individually instead of in chunks
                         if ($group_by) {
-                            $DB::single = 1;
+                            #$DB::single = 1;
                         }
                         else {
                             push @all_table_properties,
@@ -2648,7 +2648,7 @@ $DB::single = 1;
     if ($group_by) {
         # when grouping, we're making set objects instead of regular objects
         # this means that we re-constitute the select clause and add a group_by clause
-        $DB::single = 1;
+        #$DB::single = 1;
         $group_by_clause = 'group by ' . $select_clause;
         
         $order_by_clause = 'order by ' . $select_clause;
