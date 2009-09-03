@@ -473,7 +473,6 @@ sub resolve_for_class_and_params {
                 unless ($property_meta) {
                     die "Failed to find meta for $key on " . $subject_class_meta->class_name . "?!";
                 }
-                $DB::single = 1;
                 my @joins = $property_meta->get_property_name_pairs_for_join();
                 for my $join (@joins) {
                     my ($my_method, $their_method) = @$join;
@@ -676,7 +675,6 @@ sub create_from_filters {
             }
         }
         else {
-            $DB::single = 1;
             $key = $fdata->[0] . ($fdata->[1] and $fdata->[1] ne '='? ' ' . $fdata->[1] : '');
             $value = $fdata->[2];
             $rule_filter = [ @$fdata ];
