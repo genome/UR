@@ -242,6 +242,8 @@ UR::Object::Type->define(
         is_dimension                    => { type => 'Boolean', is_optional => 1},
         is_specified_in_module_header   => { type => 'Boolean', default_value => 0 },
         position_in_module_header       => { type => 'Integer', is_optional => 1 },
+        singular_name                   => { type => 'Text' },
+        plural_name                     => { type => 'Text' },
     ],
     unique_constraints => [
         { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },

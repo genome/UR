@@ -2,6 +2,7 @@ package UR::Object::Property;
 
 use warnings;
 use strict;
+use Lingua::EN::Inflect;
 
 our $VERSION = '2.0';
 
@@ -94,9 +95,19 @@ sub create_object {
         } 
     }
     
-    return $class->SUPER::create_object(%params);
-}
+    my ($singular_name,$plural_name);
+    if ($params{is_many}) {
+        require Lingua::EN::Inflect;
+        $plural_name = $params{property_name};
+        $singular_name = Lingua::EN::Inflect::PL_V($plural_name);
+    }
+    else {
+        $singular_name = $params{property_name};
+        $plural_name = Lingua::EN::Inflect::PL($singular_name);
+    }
 
+    return $class->SUPER::create_object(plural_name => $plural_name, singular_name => $singular_name, %params);
+}
 
 sub get_property_name_pairs_for_join {
     my ($self) = @_;
