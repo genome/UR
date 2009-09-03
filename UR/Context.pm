@@ -427,8 +427,8 @@ sub prune_object_cache {
         push @{$indexes_by_class{$class}}, $UR::Context::all_objects_loaded->{'UR::Object::Index'}->{$idx_id};
     }
 
-    #my $deleted_count;
-    #my $pass = 0;
+    my $deleted_count;
+    my $pass = 0;
 
     # Make a guess about that the target serial number should be
     # This one goes 10% between the last time we pruned, and the last get serial
@@ -438,7 +438,7 @@ sub prune_object_cache {
     my $target_serial = $cache_last_prune_serial;
     CACHE_IS_TOO_BIG:
     while ($all_objects_cache_size > $cache_size_lowwater) {
-        #$pass++;
+        $pass++;
 
         $target_serial += $target_serial_increment;
         last if ($target_serial > $GET_COUNTER);
@@ -479,7 +479,7 @@ sub prune_object_cache {
                     Scalar::Util::weaken($objects_for_class->{$id});
                     
                     $all_objects_cache_size--;
-                    #$deleted_count++;
+                    $deleted_count++;
                 }
             }
         }
