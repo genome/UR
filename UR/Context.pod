@@ -183,9 +183,9 @@ not have a data source, then it will return C<undef>.
 
 =item resolve_data_sources_for_class_meta_and_rule
 
-  my @ds = $context->resolve_data_sources_for_class_meta_and_rule($class_name, $boolexpr);
+  my @ds = $context->resolve_data_sources_for_class_meta_and_rule($class_obj, $boolexpr);
 
-For the given class name and boolean expression (rule), return the list of
+For the given class metaobject and boolean expression (rule), return the list of
 data sources that will need to be queried in order to return the objects
 matching the rule.  In most cases, only one data source will be returned.
 
