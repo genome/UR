@@ -126,7 +126,7 @@ sub _get_class_data_for_loading {
         my $query_config; 
         my $post_process_results_callback;
         if (@lob_column_names) {
-            $query_config = $self->_prepare_for_lob if ($self->can('_prepare_for_lob'));
+            $query_config = $self->_prepare_for_lob;
             if ($query_config) {
                 my $dbh = $self->get_default_dbh;
                 my $results_row_arrayref;
@@ -709,5 +709,7 @@ sub _get_template_data_for_loading {
     
     return $template_data;
 }
+
+sub _prepare_for_lob { };
 1;
 #$Header
