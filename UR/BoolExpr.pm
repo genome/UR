@@ -579,7 +579,7 @@ sub legacy_params_hash {
 }
 
 sub create_from_filter_string {
-    my ($self, $subject_class_name, $filter_string) = @_;
+    my ($self, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
     my ($property, $op, $value);
     no warnings;
@@ -595,9 +595,13 @@ sub create_from_filter_string {
         [$property, $op, $value]
     } split(/,/, $filter_string);
 
+    my @hints = split(",",$usage_hints_string);
+    my @order = split(",",$order_string);
+    my @page  = split(",",$page_string);
+
     use warnings;
     
-    return __PACKAGE__->create_from_filters($subject_class_name, @filters);
+    return __PACKAGE__->create_from_filters($subject_class_name, \@filters, \@hints, \@order, \@page);
 }
 
 sub create_from_command_line_format_filters {
@@ -609,14 +613,17 @@ sub create_from_filters {
     my $class = shift;
     
     my $subject_class_name = shift;
-    my @filter = @_;
+    my $filters = shift;
+    my $usage_hints = shift;
+    my $order = shift;
+    my $page = shift;
 
     my @rule_filters;
     
     my @keys;
     my @values;
 
-    for my $fdata (@filter) {
+    for my $fdata (@$filters) {
         my $rule_filter;
     
         # rule component
@@ -701,11 +708,29 @@ sub create_from_filters {
         push @values, $value;
     } 
 
-    return UR::BoolExpr->create_from_subject_class_name_keys_and_values(
-        subject_class_name => $subject_class_name,
-        keys => \@keys,
-        values=> \@values
-    );
+    $DB::single = $DB::stopper;
+    if ($usage_hints or $order or $page) {
+        # todo: incorporate hints in a smarter way
+        my %p;
+        for my $key (@keys) {
+            $p{$key} = shift @values;
+        }
+        return $class->resolve_for_class_and_params(
+            $subject_class_name, 
+            %p, 
+            ($usage_hints   ? (-hints   => $usage_hints) : () ),
+            ($order         ? (-order   => $order) : () ),
+            ($page          ? (-page    => $page) : () ),
+        ); 
+    }
+    else {
+        return UR::BoolExpr->create_from_subject_class_name_keys_and_values(
+            subject_class_name => $subject_class_name,
+            keys => \@keys,
+            values=> \@values,
+        );    
+    }
+    
 }
 
 sub create_from_subject_class_name_keys_and_values {

@@ -95,6 +95,12 @@ sub create {
     return $self;
 }
 
+sub _hint_string 
+{
+    my $self = shift;
+    return $self->show;
+}
+
 sub _do
 {
     my ($self, $iterator) = @_;    
@@ -442,4 +448,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 38672 2008-09-17 15:15:06Z adukes $
+#$Id: List.pm 39821 2008-10-15 19:59:13Z ssmith $

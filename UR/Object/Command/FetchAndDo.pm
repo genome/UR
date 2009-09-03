@@ -3,7 +3,8 @@ package UR::Object::Command::FetchAndDo;
 use strict;
 use warnings;
 
-use above 'UR';
+use UR;
+use Data::Dumper;
 
 class UR::Object::Command::FetchAndDo {
     is => 'Command',
@@ -18,10 +19,14 @@ class UR::Object::Command::FetchAndDo {
             is_optional => 1,
             doc => 'Filter results based on the parameters.  See below for how to.'
         },
+        _fields => {
+            is_many => 1,
+            is_optional => 1,
+            doc => 'Methods which the caller intends to use on the fetched objects.  May lead to pre-fetching the data.'
+        },
     ], 
 };
 
-use Data::Dumper;
 
 ########################################################################
 
@@ -153,22 +158,29 @@ sub _subject_class_filterable_properties {
     } $self->subject_class->get_all_property_objects;
 }
 
+sub _hint_string {
+    return;
+}
+
 sub _fetch
 {
     my $self = shift;
-
     my ($bool_expr, %extra) = UR::BoolExpr->create_from_filter_string(
         $self->subject_class_name, 
         $self->filter, 
+        $self->_hint_string
     );
 
     $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
         and return if %extra;
     
-    return $self->subject_class_name->create_iterator
-    (
-        where => $bool_expr,
-    ); # error happens in object
+    if (my $i = $self->subject_class_name->create_iterator(where => $bool_expr)) {
+        return $i;
+    }
+    else {
+        $self->error_message($self->subject_class_name->error_message);
+        return;
+    }
 }
 
 sub _do
@@ -276,4 +288,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 =cut
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/FetchAndDo.pm $
-#$Id: FetchAndDo.pm 37193 2008-08-02 19:52:35Z ssmith $#
+#$Id: FetchAndDo.pm 39821 2008-10-15 19:59:13Z ssmith $#

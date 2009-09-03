@@ -37,7 +37,6 @@ UR::Object::Type->define(
         matches_all                     => { is => 'Boolean' },
         key_op_hash                     => { is => 'HASH' },
         num_values                      => { is => 'Integer' },
-        recursion_desc                  => { is => 'ARRAY' },
         id_position                     => { is => 'Integer' },
         normalized_id                   => { is => 'Text' },        
         normalized_positions_arrayref   => { is => 'ARRAY' },        
@@ -45,6 +44,12 @@ UR::Object::Type->define(
         _property_meta_hash             => { is => 'HASH' },
         _property_names_arrayref        => { is => 'ARRAY' },
     ],
+    has_optional => [
+        hints                           => { is => 'ARRAY' },
+        recursion_desc                  => { is => 'ARRAY' },
+        is_paged                        => { is => "Boolean" },
+        order_by                        => { is => "Text" },
+    ]
 );
 
 our $VERSION = '0.1';
@@ -301,6 +306,9 @@ sub get {
         Carp::confess($id);
     }
 
+    my @constant_values;
+    @constant_values = UR::BoolExpr::Template->value_id_to_values($constant_value_id) if defined $constant_value_id;;
+
     my @extra_params;
     if ($logic_type eq "And") {
         # TODO: move into subclass
@@ -511,6 +519,7 @@ sub get {
         my %key_positions;
         my $pos = 0;
         for my $key (@keys) {
+            next if substr($key,0,1) eq '-';
             $key_positions{$key} ||= [];
             push @{ $key_positions{$key} }, $pos++;    
         }
@@ -522,15 +531,28 @@ sub get {
         my $normalized_positions_arrayref = [];
         my $constant_value_normalized_positions = [];
         my $recursion_desc = undef;
+        my $hints = undef;
+        my $order = undef;
+        my $page = undef;
         for my $key (@keys_sorted) {
             my $pos_list = $key_positions{$key};
             my $pos = shift @$pos_list;
             if (substr($key,0,1) eq '-') {
                 push @$constant_value_normalized_positions, $pos;
                 if ($key eq '-recurse') {
-                    my @values = UR::BoolExpr::Template->value_id_to_values($constant_value_id);
-                    $DB::single = 1;
-                    $recursion_desc = $values[0];
+                    $recursion_desc = shift @constant_values;
+                }
+                elsif ($key eq '-hints') {
+                    $hints = shift @constant_values; 
+                }
+                elsif ($key eq '-order') {
+                    $order = shift @constant_values;
+                }
+                elsif ($key eq '-page') {
+                    $page = shift @constant_values;
+                }
+                else {
+                    die "Unknown special param $key.  Expected -recurse or -hint.";
                 }
             }
             else {
@@ -540,9 +562,9 @@ sub get {
 
         $id_only = 0 if ($matches_all);
     
-        if (@$constant_value_normalized_positions > 1) {
-            Carp::confess("Not Implemented: multiple '-' options.  Fix me!");
-        }
+        #if (@$constant_value_normalized_positions > 1) {
+        #    Carp::confess("Not Implemented: multiple '-' options.  Fix me!");
+        #}
         
         # Determine the rule template's ID.
         # The normalizer will store this.  Below, we'll
@@ -562,6 +584,9 @@ sub get {
             _property_meta_hash             => $property_meta_hash,
     
             recursion_desc                  => $recursion_desc,
+            hints                           => $hints,
+            order                           => $order,
+            page                            => $page,
     
             is_normalized                   => ($id eq $normalized_id ? 1 : 0),
             normalized_id                   => $normalized_id,        
@@ -582,7 +607,6 @@ sub get {
         @extra_params
     }, $sub_class_name;
     $UR::Object::rule_templates{$id} = $self;  
-    #print Data::Dumper::Dumper($self);
     return $self;
 }
 
