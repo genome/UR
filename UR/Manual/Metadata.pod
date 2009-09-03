@@ -1,8 +1,8 @@
 =pod
 
-=head1 UR::Manual::Metadata
+=head1 NAME
 
-Overview of the metadata classes in UR
+UR::Manual::Metadata - Overview of the metadata classes in UR
 
 =head1 SYNOPSIS
 

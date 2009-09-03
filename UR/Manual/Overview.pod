@@ -1,8 +1,10 @@
 =pod
 
-=head1 UR::Manual::Overview - UR from Ten Thousand Feet
+=head1 NAME
 
-Perspective on Objects
+UR::Manual::Overview - UR from Ten Thousand Feet
+
+=head1 Perspective on Objects
 
 Standard software languages provide a facility for making objects. Those
 objects have certain characteristics which are different with UR objects.

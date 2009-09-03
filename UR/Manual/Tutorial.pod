@@ -1,9 +1,8 @@
 =pod
 
-=head1 UR::Manual::Tutorial
+=head1 NAME
 
-A step-by-step guide to building a set of classes for a simple database
-schema.
+UR::Manual::Tutorial - Step-by-step guide to building a set of classes for a simple database schema
 
 =head1 Overview
 

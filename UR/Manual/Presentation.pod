@@ -1,8 +1,8 @@
 =pod
 
-=head1 UR::Manual::Presentation
+=head1 NAME
 
-Slides for a presenation on UR
+UR::Manual::Presentation - Slides for a presenation on UR
 
 =head1 Overview
 
