@@ -230,10 +230,21 @@ sub create_iterator_closure_for_rule {
 }
 
 
-sub _generate_template_data_for_loading {
+sub _generate_loading_templates_arrayref {
     my $self = shift;
     my $delegate_class = $self->_file_specific_parent_ds_name();
-    return $delegate_class->_generate_template_data_for_loading(@_);
+
+    unless ($delegate_class->can('_generate_loading_templates_arrayref')) {
+        if (UR::Object::Type->get($delegate_class)) {
+            $self->error_message("$delegate_class exists but _generate_loading_templates_arrayref doesn't!?");
+            return;
+        }
+        # the delegate class hasn't been setup yet.  probably because of a cross-datasource join
+        # before the secondary class' datasource was used directly in a get()
+        $self->_define_file_specific_data_source_parent($delegate_class, $self->_delegate_data_source_class);
+    }
+
+    return $delegate_class->_generate_loading_templates_arrayref(@_);
 }
 
 
