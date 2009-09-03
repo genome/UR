@@ -233,6 +233,7 @@ sub mk_indirect_rw_accessor {
                 # which are not id properties.
                 
                 my $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
+                $adder = "add_" . $via_property_meta->singular_name;
                 unless ($via_property_meta) {
                     $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
                     die "no meta for $via in $class_name!?" unless $via_property_meta;
@@ -240,7 +241,6 @@ sub mk_indirect_rw_accessor {
                 my $r_class_name = $via_property_meta->data_type;
                 my @r_id_property_names = $r_class_name->get_class_object->id_property_names;
                 if (grep { $_ eq $to } @r_id_property_names) {
-                    $adder = "add_" . $via_property_meta->singular_name;
                     $update_strategy = 'delete-create'
                 }
                 else {
@@ -248,10 +248,12 @@ sub mk_indirect_rw_accessor {
                 }
             }
             if ($update_strategy eq 'change') {
-                unless (@bridges) {
-                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: property is via $via which is not set!");
+                if (@bridges == 0) {
+                    #print "adding via $adder @where :::> $to @_\n";
+                    @bridges = $self->$adder(@where, $to => $_[0]);
+                    #WAS > Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: property is via $via which is not set!");
                 }
-                if (@bridges > 1) {
+                elsif (@bridges > 1) {
                     Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
                 }
                 #print "updating $bridges[0] $to to @_\n";
