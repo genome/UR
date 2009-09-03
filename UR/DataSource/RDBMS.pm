@@ -2072,7 +2072,7 @@ sub _generate_template_data_for_loading {
         
         my $final_table_name_with_alias = $first_table_name; 
         my $last_class_object_excluding_inherited_joins;
-        
+
         my $final_join = $joins[-1];
         while (my $object_join = shift @joins) {
             #$DB::single = 1;
@@ -2108,7 +2108,7 @@ sub _generate_template_data_for_loading {
 
                 my @source_table_and_column_names = 
                     map {
-                        if ($_->[0] =~ /^(.*)\s+(\w+)\s*$/) {
+                        if ($_->[0] =~ /^(.*)\s+(\w+)\s*$/s) {
                             $_->[0] = $1;
                         }
                         $_;
@@ -2122,7 +2122,7 @@ sub _generate_template_data_for_loading {
                             Carp::confess("No column $_ for class $source_class_object->{class_name}\n");
                         }
                         my $table_name = $p->class_name->get_class_object->table_name;
-                        if ($table_name =~ /^(.*)\s+(\w+)\s*$/) {
+                        if ($table_name =~ /^(.*)\s+(\w+)\s*$/s) {
                             $table_name = $2;
                         }
                         [$table_name, $p->column_name];
@@ -2132,7 +2132,7 @@ sub _generate_template_data_for_loading {
                 #print "source column names are @source_table_and_column_names for $property_name\n";            
     
                 my $foreign_table_name = $foreign_class_object->table_name; # TODO: switch to "base 'from' expr"
-                if ($foreign_table_name =~ /^(.*)\s+(\w+)\s*$/) {
+                if ($foreign_table_name =~ /^(.*)\s+(\w+)\s*$/s) {
                     $foreign_table_name = $1;
                 }
     
@@ -2330,7 +2330,7 @@ sub _generate_template_data_for_loading {
     for my $class_property (@all_table_properties) {
         my ($sql_class,$sql_property,$sql_table_name) = @$class_property;
         $sql_table_name ||= $sql_class->table_name;
-        my ($select_table_name) = ($sql_table_name =~ /(\S+)\s*$/);
+        my ($select_table_name) = ($sql_table_name =~ /(\S+)\s*$/s);
         $select_clause .= ($class_property == $all_table_properties[0] ? "" : ", ");
        
         # FIXME - maybe a better way would be for these sql-calculated properties, the column_name()
@@ -2360,7 +2360,7 @@ sub _generate_template_data_for_loading {
     while (@sql_joins) {
         my $table_name = shift (@sql_joins);
         my $condition  = shift (@sql_joins);
-        my ($table_alias) = ($table_name =~ /(\S+)\s*$/);
+        my ($table_alias) = ($table_name =~ /(\S+)\s*$/s);
         
         my $join_type;
         if ($condition->{-is_required}) {
@@ -2413,7 +2413,7 @@ sub _generate_template_data_for_loading {
     {
         my $table_name = shift (@sql_filters);
         my $condition  = shift (@sql_filters);
-        my ($table_alias) = ($table_name =~ /(\S+)\s*$/);
+        my ($table_alias) = ($table_name =~ /(\S+)\s*$/s);
         
         for my $column_name (keys %$condition) {
             my $linkage_data = $condition->{$column_name};
