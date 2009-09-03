@@ -21,7 +21,7 @@ class UR::Object::Command::List {
         is => 'Text',
         is_optional => 1,
         default_value => 'text',
-        doc => 'Style of the list: text (default), csv',
+        doc => 'Style of the list: text (default), csv, pretty',
     },
     noheaders => { 
         is => 'Boolean',
@@ -41,26 +41,61 @@ class UR::Object::Command::List {
 
 ##############################
 
+sub help_detail {
+    my $self = shift;
+    
+    return join(
+        "\n",
+        $self->_filter_doc,
+        $self->_style_doc,
+    );
+}
+
+sub _style_doc {
+    return <<EOS;
+Listing Styles:
+---------------
+ text - table like
+ csv - comma separated values
+
+EOS
+}
+
+##############################
+
 sub valid_styles {
-    return (qw/ text csv /);
+    return (qw/ text csv pretty /);
+}
+    
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    # validate style
+    $self->error_message( 
+        sprintf(
+            'Invalid style (%s).  Please choose from: %s', 
+            $self->style, 
+            join(', ', valid_styles()),
+        ) 
+    ) 
+        and return unless grep { $self->style eq $_ } valid_styles();
+     
+    # determine things to show
+    if ( my $show = $self->show ) {
+        $self->show([ map { lc } split(/,/, $show) ]);
+        #TODO validate things to show??
+    }
+    else {
+        $self->show([ map { $_->property_name } $self->_subject_class_filterable_properties ]);
+    }
+    
+    return $self;
 }
 
 sub _do
 {
     my ($self, $iterator) = @_;    
-
-    my @show;
-    my @props = map { $_->property_name } $self->_subject_class_filterable_properties;
-    if ( $self->show ) {
-        @show = split(/,/, $self->show); 
-        #TODO validate things to show
-    }
-    else {
-        @show = @props;
-    }
-
-    # TODO set show
-    $self->{_show}=\@show;
 
     # Handle
     my $handle_method = sprintf('_create_handle_for_%s', $self->style);
@@ -88,7 +123,8 @@ sub _do
 
     ################################
     ##############################
-    # TODO add more views
+    # old code:
+    my @show;
     my $cnt = '0 but true';
     unless ($self->format eq 'none') {
         # TODO: replace this with views, and handle terminal output as one type     
@@ -147,28 +183,36 @@ sub _create_handle_for_csv {
     return shift->_create_handle("| cat");
 }
 
+sub _create_handle_for_pretty {
+    return shift->_create_handle("| cat");
+}
+
 # Header
 sub _get_header_string_for_text {
     my $self = shift;
 
     return join (
         "\n",
-        join("\t", map { uc } @{$self->{_show}}),
-        join("\t", map { '-' x length } @{$self->{_show}}),
+        join("\t", map { uc } @{$self->show}),
+        join("\t", map { '-' x length } @{$self->show}),
     );
 }
 
 sub _get_header_string_for_csv {
     my $self = shift;
 
-    return join(",", map { lc } @{$self->{_show}});
+    return join(",", map { lc } @{$self->show});
+}
+
+sub _get_header_string_for_pretty {
+    return '';
 }
 
 # Body 
 sub _object_properties_to_string {
     my ($self, $object, $char) = @_;
 
-    return join($char, map { ( defined $object->$_ ? $object->$_ : 'NULL' ) } @{$self->{_show}});
+    return join($char, map { ( defined $object->$_ ? $object->$_ : 'NULL' ) } @{$self->show});
 }
 
 sub _get_text_string_for_object {
@@ -177,21 +221,121 @@ sub _get_text_string_for_object {
     return $self->_object_properties_to_string($object, "\t");
 }
 
-sub _get_pretty_string_for_object {
-    my ($self, $object) = @_;
-
-    my $row = $self->_object_to_plain_row($object);
-
-    return Term::ANSIColor::colored($row, 'blue');
-}
-
 sub _get_csv_string_for_object {
     my ($self, $object) = @_;
 
     return $self->_object_properties_to_string($object, ',');
 }
 
+sub _get_pretty_string_for_object {
+    my ($self, $object) = @_;
+
+    my $out;
+    for my $property ( @{$self->show} )
+    {
+        $out .= sprintf(
+            "%s: %s\n",
+            Term::ANSIColor::colored($property, 'red'),
+            Term::ANSIColor::colored($object->$property, 'cyan'),
+        );
+    }
+
+    return $out;
+
+    #Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
+}
+
 1;
 
+=pod
+
+=head1 Name
+
+UR::Object::Command::List
+
+=head1 Synopsis
+
+Fetches and lists objects in different styles.
+
+=head1 Usage
+
+ package MyLister;
+
+ use strict;
+ use warnings;
+
+ use above "UR";
+
+ class MyLister {
+     is => 'UR::Object::Command::List',
+     has => [
+     # add/modify properties
+     ],
+ };
+
+ 1;
+
+=head1 Provided by the Developer
+
+=head2 subject_class_name (optional)
+
+The subject_class_name is the class for which the objects will be fetched.  It can be specified one of two main ways:
+
+=over
+
+=item I<by_the_end_user_on_the_command_line>
+
+For this do nothing, the end user will have to provide it when the command is run.
+
+=item I<by_the_developer_in the_class_declartion>
+
+For this, in the class declaration, add a has key w/ arrayref of hashrefs.  One of the hashrefs needs to be subject_class_name.  Give it this declaration:
+
+ class MyFetchAndDo {
+     is => 'UR::Object::Command::FetchAndDo',
+     has => [
+         subject_class_name => {
+             value => <CLASS NAME>,
+             is_constant => 1,
+         },
+     ],
+ };
+
+=back
+
+=head2 show (optional)
+ 
+Add defaults to the show property:
+
+ class MyFetchAndDo {
+     is => 'UR::Object::Command::FetchAndDo',
+     has => [
+         show => {
+             default_value => 'name,age', 
+         },
+     ],
+ };
+
+=head2 helps (optional)
+
+Overwrite the help_brief, help_synopsis and help_detail methods to provide specific help.  If overwiting the help_detail method, use call '_filter_doc' to get the filter documentation and usage to combine with your specific help.
+
+=head1 List Styles
+
+text, csv, pretty (inprogress)
+
+=head1 Disclaimer
+
+Copyright (C) 2005 - 2008 Washington University Genome Sequencing Center
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@watson.wustl.edu>
+
+=cut
+
+
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 36255 2008-07-07 20:15:50Z ebelter $
+#$Id: List.pm 36321 2008-07-08 20:19:48Z ebelter $
