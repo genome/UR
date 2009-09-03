@@ -189,6 +189,7 @@ sub create {
     if ($class_meta->is_abstract) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
 
+$DB::single=1;
         # Determine the correct subclass for this object
         # and delegate to that subclass.
         my $subclassify_by = $class_meta->subclassify_by;

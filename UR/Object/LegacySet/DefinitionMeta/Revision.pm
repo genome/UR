@@ -42,13 +42,3 @@ UR::Object::Type->define(
 
 1;
 
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software.  You may distribute under the terms
-# of either the GNU General Public License or the Artistic License, as
-# specified in the Perl README file.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-

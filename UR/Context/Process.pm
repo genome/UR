@@ -498,22 +498,11 @@ __END__
 
 =back
 
-=head1 BUGS
-
-Report bugs to <software@watson.wustl.edu>.
-
 =head1 SEE ALSO
 
-App(3)
-
-=head1 AUTHOR
-
-David Dooling <ddooling@wustl.edu> (process info, name-related methods)
-Scott Smith <ssmith@genome.wustl.edu> (context logic)
+L<UR::Context>
 
 =cut
-
-#$Header$
 
 
 1;

@@ -431,18 +431,8 @@ Overwrite the help_brief, help_synopsis and help_detail methods to provide speci
 
 text, csv, html, pretty (inprogress)
 
-=head1 Disclaimer
-
-Copyright (C) 2005 - 2008 Washington University Genome Sequencing Center
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@watson.wustl.edu>
-
 =cut
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 46525 2009-05-05 13:20:42Z abrummet $
+#$Id: List.pm 46825 2009-05-13 20:29:11Z abrummet $

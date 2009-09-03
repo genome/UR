@@ -937,32 +937,8 @@ $r = $rt->get_rule_for_values(@v);
 
 UR::BoolExpr - a boolean expression functional on any UR::Object of a given class
 
-=cut
-
-=over 4
-
-Report bugs to <software@watson.wustl.edu>.
-
-=back
-
 =head1 SEE ALSO
 
 UR(3), UR::Object(3), UR::Object::Set(3)
 
-=head1 AUTHOR
-
-Scott Smith <ssmith@watson.wustl.edu>,
-Ben Oberkfel <boberkfe@watson.wustl.edu>
-
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software.  You may distribute under the terms
-# of either the GNU General Public License or the Artistic License, as
-# specified in the Perl README file.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-# $Header: /var/lib/cvs/perl_modules/App/Object/BoolExpr.pm,v 1.1 2005/11/12 01:19:24 ssmith Exp $
-
+=cut

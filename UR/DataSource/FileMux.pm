@@ -521,10 +521,5 @@ UR::DataSource
 
 UR, UR::DataSource, UR::DataSource::File
 
-=head1 AUTHOR
-
-Anthony Brummett <abrummet@watson.wustl.edu>
-
-
 =cut
 

@@ -524,26 +524,11 @@ sub _id_listref_to_objects {
   
   The viewer is stubbed-out, but not complete.
 
-Report bugs to <software@watson.wustl.edu>.
-
 =back
 
 =head1 SEE ALSO
 
-App(3), UR::Object(3), UR::Object::LegacySet::DefinitionType::Manual(3),
+UR::Object(3), UR::Object::LegacySet::DefinitionType::Manual(3),
 
-=head1 AUTHOR
-
-Scott Smith <ssmith@watson.wustl.edu>,
-
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software.  You may distribute under the terms
-# of either the GNU General Public License or the Artistic License, as
-# specified in the Perl README file.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 #$Header$

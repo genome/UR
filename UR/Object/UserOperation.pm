@@ -1,12 +1,4 @@
 # Methods describing possible operations a user can perform on an object.
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the same terms as Perl itself.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 package UR::Object::UserOperation;
 
@@ -248,12 +240,6 @@ probably inherit from App, and do $self->error_message when errors
 occur, etc.
 
 =back
-
-Report bugs to <ssmith@watson.wustl.edu>.
-
-=head1 AUTHOR
-
-Scott Smith <ssmith@watson.wustl.edu>
 
 =cut
 

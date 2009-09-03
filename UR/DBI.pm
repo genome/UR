@@ -1,12 +1,4 @@
 # Additional methods for DBI.
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the same terms as Perl itself.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 package UR::DBI;
 
@@ -603,12 +595,12 @@ sub commit
             UR::DBI::before_execute("commit (ignored)");
             $UR::Context::current->error_message('Tried to commit with dummy-ids on and no-commit off');
             UR::DBI::after_execute;
-            $UR::Context::current->send_email(
-                To => 'autobulk@watson.wustl.edu,kswanson@watson.wustl.edu',
-                Subject => 'attempt to commit with dummy-ids on and no-commit off '.
-                            "by $ENV{USER} on $ENV{HOST} running ".
-                            UR::Context::Process->original_program_path." as pid $$",
-                Message => "Call stack:\n" .Carp::longmess()
+            #$UR::Context::current->send_email(
+            #    To => 'example@example.edu',
+            #    Subject => 'attempt to commit with dummy-ids on and no-commit off '.
+            #                "by $ENV{USER} on $ENV{HOST} running ".
+            #                UR::Context::Process->original_program_path." as pid $$",
+            #    Message => "Call stack:\n" .Carp::longmess()
             );
         } else {
             # Commit and update the associated objects.
@@ -1051,17 +1043,9 @@ __END__
 
 =back
 
-=head1 BUGS
-
-Report bugs to <software@watson.wustl.edu>.
-
 =head1 SEE ALSO
 
 UR(3), UR::DataSource::RDBMS(3), UR::Context(3), UR::Object(3)
-
-=head1 AUTHOR
-
-Scott Smith <ssmith@watson.wustl.edu>
 
 =cut
 

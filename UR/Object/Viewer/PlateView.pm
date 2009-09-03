@@ -1,12 +1,4 @@
 # Viewer for 96- or 384-well plates.
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the same terms as Perl itself.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 package UR::Object::Viewer::PlateView;
 
@@ -549,19 +541,5 @@ sub _well_number_to_dna_location {
 
 1;
 __END__
-
-=pod
-
-=back
-
-=head1 BUGS
-
-Report bugs to <software@watson.wustl.edu>
-
-=head1 AUTHOR
-
-ben oberkfell <boberkfe@watson.wustl.edu>
-
-=cut
 
 #$Header$

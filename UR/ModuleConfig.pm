@@ -1,14 +1,5 @@
 # Manage dynamic configuration of modules.
-# Copyright (C) 2005 Washington University in St. Louis
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the same terms as Perl itself.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-# set package name for module
 package UR::ModuleConfig;
 
 =pod
@@ -345,24 +336,5 @@ sub config_file
 }
 
 1;
-__END__
-
-=pod
-
-=back
-
-=head1 BUGS
-
-Please report bugs to <software@watson.wustl.edu>.
-
-=head1 SEE ALSO
-
-App(3)
-
-=head1 AUTHOR
-
-David Dooling <ddooling@watson.wustl.edu>
-
-=cut
 
 #$Header$

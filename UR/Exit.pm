@@ -1,14 +1,3 @@
-# Class to allow for smooth exits.
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software.  You may distribute under the terms
-# of either the GNU General Public License or the Artistic License, as
-# specified in the Perl README file.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
 package UR::Exit;
 
 =pod
@@ -98,6 +87,9 @@ and warn if debugging.
 sub death
 {
 
+print "In death()\n\n\n";
+    return unless $ENV{'UR_STACK_DUMP_ON_DIE'};
+
     # workaround common error    
     if ($_[0] =~ /Can.*t upgrade that kind of scalar during global destruction/)
     {
@@ -156,6 +148,8 @@ Give more informative warnings.
 
 sub warning
 {
+    return unless $ENV{'UR_STACK_DUMP_ON_WARN'};
+
     return if $_[0] =~ /Attempt to free unreferenced scalar/;
     return if $_[0] =~ /Use of uninitialized value in exit at/;
     return if $_[0] =~ /Use of uninitialized value in subroutine entry at/;    
@@ -180,17 +174,9 @@ __END__
 
 =back
 
-=head1 BUGS
-
-Report bugs to <software@watson.wustl.edu>.
-
 =head1 SEE ALSO
 
 UR(3), Carp(3)
-
-=head1 AUTHOR
-
-Scott Smith <ssmith@watson.wustl.edu>
 
 =cut
 

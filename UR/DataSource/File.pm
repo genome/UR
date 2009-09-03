@@ -797,8 +797,4 @@ is to assumme the file is not sorted.
 
 UR, UR::DataSource
 
-=head1 AUTHOR
-
-Anthony Brummett <abrummet@watson.wustl.edu>
-
 =cut

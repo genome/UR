@@ -634,14 +634,3 @@ sub _update_subject_from_widget
 
 1;
 
-# Object viewers.
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the same terms as Perl itself.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-#$Id: /mirror/perl_modules/branches/ur-convert4/UR/Object/Viewer.pm 1103 2006-10-13T23:56:32.111234Z ssmith  $

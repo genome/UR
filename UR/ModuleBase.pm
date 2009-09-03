@@ -1,12 +1,4 @@
 # A base class supplying error, warning, status, and debug facilities.
-# Copyright (C) 2004 Washington University in St. Louis
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the same terms as Perl itself.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 package UR::ModuleBase;
 
@@ -860,17 +852,9 @@ __END__
 
 =back
 
-=head1 BUGS
-
-Report bugs to <software@watson.wustl.edu>.
-
 =head1 SEE ALSO
 
-App(3), UR(3)
-
-=head1 AUTHOR
-
-Scott Smith <ssmith@watson.wustl.edu>
+UR(3)
 
 =cut
 

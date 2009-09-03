@@ -29,6 +29,7 @@ sub deep_copy {
     require Data::Dumper;
     local $Data::Dumper::Purity = 1;
     my $original = $_[0];
+    # FIXME - this will cause Data::Dumper to emit a warning if $original contains a coderef...
     my $src = "no strict; no warnings;\n" . Data::Dumper::Dumper($original) . "\n\$VAR1;";
     my $copy = eval($src);
     return $copy;

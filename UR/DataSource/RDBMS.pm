@@ -1301,26 +1301,26 @@ sub _sync_database {
             }
             if ($failed_attempts > 1) {
                 my $err = join("\n",@err);
-                $UR::Context::current->send_email(
-                    To => 'autobulk@watson.wustl.edu',
-                    From => App->prog_name . ' <autobulk@watson.wustl.edu>',
-                    Subject => (
-                            $failed_attempts >= $max_failed_attempts
-                            ? "sync_database lock failure after $failed_attempts attempts"
-                            : "sync_database lock success after $failed_attempts attempts"
-                        )
-                        . " in " . App->prog_name
-                        . " on $table_name",
-                    Message => qq/
-                        $failed_attempts attempts to lock table $table_name
-
-                        Errors:
-                        $err
-
-                        The complete table lock list for this sync:
-                        @tables_requiring_lock
-                    /
-                );
+                #$UR::Context::current->send_email(
+                #    To => 'example@example.edu',
+                #    From => UR::Context::Process->prog_name . ' <example@example.edu>',
+                #    Subject => (
+                #            $failed_attempts >= $max_failed_attempts
+                #            ? "sync_database lock failure after $failed_attempts attempts"
+                #            : "sync_database lock success after $failed_attempts attempts"
+                #        )
+                #        . " in " . UR::Context::Process->prog_name
+                #        . " on $table_name",
+                #    Message => qq/
+                #        $failed_attempts attempts to lock table $table_name
+                #
+                #        Errors:
+                #        $err
+                #
+                #        The complete table lock list for this sync:
+                #        @tables_requiring_lock
+                #    /
+                #);
                 if ($failed_attempts >= $max_failed_attempts) {
                     $self->error_message(
                         "Could not obtain an exclusive table lock on table "

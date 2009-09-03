@@ -391,10 +391,5 @@ via unload().
 
 L<UR>, L<UR::Object::Type>, L<UR::Context>
 
-=head1 AUTHOR
-
- Scott Smith  ssmith@genome.wustl.edu
- Anthony Brummett abrummet@genome.wustl.edu
-
 =cut
 
