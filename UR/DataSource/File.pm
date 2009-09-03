@@ -125,14 +125,15 @@ sub record_separator {
 
 
 # FIXME Looks like the AccessorWriter doesn't properly make accessors for singleton classes?!
-sub last_read_fingerprint {
-    my $self = shift->_singleton_object;
-
-    if (@_) {
-        $self->{'_last_read_fingerprint'} = shift;
-    }
-    $self->{'_last_read_fingerprint'};
-}
+# In the iterator below, we'll resort to poking the data in the hash directly
+#sub last_read_fingerprint {
+#    my $self = shift->_singleton_object;
+#
+#    if (@_) {
+#        $self->{'_last_read_fingerprint'} = shift;
+#    }
+#    $self->{'_last_read_fingerprint'};
+#}
 
 sub file_cache_index {
     my $self = shift->_singleton_object;
@@ -484,6 +485,8 @@ sub create_iterator_closure_for_rule {
 
     my $file_cache = $self->_file_cache();
 
+    my $self_hash = $self->_singleton_object;
+
     # If there are ID columns mentioned in the rule, and there are items in the
     # cache, see if any of them are less than the comparators
     my $matched_in_cache = 0;
@@ -502,7 +505,7 @@ sub create_iterator_closure_for_rule {
                     # last row read is earlier than the data we're looking for; we can
                     # continue on from the next thing in the cache
                     $matched_in_cache = 1;
-                    $self->last_read_fingerprint($fingerprint); # This will make the iterator skip resetting the position
+                    $self_hash->{'_last_read_fingerprint'} = $fingerprint; # This will make the iterator skip resetting the position
                     $self->file_cache_index($file_cache_index + 1);
                     last SEARCH_CACHE;
     
@@ -542,7 +545,7 @@ sub create_iterator_closure_for_rule {
         # this query either doesn't hit the leftmost sorted columns, or nothing
         # has been read from it yet
         $file_pos = 0;
-        $self->last_read_fingerprint('');  # This will force a seek and cache invalidation at the start of the iterator
+        $self_hash->{'_last_read_fingerprint'} = -1;  # This will force a seek and cache invalidation at the start of the iterator
     }
 
     #my $max_cache_size = $self->cache_size;
@@ -556,18 +559,20 @@ sub create_iterator_closure_for_rule {
             $monitor_printed_first_fetch = 1;
         }
 
-        if ($self->last_read_fingerprint() ne $fingerprint) {
+        if ($self_hash->{'_last_read_fingerprint'} != $fingerprint) {
             $sql_fh->printf("CSV: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
-            local $/;   # Make sure some wise guy hasn't changed this out from under us
-            $/ = $record_separator;
-            $fh->getline() if ($self->skip_first_line());
+            #$fh->getline() if ($self->skip_first_line());
+            scalar(<$fh>) if ($self->skip_first_line());
 
             $self->_invalidate_cache();
         }
 
         my $file_cache_index = $self->file_cache_index();
+
+        local $/;   # Make sure some wise guy hasn't changed this out from under us
+        $/ = $record_separator;
 
         my $line;
         READ_LINE_FROM_FILE:
@@ -576,11 +581,9 @@ sub create_iterator_closure_for_rule {
             if ($file_cache->[$file_cache_index]) {
                 $next_candidate_row = $file_cache->[$file_cache_index++];
             } else {
-                $self->last_read_fingerprint($fingerprint);
+                $self_hash->{'_last_read_fingerprint'} = $fingerprint;
 
-                local $/;   # Make sure some wise guy hasn't changed this out from under us
-                $/ = $record_separator;
-                my $line = $fh->getline();
+                $line = <$fh>;
 
                 unless (defined $line) {
                     # at EOF.  Close up shop and return
@@ -620,9 +623,9 @@ sub create_iterator_closure_for_rule {
 
                     return;
                 
-                } elsif ($comparison != 0) {
+                } elsif ($comparison) {
+                    # comparison didn't match, read another line from the file
                     redo READ_LINE_FROM_FILE;
-
                 }
 
                 # That comparison worked... stay in the for() loop for other comparisons
