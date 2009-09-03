@@ -578,7 +578,7 @@ sub create_iterator_closure_for_rule {
     
     my $iterator = sub {
         unless ($sth) {
-            $DB::single = 1;
+            #$DB::single = 1;
             return;
         }
  

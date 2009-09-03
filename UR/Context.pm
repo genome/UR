@@ -1643,10 +1643,10 @@ sub _create_object_fabricator_for_loading_template {
                 # the object may no longer match the rule after subclassifying...
                 if ($loading_base_object and not $rule->evaluate($pending_db_object)) {
                     #print "Object does not match rule!" . Dumper($pending_db_object,[$rule->params_list]) . "\n";
-                    $DB::single = 1;
-                    $rule->evaluate($pending_db_object);
-                    $DB::single = 1;
-                    $rule->evaluate($pending_db_object);
+                    #$DB::single = 1;
+                    #$rule->evaluate($pending_db_object);
+                    #$DB::single = 1;
+                    #$rule->evaluate($pending_db_object);
                     return;
                     #$pending_db_object = undef;
                     #redo;
