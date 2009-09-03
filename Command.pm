@@ -131,7 +131,7 @@ sub _execute_with_shell_params_and_return_exit_code
     my @argv = @_;
 
     # make --foo=bar equivalent to --foo bar
-    @argv = map {split /=/, $_} @argv; 
+    @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
 
     $DB::single = 1;
     my ($delegate_class, $params) = $class->resolve_class_and_params_for_argv(@argv);
