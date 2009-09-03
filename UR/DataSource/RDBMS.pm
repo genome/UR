@@ -1425,13 +1425,13 @@ $DB::single =1;
                     my $column = $column_objects_by_class_and_column_name{$class_name}{$_};
                     unless ($column) {
                         print "looking at parent classes for $class_name\n";
-			for my $ancestor_class_name ($class_object->ordered_inherited_class_names) {
-	                    $column = $column_objects_by_class_and_column_name{$ancestor_class_name}{$_};
-                            if ($column) {
-		                $column_objects_by_class_and_column_name{$class_name}{$_} = $column;
-        	                last;
-                            }
-			}
+                        for my $ancestor_class_name ($class_object->ordered_inherited_class_names) {
+                                    $column = $column_objects_by_class_and_column_name{$ancestor_class_name}{$_};
+                                        if ($column) {
+                                    $column_objects_by_class_and_column_name{$class_name}{$_} = $column;
+                                        last;
+                                        }
+                        }
                         unless ($column) {
                             $DB::single = 1;
                             die "Failed to find a column object column $_ for class $class_name";
@@ -1877,7 +1877,14 @@ sub _default_save_sql_for_object {
                     . ") VALUES (" 
                     . join(',', split(//,'?' x scalar(@changed_cols))) . ")";
             
-            @values = map { $object_to_save->$_ } (@changed_cols);                     
+            @values = map { 
+                    # when there is a column but no property, use NULL as the value
+                    $object_to_save->can($_) 
+                        ? $object_to_save->$_ 
+                        : undef
+                } 
+                (@changed_cols);
+                
             push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
         }
         else
