@@ -1160,6 +1160,9 @@ sub _complete_class_meta_object_definitions {
             unless ($id_property_detail->{data_type}) {
                 unless ($r_class) {
                     $r_class ||= UR::Object::Type->get($r_class_name);
+                    unless ($r_class) {
+                        Carp::confess("Unable to load $r_class_name while defining relationship ".$pinfo->{'property_name'}. " in class $class");
+                    }
                     @r_id_properties = $r_class->id_property_names;
                 }                
                 my ($r_property) = 
