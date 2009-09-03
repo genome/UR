@@ -261,6 +261,9 @@ sub get_objects_for_class_and_rule {
         return $c[0];                     # scalar context
     }
 
+if ($class =~ m/^Genome::/) {
+$DB::single=1;
+}
     
     # the above process might have found all of the cached data required as a side-effect in which case we have a value for this early (ugly but DRY)
     # either way: ensure the cached data is known and sorted
@@ -629,7 +632,10 @@ sub _create_object_fabricator_for_loading_template {
     
     my $rule_class_name = $rule_template->subject_class_name;
     my $load_class_name = $class;
-    my $load_rule_id = $load_class_name->get_rule_for_params($rule->params_list)->id;
+    # $rule can contain params that may not apply to the subclass that's currently loading.
+    # get_rule_for_params() in array context will return the portion of the rule that actually applies
+    my($load_rule, undef) = $load_class_name->get_rule_for_params($rule->params_list);
+    my $load_rule_id = $load_rule->id;
 
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
