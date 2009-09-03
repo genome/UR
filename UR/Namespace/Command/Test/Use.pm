@@ -9,9 +9,10 @@ use YAML;
 
 class UR::Namespace::Command::Test::Use {
     is => "UR::Namespace::Command::RunsOnModulesInTree",
-    has => [
+    has_optional => [
         verbose             => { is => 'Boolean', doc => 'List each explicitly.' },
         summarize_externals => { is => 'Boolean', doc => 'List all modules used which are outside the namespace.' },
+        exec                => { is => 'Text',    doc => 'Execute the specified Perl _after_ using all of the modules.' },
     ]
 };
 
@@ -48,6 +49,8 @@ sub before {
     my $self = shift;
     $self->{success} = 0;
     $self->{failure} = 0;
+    $self->{used_libs} = {};
+    $self->{used_mods} = {};
     $self->SUPER::before(@_);
 }
 
@@ -101,6 +104,11 @@ sub after {
             . YAML::Dump($self->{used_mods})  
         );
     }
+    if (my $src = $self->exec) {
+        eval $src;
+        $self->error_message($@) if $@;
+    }
+    
     return 1;
 }
 
