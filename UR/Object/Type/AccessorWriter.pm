@@ -1056,9 +1056,9 @@ sub initialize_direct_accessors {
         elsif ($property_data->{'is_class_wide'}) {
             my $value = $property_data->{'default_value'};
             if ($property_data->{'is_constant'}) {
-                $self->mk_rw_class_accessor($class_name,$accessor_name,'',$value);
-            } else {
                 $self->mk_ro_class_accessor($class_name,$accessor_name,'',$value);
+            } else {
+                $self->mk_rw_class_accessor($class_name,$accessor_name,'',$value);
             }
         }
         else {        

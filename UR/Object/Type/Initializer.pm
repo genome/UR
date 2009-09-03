@@ -148,7 +148,7 @@ sub create {
     my $self = $class->_make_minimal_class_from_normalized_class_description($desc);
     Carp::confess("Failed to define class $class_name!") unless $self;
         
-    $self->_initilize_accessors_and_inheritance
+    $self->_initialize_accessors_and_inheritance
         or Carp::confess("Failed to define class $class_name!");
     
     $self->_inform_all_parent_classes_of_newly_loaded_subclass()
@@ -282,7 +282,7 @@ sub define {
     delete @db_committed{@keys_to_delete_from_db_committed};
     $self->{'db_committed'} = \%db_committed;
 
-    $self->_initilize_accessors_and_inheritance 
+    $self->_initialize_accessors_and_inheritance 
         or Carp::confess("Error initializing accessors for $class_name!");
 
     if ($bootstrapping) {
@@ -754,6 +754,28 @@ sub _normalize_class_description {
         }
         #print "inheritance for $class_name has @additional_property_meta_attributes\n";
         %$meta_properties = (%$meta_properties, @additional_property_meta_attributes);
+
+        # Inheriting from an abstract class that subclasses with a subclassify_by means that
+        # this class' property named by that subclassify_by is actually a constant equal to this
+        # class' class name
+        PARENT_CLASS:
+        foreach my $parent_class_name ( @{ $new_class{'is'} }) {
+            my $parent_class_meta = $parent_class_name->get_class_object();
+            foreach my $ancestor_class_meta ( $parent_class_meta->all_class_metas ) {
+                if (my $subclassify_by = $ancestor_class_meta->subclassify_by) {
+                    $instance_properties->{$subclassify_by} ||= { property_name => $subclassify_by,
+                                                                  default_value => $class_name,
+                                                                  is_constant => 1,
+                                                                  is_class_wide => 1,
+                                                                  is_specified_in_module_header => 0,
+                                                                  column_name => '',
+                                                                  implied_by => $parent_class_meta->class_name . '::subclassify_by',
+                                                                };
+                    last PARENT_CLASS;
+                }
+            }
+        }
+    
     }
 
     # normalize the data behind the property descriptions    
@@ -1028,8 +1050,8 @@ sub _make_minimal_class_from_normalized_class_description {
 
     return $self;
 }
-    
-sub _initilize_accessors_and_inheritance {  
+
+sub _initialize_accessors_and_inheritance {  
     my $self = shift;
     
     $self->initialize_direct_accessors;
