@@ -49,6 +49,7 @@ is($load_count,  0, 'loaded 0 times - all from the cache');
 # to parent if there were any other_child objects
 is($query_count, 1, 'get() correctly triggered 1 query'); 
 
+unlink(URT::DataSource::SomeSQLite->server);  # Remove the DB file from /tmp/
 
 
 sub create_db_tables {
@@ -134,5 +135,3 @@ sub URT::Parent::reclassify_object {
     return $obj->the_type_name;
 }
 
-
-1;
