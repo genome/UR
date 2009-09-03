@@ -1356,7 +1356,7 @@ sub cancel_change_subscription ($@)
 
 sub ghost_class {
     my $class = $_[0]->class;
-    $class = "${class}::Ghost";
+    $class = $class . '::Ghost';
     return $class;
 }
 
