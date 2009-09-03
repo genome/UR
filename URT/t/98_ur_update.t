@@ -235,9 +235,11 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     ok($employeeclass, 'Employee class loaded');
     isa_ok($employeeclass, 'UR::Object::Type');
 
-    # There is no standardized way to spot inheritance from the shema.
+    # There is no standardized way to spot inheritance from the schema.
     # The developer can reclassify in the source, and subsequent updates would respect it.
     # FIXME: test for this.
+    # What about if one class' primary keys are all foreign keys to all of another class' primary keys?
+    # FIXME - what about foreign keys not involving primary keys?  Make object accessor properties
 
     ok(! $employeeclass->isa('URT::Car'), 'Employee class is correctly not a Car');
     ok($employeeclass->module_source_lines, 'Employee class module has at least one line');
@@ -296,6 +298,23 @@ ok($trans, "DROPPED CAR and began transaction");
     $trans->rollback;
     ok($trans->isa("UR::DeletedRef"), "rolled-back transaction");
     is(cached_dd_object_count(), $expected_dd_object_count, "no data dictionary objects cached after rollback");
+
+
+# Drop a constraint
+# SQLite doesn't support altering a table to drop a constraint, so we need to
+# drop the table and recreate it without the constraint
+#ok($dbh->do('DROP TABLE employee'), 'Temporarily dropping table employee');
+#ok($dbh->do('CREATE TABLE employee (employee_id integer NOT NULL PRIMARY KEY, rank integer)'), 'Recreate Employee without constraint');
+#$trans = UR::Context::Transaction->begin();
+#ok($trans, "Changed EMPLOYEE and began transaction");
+#
+#    ok($command_obj->execute(), 'Updating schema');
+#    my @o = UR::DataSource::RDBMS::FkConstraint->get(namespace => 'URT');
+#print "\n\n*** Got ",scalar(@o)," FkConstraints\n";
+#    @changes = get_changes();
+#    $changes_as_hash = convert_change_list_for_checking(@changes);
+#
+
 
 # Drop the other two tables
 

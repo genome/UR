@@ -81,6 +81,7 @@ sub execute {
     # Command parameter checking
     #
     
+$DB::single=1;
     my $force_check_all_tables = $self->force_check_all_tables;
     my $force_rewrite_all_classes = $self->force_rewrite_all_classes;
     
@@ -261,7 +262,7 @@ sub execute {
     # Update the classes based-on changes to the database schemas
     #
 
-    #$DB::single = 1;
+    $DB::single = 1;
 
     if (@data_dictionary_objects) {
         $self->status_message("Found " . keys(%changed_tables) . " tables with changes.") unless $force_rewrite_all_classes;
@@ -538,6 +539,7 @@ sub _update_database_metadata_objects_for_schema_changes {
 
     return 1;
 }
+
 
 
 # Keep a cache of class meta objects so we don't have to keep asking the 
@@ -1424,6 +1426,9 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                     class_name => $r_class_name,
                     property_name => $r_property_name,
                 );
+                unless ($id_meta) {
+                    Carp::confess("Can't find a UR::Object::Property::ID for class $r_class_name property $r_property_name");
+                }
 
                 my $reference_property = UR::Object::Reference::Property->create(
                     tha_id => $reference_id,
@@ -1693,9 +1698,20 @@ sub _update_database_metadata_objects_for_table_changes {
         );
     }
 
+    
+    # Make a note of what FKs exist in the Meta DB involving this table
+    my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source,
+                                                                  table_name => $table_name);
+    push @fks_in_meta_db, UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source,
+                                                                   r_table_name => $table_name);
+    my %fks_in_meta_db_by_fingerprint;
+    foreach my $fk ( @fks_in_meta_db ) {
+        my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+        $fks_in_meta_db_by_fingerprint{$fingerprint} = $fk;
+    }
 
-    # get foreign_key_info one way
-    # constraints on other tables against columns in this table
+    # constraints on this table against columns in other tables
+   
 
     my $db_owner = $data_source->owner;
     my $fk_sth = $data_source->get_foreign_key_details_from_data_dictionary('', $db_owner, $table_name, '', '', '');
@@ -1704,7 +1720,7 @@ sub _update_database_metadata_objects_for_table_changes {
                 # invocation of foreign_key_info created
 
     my @constraints;
-
+    my %fks_in_real_db;
     if ($fk_sth) {
         while (my $data = $fk_sth->fetchrow_hashref()) {
             #push @$ref_fks, [@$data{qw(FK_NAME FK_TABLE_NAME)}];
@@ -1751,12 +1767,15 @@ sub _update_database_metadata_objects_for_table_changes {
                     
             }
     
+            my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+            $fks_in_real_db{$fingerprint} = $fk;
+
             push @constraints, $fk;
         }
     }
 
     # get foreign_key_info the other way
-    # constraints on this table against columns in other tables
+    # constraints on other tables against columns in this table
 
     my $fk_reverse_sth = $data_source->get_foreign_key_details_from_data_dictionary('', '', '', '', $db_owner, $table_name);
 
@@ -1811,7 +1830,20 @@ sub _update_database_metadata_objects_for_table_changes {
             }
     
                 
+            my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+            $fks_in_real_db{$fingerprint} = $fk;
+
             push @constraints, $fk;
+        }
+    }
+
+    # Find FKs still in the Meta db that don't exist in the real database anymore
+    foreach my $fingerprint ( keys %fks_in_meta_db_by_fingerprint ) {
+        unless ($fks_in_real_db{$fingerprint}) {
+            my $fk = $fks_in_meta_db_by_fingerprint{$fingerprint};
+            my @fk_cols = $fk->get_related_column_objects();
+            $_->delete foreach @fk_cols;
+            $fk->delete;
         }
     }
 
@@ -1977,6 +2009,16 @@ sub _update_database_metadata_objects_for_table_changes {
     }
 
     return $table_object;
+}
+
+sub _make_foreign_key_fingerprint {
+    my($self,$fk) = @_;
+
+    my @fk_cols = sort {$a->column_name cmp $b->column_name} $fk->get_related_column_objects();
+    my $fingerprint = join(':', $fk->table_name,
+                                $fk->r_table_name,
+                                map { $_->column_name, $_->r_column_name } @fk_cols);
+    return $fingerprint;
 }
 
 
