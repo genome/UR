@@ -16,7 +16,7 @@ use Scalar::Util qw(blessed);
 
 sub class { ref($_[0]) || $_[0] }
 
-sub get_class_object () {
+sub get_class_object  {
     # for bootstrapping
     # subclasses set this specifically for efficiency
     my $class_name = shift;

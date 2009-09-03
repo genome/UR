@@ -1026,7 +1026,7 @@ sub _make_minimal_class_from_normalized_class_description {
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => 'get_class_object',
-        code => Sub::Name::subname $full_name => sub () {$self},
+        code => Sub::Name::subname $full_name => sub {$self},
     });
 
     return $self;
@@ -1553,12 +1553,12 @@ sub generate {
     my $class_name = $self->class_name;
 
     # this is done earlier in the class definition process in _make_minimal_class_from_normalized_class_description()
-    #my $full_name = join( '::', $class_name, 'get_class_object' );
-    #Sub::Install::reinstall_sub({
-    #    into => $class_name,
-    #    as   => 'get_class_object',
-    #    code => Sub::Name::subname $full_name => sub {$self},
-    #});
+    my $full_name = join( '::', $class_name, 'get_class_object' );
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => 'get_class_object',
+        code => Sub::Name::subname $full_name => sub {$self},
+    });
 
     my @parent_class_names = $self->parent_class_names;
     
