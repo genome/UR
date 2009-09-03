@@ -186,9 +186,7 @@ sub resolve_data_sources_for_class_meta_and_rule {
         $data_source = $class_meta->data_source;
     }
 
-    if ($data_source && $data_source->can('resolve_data_sources_for_rule')) {
-        $data_source = $data_source->resolve_data_sources_for_rule($boolexpr);
-    }
+    $data_source = $data_source->resolve_data_sources_for_rule($boolexpr);
     return $data_source;
 }
 

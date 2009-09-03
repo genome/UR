@@ -70,6 +70,13 @@ sub _get_template_data_for_loading {
     } 
     return $template_data;
 }
+
+
+# Child classes can override this to return a different datasource
+# depending on the rule passed in
+sub resolve_data_sources_for_rule {
+    return @_;
+}
     
 sub _generate_class_data_for_loading {
     my ($self, $class_meta) = @_;
