@@ -44,10 +44,12 @@ sub undo {
 
     my $changed_obj;
     if ($changed_aspect eq "delete" or $changed_aspect eq "unload") {
+        $undo_data = '' unless defined $undo_data;
         $changed_obj = eval "no strict; no warnings; " . $undo_data;
         if ($@) {
             Carp::confess("Error reconstructing $changed_aspect data for @_: $@");
         }
+        return unless $changed_obj;
     }
     else {
         $changed_obj = $changed_class_name->get($changed_id);
