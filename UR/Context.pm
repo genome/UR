@@ -466,6 +466,9 @@ sub prune_object_cache {
                     foreach my $index ( @{$indexes_by_class{$class}} ) {
                         $index->weaken_reference_for_object($obj);
                     }
+                    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+                        print STDERR "PRUNE object $obj class $class id $id\n";
+                    }
 
                     delete $obj->{'__get_serial'};
                     Scalar::Util::weaken($objects_for_class->{$id});

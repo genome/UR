@@ -141,12 +141,17 @@ sub DESTROY {
             return;
         }
         else {
+            if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+                print STDERR "DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+            }
             $obj->unload();
-            #print "TOSSING $obj.  Found $obj .\n";
             return $obj->SUPER::DESTROY();
         }
     }
     else {
+        if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+            print STDERR "DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+        }
         $obj->SUPER::DESTROY();
     }
 };
@@ -568,6 +573,9 @@ sub delete_object {
     # Turn our $self reference into a UR::DeletedRef.
     # Further attempts to use it will result in readable errors.
     # The object can be resurrected.
+    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+        print STDERR  "DELETE object $self class ",$self->class," id ",$self->id,"\n";
+    }
     UR::DeletedRef->bury($self);
 
     return $self;

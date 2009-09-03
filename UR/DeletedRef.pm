@@ -10,7 +10,9 @@ sub bury {
     my $class = shift;
 
     for my $object (@_) {
-#print "*** BURY object $object class ",$object->class," id ",$object->id,"\n";
+        if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+            print STDERR "BURY object $object class ",$object->class," id ",$object->id,"\n";
+        }
         %$object = (original_class => ref($object), original_data => {%$object});
         bless $object, 'UR::DeletedRef';
         my $stringified = $object;
@@ -44,8 +46,9 @@ sub AUTOLOAD {
 }
 
 sub DESTROY {
-    # print "Destroying @_\n";
-#print "*** DESTROY deletedref $_[0]\n";
+    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+        print STDERR "DESTROY deletedref $_[0]\n";
+    }
     delete $all_objects_deleted->{"$_[0]"};
 }
 
