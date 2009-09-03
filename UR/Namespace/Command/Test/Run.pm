@@ -245,6 +245,7 @@ sub _run_tests {
         no warnings;
         local %SIG = %SIG; 
         delete $SIG{__DIE__}; 
+        $ENV{UR_DBI_NO_COMMIT} = 1;
         runtests(@tests);
     };
     if ($@) {
@@ -392,48 +393,37 @@ B<runtests> - run one or more GSC test scripts
 
 =head1 SYNOPSIS
 
- # run everything
+ # run everything in a given namespace
  cd my_sandbox/GSC
- runtests -I .. --db production --no-commit --long
+ ur test run --recurse
 
  # run only selected tests
  cd my_sandbox/GSC
- runtests -I .. --db production --no-commit t/sometest.t t/anothertest.t
+ ur test run My/Module.t Another/Module.t t/foo.t t/bar.t
 
  # run only tests which load the GSC::DNA module
  cd my_sandbox/GSC
- runtests -I .. --db production --no-commit --cover GSC/DNA.pm
+ ur test run --cover GSC/DNA.pm
 
- # run only tests which cover the changes you have in subversion
+ # run only tests which cover the changes you have in Subversion
  cd my_sandbox/GSC
- runtests -I .. --db production --no-commit --cover-svn-changes
-
+ ur test run --cover-svn-changes
 
 =head1 DESCRIPTION
 
-Runtests is a GSC-build test harness, similar to "prove".  When run w/o
-parameters, it looks for "t" directory in the current working directory,
-and runs ALL tests under that directory.
+Runs a test harness around automated test cases, like "make test" in a 
+make-oriented software distrbution, and similar to "prove" run in bulk.  
 
-This script should be run before committing changes to svn/cvs.
+When run w/o parameters, it looks for "t" directory in the current working 
+directory, and runs ALL tests under that directory.
 
 =head1 OPTIONS
 
 =over 4
 
-=item --no-commit
+=item --recurse
 
- Like all App-based programs at the GSC, this allows the user to disable DBI
- commits on the subclassed handles used by the GSC OO API.
-
- Tests should be run against production with --no-commit before deploying code.
-
-=item --db [production|development]
-
- Like all App-based programs at the GSC, this allows the user to specify which
- database set should be used for the tests.
-
- Tests should be run against production with --no-commit before deploying code.
+ Run all tests in the current directory, and in sub-directories.
 
 =item --long
 
@@ -463,16 +453,19 @@ This script should be run before committing changes to svn/cvs.
  directory with "GSC" in it, and get all of the changes in your perl_modules trunk.
  It will behave as though those modules were listed as individual --cover options.
 
-=head1 BUGS
+=head1 PENDING FEATURES
 
-This currently has a lot hard-coded to the GSC schema.  The UR tree's
-"ur test run" module will replace this with a namespace-independent version.
+=item automatically running in parallel on a remote compute cluster
+
+=item automatic remote execution for tests requiring a distinct hardware platform
+
+=item logging profileing and coverage metrics with each test
 
 =over 4
 
 =back
 
-Report bugs to <software@watson.wustl.edu>.
+Report bugs to <software@genome.wustl.edu>.
 
 =cut
 
