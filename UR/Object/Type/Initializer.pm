@@ -272,6 +272,7 @@ sub define {
     Carp::confess("Failed to define class $class_name!") unless $self;
     
     # we do this for define() but not create()
+    # FIXME - if there's a coderef in this struct, it'll spit out a warning
     $self->{db_committed} = { %{ UR::Util::deep_copy($self) } };
     delete $self->{db_committed}{id};
 
@@ -474,7 +475,24 @@ sub _normalize_class_description {
         }
     }
 
-    $new_class{table_name} = uc($new_class{table_name}) if ($new_class{table_name} and $new_class{table_name} !~ /\s/);
+    if(!exists($new_class{'table_name'}) and $new_class{'data_source'}) {
+        # Fill in something for table_name if they're using an inline data source defition
+        # Also some data sources don't really have table_names, but we still want the class'
+        # properties to get column_name filled in (like the File-based data sources)
+        if (ref($new_class{'data_source'}) eq 'HASH') {
+            for($new_class{'data_source'}) {
+                $new_class{'table_name'} = $_->{'server'} || $_->{'file'} || $_->{'path'};
+            }
+        } elsif ($new_class{'data_source'}->can('server')) {
+            $new_class{'table_name'} = $new_class{'data_source'}->server;
+        }
+        unless ($new_class{'table_name'}) {
+            our $TABLE_NAME_AUTOGEN ||= 1;
+            $new_class{'table_name'} = 'AUTOGEN' . $TABLE_NAME_AUTOGEN++;
+        }
+    } else {
+        $new_class{table_name} = uc($new_class{table_name}) if ($new_class{table_name} and $new_class{table_name} !~ /\s/);
+    }
 
     unless ($new_class{'doc'}) {
         $new_class{'doc'} = undef;
@@ -551,6 +569,7 @@ sub _normalize_class_description {
     # NOTE: we normalize the details at the end of normalizing the class description.
     my @keys = grep { /has|attributes_have/ } keys %old_class;
     unshift @keys, qw(id_implied); # we want to hit this first to preserve position_ and is_specified_ keys
+    my @properties_in_class_definition_order;
     foreach my $key ( @keys ) {
         # parse the key to see if we're looking at instance or meta attributes,
         # and take the extra words as additional attribute meta-data. 
@@ -635,6 +654,7 @@ sub _normalize_class_description {
             } else {
                 $properties->{$name} = $params;
             }
+            push @properties_in_class_definition_order, $name;
 
             # a single calculate_from can be a simple string, convert to a listref
             if (my $calculate_from = $params->{'calculate_from'}) {
@@ -680,6 +700,7 @@ sub _normalize_class_description {
         }
 
     } # next group of properties
+    $new_class{'__properties_in_class_definition_order'} = \@properties_in_class_definition_order;
     
     unless ($new_class{type_name}) {
         if ($new_class{table_name}) {
@@ -695,7 +716,7 @@ sub _normalize_class_description {
         }
     }
     
-    if ($new_class{data_source} and not $new_class{schema_name}) {
+    if (($new_class{data_source} and not ref($new_class{data_source})) and not $new_class{schema_name}) {
         my $s = $new_class{data_source};
         $s =~ s/^.*::DataSource:://;
         $new_class{schema_name} = $s;
@@ -1076,6 +1097,7 @@ sub _complete_class_meta_object_definitions {
     my $id_properties = $self->{id_by};
     my $relationships = $self->{relationships} || [];
     my $constraints = $self->{constraints};
+    my $data_source = $self->{'data_source'};
     
     # handle inheritance
     unless ($class_name eq "UR::Object") {
@@ -1091,6 +1113,15 @@ sub _complete_class_meta_object_definitions {
 
         # set
         @{ $class_name . "::ISA" } = @$inheritance;
+    }
+
+    
+    # Create inline data source
+    if ($data_source and ref($data_source) eq 'HASH') {
+        $self->{'__inline_data_source_data'} = $data_source;
+        my $ds_class = $data_source->{'is'};
+        my $inline_ds_class = $ds_class->create_from_inline_class_data($self, $data_source);
+        $self->{'data_source'} = $self->{'db_committed'}->{'data_source'} = $inline_ds_class;
     }
 
     my $n = 1;
