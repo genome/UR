@@ -66,26 +66,31 @@ sub get {
     }
 
     my @property_names = @{$delegation_property_meta->{'id_by'}};
+    my $property_names_count = scalar(@property_names);
 
     my $r_class_name = $ref->r_class_name;
     my $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
     my @r_property_names = $r_class_meta->id_property_names;
+    my $r_property_names_count = scalar(@r_property_names);
 
-    unless (scalar(@property_names) == scalar(@r_property_names)) {
-        Carp::confess('Unequal property counts describing reference $tha_id.   Property has ' .
-                      scalar(@property_names) . " while class $r_class_name has " .
-                      scalar(@r_property_names) . ' id properties.');
+    if ($property_names_count == 1 and $r_property_names_count > 1) {
+        # Assumme this points directly to the composite 'id' property of the remote class
+        @r_property_names = ('id');
+
+    } elsif ($property_names_count != $r_property_names_count) {
+        Carp::confess("Unequal property counts describing reference $tha_id.   Property " .
+                      $delegation_property_meta->property_name .
+                      " has $property_names_count id properties while class $r_class_name has $r_property_names_count");
     }
 
     my $rank = 0;
     my @defined_objects;
-    for (my $i = 0; $i < @property_names; $i++) {
+    for (my $i = 0; $i < $property_names_count; $i++) {
         my $property_name = $property_names[$i];
         my $property_meta = $class_meta->get_property_meta_by_name($property_name);
         my $attribute_name = $property_meta->attribute_name;
 
         my $r_property_name = $r_property_names[$i];
-        #my $r_property_meta = UR::Object::Property->get(class_name => $r_class_name, property_name => $r_property_name);
         my $r_property_meta = $r_class_meta->get_property_meta_by_name($r_property_name);
         my $r_attribute_name = $r_property_meta->attribute_name;
 
