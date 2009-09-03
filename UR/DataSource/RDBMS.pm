@@ -19,6 +19,10 @@ UR::Object::Type->define(
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
+# FIXME - shouldn't this be a property of the class instead of a method?
+sub does_support_joins { 1;} 
+
+
 sub get_class_meta_for_table {
     my $self = shift;
     my $table = shift;
@@ -1843,7 +1847,7 @@ sub _generate_template_data_for_loading {
     my ($self, $rule_template) = @_;
         
     # class-based values
-    
+
     my $class_name = $rule_template->subject_class_name;
     my $class_meta = $class_name->get_class_object;
 
