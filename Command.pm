@@ -837,6 +837,18 @@ sub class_for_sub_command
 # STDERR, but the test case can change it to capture the messages to somewhere else
 our $stderr = \*STDERR;
 
+sub _get_msgdata {
+    my $self = $_[0];
+    
+    if (ref($self)) {
+        return $self->{msgdata} ||= {};
+    }
+    else {
+        no strict 'refs';
+        return ${ $self . "::msgdata" } ||= {};
+    }
+}
+
 for my $type (qw/error warning status debug usage/) {
 
     for my $method_base (qw/_messages_callback queue_ dump_/) {
@@ -846,16 +858,7 @@ for my $type (qw/error warning status debug usage/) {
         );
         my $method_subref = sub {
             my $self = shift;
-
-            my $msgdata;
-            if (ref($self)) {
-                $msgdata = $self->{msgdata} ||= {};
-            }
-            else {
-                no strict 'refs';
-                $msgdata = ${ $self . "::msgdata" } ||= {};
-            }
-
+            my $msgdata = $self->_get_msgdata;
             $msgdata->{$method} = pop if @_;
             return $msgdata->{$method};
         };
@@ -868,14 +871,7 @@ for my $type (qw/error warning status debug usage/) {
     my $logger_subref = sub {
         my $self = shift;
 
-        my $msgdata;
-        if (ref($self)) {
-            $msgdata = $self->{msgdata} ||= {};
-        }
-        else {
-            no strict 'refs';
-            $msgdata = ${ $self . "::msgdata" } ||= {};
-        }
+        my $msgdata = $self->_get_msgdata();
 
         if (@_) {
             my $msg = shift;
@@ -888,8 +884,8 @@ for my $type (qw/error warning status debug usage/) {
             if (my $code = $msgdata->{ $type . "_messages_callback"}) {
                 $code->($self,$msg);
             }
-            if ($msgdata->{ "dump_" . $type . "_messages" }) {
-                print $stderr ($type eq "status" ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n";
+            if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
+                (ref($fh) ? $fh : $stderr)->print(($type eq "status" ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
             }
             if ($msgdata->{ "queue_" . $type . "_messages"}) {
                 my $a = $msgdata->{ $type . "_messages_arrayref" } ||= [];
@@ -904,16 +900,7 @@ for my $type (qw/error warning status debug usage/) {
     my $arrayref_subname = $type . "_messages_arrayref";
     my $arrayref_subref = sub {
         my $self = shift;
-
-        my $msgdata;
-        if (ref($self)) {
-            $msgdata = $self->{msgdata} ||= {};
-        }
-        else {
-            no strict 'refs';
-            $msgdata = ${ $self . "::msgdata" } ||= {};
-        }
-
+        my $msgdata = $self->_get_msgdata;
         return $msgdata->{$type . "_messages_arrayref"};
     };
 
@@ -922,15 +909,7 @@ for my $type (qw/error warning status debug usage/) {
     my $array_subref = sub {
         my $self = shift;
 
-        my $msgdata;
-        if (ref($self)) {
-            $msgdata = $self->{msgdata} ||= {};
-        }
-        else {
-            no strict 'refs';
-            $msgdata = ${ $self . "::msgdata" } ||= {};
-        }
-
+        my $msgdata = $self->_get_msgdata;
         return ref($msgdata->{$type . "_messages_arrayref"}) ?
                @{ $msgdata->{$type . "_messages_arrayref"} } :
                ();
