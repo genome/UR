@@ -286,5 +286,5 @@ Overwrite the help_brief, help_synopsis and help_detail methods to provide speci
 
 =cut
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/FetchAndDo.pm $
-#$Id: FetchAndDo.pm 46825 2009-05-13 20:29:11Z abrummet $#
+#$HeadURL: /gscpan/distro/ur-bundle/releases/UR-Bundle-0.02/lib/UR/Object/Command/FetchAndDo.pm $
+#$Id: /gscpan/distro/ur-bundle/releases/UR-Bundle-0.02/lib/UR/Object/Command/FetchAndDo.pm 46839 2009-05-14T06:17:40.665014Z ssmith  $#
