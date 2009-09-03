@@ -230,7 +230,7 @@ sub get_objects_for_class_and_rule {
         #print "shortcutting out\n";
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
         return @c if wantarray;
-        die if @c > 1;
+        Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
         return $c[0];
     }
 
