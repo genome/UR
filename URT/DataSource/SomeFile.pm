@@ -5,7 +5,7 @@ use warnings;
 
 use UR::Object::Type;
 use URT;
-class URT::DataSource::SomeCsvFile {
+class URT::DataSource::SomeFile {
     is => ['UR::DataSource::File'],
     type_name => 'urt datasource somefile',
 };
