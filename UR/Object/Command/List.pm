@@ -145,7 +145,7 @@ sub _do
         $self->show([ map { $_->property_name } $self->_subject_class_filterable_properties ]);
     }
 
-    my $style_module_name = ucfirst $self->style;
+    my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
     my $style_module = $style_module_name->new( 
         iterator =>$iterator, 
         show =>$self->show, 
@@ -157,7 +157,7 @@ sub _do
     return 1;
 }
 
-package Style;
+package UR::Object::Command::List::Style;
 
 sub new{
     my ($class, %args) = @_;
@@ -224,8 +224,8 @@ sub format_and_print{
 
 }
 
-package Html;
-use base 'Style';
+package UR::Object::Command::List::Html;
+use base 'UR::Object::Command::List::Style';
 
 sub _get_header_string{
     my $self = shift;
@@ -262,8 +262,8 @@ sub format_and_print{
     $self->{output}->print("</table>");
 }
 
-package Csv;
-use base 'Style';
+package UR::Object::Command::List::Csv;
+use base 'UR::Object::Command::List::Style';
 
 sub _get_header_string{
     my $self = shift;
@@ -277,8 +277,8 @@ sub _get_object_string {
     return $self->_object_properties_to_string($object, ',');
 }
 
-package Pretty;
-use base 'Style';
+package UR::Object::Command::List::Pretty;
+use base 'UR::Object::Command::List::Style';
 
 sub _get_header_string{
     return '';
@@ -300,8 +300,8 @@ sub _get_object_string{
     return $out;
 }
 
-package Xml;
-use base 'Style';
+package UR::Object::Command::List::Xml;
+use base 'UR::Object::Command::List::Style';
 
 sub format_and_print{
 	my $self = shift;
@@ -349,8 +349,8 @@ sub format_and_print{
 	$self->{output}->print($doc->toString(1));
 }
 
-package Text;
-use base 'Style';
+package UR::Object::Command::List::Text;
+use base 'UR::Object::Command::List::Style';
 
 sub _get_header_string{
     my $self = shift;
@@ -498,4 +498,4 @@ text, csv, html, xml, pretty (inprogress)
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 50225 2009-08-21 21:52:38Z abrummet $
+#$Id: List.pm 50226 2009-08-21 21:58:48Z abrummet $
