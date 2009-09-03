@@ -231,7 +231,6 @@ sub add_filter {
     }
     my @keys = split(',',$logic_detail);
     my $new_id = join('/',$subject_class_name,$logic_type,join(',',@keys,$new_key));
-    print "$new_id\n";
     return $self->class->get($new_id);
 }
 
