@@ -66,6 +66,8 @@ for my $e (keys %ENV) {
     }
 }
 
+# UR supports several environment variables, found under UR/ENV
+# These two dump info about used modules and libraries at program exit.
 END {
     if ($ENV{UR_USED_LIBS}) {
         print STDERR "Used libraries:\n";
