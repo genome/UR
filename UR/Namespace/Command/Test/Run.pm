@@ -241,7 +241,12 @@ sub _run_tests {
     local $My::Test::Harness::Straps::perl_opts     = $perl_opts;
     local $My::Test::Harness::Straps::script_opts   = $script_opts;
     local $My::Test::Harness::Straps::v             = $v;
-    eval { runtests(@tests) };
+    eval { 
+        no warnings;
+        local %SIG = %SIG; 
+        delete $SIG{__DIE__}; 
+        runtests(@tests);
+    };
     if ($@) {
         $self->error_message($@);
         return;
