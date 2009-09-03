@@ -1211,7 +1211,6 @@ sub _sync_database {
     # Note that the general command is something like "insert EMPLOYEES",
     # while the explicit command is an exact insert statement with params.
     #
-$DB::single =1;
     my @general_commands_in_order;
     my %self_referencing_table_commands;
 

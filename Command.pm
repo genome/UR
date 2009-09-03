@@ -29,7 +29,6 @@ sub _init_subclass {
     my $subclass_name = $_[0];
     no strict;
     no warnings;
-    #$DB::single = 1;
     ## manipulating %{ $subclass_name . '::' } causes ptkdb to segfault perl
     if ($subclass_name->can('execute')) {
         my $new_symbol = "${subclass_name}::_execute_body";
@@ -76,7 +75,6 @@ sub execute {
         return;
     }
 
-    $DB::single=1;
     my $result = $self->_execute_body(@_);
 
     $self->is_executed(1);
@@ -681,7 +679,6 @@ sub _shell_args_property_meta
     my @property_meta = $class_meta->get_all_property_objects(@_);
     my @result;
     my %seen;
-    $DB::single = 1;
     for my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
         next if $property_name eq 'id';
