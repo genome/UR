@@ -20,8 +20,8 @@ UR::Object::Type->define(
     is_abstract => 1,
     has => [
         bare_args   => { is => 'ARRAY', is_optional => 1 },
-        is_executed => { is => 'Boolean' },
-        result      => { is => 'Scalar' },
+        is_executed => { is => 'Boolean', is_optional => 1 },
+        result      => { is => 'Scalar', is_optional => 1 },
     ]
 );
 
@@ -683,6 +683,8 @@ sub _shell_args_property_meta
         $seen{$property_name} = 1;
         next if $property_name eq 'id';
         next if $property_name eq 'bare_args';
+        next if $property_name eq 'result';
+        next if $property_name eq 'is_executed';
         next if $property_name =~ /^_/;
         next if defined($property_meta->data_type) and $property_meta->data_type =~ /::/;
         next if not $property_meta->is_mutable;
