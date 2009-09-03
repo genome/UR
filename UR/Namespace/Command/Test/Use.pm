@@ -5,17 +5,18 @@ use strict;
 use warnings;
 use UR;
 use Cwd;
+use YAML;
 
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
+class UR::Namespace::Command::Test::Use {
     is => "UR::Namespace::Command::RunsOnModulesInTree",
     has => [
-        verbose => { type => 'Boolean', doc => 'List each explicitly.' }
+        verbose             => { is => 'Boolean', doc => 'List each explicitly.' },
+        summarize_externals => { is => 'Boolean', doc => 'List all modules used which are outside the namespace.' },
     ]
-);
+};
 
 sub help_brief {
-    "Tests each module for compile errors by 'use'-ing it."
+    "Tests each module for compile errors by 'use'-ing it.  Also reports on any libs added to \@INC by any modules (bad!)."
 }
 
 sub help_synopsis {
@@ -47,19 +48,30 @@ sub before {
     my $self = shift;
     $self->{success} = 0;
     $self->{failure} = 0;
-    my %inc = map { $_ => 1 } @INC;
-    $self->{inc} = \%inc;
     $self->SUPER::before(@_);
 }
 
 sub for_each_module_file {
     my $self = shift;
     my $module_file = shift;
+    my $namespace_name = $self->namespace_name;
     my %libs_before = map { $_ => 1 } @INC;
+    my %mods_before = %INC if $self->summarize_externals;
+    local $SIG{__DIE__};
     eval "require '$module_file'";
     my %new_libs = map { $_ => 1 } grep { not $libs_before{$_} } @INC;
+    my %new_mods = 
+        map { $_ => $module_file } 
+        grep { not $_ =~ /^$namespace_name\// } 
+        grep { not $mods_before{$_} } 
+        keys %INC;
     if (%new_libs) {
-        $self->{rogue_libs}{$module_file} = \%new_libs;
+        $self->{used_libs}{$module_file} = \%new_libs;
+    }
+    if (%new_mods) {
+        for my $mod (keys %new_mods) {
+            $self->{used_mods}{$mod} = $module_file;
+        }
     }
     if ($@) {
         print "$module_file  FAILED:\n$@\n";
@@ -77,16 +89,19 @@ sub after {
     $self->status_message("SUCCESS: $self->{success}");
     $self->status_message("FAILURE: $self->{failure}");
     
-    my %new = map { $_ => 1 } grep { not $self->{libs}{$_} } @INC;
-    if (%new) {
+    if (%{ $self->{used_libs} }) {
         $self->status_message(
             "ROGUE LIBS: "
-            . Data::Dumper::Dumper($self->{rogue_libs})
-           # . join(", ",sort keys %new)
-           # . "\n"
+            . YAML::Dump($self->{used_libs})
         )
-        
     }
+    if ($self->summarize_externals) {
+        $self->status_message(
+            "MODULES USED: "
+            . YAML::Dump($self->{used_mods})  
+        );
+    }
+    return 1;
 }
 
 1;
