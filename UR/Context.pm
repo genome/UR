@@ -1086,11 +1086,12 @@ sub get_objects_for_class_and_rule {
         my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
 
         my $last_loaded_id;
+        my($next_obj_current_context, $next_obj_underlying_context);
         # this will interleave the above with any data already present in the current context
         $loading_iterator = sub {
             GET_FROM_UNDERLYING_CONTEXT:
-            my ($next_obj_current_context) = shift @$cached;
-            my ($next_obj_underlying_context) = $underlying_context_closure->(1) if $underlying_context_closure;
+            ($next_obj_current_context) = shift @$cached unless ($next_obj_current_context);
+            ($next_obj_underlying_context) = $underlying_context_closure->(1) if ($underlying_context_closure && ! $next_obj_underlying_context);
 
             # We're turning off warnings to avoid complaining in the elsif()
             no warnings 'uninitialized';
@@ -1103,9 +1104,8 @@ sub get_objects_for_class_and_rule {
                 # as it's chewing through the (possibly) multiple objects joined to it.
                 # Since the objects will be returned sorted by their IDs, we only have to
                 # remember the last one we saw
+                $next_obj_underlying_context = undef;
                 goto GET_FROM_UNDERLYING_CONTEXT;
-            } else {
-                $last_loaded_id = $next_obj_underlying_context->id;
             }
             use warnings 'uninitialized';
             
@@ -1154,6 +1154,7 @@ sub get_objects_for_class_and_rule {
             }
             
             return unless defined $next_object;
+            $last_loaded_id = $next_object->id;
             return $next_object;
         };
     }
