@@ -5,9 +5,9 @@ use warnings;
 require UR;
 
 UR::Object::Type->define(
-    class_name => 'UR::DataSource::PostgreSQL',
+    class_name => 'UR::DataSource::Pg',
     is => ['UR::DataSource::RDBMS'],
-    english_name => 'ur datasource postgresql',
+    english_name => 'ur datasource pg',
     is_abstract => 1,
 );
 
