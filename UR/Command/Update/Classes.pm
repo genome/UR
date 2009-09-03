@@ -1216,9 +1216,12 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             for my $uc_col (@uc_cols)
             {
                 my ($property) = grep { defined($_->column_name) and ($_->column_name eq $uc_col) } @properties;
-unless ($property) {
-#$DB::single=1;
-}
+                unless ($property) {
+                    $self->warning_message("No property found for column $uc_col for unique constraint $uc_name");
+                    $DB::single=1;
+                    next;
+                }
+
                 my $property_name = $property->property_name;
                 my $attribute_name = $property->attribute_name;
                 my $uc = UR::Object::Property::Unique->create(
@@ -1247,6 +1250,7 @@ unless ($property) {
 
     my %existing_references;
     my $last_class_name = '';
+    FK:
     for my $fk (sort $sorter @{ $dd_changes_by_class{'UR::DataSource::RDBMS::FkConstraint'} }) {
 
         my $table = $fk->get_table;
@@ -1318,8 +1322,9 @@ unless ($property) {
                                       column_name => $r_column_name,
                                 );
                 unless ($r_property) {
-                    #$DB::single = 1;
-                    Carp::confess("Failed to find a property for column $r_column_name on class $r_class_name");
+                    Carp::cluck("Failed to find a property for column $r_column_name on class $r_class_name");
+                    $DB::single = 1;
+                    next FK;
                 }
                 push @r_properties,$r_property;
                 my $r_property_name = $r_property->property_name;
