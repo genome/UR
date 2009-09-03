@@ -218,7 +218,9 @@ sub create {
     # to the class.  In other words, a property directly on the class gets
     # used instead of an inherited one.
     my %property_objects;
-    my @direct_property_names;
+    my %direct_properties;
+    my %indirect_properties; 
+    my %set_properties;
     my %default_values;
     
     for my $co ( reverse( $class_meta, $class_meta->get_inherited_class_objects ) ) {
@@ -236,68 +238,71 @@ sub create {
         @property_objects{@property_names} = @property_objects;            
         
         foreach my $prop ( @property_objects ) {
+            my $name = $prop->property_name;
             $default_values{ $prop->property_name } = $prop->default_value if (defined $prop->default_value);
-        }
-                    
-        #%property_objects = (
-        #    %property_objects,
-        #    map { $_->property_name => $_ }
-        #    $co->get_property_objects
-        #);
-        
-        if ($class_meta->isa("UR::Entity")) {
-            # Things with a data source need a mapping to actually store
-            # their value on the object. The rest will get EAVs.
-            # Todo: store the EAVs here too.
-            push @direct_property_names,
-                map { $_->property_name } 
-                grep { 
-                    ($co->table_name and $_->column_name)
-                    or 
-                    ((not $co->table_name) and (not $_->column_name))
-                }
-                @property_objects;            
-        }
-        else {
-            # Non data-sources store everything here, 
-            # so we don't have to hassle with the other objects.
-            push @direct_property_names, @property_names;
+            if ($prop->is_many) {
+                $set_properties{$name} = $prop;
+            }
+            elsif ($prop->is_indirect) {
+                $indirect_properties{$name} = $prop;
+            }
+            else {
+                $direct_properties{$name} = $prop;
+            }
         }
     }
     
-    my %indirect_properties = %property_objects;
-    delete @indirect_properties{@direct_property_names};
-    
+    my @indirect_property_names = keys %indirect_properties;
+    my @direct_property_names = keys %direct_properties;
+
     $params = { %$params };
-    my $kv = {}; # collection of key-value pairs for the EAV table
+
+    my $indirect_values = {}; # collection of key-value pairs for the EAV table
     for my $property_name (keys %indirect_properties) {
-        $kv->{ $property_name } =
+        $indirect_values->{ $property_name } =
+            delete $params->{ $property_name }
+                if ( exists $params->{ $property_name } );
+    }
+
+    my $set_values = {};
+    for my $property_name (keys %set_properties) {
+        $set_values->{ $property_name } =
             delete $params->{ $property_name }
                 if ( exists $params->{ $property_name } );
     }
     
-    # Create the object.
-    
+    # create the object.
     my $self = $class->create_object(%default_values, %$params, @extra, id => $id);
     unless ($self) {
         return;
     }
-    
-    # set any attribute_value properties        
-    if (%$kv) {
-        for my $property_name ( keys %$kv )
-        {
-            my $po = $class_meta->get_property_object( property_name => $property_name );
-            my $eav = GSC::EntityAttributeValue->create
-            (
-                type_name      => $po->type_name,
-                entity_id      => $id,
-                attribute_name => $po->attribute_name,
-                value          => $kv->{ $property_name },
-            );
+
+    # add itesm for any multi properties
+    if (%$set_values) {
+        for my $property_name (keys %$set_values) {
+            my $adder = 'add_' . $property_name;
+            my $value = $set_values->{$property_name};
+            if (ref($value)) {
+                unless (ref($value) eq 'ARRAY') {
+                    die "odd non-array refrenced used for 'has-many' property $property_name for $class: $value!";
+                }
+                for my $item (@$value) {
+                    $self->$adder($item);
+                }
+            }
+            else {
+                $self->$adder($value);
+            }
+        }
+    }    
+
+    # set any indirect properties        
+    if (%$indirect_values) {
+        for my $property_name (keys %$indirect_values) {
+            $self->$property_name($indirect_values->{$property_name});
         }
     }
-    
+
     $self->signal_change("create");
     return $self;    
 }
