@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Test::More;# skip_all => "fork() causes intermittent failure in TAP output";
+use Test::Fork;
 
 use above 'URT';
 
@@ -18,13 +19,17 @@ if ($ARGV[0] and $ARGV[0] eq '--child') {
     exit(0);
 }
 
+plan tests => 35;
 my $pid;
 if ($ARGV[0] and $ARGV[0] eq '--parent') {
     1;  # do nothing special
-} elsif (! ($pid = fork())) {
-    # child - server
-    &Child();
-    exit(0);
+#} elsif (! ($pid = fork())) {
+#    # child - server
+#    &Child();
+#    exit(0);
+#}
+} else {
+    $pid = fork_ok(6, \&Child);
 }
 
 END { 
@@ -41,7 +46,7 @@ END {
 
 # parent
 
-plan tests => 28;
+#plan tests => 28;
 sleep(1);  # Give the child a change to get started
 
 my $to_server = IO::Socket::INET->new(PeerHost => 'localhost',
@@ -145,7 +150,7 @@ is($resp->exception, undef, 'There was no exception');
 
 
 sub Child {
-    plan tests => 6;
+    #plan tests => 6;
 
     ok(UR::Object::Type->define(
             class_name => 'URT::RPC::Listener',
@@ -156,7 +161,7 @@ sub Child {
     ok(UR::Object::Type->define(
             class_name => 'URT::RPC::Thingy',
             is => 'UR::Service::RPC::Executer'),
-        'Created class for RPC executor');
+       'Created class for RPC executor');
     unshift @URT::RPC::Thingy, 'UR::Service::RPC::Executor';
 
     my $listen_socket = IO::Socket::INET->new(LocalPort => $PORT,
@@ -172,6 +177,7 @@ sub Child {
     ok($rpc_server, 'Created an RPC server');
 
     ok($rpc_server->add_executer($listen_executer), 'Added the listen executer to the server');
+    #$rpc_server->add_executer($listen_executer);
 
     diag('Child process entering the event loop');
     while(1) {
