@@ -797,7 +797,7 @@ sub create
     my $class = shift;
     my $obj = {@_};
     bless ($obj,$class);
-    weaken $obj->{'owner_id'} if (ref($obj->{'owner_id'}));
+   weaken $obj->{'owner_id'} if (ref($obj->{'owner_id'}));
 
     return $obj;
 }

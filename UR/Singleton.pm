@@ -130,7 +130,7 @@ sub init {
 }
 
 # All singletons require special deletion logic since they keep a 
-# weakened reference to the singleton.
+#weakened reference to the singleton.
 
 sub delete_object {
     my $self = shift;

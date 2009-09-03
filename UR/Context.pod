@@ -673,7 +673,7 @@ main object cache, C<$UR::Context::all_objects_loaded>.
 
 The application may lock an object in the cache by calling C<strengthen> on
 it,  Likewise, the app may hint to the pruner to throw away an object as 
-soon as possible by calling C<weaken>.
+soon as possible by calling C<__weaken__>.
 
 =head1 SEE ALSO
 

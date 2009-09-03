@@ -2,9 +2,10 @@ package UR::Object;
 
 use warnings;
 use strict;
+
 require UR;
 
-use Scalar::Util qw(blessed);
+use Scalar::Util;
 
 our @ISA = ('UR::ModuleBase');
 our $VERSION = $UR::VERSION;;
@@ -12,8 +13,8 @@ our $VERSION = $UR::VERSION;;
 sub class { ref($_[0]) || $_[0] }
 
 sub __meta__  {
-    # for bootstrapping
     # subclasses set this specifically for efficiency
+    # the base class has a generic implementation for boostrapping
     my $class_name = shift;
     return $UR::Context::all_objects_loaded->{"UR::Object::Type"}{$class_name};
 }
@@ -32,21 +33,21 @@ sub __label_name__ {
 
 sub __display_name__ {
     my $self = shift;
-    my $context = shift;
+    my $in_context_of_related_object = shift;
     
     my $name = $self->id;
     $name =~ s/\t/ /g;
     return $name;
 
-    if (not $context) {
-        # no context.
+    if (not $in_context_of_related_object) {
+        # no in_context_of_related_object.
         # the object is identified globally
         return $self->label_name . ' ' . $name;
     }
-    elsif ($context eq ref($self)) {
+    elsif ($in_context_of_related_object eq ref($self)) {
         # the class is completely known
         # show only the core display name
-        # -> less text, more context
+        # -> less text, more in_context_of_related_object
         return $name
     }
     else {
@@ -60,7 +61,7 @@ sub __display_name__ {
 sub context {
     # For efficiency, all context switches update this value.
     # We will ultimately need to support objects knowing their context explicitly
-    # for things such as data maintenance operations.
+    # for things such as data maintenance operations.  TODO.
     $UR::Context::current;
 }
 
@@ -90,7 +91,6 @@ sub create_iterator {
     }
   
     unless (Scalar::Util::blessed($filter)) {
-        #$filter = $class->define_boolexpr(@$filter)
         $filter = UR::BoolExpr->resolve($class,@$filter)
     }
     
@@ -170,14 +170,14 @@ END {
 # For classes without a data source, then it will be dropped according to
 # the normal rules w/r/t the __get_serial (classes without data sources
 # normally are never dropped by the pruner)
-sub weaken {
+sub __weaken__ {
     my $self = $_[0];
     delete $self->{'__strengthened'};
     $self->{'__weakened'} = 1;
 }
 
 # Indicate this object should never be unloaded by the object cache pruner
-sub strengthen {
+sub __strengthen__ {
     my $self = $_[0];
     delete $self->{'__weakened'};
     $self->{'__strengthened'} = 1;

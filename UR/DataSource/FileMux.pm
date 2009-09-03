@@ -204,7 +204,7 @@ sub get_or_create_data_source {
 
         # Since these $sub_ds objects have no data_source, this will indicate to
         # UR::Context::prune_object_cache() that it's ok to go ahead and drop them
-        $sub_ds->weaken();
+        $sub_ds->__weaken__();
     }
     return $sub_ds;
 }
@@ -501,7 +501,7 @@ sub _sync_database {
 
             # Since these $sub_ds objects have no data_source, this will indicate to
             # UR::Context::prune_object_cache() that it's ok to go ahead and drop them
-            $sub_ds->weaken();
+            $sub_ds->__weaken__();
         }
         unless ($sub_ds) {
             die "Can't get data source with ID $sub_ds_id";

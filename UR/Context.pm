@@ -451,7 +451,7 @@ sub prune_object_cache {
             foreach my $id ( keys ( %$objects_for_class ) ) {
                 my $obj = $objects_for_class->{$id};
 
-                # Objects marked strengthened are never purged
+                # Objects marked __strengthen__ed are never purged
                 next if exists $obj->{'__strengthened'};
 
                 # classes with data sources get their objects pruned immediately if
