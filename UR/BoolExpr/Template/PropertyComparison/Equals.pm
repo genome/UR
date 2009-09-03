@@ -15,7 +15,10 @@ sub evaluate_subject_and_values {
     my $subject = shift;
     my $comparison_value = shift;    
     my $property_name = $self->property_name;    
-    my @property_value = $subject->$property_name;
+    my @property_value = eval { $subject->$property_name; };
+    if ($@) {
+        $DB::single = 1;
+    }
     no warnings;
     if (@property_value == 1) {
         return ($property_value[0] eq $comparison_value ? 1 : '');

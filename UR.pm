@@ -7,10 +7,11 @@ package UR;
 use strict;
 use warnings FATAL => 'all';
 
+use version;
 our $VERSION;
 
 BEGIN {
-    $VERSION = '0.7';
+    $VERSION = qv('0.10');
 }
 
 # Ensure we get detailed errors while starting up.
