@@ -35,7 +35,6 @@ my %WORKING_RULES; # Avoid recusion when infering values from rules
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
-$DB::single=1;
     if ($WORKING_RULES{$rule->id}++) {
         my $subject_class = $rule->subject_class_name;
         $self->error_message("Recursive entry into create_iterator_closure_for_rule() for class $subject_class rule_id ".$rule->id);
@@ -109,11 +108,17 @@ $DB::single=1;
                     " returned undef for params " . join(',',@$resolver_params);
             }
 
-            $sub_ds = $concrete_ds_type->create(
+            $concrete_ds_type->define(
                           id => $sub_ds_id,
                           %sub_ds_params,
                           server => $file_path,
                       );
+            $UR::Context::all_objects_cache_size++;
+            $sub_ds = $concrete_ds_type->get($sub_ds_id);
+
+            # Since these $sub_ds objects have no data_source, this will indicate to
+            # UR::Context::prune_object_cache() that it's ok to go ahead and drop them
+            $sub_ds->weaken();
         }
         unless ($sub_ds) {
             die "Can't get data source with ID $sub_ds_id";
