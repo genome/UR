@@ -128,7 +128,7 @@ existing database, give its connect string instead.
 
 which generates this output:
 
-  A   CdExample::DataSource::Example (UR::DataSource::SQLite)
+  A   CdExample::DataSource::Example (UR::DataSource::SQLite,UR::Singleton)
      ...connecting...
      ....ok
 

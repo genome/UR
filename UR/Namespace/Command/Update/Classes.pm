@@ -1276,7 +1276,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     #  These often change name, and as such need to be identified by their actual content.
     #  Each constraint must match some relationship in the system, or a new one will be added.
 
-    $self->status_message("Updating class relationship constraints...\n");
+    $self->status_message("Updating class relationships...\n");
 
     my %existing_references;
     my $last_class_name = '';
@@ -1382,7 +1382,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             else {
                 $delegation_name = join("_", @property_names) . "_" . $delegation_name;
             }
-    
+
             # Generate a delegation name that dosen't conflict with another already in use
             my %delegation_names_used = map { $_->delegation_name => 1 }
                                             UR::Object::Reference->get(class_name => $class_name);
@@ -1448,6 +1448,39 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                     Carp::confess("Failed to create a new reference property for tha_id $reference_id property_name $property_name r_property_name $r_property_name");
                 }
             }
+
+            # Make a new relationship property for this reference
+ 
+            # Pick a name that isn't already a property in that class
+            PICK_A_NAME:
+            for ( 1 ) {
+                if (UR::Object::Property->get(class_name => $class_name,
+                                              property_name => $delegation_name)) {
+                    if (UR::Object::Property->get(class_name => $class_name,
+                                                  property_name => $delegation_name.'_obj')) {
+                        foreach my $i ( 1 .. 10 ) {
+                            unless (UR::Object::Property->get(class_name => $class_name,
+                                                              property_name => $delegation_name."_$i")) {
+                                $delegation_name .= "_$i";
+                                last PICK_A_NAME;
+                            }
+                        }
+                        $self->warning_message("Can't generate a relationship property name for $class_name table name $table_name constraint_name ",$fk->fk_constraint_name);
+                        next FK;
+                    } else {
+                        $delegation_name = $delegation_name.'_obj';
+                    }
+                }
+            }
+            UR::Object::Property->create(class_name => $class_name,
+                                         property_name => $delegation_name, 
+                                         data_type => $r_class_name,
+                                         id_by => \@property_names,
+                                         constraint_name => $fk->fk_constraint_name,
+                                         is_delegated => 1,
+                                         is_specified_in_module_header => 1,
+                                        );
+
         } # end create a new reference object
 
     } # next fk constraint
@@ -1516,10 +1549,10 @@ sub _sync_filesystem {
                 next;
             }
             if ($class_obj->db_committed) {
-                $status_message_this_update .= "U " . $class_obj->class_name;
+                $status_message_this_update .= "U " . $class_obj->module_path;
             }
             else {
-                $status_message_this_update .= "A " . $class_obj->class_name;
+                $status_message_this_update .= "A " . $class_obj->module_path;
             }
             $class_obj->rewrite_module_header() unless ($no_commit);
             # FIXME A test of automaticly making DBIx::Class modules
@@ -1531,7 +1564,7 @@ sub _sync_filesystem {
                 next;
             }
             
-            $status_message_this_update = "D " . $class_obj->class_name;
+            $status_message_this_update = "D " . $class_obj->module_path;
             
             unless ($no_commit) {
                 unless (-d $obsolete_module_directory) {
