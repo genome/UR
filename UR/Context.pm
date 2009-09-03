@@ -416,9 +416,10 @@ sub get_objects_for_class_and_rule {
     my $meta = $class->get_class_object();    
     my $id_property_sorter = $meta->id_property_sorter;
     my ($ds) = $self->resolve_data_sources_for_class_meta_and_rule($meta,$rule);
-    unless ($ds) {
-        $load = 0;
-    }
+    if (! $ds or $meta->class_name =~ m/::Ghost$/) {
+        # Classes without data sources and Ghosts can only ever come from the cache
+        $load = 0;  
+    } 
     
     # this is an arrayref of all of the cached data
     my $cached;
