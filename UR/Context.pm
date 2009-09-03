@@ -539,7 +539,8 @@ sub _create_import_iterator_for_underlying_context {
             for (1) {
                 $pending_db_object = undef;
 
-                my ($pending_db_object_data) = $db_iterator->();                
+                my $pending_db_object_data;
+                $pending_db_object_data = $db_iterator->() if ($db_iterator);
                 unless ($pending_db_object_data) {
                     if ($rows == 0) {
                         # if we got no data at all from the sql then we give a status
