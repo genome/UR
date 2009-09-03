@@ -943,7 +943,7 @@ sub _normalize_property_description {
     }
     # UR::DataSource::File-backed classes don't have table_names, but for querying/saving to
     # work property, their properties still have to have column_name filled in
-    if (($new_class{table_name} or ($the_data_source and $the_data_source->isa('UR::DataSource::File')))
+    if (($new_class{table_name} or ($the_data_source and ($the_data_source->initializer_should_create_column_name_for_class_properties())))
         and not $new_property{column_name}
         and not $new_property{is_transient}
         and not $new_property{is_delegated}

@@ -771,6 +771,11 @@ sub create_from_inline_class_data {
 }
 
 
+sub initializer_should_create_column_name_for_class_properties {
+    1;
+}
+
+
 1;
 
 =pod

@@ -433,6 +433,10 @@ sub _setup_generate_load_tmpl_method {
         code => $gen_templates,
     });
 }
+
+sub initializer_should_create_column_name_for_class_properties {
+    1;
+}
     
  
 1;

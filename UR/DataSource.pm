@@ -956,6 +956,19 @@ sub get_default_handle {
     return;
 }
 
+# When the class initializer is create property objects, it will
+# auto-fill-in column_name if the class definition has a table_name.
+# File-based data sources do not have tables (and so classes using them
+# do not have table_names), but the properties still need column_names
+# so loading works properly.
+# For now, only UR::DataSource::File and ::FileMux set this.
+# FIXME this method's existence is ugly.  Find a better way to fill in
+# column_name for those properties, or fix the data sources to not
+# require column_names to be set by the initializer
+sub initializer_should_create_column_name_for_class_properties {
+    return 0;
+}
+
 
 # Subclasses should override this.
 # It's called by the class initializer when the data_source property in a class
