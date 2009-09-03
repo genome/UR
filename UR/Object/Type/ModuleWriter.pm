@@ -54,12 +54,48 @@ sub resolve_class_description_perl {
     my $perl = '';
     
     unless (@isa == 1 and $isa[0] =~ /^UR::Object|UR::Entity$/ ) {
-        $perl .= "    is => " . (@isa == 1 ? "['@isa'],\n" : "[qw/@isa/],\n");
+        $perl .= "    is => " . (@isa == 1 ? "[ '@isa' ],\n" : "[ qw/@isa/ ],\n");
     }
     $perl .= "    type_name => '" . $self->type_name . "',\n" unless $self->type_name eq $class_name;
     $perl .= "    table_name => " . ($self->table_name ? "'" . $self->table_name . "'" : 'undef') . ",\n" if $self->data_source;
     $perl .= "    is_abstract => 1,\n" if $self->is_abstract;
     $perl .= "    er_role => '" . $self->er_role . "',\n" if ($self->er_role and ($self->er_role ne $class_meta_meta->get_property_object(property_name => 'er_role')->default_value));
+
+    # Meta-property attributes
+    my @property_meta_property_names;
+    my @property_meta_property_strings;
+    if ($self->{'attributes_have'}) {
+        @property_meta_property_names = sort { $self->{'attributes_have'}->{$a}->{'position_in_module_header'}
+                                                 <=>
+                                               $self->{'attributes_have'}->{$b}->{'position_in_module_header'} }
+                                            keys %{$self->{'attributes_have'}};
+        foreach my $meta_name ( @property_meta_property_names ) {
+            my @this_meta_properties;
+            my $this_meta_struct = $self->{'attributes_have'}->{$meta_name};
+
+            # We want these to appear first
+            push @this_meta_properties, sprintf("is => '%s'", $this_meta_struct->{'is'}) if (exists $this_meta_struct->{'is'});
+            push @this_meta_properties, sprintf("is_optional => %d", $this_meta_struct->{'is_optional'}) if (exists $this_meta_struct->{'is_optional'});
+
+            foreach my $key ( sort keys %$this_meta_struct ) {
+                next if grep { $key eq $_ } qw( is is_optional is_specified_in_module_header position_in_module_header );  # skip the ones we've already done
+                my $value = $this_meta_struct->{$key};
+                my $is_number = ($value + 0) eq $value;
+                
+                my $format = $is_number ? "%s => %s" : "%s => '%s'";
+                push @this_meta_properties, sprintf($format, $key, $value);
+            }
+            push @property_meta_property_strings, "$meta_name => { " . join(', ', @this_meta_properties) . " },";
+        }
+    }
+    if (@property_meta_property_strings) {
+        $perl .= "    attributes_have => [\n        " . 
+                 join("\n        ", @property_meta_property_strings) .
+                 "\n    ],\n";
+    }
+            
+    $DB::single=1;
+
 
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->get_class_object->all_property_type_names;
@@ -86,128 +122,71 @@ sub resolve_class_description_perl {
            }
     }
 
-    my %properties_seen;
-    my %implied_properties;
-    my %properties_printed;
-    for my $group ('id_by','has') {
-        my $properties_src = "";
-        my @properties_to_list;
-        if ($group eq 'id_by') {
-            @properties_to_list = 
-                sort {
-                    my $a_pos = (ref($a) eq 'UR::Object::Property::ID' ? $a->position : $a->rank);
-                    my $b_pos = (ref($b) eq 'UR::Object::Property::ID' ? $b->position : $b->rank);
-                    $a_pos <=> $b_pos;
-                }
-                map { 
-                    UR::Object::Property::ID->get(class_name => $class_name, property_name => $_),
-                    UR::Object::Reference::Property->get(class_name => $class_name, property_name => $_)
-                } 
-                $self->id_property_names;
-                
-            if (@isa == 1
-                and @properties_to_list == 2 
-                and $properties_to_list[1]->isa('UR::Object::Reference::Property') 
-                and $properties_to_list[1]->get_reference->r_class_name eq $isa[0]
-            ) {
-                # the id is a fk to the parent class' ID: this is really a relationship to self                
-                @properties_to_list = ($properties_to_list[0]->get_property);
-            }
-            else {
-                @properties_to_list = map { ref($_) eq 'UR::Object::Reference::Property' ? $_->get_reference : $_->get_property } @properties_to_list; 
-            }
+    my @properties = $self->get_property_objects;
+    my %properties_by_section;
+    foreach my $property_meta ( @properties ) {
+        my $mentioned_section = $property_meta->is_specified_in_module_header;
+        next unless $mentioned_section;  # skip implied properites
+        ($mentioned_section) = ($mentioned_section =~ m/::(\w+)$/);
+         
+        if (($mentioned_section and $mentioned_section eq 'id_implied')
+            or $property_meta->isa('UR::Object::Property::ID')) {
+
+            push @{$properties_by_section{'id_by'}}, $property_meta;
+
+        } elsif ($mentioned_section) {
+            push @{$properties_by_section{$mentioned_section}}, $property_meta;
+  
+        } else {
+            push @{$properties_by_section{'has'}}, $property_meta;
         }
-        else {
-            @properties_to_list = (
-                UR::Object::Property->get(class_name => $self->class_name),
-                UR::Object::Reference->get(class_name => $self->class_name)
-            );
+    }
+
+    my %sections_seen;
+    foreach my $section ( ( 'id_by', 'has', 'has_many', 'has_optional', keys(%properties_by_section) ) ) {
+        next unless ($properties_by_section{$section});
+        next if ($sections_seen{$section});
+        $sections_seen{$section} = 1;
+
+        # New properites (will have position_in_module_header == undef) should go at the end
+        my @properties = sort { my $pos_a = defined($a->{'position_in_module_header'})
+                                            ? $a->{'position_in_module_header'}
+                                            : 1000000;
+                                my $pos_b = defined($b->{'position_in_module_header'})
+                                            ? $b->{'position_in_module_header'}
+                                            : 1000000;
+                                $pos_a <=> $pos_b;
+                              }
+                              @{$properties_by_section{$section}};
+        
+        my $section_src = '';
+        my $max_name_length = 0;
+        foreach my $property_meta ( @properties ) {
+            my $name = $property_meta->property_name;
+            $max_name_length = length($name) if (length($name) > $max_name_length);
         }
-        
-        my $max_name_length = 0;        
-        for my $p (@properties_to_list) {
-            my $name = ($p->isa("UR::Object::Property") ? $p->property_name : $p->delegation_name);
-            $max_name_length = length($name) if $max_name_length < length($name);
-            if (my $other = $properties_seen{$name}) {
-                if ($other->isa("UR::Object::Reference")) {
-                    # a non-reference takes precedence
-                    $properties_seen{$name} = $p;
-                }
-                else {
-                    # skip/duplicate
-                    next;
-                }
-            }
-            else {
-                $properties_seen{$name} = $p;
-            }
-            
-            my @id_by;
-            if ($p->isa("UR::Object::Property")) {
-                @id_by = $p->id_by_property_links;            
-            }
-            else {
-                @id_by = $p->property_link_names;            
-            }
-            for (@id_by) {
-                $implied_properties{$_} = $name;                
-            }            
-        }
-        
-        @properties_to_list = 
-            sort {
-                my $name_a = ($a->isa("UR::Object::Property") ? $a->property_name : $a->delegation_name);
-                my $name_b = ($b->isa("UR::Object::Property") ? $b->property_name : $b->delegation_name);
-                ($name_a cmp $name_b);
-            } @properties_to_list;
-        
-        for my $property (@properties_to_list) {
-            my $name = ($property->isa("UR::Object::Property") ? $property->property_name : $property->delegation_name);
-            unless ($property) {
-                die "No $name?\n";
-            }
-            next if $properties_printed{$name};
-            
-            my @fields;
-            
-            if ($property->isa("UR::Object::Reference")) {
-                #print Data::Dumper::Dumper("got reference for $class_name: $property->{id}");
-                my $type = $property->r_class_name;
-                push @fields, "is => '$type'";            
-                if ($property->property_link_names == 1) {
-                    push @fields, "id_by => '" . ($property->property_link_names)[0] . "'";
-                }
-                else {
-                    push @fields, "id_by => [" . join(", ", map { "'$_'" } $property->property_link_names) . "]";
-                }
-            
-                if ($property->constraint_name) {
-                    push @fields, "constraint_name => '" . $property->constraint_name . "'";
-                }
-            }
-            else {
-                @fields = $self->_get_display_fields_for_property($property, has_table => $has_table);
-            }
-            
-            # Properties which are implied and have no additional information are skipped.
-            next if @fields == 0;
-            
+        foreach my $property_meta ( @properties ) {
+            my $name = $property_meta->property_name;
+            my @fields = $self->_get_display_fields_for_property(
+                                        $property_meta,
+                                        has_table => $has_table,
+                                        section => $section,
+                                        attributes_have => \@property_meta_property_names);
+
             my $line = "        "
                 . $name . (" " x ($max_name_length - length($name)))
                 . " => { "
                 . join(", ", @fields)
                 . " },\n";
-    
-            $properties_src .= $line;
-            $properties_printed{$name} = 1;
+
+            $section_src .= $line;
         }
-        
-        if (length($properties_src)) {            
-            $perl .= "    $group => [\n" . $properties_src . "    ],\n";
-        }
+
+        $perl .= "    $section => [\n$section_src\n    ],\n";
     }
 
-    if (my @unique_constraint_props = sort { $a->unique_group cmp $b->unique_group } UR::Object::Property::Unique->get(class_name => $self->class_name)) {
+    if (my @unique_constraint_props = sort { $a->unique_group cmp $b->unique_group }
+                                      UR::Object::Property::Unique->get(class_name => $self->class_name)) {
         my %unique_groups;
         for my $uc_prop (@unique_constraint_props) {
             $unique_groups{$uc_prop->unique_group} ||= [];
@@ -241,41 +220,41 @@ sub resolve_class_description_perl {
     #$perl .= "    source => '" . $self->source . "',\n" if defined $self->source;
     $perl .= "    doc => $doc,\n" if defined($doc);
 
-=cut
-
-    do {
-        no warnings;
-        
-        my $new_desc = eval "{ $perl }";
-        die $@ if $@;        
-        
-        my $old_desc = $self; #UR::Util::deep_copy($self);
-        for my $key (keys %$old_desc) {            
-            delete $old_desc->{$key} if $key =~ /^_/;            
-        }
-        for my $has (keys %{ $old_desc->{has} }) {
-            my $p = $old_desc->{has}{$has};
-            if ($p->{implied_by}) {
-                delete $old_desc->{has}{$has};
-            }
-        }
-        delete $old_desc->{db_committed};
-        delete $old_desc->{id};
-        delete $old_desc->{module_header_positions};
-        delete $old_desc->{meta_class_name};        
-        
-        my $new_normalized = __PACKAGE__->_normalize_class_description(class_name => $class_name, %$new_desc);
-        my $old_normalized = __PACKAGE__->_normalize_class_description(%$old_desc);
-        my $old_src = Data::Dumper::Dumper($self);
-        my $new_src = Data::Dumper::Dumper($new_normalized);
-        unless ($old_src eq $new_src) {
-            warn "source for $class_name does not normalize back to the original class!\n";
-            print IO::File->new(">/tmp/old.pm")->print($old_src);
-            print IO::File->new(">/tmp/new.pm")->print($new_src);        
-        }
-    };
-
-=cut
+#=cut
+#
+#    do {
+#        no warnings;
+#        
+#        my $new_desc = eval "{ $perl }";
+#        die $@ if $@;        
+#        
+#        my $old_desc = $self; #UR::Util::deep_copy($self);
+#        for my $key (keys %$old_desc) {            
+#            delete $old_desc->{$key} if $key =~ /^_/;            
+#        }
+#        for my $has (keys %{ $old_desc->{has} }) {
+#            my $p = $old_desc->{has}{$has};
+#            if ($p->{implied_by}) {
+#                delete $old_desc->{has}{$has};
+#            }
+#        }
+#        delete $old_desc->{db_committed};
+#        delete $old_desc->{id};
+#        delete $old_desc->{module_header_positions};
+#        delete $old_desc->{meta_class_name};        
+#        
+#        my $new_normalized = __PACKAGE__->_normalize_class_description(class_name => $class_name, %$new_desc);
+#        my $old_normalized = __PACKAGE__->_normalize_class_description(%$old_desc);
+#        my $old_src = Data::Dumper::Dumper($self);
+#        my $new_src = Data::Dumper::Dumper($new_normalized);
+#        unless ($old_src eq $new_src) {
+#            warn "source for $class_name does not normalize back to the original class!\n";
+#            print IO::File->new(">/tmp/old.pm")->print($old_src);
+#            print IO::File->new(">/tmp/new.pm")->print($new_src);        
+#        }
+#    };
+#
+#=cut
 
     return $perl;
 }
@@ -294,29 +273,43 @@ sub _get_display_fields_for_property {
     my $property = shift;
     my %params = @_;
     
-    if(not $property->is_specified_in_module_header) {
-        # we omit showing implied properties which have no additional data, unless they have their own docs, a specified column, etc.
+    if (not $property->is_specified_in_module_header) {
+        # we omit showing implied properties which have no additional data,
+        # unless they have their own docs, a specified column, etc.
         return();
     }    
+
+    my $next_line_prefix = "\n" . (" " x 25);
+    my $deep_indent_prefix = "\n" . (" " x 55);
     
     my @fields;    
+    my %seen;
     my $property_name = $property->property_name;
     
     my $type = $property->data_type;
-    push @fields, "is => '$type'" if $type;
+    if ($type) {
+        push @fields, "is => '$type'" if $type;
+        $seen{'is'} = 1;
+    }
     
     if (defined($property->data_length) and length($property->data_length)) {
-        push @fields, "len => " . $property->data_length
+        push @fields, "len => " . $property->data_length;
+        $seen{'data_length'} = 1;
     }
     
     # show defined values
     for my $std_field_name (qw//) {
         my $property_name = "is_" . $std_field_name;
         push @fields, "$property_name => " . $property->$property_name if defined $property->$property_name;
+        $seen{$property_name} = 1;
     }
 
     # show only true values, false is default
-    for my $std_field_name (qw/optional transient constant class_wide/) {
+    my $section = $params{'section'};
+    $section =~ s/^has_//;
+    for my $std_field_name (qw/optional abstract transient constant class_wide many/) {
+        $seen{$property_name} = 1;
+        next if ($section eq $std_field_name);  # Don't print is_optional if we're in the has_optional section
         my $property_name = "is_" . $std_field_name;
         push @fields, "$property_name => " . $property->$property_name if $property->$property_name;
     }
@@ -326,54 +319,93 @@ sub _get_display_fields_for_property {
         # temp hack for entity attribute values
         #push @fields, "delegate => { via => 'eav_" . $property->property_name . "', to => 'value' }";
         push @fields, "is_legacy_eav => 1";                
+        $seen{'is_legacy_eav'} = 1;
     }
     elsif ($property->is_delegated) {
         # do nothing
+        $seen{'is_delegated'} = 1;
     }
     elsif ($property->is_calculated) {
-        # do nothing
-    }
-    elsif ($property->is_transient) {
-        # do nothing
+        my @calc_fields;
+        if (my $calc_from = $property->calculate_from) {
+            if ($calc_from and @$calc_from == 1) {
+                push @calc_fields, "calculate_from => '" . $calc_from->[0] . "'";
+            } elsif ($calc_from) {
+                push @calc_fields, "calculate_from => [ '" . join("', '", @$calc_from) . "' ]";
+            }
+        }
+        foreach my $calc_type ( qw( calculate calculate_sql calculate_perl calculate_js ) ) {
+            if ($property->$calc_type) {
+                push @calc_fields, "$calc_type => '" . $property->$calc_type . "'";
+            }
+        }
+        push @fields, join(",$next_line_prefix", @calc_fields);
+        $seen{'is_calculated'} = 1;
     }
     elsif ($params{has_table}) {
         unless ($property->column_name) {
-            die("no column for property on class with table: " . $property->property_name . " class: " . $self->class_name . "?");
+            die("no column for property on class with table: " . $property->property_name .
+                " class: " . $self->class_name . "?");
         }
         if (uc($property->column_name) ne uc($property->property_name)) {
             push @fields,  "column_name => '" . $property->column_name . "'";
         }
+        $seen{'column_name'} = 1;
     }
     
     my $implied_property = 0;
     if (defined($property->implied_by) and length($property->implied_by)) { 
         push @fields,  "implied_by => '" . $property->implied_by . "'";
         $implied_property = 1;
+        $seen{'implied_by'} = 1;
     }
 
-    my $next_line_prefix = "\n" . (" " x 50);
-    my $deep_indent_prefix = "\n" . (" " x 55);
-
     if (my @id_by = $property->id_by_property_links) {
-        #push @fields, $next_line_prefix 
-        #    . "id_by => [ "
-        #    . join("\n$deep_indent_prefix", map { "'" . $_->property_name . "'" } @id_by )
-        #    . " ]";
         push @fields, "id_by => " 
             . (@id_by > 1 ? '[ ' : '')
             . join(", ", map { "'" . $_->property_name . "'" } @id_by)
-            . (@id_by > 1 ? ' ]' : '') 
+            . (@id_by > 1 ? ' ]' : '');
+        $seen{'id_by_property_links'} = 1;
+    }
+
+    if ($property->via) {
+        push @fields, "via => '" . $property->via . "'";
+        $seen{'via'} = 1;
+        if ($property->to and $property->to ne $property->property_name) {
+            push @fields, "to => '" . $property->to . "'";
+            $seen{'to'} = 1;
+        }
+    }
+    if ($property->reverse_id_by) {
+        push @fields, "reverse_id_by => '" . $property->reverse_id_by . "'";
+        $seen{'reverse_id_by'} = 1;
     }
 
     if ($property->constraint_name) {
         push @fields, "constraint_name => '" . $property->constraint_name . "'";
+        $seen{'constraint_name'} = 1;
+    }
+
+    if ($property->where) {
+        my %where = @{ $property->where };
+        push @fields, 'where => [ ' . join(', ', map { sprintf("%s => '%s'", $_, $where{$_}) } keys %where) . ' ]';
+    }
+
+    foreach my $meta_property ( @{$params{'attributes_have'}} ) {
+        my $value = $property->{$meta_property};
+        if (defined $value) {
+            no warnings 'numeric';
+            my $is_number = ($value + 0) eq $value;
+            my $format = $is_number ? "%s => %s" : "%s => '%s'";
+            push @fields, sprintf($format, $meta_property, $value);
+        }
     }
     
     my $desc = $property->description;
     if ($desc && length($desc)) {
         $desc =~ s/([\$\@\%\\\"])/\\$1/g;
         $desc =~ s/\n/\\n/g;
-        push @fields,  $next_line_prefix . 'doc => "' . $desc . '"';
+        push @fields,  $next_line_prefix . "doc => '$desc'";
     }
     
     return @fields;
@@ -651,6 +683,19 @@ if ($package->isa("UR::Object::Type")) {
     UR::Context::Transaction->log_change($self, ref($self), $self->id, 'rewrite_module_header', Data::Dumper::Dumper{path => $module_file_path, data => $old_file_data});
 
     return 1;
+}
+
+
+sub _should_write_to_class_definition {
+    my($self, $property_meta) = @_;
+
+    my $property_name = $property_meta->property_name;
+    return unless $property_meta->is_modulewritten;
+
+    my $default_value = $property_meta->default_value;
+    my $property_value = $self->$property_name;
+
+    return $default_value ne $property_value;
 }
 
 1;
