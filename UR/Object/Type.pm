@@ -317,7 +317,7 @@ sub get_property_meta_by_name {
 }
 
 # Replaces the above!
-sub property_meta_by_name {
+sub property_meta_for_name {
     my($self, $property_name) = @_;
 
     my $property = $self->direct_property_metas(property_name => $property_name);
@@ -325,7 +325,7 @@ sub property_meta_by_name {
 
     # Make a depth-first search for a direct_property_meta with that name
     foreach my $parent_class_meta ( $self->parent_class_metas ) {
-        $property = $parent_class_meta->property_meta_by_name($property_name);
+        $property = $parent_class_meta->property_meta_for_name($property_name);
         return $property if $property;
     }
     return;
@@ -472,7 +472,7 @@ sub generate_support_class_for_extension {
         my $subject_class_metaobj = UR::Object::Type->get($self->meta_class_name);  # Class object for the subject_class
         #my %class_params = map { $_ => $subject_class_obj->$_ } $subject_class_obj->property_names;
         my %class_params = map { $_ => $subject_class_obj->$_ }
-                           grep { my $p = $subject_class_metaobj->property_meta_by_name($_);
+                           grep { my $p = $subject_class_metaobj->property_meta_for_name($_);
                                   unless($p) { die "can't get_property_meta_by_name for $_"; }
                                   ! $p->is_delegated and ! $p->is_calculated }
                            $subject_class_obj->property_names;

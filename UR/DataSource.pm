@@ -345,13 +345,21 @@ sub _generate_template_data_for_loading {
         my $last_alias_for_this_chain;
     
         my $property_name = $delegated_property->property_name;
-        my $final_accessor = $delegated_property->to;            
         my @joins = $delegated_property->_get_joins;
         my $relationship_name = $delegated_property->via;
         unless ($relationship_name) {
            $relationship_name = $property_name;
            $needs_further_boolexpr_evaluation_after_loading = 1;
         }
+
+        my $delegate_class_meta = $delegated_property->class_meta;
+        my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
+        my $final_accessor = $delegated_property->to;            
+        my $final_accessor_meta = $via_accessor_meta->data_type->get_class_object->property_meta_for_name($final_accessor);
+        while($final_accessor_meta->is_delegated) {
+            $final_accessor_meta = $final_accessor_meta->to_property_meta();
+        }
+        $final_accessor = $final_accessor_meta->property_name;
 
         #print "$property_name needs join "
         #    . " via $relationship_name "
@@ -544,7 +552,7 @@ sub _generate_loading_templates_arrayref {
 
     use strict;
     use warnings;
-    
+
     my %templates;
     my $pos = 0;
     my @templates;
@@ -575,9 +583,11 @@ sub _generate_loading_templates_arrayref {
     
     # Post-process the template objects a bit to get the exact id positions.
     for my $template (@templates) {
+        next unless $template;  # This join may have resulted in no template?!
         my @id_property_names;
         unless (defined $template->{data_class_name}) {
-            print Data::Dumper::Dumper("No data class name in template?",$template); 
+            $DB::single=1;
+            print "No data class name in template: ", Data::Dumper::Dumper($template); 
         }
         for my $id_class_name ($template->{data_class_name}, $template->{data_class_name}->inheritance) {
             my $id_class_obj = UR::Object::Type->get(class_name => $id_class_name);

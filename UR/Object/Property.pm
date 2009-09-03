@@ -107,6 +107,71 @@ sub create_object {
     return $class->SUPER::create_object(plural_name => $plural_name, singular_name => $singular_name, %params);
 }
 
+
+# Returns the table and column for this property.
+# If this particular property doesn't have a column_name, and it
+# overrides a property defined on a parent class, then walk up the
+# inheritance and find the right one
+sub table_and_column_name_for_property {
+    my $self = shift;
+
+    # Shortcut - this property has a column_name, so the class should have the right
+    # table_name
+    if ($self->column_name) {
+        return ($self->class_name->get_class_object->table_name, $self->column_name);
+    }
+
+    my $property_name = $self->property_name;
+    my @class_metas = $self->class_meta->parent_class_metas;
+
+    my %seen;
+    while (@class_metas) {
+        my $class_meta = shift @class_metas;
+        next if ($seen{$class_meta}++);
+
+        my $p = $class_meta->property_meta_for_name($property_name);
+        next unless $p;
+
+        if ($p->column_name && $class_meta->table_name) {
+            return ($class_meta->table_name, $p->column_name);
+        }
+
+        push @class_metas, $class_meta->parent_class_metas;
+    }
+
+    # This property has no column anywhere in the class' inheritance
+    return;
+}
+
+
+# For via/to delegated properties, return the property meta in the same
+# class this property delegates through
+sub via_property_meta {
+    my $self = shift;
+
+    return unless ($self->is_delegated and $self->via);
+    my $class_meta = $self->class_meta;
+    return $class_meta->property_meta_for_name($self->via);
+}
+
+# For via/to delegated properties, return the property meta on the foreign
+# class that this property delegates to
+sub to_property_meta {
+    my $self = shift;
+
+    return unless ($self->is_delegated && $self->via && $self->to);
+
+    my $via_meta = $self->via_property_meta();
+    return unless $via_meta;
+
+    my $remote_class = $via_meta->data_type;
+    my $remote_class_meta = UR::Object::Type->get($remote_class);
+    return unless $remote_class_meta;
+
+    return $remote_class_meta->property_meta_for_name($self->to);
+}
+
+
 sub get_property_name_pairs_for_join {
     my ($self) = @_;
     my @linkage = $self->_get_direct_join_linkage();
