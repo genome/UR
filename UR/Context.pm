@@ -392,7 +392,7 @@ sub prune_object_cache {
     return if ($is_pruning);  # Don't recurse into here
 
     #$DB::single=1;
-#    return unless ($all_objects_cache_size > $cache_size_highwater);
+    return unless ($all_objects_cache_size > $cache_size_highwater);
 
     $is_pruning = 1;
     #$main::did_prune=1;
