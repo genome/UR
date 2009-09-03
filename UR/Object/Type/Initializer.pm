@@ -276,14 +276,8 @@ sub define {
     Carp::confess("Failed to define class $class_name!") unless $self;
     
     # we do this for define() but not create()
-    # FIXME - if there's a coderef in this struct, it'll spit out a warning
-#YOYO
-    #$self->{db_committed} = { %{ UR::Util::deep_copy($self) } };
-    #delete $self->{db_committed}{id};
     my %db_committed = %$self;
     delete @db_committed{@keys_to_delete_from_db_committed};
-    #delete $db_committed{'id'};
-    #delete $db_committed{'db_committed'};
     $self->{'db_committed'} = \%db_committed;
 
     $self->_initilize_accessors_and_inheritance 
@@ -308,7 +302,7 @@ sub define {
             );
         }     
     }
-    return $self;
+    return $self; 
 }
 
 
@@ -1479,14 +1473,7 @@ sub _complete_class_meta_object_definitions {
     for my $obj ($self,@subordinate_objects) {
         #use Data::Dumper;
         no strict;
-#print "Dumper ",$obj->{'id'},"\n";
-#YOYO
-        #my $db_committed = eval(Dumper($obj));
-        #$obj->{db_committed} ||= $db_committed;        
-        #delete $db_committed->{id};
-
         my %db_committed = %$obj;
-        #delete $db_committed{'id'};
         delete @db_committed{@keys_to_delete_from_db_committed};
         $obj->{'db_committed'} = \%db_committed;
             
