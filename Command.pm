@@ -387,6 +387,11 @@ sub command_name_brief
 # Methods to transform shell args into command properties
 #
 
+my $_resolved_params_from_get_options = {};
+sub _resolved_params_from_get_options {
+    return $_resolved_params_from_get_options;
+}
+
 sub resolve_class_and_params_for_argv
 {
     # This is used by execute_with_shell_params_and_exit, but might be used within an application.
@@ -448,6 +453,8 @@ sub resolve_class_and_params_for_argv
         $new_key =~ s/\-/_/g;
         $params{$new_key} = delete $params{$key};
     }
+
+    $_resolved_params_from_get_options = \%params;
 
     return $self, \%params;
 }
