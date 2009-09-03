@@ -15,7 +15,7 @@ our %used_libs;
 BEGIN {
     %used_libs = ($ENV{PERL_USED_ABOVE} ? (map { $_ => 1 } split(":",$ENV{PERL_USED_ABOVE})) : ());
     for my $path (keys %used_libs) {
-        print STDERR "Using (parent process') libraries at $path\n";
+        #print STDERR "Using (parent process') libraries at $path\n";
         eval "use lib '$path';";
         die "Failed to use library path '$path' from the environment PERL_USED_ABOVE?: $@" if $@;
     }
