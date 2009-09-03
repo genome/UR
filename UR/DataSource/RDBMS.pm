@@ -1473,7 +1473,26 @@ sub _matching_where_clause {
 
     return join(' and ', @where);
 }
-            
+
+sub _id_values_for_primary_key {
+    my ($self,$table_obj,$object_to_save) = @_;
+    
+    unless ($table_obj && $object_to_save) {
+        Carp::confess("Both table and class object should be passed for $self!");
+    }
+    
+    my $class_obj = $object_to_save->get_class_object;
+    my @pk_cols = $table_obj->primary_key_constraint_column_names;
+    my @values = $object_to_save->decomposed_id($object_to_save->id);
+    my @columns = $class_obj->id_column_names;
+
+    my $i=0;    
+    my %column_index = map { $_ => $i++ } @columns;
+
+    my @id_values_in_pk_order = @values[@column_index{@pk_cols}];
+    
+    return @id_values_in_pk_order;
+}
 
 sub _default_save_sql_for_object {
     my $self = shift;        
@@ -1594,7 +1613,7 @@ sub _default_save_sql_for_object {
             # A row loaded from the database with its object deleted.
             # Delete the row in the database.
             
-            @values = $object_to_save->decomposed_id($id);
+            @values = $self->_id_values_for_primary_key($table,$object_to_save);
             my $where = $self->_matching_where_clause($table, \@values);
 
             $sql = " DELETE FROM ";
@@ -1636,7 +1655,7 @@ sub _default_save_sql_for_object {
             
             if (@changed_cols)
             {
-                @values = ( (map { $object_to_save->$_ } @changed_cols) , $object_to_save->decomposed_id($id));
+                @values = ( (map { $object_to_save->$_ } @changed_cols) , $self->_id_values_for_primary_key($table,$object_to_save));
                 my $where = $self->_matching_where_clause($table, \@values);
 
                 $sql = " UPDATE ";
