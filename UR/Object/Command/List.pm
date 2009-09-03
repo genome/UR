@@ -11,30 +11,30 @@ require Term::ANSIColor;
 class UR::Object::Command::List {
     is => 'UR::Object::Command::FetchAndDo',
     has => [
-    show => {
-        is => 'Text',
-        is_optional => 1,
-        doc => 'Specify which columns to show, in order.' 
-    },
-    style => { 
-        is => 'Text',
-        is_optional => 1,
-        default_value => 'text',
-        doc => 'Style of the list: text (default), csv, pretty, html',
-    },
-    noheaders => { 
-        is => 'Boolean',
-        is_optional => 1,
-        default => 0,
-        doc => 'Do not include headers',
-    },
-    output => {
-        is => 'IO::Handle',
-        is_optional =>1,
-        is_transient =>1,
-        default => \*STDOUT,
-        doc => 'output handle for list, defauls to STDOUT',
-    },
+        show => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Specify which columns to show, in order.' 
+        },
+        style => { 
+            is => 'Text',
+            is_optional => 1,
+            default_value => 'text',
+            doc => 'Style of the list: text (default), csv, pretty',
+        },
+        noheaders => { 
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'Do not include headers',
+        },
+        output => {
+            is => 'IO::Handle',
+            is_optional =>1,
+            is_transient =>1,
+            default => \*STDOUT,
+            doc => 'output handle for list, defauls to STDOUT',
+        },
     ], 
 };
 
@@ -93,9 +93,40 @@ sub _do
 {
     my ($self, $iterator) = @_;    
 
+    $DB::single = $DB::stopper;
+    
+    # prevent commits due to changes here
+    # this can be prevented by careful use of environment variables if you REALLY want to use this to update data
+    $ENV{UR_DBI_NO_COMMIT} = 1 unless (exists $ENV{UR_DBI_NO_COMMIT});
+
     # Determine things to show
     if ( my $show = $self->show ) {
-        $self->show([ map { lc } split(/,/, $show) ]);
+        my @show;
+        my $expr;
+        for my $item (split(/,/, $show)) {
+            if ($item =~ /^\w+$/ and not defined $expr) {
+                push @show, $item;
+            }
+            else {
+                if ($expr) {
+                    $expr .= ',' . $item;
+                }
+                else {
+                    $expr = '(' . $item;
+                }
+                my $o;
+                if (eval('sub { ' . $expr . ')}')) {
+                    push @show, $expr . ')';
+                    #print "got: $expr<\n";
+                    $expr = undef;
+                }
+            }
+        }
+        if ($expr) {
+            die "Bad expression: $expr\n$@\n";
+        }
+        $self->show(\@show);
+        
         #TODO validate things to show??
     }
     else {
@@ -103,7 +134,8 @@ sub _do
     }
 
     my $style_module_name = ucfirst $self->style;
-    my $style_module = $style_module_name->new( iterator =>$iterator, 
+    my $style_module = $style_module_name->new( 
+        iterator =>$iterator, 
         show =>$self->show, 
         noheaders =>$self->noheaders,
         output => $self->output
@@ -124,12 +156,20 @@ sub new{
 }
 
 sub _object_properties_to_string {
-    my ($self, $object, $char) = @_;
+    my ($self, $o, $char) = @_;
     my @v;
     return join(
         $char, 
         map { 
-            @v = map { defined $_ ? $_ : 'NULL' } $object->$_;
+            if (substr($_,0,1) eq '(') {
+                @v = eval $_;
+                if ($@) {
+                    @v = ('<ERROR>'); # ($@ =~ /^(.*)$/);
+                }
+            }
+            else {
+                @v = map { defined $_ ? $_ : '<NULL>' } $o->$_;
+            }
             if (@v > 1) {
                 join(',',@v)
             }
@@ -394,4 +434,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 37208 2008-08-04 13:48:17Z jweible $
+#$Id: List.pm 38662 2008-09-16 22:46:02Z ssmith $
