@@ -195,7 +195,7 @@ UR::Object::Type->define(
         is_transient                    => { type => 'Boolean' , default_value => 0},
         is_constant                     => { type => 'Boolean' , default_value => 0},  # never changes
         is_mutable                      => { type => 'Boolean' , default_value => 1},  # can be changed explicitly via accessor (cannot be constant)
-        is_volatile                     => { type => 'Boolean' , default_value => 1},  # changes w/o a signal: (cannot be constant or transactional)
+        #is_volatile                     => { type => 'Boolean' , default_value => 0},  # changes w/o a signal: (cannot be constant or transactional)
         is_class_wide                   => { type => 'Boolean' , default_value => 0},
         is_delegated                    => { type => 'Boolean' , default_value => 0},
         is_calculated                   => { type => 'Boolean' , default_value => 0},
