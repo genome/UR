@@ -86,7 +86,6 @@ sub _get_class_data_for_loading {
             $order_by_clause = "order by " . join(",", @id_column_names);
         };
         
-        $DB::single = 1;
         my @parent_class_objects = $class_meta->ordered_inherited_class_objects;
         my @all_table_properties;
         my $first_table_name;
