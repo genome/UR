@@ -642,16 +642,27 @@ sub create_from_command_line_format_filters {
 
 sub create_from_subject_class_name_keys_and_values {
     my $class = shift;
+    
     my %params = @_;
+    
+    my $subject_class_name = $params{subject_class_name};
+    my @values          = @{ $params{values} || [] };
+    my @constant_values = @{ $params{constant_values} || [] };
+    my @keys            = @{ $params{keys} || [] };
 
-    my $template_id = $class->get_class_object->resolve_composite_id_from_ordered_values(
-        $params{subject_class_name},
-        'And',
-        join(",",@{ $params{keys} }),
-        $class->values_to_value_id()
-    );
-    my $template = UR::BoolExpr::Template->get($template_id);
-    my $rule = $template->get_rule_for_values(@{$params{values}});
+    my $value_id = UR::BoolExpr->values_to_value_id(@values);
+    my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);
+    
+    my $rule_template_id = $subject_class_name . '/And/' . join(",",@keys) . "/" . $constant_value_id;
+    my $rule_id = join($id_sep,$rule_template_id,$value_id);
+
+    my $rule = __PACKAGE__->get($rule_id);
+
+    $rule->{values} = \@values;
+
+    #if (@non_ur_object_refs) {
+    #    $rule->{non_ur_object_refs} = { @non_ur_object_refs };
+    #}
     return $rule;
 }
 
