@@ -333,6 +333,9 @@ sub _get_display_fields_for_property {
     elsif ($property->is_calculated) {
         # do nothing
     }
+    elsif ($property->is_transient) {
+        # do nothing
+    }
     elsif ($params{has_table}) {
         unless ($property->column_name) {
             die("no column for property on class with table: " . $property->property_name . " class: " . $self->class_name . "?");
