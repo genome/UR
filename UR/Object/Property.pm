@@ -122,10 +122,14 @@ sub _get_joins {
         if (my $via = $self->via) {
             my $via_meta = $class_meta->get_property_meta_by_name($via);
             unless ($via_meta) {
-                die "No via meta for $via?";
+                my $property_name = $self->property_name;
+                my $class_name = $self->class_name;
+                Carp::croak "Can't resolve property $property_name of $class_name: No via meta for '$via'?";
             }
             unless ($via_meta->data_type) {
-                die "No data type for $via?";
+                my $property_name = $self->property_name;
+                my $class_name = $self->class_name;
+                Carp::croak "Can't resolve property $property_name of $class_name: No data type for '$via'?";
             }            
             push @joins, $via_meta->_get_joins();
             
@@ -135,7 +139,9 @@ sub _get_joins {
             }            
             my $to_meta = $via_meta->data_type->get_class_object->get_property_meta_by_name($to);
             unless ($to_meta) {
-                die "No $to property found on " . $via_meta->data_type;
+                my $property_name = $self->property_name;
+                my $class_name = $self->class_name;
+                Carp::croak "Can't resolve property $property_name of $class_name: No '$to' property found on " . $via_meta->data_type;
             }
             push @joins, $to_meta->_get_joins();
         }
