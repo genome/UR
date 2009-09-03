@@ -548,7 +548,7 @@ sub help_options
     }
     my $text = '';
     for my $row (@data) {
-        if ($format eq 'pod') {
+        if (defined($format) and $format eq 'pod') {
             $text .= "\n=item " . $row->[0] . "\n  " . $row->[1] . "\n"; 
         }
         else {
