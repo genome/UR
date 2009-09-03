@@ -19,7 +19,7 @@ sub _load {
     $class->context_return(@loaded) if @loaded;
 
     # Auto generate the object on the fly.
-    unless (defined $rule->specified_value_for_id) {
+    unless (defined $rule->value_for_id) {
         $DB::single = 1;
         die "No id specified for loading members of an infinite set ($class)!"
     }
@@ -27,7 +27,7 @@ sub _load {
     
     my $class_meta = $class->__meta__;
     if (my $method_name = $class_meta->sub_classification_method_name) {
-        my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, $rule);
+        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
         my $sub_class_name = $obj->$method_name;
         if ($sub_class_name ne $class) {
             # delegate to the sub-class to create the object

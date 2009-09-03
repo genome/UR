@@ -1,1 +1,0 @@
-These modules were part of an old attempt to merge UR and Moose meta-classes.  They are left here to help experimenters.   Because UR classes expecte a singleton metaclass for each, the naming UR::Meta::Class  instead of UR::Object::Type won't work.  

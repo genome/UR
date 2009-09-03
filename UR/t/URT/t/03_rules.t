@@ -53,7 +53,7 @@ is_deeply(
 )
     or print Dumper([$r->params_list]);
     
-my $t = $r->get_rule_template;
+my $t = $r->template;
 ok($t, "got a template for the rule");
 
 is($t->value_position_for_property_name('foo'),0, "position is as expected for variable param 1");
@@ -74,19 +74,19 @@ is_deeply(
     or print Dumper([$r->params_list]);
 
 $r = URT::FancyItem->define_boolexpr(foo => { operator => "between", value => [10,30] }, bar => { operator => "like", value => 'x%y' });
-$t = $r->get_rule_template();
-is($t->operator_for_property_name('foo'),'between', "operator for param 1 is correct");
-is($t->operator_for_property_name('bar'),'like', "operator for param 2 is correct");
+$t = $r->template();
+is($t->operator_for('foo'),'between', "operator for param 1 is correct");
+is($t->operator_for('bar'),'like', "operator for param 2 is correct");
 
 $r = URT::FancyItem->define_boolexpr(foo => 10, bar => { operator => "like", value => 'x%y' });
-$t = $r->get_rule_template();
-is($t->operator_for_property_name('foo'),'=', "operator for param 1 is correct");
-is($t->operator_for_property_name('bar'),'like', "operator for param 2 is correct");
+$t = $r->template();
+is($t->operator_for('foo'),'=', "operator for param 1 is correct");
+is($t->operator_for('bar'),'like', "operator for param 2 is correct");
 
 $r = URT::FancyItem->define_boolexpr(foo => { operator => "between", value => [10,30] }, bar => 20);
-$t = $r->get_rule_template();
-is($t->operator_for_property_name('foo'),'between', "operator for param 1 is correct");
-is($t->operator_for_property_name('bar'),'=', "operator for param 2 is correct");
+$t = $r->template();
+is($t->operator_for('foo'),'between', "operator for param 1 is correct");
+is($t->operator_for('bar'),'=', "operator for param 2 is correct");
 
 
 
