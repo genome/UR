@@ -28,13 +28,13 @@ class UR::Object::Command::List {
         default => 0,
         doc => 'Do not include headers',
     },
-    #'summarize'        => { is => 'String',    doc => 'A list of show columns by which intermediate groupings (sub-totals, etc.) should be done.' },
-    #'summary_placement => { is => 'String',    doc => 'Either "top" or "bottom" or "middle".  Middle is the default.', default_value => 'middle' },
-    #rowlimit => {
-    #    is => 'Integer', 
-    #    is_optional => 1,
-    #    doc => 'Limit the size of the list returned to n rows.' 
-    #},
+    output => {
+        is => 'IO::Handle',
+        is_optional =>1,
+        is_transient =>1,
+        default => \*STDOUT,
+        doc => 'output handle for list, defauls to STDOUT',
+    },
     ], 
 };
 
@@ -46,7 +46,7 @@ sub help_brief {
 
 sub help_detail {
     my $self = shift;
-    
+
     return join(
         "\n",
         $self->_filter_doc,
@@ -70,7 +70,7 @@ EOS
 sub valid_styles {
     return (qw/ text csv pretty /);
 }
-    
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
@@ -84,7 +84,7 @@ sub create {
         ) 
     ) 
         and return unless grep { $self->style eq $_ } valid_styles();
-     
+
     return $self;
 }
 
@@ -100,154 +100,87 @@ sub _do
     else {
         $self->show([ map { $_->property_name } $self->_subject_class_filterable_properties ]);
     }
-    
-    # Handle
-    my $handle_method = sprintf('_create_handle_for_%s', $self->style);
-    my $h = $self->$handle_method
-        or return;
-     
-    # Header
-    unless ( $self->noheaders ) {
-        my $header_method = sprintf('_get_header_string_for_%s', $self->style);
-        $h->print($self->$header_method, "\n");
-    }
 
-    # Body
-    my $body_method = sprintf('_get_%s_string_for_object', $self->style);
-    my $count = 0;
-    while (my $object = $iterator->next) {  
-        $h->print($self->$body_method($object), "\n");
-        $count++;
-    }
-    $h->close;
-    #print "$count rows output\n";
+    my $style_module_name = ucfirst $self->style;
+    my $style_module = $style_module_name->new( iterator =>$iterator, 
+        show =>$self->show, 
+        noheaders =>$self->noheaders,
+        output => $self->output
+    );
+    $style_module->format_and_print;
 
     return 1;
+}
 
+package Style;
 
-    ################################
-    ##############################
-    # old code:
-    my @show;
-    my $cnt = '0 but true';
-    unless ($self->format eq 'none') {
-        no warnings; # lots of undefs as strings below
-        # TODO: replace this with views, and handle terminal output as one type     
-        if ($self->format eq 'text') {
-            my $h = IO::File->new("| tab2col --nocount");
-            $h->print(join("\t",map { uc($_) } @show),"\n");
-            $h->print(join("\t",map { '-' x length($_) } @show),"\n");
-            while (my $obj = $iterator->next) {  
-                my $row = join("\t",map { 
-                        ( defined $obj->$_ ? $obj->$_ : 'NULL' )
-                        } @show) . "\n";
-                $h->print($row);
-                $cnt++;
-            }
-            $h->close;
-            # This replaces tab2col's item count, since it counts the header also
-            print "$cnt rows output\n";
-        }
-        else {
-            # todo: switch this to not use App::Report
-            require App;
-            my $report = App::Report->create();
-            my $title = $self->subject_class_name->get_class_object->type_name;
-            $title =~ s/::/ /g;
-            my $v = $self->get_class_object->get_namespace->get_vocabulary;
-            $title = join(" ", $v->convert_to_title_case(split(/\s+/,$title)));
-            my $section1 = $report->create_section(title => $title);
-            $section1->header($v->convert_to_title_case(map { lc($_) } @show));
-            while (my $obj = $iterator->next) {
-                $section1->add_data(map { $obj->$_ } @show);
-            }
-            $cnt++;
-            print $report->generate(format => ucfirst(lc($self->format)));
-        }
+sub new{
+    my ($class, %args) = @_;
+    foreach (qw/iterator show noheaders output/){
+        die "no value for $_!" unless defined $args{$_};
     }
-
-    return $cnt; 
+    return bless(\%args, $class);
 }
 
-# Handle
-sub _create_handle {
-    my ($self, $command) = @_;
-    
-    my $handle = IO::File->new($command);
-    $self->error_message("Can't open command handle for tab2col: $!")
-        and return unless $handle;
-
-    return $handle;
-}
-
-sub _create_handle_for_text {
-    return shift->_create_handle("| tab2col --nocount");
-}
-
-sub _create_handle_for_csv {
-    return shift->_create_handle("| cat");
-}
-
-sub _create_handle_for_pretty {
-    return shift->_create_handle("| cat");
-}
-
-# Header
-sub _get_header_string_for_text {
-    my $self = shift;
-
-    return join (
-        "\n",
-        join("\t", map { uc } @{$self->show}),
-        join("\t", map { '-' x length } @{$self->show}),
-    );
-}
-
-sub _get_header_string_for_csv {
-    my $self = shift;
-
-    return join(",", map { lc } @{$self->show});
-}
-
-sub _get_header_string_for_pretty {
-    return '';
-}
-
-# Body 
 sub _object_properties_to_string {
     my ($self, $object, $char) = @_;
     my @v;
     return join(
         $char, 
         map { 
-                @v = map { defined $_ ? $_ : 'NULL' } $object->$_;
-                if (@v > 1) {
-                    join(',',@v)
-                }
-                else {
-                    $v[0]
-                }
-            } @{$self->show}
+            @v = map { defined $_ ? $_ : 'NULL' } $object->$_;
+            if (@v > 1) {
+                join(',',@v)
+            }
+            else {
+                $v[0]
+            }
+        } @{$self->{show}}
     );
 }
 
-sub _get_text_string_for_object {
-    my ($self, $object) = @_;
+sub format_and_print{
+    my $self = shift;
 
-    return $self->_object_properties_to_string($object, "\t");
+    unless ( $self->{noheaders} ) {
+        $self->{output}->print($self->_get_header_string. "\n");
+    }
+
+    my $count = 0;
+    while (my $object = $self->{iterator}->next) {
+        $self->{output}->print($self->_get_object_string($object), "\n");
+        $count++;
+    }
+
 }
 
-sub _get_csv_string_for_object {
+package Csv;
+use base 'Style';
+
+sub _get_header_string{
+    my $self = shift;
+
+    return join(",", map { lc } @{$self->{show}});
+}
+
+sub _get_object_string {
     my ($self, $object) = @_;
 
     return $self->_object_properties_to_string($object, ',');
 }
 
-sub _get_pretty_string_for_object {
+package Pretty;
+use base 'Style';
+
+sub _get_header_string{
+    return '';
+}
+
+sub _get_object_string{
     my ($self, $object) = @_;
 
     my $out;
-    for my $property ( @{$self->show} )
+    for my $property ( @{$self->{show}} )
     {
         $out .= sprintf(
             "%s: %s\n",
@@ -257,12 +190,81 @@ sub _get_pretty_string_for_object {
     }
 
     return $out;
-
-    #Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
 }
 
-1;
+package Text;
+use base 'Style';
+use UR::Object::Command::List::Tab2Col;
 
+sub _get_header_string{
+    my $self = shift;
+    return join (
+        "\n",
+        join("\t", map { uc } @{$self->{show}}),
+        join("\t", map { '-' x length } @{$self->{show}}),
+    );
+}
+
+sub _get_object_string{
+    my ($self, $object) = @_;
+    $self->_object_properties_to_string($object, "\t");
+}
+
+sub format_and_print{
+    my $self = shift;
+    my $tab_delimited;
+    unless ($self->{noheaders}){
+        $tab_delimited .= $self->_get_header_string."\n";
+    }
+
+    my $count = 0;
+    while (my $object = $self->{iterator}->next) {
+        $tab_delimited .= $self->_get_object_string($object)."\n";
+        $count++;
+    }
+
+    $self->{output}->print($self->tab2col($tab_delimited));
+}
+
+sub tab2col{
+    my ($self, $data) = @_;
+
+    #turn string into 2d array of arrayrefs ($array[$rownum][$colnum])
+    my @rows = split("\n", $data);
+    @rows = map { [split("\t", $_)] } @rows;
+
+    my $output;
+    my @width;
+
+    #generate array of max widths per column
+    foreach my $row_ref (@rows) {
+        my @cols = @$row_ref;
+        my $index = $#cols;
+        for (my $i = 0; $i <= $index; $i++) {
+            my $l = (length $cols[$i]) + 3; #TODO test if we need this buffer space
+            $width[$i] = $l if ! defined $width[$i] or $l > $width[$i];
+        }
+    }
+    
+    #create a array of blanks to use as a templatel
+    my @column_template = map { ' ' x $_ } @width;
+
+    #iterate through rows and cols, substituting in the row entry in your template
+    foreach my $row_ref (@rows) {
+        my @cols = @$row_ref;
+        my $index = $#cols;
+        #only apply template for all but the last entry in a row 
+        for (my $i = 0; $i < $index; $i++) {
+            my $entry = $cols[$i];
+            my $template = $column_template[$i];
+            substr($template, 0, length $entry, $entry);
+            $output.=$template;
+        }
+        $output.=$cols[$index]."\n"; #Don't need traling spaces on the last entry
+    }
+    return $output;
+}
+1;
 =pod
 
 =head1 Name
@@ -320,7 +322,7 @@ For this, in the class declaration, add a has key w/ arrayref of hashrefs.  One 
 =back
 
 =head2 show (optional)
- 
+
 Add defaults to the show property:
 
  class MyFetchAndDo {
@@ -354,4 +356,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 36719 2008-07-17 23:43:20Z ssmith $
+#$Id: List.pm 36976 2008-07-25 17:18:12Z adukes $
