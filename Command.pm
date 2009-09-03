@@ -185,13 +185,12 @@ sub create
 {
     my $class = shift;
     my ($rule,%extra) = $class->get_rule_for_params(@_);
-	my @params_list = $rule->params_list;
+    if (%extra) {
+        $extra{bare_args} = delete $extra{" "};
+    }
+    my @params_list = $rule->params_list;
     my $self = $class->SUPER::create(@params_list, %extra);
-    unless ($self->bare_args) {
-		$self->bare_args([]); 
-	}
-	
-	return unless $self;
+    return unless $self;
 
     # set non-optional boolean flags to false.
     for my $property_meta ($self->_shell_args_property_meta) {
