@@ -574,8 +574,11 @@ sub _generate_loading_templates_arrayref {
     }
     
     # Post-process the template objects a bit to get the exact id positions.
-    for my $template (@templates) {               
+    for my $template (@templates) {
         my @id_property_names;
+        unless (defined $template->{data_class_name}) {
+            print Data::Dumper::Dumper("No data class name in template?",$template); 
+        }
         for my $id_class_name ($template->{data_class_name}, $template->{data_class_name}->inheritance) {
             my $id_class_obj = UR::Object::Type->get(class_name => $id_class_name);
             last if @id_property_names = $id_class_obj->id_property_names;
@@ -606,8 +609,7 @@ sub _generate_loading_templates_arrayref {
             }                    
         }
         else {
-            use Data::Dumper;
-            die "No id column positions for template " . Dumper($template);
+            die "No id column positions for template " . Data::Dumper::Dumper($template);
         }             
     }        
 
@@ -956,4 +958,3 @@ sub get_default_handle {
 
 
 1;
-#$Header
