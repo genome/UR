@@ -56,7 +56,7 @@ sub get_default_handle {
         }
 
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
-            $sql_fh->printf("CSV: opened %s fileno %d\n",$self->server, $fh->fileno);
+            $sql_fh->printf("CSV: opened %s fileno %d\n\n",$self->server, $fh->fileno);
         }
 
         $self->{'_fh'} = $fh;
