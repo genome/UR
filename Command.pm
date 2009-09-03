@@ -1053,3 +1053,5 @@ for my $type (qw/error warning status debug usage/) {
 
 1;
 
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
+#$Id: Command.pm 38975 2008-09-23 17:24:31Z ebelter $
