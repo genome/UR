@@ -475,24 +475,7 @@ sub _normalize_class_description {
         }
     }
 
-    if(!exists($new_class{'table_name'}) and $new_class{'data_source'}) {
-        # Fill in something for table_name if they're using an inline data source defition
-        # Also some data sources don't really have table_names, but we still want the class'
-        # properties to get column_name filled in (like the File-based data sources)
-        if (ref($new_class{'data_source'}) eq 'HASH') {
-            for($new_class{'data_source'}) {
-                $new_class{'table_name'} = $_->{'server'} || $_->{'file'} || $_->{'path'};
-            }
-        } elsif ($new_class{'data_source'}->can('server')) {
-            $new_class{'table_name'} = $new_class{'data_source'}->server;
-        }
-        unless ($new_class{'table_name'}) {
-            our $TABLE_NAME_AUTOGEN ||= 1;
-            $new_class{'table_name'} = 'AUTOGEN' . $TABLE_NAME_AUTOGEN++;
-        }
-    } else {
-        $new_class{table_name} = uc($new_class{table_name}) if ($new_class{table_name} and $new_class{table_name} !~ /\s/);
-    }
+    $new_class{table_name} = uc($new_class{table_name}) if ($new_class{table_name} and $new_class{table_name} !~ /\s/);
 
     unless ($new_class{'doc'}) {
         $new_class{'doc'} = undef;
@@ -945,7 +928,18 @@ sub _normalize_property_description {
         }
     }
 
-    if ($new_class{table_name} 
+    # For classes that have (or pretend to have) tables, the Property objects
+    # should get their column_name property automatically filled in
+    my $the_data_source;
+    if (ref($new_class{'data_source'}) eq 'HASH') {
+        # This is an inline-defined data source
+        $the_data_source = $new_class{'data_source'}->{'is'};
+    } else {
+        $the_data_source = $new_class{'data_source'};
+    }
+    # UR::DataSource::File-backed classes don't have table_names, but for querying/saving to
+    # work property, their properties still have to have column_name filled in
+    if (($new_class{table_name} or ($the_data_source and $the_data_source->isa('UR::DataSource::File')))
         and not $new_property{column_name}
         and not $new_property{is_transient}
         and not $new_property{is_delegated}
