@@ -22,7 +22,7 @@ our @data = ( [ 1, 'Bob', 'blue' ],
 &setup($filename);
 
 
-my $fh = URT::DataSource::SomeCsvFile->get_default_handle();
+my $fh = URT::DataSource::SomeFile->get_default_handle();
 ok($fh, "got a handle");
 isa_ok($fh, 'IO::Handle', 'Returned handle is the proper class');
 
@@ -53,7 +53,7 @@ sub setup {
     ok($fh, 'opened file for writing');
 
     my $delimiter = URT::DataSource::SomeFile->delimiter;
-    my $rs = URT::DataSource::SomeFile->record_seperator;
+    my $rs = URT::DataSource::SomeFile->record_separator;
 
     foreach my $line ( @data ) {
         $fh->print(join($delimiter, @$line),$rs);
