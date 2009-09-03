@@ -699,8 +699,31 @@ sub _normalize_class_description {
                 }                    
             }
         }
-
     } # next group of properties
+   
+    # NOT ENABLED YET
+    if (0) {
+    # done processing direct properties of this process
+    # extend %$instance_properties with properties of the parent classes
+    my @parent_class_names = @{ $new_class{is} };
+    for my $parent_class_name (@parent_class_names) {
+        my $parent_class_meta = $parent_class_name->__meta__;
+        die "no meta for $parent_class_name while initializing $class_name?" unless $parent_class_meta;
+        my $parent_normalized_properties = $parent_class_meta->{has};
+        for my $parent_property_name (keys %$parent_normalized_properties) {
+            my $parent_property_data = $parent_normalized_properties->{$parent_property_name};
+            my $inherited_copy = $instance_properties->{$parent_property_name};
+            unless ($inherited_copy) {
+                $inherited_copy = UR::Util::deep_copy($parent_property_data);
+            }
+            $inherited_copy->{class_name} = $class_name;
+            my $a = $inherited_copy->{overrides_class_names} ||= [];
+            push @$a, $parent_property_data->{class_name};
+            #print "$class_name getting $parent_property_name copy from $parent_class_name\n";
+        }
+    }
+    }
+
     $new_class{'__properties_in_class_definition_order'} = \@properties_in_class_definition_order;
     
     unless ($new_class{type_name}) {
@@ -773,8 +796,7 @@ sub _normalize_class_description {
                     last PARENT_CLASS;
                 }
             }
-        }
-    
+        }    
     }
 
     # normalize the data behind the property descriptions    
@@ -1202,6 +1224,7 @@ sub _complete_class_meta_object_definitions {
             $DB::single = 1;
             redo;
         }
+        
         my $obj =
             UR::Object::Inheritance->__define__(
                 class_name => $self->class_name,
@@ -1719,6 +1742,10 @@ sub generate {
         }
     }
     
+    unless ($class_name->isa("UR::Object")) {
+        print Data::Dumper::Dumper('@C::ISA',\@C::ISA,'@B::ISA',\@B::ISA);
+    }
+
     # ensure the class is generated
     die "Error in module for $class_name.  Resulting class does not appear to be generated!" unless $self->generated;
 

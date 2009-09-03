@@ -19,13 +19,19 @@ eval 'use lib "$d/lib1/"';
 
 chdir "$d/lib2/Foo";
 eval "use above 'Foo'";
-is($INC{"Foo.pm"},"$d/lib2//Foo.pm", "used the expected module");
+is(&clean_darwin($INC{"Foo.pm"}), "$d/lib2//Foo.pm",
+   "used the expected module");
 chdir "$d/" or die "Failed to chdir to $d/: $!";
 my $src = q|perl -e 'use above "Foo"; print $INC{"Foo.pm"}'|;
 my $v = `$src`; 
-is($v,"$d/lib2//Foo.pm","Got the original module, not the 2nd one, and not an error."); 
+is(&clean_darwin($v), "$d/lib2//Foo.pm",
+   "Got the original module, not the 2nd one, and not an error."); 
+exit(0);
 
-
-
-
-
+# remove the /private from Mac OS X paths
+sub clean_darwin {
+    my ($path) = @_;
+    return $path unless $^O eq 'darwin';
+    $path =~ s{^/private}{};
+    return $path;
+}

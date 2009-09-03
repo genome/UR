@@ -83,6 +83,6 @@ UR::BoolExpr::And -  A rule which is true if all the underlying conditions are t
 
 =head1 SEE ALSO
 
-UR::Object(3), UR::BoolExpr::DefinitionType::Manual(3),
+UR::BoolExpr;(3)
 
 =cut 

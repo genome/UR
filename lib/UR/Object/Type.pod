@@ -2,35 +2,35 @@
 
 =head1 NAME
 
-UR::Object::Type - Class representing metadata about other classes
+UR::Object::Type - a meta-class for any class or primitive type 
 
 =head1 SYNOPSIS
 
-  use UR;
-  
-  my $class_obj = UR::Object::Type->define(
-                      class_name => 'MyClass',
-                      is => ['ParentClass1', 'ParentClass2'],
-                      id_by => ['id_prop1', 'id_prop2'],
-                      has => [
-                          id_prop1 => { is => 'Integer' },
-                          id_prop2 => { is => 'String' },
-                          property_a => { is => 'String' }
-                          property_b => { is => Integer, is_optional => 1 },
-                      ],
-                  );
- 
-  my $obj1 = MyClass->get(id_prop1 => 5);
-  my $obj2 = MyClass->get(id_prop2 => 'Hello', property_a => 'There');
+    use UR;
 
-  $class_obj = $obj1->__meta__;
-  $class_obj = MyClass->__meta__;
-  
-  my @myclass_prop_names = $class_obj->direct_property_names;
-  my @all_prop_names     = $class_obj->all_property_names;
-  my @property_metas     = $class_obj->direct_property_metas;
+    class MyClass {
+        is => ['ParentClass1', 'ParentClass2'],
+        id_by => [
+            id_prop1    => { is => 'Integer' },
+            id_prop2    => { is => 'String' },
+        ],
+        has => [
+            property_a  => { is => 'String' }
+            property_b  => { is => 'Integer', is_optional => 1 },
+        ],
+    };
 
-  my @parents = $class_obj->parent_class_names;
+    my $meta = MyClass->__meta__;
+    
+    my @parent_class_metas = $meta->parents();
+    # 2 meta objects, see UR::Object::Property
+
+    my @property_meta = $meta->properties();
+    # N properties (4, +1 from UR::Object, +? from ParentClass1 and ParentClass2)
+    
+    $meta->is_abstract;
+
+    $meta->...
 
 =head1 DESCRIPTION
 
@@ -38,13 +38,78 @@ UR::Object::Type implements the class behind the central metadata in the UR
 class framework.  It contains methods for introspection and manipulation of 
 related class data.  
 
+A UR::Object::Type object describes UR::Object, and also
+every subclass of UR::Object.
+
 =head1 INHERITANCE
 
-UR::Object::Type is a subclass of L<UR::Object>
+In addition to describing UR::Object an each of its subclasses, 
+UR::Object::Type is _itself_ a subclass of L<UR::Object>.  This means
+that the same query APIs used for regular objects can be used
+for meta objects.
+
+   UR::Object  -> has-meta -> UR::Object::Type
+          A                         |
+          \                        / 
+           \-----<- is-a  <-------/
+
+Further, new classes which generate a new UR::Objec::Type,
+also generate a new subclass for the meta-class.  This
+means that each new class can have private meta methods,
+(ala Ruby).  
+
+This means that extensions to a meta-class,
+apply to the meta-class of its derivatives.
+
+     Regular                    Meta-Class 
+     Entity                     Singleton
+     -------                    ----------
+
+    Greyhound   has-meta ->   Greyhound::Type
+        |                          |
+        V                          V
+      is-a                       is-a 
+        |                          |
+        V                          V
+       Dog      has-meta ->    Dog::Type
+        |                          |
+        V                          V
+      is-a                       is-a
+        |                          |
+        V                          V
+      Animal    has-meta ->   Animal::Type        
+        |                          |
+        V                          V
+      is-a                       is-a
+        |                          |     /-----------------\
+        V                          V     V                 |
+   UR::Object   has-meta ->   UR::Object::Type   has-meta -/ 
+          A                      is-a
+          |                        |
+           \______________________/
+
 
 =head1 CONSTRUCTORS
 
 =over 4
+
+=item "class" 
+
+  class MyClass1 {};
+
+  class MyClass2 { is => 'MyClass1' };
+
+  class MyClass3 {
+      is => ['Parent1','Parent2'],
+      is_abstract => 1,
+      is_transient => 1,
+      has => [ qw/p1 p2 p3/ ],
+      doc => 'woo hoo!'
+  };
+
+The primary constructor is not a method on this class at all.
+UR catches "class SOMENAME { ... }" and calls define() with
+the parameters.
 
 =item define
 
@@ -82,14 +147,46 @@ Applications will not normally use create().
 
 Each property has a method of the same name
 
-=head2 Direct Properties 
+=head2 External API 
+
+=over 4
 
 =item class_name
 
-  $name = $class_obj->class_name
+    $name = $class_obj->class_name
 
 The name of the class.  Class names are unique within a UR namespace and an
-application.
+application.  
+
+This is symmetrical with $class_obj = $name->__meta__.
+
+=item properties
+
+  @all = $class_obj->properties();
+  
+  @some = $class_obj->properties(
+      'is                    => ['Text','Number']
+      'doc like'             => '%important%',
+      'property_name like'   => 'someprefix_%',
+  );
+
+Access the related property meta-objects for all properties of this class.  It includes 
+the properties of any parent classes which are inherited by this class.
+
+See L<UR::Object::Property> for details.
+
+=item property
+
+  $property_meta = $class_obj->property('someproperty');
+
+The singular version of the above.  A single argument, as usual, is treated
+as the remainder of the ID, and will select a property by name.
+
+=item namespace
+
+  $namespace_name = $class_obj->namespace
+
+Returns the name of the class's UR namespace.
 
 =item doc
 
@@ -111,6 +208,9 @@ application.  data_source_id will resolve to an L<UR::DataSource> id.
 
 For classes with data sources, this is the name of the table within that
 data source.  This is usually a table in a relational database.
+
+At a basic level, it is a storage directive interpreted by the data_source,
+and may or may not related to a storage table at that level.
 
 =item is_abstract
 
@@ -137,16 +237,18 @@ will inherit from L<UR::Singleton>.
   $bool = $class_obj->is_transactional
 
 A flag indicating whether changes to this class's instances will be tracked.
+Non-transactional objecs do not change when an in-memory transaction rolls back.
 
-=head2 Relation Properties
+It is similar to the is_transient meta-property, which does the same for an 
+individual property.
+
+=back
+
+=head2 Internal API 
 
 These methods return data about how this class relates to other classes.
 
-=item namespace
-
-  $namespace_name = $class_obj->namespace
-
-Returns the name of the class's UR namespace.
+=over 4
 
 =item namespace_meta
 
@@ -357,5 +459,13 @@ This method is called whenever new objects of the given class are created
 through C<ClassName-E<gt>create()>, and not all of their ID properties were
 specified.  UR::Object::Type has an implementation used by default, but
 other classes can override this if they need special handling.
+
+=back
+
+=head1 SEE ALSO
+
+L<UR::Object::Property>
+
+=cut
 
 
