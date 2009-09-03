@@ -130,8 +130,6 @@ sub _invalidate_cache {
 sub _generate_loading_templates_arrayref {
     my($class,$old_sql_cols) = @_;
 
-$DB::single=1;
-
     my @columns_in_file = $class->column_order;
     my %column_to_position_map;
     for (my $i = 0; $i < @columns_in_file; $i++) {
@@ -347,7 +345,6 @@ our $READ_FINGERPRINT = 0;
 
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
-$DB::single=1;
 
     my $class_name = $rule->subject_class_name;
     my $class_meta = $class_name->get_class_object;
@@ -474,7 +471,6 @@ $DB::single=1;
 
     my $iterator = sub {
 
-$DB::single=1;
         if ($monitor_start_time && ! $monitor_printed_first_fetch) {
             $sql_fh->printf("CSV: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
             $monitor_printed_first_fetch = 1;
