@@ -60,7 +60,7 @@ UR::Object::Type->define(
         host_name       => { is => 'Text' },
         process_id      => { is => 'Integer' },
         access_level    => { is => 'Text', default_value => '??' },
-        debug_level     => { is => 'Integer' },
+        debug_level     => { is => 'Integer', default_value => 0 },
     ],
     doc => 'A context for a given process.',
 );
