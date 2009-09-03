@@ -35,6 +35,9 @@ CREATE TABLE dd_pk_constraint_column (
     rank integer NOT NULL,
     PRIMARY KEY (data_source,owner,table_name,column_name,rank)
 );
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::TestMe','','PROCESSING_PROFILE','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','id',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -46,6 +49,9 @@ CREATE TABLE dd_table (
      remarks varchar,
      PRIMARY KEY(data_source, owner, table_name)
 );
+INSERT INTO "dd_table" VALUES('URT::DataSource::TestMe','','DATA_MODEL','TABLE','entity',NULL,'2009-05-06 01:58:21',NULL);
+INSERT INTO "dd_table" VALUES('URT::DataSource::TestMe','','PROCESSING_PROFILE','TABLE','entity',NULL,'2009-05-06 01:58:20',NULL);
+INSERT INTO "dd_table" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','TABLE','entity',NULL,'2009-05-06 02:11:11',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -58,6 +64,18 @@ CREATE TABLE dd_table_column (
     remarks varchar,
     PRIMARY KEY(data_source, owner, table_name, column_name)
 );
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL','PROCESSING_PROFILE_ID','Integer',NULL,'Y','2009-05-06 01:58:21','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL','SUBJECT_NAME','Text',NULL,'Y','2009-05-06 01:58:21','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','PROCESSING_PROFILE','PARAM1','Text',NULL,'Y','2009-05-06 01:58:20','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL','NAME','Text',NULL,'Y','2009-05-06 01:58:21','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL','ID','Integer',NULL,'Y','2009-05-06 01:58:21','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','PROCESSING_PROFILE','ID','Integer',NULL,'Y','2009-05-06 01:58:20','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','PROCESSING_PROFILE','NAME','Text',NULL,'Y','2009-05-06 01:58:20','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','PROCESSING_PROFILE','PARAM2','Text',NULL,'Y','2009-05-06 01:58:20','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','PROCESSING_PROFILE_ID','Integer',NULL,'Y','2009-05-06 02:11:11','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','SUBJECT_NAME','Text',NULL,'Y','2009-05-06 02:11:11','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','NAME','Text',NULL,'Y','2009-05-06 02:11:11','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','ID','Integer',NULL,'Y','2009-05-06 02:11:11','');
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

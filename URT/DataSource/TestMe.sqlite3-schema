@@ -1,0 +1,5 @@
+BEGIN TRANSACTION;
+CREATE TABLE processing_profile (id Integer primary key, name Text, param1 Text, param2 Text);
+CREATE TABLE data_model (id Integer primary key, processing_profile_id Integer, name Text, subject_name Text);
+CREATE TABLE data_model2 (id Integer primary key, processing_profile_id Integer, name Text, subject_name Text);
+COMMIT;
