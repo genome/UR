@@ -271,6 +271,16 @@ sub _get_joins {
                         push @source_property_names, $ref_property->property_name;
                         push @foreign_property_names, $ref_property->r_property_name;
                     }
+               
+                    if (ref($id_by) eq 'ARRAY') {
+                        # satisfying the id_by requires joins of its own
+                        foreach my $id_by_property_name ( @$id_by ) {
+                            my $id_by_property = $class_meta->property_meta_for_name($id_by_property_name);
+                            next unless ($id_by_property and $id_by_property->is_delegated);
+                           
+                            push @joins, $id_by_property->_get_joins();
+                        }
+                    }
                     
                     push @joins, {
                         id => $id,
