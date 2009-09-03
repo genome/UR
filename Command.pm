@@ -166,9 +166,12 @@ sub _execute_with_shell_params_and_return_exit_code
     $command_object->dump_debug_messages(0);
 
     $DB::single = 1;
-    
  
     my $rv = $command_object->execute($params);
+
+    if ($command_object->invalid) {
+        $command_object->delete;
+    }
 
     my $exit_code = $delegate_class->exit_code_for_return_value($rv);
     return $exit_code;
@@ -682,8 +685,6 @@ sub _shell_args_property_meta
     my %seen;
     for my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
-        next if $seen{$property_name};
-        $seen{$property_name} = 1;
         next if $property_name eq 'id';
         next if $property_name eq 'bare_args';
         next if $property_name eq 'result';
@@ -693,7 +694,9 @@ sub _shell_args_property_meta
         next if not $property_meta->is_mutable;
         next if $property_meta->is_delegated;
         next if $property_meta->is_calculated;
+        next if $seen{$property_name};
         push @result, $property_meta;
+        $seen{$property_name} = 1;
     }
     return @result;
 }
