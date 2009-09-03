@@ -661,6 +661,16 @@ UR uses several environment variables to change its behavior.
 
 =over 4
 
+=item UR_STACK_DUMP_ON_DIE <bool>
+
+When true, has the effect of turning any die() into a Carp::confess, meaning
+a stack dump will be printed after the die message.
+
+=item UR_STACK_DUMP_ON_WARN <bool>
+
+When true, has the effect of turning any warn() into a Carp::cluck, meaning
+a stack dump will be printed after the warn message.
+
 =item UR_CONTEXT_ROOT <string>
 
 The name of the Root context to instantiate when the program initializes.

@@ -86,9 +86,9 @@ and warn if debugging.
 
 sub death
 {
-
-print "In death()\n\n\n";
-    return unless $ENV{'UR_STACK_DUMP_ON_DIE'};
+    unless ($ENV{'UR_STACK_DUMP_ON_DIE'}) {
+        die @_;
+    }
 
     # workaround common error    
     if ($_[0] =~ /Can.*t upgrade that kind of scalar during global destruction/)
@@ -133,7 +133,7 @@ print "In death()\n\n\n";
         # Dump the call stack in other cases.
         # This is a developer error occurring while things are
         # initializing.
-        Carp::cluck(@_);
+        Carp::confess(@_);
 	return;
     }
 }
@@ -148,7 +148,11 @@ Give more informative warnings.
 
 sub warning
 {
-    return unless $ENV{'UR_STACK_DUMP_ON_WARN'};
+
+    unless ($ENV{'UR_STACK_DUMP_ON_WARN'}) {
+        warn @_;
+        return;
+    }
 
     return if $_[0] =~ /Attempt to free unreferenced scalar/;
     return if $_[0] =~ /Use of uninitialized value in exit at/;
@@ -164,8 +168,16 @@ sub warning
     return;
 }
 
-$SIG{__DIE__} = \&death unless ($SIG{__DIE__});
-$SIG{__WARN__} = \&warning unless ($SIG{__WARN__});
+#$SIG{__DIE__} = \&death unless ($SIG{__DIE__});
+#$SIG{__WARN__} = \&warning unless ($SIG{__WARN__});
+
+sub enable_hooks_for_warn_and_die {
+    $SIG{__DIE__} = \&death;
+    $SIG{__WARN__} = \&warning;
+}
+
+&enable_hooks_for_warn_and_die();
+
 
 1;
 __END__
