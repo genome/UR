@@ -95,6 +95,7 @@ our $VERSION = '0.6';
 # set up module
 use Carp;
 use IO::Handle;
+use UR::Util;
 
 =pod
 
