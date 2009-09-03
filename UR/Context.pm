@@ -1362,10 +1362,15 @@ sub _create_object_fabricator_for_loading_template {
                         }
                         else {
                             # conflicting change!
+                            # Since the user could be catching this exception, go ahead and update the
+                            # object's notion of what is in the database
+                            my %old_dbc = %$dbc;
+                            @$dbc{@property_names} = @$pending_db_object_data{@property_names};
+            
                             Carp::confess(qq/
                                 A change has occurred in the database for
                                 $class property $property on object $pending_db_object->{id}
-                                from '$dbc->{$property}' to '$pending_db_object_data->{$property}'.                                    
+                                from '$old_dbc{$property}' to '$pending_db_object_data->{$property}'.                                    
                                 At the same time, this application has made a change to 
                                 that value to $pending_db_object->{$property}.
     
@@ -1555,7 +1560,44 @@ sub _create_object_fabricator_for_loading_template {
                     # Performance shortcut.
                     # These need to be subclassed, but there is no added data to load.
                     # Just remove and re-add from the core data structure.
-                    if (my $already_loaded = $subclass_name->is_loaded($pending_db_object->id)) {
+                    my $already_loaded = $subclass_name->is_loaded($pending_db_object->id);
+
+                    my $different;
+                    if ($already_loaded) {
+                        foreach my $property ( @property_names ) {
+                            next if (ref($already_loaded->{$property}) || ref($pending_db_object->{$property}));
+                            no warnings 'uninitialized';
+                            if (($already_loaded->{'db_committed'}->{$property} ne $already_loaded->{$property}) and
+                                ($already_loaded->{$property} ne $pending_db_object->{$property})
+                            ) {
+                                 # conflicting change!
+
+                                 # Since the user may be trapping expections, first clean up the object in the
+                                 # cache under the un-subclassed slot, and reload the object's notion of what
+                                 # is in the database
+                                 delete $UR::Context::all_objects_loaded->{$already_loaded->class}->{$already_loaded->id};
+                                 my $dbc = $already_loaded->{'db_committed'};
+                                 my %old_dbc = %$dbc;
+                                 @$dbc{@property_names} = @$pending_db_object_data{@property_names};
+
+                                 Carp::confess(qq/
+                                     A change has occurred in the database for
+                                     $class property $property on object $pending_db_object->{id}
+                                     from '$old_dbc{$property}' to '$pending_db_object_data->{$property}'.
+                                     At the same time, this application has made a change to 
+                                     that value to $already_loaded->{$property}.
+         
+                                     The application should lock data which it will update 
+                                     and might be updated by other applications. 
+                                 /);
+                            } elsif ($already_loaded->{$property} ne $pending_db_object->{$property}) {
+                                $different = 1;
+                                last;
+                            }
+                        }
+                    }
+                    
+                    if ($already_loaded and !$different) {
                         if ($pending_db_object == $already_loaded) {
                             print "ALREADY LOADED SAME OBJ?\n";
                             $DB::single = 1;
@@ -1595,8 +1637,17 @@ sub _create_object_fabricator_for_loading_template {
                         $pending_db_object->signal_change("unload");
                         delete $UR::Object::all_objects_loaded->{$prev_class_name}->{$id};
                         delete $UR::Object::all_objects_are_loaded->{$prev_class_name};
+                        if ($already_loaded) {
+                            # The new object should replace the old object.  Since other parts of the user's program
+                            # may have references to this object, we should copy the values from the new object into
+                            # the existing object's cache
+                            @$already_loaded{@property_names,'db_committed'} = @$pending_db_object{@property_names,'db_committed'};
+                            $pending_db_object = $already_loaded;
+                        } else {
+                            # This is a completely new object
+                            $UR::Object::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
+                        }
                         bless $pending_db_object, $subclass_name;
-                        $UR::Object::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
                         $pending_db_object->signal_change("load");
                         
                         $dsx->_add_object_loading_info($pending_db_object, $loading_info);
