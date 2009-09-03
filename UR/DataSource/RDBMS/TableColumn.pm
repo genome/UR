@@ -91,5 +91,21 @@ Carp::confess("not implemented yet?!");
 }
 
 
+# the update classes code uses this.  If the data type of a column is a time-ish format, then
+# the data_length reported by the schema is the number of bytes used internally by the DB.
+# Since the UR-object will store the time in text format, it will always be longer than
+# that.  To keep $obj->invalid from complaining, don't even bother storing the length of
+# time-ish data
+sub is_time_data {
+    my $self = shift;
+
+    my $type = uc($self->data_type);
+    if ($type eq 'TIMESTAMP' or uc($type) eq 'DATE' or uc($type) eq 'INTERVAL') {
+        return 1;
+    } else {
+        return;
+    }
+}
+
 1;
 #$Header

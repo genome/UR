@@ -1044,7 +1044,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 }
             }
             $property->data_type($column->data_type);
-            $property->data_length($column->data_length);
+            # lengths for these data types are based on the number of bytes used internally in the
+            # database.  The UR-based objects will store the text version, which will always be longer,
+            # making $obj->invalid() complain about the length being out of bounds
+            $property->data_length($column->is_time_data ? undef : $column->data_length);
+
             $property->is_optional($column->nullable eq "Y" ? 1 : 0);
             $property->doc($column->remarks);
             
@@ -1052,7 +1056,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 no warnings;
                 $self->status_message(
                     #sprintf("U %-40s uses table %-40s" . "\n",$class_name,$table_name)
-                    sprintf("U %-40s has updated column %s.%s (%s %s)" . "\n",                                                         
+                    sprintf("U %-40s has updated column %s.%s (%s %s)\n",
                                                             $class_name,
                                                             $table->table_name, 
                                                             $column_name,
@@ -1088,16 +1092,16 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 property_name  => $property_name,
                 column_name    => $column_name,
                 data_type      => $column->data_type,
-                data_length    => $column->data_length,
+                data_length    => $column->is_time_data ? undef : $column->data_length,
                 is_optional    => $column->nullable eq "Y" ? 1 : 0,
                 is_volatile    => 0,
                 doc            => $column->remarks,
                 is_specified_in_module_header => 1, 
             );
-            
+
             no warnings;
             $self->status_message(
-                sprintf("A %-40s has new column %s.%s (%s %s)" . "\n",                                                         
+                sprintf("A %-40s has new column %s.%s (%s %s)\n",
                                                         $class_name,
                                                         $table->table_name, 
                                                         $column_name,
