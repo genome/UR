@@ -10,7 +10,7 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     has => [
         subject_class   => { is => 'UR::Object::Type', id_by => 'subject_class_name' },
-        subject_id      => { is => 'SCALAR' },
+        subject_id      => { is => 'SCALAR', is_optional => 1 },
         subject         => { is => 'UR::Object', 
                                 calculate_from => ['subject_class_name','subject_id'],
                                 calculate => '$subject_class_name->get($subject_id)' },
