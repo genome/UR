@@ -1041,6 +1041,17 @@ sub _sync_database {
     flock($read_fh, LOCK_UN);
     $read_fh->close();
 
+    # FIXME - this is ugly... With RDBMS-type data sources, they will call $dbh->commit() which
+    # gets to UR::DBI->commit(), which calls _set_object_saved_committed for them.  Since we're
+    # not using DBI we have to do this 2-part thing ourselves.  In the future, we might break
+    # out things so the saving to the temp file goes in _sync_database(), and moving the temp
+    # file over the original goes in commit()
+    unless ($self->_set_specified_objects_saved_uncommitted($changed_objects)) {
+        Carp::croak("Error setting objects to a saved state after sync_database.  Exiting.");
+        return;
+    }
+    $self->_set_object_saved_committed($_) foreach @$changed_objects;
+
     return 1;
 }
 

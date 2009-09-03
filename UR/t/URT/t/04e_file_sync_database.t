@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 18;
+use Test::More tests => 20;
 
 use IO::File;
 
@@ -29,6 +29,7 @@ ok($thing3->delete, 'Deleted a third thing');
 
 my $new_thing1 = URT::Things->create(thing_id => 3, thing_name => 'Newby', thing_color=> 'clear');
 ok($new_thing1, 'created new thing');
+ok(!exists($new_thing1->{'db_committed'}), "New thing correctly has no 'db_committed' hash key");
 
 my $new_thing2 = URT::Things->create(thing_id => 0, thing_name => 'Something', thing_color => 'white');
 ok($new_thing2, 'created new thing 2');
@@ -39,6 +40,8 @@ ok($new_thing3, 'created new thing 3');
 ok(UR::Context->commit, 'Commit');
 
 &check_file($ds);
+
+ok(exists($new_thing1->{'db_committed'}), "New thing 1 now has a 'db_committed' has key");
 
 unlink $ds->server;
 

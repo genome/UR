@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 31;
+use Test::More tests => 36;
 
 use IO::File;
 
@@ -46,6 +46,10 @@ ok($new5, 'Created a new thing 5');
 ok(UR::Context->commit(), 'Commit');
 
 &check_files($ds);
+
+foreach my $obj ( $new1, $new2, $new3, $new4, $new5 ) {
+    ok(exists($obj->{'db_committed'}), "New object now has a 'db_committed' hash key")
+}
 
 
 sub check_files {
