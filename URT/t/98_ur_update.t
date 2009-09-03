@@ -8,7 +8,7 @@ use warnings;
 use URT;
 use DBI;
 use IO::Pipe;
-use Test::More tests => 88;
+use Test::More tests => 90;
 use UR::Namespace::Command::Update::Classes;
 UR::DBI->no_commit(1);
 
@@ -149,7 +149,10 @@ ok($trans, "began transaction");
     ok($command_obj->execute(),'Executing update on an empty schema');
 
     my @changes = get_changes();
-    is(scalar(@changes),0, "no changes for an empty schema");
+    is(scalar(@changes),1, "one change for an empty schema");
+    is($changes[0]->changed_class_name, 'URT::DataSource::Meta', 'Single change was to URT::DataSource::Meta');
+    is($changes[0]->changed_aspect, 'connect', 'Single change was a DB connect');
+    
 
     # note this for comparison in future tests.
     my $expected_dd_object_count = cached_dd_object_count();
