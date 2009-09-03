@@ -1041,9 +1041,13 @@ sub _get_msgdata {
     if (ref($self)) {
         no strict 'refs';
         my $object_msgdata = $msgdata{$self->id} ||= {};
-        my $class_msgdata = ${ ref($self) . '::msgdata' } ||= {};
+        my $class_msgdata = ref($self)->_get_msgdata;
 
-        return { %$class_msgdata, %$object_msgdata };
+        while (my ($k,$v) = each(%$class_msgdata)) {
+            $object_msgdata->{$k} = $v unless (exists $object_msgdata->{$k});
+        }
+
+        return $object_msgdata;
     }
     else {
         no strict 'refs';
@@ -1128,4 +1132,4 @@ for my $type (qw/error warning status debug usage/) {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 39730 2008-10-14 18:15:48Z eclark $
+#$Id: Command.pm 39742 2008-10-14 18:35:26Z eclark $
