@@ -412,7 +412,14 @@ sub resolve_for_class_and_params {
             $value = [ @$value ];
             
             # transform objects into IDs if applicable
-            if (blessed($value->[0])) {
+            my $is_all_objects = 1;
+            for (@$value) { 
+                unless (blessed($_)) {
+                    $is_all_objects = 0;
+                    last;
+                }
+            }
+            if ($is_all_objects) {
                 
                 my ($method) = ($key =~ /^(\w+)/);
                 if (my $subref = $subject_class->can($method) and $subject_class->isa("UR::Object")) {
