@@ -31,6 +31,7 @@ use warnings;
     is_optional      => 0,
     is_transient     => 0,
     is_constant      => 0,
+    is_volatile      => 0,
     is_class_wide    => 0,
     is_delegated     => 0,
     is_calculated    => 0,
