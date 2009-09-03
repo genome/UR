@@ -1030,11 +1030,13 @@ sub class_for_sub_command
 # STDERR, but the test case can change it to capture the messages to somewhere else
 our $stderr = \*STDERR;
 
+our %msgdata;
+
 sub _get_msgdata {
     my $self = $_[0];
     
     if (ref($self)) {
-        return $self->{msgdata} ||= {};
+        return $msgdata{$self->id} ||= {}; # $self->{msgdata} ||= {};
     }
     else {
         no strict 'refs';
@@ -1119,4 +1121,4 @@ for my $type (qw/error warning status debug usage/) {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 39433 2008-10-04 00:04:28Z ssmith $
+#$Id: Command.pm 39497 2008-10-07 21:17:49Z jwalker $
