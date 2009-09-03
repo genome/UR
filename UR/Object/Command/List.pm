@@ -180,8 +180,17 @@ sub format_and_print{
     my $self = shift;
     
     $self->{output}->print("<table>");
+    
+    #cannot use super because \n screws up javascript
+    unless ( $self->{noheaders} ) {
+        $self->{output}->print($self->_get_header_string);
+    }
 
-    $self->SUPER::format_and_print();
+    my $count = 0;
+    while (my $object = $self->{iterator}->next) {
+        $self->{output}->print($self->_get_object_string($object));
+        $count++;
+    }
     
     $self->{output}->print("</table>");
 }
@@ -387,4 +396,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 37018 2008-07-28 19:44:01Z jweible $
+#$Id: List.pm 37021 2008-07-28 19:56:29Z jweible $
