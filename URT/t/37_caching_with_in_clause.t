@@ -8,6 +8,11 @@ use above 'URT'; # dummy namespace
 # Turn this on for debugging
 #$ENV{UR_DBI_MONITOR_SQL}=1;
 
+END {
+    my $db_file = URT::DataSource::SomeSQLite->server;
+    unlink $db_file;
+}
+
 my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
 ok($dbh, "got a db handle");
 &create_db_tables($dbh);
