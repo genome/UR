@@ -11,7 +11,6 @@ ok(UR::Object::Type->define(
         class_name => 'URT::RPC::Thingy',
         is => 'UR::Service::RPC::Executer'),
    'Created class for RPC executor');
-unshift @URT::RPC::Thingy, 'UR::Service::RPC::Executer';
 
 
 my($to_server,$to_client) = IO::Socket->socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC);
@@ -43,7 +42,13 @@ my $msg = UR::Service::RPC::Message->create(
 ok($msg, 'Created an RPC message');
 ok($msg->send($to_server), 'Sent RPC message from client');
 
-$count = $rpc_server->loop(1);
+do {
+    local *STDERR;
+    no warnings;
+    $count = $rpc_server->loop(1);
+    use warnings;
+};
+
 is($count, 1, 'RPC server ran the event loop and correctly processed 1 event');
 is($URT::RPC::Thingy::join_called, 1, 'RPC server called the correct method');
 
@@ -86,7 +91,6 @@ $msg = UR::Service::RPC::Message->create(
 ok($msg, 'Created third RPC message encoding an undefined function call');
 ok($msg->send($to_server), 'Sent RPC message from client');
 
-diag('You may see error messages when the server attempts to call the undefined function');
 $count = $rpc_server->loop(1);
 is($count, 1, 'RPC server ran the event loop and correctly processed 1 event');
 

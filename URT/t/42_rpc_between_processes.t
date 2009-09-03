@@ -14,7 +14,7 @@ STDERR->autoflush(1);
 if ($ARGV[0] and $ARGV[0] eq '--child') {
     # This is for debugging the test case.
     # It will start up just the child part
-    diag('Starting up the child portion');
+    note('Starting up the child portion');
     &Child();
     exit(0);
 }
@@ -35,10 +35,10 @@ if ($ARGV[0] and $ARGV[0] eq '--parent') {
 END { 
     unless ($ARGV[0]) {
         if ($pid) {
-            diag("killing child PID $pid\n");
+            note("killing child PID $pid\n");
             kill 'TERM', $pid;
         } elsif (getppid() != 1) {
-            diag("Child is exiting early... killing parent");
+            note("Child is exiting early... killing parent");
             kill 'TERM', getppid();
         }
     }
@@ -156,13 +156,11 @@ sub Child {
             class_name => 'URT::RPC::Listener',
             is => 'UR::Service::RPC::TcpConnectionListener'),
        'Created class for RPC socket Listener');
-    unshift @URT::RPC::Listener, 'UR::Service::RPC::TcpConnectionListener';
 
     ok(UR::Object::Type->define(
             class_name => 'URT::RPC::Thingy',
             is => 'UR::Service::RPC::Executer'),
        'Created class for RPC executor');
-    unshift @URT::RPC::Thingy, 'UR::Service::RPC::Executor';
 
     my $listen_socket = IO::Socket::INET->new(LocalPort => $PORT,
                                               Proto => 'tcp',
@@ -179,7 +177,7 @@ sub Child {
     ok($rpc_server->add_executer($listen_executer), 'Added the listen executer to the server');
     #$rpc_server->add_executer($listen_executer);
 
-    diag('Child process entering the event loop');
+    note('Child process entering the event loop');
     while(1) {
         $rpc_server->loop(undef);
     }

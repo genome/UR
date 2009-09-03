@@ -61,6 +61,8 @@ $DB::single=1;
         next if $class_name eq "UR::Object::Index";
         next if $class_name eq "UR::Namespace::CommandParam";
         next if $class_name =~ /UR::BoolExpr.*/;
+        next if $class_name eq 'UR::Context::Transaction';
+        next if $class_name eq 'UR::Change';
         $state->{$class_name} = {};
         for my $object (@objects) {
             my $copy = UR::Util::deep_copy($object);
