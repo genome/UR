@@ -601,7 +601,7 @@ sub commit
             #                "by $ENV{USER} on $ENV{HOST} running ".
             #                UR::Context::Process->original_program_path." as pid $$",
             #    Message => "Call stack:\n" .Carp::longmess()
-            );
+            #);
         } else {
             # Commit and update the associated objects.
             UR::DBI::before_execute("commit");        
