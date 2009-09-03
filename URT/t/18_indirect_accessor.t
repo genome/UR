@@ -2,7 +2,7 @@ use warnings;
 use strict;
 
 use UR;
-use Test::More tests => 12;
+use Test::More tests => 13;
 
 UR::Object::Type->define(
     class_name => 'Acme',
@@ -50,3 +50,6 @@ is($e1->boss,$b2, "re-assigned the employee to a new boss");
 is($e1->boss_name,$b2->name, "boss_name check works");
 is($e1->company,$b2->company, "company check works");
 
+# Hmmm... this only triggered the bug on DataSources backed by a real database
+my @matches = Acme::Employee->get(boss => 'nonsensical');
+ok(scalar(@matches) == 0, 'get employees by boss without boss objects correctly returns 0 items');
