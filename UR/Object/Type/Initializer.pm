@@ -1249,7 +1249,7 @@ sub _complete_class_meta_object_definitions {
         no strict;
         my $db_committed = eval(Dumper($obj));
         $obj->{db_committed} ||= $db_committed;        
-        delete $db_committed{id};
+        delete $db_committed->{id};
     };
 
     unless ($self->generate) {    
@@ -1273,7 +1273,7 @@ sub _complete_class_meta_object_definitions {
             }
         }
         if (%still_not_found) {
-            Carp::confess("BAD CLASS DEFINITION ($class_name): " . Data::Dumper::Dumper(%still_not_found));
+            Carp::confess("BAD CLASS DEFINITION for $class_name.  Unrecognized properties: " . Data::Dumper::Dumper(%still_not_found));
         }
     }
 
