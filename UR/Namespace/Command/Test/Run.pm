@@ -57,7 +57,9 @@ sub execute {
     my $self = shift;
     my $lib_path = $self->lib_path;
     my $working_path = $self->working_path;
-    
+
+    $working_path ||= ".";
+
     # nasty parsing of command line args
     # this may no longer be needed..
     my @tests = @{ $self->bare_args || [] }; 
@@ -99,6 +101,11 @@ sub execute {
         return 1;
     }
     
+    if (not @tests) {
+        $self->error_message("No tests found under $working_path");
+        return;
+    }
+
     return $self->_run_tests(@tests);
 }
 
