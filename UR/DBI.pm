@@ -61,12 +61,13 @@ my %sub_env_map = ( monitor_sql => 'UR_DBI_MONITOR_SQL',
                     explain_sql_if => 'UR_DBI_EXPLAIN_SQL_IF',
                     explain_sql_slow => 'UR_DBI_EXPLAIN_SQL_SLOW',
                     explain_sql_match => 'UR_DBI_EXPLAIN_SQL_MATCH',
+                    explain_sql_callstack => 'UR_DBI_EXPLAIN_SQL_CALLSTACK',
                     no_commit => 'UR_DBI_NO_COMMIT',
                     monitor_every_fetch => 'UR_DBI_MONITOR_EVERY_FETCH',
                   );
 
 our ($monitor_sql,$monitor_dml,$no_commit,$monitor_every_fetch,
-    $explain_sql_slow,$explain_sql_if,$explain_sql_match);
+    $explain_sql_slow,$explain_sql_if,$explain_sql_match,$explain_sql_callstack);
 
 while ( my($subname, $envname) = each ( %sub_env_map ) ) {
     no strict 'refs';
@@ -285,6 +286,9 @@ sub before_execute
                 else {
                     _print_sql_and_params($sql,@_);
                 }                
+                if ($explain_sql_callstack) {
+                    $sql_fh->print(Carp::longmess("callstack begins"),"\n");
+                }
                 if ($UR::DBI::explained_queries{$sql}) {
                     $sql_fh->print("(query explained above)\n");
                 }
@@ -300,6 +304,9 @@ sub before_execute
     my $start_time = _set_start_time();
     if ($monitor_sql){
 	_print_sql_and_params($sql,@_);
+        if ($monitor_sql > 1) {
+            $sql_fh->print(Carp::longmess("callstack begins"),"\n");
+        }
 	_print_monitor_label("EXECUTE");        
     }
     elsif($monitor_dml && $sql !~ /^\s*select/i){
@@ -505,6 +512,9 @@ sub _check_query_timing
         }
         else {
             _print_sql_and_params($sql,@params);
+        }
+        if ($explain_sql_callstack) {
+            $sql_fh->print(Carp::longmess("callstack begins"),"\n");
         }
         if ($UR::DBI::explained_queries{$sql}) {
             $sql_fh->print("(query explained above)\n");
