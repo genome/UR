@@ -187,6 +187,7 @@ UR::Object::Type->define(
         first_sub_classification_method_name => { type => 'Text', len => 256, is_optional => 1 },
         
         composite_id_separator           => { type => 'Text', len => 2 , default_value => "\t", is_optional => 1},        
+        subclass_description_preprocessor => { is => 'MethodName', len => 255, is_optional => 1 },
     ],    
     unique_constraints => [
         { properties => [qw/type_name/], sql => 'SUPER_FAKE_O2' },
@@ -197,7 +198,6 @@ UR::Object::Type->define(
 UR::Object::Type->define(
     class_name => 'UR::Object::Property',
     english_name => 'entity type attribute',
-    #id_properties => [qw/type_name attribute_name/],
     id_properties => [qw/class_name property_name/],
     properties => [
         property_type                   => { type => 'Text', len => 64 , is_optional => 1},
@@ -324,8 +324,8 @@ UR::Object::Type->define(
 );
 
 require UR::Context;
-require Command;
 UR::Object::Type->initialize_bootstrap_classes;
+require Command;
 
 $UR::initialized = 1;
 
