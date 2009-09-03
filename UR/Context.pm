@@ -459,21 +459,28 @@ sub get_objects_for_class_and_rule {
         # this returns objects from the underlying context after importing them into the current context
         my $underlying_context_closure = $self->_create_import_iterator_for_underlying_context($normalized_rule,$ds);
         
-        my %loaded_ids;
+        my $last_loaded_id;
         # this will interleave the above with any data already present in the current context
         $loading_iterator = sub {
             GET_FROM_UNDERLYING_CONTEXT:
             my ($next_obj_current_context) = shift @$cached;
             my ($next_obj_underlying_context) = $underlying_context_closure->(1) if $underlying_context_closure;
+
+            # We're turning off warnings to avoid complaining in the elsif()
+            no warnings 'uninitialized';
             if (!$next_obj_underlying_context) {
                 $underlying_context_closure = undef;
 
-            } elsif ($loaded_ids{$next_obj_underlying_context->id}++) {
+            } elsif ($last_loaded_id eq $next_obj_underlying_context->id) {
                 # during a get() with -hints, it's possible that the join can produce the same main object
-                # as it's chewing through the (possibly) multiple objects joined to it
+                # as it's chewing through the (possibly) multiple objects joined to it.
+                # Since the objects will be returned sorted by their IDs, we only have to
+                # remember the last one we saw
                 goto GET_FROM_UNDERLYING_CONTEXT;
+            } else {
+                $last_loaded_id = $next_obj_underlying_context->id;
             }
-
+            use warnings 'uninitialized';
             
             # decide which pending object to return next
             # both the cached list and the list from the database are sorted separately,
@@ -550,8 +557,11 @@ sub get_objects_for_class_and_rule {
         return unless defined wantarray;
         return @results if wantarray;
         if (@results > 1) {
-            die "Multiple results unexpected for query:"
-                . Data::Dumper::Dumper(\@results,$rule->subject_class_name,[$rule->params_list]);
+            die sprintf("Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results:\n%s\n",
+                        $rule->subject_class_name,
+                        join(',', $rule->params_list),
+                        scalar(@results),
+                        Data::Dumper::Dumper(\@results));
         }
         return $results[0];
     }
@@ -1244,10 +1254,10 @@ sub _create_object_fabricator_for_loading_template {
     my $recurse_property_referencing_other_rows     = $template_data->{recurse_property_referencing_other_rows};
 
     my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
-    
+
     my $rule_id = $rule->id;    
     my $rule_without_recursion_desc = $rule_template_without_recursion_desc->get_rule_for_values(@values);    
-    
+
     my $loading_base_object;
     if ($loading_template == $template_data->{loading_templates}[0]) {
         $loading_base_object = 1;
@@ -1301,6 +1311,40 @@ sub _create_object_fabricator_for_loading_template {
         $rule_template_without_in_clause = UR::BoolExpr::Template->get($rule_template_id_without_in_clause);
     }
 
+
+    # If the rule has hints, we'll be loading more data than is being returned.  Set up some stuff so
+    # we can mark in all_params_loaded that these other things got loaded, too
+    my %rule_hints;
+    if (!$loading_base_object && $rule_template->hints) {
+        #$DB::single=1; 
+        my $query_class_meta = $rule_template->subject_class_name->get_class_object;
+        foreach my $hint ( @{ $rule_template->hints } ) {
+            my $delegated_property_meta = $query_class_meta->property_meta_for_name($hint);
+            next unless $delegated_property_meta;
+            foreach my $join ( $delegated_property_meta->_get_joins ) {
+                next unless ($join->{'foreign_class'} eq $loading_template->{'data_class_name'});
+
+                # Is this the equivalent of loading by the class' ID?
+                my $foreign_class_meta = $join->{'foreign_class'}->get_class_object;
+                my %join_properties = map { $_ => 1 } @{$join->{'foreign_property_names'}};
+                my $join_has_all_id_props = 1;
+                foreach my $foreign_id_prop ( $foreign_class_meta->all_id_property_metas ) {
+                    next if ($foreign_id_prop->class_name eq 'UR::Object');  # Skip the manufactured property called id
+                    next if (delete $join_properties{ $foreign_id_prop->property_name });
+                    # If we get here, there's an ID property that isn't mentioned in the join properties
+                    $join_has_all_id_props = 0;
+                    last;
+                }
+                next if ( $join_has_all_id_props and ! scalar(keys %join_properties));
+
+                $rule_hints{$hint} ||= [];
+                my $hint_rule_tmpl = UR::BoolExpr::Template->resolve_for_class_and_params($join->{'foreign_class'}, 
+                                                                                          @{$join->{'foreign_property_names'}});
+                push @{$rule_hints{$hint}}, [ [@{$join->{'foreign_property_names'}}] , $hint_rule_tmpl];
+            }
+        }
+    }
+    
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
         
@@ -1647,8 +1691,8 @@ sub _create_object_fabricator_for_loading_template {
                         delete $UR::Object::all_objects_are_loaded->{$prev_class_name};
                         if ($already_loaded) {
                             # The new object should replace the old object.  Since other parts of the user's program
-                            # may have references to this object, we should copy the values from the new object into
-                            # the existing object's cache
+                            # may have references to this object, we need to copy the values from the new object into
+                            # the existing cached object
                             @$already_loaded{@property_names,'db_committed'} = @$pending_db_object{@property_names,'db_committed'};
                             $pending_db_object = $already_loaded;
                         } else {
@@ -1719,6 +1763,20 @@ sub _create_object_fabricator_for_loading_template {
             }
         } # end handling newly loaded objects
         
+        # If the rule had hints, mark that we loaded those things too, in all_params_loaded
+        if (keys(%rule_hints)) {
+            #$DB::single=1;
+            foreach my $hint ( keys(%rule_hints) ) {
+                #my @other_objs = UR::Context->get_current->infer_property_value_from_rule($hint, $rule);
+                foreach my $hint_data ( @{ $rule_hints{$hint}} ) {
+                    my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
+                    my $rule_tmpl = $hint_data->[1];
+                    my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
+                    $UR::Context::all_params_loaded->{$rule_tmpl->subject_class_name}->{$related_obj_rule->id}++;
+                 }
+            }
+        }
+
         # When there is recursion in the query, we record data from each 
         # recursive "level" as though the query was done individually.
         if ($recursion_desc and $loading_base_object) {
