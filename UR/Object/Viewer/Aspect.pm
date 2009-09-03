@@ -24,7 +24,7 @@ package UR::Object::Viewer::Aspect;
 use warnings;
 use strict;
 
-our $VERSION = '0.1';
+our $VERSION = $UR::VERSION;;
 
 require UR;
 

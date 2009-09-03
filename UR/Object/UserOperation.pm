@@ -110,7 +110,7 @@ always return 'Clone'.
 require 5.6.0;
 use warnings;
 use strict;
-our $VERSION = '0.1';
+our $VERSION = $UR::VERSION;;
 our (@ISA, @EXPORT, @EXPORT_OK);
 
 # set up module

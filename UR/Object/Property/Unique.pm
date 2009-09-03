@@ -20,7 +20,7 @@ UR::Object::Type->define(
 
 =cut
 
-our $VERSION = '2.0';
+our $VERSION = $UR::VERSION;;
 
 sub create_object {
     my $class = shift;

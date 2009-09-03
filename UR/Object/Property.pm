@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use Lingua::EN::Inflect;
 
-our $VERSION = '2.0';
+our $VERSION = $UR::VERSION;;
 
 =pod
 

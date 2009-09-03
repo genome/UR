@@ -44,7 +44,7 @@ use Scalar::Util qw(blessed);
 require UR;
 
 our @ISA = qw(UR::Object);
-our $VERSION = '2.1';
+our $VERSION = $UR::VERSION;;
 
 # This module implements define(), and most everything behind it.
 use UR::Object::Type::Initializer;

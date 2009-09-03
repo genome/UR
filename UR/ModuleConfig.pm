@@ -29,7 +29,7 @@ configuration methods should inherit from the module.
 require 5.6.0;
 use warnings;
 use strict;
-our $VERSION = '0.5';
+our $VERSION = $UR::VERSION;;
 use base qw(UR::ModuleBase);
 use IO::File;
 

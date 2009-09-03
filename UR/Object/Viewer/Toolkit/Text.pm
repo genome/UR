@@ -13,7 +13,7 @@ UR::Object::Type->define(
     ]
 );
 
-our $VERSION = '0.1';
+our $VERSION = $UR::VERSION;;
 
 sub show_viewer {
     my $class = shift;

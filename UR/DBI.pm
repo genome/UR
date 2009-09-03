@@ -28,7 +28,7 @@ This module subclasses DBI, and provides a few extra methods useful when using a
 require 5.6.0;
 use warnings;
 use strict;
-our $VERSION = '0.1';
+our $VERSION = $UR::VERSION;;
 
 # set up module
 use base qw(Exporter DBI);
