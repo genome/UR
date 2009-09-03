@@ -261,10 +261,6 @@ sub get_objects_for_class_and_rule {
         return $c[0];                     # scalar context
     }
 
-if ($class =~ m/^Genome::/) {
-$DB::single=1;
-}
-    
     # the above process might have found all of the cached data required as a side-effect in which case we have a value for this early (ugly but DRY)
     # either way: ensure the cached data is known and sorted
     if ($cached) {
