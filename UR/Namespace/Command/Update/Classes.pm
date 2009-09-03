@@ -653,7 +653,9 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $bucket = $dd_changes_by_class{$changed_class};
         push @$bucket, $changed_obj;
     }
-    my $sorter = sub { $a->table_name cmp $b->table_name || $a->id cmp $b->id };
+    my $sorter = sub { no warnings 'uninitialized';
+                        $a->table_name cmp $b->table_name || $a->id cmp $b->id
+                     };
 
     # FKs are special, in that they might change names, but we use the name as the "id".
     # This should change, really, but until it does we need to identify them by their "content",
@@ -670,6 +672,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     #  automatically.
     
     for my $fk (sort $sorter @{ $dd_changes_by_class{'UR::DataSource::RDBMS::FkConstraint::Ghost'} }) {
+        unless ($fk->table_name) {
+            $self->status_message(sprintf("~ No table name for deleted foreign key constraint %-32s\n", $fk->id));
+            next;
+        }
+
         my $table = $fk->get_table;
         # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
         my $class = 
@@ -685,7 +692,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         unless ($class) {
             #$DB::single = 1;
-            $self->status_message(sprintf("~ No class found for deleted foreign key constraint %-32s %-32s" . "\n",$table->table_name, $fk->id));
+            $self->status_message(sprintf("~ No class found for deleted foreign key constraint %-32s %-32s\n",$table->table_name, $fk->id));
             next;
         }
         my $class_name = $class->class_name;
@@ -696,7 +703,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         unless ($reference) {
             # FIXME should we do a $fk->delete() here?
             #$DB::single = 1;
-            $self->status_message(sprintf("~ No reference found for deleted foreign key constraint %-32s %-32s" . "\n",$table->table_name, $fk->id));
+            $self->status_message(sprintf("~ No reference found for deleted foreign key constraint %-32s %-32s\n",$table->table_name, $fk->id));
             next;
         }
         $reference->constraint_name(undef);
@@ -713,6 +720,10 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     # DELETED COLUMNS
     for my $column (sort $sorter @{ $dd_changes_by_class{"UR::DataSource::RDBMS::TableColumn::Ghost"} }) {
         my $table = $column->get_table;
+        unless ($table) {
+            $self->status_message(sprintf("~ No table found for deleted column %-32s\n", $column->id));
+            next;
+        }
         my $column_name = $column->column_name;
 
         # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
@@ -780,6 +791,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     for my $table (sort $sorter @{ $dd_changes_by_class{"UR::DataSource::RDBMS::Table::Ghost"} }) {
         # Though we create classes for tables, we don't immediately delete them, just deflate them.
         my $table_name = $table->table_name;
+        unless ($table_name) {
+            $self->status_message("~ No table_name for delete table object ".$table->id);
+            next;
+        }
+
         if (not defined UR::Context->_get_committed_property_value($table,'table_name')) {
             print Data::Dumper::Dumper($table);
             #$DB::single = 1;
@@ -790,7 +806,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             table_name => UR::Context->_get_committed_property_value($table,'table_name'),
         );
         unless ($class) {
-            $self->status_message(sprintf("~ No class found for deleted table %-32s" . "\n",$table_name));
+            $self->status_message(sprintf("~ No class found for deleted table %-32s" . "\n",$table->id));
             next;
         }
         $classes_with_deleted_tables{$table_name} = $class;
@@ -1105,7 +1121,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
     } # next column
 
-    $self->status_message("Updating class relationships...\n");
+    $self->status_message("Updating class ID properties...\n");
 
     # PK CONSTRAINTS (loop table objects again, since the DD doesn't do individual ID objects)
     for my $table (sort $sorter @{ $dd_changes_by_class{'UR::DataSource::RDBMS::Table'} }) {
@@ -1129,12 +1145,12 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             #$DB::single = 1;
         }
 
-        my @id_properties =
+        my @old_id_properties =
             UR::Object::Property::ID->get(
                 class_name=> $class_name
             );
         
-        my @expected_pk_cols = map { $class->get_property_meta_by_name($_->property_name)->column_name } @id_properties;
+        my @expected_pk_cols = map { $class->get_property_meta_by_name($_->property_name)->column_name } @old_id_properties;
         
         my @pk_cols = $table->primary_key_constraint_column_names;
         
@@ -1142,7 +1158,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             next;
         }
         
-        for my $property (@id_properties) { $property->delete };        
+        for my $property (@old_id_properties) { $property->delete };        
         
         unless (@pk_cols) {
             # If there are no primary keys defined, then treat _all_ the columns
@@ -1150,8 +1166,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             # table containing the same data.
             @pk_cols = $table->column_names;
         }
-        for my $pos (1 .. @pk_cols)
-        {
+
+        for my $pos (1 .. @pk_cols) {
             my $pk_col = $pk_cols[$pos-1];
             my ($property) = grep { defined($_->column_name) and (uc($_->column_name) eq uc($pk_col)) } @properties;
             
