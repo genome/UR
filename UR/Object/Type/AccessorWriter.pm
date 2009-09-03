@@ -11,45 +11,46 @@ use Carp ();
 use Sub::Name ();
 use Sub::Install ();
 
-sub construct_class_from_data
-{
-    my $self = shift;
-
-    my %params = @_;
-    my $class_name = $params{"class_name"};
-    my @id_properties = @{ $params{id_properties} };
-    my @other_properties = @{ $params{other_properties} };
-    my @class_properties = ($params{class_properties} ? @{ $params{class_properties} } : ());
-
-    for my $property (@id_properties)
-    {
-        UR::Object::Type->mk_ro_accessor($class_name,$property,uc($property));
-    }
-
-    for my $property (@other_properties)
-    {
-        UR::Object::Type->mk_rw_accessor($class_name,$property,uc($property));
-    }
-
-    for my $property (@class_properties)
-    {
-        UR::Object::Type->mk_class_accessor($class_name,$property);
-    }
-
-    my $props = [@id_properties, @other_properties];
-    my $cols = [map { uc($_) } @$props];
-
-    no strict 'refs';
-
-    my @isa = @{$class_name . '::ISA'};
-    for my $base (@isa) {
-        my $isl = ${$base . '::immediate_subclasses_loaded'} ||= [];
-        push @$isl, $class_name;
-        $isl = ${$base . '::Ghost::immediate_subclasses_loaded'} ||= [];
-        push @$isl, $class_name . '::Ghost';
-    }
-
-}
+##PRUNE
+#sub construct_class_from_data
+#{
+#    my $self = shift;
+#
+#    my %params = @_;
+#    my $class_name = $params{"class_name"};
+#    my @id_properties = @{ $params{id_properties} };
+#    my @other_properties = @{ $params{other_properties} };
+#    my @class_properties = ($params{class_properties} ? @{ $params{class_properties} } : ());
+#
+#    for my $property (@id_properties)
+#    {
+#        UR::Object::Type->mk_ro_accessor($class_name,$property,uc($property));
+#    }
+#
+#    for my $property (@other_properties)
+#    {
+#        UR::Object::Type->mk_rw_accessor($class_name,$property,uc($property));
+#    }
+#
+#    for my $property (@class_properties)
+#    {
+#        UR::Object::Type->mk_class_accessor($class_name,$property);
+#    }
+#
+#    my $props = [@id_properties, @other_properties];
+#    my $cols = [map { uc($_) } @$props];
+#
+#    no strict 'refs';
+#
+#    my @isa = @{$class_name . '::ISA'};
+#    for my $base (@isa) {
+#        my $isl = ${$base . '::immediate_subclasses_loaded'} ||= [];
+#        push @$isl, $class_name;
+#        $isl = ${$base . '::Ghost::immediate_subclasses_loaded'} ||= [];
+#        push @$isl, $class_name . '::Ghost';
+#    }
+#
+#}
 
 
 sub mk_rw_accessor {

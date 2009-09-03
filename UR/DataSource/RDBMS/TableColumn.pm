@@ -40,14 +40,6 @@ sub _fk_constraint_class {
     }
 }
 
-
-sub generic_data_type {
-die "See where this is called from";
-    use vars qw(%generic_data_type_for_vendor_data_type);
-    return $generic_data_type_for_vendor_data_type{$_[0]->data_type};
-}
-
-
 sub get_table {
     my $self = shift;
 
@@ -77,12 +69,6 @@ sub fk_constraints {
                              data_source => $self->data_source);
                        
     return @fks;
-}
-
-
-sub resolve_names {
-    Carp::carp("resolve_names probably isn't needed anymore");
-    return 1;
 }
 
 

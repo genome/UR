@@ -37,13 +37,6 @@ sub get_default_context
 }
 
 
-sub get_default_data_source
-{
-    my $self = shift;
-    my $context = $self->get_default_context;
-    return $context->get_default_data_source;
-}
-
 # FIXME  These should change to using the namespace metadata DB when
 # that's in place, rather than trolling through the directory tree
 sub get_material_classes

@@ -29,9 +29,6 @@ sub _load {
     shift->is_loaded(@_);
 }
 
-sub cache_class_path {
-    return shift->live_class->cache_class_path;
-}
 
 sub unload {
     return;
@@ -41,10 +38,6 @@ sub edit_class { undef }
 
 sub ghost_class { undef }
 
-sub history_class { undef }
-
-sub history_table_name { undef }
-
 sub is_ghost { return 1; }
 
 sub live_class
@@ -53,8 +46,6 @@ sub live_class
     $class =~ s/::Ghost//;
     return $class;
 }
-
-sub label_name { shift->live_class->label_name . "(DELETED)" }
 
 my @ghost_changes;
 sub changed {

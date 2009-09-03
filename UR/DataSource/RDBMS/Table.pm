@@ -229,41 +229,6 @@ sub handler_class_name {
     return $self->handler_class(@_)->class_name;
 }
 
-#sub dbh {
-#my $self = shift;
-#    #return $self->data_source->get_default_dbh;
-#$DB::single=1;
-#    my $data_source = $self->data_source;
-#    my $dbh = $data_source->get_default_dbh;
-#    return $dbh;
-#}
-
-sub _OBSOLETE_matching_where_clause {
-my $self = shift;
-    my @pks = $self->primary_key_constraint_column_names;
-    return join(" and ", map { "$_ = ?" } @pks);
-}
-
-=pod
-
-=over 4
-
-=item $class_obj = $t->get_class_meta();
-
-Returns the class metadata object for the given table
-
-=back
-
-=cut
-
-sub get_class_meta {
-    my $self = shift;
-
-    my $data_source = $self->data_source;
-    return $data_source->get_class_meta_for_table($self);
-}
-
-                             
 sub delete {
 my $self = shift;
 

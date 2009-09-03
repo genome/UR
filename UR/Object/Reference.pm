@@ -58,14 +58,6 @@ sub create_object {
     return $class->SUPER::create_object(%params);
 }
 
-sub generate
-{
-    my $self = shift;
-    my $id = $self->id;
-    print "generating $id\n";
-    return 1;
-}
-
 sub get_property_links
 {
     my $self = shift;

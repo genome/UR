@@ -168,36 +168,6 @@ sub create_object
     return $class->SUPER::create_object(%params);
 }
 
-sub _reference_class
-{
-    my $self = shift;
-    if ($self->isa('UR::Object::Ghost')) {
-        return 'UR::Object::Reference::Ghost';
-    }
-    else {
-        return 'UR::Object::Reference';
-    }
-}
-
-#sub get_reference
-#{
-#    my $self = shift;
-#    return $self->_reference_class->get($self->tha_id);
-#}
-
-#sub class_name
-#{
-#    my $self = shift;
-#    my $r = $self->get_reference;
-#    return $r->class_name;
-#}
-#
-#
-#sub r_class_name
-#{
-#    shift->get_reference->r_class_name
-#}
-
 sub get_with_special_parameters 
 {
     my $class = shift;

@@ -429,7 +429,7 @@ sub _get_display_fields_for_property {
         }
     }
     
-    my $desc = $property->description;
+    my $desc = $property->doc;
     if ($desc && length($desc)) {
         $desc =~ s/([\$\@\%\\\"])/\\$1/g;
         $desc =~ s/\n/\\n/g;
@@ -486,14 +486,6 @@ sub module_directory {
         Carp::confess("Failed to find base name $base_name at the end of path $path!")
     }
     return $path;
-}
-
-sub singleton_cache_dir {
-    my $self = shift;
-    my $singleton_cache_dir = $self->singleton_path;
-    $singleton_cache_dir =~ s/\.pm$//;
-    $singleton_cache_dir .= "/";
-    return $singleton_cache_dir;
 }
 
 sub module_source_lines {
@@ -711,19 +703,6 @@ if ($package->isa("UR::Object::Type")) {
     UR::Context::Transaction->log_change($self, ref($self), $self->id, 'rewrite_module_header', Data::Dumper::Dumper{path => $module_file_path, data => $old_file_data});
 
     return 1;
-}
-
-
-sub _should_write_to_class_definition {
-    my($self, $property_meta) = @_;
-
-    my $property_name = $property_meta->property_name;
-    return unless $property_meta->is_modulewritten;
-
-    my $default_value = $property_meta->default_value;
-    my $property_value = $self->$property_name;
-
-    return $default_value ne $property_value;
 }
 
 

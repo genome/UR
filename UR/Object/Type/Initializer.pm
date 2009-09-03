@@ -938,8 +938,9 @@ sub _normalize_property_description {
     if (ref($new_class{'data_source_id'}) eq 'HASH') {
         # This is an inline-defined data source
         $the_data_source = $new_class{'data_source_id'}->{'is'};
-    } else {
+    } elsif ($new_class{'data_source_id'}) {
         $the_data_source = $new_class{'data_source_id'};
+        $the_data_source = UR::DataSource->get($the_data_source) || $the_data_source->get();
     }
     # UR::DataSource::File-backed classes don't have table_names, but for querying/saving to
     # work property, their properties still have to have column_name filled in

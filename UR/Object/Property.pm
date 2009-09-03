@@ -40,12 +40,6 @@ UR::Object::Type->define(
 
 =cut
 
-sub is_aggregate {
-    my $self = shift;
-    # TODO: calclulated properties, might auto-aggregate.  By default nothing does. 
-    return;
-}
-
 # Implements the is_numeric calculated property - returns true if it's ok to use
 # numeric comparisons (==, <, <=>, etc) on the property
 our %NUMERIC_TYPES = (
@@ -319,27 +313,6 @@ sub _get_joins {
 }
 
 
-sub ref_type_names {
-    my $self = shift;
-    unless ($self->{ref_type_names})
-    { 
-        my $data_type = $self->data_type;
-        my $type_name = $self->type_name;
-        my $attribute_name = $self->attribute_name;
-        my @taha = 
-           map { UR::Object::Reference::Property->get(tha_id=>$_->id, attribute_name=>$attribute_name) } 
-            UR::Object::Reference->get(type_name => $type_name);
-        my @ref_type_names;    
-        for my $taha (@taha)
-        {
-            my $tha = UR::Object::Reference->get($taha->tha_id);
-            push @ref_type_names, $tha->r_type_name;        
-        } 
-        $self->{ref_type_names} = \@ref_type_names;
-    }
-    return @{ $self->{ref_type_names} };
-}
-
 sub label_text 
 {
     # The name of the property in friendly terms.
@@ -379,20 +352,6 @@ sub generic_data_type {
     return $generic_data_type_for_vendor_data_type{$_[0]->{data_type}};
 }
 
-# A List of Oracle Column Types we can't query by
-# LONG and LONGRAW are definitely no good
-our %unqueryable_data_types=('LONG'    => 1,
-                             'LONGRAW' => 1,
-# Plus, add anything above that is defined as 'Ugly'
-                             map {($_ => 1)} 
-                             grep {$generic_data_type_for_vendor_data_type{$_} eq 'Ugly'} 
-                             keys %generic_data_type_for_vendor_data_type);
-sub is_queryable {
-    return unless ($_[0]->data_type);
-    return !exists($unqueryable_data_types{$_[0]->data_type});
-}
-
-
 sub is_indirect {
     my $self = shift;
 
@@ -400,18 +359,6 @@ sub is_indirect {
 }
 
 
-
-#
-# OBSOLETE
-#
-
-# legacy accessors
-sub description { shift->doc(@_) }
-
-# The legacy name is 'nullable', the new is 'is_optional'
-sub nullable { # Carp::carp(q(Legacy call to 'nullable()' should change to 'is_optional'));
-               shift->is_optional(@_)
-             }
 
 sub id_by_property_links {
     my $self = shift;
@@ -427,17 +374,5 @@ sub r_id_by_property_links {
     return @r;
 }
 
-
-sub id_by_property_names {
-    my $self = shift;
-    my @r = $self->id_by_property_links();
-    return map { $_->property_name } @r;
-}
-
-sub r_id_by_property_names {
-    my $self = shift;
-    my @r = $self->id_by_property_links();
-    return map { $_->r_property_name } @r;
-}
 
 1;

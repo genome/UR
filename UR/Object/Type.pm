@@ -62,18 +62,6 @@ our $bootstrapping = 1;
 our @partially_defined_classes;
 our $pwd_at_compile_time = cwd();
 
-# Replaced by namespace
-sub get_namespace {
-    my $self = shift;
-
-    my $class_name = $self->class_name;
-    my $pos = index($class_name,"::");
-    return $class_name if ($pos < 1);  # The top-level namespace class is in its namespace
-
-    my $namespace = substr($class_name,0,$pos);
-    return $namespace;
-}
-
 # This needs to remain overridden to enforce the restriction on callers
 sub data_source {
     my $self = shift;
@@ -316,8 +304,8 @@ sub ordered_inherited_class_objects {
 
 }
 
-# Kinda Replaced by all_property_metas(property_name => 'name')
-#*get_property_object_for_name = \&get_property_meta_by_name; 
+## Kinda Replaced by all_property_metas(property_name => 'name')
+##*get_property_object_for_name = \&get_property_meta_by_name; 
 sub get_property_meta_by_name {
     my ($self, $property_name) = @_;
     my $property;
@@ -333,7 +321,9 @@ sub get_property_meta_by_name {
     return;
 }
 
+
 # Replaces the above!
+#*get_property_meta_by_name = \&property_meta_for_name;
 sub property_meta_for_name {
     my($self, $property_name) = @_;
 
@@ -916,94 +906,6 @@ sub mk_table {
     1;
 }
 
-
-
-
-
-
-# FIXME is this necessary any more?
-#sub mk_attribute_value_accessor {
-#    my ($self, $class_name, $property_name) = @_;
-#   
-#    # defined on first use inside the closure 
-#    my $type_name;
-#    my $attribute_name;
-#
-#    my $accessor = sub {
-#        my ($self, $new_value) = @_;
-#        
-#        unless ($type_name and $attribute_name) {
-#            my $class_object ||= UR::Object::Type->get (
-#                class_name => $class_name
-#            );
-#            my $property_object ||= UR::Object::Property->get (
-#                class_name     => $class_object->class_name,
-#                property_name => $property_name
-#            );
-#            $type_name = $class_object->type_name;
-#            $attribute_name = $property_object->attribute_name;
-#        }
-#
-#        my $eav = GSC::EntityAttributeValue->get (
-#            type_name      => $type_name,
-#            entity_id      => $self->id,
-#            attribute_name => $attribute_name,
-#        );
-#
-#        if ( @_ < 2) {
-#            # GET
-#            if ( $eav ) {
-#                return $eav->value;
-#            }
-#            else {
-#                return undef;
-#            }
-#        }
-#        else {
-#            # SET
-#            if ($eav) {
-#                my $old_value = $eav->value;
-#
-#                if ( defined ($new_value) and $new_value ne "" ) {
-#                    # defined -> defined
-#                    return $old_value if ( $old_value eq $new_value );
-#                    $eav->value( $new_value );
-#                    $self->signal_change( $property_name, $old_value, $new_value );
-#                }
-#                else {
-#                    # defined -> undef
-#                    $eav->delete;
-#                    $self->signal_change( $property_name, $old_value, $new_value );
-#                }
-#
-#                return $new_value;
-#            }
-#            else {
-#                if ( defined($new_value) ) {
-#                    # undef -> defined
-#                    $eav = GSC::EntityAttributeValue->create (
-#                        type_name      => $type_name,
-#                        entity_id      => $self->id,
-#                        attribute_name => $attribute_name,
-#                        value          => $new_value,
-#                    );
-#                    $self->signal_change( $property_name, undef, $new_value );
-#                    return $new_value;
-#                }
-#                else {
-#                    # undef -> undef
-#                    return undef;
-#                }
-#            }
-#        }
-#    };
-#
-#    no strict 'refs';
-#
-#    *{$class_name ."::$property_name"}  = $accessor;
-#}
-
-
 # sub _object
 # This is used to make sure that methods are called
 # as object methods and not class methods.
@@ -1035,36 +937,6 @@ sub _object
 }
 
 
-
-###################################################
-#
-# Methods which directly get data from the
-# metadata system as efficiently as possible.
-#
-# Metadata about a class should be removed from
-# the class itself, so we can track infrastructural
-# requirements on a class right here.
-#
-###################################################
-
-*has_subtypes = \&has_subclasses;
-
-sub has_subclasses
-{
-    my $self = $_[0];
-    unless (exists $_[0]->{has_subclasses})
-    {
-        if ($self->derived_type_names)
-        {
-            $self->{has_subclasses} = 1;
-        }
-        else
-        {
-            $self->{has_subclasses} = 0;
-        }
-    }
-    return $_[0]->{has_subclasses};
-}
 
 ###################################################
 # methods that may go away when delegation is done
@@ -1111,50 +983,6 @@ sub get_id_property_objects
     return @id_property_objects;
 }
 
-# Replaced by unique_metas
-sub get_unique_objects
-{
-    my $self = _object(shift);
-    my @unique_objects = UR::Object::Property::Unique->get( class_name => $self->class_name );
-    return @unique_objects;
-}
-
-# Replaced by unique_property_metas
-sub get_unique_property_objects
-{
-    my $self = _object(shift);
-    my @unique_objects = $self->get_unique_objects;
-    my @unique_property_objects =
-        map { UR::Object::Property->get( class_name => $_->class_name, attribute_name => $_->attribute_name ) }
-        @unique_objects;
-    return @unique_property_objects;
-}
-
-# Replaced by direct_columnless_property_metas
-sub get_columnless_property_objects
-{
-    my $self = _object(shift);
-    my @columnless_property_objects =
-        UR::Object::Property->get( class_name => $self->class_name, column_name => undef );
-    return @columnless_property_objects;
-}
-
-# Replaced by reference_metas
-sub get_reference_objects
-{
-    my $self = _object(shift);
-    my @ref = UR::Object::Reference->is_loaded(class_name => $self->class_name, @_);
-    return @ref;
-}
-
-# Dup of the above?
-sub get_referencing_objects
-{
-    my $self = _object(shift);
-    my @ref = UR::Object::Reference->is_loaded(class_name => $self->class_name, @_);
-    return @ref;
-}
-
 ########################################
 # Accessors for parent object sets
 ########################################
@@ -1195,36 +1023,6 @@ sub get_inherited_property_objects
     return @inherited_property_objects;
 }
 
-# Replaced by ancestry_id_property_metas
-sub get_inherited_id_property_objects
-{
-    my $self = _object(shift);
-    my @inherited_id_property_objects =
-        map { $_->get_id_property_objects }
-        $self->get_inherited_class_objects;
-    return @inherited_id_property_objects;
-}
-
-# Replaced by ancestry_unique_property_metas
-sub get_inherited_unique_property_objects
-{
-    my $self = _object(shift);
-    my @inherited_unique_property_objects =
-        map { $_->get_unique_property_objects }
-        $self->get_inherited_class_objects;
-    return @inherited_unique_property_objects;
-}
-
-# Replaced by ancestry_property_metas(column_name => undef); or ancestry_columnless_property_metas
-sub get_inherited_columnless_property_objects
-{
-    my $self = _object(shift);
-    my @inherited_columnless_property_objects =
-        map { $_->get_columnless_property_objects }
-        $self->get_inherited_class_objects;
-    return @inherited_columnless_property_objects;
-}
-
 ########################################
 # Accessors for derived object sets
 ########################################
@@ -1239,13 +1037,6 @@ sub derived_type_names
     my @sub_type_links = UR::Object::Inheritance->get(parent_type_name => $type_name);
     my @sub_type_names = map { $_->type_name } @sub_type_links;
     return @sub_type_names;
-}
-
-sub derived_class_names
-{
-    #Carp::confess();
-    my @derived_type_names = shift->derived_type_names;
-    return map { UR::Object::Type->get($_)->class_name } @derived_type_names;
 }
 
 sub all_derived_type_names
@@ -1263,17 +1054,6 @@ sub all_derived_type_names
     return @all_sub_type_names;
 }
 
-sub all_derived_class_names
-{
-    #Carp::confess();
-    my @all_derived_type_names = shift->all_derived_type_names;
-    return map { UR::Object::Type->get($_)->class_name } @all_derived_type_names;
-}
-
-###############################################################
-# Accessors for composite (directly and inherited) object sets
-###############################################################
-
 # Replaced by all_property_metas
 sub get_all_property_objects
 {
@@ -1281,47 +1061,6 @@ sub get_all_property_objects
     my @all_property_objects =
         ( $self->get_property_objects(@_), $self->get_inherited_property_objects(@_), );
     return @all_property_objects;
-}
-
-# Replaced by all_id_property_metas
-sub get_all_id_property_objects
-{
-    my $self = _object(shift);
-    my @all_id_property_objects =
-        ( $self->get_id_property_objects, $self->get_inherited_id_property_objects );
-    return @all_id_property_objects;
-}
-
-# Replaced by all_unique_property_metas
-sub get_all_unique_property_objects
-{
-    my $self = _object(shift);
-    my @all_unique_property_objects =
-        ( $self->get_inherited_unique_property_objects, $self->get_unique_property_objects );
-    return @all_unique_property_objects;
-}
-
-# Replaced by all_property_metas(column_name => undef);
-sub get_all_columnless_property_objects
-{
-    my $self = _object(shift);
-    my @all_columnless_property_objects =
-        ( $self->get_inherited_columnless_property_objects, $self->get_columnless_property_objects );
-    return @all_columnless_property_objects;
-}
-
-##############################
-# Accessors for core metadata
-##############################
-
-# Replaced by direct_property_names
-sub instance_property_names
-{
-    my $self = _object(shift);
-    my @property_names =
-        map { $_->property_name }
-        $self->get_property_objects;
-    return @property_names;
 }
 
 # Replaced by direct_column_names
@@ -1364,76 +1103,6 @@ sub id_column_names
     return @id_column_names;
 }
 
-# Replaced by direct_unique_property_names
-sub unique_property_names
-{
-    my $self = _object(shift);
-    my @unique_property_names =
-        map { $_->property_name }
-        $self->get_unique_property_objects;
-    return @unique_property_names;
-}
-
-# Replaced by direct_columnless_property_names
-sub columnless_property_names
-{
-    my $self = _object(shift);
-    my @columnless_property_names =
-        map { $_->property_name }
-        $self->get_columnless_property_objects;
-    return @columnless_property_names;
-}
-
-# Replaced by ancestry_property_names
-sub inherited_property_names
-{
-    my $self = _object(shift);
-    my @inherited_property_names =
-        map { $_->property_names }
-        $self->get_inherited_class_objects;
-    return @inherited_property_names;
-}
-
-# Replaced by ancestry_id_property_names
-sub inherited_id_property_names
-{
-    my $self = _object(shift);
-    my @inherited_id_property_names =
-        map { $_->id_property_names }
-        $self->get_inherited_class_objects;
-    return @inherited_id_property_names;
-}
-
-# Replaced by ancestry_id_column_names
-sub inherited_id_column_names
-{
-    my $self = _object(shift);
-    my @inherited_id_property_names =
-        map { $_->id_column_names }
-        $self->get_inherited_class_objects;
-    return @inherited_id_property_names;
-}
-
-# Replaced by ancestry_unique_property_names
-sub inherited_unique_property_names
-{
-    my $self = _object(shift);
-    my @inherited_unique_property_names =
-        map { $_->unique_property_names }
-        $self->get_inherited_class_objects;
-    return @inherited_unique_property_names;
-}
-
-# Replaced by ancestry_column_names
-sub inherited_column_names
-{
-    my $self = _object(shift);
-    my @inherited_column_names =
-        map { $_->column_names }
-        $self->get_inherited_class_objects;
-    return @inherited_column_names;
-}
-
 # Replaced by ancestry_table_names
 sub inherited_table_names
 {
@@ -1443,16 +1112,6 @@ sub inherited_table_names
         map { $_->table_name }
         $self->get_inherited_class_objects;
     return @inherited_table_names;
-}
-
-# Replaced by ancestry_columnless_property_names
-sub inherited_columnless_property_names
-{
-    my $self = _object(shift);
-    my @inherited_columnless_property_names =
-        map { $_->property_name }
-        $self->get_inherited_columnless_property_objects;
-    return @inherited_columnless_property_names;
 }
 
 # Replaced by the same name...
@@ -1490,7 +1149,7 @@ sub ordered_inherited_class_names {
 }
 
 # old verstion gets only bc4nf properties
-# Replaced by the same name...
+# Replaced by property with the same name...
 # Note that the old one filters out object relation accessors
 sub all_property_names {
     my $self = shift;
@@ -1546,17 +1205,6 @@ sub all_property_type_names {
     return @$all_property_type_names;
 }
 
-
-# Replaced by the same name
-sub all_column_names
-{
-    my $self = _object(shift);
-    my @all_column_names =
-        map { $_->column_name }
-        $self->get_all_property_objects;
-    return @all_column_names;
-}
-
 # Replaced by the same name
 # This seems to filter out duplicates?
 sub all_id_property_names {
@@ -1572,87 +1220,6 @@ sub all_id_property_names {
         ];
     }
     return @{ $self->{_all_id_property_names} };
-}
-
-# Replaced by the same name
-sub all_id_column_names
-{
-    my $self = _object(shift);
-    my @all_id_column_names =
-        map { $_->column_name }
-        $self->get_all_id_property_objects;
-    return @all_id_column_names;
-}
-
-# Replaced by the same name
-sub all_unique_property_names
-{
-    my $self = _object(shift);
-    my @all_unique_property_names =
-        map { $_->property_name }
-        $self->get_all_unique_property_objects;
-    return @all_unique_property_names;
-}
-
-# replaced by the same name
-sub all_columnless_property_names
-{
-    my $self = _object(shift);
-    my @all_columnless_property_names =
-        map { $_->property_name }
-        $self->get_all_columnless_property_objects;
-    return @all_columnless_property_names;
-}
-
-#######################
-# boolean-like methods
-#######################
-
-# Replaced by nothing - get rid of these...
-sub is_property {} # return property object
-
-sub is_column {} # return property object
-# more to come
-
-
-# methods that use the following methods
-# probably ought to be re-written to not use them
-
-sub table_for_property
-{
-    my $self = _object(shift);
-    die 'must pass a property_name to table_for_property' unless @_;
-    my $property_name = shift;
-    for my $class_object ( $self, $self->get_inherited_class_objects )
-    {
-        my $property_object = UR::Object::Property->get( class_name => $class_object->class_name, property_name => $property_name );
-        if ( $property_object )
-        {
-            return unless $property_object->column_name;
-            return $class_object->table_name;
-        }
-    }
-
-    return;
-}
-
-sub table_column_for_property
-{
-    my $self = _object(shift);
-    die 'must pass a property_name to table_column_for_property' unless @_;
-    my $property_name = shift;
-    for my $class_object ( $self, $self->get_inherited_class_objects )
-    {
-        my $property_object = UR::Object::Property->get( class_name => $class_object->class_name, property_name => $property_name );
-        if ( $property_object )
-        {
-            my $table_column;
-            $table_column = join('.', $class_object->table_name, $property_object->column_name) if ( $class_object->table_name and $property_object->column_name );
-            return $table_column;
-        }
-    }
-
-    return;
 }
 
 sub column_for_property
@@ -1743,7 +1310,8 @@ sub unique_property_sets
     return @$unique_property_sets;
 
     my %all;
-    for my $unique_object ( $self->get_unique_objects )
+    #for my $unique_object ( $self->get_unique_objects )  # old API
+    for my $unique_object ( $self->unique_metas )         # new API
     {
         my $property_object = UR::Object::Property->get(class_name => $unique_object->class_name, attribute_name => $unique_object->attribute_name);
         my $unique_group = $unique_object->unique_group;
@@ -1765,29 +1333,9 @@ sub unique_property_sets
 }
 
 
-# Return a hashref where the keys are the SQL constraint names, and the
-# values are listrefs holding the property names under that constraint
-sub unique_property_set_hashref {
-    my $self = shift;
-
-    my $retval = {};
-    foreach my $prop_set ( @{$self->{'constraints'}} ) {
-        my @prop_names = @{$prop_set->{'properties'}};
-        $retval->{$prop_set->{'sql'}} = \@prop_names;
-    }
-    return $retval;
-}
-
-
 # Used by the class meta meta data constructors to make changes in the 
 # flat-format data stored in the class object's hash.  These should really
 # only matter while running ur update
-
-# These subscriptions get created in UR::Object::Type::Initializer
-#UR::Object::Property->create_subscription(callback => \&_property_change_callback);
-#UR::Object::Property::ID->create_subscription(callback => \&_id_property_change_callback);
-#UR::Object::Property::Unique->create_subscription(callback => \&_unique_property_change_callback);
-#UR::Object::Inheritance->create_subscription(callback => \&_inheritance_change_callback);
 
 # Args are:
 # 1) An UR::Object::Property object with attribute_name, class_name, id, property_name, type_name
@@ -1874,53 +1422,6 @@ sub _id_property_change_callback {
 }
 
 
-#sub _OLD_id_property_change_callback {
-#    my $property_obj = shift;
-#    my $method = shift;
-#
-#    return if ($method eq 'load' || $method eq 'create_object' || $method eq 'delete_object');
-#
-#    my $class = UR::Object::Type->get(class_name => $property_obj->class_name);
-#    my $pos = $property_obj->position;  # Position is 1-based, and the list embedded in the class is 0-based
-#    if ($pos > 0) {
-#        $pos--;
-#    } else {
-#        $pos = 0;
-#    }
-#    if ($method eq 'create' or
-#        ($method eq 'delete' and $class->{'id_by'}->[$pos] eq $property_obj->property_name) ) {
-#
-#        if ($method eq 'create') {
-#            splice(@{$class->{'id_by'}}, $pos, 0, $property_obj->property_name);
-#            $pos++;
-#        } else {
-#            splice(@{$class->{'id_by'}}, $pos, 1);
-#        }
-#
-#$DB::single=1;
-#        1;
-#        # Renumber the remaining id properties
-#        # FIXME  Renumbering these affects the ID properties of the inheritance
-#        # objects which is a big no-no.  Try skipping the renumbering and hopefully
-#        # the class rewriter will do the right thing given the flat data in the class
-#        # object.  Since this _should_ only be used within ur update, it shouldn't
-#        # be a problem.
-#        #for (my $i = $pos; $i < @{$class->{'id_by'}}; $i++) {
-#        #    my $property_name = $class->{'id_by'}->[$i];
-#        #    my $obj = UR::Object::Property::ID->is_loaded(class_name => $class->class_name,
-#        #                                                   property_name => $property_name);
-#        #    next unless $obj;
-#        #    $obj->position($i);
-#        #}
-#    } else {
-#        # Shouldn't get here since ID properties can't be changed, right?
-#        $DB::single = 1;
-#        Carp::confess("Shouldn't be here");
-#        1;
-#    }
-#}
-
-
 sub _unique_property_change_callback {
     my $unique_obj = shift;
     my $method = shift;
@@ -1960,7 +1461,6 @@ sub _unique_property_change_callback {
             } # end for property_idx
         } # end for constraint_idx
     } else {
-$DB::single=1;
         1;
     }
  
@@ -2015,126 +1515,6 @@ sub _inheritance_change_callback {
 }
 
 
-## Called from UR::Object::Inheritance::create to signal that a new inheritance object was created
-#sub _signal_new_inheritance {
-#my($self, $inh_obj) = @_;
-#    
-#Carp::confess("_signal_new_inheritance shouldn't be called anymore");
-#$DB::single=1;
-#    #$self->_new_ordered_flat_data($inh_object);
-#    my $prio = $inh_obj->inheritance_priority();
-#
-#    splice(@{$self->{'is'}}, $prio, 0, $inh_obj->parent_class_name);
-#    for (my $i = $prio + 1; $i < @{$self->{'is'}}; $i++) {
-#        my $parent_class_name = $self->{'is'}->[$i];
-#        my $obj = UR::Object::Inheritance->is_loaded(class_name => $self->class_name,
-#                                                      parent_class_name => $parent_class_name);
-#        next unless $obj;  # not loaded yet
-#        $obj->inheritance_priority($i);
-#    }
-#    return 1;
-#}
-#
-#sub _signal_new_property {
-#my($self,$prop_obj) = @_;
-#
-#Carp::confess("_signal_new_property shouldn't be called anymore");
-#$DB::single=1;
-#    my @attr = qw( attribute_name data_length data_type is_delegated is_optional property_name type_name );
-#    my %new_property = ( class_name => $self->class_name );
-#        
-#    foreach my $attr_name (@attr ) {
-#        $new_property{$attr_name} = $prop_obj->$attr_name();
-#    }
-#
-#    $self->{'has'}->{$prop_obj->property_name} = \%new_property;
-#    return 1;
-#}
-#
-#sub _signal_new_id_property {
-#my($self,$prop_obj) = @_;
-#
-#Carp::confess("_signal_new_id_property shouldn't be called anymore");
-#$DB::single=1;
-#    #$self->_new_ordered_flat_data($prop_object);
-#    my $pos = $prop_obj->position;
-#
-#    splice(@{$self->{'id_by'}}, $pos, 0, $prop_obj->property_name);
-#    for (my $i = $pos + 1; $i < @{$self->{'id_by'}}; $i++) {
-#        my $property_name = $self->{'id_by'}->[$i];
-#        my $obj = UR::Object::Property::ID->get(class_name => $self->class_name,
-#                                                 property_name => $property_name);
-#        next unless $obj;
-#        $obj->position($i);
-#    }
-#    return 1;
-#}
-#
-#
-#sub _signal_new_unique_property {
-#my($self,$unique_obj) = @_;
-#
-#Carp::confess("_signal_new_unique_property shouldn't be called anymore");
-#$DB::single=1;
-#    my %unique_constraints = map { $_->{'id'} => $_->{'properties'} } @{$self->{'constraints'}};
-#    my $unique_group = $unique_obj->unique_group;
-#    if ($unique_constraints{$unique_group}) {
-#        push(@{$unique_constraints{$unique_group}}, $unique_obj->property_name);
-#    } else {
-#        push(@{$self->{'constraints'}}, { sql => $unique_group, properties => [ $unique_obj->property_name ] });
-#    }
-#    return 1;
-#}
-#
-#
-#sub _signal_new_reference {
-#my($self,$ref_obj) = @_;
-#
-#$DB::single=1;
-#    
-#}
-
-#my %ordered_data_map = (
-#        'UR::Object::Inheritance' =>  { class_key => 'is',
-#                                       data_key  => 'parent_class_name',
-#                                       order_key => 'inheritance_priority',
-#                                     },
-#        'UR::Object::Property::ID' => { class_key => 'has',
-#                                       data_key  => 'property_name',
-#                                       order_key => 'position',
-#                                     },
-#     );
-#
-#sub _new_ordered_flat_data {
-#my($self,$object,$insert_data) = @_;
-#
-#    my $object_class_name = $object->class_name;
-#    my $map = $ordered_data_map{$object_class_name};
-#
-#    my $position_getter = $map->{'order_key'};
-#    my $pos = $object->$position_getter;
-#
-#    my $data_getter = $map->{'data_key'};
-#    $insert_data ||=  $object->$data_getter;
-#
-#    my $self_key = $map->{'class_key'};
-#    splice(@{$self->{$self_key}}, $pos, 0, $insert_data);
-#
-#    for (my $i = $pos + 1; $i < @{$self->{$self_key}}; $i++) {
-#        my $obj_class = $object_class_name = $self->{$self_key}->[$i];
-#        my $obj = $obj_class->is_loaded(class_name => $self->class_name,
-#                                                      $data_getter => $obj_class);
-#        next unless $obj;
-#        $obj->$data_getter($i);
-#    }
-#}
-
-   
-
-    
-
-
-
 #
 # BOOTSTRAP CODE
 #
@@ -2155,8 +1535,6 @@ sub get_with_special_parameters
 }
 
 sub load_all_on_first_access { 0 }
-
-sub unique_properties_override { (['data_source','table_name']) }
 
 sub signal_change {
     my $self = shift;

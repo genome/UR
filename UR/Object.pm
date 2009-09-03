@@ -23,11 +23,6 @@ sub get_class_object  {
     return $UR::Object::all_objects_loaded{"UR::Object::Type"}{$class_name};
 }
 
-sub get_data_source {
-    my $self = shift;
-    return $UR::Context::current->resolve_data_source_for_object($self);
-}
-
 *get_rule_for_params = \&get_boolexpr_for_params;
  
 sub get_boolexpr_for_params {
@@ -49,7 +44,15 @@ sub create_iterator {
     my $class = shift;
     my %params = @_;
     
-    my $filter = delete $params{where};
+    my $filter;
+    if ($params{'where'}) {
+        # old syntax
+        $filter = delete $params{'where'};
+    } else {
+        # new syntax takes key => value params just like get()
+        $filter = \@_;
+    }
+  
     unless (blessed($filter)) {
         #$filter = $class->get_rule_for_params(@$filter)
         $filter = UR::BoolExpr->resolve_for_class_and_params($class,@$filter)
@@ -506,11 +509,6 @@ sub delete_object {
     }
 
     # Remove the object from the main hash.
-    # Setting undef instead of doing delete shortens later searches.
-    #foreach my $load_class ( $class, keys(%{$self->{'load'}->{'param_key'}}) ) {
-    #    delete $all_objects_loaded->{$load_class}->{$id};
-    #    delete $all_objects_are_loaded->{$load_class};
-    #}
     delete $all_objects_loaded->{$class}->{$id};
     delete $all_objects_are_loaded->{$class};
 
@@ -850,64 +848,6 @@ sub all_objects_are_loaded  {
     return $all_objects_are_loaded->{$class};
 }
 
-# MOVE INTO VIEWER CLASSES
-
-sub core_label_name {
-    # This is typically set in derived classes to the "entity name".
-    # As a fallback we just use the class.
-    my $self = $_[0];
-    my $class = ref($self) || $self;
-    my ($label) = ($class =~ /([^:]+)$/);
-    $label =~ s/([a-z])([A-Z])/$1 $2/g;
-    $label =~ s/([A-Z])([A-Z]([a-z]|\s|$))/$1 $2/g;
-    $label = uc($label) if $label =~ /_id$/i;
-    return $label;
-}
-
-sub _core_display_name {
-    # This is an object-level fucntion to provide a freindly name for objects of this class.
-    # It presumes that the type of the object need not be indicated in the name, just the identity within the class.
-    my $name = $_[0]->id;
-    $name =~ s/\t/ /g;
-    return $name;
-}
-
-*label_name = \&core_label_name;
-
-sub display_name {
-    my $self = shift;
-    my $context = shift;
-    if (not $context)
-    {
-        # no context.
-        # the object is identified globally
-        return $self->label_name . ' ' . $self->_core_display_name;
-    }
-    elsif ($context eq ref($self))
-    {
-        # the class is completely known
-        # show only the core display name
-        # -> less text, more context
-        return $self->_core_display_name
-    }
-    else
-    {
-        # some intermediate base class is known,
-        # TODO: make this smarter
-        # For now, just show the whole class name with the ID
-        return $self->label_name . ' ' . $self->_core_display_name;
-    }
-}
-
-# For backward compatability.
-*display_name_full = \&display_name;
-
-# For backward compatability.
-sub display_name_brief {
-    my $self = shift;
-    $self->display_name(ref($self));
-}
-
 sub property_diff {
     # Ret hashref of the differences between the object and some other object.
     # The "other object" may be a hashref or hash, in which case it will
@@ -991,9 +931,6 @@ sub changed {
 # This is the basis for software constraint checking.
 
 sub invalid {
-    # For tablerow, we check data types and relationships,
-    # and only for changed items, to save time.
-
     my ($self,@property_names) = @_;
 
     my $class_object = $self->get_class_object;
@@ -1492,7 +1429,7 @@ sub cancel_change_subscription ($@)
     return;
 }
 
-# This should go away when we shift ot fully to a transaction log for deletions.
+# This should go away when we shift to fully to a transaction log for deletions.
 
 sub ghost_class {
     my $class = $_[0]->class;
@@ -1513,30 +1450,17 @@ sub generate_support_class {
     return $class_meta->generate_support_class_for_extension($ext);
 }
 
-sub object_properties_as_hash {
-    my %clone = %{ $_[0] };
-    for my $key (keys %clone) {
-        if ($key =~ /^_/
-        ) {
-            delete $clone{$key}
-        }
-    }
-    delete $clone{db_committed};
-    delete $clone{db_saved_uncommitted};
-    delete $clone{load};
-    return %clone;
-}
-
-sub matches {
-    no warnings;
-    my $self = shift;
-    my %param = $self->preprocess_params(@_);
-    for my $key (keys %param) {
-        next unless $self->can($key);
-        return 0 unless $self->$key eq $param{$key}
-    }
-    return 1;
-}
+## PRUNE
+#sub matches {
+#    no warnings;
+#    my $self = shift;
+#    my %param = $self->preprocess_params(@_);
+#    for my $key (keys %param) {
+#        next unless $self->can($key);
+#        return 0 unless $self->$key eq $param{$key}
+#    }
+#    return 1;
+#}
 
 
 # DEFINITELY REFACTOR AWAY

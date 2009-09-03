@@ -347,8 +347,6 @@ my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_
     $fk_table = lc($fk_table);
     $pk_table = lc($pk_table);
 
-    #my($table_col_fk, $table_col_fk_rev) = &_get_fk_lists($dbh);
-
     # first, build a data structure to collect columns of the same foreign key together
     my %fk_info;
     if ($fk_table) {
@@ -430,69 +428,6 @@ my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_
     }) or return $dbh->DBI::set_err($sponge->err(), $sponge->errstr());
 
     return $returned_sth;
-}
-
-
-# FIXME - use 'pragma foreign_key_list(table_name) to get the data instead, it returns 5 columns:
-#    id - integer ID for this foreign key starting at 0 for this table
-#    seq - integer sequence for this column in this foreign key.  Multi-column FKs will have the same id but different seq
-#    table - the name of the other table we're referencing 
-#    from - the name of the column in the local table
-#    to - the name of the column in the referencing table (column 3)
-# We'll still need to parse the table construction definition to get the constraint names, though
-
-# Return a hashref of foreign key mappings keyed by primary table,
-# and another keyed by referred table
-our $FK_AUTOGEN = 0;
-sub _X_get_fk_lists {
-my($dbh) = @_;
-
-    my $sql = q(select name,sql from sqlite_master where type='table');
-    my $sth_tables = $dbh->prepare($sql);
-    return undef unless $sth_tables;
-
-    $sth_tables->execute();
-
-    #FIXME This needs a real SQL parser behind it to handle things like data types
-    # containing commas, table wide constraints, multi-column primary keys, etc
-    my($table_col_fk,$table_col_fk_rev);
-    EACH_TABLE:
-    while (my $row = $sth_tables->fetchrow_hashref()) {
-        $row->{'sql'} =~ s/(\n)|\s+/ /g;
-        my($col_str) = ($row->{'sql'} =~ m/CREATE\s+TABLE\s+\w+\s*\((.*)\)/i);
-        $col_str =~ s/^\s+|\s+$//g;
-        my @cols = split(',',$col_str);
-
-        foreach my $col ( @cols ) {
-            $col =~ s/^\s+|\s$//;
-            # constraint declarations come after all the column declarations.
-            # Better parsing of the SQL would make this not necessary
-            next EACH_TABLE if ($col =~ m/^PRIMARY KEY|^NOT NULL|^UNIQUE|^CHECK|^DEFAULT|^COLLATE/i);
-
-            my($col_name) = ($col =~ m/(\w+)\s/);  # First part is the column name
-            my ($fk_name) = ($col =~ m/CONSTRAINT (\w+)/i);
-            unless ($fk_name) {
-                $fk_name = 'FK_' . $FK_AUTOGEN++; 
-            }
-            my($fk_table,$fk_col) = ($col =~ m/REFERENCES (\w+)\((\w+)\)/i);
-            next unless ($col_name && $fk_name && $fk_table && $fk_col);
-
-            push(@{$table_col_fk->{uc $row->{'name'}}->{uc $col_name}},
-                 { fk_name => uc $fk_name,
-                   fk_table => uc $fk_table,
-                   fk_col => uc $fk_col,
-                 }
-                );
-            push(@{$table_col_fk_rev->{uc $fk_table}->{uc $fk_col}},
-                 { fk_name => uc $fk_name,
-                   pk_table => uc $row->{'name'},
-                   pk_col => uc $col_name,
-                 }
-                );
-        }
-    }
-
-    return ($table_col_fk, $table_col_fk_rev);
 }
 
 

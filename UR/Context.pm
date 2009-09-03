@@ -73,64 +73,11 @@ sub _initialize_for_current_process {
     $UR::Context::current = $UR::Context::process;
 }
 
-sub get_default_data_source {
-    # TODO: a context should be able to specify a specific place to go for general data.
-    # This is used only to get things like the system time, etc.
-    my @ds = UR::DataSource->is_loaded();
-    return $ds[0];
-}
 
 # the current context is either the process context, or the current transaction on-top of it
 
 sub get_current {
     return $UR::Context::current;
-}
-
-# TODO: This is present to preserve old functionality, in which critical failures notify 
-# IT support of fundamental breakage.  It includes cases where a distributed trasaction fails.
-# Give it a better name.
-
-sub send_email {
-    my $self = shift;
-    my $base = $self->get_base;
-    $base->_send_email(@_);
-}
-
-# this is used to determine which data source/sources to use for loading objects matching a given rule
-
-our $data_source_mapping = {};
-
-sub set_data_sources {
-    my $self = shift;
-    while (my $class_name = shift) {
-        my $data_source_detail = shift;
-        unless (ref($data_source_detail) eq 'HASH') {
-        #if ($data_source_detail->isa("UR::DataSource")) {
-            my $boolexpr = UR::BoolExpr->resolve_for_class_and_params($class_name,());
-            $data_source_detail = 
-                { data_source => $data_source_detail, boolexpr_id => $boolexpr->id },    
-            ;
-        }
-        my $ds_list = $data_source_mapping->{$class_name} ||= [];
-        push @$ds_list, $data_source_detail;
-        #$class_name->get_class_object->data_source($data_source_detail);
-    } 
-}
-
-sub class_names_for_data_source {
-    my($self,$data_source_detail) = @_;
-
-    my $ds_id = $data_source_detail->id;
-
-    my @class_names;
-    foreach my $class_name ( keys %$data_source_mapping ) {
-        foreach my $override ( @{$data_source_mapping->{$class_name}} ) {
-            if ($override->{'data_source'}->id eq $ds_id) {
-                push @class_names, $class_name;
-            }
-        }
-    }
-    return @class_names;
 }
 
 sub resolve_data_sources_for_class_meta_and_rule {
@@ -156,18 +103,8 @@ sub resolve_data_sources_for_class_meta_and_rule {
 
     my $data_source;
 
-    if (my $mapping = $data_source_mapping->{$class_name}) {
-        my $class_name = $boolexpr->subject_class_name;
-        for my $possible_ds_data (@$mapping) {
-            #my $ds_boolexpr_id = $possible_ds_data->{boolexpr_id};
-            #my $ds_boolexpr = UR::BoolExpr->get($ds_boolexpr_id);
-            #if ($boolexpr->might_overlap($ds_boolexpr)) {
-                $data_source = $possible_ds_data->{data_source};
-            #}
-        }
-
     # For data dictionary items
-    } elsif ($class_name =~ m/^UR::DataSource::RDBMS::(.*)/) {
+    if ($class_name =~ m/^UR::DataSource::RDBMS::(.*)/) {
         if (!defined $boolexpr) {
             $DB::single=1;
         }
@@ -222,12 +159,8 @@ sub resolve_data_source_for_object {
         my($namespace) = ($data_source =~ m/(^\w+?)::DataSource/);
         my $ds_name = $namespace . '::DataSource::Meta';
         return $ds_name->get();
-    } elsif ($data_source_mapping->{$class_name}) {
-        # FIXME This assummes there will ever only be one datasource override
-        # per class name.  It doesn't check the associated boolexpr
-        return $data_source_mapping->{$class_name}->[0]->{'data_source'};
     }
-        
+
     # Default behavior
     my $ds = $class_meta->data_source;
     return $ds;
@@ -2488,52 +2421,6 @@ sub _get_objects_for_class_and_rule_from_cache {
     return $results[0];
 }
 
-sub _X_loading_was_done_before_with_a_superset_of_this_params_hashref  {
-    my ($self,$class,$params) = @_;
-
-    my @params_property_names =
-        grep {
-            $_ ne "id"
-                and not (substr($_,0,1) eq "_")
-                and not (substr($_,0,1) eq "-")
-            }
-    keys %$params;
-
-    for my $try_class ( $class, $class->inheritance ) {
-        # more than one property, see if individual checks have been done for any of these...
-        my $try_class_meta = $try_class->get_class_object;
-        next unless $try_class_meta;
-
-        # This only works if the prior load was via 1 param, but not if it
-        # used more than one.
-        for my $property_name (@params_property_names) {
-            next unless ($try_class_meta->get_property_meta_by_name($property_name));
-
-            my $key = $try_class->get_rule_for_params($property_name => $params->{$property_name})->id;
-            if (defined($key) && exists $all_params_loaded->{$try_class}->{$key}) {
-        
-                $all_params_loaded->{$try_class}->{$params->{_param_key}} = 1;
-                my $new_key = $params->{_param_key};
-                for my $obj ($try_class->all_objects_loaded) {
-                    my $load_data = $obj->{load};
-                    next unless $load_data;
-                    my $param_key_data = $load_data->{param_key};
-                    next unless $param_key_data;
-                    my $class_data = $param_key_data->{$try_class};
-                    next unless $class_data;
-                    $class_data->{$new_key}++;
-                }
-                return 1;
-            }
-        }
-        # No sense looking further up the inheritance
-        # FIXME UR::ModuleBase is in the inheritance list, you can't call get_class_object() on it
-        # and I'm having trouble getting a UR class object defined for it...
-        last if ($try_class eq 'UR::Object'); 
-    }
-    return;   
-}
-
 
 sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
     my ($self,$class,$input_params) = @_;
@@ -3054,18 +2941,6 @@ sub _disconnect_databases {
     return 1;
 }    
 
-sub _all_active_dbhs {
-    my $class = shift;
-    my @ds = UR::DataSource->all_objects_loaded();
-    my @dbh;
-    for my $ds (@ds) {
-        next unless $ds->has_default_dbh;
-        my $dbh = $ds->get_default_dbh;
-        push  @dbh, $dbh;
-    }
-    return @dbh;
-}
-
 sub _for_each_data_source {
     my($class,$method) = @_;
 
@@ -3075,27 +2950,6 @@ sub _for_each_data_source {
            $class->error_message("$method failed on DataSource ",$ds->get_name);
            return; 
        }
-    }
-    return 1;
-}
-
-sub _for_each_dbh
-{
-    my $class = shift;
-    my $method = shift;
-    my @dbh = $class->_all_active_dbhs;
-    my @ok;
-    for my $dbh (@dbh) {
-        if ($dbh->$method) {
-            push @ok, $dbh;
-        }
-        else {
-            $class->error_message(
-                $dbh->errstr
-                . (@ok ? "\nPARTIAL $method" : "")
-            );
-            return;
-        }
     }
     return 1;
 }
@@ -3140,143 +2994,146 @@ sub _dump_change_snapshot {
 }
 
 
-our $CORE_DUMP_VERSION = 1;
-# Use Data::Dumper to save a representation of the object cache to a file.  Args are:
-# filename => the name of the file to save to
-# dumpall => boolean flagging whether to dump _everything_, or just the things
-#            that would actually be loaded later in core_restore()
+##PRUNE
+#our $CORE_DUMP_VERSION = 1;
+## Use Data::Dumper to save a representation of the object cache to a file.  Args are:
+## filename => the name of the file to save to
+## dumpall => boolean flagging whether to dump _everything_, or just the things
+##            that would actually be loaded later in core_restore()
+#
+##PRUNE
+#sub _core_dump {
+#    my $class = shift;
+#    my %args = @_;
+#
+#    my $filename = $args{'filename'} || "/tmp/core." . UR::Context::Process->prog_name . ".$ENV{HOST}.$$";
+#    my $dumpall = $args{'dumpall'};
+#
+#    my $fh = IO::File->new(">$filename");
+#    if (!$fh) {
+#      $class->error_message("Can't open dump file $filename for writing: $!");
+#      return undef;
+#    }
+#
+#    my $dumper;
+#    if ($dumpall) {  # Go ahead and dump everything
+#        $dumper = Data::Dumper->new([$CORE_DUMP_VERSION,
+#                                     $UR::Object::all_objects_loaded,
+#                                     $UR::Object::all_objects_are_loaded,
+#                                     $UR::Object::all_params_loaded,
+#                                     $UR::Object::all_change_subscriptions],
+#                                    ['dump_version','all_objects_loaded','all_objects_are_loaded',
+#                                     'all_params_loaded','all_change_subscriptions']);
+#    } else {
+#        my %DONT_UNLOAD =
+#            map {
+#                my $co = $_->get_class_object;
+#                if ($co and not $co->is_transactional) {
+#                    ($_ => 1)
+#                }
+#                else {
+#                    ()
+#                }
+#            }
+#            UR::Object->all_objects_loaded;
+#
+#        my %aol = map { ($_ => $UR::Object::all_objects_loaded->{$_}) }
+#                     grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_objects_loaded;
+#        my %aoal = map { ($_ => $UR::Object::all_objects_are_loaded->{$_}) }
+#                      grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_objects_are_loaded;
+#        my %apl = map { ($_ => $UR::Object::all_params_loaded->{$_}) }
+#                      grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_params_loaded;
+#        # don't dump $UR::Object::all_change_subscriptions
+#        $dumper = Data::Dumper->new([$CORE_DUMP_VERSION,\%aol, \%aoal, \%apl],
+#                                    ['dump_version','all_objects_loaded','all_objects_are_loaded',
+#                                     'all_params_loaded']);
+#
+#    }
+#
+#    $dumper->Purity(1);   # For dumping self-referential data structures
+#    $dumper->Sortkeys(1); # Makes quick and dirty file comparisons with sum/diff work correctly-ish
+#
+#    $fh->print($dumper->Dump() . "\n");
+#
+#    $fh->close;
+#
+#    return $filename;
+#}
 
-sub _core_dump {
-    my $class = shift;
-    my %args = @_;
 
-    my $filename = $args{'filename'} || "/tmp/core." . UR::Context::Process->prog_name . ".$ENV{HOST}.$$";
-    my $dumpall = $args{'dumpall'};
-
-    my $fh = IO::File->new(">$filename");
-    if (!$fh) {
-      $class->error_message("Can't open dump file $filename for writing: $!");
-      return undef;
-    }
-
-    my $dumper;
-    if ($dumpall) {  # Go ahead and dump everything
-        $dumper = Data::Dumper->new([$CORE_DUMP_VERSION,
-                                     $UR::Object::all_objects_loaded,
-                                     $UR::Object::all_objects_are_loaded,
-                                     $UR::Object::all_params_loaded,
-                                     $UR::Object::all_change_subscriptions],
-                                    ['dump_version','all_objects_loaded','all_objects_are_loaded',
-                                     'all_params_loaded','all_change_subscriptions']);
-    } else {
-        my %DONT_UNLOAD =
-            map {
-                my $co = $_->get_class_object;
-                if ($co and not $co->is_transactional) {
-                    ($_ => 1)
-                }
-                else {
-                    ()
-                }
-            }
-            UR::Object->all_objects_loaded;
-
-        my %aol = map { ($_ => $UR::Object::all_objects_loaded->{$_}) }
-                     grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_objects_loaded;
-        my %aoal = map { ($_ => $UR::Object::all_objects_are_loaded->{$_}) }
-                      grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_objects_are_loaded;
-        my %apl = map { ($_ => $UR::Object::all_params_loaded->{$_}) }
-                      grep { ! $DONT_UNLOAD{$_} } keys %$UR::Object::all_params_loaded;
-        # don't dump $UR::Object::all_change_subscriptions
-        $dumper = Data::Dumper->new([$CORE_DUMP_VERSION,\%aol, \%aoal, \%apl],
-                                    ['dump_version','all_objects_loaded','all_objects_are_loaded',
-                                     'all_params_loaded']);
-
-    }
-
-    $dumper->Purity(1);   # For dumping self-referential data structures
-    $dumper->Sortkeys(1); # Makes quick and dirty file comparisons with sum/diff work correctly-ish
-
-    $fh->print($dumper->Dump() . "\n");
-
-    $fh->close;
-
-    return $filename;
-}
-
-
-# Read a file previously generated with core_dump() and repopulate the object cache.  Args are:
-# filename => name of the coredump file
-# force => boolean flag whether to go ahead and attempt to load the file even if it thinks
-#          there is a formatting problem
-sub _core_restore {
-    my $class = shift;
-    my %args = @_;
-    my $filename = $args{'filename'};
-    my $forcerestore = $args{'force'};
-
-    my $fh = IO::File->new("$filename");
-    if (!$fh) {
-        $class->error_message("Can't open dump file $filename for restoring: $!");
-        return undef;
-    }
-
-    my $code;
-    while (<$fh>) { $code .= $_ }
-
-    my($dump_version,$all_objects_loaded,$all_objects_are_loaded,$all_params_loaded,$all_change_subscriptions);
-    eval $code;
-
-    if ($@)
-    {
-        $class->error_message("Failed to restore core file state: $@");
-        return undef;
-    }
-    if ($dump_version != $CORE_DUMP_VERSION) {
-      $class->error_message("core file's version $dump_version differs from expected $CORE_DUMP_VERSION");
-      return 0 unless $forcerestore;
-    }
-
-    my %DONT_UNLOAD =
-        map {
-            my $co = $_->get_class_object;
-            if ($co and not $co->is_transactional) {
-                ($_ => 1)
-            }
-            else {
-                ()
-            }
-        }
-        UR::Object->all_objects_loaded;
-
-    # Go through the loaded all_objects_loaded, prune out the things that
-    # are in %DONT_UNLOAD
-    my %loaded_classes;
-    foreach ( keys %$all_objects_loaded ) {
-        next if ($DONT_UNLOAD{$_});
-        $UR::Object::all_objects_loaded->{$_} = $all_objects_loaded->{$_};
-        $loaded_classes{$_} = 1;
-
-    }
-    foreach ( keys %$all_objects_are_loaded ) {
-        next if ($DONT_UNLOAD{$_});
-        $UR::Object::all_objects_are_loaded->{$_} = $all_objects_are_loaded->{$_};
-        $loaded_classes{$_} = 1;
-    }
-    foreach ( keys %$all_params_loaded ) {
-        next if ($DONT_UNLOAD{$_});
-        $UR::Object::all_params_loaded->{$_} = $all_params_loaded->{$_};
-        $loaded_classes{$_} = 1;
-    }
-    # $UR::Object::all_change_subscriptions is basically a bunch of coderef
-    # callbacks that can't reliably be dumped anyway, so we skip it
-
-    # Now, get the classes to instantiate themselves
-    foreach ( keys %loaded_classes ) {
-        $_->class() unless m/::Ghost$/;
-    }
-
-    return 1;
-}
+##PRUNE
+## Read a file previously generated with core_dump() and repopulate the object cache.  Args are:
+## filename => name of the coredump file
+## force => boolean flag whether to go ahead and attempt to load the file even if it thinks
+##          there is a formatting problem
+#sub _core_restore {
+#    my $class = shift;
+#    my %args = @_;
+#    my $filename = $args{'filename'};
+#    my $forcerestore = $args{'force'};
+#
+#    my $fh = IO::File->new("$filename");
+#    if (!$fh) {
+#        $class->error_message("Can't open dump file $filename for restoring: $!");
+#        return undef;
+#    }
+#
+#    my $code;
+#    while (<$fh>) { $code .= $_ }
+#
+#    my($dump_version,$all_objects_loaded,$all_objects_are_loaded,$all_params_loaded,$all_change_subscriptions);
+#    eval $code;
+#
+#    if ($@)
+#    {
+#        $class->error_message("Failed to restore core file state: $@");
+#        return undef;
+#    }
+#    if ($dump_version != $CORE_DUMP_VERSION) {
+#      $class->error_message("core file's version $dump_version differs from expected $CORE_DUMP_VERSION");
+#      return 0 unless $forcerestore;
+#    }
+#
+#    my %DONT_UNLOAD =
+#        map {
+#            my $co = $_->get_class_object;
+#            if ($co and not $co->is_transactional) {
+#                ($_ => 1)
+#            }
+#            else {
+#                ()
+#            }
+#        }
+#        UR::Object->all_objects_loaded;
+#
+#    # Go through the loaded all_objects_loaded, prune out the things that
+#    # are in %DONT_UNLOAD
+#    my %loaded_classes;
+#    foreach ( keys %$all_objects_loaded ) {
+#        next if ($DONT_UNLOAD{$_});
+#        $UR::Object::all_objects_loaded->{$_} = $all_objects_loaded->{$_};
+#        $loaded_classes{$_} = 1;
+#
+#    }
+#    foreach ( keys %$all_objects_are_loaded ) {
+#        next if ($DONT_UNLOAD{$_});
+#        $UR::Object::all_objects_are_loaded->{$_} = $all_objects_are_loaded->{$_};
+#        $loaded_classes{$_} = 1;
+#    }
+#    foreach ( keys %$all_params_loaded ) {
+#        next if ($DONT_UNLOAD{$_});
+#        $UR::Object::all_params_loaded->{$_} = $all_params_loaded->{$_};
+#        $loaded_classes{$_} = 1;
+#    }
+#    # $UR::Object::all_change_subscriptions is basically a bunch of coderef
+#    # callbacks that can't reliably be dumped anyway, so we skip it
+#
+#    # Now, get the classes to instantiate themselves
+#    foreach ( keys %loaded_classes ) {
+#        $_->class() unless m/::Ghost$/;
+#    }
+#
+#    return 1;
+#}
 
 1;

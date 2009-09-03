@@ -259,6 +259,3 @@ sub execute_and_rollback
 
 1;
 
-
-1;
-
