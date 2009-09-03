@@ -35,16 +35,31 @@ sub get {
     my @o = $class->SUPER::get(@_);
     return $class->context_return(@o) if (@o);
 
-    my %params = @_;
-    unless ($params{'tha_id'}) {
-        if ($params{'class_name'} and $params{'property_name'}) {
-            $params{'tha_id'} = $params{'class_name'} . '::' . $params{'property_name'};
+    my @refs;
+    my %params;
+    if (@_ == 1) {
+        if ($_[0]->isa('UR::BoolExpr')) {
+            @refs = UR::Object::Reference->get($_[0]);
+            %params = $_[0]->params_list;
         } else {
-            Carp::confess("Required parameter (tha_id) missing");
+            my($tha_id, $rank) = $class->get_class_object->resolve_ordered_values_from_composite_id($_[0]);
+            @refs = UR::Object::Reference->get(tha_id => $tha_id);
+            @params{'tha_id','rank'} = ($tha_id, $rank);
+        } 
+
+    } else {
+        %params = @_;
+        unless ($params{'tha_id'}) {
+            if ($params{'class_name'} and $params{'property_name'}) {
+                $params{'tha_id'} = $params{'class_name'} . '::' . $params{'property_name'};
+            } else {
+                Carp::confess("Required parameter (tha_id) missing");
+            }
         }
+        my $tha_id = $params{'tha_id'};
+        @refs = UR::Object::Reference->get(id => $tha_id);
     }
-    my $tha_id = $params{'tha_id'};
-    my @refs = UR::Object::Reference->get(id => $tha_id);
+
     unless (@refs) {
         return;  # If there's no reference objects, there can't be any reference properties
     }
