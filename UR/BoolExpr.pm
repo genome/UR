@@ -450,7 +450,6 @@ sub resolve_for_class_and_params {
             }
             
             if ($property_type->is_delegated) {
-                $DB::single = 1;
                 my $property_meta = $subject_class_meta->get_property_meta_by_name($key);
                 my @joins = $property_meta->get_property_name_pairs_for_join();
                 for my $join (@joins) {
