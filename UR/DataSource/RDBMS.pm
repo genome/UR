@@ -594,21 +594,6 @@ sub resolve_attribute_name_for_column_name {
     return $type_name;
 }
 
-sub can_savepoint {
-    my $class = ref($_[0]);
-    die "Class $class didn't supply can_savepoint()";
-}
-
-sub set_savepoint {
-    my $class = ref($_[0]);
-    die "Class $class didn't supply set_savepoint, but can_savepoint is true";
-}
-
-sub rollback_to_savepoint {
-    my $class = ref($_[0]);
-    die "Class $class didn't supply rollback_to_savepoint, but can_savepoint is true";
-}
-
 sub refresh_database_metadata_for_table_name {
     my ($self,$table_name) = @_;
 

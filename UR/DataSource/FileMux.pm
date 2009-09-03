@@ -34,6 +34,8 @@ sub sql_fh {
     return UR::DBI->sql_fh();
 }
 
+sub can_savepoint { 0;}  # Doesn't support savepoints
+
 my %WORKING_RULES; # Avoid recusion when infering values from rules
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;

@@ -47,6 +47,8 @@ my $sql_fh;
 if ($ENV{'UR_DBI_MONITOR_SQL'}) {
     $sql_fh = UR::DBI->sql_fh();
 }
+
+sub can_savepoint { 0;}  # Doesn't support savepoints
  
 sub get_default_handle {
     my $self = shift;

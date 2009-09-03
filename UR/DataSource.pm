@@ -68,6 +68,23 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
     die "Data source $ds did not implement autogenerate_new_object_id_for_class_name_and_rule()";
 }
 
+# UR::Context needs to know if a data source supports savepoints
+sub can_savepoint {
+    my $class = ref($_[0]);
+    die "Class $class didn't supply can_savepoint()";
+}
+
+sub set_savepoint {
+    my $class = ref($_[0]);
+    die "Class $class didn't supply set_savepoint, but can_savepoint is true";
+}
+
+sub rollback_to_savepoint {
+    my $class = ref($_[0]);
+    die "Class $class didn't supply rollback_to_savepoint, but can_savepoint is true";
+}
+
+
 sub _get_class_data_for_loading {
     my ($self, $class_meta) = @_;
     my $class_data = $class_meta->{loading_data_cache};
