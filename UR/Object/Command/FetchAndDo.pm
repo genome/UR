@@ -168,7 +168,7 @@ sub _base_filter {
 
 sub _complete_filter {
     my $self = shift;
-    return join(',',$self->_base_filter,$self->filter);
+    return join(',', grep { defined $_ } $self->_base_filter,$self->filter);
 }
 
 sub _fetch
@@ -297,4 +297,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 =cut
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/FetchAndDo.pm $
-#$Id: FetchAndDo.pm 41810 2008-12-11 19:40:48Z ssmith $#
+#$Id: FetchAndDo.pm 41889 2008-12-14 02:55:38Z ssmith $#
