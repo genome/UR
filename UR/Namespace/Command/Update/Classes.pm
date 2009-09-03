@@ -1924,31 +1924,6 @@ sub _update_database_metadata_objects_for_table_changes {
         }
     }
 
-#    # embed the data structures;
-#    my %str_to_obj;
-#    for my $obj ($table_object, @column_objects, @constraints) {
-#        $str_to_obj{$obj} = $obj;
-#    }
-#    use Data::Dumper;
-#    my $useqq_orig = $Data::Dumper::Useqq;
-#    for my $method_basename (keys %embed) {
-#        my $objects = $embed{$method_basename};
-#        for my $obj_str (keys %$objects) {
-#            my $data = $objects->{$obj_str};
-#            $Data::Dumper::Useqq = 1;
-#            my $src = Dumper($data);
-#            $src =~ s/^\$VAR1 = //;
-#            $src =~ s/\s+//gs;
-#            $Data::Dumper::Useqq = $useqq_orig;
-#            my $obj = $str_to_obj{$obj_str};
-#            my $method_fullname =
-#                "x_" . $method_basename
-#                . (ref($data) eq "HASH" ? "_hash" : "_array");
-#            #print "setting $method_fullname on $obj to $src\n";
-#            $obj->$method_fullname($src);
-#        }
-#    }
-
     # Now that all columns know their foreign key constraints,
     # have the column objects resolve the various names
     # associated with the column.
