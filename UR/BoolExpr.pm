@@ -539,8 +539,34 @@ sub legacy_params_hash {
     return $params;
 }
 
-sub create_from_command_line_format_filters {
+sub create_from_filter_string {
+    my ($self, $subject_class_name, $filter_string) = @_;
 
+    my ($property, $op, $value);
+    no warnings;
+    my @filters = map {
+        unless (
+            ($property, $op, $value) =
+            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|\:|\blike\b)\s*(.*)\s*$/)
+        ) {
+            die "Unable to process filter $_\n";
+        }
+        $op = "like" if $op eq "~";
+
+        [$property, $op, $value]
+    } split(/,/, $filter_string);
+
+    use warnings;
+    
+    return __PACKAGE__->create_from_filters($subject_class_name, @filters);
+}
+
+sub create_from_command_line_format_filters {
+    __PACKAGE__->warning_message("Deprecated, please use 'create_from_filters'.  API is the same.  Continuing...");
+    return create_from_filters(@_);
+}
+
+sub create_from_filters {
     my $class = shift;
     
     my $subject_class_name = shift;
