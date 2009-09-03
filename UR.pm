@@ -38,6 +38,21 @@ for my $e (keys %ENV) {
     }
 }
 
+END {
+    if ($ENV{UR_USED_LIBS}) {
+        print STDERR "Used libraries:\n";
+        for my $lib (@INC) {
+            print STDERR "$lib\n";
+        }
+    }
+    if ($ENV{UR_USED_MODS}) {
+        print STDERR "Used modules:\n";
+        for my $mod (sort keys %INC) {
+            print STDERR "$mod\n";
+        }
+    }
+}
+
 #
 # Because UR modules execute code when compiling to define their classes,
 # and require each other for that code to execute, there are bootstrapping 
