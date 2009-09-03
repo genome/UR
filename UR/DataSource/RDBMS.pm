@@ -1847,10 +1847,6 @@ sub _generate_template_data_for_loading {
     my $class_name = $rule_template->subject_class_name;
     my $class_meta = $class_name->get_class_object;
 
-    if ($class_name =~ /ProcessingProfile::Assembly/) {
-        $DB::single = 1;
-    }   
- 
     my $class_data = $self->_get_class_data_for_loading($class_meta);       
 
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
@@ -1922,7 +1918,7 @@ sub _generate_template_data_for_loading {
         @delegated_properties,    
         %outer_joins,
     );
-    $DB::single = 1;
+    
     for my $co ( $class_meta, @parent_class_objects ) {
         my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
