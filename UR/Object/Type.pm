@@ -1209,8 +1209,10 @@ sub property_for_column
 }
 
 # ::Object unique_properties
-# FIXME The new API doesn't have a replacement for this
-# Not sure what this returns yet...
+# FIXME The new API doesn't have a replacement for this 
+# FIXME - and it doesn't seem to be called by anything....
+# This returns a list of lists.  Each inner list is the properties/columns
+# involved in the constraint
 sub unique_property_sets
 {
     my $self = shift; 
@@ -1251,6 +1253,31 @@ sub unique_property_sets
     }
 
     return values(%all);
+}
+
+# Return the constraint information as a hashref
+# keys are the SQL constraint name, values are a listref of property/column names involved
+sub unique_property_set_hashref {
+    my $self = shift;
+
+    if ($self->{_unique_property_set_hashref}) {
+        return $self->{_unique_property_set_hashref};
+    }
+
+    my $unique_property_set_hashref = $self->{_unique_property_set_hashref} = {};
+   
+    for my $class_name ($self->class_name, $self->ancestry_class_names) {
+        my $class_meta = UR::Object::Type->get($class_name);
+        if ($class_meta->{'constraints'}) {
+            for my $spec (@{ $class_meta->{'constraints'} }) {
+                my $unique_group = $spec->{'sql'};
+                next if ($unique_property_set_hashref->{$unique_group});  # child classes override parents
+                $unique_property_set_hashref->{$unique_group} = [ @{$spec->{properties}} ];
+            }
+        }
+    }
+
+    return $unique_property_set_hashref;
 }
 
 
@@ -1321,8 +1348,12 @@ sub _id_property_change_callback {
         } else {
             $pos = 0;
         }
-        splice(@{$class->{'id_by'}}, $pos, 0, $property_obj->property_name);
-
+        if ($pos <= @{$class->{'id_by'}}) {
+            splice(@{$class->{'id_by'}}, $pos, 0, $property_obj->property_name);
+        } else {
+            # $pos is past the end... probably an id property was deleted and another added
+            push @{$class->{'id_by'}}, $property_obj->property_name;
+        }
     } elsif ($method eq 'delete') {
         my $property_name = $property_obj->property_name;
         for (my $i = 0; $i < @{$class->{'id_by'}}; $i++) {
@@ -1332,7 +1363,7 @@ sub _id_property_change_callback {
             }
         }
         $DB::single = 1;
-        Carp::confess("Internal data consistancy problem");
+        Carp::confess("Internal data consistancy problem: could not find property named $property_name in id_by list for class meta " . $class->class_name);
 
     } else {
         # Shouldn't get here since ID properties can't be changed, right?
@@ -1351,6 +1382,11 @@ sub _unique_property_change_callback {
 
     my $class = UR::Object::Type->get(class_name => $unique_obj->class_name);
     my $property_name = $unique_obj->property_name;
+
+    # The fact that this callback is running means we need to invalidate our caches about
+    # unique property data
+    delete $class->{'_unique_property_sets'};
+    delete $class->{'_unique_property_set_hashref'};
 
     if ($method eq 'create') {
         my $unique_properties = $class->unique_property_set_hashref();

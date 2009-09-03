@@ -98,6 +98,7 @@ sub get {
         for (my $i = 0; $i < $property_names_count; $i++) {
             my $property_name = $property_names[$i];
             my $property_meta = $class_meta->property_meta_for_name($property_name);
+            next unless $property_meta;
             my $attribute_name = $property_meta->attribute_name;
 
             my $r_property_name = $r_property_names[$i];

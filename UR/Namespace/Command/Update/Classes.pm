@@ -714,6 +714,14 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             next;
         }
         $reference->constraint_name(undef);
+
+        my $property = $reference->property_meta();
+        unless ($property) {
+            $self->status_message(sprintf("~ No property found for deleted foreign key constraint %-32s %-32s class $class_name property %s\n",
+                                          $table->table_name, $fk->id, $reference->delegation_name));
+        }
+        $property->delete;
+ 
     }
 
     # DELETED UNIQUE CONSTRAINTS
@@ -756,10 +764,21 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             class_name => $class_name,
             property_name => $property->property_name,
         );
-        my @reference_property_to = UR::Object::Reference::Property->get(
-            r_class_name => $class_name,
-            r_property_name => $property->property_name,
-        );
+        #my @reference_property_from = grep { $_->property_name eq $property->property_name }
+        #                              map { $_->reference_property_metas }
+        #                              UR::Object::Reference->get(class_name => $class_name);
+        #my @reference_property_to = UR::Object::Reference::Property->get(
+        #    r_class_name => $class_name,
+        #    r_property_name => $property->property_name,
+        #);
+        # FIXME -  Reference Properties are autovivified, and for that to work you must either 
+        # you must either use tha_id or both class_name and property_name.  We can work around this
+        # by figuring it out ourselves, but it'd be nice if UR::Object::Reference::Property->get()
+        # did it
+        my @reference_property_to   = grep { $_->r_property_name eq $property->property_name }
+                                      map { $_->reference_property_metas }
+                                      UR::Object::Reference->get(r_class_name => $class_name);
+
         my @reference_ids = map { $_->reference_id } (@reference_property_from, @reference_property_to);
         for my $reference_property (@reference_property_from, @reference_property_to) {
             $reference_property->delete;
@@ -1163,7 +1182,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 class_name=> $class_name
             );
         
-        my @expected_pk_cols = map { $class->property_meta_for_name($_->property_name)->column_name } @old_id_properties;
+        #my @expected_pk_cols = map { $class->property_meta_for_name($_->property_name)->column_name } @old_id_properties;
+        my @expected_pk_cols = map { $_->column_name }
+                               grep { defined }
+                               map { $class->property_meta_for_name($_->property_name) }
+                               @old_id_properties;
         
         my @pk_cols = $table->primary_key_constraint_column_names;
         

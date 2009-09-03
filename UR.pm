@@ -420,6 +420,7 @@ UR::Object::Type->define(
         reference_property_metas        => { is => 'UR::Object::Reference::Property', reverse_as => 'reference_meta', is_many => 1 },
         class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
         r_class_meta                    => { is => 'UR::Object::Type', id_by => 'r_class_name' },
+        property_meta                   => { is => 'UR::Object::Property', id_by => ['class_name', 'delegation_name'] },
     ],
 );
 

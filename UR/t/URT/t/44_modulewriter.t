@@ -81,7 +81,7 @@ my $test_class_definition =
                         calculate => q($property_a . $property_b) },
         another_related => { is => 'URT::Related', id_by => [ 'rel_id1', 'rel_id2' ], where => [ property_a => 'foo' ] },
         related_value => { is => 'StringSubclass', via => 'another_related' },
-        related_value2 => { is => 'StringSubclass', via => 'another_related', to => 'related_value' },
+        related_value2 => { is => 'StringSubclass', via => 'another_related', to => 'related_value', is_mutable => 1 },
     ],
     schema_name => 'SomeFile',
     data_source => 'URT::DataSource::SomeFile',
