@@ -232,6 +232,11 @@ sub populate_databases {
 sub clean_tmp_dir {
     my $tmp_dir = shift;
 
+    my $dbh = URT::DataSource::SomeSQLite1->get_default_dbh();
+    $dbh->disconnect();
+    $dbh = URT::DataSource::SomeSQLite2->get_default_dbh();
+    $dbh->disconnect();
+
     diag("Cleanup tmp dir");
     # These _should_ be the only files in there...
     ok(unlink($DB_FILE_1), 'Remove sqlite DB 1');
