@@ -25,9 +25,18 @@ use warnings;
 # but then the update_classes test in URT fails, as does the 
 # Model/Command/Create/Model.t test
 #
+# A workaround for the case-sensitivity is to create files as all upper-case
+# names, and the columns as all upper-case.  Also, the file parser guts underneath
+# require dos-style newlines in the files, not unix-style
+#
 # _get_sequence_name_for_table_and_column() and _get_next_value_from_sequence()
 # aren't implemented yet, so creating new entities and sync_databases
 # won't work
+#
+# There's a bug in even the latest SQL::Statement on CPAN where the processing
+# of JOIN clauses uses a case sensitive match against upper-case stuff, when it
+# should be lower-case.  It also cannot handle more than one join in the same
+# statement
 #
 # with that out of the way... on to the show!
 
