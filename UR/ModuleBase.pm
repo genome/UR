@@ -346,6 +346,8 @@ sub AUTOLOAD {
     my $package = $1;
     my $function = $2;
 
+    return if $function eq 'DESTROY';
+
     unless ($package) {
         Carp::confess("Failed to determine package name from autoload string $autoload");
     }
@@ -395,7 +397,7 @@ sub _smart_can
     
     my ($self,$function) = @_;
     #print "CAN @_\n";
-    
+
     # Default functionality.  Defer upstream.  This will check all classes.
     # For a real/normal function.
     # This is disabled because UNIVERSAL::can somehow returns a subref which puts us in an infinite loop...
