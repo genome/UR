@@ -468,18 +468,22 @@ sub resolve_class_and_params_for_argv
 
     # Thes nasty GetOptions modules insist on working on
     # the real @ARGV, while we like a little moe flexibility.
-    # Not a problem in Perl. :)
-
-    local $SIG{__WARN__} = \&UR::Util::null_sub;
-
+    # Not a problem in Perl. :)  (which is probably why it was never fixed)
     local @ARGV;
     @ARGV = @argv;
-   
-    unless (GetOptions($params_hash,@spec)) {
-        my @failed = grep { /^--/ } grep { /\W*(\w+)/; not exists $params_hash->{$1} } @argv;
-        $self->error_message("Bad params ! @failed");
-        return($self, undef);
-    }
+    
+    do {
+        # GetOptions also likes to emit warnings instead of return a list of errors :( 
+        my @errors;
+        local $SIG{__WARN__} = sub { push @errors, @_ };
+        
+        unless (GetOptions($params_hash,@spec)) {
+            for my $error (@errors) {
+                $self->error_message($error);
+            }
+            return($self, undef);
+        }
+    };
 
     # Q: Is there a standard getopt spec for capturing non-option paramters?
     # Perhaps that's not getting "options" :)
@@ -495,7 +499,7 @@ sub resolve_class_and_params_for_argv
                 return($self, undef);
             }
             my $value = $ARGV[$n];
-            my $meta = $self->get_class_object->get_property_meta_by_name($name);
+            my $meta = $self->get_class_object->property_meta_for_name($name);
             if ($meta->is_many) {
                 if ($n == $#names) {
                     # slurp the rest
@@ -1222,4 +1226,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 45847 2009-04-15 19:57:22Z jwalker $
+#$Id: Command.pm 45943 2009-04-19 15:49:51Z ssmith $
