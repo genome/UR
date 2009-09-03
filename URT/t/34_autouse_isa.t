@@ -8,9 +8,9 @@ use warnings;
 # make sure things being associated with objects
 # are not being copied in the constructor
 
-use_ok("URT::33Subclass");
+use_ok("URT::34Subclass");
 
-my $st = URT::33Subclass->create();
+my $st = URT::34Subclass->create();
 
 ok($st,"made subclass");
 
