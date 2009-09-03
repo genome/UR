@@ -2013,6 +2013,10 @@ sub _sync_databases {
 
     return 1 unless (@changed_objects);
 
+    for (@changed_objects) {
+        $_->signal_change("presync");
+    }
+
     # Ensure validity.
     # This is primarily to catch custom validity logic in class overrides.
     my @invalid = grep { $_->invalid } @changed_objects;
