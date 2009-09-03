@@ -539,6 +539,7 @@ sub _normalize_class_description {
     # Transform the id properties into a list of raw ids, 
     # and move the property definitions into "id_implied" 
     # where present so they can be processed below.
+    my $property_rank = 0;
     do {
         my @replacement;
         my $pos = 0;
@@ -561,6 +562,7 @@ sub _normalize_class_description {
                 push @replacement, $name;
             }
             $old_class{id_implied}->{$name}->{'position_in_module_header'} = $pos++;
+            #$old_class{id_implied}->{$name}->{'rank'} = $property_rank++;
         }
         @$id_properties = @replacement;
     };
@@ -633,10 +635,11 @@ sub _normalize_class_description {
             }       
                      
             unless (exists $params->{'position_in_module_header'}) {
-                $params->{position_in_module_header} = $pos;
-                $pos++;
+                $params->{'position_in_module_header'} = $pos++;
             }
-
+            #unless (exists $params->{'rank'}) {
+            #    $params->{'rank'} = $property_rank++;
+            #}
             unless (exists $params->{is_specified_in_module_header}) {
                 $params->{is_specified_in_module_header} = $class_name . '::' . $key;
             }
@@ -849,6 +852,7 @@ sub _normalize_property_description {
         [ is_many                         => qw//],
         [ is_deprecated                   => qw//],
         [ is_numeric                      => qw//],
+        [ is_id                           => qw//],
         [ id_by                           => qw//], 
         [ via                             => qw//], 
         [ to                              => qw//],             
@@ -1094,7 +1098,7 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
 sub _complete_class_meta_object_definitions {
     my $self = shift;        
     my $class = $self->{class_name};
-    
+
     # track related objects
     my @subordinate_objects;
 
@@ -1107,9 +1111,15 @@ sub _complete_class_meta_object_definitions {
     my $inheritance = $self->{is};
     my $properties = $self->{has};
     my $id_properties = $self->{id_by};
+    my %id_properties = map { $_ => 1 } @$id_properties;
     my $relationships = $self->{relationships} || [];
     my $constraints = $self->{constraints};
     my $data_source = $self->{'data_source'};
+    
+    # mark id/non-id properites
+    foreach my $pinfo ( values %$properties ) {
+        $pinfo->{'is_id'} = exists($id_properties{$pinfo->{'property_name'}}) || 0;
+    }
     
     # handle inheritance
     unless ($class_name eq "UR::Object") {
