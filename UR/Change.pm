@@ -113,7 +113,9 @@ sub undo {
     }
     else {
         # regular property
-        $changed_obj->$changed_aspect($undo_data);
+        if ($changed_obj->can($changed_aspect)) {
+            $changed_obj->$changed_aspect($undo_data);
+        }
     }
 
     return 1;
