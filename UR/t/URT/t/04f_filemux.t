@@ -5,6 +5,8 @@ use Test::More tests => 16;
 
 use IO::File;
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; # dummy namespace
 use URT::DataSource::SomeFileMux;
 

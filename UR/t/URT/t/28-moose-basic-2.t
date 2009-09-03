@@ -1,3 +1,5 @@
+use File::Basename;
+use lib File::Basename::dirname(__FILE__).'/../..';
 
 BEGIN {
     use Test::More;

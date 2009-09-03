@@ -3,6 +3,8 @@ use warnings;
 use Test::More 'no_plan';
 my ($obj,$same_obj);
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
 
 UR::Object::Type->define(

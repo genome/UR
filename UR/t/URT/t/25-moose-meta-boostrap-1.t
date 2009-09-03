@@ -16,6 +16,8 @@ sub class_isa_ok {
     ok($_[0]->isa($_[1]), "$_[0] isa $_[1]");
 }
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
 
 use_ok('UR::Meta::Class');

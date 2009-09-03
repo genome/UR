@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use Test::More tests => 5;
 

@@ -5,6 +5,10 @@ use Test::More tests => 49;
 
 use IO::File;
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__).'/../..';
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; # dummy namespace
 
 # FIXME - this doesn't test the UR::DataSource::File internals like seeking and caching

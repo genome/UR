@@ -2,6 +2,8 @@
 
 use strict;
 use warnings;
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
 use Test::More tests => 22;
 

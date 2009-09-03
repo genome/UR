@@ -154,6 +154,8 @@ return;
     mkdir("$tmp_path/URT") || die "Can't create dir $tmp_path/URT";
     my $f = IO::File->new("$tmp_path/URT/Related.pm",'>');
     $f->print(q(
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 UR::Object::Type->define(
     class_name => 'URT::Related',
@@ -172,6 +174,8 @@ UR::Object::Type->define(
 
     $f = IO::File->new("$tmp_path/URT/Primary.pm",'>');
     $f->print(q(
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 UR::Object::Type->define(
     class_name => 'URT::Primary',

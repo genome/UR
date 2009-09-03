@@ -1,9 +1,11 @@
 use strict;
 use warnings;
+use File::Basename;
+use lib File::Basename::dirname(__FILE__).'/../..';
+use URT;
+use above "UR";
 use Test::More;# skip_all => "fork() causes intermittent failure in TAP output";
 use Test::Fork;
-
-use above 'URT';
 
 use IO::Socket;
 

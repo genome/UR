@@ -1,7 +1,9 @@
 #!/usr/bin/env perl
 
 use Test::More tests => 27;
-use above "URT"; 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT; 
 use strict;
 use warnings;
 

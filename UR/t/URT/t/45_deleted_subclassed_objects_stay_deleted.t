@@ -3,6 +3,8 @@ use strict;
 use warnings;
 use Test::More tests => 11;
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; # dummy namespace
 
 # Turn this on for debugging

@@ -4,6 +4,8 @@ use Test::More;
 #plan  tests => 5;
 plan skip_all => "Broken with new data source changes.";
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
 
 UR::Object::Type->define(

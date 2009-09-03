@@ -16,6 +16,8 @@ $Data::Dumper::Useperl = 1;
   *Data::Dumper::carp = sub { 1; };
 }
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use UR::Change;
 use UR::Context;

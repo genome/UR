@@ -3,7 +3,9 @@ use warnings;
 use Test::More;
 plan tests => 40;
 
-use above 'URT';
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."../../";
+use URT;
 
 use IO::Socket;
 

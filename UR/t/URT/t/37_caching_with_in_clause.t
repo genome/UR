@@ -3,7 +3,9 @@ use strict;
 use warnings;
 use Test::More tests => 42;
 
-use above 'URT'; # dummy namespace
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT; # dummy namespace
 
 # Turn this on for debugging
 #$ENV{UR_DBI_MONITOR_SQL}=1;

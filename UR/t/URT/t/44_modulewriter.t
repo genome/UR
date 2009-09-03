@@ -3,6 +3,8 @@ use Test::More;
 use strict;
 use warnings;
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
 plan tests => 5;

@@ -5,6 +5,8 @@ use warnings;
 
 use Test::More tests => 6;
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
 my $c1 = UR::Object::Type->define(class_name => 'URT::Foo', data_source => "URT::DataSource::SomeSQLite", table_name => "FOO");

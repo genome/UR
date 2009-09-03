@@ -1,7 +1,9 @@
 use warnings;
 use strict;
 
-use above "URT";
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT;
 use Test::More tests => 14;
 
 

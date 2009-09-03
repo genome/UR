@@ -1,7 +1,9 @@
 
 use strict;
 use warnings;
-use above "URT";
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT;
 use Test::More tests => 13;
 
 class Animal {

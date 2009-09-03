@@ -3,7 +3,9 @@ use warnings;
 use Test::More;
 plan tests => 27;
 
-use above 'URT';
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT;
 
 UR::DBI->no_commit(1); 
 

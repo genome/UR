@@ -10,6 +10,8 @@ use strict;
 use warnings;
 use Test::More;
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
 use IO::File;
 

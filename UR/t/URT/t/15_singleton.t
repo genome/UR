@@ -2,6 +2,8 @@ use strict;
 use warnings;
 use Test::More tests => 21; 
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
 my $co = UR::Object::Type->define(

@@ -1,6 +1,9 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
+use File::Basename;
+use lib File::Basename::dirname(__FILE__).'/../..';
+
 my ($obj,$same_obj);
 
 use UR;

@@ -1,3 +1,5 @@
+use File::Basename;
+use lib File::Basename::dirname(__FILE__).'/../..';
 
 use strict;
 use warnings FATAL => 'all';

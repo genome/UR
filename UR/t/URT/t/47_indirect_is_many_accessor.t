@@ -1,4 +1,6 @@
-use above 'UR';
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use UR;
 
 use Data::Dumper;
 use Test::More;

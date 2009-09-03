@@ -1,6 +1,9 @@
 #!/usr/bin/env perl
 
 use Test::More;
+use File::Basename;
+use lib File::Basename::dirname(__FILE__).'/../..';
+
 if ($ENV{UR_MOOSE}) { 
     plan tests => 1;
 }
