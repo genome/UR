@@ -1,6 +1,6 @@
 // Here's the basic API:
 // var UR = new URInterface('http://server/api_root');
-// var gsc_pse = UR.class('GSC::PSE');
+// var gsc_pse = UR.get_class('GSC::PSE');
 // var pse_obj = gsc_pse.get(10001);
 
 function construct_xmlhttp() {
@@ -44,6 +44,7 @@ function do_rpc(url, method,arglist) {
         params.push(arglist[i]);
     }
     var json_rpc = { "method":method,"params":params };
+    //var json_rpc = { "method":method, "params":arglist };
 
     xmlhttp = construct_xmlhttp();
     xmlhttp.open('POST', url, false);
@@ -70,6 +71,11 @@ function URClassInterface(base_url,class_name) {
 
     this.url = base_url + '/class/' + path_parts.join('/');
 
+    var result = do_rpc(this.url, '_get_class_info', []);
+    this.id_properties = result[0]["id_properties"];
+    this.properties = result[0]["properties"];
+    this.methods = result[0]["methods"];
+
     this.get = function() {
 
         var returned_list = do_rpc(this.url, 'get', arguments);
@@ -79,10 +85,13 @@ function URClassInterface(base_url,class_name) {
             delete returned_list[i].toJSONString;
 
             var obj_url = base_url + '/obj/' + path_parts.join('/') + '/' + returned_list[i].id;
-            retval.push(new URObject(returned_list[i], obj_url));
+            var theobj = new URObject(returned_list[i], obj_url);
+            theobj.add_methods(this.properties);
+            theobj.add_methods(this.methods);
+            retval.push(theobj);
         }
         return retval;
-    }
+    };
     
 }
 
@@ -107,16 +116,25 @@ function URObject(thing,url) {
         table += '</TABLE>';
         var orig_data = document.getElementById(display_location).innerHTML;
         document.getElementById(display_location).innerHTML = orig_data + table;
-    }
+    };
 
-    this.call = function(method) {
-        var arglist = new Array;
-        for (var i = 1; i < arguments.length; i++) {
-            arglist.push(arguments[i]);
+    this.add_methods = function(method_names) {
+        for (var i = 0; i < method_names.length; i++) {
+            var method_name = method_names[i];
+            this[method_name] = function() {
+                do_rpc(this.url, method_name, arguments);
+            }
         }
+    };
+
+    this.call = function(method,arglist) {
+        //var arglist = new Array;
+        //for (var i = 1; i < arguments.length; i++) {
+        //    arglist.push(arguments[i]);
+        //}
         var returned_list = do_rpc(this.url, method, arglist);
         return returned_list;
-    }
+    };
 }
 
 

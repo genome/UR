@@ -119,6 +119,7 @@ Ney::HTTPServer, urinterface.js
 
 use Net::HTTPServer;
 use JSON;
+use Class::Inspector;
 
 sub create {
     my($class,%args) = @_;
@@ -177,11 +178,33 @@ sub _api_entry_classes {
     my $params = $struct->{'params'};
 
     my @retval;
-    eval {
-        @retval = $class->$method(@$params);
-    };
 
-    my $return_struct = { id => $struct->{'id'}, version => $struct->{'version'}};
+    if ($method eq '_get_class_info') { # called when the other end gets a class object
+        eval {
+            my $class_object = $class->get_class_object;
+            my %id_names = map { $_ => 1 } $class_object->all_id_property_names();
+            my @id_names = keys(%id_names);
+       
+            my %property_names = map { $_ => 1 } 
+                                 grep { ! exists $id_names{$_} }
+                                 $class_object->all_property_names();
+            my @property_names = keys(%property_names);
+        
+            my $possible_method_names = Class::Inspector->methods($class, 'public');
+            my @method_names = grep { ! exists $id_names{$_} and ! exists $property_names{$_} }
+                               @$possible_method_names;
+
+            push @retval, { id_properties => \@id_names,
+                            properties => \@property_names,
+                            methods => \@method_names };
+        };
+    } else {
+        eval {
+            @retval = $class->$method(@$params);
+        };
+    }
+
+    my $return_struct = { id => $struct->{'id'}, version => $struct->{'version'}, result => \@retval};
     if ($@) {
         $return_struct->{'result'} = undef;
         $return_struct->{'error'} = $@;
