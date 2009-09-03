@@ -4,7 +4,7 @@ use Data::Dumper;
 use Test::More;
 use URT::DataSource::SomeSQLite;
 
-plan tests => 42;
+plan tests => 14;
 
 &setup_files_and_classes();
 
@@ -52,9 +52,9 @@ sub setup_files_and_classes {
         id_by => [
            'thing_id' => { is => 'Integer' },
         ],
-        has => {
+        has => [
             thing_value => { is => 'String' },
-        },
+        ],
         table_name => 'THINGS',
         data_source => 'URT::DataSource::SomeSQLite',
     );
