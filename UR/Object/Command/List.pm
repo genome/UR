@@ -100,6 +100,8 @@ sub execute {
                 $cnt++;
             }
             $h->close;
+            # This replaces tab2col's item count, since it counts the header also
+            print "$cnt rows output\n";
         }
         else {
             # todo: switch this to not use App::Report
@@ -118,8 +120,6 @@ sub execute {
             print $report->generate(format => ucfirst(lc($self->format)));
         }
     }
-    # This replaces tab2col's item count, since it counts the header also
-    print "$cnt rows output\n";
     return $cnt; 
 }
 
