@@ -27,11 +27,11 @@ sub sub_command_sort_position { 0 }
 
 sub help_brief {         
     my $self = shift;
-    my $class = $self->subject_class_name;
-    if (!$class) {
-        "list items of various types, with controls for filtering and grouping"
+    if (!ref($self)) {
+        return "list items of various types, with controls for filtering and grouping"
     }
     else {
+        my $class = $self->subject_class_name;
         my $doc = $class->get_class_object->doc;
         return $doc;
     }
