@@ -1,15 +1,13 @@
-
 package UR;
-
-use strict;
-use warnings FATAL => 'all';
-
-use version;
-our $VERSION = qv('0.4');
 
 # The UR module is itself a "UR::Namespace", besides being the root 
 # module which bootstraps the system.  The class definition itself
 # is made at the bottom of the file.
+
+use strict;
+use warnings FATAL => 'all';
+
+our $VERSION = '0.4';
 
 # Ensure we get detailed errors while starting up.
 use Carp;
@@ -40,7 +38,6 @@ BEGIN {
         ($UR::Object::rule_templates, $UR::Object::rules) = @$data;
     }
 }
-
 
 # Ensure that, if the application changes directory, we do not 
 # change where we load modules while running.
