@@ -534,7 +534,7 @@ UR - the base module for the UR framework
 
 =head1 VERSION
 
-This document describes UR version 0.01
+This document describes UR version 0.02
 
 =head1 SYNOPSIS
 
