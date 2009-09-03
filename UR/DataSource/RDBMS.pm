@@ -2660,7 +2660,7 @@ sub _generate_template_data_for_loading {
         # we only pull back columns we're grouping by if there is grouping happening
         for my $name (@$group_by) {
             unless ($class_name->can($name)) {
-                die "$class_name has no property/method $name.  Cannot group by it!";
+                Carp::croak("Cannot group by '$name': Class $class_name has no property/method by that name");
             }
             $group_by_property_names{$name} = 1;
         }
@@ -2678,7 +2678,7 @@ sub _generate_template_data_for_loading {
         # we only pull back columns we're ordering by if there is ordering happening
         for my $name (@$order_by) {
             unless ($class_name->can($name)) {
-                die "$class_name has no property/method $name.  Cannot order by it!";
+                Carp::croak("Cannot order by '$name': Class $class_name has no property/method by that name");
             }
             $order_by_property_names{$name} = 1;
         }
