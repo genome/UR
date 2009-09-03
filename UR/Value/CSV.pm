@@ -1,4 +1,4 @@
-package UR::Value::Number;
+package UR::Value::CSV;
 
 use strict;
 use warnings;
@@ -6,9 +6,9 @@ use warnings;
 require UR;
 
 UR::Object::Type->define(
-    class_name => 'UR::Value::Number',
+    class_name => 'UR::Value::CSV',
     is => ['UR::Value'],
-    english_name => 'number',
+    english_name => 'blob',
 );
 
 1;

@@ -1,4 +1,4 @@
-package UR::Value::String;
+package UR::Value::Text;
 
 use strict;
 use warnings;
@@ -6,9 +6,9 @@ use warnings;
 require UR;
 
 UR::Object::Type->define(
-    class_name => 'UR::Value::String',
+    class_name => 'UR::Value::Text',
     is => ['UR::Value'],
-    english_name => 'ur value string',
+    english_name => 'text',
 );
 
 1;
