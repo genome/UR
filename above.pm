@@ -48,7 +48,7 @@ sub use_package {
     if (length($path)) {
         while ($path =~ s:/[^/]+/\.\./:/:) { 1 } # simplify
         unless ($used_libs{$path}) {
-            print STDERR "Using libraries at $path\n";
+            print STDERR "Using libraries at $path\n" unless $ENV{PERL_ABOVE_QUIET};
             eval "use lib '$path';";
             die $@ if $@;
             $used_libs{$path} = 1;
