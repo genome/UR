@@ -44,6 +44,7 @@ sub _post_module_written {
     my $pathname = $self->server;
     $pathname =~ s/\.pm$/.sqlite3/;
     IO::File->new($pathname, O_WRONLY | O_CREAT) unless (-f $pathname);
+    $self->status_message("A   $pathname (empty database schame)");
 
     return 1;
 }
