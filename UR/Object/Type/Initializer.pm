@@ -715,6 +715,9 @@ sub _normalize_property_description {
         || $new_property{reverse_id_by}         
     ) {
         $new_property{is_delegated} = 1;
+		unless (defined $new_property{to}) {
+			$new_property{to} = $property_name;
+		}
     }
     
     if (!defined($new_property{is_mutable})) {
@@ -740,11 +743,6 @@ sub _normalize_property_description {
     unless ($new_property{attribute_name}) {
         $new_property{attribute_name} = $property_name;
         $new_property{attribute_name} =~ s/_/ /g;
-    }
-
-    if ($new_property{'delegate'}) {
-        print "$new_property{delegate}\n";
-        $new_property{is_legacy_eav} = 1;
     }
 
     if (my $extra = $class_data->{attributes_have}) {
