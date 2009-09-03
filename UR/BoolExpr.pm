@@ -493,26 +493,26 @@ sub resolve_for_class_and_params {
                 unless ($property_type) {
                     for my $class_name ($subject_class_meta->ordered_inherited_class_names) {
                         my $class_object = $class_name->get_class_object;
-    			$property_type = $subject_class_meta->get_property_object(property_name => $key);
-    			last if $property_type;
-    		    }
-    		    unless ($property_type) {
-    			die "No property type found for $subject_class $key?";
-    		    }
-    		}
-    		
-    		if ($property_type->is_delegated) {
-    		    my $property_meta = $subject_class_meta->get_property_meta_by_name($key);
-    		    unless ($property_meta) {
-    			die "Failed to find meta for $key on " . $subject_class_meta->class_name . "?!";
-    		    }
-    		    my @joins = $property_meta->get_property_name_pairs_for_join();
+                        $property_type = $subject_class_meta->get_property_object(property_name => $key);
+                        last if $property_type;
+                    }
+                    unless ($property_type) {
+                        die "No property type found for $subject_class $key?";
+                    }
+                }
+
+                if ($property_type->is_delegated) {
+                    my $property_meta = $subject_class_meta->get_property_meta_by_name($key);
+                    unless ($property_meta) {
+                        die "Failed to find meta for $key on " . $subject_class_meta->class_name . "?!";
+                    }
+                    my @joins = $property_meta->get_property_name_pairs_for_join();
                     for my $join (@joins) {
                         my ($my_method, $their_method) = @$join;
                         push @keys, $my_method;
                         push @values, $value->$their_method;
                     }
-                    
+
                     #
                     # WARNING WARNING looping early before we get to the bottom!
                     next;
