@@ -324,6 +324,25 @@ sub first_sub_classification_method_name {
 }
 
 
+# Another thing that is "inherited" from parent class metas
+sub subclassify_by {
+    my $self = shift;
+
+    return $self->{'__subclassify_by'} if exists $self->{'__subclassify_by'};
+
+    $self->{'__subclassify_by'} = $self->__subclassify_by;
+    unless ($self->{'__subclassify_by'}) {
+        for my $parent_class ($self->ancestry_class_metas) {
+            last if ($self->{'__subclassify_by'} = $parent_class->__subclassify_by);
+        }
+    }
+
+    return $self->{'__subclassify_by'};
+}
+
+    
+
+
 sub resolve_composite_id_from_ordered_values {    
     my $self = shift;
     my $resolver = $self->get_composite_id_resolver;

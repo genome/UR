@@ -1778,8 +1778,12 @@ sub _create_object_fabricator_for_loading_template {
                 }
                 else {
                     $subclass_name = $pending_db_object->$subclassify_by;
+                    unless ($subclass_name) {
+                        die "Failed to sub-classify $class while loading; calling method '$subclassify_by' returned false.  Relevant object data: "
+                                       . Data::Dumper::Dumper($pending_db_object);
+                    }
                 }
-                
+
                 # note: we check this again with the real base class, but this keeps junk objects out of the core hash
                 unless ($subclass_name->isa($class)) {
                     # We may have done a load on the base class, and not been able to use properties to narrow down to the correct subtype.

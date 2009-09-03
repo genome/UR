@@ -170,6 +170,10 @@ sub create {
     
     my $class_meta = $class->get_class_object;        
     
+    # Few different ways for automagic subclassing...
+
+    # #1 - The class specifies that we should call this other method (sub_classification_method_name)
+    # to determine the correct subclass
     if (my $method_name = $class_meta->first_sub_classification_method_name) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
         my $sub_class_name = $class->$method_name(@_);
@@ -185,11 +189,13 @@ sub create {
         }
         # fall through if the class names match
     }
-    
+
+    # #2 - The class create() was called on is abstract and has a subclassify_by property named.
+    # Extract the value of that property from the rule to determine the subclass create() should 
+    # really be called on
     if ($class_meta->is_abstract) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
 
-$DB::single=1;
         # Determine the correct subclass for this object
         # and delegate to that subclass.
         my $subclassify_by = $class_meta->subclassify_by;
@@ -247,8 +253,31 @@ $DB::single=1;
         }
 
     }
-    
-    my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+
+    # #3 - the class create was on isn't abstract, but it inherits from one that is and that
+    # specifys a subclassify_by property.  If that property doesn't appear in the rule, then
+    # add it in
+    # FIXME - this may be better done in the class initializer.  When it sees the subclass inheriting
+    # from an abstract/subclassify_by parent, it could create an implied constant property for the
+    # subclassifier
+    my $rule;
+    if ($class_meta->subclassify_by) {
+        my $subclassify_by = $class_meta->subclassify_by;
+        my %extra;
+        ($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+        my $sub_class_name = $rule->specified_value_for_property_name($subclassify_by);
+        if (!$sub_class_name) {
+            ($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, $subclassify_by => $class, @_);
+            unless ($rule and $rule->specifies_value_for_property_name($subclassify_by)) {
+                die "Error setting $subclassify_by to $class!";
+            }
+        }
+        # We've now constructed the correct rule... fall through and continue on
+
+    } else {
+        # Normal case... just make a rule out of the passed-in arams
+        $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+    }
 
     # Process parameters.  We do this here instead of 
     # waiting for create_object to do it so that we can ensure that
