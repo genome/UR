@@ -26,30 +26,6 @@ UR::Object::Type->define(
     data_source => 'UR::DataSource::Meta',
 );
 
-=pod
-
-=head1 NAME
-
-UR::DataSource::Meta::RDBMS::Table - Object-oriented class for RDBMS table objects.
-
-=head1 SYNOPSIS
-
-  $t = UR::DataSource::Meta::RDBMS::Table->get(
-                      data_source => 'Namespace::DataSource::Name',
-                      table_name => 'MY_TABLE_NAME');
-  @c = $t->column_names;
-  @f = $t->fk_constraint_names;
-
-=head1 DESCRIPTION
-
-Objects of this class represent a table in another database.  They are 
-primarily used by the class updating logic in the command line tool
-C<ur update classes>, but can be retrieved and used in any application.
-Their instances come from from the MetaDB (L<UR::DataSource::Meta>) which
-is partitioned and has one physical database per Namespace.
-
-=cut
-
 sub _related_class_name {
 my($self,$subject) = @_;
     my $class = ref($self);  
@@ -81,39 +57,6 @@ sub _table_column_class {
 sub _bitmap_index_class { 
     return shift->_related_class_name('BitmapIndex');
 }
-
-
-=pod
-
-=head2 Related Metadata Methods
-
-=over 4
-
-=item @col_objs = $t->columns();
-
-=item @col_names = $t->column_names();
-
-=item @fk_objs = $t->fk_constraints();
-
-=item @fk_names = $t->fk_constraint_names();
-
-=item @ref_fk_objs = $t->ref_fk_constraints();
-
-=item @ref_fk_names = $t->ref_fk_constraint_names();
-
-=item @pk_objs = $t->primary_key_constraint_columns();
-
-=item @pk_col_names = $t->primary_key_constraint_column_names();
-
-=item @bi_objs = $t->bitmap_indexes();
-
-=item @bi_names = $t->bitmap_index_names();
-
-Return related metadata objects (or names) for the given table object.
-
-=back
-
-=cut
 
 sub columns {
 my $self = shift;
@@ -239,4 +182,56 @@ my $self = shift;
 
 
 1;
-#$Header
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::Meta::RDBMS::Table - Object-oriented class for RDBMS table objects.
+
+=head1 SYNOPSIS
+
+  $t = UR::DataSource::Meta::RDBMS::Table->get(
+                      data_source => 'Namespace::DataSource::Name',
+                      table_name => 'MY_TABLE_NAME');
+  @c = $t->column_names;
+  @f = $t->fk_constraint_names;
+
+=head1 DESCRIPTION
+
+Objects of this class represent a table in a database.  They are 
+primarily used by the class updating logic in the command line tool
+C<ur update classes>, but can be retrieved and used in any application.
+Their instances come from from the MetaDB (L<UR::DataSource::Meta>) which
+is partitioned and has one physical database per Namespace.
+
+=head2 Related Metadata Methods
+
+=over 4
+
+=item @col_objs = $t->columns();
+
+=item @col_names = $t->column_names();
+
+=item @fk_objs = $t->fk_constraints();
+
+=item @fk_names = $t->fk_constraint_names();
+
+=item @ref_fk_objs = $t->ref_fk_constraints();
+
+=item @ref_fk_names = $t->ref_fk_constraint_names();
+
+=item @pk_objs = $t->primary_key_constraint_columns();
+
+=item @pk_col_names = $t->primary_key_constraint_column_names();
+
+=item @bi_objs = $t->bitmap_indexes();
+
+=item @bi_names = $t->bitmap_index_names();
+
+Return related metadata objects (or names) for the given table object.
+
+=back
+
+=cut
+

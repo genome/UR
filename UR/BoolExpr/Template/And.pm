@@ -1,10 +1,3 @@
-
-=head1 NAME
-
-UR::BoolExpr::And -  A rule which is true if all of its underlying rules are true 
-
-=cut
-
 package UR::BoolExpr::Template::And;
 
 use warnings;
@@ -83,6 +76,10 @@ sub evaluate_subject_and_values {
 1;
 
 =pod
+
+=head1 NAME
+
+UR::BoolExpr::And -  A rule which is true if all the underlying conditions are true 
 
 =head1 SEE ALSO
 

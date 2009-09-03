@@ -190,3 +190,79 @@ sub get_with_special_parameters
 }
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::Reference::Property - Metadata about the properties that link one class to another
+
+=head1 SYNOPSIS
+
+  my $classobj = Some::Class->__meta__;
+  my @refs = $classobj->reference_metas;
+
+  my @ref_props = $refs[0]->reference_property_metas;
+
+=head1 DESCRIPTION
+
+This class implements the infrastructure metadata about how classes are
+linked to each other.  Whenever the class initializer encounters an
+indirect property, a Reference object is created to denote the classes
+linked, and UR::Object::Reference::Property object for each property
+involved in the link.
+
+Instances of UR::Object::Reference::Property are not created directly, but
+exist as a concequence of class metadata creation.
+
+=head1 PROPERTIES
+
+=over 4
+
+=item tha_id => Text
+
+An ID property of UR::Object::Reference::Property.  Denotes which 
+UR::Object::Reference this Property belongs to.
+
+=item rank => Integer
+
+The other ID property.  Specifies how the linking properties are ordered.  
+
+=item property_name => Text
+
+The property name on the referencing class.
+
+=item r_property_name => Text
+
+The property name on the referenced class.
+
+=item class_name => Text
+
+The class name this reference points from.
+
+=item r_class_name => Text
+
+The class name this reference points to.
+
+=item property_meta => UR::Object::Property
+
+The property metaobject the link comes from, linked via class_name and
+property_name
+
+=item r_property_meta => UR::Object::Property
+
+The property metaobject the link points to, linked via r_class_name and
+r_property_name
+
+=item reference_meta => UR::Object::Reference
+
+The Reference metaobject this link belongs to
+
+=back
+
+=head1 SEE ALSO
+
+UR::Object::Reference, UR::Object::Type::Initializer
+
+=cut
+

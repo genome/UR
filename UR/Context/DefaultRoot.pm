@@ -13,3 +13,10 @@ UR::Object::Type->define(
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Context::DefaultRoot - The base context used when no special base context is specified
+
+=cut

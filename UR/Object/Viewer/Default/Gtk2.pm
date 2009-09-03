@@ -51,3 +51,19 @@ sub _remove_aspect {
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Object::Viewer::Default::Gtk2 - Gtk2 adaptor for object viewers
+
+=head1 DESCRIPTION
+
+This class provides code that implements a basic Gtk2 renderer for UR objects.
+
+=head1 SEE ALSO
+
+UR::Object::Viewer, UR::Object
+
+=cut
+

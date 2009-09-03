@@ -46,6 +46,7 @@ sub mk_rw_accessor {
 
     if ($column_name)
     {
+        $column_name = uc($column_name);
         Sub::Install::reinstall_sub({
             into => $class_name,
             as   => $column_name,
@@ -93,10 +94,9 @@ $DB::single=1;
         code => $accessor,
     });
 
-    $column_name = uc($column_name);
-    
     if ($column_name)
     {
+        $column_name = uc($column_name);
         Sub::Install::reinstall_sub({
             into => $class_name,
             as   => $column_name,
@@ -195,12 +195,12 @@ sub mk_indirect_ro_accessor {
 
         my $linking_property = UR::Object::Property->get(class_name => $class_name, property_name => $via);
         unless ($linking_property->data_type) {
-            die "Property ${class_name}::${accessor_name}: via refers to a property with no data_type.  Can't process filter";
+            Carp::confess "Property ${class_name}::${accessor_name}: via refers to a property with no data_type.  Can't process filter";
         }
         my $final_property = UR::Object::Property->get(class_name => $linking_property->data_type, 
                                                        property_name => $to);
         unless ($final_property->data_type) {
-            die "Property ${class_name}::${accessor_name}: to refers to a property with no data_type.  Can't process filter";
+            Carp::confess "Property ${class_name}::${accessor_name}: to refers to a property with no data_type.  Can't process filter";
         }
         $r_class_name = $final_property->data_type;
     };
@@ -412,11 +412,11 @@ sub mk_calculation_accessor {
         #print ">>$src<<\n";
         eval $src;
         if ($@) {
-            die "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$@\n";
+            Carp::confess "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$@\n";
         }
     }
     else {
-        die "Error implementing calcuation accessor for $class_name $accessor_name!";
+        Carp::confess "Error implementing calcuation accessor for $class_name $accessor_name!";
     }
 }
 
@@ -1100,3 +1100,133 @@ sub initialize_direct_accessors {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::Type::AccessorWriter - Helper module for UR::Object::Type responsible for creating accessors for properties
+
+=head1 DESCRIPTION
+
+Subroutines within this module actually live in the UR::Object::Type
+namespace;  this module is just a convienent place to collect them.  The
+class initializer uses these subroutines when it's time to create accessor
+methods for a newly defined class.  Each accessor is implemented by a closure
+that is then assigned a name by Sub::Name and inserted into the defined
+class's namespace by Sub::Install.
+
+=head1 METHODS
+
+=over4
+
+=item initialize_direct_accessors
+
+  $classobj->initialize_direct_accessors();
+
+This is the entry point into the accessor writing system.  It inspects each
+item in the 'has' key of the class object's hashref, and creates methods for
+each property.
+
+=item mk_rw_accessor
+
+  $classobj->mk_rw_accessor($class_name, $accessor_name, $column_name, $property_name, $is_transient);
+
+Creates a mutable accessor named $accessor_name which stores its value in
+the $property_name key of the object's hashref.
+
+=item mk_ro_accessor
+
+  $classobj->mk_ro_accessor($class_name, $accessor_name, $column_name, $property_name);
+
+Creates a read-only accessor named $accessor_name which retrieves its value
+in the $property_name key of the object's hashref.  If the method is used
+as a mutator by passing in a value to the method, it will throw an exception
+with Carp::confess.
+
+=item mk_id_based_object_accessor
+
+  $classobj->mk_id_based_object_accessor($class_name, $accessor_name, $id_by,
+                                         $r_class_name, $where);
+
+Creates an object accessor named $accessor_name.  It returns objects of type
+$r_class_name, id-ed by the parameters named in the $id_by arrayref.  $where
+is an optional  listref of additional filters to apply when retrieving
+objects.
+
+The behavior of the created accessor depends on the number of parameters
+passed to it.  For 0 params, it retrieves the object pointed to by
+$r_class_name and $id_by.  For 1 param, it looks up the ID param values
+of the passed-in object-parameter, and reassigns value stored in the $id_by
+properties of the acted-upon object, effectively acting as a mutator.
+
+For more than 1 param, the additional parameters are taken as
+properties/values to filter the returned objects on
+
+=item mk_indirect_ro_accessor
+
+  $classobj->mk_indirect_ro_accessor($class_name, $accessor_name, $via, $to, $where);
+
+Creates a read-only via accessor named $accessor_name.  Its value is
+obtained by calling the object accessor named $via, and then calling
+the method $to on that object.  The optional $where listref is used
+as additional filters when calling $via.
+
+=item mk_indirect_rw_accessor
+
+    $classobj->mk_indirect_rw_accessor($class_name, $accessor_name, $via, $to,
+                                       $where, $singular_name);
+
+Creates a via accessor named $accessor_name that is able to change the
+property it points to with $to when called as a mutator.  If the $to property
+on the remote object is an ID property of its class, it deletes the refered-to
+object and creates a new one with the appropriate properties.  Otherwise, it
+updates the $to property on the refered-to object.
+
+=item mk_calculation_accessor
+
+    $classobj->mk_calculation_accessor($class_name, $accessor_name, $calculation_src,
+                                       $calculate_from, $params, $is_constant);
+
+Creates a calculated accessor called $accessor_name.  If the $is_constant
+flag is true, then the accessor runs the calculation once, caches the result,
+and returns that result for subseqent calls to the accessor.
+
+$calculation_src can be one of: coderef, string containing Perl code, or 
+the name of a module under UR::Object::Type::AccessorWriter which has a 
+method called C<calculate>.  If $calculation_src is empty, then $accessor_name
+must be the name of an already-existing subroutine in the class's namespace.
+
+=item mk_dimension_delegate_accessors
+
+=item mk_dimension_identifying_accessor
+
+These create accessors for dealing with dimension tables in OLAP-type schemas.
+They need more documentation.
+
+=item mk_rw_class_accessor
+
+  $classobj->mk_rw_class_accessor($class_name, $accessor_name, $column_name, $variable_value);
+
+Creates a read-write accessor called $accessor_name which stores its value 
+in a scalar captured by the accessor's closure.  Since the closure is
+inserted into the class's namespace, all instances of the class share the
+same closure (and therefore the same scalar), and the property effectively
+acts as a class-wide property.  
+
+=item mk_ro_class_accessor
+
+  $classobj->mk_ro_class_accessor($class_name, $accessor_name, $column_name, $variable_value);
+
+Creates a read-only accessor called $accessor_name which retrieves its value
+from a scalar captured by the accessor's closure.  The value is initialized
+to $variable_value.  If called as a mutator, it throws an exception through
+Carp::confess
+
+=back
+
+=head1 SEE ALSO
+
+UR::Object::Type::AccessorWriter, UR::Object::Type
+
+=cut

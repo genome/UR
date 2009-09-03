@@ -238,7 +238,7 @@ sub execute
     unless ($result) {
         $transaction->rollback;
     }
-    if ($@) {
+    if ($@) { 
         die $@;
     }
     $transaction->commit;
@@ -261,3 +261,131 @@ sub execute_and_rollback
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Context::Transaction - API for software transactions
+
+=head1 SYNOPSIS
+
+  my $o = Some::Obj->create(foo => 1);
+  print "o's foo is ",$o->foo,"\n";  # prints 1
+
+  my $t = UR::Context::Transaction->begin();
+
+  $o->foo(4);
+
+  print "In transaction, o's foo is ",$o->foo,"\n";  # prints 4
+
+  if (&should_we_commit()) {
+      $t->commit();
+      print "Transaction committed, o's foo is ",$o->foo,"\n";  # prints 4
+
+  } else {
+      $t->rollback();
+      print "Transaction rollback, o's foo is ",$o->foo,"\n";  # prints 1
+  }
+
+=head1 DESCRIPTION
+
+UR::Context::Transaction instances represent in-memory transactions as a diff
+of the contents of the object cache in the Process context.  Transactions are
+nestable.  Their instances exist in the object cache and  are subject to the
+same scoping rules as other UR-based objects, meaning that they do not
+disappear mearly because the lexical variable they're assigned to goes out of
+scope.  They must be explicitly disposed of via the commit or rollback methods.
+
+=head1 INHERITANCE
+
+UR::Context::Transaction is a subclass of UR::Context
+
+=head1 CONSTRUCTOR
+
+=over 4
+
+=item begin
+
+  $t = UR::Context::Transaction->begin();
+
+Creates a new software transaction context to track changes to UR-based
+objects.  As all activity to objects occurs in some kind of transaction
+context, the newly created transaction exists within whatever context was
+current before the call to begin().
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=item commit
+
+  $t->commit();
+
+Causes all objects with changes to save those changes back to the underlying
+context.  
+
+=item rollback
+
+  $t->rollback();
+
+Causes all objects with changes to have those changes reverted to their
+state when the transaction began.  Classes with properties whose meta-property
+is_transactional => 0 are not tracked within a transaction and will not be
+reverted.
+
+=item delete
+
+  $t->delete();
+
+delete() is a synomym for rollback
+
+=item has_changes
+
+  $bool = $t->has_changes();
+
+Returns true if any UR-based objects have changes within the transaction.
+
+=item get_changes
+
+  @changes = $t->get_changes();
+
+Return a list or L<UR::Change> objects representing changes within the transaction.
+
+=back
+
+=head1 CLASS METHODS
+
+=over 4
+
+=item execute
+
+  $retval = UR::Context::Transaction->execute($coderef);
+
+Executes the coderef with no arguments, within an eval and a software
+transaction.  If the coderef returns true, the transaction is committed.
+If it returns false, the transaction is rolled back.  Finally the coderef's
+return value is returned to the caller.
+
+If the coderef throws an exception, it will be caught, the transaction rolled
+back, and the exception will be re-thrown with die().
+
+=item execute_and_rollback
+
+  UR::Context::Transaction->execute_and_rollback($coderef);
+
+Executes the coderef with no arguments, within an eval and a software
+transaction.  Reguardless of the return value of the coderef, the transaction
+will be rolled back.
+
+If the coderef throws an exception, it will be caught, the transaction rolled
+back, and the exception will be re-thrown with die().
+
+=back
+
+=head1 SEE ALSO
+
+L<UR::Context>
+
+=cut

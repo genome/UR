@@ -1,13 +1,3 @@
-
-=head1 NAME
-
-UR::BoolExpr::Or - A rule which is true if any of a list of alternative rules are true
-
-=head1 SYNOPSIS
-
-=cut
-
-
 package UR::BoolExpr::Template::Or;
 
 use warnings;
@@ -25,6 +15,13 @@ UR::Object::Type->define(
 1;
 
 =pod
+
+=head1 NAME
+
+UR::BoolExpr::Or - A rule which is true if any of the underlying conditions are true
+
+=head1 SYNOPSIS
+
 
 =head1 SEE ALSO
 

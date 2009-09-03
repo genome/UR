@@ -29,6 +29,7 @@ sub unload {
         }
 
         $self->signal_change('unload');
+print "*** UNLOAD object $self class ",$self->class," id ",$self->id,"\n";
         $self->delete_object;
         return $self;
     }

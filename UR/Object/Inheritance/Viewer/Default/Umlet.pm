@@ -52,3 +52,15 @@ Arrow 1</panel_attributes>
 }
 
 1;    
+
+=pod
+
+=head1 NAME
+
+UR::Object::Inheritance::Viewer::Default::Umlet - Viewer class for inheritance objects in an Umlet diagram
+
+=head1 DESCRIPTION
+
+This class is used internally by the class diagrammer (UR::Namespace::Command::Update::ClassDiagram)
+
+=cut

@@ -1,19 +1,3 @@
-
-=head1 NAME
-
-UR::BoolExpr::Composite - A rule made up of other rules
-
-=head1 SYNOPSIS
-
-@r = $r->get_underlying_rules();
-for (@r) {
-    print $r->evaluate($c1);
-}
-
-=head1 DESCRIPTION
-
-=cut
-
 package UR::BoolExpr::Template::Composite;
 
 use warnings;
@@ -32,6 +16,19 @@ UR::Object::Type->define(
 1;
 
 =pod
+
+=head1 NAME
+
+UR::BoolExpr::Composite - A rule made up of other rules
+
+=head1 SYNOPSIS
+
+@r = $r->get_underlying_rules();
+for (@r) {
+    print $r->evaluate($c1);
+}
+
+=head1 DESCRIPTION
 
 =head1 SEE ALSO
 

@@ -202,15 +202,11 @@ sub _do
 
 =pod
 
-=head1 Name
+=head1 NAME
 
-UR::Object::Command::FetchAndDo
+UR::Object::Command::FetchAndDo - Base class for fetching objects and then performing a function on/with them.
 
-=head1 Synopsis
-
-Base class for fetching objects and then performing a function on/with them.
-
-=head1 Usage
+=head1 SYNOPSIS
 
  package MyFecthAndDo;
 
@@ -287,4 +283,4 @@ Overwrite the help_brief, help_synopsis and help_detail methods to provide speci
 =cut
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/FetchAndDo.pm $
-#$Id: FetchAndDo.pm 46825 2009-05-13 20:29:11Z abrummet $#
+#$Id: FetchAndDo.pm 47349 2009-05-28 22:19:23Z abrummet $#

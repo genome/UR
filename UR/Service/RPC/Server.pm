@@ -81,3 +81,59 @@ sub loop {
 }
 
 1;
+
+
+=pod
+
+=head1 NAME
+
+UR::Service::RPC::Server - Class for implementing RPC servers
+
+=head1 SYNOPSIS
+
+  my $executer = Some::Exec::Class->create(fh => $fh);
+
+  my $server = UR::Service::RPC::Server->create();
+  $server->add_executer($executer);
+
+  $server->loop(5);  # Process messages for 5 seconds
+
+=head1 DESCRIPTION
+
+The RPC server implementation isn't fleshed out very well yet, and may change
+in the future.
+
+=head1 METHODS
+
+=over 4
+
+=item add_executer
+
+  $server->add_executer($exec);
+
+Incorporate a new UR::Service::RPC::Executer instance to this server.  It
+adds the Executer's filehandle to its own internal IO::Select object.
+
+=item loop
+
+  $server->loop();
+
+  $server->loop(0);
+
+  $server->loop($timeout);
+
+Enter the Server's event loop for the given number of seconds.  If the timeout
+is undef, it will stay in the loop forever.  If the timeout is 0, it will make
+a single pass though the readable filehandles and call C<execute> on their
+Executer objects.  
+
+If the return value of an Executer's C<execute> method is false, that Executer's
+file handle is removed from the internal Select object.
+
+=back
+
+=head1 SEE ALSO
+
+UR::Service::RPC::Executer, UR::Service::RPC::Message
+
+=cut

@@ -1,17 +1,3 @@
-
-=pod
-
-=head1 NAME
-
-UR::Object::Viewer::Toolkit::Umlet
-
-=head1 SYNOPSIS
-
-Methods called by UR::Object::Viewer to get toolkit specific support for
-common tasks.
-
-=cut
-
 package UR::Object::Viewer::Toolkit::Umlet;
 
 use warnings;
@@ -28,6 +14,19 @@ UR::Object::Type->define(
 );
 
 # Behaving just like Text viewers should be ok...
-# Maybe that means tehy should be combined somehow?
+# Maybe that means they should be combined somehow?
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::Viewer::Toolkit::Umlet - Declaration of Umlet as a Viewer toolkit type
+
+=head1 SYNOPSIS
+
+Methods called by UR::Object::Viewer to get toolkit specific support for
+common tasks.
+
+=cut

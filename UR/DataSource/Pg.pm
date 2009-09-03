@@ -129,3 +129,21 @@ my($self,$table_name) = @_;
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::Pg - PostgreSQL specific subclass of UR::DataSource::RDBMS
+
+=head1 DESCRIPTION
+
+This module provides the PostgreSQL-specific methods necessary for interacting with
+PostgreSQL databases
+
+=head1 SEE ALSO
+
+L<UR::DataSource>, L<UR::DataSource::RDBMS>
+
+=cut
+

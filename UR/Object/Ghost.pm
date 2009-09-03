@@ -62,3 +62,55 @@ sub AUTOSUB
 }
 
 1;
+
+
+=pod
+
+=head1 NAME
+
+UR::Object::Ghost - Abstract class for representing deleted objects not yet committed
+
+=head1 SYNOPSIS
+
+  my $obj = Some::Class->get(1234);
+  $obj->some_method();
+
+  $obj->delete();   # $obj is now a UR::DeletedRef
+
+  $ghost = Some::Class::Ghost->get(1234);
+  $ghost->some_method;  # Works
+
+=head1 DESCRIPTION
+
+Ghost objects are a bookkeeping entity for tracking objects which have been
+loaded from an external data source, deleted within the application, and not
+yet committed.  This implies that they still exist in the external data
+source.  When the Context is committed, the existence of Ghost objects
+triggers commands to the external data sources to also delete the object(s).
+When objects are brought into the Context by querying a data source, they
+are compared against any ghosts that may already exist, and matching objects
+are not re-loaded or returned to the user from a call to get().  If the
+user wants to get Ghost objects, they must call get() explicitly on the
+Ghost class.
+
+Each class in the system also has an associated Ghost class, the name of which
+is formed by tacking '::Ghost' to the name of the regular class.  Ghost 
+classes do not have ghosts themselves.  
+ 
+Instances of Ghosts are not instantiated with create() directly, they are
+created as a concequence of deleting a regular object instance.  A Ghost 
+can be turned back into a "live" object by re-creating it, or rolling back
+the transaction it was deleted in.
+
+=head1 DEPRECATED
+
+Applications will not, and should not, normally interact with Ghosts.  The
+whole Ghost system is scheduled for elimination as we refactor the Context
+and software transaction framework.
+
+=head1 SEE ALSO
+
+UR::Object, UR::Object::Type
+
+=cut
+

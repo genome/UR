@@ -268,8 +268,8 @@ it returns an iterator object with one method, next().  next() will return
 one object from the resulting set each time it is called, and undef when
 the results have been exhausted.
 
-UR::Object::Iterator instances are normal hashrefs, not UR-based objects,
-and obey the same scoping rules as any normal Perl reference. 
+UR::Object::Iterator instances are normal object references, not UR-based
+objects, and obey the same scoping rules as any normal Perl reference. 
 
 =back
 

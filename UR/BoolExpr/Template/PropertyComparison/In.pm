@@ -36,3 +36,15 @@ sub evaluate_subject_and_values {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::BoolExpr::Template::PropertyComparison::In - Perform an In test
+
+=head1 DESCRIPTION
+
+Returns true if any of the property's values appears in the comparison value list
+
+=cut

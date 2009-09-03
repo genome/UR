@@ -27,5 +27,20 @@ UR::Object::Type->define(
 );
 
 1;
-#$Header
+
+=pod
+
+=head1 NAME 
+
+UR::DataSource::RDBMS::FkConstraintColumn - Metadata about a data source's foreign keys
+
+=head1 DESCRIPTION
+
+This class represents the column linkages that make up a foreign key.  Each
+instance has a column_name (the source, where the foreign key points from)
+and r_column_name (remote column name, where the fireign key points to),
+as well as the source and remote table names.
+
+=cut
+
 

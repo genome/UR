@@ -149,3 +149,20 @@ my($self,$table_name) = @_;
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::MySQL - MySQL specific subclass of UR::DataSource::RDBMS
+
+=head1 DESCRIPTION
+
+This module provides the MySQL-specific methods necessary for interacting with
+MySQL databases
+
+=head1 SEE ALSO
+
+L<UR::DataSource>, L<UR::DataSource::RDBMS>
+
+=cut

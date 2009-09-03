@@ -53,3 +53,14 @@ sub _update_widget_from_subject {
 
 1;
 
+=pod
+
+=head1 NAME 
+
+UR::Object::Property::Viewer::DescriptionLineItem::Text - Viewer class for UR::Object::Property
+
+=head1 DESCRIPTION
+
+Used by UR::Namespace::Command::Describe when displaying information about a property
+
+=cut

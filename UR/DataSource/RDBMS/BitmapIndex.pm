@@ -24,4 +24,20 @@ UR::Object::Type->define(
 );
 
 1;
-#$Header
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::RDBMS::BitmapIndex - Metadata about a data source's bitmap indexes
+
+=head1 DESCRIPTION
+
+This class represents instances of bitmap indexes in a data source.  They are
+maintained by 'ur update classes' and stored in the namespace's MetaDB.
+
+The existence of bitmap indexes in a datasource affects SQL generation during
+a Context commit.  Oracle's implementation requires a table covered by a
+bitmap index to be locked while it is being updated.
+
+=cut

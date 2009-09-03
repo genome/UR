@@ -165,4 +165,17 @@ my $self = shift;
 
 
 1;
-#$Header
+
+
+=pod
+
+=head1 NAME 
+
+UR::DataSource::RDBMS::FkConstraint - Metadata about a data source's foreign keys
+
+=head1 DESCRIPTION
+
+This class represents instances of foreign keys in a data source.  They are 
+maintained by 'ur update classes' and stored in the namespace's MetaDB.
+
+=cut

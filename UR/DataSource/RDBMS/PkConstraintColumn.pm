@@ -25,4 +25,16 @@ UR::Object::Type->define(
 );
 
 1;
-#$Header
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::RDBMS::PkConstraintColumn - Metadata about a data source's primary keys
+
+=head1 DESCRIPTION
+
+This class represents columns that make up a primary key.  Tables with
+multiple-column primary keys are ordered by their 'rank' property.
+
+=cut

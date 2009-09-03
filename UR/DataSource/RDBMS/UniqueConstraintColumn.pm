@@ -26,3 +26,19 @@ UR::Object::Type->define(
 1;
 
 
+=pod
+
+=head1 NAME
+
+UR::DataSource::RDBMS::UniqueConstraintColumn - Metadata about a data source's unique constraints
+
+=head1 DESCRIPTION
+
+This class represents instances of unique constraints in a data source.  They are
+maintained by 'ur update classes' and stored in the namespace's MetaDB.
+
+Multi-column unique constraints are represented by instances having the same
+table_name and constraint_name, but different column_names.
+
+=cut
+

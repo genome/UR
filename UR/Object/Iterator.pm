@@ -63,3 +63,63 @@ sub next {
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Object::Iterator - API for iterating through objects matching a rule
+
+=head1 SYNOPSIS
+
+  my $rule = UR::BoolExpr->resolve_for_class_and_params('Some::Class', foo => 1);
+  my $iter = UR::Object::Iterator->create_for_filter_rule($rule);
+  while (my $obj = $iter->next()) {
+      print "Got an object: ",$obj->id,"\n";
+  }
+
+  # Equivalent
+  my $iter2 = Some::Class->create_iterator(foo => 1);
+  while (my $obj = $iter2->next()) {
+      print "Got an object: ",$obj->id,"\n";
+  }
+
+=head1 DESCRIPTION
+
+get(), implemented in UR::Object, is the usual way for retrieving sets of
+objects matching particular properties.  When the result set of data is
+large, it is often more efficient to use an iterator to access the data 
+instead of getting it all in one list.
+
+UR::Object implements create_iterator(), which is just a wrapper around
+create_for_filter_rule().
+
+UR::Object::Iterator instances are normal Perl object references, not
+UR-based objects.  They do not live in the Context's object cache, and
+obey the normal Perl rules about scoping.
+
+=head1 METHODS
+
+=over 4
+
+=item create_for_filter_rule
+
+  $iter = UR::Object::Iterator->create_for_filter_rule($boolexpr);
+
+Creates an iterator object based on the given BoolExpr (rule).  Under the
+hood, it calls get_objects_for_class_and_rule() on the current Context
+with the $return_closure flag set to true.
+
+=item next
+
+  $obj = $iter->next();
+
+Return the next object matching the iterator's rule.  When there are no more
+matching objects, it returns undef.
+
+=back
+
+=head1 SEE ALSO
+
+UR::Object, UR::Context
+
+=cut

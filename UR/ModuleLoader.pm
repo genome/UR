@@ -123,3 +123,21 @@ sub dynamically_load_class {
 
 1;
 
+
+=pod
+
+=head1 NAME
+
+UR::ModuleLoader - UR hooks into Class::Autouse
+
+=head1 DESCRIPTION
+
+UR uses Class::Autouse to handle automagic loading for modules.  As long
+as some part of an application "use"s a Namespace module, the autoloader
+will handle loading modules under that namespace when they are needed.
+
+=head1 SEE ALSO
+
+UR, UR::Namespace
+
+=cut

@@ -183,4 +183,21 @@ sub get_unique_index_details_from_data_dictionary {
 
 
 1;
-#$Header
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::Oracle - Oracle specific subclass of UR::DataSource::RDBMS
+
+=head1 DESCRIPTION
+
+This module provides the Oracle-specific methods necessary for interacting with
+Oracle databases
+
+=head1 SEE ALSO
+
+L<UR::DataSource>, L<UR::DataSource::RDBMS>
+
+=cut
+

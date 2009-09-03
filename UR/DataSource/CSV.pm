@@ -165,7 +165,6 @@ sub _find_pathname_for_table {
 sub get_column_details_from_data_dictionary {
     my($self,$catalog,$schema,$table,$column) = @_;
 
-$DB::single=1;
     # Convert the SQL wildcards to glob wildcards
     $table =~ tr/%_/*?/;
 
@@ -265,7 +264,6 @@ sub get_table_details_from_data_dictionary {
     # if you only asked for details on one of them
     my $sth = $self->SUPER::get_table_details_from_data_dictionary($catalog,$schema,$table,$type);
 
-$DB::single=1;
     # Yeah, it's kind of silly to have to read in all the data and repackage it
     # back into another sth
     my @returned_details;
@@ -297,3 +295,22 @@ sub dump_on_commit {
 
 
 1;
+
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::CSV - Parent class for data sources using DBD::CSV
+
+=head1 DESCRIPTION
+
+UR::DataSource::CSV is a subclass of L<UR::DataSource::RDBMS> and can be
+used for interacting with CSV files.  Because of the limitations of the
+underlying modules (such as SQL::Statement only supporting one join at a
+time), this module is deprecated.
+
+L<UR::DataSource::File> implements a non-SQL interface for data files, and
+is the proper way to use a file as a data source for class data.
+
+=cut

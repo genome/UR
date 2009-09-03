@@ -1,17 +1,3 @@
-
-=pod
-
-=head1 NAME
-
-UR::Object::Viewer::Toolkit::Text
-
-=head1 SYNOPSIS
-
-Methods called by UR::Object::Viewer to get toolkit specific support for
-common tasks.
-
-=cut
-
 package UR::Object::Viewer::Toolkit::Text;
 
 use warnings;
@@ -69,3 +55,18 @@ return undef;
 }
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::Viewer::Toolkit::Text - Declaration of Text as a Viewer toolkit type
+
+=head1 SYNOPSIS
+
+Methods called by UR::Object::Viewer to get toolkit specific support for
+common tasks.
+
+=cut
+
+

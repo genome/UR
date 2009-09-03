@@ -25,3 +25,15 @@ sub evaluate_subject_and_values {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::BoolExpr::Template::PropertyComparison::NotIn - Perform a negated In comparison
+
+=head1 DESCRIPTION
+
+Returns false if any of the property's values appears in the comparison value list
+
+=cut

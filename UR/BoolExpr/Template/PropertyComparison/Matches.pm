@@ -22,3 +22,11 @@ sub evaluate_subject_and_values {
 
 
 1;
+
+=pod
+
+=head1 NAME 
+
+UR::BoolExpr::Template::PropertyComparison::Matches - Perform a Perl regular expression match
+
+=cut

@@ -126,3 +126,12 @@ sub value_id_to_values {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::BoolExpr::Util - Non-OO module to collect utility functions used by the BoolExpr modules
+
+=cut
+

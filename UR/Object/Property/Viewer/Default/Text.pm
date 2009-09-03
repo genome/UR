@@ -15,3 +15,14 @@ UR::Object::Type->define(
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Object::Property::Viewer::Default::Text - Viewer class for UR::Object::Property
+
+=head1 DESCRIPTION
+
+Used by UR::Namespace::Command::Info when displaying information about a property
+
+=cut

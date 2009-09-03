@@ -1,17 +1,3 @@
-
-=pod
-
-=head1 NAME
-
-UR::Object::Viewer::Toolkit::Gtk
-
-=head1 SYNOPSIS
-
-Methods called by UR::Object::Viewer to get toolkit specific support for
-common tasks.
-
-=cut
-
 package UR::Object::Viewer::Toolkit::Gtk;
 
 use warnings;
@@ -118,5 +104,19 @@ sub delete_window_around_viewer {
 }
 
 1;
-#$Id$
+
+
+=pod
+
+=head1 NAME
+
+UR::Object::Viewer::Toolkit::Gtk - Declaration of Gtk as a Viewer toolkit type
+
+=head1 SYNOPSIS
+
+Methods called by UR::Object::Viewer to get toolkit specific support for
+common tasks.
+
+=cut
+
 

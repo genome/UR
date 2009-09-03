@@ -88,3 +88,19 @@ sub show {
 
 1;
 
+
+=pod
+
+=head1 NAME
+
+UR::Object::Viewer::Default::Text - Text adaptor for object viewers
+
+=head1 DESCRIPTION
+
+This class provides code that implements a basic text renderer for UR objects.
+
+=head1 SEE ALSO
+
+UR::Object::Viewer, UR::Object
+
+=cut

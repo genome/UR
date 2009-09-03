@@ -465,4 +465,28 @@ sub _add_object($$)
 
 1;
 
+=pod
 
+=head1 NAME
+
+UR::Object::Index - Indexing system for retrieving objects by non-id properties
+
+=head1 DESCRIPTION
+
+This class implements an indexing system for objects to retrieve them quickly
+by properties other than their ID properties.  Their existence and use is 
+managed by the Context as needed, and end-users should never need to interact
+with UR::Object::Index instances.
+
+Internally, they are a container for objects of the same class and a set of 
+properties used to look them up.  Each time a get() is performed on a new set
+of non-id properties, a new Index is created to handle the request for
+objects which may already exist in the object cache,
+
+The data_tree inside the Index is a multi-level hash.  The levels are in the
+same order as the properties in the get request.  At each level, the hash
+keys are the values that target property has.  For that level and key, all the
+objects inside have the same value for that property.  A get() by three non-id
+properties will have a 3-level hash.
+
+=cut

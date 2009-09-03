@@ -26,3 +26,4 @@ This class exists as a means for flagging MetaDB objects and handling them
 specially by the infrastructure in certain circumstances, such as final
 data source determination.
 
+=cut 

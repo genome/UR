@@ -2743,3 +2743,23 @@ sub _select_clause_for_table_property_data {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::RDBMS - Abstract base class for RDBMS-type data sources
+
+=head1 DESCRIPTION
+
+This class implements the interface UR uses to query RDBMS databases with
+DBI.  It encapsulates the system's knowledge of classes/properties relation
+to tables/columns, and how to generate SQL to create, retrieve, update and
+delete table rows that represent object instances.
+
+=head1 SEE ALSO
+
+UR::DataSource, UR::DataSource::Oracle, UR::DataSource::Pg, UR::DataSource::SQLite
+UR::DataSource::MySQL
+
+=cut

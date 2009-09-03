@@ -1,4 +1,3 @@
-
 package UR::Object::Type::ModuleWriter; # to help the installer
 
 package UR::Object::Type; # hold methods for the class which cover Module Read/Write.
@@ -715,3 +714,86 @@ sub _is_number {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::Type::ModuleWriter - Helper module for UR::Object::Type responsible for writing Perl modules
+
+=head1 DESCRIPTION
+
+Subroutines within this module actually live in the UR::Object::Type
+namespace;  this module is just a convienent place to collect them.  The
+Module Writer is used by the class updater system (L<(UR::Namespace::Command::Update::Classes>
+and 'ur update classes) to add, remove and alter the Perl modules behind
+the classes within a Namespace.  
+
+=head1 METHODS
+
+=over 4
+
+=item resolve_module_header_source
+
+  $classobj->resolve_module_header_source();
+
+Returns a string that represents a fully-formed class definition the the
+given class metaobject $classobj.
+
+=item resolve_class_description_perl
+
+  $classobj->resolve_class_description_perl()
+
+Used by resolve_module_header_source().  This method inspects all the
+applicable properties of the class metaobject and builds up a string that
+gets inserted between the {...} of the class definition string.
+
+=item rewrite_module_header
+
+  $classobj->rewrite_module_header();
+
+This method rewrites an existing Perl module file in place for the class
+metaobject, or creates a new file if one does not already exist.
+
+=item module_base_name
+
+Returns the pathname of the class's module relative to the top level directory
+of that class's Namespace.
+
+=item module_path
+
+Returns the fully qualified pathname of the class's module.
+
+=item module_source_lines
+
+Returns the text of the class's Perl module as a list of strings.
+
+=item module_source
+
+Returns the text of the class's Perl module as a single string.
+
+=item module_header_positions
+
+Returns a 3-element list ($begin, $end, $use) where $begin is the line number
+where the class header begins.  $end is the line number where it ends.  $use
+is the line number where the module declares that it use's a Namespace.
+
+=item module_header_source_lines
+
+Returns the text of the class's Perl module source where the class definition
+is as a list of strings.
+
+=item module_header_source
+
+Returns the text of the class's Perl module source where the class definition
+is as a single string.
+
+=back
+
+=head1 SEE ALSO
+
+UR::Object::Type, UR::Object::Type::Initializer
+
+=cut
+
+

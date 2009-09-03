@@ -95,4 +95,17 @@ sub is_time_data {
 }
 
 1;
-#$Header
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::RDBMS::TableColumn - Metadata about a data source's table's columns
+
+=head1 DESCRIPTION
+
+This class represents instances of columns in a data source's tables.  They are
+maintained by 'ur update classes' and stored in the namespace's MetaDB.
+
+=cut
+

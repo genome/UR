@@ -13,3 +13,17 @@ UR::Object::Type->define(
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::RDBMS::TableColumn::Viewer::Default::Text - Viewer class for RDBMS column objects
+
+=head1 DESCRIPTION
+
+This class defines a text-mode viewer for RDBMS column objects, and is used by
+the 'ur info' command.
+
+=cut
+

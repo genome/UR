@@ -52,3 +52,16 @@ Arrow 1</panel_attributes>
 }
 
 1;    
+
+=pod
+
+=head1 NAME 
+
+UR::Object::Reference::Viewer::Default::Umlet - Viewer class for References in an Umlet diagram
+
+=head1 DESCRIPTION
+
+This class is used by the class diagrammer (L<UR::Namespace::Command::Update::ClassDiagram>)
+to draw links between classes indicated by indirect properties.
+
+=cut

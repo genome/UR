@@ -374,3 +374,79 @@ sub resolve_lib_namespace_working_dirs
 
 1;
 
+
+=pod
+
+=head1 NAME
+
+UR::Namespace::Command - Top-level Command module for the UR namespace commands
+
+=head1 DESCRIPTION
+
+This class is the parent class for all the namespace-manipluation command
+modules, and the root for command handling behind the 'ur' command-line
+script.  
+
+There are several sub-commands for manipluating a namespace's metadata.
+
+=over 4
+
+=item browser 
+
+Start a lightweight web server for viewing class and schema information
+
+=item commit
+
+Update data source schemas based on the current class structure
+
+=item define
+
+Define metadata instances such as classes, data sources or namespaces
+
+=item describe
+
+Get detailed information about a class
+
+=item diff
+
+Show a diff for various kinds of other ur commands.
+
+=item info
+
+Show brief information about class or schema metadata
+
+=item list
+
+List various types of things
+
+=item redescribe
+
+Outputs class description(s) formatted to the latest standard
+
+=item rename
+
+Rename logical schema elements.
+
+=item rewrite
+
+Rewrites class descriptions headers to normalize manual changes.
+
+=item test
+
+Sub-commands related to testing
+
+=item update
+
+Update metadata based on external data sources
+
+=back
+
+Some of these commands have sub-commands of their own.  You can get more
+detailed information by typing 'ur <command> --help' at the command line.
+
+=head1 SEE ALSO
+
+Command, UR, UR::Namespace
+
+=cut
+

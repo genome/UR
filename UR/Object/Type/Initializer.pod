@@ -78,7 +78,7 @@ that later...
 After using UR, or another class that inherits from UR::Namespace, the above
 "class" syntax above can be used to define a class.
 
-The equivalent, more plain-Perl way to define a class is: It is the same as:
+The equivalent, more plain-Perl way to define a class is like this:
 
   UR::Object::Type->define(
      class_name => 'Thing',

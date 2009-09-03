@@ -14,3 +14,15 @@ UR::Object::Type->define(
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Object::Type::Viewer::Default::Text - Viewer class for class metaobjects
+
+=head1 DESCRIPTION
+
+This class is used by L<UR::Namespace::Command::Info> and L<UR::Namespace::Command::Description>
+to construct the text outputted.
+
+=cut

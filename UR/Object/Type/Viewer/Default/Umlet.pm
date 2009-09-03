@@ -12,3 +12,16 @@ UR::Object::Type->define(
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Object::Type::Viewer::Default::Umlet - Viewer class for class metaobjects
+
+=head1 DESCRIPTION
+
+This class is used by L<UR::Namespace::Command::Update::ClassDiagram> and
+C<ur update class-diagram> to create Umlet diagrams showing the class
+structure.
+
+=cut

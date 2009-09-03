@@ -16,3 +16,11 @@ sub calculate {
 };
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::Type::AccessorWriter::Sum - Implements a calculation accessor which sums the values of its properties
+
+=cut

@@ -24,3 +24,18 @@ my($self,$string) = @_;
 }
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::Umlet - Base class for entities diagrammed by Umlet
+
+=head1 DESCRIPTION
+
+This class is used by the class and schema diagrammers
+(L<UR::Namespace::Command::Update::ClassDiagram> and 
+L<UR::Namespace::Command::Update::SchemaDiagram>) and represents
+elements of a diagram.
+
+=cut

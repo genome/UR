@@ -230,3 +230,17 @@ sub generate_readonly_methods
 }
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Util - Collection of utility subroutines and methods
+
+=head1 DESCRIPTION
+
+This package contains subroutines and methods used by other parts of the 
+infrastructure.  These subs are not likely to be useful to outside code.
+
+=cut
+

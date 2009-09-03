@@ -392,3 +392,275 @@ sub r_id_by_property_links {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::Property - Class representing metadata about a class property
+
+=head1 SYNOPSIS
+
+  my $prop = UR::Object::Property->get(class_name => 'Some::Class', property_name => 'foo');
+
+  my $class_meta = Some::Class->__meta__;
+  my $prop2 = $class_meta->property_meta_for_name('foo');
+
+  # Print out the meta-property name and its value of $prop2
+  print map { " $_ : ".$prop2->$_ }
+        qw(class_name property_name data_type default_value);
+
+=head1 DESCRIPTION
+
+Instances of this class represent properties of classes.  For every item
+mentioned in the 'has' or 'id_by' section of a class definition become Property
+objects.  
+
+=head1 INHERITANCE
+
+UR::Object::Property is a subclass of L<UR::Object>
+
+=head1 PROPERTY TYPES
+
+For this class definition:
+  class Some::Class {
+      has => [
+          other_id => { is => 'Text' },
+          other    => { is => 'Some::Other', id_by => 'foo_id' },
+          bar      => { via => 'other', to => 'bar' },
+          foos     => { is => 'Some::Foo', reverse_as => 'some', is_many => 1 },
+          uc_other_id => { calculate_from => 'other_id',
+                           calculate_perl => 'uc($other_id)' },
+      ],
+  };
+      
+Properties generally fall in to one of these categories:
+
+=over 4
+
+=item regular property
+
+A regular property of a class holds a single scalar.  In this case,
+'other_id' is a regular property.
+
+=item object accessor
+
+An object accessor property returns objects of some class.  The properties
+of this class must link in some way with all the ID properties of the remote
+class (the 'is' declaration).  'other' is an object accessor property.  This
+is how one-to-one relationships are implemented.
+
+=item via property
+
+When a class has some object accessor property, and it is helpful for an
+object to assumme the value of the remote class's properties, you can set 
+up a 'via' property.  In the example above, an object of this class 
+gets the value of its 'bar' property via the 'other' object it's linked
+to, from that object's 'bar' property.
+
+=item reverse as or is many property
+
+This is how one-to-many relationships are implemented.  In this case, 
+the Some::Foo class must have an object accessor property called 'some',
+and the 'foos' property will return a list of all the Some::Foo objects
+where their 'some' property would have returned that object.
+
+=item calculated property
+
+A calculated property doesn't store its data directly in the object, but 
+when its accessor is called, the calculation code is executed.
+
+=back
+
+=head1 PROPERTIES
+
+Each property has a method of the same name
+
+=head2 Direct Properties
+
+=over 4
+
+=item class_name => Text
+
+The name of the class this Property is attached to
+
+=item property_name => Text
+
+The name of the property.  The pair of class_name and property name are
+the ID properties of UR::Object::Property
+
+=item column_name => Text
+
+If the class is backed by a database table, then the column this property's 
+data comes from is stored here
+
+=item data_type => Text
+
+The type of data stored in this property.  Corresponds to the 'is' part of
+a class's property definition.
+
+=item data_length => Number
+
+The maximum size of data stored in this property
+
+=item default_value
+
+For is_optional properties, the default value given when an object is created
+and this property is not assigned a value.
+
+=item valid_values => ARRAY
+
+A listref of enumerated values this property may be set to
+
+=item doc => Text
+
+A place for documentation about this property
+
+=item is_id => Boolean
+
+Indicates whether this is an ID property of the class
+
+=item is_optional => Boolean
+
+Indicates whether this is property may have the value undef when the object
+is created
+
+=item is_transient => Boolean
+
+Indicates whether this is property is transient?
+
+=item is_constant => Boolean
+
+Indicates whether this property can be changed after the object is created.
+
+=item is_mutable => Boolean
+
+Indicates this property can be changed via its accessor.  Properties cannot
+be both constant and mutable
+
+=item is_volatile => Boolean
+
+Indicates this property can be changed by a mechanism other than its normal
+accessor method.  Signals are not emmitted even when it does change via
+its normal accessor method.
+
+=item is_class_wide => Boolean
+
+Indicates this property's storage is shared among all instances of the class.
+When the value is changed for one instance, that change is effective for all
+instances.
+
+=item is_delegated => Boolean
+
+Indicates that the value for this property is not stored in the object
+directly, but is delegated to another object or class.
+
+=item is_calculated => Boolean
+
+Indicates that the value for this property is not a part of the object'd
+data directly, but is calculated in some way.
+
+=item is_transactional => Boolean
+
+Indicates the changes to the value of this property is tracked by a Context's
+transaction and can be rolled back if necessary.
+
+=item is_abstract => Boolean
+
+Indicates this property exists in a base class, but must be overridden in
+a derived class.
+
+=item is_concrete => Boolean
+
+Antonym for is_abstract.  Properties cannot be both is_abstract and is_concrete,
+
+=item is_final => Boolean
+
+Indicates this property cannot be overridden in a derived class.
+
+=item is_deprecated => Boolean
+
+Indicates this property's use is deprecated.  It has no effect in the use
+of the property in any way, but is useful in documentation.
+
+=item implied_by => Text
+
+If this propery is created as a result of another property's existence,
+implied_by is the name of that other property.  This can happen in the
+case where an object accessor property is defined
+
+  has => [ 
+      foo => { is => 'Some::Other', id_by => 'foo_id' },
+  ],
+
+Here, the 'foo' property requires another property called 'foo_id', which
+is not explicitly declared.  In this case, the Property named foo_id will
+have its implied_by set to 'foo'.
+
+=item id_by => ARRAY
+
+In the case of an object accessor property, this is the list of properties in
+this class that link to the ID properties in the remote class.
+
+=item reverse_as => Text
+
+Defines the linking property name in the remote class in the case of an
+is_many relationship
+
+=item via => Text
+
+For a via-type property, indicates which object accessor to go through.
+
+=item to => Text
+
+For a via-type property, indicates the property name in the remote class to
+get its value from.  The default value is the same as property_name
+
+=item where => ARRAY
+
+Supplies additional filters for indirect properies.  For example:
+
+  foos => { is => 'Some::Foo', reverse_as => 'some', is_many => 1 },
+  blue_foos => { via => 'foos', where => [ color => 'blue' ] },
+
+Would create a property 'blue_foos' which returns only the related
+Some::Foo objects that have 'blue' color.
+
+=item calculate_from => ARRAY
+
+For calculated properties, this is a list of other property names the
+calculation is based on
+
+=item calculate_perl => Text
+
+For calculated properties, a string containing Perl code.  Any properties
+mentioned in calculate_from will exist in the code's scope at run time
+as scalars of the same name.
+
+=item class_meta => UR::Object::Type
+
+Returns the class metaobject of the class this property belongs to
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=item via_property_meta
+
+For via/to delegated properties, return the property meta in the same
+class this property delegates through
+
+=item to_property_meta
+
+For via/to delegated properties, return the property meta on the foreign
+class that this property delegates to
+
+=back
+
+=head1 SEE ALSO
+
+UR::Object::Type, UR::Object::Type::Initializer, UR::Object
+
+=cut

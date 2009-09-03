@@ -36,3 +36,15 @@ sub evaluate_subject_and_values {
 
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::BoolExpr::Template::PropertyComparison::Between - Perform a 'between' test
+
+=head1 DESCRIPTION
+
+Evaluates to true of the property's value is between the lower and upper bounds, inclusive.
+
+=cut

@@ -175,3 +175,65 @@ sub create {
 
 1;
 
+
+=pod
+
+=head1 NAME
+
+UR::Singleton - Abstract class for implementing singleton objects
+
+=head1 SYNOPSIS
+
+  package MyApp::SomeClass;
+  use UR;
+  class MyApp::SomeClass {
+      is => 'UR::Singleton',
+      has => [
+          foo => { is => 'Number' },
+      ]
+  };
+
+  $obj = MyApp::SomeClass->get();
+  $obj->foo(1);
+
+=head1 DESCRIPTION
+
+This class provides the infrastructure for singleton classes.  Singletons
+are classes of which there can only be one instance, and that instance's ID
+is the class name.
+
+If a class inherits from UR::Singleton, it overrides the default
+implementation of C<get()> and C<is_loaded()> in UR::Object with code that
+fabricates an appropriate object the first time it's needed.
+
+Singletons are most often used as one of the parent classes for data sources
+within a Namespace.  This makes it convienent to refer to them using only
+their name, as in a class definition.
+
+=head1 METHODS
+
+=over 4
+
+=item _singleton_object
+
+  $obj = Class::Name->_singleton_object;
+
+  $obj = $obj->_singleton_object;
+
+Returns the object instance whether it is called as a class or object method.
+
+=item _singleton_class_name
+
+  $class_name = Class::Name->_singleton_class_name;
+
+  $class_name = $obj->_singleton_class_name;
+
+Returns the class name whether it is called as a class or object method.
+
+=back
+
+=head1 SEE ALSO
+
+UR::Object
+
+=cut

@@ -150,3 +150,19 @@ $DB::single=1;
             
     
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Namespace::Viewer::SchemaBrowser::CgiApp - Viewer class for metadata via the browser namespace command
+
+=head1 DESCRIPTION
+
+This class implements the viewer behavior behind the metadata web browser.  
+
+=head1 SEE ALSO
+
+UR::Namespace::Command::Browser, 'ur browser --help'
+
+=cut

@@ -35,3 +35,17 @@ sub _update_widget_from_subject {
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Object::Reference::Viewer::DescriptionLineItem::Text - Viewer class for Reference objects
+
+=head1 DESCRIPTION
+
+This class is used by L<UR::Namespace::Command::Describe> to print detail
+about indirect properties.
+
+=cut
+
+
