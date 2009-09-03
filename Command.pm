@@ -9,6 +9,8 @@ use File::Basename;
 use Getopt::Long;
 use Term::ANSIColor;
 require Text::Wrap;
+
+# This is changed with "local" where used in some places
 $Text::Wrap::columns = 100;
 
 eval {
@@ -63,7 +65,7 @@ sub execute {
     # so this will get direct control when execute() is called. 
     my $self = shift;
 
-    # TODO: handle calls to SUPER::execute() from another execute().    
+    #TODO handle calls to SUPER::execute() from another execute().    
 
     # handle calls as a class method
     my $was_called_as_class_method = 0;
@@ -294,7 +296,7 @@ sub help_detail
 sub sub_command_sort_position 
 { 
     # override to do something besides alpha sorting by name
-    shift->command_name
+    return $_[0]->command_name_brief;
 }
 
 
@@ -430,8 +432,8 @@ sub resolve_class_and_params_for_argv
     my @argv = @_;
 
     if ($self->is_sub_command_delegator) {
-
-        if (my $class_for_sub_command = ($argv[0] ? $self->class_for_sub_command($argv[0]) : undef)) {
+        if ( $argv[0] and $argv[0] !~ /^\-/ 
+                and my $class_for_sub_command = $self->class_for_sub_command($argv[0]) ) {
             # delegate
             shift @argv;
             return $class_for_sub_command->resolve_class_and_params_for_argv(@argv);
@@ -505,7 +507,7 @@ sub resolve_class_and_params_for_argv
 
 
 
-    # TODO: when everything is converted to use bare_shell_argument_names, 
+    #TODO when everything is converted to use bare_shell_argument_names, 
     # this should throw an error if there are any @ARGV left.
     $params_hash->{" "} = [@ARGV];
 
@@ -537,8 +539,7 @@ sub resolve_class_and_params_for_argv
 # Methods which let the command auto-document itself.
 #
 
-sub help_usage_complete_text
-{
+sub help_usage_complete_text {
     my $self = shift;
 
     my $command_name = $self->command_name;
@@ -548,7 +549,11 @@ sub help_usage_complete_text
         # no execute implemented
         if ($self->is_sub_command_delegator) {
             # show the list of sub-commands
-            $text = "commands:\n" . $self->help_sub_commands;
+            $text = sprintf(
+                "Commands for %s\n%s",
+                Term::ANSIColor::colored($command_name, 'bold'),
+                $self->help_sub_commands,
+            );
         }
         else {
             # developer error
@@ -614,7 +619,7 @@ sub help_usage_command_pod
         # no execute implemented
         if ($self->is_sub_command_delegator) {
             # show the list of sub-commands
-            $pod = "commands:\n" . $self->help_sub_commands;
+            $pod = "Commands:\n" . $self->help_sub_commands;
         }
         else {
             # developer error
@@ -724,38 +729,51 @@ sub help_sub_commands
 {
     my $class = shift;
     my %params = @_;
-    my $command_name_method = ($params{brief} ? 'command_name_brief' : 'command_name');
+    my $command_name_method = 'command_name_brief';
+    #my $command_name_method = ($params{brief} ? 'command_name_brief' : 'command_name');
     
     my @sub_command_classes = $class->sub_command_classes;
     no warnings;
-    my @data =  
-        map {
+    local  $Text::Wrap::columns = 60;
+    my @data =
+    map {
+        my @rows = split("\n",Text::Wrap::wrap('', ' ', ucfirst $_->help_brief));
+        chomp @rows;
+        (
             [
-                color_command_name($_->$command_name_method),
-                Term::ANSIColor::colored($_->_shell_args_usage_string_abbreviated, 'cyan'),
-                Term::ANSIColor::colored(ucfirst($_->help_brief), 'blue'),
-            ];
-        }
-        sort {
-            ($a->sub_command_sort_position <=> $b->sub_command_sort_position)
-            || 
-            ($a->sub_command_sort_position cmp $b->sub_command_sort_position) 
-        }
-        grep { not $_->is_abstract }
-        @sub_command_classes
-    ;
-    
+            $_->$command_name_method,
+            $_->_shell_args_usage_string_abbreviated,
+            $rows[0],
+            ],
+            map { 
+                [ 
+                '',
+                ' ',
+                $rows[$_],
+                ]
+            } (1..$#rows)
+        );
+    } sort {
+        ($a->sub_command_sort_position <=> $b->sub_command_sort_position)
+        ||
+        ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
+    } 
+    @sub_command_classes;
+
+    $DB::single = 1;
     my @max_width_found = (0,0,0);
     for (@data) {
         for my $c (0..2) {
             $max_width_found[$c] = length($_->[$c]) if $max_width_found[$c] < length($_->[$c]);
         }
     }
+
+    my @colors = (qw/ red cyan blue /);
     my $text = '';
     for my $row (@data) {
         for my $c (0..2) {
             $text .= '  ';
-            $text .= $row->[$c];
+            $text .= Term::ANSIColor::colored($row->[$c], $colors[$c]),
             $text .= ' ';
             $text .= ' ' x ($max_width_found[$c]-length($row->[$c]));
         }
@@ -932,7 +950,7 @@ sub sub_command_dirs
     $module .= '.pm';
     my $path = $INC{$module};
     unless ($path) {
-        print Data::Dumper::Dumper("no $module in \%INC: ", \%INC);
+        print Dumper("no $module in \%INC: ", \%INC);
         return;
     }
     $path =~ s/.pm$//;
@@ -975,21 +993,26 @@ sub class_for_sub_command
     my $class = ref($self) || $self;
     my $sub_command = shift;
 
+    return if $sub_command =~ /^\-/;
+
     my $sub_class = join("", map { ucfirst($_) } split(/-/, $sub_command));
     $sub_class = $class . "::" . $sub_class;
 
-    eval "use $sub_class;";
-    if ($@) {
-        if ($@ =~ /^Can't locate .*\.pm in \@INC/) {
-            #die "Failed to find $sub_class! $class_for_sub_command.pm!\n$@";
-            return;
-        }
-        else {
-            my @msg = split("\n",$@);
-            pop @msg;
-            pop @msg;
-            $self->error_message("$sub_class failed to compile!:\n@msg\n\n");
-            return;
+    my $meta = UR::Object::Type->get($sub_class); # allow in memory classes
+    unless ( $meta ) {
+        eval "use $sub_class;";
+        if ($@) {
+            if ($@ =~ /^Can't locate .*\.pm in \@INC/) {
+                #die "Failed to find $sub_class! $class_for_sub_command.pm!\n$@";
+                return;
+            }
+            else {
+                my @msg = split("\n",$@);
+                pop @msg;
+                pop @msg;
+                $self->error_message("$sub_class failed to compile!:\n@msg\n\n");
+                return;
+            }
         }
     }
     elsif (my $isa = $sub_class->isa("Command")) {
@@ -1151,4 +1174,4 @@ sub system_inhibit_std_out_err {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 40022 2008-10-21 16:33:05Z abrummet $
+#$Id: Command.pm 41122 2008-11-18 20:50:23Z ebelter $
