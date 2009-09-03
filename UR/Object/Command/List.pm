@@ -10,7 +10,6 @@ require Term::ANSIColor;
 
 class UR::Object::Command::List {
     is => 'UR::Object::Command::FetchAndDo',
-    is_abstract => 1,
     has => [
     show => {
         is => 'Text',
@@ -354,4 +353,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 36518 2008-07-13 07:24:11Z ssmith $
+#$Id: List.pm 36559 2008-07-14 19:01:40Z jweible $
