@@ -740,6 +740,7 @@ sub join_pattern {
 sub _sync_database {
     my $self = shift;
     my %params = @_;
+$DB::single=1;
 
     unless (ref($self)) {
         if ($self->isa("UR::Singleton")) {
@@ -821,12 +822,18 @@ sub _sync_database {
     }
 
     my $sort_order = $self->sort_order;
-    $_ = uc foreach @$sort_order;  # Force all column-namey things to upper-case
+    foreach my $sort_column_name ( @$sort_order ) {
+        $sort_column_name = uc $sort_column_name;  # Force all column-namey things to upper-case
+        unless (exists $column_name_to_index_map{$sort_column_name}) {
+            Carp::croak("Column name '$sort_column_name' appears in the sort_order list, but not in the column_order list for data source ".$self->id);
+        }
+    }
     my $file_is_sorted = scalar(@$sort_order);
     my %column_sorts_numerically = map { $_->column_name => $_->is_numeric }
                                    values %column_name_to_property_meta;
     my $row_sort_sub = sub ($$) {
                            my $comparison;
+
                            foreach my $column_name ( @$sort_order ) {
                                my $i = $column_name_to_index_map{$column_name};
                                if ($column_sorts_numerically{$column_name}) {
