@@ -590,6 +590,10 @@ sub create_iterator_closure_for_rule {
                     $fh = undef;
                     $self->_invalidate_cache();
                  
+                    if ($monitor_start_time) {
+                        $sql_fh->printf("CSV: at EOF\nCSV: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
+                    }
+
                     return;
                 }
 
@@ -619,7 +623,6 @@ sub create_iterator_closure_for_rule {
                     if ($monitor_start_time) {
                         $sql_fh->printf("CSV: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
                     }
-
 
                     return;
                 
