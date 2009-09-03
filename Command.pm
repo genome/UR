@@ -570,7 +570,6 @@ sub help_sub_commands
     my %params = @_;
     my $command_name_method = ($params{brief} ? 'command_name_brief' : 'command_name');
     
-    $DB::single=1;
     my @sub_command_classes = $class->sub_command_classes;
     no warnings;
     my @data =  
