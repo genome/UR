@@ -1846,7 +1846,11 @@ sub _generate_template_data_for_loading {
     
     my $class_name = $rule_template->subject_class_name;
     my $class_meta = $class_name->get_class_object;
-    
+
+    if ($class_name =~ /ProcessingProfile::Assembly/) {
+        $DB::single = 1;
+    }   
+ 
     my $class_data = $self->_get_class_data_for_loading($class_meta);       
 
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
@@ -1918,42 +1922,38 @@ sub _generate_template_data_for_loading {
         @delegated_properties,    
         %outer_joins,
     );
-    
+    $DB::single = 1;
     for my $co ( $class_meta, @parent_class_objects ) {
-        my $table_name = $co->table_name;
-        next unless $table_name;
-
-        $first_table_name ||= $table_name;                
-
         my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
-        
         my @id_property_objects = $co->get_id_property_objects;
         my %id_properties = map { $_->property_name => 1 } @id_property_objects;
         my @id_column_names =
             map { $_->column_name }
             @id_property_objects;
-        
-        # cvsj pushes table properties here
-
-        if ($prev_table_name)
-        {
-            die "Database-level inheritance cannot be used with multi-value-id classes ($class_name)!" if @id_property_objects > 1;
-            
-            push @sql_joins,
-                $table_name =>
-                    {
-                        $id_property_objects[0]->column_name => { 
-                            link_table_name => $prev_table_name, 
-                            link_column_name => $prev_id_column_name 
-                        }
-                    };
-            delete $filters{ $id_property_objects[0]->property_name } if $pk_used;
+        my $table_name = $co->table_name;
+        if ($table_name) {
+            $first_table_name ||= $table_name;
+            if ($prev_table_name) {
+                die "Database-level inheritance cannot be used with multi-value-id classes ($class_name)!" if @id_property_objects > 1;
+                push @sql_joins,
+                    $table_name =>
+                        {
+                            $id_property_objects[0]->column_name => { 
+                                link_table_name => $prev_table_name, 
+                                link_column_name => $prev_id_column_name 
+                            }
+                        };
+                # Not sure why this was here before we moved the logic around.
+                # It seems that worst case on removing it is overly redundant queries.
+                # The worst case on keeping it is leaving a filter out, which we don't want.
+                #delete $filters{ $id_property_objects[0]->property_name } if $pk_used;
+            }
+            $prev_table_name = $table_name;
+            $prev_id_column_name = $id_property_objects[0]->column_name;
         }
-        # cvsj makes an array of eav props (empty)                
-        
-        for my $property_name (sort keys %filters)
-        {                
+
+        for my $property_name (sort keys %filters) {                
             my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);                
             next unless $property;
             
@@ -1964,6 +1964,10 @@ sub _generate_template_data_for_loading {
             $pk_used = 1 if $id_properties{ $property_name };
             
             if ($property->can("expr_sql")) {
+                unless ($table_name) {
+                    $self->warning_message("Property '$property_name' of class '$class_name' can 'expr_sql' but has no table!");
+                    next;
+                }
                 my $expr_sql = $property->expr_sql;
                 push @sql_filters, 
                     $table_name => 
@@ -1974,15 +1978,19 @@ sub _generate_template_data_for_loading {
                         };
                 next;
             }
-            
+
             if (my $column_name = $property->column_name) {
+                unless ($table_name) {
+                    $self->warning_message("Property '$property_name' of class '$class_name'  has column '$column_name' but has no table!");
+                    next;
+                }
                 # normal column: filter on it
                 push @sql_filters, 
                     $table_name => 
                         { 
                             $column_name => { operator => $operator, value_position => $value_position }
                         };
-            }                        
+            }
             elsif ($property->is_legacy_eav) {
                 die "Old GSC EAV can be handled with a via/to/where/is_mutable=1";
             }
@@ -1996,13 +2004,9 @@ sub _generate_template_data_for_loading {
                 $needs_further_boolexpr_evaluation_after_loading = 1;
             }
             else {
-                die "Query by $property_name is unsupported!";
+                next;
             }
         }
-        
-        $prev_table_name = $table_name;
-        $prev_id_column_name = $id_property_objects[0]->column_name;
-        
     } # end of inheritance loop
         
     if ( my @errors = keys(%filters) ) { 
