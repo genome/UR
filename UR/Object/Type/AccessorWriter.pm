@@ -233,11 +233,11 @@ sub mk_indirect_rw_accessor {
                 # which are not id properties.
                 
                 my $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
-                $adder = "add_" . $via_property_meta->singular_name;
                 unless ($via_property_meta) {
                     $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
                     die "no meta for $via in $class_name!?" unless $via_property_meta;
                 }
+                $adder = "add_" . $via_property_meta->singular_name;
                 my $r_class_name = $via_property_meta->data_type;
                 my @r_id_property_names = $r_class_name->get_class_object->id_property_names;
                 if (grep { $_ eq $to } @r_id_property_names) {
@@ -254,14 +254,14 @@ sub mk_indirect_rw_accessor {
                     #WAS > Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: property is via $via which is not set!");
                 }
                 elsif (@bridges > 1) {
-                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
+                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set!");
                 }
                 #print "updating $bridges[0] $to to @_\n";
                 return $bridges[0]->$to(@_);
             }
             elsif ($update_strategy eq 'delete-create') {
                 if (@bridges > 1) {
-                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple cases of $via found, via which the property is set!");
+                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set!");
                 }
                 else {
                     if (@bridges) {
@@ -882,7 +882,7 @@ sub initialize_direct_accessors {
             }
         }
     }    
-    
+
     for my $property_name (sort keys %{ $self->{has} }) {
         my $property_data = $self->{has}{$property_name};
         
