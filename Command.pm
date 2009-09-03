@@ -1225,5 +1225,101 @@ sub system_inhibit_std_out_err {
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 47134 2009-05-22 02:40:04Z ssmith $
+__END__
+
+=pod
+
+=head1 NAME
+
+Command - Base class for modules implementing the Command Pattern
+
+=head1 SYNOPSIS
+
+  use TopLevelNamespace;
+
+  class TopLevelNamespace::SomeObj::Command {
+    is => 'Command',
+    has => [
+        someobj => { is => 'TopLevelNamespace::SomeObj', id_by => 'some_obj_id' },
+        verbose => { is => 'Boolean', is_optional => 1 },
+    ],
+  };
+
+  sub execute {
+      my $self = shift;
+      if ($self->verbose) {
+          print "Working on id ",$self->some_obj_id,"\n";
+      }
+      my $result = $someobj->do_something();
+      if ($self->verbose) {
+          print "Result was $result\n";
+      }
+      return $result;
+  }
+
+  sub help_brief {
+      return 'Call do_something on a SomeObj instance';
+  }
+  sub help_synopsis {
+      return 'cmd --some_obj_id 123 --verbose';
+  }
+  sub help_detail {
+      return 'This command performs a FooBarBaz transform on a SomObj object instance by calling its do_something method.';
+  }
+
+  # Another part of the code
+  
+  my $cmd = TopLevelNamespace::SomeObj::Command->create(some_obj_id => $some_obj->id);
+  $cmd->execute();
+
+=head1 DESCRIPTION
+
+The Command module is a base class for creating other command modules
+implementing the Command Pattern.  These modules can be easily reused in
+applications or loaded and executed dynamicaly in a command-line program.
+
+Each Command subclass represents a reusable work unit.  The bulk of the
+module's code will likely be in the execute() method.  execute() will
+usually take only a single argument, an instance of the Command subclass.
+
+=head1 Command-line use
+
+Creating a top-level Command module called, say TopLevelNamespace::Command,
+and a script called tln_cmd that looks like:
+
+  #!/usr/bin/perl
+  use TopLevelNamespace;
+  TopLevelNamespace::Command->execute_with_shell_params_and_exit();
+
+gives you an instant command-line tool as an interface to the hierarchy of
+command modules at TopLevelNamespace::Command.  
+
+For example:
+
+  > tln_cmd foo bar --baz 1 --qux
+
+will create an instance of TopLevelNamespace::Command::Foo::Bar (if that
+class exists) with params baz => 1 and qux => 1, assumming qux is a boolean
+property, call execute() on it, and translate the return value from execute()
+into the appropriate notion of a shell return value, meaning that if
+execute() returns true in the Perl sense, then the script returns 0 - true in
+the shell sense.
+
+The infrastructure takes care of turning the command line parameters into
+parameters for create().  Params designated as is_optional are, of course,
+optional and non-optional parameters that are missing will generate an error.
+
+--help is an implicit param applicable to all Command modules.  It generates 
+some hopefully useful text based on the documentation in the class definition
+(the 'doc' attributes you can attach to a class and properties), and the
+strings returned by help_detail(), help_brief() and help_synopsis().
+
+=head1 TODO
+
+This documentation needs to be fleshed out more.  There's a lot of special 
+things you can do with Command modules that isn't mentioned here yet.
+
+=cut
+
+
+
