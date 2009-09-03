@@ -595,7 +595,7 @@ sub get {
 
     # This is here for bootstrapping reasons: we must be able to load class singletons
     # in order to have metadata for regular loading....
-    if ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton")) {
+    if ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value")) {
         my $normalized_rule = $rule->get_normalized_rule_equivalent;
         
         my @objects = $class->_load($normalized_rule);
