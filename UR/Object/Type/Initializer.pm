@@ -165,7 +165,11 @@ sub define {
     }
     
     my $self = $UR::Object::all_objects_loaded->{$meta_class_name}{$class_name};
-    Carp::confess("Re-defining class $class_name?  Found $meta_class_name with id '$class_name'") if $self;
+    if ($self) {
+        $DB::single = 1;
+        #Carp::cluck("Re-defining class $class_name?  Found $meta_class_name with id '$class_name'");
+        return $self;
+    }
 
     $self = $class->_make_minimal_class_from_normalized_class_description($desc);
     Carp::confess("Failed to define class $class_name!") unless $self;
