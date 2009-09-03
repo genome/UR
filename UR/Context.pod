@@ -202,7 +202,7 @@ the value 'bar', it can infer that the TestClass property C<baz> must
 have the value 'blah' in the current context.
 
   my $obj = TestClass->define(id => 1, foo => 'bar', baz=> 'blah');
-  my $rule = UR::BoolExpr->resolve_for_class_and_params('TestClass', foo => 'bar);
+  my $rule = UR::BoolExpr->resolve('TestClass', foo => 'bar);
   my $val = $context->infer_property_value_from_rule('baz', $rule);
   # val now is 'blah'
 

@@ -65,13 +65,13 @@ sub context {
 }
 
 sub define_boolexpr {
-    return UR::BoolExpr->resolve_for_class_and_params(@_);
+    return UR::BoolExpr->resolve(@_);
 }
 
 sub define_set {
     my $class = shift;
     $class = ref($class) || $class;
-    my $rule = UR::BoolExpr->resolve_for_class_and_params($class,@_);
+    my $rule = UR::BoolExpr->resolve($class,@_);
     my $set_class = $class . "::Set";
     return $set_class->get($rule->id);    
 }
@@ -91,7 +91,7 @@ sub create_iterator {
   
     unless (Scalar::Util::blessed($filter)) {
         #$filter = $class->define_boolexpr(@$filter)
-        $filter = UR::BoolExpr->resolve_for_class_and_params($class,@$filter)
+        $filter = UR::BoolExpr->resolve($class,@$filter)
     }
     
     my $iterator = UR::Object::Iterator->create_for_filter_rule($filter);
@@ -196,7 +196,7 @@ sub create {
     # #1 - The class specifies that we should call this other method (sub_classification_method_name)
     # to determine the correct subclass
     if (my $method_name = $class_meta->first_sub_classification_method_name) {
-        my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
         my $sub_class_name = $class->$method_name(@_);
         if (defined($sub_class_name) and ($sub_class_name ne $class)) {
             # delegate to the sub-class to create the object
@@ -215,13 +215,13 @@ sub create {
     # Extract the value of that property from the rule to determine the subclass create() should 
     # really be called on
     if ($class_meta->is_abstract) {
-        my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
 
         # Determine the correct subclass for this object
         # and delegate to that subclass.
         my $subclassify_by = $class_meta->subclassify_by;
         if ($subclassify_by) {
-            unless ($rule->specifies_value_for_property_name($subclassify_by)) {
+            unless ($rule->specifies_value_for($subclassify_by)) {
                 if ($class_meta->is_abstract) {
                     Carp::confess(
                         "Invalid parameters for $class create():"
@@ -230,13 +230,13 @@ sub create {
                     );               
                 }
                 else {
-                    ($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, $subclassify_by => $class, @_);
-                    unless ($rule and $rule->specifies_value_for_property_name($subclassify_by)) {
+                    ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $subclassify_by => $class, @_);
+                    unless ($rule and $rule->specifies_value_for($subclassify_by)) {
                         die "Error setting $subclassify_by to $class!";
                     }
                 } 
             }           
-            my $sub_class_name = $rule->specified_value_for_property_name($subclassify_by);
+            my $sub_class_name = $rule->value_for($subclassify_by);
             unless ($sub_class_name) {
                 die "no sub class found?!";
             }
@@ -276,7 +276,7 @@ sub create {
     }
 
     # Normal case... just make a rule out of the passed-in params
-    my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+    my $rule = UR::BoolExpr->resolve_normalized($class, @_);
 
     # Process parameters.  We do this here instead of 
     # waiting for create_object to do it so that we can ensure that
@@ -588,7 +588,7 @@ sub define {
     my $class = shift;
     my $class_meta = $class->__meta__;    
     if (my $method_name = $class_meta->sub_classification_method_name) {
-        my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
         my $sub_class_name = $class->$method_name(@_);
         if ($sub_class_name ne $class) {
             # delegate to the sub-class to create the object
@@ -638,7 +638,7 @@ sub get {
         }
     }
     
-    my ($rule, @extra) = UR::BoolExpr->resolve_for_class_and_params($class,@_);        
+    my ($rule, @extra) = UR::BoolExpr->resolve($class,@_);        
     
     if (@extra) {
         # remove this and have the developer go to the datasource 
@@ -653,7 +653,7 @@ sub get {
     # This is here for bootstrapping reasons: we must be able to load class singletons
     # in order to have metadata for regular loading....
     if (!$rule->has_meta_options and ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value"))) {
-        my $normalized_rule = $rule->get_normalized_rule_equivalent;
+        my $normalized_rule = $rule->normalize;
         
         my @objects = $class->_load($normalized_rule);
         

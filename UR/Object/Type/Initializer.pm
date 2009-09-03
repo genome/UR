@@ -1341,7 +1341,7 @@ sub _complete_class_meta_object_definitions {
     }
 
     if ($constraints) {
-        my $property_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property','class_name','property_name');
+        my $property_rule_template = UR::BoolExpr::Template->resolve('UR::Object::Property','class_name','property_name');
 
         my $n = 1;
         for my $unique_set (sort { $a->{sql} cmp $b->{sql} } @$constraints) {

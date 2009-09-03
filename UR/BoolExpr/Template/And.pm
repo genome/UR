@@ -2,7 +2,7 @@ package UR::BoolExpr::Template::And;
 
 use warnings;
 use strict;
-our $VERSION = '0.1';
+our $VERSION = $UR::VERSION;;
 
 require UR;
 
@@ -51,7 +51,7 @@ sub get_underlying_rule_templates {
         } @underlying_keys;
 }
 
-sub specifies_value_for_property_name {
+sub specifies_value_for {
     my ($self, $property_name) = @_;
     Carp::confess() if not defined $property_name;
     my @underlying_templates = $self->get_underlying_rule_templates();        

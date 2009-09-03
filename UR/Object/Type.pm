@@ -100,7 +100,7 @@ sub data_source {
 }
 
 sub ancestry_class_metas {
-    #my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params(__PACKAGE__,'id');
+    #my $rule_template = UR::BoolExpr::Template->resolve(__PACKAGE__,'id');
 
     # Can't use the speed optimization of getting a template here.  Using the Context to get 
     # objects here causes endless recursion during bootstrapping
@@ -115,7 +115,7 @@ sub property_meta_for_name {
     my ($self, $property_name) = @_;
     my $property;
 
-    my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'class_name', 'property_name');
+    my $rule_template = UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name');
 
     for my $class ($self->class_name, $self->ancestry_class_names) {
         #$property = UR::Object::Property->get(class_name => $class, property_name => $property_name);
@@ -143,11 +143,11 @@ sub direct_id_token_metas
 sub direct_id_property_metas
 {
     my $self = _object(shift);
-    my $get_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Property', 'class_name', 'attribute_name');
+    my $template = UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'attribute_name');
     my @id_property_objects =
         #map { UR::Object::Property->get(class_name => $_->class_name, attribute_name => $_->attribute_name) }
         map { $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $_) }
-        map { $get_rule_template->get_rule_for_values($_->class_name, $_->attribute_name) }
+        map { $template->get_rule_for_values($_->class_name, $_->attribute_name) }
         $self->direct_id_token_metas;
     if (@id_property_objects == 0) {
         @id_property_objects = $self->property_meta_for_name("id");
@@ -166,7 +166,7 @@ sub parent_class_names {
 sub id_property_names {    
     my $self = _object(shift);
     my @id_by;
-    #my $template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Type', 'class_name');
+    #my $template = UR::BoolExpr::Template->resolve('UR::Object::Type', 'class_name');
 
     unless ($self->{id_by} and @id_by = @{ $self->{id_by} }) {
         foreach my $parent ( @{ $self->{'is'} } ) {
@@ -295,7 +295,7 @@ sub _resolve_meta_class_name_for_class_name {
 
 sub _resolve_meta_class_name {
     my $class = shift;
-    my ($rule,%extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+    my ($rule,%extra) = UR::BoolExpr->resolve_normalized($class, @_);
     my %params = $rule->params_list;
     my $class_name = $params{class_name};
     return unless $class_name;
@@ -1124,7 +1124,7 @@ sub all_property_type_names {
         return @{ $self->{_all_property_type_names} };
     }
     
-    #my $rule_template = UR::BoolExpr::Template->resolve_for_class_and_params('UR::Object::Type', 'id');
+    #my $rule_template = UR::BoolExpr::Template->resolve('UR::Object::Type', 'id');
 
     my $all_property_type_names = $self->{_all_property_type_names} = [];
     for my $class_name ($self->class_name, $self->ancestry_class_names) {

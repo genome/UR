@@ -52,7 +52,7 @@ UR::Object::Type->define(
     ]
 );
 
-our $VERSION = '0.1';
+our $VERSION = $UR::VERSION;;
 
 # Borrow from the util package.
 # This will go away with refactoring.
@@ -101,7 +101,7 @@ sub is_unique {
         $normalized_self = $self->get_normalized_template_equivalent($self);
     }
 
-    my $op = $normalized_self->operator_for_property_name('id');
+    my $op = $normalized_self->operator_for('id');
     if (defined($op) and ($op eq '' or $op eq '=')) {
         return $self->{is_unique} = 1;
     }
@@ -215,7 +215,7 @@ sub value_position_for_property_name {
     }
 }
 
-sub operator_for_property_name {
+sub operator_for {
     if (exists $_[0]{_property_meta_hash}{$_[1]}) {
         return $_[0]{_property_meta_hash}{$_[1]}{operator} || '=';
     } else {
@@ -269,9 +269,9 @@ sub get_by_subject_class_name_logic_type_and_logic_detail {
 }
 
 
-# The analogue of resolve_for_class_and_params in UR::BoolExpr.  @params_list is a list if
+# The analogue of resolve in UR::BoolExpr.  @params_list is a list if
 # strings containing properties and operators separated by a space.  For ex: "some_param ="
-sub resolve_for_class_and_params {
+sub resolve {
     my($class,$subject_class_name, @params_list) = @_;
 
     return $class->get_by_subject_class_name_logic_type_and_logic_detail($subject_class_name, "And", join(',',@params_list));

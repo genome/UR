@@ -146,7 +146,7 @@ sub create {
 sub define {
     my $class = shift;
     #my ($rule, %extra) = $class->define_boolexpr(@_);    
-    my ($rule, %extra) = UR::BoolExpr->resolve_for_class_and_params($class, @_);
+    my ($rule, %extra) = UR::BoolExpr->resolve($class, @_);
 
     # see above for details on why action_on_set has issues
     my $action_on_set = delete $extra{action_on_set};
@@ -156,7 +156,7 @@ sub define {
         );
     }   
     
-    my $self = $class->SUPER::define($rule->get_normalized_rule_equivalent);
+    my $self = $class->SUPER::define($rule->normalize);
     unless ($self) {
         print STDERR "failed to create on @_\n";
         return;

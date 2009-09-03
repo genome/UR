@@ -509,7 +509,7 @@ sub _get_sequence_name_for_table_and_column {
 sub create_iterator_closure_for_rule {
     my ($self, $rule) = @_; 
 
-    my ($rule_template, @values) = $rule->get_rule_template_and_values();    
+    my ($rule_template, @values) = $rule->template_and_values();    
     my $template_data = $self->_get_template_data_for_loading($rule_template); 
     
     #
@@ -2082,7 +2082,7 @@ sub _generate_template_data_for_loading {
                   
             my ($operator, $value_position); 
             if (exists $filters{$property_name}) {
-                $operator       = $rule_template->operator_for_property_name($property_name);
+                $operator       = $rule_template->operator_for($property_name);
                 $value_position = $rule_template->value_position_for_property_name($property_name);
                 unless (defined $value_position) {
                     die "No value position found in rule template for filter property $property_name?!"
@@ -2509,7 +2509,7 @@ sub _generate_template_data_for_loading {
 
         my $value_position = $rule_template->value_position_for_property_name($property_name);
         if (defined $value_position) {
-            my $operator       = $rule_template->operator_for_property_name($property_name);
+            my $operator       = $rule_template->operator_for($property_name);
             
             unless ($alias_for_property_value) {
                 die "No alias found for $property_name?!";

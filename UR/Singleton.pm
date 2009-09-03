@@ -56,7 +56,7 @@ sub _init_subclass {
 sub _abstract_load {
     my $class = shift;
     my $bx = $class->define_boolexpr(@_);
-    my $id = $bx->specified_value_for_id;
+    my $id = $bx->value_for_id;
     unless (defined $id) {
         use Data::Dumper;
         my $params = { $bx->params_list };
@@ -157,7 +157,7 @@ sub _resolve_id_for_subclass_name {
 sub create {
     my $class = shift;
     my $bx = $class->define_boolexpr(@_);
-    my $id = $bx->specified_value_for_id;
+    my $id = $bx->value_for_id;
     unless (defined $id) {
         use Data::Dumper;
         my $params = { $bx->params_list };

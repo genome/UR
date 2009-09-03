@@ -14,7 +14,7 @@ package UR::BoolExpr::Template::PropertyComparison;
 
 use warnings;
 use strict;
-our $VERSION = '0.1';
+our $VERSION = $UR::VERSION;;
 
 # Define the class metadata.
 
@@ -84,7 +84,7 @@ sub resolve_subclass_for_comparison_operator {
     my $class = shift;
     my $comparison_operator = shift;
 
-    # Remove any escape sequence that may have been put in at UR::BoolExpr::resolve_for_class_and_params()
+    # Remove any escape sequence that may have been put in at UR::BoolExpr::resolve()
     $comparison_operator =~ s/-.+$// if $comparison_operator;
     
     my $subclass_name;

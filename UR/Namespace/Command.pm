@@ -46,7 +46,7 @@ sub create
     }        
     
     #my ($rule,%extra) = $class->define_boolexpr(@_);    
-    my ($rule,%extra) = UR::BoolExpr->resolve_for_class_and_params($class,@_);    
+    my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);    
     
     return $class->SUPER::create(
         lib_path => $lib_path,

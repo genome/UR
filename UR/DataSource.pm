@@ -290,7 +290,7 @@ sub _generate_template_data_for_loading {
             my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);                
             next unless $property;
             
-            my $operator       = $rule_template->operator_for_property_name($property_name);
+            my $operator       = $rule_template->operator_for($property_name);
             my $value_position = $rule_template->value_position_for_property_name($property_name);
             
             delete $filters{$property_name};
@@ -502,7 +502,7 @@ sub _generate_template_data_for_loading {
             }
         }
 
-        my $operator       = $rule_template->operator_for_property_name($property_name);
+        my $operator       = $rule_template->operator_for($property_name);
         my $value_position = $rule_template->value_position_for_property_name($property_name);                
         #push @sql_filters, 
         #    $final_table_name_with_alias => { 
@@ -518,7 +518,7 @@ sub _generate_template_data_for_loading {
     
     my $rule_template_specifies_value_for_subtype;
     if ($sub_typing_property) {
-        $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for_property_name($sub_typing_property)
+        $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for($sub_typing_property)
     }
 
     my $per_object_in_resultset_loading_detail = $self->_generate_loading_templates_arrayref(\@all_properties);
@@ -534,7 +534,7 @@ sub _generate_template_data_for_loading {
         rule_template_without_recursion_desc        => $rule_template_without_recursion_desc,
         rule_template_id_without_recursion_desc     => $rule_template_without_recursion_desc->id,
         rule_matches_all                            => $rule_template->matches_all,
-        rule_specifies_id                           => ($rule_template->specifies_value_for_property_name('id') || undef),
+        rule_specifies_id                           => ($rule_template->specifies_value_for('id') || undef),
         rule_template_is_id_only                    => $rule_template->is_id_only,
         rule_template_specifies_value_for_subtype   => $rule_template_specifies_value_for_subtype,
         

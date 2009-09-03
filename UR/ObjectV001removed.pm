@@ -4,15 +4,15 @@ package UR::Object;
 
 =head1 NAME
 
-UR::ObjectV002 - compatability layer for UR version 0.02
+UR::ObjectV001removed - restores changes removed in UR version 0.01 
 
 =head1 SYNOPSIS
 
-use UR::ObjectV002
+use UR::ObjectV001removed
 
 =head1 DESCRIPTION
 
-Extends the UR::Object API to be compatible with version 0.01 across the application.
+Extends the UR::Object API have methods removed in the 0.01 release. 
 
 If you upgrade UR, but depend on old APIs, use this module.
 
@@ -60,7 +60,7 @@ sub load {
          $class = ref $class;
     }
 
-    my ($rule, @extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class,@_);        
+    my ($rule, @extra) = UR::BoolExpr->resolve_normalized($class,@_);        
     
     if (@extra) {
         if (scalar @extra == 2 and $extra[0] eq "sql") {
@@ -112,4 +112,7 @@ sub _is_loaded {
     my ($class,$rule) = @_;
     return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
 }
+
+# as we remove more logic from the default API, add extensions here.
+use UR::ObjectV04removed;
 

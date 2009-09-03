@@ -236,7 +236,7 @@ sub _get_joins {
                 }            
                 my $join = pop @joins;
                 #my $where_rule = $join->{foreign_class}->define_boolexpr(@$where);                
-                my $where_rule = UR::BoolExpr->resolve_for_class_and_params($join->{foreign_class}, @$where);                
+                my $where_rule = UR::BoolExpr->resolve($join->{foreign_class}, @$where);                
                 my $id = $join->{id};
                 $id .= ' ' . $where_rule->id;
                 push @joins, { %$join, id => $id, where => $where };
@@ -266,7 +266,7 @@ sub _get_joins {
                 my $id = $source_class . '::' . $property_name;
                 if ($where) {
                     #my $where_rule = $foreign_class->define_boolexpr(@$where);
-                    my $where_rule = UR::BoolExpr->resolve_for_class_and_params($foreign_class, @$where);
+                    my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
                     $id .= ' ' . $where_rule->id;
                 }
                 if (my $id_by = $self->id_by) { 

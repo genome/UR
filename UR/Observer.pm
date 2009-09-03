@@ -22,7 +22,7 @@ UR::Object::Type->define(
 sub create {
     my $class = shift;
     #my ($rule,%extra) = $class->define_boolexpr(@_);
-    my ($rule,%extra) = UR::BoolExpr->resolve_for_class_and_params($class,@_);
+    my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);
     my $callback = delete $extra{callback};
     if (%extra) {
         die("Odd params!?" . Data::Dumper::Dumper(\%extra));

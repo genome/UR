@@ -137,7 +137,7 @@ sub get {
     } # end foreach @refs
 
     # We may have created more than was actually asked for
-    my $rule = UR::BoolExpr->resolve_for_class_and_params($class,%params);
+    my $rule = UR::BoolExpr->resolve($class,%params);
     $class->context_return(grep { $rule->evaluate($_) } @defined_objects);
 }
 

@@ -678,7 +678,7 @@ sub mk_object_set_accessors {
                 $get_params{$link->property_name}  = $obj->$my_property_name;
             }
             my $tmp_rule = $r_class_name->define_boolexpr(%get_params);
-            $rule_template = $tmp_rule->get_rule_template;
+            $rule_template = $tmp_rule->template;
             unless ($rule_template) {
                 die "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
             }

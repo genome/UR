@@ -71,7 +71,7 @@ UR::Object::Iterator - API for iterating through objects matching a rule
 
 =head1 SYNOPSIS
 
-  my $rule = UR::BoolExpr->resolve_for_class_and_params('Some::Class', foo => 1);
+  my $rule = UR::BoolExpr->resolve('Some::Class', foo => 1);
   my $iter = UR::Object::Iterator->create_for_filter_rule($rule);
   while (my $obj = $iter->next()) {
       print "Got an object: ",$obj->id,"\n";

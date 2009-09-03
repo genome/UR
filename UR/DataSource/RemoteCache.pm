@@ -193,7 +193,7 @@ sub _get_template_data_for_loading {
         my $rule_template_specifies_value_for_subtype;
         my $sub_typing_property = $class_data->{'sub_typing_property'};
         if ($sub_typing_property) {
-            $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for_property_name($sub_typing_property)
+            $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for($sub_typing_property)
         }
 
         my @property_names = $class_name->__meta__->all_property_names;
@@ -218,7 +218,7 @@ sub _get_template_data_for_loading {
             rule_template_without_recursion_desc        => $rule_template_without_recursion_desc,
             rule_template_id_without_recursion_desc     => $rule_template_without_recursion_desc->id,
             rule_matches_all                            => $rule_template->matches_all,
-            rule_specifies_id                           => ($rule_template->specifies_value_for_property_name('id') || undef),
+            rule_specifies_id                           => ($rule_template->specifies_value_for('id') || undef),
             rule_template_is_id_only                    => $rule_template->is_id_only,
             rule_template_specifies_value_for_subtype   => $rule_template_specifies_value_for_subtype,
 
@@ -244,7 +244,7 @@ sub create_iterator_closure_for_rule {
 
     # TODO Also, this is getting objects back, but is now expected to return an array of values.
     # Switch to sending a list of properties, getting a list of value arrays.
-    my $loading_data = $self->_get_template_data_for_loading($rule->get_rule_template);
+    my $loading_data = $self->_get_template_data_for_loading($rule->template);
     my @names = @{ $loading_data->{property_names_in_resultset_order} };
 
     my $iterator = sub {

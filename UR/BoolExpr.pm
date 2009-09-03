@@ -5,11 +5,10 @@ use strict;
 use Scalar::Util qw(blessed);
 require UR;
 
-use overload ('""' => 'desc');
+our $VERSION = $UR::VERSION;;
 
-our $VERSION = '0.1';
-
-# All of the meta-data is not in the meta class yet.
+# readable stringification
+use overload ('""' => '__display_name__');
 
 UR::Object::Type->define(
     class_name => 'UR::BoolExpr',
@@ -46,8 +45,9 @@ sub UR::BoolExpr::Type::resolve_ordered_values_from_composite_id {
      return (substr($id,0,$pos), substr($id,$pos+1));
 }
 
+# override the UR/system display name
 # this is used in stringification overload
-sub desc {
+sub __display_name__ {
     my $self = shift;
     my %b = $self->params_list;
     my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Dump;
@@ -58,30 +58,13 @@ sub desc {
     return __PACKAGE__ . '=(' . $self->subject_class_name . ':' . $s . ')';
 }
 
-# Legacy API
-
-*get_rule_template = \&template;
-*rule_template = \&template;
-*template_id = \&template_id;
-*get_rule_template_and_values = \&template_and_values;
-*get_template_and_values = \&template_and_values;
-*get_values = \&values;
-*get_underlying_rules = \&underlying_rules;
-*specifies_value_for_property_name = \&specifies_value_for;
-*specified_operator_for_property_name = \&operator_for;
-*operator_for_property_name = \&operator_for;
-*specified_value_for_id = \&value_for_id;
-*specified_value_for_position = \&value_for_position;
-*specified_value_for_property_name = \&value_for;
-*get_normalized_rule_equivalent = \&normalize;
-
 # The primary function: evaluate a subject object as matching the rule or not.
 
 sub evaluate {
     my $self = shift;
     my $subject = shift;
-    my $template = $self->get_rule_template;
-    my @values = $self->get_values;
+    my $template = $self->template;
+    my @values = $self->values;
     return $template->evaluate_subject_and_values($subject,@values);
 }
 
@@ -106,16 +89,16 @@ sub values {
 
 sub value_for_id {
     my $self = shift;
-    my $t = $self->get_rule_template;
+    my $t = $self->template;
     my $position = $t->id_position;
     return unless defined $position;
-    return $self->specified_value_for_position($position);
+    return $self->value_for_position($position);
 }
 
 sub specifies_value_for {
     my $self = shift;
-    my $rule_template = $self->get_rule_template;
-    return $rule_template->specifies_value_for_property_name(@_);
+    my $rule_template = $self->template;
+    return $rule_template->specifies_value_for(@_);
 }
 
 sub value_for {
@@ -129,7 +112,7 @@ sub value_for {
     } else {
         # No value found under that name... try decomposing the id 
         return if $property_name eq 'id';
-        my $id_value = $self->specified_value_for_property_name('id');
+        my $id_value = $self->value_for('id');
         my $class_meta = $self->subject_class_name->__meta__();
         my @id_property_values = $class_meta->get_composite_id_decomposer->($id_value);
         
@@ -148,27 +131,27 @@ sub value_for {
 
 sub value_for_position {
     my ($self, $pos) = @_;
-    return ($self->get_values)[$pos];    
+    return ($self->values)[$pos];    
 }
 
 sub operator_for {
     my $self = shift;
-    my $t = $self->get_rule_template;
-    return $t->operator_for_property_name(@_);
+    my $t = $self->template;
+    return $t->operator_for(@_);
 }
 
 sub underlying_rules { 
     my $self = shift;    
-    my @values = $self->get_values;    
-    return $self->get_rule_template->get_underlying_rules_for_values(@values);
+    my @values = $self->values;    
+    return $self->template->get_underlying_rules_for_values(@values);
 }
 
 # De-compose the rule back into its original form.
 
 sub params_list {
-    # This is the reverse of the bulk of resolve_for_class_and_params.
+    # This is the reverse of the bulk of resolve.
     # It returns the params in list form, directly coercable into a hash if necessary.
-    # $r = UR::BoolExpr->resolve_for_class_and_params($c1,@p1);
+    # $r = UR::BoolExpr->resolve($c1,@p1);
     # ($c2, @p2) = ($r->subject_class_name, $r->params_list);
     
     my $self = shift;
@@ -176,10 +159,10 @@ sub params_list {
     
     # Get the values
     # Add a key for each underlying rule
-    my $rule_template = $self->get_rule_template;
+    my $rule_template = $self->template;
     my @keys_sorted = $rule_template->_underlying_keys;
     my @constant_values_sorted = $rule_template->_constant_values;
-    my @values_sorted = $self->get_values;    
+    my @values_sorted = $self->values;    
     if (my $non_ur_object_refs = $self->{non_ur_object_refs}) {
         my $n = 0;
         for my $key (@keys_sorted) {
@@ -229,7 +212,7 @@ sub params_list {
 
 sub add_filter {
     my $self = shift;
-    return __PACKAGE__->resolve_for_class_and_params($self->subject_class_name, $self->params_list, @_);
+    return __PACKAGE__->resolve($self->subject_class_name, $self->params_list, @_);
 }
 
 # FIXME this method seems misnamed.... it doesn't remove a filter on a rule, it returns 
@@ -247,12 +230,12 @@ sub remove_filter {
         my $value = $params_list[$n+1];
         push @new_params_list, $key, $value;
     }
-    return __PACKAGE__->resolve_for_class_and_params($self->subject_class_name, @new_params_list);
+    return __PACKAGE__->resolve($self->subject_class_name, @new_params_list);
 }
 
 sub sub_classify {
     my ($self,$subclass_name) = @_;
-    my ($t,@v) = $self->get_rule_template_and_values();
+    my ($t,@v) = $self->template_and_values();
     return $t->sub_classify($subclass_name)->get_rule_for_values(@v);
 }
 
@@ -271,11 +254,10 @@ sub get {
     return $UR::Object::rules->{$rule_id};
 }
 
-
-sub resolve_normalized_rule_for_class_and_params {
+sub resolve_normalized {
     my $class = shift;
-    my ($unnormalized_rule, @extra) = $class->resolve_for_class_and_params(@_);
-    my $normalized_rule = $unnormalized_rule->get_normalized_rule_equivalent();
+    my ($unnormalized_rule, @extra) = $class->resolve(@_);
+    my $normalized_rule = $unnormalized_rule->normalize();
     return if !defined(wantarray);
     return ($normalized_rule,@extra) if wantarray;
     if (@extra) {
@@ -293,7 +275,7 @@ sub resolve_for_template_id_and_values {
 }
 
 our $resolve_depth;
-sub resolve_for_class_and_params {
+sub resolve {
     # Handle the case in which we've already processed the 
     # params into a rule.
     $resolve_depth++;
@@ -545,13 +527,13 @@ sub resolve_for_class_and_params {
 sub normalize {
     my $self = shift;
     
-    my $rule_template = $self->get_rule_template;
+    my $rule_template = $self->template;
     
     if ($rule_template->{is_normalized}) {
         return $self;
     }
     
-    my @unnormalized_values = $self->get_values();
+    my @unnormalized_values = $self->values();
     
     return $rule_template->get_normalized_rule_for_values(@unnormalized_values);
 }
@@ -564,7 +546,7 @@ sub legacy_params_hash {
     return { @$params_array } if $params_array;
     
     # Make one by starting with the one on the rule template
-    my $rule_template = $self->get_rule_template;
+    my $rule_template = $self->template;
     my $params = { %{$rule_template->legacy_params_hash}, $self->params_list };
     
     # If the template has a _param_key, fill it in.
@@ -578,7 +560,7 @@ sub legacy_params_hash {
     return $params;
 }
 
-sub create_from_filter_string {
+sub resolve_for_string {
     my ($self, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
     my ($property, $op, $value);
@@ -605,15 +587,10 @@ sub create_from_filter_string {
 
     use warnings;
     
-    return __PACKAGE__->create_from_filters($subject_class_name, \@filters, \@hints, \@order, \@page);
+    return __PACKAGE__->_resolve_from_filter_array($subject_class_name, \@filters, \@hints, \@order, \@page);
 }
 
-sub create_from_command_line_format_filters {
-    __PACKAGE__->warning_message("Deprecated, please use 'create_from_filters'.  API is the same.  Continuing...");
-    return create_from_filters(@_);
-}
-
-sub create_from_filters {
+sub _resolve_from_filter_array {
     my $class = shift;
     
     my $subject_class_name = shift;
@@ -719,7 +696,7 @@ sub create_from_filters {
         for my $key (@keys) {
             $p{$key} = shift @values;
         }
-        return $class->resolve_for_class_and_params(
+        return $class->resolve(
             $subject_class_name, 
             %p, 
             ($usage_hints   ? (-hints   => $usage_hints) : () ),
@@ -728,7 +705,7 @@ sub create_from_filters {
         ); 
     }
     else {
-        return UR::BoolExpr->create_from_subject_class_name_keys_and_values(
+        return UR::BoolExpr->_resolve_from_subject_class_name_keys_and_values(
             subject_class_name => $subject_class_name,
             keys => \@keys,
             values=> \@values,
@@ -737,15 +714,15 @@ sub create_from_filters {
     
 }
 
-sub create_from_subject_class_name_keys_and_values {
+sub _resolve_from_subject_class_name_keys_and_values {
     my $class = shift;
     
     my %params = @_;
-    
     my $subject_class_name = $params{subject_class_name};
     my @values          = @{ $params{values} || [] };
     my @constant_values = @{ $params{constant_values} || [] };
     my @keys            = @{ $params{keys} || [] };
+    die "unexpected params: " . Data::Dumper::Dumper(\%params) if %params;
 
     my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
     my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);
@@ -757,50 +734,62 @@ sub create_from_subject_class_name_keys_and_values {
 
     $rule->{values} = \@values;
 
-    #if (@non_ur_object_refs) {
-    #    $rule->{non_ur_object_refs} = { @non_ur_object_refs };
-    #}
     return $rule;
 }
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::BoolExpr - a "where clause" for objects 
 
 =head1 SYNOPSIS
     
-    my $r = GSC::Clone->define_boolexpr(
-        "status" => "active",
-        "chromosome" => [2,4,7],
-        "clone_name like" => "Foo%",
-        "clone_size between" => [100000,200000],
-    );
-    
-    my $o = GSC::Clone->create(
-        status => "active", 
-        chromosome => 4, 
-        clone_name => "FooBar",
-        clone_size => 100500
+    my $o = Acme::Employee->create(
+        ssn => '123-45-6789',
+        name => 'Pat Jones',
+        status => 'active', 
+        start_date => UR::Time->now,
+        payroll_category => 'hourly',
     );    
         
-    $r->specifies_value_for_property_name("chromosome") # true
+    my $bx = Acme::Employee->define_boolexpr(
+        payroll_category => 'hourly',
+        status => ['active','terminated'],
+        'name like' => '%Jones',
+        'ssn matches' => '\d{3}-\d{2}-\d{4}',
+        'start_date between' => ['2009-01-01','2009-02-01'],
+    );
     
-    $r->specified_value_for_property_name("chromosome") # 4
+    $bx->evaluate($o); # true 
+    
+    $bx->specifies_value_for('payroll_category') # true 
+    
+    $bx->value_for('payroll_cagtegory') # 'hourly'
         
-    $r->evaluate($o); # true
-    
-    $o->chromosome(11);
-    $r->evaluate($o); # false
-    
-    
+    $o->payroll_category('salary');
+    $bx->evaluate($o); # false
+
+    # these could take either a boolean expression, or a list of params
+    # from which it will generate one on-the-fly
+    my $set     = Acme::Employee->define_set($bx);  # same as listing all of the params
+    my @matches = Acme::Employee->get($bx);         # same as above, but returns the members 
+       
+
 =head1 DESCRIPTION
 
-Rule objects are used internally by the UR API to define data sets.  They 
-have a 1:1 correspondence within the WHERE clause in an SQL statement.
+A UR::BoolExpr object captures a set of match criteria for some class of object.
 
-The entire rule description is the identity of the rule.  They are not
-created, just gotten from the infinite set of all possible rules using the
-resolve_normalized_rule_for_class_and_params() class method (flyweight 
-constructor.)
+Calls to get(), create(), and define_set() all use this internally to objectify
+their paramters.  If given a boolean expression object directly they will use it.
+Otherwise they will construct one from the parameters given.
+
+They have a 1:1 correspondence within the WHERE clause in an SQL statement where
+RDBMS persistance is used.  They also imply the FROM clause in these cases,
+since the query properties control which joins must be included to return
+the matching object set.
 
 =head1 REFLECTION
 
@@ -860,28 +849,12 @@ For example, the rule GSC::Clone name=x,chromosome>y:
     and the key-op pairs in sorted order: "chromosome>,name="
 - the value_id embeds the x,y values in a special format
 
-=head1 PROPERTIES
-
-=over 4
-
-=item
-
-=back
-
-=head1 GENERAL METHODS
-
-=over 4
-
-=item 
-
-=back
-
 =head1 EXAMPLES
 
 
 my $bool = $x->evaluate($obj);
 
-my $t = GSC::Clone->get_rule_template_for_params(
+my $t = GSC::Clone->template_for_params(
     "status =",
     "chromosome []",
     "clone_name like",
@@ -897,27 +870,23 @@ my @results = $t->get_matching_objects(
 
 my $r = $t->get_rule($v1,$v2,$v3);
 
-my $t = $r->get_rule_template;
+my $t = $r->template;
 
 my @results = $t->get_matching_objects($v1,$v2,$v3);
 my @results = $r->get_matching_objects();
 
-@r = $r->get_underlying_rules();
+@r = $r->underlying_rules();
 for (@r) {
     print $r->evaluate($c1);
 }
 
-my $rt = $r->get_rule_template();
+my $rt = $r->template();
 my @rt = $rt->get_underlying_rule_templates();
 
 $r = $rt->get_rule_for_values(@v);
 
-=head1 NAME
-
-UR::BoolExpr - a boolean expression functional on any UR::Object of a given class
-
 =head1 SEE ALSO
 
-UR(3), UR::Object(3), UR::Object::Set(3)
+UR(3), UR::Object(3), UR::Object::Set(3), UR::BoolExpr::Template(3)
 
 =cut

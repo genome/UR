@@ -30,7 +30,7 @@ sub members {
 sub subset {
     my $self = shift;
     my $member_class_name = $self->member_class_name;
-    my $bx = UR::BoolExpr->resolve_for_class_and_params($member_class_name,@_);
+    my $bx = UR::BoolExpr->resolve($member_class_name,@_);
     my $subset = $self->class->get($bx->id);
     return $subset;
 }
@@ -67,8 +67,8 @@ sub AUTOSUB {
             die "set properties are not mutable!";
         }
         my $rule = $self->rule;
-        if ($rule->specifies_value_for_property_name($method)) {
-            return $rule->specified_value_for_property_name($method);
+        if ($rule->specifies_value_for($method)) {
+            return $rule->value_for($method);
         } 
         else {
             my @members = $self->members;

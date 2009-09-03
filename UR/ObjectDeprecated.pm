@@ -87,7 +87,7 @@ sub is_loaded {
     }
 
     my $class = shift;
-    my $rule = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class,@_);
+    my $rule = UR::BoolExpr->resolve_normalized($class,@_);
     return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);    
 }
 
@@ -349,7 +349,7 @@ sub preprocess_params {
 
         # get the rule object, which has the old params pre-cached
         my ($rule, @extra) = $class->can("define_boolexpr")->($class,@_);
-        my $normalized_rule = $rule->get_normalized_rule_equivalent;
+        my $normalized_rule = $rule->normalize;
         my $rule_params = $normalized_rule->legacy_params_hash;
 
         # catch only case where sql is passed in

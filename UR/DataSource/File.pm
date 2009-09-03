@@ -421,12 +421,12 @@ sub create_iterator_closure_for_rule {
 
     my $class_name = $rule->subject_class_name;
     my $class_meta = $class_name->__meta__;
-    my $rule_template = $rule->rule_template;
+    my $rule_template = $rule->template;
 
     my $csv_column_order = $self->column_order;
     my $csv_column_count = scalar @$csv_column_order;
     my %properties_in_rule = map { $_ => 1 }
-                             grep { $rule->specifies_value_for_property_name($_) }
+                             grep { $rule->specifies_value_for($_) }
                              @$csv_column_order;
 
     my $sort_order = $self->sort_order;
@@ -461,8 +461,8 @@ sub create_iterator_closure_for_rule {
 
         push @rule_columns_in_order, $column_name_to_index_map{$column_name};
          
-        my $operator = $rule->specified_operator_for_property_name($column_name);
-        my $rule_value = $rule->specified_value_for_property_name($column_name);
+        my $operator = $rule->operator_for($column_name);
+        my $rule_value = $rule->value_for($column_name);
     
         my $comparison_function = $self->_comparator_for_operator_and_property($property_metas{$column_name},
                                                                                \$next_candidate_row,
@@ -528,8 +528,8 @@ sub create_iterator_closure_for_rule {
             my $column = $rule_columns_in_order[$i];
             my $column_name = $csv_column_order->[$column];
             my $is_sorted = $i <= $last_id_column_in_rule ? ' (sorted)' : '';
-            my $operator = $rule->specified_operator_for_property_name($column_name) || '=';
-            my $rule_value = $rule->specified_value_for_property_name($column_name);   
+            my $operator = $rule->operator_for($column_name) || '=';
+            my $rule_value = $rule->value_for($column_name);   
             if (ref $rule_value eq 'ARRAY') {
                 $rule_value = '[' . join(',', @$rule_value) . ']';
             }
