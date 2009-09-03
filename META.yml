@@ -1,0 +1,25 @@
+---
+abstract: 'rich declarative transactional objects'
+author:
+  - 'UR was built by the software development team at the Genome Center'
+build_requires:
+  Test::Fork: 0.02
+  Test::More: 0.62
+configure_requires:
+  ExtUtils::MakeMaker: 6.48
+distribution_type: module
+generated_by: 'Module::Install version 0.81'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: UR
+no_index:
+  directory:
+    - inc
+    - t
+requires:
+  perl: 5.8.0
+resources:
+  license: http://dev.perl.org/licenses/
+version: 0.010000
