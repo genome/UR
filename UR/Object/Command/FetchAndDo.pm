@@ -117,6 +117,8 @@ sub _validate_subject_class {
         )
     )
         and return if $subject_class_name =~ /^UR::/;
+
+    eval "use $subject_class_name;"; # dont check for errors
     
     my $subject_class = $self->subject_class;
     $self->error_message(
@@ -274,4 +276,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 =cut
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/FetchAndDo.pm $
-#$Id: FetchAndDo.pm 36331 2008-07-08 21:12:57Z ebelter $#
+#$Id: FetchAndDo.pm 36363 2008-07-09 16:49:57Z eclark $#
