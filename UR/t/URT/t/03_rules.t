@@ -5,7 +5,7 @@ use warnings;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 22;
+use Test::More tests => 29;
 use Data::Dumper;
 
 class URT::Item {
@@ -26,6 +26,13 @@ class URT::FancyItem {
     ]
 };
 
+class URT::UnrelatedItem {
+    has => [
+        name    => { is => "String" },
+        group   => { is => "String" },
+    ],
+};
+
 
 my $m = URT::FancyItem->__meta__;
 ok($m, "got metadata for test class");
@@ -33,11 +40,17 @@ ok($m, "got metadata for test class");
 my @p = $m->id_property_names;
 is("@p", "name group", "property names are correct");
 
+my $b = URT::Item->create(name => 'Joe', group => 'shirts');
+ok($b, 'made a base class object');
+
 my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts');
 ok($p, "made a parent object");
 
 my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins');
 ok($c, "made a child object which references it");
+
+my $u = URT::UnrelatedItem->create(name => 'Bob', group => 'shirts');
+ok($u, 'made an unrelated item object');
 
 my $r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
 ok($r, "got a rule to get objects using -recurse");
@@ -87,6 +100,24 @@ $r = URT::FancyItem->define_boolexpr(foo => { operator => "between", value => [1
 $t = $r->template();
 is($t->operator_for('foo'),'between', "operator for param 1 is correct");
 is($t->operator_for('bar'),'=', "operator for param 2 is correct");
+
+
+# Make a rule on the parent class
+$r = URT::Item->define_boolexpr(name => 'Bob', group => 'shirts');
+ok($r->evaluate($p), 'Original parent object evaluated though rule');
+
+ok(! $r->evaluate($c), 'Child object with different params evaluated through parent rule returns false');
+
+$r = URT::Item->define_boolexpr(name => 'Fred', group => 'skins');
+ok($r->evaluate($c), 'Child object with same params evaluated through parent rule returns true');
+
+# Make a rule on the child class
+$r = URT::FancyItem->define_boolexpr(name => 'Joe', group => 'shirts');
+ok(! $r->evaluate($b), 'Base class object evaluated through rule on child class returns false');
+
+# An item of a different class but with the same params 
+$r = URT::UnrelatedItem->define_boolexpr(name => 'Bob', group => 'shirts');
+ok(! $r->evaluate($p), 'Original parent object evaluated false through rule on unrelatd class');
 
 
 

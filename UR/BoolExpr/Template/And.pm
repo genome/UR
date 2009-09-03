@@ -61,6 +61,9 @@ sub specifies_value_for {
 sub evaluate_subject_and_values {
     my $self = shift;
     my $subject = shift;
+
+    return unless (ref($subject) && $subject->isa($self->subject_class_name));
+
     if (my @underlying = $self->get_underlying_rule_templates) {
         while (my $underlying = shift (@underlying)) {
             my $value = shift @_;
