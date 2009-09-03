@@ -3,7 +3,7 @@ use Test::More;
 use strict;
 use warnings;
 
-use UR;
+use URT;
 
 plan tests => 5;
 
@@ -48,6 +48,7 @@ ok($c, 'Defined URT::Remote class');
 my $test_class_definition =
     q(    is => [ 'URT::Parent' ],
     type_name => 'urt testclass',
+    table_name => 'PARENT_TABLE',
     attributes_have => [
         meta_prop_a => { is => 'Boolean', is_optional => 1 },
         meta_prop_b => { is => 'String' },
@@ -74,11 +75,17 @@ my $test_class_definition =
         related_value => { is => 'StringSubclass', via => 'another_related' },
         related_value2 => { is => 'StringSubclass', via => 'another_related', to => 'related_value' },
     ],
+    schema_name => 'SomeFile',
+    data_source => 'URT::DataSource::SomeFile',
     doc => 'Hi there',
 );
 my $orig_test_class = $test_class_definition;
 my $test_class_meta = eval "UR::Object::Type->define(class_name => 'URT::TestClass', $test_class_definition);";
 ok($test_class_meta, 'Defined URT::TestClass class');
+if ($@) {
+    diag("Errors from class definition:\n$@");
+    exit(1);
+}
 
 my $string = $test_class_meta->resolve_class_description_perl();
 my $orig_string = $string;

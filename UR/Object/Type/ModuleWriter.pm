@@ -57,7 +57,7 @@ sub resolve_class_description_perl {
         $perl .= "    is => " . (@isa == 1 ? "[ '@isa' ],\n" : "[ qw/@isa/ ],\n");
     }
     $perl .= "    type_name => '" . $self->type_name . "',\n" unless $self->type_name eq $class_name;
-    $perl .= "    table_name => " . ($self->table_name ? "'" . $self->table_name . "'" : 'undef') . ",\n" if $self->data_source;
+    $perl .= "    table_name => " . ($self->table_name ? "'" . $self->table_name . "'" : 'undef') . ",\n" if $self->data_source_id;
     $perl .= "    is_abstract => 1,\n" if $self->is_abstract;
     $perl .= "    er_role => '" . $self->er_role . "',\n" if ($self->er_role and ($self->er_role ne $class_meta_meta->get_property_object(property_name => 'er_role')->default_value));
 
@@ -107,7 +107,7 @@ sub resolve_class_description_perl {
             
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->get_class_object->all_property_type_names;
-    my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas reference_metas reference_property_metas meta_class_name/;
+    my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas reference_metas reference_property_metas meta_class_name/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
         my $property_obj = $class_meta_meta->get_property_object(property_name => $property_name);
@@ -220,7 +220,7 @@ sub resolve_class_description_perl {
     }
 
     $perl .= "    schema_name => '" . $self->schema_name . "',\n" if $self->schema_name;
-    $perl .= "    data_source => '" . $self->data_source . "',\n" if $self->data_source;
+    $perl .= "    data_source => '" . $self->data_source_id . "',\n" if $self->data_source_id;
 
     my $doc = $self->doc;
     if (defined($doc)) {
