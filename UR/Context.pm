@@ -20,6 +20,7 @@ consistency, locking, etc.
 EOS
 );
 
+# These are all owned by the "process" context.
 our $all_objects_loaded ||= {};               # Master index of all tracked objects by class and then id.
 our $all_change_subscriptions ||= {};         # Index of other properties by class, property_name, and then value.
 our $all_objects_are_loaded ||= {};           # Track when a class informs us that all objects which exist are loaded.
@@ -35,9 +36,26 @@ sub _initialize_for_current_process {
     if ($initialized) {
         die "Attempt to re-initialize the current process?";
     }
-    $UR::Context::root = $ENV{UR_CONTEXT_ROOT} ||= 'UR::Context::DefaultRoot';
-    $UR::Context::base = $ENV{UR_CONTEXT_BASE} ||= $UR::Context::root;
+
+    my $root_id = $ENV{UR_CONTEXT_ROOT} ||= 'UR::Context::DefaultRoot';
+    $UR::Context::root = UR::Context::Root->get($root_id);
+    unless ($UR::Context::root) {
+        die "Failed to find root context object '$root_id':!?  Odd value in environment variable UR_CONTEXT_ROOT?";
+    }
+
+    if (my $base_id = $ENV{UR_CONTEXT_BASE}) {
+        $UR::Context::base = UR::Context::Process->get($base_id);
+        unless ($UR::Context::base) {
+            die "Failed to find base context object '$base_id':!?  Odd value in environment variable UR_CONTEXT_BASE?";
+        }
+    } 
+    else {
+        $UR::Context::base = $UR::Context::root;
+    }
+
     $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base);
+
+    # This changes when we initiate in-memory transactions on-top of the basic, heavier weight one for the process.
     $UR::Context::current = $UR::Context::process;
 }
 
