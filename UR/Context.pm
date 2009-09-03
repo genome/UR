@@ -984,6 +984,13 @@ sub _create_object_fabricator_for_loading_template {
     my $multi_column_id     = (@id_positions > 1 ? 1 : 0);
     my $composite_id_resolver = $class_meta->get_composite_id_resolver;
     
+    my %initial_object_data;
+    if ($loading_template->{constant_property_names}) {
+        my @constant_property_names  = @{ $loading_template->{constant_property_names} };
+        my @constant_property_values = @{ $loading_template->{constant_property_values} };
+        @initial_object_data{@constant_property_names} = @constant_property_values;
+    }
+
     my $rule_class_name = $rule_template->subject_class_name;
     my $load_class_name = $class;
     # $rule can contain params that may not apply to the subclass that's currently loading.
@@ -1017,10 +1024,14 @@ sub _create_object_fabricator_for_loading_template {
             #$DB::single = 1;
         }
         
-        my $pending_db_object_data = {};
+        my $pending_db_object_data = { %initial_object_data };
         @$pending_db_object_data{@property_names} = @$next_db_row[@column_positions];
         
         # resolve id
+        # FIXME This %initial_object_data stuff totally won't work if one of the 
+        # constant value items is an ID column, since we're using @$next_db_row to
+        # get the ID data and not $pending_db_object_data.  This probably won't be a problem
+        # in practice, though
         my $pending_db_object_id;
         if ($multi_column_id) {
             $pending_db_object_id = $composite_id_resolver->(@$next_db_row[@id_positions]);
