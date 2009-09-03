@@ -1,12 +1,14 @@
 use strict;
 use warnings;
-use Test::More;
+use Test::More skip_all => "fork() causes intermittent failure in TAP output";
 
 use above 'URT';
 
 use IO::Socket;
 
 our $PORT = '12345';
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
 
 if ($ARGV[0] and $ARGV[0] eq '--child') {
     # This is for debugging the test case.
