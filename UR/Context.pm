@@ -392,13 +392,13 @@ sub prune_object_cache {
     return if ($is_pruning);  # Don't recurse into here
 
     #$DB::single=1;
-    return unless ($all_objects_cache_size > $cache_size_highwater);
+#    return unless ($all_objects_cache_size > $cache_size_highwater);
 
     $is_pruning = 1;
     #$main::did_prune=1;
     my $t1;
     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-        my $t1 = Time::HiRes::time();
+        $t1 = Time::HiRes::time();
         print STDERR "MEM PRUNE begin at $t1 ",scalar(localtime($t1)),"\n";
     }
         
@@ -427,7 +427,7 @@ sub prune_object_cache {
         push @{$indexes_by_class{$class}}, $UR::Context::all_objects_loaded->{'UR::Object::Index'}->{$idx_id};
     }
 
-    my $deleted_count;
+    my $deleted_count = 0;
     my $pass = 0;
 
     # Make a guess about that the target serial number should be
