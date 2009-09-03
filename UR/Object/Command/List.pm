@@ -68,7 +68,7 @@ EOS
 ##############################
 
 sub valid_styles {
-    return (qw/ text csv pretty /);
+    return (qw/ text csv pretty html/);
 }
 
 sub create {
@@ -91,6 +91,9 @@ sub create {
 sub _do
 {
     my ($self, $iterator) = @_;    
+
+    #filehandle stuff
+    $DB::single = 1;
 
     # Determine things to show
     if ( my $show = $self->show ) {
@@ -152,6 +155,35 @@ sub format_and_print{
         $count++;
     }
 
+}
+
+package Html;
+use base 'Style';
+
+sub _get_header_string{
+    my $self = shift;
+    return "<tr><th>". join("</th><th>", map { uc } @{$self->{show}}) ."</th></tr>";
+}
+
+sub _get_object_string{
+    my ($self, $object) = @_;
+    
+    my $out = "<tr>";
+    for my $property ( @{$self->{show}} ){
+        $out .= "<td>" . $object->$property . "</td>";
+    }
+    
+    return $out . "</tr>";
+}
+
+sub format_and_print{
+    my $self = shift;
+    
+    $self->{output}->print("<table>");
+
+    $self->SUPER::format_and_print();
+    
+    $self->{output}->print("</table>");
 }
 
 package Csv;
@@ -355,4 +387,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 36979 2008-07-25 17:50:17Z adukes $
+#$Id: List.pm 37018 2008-07-28 19:44:01Z jweible $
