@@ -57,11 +57,13 @@ $DB::single=1;
     my %class_properties;
     if ($class_obj) {
         my @class_detail;
-        foreach my $prop_name ( qw( namespace data_source doc er_role is_abstract is_final
-                                 is_singleton sub_classification_meta_class_name sub_classification_property_name type_name) ) {
+        foreach my $prop_name ( qw( namespace doc er_role is_abstract is_final is_singleton
+                                    sub_classification_meta_class_name sub_classification_property_name type_name) ) {
 
             push @class_detail, { PROPERTY_NAME => $prop_name, PROPERTY_VALUE => $class_obj->$prop_name };
         }
+        push @class_detail, { PROPERTY_NAME => 'data_source',
+                              PROPERTY_VALUE => UR::Context->resolve_data_source_for_object($class_obj)};
         $self->tmpl->param(CLASS_DETAIL => \@class_detail);
     
         my @class_properties;

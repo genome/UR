@@ -73,7 +73,12 @@ sub get_material_class_names
 
 sub get_data_sources
 {
-    return shift->_get_class_names_under_dir("DataSource");
+    my $class = shift;
+    if ($class eq 'UR' or (ref($class) and $class->id eq 'UR')) {
+        return 'UR::DataSource::Meta';  # UR only has 1 "real" data source, the other stuff in that dir are base classes
+    } else {
+        return $class->_get_class_names_under_dir("DataSource");
+    }
 }
 
 sub get_base_contexts

@@ -74,8 +74,8 @@ sub fk_constraints {
 
     my $fk_class = $self->_fk_constraint_class();
     my @fks = $fk_class->get(table_name => $self->table_name,
-                             data_source => $self->data_source,
-                             column_name => $self->column_name);
+                             data_source => $self->data_source);
+                       
     return @fks;
 }
 
