@@ -526,6 +526,7 @@ sub sorter {
         }
         return 0;
     };
+    Sub::Name::subname("UR::Object::Type::sorter__class_".$self->class_name, $sorter);
     return $sorter;
 }
 
