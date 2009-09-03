@@ -281,7 +281,7 @@ sub _comparator_for_operator_and_property {
                    };
         }
 
-    } elsif ($operator eq '[]') {
+    } elsif ($operator eq '[]' or $operator eq 'in') {
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             # Numeric 'in' comparison  returns undef is we're within the range of the list
             # but don't actually match any of the items in the list
@@ -315,6 +315,24 @@ sub _comparator_for_operator_and_property {
                        }
                    };
 
+        }
+
+    } elsif ($operator eq 'not []' or $operator eq 'not in') {
+        if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
+            return sub {
+                foreach ( @$value ) {
+                    return -1 if $$next_candidate_row->[$index] == $_;
+                }
+                return 0;
+            }
+
+        } else {
+            return sub {
+                foreach ( @$value ) {
+                    return -1 if $$next_candidate_row->[$index] eq $_;
+                }
+                return 0;
+            }
         }
 
     } elsif ($operator eq 'like') {
@@ -482,6 +500,9 @@ sub create_iterator_closure_for_rule {
                                                                                $column_name_to_index_map{$column_name},
                                                                                $operator,
                                                                                $rule_value);
+        unless ($comparison_function) {
+            Carp::croak("Unknown operator '$operator' in file data source filter");
+        }
         push @comparison_for_column, $comparison_function;
     }
 

@@ -40,8 +40,9 @@ is($thing->thing_id, 2, 'thing_id is correct');
 is($thing->thing_name, 'Fred', 'thing_name is correct');
 is($thing->thing_color, 'green', 'thing_color is correct');
 
-my @things = URT::Things->get('thing_color ne' => 'red');
-is(scalar(@things), 3, 'Get where color ne "red" returned 3 items');
+#my @things = URT::Things->get('thing_color ne' => 'red');
+my @things = URT::Things->get(thing_color => {operator => 'not in', value => ['red','green']});
+is(scalar(@things), 2, 'Get where color ne "red" returned 3 items');
 
 
 @things = URT::Things->get();
