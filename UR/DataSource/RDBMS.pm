@@ -584,7 +584,11 @@ sub create_iterator_closure_for_rule {
     my $ur_test_filldb = $ENV{'UR_TEST_FILLDB'};
     
     my $iterator = sub {
-    
+        unless ($sth) {
+            $DB::single = 1;
+            return;
+        }
+ 
         $next_db_row = $sth->fetchrow_arrayref;
         #$self->signal_change('fetch',$next_db_row);  # FIXME: commented out because it may make fetches too slow
         
