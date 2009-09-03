@@ -177,6 +177,8 @@ sub create_dbh {
     }
     $all_dbh_hashref->{$dbh} = $dbh;
     Scalar::Util::weaken($all_dbh_hashref->{$dbh});
+
+    $self->signal_change("connect");
     
     return $dbh;
 }
@@ -519,6 +521,8 @@ sub create_iterator_closure_for_rule {
 
     die unless $sth;    
 
+    $self->signal_change('query',$sql);
+
     # buffers for the iterator
     my $next_db_row;
     my $pending_db_object_data;
@@ -528,6 +532,7 @@ sub create_iterator_closure_for_rule {
     my $iterator = sub {
     
         $next_db_row = $sth->fetchrow_arrayref;
+        #$self->signal_change('fetch',$next_db_row);  # FIXME: commented out because it may make fetches too slow
         
         unless ($next_db_row) {
             $sth->finish;
