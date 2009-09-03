@@ -1158,7 +1158,7 @@ sub validate_subscription
     return 1 if (!defined($subscription_property));
 
     # All standard creation and destruction methods emit a signal.
-    return 1 if ($subscription_property =~ /^(create_object|delete_object|create|delete|presync|commit|rollback|load|unload|load_external)$/);
+    return 1 if ($subscription_property =~ /^(create_object|delete_object|create|delete|commit|rollback|load|unload|load_external)$/);
 
     # A defined attribute in our property list indicates the caller wants callbacks from our properties.
     my $class_object = $self->get_class_object;

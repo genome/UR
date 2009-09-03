@@ -1673,7 +1673,7 @@ sub _id_property_change_callback {
     my $property_obj = shift;
     my $method = shift;
 
-    return if ($method eq 'load' || $method eq 'unload' || $method eq 'create_object' || $method eq 'delete_object' || $method eq 'presync');
+    return if ($method eq 'load' || $method eq 'unload' || $method eq 'create_object' || $method eq 'delete_object');
 
     my $class = UR::Object::Type->get(class_name => $property_obj->class_name);
     
