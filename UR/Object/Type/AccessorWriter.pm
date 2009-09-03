@@ -81,7 +81,7 @@ sub mk_ro_accessor {
 
             if ($old ne $new)
             {
-                Carp::confess("Cannot change read-only property $accessor_name for class $class_name!"
+                Carp::croak("Cannot change read-only property $accessor_name for class $class_name!"
                 . "  Failed to update " . $_[0]->__display_name__ . " property: $property_name from $old to $new");
             }
             return $new;
@@ -175,7 +175,7 @@ sub mk_indirect_ro_accessor {
 
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
-        Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
+        Carp::croak("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
         my @bridges = $self->$via(@where);
         return unless @bridges;
         return $self->context_return(@bridges) if ($to eq '-filter');
@@ -196,12 +196,12 @@ sub mk_indirect_ro_accessor {
 
         my $linking_property = UR::Object::Property->get(class_name => $class_name, property_name => $via);
         unless ($linking_property->data_type) {
-            Carp::confess "Property ${class_name}::${accessor_name}: via refers to a property with no data_type.  Can't process filter";
+            Carp::croak "Property ${class_name}::${accessor_name}: via refers to a property with no data_type.  Can't process filter";
         }
         my $final_property = UR::Object::Property->get(class_name => $linking_property->data_type, 
                                                        property_name => $to);
         unless ($final_property->data_type) {
-            Carp::confess "Property ${class_name}::${accessor_name}: to refers to a property with no data_type.  Can't process filter";
+            Carp::croak "Property ${class_name}::${accessor_name}: to refers to a property with no data_type.  Can't process filter";
         }
         $r_class_name = $final_property->data_type;
     };
@@ -283,14 +283,14 @@ sub mk_indirect_rw_accessor {
                     #WAS > Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: property is via $via which is not set!");
                 }
                 elsif (@bridges > 1) {
-                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set!");
+                    Carp::croak("Cannot set $accessor_name on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set!");
                 }
                 #print "updating $bridges[0] $to to @_\n";
                 return $bridges[0]->$to(@_);
             }
             elsif ($update_strategy eq 'delete-create') {
                 if (@bridges > 1) {
-                    Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set!");
+                    Carp::croak("Cannot set $accessor_name on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set!");
                 }
                 else {
                     if (@bridges) {
@@ -300,7 +300,7 @@ sub mk_indirect_rw_accessor {
                     #print "adding via $adder @where :::> $to @_\n";
                     @bridges = $self->$adder(@where, $to => $_[0]);
                     unless (@bridges) {
-                        Carp::confess("Failed to add bridge for $accessor_name on $class_name $self->{id}: property is via $via!");
+                        Carp::croak("Failed to add bridge for $accessor_name on $class_name $self->{id}: property is via $via!");
                     }
                 }
             }
@@ -356,7 +356,7 @@ sub mk_calculation_accessor {
         $accessor = sub {
             my $self = shift;
             if (@_) {
-                Carp::confess("$class_name $accessor_name is a read-only property derived from @$calculate_from");
+                Carp::croak("$class_name $accessor_name is a read-only property derived from @$calculate_from");
             }
             return $calculation_src->(map { $self->$_ } @$calculate_from);        
         };
@@ -413,11 +413,11 @@ sub mk_calculation_accessor {
         #print ">>$src<<\n";
         eval $src;
         if ($@) {
-            Carp::confess "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$@\n";
+            Carp::croak "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$@\n";
         }
     }
     else {
-        Carp::confess "Error implementing calcuation accessor for $class_name $accessor_name!";
+        Carp::croak "Error implementing calcuation accessor for $class_name $accessor_name!";
     }
 }
 
@@ -582,7 +582,7 @@ sub mk_ro_class_accessor {
 
             if ($old ne $new)
             {
-                Carp::confess("Cannot change read-only class-wide property $accessor_name for class $class_name from $old to $new!");
+                Carp::croak("Cannot change read-only class-wide property $accessor_name for class $class_name from $old to $new!");
             }
             return $new;
         }
@@ -1173,7 +1173,7 @@ the $property_name key of the object's hashref.
 Creates a read-only accessor named $accessor_name which retrieves its value
 in the $property_name key of the object's hashref.  If the method is used
 as a mutator by passing in a value to the method, it will throw an exception
-with Carp::confess.
+with Carp::croak.
 
 =item mk_id_based_object_accessor
 
@@ -1252,7 +1252,7 @@ acts as a class-wide property.
 Creates a read-only accessor called $accessor_name which retrieves its value
 from a scalar captured by the accessor's closure.  The value is initialized
 to $variable_value.  If called as a mutator, it throws an exception through
-Carp::confess
+Carp::croak
 
 =back
 
