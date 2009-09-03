@@ -527,7 +527,7 @@ __END__
 
 =head1 NAME
 
-UR - The base module for the UR framework
+UR - rich declarative non-hierarchical transactional objects
 
 =head1 VERSION
 

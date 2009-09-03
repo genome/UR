@@ -1,0 +1,41 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use above "UR";
+UR::Namespace::Command->execute_with_shell_params_and_exit();
+
+=pod
+
+=head1 NAME
+
+ur
+
+=head1 DESCRIPTION
+
+The "ur" command has its first argument the name of a specific ur-related command.
+Run "ur" w/o arguments to see the complete list, or "ur --help" for more details.
+
+Every command and sub-command supports the --help option.
+
+=head1 OPTIONS
+
+These depend on the specific sub-command.
+
+=head1 DEVELOPER NOTE
+
+Running this WITHIN a source tree under the Genome namespace will automatically "use lib" your tree.
+A message will appear to STDERR when this occurs.
+
+=head1 BUGS
+
+Report bugs to software@watson.wustl.edu
+
+=head1 AUTHOR
+
+Scott Smith
+
+ssmith@watson.wustl.edu
+
+=cut
+
+
