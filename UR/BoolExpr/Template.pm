@@ -554,7 +554,7 @@ sub get {
                     $page = shift @constant_values;
                 }
                 else {
-                    die "Unknown special param $key.  Expected -recurse or -hint.";
+                    die "Unknown special param $key.  Expected -recurse or -hints.";
                 }
             }
             else {
