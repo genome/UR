@@ -7,18 +7,18 @@ use warnings;
 
 plan tests => 22;
 
-my $o = URT::ObjWithHash->create(myhash1 => { aaa => 111, bbb => 222 }, myhash2 => [ ccc => 333, ddd => 444 ]); 
-my @h = ($o->myhash1, $o->myhash2); 
+my $o = URT::ObjWithHash->create(myhash1 => { aaa => 111, bbb => 222 }, mylist => [ ccc => 333, ddd => 444 ]); 
+my @h = ($o->myhash1, $o->mylist); 
 #diag "data was: " . Data::Dumper::Dumper($o,@h);
 is(ref($h[0]),'HASH', "got a hashref back");
 is(ref($h[1]),'ARRAY', "got an arrayref back");
 is_deeply($h[0],{ aaa => 111, bbb => 222 },"got correct values back for hashref");
 
-TODO: {
-    local $TODO = 'array seems to be out of order';
+#TODO: {
+#    local $TODO = 'array seems to be out of order';
     
     is_deeply($h[1],[ ccc => 333, ddd => 444 ],"got correct values back for arrayref");
-};
+#};
 
 # make sure things being associated with objects
 # are not being copied in the constructor
@@ -77,8 +77,8 @@ ok($c = TestClassC->create(
 ),"Created TestClassC with foo arrayref");
 is_deeply($c->foo,[qw{foo bar baz}],'Checking array for alpha-sort');
 
-TODO: {
-    local $TODO = 'somewhere, somehow PAP workflow does this....  so lets make sure it works';
+#TODO: {
+#    local $TODO = 'somewhere, somehow PAP workflow does this....  so lets make sure it works';
     
     my $d;
     ok(eval { $d = TestClassC->create(
@@ -95,4 +95,4 @@ TODO: {
         ]
     ) }, "created TestClassC with psuedo-hash like array");
 #    diag "data was: " . Data::Dumper::Dumper($d);
-}
+#}

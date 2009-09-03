@@ -7,7 +7,7 @@ use URT;
 class URT::ObjWithHash {
     has => [
         myhash1 => { is => 'HASH' },
-        myhash2 => { is => 'Hash' },
+        mylist => { is => 'ARRAY' },
     ],
 };
 

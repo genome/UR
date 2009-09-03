@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More skip_all => "fork() causes intermittent failure in TAP output";
+use Test::More;# skip_all => "fork() causes intermittent failure in TAP output";
 
 use above 'URT';
 
