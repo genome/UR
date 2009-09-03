@@ -2138,8 +2138,8 @@ sub __create_object_fabricator_for_loading_template {
     my $class_name                                  = $loading_template->{final_class_name};
     #$class_name or Carp::croak("No final_class_name in loading template?");
     unless ($class_name) {
-        Carp::carp("No final_class_name in loading template for rule $rule");
-        return;   # This join doesn't result in an object?
+        #Carp::carp("No final_class_name in loading template for rule $rule");
+        return;   # This join doesn't result in an object? - i think this happens when you do a get() with -hints
     }
     
     my $class_meta                                  = $class_name->__meta__;
