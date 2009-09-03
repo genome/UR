@@ -3,7 +3,7 @@ package UR::Object::Command::FetchAndDo;
 use strict;
 use warnings;
 
-use Command;
+use above 'UR';
 
 class UR::Object::Command::FetchAndDo {
     is => 'Command',
@@ -24,14 +24,6 @@ class UR::Object::Command::FetchAndDo {
 use Data::Dumper;
 
 ########################################################################
-
-sub help_brief {
-    return "Fetch objects based on filters and then perform a function on each object";
-}
-
-sub help_synopsis {
-    return "Fetch objects based on filters and then perform a function on each object";
-}
 
 sub help_detail {          
     my $class = shift;
@@ -73,7 +65,7 @@ EOS
             }
         }
         else {
-            $doc .= sprintf(" Class (%s) does not have any filterable properties.\n", $self->subject_class_name);
+            $doc .= sprintf(" %s\n", $self->error_message);
         }
     }
     else {
@@ -102,8 +94,8 @@ EOS
 sub execute {  
     my $self = shift;    
 
-    $self->error_message("No subject class name indicated.")
-        and return unless $self->subject_class_name;
+    $self->_validate_subject_class
+        or return;
     
     my $iterator = $self->_fetch
         or return;
@@ -111,12 +103,47 @@ sub execute {
     return $self->_do($iterator);
 }
 
+sub _validate_subject_class {
+    my $self = shift;
+
+    my $subject_class_name = $self->subject_class_name;
+    $self->error_message("No subject_class_name indicated.")
+        and return unless $subject_class_name;
+
+    $self->error_message(
+        sprintf(
+            'This command is not designed to work on a base UR class (%s).',
+            $subject_class_name,
+        )
+    )
+        and return if $subject_class_name =~ /^UR::/;
+    
+    my $subject_class = $self->subject_class;
+    $self->error_message(
+        sprintf(
+            'Can\'t get class meta object for class (%s).  Is this class a properly declared UR::Object?',
+            $subject_class_name,
+        )
+    )
+        and return unless $subject_class;
+    
+    $self->error_message(
+        sprintf(
+            'Can\'t find method (get_all_property_objects) in %s.  Is this a properly declared UR::Object class?',
+            $subject_class_name,
+        ) 
+    )
+        and return unless $subject_class->can('get_all_property_objects');
+
+    return 1;
+}
+
 sub _subject_class_filterable_properties {
     my $self = shift;
 
-    $self->error_message("No subject_class_name set.")
-        and return unless $self->subject_class_name;
-    
+    $self->_validate_subject_class
+        or return;
+
     return sort { 
         $a->property_name cmp $b->property_name
     } grep {
@@ -247,4 +274,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 =cut
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/FetchAndDo.pm $
-#$Id: FetchAndDo.pm 36320 2008-07-08 20:18:09Z ebelter $#
+#$Id: FetchAndDo.pm 36331 2008-07-08 21:12:57Z ebelter $#
