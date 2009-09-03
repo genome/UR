@@ -31,10 +31,10 @@ ok($m, "got metadata for test class");
 my @p = $m->id_property_names;
 is("@p", "name group", "property names are correct");
 
-my $p = URT::FancyItem->create();
+my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts');
 ok($p, "made a parent object");
 
-my $c = URT::FancyItem->create(parent => $p);
+my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins');
 ok($c, "made a child object which references it");
 
 my $r = URT::FancyItem->get_rule_for_params(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
