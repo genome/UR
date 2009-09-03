@@ -66,7 +66,8 @@ sub execute {
             $self->error_message("Cannot currently combine the recurse option with a specific test list.");
             return;
         }
-        @tests = `find $working_path | grep "\\.t\$"`;
+        @tests = sort `find $working_path | grep "\\.t\$"`;
+        chomp @tests;
     }
     elsif (not @tests) {
         my @dirs = `find $working_path`;
