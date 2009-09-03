@@ -307,6 +307,7 @@ UR::Object::Type->define(
 );
 
 require UR::Context;
+require Command;
 UR::Object::Type->initialize_bootstrap_classes;
 
 $UR::initialized = 1;
