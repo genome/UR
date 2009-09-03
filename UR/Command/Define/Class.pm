@@ -33,11 +33,14 @@ EOS
 
 sub execute {
     my $self = shift;
-    my @class_names = $self->bare_args;
+    my @class_names = @{ $self->bare_args };
     unless (@class_names) {
         $self->error_message("No class name(s) provided!");
         return;
     }
+
+    $self->_init or return;
+
     my $namespace = $self->namespace_name;
     my $is = $self->extends || 'UR::Object';
     my $parent_class_meta = UR::Object::Type->get($is);
@@ -54,12 +57,10 @@ sub execute {
         }
     }
     
-    my @has = split(/,/,$self->has);
     for my $class_name (@class_names) {
         unless ($class_name =~ /^${namespace}::/) {
             $class_name = $namespace . '::' . $class_name;
         }
-        print "has: @has\n";
         my $new_class = UR::Object::Type->create(
             class_name => $class_name,
             is => $is,
