@@ -44,80 +44,81 @@ sub get {
         }
     }
     my $tha_id = $params{'tha_id'};
-    my $ref = UR::Object::Reference->get(id => $tha_id);
-    unless ($ref) {
-        if (ref($tha_id) eq 'ARRAY') {
-            $tha_id = '[' . join(',',@$tha_id) . ']: ' . scalar(@$tha_id) . ' items';
-        }
-        return;  # If there's no reference object, there can't be any reference properties
+    my @refs = UR::Object::Reference->get(id => $tha_id);
+    unless (@refs) {
+        return;  # If there's no reference objects, there can't be any reference properties
     }
 
-    my $class_name = $ref->class_name;
-    my $class_meta = UR::Object::Type->get(class_name => $class_name);
-    my $delegation_property_meta = $class_meta->get_property_meta_by_name($ref->delegation_name);
-    unless ($delegation_property_meta) {
-        # FIXME - the update_classes testcase trips this conditional up and causes a die here when
-        # it's updating the Car class.  A Reference gets created from Car to Person through the foreign key
-        # called person_owner, but there's no class property, therefore no reference property
-        # But the testcase also implies that it's not expecting a person_owner property, so maybe we just
-        # return nothing?
-        #Carp::confess("Couldn't find a property called " . $ref->delegation_name . " on class $class_name");
-        return;
-    }
-
-    my @property_names = @{$delegation_property_meta->{'id_by'}};
-    my $property_names_count = scalar(@property_names);
-
-    my $r_class_name = $ref->r_class_name;
-    my $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
-    my @r_property_names = $r_class_meta->id_property_names;
-    my $r_property_names_count = scalar(@r_property_names);
-
-    if ($property_names_count == 1 and $r_property_names_count > 1) {
-        # Assumme this points directly to the composite 'id' property of the remote class
-        @r_property_names = ('id');
-
-    } elsif ($property_names_count != $r_property_names_count) {
-        Carp::confess("Unequal property counts describing reference $tha_id.   Property " .
-                      $delegation_property_meta->property_name .
-                      " has $property_names_count id properties while class $r_class_name has $r_property_names_count");
-    }
-
-    my $rank = 0;
     my @defined_objects;
-    for (my $i = 0; $i < $property_names_count; $i++) {
-        my $property_name = $property_names[$i];
-        my $property_meta = $class_meta->get_property_meta_by_name($property_name);
-        my $attribute_name = $property_meta->attribute_name;
+    foreach my $ref ( @refs ) {
 
-        my $r_property_name = $r_property_names[$i];
-        my $r_property_meta = $r_class_meta->get_property_meta_by_name($r_property_name);
-        my $r_attribute_name = $r_property_meta->attribute_name;
-
-        my $rp = UR::Object::Reference::Property->define(
-                     tha_id           => $tha_id,
-                     rank             => $i+1,
-                     property_name    => $property_name,
-                     attribute_name   => $attribute_name,
-                     r_property_name  => $r_property_name,
-                     r_attribute_name => $r_attribute_name,
-                 );
-        unless ($rp) {
-            Carp::confess('Failed to define relationship ' . $ref->delegation_name . " property $property_name");
+        my $class_name = $ref->class_name;
+        my $class_meta = UR::Object::Type->get(class_name => $class_name);
+        my $delegation_property_meta = $class_meta->get_property_meta_by_name($ref->delegation_name);
+        unless ($delegation_property_meta) {
+            return;
         }
 
-        {
-            use Data::Dumper; 
-            no strict;
-            my $db_committed = eval(Data::Dumper::Dumper($rp));
-            $rp->{'db_committed'} ||= $db_committed;
-            delete $db_committed->{'id'};
+        my @property_names = @{$delegation_property_meta->{'id_by'}};
+        my $property_names_count = scalar(@property_names);
+
+        my $r_class_name = $ref->r_class_name;
+        my $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
+        my @r_property_names = $r_class_meta->id_property_names;
+        my $r_property_names_count = scalar(@r_property_names);
+
+        if ($property_names_count == 1 and $r_property_names_count > 1) {
+            # Assumme this points directly to the composite 'id' property of the remote class
+            @r_property_names = ('id');
+
+        } elsif ($property_names_count != $r_property_names_count) {
+            Carp::confess("Unequal property counts describing reference " . $ref->tha_id .
+                          ".   Property " .  $delegation_property_meta->property_name .
+                          " has $property_names_count id properties while class $r_class_name has $r_property_names_count");
         }
 
-        push @defined_objects, $rp;
-    }
+        my $rank = 0;
+        for (my $i = 0; $i < $property_names_count; $i++) {
+            my $property_name = $property_names[$i];
+            my $property_meta = $class_meta->get_property_meta_by_name($property_name);
+            my $attribute_name = $property_meta->attribute_name;
 
-    $class->context_return(@defined_objects);
+            my $r_property_name = $r_property_names[$i];
+            my $r_property_meta = $r_class_meta->get_property_meta_by_name($r_property_name);
+            my $r_attribute_name = $r_property_meta->attribute_name;
+
+            my %get_define_params = ( 
+                         tha_id           => $ref->tha_id,
+                         rank             => $i+1,
+                         property_name    => $property_name,
+                         attribute_name   => $attribute_name,
+                         r_property_name  => $r_property_name,
+                         r_attribute_name => $r_attribute_name,
+                     );
+            my $rp = $class->SUPER::get(%get_define_params) 
+                      ||
+                     UR::Object::Reference::Property->define(%get_define_params);
+
+            unless ($rp) {
+                $DB::single=1;
+                Carp::confess('Failed to define relationship ' . $ref->delegation_name . " property $property_name");
+            }
+
+            {
+                use Data::Dumper; 
+                no strict;
+                my $db_committed = eval(Data::Dumper::Dumper($rp));
+                $rp->{'db_committed'} ||= $db_committed;
+                delete $db_committed->{'id'};
+            }
+
+            push @defined_objects, $rp;
+        } # end for 0 .. $property_names_count
+    } # end foreach @refs
+
+    # We may have created more than was actually asked for
+    my $rule = UR::BoolExpr->resolve_for_class_and_params($class,%params);
+    $class->context_return(grep { $rule->evaluate($_) } @defined_objects);
 }
 
 sub create_object

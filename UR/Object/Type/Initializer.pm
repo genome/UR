@@ -1159,6 +1159,8 @@ sub _complete_class_meta_object_definitions {
             }
             unless ($id_property_detail->{data_type}) {
                 unless ($r_class) {
+                    # FIXME - it'd be nice if we didn't have to load the remote class here, and
+                    # instead put off loading until it's necessary 
                     $r_class ||= UR::Object::Type->get($r_class_name);
                     unless ($r_class) {
                         Carp::confess("Unable to load $r_class_name while defining relationship ".$pinfo->{'property_name'}. " in class $class");
