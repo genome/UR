@@ -51,6 +51,11 @@ use Sub::Install ();
     position_in_module_header => -1,
 );
 
+%UR::Object::Type::converse = (
+    required => 'optional',
+    abstract => 'concrete',
+    one => 'many',
+);
 
 # These classes are used to define an object class.
 # As such, they get special handling to bootstrap the system.
@@ -251,7 +256,7 @@ sub define {
     Carp::confess("Failed to define class $class_name!") unless $self;
     
     # we do this for define() but not create()
-    $self->{db_committed} = { %$self };
+    $self->{db_committed} = { %{ UR::Util::deep_copy($self) } };
     delete $self->{db_committed}{id};
 
     $self->_initilize_accessors_and_inheritance 
@@ -468,17 +473,45 @@ sub _normalize_class_description {
         }
     }
     
-    my $id_by = $new_class{id_by};
-    my $instance_properties = $new_class{has};
+    # These may have been found and moved over.  Restore.
+    $old_class{has}             = delete $new_class{has};
+    $old_class{attributes_have} = delete $new_class{attributes_have};
     
-    if ($id_by) {
+
+    # Install structures to track fully formatted property data.
+    my $instance_properties = $new_class{has} = {};
+    my $meta_properties     = $new_class{attributes_have} = {};
+    
+    # The id might be a single value, or not specified at all.
+    my $id_properties;
+    if (not exists $new_class{id_by}) {
+        if ($new_class{is}) {
+            #print "no id for $class_name, is $new_class{is}\n";
+            #$id_properties = $new_class{id_by} = [ @{ $new_class{is}[0]->get_class_object->id_property_names } ];
+            $id_properties = $new_class{id_by} = [];
+        }
+        else {
+            $id_properties = $new_class{id_by} = [ id => { is_optional => 0 } ];
+        }
+    }
+    elsif ( (not ref($new_class{id_by})) or (ref($new_class{id_by}) ne 'ARRAY') ) {
+        $id_properties = $new_class{id_by} = [ $new_class{id_by} ];
+    }
+    else {
+        $id_properties = $new_class{id_by};
+    }
+    
+    # Transform the id properties into a list of raw ids, 
+    # and move the property definitions into "id_implied" 
+    # where present so they can be processed below.
+    do {
         my @replacement;
-        for (my $n = 0; $n < @$id_by; $n++) {
-            my $name = $id_by->[$n];
+        for (my $n = 0; $n < @$id_properties; $n++) {
+            my $name = $id_properties->[$n];
             
-            my $data = $id_by->[$n+1];
+            my $data = $id_properties->[$n+1];
             if (ref($data)) {
-                unshift @$instance_properties, $name, $data;
+                $old_class{id_implied}->{$name} ||= $data;
                 if (my $obj_ids = $data->{id_by}) {
                     push @replacement, (ref($obj_ids) ? @$obj_ids : ($obj_ids));
                 }
@@ -488,82 +521,81 @@ sub _normalize_class_description {
                 $n++;
             }
             else {
-                unshift @$instance_properties, $name, {};
+                $old_class{id_implied}->{$name} ||= {};
                 push @replacement, $name;
             }
         }
-        @$id_by = @replacement;
-    }
-        
-    unless ($new_class{type_name}) {
-        if ($new_class{table_name}) {
-            $new_class{type_name} = lc($new_class{table_name});
-            $new_class{type_name} =~ s/_/ /g;
+        @$id_properties = @replacement;
+    };
+    
+    # Flatten and format the property list(s) in the class description.
+    # NOTE: we normalize the details at the end of normalizing the class description.
+    for my $key (grep { /has|attributes_have|id_implied/ } keys %old_class) {
+        # parse the key to see if we're looking at instance or meta attributes,
+        # and take the extra words as additional attribute meta-data. 
+        my @added_property_meta;
+        my $properties;
+        if ($key =~ /has/) {
+            @added_property_meta =
+                grep { $_ ne 'has' } split(/[_-]/,$key);
+            $properties = $instance_properties;
         }
-        elsif ($class_name) {
-            $new_class{type_name} = lc($new_class{class_name});
-            $new_class{type_name} =~ s/::/ /g;
+        elsif ($key =~ /attributes_have/) {
+            @added_property_meta =
+                grep { $_ ne 'attributes' and $_ ne 'have' } split(/[_-]/,$key);
+            $properties = $meta_properties;
+        }
+        elsif ($key eq 'id_implied') {
+            # these are additions to the regular "has" list from complex identity properties
+            $properties = $instance_properties;
         }
         else {
-            Carp::confess("Unable to resolve type name for class $class_name????");
+            die "Odd key $key?";
         }
-    }
-    
-    if ($new_class{data_source} and not $new_class{schema_name}) {
-        my $s = $new_class{data_source};
-        $s =~ s/^.*::DataSource:://;
-        $new_class{schema_name} = $s;
-    }
+        @added_property_meta = map { 'is_' . $_ => 1 } @added_property_meta;
 
-    my $meta_properties = delete $old_class{attributes_have};
-    
-    # the properties can be a string, array, or hash        
-    for my $properties (grep { defined $_ } $meta_properties, $instance_properties) {
-        
-        my @expected_meta_properties = qw/is_transient is_optional is_mutable is_many is_class_wide/;
-        if ($properties eq $instance_properties) {
-            push @expected_meta_properties, keys %$meta_properties;
-        }
-        
-        # convert string, hash and () into an arrayref
-        
-        if (!ref($properties)) {
-            if (defined($properties)) {
-                $properties = [ split(/\s+/, $properties) ];
+        # the property data can be a string, array, or hash as they come in       
+        # convert string, hash and () into an array
+        my $property_data = delete $old_class{$key};
+
+        my @tmp;
+        if (!ref($property_data)) {
+            if (defined($property_data)) {
+                @tmp  = split(/\s+/, $property_data);
             }
             else {
-                $properties = [];
+                @tmp = (); 
             }
         }
-        
-        if (ref($properties) eq 'HASH') {
-            my $pos = 0;
-            $properties = [
-                map {                    
-                    ($_ => $properties->{$_})
-                } sort keys %$properties
-            ];
+        elsif (ref($property_data) eq 'HASH') {
+            @tmp = map {                    
+                    ($_ => $property_data->{$_})
+                } sort keys %$property_data;
+        }
+        elsif (ref($property_data) eq 'ARRAY') {
+            @tmp = @$property_data;    
+        }
+        else {
+            die "Unrecognized data $property_data appearing as property list!";
         }
         
-        # process the arrayref of property specs
-        
-        my @tmp = @$properties;
-        $properties = {};
+        # process the array of property specs
         my $pos = 0;
         while (my $name = shift @tmp) {
             my $params;
             if (ref($tmp[0])) {
                 $params = shift @tmp;
+                %$params = (@added_property_meta, %$params) if @added_property_meta;
             }
             else {
-                $params = {};
+                $params = { @added_property_meta };
             }       
                      
             $params->{position_in_module_header} = $pos;
             $pos++;
-            
+
             unless (exists $params->{is_specified_in_module_header}) {
-                $params->{is_specified_in_module_header} = 1;
+                $params->{is_specified_in_module_header} = $class_name . '::' . $key;
             }
             
             # Indirect properties can mention the same property name more than once.  To
@@ -596,73 +628,43 @@ sub _normalize_class_description {
                     $params2->{implied_by} = $name;
                     $params2->{is_specified_in_module_header} = 0;
                     
-                    for my $key (@expected_meta_properties) {
-                        if (exists $params->{$key}) {
-                            $params2->{$key} = $params->{$key};
-                        }
-                    }
                     push @id_by_names, $id_name;
                     push @tmp, $id_name, $params2;
                 }
                 $params->{id_by} = \@id_by_names;
             }
-        }        
-        
-        if ($properties eq $instance_properties) {
-            $new_class{has} = $properties;
+            $properties->{$name} = $params;
+        } # next property in group
+    } # next group of properties
+    
+    unless ($new_class{type_name}) {
+        if ($new_class{table_name}) {
+            $new_class{type_name} = lc($new_class{table_name});
+            $new_class{type_name} =~ s/_/ /g;
         }
-        elsif ($properties eq $meta_properties) {
-            $new_class{attributes_have} = $properties;
+        elsif ($class_name) {
+            $new_class{type_name} = lc($new_class{class_name});
+            $new_class{type_name} =~ s/::/ /g;
+        }
+        else {
+            Carp::confess("Unable to resolve type name for class $class_name????");
         }
     }
     
-    my $properties = $instance_properties;
-    
-    # when no id properties are specified, it's just "id"
-    my $id_properties = $new_class{id_by};
-    unless ($id_properties or scalar(@{ $new_class{is} })) {
-        $id_properties = ['id'];
-        # unless there is a description for the id in the main list,
-        # make one with some basic params
-        unless ($properties->{id})
-        {
-            $properties->{id} = { is_nullable => 0 };
-        }
+    if ($new_class{data_source} and not $new_class{schema_name}) {
+        my $s = $new_class{data_source};
+        $s =~ s/^.*::DataSource:://;
+        $new_class{schema_name} = $s;
     }
-    $new_class{id_by} = $id_properties;
-    
-    # FIXME - is there a canonical list of has_* => is_* mappings, or do we
-    # support anything the user might want to put in there?
-    for my $key (keys %old_class) {
-        next unless $key =~ /has/;
-        my @words = map { 'is_' . $_ } grep { $_ ne 'has' } split(/[_-]/,$key);
-        my $list = delete $old_class{$key};
-        unless (ref($list) =~ m/^ARRAY/) {
-            $class->error_message("Bad class definition while parsing key $key: expected ARRAY ref, got $list (missing has => [] section?)");
-            return;
-        }
-        for (my $n = 0; $n < @$list; $n+=2) {
-            my $name = $list->[$n];
-            my $data = $list->[$n+1];
-            $data = { %$data, map { $_ => 1 } @words };
-            $properties->{$name} = $data;
-        }
-    }   
- 
-    $new_class{is_class_wide} = $new_class{is_class} if exists $new_class{is_class};
- 
+     
     if (%old_class) {
         # this should have all been deleted above
         # we actually process it later, since these may be related to parent classes extending
         # the class definition
         $new_class{extra} = \%old_class;
     };
-    
 
-    #print "inheritance for $class_name has @additional_property_meta_attributes\n";
-    my $attributes_have = $new_class{attributes_have} ||= [];
-    
-    # cascage extra meta attributes from the parent downward
+    # cascade extra meta attributes from the parent downward
     unless ($bootstrapping) {
         my @additional_property_meta_attributes;
         for my $parent_class_name (@{ $new_class{is} }) {
@@ -678,19 +680,20 @@ sub _normalize_class_description {
                 warn "no class metadata bject for $parent_class_name!";
                 next;
             }
-            if (my $attributes_have = $parent_class->{attributes_have}) {
-                push @additional_property_meta_attributes, @$attributes_have;
+            if (my $parent_meta_properties = $parent_class->{attributes_have}) {
+                push @additional_property_meta_attributes, %$parent_meta_properties;
             }
         }
-        push @$attributes_have, @additional_property_meta_attributes;
+        #print "inheritance for $class_name has @additional_property_meta_attributes\n";
+        %$meta_properties = (%$meta_properties, @additional_property_meta_attributes);
     }
 
     # normalize the data behind the property descriptions    
-    my @properties = keys %$properties;
+    my @properties = keys %$instance_properties;
     for my $property_name (@properties) {            
-        my %old_property = %{ $properties->{$property_name} };        
+        my %old_property = %{ $instance_properties->{$property_name} };        
         my %new_property = $class->_normalize_property_description($property_name, \%old_property, \%new_class);
-        $properties->{$property_name} = \%new_property;        
+        $instance_properties->{$property_name} = \%new_property;
     }
 
     # allow parent classes to adjust the description in systematic ways 
@@ -712,7 +715,6 @@ sub _normalize_property_description {
     my $property_name = shift;
     my $property_data = shift;
     my $class_data = shift || $class;
-    
     my $class_name = $class_data->{class_name};
     my %old_property = %$property_data;
     my %new_class = %$class_data;
@@ -876,8 +878,7 @@ sub _normalize_property_description {
     }
 
     if (my $extra = $class_data->{attributes_have}) {
-        my %extra = @$extra;
-        my @names = keys %extra;
+        my @names = keys %$extra;
         @new_property{@names} = delete @old_property{@names};
     }
 
