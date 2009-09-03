@@ -20,6 +20,8 @@ use Fcntl qw(:DEFAULT :flock);
 use File::Temp;
 use File::Basename;
 
+our @CARP_NOT = qw( UR::Context );
+
 class UR::DataSource::File {
     is => ['UR::DataSource'],
     has => [
@@ -896,13 +898,16 @@ sub _sync_database {
     }
 
     my $write_fh;
+    my $temp_file_name;
     if ($use_quick_rename) {
-        $write_fh = File::Temp->new(DIR => $original_data_dir, UNLINK => 0);
+        $temp_file_name = sprintf("%s/.%d.%d" , $original_data_dir, time(), $$);
+        $write_fh = IO::File->new($temp_file_name, O_WRONLY|O_CREAT);
     } else {
         $write_fh = File::Temp->new(UNLINK => 1);
+        $temp_file_name = $write_fh->filename if ($write_fh);
     }
     unless ($write_fh) {
-        die "Can't create temporary file for writing: $!";
+        Carp::croak "Can't create temporary file for writing: $!";
     }
 
     my $monitor_start_time;
@@ -994,7 +999,6 @@ sub _sync_database {
         $write_fh->print($new_line);
     }
     $write_fh->close();
-    my $temp_file_name = $write_fh->filename;
     
     if ($use_quick_rename) {
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
