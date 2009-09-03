@@ -1143,6 +1143,10 @@ sub _complete_class_meta_object_definitions {
         
         my $id_properties = $pinfo->{id_by};
         my $r_class_name = $pinfo->{data_type};
+        unless($r_class_name) {
+            die sprintf("Object accessor property definition for %s::%s has an 'id_by' but no 'data_type'",
+                                  $pinfo->{'class_name'}, $pinfo->{'property_name'});
+        }
         my $r_class;        
         my @r_id_properties;
         

@@ -209,6 +209,9 @@ sub _get_joins {
                     for (@joins) { 
                         @$_{@new} = @$_{@old};
                     }
+
+                } else {
+                    $self->error_message("Property $id has no 'id_by' or 'reverse_id_by' property metadata");
                 }
             }
             else {
