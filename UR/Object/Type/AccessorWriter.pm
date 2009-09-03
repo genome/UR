@@ -212,41 +212,50 @@ sub mk_indirect_ro_accessor {
 }
 
 sub mk_indirect_rw_accessor {
-    my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
+    my ($self, $class_name, $accessor_name, $via, $to, $where, $singular_name) = @_;
     my @where = ($where ? @$where : ());
     my $full_name = join( '::', $class_name, $accessor_name );
     
     my $update_strategy; # defined the first time we "set" a value through this
     my $adder;
+    my $via_property_meta;
+    my $r_class_name;
+
+    my $resolve_update_strategy = sub {
+        unless (defined $update_strategy) {
+            # Resolve the strategy.  We need to figure out if $to 
+            # refers to an id-property.  This is only called once, when the
+            # accessor is first used.
+        
+            # If we reference a remote object, and go to one of its id properties
+            # we must do a delete/create instead of property change.  Note that
+            # this is only allowed when the remote object has no direct properties
+            # which are not id properties.
+        
+            $via_property_meta ||= $class_name->get_class_object->get_property_meta_by_name($via);
+            unless ($via_property_meta) {
+                $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
+                die "no meta for $via in $class_name!?" unless $via_property_meta;
+            }
+            $adder = "add_" . $via_property_meta->singular_name;
+            $r_class_name ||= $via_property_meta->data_type;
+            my @r_id_property_names = $r_class_name->get_class_object->id_property_names;
+            if (grep { $_ eq $to } @r_id_property_names) {
+                $update_strategy = 'delete-create'
+            }
+            else {
+                $update_strategy = 'change';
+            }
+        }
+        return $update_strategy;
+    };
+ 
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         my @bridges = $self->$via(@where);
         if (@_) {            
-            unless (defined $update_strategy) {
-                # Resolve the strategy.  We need to figure out if $to 
-                # refers to an id-property.  This is only called once, when the
-                # accessor is first used.
-                
-                # If we reference a remote object, and go to one of its id properties
-                # we must do a delete/create instead of property change.  Note that
-                # this is only allowed when the remote object has no direct properties
-                # which are not id properties.
-                
-                my $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
-                unless ($via_property_meta) {
-                    $via_property_meta = $class_name->get_class_object->get_property_meta_by_name($via);
-                    die "no meta for $via in $class_name!?" unless $via_property_meta;
-                }
-                $adder = "add_" . $via_property_meta->singular_name;
-                my $r_class_name = $via_property_meta->data_type;
-                my @r_id_property_names = $r_class_name->get_class_object->id_property_names;
-                if (grep { $_ eq $to } @r_id_property_names) {
-                    $update_strategy = 'delete-create'
-                }
-                else {
-                    $update_strategy = 'change';
-                }
-            }
+            $resolve_update_strategy->() unless (defined $update_strategy);
+
             if ($update_strategy eq 'change') {
                 if (@bridges == 0) {
                     #print "adding via $adder @where :::> $to @_\n";
@@ -286,6 +295,28 @@ sub mk_indirect_rw_accessor {
         as   => $accessor_name,
         code => $accessor,
     });
+
+    if ($singular_name) {  # True if we're defining an is_many indirect property
+        my $via_adder;
+
+        my $add_accessor = Sub::Name::subname $class_name ."::add_$singular_name" => sub {
+            my($self,$value) = @_;
+
+            $resolve_update_strategy->() unless (defined $update_strategy);
+            unless (defined $via_adder) {
+                $via_adder = "add_" . $via_property_meta->singular_name;
+            }
+           
+            $self->$via_adder(@where, $to => $value);
+        };
+
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => "add_$singular_name",
+            code => $add_accessor,
+        });
+    }
+    
 }
 
 
@@ -578,7 +609,7 @@ sub mk_object_set_accessors {
             my @property_links = $property_meta->id_by_property_links;
             #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_id_by); 
             unless (@property_links) {
-                $DB::single = 1;
+                #$DB::single = 1;
                 Carp::confess("No property links for $r_class_name -> $reverse_id_by?  Cannot build accessor for $singular_name/$plural_name relationship.");
             }
             my %get_params;            
@@ -746,11 +777,11 @@ sub mk_object_set_accessors {
             $params_prefix_resolver->() unless $params_prefix_resolved;
             unshift @_, @params_prefix if @_ == 1;
             my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);        
-            $r_class_name->create($rule->params_list,@_);
+            $r_class_name->create($rule->params_list,@where,@_);
         }
         else {
             if ($r_class_meta) {
-                my $new = $r_class_name->create(@_);
+                my $new = $r_class_name->create(@where,@_);
                 return unless $new;
                 push @{ $self->{$plural_name} ||= [] }, $new;
             }
@@ -917,7 +948,12 @@ sub initialize_direct_accessors {
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
             if ($property_data->{is_mutable}) {
-                $self->mk_indirect_rw_accessor($class_name,$accessor_name,$via,$to,$where);
+                my $singular_name;
+                if ($property_data->{'is_many'}) {
+                    require Lingua::EN::Inflect;
+                    $singular_name = Lingua::EN::Inflect::PL_V($accessor_name);
+                }
+                $self->mk_indirect_rw_accessor($class_name,$accessor_name,$via,$to,$where,$property_data->{'is_many'} && $singular_name);
             }
             else {
                 $self->mk_indirect_ro_accessor($class_name,$accessor_name,$via,$to,$where);
