@@ -3,7 +3,7 @@ package UR::Object::Command::List;
 use strict;
 use warnings;
 
-use above "Genome";                 
+use above "UR";                 
 
 use Data::Dumper;
 require Term::ANSIColor;
@@ -343,4 +343,4 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 36329 2008-07-08 21:09:07Z ebelter $
+#$Id: List.pm 36330 2008-07-08 21:11:53Z ebelter $
