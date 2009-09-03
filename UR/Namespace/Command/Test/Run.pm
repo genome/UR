@@ -430,24 +430,24 @@ END {
 
 =head1 NAME
 
-B<runtests> - run one or more GSC test scripts
+B<run tests> - run one or more test scripts
 
 =head1 SYNOPSIS
 
  # run everything in a given namespace
- cd my_sandbox/GSC
+ cd my_sandbox/TheNamespace
  ur test run --recurse
 
  # run only selected tests
- cd my_sandbox/GSC
+ cd my_sandbox/TheNamespace
  ur test run My/Module.t Another/Module.t t/foo.t t/bar.t
 
- # run only tests which load the GSC::DNA module
- cd my_sandbox/GSC
- ur test run --cover GSC/DNA.pm
+ # run only tests which load the TheNamespace::DNA module
+ cd my_sandbox/TheNamespace
+ ur test run --cover TheNamespace/DNA.pm
 
  # run only tests which cover the changes you have in Subversion
- cd my_sandbox/GSC
+ cd my_sandbox/TheNamespace
  ur test run --cover-svn-changes
 
 =head1 DESCRIPTION
@@ -500,13 +500,11 @@ directory, and runs ALL tests under that directory.
 
 =item automatic remote execution for tests requiring a distinct hardware platform
 
-=item logging profileing and coverage metrics with each test
+=item logging profiling and coverage metrics with each test
 
 =over 4
 
 =back
-
-Report bugs to <software@genome.wustl.edu>.
 
 =cut
 
