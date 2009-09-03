@@ -553,7 +553,7 @@ sub create_from_filter_string {
     my @filters = map {
         unless (
             ($property, $op, $value) =
-            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|\:|\blike\b)\s*(.*)\s*$/)
+            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|\:|\blike\b)\s*['"]?([^'"]*)['"]?\s*$/)
         ) {
             die "Unable to process filter $_\n";
         }
@@ -658,17 +658,9 @@ sub create_from_filters {
                 $rule_filter = [ $fdata->[0], "!=", undef ];
             }
         }
-        elsif ($fdata->[1] =~ /like/) {
-            $key = $fdata->[0] . " like";
-            $value = $fdata->[2];
-            $rule_filter = [ $fdata->[0], "like", $fdata->[2] ];
-        } elsif ($fdata->[1] =~ /!=/) {
-            $key = $fdata->[0] . " !=";
-            $value = $fdata->[2];
-            $rule_filter = [ $fdata->[0], " != ", $fdata->[2] ];
-        }
         else {
-            $key = $fdata->[0];
+            $DB::single = 1;
+            $key = $fdata->[0] . ($fdata->[1] and $fdata->[1] ne '='? ' ' . $fdata->[1] : '');
             $value = $fdata->[2];
             $rule_filter = [ @$fdata ];
         }

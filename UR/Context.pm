@@ -1069,13 +1069,15 @@ sub _cache_is_complete_for_class_and_normalized_rule {
     # Try to resolve without loading in cases where we are sure
     # that doing so will return the complete results.
     
-    if ($params->{_id_only}) {
+    my $id_only = $params->{_id_only};
+    $id_only = undef if ref($id_only) and ref($id_only) eq 'HASH';
+    if ($id_only) {
         # _id_only means that only id parameters were passed in.
         # Either a single id or an arrayref of ids.
         # Try to pull objects from the cache in either case
         if (ref $id) {
             # arrayref id
-
+            
             # we check the immediate class and all derived
             # classes for any of the ids in the set.
             @objects =
