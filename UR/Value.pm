@@ -16,17 +16,17 @@ sub _load {
     my $rule = shift;
         
     # See if the requested object is loaded.
-    my @loaded = $class->_is_loaded($rule);
+    my @loaded = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
     $class->context_return(@loaded) if @loaded;
 
-    $DB::single = 1;
     # Auto generate the object on the fly.
     unless (defined $rule->specified_value_for_id) {
+        $DB::single = 1;
         die "No id specified for loading members of an infinite set ($class)!"
     }
     my $obj = $class->create_object($rule);
     
-    my $class_meta = $class->get_class_object;            
+    my $class_meta = $class->get_class_object;
     if (my $method_name = $class_meta->sub_classification_method_name) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, $rule);
         my $sub_class_name = $obj->$method_name;
