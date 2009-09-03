@@ -17,7 +17,7 @@ sub evaluate_subject_and_values {
     my $property_name = $self->property_name;    
     my @property_values = $subject->$property_name;
 
-    if (@property_values == 1 and ref($property_values[0]) == 'ARRAY') {
+    if (@property_values == 1 and ref($property_values[0]) eq 'ARRAY') {
         @property_values = @{$property_values[0]};
     }
 
