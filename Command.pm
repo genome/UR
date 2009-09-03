@@ -76,6 +76,7 @@ sub execute {
         return;
     }
 
+    $DB::single=1;
     my $result = $self->_execute_body(@_);
 
     $self->is_executed(1);
@@ -133,7 +134,6 @@ sub _execute_with_shell_params_and_return_exit_code
     # make --foo=bar equivalent to --foo bar
     @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
 
-    $DB::single = 1;
     my ($delegate_class, $params) = $class->resolve_class_and_params_for_argv(@argv);
 
     unless ($delegate_class) {
@@ -165,8 +165,6 @@ sub _execute_with_shell_params_and_return_exit_code
     $command_object->dump_error_messages(1);
     $command_object->dump_debug_messages(0);
 
-    $DB::single = 1;
- 
     my $rv = $command_object->execute($params);
 
     if ($command_object->invalid) {
