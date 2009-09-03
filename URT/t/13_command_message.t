@@ -6,9 +6,9 @@ use Data::Dumper;
 
 use Test::More tests => 774;
 
-use UR::Command::Diff;
+use UR::Namespace::Command::Diff;
 
-my $c = "UR::Command::Diff";
+my $c = "UR::Namespace::Command::Diff";
 
 # The messaging methods print to the filehandle $Command::stderr, which defaults
 # to STDERR.  Redefine it so the messages are printed to a filehandle we

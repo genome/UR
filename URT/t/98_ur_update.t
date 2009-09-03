@@ -9,7 +9,7 @@ use URT;
 use DBI;
 use IO::Pipe;
 use Test::More tests => 76;
-use UR::Command::Update::Classes;
+use UR::Namespace::Command::Update::Classes;
 UR::DBI->no_commit(1);
 
 # This can only be run with the cwd at the top of the URT namespace
@@ -53,10 +53,10 @@ sub cleanup_files {
     }
 }
 
-UR::Command::Update::Classes->dump_error_messages(1);
-UR::Command::Update::Classes->dump_warning_messages(1);
-UR::Command::Update::Classes->dump_status_messages(0);
-UR::Command::Update::Classes->status_messages_callback(
+UR::Namespace::Command::Update::Classes->dump_error_messages(1);
+UR::Namespace::Command::Update::Classes->dump_warning_messages(1);
+UR::Namespace::Command::Update::Classes->dump_status_messages(0);
+UR::Namespace::Command::Update::Classes->status_messages_callback(
     sub {
         my $self = shift;
         my $msg = shift;
@@ -67,7 +67,7 @@ UR::Command::Update::Classes->status_messages_callback(
 
 # This command will be used below multiple times.
 
-my($delegate_class,$create_params) = UR::Command::Update::Classes->resolve_class_and_params_for_argv(qw(--data-source URT::DataSource::SomeSQLite));
+my($delegate_class,$create_params) = UR::Namespace::Command::Update::Classes->resolve_class_and_params_for_argv(qw(--data-source URT::DataSource::SomeSQLite));
 ok($delegate_class, "Resolving parameters for update: class is $delegate_class");
 
 my $command_obj = $delegate_class->create(%$create_params, _override_no_commit_for_filesystem_items => 1);
@@ -82,7 +82,7 @@ ok($dbh, 'Got database handle');
 my $trans;
 sub get_changes {
     my @changes =
-        grep { $_->changed_class_name ne "UR::Command::Param" }
+        grep { $_->changed_class_name ne "UR::Namespace::CommandParam" }
         grep { $_->changed_class_name ne 'UR::DataSource::Meta' && substr($_->changed_aspect,0,1) ne '_'}
         $trans->get_change_summary();
     return @changes;

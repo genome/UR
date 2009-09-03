@@ -50,7 +50,7 @@ sub take_state_snapshot {
             $class_name->all_objects_loaded_unsubclassed;
         next unless @objects;
         next if $class_name eq "UR::Object::Index";
-        next if $class_name eq "UR::Command::Param";
+        next if $class_name eq "UR::Namespace::CommandParam";
         next if $class_name =~ /UR::BoolExpr.*/;
         $state->{$class_name} = {};
         for my $object (@objects) {
