@@ -518,6 +518,8 @@ sub main::ur_core {
 1;
 __END__
 
+=pod
+
 =head1 NAME
 
 UR - the base module for the UR framework
@@ -779,10 +781,10 @@ XML::Simple
 UR was built by the software development team at the Washington
 University Genome Center.  Incarnations of it run laboratory
 automation and analysis systems for high-throughput genomics.
-
- Scott Smith         sakoht@cpan.org
- Anthony Brummet      
  
+ Scott Smith	    sakoht@cpan.org	Orginal Architecture
+ Anthony Brummett   brummett@cpan.org	Primary Development
+
  Craig Pohl
  Todd Hepler
  Ben Oberkfell
@@ -816,7 +818,7 @@ automation and analysis systems for high-throughput genomics.
  
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (C) 2002-2009 Washington University in St. Louis
+Copyright (C) 2002-2009 Washington University in St. Louis, MO.
 
 This sofware is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.

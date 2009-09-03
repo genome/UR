@@ -12,6 +12,7 @@ INSERT INTO "content_type" VALUES(9,'shilling');
 INSERT INTO "content_type" VALUES(11,'diamond');
 CREATE TABLE coin (coin_id integer PRIMARY KEY NOT NULL REFERENCES content(content_id),
                    type_id integer NOT NULL REFERENCES content_type(type_id));
+INSERT INTO "coin" VALUES(129,1);
 CREATE TABLE product (product_id integer PRIMARY KEY NOT NULL REFERENCES content_type(type_id),
                       cost_cents integer NOT NULL,
                       manufacturer varchar NOT NULL);
@@ -22,7 +23,7 @@ CREATE TABLE URMETA_machine_location_SLOT_ID_seq (next_value integer PRIMARY KEY
 DELETE FROM sqlite_sequence;
 INSERT INTO "sqlite_sequence" VALUES('URMETA_machine_location_SLOT_ID_seq',14);
 INSERT INTO "sqlite_sequence" VALUES('URMETA_content_type_TYPE_ID_seq',11);
-INSERT INTO "sqlite_sequence" VALUES('URMETA_COIN_COIN_ID_seq',128);
+INSERT INTO "sqlite_sequence" VALUES('URMETA_COIN_COIN_ID_seq',129);
 CREATE TABLE machine_location (machine_location_id integer PRIMARY KEY NOT NULL,
                          name varchar NOT NULL,
                          is_buyable integer NOT NULL,
@@ -40,6 +41,7 @@ CREATE TABLE content (content_id PRIMARY KEY NOT NULL,
                         subtype_name varchar,
                         machine_location_id integer NOT NULL REFERENCES machine_location(machine_location_id),
                         machine_id NOT NULL REFERENCES machine(machine_id));
+INSERT INTO "content" VALUES('129',NULL,12,'1');
 CREATE TABLE URMETA_content_type_TYPE_ID_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
 CREATE TABLE URMETA_COIN_COIN_ID_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
 COMMIT;
