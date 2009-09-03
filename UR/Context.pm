@@ -173,6 +173,8 @@ sub resolve_data_source_for_object {
 #$DB::single=1;
     my $class_meta = $object->get_class_object;
     
+    # FIXME this pattern match is going to get called a lot.
+    # Make up something that's faster to do the job
     if ($class_meta->class_name =~ m/^UR::DataSource::RDBMS::/) {
         my $data_source = $object->data_source;
         my($namespace) = ($data_source =~ m/(^\w+?)::DataSource/);
