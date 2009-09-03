@@ -1,0 +1,6 @@
+$UR::Namespace::Command::Define::Class::OPTS_SPEC = [
+          'extends=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,14 @@
+$UR::Namespace::Command::Test::Callcount::List::OPTS_SPEC = [
+          'file=s',
+          undef,
+          'show=s',
+          undef,
+          'filter=s',
+          undef,
+          'noheaders!',
+          undef,
+          'style=s',
+          undef,
+          'help!',
+          undef
+        ];

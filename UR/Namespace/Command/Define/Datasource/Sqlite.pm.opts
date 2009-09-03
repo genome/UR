@@ -1,0 +1,12 @@
+$UR::Namespace::Command::Define::Datasource::Sqlite::OPTS_SPEC = [
+          'dsname=s',
+          undef,
+          'nosingleton!',
+          undef,
+          'dsid=s',
+          undef,
+          'server=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,12 @@
+$UR::Namespace::Command::Define::Datasource::File::OPTS_SPEC = [
+          'dsname=s',
+          undef,
+          'nosingleton!',
+          undef,
+          'server=s',
+          undef,
+          'dsid=s',
+          undef,
+          'help!',
+          undef
+        ];

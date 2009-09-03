@@ -1,0 +1,10 @@
+$UR::Namespace::Command::Test::Use::OPTS_SPEC = [
+          'exec=s',
+          undef,
+          'summarize-externals!',
+          undef,
+          'verbose!',
+          undef,
+          'help!',
+          undef
+        ];

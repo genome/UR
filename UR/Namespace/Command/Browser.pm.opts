@@ -1,0 +1,4 @@
+$UR::Namespace::Command::Browser::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

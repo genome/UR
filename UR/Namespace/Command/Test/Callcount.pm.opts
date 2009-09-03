@@ -1,0 +1,4 @@
+$UR::Namespace::Command::Test::Callcount::OPTS_SPEC = [
+          '>list',
+          \'UR::Namespace::Command::Test::Callcount::List'
+        ];

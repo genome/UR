@@ -1,0 +1,14 @@
+$UR::Object::Command::List::OPTS_SPEC = [
+          'subject-class-name=s',
+          undef,
+          'filter=s',
+          undef,
+          'noheaders!',
+          undef,
+          'show=s',
+          undef,
+          'style=s',
+          undef,
+          'help!',
+          undef
+        ];

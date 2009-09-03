@@ -1,0 +1,22 @@
+$UR::Namespace::Command::OPTS_SPEC = [
+          '>browser',
+          \'UR::Namespace::Command::Browser',
+          '>define',
+          \'UR::Namespace::Command::Define',
+          '>describe',
+          \'UR::Namespace::Command::Describe',
+          '>diff',
+          \'UR::Namespace::Command::Diff',
+          '>export',
+          \'UR::Namespace::Command::Export',
+          '>info',
+          \'UR::Namespace::Command::Info',
+          '>list',
+          \'UR::Namespace::Command::List',
+          '>rename',
+          \'UR::Namespace::Command::Rename',
+          '>test',
+          \'UR::Namespace::Command::Test',
+          '>update',
+          \'UR::Namespace::Command::Update'
+        ];

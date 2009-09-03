@@ -1,0 +1,10 @@
+$UR::Namespace::Command::Define::Datasource::OPTS_SPEC = [
+          '>file',
+          \'UR::Namespace::Command::Define::Datasource::File',
+          '>mysql',
+          \'UR::Namespace::Command::Define::Datasource::Mysql',
+          '>pg',
+          \'UR::Namespace::Command::Define::Datasource::Pg',
+          '>sqlite',
+          \'UR::Namespace::Command::Define::Datasource::Sqlite'
+        ];

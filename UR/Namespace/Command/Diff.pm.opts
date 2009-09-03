@@ -1,0 +1,6 @@
+$UR::Namespace::Command::Diff::OPTS_SPEC = [
+          '>rewrite',
+          \'UR::Namespace::Command::Diff::Rewrite',
+          '>update',
+          \'UR::Namespace::Command::Diff::Update'
+        ];

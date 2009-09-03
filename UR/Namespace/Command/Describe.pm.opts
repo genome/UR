@@ -1,0 +1,4 @@
+$UR::Namespace::Command::Describe::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

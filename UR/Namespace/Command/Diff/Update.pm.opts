@@ -1,0 +1,4 @@
+$UR::Namespace::Command::Diff::Update::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

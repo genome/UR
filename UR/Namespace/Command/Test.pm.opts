@@ -1,0 +1,16 @@
+$UR::Namespace::Command::Test::OPTS_SPEC = [
+          '>callcount',
+          \'UR::Namespace::Command::Test::Callcount',
+          '>compile',
+          \'UR::Namespace::Command::Test::Compile',
+          '>eval',
+          \'UR::Namespace::Command::Test::Eval',
+          '>run',
+          \'UR::Namespace::Command::Test::Run',
+          '>track-object-release',
+          \'UR::Namespace::Command::Test::TrackObjectRelease',
+          '>use',
+          \'UR::Namespace::Command::Test::Use',
+          '>window',
+          \'UR::Namespace::Command::Test::Window'
+        ];

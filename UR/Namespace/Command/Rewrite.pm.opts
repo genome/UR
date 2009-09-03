@@ -1,0 +1,6 @@
+$UR::Namespace::Command::Rewrite::OPTS_SPEC = [
+          'force!',
+          undef,
+          'help!',
+          undef
+        ];
