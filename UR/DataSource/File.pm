@@ -660,6 +660,8 @@ sub create_iterator_closure_for_rule {
 sub UR::DataSource::File::Tracker::DESTROY {
     my $iterator = shift;
     my $ds = delete $iterator_data_source{$iterator};
+    return unless $ds;   # The data source may have gone out of scope first during global destruction
+
     my $count = $ds->_open_query_count();
     $ds->_open_query_count(--$count);
     if ($count == 0) {
