@@ -396,7 +396,12 @@ sub prune_object_cache {
 
     $is_pruning = 1;
     #$main::did_prune=1;
-    #my $t1 = Time::HiRes::time();
+    my $t1;
+    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+        my $t1 = Time::HiRes::time();
+        print STDERR "MEM PRUNE begin at $t1 ",scalar(localtime($t1)),"\n";
+    }
+        
 
     my $index_id_sep = UR::Object::Index->__meta__->composite_id_separator() || "\t";
 
@@ -467,7 +472,7 @@ sub prune_object_cache {
                         $index->weaken_reference_for_object($obj);
                     }
                     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-                        print STDERR "PRUNE object $obj class $class id $id\n";
+                        print STDERR "MEM PRUNE object $obj class $class id $id\n";
                     }
 
                     delete $obj->{'__get_serial'};
@@ -482,8 +487,10 @@ sub prune_object_cache {
     $is_pruning = 0;
 
     $cache_last_prune_serial = $target_serial;
-    #my $t2 = Time::HiRes::time();
-    #printf("*** Done pruning, we deleted $deleted_count objects after $pass passes in %.4f sec\n\n\n",$t2-$t1);
+    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+        my $t2 = Time::HiRes::time();
+        printf("MEM PRUNE complete, $deleted_count objects marked after $pass passes in %.4f sec\n\n\n",$t2-$t1);
+    }
     if ($all_objects_cache_size > $cache_size_lowwater) {
         #$DB::single=1;
         warn "After several passes of pruning the object cache, there are still $all_objects_cache_size objects";

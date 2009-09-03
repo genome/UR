@@ -11,7 +11,7 @@ sub bury {
 
     for my $object (@_) {
         if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-            print STDERR "BURY object $object class ",$object->class," id ",$object->id,"\n";
+            print STDERR "MEM BURY object $object class ",$object->class," id ",$object->id,"\n";
         }
         %$object = (original_class => ref($object), original_data => {%$object});
         bless $object, 'UR::DeletedRef';
@@ -47,7 +47,7 @@ sub AUTOLOAD {
 
 sub DESTROY {
     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-        print STDERR "DESTROY deletedref $_[0]\n";
+        print STDERR "MEM DESTROY deletedref $_[0]\n";
     }
     delete $all_objects_deleted->{"$_[0]"};
 }

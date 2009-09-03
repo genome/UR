@@ -142,7 +142,7 @@ sub DESTROY {
         }
         else {
             if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-                print STDERR "DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+                print STDERR "MEM DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
             }
             $obj->unload();
             return $obj->SUPER::DESTROY();
@@ -150,7 +150,7 @@ sub DESTROY {
     }
     else {
         if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-            print STDERR "DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+            print STDERR "MEM DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
         }
         $obj->SUPER::DESTROY();
     }
@@ -574,7 +574,7 @@ sub delete_object {
     # Further attempts to use it will result in readable errors.
     # The object can be resurrected.
     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-        print STDERR  "DELETE object $self class ",$self->class," id ",$self->id,"\n";
+        print STDERR  "MEM DELETE object $self class ",$self->class," id ",$self->id,"\n";
     }
     UR::DeletedRef->bury($self);
 
