@@ -42,6 +42,11 @@ UR::Object::Type->define(
                         doc => 'Owner/schema to connect to',
                         is_optional => 1,
                 },
+                server => {
+                    is => 'String',
+                    doc => 'Override for the "server" attribute',
+                    is_optional => 1,
+                },
            ],
 );
 
@@ -206,17 +211,22 @@ $DB::single=1;
 
     if ($self->login) {
         my $login = $self->login;
-        $src .= qq(sub login {\n    "$login";}\n\n);
+        $src .= qq(sub login { "$login"; }\n\n);
     }
 
     if ($self->auth) {
         my $auth = $self->auth;
-        $src .= qq(sub auth {\n    "$auth";}\n\n);
+        $src .= qq(sub auth { "$auth"; }\n\n);
     }
 
     if ($self->owner || $self->schema) {
         my $owner = $self->owner || $self->schema;
-        $src .= qq(sub owner {\n    "$owner";}\n\n);
+        $src .= qq(sub owner { "$owner"; }\n\n);
+    }
+
+    if ($self->server) {
+        my $server = $self->server;
+        $src .= qq(sub server { "$server"; }\n\n);
     }
 
     $src .= "\n1;\n";
