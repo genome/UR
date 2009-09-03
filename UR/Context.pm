@@ -2763,6 +2763,8 @@ sub clear_cache {
 
         next if $class_obj->is_meta;
 
+        next if not defined $class_obj->data_source;
+
         for my $obj ($self->all_objects_loaded_unsubclassed($class_name)) {
             # Check the type against %local_dont_unload again, because all_objects_loaded()
             # will return child class objects, as well as the class you asked for.  For example,
@@ -2785,7 +2787,7 @@ sub clear_cache {
                 require YAML;
                 $class->error_message(
                     "The following objects have changes:\n"
-                    . YAML::Dump(\@changed)
+                    . Data::Dumper::Dumper(\@changed)
                     . "The clear_cache method cannot be called with unsaved changes on objects.\n"
                     . "Use reverse_all_changes() first to really undo everything, then clear_cache(),"
                     . " or call sync_database() and clear_cache() if you want to just lighten memory but keep your changes.\n"

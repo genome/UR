@@ -249,9 +249,15 @@ sub get {
         my $rule = { id => $rule_id, template_id => $template_id, value_id => $value_id };    
         bless ($rule, "UR::BoolExpr");
         $UR::Object::rules->{$rule_id} = $rule;
+        Scalar::Util::weaken($UR::Object::rules->{$rule_id});
+        return $rule;
     }
    
     return $UR::Object::rules->{$rule_id};
+}
+
+sub DESTROY {
+    delete $UR::Object::rules->{$_[0]->{id}};
 }
 
 sub resolve_normalized {
