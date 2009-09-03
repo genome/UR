@@ -80,7 +80,7 @@ sub data_source {
     my $schema = $self->schema_name;
     
     my @caller = caller(1);
-    my $caller = $caller[3];
+    my $caller = $caller[3] || $0;
     unless(
         $caller    eq 'UR::Context::resolve_data_sources_for_class_meta_and_rule'
         or $caller eq 'UR::Context::resolve_data_source_for_object'
