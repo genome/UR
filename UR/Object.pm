@@ -844,16 +844,13 @@ sub changed {
     {
         my $class_name = $meta->class_name;
         @changed =
-            grep { $_ }
             grep {
-                my $property_meta = UR::Object::Property->is_loaded(
-                    class_name => $class_name,
-                    property_name => $_
-                );
+                my $property_meta = $meta->get_property_meta_by_name($_);
                 ( ((!$property_meta) or $property_meta->is_transient) ? 0 : 1 );
             }
-            grep { $orig->{$_} ne $self->$_ }
             grep { $self->can($_) and not UR::Object->can($_) }
+            grep { $orig->{$_} ne $self->{$_} }
+            grep { $_ }
             keys %$orig;
     }
     else
