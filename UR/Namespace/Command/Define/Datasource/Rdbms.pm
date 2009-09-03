@@ -8,319 +8,164 @@ use IO::File;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Namespace::Command',
+    is => 'UR::Namespace::Command::Define::Datasource',
     has => [
-                dsname => {
-                        type => 'String',
-                        doc => "The name to give this data source. The default is the same name as the namespace",
-                        #default => 'Main',  # FIXME - default dosen't seem to work.  It's _always_ 'Main' even if you give --name on the cmdline
-                        is_optional => 1,
-                },
-                dsn => {
-                        is => 'String',
-                        doc => 'The connection string used by DBI.'
-                },
-                # When it's refactored into subclasses, only some will need these
-                login => {   
-                        is => 'String',
-                        doc => 'User to log in with',
-                        is_optional => 1,   
-                },
-                auth => {
-                        is => 'String',
-                        doc => 'Password to log in with',
-                        is_optional => 1,
-                },
-                # FIXME is there a way to make owner and schema be the same?
-                owner => {
-                        is => 'String',
-                        doc => 'Owner/schema to connect to',
-                        is_optional => 1,
-                },
-                schema => {
-                        is => 'String',
-                        doc => 'Owner/schema to connect to',
-                        is_optional => 1,
-                },
                 server => {
                     is => 'String',
-                    doc => 'Override for the "server" attribute',
+                    doc => '"server" attribute for this data source, such as a database name',
                     is_optional => 1,
                 },
+                nosingleton => {
+                    is => 'Boolean',
+                    doc => 'Created data source should not inherit from UR::Singleton (defalt is that it will)',
+                    default_value => 0,
+                },
            ],
+           is_abstract => 1,
 );
 
 sub help_description {
-   "Define a UR datasource connected to a relational database through DBI";
+   "Define a UR datasource connected to a relational database through UR::DataSource::RDBMS and DBI";
 }
 
-
-sub _decompose_dsn {
-    my($self,$dsn) = @_;
-
-    #my($dbi,$driver,$db_string) = split(/:/, $dsn, 3);
-    return split(/:/, $dsn, 3);
-}
-
-
-
-#sub _type {
-#    my $self = shift;
-#    my ($type) = ($self->class =~ /([^:]+)$/);
-#    return $type;
-#}
-#
-#sub _data_source_sub_class_name {
-#    my $self = shift;
-#    my $driver = shift;
-#    return "UR::DataSource::" . $driver;
-#}
-#
-## REFACTOR INTO SUBCLASSES
-#sub _server_adjusted {
-#    my $self = shift;
-#    my $lc_type = lc($self->_type);
-#    my $server;
-#    if ($lc_type eq 'oracle') {
-#        $server = sprintf("'%s'", $self->server);
-#    }
-#    elsif ($lc_type eq 'sqlite') {
-#        $server = "''";
-#    }
-#    else {
-#        $server = sprintf("'dbname=%s;host=%s'", lc $self->name, $self->server);
-#    }
-#    return $server;
-#}
-#
-## REFACTOR INTO SUBCLASSES
-#sub _db_name_adjusted {
-#    my $self = shift;
-#    my $db_name_src = '';
-#    if (lc $self->_type eq 'mysql') {
-#        $db_name_src = sprintf(q('%s'), $self->name);
-#    }
-#    return $db_name_src;
-#}
-#
-## REFACTOR INTO SUBCLASSES
-#sub _schema_adjusted {
-#    my $self = shift;
-#    my $schema = $self->schema;
-#    if ($schema) {
-#        $schema = qq('$schema');
-#    } else {
-#        if (lc($self->_type) eq 'postgresql') {
-#            $schema = qq('public');
-#        } elsif (lc($self->_type) eq 'mysql') {
-#            $schema = 'undef';
-#        } else {
-#            $schema = qq('');
-#        }
-#    }
-#    return $schema;
-#}
-#
-#sub _write_name { 0 }
-#
-#sub _write_server { 1 }
-#
-#sub _write_login { 1 }
-#
-#sub _write_auth  { 1 } 
-#
-#sub _write_owner { 1 }
-
-sub validate_params {
-    my $self = shift;
-    if ($self->bare_args) {
-        $self->error_message("Unexpected arguments!");
-        return;
-    }
-    return 1;
-}
 
 sub execute {
     my $self = shift;
 
+$DB::single=1;
     my $namespace = $self->namespace_name;
     unless ($namespace) {
         $self->error_message("This command must be run from a namespace directory.");
         return;
     }
-$DB::single=1;
-    # FIXME strange... the eval here loads the right module but $@ contains "Compilation error"
-    # my $ret = eval "use above $namespace; print qq(Hi $@\n);";
+
+    unless ($self->__dsname || $self->__dsid) {
+        $self->error_message("Either --dsname or --dsid is required");
+        return;
+    }
+
+    # Force an autoload of the namespace module
     my $ret = above::use_package($namespace);
     if ($@) {
         $self->error_message("Can't load namespace $namespace: $@");
         return;
     }
 
-    my(undef,$driver,$connect) = $self->_decompose_dsn($self->dsn);
-    unless ($driver && $connect) {
-        $self->error_message("Couldn't determine DBI driver and database string from dsn ".$self->dsn);
+    unless (defined $self->server) {
+        $self->server($self->dsname);
+    }
+      
+    my $ds_id = $self->dsid;
+
+    my $c = eval { UR::DataSource->get($ds_id) || $ds_id->get() };
+    if ($c) {
+        $self->error_message("A data source named $ds_id already exists\n");
         return;
     }
 
-    # FIXME see the comment in the class definition about default values
-    my $name = ucfirst($self->dsname) || 'Main';
+    my $src = $self->_resolve_module_header($ds_id,$namespace);
 
-    my $this_ds_class = $namespace . '::DataSource::' . $name;
-    my $this_ds_parent_class = 'UR::DataSource::'.$driver;
+    my($class_definition,$parent_classes) = $self->_resolve_class_definition_source();
+    $src .= $class_definition;
 
-    if (eval {$this_ds_class->get_class_object}) {
-        $this_ds_class =~ s/::/\//g;
-        $self->error_message("A datasource already exists by that name in module ".$INC{$this_ds_class . '.pm'});
-        return;
-    }
-    
+    my $module_body = $self->_resolve_module_body();
+    $src .= "\n$module_body\n1;\n";
 
-    # Figure out the right path the Datasource goes in
-    my $namespace_module = $namespace . '.pm';
-    unless ($INC{$namespace_module}) {
-        $self->error_message("Namespace $namespace has no entry in %INC!?");
-        return;
-    }
-
-    my $path = $INC{$namespace_module};
-    ($path) = ($path =~ m/^(.*)\.pm/);
-    $path .= '/DataSource/';
-
-    my $module_pathname = $path . $name . '.pm';
-
-    mkdir $path;
-    unless (-d $path) {
-        $self->error_message("Can't create data source directory $path: $!");
-        return;
-    }
-
-
-    my $ds = UR::Object::Type->define(
-        class_name => $this_ds_class,
-        is => [$this_ds_parent_class],
-        is_abstract => 0, 
-    );
-    unless ($ds) {
-        $self->error_message("Failed to define new DataSource class $this_ds_class");
-        return;
-    }  
-    my $src = qq(use strict;\nuse warnings;\n\npackage $this_ds_class;\n\nuse $namespace;\n\n);
-    $src .= $ds->resolve_module_header_source . "\n\n";
-
-
-    if ($self->login) {
-        my $login = $self->login;
-        $src .= qq(sub login { "$login"; }\n\n);
-    }
-
-    if ($self->auth) {
-        my $auth = $self->auth;
-        $src .= qq(sub auth { "$auth"; }\n\n);
-    }
-
-    if ($self->owner || $self->schema) {
-        my $owner = $self->owner || $self->schema;
-        $src .= qq(sub owner { "$owner"; }\n\n);
-    }
-
-    if ($self->server) {
-        my $server = $self->server;
-        $src .= qq(sub server { "$server"; }\n\n);
-    }
-
-    $src .= "\n1;\n";
-
-    my $fh = IO::File->new(">$module_pathname");
+    my $module_path = $self->data_source_module_pathname();
+    my $fh = IO::File->new($module_path, O_WRONLY | O_CREAT | O_EXCL);
     unless ($fh) {
-        $self->error_message("Can't open $module_pathname for writing: $!");
+        $self->error_message("Can't open $module_path for writing: $!");
         return;
     }
 
     $fh->print($src);
     $fh->close();
 
-#    if ($self->_write_server) {
-#        my $server = $self->_server_adjusted();
-#
-#        $fh->print(qq|
-## This becomes the third part of the colon-separated data_source
-## string passed to DBI->connect()
-#sub server {
-#    $server;
-#}
-#        |);
-#    }
-#
-#
-#    if ($self->_write_name) {
-#        my $db_name = $self->_db_name_adjusted();
-#        $fh->print(qq(
-## Name of the database
-#sub db_name {
-#    $db_name;
-#}
-#        ));
-#    }
-#
-#    if ($self->_write_owner) {
-#        my $schema = $self->_schema_adjusted();
-#        $fh->print(qq(
-## This becomes the schema argument to most of the data dictionary methods
-## of DBI like table_info, column_info, etc.
-#sub owner {
-#    $schema;
-#}
-#        ));
-#    }
-#
-#    if ($self->_write_login) {
-#        my $login = sprintf("'%s'", $self->login);
-#        $fh->print(qq(
-## This becomes the username argument to DBI->connect
-#sub login {
-#    $login;
-#}
-#        ));
-#    }
-#
-#    if ($self->_write_auth) {
-#        my $password = sprintf("'%s'", $self->password);
-#        $fh->print(qq(
-## This becomes the password argument to DBI->connect
-#sub auth {
-#    $password;
-#}
-#        ));
-#    }
-#
-#    if ($self->can("_module_tail")) {
-#        $fh->print($self->_module_tail);
-#    }
-#
-#    $fh->print("\n1;\n");
+    $self->status_message("A   $ds_id (" . join(',', @$parent_classes) . ")\n");
 
-    $self->status_message("A   $this_ds_class ($this_ds_parent_class)\n");
+    $self->_post_module_written();
 
-    # FIXME when this is split back out into subclasses for each type of DS,
-    # then this goes into the SQLite class
-    if ($driver eq 'SQLite') {
-        # Create a new, empty DB if it dosen't exist yet
-        $module_pathname =~ s/\.pm$/.sqlite3/;
-        IO::File->new($module_pathname, O_WRONLY | O_CREAT);
+    if ($self->_try_connect()) {
+        return 1;
+    } else {
+        return;
     }
+}
+ 
+
+
+sub _resolve_module_header {
+    my($self,$ds_id, $namespace) = @_;
+
+    return "package $ds_id;\n\nuse strict;\nuse warnings;\n\nuse $namespace;\n\n";
+}
+
+# Subclasses can override this to have something happen after the module
+# is written, but before we try connecting to the DS
+sub _post_module_written {
+    return 1;
+}
+
+
+# Subclasses must override this to indicate what abstract DS class they should
+# inherit from
+sub _data_source_sub_class_name {
+    my $self = shift;
+    my $class = ref($self);
+    die "Class $class didn't implement _data_source_sub_class_name";
+}
+
+
+sub _resolve_class_definition_source {
+    my $self = shift;
+ 
+    my $ds_id = $self->dsid;
+
+    my $parent_ds_class = $self->_data_source_sub_class_name();
+    my $src = "class $ds_id {\n";
+
+    my @parent_classes = ( $parent_ds_class );
+    if (! $self->nosingleton) {
+        push @parent_classes, 'UR::Singleton';
+    }
+
+    $src .= sprintf("    is => [ '%s' ],\n", join("', '", @parent_classes));
+
+    $src .= "};\n";
+
+    return($src,\@parent_classes);
+}
+
+
+    
+sub _resolve_module_body {
+    my $self = shift;
+
+    my $server = $self->server;
+    my $src = "sub server { '$server' }\n";
+
+    return $src;
+}
+
+
+
+sub _try_connect {
+    my $self = shift;
 
     $self->status_message("    ...connecting...");
 
-    my $dbh = $this_ds_class->get_default_dbh();
+    my $ds_id = $self->dsid;
+    my $dbh = $ds_id->get_default_handle();
     if ($dbh) {
         $self->status_message("    ....ok\n");
+        return 1;
+    } else {
+        $self->error_message("    ERROR: " . $ds_id->error_message);
+        return;
     }
-    else {
-        $self->error_message("    ERROR: " . $this_ds_class->error_message);
-    }
-    return 1;
-};
+}
+
+
 
 1;
 

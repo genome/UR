@@ -4,50 +4,48 @@ use strict;
 use warnings;
 use UR;
 
+use IO::File;
+
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => "UR::Namespace::Command::Define::Datasource::Rdbms",
-    has => [
-        file    => { is => 'FilePath', is_optional => 1 }
-    ]
+    is => [ 'UR::Namespace::Command::Define::Datasource::Rdbms' ],
 );
 
 sub help_brief {
    "Add a SQLite data source to the current namespace."
 }
 
-sub _write_server  { 0 }
-
-sub _write_login  { 0 }
-
-sub _write_auth   { 0 }
-
-sub _write_db_name { 0 }
-
-sub _write_owner  { 0 }
-
 sub _data_source_sub_class_name {
     "UR::DataSource::SQLite"
 }
 
-sub _module_tail {  
-    my $self = shift;
-    my $file_path = $self->file;
-    return unless $file_path and length($file_path);
-    return <<EOS
-
-sub _database_file_path {
-    return '$file_path';
-}
-
-EOS
-}
-
-sub execute {
+sub server {
     my $self = shift;
 
-    $self->error_message("postponed until later, use 'ur define datasource rdbms' for now");
-    return 0;
+    my $super_server = $self->super_can('server');
+    if (@_) {
+        # unusual case, setting the server
+        return $super_server($self,@_);
+    }
+
+    my $server = $super_server->($self);
+    unless ($server) {
+        $server = $self->data_source_module_pathname();
+        $server =~ s/\.pm$/.sqlite3/;
+        $super_server->($self,$server);
+    }
+    return $server;
+}
+
+sub _post_module_written {
+    my $self = shift;
+
+    # Create a new, empty DB if it dosen't exist yet
+    my $pathname = $self->server;
+    $pathname =~ s/\.pm$/.sqlite3/;
+    IO::File->new($pathname, O_WRONLY | O_CREAT) unless (-f $pathname);
+
+    return 1;
 }
 
 

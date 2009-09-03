@@ -119,12 +119,12 @@ create a datasource, so you need to be within the CdExample's Namespace's direct
 
   cd CdExample
 
-and then define the datasource. We specify the data source's name with the
---dsname argument, and a DBI connect string with the --dsn argument. For
-this example, we'll use a brand new SQLite database. For some other, perhaps
-already existing database, give its connect string instead.
+and then define the datasource. We specify the data source's type as a
+sub-command, and the name with the --dsname argument.  For this example,
+we'll use a brand new SQLite database. For some other, perhaps already
+existing database, give its connect string instead.
 
-  ur define datasource rdbms --dsname Example --dsn dbi:SQLite:Example.sqlite3
+  ur define datasource sqlite --dsname Example
 
 which generates this output:
 
@@ -331,7 +331,7 @@ The C<delete()> method does just what it says.
      $track->delete();
   }
 
-Again, the correcponding database rows will not be removed until you commit.
+Again, the corresponding database rows will not be removed until you commit.
 
 =head1 Relationships
 
