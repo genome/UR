@@ -51,6 +51,22 @@ use Sub::Install ();
     position_in_module_header => -1,
 );
 
+@UR::Object::Type::meta_id_ref_shared_properties = (
+    qw/
+        is_optional
+        is_transient
+        is_constant
+        is_volatile
+        is_class_wide
+        is_transactional
+        is_abstract
+        is_concrete
+        is_final
+        is_many
+        is_deprecated
+    /
+);
+
 %UR::Object::Type::converse = (
     required => 'optional',
     abstract => 'concrete',
@@ -323,9 +339,9 @@ sub initialize_bootstrap_classes
 sub _normalize_class_description {
     my $class = shift;
     my %old_class = @_;
-   
+
     my $class_name = delete $old_class{class_name};    
-    
+
     my %new_class = (
         class_name      => $class_name,        
         is_singleton    => $UR::Object::Type::defaults{'is_singleton'},
@@ -624,17 +640,33 @@ sub _normalize_class_description {
                     }
                     else {
                         $params2 = {};
+                    }
+                    for my $p (@UR::Object::Type::meta_id_ref_shared_properties) {
+                        if (exists $params->{$p}) {
+                            $params2->{$p} = $params->{$p};
+                        }
                     }                    
                     $params2->{implied_by} = $name;
-                    $params2->{is_specified_in_module_header} = 0;
-                    
+                    $params2->{is_specified_in_module_header} = 0;                    
                     push @id_by_names, $id_name;
                     push @tmp, $id_name, $params2;
                 }
                 $params->{id_by} = \@id_by_names;
             }
-            $properties->{$name} = $params;
         } # next property in group
+
+        for my $pdata (values %$properties) {
+            next unless $pdata->{id_by};
+            for my $id_property (@{ $pdata->{id_by} }) {
+                my $id_pdata = $properties->{$id_property};
+                for my $p (@UR::Object::Type::meta_id_ref_shared_properties) {
+                    if (exists $id_pdata->{$p}) {
+                        $pdata->{$p} = $id_pdata->{$p};
+                    }
+                }                    
+            }
+        }
+
     } # next group of properties
     
     unless ($new_class{type_name}) {
