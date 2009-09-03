@@ -76,6 +76,7 @@ require UR::Object::Index;
 # This is done outside of the actual modules since the define() method
 # uses all of the modules themselves to do its work.
 #
+
 UR::Object::Type->define(
     class_name => 'UR::Object',
     english_name => 'entity',
