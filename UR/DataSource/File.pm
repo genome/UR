@@ -904,7 +904,7 @@ sub _sync_database {
             my $comparison = $row_sort_sub->($row, $insert->[0]);
             if ($comparison > 0) {
                 # write the object's data
-                no warnings 'uninitialized';
+                no warnings 'uninitialized';   # Some of the object's data may be undef
                 my $new_row = shift @$insert;
                 my $new_line = join($join_pattern, @$new_row) . $record_separator;
 
@@ -949,7 +949,7 @@ sub _sync_database {
 
     # finish out by writing the rest of the new data
     foreach my $new_row ( @$insert ) {
-        no warnings 'uninitialized';
+        no warnings 'uninitialized';   # Some of the object's data may be undef
         my $new_line = join($join_pattern, @$new_row) . $record_separator;
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
             $sql_fh->print("INSERT >>$new_line<<\n");
@@ -993,7 +993,9 @@ sub _sync_database {
         $new_write_fh->close();
     }
 
-    $self->{_fh} = undef;
+    # Because of the rename/copy process during syncing, the previously opened filehandle may
+    # not be valid anymore.  get_default_handle will reopen the file next time it's needed
+    $self->{_fh} = undef; 
 
     if ($ENV{'UR_DBI_MONITOR_SQL'}) {
         $sql_fh->printf("FILE: TOTAL COMMIT TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
