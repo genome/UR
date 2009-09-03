@@ -28,7 +28,7 @@ class UR::DataSource::SortedCsvFile {
 
 my $sql_fh;
 
-sub _fh {
+sub get_default_handle {
     my $self = shift->_singleton_object;
 
     unless ($self->{'_fh'}) {
@@ -38,7 +38,18 @@ sub _fh {
             $sql_fh->printf("CSV OPEN AT %d [%s]\n",$time, scalar(localtime($time)));
         }
 
-        my $fh = IO::File->new($self->server);
+        my $filename = $self->server;
+        unless (-e $filename) {
+            # file doesn't exist
+            my $fh = IO::File->new($filename, '>');
+            unless ($fh) {
+                $self->error_message("$filename does not exist, and can't be created: $!");
+                return;
+            }
+            $fh->close();
+        }
+
+        my $fh = IO::File->new($filename);
         unless($fh) {
             $self->error_message("Can't open ".$self->server." for reading: $!");
             return;
@@ -392,7 +403,7 @@ $DB::single=1;
         push @comparison_for_column, $comparison_function;
     }
 
-    my $fh = $self->_fh();
+    my $fh = $self->get_default_handle();
     my $split_regex = $self->_regex();
 
     # A method to tell if there's been interleaved reads on the same file handle.  If the
@@ -487,7 +498,7 @@ $DB::single=1;
             } else {
                 $self->last_read_fingerprint($fingerprint);
                 my $line = $fh->getline();
-                unless ($line) {
+                unless (defined $line) {
                     # at EOF.  Close up shop and return
                     $fh = undef;
                     $self->_invalidate_cache();
@@ -495,6 +506,7 @@ $DB::single=1;
                     return;
                 }
 
+                chomp $line;
                 $next_candidate_row = [ split($split_regex, $line) ];
 
                 if ($file_cache_index > $max_cache_size) {
