@@ -11,7 +11,7 @@ sub import {
     }
 }
 
-our %used_libs;
+our %used_libs = ($ENV{PERL_USED_ABOVE} ? (map { $_ => 1 } split(":",$ENV{PERL_USED_ABOVE})) : ());
 
 sub use_package {
     my $class = shift;
@@ -45,6 +45,8 @@ sub use_package {
             eval "use lib '$path';";
             die $@ if $@;
             $used_libs{$path} = 1;
+            my $env_value = join(":",sort keys %used_libs);
+            $ENV{PERL_USED_ABOVE} = $env_value;
         }
     }
 
