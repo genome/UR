@@ -90,7 +90,7 @@ sub value_id_to_values {
     my $method_identifier = substr($value_id,0,2);
     $value_id = substr($value_id, 2, length($value_id)-2);    
     if ($method_identifier eq "F:") {
-    return $self->value_id_to_values_frozen($value_id);
+        return $self->value_id_to_values_frozen($value_id);
     }
 
     my @values = ($value_id =~ /(.*?)$record_sep/gs);
