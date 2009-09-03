@@ -337,8 +337,8 @@ sub create {
             if (@errors_fatal_to_construction) {
                 my $msg = 'Failed to create ' . $class . ' with invalid immutable properties:'
                     . join("\n", @errors_fatal_to_construction);
-                $self->delete_object;
-                die $msg;
+                #$self->delete_object;
+                #die $msg;
             }
         }
     }
