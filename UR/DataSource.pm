@@ -936,7 +936,7 @@ sub commit {
     my %args = @_;
     $class = ref($class) || $class;
 
-    $class->warning_message("commit() ignored for data source $class");
+    #$class->warning_message("commit() ignored for data source $class");
     return 1;
 }
 
