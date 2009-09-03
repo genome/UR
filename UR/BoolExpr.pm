@@ -426,9 +426,11 @@ sub resolve_for_class_and_params {
             }
             
             my $is_many;
+            my $data_type;
             my $property_meta = $subject_class_meta->get_property_meta_by_name($property_name);
             if ($property_meta) {
                 $is_many = $property_meta->is_many;
+                $data_type = $property_meta->data_type;
             }
             else {
                 if ($UR::initialized) {
@@ -437,10 +439,11 @@ sub resolve_for_class_and_params {
                 else {
                     # this has to run during bootstrapping in 2 cases currently...
                     $is_many = $subject_class_meta->{has}{$property_name}{is_many};
+                    $data_type = $subject_class_meta->{has}{$property_name}{data_type};
                 }
             }
-            
-            unless ($is_many) {
+            $data_type ||= '';  # avoid a warning about undefined below
+            if ($data_type ne 'ARRAY' and !$is_many) {
                 no warnings;
 
                 # sort and replace the arrayref
