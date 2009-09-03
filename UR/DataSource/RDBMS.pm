@@ -1936,7 +1936,7 @@ sub _generate_template_data_for_loading {
         @delegated_properties,    
         %outer_joins,
     );
-$DB::single = 1; 
+    
     for my $co ( $class_meta, @parent_class_objects ) {
         my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
