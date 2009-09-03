@@ -96,7 +96,7 @@ sub _get_next_value_from_sequence {
 }
 
 
-sub bitmap_index_info {
+sub get_bitmap_index_details_from_data_dictionary {
     # Mysql dosen't have bitmap indexes.
     return [];
 }
@@ -121,7 +121,7 @@ my($self,$sp_name) = @_;
 
 # FIXME This works on Mysql 4.x (and later?).  Mysql5 has a database called
 # IMFORMATION_SCHEMA that may be more useful for these kinds of queries
-sub unique_index_info {
+sub get_unique_index_details_from_data_dictionary {
 my($self,$table_name) = @_;
 
     my $dbh = $self->get_default_dbh();

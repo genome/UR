@@ -1,4 +1,4 @@
-package UR::DataSource::PostgreSQL;
+package UR::DataSource::Pg;
 use strict;
 use warnings;
 
@@ -87,14 +87,14 @@ my($self,$table_name, $column_name) = @_;
 }
 
 
-sub bitmap_index_info {
+sub get_bitmap_index_details_from_data_dictionary {
     # FIXME Postgres has bitmap indexes, but we don't support them yet.  See the Oracle
     # datasource module for details about how to get it working
     return [];
 }
 
 
-sub unique_index_info {
+sub get_unique_index_details_from_data_dictionary {
 my($self,$table_name) = @_;
 
     my $sql = qq(

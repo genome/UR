@@ -212,6 +212,42 @@ sub _get_table_names_from_data_dictionary {
 }
 
 
+# A wrapper for DBI's table_info() since the DBD implementations of them
+# aren't always exactly what we need in other places in the system.  Other
+# subclasses can override it to get custom behavior
+sub get_table_details_from_data_dictionary {
+    return shift->_get_whatever_details_from_data_dictionary('table_info',@_);
+}
+
+sub _get_whatever_details_from_data_dictionary {
+    my $self = shift;
+    my $method = shift;
+
+    my $dbh = $self->get_default_dbh();
+    return unless $dbh;
+
+    return $dbh->$method(@_);
+}
+
+sub get_column_details_from_data_dictionary {
+    return shift->_get_whatever_details_from_data_dictionary('column_info',@_);
+}
+
+sub get_foreign_key_details_from_data_dictionary {
+    return shift->_get_whatever_details_from_data_dictionary('foreign_key_info',@_);
+}
+
+sub get_primary_key_details_from_data_dictionary {
+    return shift->_get_whatever_details_from_data_dictionary('primary_key_info',@_);
+}
+    
+
+
+
+
+    
+
+
 sub get_table_names {
     map { $_->table_name } shift->get_tables(@_);
 }
@@ -361,7 +397,11 @@ sub rollback_to_savepoint {
 # This is used by the part that writes class defs based on the DB schema, and 
 # possibly by sync_database()
 # Implemented methods should take one optional argument: a table name
-sub bitmap_index_info {
+#
+# FIXME The API for bitmap_index and unique_index methods here aren't the same as
+# the other data_dictionary methods.  These tqo return hashrefs of massaged
+# data while the others return DBI statement handles.
+sub get_bitmap_index_details_from_data_dictionary {
     my $class = shift;
     Carp::confess("Class $class didn't define its own bitmap_index_info() method");
 }
@@ -370,7 +410,7 @@ sub bitmap_index_info {
 # Derived classes should define a method to return a ref to a hash keyed by constraint
 # names.  Each value holds a listref of hashrefs containing these keys:
 # CONSTRAINT_NAME and COLUMN_NAME
-sub unique_index_info {
+sub get_unique_index_details_from_data_dictionary {
     my $class = shift;
     Carp::confess("Class $class didn't define its own unique_index_info() method");
 }

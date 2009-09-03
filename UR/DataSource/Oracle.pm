@@ -117,7 +117,7 @@ my($self,$sequence_name) = @_;
     return $new_id;
 }
 
-sub bitmap_index_info {
+sub get_bitmap_index_details_from_data_dictionary {
 my($self,$table_name) = @_;
     my $sql = qq(
         select c.table_name,c.column_name,c.index_name
@@ -139,7 +139,7 @@ my($self,$table_name) = @_;
 }
 
 
-sub unique_index_info {
+sub get_unique_index_details_from_data_dictionary {
     my ($self,$table_name) = @_;
     my $sql = qq(
         select cc.constraint_name, cc.column_name

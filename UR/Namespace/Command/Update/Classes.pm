@@ -1550,11 +1550,8 @@ sub _update_database_metadata_objects_for_table_changes {
     # this must be on or before the actual data dictionary queries
     my $revision_time = UR::Time->now();
 
-    # re-used heavily
-    my $dbh = $data_source->get_default_dbh;
-
     # TABLE
-    my $table_sth = $dbh->table_info('%', $data_source->owner, $table_name, "TABLE,VIEW");
+    my $table_sth = $data_source->get_table_details_from_data_dictionary('%', $data_source->owner, $table_name, "TABLE,VIEW");
     my $table_data = $table_sth->fetchrow_hashref();
     unless ($table_data && %$table_data) {
         #Carp::confess("No data for table $table_name in data source $data_source?!");
@@ -1595,13 +1592,15 @@ sub _update_database_metadata_objects_for_table_changes {
     # COLUMNS
     # mysql databases seem to require you to actually put in the database name in the first arg
     my $db_name = ($data_source->can('db_name')) ? $data_source->db_name : '%';
-    my $column_sth = $dbh->column_info($db_name, $data_source->owner, $table_name, '%');
+    my $column_sth = $data_source->get_column_details_from_data_dictionary($db_name, $data_source->owner, $table_name, '%');
     unless ($column_sth) {
-        Carp::confess("Error getting column data for table $table_name in data source $data_source.");
+        $self->error_message("Error getting column data for table $table_name in data source $data_source.");
+        return;
     }
     my $all_column_data = $column_sth->fetchall_arrayref({});
     unless (@$all_column_data) {
-        Carp::confess("No column data for table $table_name?: " . $dbh->errstr);
+        $self->error_message("No column data for table $table_name in data source $data_source");
+        return;
     }
     
     my %columns_to_delete = map {$_->column_name, $_} UR::DataSource::RDBMS::TableColumn->get(table_name => $table_name,
@@ -1610,17 +1609,6 @@ sub _update_database_metadata_objects_for_table_changes {
     
     
     for my $column_data (@$all_column_data) {
-        
-        
-        
-        # map data_type to type_name
-        # for backward compatibility
-
-        # change nullable field
-        # for backward compatibility
-
-        # set data_length field
-        # for backward compatibility
 
         #my $id = $table_name . '.' . $column_data->{COLUMN_NAME}
         $column_data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
@@ -1670,39 +1658,8 @@ sub _update_database_metadata_objects_for_table_changes {
         $to_delete->delete;
     }
 
-    # DD objects embed serialized data structures to make up for not being queryable directly (right now).
-    # The hash below tracks all of this generically, and does embedding of the data at the end of this method call.
 
-    #my %embed;
-    #$embed{bitmap_index_names} ||= {};
-    #$embed{bitmap_index_names}{$table_object} ||= [];
-#
-#    $embed{column_names} ||= {};
-#    $embed{column_names}{$table_object} = [ map { $_->column_name } @column_objects ];
-#
-#    my $ref_fks = [];
-#    $embed{ref_fk_constraint_names}{$table_object} = $ref_fks;
-#
-#    my $fks = [];
-#    $embed{fk_constraint_names} ||= {};
-#    $embed{fk_constraint_names}{$table_object} = $fks;
-
-#    # used by fk objects
-#    $embed{column_names} ||= {};
-#    $embed{r_column_names} ||= {};
-
-    # Moved into the UR::DataSource::* classes as
-    ## Check for bitmap indexes, as these require
-    ## special locking when coordinating DML.
-    #$sql = qq|
-    #    select c.table_name,c.column_name,c.index_name
-    #    from all_indexes i join all_ind_columns c on i.index_name = c.index_name
-    #    where i.index_type = 'BITMAP'
-    #    and i.table_name = ?
-    #|;
-    #$data = $dbh->selectall_arrayref($sql, undef, $table_name);
-
-    my $bitmap_data = $data_source->bitmap_index_info($table_name);
+    my $bitmap_data = $data_source->get_bitmap_index_details_from_data_dictionary($table_name);
     for my $index (@$bitmap_data) {
         #push @{ $embed{bitmap_index_names}{$table_object} }, $index->{'index_name'};
 
@@ -1711,8 +1668,6 @@ sub _update_database_metadata_objects_for_table_changes {
             data_source => $data_source,
             column_name => uc($index->{'column_name'}),
         );
-#        $embed{bitmap_index_names}{$column_object} ||= [];
-#        push @{ $embed{bitmap_index_names}{$column_object} }, $index->{'index_name'};
     }
 
 
@@ -1720,7 +1675,7 @@ sub _update_database_metadata_objects_for_table_changes {
     # constraints on other tables against columns in this table
 
     my $db_owner = $data_source->owner;
-    my $fk_sth = $dbh->foreign_key_info('', $db_owner, $table_name, '', '', '');
+    my $fk_sth = $data_source->get_foreign_key_details_from_data_dictionary('', $db_owner, $table_name, '', '', '');
 
     my %fk;     # hold the fk constraints that this
                 # invocation of foreign_key_info created
@@ -1771,10 +1726,6 @@ sub _update_database_metadata_objects_for_table_changes {
                     data_source     => $table_object->{data_source},
                 );
                     
-    #            $embed{column_names}{$fk} ||= [];
-    #            push @{ $embed{column_names}{$fk} }, $data->{FK_COLUMN_NAME};
-    #            $embed{r_column_names}{$fk} ||= [];
-    #            push @{ $embed{r_column_names}{$fk} }, $data->{UK_COLUMN_NAME};
             }
     
             push @constraints, $fk;
@@ -1784,7 +1735,7 @@ sub _update_database_metadata_objects_for_table_changes {
     # get foreign_key_info the other way
     # constraints on this table against columns in other tables
 
-    my $fk_reverse_sth = $dbh->foreign_key_info('', '', '', '', $db_owner, $table_name);
+    my $fk_reverse_sth = $data_source->get_foreign_key_details_from_data_dictionary('', '', '', '', $db_owner, $table_name);
 
     %fk = ();   # resetting this prevents data_source referencing
                 # tables from fouling up their fk objects
@@ -1834,32 +1785,16 @@ sub _update_database_metadata_objects_for_table_changes {
                     owner           => $table_object->{owner},
                     data_source     => $table_object->{data_source},
                  );
-    
-                
-    #            $embed{column_names}{$fk} ||= [];
-    #            push @{ $embed{column_names}{$fk} }, $data->{FK_COLUMN_NAME};
-    #            $embed{r_column_names}{$fk} ||= [];
-    #            push @{ $embed{r_column_names}{$fk} }, $data->{UK_COLUMN_NAME};
             }
     
-    #        my $column_object = UR::DataSource::RDBMS::TableColumn->is_loaded(
-    #                                     table_name => $table_name,
-    #                                     data_source => $data_source,
-    #                                     column_name => $data->{'FK_COLUMN_NAME'},
-    #                                 );
-    #        );
-    #        $embed{fk_constraint_names} ||= {};
-    #        $embed{fk_constraint_names}{$column_object} ||= [];
-    #        push @{ $embed{fk_constraint_names}{$column_object} }, $data->{FK_NAME};
-    
+                
             push @constraints, $fk;
         }
     }
 
     # get primary_key_info
 
-    #my $pk_sth = $dbh->primary_key_info('', $db_owner, $table_name);
-    my $pk_sth = $dbh->primary_key_info(undef, $db_owner, $table_name);
+    my $pk_sth = $data_source->get_primary_key_details_from_data_dictionary(undef, $db_owner, $table_name);
 
     if ($pk_sth) {
 		my @new_pk;
@@ -1908,7 +1843,7 @@ sub _update_database_metadata_objects_for_table_changes {
     # and each other DataSource class needs its own implementation
 
     # The above was moved into each data source's class
-    if (my $uc = $data_source->unique_index_info($table_name)) {
+    if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($table_name)) {
         my %uc = %$uc;
 
         # check for redundant unique constraints
