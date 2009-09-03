@@ -193,12 +193,8 @@ put into the C<@ISA> array by the class or one of its super classes.
 
 sub inheritance {
     my $self = $_[0];    
-    my $class;
-    $class = ref($self) || $self;
-#my @c0 = caller(0);
-#my @c1 = caller(1);
-#print STDERR "inheritance $class @_ :  $c1[3] $c0[2]\n";
-#print STDERR "inheritance $class\n";
+    my $class = ref($self) || $self;
+    return unless $class;
     no strict;
     my @parent_classes = @{$class . '::ISA'};
 
