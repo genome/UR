@@ -2206,7 +2206,6 @@ sub _generate_template_data_for_loading {
                         if ($where) {
                             
                             
-                            $DB::single = 1;
                             # temp hack
                             # todo: switch to rule processing
                             my @keys;
