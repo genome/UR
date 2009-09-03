@@ -834,7 +834,7 @@ sub _shell_args_usage_string_abbreviated
     }
     else {
         my $detailed = $self->_shell_args_usage_string;
-        if (length($detailed) < 40) {
+        if (length($detailed) <= 20) {
             return $detailed;
         }
         else {
@@ -1054,4 +1054,4 @@ for my $type (qw/error warning status debug usage/) {
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Command.pm $
-#$Id: Command.pm 38975 2008-09-23 17:24:31Z ebelter $
+#$Id: Command.pm 39062 2008-09-25 14:26:19Z ssmith $
