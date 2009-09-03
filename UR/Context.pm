@@ -381,8 +381,7 @@ sub get_objects_for_class_and_rule {
 # then this method also returns a list containing triples (@addl_loading_info) where each member is:
 # 1) The secondary data source name
 # 2) a listref of delegated properties joining the primary class to the secondary class
-# 3) a hashref containing a data structure like $primary_template, but that applies to the 
-#    secondary class
+# 3) a rule template applicable against the secondary data source
 sub _get_template_data_for_loading {
     my($self,$primary_data_source,$rule_template) = @_;
 
@@ -399,10 +398,14 @@ sub _get_template_data_for_loading {
 
         my @secondary_params;
         my $secondary_class;
+        my %seen_properties;
         foreach my $delegated_property ( @$this_ds_delegations ) {
-            my $operator = $rule_template->operator_for_property_name($delegated_property->property_name);
+            my $delegated_property_name = $delegated_property->property_name;
+            next if ($seen_properties{$delegated_property_name});
+
+            my $operator = $rule_template->operator_for_property_name($delegated_property_name);
             $operator ||= '=';  # FIXME - shouldn't the template return this for us?
-            push @secondary_params, $delegated_property->to . " " . $operator;
+            push @secondary_params, $delegated_property->to . ' ' . $operator;
 
             unless ($secondary_class) {
                 my $relation_property = UR::Object::Property->get(class_name => $delegated_property->class_name,
@@ -410,13 +413,35 @@ sub _get_template_data_for_loading {
      
                 $secondary_class ||= $relation_property->data_type;
             }
+
+            # we can also add in any properties in the property's joins that also appear in the rule
+            if (@{$delegated_property->{'_get_joins'}} > 1) {
+                # What does it mean if there's more than one thing in here?
+                die sprintf("Property %s of class %s has more than one item in _get_joins.  I don't know what to do",
+                            $delegated_property->property_name, $delegated_property->class_name);
+            }
+                    
+            my $reference = UR::Object::Reference->get(class_name => $delegated_property->class_name,
+                                                       delegation_name => $delegated_property->via);
+            my @ref_properties = $reference->get_property_links();
+            foreach my $ref_property ( @ref_properties ) {
+                next if ($seen_properties{$ref_property->property_name});
+                my $ref_property_name = $ref_property->property_name;
+                next unless ($rule_template->specifies_value_for_property_name($ref_property_name));
+
+                my $ref_operator = $rule_template->operator_for_property_name($ref_property_name);
+                $ref_operator ||= '=';
+
+                push @secondary_params, $ref_property->r_property_name . ' ' . $ref_operator;
+            }
+
         }
         my $secondary_rule_template = UR::BoolExpr::Template->resolve_for_class_and_params($secondary_class, @secondary_params);
 
         push @addl_loading_info,
                  $secondary_data_source,
                  $this_ds_delegations,
-                 $self->_get_template_data_for_loading($secondary_data_source,$secondary_rule_template);
+                 $secondary_rule_template;
     }
 
     return ($primary_template, @addl_loading_info);
@@ -426,11 +451,11 @@ sub _get_template_data_for_loading {
 # Used by _create_secondary_loading_comparators to convert a rule against the primary data source
 # to a rule that can be used against a secondary data source
 sub _create_secondary_rule_from_primary {
-    my($self,$primary_rule, $delegated_properties, $secondary_template) = @_;
+    my($self,$primary_rule, $delegated_properties, $secondary_rule_template) = @_;
 
-    my $secondary_rule_template = UR::BoolExpr::Template->get($secondary_template->{'rule_template_id'});
-    
+#$DB::single=1;
     my @secondary_values;
+    my %seen_properties;  # FIXME - we've already been over this list in _get_template_data_for_loading()...
     # FIXME - is there ever a case where @$delegated_properties will be more than one item?
     foreach my $property ( @$delegated_properties ) {
         my $value = $primary_rule->specified_value_for_property_name($property->property_name);
@@ -438,6 +463,21 @@ sub _create_secondary_rule_from_primary {
         my $secondary_property_name = $property->to;
         my $pos = $secondary_rule_template->value_position_for_property_name($secondary_property_name);
         $secondary_values[$pos] = $value;
+        $seen_properties{$property->property_name}++;
+
+        my $reference = UR::Object::Reference->get(class_name => $property->class_name,
+                                                   delegation_name => $property->via);
+        next unless $reference;
+        my @ref_properties = $reference->get_property_links();
+        foreach my $ref_property ( @ref_properties ) {
+            my $ref_property_name = $ref_property->property_name;
+            next if ($seen_properties{$ref_property_name}++);
+            $value = $primary_rule->specified_value_for_property_name($ref_property_name);
+            next unless $value;
+
+            $pos = $secondary_rule_template->value_position_for_property_name($ref_property->r_property_name);
+            $secondary_values[$pos] = $value;
+        }
     }
 
     my $secondary_rule = $secondary_rule_template->get_rule_for_values(@secondary_values);
@@ -490,7 +530,6 @@ sub _fixup_secondary_loading_template_column_positions {
 sub _create_secondary_loading_closures {
     my($self, $primary_template, $rule, @addl_loading_info) = @_;
 
-$DB::single=1;
     my $loading_templates = $primary_template->{'loading_templates'};
 
     # Make a mapping of property name to column positions returned by the primary query
@@ -513,7 +552,15 @@ $DB::single=1;
     while (@addl_loading_info) {
         my $secondary_data_source = shift @addl_loading_info;
         my $this_ds_delegations = shift @addl_loading_info;
-        my $secondary_template = shift @addl_loading_info;
+        my $secondary_rule_template = shift @addl_loading_info;
+
+        my $secondary_rule = $self->_create_secondary_rule_from_primary (
+                                              $rule,
+                                              $this_ds_delegations,
+                                              $secondary_rule_template,
+                                       );
+        $secondary_data_source = $secondary_data_source->resolve_data_sources_for_rule($secondary_rule);
+        my $secondary_template = $self->_get_template_data_for_loading($secondary_data_source,$secondary_rule_template);
 
         # sets of triples where the first in the triple is the column index in the
         # $secondary_db_row (in the join_comparator closure below), the second is the
@@ -561,11 +608,6 @@ $DB::single=1;
             }
         }
 
-        my $secondary_rule = $self->_create_secondary_rule_from_primary (
-                                              $rule,
-                                              $this_ds_delegations,
-                                              $secondary_template,
-                                       );
         my $secondary_db_iterator = $secondary_data_source->create_iterator_closure_for_rule($secondary_rule);
 
         my $secondary_db_row;
@@ -643,7 +685,8 @@ $DB::single=1;
                                                                           \@secondary_loading_templates,
                                                                           $column_position_offset,$object_num_offset);
  
-        my($secondary_rule_template,@secondary_values) = $secondary_rule->get_template_and_values();
+        #my($secondary_rule_template,@secondary_values) = $secondary_rule->get_template_and_values();
+        my @secondary_values = $secondary_rule->get_values();
         foreach my $secondary_loading_template ( @secondary_loading_templates ) {
             my $secondary_object_importer = $self->_create_object_fabricator_for_loading_template(
                                                        $secondary_loading_template,
@@ -979,6 +1022,7 @@ sub _create_object_fabricator_for_loading_template {
     my %recurse_property_value_found;
     
     my @property_names      = @{ $loading_template->{property_names} };
+    my @id_property_names   = @{ $loading_template->{id_property_names} };
     my @column_positions    = @{ $loading_template->{column_positions} };
     my @id_positions        = @{ $loading_template->{id_column_positions} };
     my $multi_column_id     = (@id_positions > 1 ? 1 : 0);
@@ -1028,16 +1072,12 @@ sub _create_object_fabricator_for_loading_template {
         @$pending_db_object_data{@property_names} = @$next_db_row[@column_positions];
         
         # resolve id
-        # FIXME This %initial_object_data stuff totally won't work if one of the 
-        # constant value items is an ID column, since we're using @$next_db_row to
-        # get the ID data and not $pending_db_object_data.  This probably won't be a problem
-        # in practice, though
         my $pending_db_object_id;
         if ($multi_column_id) {
-            $pending_db_object_id = $composite_id_resolver->(@$next_db_row[@id_positions]);
+            $pending_db_object_id = $composite_id_resolver->(@$pending_db_object_data{@id_property_names})
         }
         else {
-            $pending_db_object_id = $next_db_row->[$id_positions[0]];
+            $pending_db_object_id = $pending_db_object_data->{$id_property_names[0]};
         }
         
         unless (defined $pending_db_object_id) {
