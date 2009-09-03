@@ -79,6 +79,30 @@ sub _regex {
     return $self->{'_regex'};
 }
 
+
+
+# Subclasses can override this to return a string containing the pathname of the file
+# to open.  Alternatively, the subclass can implement a method called file_list that returns 
+# a list of file paths, all of which should contain the same data - as a way to, say, load
+# balance NFS servers
+sub server {
+    my $self = shift->_singleton_object;
+
+    unless ($self->{'_chached_server'}) {
+        unless ($self->can('file_list')) {
+            my $class = ref($self);
+            die "Class $class didn't implement server() to specify file path";
+        }
+
+        my @files = $self->file_list;
+        my $count = scalar(@files);
+        my $idx = $$ % $count;
+        $self->{'_cached_server'} = $files[$idx];
+    }
+    return $self->{'_cached_server'};
+}
+
+
 # FIXME Looks like the AccessorWriter doesn't properly make accessors for singleton classes?!
 sub last_read_fingerprint {
     my $self = shift->_singleton_object;
@@ -418,7 +442,7 @@ sub create_iterator_closure_for_rule {
     # If there are ID columns mentioned in the rule, and there are items in the
     # cache, see if any of them are less than the comparators
     my $matched_in_cache = 0;
-    if ($last_id_column_in_rule > 0) {
+    if ($last_id_column_in_rule >= 0) {
         SEARCH_CACHE:
         for(my $file_cache_index = $self->file_cache_index - 1;
             $file_cache->[$file_cache_index] and $file_cache_index >= 0;
@@ -453,9 +477,12 @@ sub create_iterator_closure_for_rule {
         $monitor_start_time = Time::HiRes::time();
         $monitor_printed_first_fetch = 0;
         my @filters_list;
-        foreach my $column ( @rule_columns_in_order ) {
+        #foreach my $column ( @rule_columns_in_order ) {
+        for (my $i = 0; $i < @rule_columns_in_order; $i++) {
+            my $column = $rule_columns_in_order[$i];
             my $column_name = $csv_column_order[$column];
-            my $is_sorted = $column <= $last_id_column_in_rule ? ' (sorted)' : '';
+            #my $is_sorted = $column <= $last_id_column_in_rule ? ' (sorted)' : '';
+            my $is_sorted = $i <= $last_id_column_in_rule ? ' (sorted)' : '';
             my $operator = $rule->specified_operator_for_property_name($column_name) || '=';
             my $rule_value = $rule->specified_value_for_property_name($column_name);   
             if (ref $rule_value eq 'ARRAY') {
@@ -486,6 +513,7 @@ sub create_iterator_closure_for_rule {
         }
 
         if ($self->last_read_fingerprint() ne $fingerprint) {
+            $sql_fh->printf("CSV: Rewinding file position to the start\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
             $fh->getline() if ($self->skip_first_line());
