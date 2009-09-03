@@ -1812,7 +1812,9 @@ sub _generate_class_data_for_loading {
                     die ("No property $_ found for " . $inheritance_class_object->class_name . "?") unless $p;
                     $p->column_name;
                 } 
-                $inheritance_class_object->id_property_names;
+                map { $_->property_name }
+                grep { $_->column_name }
+                $inheritance_class_object->direct_id_property_metas;
                 
             last if (@id_column_names);
         }
