@@ -807,9 +807,17 @@ sub mk_object_set_accessors {
                 # value (or non-ur object)
                 if (@_ == 1) {
                     # remove specific value
-                    my @remove = grep { $_ eq $_[0] } @{ $self->{$plural_name} };
-                    die "Failed to find item @_ in $class_name $plural_name!";
-                    return $remove[0];
+                    my $removed;
+                    my $n = 0;
+                    for my $value (@{ $self->{$plural_name} }) {
+                        if ($value eq $_[0]) {
+                            $removed = splice(@{ $self->{$plural_name} }, $n, 1);
+                            die unless $removed eq $value;
+                            return $removed;
+                        }
+                        $n++;
+                    }
+                    die "Failed to find item @_ in $class_name $plural_name (@{$self->{$plural_name}})!";
                 }
                 elsif (@_ == 0) {
                     # remove all if no params are specified

@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use UR;
-use Test::More tests => 15;
+use Test::More tests => 20;
 
 # make sure the INDIRECT stuff still works
 
@@ -21,6 +21,8 @@ class Line {
     ],
 };
 
+#print Data::Dumper::Dumper(Line->get_class_object);
+
 my $o = Order->create(
     lines => [ 1, 2, 17 ]
 );
@@ -31,8 +33,8 @@ is("@line_nums", "1 17 2", "has-many with INDIRECT relationships still works cor
 
 
 class FileList {
-    has => [
-        files => { is => 'FileName', is_many => 1 }, 
+    has_many => [
+        files => { is => 'FileName' }, 
     ]
 };
 
@@ -58,6 +60,7 @@ is("@f","a b c d", "got expected values: '@f'");
 my $list2 = FileList->create();
 my $fx = $list2->file("xxx");
 is($fx,undef,"correctly failed to find a made-up value");
+
 my $f1 = $list2->add_file("aaa");
 is($f1,"aaa","added a new value, retval is correct");
 my $f1r = $list2->file("aaa");
@@ -65,6 +68,7 @@ is($f1r,$f1,"got it back through single accessor");
 @f = $list2->files;
 is(scalar(@f),1,"list has expected count");
 is($f[0],$f1,"items are correct");
+
 my $f2 = $list2->add_file("bbb");
 my $f2r = $list2->file("bbb");
 is($f2,$f2r,"added another file and got it back correctly: $f2");
@@ -72,4 +76,29 @@ is($f2,$f2r,"added another file and got it back correctly: $f2");
 is(scalar(@f),2,"list has expected count");
 is("@f","aaa bbb","items are correct");
 
+
+my (@actual,@expected);
+my $f3 = FileList->create(files => [qw/4 1 2 5 3/]); 
+@expected = (4,1,2,5,3);
+@actual = $f3->files;
+is("@expected","@actual","created object has expected list");
+
+$f3->add_file("22"); 
+@expected = (4,1,2,5,3,22);
+@actual = $f3->files;
+is("@expected","@actual","correct after adding an item");
+
+$f3->remove_file("5"); 
+@expected = (4,1,2,3,22);
+@actual = $f3->files;
+is("@expected","@actual","correct after removing an item");
+
+$a = [qw/11 22 33/]; 
+$f3->files($a); 
+@expected = (11,22,33);
+@actual = $f3->files;
+is("@expected","@actual","correct after setting an item");
+
+push @$a,"44"; 
+is("@expected","@actual","changing the arrayref after setting it has no effect, as expected");
 
