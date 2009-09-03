@@ -81,6 +81,9 @@ sub create_object {
 sub get_property_name_pairs_for_join {
     my ($self) = @_;
     my @linkage = $self->_get_direct_join_linkage();
+    unless (@linkage) {
+        die "No linkage for property " . $self->id;
+    }
     if ($self->class_name eq $linkage[0]->class_name) {
         return map { [ $_->property_name => $_->r_property_name ] } @linkage;
     }

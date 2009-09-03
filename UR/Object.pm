@@ -311,7 +311,7 @@ sub delete {
 
             # gather params for the ghost object
             my %ghost_params;
-            my @pn = $self->property_names;
+            my @pn = grep { exists $self->{$_} } $self->property_names;
             @ghost_params{@pn} = $self->get(@pn);
 
             # create ghost object

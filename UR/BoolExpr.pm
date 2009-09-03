@@ -303,8 +303,11 @@ sub resolve_for_class_and_params {
 
     # The class to which the parameters apply.
     my $subject_class = shift;
-	my $subject_class_meta = $subject_class->get_class_object;
-    
+    my $subject_class_meta = $subject_class->get_class_object;
+    unless ($subject_class_meta) {
+        die "No meta for $subject_class?!";
+    }    
+
     #my %subject_class_props = map {$_, 1}  ( $subject_class->property_names, qw/id subclass_ext ref_class_name base_string gff_type begin_position end_position collaborator_name role_name/);
     my %subject_class_props = map {$_, 1}  ( $subject_class_meta->all_property_type_names, 'subclass_ext');
 
@@ -451,6 +454,9 @@ sub resolve_for_class_and_params {
             
             if ($property_type->is_delegated) {
                 my $property_meta = $subject_class_meta->get_property_meta_by_name($key);
+                unless ($property_meta) {
+                    die "Failed to find meta for $key on " . $subject_class_meta->class_name . "?!";
+                }
                 my @joins = $property_meta->get_property_name_pairs_for_join();
                 for my $join (@joins) {
                     my ($my_method, $their_method) = @$join;
