@@ -1337,6 +1337,8 @@ sub _create_object_fabricator_for_loading_template {
         }
         
         unless (defined $pending_db_object_id) {
+            $DB::single = $DB::stopper;
+            return undef;
             Carp::confess(
                 "no id found in object data for $class_name?\n" 
                 . Data::Dumper::Dumper($pending_db_object_data)
