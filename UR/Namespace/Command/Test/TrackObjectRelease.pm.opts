@@ -1,6 +1,0 @@
-$UR::Namespace::Command::Test::TrackObjectRelease::OPTS_SPEC = [
-          'file=s',
-          undef,
-          'help!',
-          undef
-        ];

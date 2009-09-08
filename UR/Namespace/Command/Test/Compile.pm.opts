@@ -1,4 +1,0 @@
-$UR::Namespace::Command::Test::Compile::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

@@ -1,8 +1,0 @@
-$UR::Object::Command::FetchAndDo::OPTS_SPEC = [
-          'subject-class-name=s',
-          undef,
-          'filter=s',
-          undef,
-          'help!',
-          undef
-        ];

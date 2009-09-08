@@ -1,4 +1,0 @@
-$Command::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

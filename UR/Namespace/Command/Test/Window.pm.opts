@@ -1,4 +1,0 @@
-$UR::Namespace::Command::Test::Window::OPTS_SPEC = [
-          'help!',
-          undef
-        ];

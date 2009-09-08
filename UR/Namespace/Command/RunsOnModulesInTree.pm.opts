@@ -1,4 +1,0 @@
-$UR::Namespace::Command::RunsOnModulesInTree::OPTS_SPEC = [
-          'help!',
-          undef
-        ];
