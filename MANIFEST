@@ -1,12 +1,5 @@
 bin/ur
 Changes
-doc/Cookbook.pod
-doc/Metadata.pod
-doc/Overview.pod
-doc/Presentation.pod
-doc/Tutorial.pod
-doc/UR.pod
-doc/UR_Presentation.pdf
 inc/Module/AutoInstall.pm
 inc/Module/Install.pm
 inc/Module/Install/AutoInstall.pm
@@ -128,7 +121,6 @@ lib/UR/Moose.pm
 lib/UR/Namespace.pm
 lib/UR/Namespace/Command.pm
 lib/UR/Namespace/Command/Browser.pm
-lib/UR/Namespace/Command/Commit.pm
 lib/UR/Namespace/Command/Define.pm
 lib/UR/Namespace/Command/Define/Class.pm
 lib/UR/Namespace/Command/Define/Datasource.pm
@@ -168,7 +160,6 @@ lib/UR/Namespace/Command/Test/Window.pm
 lib/UR/Namespace/Command/Update.pm
 lib/UR/Namespace/Command/Update/ClassDiagram.pm
 lib/UR/Namespace/Command/Update/Classes.pm
-lib/UR/Namespace/Command/Update/DbicClasses.pm
 lib/UR/Namespace/Command/Update/SchemaDiagram.pm
 lib/UR/Namespace/Viewer/SchemaBrowser/CgiApp.pm
 lib/UR/Namespace/Viewer/SchemaBrowser/CgiApp/Base.pm
@@ -228,6 +219,7 @@ lib/UR/Object/Viewer/Toolkit/Gtk.pm
 lib/UR/Object/Viewer/Toolkit/Gtk2.pm
 lib/UR/Object/Viewer/Toolkit/Text.pm
 lib/UR/Object/Viewer/Toolkit/Umlet.pm
+lib/UR/Object/Viewer/Lister/Text.pm
 lib/UR/ObjectDeprecated.pm
 lib/UR/ObjectV001removed.pm
 lib/UR/ObjectV04removed.pm
@@ -241,6 +233,7 @@ lib/UR/Service/RPC/Message.pm
 lib/UR/Service/RPC/Server.pm
 lib/UR/Service/RPC/TcpConnectionListener.pm
 lib/UR/Service/urinterface.js
+lib/UR/Service/XMLCommandExecutor.pm
 lib/UR/Singleton.pm
 lib/UR/Test.pm
 lib/UR/Time.pm
@@ -362,13 +355,18 @@ t/URT/t/53_abandoned_iterator.t
 t/URT/t/54_valid_values.t
 t/URT/t/55_on_the_fly_metadb.t
 t/URT/t/56_properties_query.t
-t/URT/t/60_command_define_datasource.t
+t/URT/t/56_order_by_returns_items_in_order.t
+t/URT/t/57_order_by_merge_new_objects.t
+t/URT/t/58_order_by_merge_changed_objects.t
+t/URT/t/59_get_merge_new_objs_with_db.t
+t/URT/t/60_get_merge_changed_objs_with_db.t
+t/URT/t/61_iterator_merge_changed_objs_with_db.t
+t/URT/t/80_command_define_datasource.t
 t/URT/t/98_ur_update.t
-t/URT/t/99_transaction.t
+t/URT/t/002_transaction.t
 t/URT/Thingy.pm
 t/URT/Vocabulary.pm
 t/Vending.pm
-t/Vending/.Machine.pm.swp
 t/Vending/Coin.pm
 t/Vending/CoinType.pm
 t/Vending/Command.pm
