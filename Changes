@@ -1,5 +1,14 @@
 Revision history for UR
 
+0.12	2009-09-09
+        'ur test run' can now run tests in parallel and can submit tests as jobs
+            to LSF
+        Command modules now have support for Getopt::Complete for bash tab-completion
+	Bugfixes related to saving objects to File data sources.
+	Several more fixes for merging between database and in-memory objects.
+	Property names beginning with an underscore are now handled properly during rule
+            and object creation
+
 0.11    2009-07-30
         Fix bug in merge between database/in-memory data sets with changes.
 
