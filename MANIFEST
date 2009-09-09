@@ -180,7 +180,6 @@ lib/UR/Object/Inheritance.pm
 lib/UR/Object/Inheritance/Viewer/Default/Umlet.pm
 lib/UR/Object/Iterator.pm
 lib/UR/Object/Property.pm
-lib/UR/Object/Property/Compressable.pm
 lib/UR/Object/Property/ID.pm
 lib/UR/Object/Property/Unique.pm
 lib/UR/Object/Property/Viewer/Default/Text.pm
