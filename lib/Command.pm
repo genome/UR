@@ -546,18 +546,12 @@ sub resolve_class_and_params_for_argv
         push @spec, "help!";
     }
 
-    # Thes nasty GetOptions modules insist on working on
-    # the real @ARGV, while we like a little moe flexibility.
-    # Not a problem in Perl. :)  (which is probably why it was never fixed)
-    local @ARGV;
-    @ARGV = @argv;
-    
     do {
         # GetOptions also likes to emit warnings instead of return a list of errors :( 
         my @errors;
         local $SIG{__WARN__} = sub { push @errors, @_ };
         
-        unless (GetOptions($params_hash,@spec)) {
+        unless (Getopt::Long::GetOptionsFromArray(\@argv,$params_hash,@spec)) {
             for my $error (@errors) {
                 $self->error_message($error);
             }
