@@ -23,7 +23,7 @@ UR::Object::Type->define(
     is => "UR::Namespace::Command",
     has => [
         recurse           => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.'                                                },
-        time              => { is => 'String', doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
+        'time'            => { is => 'String',  doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
         long              => { is => 'Boolean', doc => 'Run tests including those flagged as long',                                          is_optional => 1                       },
         list              => { is => 'Boolean', doc => 'List the tests, but do not actually run them.'                                                                              },
         noisy             => { is => 'Boolean', doc => "doesn't redirect stdout",is_optional => 1},
@@ -35,13 +35,12 @@ UR::Object::Type->define(
         cover_cvs_changes => { is => 'Boolean', doc => 'Cover modules modified in cvs status',                                               is_optional => 1                       },
         coverage          => { is => 'Boolean', doc => 'Invoke Devel::Cover',                                                                is_optional => 1                       },
         script_opts       => { is => 'String',  doc => 'Override options to the test case when running the tests (--dump-sql --no-commit)',  is_optional=>  1, default_value => ''  },
-        callcount         => { is => 'Boolean', doc => 'Count the number of calls to each subroutine/method',                                is_optional => 1 },
-        jobs              => { is => 'Number', is_optional => 1, default_value => 1,
-                               doc => 'How many tests to run in parallel', },
+        callcount         => { is => 'Boolean', doc => 'Count the number of calls to each subroutine/method',                                is_optional => 1                       },
+        jobs              => { is => 'Number',  doc => 'How many tests to run in parallel',                                                  is_optional => 1, default_value => 1,  },
         lsf               => { is => 'Boolean', doc => 'If true, tests will be submitted as jobs via bsub' },
-        lsf_params        => { is => 'String', is_optional => 1, default_value => '-q short -R select[type=LINUX64]',
-                               doc => 'Params passed to bsub while submitting jobs to lsf' },
-        run_as_lsf_helper => { is => 'String', is_optional => 1, doc => 'Used internally by the test harness' },
+        lsf_params        => { is => 'String',  doc => 'Params passed to bsub while submitting jobs to lsf',        is_optional => 1, default_value => '-q short -R select[type=LINUX64]',},
+        run_as_lsf_helper => { is => 'String',  doc => 'Used internally by the test harness',                                                is_optional => 1, },
+        inc               => { is => 'String',  doc => 'Additional paths for @INC, alias for -I',                              is_many => 1, is_optional => 1, },
     ],
 );
 
@@ -54,6 +53,7 @@ ur test run --recurse                   # run all tests in the namespace
 ur test run                             # runs all tests in the t/ directory under pwd
 ur test run t/mytest1.t My/Class.t      # run specific tests
 ur test run -v -t --cover-svk-changes   # run tests to cover latest svk updates
+ur test run -I ../some/path/            # Adds ../some/path to perl's @INC through -I
 EOS
 }
 
@@ -61,6 +61,22 @@ sub help_detail {
     return <<EOS
 This command is like "prove" or "make test", running the test suite for the current namespace.
 EOS
+}
+
+
+# Override so we'll allow '-I' on the command line
+sub _shell_args_getopt_specification {
+    my $self = shift;
+
+    my($params_hash, @spec) = $self->SUPER::_shell_args_getopt_specification();
+
+    foreach (@spec) {
+        if ($_ eq 'inc=s@') {
+            $_ = 'inc|I=s@';
+            last;
+        }
+    }
+    return($params_hash, @spec);
 }
 
 sub execute {
@@ -266,6 +282,9 @@ sub _run_tests {
     }
     if ($self->callcount()) {
         $perl_opts .= ' -d:callcount';
+    }
+    if (my @inc = $self->inc) {
+        $perl_opts .= join(' ', map { '-I' . Path::Class::Dir->new($_)->absolute } @inc);
     }
 
     $ENV{'PERL5LIB'} = join(':', @INC);
