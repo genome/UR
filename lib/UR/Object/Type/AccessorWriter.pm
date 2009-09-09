@@ -828,40 +828,42 @@ sub mk_object_set_accessors {
         $params_prefix_resolved = 1;
     };
 
-    my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
-        my $self = shift;
-        $rule_resolver->($self) unless ($rule_template);
-        if ($rule_template) {
-            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
-            $params_prefix_resolver->() unless $params_prefix_resolved;
-            unshift @_, @params_prefix if @_ == 1;
-            if (@where or @_) {
-                return my $obj = $r_class_name->get($rule->params_list,@where,@_);
+    if ($singular_name ne $plural_name) {
+        my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
+            my $self = shift;
+            $rule_resolver->($self) unless ($rule_template);
+            if ($rule_template) {
+                my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
+                $params_prefix_resolver->() unless $params_prefix_resolved;
+                unshift @_, @params_prefix if @_ == 1;
+                if (@where or @_) {
+                    return my $obj = $r_class_name->get($rule->params_list,@where,@_);
+                }
+                else {
+                    return my $obj = $r_class_name->get($rule);
+                }
             }
             else {
-                return my $obj = $r_class_name->get($rule);
+                return unless $self->{$plural_name};
+                return unless @_;  # Can't compare our list to nothing...
+                if (@_ > 1) {
+                    Carp::croak "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
+                }
+                unless (ref($self->{$plural_name}) eq 'ARRAY') {
+                    Carp::croak("${class_name}::$singular_name($_[0]): $plural_name does not contain an arrayref");
+                }
+                no warnings 'uninitialized';
+                my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name} };
+                return $matches[0] if @matches < 2;
+                return $self->context_return(@matches);
             }
-        }
-        else {
-            return unless $self->{$plural_name};
-            return unless @_;  # Can't compare our list to nothing...
-            if (@_ > 1) {
-                Carp::croak "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
-            }
-            unless (ref($self->{$plural_name}) eq 'ARRAY') {
-                Carp::croak("${class_name}::$singular_name($_[0]): $plural_name does not contain an arrayref");
-            }
-            no warnings 'uninitialized';
-            my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name} };
-            return $matches[0] if @matches < 2;
-            return $self->context_return(@matches); 
-        }
-    };
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $singular_name,
-        code => $single_accessor,
-    });
+        };
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => $singular_name,
+            code => $single_accessor,
+        });
+    }
 
     my $add_accessor = Sub::Name::subname $class_name ."::add_$singular_name" => sub {
         # TODO: this handles only a single item when making objects: support a list of hashrefs
