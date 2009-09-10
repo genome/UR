@@ -546,12 +546,20 @@ sub resolve_class_and_params_for_argv
         push @spec, "help!";
     }
 
+    # Previously, these nasty GetOptions modules insisted on working on
+    # the real @ARGV, while we like a little more flexibility.
+    # Getopt::Long now supports working on an arbitrary list with GetOptionsFromArray,
+    # but the proper version doesn't seem to be supplied with OSX.  So, we stay
+    # with the old method
+    local @ARGV;
+    @ARGV = @argv;
+
     do {
         # GetOptions also likes to emit warnings instead of return a list of errors :( 
         my @errors;
         local $SIG{__WARN__} = sub { push @errors, @_ };
         
-        unless (Getopt::Long::GetOptionsFromArray(\@argv,$params_hash,@spec)) {
+        unless (Getopt::Long::GetOptions($params_hash,@spec)) {
             for my $error (@errors) {
                 $self->error_message($error);
             }
