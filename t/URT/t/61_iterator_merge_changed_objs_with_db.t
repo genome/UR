@@ -55,7 +55,7 @@ is($o->name, 'Fred', 'First object name is Fred');
 
 $o = eval { $iter->next() };
 like($@, 
-     qr(Attempt to fetch an object which matched.*'thing_id' => '10')s,
+     qr(Attempt to fetch an object which matched.*'thing_id' => '?10'?)s,
      'Caught exception about deleted object');
 
 $o = $iter->next();
