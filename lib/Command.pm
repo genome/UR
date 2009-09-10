@@ -559,7 +559,7 @@ sub resolve_class_and_params_for_argv
         my @errors;
         local $SIG{__WARN__} = sub { push @errors, @_ };
         
-        unless (Getopt::Long::GetOptions($params_hash,@spec)) {
+        unless (GetOptions($params_hash,@spec)) {
             for my $error (@errors) {
                 $self->error_message($error);
             }
