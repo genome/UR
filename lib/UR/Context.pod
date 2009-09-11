@@ -279,7 +279,7 @@ how data is to be loaded and whether this request spans multiple data
 sources.  It calls L</__create_object_fabricator_for_loading_template> to get
 a list of closures to transform the primary data source's data into UR
 objects, and L</_create_secondary_loading_closures> (if necessary) to get
-more closures that can load and join data from the primary to the secondaty
+more closures that can load and join data from the primary to the secondary
 data source(s).
 
 It returns a subref that works as an iterator, loading and returning objects
@@ -593,7 +593,7 @@ C<$UR::Context::GET_SERIAL> counter.  This number is unique and increases
 with each get(), and is used by the L</Object Cache Pruner> to expire the
 least recently requested data.
 
-Objects also track what paremeters have been used to get() them in the hash
+Objects also track what parameters have been used to get() them in the hash
 C<$obj-E<gt>{load}-E<gt>{param_key}>.  This is a copy of the data in
 C<$UR::Context::all_params_loaded-E<gt>{$class_name}>.  For each rule
 ID, it will have a count of the number of times that rule was used in a get().
@@ -602,8 +602,8 @@ ID, it will have a count of the number of times that rule was used in a get().
 
 Calling delete() on an object is tracked in a different way.  First, a new
 object is created, called a ghost.  Ghost classes exist for every
-class in the application and are subclasses of L<UR::Object::Ghost>,  For
-example the ghost class for MyClass is MyClass::Ghost.  This ghost object
+class in the application and are subclasses of L<UR::Object::Ghost>.  For
+example, the ghost class for MyClass is MyClass::Ghost.  This ghost object
 is initialized with the data from the original object.  The original object
 is removed from the object cache, and is reblessed into the UR::DeletedRef
 class.  Any attempt to interact with the object further will raise an
@@ -671,7 +671,7 @@ C<__get_serial> is less than the target serial, it is weakened from any
 L<UR::Object::Index>es it may be a member of, and then weakened from the
 main object cache, C<$UR::Context::all_objects_loaded>.
 
-The application may lock an object in the cache by calling C<strengthen> on
+The application may lock an object in the cache by calling C<__strengthen__> on
 it,  Likewise, the app may hint to the pruner to throw away an object as 
 soon as possible by calling C<__weaken__>.
 
