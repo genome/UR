@@ -287,7 +287,7 @@ sub _run_tests {
         $perl_opts .= join(' ', map { '-I' . Path::Class::Dir->new($_)->absolute } @inc);
     }
 
-    $ENV{'PERL5LIB'} = join(':', @INC);
+    $ENV{'PERL5LIB'} = join(':', UR::Util::used_libs_perl5lib_prefix(), $ENV{'PERL5LIB'});
 
     my $formatter = TAP::Formatter::Console->new( {
                         jobs => $self->jobs,
