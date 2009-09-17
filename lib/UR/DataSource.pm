@@ -5,10 +5,6 @@ use warnings;
 require UR;
 use Sys::Hostname;
 
-open(DUMMY_FILE, ">>/tmp/yesweran");
-print DUMMY_FILE "datasource at ",scalar(localtime),"\n";
-close DUMMY_FILE;
-
 *namespace = \&get_namespace;
 
 UR::Object::Type->define(
