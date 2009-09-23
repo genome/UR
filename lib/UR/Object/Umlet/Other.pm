@@ -11,8 +11,8 @@ UR::Object::Type->define(
     has => [
                width => { type => 'Integer' },
                height => { type => 'Integer' },
-               panel_attributes_data => { type => 'String'},
-               additional_attributes_data => { type => 'String'},
+               panel_attributes_data => { type => 'String', is_optional => 1 },
+               additional_attributes_data => { type => 'String', is_optional => 1 },
                umlet_type_string => { type => 'String' },
            ],
     doc => 'Represents an object that is a picture element, but is not a relation',

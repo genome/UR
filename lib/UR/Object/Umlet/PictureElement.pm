@@ -14,11 +14,11 @@ UR::Object::Type->define(
                subject_id => { type => 'String' },
                diagram_name => { type => 'String' },
 
-               label => { type => 'String' },
+               label => { type => 'String', is_optional => 1 },
                x => { type => 'Integer' },
                y => { type => 'Integer' },
-               fg_color => { type => 'String' },
-               bg_color => { type => 'String' },
+               fg_color => { type => 'String', is_optional => 1 },
+               bg_color => { type => 'String', is_optional => 1 },
            ],
     id_by => ['subject_id','diagram_name'],
     relationships => [
