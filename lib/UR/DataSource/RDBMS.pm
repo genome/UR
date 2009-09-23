@@ -2220,9 +2220,21 @@ sub _id_values_for_primary_key {
     }
 
     my @pk_cols = $table_obj->primary_key_constraint_column_names;
+    my %pk_cols = map { uc($_) => 1 } @pk_cols;
     # this previously went to $object_to_save->__meta__, which is nearly the same thing but not quite
     my @values = $class_obj->resolve_ordered_values_from_composite_id($object_to_save->id);
     my @columns = $class_obj->direct_id_column_names;
+
+    foreach my $col_in_class ( @columns ) {
+        unless ($pk_cols{$col_in_class}) {
+            my $table_name = $table_obj->table_name;
+            my $class_name = $class_obj->class_name;
+            Carp::croak("While committing, metadata for table $table_name does not match class $class_name.\n  Table primary key columns are " .
+                        join(', ',@pk_cols) .
+                        "\n  class ID property columns " .
+                        join('', @columns));
+        }
+    }
 
     my $i=0;    
     my %column_index = map { $_ => $i++ } @columns;
