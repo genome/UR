@@ -16,6 +16,7 @@ UR::Object::Type->define(
         file => { type => 'String', doc => 'Pathname of the Umlet (.uxf) file' },
         show_attributes => { type => 'Boolean', is_optional => 1, default => 1, doc => 'Include class attributes in the diagram' },
         show_methods => { type => 'Boolean', is_optional => 1, default => 0, doc => 'Include methods in the diagram (not implemented yet' },
+        include_ur_object => { type => 'Boolean', is_optional => 1, default => 0, doc => 'Include UR::Object and UR::Entity in the diagram (default = no)' },
     ],
 );
 
@@ -236,6 +237,11 @@ my($self, %params) = @_;
     return unless @related_names;
 
     my @objs = $item_class->get($item_param => \@related_names);
+
+    unless ($self->include_ur_object) {
+        # Prune out UR::Object and UR::Entity
+        @objs = grep { $_->class_name ne 'UR::Object' and $_->class_name ne 'UR::Entity' } @objs;
+    }
 
     # make a recursive call to get the related objects by name
     return ( @objs, $self->_get_related_items( %params, names => \@related_names, depth => --$params{'depth'}) );
