@@ -300,7 +300,7 @@ sub _resolve_fk_name {
     my $col_str = $table_info->{'sql'};
     $col_str =~ s/^\s+|\s+$//g;  # Remove leading and trailing whitespace
     $col_str =~ s/\s{2,}/ /g;    # Remove multiple spaces
-    if ($col_str =~ m/^CREATE TABLE (\w+)\s*?\((.*?)\)$/i) {
+    if ($col_str =~ m/^CREATE TABLE (\w+)\s*?\((.*?)\)$/is) {
         unless (uc($1) eq uc($table_name)) {
             Carp::confess("SQL for $table_name is inconsistent");
         }
