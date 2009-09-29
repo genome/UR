@@ -180,7 +180,7 @@ sub resolve_data_source_for_object {
     my $class_meta = $object->__meta__;
     my $class_name = $class_meta->class_name;
     
-    if ($class_name->isa('UR::DataSource::RDBMS::Entity')) {
+    if ($class_name->isa('UR::DataSource::RDBMS::Entity') || $class_name->isa('UR::DataSource::RDBMS::Entity::Ghost')) {
         my $data_source = $object->data_source;
         my($namespace) = ($data_source =~ m/(^\w+?)::DataSource/);
         my $ds_name = $namespace . '::DataSource::Meta';
