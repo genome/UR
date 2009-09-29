@@ -2079,7 +2079,7 @@ sub _sync_database {
                 # This is a real error.  Stop retrying and report.
                 for my $error (@failures)
                 {
-                    $self->error_message("Error executing SQL:\n$error->{cmd}{sql}\n" . $error->{error_message} . "\n");
+                    $self->error_message($self->id . ": Error executing SQL:\n$error->{cmd}{sql}\n" . $error->{error_message} . "\n");
                 }
                 last;
             }
@@ -2962,7 +2962,7 @@ sub _generate_template_data_for_loading {
                 my $foreign_class_name = $join->{foreign_class};
                 my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
                 my($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
-                if ($foreign_data_source ne $self) {
+                if (!$foreign_data_source or ($foreign_data_source ne $self)) {
                     # FIXME - do something smarter in the future where it can do a join-y thing in memory
                     $needs_further_boolexpr_evaluation_after_loading = 1;
                     next DELEGATED_PROPERTY;

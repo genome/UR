@@ -347,6 +347,7 @@ $DB::single=1;
             @changed_class_meta_objects
         ) {
             my $class_name = $obj->class_name;
+            next unless $class_name;  #if $obj is a ghost, class_name might return undef?
             $changed_classes{$class_name} = 1;
         }
         unless (@changed_class_meta_objects) {

@@ -415,7 +415,11 @@ sub _generate_template_data_for_loading {
             my $foreign_class_name = $join->{foreign_class};
             my $foreign_class_object = $join->{'foreign_class_meta'};
             my($foreign_data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
-            if ($foreign_data_source ne $self or
+            if (! $foreign_data_source) {
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+                next DELEGATED_PROPERTY;
+
+            } elsif ($foreign_data_source ne $self or
                     ! $self->does_support_joins or
                     ! $foreign_data_source->does_support_joins
                 )
