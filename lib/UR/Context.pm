@@ -3348,6 +3348,11 @@ sub get_time_ymdhms {
 
 sub commit {
     my $self = shift;
+
+    unless ($self) {
+        warn 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context';
+        $self = UR::Context->current();
+    }
     $self->__signal_change__('precommit');
 
     unless ($self->_sync_databases) {
@@ -3369,6 +3374,11 @@ sub commit {
 
 sub rollback {
     my $self = shift;
+
+    unless ($self) {
+        warn 'UR::Context::rollback() called as a function, not a method.  Assumming rollback on current context';
+        $self = UR::Context->current();
+    }
     $self->__signal_change__('prerollback');
 
     unless ($self->_reverse_all_changes) {
