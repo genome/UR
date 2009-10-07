@@ -386,9 +386,9 @@ sub query {
         return @objects if wantarray;
         
         if ( @objects > 1 and defined(wantarray)) {
-            my $params = $rule->params_list();
+            my %params = $rule->params_list();
             $DB::single=1;
-            print "Got multiple matches for class $class\nparams were: ".join(', ', map { "$_ => " . $params->{$_} } keys %$params) . "\nmatched objects were:\n";
+            print "Got multiple matches for class $class\nparams were: ".join(', ', map { "$_ => " . $params{$_} } keys %params) . "\nmatched objects were:\n";
             foreach my $o (@objects) {
                print "Object $o\n";
                foreach my $k ( keys %$o) {
@@ -397,7 +397,7 @@ sub query {
             }
             Carp::confess("Multiple matches for $class query!". Data::Dumper::Dumper([$rule->params_list]));
             Carp::confess("Multiple matches for $class, ids: ",map {$_->id} @objects, "\nParams: ",
-                           join(', ', map { "$_ => " . $params->{$_} } keys %$params)) if ( @objects > 1 and defined(wantarray));
+                           join(', ', map { "$_ => " . $params{$_} } keys %params)) if ( @objects > 1 and defined(wantarray));
         }
         
         return $objects[0];
