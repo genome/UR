@@ -128,6 +128,7 @@ sub _execute_body
 # Standard external interface for two-line wrappers
 #
 
+# TODO: abstract out all dispatchers for commands into a given API
 sub execute_with_shell_params_and_exit
 {
     # This automatically parses command-line options and "does the right thing":
@@ -160,6 +161,7 @@ My::Command->execute_with_shell_params_and_exit;
     exit $exit_code;
 }
 
+# TODO: abstract out all dispatchers for commands into a given API
 sub _execute_with_shell_params_and_return_exit_code
 {
     my $class = shift;
@@ -168,6 +170,12 @@ sub _execute_with_shell_params_and_return_exit_code
     # make --foo=bar equivalent to --foo bar
     @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
     my ($delegate_class, $params) = $class->resolve_class_and_params_for_argv(@argv);
+
+    $class->_execute_delegate_class_with_params($delegate_class,$params);
+}
+
+sub _execute_delegate_class_with_params {
+    my ($class, $delegate_class, $params) = @_;
 
     unless ($delegate_class) {
         $class->usage_message($class->help_usage_complete_text);
@@ -206,6 +214,114 @@ sub _execute_with_shell_params_and_return_exit_code
 
     my $exit_code = $delegate_class->exit_code_for_return_value($rv);
     return $exit_code;
+}
+
+# TODO: abstract out all dispatchers for commands into a given API
+sub execute_with_http_params {
+    # This automatically parses command-line options and "does the right thing":
+    my $class = shift;
+
+    if (@_) {
+        die "No params expected for execute_with_http_params().  Params are pulled from the HTTP request.";
+    }
+    
+    require CGI;
+    my $cgi = CGI->new();
+    print $cgi->header();
+    
+    my $params = $cgi->Vars;
+    my $delegate_class = $params->{'@'};
+    delete $params->{'@'};
+
+    require File::Temp;
+    my $dir = File::Temp::tempdir("/tmp/command-dispatch.$$.XXXXX");
+    
+    my $child_pid = fork();
+    if ($child_pid) {
+        # the parent process returns the path to the directory which tracks output, error, status
+        print $dir;
+        return $dir;
+    }
+   
+    # the parent process has just returned the path to the directory and closed the socket to the browser 
+    # the child process does the real work, and feeds results into files 
+    # which can be polled by the browser, perhaps via ajax
+    require IO::Handle;
+    require IO::File;
+   
+    # duplicate handles to the old stdout/stderr
+    #open my $oldout, ">&STDOUT"     or die "Can’t dup STDOUT: $!";
+    #open my $olderr, ">&STDERR"     or die "Can't dup STDERR: $!";
+
+    my $status_logger = sub {
+        my $fh = IO::File->new(">$dir/status");
+        select $fh; $| = 1;
+        $fh->print(@_);
+        select STDOUT; $| = 1;
+    };
+    
+
+    $status_logger->('initializing...');
+
+    # redirect stdin/stdout to go to our files
+    open STDOUT, ">$dir/stdout";
+    open STDERR, ">$dir/stderr";
+    
+    # make them unbuffered
+    select STDERR; $| = 1;
+    select STDOUT; $| = 1;
+
+    # close the original stdin/stdout so we let the web client go
+    #$oldout->close;
+    #$olderr->close;
+
+    #$oldout->print("oldout\n");
+    #$olderr->print("olderr\n");
+
+    # the parent process does the real work...
+    print "<pre>\n";
+    print Data::Dumper::Dumper($delegate_class,$params, $dir);
+    print "\n</pre>\n";
+
+    my $t1 = time;
+    print "foo!\n";
+    while (time() < $t1+5) {
+        warn "sleeping...\n";
+        sleep 1;
+    }
+    print "done sleeping!\n";
+
+    IO::File->new(">" . $dir . "/done");
+
+    # restore stdout/stderr to their original streams
+    #open STDOUT, ">&", $oldout;
+    #open STDERR, ">&", $olderr;
+
+    return 1;
+
+=pod
+
+    if ($ENV{COMP_LINE}) {
+        require Getopt::Complete;
+        my @spec = $class->resolve_option_completion_spec();
+        my $options = Getopt::Complete::Options->new(@spec);
+        $options->handle_shell_completion;
+        die "error: failed to exit after handling shell completion!";
+    }
+
+    my @argv = @ARGV;
+    @ARGV = ();
+    my $exit_code = $class->_execute_with_shell_params_and_return_exit_code(@argv);
+    UR::Context->commit;
+    exit $exit_code;
+
+=cut
+
+}
+
+# TODO: this is part of the dispatcher API
+sub render_html_form {
+
 }
 
 #
@@ -373,25 +489,34 @@ sub command_name
 {
     my $self = shift;
     my $class = ref($self) || $self;
-    my @words;
     if ( my ($base,$ext) = $class->_base_command_class_and_extension() ) {
         $ext = $class->_command_name_for_class_word($ext);
-        unless ($base->can("command_name")) {
-            local $SIG{__DIE__};
-            eval "use $base";
-        }
-        if ($base->can("command_name")) {
-            return $base->command_name . " " . $ext;
-        }
-        elsif ($ext eq "command") {
-            return $base;
-        }
-        else {
-            return $base . " " . $ext;
+        for (1) {
+            unless ($base->can("command_name")) {
+                local $SIG{__DIE__};
+                eval "use $base";
+            }
+            if ($base->can("command_name")) {
+                return $base->command_name . " " . $ext;
+            }
+            elsif ($ext eq "command") {
+                return $base;
+            }
+            else {
+                my ($b2,$e2) = _base_command_class_and_extension($base);
+                if ($b2) {
+                    $class = $b2;
+                    $ext = $class->_command_name_for_class_word($e2) . ' ' . $ext;
+                    redo;
+                }
+                else {
+                    die "failed to resolve the command name for $base with extension $ext!";
+                }
+            }
         }
     }
     else {
-        return $class;
+        return die "failed to resolve the command name for $base\n";
     }
 }
 
@@ -546,14 +671,12 @@ sub resolve_class_and_params_for_argv
         push @spec, "help!";
     }
 
-    # Previously, these nasty GetOptions modules insisted on working on
-    # the real @ARGV, while we like a little more flexibility.
-    # Getopt::Long now supports working on an arbitrary list with GetOptionsFromArray,
-    # but the proper version doesn't seem to be supplied with OSX.  So, we stay
-    # with the old method
+    # Thes nasty GetOptions modules insist on working on
+    # the real @ARGV, while we like a little moe flexibility.
+    # Not a problem in Perl. :)  (which is probably why it was never fixed)
     local @ARGV;
     @ARGV = @argv;
-
+    
     do {
         # GetOptions also likes to emit warnings instead of return a list of errors :( 
         my @errors;
