@@ -28,6 +28,13 @@ unless ($delegate_class->isa("Command")) {
     exit;
 }
 
+my $rurl = $cgi->url();
+my $base_url = $rurl;
+$base_url =~ s/command-ui.cgi.*//;
+
+my $dispatch_url = $rurl;
+$dispatch_url =~ s/-ui.cgi.*/-dispatch.cgi/;
+
 my $html = html_form($delegate_class);
 print "<html>\n\n",$html,"\n\n</html>";
 
@@ -61,7 +68,7 @@ sub html_form {
         my @args_meta = $self->_shell_args_property_meta();
 
         $text = "<div id='form'>\n";
-        $text .= "<form name='params' action='http://127.0.0.1/cgi-bin/urgit/bin/command-dispatch.cgi' >\n";
+        $text .= "<form name='params' action='$dispatch_url' >\n";
         $text .= "<b>$command_name:</b><br>\n";
         for my $arg_meta (@args_meta) {
             my $param_name      = $arg_meta->property_name;
@@ -95,7 +102,7 @@ sub sub_command_links_html {
     my $text = '';
     my @sub = $self->sorted_sub_command_classes;
     for my $sub (@sub) {
-        $text .= "<a href='http://127.0.0.1/cgi-bin/urgit/bin/command-ui.cgi?\@=$sub'>" 
+        $text .= "<a href='$base_url/command-ui.cgi?\@=$sub'>" 
             . $sub->command_name_brief 
             . ' : '
             . ($sub->help_brief || '(undocumented)')
