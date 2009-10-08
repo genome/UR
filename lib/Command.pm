@@ -833,6 +833,9 @@ sub help_options
         if (defined($format) and $format eq 'pod') {
             $text .= "\n=item " . $row->[0] . "\n  " . $row->[1] . "\n"; 
         }
+        elsif (defined($format) and $format eq 'html') {
+            $text .= "\n\t<br>" . $row->[0] . "<br> " . $row->[1] . "<br>\n";
+        }
         else {
             $text .= sprintf(
                 " %s\n%s\n",
