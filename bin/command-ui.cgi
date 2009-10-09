@@ -37,7 +37,7 @@ $head.= <<EOS;
 
             function dispatch() { 
 
-                function get_http_object() {
+                function create_ajax_handle() {
                     if (window.ActiveXObject)
                         return new ActiveXObject("Microsoft.XMLHTTP");
                     else if (window.XMLHttpRequest)
@@ -48,7 +48,7 @@ $head.= <<EOS;
                     }
                 }
 
-                httpr = get_http_object();
+                httpr = create_ajax_handle();
 
                 function set_result() {
                     if(httpr.readyState == 4) {
@@ -57,7 +57,8 @@ $head.= <<EOS;
                 }
 
                 if (httpr != null) {
-                    httpr.open("GET", "$base_url/command-dispatch.cgi?\@=Command::Echo&in=111&out=222",true);
+                    /***** FIXME I'M FAKING ACTUALLY HARD-CODING FAKE PARAMS INSTEAD OF USING THE FORM *****/
+                    httpr.open("GET", "$base_url/command-dispatch.cgi?\@=Command::Test::Echo&in=111&out=222",true);
                     httpr.send(null);
                     httpr.onreadystatechange = set_result;
                 }

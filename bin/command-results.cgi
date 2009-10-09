@@ -27,7 +27,7 @@ my ($pid) = ($job_id =~ /(\d+)\./);
 my @files = sort glob("$job_id/*");
 
 my $t = '';
-$t = "<html>\n";
+$t = "<html><b>job id:</b> $job_id<p>\n";
 for my $file (@files) {
     my ($name) = ($file =~ /^$job_id\/(.*)/);
     my $content = join('',IO::File->new($file)->getlines);
