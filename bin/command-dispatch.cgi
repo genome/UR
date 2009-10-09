@@ -54,7 +54,7 @@ if ($child_pid = fork()) {
 
 # this updates the stage for the request
 my $stage_logger = sub {
-    my $fh = IO::File->new(">$dir/stage");
+    my $fh = IO::File->new(">$dir/status");
     select $fh; $| = 1;
     $fh->print(@_);
     select STDOUT; $| = 1;
