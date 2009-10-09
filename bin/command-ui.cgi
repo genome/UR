@@ -97,6 +97,23 @@ sub html_form {
     my $self = shift;
 
     my $command_name = $self->command_name;
+    my $title_bar = '';
+    my $link_class;
+    my @words = split('::',$self->class);
+    for my $word (@words[0..$#words-1]) {
+        $link_class .= '::' if $link_class;
+        $link_class .= $word;
+        
+        $title_bar .= ' ' if $title_bar;
+        if ($link_class->isa('Command')) {
+            $title_bar .= "<a href='http://google.com'>" . lc($word) . "</a>";
+        }
+        else {
+            $title_bar .= $word;
+        }
+    }
+    $title_bar .= ' ' . $words[-1];
+
     my $text;
     
     if (not $self->is_executable) {
