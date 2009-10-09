@@ -32,11 +32,46 @@ my $rurl = $cgi->url();
 my $base_url = $rurl;
 $base_url =~ s/command-ui.cgi.*//;
 
-my $dispatch_url = $rurl;
-$dispatch_url =~ s/-ui.cgi.*/-dispatch.cgi/;
+$head.= <<EOS;
+        <script language="javascript" type="text/javascript">
 
-my $html = html_form($delegate_class);
-print "<html>\n\n",$html,"\n\n</html>";
+            function dispatch() { 
+
+                function get_http_object() {
+                    if (window.ActiveXObject)
+                        return new ActiveXObject("Microsoft.XMLHTTP");
+                    else if (window.XMLHttpRequest)
+                        return new XMLHttpRequest();
+                    else {
+                        alert("Your browser does not support AJAX.");
+                        return null;
+                    }
+                }
+
+                httpr = get_http_object();
+
+                function set_result() {
+                    if(httpr.readyState == 4) {
+                        document.getElementById('results').src = '$base_url/command-results.cgi?job_id=' + httpr.responseText;
+                    }
+                }
+
+                if (httpr != null) {
+                    httpr.open("GET", "$base_url/command-dispatch.cgi?\@=Command::Echo&in=111&out=222",true);
+                    httpr.send(null);
+                    httpr.onreadystatechange = set_result;
+                }
+            }
+
+        </script>
+    </head>
+EOS
+
+print "<html>\n",$head,"\n";
+
+my $body = html_form($delegate_class);
+
+print $body,"\n\n</html>";
 
 sub html_form { 
     my $self = shift;
@@ -84,14 +119,14 @@ sub html_form {
             $text .= "$param_label: ";
             $text .= "<input type='text' name='$param_name'/><br>\n"; 
         }
-        $text .= "<input type='submit' value='execute'>";
+        $text .= "job id: <input id='job_id' type='hidden' name='job_id' value='/tmp/command-dispatch.13682.efIsm'/>\n";
+        $text .= "<input type='button' onclick='javascript:dispatch();' value='execute'>";
         $text .= "</form>\n";
         $text .= $sub_commands if $sub_commands;
         $text .= "</div>\n";
 
-        $text .= "<b>results:</b>\n";
-        $text .= "<pre id='results'>\n";
-        $text .= "</pre>\n";
+        $text .= "<b>results:</b><br>\n";
+        $text .= "<iframe id='results' width='100%', height='80%'/>\n";
     }
 
     return $text;
