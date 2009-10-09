@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl 
+
+use warnings;
+use strict;
 
 use FindBin '$Bin';
 use lib "$Bin/../lib";
@@ -41,6 +44,7 @@ $SIG{CHLD} = \&REAPER;
 
 # fork so that the parent can return the path for results lookup, 
 # and the child can get to work on the actual execution
+my $child_pid;
 if ($child_pid = fork()) {
     # the parent process returns the path to the directory which tracks output, error, status
     print $dir;

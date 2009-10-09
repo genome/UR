@@ -1,5 +1,9 @@
 #!/usr/local/bin/perl
 
+use warnings;
+use strict;
+
+
 use FindBin '$Bin';
 use lib "$Bin/../lib";
 
@@ -32,36 +36,47 @@ my $rurl = $cgi->url();
 my $base_url = $rurl;
 $base_url =~ s/command-ui.cgi.*//;
 
-$head.= <<EOS;
+my $head.= <<EOS;
+        <script src="http://www.google.com/jsapi"></script>
+        
         <script language="javascript" type="text/javascript">
-
-            function dispatch() { 
-
-                function create_ajax_handle() {
-                    if (window.ActiveXObject)
-                        return new ActiveXObject("Microsoft.XMLHTTP");
-                    else if (window.XMLHttpRequest)
-                        return new XMLHttpRequest();
-                    else {
-                        alert("Your browser does not support AJAX.");
-                        return null;
+        google.load('prototype', '1.6.1.0');
+        
+            function dispatch() {
+            
+                \$( 'form').request({
+                    onComplete: function(response) {
+                        var url='$base_url/command-results.cgi?job_id=' + response.responseText;
+                        \$('ticker').update('Requesting.');
+                        requestResult(url);
+                        //document.getElementById('results').src = '$base_url/command-results.cgi?job_id=' + response.responseText;
                     }
-                }
+                });
+            }
+            
+            function updateTicker() {
+                \$('ticker').update(\$('ticker').innerHTML + '.')
+            }
+            
+            function requestResult(url) {
+                new Ajax.Request(url, {
+                    method: 'get',
+                    onSuccess: function(response) {
+                        var values = eval( '(' + response.responseText + ')' );
 
-                httpr = create_ajax_handle();
-
-                function set_result() {
-                    if(httpr.readyState == 4) {
-                        document.getElementById('results').src = '$base_url/command-results.cgi?job_id=' + httpr.responseText;
+                        for (key in values) {
+                            \$(key).update(values[key])
+                        }
+                        
+                        if (values['status'] == 'running') {
+                            var fxn = "requestResult('" + url + "')";
+                            setTimeout(fxn, 1000);
+                            updateTicker();
+                        } else {
+                            \$('ticker').update('Finished');
+                        }
                     }
-                }
-
-                if (httpr != null) {
-                    /***** FIXME I'M FAKING ACTUALLY HARD-CODING FAKE PARAMS INSTEAD OF USING THE FORM *****/
-                    httpr.open("GET", "$base_url/command-dispatch.cgi?\@=Command::Test::Echo&in=111&out=222",true);
-                    httpr.send(null);
-                    httpr.onreadystatechange = set_result;
-                }
+                });
             }
 
         </script>
@@ -103,8 +118,8 @@ sub html_form {
         my $sub_commands = sub_command_links_html($self); 
         my @args_meta = $self->_shell_args_property_meta();
 
-        $text = "<div id='form'>\n";
-        $text .= "<form name='params' action='$dispatch_url' >\n";
+        $text = "<div id='form-container'>\n";
+        $text .= "<form name='params' id='form' action='$base_url/command-dispatch.cgi' >\n";
         $text .= "<b>$command_name:</b><br>\n";
         for my $arg_meta (@args_meta) {
             my $param_name      = $arg_meta->property_name;
@@ -118,16 +133,25 @@ sub html_form {
             $param_label =~ s/_/ /g;
             
             $text .= "$param_label: ";
-            $text .= "<input type='text' name='$param_name'/><br>\n"; 
+            $text .= "<input type='text' id='param-$param_name' name='$param_name'/><br>\n"; 
         }
-        $text .= "job id: <input id='job_id' type='hidden' name='job_id' value='/tmp/command-dispatch.13682.efIsm'/>\n";
+        $text .= "<input type='hidden' id='param-\@' name='\@' value='$delegate_class'>";
+        #$text .= "job id: <input id='job_id' type='hidden' name='job_id' value='/tmp/command-dispatch.13682.efIsm'/>\n";
         $text .= "<input type='button' onclick='javascript:dispatch();' value='execute'>";
         $text .= "</form>\n";
         $text .= $sub_commands if $sub_commands;
         $text .= "</div>\n";
 
         $text .= "<b>results:</b><br>\n";
-        $text .= "<iframe id='results' width='100%', height='80%'/>\n";
+        #$text .= "<iframe id='results' width='100%', height='80%'/>\n";
+        $text .= <<END_HTML;
+<span id="ticker" style="font-weight:bold; color:blue"></span>
+<div id="results" style="border: 1px solid black; ">
+    <b>Status:</b> <span id="status"></span><br/>
+    <b>STDOUT:</b> <pre><div id="stdout"></div></pre>
+    <b>STDERR:</b> <pre><div id="stderr"></div></pre>
+</div>
+END_HTML
     }
 
     return $text;
@@ -147,3 +171,31 @@ sub sub_command_links_html {
     return $text;
 }
 
+__END__
+/*
+                function create_ajax_handle() {
+                    if (window.ActiveXObject)
+                        return new ActiveXObject("Microsoft.XMLHTTP");
+                    else if (window.XMLHttpRequest)
+                        return new XMLHttpRequest();
+                    else {
+                        alert("Your browser does not support AJAX.");
+                        return null;
+                    }
+                }
+
+                httpr = create_ajax_handle();
+
+                function set_result() {
+                    if(httpr.readyState == 4) {
+                        document.getElementById('results').src = '$base_url/command-results.cgi?job_id=' + httpr.responseText;
+                    }
+                }
+
+                if (httpr != null) {
+                    /***** FIXME I'M FAKING ACTUALLY HARD-CODING FAKE PARAMS INSTEAD OF USING THE FORM *****/
+                    httpr.open("GET", "$base_url/command-dispatch.cgi?\@=$delegate_class&in=111&out=222",true);
+                    httpr.send(null);
+                    httpr.onreadystatechange = set_result;
+                }
+                */
