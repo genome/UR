@@ -41,6 +41,7 @@ my $head.= <<EOS;
         
         <script language="javascript" type="text/javascript">
         google.load('prototype', '1.6.1.0');
+        google.load("scriptaculous", "1.8.2");
         
             function dispatch() {
             
@@ -63,11 +64,14 @@ my $head.= <<EOS;
                     method: 'get',
                     onSuccess: function(response) {
                         var values = eval( '(' + response.responseText + ')' );
-
-                        for (key in values) {
-                            \$(key).update(values[key])
+                        \$('results').update('');
+                        var newContainer = document.createElement('div');
+                        for (key in values) { 
+                            var keyField = document.createElement('div');
+                            keyField.update("<b>"+key+"</b>:" + "<br/><pre>" + values[key] + "</pre>");
+                            \$('results').appendChild(keyField);
                         }
-                        
+                        new Effect.Highlight(\$('results'), {});
                         if (values['status'] == 'running') {
                             var fxn = "requestResult('" + url + "')";
                             setTimeout(fxn, 1000);
@@ -145,11 +149,9 @@ sub html_form {
         $text .= "<b>results:</b><br>\n";
         #$text .= "<iframe id='results' width='100%', height='80%'/>\n";
         $text .= <<END_HTML;
-<span id="ticker" style="font-weight:bold; color:blue"></span>
+<span id="ticker" style="font-weight:bold; color:blue"></span><br/>
+<b>Status:</b> <span id="status"></span><br/>
 <div id="results" style="border: 1px solid black; ">
-    <b>Status:</b> <span id="status"></span><br/>
-    <b>STDOUT:</b> <pre><div id="stdout"></div></pre>
-    <b>STDERR:</b> <pre><div id="stderr"></div></pre>
 </div>
 END_HTML
     }
