@@ -9,13 +9,22 @@ use lib "$Bin/../lib";
 
 # dispatch any modularized operation from an HTTP request
 
-use Command;
-use CGI;
-use IO::File;
-use File::Temp;
+my @missing_mods;
+for my $mod (qw/Command CGI IO::File File::Temp JSON/) {
+    eval "use $mod";
+    if ($@) { push @missing_mods, [$mod,$@] }
+}
 
 my $cgi = CGI->new();
 print $cgi->header();
+
+if (@missing_mods) {
+    print "<html>The following modules are missing on your system.  Please install them to use this tool.:<br>\n";
+    for my $mod (@missing_mods) {
+        print "    $mod<br>\n";
+    }
+    print "</html>";
+}
 
 my $params = $cgi->Vars;
 my $delegate_class = $params->{'@'};
@@ -40,21 +49,29 @@ my $head.= <<EOS;
         <script src="http://www.google.com/jsapi"></script>
         
         <script language="javascript" type="text/javascript">
-        google.load('prototype', '1.6.1.0');
-        google.load("scriptaculous", "1.8.2");
+        
+            google.load('prototype', '1.6.1.0');
+            google.load("scriptaculous", "1.8.2");
         
             function dispatch() {
             
+                setStatus('sending request');
+                \$('results').update('');
                 \$( 'form').request({
                     onComplete: function(response) {
                         var url='$base_url/command-results.cgi?job_id=' + response.responseText;
-                        \$('ticker').update('Requesting.');
+                        setStatus('execution initiated');
                         requestResult(url);
                         //document.getElementById('results').src = '$base_url/command-results.cgi?job_id=' + response.responseText;
                     }
                 });
+                setStatus('request sent');
             }
-            
+           
+            function setStatus(value) {
+                \$('status').update(value)
+            }
+
             function updateTicker() {
                 \$('ticker').update(\$('ticker').innerHTML + '.')
             }
@@ -65,11 +82,47 @@ my $head.= <<EOS;
                     onSuccess: function(response) {
                         var values = eval( '(' + response.responseText + ')' );
                         \$('results').update('');
+                        
+                        document.getElementById('status').update(values['status']);
+                            
+                        var keyField = document.createElement('div');
+                        keyField.update("<pre>" + values['stdout'] + "</pre>");
+                        \$('results').appendChild(keyField);
+
+                        var keyField2 = document.createElement('div');
+                        keyField2.update("<pre style='color:red'>" + values['stderr'] + "</pre>");
+                        \$('results').appendChild(keyField2);
+                        
+                        new Effect.Highlight(\$('results'), {});
+                        if (values['status'] == 'running') {
+                            var fxn = "requestResult('" + url + "')";
+                            setTimeout(fxn, 1000);
+                            updateTicker();
+                        } else {
+                            \$('ticker').update();
+                        }
+                    }
+                });
+            }
+
+        </script>
+
+    </head>
+EOS
+
+=pod
+
                         var newContainer = document.createElement('div');
                         for (key in values) { 
-                            var keyField = document.createElement('div');
-                            keyField.update("<b>"+key+"</b>:" + "<br/><pre>" + values[key] + "</pre>");
-                            \$('results').appendChild(keyField);
+                            if (key == 'status') {
+                                document.getElementById('status').update(values[key]);
+                            }
+                            else {
+                                var keyField = document.createElement('div');
+                                keyField.id = 'results-' + key;
+                                keyField.update("<b>"+key+"</b>:" + "<br/><pre>" + values[key] + "</pre>");
+                                \$('results').appendChild(keyField);
+                            }
                         }
                         new Effect.Highlight(\$('results'), {});
                         if (values['status'] == 'running') {
@@ -77,15 +130,10 @@ my $head.= <<EOS;
                             setTimeout(fxn, 1000);
                             updateTicker();
                         } else {
-                            \$('ticker').update('Finished');
+                            \$('ticker').update();
                         }
-                    }
-                });
-            }
 
-        </script>
-    </head>
-EOS
+=cut
 
 print "<html>\n",$head,"\n";
 
@@ -157,19 +205,16 @@ sub html_form {
             $text .= "<input type='text' id='param-$param_name' name='$param_name'/><br>\n"; 
         }
         $text .= "<input type='hidden' id='param-\@' name='\@' value='$delegate_class'>";
-        #$text .= "job id: <input id='job_id' type='hidden' name='job_id' value='/tmp/command-dispatch.13682.efIsm'/>\n";
         $text .= "<input type='button' onclick='javascript:dispatch();' value='execute'>";
         $text .= "</form>\n";
         $text .= $sub_commands if $sub_commands;
         $text .= "</div>\n";
 
-        $text .= "<b>results:</b><br>\n";
-        #$text .= "<iframe id='results' width='100%', height='80%'/>\n";
         $text .= <<END_HTML;
-<span id="ticker" style="font-weight:bold; color:blue"></span><br/>
-<b>Status:</b> <span id="status"></span><br/>
-<div id="results" style="border: 1px solid black; ">
-</div>
+    <span id="status" style="font-weight:bold; color:blue"><br></span>
+    <span id="ticker" style="font-weight:bold; color:blue"></span><p/>
+    <div id="results" style="border: 1px solid black; ">
+    </div>
 END_HTML
     }
 
@@ -190,31 +235,3 @@ sub sub_command_links_html {
     return $text;
 }
 
-__END__
-/*
-                function create_ajax_handle() {
-                    if (window.ActiveXObject)
-                        return new ActiveXObject("Microsoft.XMLHTTP");
-                    else if (window.XMLHttpRequest)
-                        return new XMLHttpRequest();
-                    else {
-                        alert("Your browser does not support AJAX.");
-                        return null;
-                    }
-                }
-
-                httpr = create_ajax_handle();
-
-                function set_result() {
-                    if(httpr.readyState == 4) {
-                        document.getElementById('results').src = '$base_url/command-results.cgi?job_id=' + httpr.responseText;
-                    }
-                }
-
-                if (httpr != null) {
-                    /***** FIXME I'M FAKING ACTUALLY HARD-CODING FAKE PARAMS INSTEAD OF USING THE FORM *****/
-                    httpr.open("GET", "$base_url/command-dispatch.cgi?\@=$delegate_class&in=111&out=222",true);
-                    httpr.send(null);
-                    httpr.onreadystatechange = set_result;
-                }
-                */
