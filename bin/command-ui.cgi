@@ -12,7 +12,7 @@ use lib "$Bin/../lib";
 my @missing_mods;
 for my $mod (qw/Command CGI IO::File File::Temp JSON/) {
     eval "use $mod";
-    if ($@) { push @missing_mods, [$mod,$@] }
+    if ($@) { push @missing_mods, $mod; }
 }
 
 my $cgi = CGI->new();
@@ -24,6 +24,7 @@ if (@missing_mods) {
         print "    $mod<br>\n";
     }
     print "</html>";
+    exit 1;
 }
 
 my $params = $cgi->Vars;
@@ -43,35 +44,35 @@ unless ($delegate_class->isa("Command")) {
 
 my $rurl = $cgi->url();
 my $base_url = $rurl;
-$base_url =~ s/command-ui.cgi.*//;
+$base_url =~ s/\/command-ui.cgi.*//;
 
 my $head.= <<EOS;
-<style type="text/css">
-#stdout {
-    float:left;
-    width:50%;
-    font-size:10px;
-    z:2;
-}
-#stderr {
-    float:right;
-    width:50%;
-    font-weight:bold;
-    z:1;
-    color:red;
-    background-color:yellow;
-    opacity:.78;
+        <style type="text/css">
+            #stdout {
+                float:left;
+                width:50%;
+                font-size:10px;
+                z:2;
+            }
+            #stderr {
+                float:right;
+                width:50%;
+                font-weight:bold;
+                z:1;
+                color:red;
+                background-color:yellow;
+                opacity:.78;
 
-}
-#status {
-    font-weight:bold;
-    color:blue;
-}
-#ticker {
-    font-weight:bold;
-    color:blue;
-}
-</style>
+            }
+            #status {
+                font-weight:bold;
+                color:blue;
+            }
+            #ticker {
+                font-weight:bold;
+                color:blue;
+            }
+        </style>
 
         <script src="http://www.google.com/jsapi"></script>
         
@@ -117,11 +118,13 @@ my $head.= <<EOS;
                         keyField.update("<pre>" + values['stdout'] + "</pre>");
                         \$('results').appendChild(keyField);
 
-                        var keyField2 = document.createElement('div');
-                        keyField2.id = 'stderr';
-                        keyField2.update("<pre>" + values['stderr'] + "</pre>");
-                        \$('results').appendChild(keyField2);
-                        
+                        if (values['stderr']) {
+                            var keyField2 = document.createElement('div');
+                            keyField2.id = 'stderr';
+                            keyField2.update("<pre>" + values['stderr'] + "</pre>");
+                            \$('results').appendChild(keyField2);
+                        }
+
                         new Effect.Highlight(\$('results'), {});
                         if (values['status'] == 'running') {
                             var fxn = "requestResult('" + url + "')";
@@ -148,8 +151,7 @@ print $body,"\n\n</html>";
 sub html_form { 
     my $self = shift;
 
-    my $command_name = $self->command_name;
-    my $title_bar = '';
+    my $title_bar = '<b>';
     my $link_class;
     my @words = split('::',$self->class);
     for my $word (@words[0..$#words-1]) {
@@ -157,19 +159,27 @@ sub html_form {
         $link_class .= $word;
         
         $title_bar .= ' ' if $title_bar;
+        eval "use $link_class";
+        next if $word eq 'Command';
+        #TODO: split camel-case words into separate words for display
         if ($link_class->isa('Command')) {
-            $title_bar .= "<a href='http://google.com'>" . lc($word) . "</a>";
+            $title_bar .= "<a href='$base_url/command-ui.cgi?@=$link_class'>" . $word . "</a>";
         }
         else {
             $title_bar .= $word;
         }
     }
-    $title_bar .= ' ' . $words[-1];
-
-    my $text;
+    $title_bar .= ' ' . $words[-1] . ':';
+    $title_bar .= "</b><i><small>";
+    if (my $help = $self->help_brief) {
+        $title_bar .= "<br/>\n" . $self->help_brief . "\n";
+    }
+    $title_bar .= "</i></small>";
     
+
+    my $text .= $title_bar;
     if (not $self->is_executable) {
-        $text = "<div id='form'>\n<b>$command_name:</b><br>\n";
+        $text .= "<br/><div id='form'>\n";
         # no execute implemented
         if ($self->is_sub_command_delegator) {
             # show the list of sub-commands
@@ -191,9 +201,8 @@ sub html_form {
         my $sub_commands = sub_command_links_html($self); 
         my @args_meta = $self->_shell_args_property_meta();
 
-        $text = "<div id='form-container'>\n";
+        $text .= "<p/><div id='form-container'>\n";
         $text .= "<form name='params' id='form' action='$base_url/command-dispatch.cgi' >\n";
-        $text .= "<b>$command_name:</b><br>\n";
         for my $arg_meta (@args_meta) {
             my $param_name      = $arg_meta->property_name;
             my $doc             = $arg_meta->doc;
@@ -233,7 +242,7 @@ sub sub_command_links_html {
         $text .= "<a href='$base_url/command-ui.cgi?\@=$sub'>" 
             . $sub->command_name_brief 
             . ' : '
-            . ($sub->help_brief || '(undocumented)')
+            . '<small><i>' . ($sub->help_brief || '(undocumented)') . "</small></i>"
             . "<br>\n";
     }
     return $text;

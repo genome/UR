@@ -10,7 +10,8 @@ class Command::Test::Echo {
     has => [
         in => { is => 'Text' },
         out => { is => 'Text', is_output => 1, is_optional => 1 },
-    ]
+    ],
+    doc => 'echo the input back, and die or fail if those words appear in the input',
 };
 
 sub execute {
