@@ -46,6 +46,33 @@ my $base_url = $rurl;
 $base_url =~ s/command-ui.cgi.*//;
 
 my $head.= <<EOS;
+<style type="text/css">
+#stdout {
+    float:left;
+    width:50%;
+    font-size:10px;
+    z:2;
+}
+#stderr {
+    float:right;
+    width:50%;
+    font-weight:bold;
+    z:1;
+    color:red;
+    background-color:yellow;
+    opacity:.78;
+
+}
+#status {
+    font-weight:bold;
+    color:blue;
+}
+#ticker {
+    font-weight:bold;
+    color:blue;
+}
+</style>
+
         <script src="http://www.google.com/jsapi"></script>
         
         <script language="javascript" type="text/javascript">
@@ -86,11 +113,13 @@ my $head.= <<EOS;
                         document.getElementById('status').update(values['status']);
                             
                         var keyField = document.createElement('div');
+                        keyField.id = 'stdout';
                         keyField.update("<pre>" + values['stdout'] + "</pre>");
                         \$('results').appendChild(keyField);
 
                         var keyField2 = document.createElement('div');
-                        keyField2.update("<pre style='color:red'>" + values['stderr'] + "</pre>");
+                        keyField2.id = 'stderr';
+                        keyField2.update("<pre>" + values['stderr'] + "</pre>");
                         \$('results').appendChild(keyField2);
                         
                         new Effect.Highlight(\$('results'), {});
@@ -109,31 +138,6 @@ my $head.= <<EOS;
 
     </head>
 EOS
-
-=pod
-
-                        var newContainer = document.createElement('div');
-                        for (key in values) { 
-                            if (key == 'status') {
-                                document.getElementById('status').update(values[key]);
-                            }
-                            else {
-                                var keyField = document.createElement('div');
-                                keyField.id = 'results-' + key;
-                                keyField.update("<b>"+key+"</b>:" + "<br/><pre>" + values[key] + "</pre>");
-                                \$('results').appendChild(keyField);
-                            }
-                        }
-                        new Effect.Highlight(\$('results'), {});
-                        if (values['status'] == 'running') {
-                            var fxn = "requestResult('" + url + "')";
-                            setTimeout(fxn, 1000);
-                            updateTicker();
-                        } else {
-                            \$('ticker').update();
-                        }
-
-=cut
 
 print "<html>\n",$head,"\n";
 
@@ -211,8 +215,8 @@ sub html_form {
         $text .= "</div>\n";
 
         $text .= <<END_HTML;
-    <span id="status" style="font-weight:bold; color:blue"><br></span>
-    <span id="ticker" style="font-weight:bold; color:blue"></span><p/>
+    <span id="status"><br></span>
+    <span id="ticker"></span><p/>
     <div id="results" style="border: 1px solid black; ">
     </div>
 END_HTML
