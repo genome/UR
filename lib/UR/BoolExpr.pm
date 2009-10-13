@@ -408,7 +408,7 @@ sub resolve {
                         
                         my ($method) = ($key =~ /^(\w+)/);
                         if (my $subref = $subject_class->can($method) and $subject_class->isa("UR::Object")) {
-                            for (@$value) { $_ =  $subref->($_) };
+                            #for (@$value) { $_ =  $subref->($_) };
                         }
                     }
                 }
@@ -490,6 +490,12 @@ sub resolve {
                         my ($my_method, $their_method) = @$join;
                         push @keys, $my_method;
                         push @values, $value->$their_method;
+                    }
+                    # TODO: this may need to be moved into the above get_property_name_pairs_for_join(),
+                    # but the exact syntax for expressing that this is part of the join is unclear.
+                    if (my $id_class_by = $property_type->id_class_by) {
+                        push @keys, $id_class_by;
+                        push @values, ref($value);
                     }
 
                     #
