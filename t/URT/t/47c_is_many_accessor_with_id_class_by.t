@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use above "URT";
-use Test::More tests => 3;
+use Test::More tests => 31;
 
 class URT::Note {
     id_by => [
