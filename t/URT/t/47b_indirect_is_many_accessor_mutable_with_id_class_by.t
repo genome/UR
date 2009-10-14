@@ -4,7 +4,7 @@ use UR;
 
 use Data::Dumper;
 use Test::More;
-plan tests => 13;
+plan tests => 77;
 
 UR::Object::Type->define(
     class_name => 'URT::Value1'
