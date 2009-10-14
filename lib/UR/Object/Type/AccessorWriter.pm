@@ -722,16 +722,20 @@ sub mk_object_set_accessors {
                 #$DB::single = 1;
                 Carp::croak("No property links for $r_class_name -> $reverse_as?  Cannot build accessor for $singular_name/$plural_name relationship.");
             }
-            my %get_params;
+            my @get_params;
             for my $link (@property_links) {
                 my $my_property_name = $link->r_property_name;
                 push @property_names, $my_property_name;
                 unless ($obj->can($my_property_name)) {
                     Carp::croak "Cannot handle indirect relationship $r_class_name -> $reverse_as.  Class $class_name has no property named $my_property_name";
                 }
-                $get_params{$link->property_name}  = $obj->$my_property_name;
+                push @get_params, $link->property_name, ($obj->$my_property_name || undef);
             }
-            my $tmp_rule = $r_class_name->define_boolexpr(%get_params);
+            if (my $id_class_by = $property_meta->id_class_by) {
+                push @get_params, $id_class_by, $class_name;
+                push @property_names, 'class';
+            }
+            my $tmp_rule = $r_class_name->define_boolexpr(@get_params);
             $rule_template = $tmp_rule->template;
             unless ($rule_template) {
                 die "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
