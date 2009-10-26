@@ -4,7 +4,7 @@ use UR;
 
 use Data::Dumper;
 use Test::More;
-plan tests => 77;
+plan tests => 81;
 
 UR::Object::Type->define(
     class_name => 'URT::Value1'
@@ -47,6 +47,14 @@ UR::Object::Type->define(
         #interesting_params => { is => 'URT::Param', reverse_as => 'thing', is_many => 1,
         #                        where => [name => 'interesting']},
         #interesting_param_values => { via => 'interesting_params', to => 'value', is_many => 1, is_mutable => 1 },
+        #< Test adding primitives, giving the class name
+        friends => {
+            via => 'params',
+            to => 'value_id',
+            is_many => 1,
+            is_mutable => 1,
+            where => [qw/ name friends value_class_name UR::Value /],
+        },
     ],
 );
 
@@ -231,6 +239,17 @@ ok($o2, 'Got thingy w/ id 2');
 my @v = $o2->interesting_param_values;
 is_deeply(\@v,[$v1,$v2,$v3], 'Ineresting values match those from orginal object');
 #is_deeply([ $o1->interesting_param_values ], [ $thing2->interesting_param_values ], 'Ineresting values match those from orginal object');
+
+#<>#
+note('primitives with UR::Value in where clause');
+$o1->add_friend('Watson');
+is_deeply([$o1->friends], [qw/ Watson /], 'Added a friend: Watson');
+$o1->add_friend('Crick');
+is_deeply([sort $o1->friends], [qw/ Crick Watson /], 'Added a friend: Crick');
+$o1->remove_friend('Watson');
+is_deeply([$o1->friends], [qw/ Crick /], 'Removed a friend: Watson');
+$o1->friends(undef);
+ok(!$o1->friends, 'Set friends to undef');
 
 # Try to get the object again w/ id and ineresting values
 # FIXME does not work
