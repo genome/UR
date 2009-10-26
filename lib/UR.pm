@@ -31,26 +31,28 @@ $SIG{__DIE__} = \&Carp::confess;
 # NOTE: it is currently not used because of deployment issues.
 use Storable qw(store_fd fd_retrieve);
 BEGIN {
-    my $ur_dir = substr($INC{'UR.pm'}, 0, length($INC{'UR.pm'})-5);
-    #print "STDERR ur_dir is $ur_dir\n";
-    my $dump;
-    foreach my $dir ( '.', $ur_dir ) {
-        if (-f "$dir/ur_core.$VERSION.stor" and -s _) {
-            #print STDERR "Loading rules dump from $dir/ur_core.stor\n";
-            open($dump, "$dir/ur_core.$VERSION.stor");
-            last;
-        } elsif (-f "$dir/ur_core.stor.gz" and -s _) {
-            #print STDERR "Loading gzipped rules dump from $dir/ur_core.stor.gz\n";
-            open($dump, "gzip -dc $dir/ur_core.stor.gz |");
-            last;
+    if ( $INC{'UR.pm'} ) {
+        my $ur_dir = substr($INC{'UR.pm'}, 0, length($INC{'UR.pm'})-5);
+        #print "STDERR ur_dir is $ur_dir\n";
+        my $dump;
+        foreach my $dir ( '.', $ur_dir ) {
+            if (-f "$dir/ur_core.$VERSION.stor" and -s _) {
+                #print STDERR "Loading rules dump from $dir/ur_core.stor\n";
+                open($dump, "$dir/ur_core.$VERSION.stor");
+                last;
+            } elsif (-f "$dir/ur_core.stor.gz" and -s _) {
+                #print STDERR "Loading gzipped rules dump from $dir/ur_core.stor.gz\n";
+                open($dump, "gzip -dc $dir/ur_core.stor.gz |");
+                last;
+            }
         }
-    }
-    if ($dump) {
-        $UR::DID_LOAD_FROM_DUMP = 1;
+        if ($dump) {
+            $UR::DID_LOAD_FROM_DUMP = 1;
 
-        local $/;
-        my $data = fd_retrieve($dump);
-        ($UR::Object::rule_templates, $UR::Object::rules) = @$data;
+            local $/;
+            my $data = fd_retrieve($dump);
+            ($UR::Object::rule_templates, $UR::Object::rules) = @$data;
+        }
     }
 }
 
@@ -74,9 +76,9 @@ for my $e (keys %ENV) {
         my @files = glob($path . '/Env/*');
         my @vars = map { /UR\/Env\/(.*).pm/; $1 } @files; 
         print STDERR "Environment variable $e set to $ENV{$e} but there were errors using UR::Env::$e:\n"
-            . "Available variables:\n\t" 
-            . join("\n\t",@vars)
-            . "\n";
+        . "Available variables:\n\t" 
+        . join("\n\t",@vars)
+        . "\n";
         exit 1;
     }
 }
