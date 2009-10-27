@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More tests => 27;
+use Test::More tests => 24;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; 
@@ -58,33 +58,25 @@ TestClass2->message_callback('error', sub { push @error_messages, $_[0]->text })
 
 $o = TestClass2->create(foo => 'qqqq', value => 'blah');
 ok(!$o, "Correctly couldn't create a multi-ID property object without specifying all the IDs");
-is(scalar(@error_messages), 2, 'Correctly trapped 2 error messages');
-like($error_messages[0], qr/Can't autogenerate ID property values for multiple ID property class TestClass2/,
-   'The error message was correct');
-like($error_messages[1], qr/No ID for new TestClass2/,
+is(scalar(@error_messages), 1, 'Correctly trapped 2 error messages');
+like($error_messages[0], qr/Attempt to create TestClass2 with multiple ids without these properties: bar/,
    'The error message was correct');
 
 
 @error_messages = ();
 $o = TestClass2->create(bar => 'wwww', value => 'blah');
 ok(!$o, "Correctly couldn't create a multi-ID property object without specifying all the IDs, again");
-is(scalar(@error_messages), 2, 'Correctly trapped 2 error messages');
-like($error_messages[0], qr/Can't autogenerate ID property values for multiple ID property class TestClass2/,
+is(scalar(@error_messages), 1, 'Correctly trapped 2 error messages');
+like($error_messages[0], qr/Attempt to create TestClass2 with multiple ids without these properties: foo/,
    'The error message was correct');
-like($error_messages[1], qr/No ID for new TestClass2/,
-   'The error message was correct');
-
 
 
 @error_messages = ();
 $o = TestClass2->create(value => 'asdf');
 ok(!$o, "Correctly couldn't create a multi-ID property object without specifying all the IDs, again");
-is(scalar(@error_messages), 2, 'Correctly trapped 2 error messages');
-like($error_messages[0], qr/Can't autogenerate ID property values for multiple ID property class TestClass2/,
+is(scalar(@error_messages), 1, 'Correctly trapped 2 error messages');
+like($error_messages[0], qr/Attempt to create TestClass2 with multiple ids without these properties: foo, bar/,
    'The error message was correct');
-like($error_messages[1], qr/No ID for new TestClass2/,
-   'The error message was correct');
-
 
 
 @error_messages = ();

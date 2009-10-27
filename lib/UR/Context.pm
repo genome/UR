@@ -509,20 +509,40 @@ sub create_entity {
     my $id = $params->{id};        
 
     # Whenever no params, or a set which has no ID, make an ID.
-    unless (defined($id)) {            
-        $id = $class_meta->autogenerate_new_object_id($rule);
-        unless (defined($id)) {
-            $class->error_message("No ID for new $class!\n");
-            return;
+    unless (defined($id)) {
+        my @id_property_names = $class_meta->id_property_names
+            or Carp::confess( # Bad should be at least one
+            "No id property names for class ($class).  This should not have happened."
+        );
+        if ( @id_property_names == 1 ) { # only 1 - try to auto generate
+            $id = $class_meta->autogenerate_new_object_id($rule);
+            unless ( defined $id ) {
+                $class->error_message("Failed to auto-generate an ID for single ID property class ($class)");
+                return;
+            }
+        }
+        else { # multiple
+            # Try to give a useful message by getting id prop names that are not deinfed
+            my @missed_names;
+            for my $name ( @id_property_names ) {
+                push @missed_names, $name unless $rule->specifies_value_for($name);
+            }
+            if ( @missed_names ) { # Ok - prob w/ class def, list the ones we missed
+                $class->error_message("Attempt to create $class with multiple ids without these properties: ".join(', ', @missed_names));
+                return;
+            }
+            else { # Bad - something is really wrong... 
+                Carp::confess("Attempt to create $class failed to resolve id from underlying id properties.");
+            }
         }
     }
-    
-    # @extra is extra values gotten by inheritance
+
+# @extra is extra values gotten by inheritance
     my @extra;
-    
-    # %property_objects maps property names to UR::Object::Property objects
-    # by going through the reversed list of UR::Object::Type objects below
-    # We set up this hash to have the correct property objects for each property
+
+# %property_objects maps property names to UR::Object::Property objects
+# by going through the reversed list of UR::Object::Type objects below
+# We set up this hash to have the correct property objects for each property
     # name.  This is important in the case of property name overlap via
     # inheritance.  The property object used should be the one "closest"
     # to the class.  In other words, a property directly on the class gets
@@ -533,21 +553,21 @@ sub create_entity {
     my %set_properties;
     my %default_values;
     my %immutable_properties;
-    
+
     for my $co ( reverse( $class_meta, $class_meta->ancestry_class_metas ) ) {
         # Reverse map the ID into property values.
         # This has to occur for all subclasses which represent table rows.
-        
+
         my @id_property_names = $co->id_property_names;
         my @values = $co->resolve_ordered_values_from_composite_id( $id );
         $#values = $#id_property_names;
         push @extra, map { $_ => shift(@values) } @id_property_names;
-        
+
         # deal with %property_objects
         my @property_objects = $co->direct_property_metas;
         my @property_names = map { $_->property_name } @property_objects;
         @property_objects{@property_names} = @property_objects;            
-        
+
         foreach my $prop ( @property_objects ) {
             my $name = $prop->property_name;
             $default_values{ $prop->property_name } = $prop->default_value if (defined $prop->default_value);

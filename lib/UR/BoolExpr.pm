@@ -396,23 +396,6 @@ sub resolve {
                 
                 # transform objects into IDs if applicable
                 my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
-                if ($property_meta && $property_meta->is_delegated) {
-                    my $is_all_objects = 1;
-                    for (@$value) { 
-                        unless (blessed($_)) {
-                            $is_all_objects = 0;
-                            last;
-                        }
-                    }
-                    if ($is_all_objects) {
-                        
-                        my ($method) = ($key =~ /^(\w+)/);
-                        if (my $subref = $subject_class->can($method) and $subject_class->isa("UR::Object")) {
-                            for (@$value) { $_ =  $subref->($_) };
-                        }
-                    }
-                }
-    
                 my $one_or_many = $subject_class_props{$property_name};
                 unless (defined $one_or_many) {
                     die "$subject_class: '$property_name' ($key => $value)\n" . Data::Dumper::Dumper({ @_ });
@@ -490,6 +473,12 @@ sub resolve {
                         my ($my_method, $their_method) = @$join;
                         push @keys, $my_method;
                         push @values, $value->$their_method;
+                    }
+                    # TODO: this may need to be moved into the above get_property_name_pairs_for_join(),
+                    # but the exact syntax for expressing that this is part of the join is unclear.
+                    if (my $id_class_by = $property_type->id_class_by) {
+                        push @keys, $id_class_by;
+                        push @values, ref($value);
                     }
 
                     #

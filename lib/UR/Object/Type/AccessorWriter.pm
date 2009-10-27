@@ -115,12 +115,8 @@ sub mk_ro_accessor {
     }
 }
 
-
-# FIXME - this is kinda ugly.  I've co-opted this to work for is_many with id_by where the thing
-# we're id-ing_by is an ARRAY.  This case should probably be broken out to make something like mk_object_set_accessors,
-# or change mk_object_set_accessors to support this
 sub mk_id_based_object_accessor {
-    my ($self, $class_name, $accessor_name, $id_by, $r_class_name, $where) = @_;
+    my ($self, $class_name, $accessor_name, $id_by, $r_class_name, $where, $id_class_by) = @_;
 
     unless (ref($id_by)) {
         $id_by = [ $id_by ];
@@ -131,6 +127,7 @@ sub mk_id_based_object_accessor {
     my @id;
     my $id;
     my $full_name = join( '::', $class_name, $accessor_name );
+    my $concrete_r_class_name = $r_class_name;
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         if (@_ == 1) {
@@ -138,23 +135,48 @@ sub mk_id_based_object_accessor {
             # $cd->artist($different_artist);
             # to switch which artist object this cd points to
             my $object_value = shift;
-            $id_decomposer ||= $r_class_name->__meta__->get_composite_id_decomposer;
-            @id = ( defined($object_value) ? $id_decomposer->($object_value->id) : () );
-            for my $id_property_name (@$id_by) {
-                $self->$id_property_name(shift @id);
+            if (defined $object_value) {
+                if ($id_class_by) {
+                    $concrete_r_class_name = ($object_value->can('class') ? $object_value->class : ref($object_value));
+                    $id_decomposer = undef;
+                    $id_resolver = undef;
+                    $self->$id_class_by($concrete_r_class_name);
+                }
+                $id_decomposer ||= $concrete_r_class_name->__meta__->get_composite_id_decomposer;
+                @id = $id_decomposer->($object_value->id);
+                for my $id_property_name (@$id_by) {
+                    $self->$id_property_name(shift @id);
+                }
+            }
+            else {
+                if ($id_class_by) {
+                    $self->$id_class_by(undef);
+                }
+                for my $id_property_name (@$id_by) {
+                    $self->$id_property_name(undef);
+                }
             }
             return $object_value;
         }
         else {
-            $id_resolver ||= $r_class_name->__meta__->get_composite_id_resolver;
+            if ($id_class_by) {
+                $concrete_r_class_name = $self->$id_class_by;
+                $id_decomposer = undef;
+                $id_resolver = undef;
+                return unless $concrete_r_class_name;
+            }
+            $id_resolver ||= $concrete_r_class_name->__meta__->get_composite_id_resolver;
             @id = map { $self->$_ } @$id_by;
             $id = $id_resolver->(@id);
             return if not defined $id;
+            if ($concrete_r_class_name eq 'UR::Object') {
+                Carp::cluck("Querying by using UR::Object class is deprecated.");
+            }
             if (@_ || $where) { 
                 # There were additional params passed in 
-                return $r_class_name->get(id => $id, @_, @$where);
+                return $concrete_r_class_name->get(id => $id, @_, @$where);
             } else {
-                return $r_class_name->get($id);
+                return $concrete_r_class_name->get($id);
             }
         }
     };
@@ -175,7 +197,7 @@ sub mk_indirect_ro_accessor {
 
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
-        Carp::croak("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
+        Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
         my @bridges = $self->$via(@where);
         return unless @bridges;
         return $self->context_return(@bridges) if ($to eq '-filter');
@@ -317,26 +339,58 @@ sub mk_indirect_rw_accessor {
     });
 
     if ($singular_name) {  # True if we're defining an is_many indirect property
+        # Add 
         my $via_adder;
-
         my $add_accessor = Sub::Name::subname $class_name ."::add_$singular_name" => sub {
-            my($self,$value) = @_;
+            my($self) = shift;
+
 
             $resolve_update_strategy->() unless (defined $update_strategy);
             unless (defined $via_adder) {
                 $via_adder = "add_" . $via_property_meta->singular_name;
             }
-           
-            $self->$via_adder(@where, $to => $value);
+
+            # By default, a single value will come in which is the remote value
+            # we just add the appropriate property name to it.  If multiple
+            # values come in we trust the caller to be giving additional params.
+            if (@_ == 1) {
+                unshift @_, $to;
+            }
+            $self->$via_adder(@where,@_);
         };
 
         Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => "add_$singular_name",
-            code => $add_accessor,
+                into => $class_name,
+                as   => "add_$singular_name",
+                code => $add_accessor,
+            });
+
+        # Remove 
+        my  $via_remover;
+        my $remove_accessor = Sub::Name::subname $class_name ."::remove_$singular_name" => sub {
+            my($self) = shift;
+
+            $resolve_update_strategy->() unless (defined $update_strategy);
+            unless (defined $via_remover) {
+                $via_remover = "remove_" . $via_property_meta->singular_name;
+            }
+
+            # By default, a single value will come in which is the remote value
+            # we just remove the appropriate property name to it.  If multiple
+            # values come in we trust the caller to be giving removeitional params.
+            if (@_ == 1) {
+                unshift @_, $to;
+            }
+            $self->$via_remover(@where,@_);
+        };
+
+        Sub::Install::reinstall_sub({
+                into => $class_name,
+                as   => "remove_$singular_name",
+                code => $remove_accessor,
         });
     }
-    
+
 }
 
 
@@ -668,16 +722,20 @@ sub mk_object_set_accessors {
                 #$DB::single = 1;
                 Carp::croak("No property links for $r_class_name -> $reverse_as?  Cannot build accessor for $singular_name/$plural_name relationship.");
             }
-            my %get_params;
+            my @get_params;
             for my $link (@property_links) {
                 my $my_property_name = $link->r_property_name;
                 push @property_names, $my_property_name;
                 unless ($obj->can($my_property_name)) {
                     Carp::croak "Cannot handle indirect relationship $r_class_name -> $reverse_as.  Class $class_name has no property named $my_property_name";
                 }
-                $get_params{$link->property_name}  = $obj->$my_property_name;
+                push @get_params, $link->property_name, ($obj->$my_property_name || undef);
             }
-            my $tmp_rule = $r_class_name->define_boolexpr(%get_params);
+            if (my $id_class_by = $property_meta->id_class_by) {
+                push @get_params, $id_class_by, $class_name;
+                push @property_names, 'class';
+            }
+            my $tmp_rule = $r_class_name->define_boolexpr(@get_params);
             $rule_template = $tmp_rule->template;
             unless ($rule_template) {
                 die "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
@@ -900,10 +958,22 @@ sub mk_object_set_accessors {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) {
+            # an id-linked "has-many"
             my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
             $params_prefix_resolver->() unless $params_prefix_resolved;
-            unshift @_, @params_prefix if @_ == 1;        
-            my @matches = $r_class_name->get($rule->params_list,@_);
+            my @matches;
+            if (@_ == 1 and ref($_[0])) {
+                # the object to remove was passed-in
+                unless ($rule->evaluate($_[0])) {
+                    die "object " . $_[0]->__display_name__ . " is not a member of the $singular_name set!";
+                }
+                @matches = ($_[0]);
+            }
+            else {
+                # the parameters to find objects to remove were passed-in
+                unshift @_, @params_prefix if @_ == 1; # a single "id" is the remainder of the id of the object        
+                @matches = $r_class_name->get($rule->params_list,@_);
+            }
             my $trans = UR::Context::Transaction->begin;
             @matches = map {
                 $_->delete or die "Error deleting $r_class_name " . $_->id . " for remove_$singular_name!: " . $_->error_message;
@@ -1039,7 +1109,9 @@ sub initialize_direct_accessors {
         my @calculation_fields = (qw/calculate calc_perl calc_sql calculate_from/);
         if (my $id_by = $property_data->{id_by}) {
             my $r_class_name = $property_data->{data_type};
-            $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where);
+            #$self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where);
+            my $id_class_by = $property_data->{id_class_by};
+            $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where, $id_class_by);
         }
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
