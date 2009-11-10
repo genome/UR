@@ -2291,7 +2291,7 @@ sub _default_save_sql_for_object {
     # there is inheritance within the schema.
     my @save_table_names = 
         map  { uc }
-        grep { $_ }
+        grep { not /[^\w\.]/ } # remove any views from the list
         $class_object->all_table_names;
         
     @save_table_names = reverse @save_table_names unless ($object_to_save->isa('UR::Entity::Ghost'));
