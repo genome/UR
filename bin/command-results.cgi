@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use FindBin '$Bin';
 use lib "$Bin/../lib";
