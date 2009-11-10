@@ -1,10 +1,10 @@
-#!/usr/local/bin/perl
+#!/gsc/bin/perl
 
 use FindBin '$Bin';
 use lib "$Bin/../lib";
 use JSON;
 
-# this "job status/result checker" really just lets you pick some file in the job's directory and dump it back 
+# this "job status/result checker" really just lets you pick some file in the job's directory and dump it back
 # http://mysite/cgi-bin/command-check.cgi?job_id=12345.ABCDE&key=stdout
 
 use Command;

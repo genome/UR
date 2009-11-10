@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl 
+#!/gsc/bin/perl
 
 use warnings;
 use strict;
@@ -42,7 +42,7 @@ sub REAPER {
 }
 $SIG{CHLD} = \&REAPER;
 
-# fork so that the parent can return the path for results lookup, 
+# fork so that the parent can return the path for results lookup,
 # and the child can get to work on the actual execution
 my $child_pid;
 if ($child_pid = fork()) {
@@ -63,7 +63,7 @@ my $stage_logger = sub {
     $fh->print(@_);
     select STDOUT; $| = 1;
 };
-$stage_logger->('initializing'); 
+$stage_logger->('initializing');
 
 # duplicate handles to the old stdout/stderr
 #open my $oldout, ">&STDOUT"     or die "Can’t dup STDOUT: $!";
@@ -87,7 +87,7 @@ select STDOUT; $| = 1;
 #$olderr->close;
 
 # now do the real work...
-$stage_logger->('running'); 
+$stage_logger->('running');
 my $rv = eval {
     eval "use $delegate_class";
     die $@ if $@;
@@ -96,7 +96,7 @@ my $rv = eval {
 
 # set status after execution has completed
 if ($@) {
-    $stage_logger->('crashed'); 
+    $stage_logger->('crashed');
     STDERR->print($@);
     UR::Context->rollback;
 }
