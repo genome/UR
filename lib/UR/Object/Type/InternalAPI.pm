@@ -529,6 +529,7 @@ sub autogenerate_new_object_id {
 
     my ($data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($self);
     if ($data_source) {
+        $DB::single = 1;
         return $data_source->autogenerate_new_object_id_for_class_name_and_rule(
             $self->class_name,
             $rule

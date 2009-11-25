@@ -125,9 +125,10 @@ sub _execute_body
 
 
 #
-# Standard external interface for two-line wrappers
+# Standard external interface for shell dispatchers 
 #
 
+# TODO: abstract out all dispatchers for commands into a given API
 sub execute_with_shell_params_and_exit
 {
     # This automatically parses command-line options and "does the right thing":
@@ -169,6 +170,16 @@ sub _execute_with_shell_params_and_return_exit_code
     @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
     my ($delegate_class, $params) = $class->resolve_class_and_params_for_argv(@argv);
 
+    my $rv = $class->_execute_delegate_class_with_params($delegate_class,$params);
+    
+    my $exit_code = $delegate_class->exit_code_for_return_value($rv);
+    return $exit_code;
+}
+
+# this is called by both the shell dispatcher and http dispatcher for now
+sub _execute_delegate_class_with_params {
+    my ($class, $delegate_class, $params) = @_;
+
     unless ($delegate_class) {
         $class->usage_message($class->help_usage_complete_text);
         return 1;
@@ -204,8 +215,7 @@ sub _execute_with_shell_params_and_return_exit_code
         $command_object->delete;
     }
 
-    my $exit_code = $delegate_class->exit_code_for_return_value($rv);
-    return $exit_code;
+    return $rv;
 }
 
 #
@@ -373,25 +383,34 @@ sub command_name
 {
     my $self = shift;
     my $class = ref($self) || $self;
-    my @words;
     if ( my ($base,$ext) = $class->_base_command_class_and_extension() ) {
         $ext = $class->_command_name_for_class_word($ext);
-        unless ($base->can("command_name")) {
-            local $SIG{__DIE__};
-            eval "use $base";
-        }
-        if ($base->can("command_name")) {
-            return $base->command_name . " " . $ext;
-        }
-        elsif ($ext eq "command") {
-            return $base;
-        }
-        else {
-            return $base . " " . $ext;
+        for (1) {
+            unless ($base->can("command_name")) {
+                local $SIG{__DIE__};
+                eval "use $base";
+            }
+            if ($base->can("command_name")) {
+                return $base->command_name . " " . $ext;
+            }
+            elsif ($ext eq "command") {
+                return $base;
+            }
+            else {
+                my ($b2,$e2) = _base_command_class_and_extension($base);
+                if ($b2) {
+                    $class = $b2;
+                    $ext = $class->_command_name_for_class_word($e2) . ' ' . $ext;
+                    redo;
+                }
+                else {
+                    die "failed to resolve the command name for $base with extension $ext!";
+                }
+            }
         }
     }
     else {
-        return $class;
+        return lc($base);
     }
 }
 
@@ -546,14 +565,12 @@ sub resolve_class_and_params_for_argv
         push @spec, "help!";
     }
 
-    # Previously, these nasty GetOptions modules insisted on working on
-    # the real @ARGV, while we like a little more flexibility.
-    # Getopt::Long now supports working on an arbitrary list with GetOptionsFromArray,
-    # but the proper version doesn't seem to be supplied with OSX.  So, we stay
-    # with the old method
+    # Thes nasty GetOptions modules insist on working on
+    # the real @ARGV, while we like a little moe flexibility.
+    # Not a problem in Perl. :)  (which is probably why it was never fixed)
     local @ARGV;
     @ARGV = @argv;
-
+    
     do {
         # GetOptions also likes to emit warnings instead of return a list of errors :( 
         my @errors;
@@ -815,6 +832,9 @@ sub help_options
     for my $row (@data) {
         if (defined($format) and $format eq 'pod') {
             $text .= "\n=item " . $row->[0] . "\n  " . $row->[1] . "\n"; 
+        }
+        elsif (defined($format) and $format eq 'html') {
+            $text .= "\n\t<br>" . $row->[0] . "<br> " . $row->[1] . "<br>\n";
         }
         else {
             $text .= sprintf(

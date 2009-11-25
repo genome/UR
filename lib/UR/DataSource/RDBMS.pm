@@ -103,11 +103,24 @@ sub generate_schema_for_class_meta {
     my $method = ($temp ? '__define__' : 'create'); 
 
     my @defined;
+    
+    my $table_name = $class_meta->table_name;
+   
+    my @fks_to_generate;
     for my $p ($class_meta->parent_class_metas) {
         next if $p->class_name eq 'UR::Object';
         next unless $p->class_name->isa("UR::Object");
-        my @new = $self->generate_schema_for_class_meta($p);
+        my @new = $self->generate_schema_for_class_meta($p,$temp);
         push @defined, @new;
+
+        if (my $parent_table = grep { $_->isa("UR::DataSource::RDBMS::Table") } @new) {
+            my @id_by = $class_meta->id_property_names;            
+            my @column_names = map { $class_meta->property($_)->column_name } @id_by;
+            my @r_id_by = $p->id_property_names;
+            my @r_column_names = map { $class_meta->property($_)->column_name } @r_id_by;
+            my $r_table_name = $p->table_name;
+            push @fks_to_generate, [$class_meta->class_name, $table_name, $r_table_name, \@column_names, \@r_column_names];
+        }
     }
 
     my %properties_with_expected_columns = 
@@ -115,7 +128,14 @@ sub generate_schema_for_class_meta {
         grep { $_->column_name }
         $class_meta->direct_property_metas;    
 
-    my $table_name = $class_meta->table_name;
+    my %expected_constraints = 
+        map { $_->column_name => $_ } 
+        grep { $_->class_meta eq $class_meta }
+        map { $class_meta->property_meta_for_name($_) }
+        map { @{ $_->id_by } }
+        grep { $_->id_by }  
+        $class_meta->all_property_metas;    
+    
     unless ($table_name) {
         if (my @column_names = keys %properties_with_expected_columns) {
             Carp::confess "class " . $class_meta->__display_name__ . " has no table_name specified for columns @column_names!";
@@ -126,14 +146,6 @@ sub generate_schema_for_class_meta {
         }
     }
 
-    my %expected_constraints = 
-        map { $_->column_name => $_ } 
-        grep { $_->class_meta eq $class_meta }
-        map { $class_meta->property_meta_for_name($_) }
-        map { @{ $_->id_by } }
-        grep { $_->id_by }  
-        $class_meta->all_property_metas;    
-    
     ## print "handling table $table_name\n";
     
     my $t = '-'; 
@@ -204,6 +216,55 @@ sub generate_schema_for_class_meta {
         $column->remarks($property->doc);
     }
 
+    for my $property ($class_meta->properties) {
+        my $id_by = $property->id_by;
+        next unless $id_by;
+        my $r_class_name = $property->data_type;
+        my $r_class_meta = $r_class_name->__meta__;
+        my $r_table_name = $r_class_meta->table_name;
+        next unless $r_table_name;
+        my @column_names = map { $class_meta->property($_)->column_name } @$id_by;
+        my @r_column_names = map { $r_class_meta->property($_)->column_name } @{ $r_class_meta->id_property_names };
+
+        push @fks_to_generate, [$property->id, $table_name, $r_table_name, \@column_names, \@r_column_names ];
+    }
+
+    for my $fk_to_generate (@fks_to_generate) {
+        my ($fk_id, $table_name, $r_table_name, $column_names, $r_column_names) = @$fk_to_generate;
+        
+        my $fk = UR::DataSource::RDBMS::FkConstraint->create(
+            fk_constraint_name => $fk_id,
+            table_name      => $table_name,
+            r_table_name    => $r_table_name,
+            owner           => $self->owner,
+            r_owner         => $self->owner,
+            data_source     => $self->id,
+            last_object_revision => '-',
+        );
+        unless ($fk) {
+            die "failed to generate an implied foreign key constraint for $table_name => $r_table_name!"
+                . UR::DataSource::RDBMS::FkConstraint->error_message;
+        }
+
+        for (my $n = 0; $n < @$column_names; $n++) {
+            my $column_name = $column_names->[$n];
+            my $r_column_name = $r_column_names->[$n];
+            my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get_or_create(
+                fk_constraint_name => $fk_id,
+                table_name      => $table_name,
+                column_name     => $column_name,
+                r_table_name    => $r_table_name,
+                r_column_name   => $r_column_name,
+                owner           => $self->owner,
+                data_source     => $self->id,
+            );
+            unless ($fkcol) {
+                die "failed to generate an implied foreign key constraint for $table_name => $r_table_name!"
+                    . UR::DataSource::RDBMS::FkConstraint->error_message;
+            }
+        }
+    }
+    
     # handle missing meta datasource on the fly...
     if (@defined) {
         my $ns = $class_meta->namespace;
@@ -213,14 +274,16 @@ sub generate_schema_for_class_meta {
         }
     }
 
-    my @ddl = $self->_resolve_ddl_for_table($table);
-    $t = UR::Time->now;
-    if (@ddl) {
-        my $dbh = $table->data_source->get_default_handle;
-        for my $ddl (@ddl) {
-            $dbh->do($ddl) or Carp::confess("Failed to modify the database schema!: $ddl\n" . $dbh->errstr);
-            for my $o ($table, $table->columns) {
-                $o->last_object_revision($t);
+    unless ($temp) {
+        my @ddl = $self->_resolve_ddl_for_table($table);
+        $t = UR::Time->now;
+        if (@ddl) {
+            my $dbh = $table->data_source->get_default_handle;
+            for my $ddl (@ddl) {
+                $dbh->do($ddl) or Carp::confess("Failed to modify the database schema!: $ddl\n" . $dbh->errstr);
+                for my $o ($table, $table->columns) {
+                    $o->last_object_revision($t);
+                }
             }
         }
     }
@@ -637,7 +700,6 @@ sub resolve_attribute_name_for_column_name {
 
 sub refresh_database_metadata_for_table_name {
     my ($self,$table_name) = @_;
-
     my $data_source = $self;
 
     my @column_objects;
@@ -1174,23 +1236,32 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
         my @primary_keys;
         if ($table_meta) {
             @primary_keys = $table_meta->primary_key_constraint_column_names;
+            $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $primary_keys[0]);
         } else {
             # No metaDB info... try and make a guess based on the class' ID proeprties
-            @primary_keys = grep { $_ }  # Only interested in the properties with columns defined
-                            map { $_->column_name }
-                            $class_meta->all_id_property_metas;
+            for my $meta ($class_meta, $class_meta->ancestry_class_metas) {
+                @primary_keys = grep { $_ }  # Only interested in the properties with columns defined
+                                map { $_->column_name }
+                                $meta->direct_id_property_metas;
+                if (@primary_keys > 1) {
+                    Carp::croak("Tables with multiple primary keys (i.e. " .
+                                 $table_name  . ": " .
+                                 join(',',@primary_keys) .
+                                 ") cannot have a surrogate key created from a sequence.");
+                } 
+                elsif (@primary_keys == 1) {
+                    $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $primary_keys[0]);
+                    last if $sequence;
+                }
+            }
         }
 
-        if (@primary_keys > 1) {
-            Carp::croak("Tables with multiple primary keys (i.e." .
-                         $table_name  . ": " .
-                         join(',',@primary_keys) .
-                         ") cannot have a surrogate key created from a sequence.");
-        } elsif (@primary_keys == 0) {
+        if (@primary_keys == 0) {
             Carp::croak("No primary keys found for table " . $table_name . "\n");
         }
-
-        $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $primary_keys[0]);
+        if (!$sequence) {
+            Carp::croak("No identity generator found for table " . $table_name . "\n");
+        }
     }
 
     my $new_id = $self->_get_next_value_from_sequence($sequence);
@@ -2428,7 +2499,7 @@ sub _default_save_sql_for_object {
             my @changed_cols = reverse sort $table->column_names; 
             
             $sql = " INSERT INTO ";
-            $sql .= "${db_owner}." if ($db_owner);
+            $sql .= "${db_owner}." if ($db_owner) and $table_name !~ /\./;
             $sql .= "$table_name_to_update (" 
                     . join(",", @changed_cols) 
                     . ") VALUES (" 
@@ -2641,7 +2712,6 @@ sub _generate_class_data_for_loading {
 
 sub _generate_template_data_for_loading {
     my ($self, $rule_template) = @_;
-#$DB::single = 1;
     
     # class-based values
 
@@ -2897,7 +2967,6 @@ sub _generate_template_data_for_loading {
         my $alias_for_property_value;
     
         my $property_name = $delegated_property->property_name;
-#$DB::single=1;
         my @joins = $delegated_property->_get_joins;
         my $relationship_name = $delegated_property->via;
         unless ($relationship_name) {
