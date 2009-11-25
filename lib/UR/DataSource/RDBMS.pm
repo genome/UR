@@ -2309,6 +2309,14 @@ sub _id_values_for_primary_key {
 
     my $i=0;    
     my %column_index = map { $_ => $i++ } @columns;
+    my @bad_pk_cols = grep { ! exists($column_index{$_}) } @pk_cols;
+    if (@bad_pk_cols) {
+        my $table_name = $table_obj->table_name;
+        Carp::croak("Metadata for table $table_name is inconsistent.\n" .
+                    "Column(s) named " . join(',',@bad_pk_cols) . " appear as primary key constraint columns," .
+                    " but do not appear as column names.  Check the dd_pk_constraint_columns data in the MetaDB");
+    }
+
     my @id_values_in_pk_order = @values[@column_index{@pk_cols}];
     
     return @id_values_in_pk_order;
