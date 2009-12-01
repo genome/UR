@@ -3182,7 +3182,6 @@ sub _generate_template_data_for_loading {
                                     ),
                                     @extra_filters,
                                 };
-                        @source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
                         $alias_sql_join{$alias} = $sql_joins[-1];
                         
                         # Add all of the columns in the join table to the return list
@@ -3201,10 +3200,14 @@ sub _generate_template_data_for_loading {
                                 }
                                 @{ $foreign_class_loading_data->{direct_table_properties} };                
                         }
-                        $last_alias_for_this_chain = $alias;
                     }
                 }
                 
+                if ($foreign_class_object->table_name) {
+                    $last_alias_for_this_chain = $alias;
+                    @source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
+                }
+
                 if ($group_by) {
                     if ($group_by_property_names{$property_name}) {
                         my ($p) = 
