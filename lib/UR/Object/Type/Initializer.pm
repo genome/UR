@@ -182,9 +182,10 @@ sub _preprocess_subclass_description {
         $current_desc = $self->class_name->$preprocessor($current_desc);
     }
 
+    # only call it on the direct parent classes, let recursion walk the tree
     my @parent_class_names = 
-        grep { $_->isa("UR::Object::Type") and $_ ne $self->class_name } 
-        $self->ancestry_class_names();
+        grep { $_->can('__meta__') } 
+        $self->parent_class_names();
 
     for my $parent_class_name (@parent_class_names) {
         my $parent_class = $parent_class_name->__meta__;
