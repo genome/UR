@@ -28,25 +28,28 @@ ok (@circular, 'got objects from circular table');
 isa_ok ($circular[0], 'URT::Circular');
 is ( scalar @circular, 4, 'got expected number of objects from circular table');
 for (@circular){
-    $_->delete;
+    ok($_->delete, 'deleted object');
 }
 
 eval{
     UR::Context->commit();
 };
 
+ok($@, "got error message '$@' for failed commit");
+
 sub setup_classes_and_db {
     my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
 
     ok($dbh, 'Got DB handle');
 
-    ok( $dbh->do("create table circular (id integer, parent_id integer REFERENCES circular(id))"),
+    ok( $dbh->do("create table circular (id integer primary key, parent_id integer REFERENCES circular(id))"),
+
        'Created circular table');
 
-    ok( $dbh->do("create table left (id integer, right_id integer REFERENCES right(id))"),
+    ok( $dbh->do("create table left (id integer primary key, right_id integer REFERENCES right(id))"),
        'Created left table');
 
-    ok( $dbh->do("create table right (id integer, left_id integer REFERENCES left(id))"),
+    ok( $dbh->do("create table right (id integer primary key, left_id integer REFERENCES left(id))"),
        'Created right table');
 
     my $ins_circular = $dbh->prepare("insert into circular (id, parent_id) values (?,?)");
