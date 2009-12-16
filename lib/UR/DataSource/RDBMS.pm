@@ -2447,6 +2447,10 @@ sub _default_save_sql_for_object {
             # A row loaded from the database with its object deleted.
             # Delete the row in the database.
             
+            $DB::single = 1;
+            #grab fk_constraints so we can undef nullable fks before delete, this could be moved above this control block
+            my @fk = $table->fk_constraints;
+
             @values = $self->_id_values_for_primary_key($table,$object_to_save);
             my $where = $self->_matching_where_clause($table, \@values);
 
@@ -2503,6 +2507,9 @@ sub _default_save_sql_for_object {
         {
             # An object without a row in the database.
             # Insert into the database.
+            
+            #grab fk_constraints so we can undef nullable fks before delete, this could be moved above this control block
+            my @fk = $table->fk_constraints;
             
             my @changed_cols = reverse sort $table->column_names; 
             

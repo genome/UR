@@ -3,11 +3,13 @@ use warnings;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
+use lib File::Basename::dirname(__FILE__)."/../../../lib/";
 
 use URT;
 use Test::More 'no_plan';
 
 use URT::DataSource::SomeSQLite;
+use Data::Dumper;
 
 =cut
 #This test verifies that sql generation is correct for inserts and deletes on tables with nullable foreign key constraints
@@ -28,6 +30,26 @@ ok (@circular, 'got objects from circular table');
 isa_ok ($circular[0], 'URT::Circular');
 is ( scalar @circular, 4, 'got expected number of objects from circular table');
 for (@circular){
+    my $id = $_->id;
+    ok($_->delete, 'deleted object');
+    my $ghost = URT::Circular::Ghost->get(id=> $id);
+    my $ds = UR::Context->resolve_data_source_for_object($ghost);
+    my @sql = $ds->_default_save_sql_for_object($ghost);
+    print Dumper [$ghost, $ds, \@sql];
+}
+
+exit;
+eval{
+    UR::Context->commit();
+};
+
+ok(!$@, "no error message for sqlite commit due to fk constraints not being enforced");
+
+my @chain = (URT::Alpha->get(), URT::Beta->get(), URT::Gamma->get());
+
+ok (@chain, 'got objects from alpha, beta, and gamma tables');
+is (scalar @chain, 3, 'got expected number of objects');
+for (@chain){
     ok($_->delete, 'deleted object');
 }
 
@@ -35,7 +57,20 @@ eval{
     UR::Context->commit();
 };
 
-ok($@, "got error message '$@' for failed commit");
+ok(!$@, "no error message on commit: $@");
+
+my ($new_alpha, $new_beta, $new_gamma);
+
+ok($new_alpha = URT::Alpha->create(id => 101, beta_id => 201), 'created new alpha');
+ok($new_beta = URT::Beta->create(id => 201, gamma_id => 301), 'created new beta');
+ok($new_gamma = URT::Gamma->create(id => 301, type => 'test2'), 'created new gamma');
+
+eval {
+    UR::Context->commit();
+};
+
+ok(!$@, "no error message on commit of new alpha,beta,gamma, would fail due to fk constraints if we weren't using sqlite datasource");
+
 
 sub setup_classes_and_db {
     my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
@@ -52,6 +87,13 @@ sub setup_classes_and_db {
     ok( $dbh->do("create table right (id integer primary key, left_id integer REFERENCES left(id))"),
        'Created right table');
 
+    ok( $dbh->do("create table alpha (id integer primary key, beta_id integer REFERENCES beta(id))"),
+        'Created table alpha');
+    ok( $dbh->do("create table beta (id integer primary key, gamma_id integer REFERENCES gamma(id))"),
+        'Created table beta');
+    ok( $dbh->do("create table gamma (id integer primary key, type varchar)"),
+        'Created table gamma');
+
     my $ins_circular = $dbh->prepare("insert into circular (id, parent_id) values (?,?)");
     foreach my $row (  [1, 5], [2, 1], [3, 2], [4, 3], [5, 4]  ) {
         ok( $ins_circular->execute(@$row), 'Inserted into circular' );
@@ -66,6 +108,16 @@ sub setup_classes_and_db {
     }
     $ins_left->finish;
     $ins_right->finish;
+    my $ins_alpha = $dbh->prepare("insert into alpha(id, beta_id) values(?,?)");
+    ok($ins_alpha->execute(100, 200), 'inserted into alpha');
+    $ins_alpha->finish;
+    my $ins_beta = $dbh->prepare("insert into beta(id, gamma_id) values(?,?)");
+    ok($ins_beta->execute(200, 300), 'inserted into beta');
+    $ins_beta->finish;
+    my $ins_gamma = $dbh->prepare("insert into gamma(id, type) values(?,?)");
+    ok($ins_gamma->execute(300, 'test'), 'inserted into gamma');
+    $ins_gamma->finish;
+
 
     ok($dbh->commit(), 'DB commit');
            
@@ -106,4 +158,39 @@ sub setup_classes_and_db {
         data_source => 'URT::DataSource::SomeSQLite',
         table_name => 'right',
     ), 'Defined URT::Right class');
+    ok(UR::Object::Type->define(
+            class_name => 'URT::Alpha',
+            id_by => [
+                id => {is => 'Integer'}
+            ],
+            has_optional => [
+                beta_id => { is => 'Integer' }, 
+                beta => { is => 'URT::Beta', id_by => 'beta_id'},
+            ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'alpha',
+    ), 'Defined URT::Alpha class');
+    ok(UR::Object::Type->define(
+            class_name => 'URT::Beta',
+            id_by => [
+                id => {is => 'Integer'}
+            ],
+            has_optional => [
+                gamma_id => { is => 'Integer' }, 
+                gamma => { is => 'URT::Gamma', id_by => 'gamma_id'},
+            ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'beta',
+    ), 'Defined URT::Beta class');
+    ok(UR::Object::Type->define(
+            class_name => 'URT::Gamma',
+            id_by => [
+                id => {is => 'Integer'}
+            ],
+            has => [
+                type => { is => 'Text' }, 
+            ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'gamma',
+    ), 'Defined URT::Alpha class');
 }
