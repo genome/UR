@@ -2450,14 +2450,18 @@ sub _default_save_sql_for_object {
             ##############################################################################################
             #grab fk_constraints so we can undef nullable fks before delete, this could be moved above this control block
             #not sure if I should be using table name or table name to update
+            my @nullable_fk_columns;
             my @fk = $table->fk_constraints;
-            print "fk:".Data::Dumper::Dumper \@fk;
+            #print "fk:".Data::Dumper::Dumper \@fk;
             for my $fk (@fk){
                 my @fk_columns = UR::DataSource::RDBMS::FkConstraintColumn->get(fk_constraint_name => $fk->fk_constraint_name, data_source => $self->id);
-                print "fk_column:".Data::Dumper::Dumper \@fk_columns;
+                #print "fk_column:".Data::Dumper::Dumper \@fk_columns;
                 for my $fk_col (@fk_columns){
                     my $column_obj = UR::DataSource::RDBMS::TableColumn->get(data_source => $self->id, table_name => $fk_col->table_name, column_name=> $fk_col->column_name);
-                    print "column:".Data::Dumper::Dumper $column_obj;
+                    #print "column:".Data::Dumper::Dumper $column_obj;
+                    if ($column_obj->nullable){
+                        push @nullable_fk_columns, $column_obj->column_name;
+                    }
                 }
             }
 
@@ -2466,12 +2470,27 @@ sub _default_save_sql_for_object {
 
             @values = $self->_id_values_for_primary_key($table,$object_to_save);
             my $where = $self->_matching_where_clause($table, \@values);
+            
+            my $update_sql = "UPDATE ";
+            $update_sql .= "${db_owner}." if ($db_owner);
+            $update_sql .= "$table_name_to_update SET ";
+            $update_sql .= join(", ", map { "$_=?"} @nullable_fk_columns);
+            $update_sql .= " WHERE $where";
+            my @update_values = @values;
+            for (@nullable_fk_columns){
+                unshift @update_values, undef;
+            }
+            my $update_command = {type => 'update', table_name => $table_name, column_names=> @nullable_fk_columns, sql => $update_sql, params => \@update_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh};
+            push @commands, $update_command;
+
 
             $sql = " DELETE FROM ";
             $sql .= "${db_owner}." if ($db_owner);
             $sql .= "$table_name_to_update WHERE $where";
 
             push @commands, { type => 'delete', table_name => $table_name, column_names => undef, sql => $sql, params => \@values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+            
+            #print Data::Dumper::Dumper \@commands;
         }                    
         elsif ($table_action eq 'update')
         {

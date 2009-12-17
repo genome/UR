@@ -35,13 +35,14 @@ for (@circular){
     my $ghost = URT::Circular::Ghost->get(id=> $id);
     my $ds = UR::Context->resolve_data_source_for_object($ghost);
     my @sql = $ds->_default_save_sql_for_object($ghost);
-    print Dumper [$ghost, $ds, \@sql];
+    #print Dumper [$ghost, $ds, \@sql];
 }
 
-exit;
 eval{
+    print "committing...\n";
     UR::Context->commit();
 };
+exit;
 
 ok(!$@, "no error message for sqlite commit due to fk constraints not being enforced");
 
