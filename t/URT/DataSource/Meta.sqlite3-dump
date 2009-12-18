@@ -16,6 +16,7 @@ CREATE TABLE dd_fk_constraint (
     last_object_revision timestamp NOT NULL,
     PRIMARY KEY(data_source, owner, r_owner, table_name, r_table_name, fk_constraint_name)
 );
+INSERT INTO "dd_fk_constraint" VALUES('URT::DataSource::SomeSQLite','','','CIRCULAR','CIRCULAR','CIRCULAR_PARENT_ID_CIRCULAR_ID_FK','2009-12-17 15:44:22');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -27,6 +28,7 @@ CREATE TABLE dd_fk_constraint_column (
 
     PRIMARY KEY(data_source, owner, table_name, fk_constraint_name, column_name)
 );
+INSERT INTO "dd_fk_constraint_column" VALUES('CIRCULAR_PARENT_ID_CIRCULAR_ID_FK','URT::DataSource::SomeSQLite','','CIRCULAR','CIRCULAR','PARENT_ID','ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -38,6 +40,7 @@ CREATE TABLE dd_pk_constraint_column (
 INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL','id',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::TestMe','','PROCESSING_PROFILE','id',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::SomeSQLite','','CIRCULAR','id',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -52,6 +55,7 @@ CREATE TABLE dd_table (
 INSERT INTO "dd_table" VALUES('URT::DataSource::TestMe','','DATA_MODEL','TABLE','entity',NULL,'2009-05-06 01:58:21',NULL);
 INSERT INTO "dd_table" VALUES('URT::DataSource::TestMe','','PROCESSING_PROFILE','TABLE','entity',NULL,'2009-05-06 01:58:20',NULL);
 INSERT INTO "dd_table" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','TABLE','entity',NULL,'2009-05-06 02:11:11',NULL);
+INSERT INTO "dd_table" VALUES('URT::DataSource::SomeSQLite','','CIRCULAR','TABLE','entity',NULL,'2009-12-17 15:44:22',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -76,6 +80,8 @@ INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2',
 INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','SUBJECT_NAME','Text',NULL,'Y','2009-05-06 02:11:11','');
 INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','NAME','Text',NULL,'Y','2009-05-06 02:11:11','');
 INSERT INTO "dd_table_column" VALUES('URT::DataSource::TestMe','','DATA_MODEL2','ID','Integer',NULL,'Y','2009-05-06 02:11:11','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::SomeSQLite','','CIRCULAR','PARENT_ID','Integer',NULL,'1','2009-12-17 15:44:22','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::SomeSQLite','','CIRCULAR','ID','Integer',NULL,'1','2009-12-17 15:44:22','');
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

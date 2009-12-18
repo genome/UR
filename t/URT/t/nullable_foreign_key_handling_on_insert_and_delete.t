@@ -42,9 +42,21 @@ eval{
     print "committing...\n";
     UR::Context->commit();
 };
-exit;
 
-ok(!$@, "no error message for sqlite commit due to fk constraints not being enforced");
+ok(!$@, "no error message for sqlite commit due to fk constraints not being enforced: $@");
+
+my @bridges = URT::Bridge->get();
+for (@bridges){
+    ok($_->delete(), 'deleted bridge');
+}
+
+eval{
+    UR::Context->commit();
+};
+
+ok( $@ =~ "Modifying nullable foreign key column LEFT_ID not allowed because it is a primary key column in BRIDGE", 'got expected error removing bridge table entries w/ nullable foreign key constraints that are part of primary key');
+
+exit;
 
 my @chain = (URT::Alpha->get(), URT::Beta->get(), URT::Gamma->get());
 
@@ -94,6 +106,9 @@ sub setup_classes_and_db {
         'Created table beta');
     ok( $dbh->do("create table gamma (id integer primary key, type varchar)"),
         'Created table gamma');
+    ok( $dbh->do("create table bridge (left_id integer REFERENCES left(id), right_id integer REFERENCES right(id), primary key (left_id,  right_id))"),
+        'Created table bridge');
+
 
     my $ins_circular = $dbh->prepare("insert into circular (id, parent_id) values (?,?)");
     foreach my $row (  [1, 5], [2, 1], [3, 2], [4, 3], [5, 4]  ) {
@@ -107,10 +122,23 @@ sub setup_classes_and_db {
         ok( $ins_left->execute(@$row), 'Inserted into left');
         ok( $ins_right->execute(@$row), 'Inserted into right');
     }
+    
+    
+    my $ins_bridge_left = $dbh->prepare("insert into left(id) values (?)");
+    $ins_bridge_left->execute(10);
+    my $ins_bridge_right = $dbh->prepare("insert into right(id) values (?)");
+    my $ins_bridge = $dbh->prepare("insert into bridge(left_id, right_id) values (?, ?)");
+    for (11..15){
+        $ins_bridge_right->execute($_);
+        $ins_bridge->execute(10, $_);
+    }
+    $ins_bridge->finish;
+    $ins_bridge_right->finish;
+    $ins_bridge_left->finish;
+    
     $ins_left->finish;
     $ins_right->finish;
     my $ins_alpha = $dbh->prepare("insert into alpha(id, beta_id) values(?,?)");
-    ok($ins_alpha->execute(100, 200), 'inserted into alpha');
     $ins_alpha->finish;
     my $ins_beta = $dbh->prepare("insert into beta(id, gamma_id) values(?,?)");
     ok($ins_beta->execute(200, 300), 'inserted into beta');
@@ -194,4 +222,13 @@ sub setup_classes_and_db {
         data_source => 'URT::DataSource::SomeSQLite',
         table_name => 'gamma',
     ), 'Defined URT::Alpha class');
+    ok(UR::Object::Type->define(
+            class_name => 'URT::Bridge',
+            id_by => [
+                left_id => {is => 'Integer'},
+                right_id => {is => 'Integer'}
+            ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'bridge',
+    ), 'Defined URT::Bridge class');
 }
