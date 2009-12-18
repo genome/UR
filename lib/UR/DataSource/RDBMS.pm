@@ -2554,9 +2554,6 @@ sub _default_save_sql_for_object {
             # An object without a row in the database.
             # Insert into the database.
 
-            #grab fk_constraints so we can undef nullable fks before delete, this could be moved above this control block
-            my @fk = $table->fk_constraints;
-
             my @changed_cols = reverse sort $table->column_names; 
 
             $sql = " INSERT INTO ";
@@ -2574,7 +2571,27 @@ sub _default_save_sql_for_object {
             } 
             (@changed_cols);
 
-            push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+            #grab fk_constraints so we can undef non primary-key nullable fks before delete
+            my @nullable_fk_columns = $self->get_nullable_foreign_key_columns_for_table($table);
+            
+            my @insert_values;
+            my %update_values;
+            for (my $i = 0; $i < @changed_cols; $i++){
+                my $col = uc ($changed_cols[$i]);
+                if (grep {$col eq uc($_)} @nullable_fk_columns){
+                    push @insert_values, undef;
+                    $update_values{$col} = $values[$i];
+                }else{
+                    push @insert_values, $values[$i];
+                }
+            }
+            my @pk_values = $self->_id_values_for_primary_key($table, $object_to_saave);
+            my $where = $self->_matching_where_clause($table, \@pk_values);
+
+            push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@insert_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+            
+            
+            push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@insert_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
         }
         else
         {
