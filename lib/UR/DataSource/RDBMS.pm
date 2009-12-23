@@ -602,6 +602,19 @@ sub get_nullable_foreign_key_columns_for_table{
     return @nullable_fk_columns;
 }
 
+sub get_non_primary_key_nullable_foreign_key_columns_for_table{
+    my $self = shift;
+    my $table = shift;
+
+    my @nullable_fk_columns = $self->get_nullable_foreign_key_columns_for_table($table);
+    my %pk_columns = map {uc($_->column_name) => 1} $table->primary_key_constraint_columns;
+    my @non_pk_nullable_fk_columns;
+    for my $fk_column (@nullable_fk_columns){
+        push @non_pk_nullable_fk_columns, $fk_column unless grep { uc($fk_column) eq uc($_)} keys %pk_columns;
+    }
+    return @non_pk_nullable_fk_columns;
+}
+
 # TODO: make "env" an optional characteristic of a class attribute
 # for all of the places we do this crap...
 
@@ -2468,32 +2481,23 @@ sub _default_save_sql_for_object {
             # Delete the row in the database.
 
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
-            my @nullable_fk_columns = $self->get_nullable_foreign_key_columns_for_table($table);
-
-            my %pk_columns = map {uc($_->column_name) => 1} $table->primary_key_constraint_columns;
-            for my $col (@nullable_fk_columns){
-                #if foreign key constraint column is nullable and not in the tables primary key, we will undef it before deletion
-                if ($pk_columns{uc($col)} ){
-                    Carp::croak("Modifying nullable foreign key column $col not allowed because it is a primary key column in $table_name_to_update");
-
-                }
-            }
+            my @non_pk_nullable_fk_columns = $self->get_non_primary_key_nullable_foreign_key_columns_for_table($table);
 
             @values = $self->_id_values_for_primary_key($table,$object_to_save);
             my $where = $self->_matching_where_clause($table, \@values);
 
-            if (@nullable_fk_columns){
+            if (@non_pk_nullable_fk_columns){
                 #generate an update statement to set nullable fk columns to null pre delete
                 my $update_sql = "UPDATE ";
                 $update_sql .= "${db_owner}." if ($db_owner);
                 $update_sql .= "$table_name_to_update SET ";
-                $update_sql .= join(", ", map { "$_=?"} @nullable_fk_columns);
+                $update_sql .= join(", ", map { "$_=?"} @non_pk_nullable_fk_columns);
                 $update_sql .= " WHERE $where";
                 my @update_values = @values;
-                for (@nullable_fk_columns){
+                for (@non_pk_nullable_fk_columns){
                     unshift @update_values, undef;
                 }
-                my $update_command = {type => 'update', table_name => $table_name, column_names=> \@nullable_fk_columns, sql => $update_sql, params => \@update_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh};
+                my $update_command = {type => 'update', table_name => $table_name, column_names=> \@non_pk_nullable_fk_columns, sql => $update_sql, params => \@update_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh};
                 push @commands, $update_command;
             }
 
@@ -2572,26 +2576,43 @@ sub _default_save_sql_for_object {
             (@changed_cols);
 
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
-            my @nullable_fk_columns = $self->get_nullable_foreign_key_columns_for_table($table);
-            
-            my @insert_values;
-            my %update_values;
-            for (my $i = 0; $i < @changed_cols; $i++){
-                my $col = uc ($changed_cols[$i]);
-                if (grep {$col eq uc($_)} @nullable_fk_columns){
-                    push @insert_values, undef;
-                    $update_values{$col} = $values[$i];
-                }else{
-                    push @insert_values, $values[$i];
-                }
-            }
-            my @pk_values = $self->_id_values_for_primary_key($table, $object_to_saave);
-            my $where = $self->_matching_where_clause($table, \@pk_values);
+            my @non_pk_nullable_fk_columns = $self->get_non_primary_key_nullable_foreign_key_columns_for_table($table);
 
-            push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@insert_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
-            
-            
-            push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@insert_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+            if (@non_pk_nullable_fk_columns){
+                my @insert_values;
+                my %update_values;
+                for (my $i = 0; $i < @changed_cols; $i++){
+                    my $col = uc ($changed_cols[$i]);
+                    if (grep {$col eq uc($_)} @non_pk_nullable_fk_columns){
+                        push @insert_values, undef;
+                        $update_values{$col} = $values[$i];
+                    }else{
+                        push @insert_values, $values[$i];
+                    }
+                }
+
+                push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@insert_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+
+                $DB::single = 1;
+                my @pk_values = $self->_id_values_for_primary_key($table, $object_to_save);
+                my $where = $self->_matching_where_clause($table, \@pk_values);
+                
+                my @update_cols = keys %update_values;
+                my @update_values = ((map {$update_values{$_}} @update_cols), @pk_values);
+                
+                
+
+                my $update_sql = " UPDATE ";
+                $update_sql .= "${db_owner}." if ($db_owner);
+                $update_sql .= "$table_name_to_update SET ". join(",", map { "$_ = ?" } @update_cols) . " WHERE $where";
+
+                push @commands, { type => 'update', table_name => $table_name, column_names => \@update_cols, sql => $update_sql, params => \@update_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+            }
+            else 
+            {
+                push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+            }
+
         }
         else
         {

@@ -25,45 +25,72 @@ setup_classes_and_db();
 
 #test failure conditions
 
-my @circular = URT::Circular->get(id => [1,2,3,4]);
-ok (@circular, 'got objects from circular table');
-isa_ok ($circular[0], 'URT::Circular');
-is ( scalar @circular, 4, 'got expected number of objects from circular table');
+my @circular = URT::Circular->get();
+my $sqlite_ds = UR::Context->resolve_data_source_for_object($circular[0]);
+is (scalar @circular, 5, 'got circular objects');
 for (@circular){
     my $id = $_->id;
+
     ok($_->delete, 'deleted object');
+
     my $ghost = URT::Circular::Ghost->get(id=> $id);
-    my $ds = UR::Context->resolve_data_source_for_object($ghost);
-    my @sql = $ds->_default_save_sql_for_object($ghost);
-    #print Dumper [$ghost, $ds, \@sql];
+    my @sql = $sqlite_ds->_default_save_sql_for_object($ghost);
+    ok(sql_has_update_and_delete(@sql), "got separate update and delete statement for deleting circular item w/ nullable foreign key");
 }
 
 eval{
-    print "committing...\n";
     UR::Context->commit();
 };
 
-ok(!$@, "no error message for sqlite commit due to fk constraints not being enforced: $@");
+ok(!$@, "circular deletion committed successfully!");
 
 my @bridges = URT::Bridge->get();
 for (@bridges){
+    my $id = $_->id;
     ok($_->delete(), 'deleted bridge');
+    my $ghost = URT::Bridge::Ghost->get(id => $id);
+    my @sql = $sqlite_ds->_default_save_sql_for_object($ghost);
+    ok(sql_has_delete_only(@sql), "didn't update primary key nullable foreign keys on delete");
 }
 
 eval{
     UR::Context->commit();
 };
 
-ok( $@ =~ "Modifying nullable foreign key column LEFT_ID not allowed because it is a primary key column in BRIDGE", 'got expected error removing bridge table entries w/ nullable foreign key constraints that are part of primary key');
+ok( !$@, 'no commit errors on deleting bridge entries w/ nullable foreign keys primary key' );
 
-exit;
+my @left = URT::Left->get();
+my @right = URT::Right->get();
 
-my @chain = (URT::Alpha->get(), URT::Beta->get(), URT::Gamma->get());
+while (my $left = shift @left){
+    my $right = shift @right;
+    my $bridge = URT::Bridge->create(left_id => $left->id, right_id => $right->id);
+    my @sql = $sqlite_ds->_default_save_sql_for_object($bridge);
+    ok(sql_has_insert_only(@sql), "didn't null insert values for bridge entries nullable, no update statement produced)");
+}
+
+eval{
+    UR::Context->commit();
+};
+
+ok( !$@, 'no commit errors on recreating bridge entries' );
+
+
+my @chain = ( URT::Gamma->get(), URT::Beta->get(), URT::Alpha->get());
 
 ok (@chain, 'got objects from alpha, beta, and gamma tables');
 is (scalar @chain, 3, 'got expected number of objects');
-for (@chain){
-    ok($_->delete, 'deleted object');
+my $gamma = shift @chain;
+ok ($gamma->delete, 'deleted_object');
+
+for ("URT::Beta", "URT::Alpha"){
+    my $obj = shift @chain;
+    my $id = $obj->id;
+    my $class = $_."::Ghost";
+    ok($obj->delete, 'deleted object');
+    my $ghost = $class->get(id => $id);
+    my @sql = $sqlite_ds->_default_save_sql_for_object($ghost);
+    ok(sql_has_update_and_delete(@sql), "got separate update and delete statement for deleting bridge items w/ nullable foreign key");
 }
 
 eval{
@@ -72,11 +99,21 @@ eval{
 
 ok(!$@, "no error message on commit: $@");
 
+my @chain2 = (URT::Alpha->get(), URT::Beta->get(), URT::Gamma->get());
+
+ok(!@chain2, "couldn't get deleted chain objects!");
+
 my ($new_alpha, $new_beta, $new_gamma);
 
 ok($new_alpha = URT::Alpha->create(id => 101, beta_id => 201), 'created new alpha');
+my @alpha_sql = $sqlite_ds->_default_save_sql_for_object($new_alpha);
 ok($new_beta = URT::Beta->create(id => 201, gamma_id => 301), 'created new beta');
+my @beta_sql = $sqlite_ds->_default_save_sql_for_object($new_beta);
 ok($new_gamma = URT::Gamma->create(id => 301, type => 'test2'), 'created new gamma');
+
+for (\@alpha_sql, \@beta_sql){
+    ok(sql_has_insert_and_update(@$_), 'got seperate insert and update statements for recreating chained objects');
+}
 
 eval {
     UR::Context->commit();
@@ -84,7 +121,40 @@ eval {
 
 ok(!$@, "no error message on commit of new alpha,beta,gamma, would fail due to fk constraints if we weren't using sqlite datasource");
 
+my $check_alpha = URT::Alpha->get(id => 101);
+is ($check_alpha->beta_id, 201, 'initial null value updated correctly for chain object');
 
+my $check_beta = URT::Beta->get(id => 201);
+is ($check_beta->gamma_id, 301, 'initial null value updated correctly for chain object');
+
+sub sql_has_delete_only{
+    my @st = @_;
+    return undef if grep {$_->{sql} =~ /update|insert/i} @st;
+    return undef unless grep {$_->{sql} =~/delete/i} @st;
+    return 1;
+}
+
+sub sql_has_insert_only{
+    my @st = @_;
+    return undef if grep {$_->{sql} =~ /update|delete/i} @st;
+    return undef unless grep {$_->{sql} =~/insert/i} @st;
+    return 1;
+}
+
+sub sql_has_insert_and_update{
+    my @st = @_;
+    return undef unless grep {$_->{sql} =~ /insert/i} @st;
+    return undef unless grep {$_->{sql} =~ /update/i} @st;
+    return 1;
+}
+
+sub sql_has_update_and_delete{
+    my @st = @_;
+    return undef unless grep {my $val = $_; $val->{sql} =~ /delete/i} @st;
+    return undef unless grep {my $val = $_; $val->{sql} =~ /update/i} @st;
+    return 1;
+
+}
 sub setup_classes_and_db {
     my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
 
@@ -94,10 +164,10 @@ sub setup_classes_and_db {
 
        'Created circular table');
 
-    ok( $dbh->do("create table left (id integer primary key, right_id integer REFERENCES right(id))"),
+    ok( $dbh->do("create table left (id integer, right_id integer REFERENCES right(id), right_id2 integer REFERENCES right(id), primary key (id, right_id))"),
        'Created left table');
 
-    ok( $dbh->do("create table right (id integer primary key, left_id integer REFERENCES left(id))"),
+    ok( $dbh->do("create table right (id integer primary key, left_id integer REFERENCES left(id), left_id2 integer REFERENCES left(id))"),
        'Created right table');
 
     ok( $dbh->do("create table alpha (id integer primary key, beta_id integer REFERENCES beta(id))"),
@@ -116,9 +186,9 @@ sub setup_classes_and_db {
     }
     $ins_circular->finish;
 
-    my $ins_left = $dbh->prepare("insert into left (id, right_id) values (?,?)");
-    my $ins_right = $dbh->prepare("insert into right (id, left_id) values (?,?)");
-    foreach my $row ( ( [1, 1], [2,2], [3,3], [4,4], [5,5]) ) {
+    my $ins_left = $dbh->prepare("insert into left (id, right_id, right_id2) values (?,?,?)");
+    my $ins_right = $dbh->prepare("insert into right (id, left_id, left_id2) values (?,?,?)");
+    foreach my $row ( ( [1,1,2], [2,2,3], [3,3,4], [4,4,5], [5,5,6]) ) {
         ok( $ins_left->execute(@$row), 'Inserted into left');
         ok( $ins_right->execute(@$row), 'Inserted into right');
     }
@@ -139,6 +209,7 @@ sub setup_classes_and_db {
     $ins_left->finish;
     $ins_right->finish;
     my $ins_alpha = $dbh->prepare("insert into alpha(id, beta_id) values(?,?)");
+    ok($ins_alpha->execute(100,200), 'inserted into alpha');
     $ins_alpha->finish;
     my $ins_beta = $dbh->prepare("insert into beta(id, gamma_id) values(?,?)");
     ok($ins_beta->execute(200, 300), 'inserted into beta');
