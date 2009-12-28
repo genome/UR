@@ -626,10 +626,6 @@ sub mk_rw_class_accessor
 sub mk_ro_class_accessor {
     my($self, $class_name, $accessor_name, $column_name, $variable_value) = @_;
 
-    print "ro class accessor: $class_name $accessor_name: $variable_value\n";
-    print Carp::longmess();
-    $DB::single = 1;
-
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
         if (@_ > 1) {
@@ -716,6 +712,9 @@ sub mk_object_set_accessors {
         }
         if ($reverse_as) {
             # join to get the data...
+            unless ($r_class_meta) {
+                Carp::confess("No r_class_meta?"); 
+            }
             my $property_meta = $r_class_meta->property_meta_for_name($reverse_as);
             unless ($property_meta) {
                 die "Cannot process reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_as";
