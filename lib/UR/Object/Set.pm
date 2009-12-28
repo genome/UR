@@ -8,15 +8,17 @@ class UR::Object::Set {
     is => 'UR::Value',
     is_abstract => 1,
     subclassify_by => 'member_class_name',
-    type_has => [
-        member_class_name   => { is => 'Text' },
-    ],
+    #type_has => [
+    #    xmember_class_name   => { is => 'Text' },
+    #],
     has => [
         rule                => { is => 'UR::BoolExpr', id_by => 'id' },
-        member_class_name   => { via => 'rule', to => 'subject_class_name' },
+        ymember_class_name   => { via => 'rule', to => 'subject_class_name' },
     ],
     doc => 'an unordered group of distinct UR::Objects'
 };
+
+print "HIIIII\n";
 
 sub members {
     my $self = shift;
@@ -24,7 +26,7 @@ sub members {
     while (@_) {
         $rule = $rule->add_filter(shift, shift);
     }
-    return $self->member_class_name->get($rule);
+    return $self->rule->subject_class_name->get($rule);
 }
 
 sub subset {
@@ -40,7 +42,7 @@ sub group_by {
     my @group_by = @_;
     my $grouping_rule = $self->rule->add_filter(-group_by => \@group_by);
     my @groups = UR::Context->get_objects_for_class_and_rule( 
-        $self->member_class_name, 
+        $grouping_rule->subject_class_name, 
         $grouping_rule, 
         undef,  #$load, 
         0,      #$return_closure, 

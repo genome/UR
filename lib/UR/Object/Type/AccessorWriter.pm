@@ -626,6 +626,10 @@ sub mk_rw_class_accessor
 sub mk_ro_class_accessor {
     my($self, $class_name, $accessor_name, $column_name, $variable_value) = @_;
 
+    print "ro class accessor: $class_name $accessor_name: $variable_value\n";
+    print Carp::longmess();
+    $DB::single = 1;
+
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
         if (@_ > 1) {
