@@ -1,7 +1,8 @@
 use strict;
 use warnings;
 use File::Basename;
-BEGIN { use lib File::Basename::dirname(__FILE__).'/../..'; }
+BEGIN { use lib File::Basename::dirname(__FILE__)."/../../../lib";
+use lib File::Basename::dirname(__FILE__).'/../..'; }
 use URT;
 use above "UR";
 use Test::More;# skip_all => "fork() causes intermittent failure in TAP output";

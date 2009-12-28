@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
 use Test::More;

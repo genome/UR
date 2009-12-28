@@ -9,6 +9,7 @@ use Test::More tests => 50;
 # than the alphabetic order
 
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; # dummy namespace
 
@@ -157,6 +158,7 @@ return;
     my $f = IO::File->new("$tmp_path/URT/Related.pm",'>');
     $f->print(q(
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 UR::Object::Type->define(
@@ -177,6 +179,7 @@ UR::Object::Type->define(
     $f = IO::File->new("$tmp_path/URT/Primary.pm",'>');
     $f->print(q(
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 UR::Object::Type->define(

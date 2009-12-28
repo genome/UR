@@ -16,7 +16,7 @@ class UR::Object::View {
         subject => { id_class_by => 'subject_class_name', id_by => 'subject_id', is => 'UR::Object',  
                     doc => 'the object being observed' },
 
-        aspects => { is => 'UR::Object::View::Aspect', is_many => 1, reverse_as => 'complete_view',
+        aspects => { is => 'UR::Object::View::Aspect', is_many => 1, reverse_as => 'parent_view',
                     doc => 'the aspects of the subject this view renders' },
 
         _widget  => { doc => 'the object/data native to the specified toolkit which does the actual visualization' },
@@ -27,11 +27,9 @@ class UR::Object::View {
     ],
 };
 
-
 sub generate_support_class {
     my $self = shift;
     my $extension_for_support_class = shift;
-print "trying $extension_for_support_class on $self\n";
     return unless defined($extension_for_support_class);
     return unless $extension_for_support_class =~ /::/;
     
@@ -68,7 +66,8 @@ print "trying $extension_for_support_class on $self\n";
         class_name => $subject_class_name . "::View::" . $extension_for_support_class,
         is => [$parent_class_name],
         has_constant => [
-            subject_class_name => { value => $subject_class_name },            
+            subject_class_name => { value => $subject_class_name },
+            # the base class probably implies a perspective/toolkit which is also constant
         ]
     );
     $self->error_message(UR::Object::Type->error_message) and return unless $class_obj;
@@ -77,7 +76,7 @@ print "trying $extension_for_support_class on $self\n";
 
 sub resolve_view_class_for_params {
     my $class = shift;
-    my %params = @_;
+    my %params = $class->define_boolexpr(@_)->params_list;
     
     my $subject_class_name = delete $params{subject_class_name};
     my $perspective = delete $params{perspective};
@@ -93,7 +92,7 @@ sub resolve_view_class_for_params {
         return;
     }
 
-    my $namespace = $subject_class_object->namespace;
+    my $namespace = $subject_class_name->__meta__->namespace;
     my $vocabulary = ($namespace->can("get_vocabulary") ? $namespace->get_vocabulary() : undef);
     $vocabulary = UR->get_vocabulary;
 
@@ -140,7 +139,6 @@ sub create {
         # nothing to do here except pass the call up the inheritance chain
         return $class->SUPER::create(@_);
     }
-   
 
     # Otherwise, we're using this as a factory to create the correct viewer subclass 
 
@@ -152,128 +150,6 @@ sub create {
 
 1;
 
-=pod
-
-=head1 NAME
-
-UR::Object::View - a base class for "views" of UR::Objects
-
-=head1 SYNOPSIS
-
-  $object = Acme::Product->get(1234);
-
-  $view = $object->create_view(
-    perspective         => 'inventory history', # defaults to 'default'
-    toolkit             => 'XML',              # Gtk, XML, HTML, JSON, defaults to 
-  );
-
-  $html = $view->widget;
-
-=head1 DESCRIPTION
-
-UR::Object::View is the badse class for "views" of UR::Objects.  
-
-Concrete subclasses specify the following as part of the class name:
-
- SubjectClassName::View::Perspective::Toolkit
-
-The view takes a subject, and returns a "widget" made from the specified toolkit
-which renders the subject from the specified perspective.
-
-=head1 EXAMPLES
-
-$o = Acme::Product->get(1234);
-
-$v = Acme::Product::View::InventoryHistory::HTML->create();
-
-=head1 CLASS CONSTATNT METHODS
-
-=over 4
-
-=item subject_class_name
-    
-The class of subject this viewer will view.  Constant for any given viewer,
-but this may be any abstract class up-to UR::Object itself.
-    
-=item perspective
-
-Used to describe the layout logic which gives logical content
-to the viewer.
-
-=item toolkit
-
-The specific (typically graphical) toolkit used to construct the UI.
-Examples are Gtk, Gkt2, Tk, HTML, XML.
-
-=back
-
-=head1 INSTANCE CONSTANT METHODS
-
-=over 4
-
-=item widget
-
-An object of the specified toolkit which "renders" the subject.
-
-=back
-
-=head1 (POTENTIALLY) MUTABLE METHODS
-
-=over 4
-
-=item subject
-
-The particular "model" object, in MVC parlance, which is viewed by this view.
-This value may change
-
-=item aspects / add_aspect / remove_aspect
-
-Specifications for properties/methods of the subject which are rendered in
-the view.  Some views have mutable aspects, while others merely report
-which aspects are revealed by the perspective in question.
-
-An "aspect" is some characteristic of the "subject" which is rendered in the 
-viewer.  Any property of the subject is usable, as is any method.
-
-=back
-
-=head1 CONSTRUCTION, DESTRUCTION and CONTROL
-
-=over 4
-
-=item create
-
-The constructor requires the following params to be specified as key-value pairs:
-
-=item position
-
-The position within the viewer of this aspect.  The actual meaning will
-depend on the logic behind the perspective.
-
-=item show
-
-For stand-alone viewers, this puts the viewer in its own window.  For 
-viewers which are part of a larger viewer, this makes the viewer widget
-visible in the parent.
-
-=item hide
-
-Makes the viewer invisible.  This means hiding the window, or hiding the viewer
-widget in the parent widget for subordinate viewers.
-
-=item show_modal 
-
-This method shows the viewer in a window, and only returns after the window is closed.
-It should only be used for viewers which are a full interface capable of closing itself when done.
-
-=item delete
-
-The destructor deletes subordinate components, and the related widget, 
-removing them all from the view of the user.
-
-=back
-
-=cut
 
 __END__
 
@@ -545,3 +421,125 @@ sub _update_subject_from_widget
 
 1;
 
+=pod
+
+=head1 NAME
+
+UR::Object::View - a base class for "views" of UR::Objects
+
+=head1 SYNOPSIS
+
+  $object = Acme::Product->get(1234);
+
+  $view = $object->create_view(
+    perspective         => 'inventory history', # defaults to 'default'
+    toolkit             => 'XML',              # Gtk, XML, HTML, JSON, defaults to 
+  );
+
+  $html = $view->widget;
+
+=head1 DESCRIPTION
+
+UR::Object::View is the badse class for "views" of UR::Objects.  
+
+Concrete subclasses specify the following as part of the class name:
+
+ SubjectClassName::View::Perspective::Toolkit
+
+The view takes a subject, and returns a "widget" made from the specified toolkit
+which renders the subject from the specified perspective.
+
+=head1 EXAMPLES
+
+$o = Acme::Product->get(1234);
+
+$v = Acme::Product::View::InventoryHistory::HTML->create();
+
+=head1 CLASS CONSTATNT METHODS
+
+=over 4
+
+=item subject_class_name
+    
+The class of subject this viewer will view.  Constant for any given viewer,
+but this may be any abstract class up-to UR::Object itself.
+    
+=item perspective
+
+Used to describe the layout logic which gives logical content
+to the viewer.
+
+=item toolkit
+
+The specific (typically graphical) toolkit used to construct the UI.
+Examples are Gtk, Gkt2, Tk, HTML, XML.
+
+=back
+
+=head1 INSTANCE CONSTANT METHODS
+
+=over 4
+
+=item widget
+
+An object of the specified toolkit which "renders" the subject.
+
+=back
+
+=head1 (POTENTIALLY) MUTABLE METHODS
+
+=over 4
+
+=item subject
+
+The particular "model" object, in MVC parlance, which is viewed by this view.
+This value may change
+
+=item aspects / add_aspect / remove_aspect
+
+Specifications for properties/methods of the subject which are rendered in
+the view.  Some views have mutable aspects, while others merely report
+which aspects are revealed by the perspective in question.
+
+An "aspect" is some characteristic of the "subject" which is rendered in the 
+viewer.  Any property of the subject is usable, as is any method.
+
+=back
+
+=head1 CONSTRUCTION, DESTRUCTION and CONTROL
+
+=over 4
+
+=item create
+
+The constructor requires the following params to be specified as key-value pairs:
+
+=item position
+
+The position within the viewer of this aspect.  The actual meaning will
+depend on the logic behind the perspective.
+
+=item show
+
+For stand-alone viewers, this puts the viewer in its own window.  For 
+viewers which are part of a larger viewer, this makes the viewer widget
+visible in the parent.
+
+=item hide
+
+Makes the viewer invisible.  This means hiding the window, or hiding the viewer
+widget in the parent widget for subordinate viewers.
+
+=item show_modal 
+
+This method shows the viewer in a window, and only returns after the window is closed.
+It should only be used for viewers which are a full interface capable of closing itself when done.
+
+=item delete
+
+The destructor deletes subordinate components, and the related widget, 
+removing them all from the view of the user.
+
+=back
+
+=cut

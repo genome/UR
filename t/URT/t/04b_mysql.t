@@ -4,6 +4,7 @@ use warnings;
 
 use Test::More skip_all => "enable after configuring MySQL";
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 

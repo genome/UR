@@ -62,9 +62,9 @@ my $pv = $p->create_view(
     ]
 );
 ok($pv, "got an XML viewer for the person");
-print($pv->buf);
-my $pv_expected_xml = '';
-is($pv->buf,$pv_expected_xml,"XML is as expected for the person view");
+print($pv->widget);
+my $pv_expected_xml = undef;
+is($pv->widget,$pv_expected_xml,"XML is as expected for the person view");
 
 my $c1v = $c1->create_viewer(toolkit => 'text');
 print($c1v->buf);
