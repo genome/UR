@@ -16,122 +16,27 @@ class UR::Object::View {
         subject => { id_class_by => 'subject_class_name', id_by => 'subject_id', is => 'UR::Object',  
                     doc => 'the object being observed' },
 
-        aspects => { is => 'UR::Object::View::Aspect', is_many => 1, reverse_as => 'parent_view',
+        aspects => { is => 'UR::Object::View::Aspect', 
+                    reverse_as => 'parent_view',
+                    is_many => 1, 
+                    specify_by => 'name',
+                    order_by => 'number',
                     doc => 'the aspects of the subject this view renders' },
 
         _widget  => { doc => 'the object/data native to the specified toolkit which does the actual visualization' },
-
-        _next_aspect_position   => { is => 'Number', default_value => 0 },        
-        
-        _misc_container         => { is => 'BLOB' },
     ],
+    has_many_optional => [
+        aspect_names    => { via => 'aspects', to => 'name' },
+    ]
 };
 
-sub generate_support_class {
-    my $self = shift;
-    my $extension_for_support_class = shift;
-    return unless defined($extension_for_support_class);
-    return unless $extension_for_support_class =~ /::/;
-    
-    my $subject_class_name_plus_keyword = ref($self) || $self;
-    my ($subject_class_name) = ($subject_class_name_plus_keyword =~ /^(.*)::View$/);
-    
-    my $parent_class_name;
-    for my $subject_parent_class_name ($subject_class_name->inheritance, "UR::Object") {
-        
-        my $possible_parent_class_name = 
-            $subject_parent_class_name
-            . "::View::"
-            . $extension_for_support_class;
-        
-        eval "use $possible_parent_class_name";
-        # Ignore errors like "Can't locate <pathname> in @INC.  Others are probably
-        # real errors like syntax problems
-        if ($@ && $@ !~ m/^Can't locate /) {
-            $self->error_message("Error while loading $possible_parent_class_name: $@");
-            return;
-        }
-
-        my $possible_parent_class_meta = UR::Object::Type->is_loaded(
-            class_name => $possible_parent_class_name
-        );
-        if ($possible_parent_class_meta) {        
-            $parent_class_name = $possible_parent_class_name;
-            last;
-        }
-    }
-    return unless $parent_class_name;
-    
-    my $class_obj = UR::Object::Type->define(
-        class_name => $subject_class_name . "::View::" . $extension_for_support_class,
-        is => [$parent_class_name],
-        has_constant => [
-            subject_class_name => { value => $subject_class_name },
-            # the base class probably implies a perspective/toolkit which is also constant
-        ]
-    );
-    $self->error_message(UR::Object::Type->error_message) and return unless $class_obj;
-    return $class_obj;
-}
-
-sub resolve_view_class_for_params {
-    my $class = shift;
-    my %params = $class->define_boolexpr(@_)->params_list;
-    
-    my $subject_class_name = delete $params{subject_class_name};
-    my $perspective = delete $params{perspective};
-    my $toolkit = delete $params{toolkit};
-    my $aspects = delete $params{aspects};
-    
-    $perspective = lc($perspective);
-    $toolkit = lc($toolkit);
-    
-    if (%params) {
-        my @params = %params;
-        $class->error_message("Bad params: @params");
-        return;
-    }
-
-    my $namespace = $subject_class_name->__meta__->namespace;
-    my $vocabulary = ($namespace->can("get_vocabulary") ? $namespace->get_vocabulary() : undef);
-    $vocabulary = UR->get_vocabulary;
-
-    my $subject_class_object = $subject_class_name->__meta__;
-    my $subclass_name = join("::",
-        $subject_class_name,
-        "View",
-        join ("",
-            $vocabulary->convert_to_title_case (
-                map { ucfirst(lc($_)) }
-                split(/\s+/,$perspective)
-            )
-        ),
-        join ("",
-            $vocabulary->convert_to_title_case (
-                map { ucfirst(lc($_)) }
-                split(/\s+/,$toolkit)
-            )
-        )
-      );
-   
-    my $subclass_meta = UR::Object::Type->get($subclass_name);
-    unless ($subclass_meta) {
-        $class->error_message("Failed to find class $subclass_name!  Cannot create viewer!");
-        Carp::confess();
-    }
-    
-    unless($subclass_name->isa(__PACKAGE__)) {
-        die "Subclass $subclass_name is not a view?!";
-    }
-
-    return $subclass_name;
-}
+# construction and destruction
 
 sub create {
     my $class = shift;    
 
     if ($class eq __PACKAGE__) {
-        $class = $class->resolve_view_class_for_params(@_);
+        $class = $class->_resolve_view_class_for_params(@_);
     }
 
     if ($class ne __PACKAGE__) {
@@ -148,10 +53,67 @@ sub create {
     return $self;
 }
 
-1;
+sub _resolve_view_class_for_params {
+    # View modules use standardized naming:  SubjectClassName::View::Perspective::Toolkit.
+    # The "SubjectClassName" can be the class name of the subject, or the first ancestor with 
+    # a view with the expected perspective/toolkit.
+    my $class = shift;
+    my %params = $class->define_boolexpr(@_)->params_list;
+    
+    my $subject_class_name = delete $params{subject_class_name};
+    my $perspective = delete $params{perspective};
+    my $toolkit = delete $params{toolkit};
+    my $aspects = delete $params{aspects};
+    
+    $perspective = lc($perspective);
+    $toolkit = lc($toolkit);
+    if (%params) {
+        my @params = %params;
+        $class->error_message("Bad params: @params");
+        return;
+    }
 
+    my $namespace = $subject_class_name->__meta__->namespace;
+    my $vocabulary = ($namespace and $namespace->can("get_vocabulary") ? $namespace->get_vocabulary() : undef);
+    $vocabulary = UR->get_vocabulary;
 
-__END__
+    my $subject_class_object = $subject_class_name->__meta__;
+    my @possible_subject_class_names = ($subject_class_name,$subject_class_name->inheritance);
+    
+    my $subclass_name;
+    for my $possible_subject_class_name (@possible_subject_class_names) {
+        $subclass_name = join("::",
+            $possible_subject_class_name,
+            "View",
+            join ("",
+                $vocabulary->convert_to_title_case (
+                    map { ucfirst(lc($_)) }
+                    split(/\s+/,$perspective)
+                )
+            ),
+            join ("",
+                $vocabulary->convert_to_title_case (
+                    map { ucfirst(lc($_)) }
+                    split(/\s+/,$toolkit)
+                )
+            )
+        );
+    
+        my $subclass_meta = UR::Object::Type->get($subclass_name);
+        unless ($subclass_meta) {
+            next;
+        }
+        
+        unless($subclass_name->isa(__PACKAGE__)) {
+            warn "Subclass $subclass_name exists but is not a view?!";
+            next;
+        }
+
+        return $subclass_name;
+    }
+
+    return;
+}
 
 sub _delete_object {
     # This covers the needs of both unload() and delete().
@@ -165,218 +127,29 @@ sub _delete_object {
     return $self->SUPER::_delete_object(@_);
 }
 
-sub show_modal {
+# rendering implementation
+
+sub widget {
     my $self = shift;
-    $self->_toolkit_class->show_viewer_modally($self);
-}
-
-sub show {
-    my $self = shift;
-    $self->_toolkit_class->show_viewer($self);
-}
-
-sub hide {
-    my $self = shift;
-    $self->_toolkit_class->hide_viewer($self);
-}
-
-# TODO: these methods are older than the general "aspects" property, which 
-# should be used now.
-#
-# OLD:              NEW:
-# get_aspects()     aspects()
-# add_aspect()      add_aspect()
-# remove_aspect()   remove_aspect()
-# default_aspects() set the default_value in the aspects() property in the subclass
-
-sub Xget_aspects {
-    my $self = shift;
-    return UR::Object::View::Aspect->get(viewer_id => $self->id, @_);
-}
-
-sub Xdefault_aspects {
-    return [];
-}
-
-sub Xadd_aspect {
-    my $self = shift;    
-    my @previous_aspects = $self->get_aspects();
-    my %aspect_creation_params;
-    if (@_ == 1) {
-        %aspect_creation_params = (aspect_name => shift(@_), position => scalar(@previous_aspects)+1);
-    } 
-    else {
-        %aspect_creation_params = (position => scalar(@previous_aspects)+1, @_);
+    if (@_) {
+        Carp::confess("widget() is not settable!");
     }
-    $aspect_creation_params{'method'} ||= $aspect_creation_params{'aspect_name'};
-
-    if ($aspect_creation_params{'perspective'} 
-        || $aspect_creation_params{'toolkit'}
-        || $aspect_creation_params{'aspects'}
-        || $aspect_creation_params{'subject_class_name'})
-    { 
-        # They're making a subordinate viewer for this aspect
-        my %subviewer_params;
-        foreach (qw( perspective toolkit aspects subject_class_name) ) {
-            next unless $aspect_creation_params{$_};
-            $subviewer_params{$_} = delete $aspect_creation_params{$_};
-        }
-        unless ($subviewer_params{'subject_class_name'}) {
-            my $class_meta = UR::Object::Type->get(class_name => $self->subject_class_name);
-
-            my $method = $aspect_creation_params{'method'};
-
-            my $property_meta = $class_meta->property_meta_for_name($method);
-            unless ($property_meta) {
-                Carp::confess("Failed to add aspect $aspect_creation_params{'aspect_name'}, no property meta for "
-                              . $self->subject_class_name . " $method");
-                return;
-            }
-            unless ($property_meta->data_type) {
-                # FIXME for indirect properties we could try harder and follow the joins...
-                Carp::confess("Can't determine delegate viewer class for aspect ".$aspect_creation_params{'aspect_name'});
-                return;
-            }
-            $subviewer_params{'subject_class_name'} = $property_meta->data_type;
-        }
-
-        my $delegate_viewer = UR::Object::View->create_viewer(%subviewer_params);
-        $aspect_creation_params{'delegate_viewer_id'} = $delegate_viewer->id;
-    }
-
-    my $aspect = UR::Object::View::Aspect->create(viewer_id => $self->id, %aspect_creation_params);
-    if ($aspect and $self->_add_aspect($aspect)) {
-        return 1;
-    }
-    else {
-        $aspect->delete;
-        Carp::confess("Failed to add aspect @_!"); 
-    }
-}
-
-sub Xremove_aspect {
-    my $self = shift;
-    my @aspect_params;
-    if (@_ == 1) {
-        @aspect_params = (aspect_name => shift(@_));
-    } 
-    else {
-        @aspect_params = @_;
-    }    
-    my @rm = UR::Object::View::Aspect->get(viewer_id => $self->id, @aspect_params);
-    for my $aspect (@rm) {
-        my $aspect_name = $aspect->aspect_name; 
-        $aspect->delete;
-        unless ($self->_remove_aspect($aspect_name)) {
-            die "Error removing aspect $aspect_name!";
-        }
-    }
-    return 1;
-}
-
-
-
-=pod
-
-=head1 Toolkit Interface
-
-=over 4
-
-=item toolkit
-
-A class method indicating what toolkit is used to render the view.
-Possible values are Gtk, and hopefully Gtk2, Tk, Qt, HTML, Curses, text, etc.
-
-=item get_widget
-
-Returns the "widget" which is the rendered view.  The actual object
-type depends on the toolkit named above.
-
-=item _toolkit_class
-
-Returns the name of a class which is derived from UR::Object::Toolkit
-which implements certain utility methods for viewers of a given toolkit.
-
-=back
-
-=cut
-
-sub get_widget {
-    my $self = shift;
-    my $widget = $self->{widget};
+    my $widget = $self->_widget();
     unless ($widget) {
-        $widget = $self->_create_widget;
-        $self->{widget} = $widget;
+        $widget = $self->_create_widget();
+        return unless $widget;
+        $self->_widget($widget);
     }
-    return $widget
+    return $widget;
 }
 
-sub _toolkit_class
-{
-    my $self = shift;
-    my $toolkit = $self->toolkit;
-    return "UR::Object::View::Toolkit::" . ucfirst(lc($toolkit));
-}
-
-
-=pod
-
-=head1 Perspective Interface
-
-When writing a new viewer, these methods should be implemented to 
-handle the tasks described.  The class can be named anything, though
-the recommended naming structure for a viewer is something like:
-
-     Acme::Rocket::View::FlightPath::Gtk2
-     \          /           \    /      \
-     subject class        perspective    toolkit
-      
-A module like ::FlightPath::Gtk2 might keep most logic in
-Acme::Rocket::View::FlightPath, and only toolkit specifics in
-Gtk2, but this is not required as long as the module functions.
-
-=over 4
-
-=item _create_widget
-
-This should be implemented in a given perspective/toolkit module to actually
-create the GUI using the appropriate toolkit.  It will be called before the
-specific subject is known, so all widget creation which is subject-specific 
-should be done in _bind_subject().
-
-=item _bind_subject
-
-This method has a default implementation which does a general subscription
-to changes on the subject.  It propbably does not need to be overridden
-in custom viewers.
-
-This does additional changes to the widget when a subject is set, unset, or 
-switched.  Implementations should take an undef subject, and also expect
-to un-bind a previously existing subject if there is one set. 
-
-=item _update_widget_from_subject
-
-If when the subject changes this method will be called on all viewers
-which render the changed aspect of the subject.
-
-=item _update_subject_from_widget
-
-When the widget changes, it should call this method to save the GUI changes
-to the subject.
-
-=back
-
-=cut
-
-sub _create_widget
-{
+sub _create_widget {
     Carp::confess("The _create_widget method must be implemented for all concrete "
         . " viewer subclasses.  No _create_widget for " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
-sub _bind_subject 
-{
+sub _bind_subject {
     my $self = shift;
     my $subject = $self->get_subject();
     my $subscriptions = $self->{subscriptions};
@@ -405,21 +178,41 @@ sub _bind_subject
     return 1;
 }
 
-sub _update_widget_from_subject
-{
+sub _update_widget_from_subject {
     Carp::confess("The _update_widget_from_subject method must be implemented for all concreate "
         . " viewer subclasses.  No _update_subject_from_widgetfor " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
-sub _update_subject_from_widget
-{
+sub _update_subject_from_widget {
     Carp::confess("The _update_widget_from_subject method must be implemented for all concreate "
         . " viewer subclasses.  No _update_subject_from_widgetfor " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
-1;
+# external controls
+
+sub _toolkit_class {
+    my $self = shift;
+    my $toolkit = $self->toolkit;
+    return "UR::Object::View::Toolkit::" . ucfirst(lc($toolkit));
+}
+
+sub show {
+    my $self = shift;
+    $self->_toolkit_class->show_viewer($self);
+}
+
+sub show_modal {
+    my $self = shift;
+    $self->_toolkit_class->show_viewer_modally($self);
+}
+
+sub hide {
+    my $self = shift;
+    $self->_toolkit_class->hide_viewer($self);
+}
+
 
 =pod
 
@@ -438,24 +231,56 @@ UR::Object::View - a base class for "views" of UR::Objects
 
   $html = $view->widget;
 
-=head1 DESCRIPTION
 
-UR::Object::View is the badse class for "views" of UR::Objects.  
+=head1 USAGE API 
 
-Concrete subclasses specify the following as part of the class name:
+=over 4
 
- SubjectClassName::View::Perspective::Toolkit
+=item create
 
-The view takes a subject, and returns a "widget" made from the specified toolkit
-which renders the subject from the specified perspective.
+The constructor requires that the subject_class_name, perspective,
+and toolkit be set.  Producing a view object does not "render" the view,
+just creates an interface for controlling the view.  
 
-=head1 EXAMPLES
+The subject can be set later and changed.  The aspects viewed may 
+be constant for a given perspective, or mutable.
 
-$o = Acme::Product->get(1234);
+=item show
 
-$v = Acme::Product::View::InventoryHistory::HTML->create();
+For stand-alone viewers, this puts the viewer widget in its a window.  For 
+viewers which are part of a larger viewer, this makes the viewer widget
+visible in the parent.
 
-=head1 CLASS CONSTATNT METHODS
+=item hide
+
+Makes the viewer invisible.  This means hiding the window, or hiding the viewer
+widget in the parent widget for subordinate viewers.
+
+=item show_modal 
+
+This method shows the viewer in a window, and only returns after the window is closed.
+It should only be used for viewers which are a full interface capable of closing itself when done.
+
+=item widget
+
+Returns the "widget" which renders the view.  This is built lazily
+on demand.  The actual object type depends on the toolkit named above.  
+This method might return HTML text, or a Gtk object.  This can be used
+directly, and is used internally by show/show_modal.
+
+=item delete
+
+The destructor removes them all from the view of the user.
+
+It also deletes subordinate components, and the related widget if one has been, 
+generated.
+
+=back
+
+=head1 CONSTRUCTION PROPERTIES (CONSTANT)
+
+The following three properties are constant for a given view class.  They
+determine which class of view to construct, and must be provided to create().
 
 =over 4
 
@@ -476,17 +301,11 @@ Examples are Gtk, Gkt2, Tk, HTML, XML.
 
 =back
 
-=head1 INSTANCE CONSTANT METHODS
+=head1 CONFIGURABLE PROPERTIES
 
-=over 4
-
-=item widget
-
-An object of the specified toolkit which "renders" the subject.
-
-=back
-
-=head1 (POTENTIALLY) MUTABLE METHODS
+These methods control which object is being viewed, and what properties 
+of the object are viewed.  They can be provided at construction time,
+or afterward.
 
 =over 4
 
@@ -506,40 +325,85 @@ viewer.  Any property of the subject is usable, as is any method.
 
 =back
 
-=head1 CONSTRUCTION, DESTRUCTION and CONTROL
+=head1 IMPLEMENTATION INTERFACE 
+
+When writing a new view class, the class name is expected to 
+follow a formula:
+
+     Acme::Rocket::View::FlightPath::Gtk2
+     \          /           \    /      \
+     subject class        perspective    toolkit
+
+The toolkit is expected to be a single word.   The perspective
+is everything before the toolkit, and after the last 'view' word.
+The subject_class_name is everything to the left of the final
+'::View::'.
+
+Intermediate classes can be constructed to consolidate logic as 
+the developer sees fit.  A module like ::FlightPath::Gtk2 might keep 
+most logic in Acme::Rocket::View::FlightPath, and only toolkit specifics in
+::Gtk2, but this is not required as long as the module functions.
+
+There are three methods which require an implementation, unless
+the developer inherits from a subclass of UR::Object::View which
+provides these methods:
 
 =over 4
 
-=item create
+=item _create_widget
 
-The constructor requires the following params to be specified as key-value pairs:
+This creates the widget the first time ->widget() is called on a view.
 
-=item position
+This should be implemented in a given perspective/toolkit module to actually
+create the GUI using the appropriate toolkit.  
 
-The position within the viewer of this aspect.  The actual meaning will
-depend on the logic behind the perspective.
+It will be called before the specific subject is known, so all widget creation 
+which is subject-specific should be done in _bind_subject().  As such it typically
+only configures skeletal aspects of the view.
 
-=item show
+=item _bind_subject
 
-For stand-alone viewers, this puts the viewer in its own window.  For 
-viewers which are part of a larger viewer, this makes the viewer widget
-visible in the parent.
+This method is called when the subject is set, or when it is changed, or unset.
+It updates the widget to reflect changes to the widget due to a change in subject. 
 
-=item hide
+This method has a default implementation which does a general subscription
+to changes on the subject.  It probably does not need to be overridden
+in custom viewers.  Implementations which _do_ override this should take 
+an undef subject, and be sure to un-bind a previously existing subject if 
+there is one set. 
 
-Makes the viewer invisible.  This means hiding the window, or hiding the viewer
-widget in the parent widget for subordinate viewers.
+=item _update_widget_from_subject
 
-=item show_modal 
+If and when the property values of the subject change, this method will be called on 
+all viewers which render the changed aspect of the subject.
 
-This method shows the viewer in a window, and only returns after the window is closed.
-It should only be used for viewers which are a full interface capable of closing itself when done.
+=item _update_subject_from_widget
 
-=item delete
-
-The destructor deletes subordinate components, and the related widget, 
-removing them all from the view of the user.
+When the widget changes, it should call this method to save the UI changes
+to the subject.  This is not applicable to read-only views.
 
 =back
 
+=head1 OTHER METHODS 
+
+=over 4
+
+=item _toolkit_class
+
+This method is useful to provide generic toolkit-based services to a view,
+using a toolkit agnostic API.  It can be used in base classes which,
+for instance, want to share logic for a given perspective across toolkits.
+
+Returns the name of a class which is derived from UR::Object::Toolkit
+which implements certain utility methods for viewers of a given toolkit.
+
+=back
+
+=head1 EXAMPLES
+
+$o = Acme::Product->get(1234);
+
+$v = Acme::Product::View::InventoryHistory::HTML->create();
+
 =cut
+

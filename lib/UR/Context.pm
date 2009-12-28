@@ -537,12 +537,12 @@ sub create_entity {
         }
     }
 
-# @extra is extra values gotten by inheritance
+    # @extra is extra values gotten by inheritance
     my @extra;
 
-# %property_objects maps property names to UR::Object::Property objects
-# by going through the reversed list of UR::Object::Type objects below
-# We set up this hash to have the correct property objects for each property
+    # %property_objects maps property names to UR::Object::Property objects
+    # by going through the reversed list of UR::Object::Type objects below
+    # We set up this hash to have the correct property objects for each property
     # name.  This is important in the case of property name overlap via
     # inheritance.  The property object used should be the one "closest"
     # to the class.  In other words, a property directly on the class gets
@@ -592,11 +592,27 @@ sub create_entity {
 
     $params = { %$params };
 
-    my $indirect_values = {}; # collection of key-value pairs for the EAV table
+    my $indirect_values = {}; 
     for my $property_name (keys %indirect_properties) {
         $indirect_values->{ $property_name } =
             delete $params->{ $property_name }
                 if ( exists $params->{ $property_name } );
+    }
+   
+    if (0) {
+    # if the indirect property is immutable, but it is via something which is 
+    # mutable, we use those values to get or create the bridge.
+    my %indirect_immutable_properties_via;
+    for my $property_name (keys %$indirect_values) {
+        if ($immutable_properties{$property_name}) {
+            my $meta = $indirect_properties{$property_name};
+            my $via = $meta->via;
+            $indirect_immutable_properties_via{$via}{$property_name} = delete $indirect_values->{$property_name};
+        }
+    }
+    for my $via (keys %indirect_immutable_properties_via) {
+        
+    }
     }
 
     my $set_values = {};
@@ -612,7 +628,7 @@ sub create_entity {
         return;
     }
 
-    # add itesm for any multi properties
+    # add items for any multi properties
     if (%$set_values) {
         for my $property_name (keys %$set_values) {
             my $meta = $set_properties{$property_name};
@@ -636,9 +652,11 @@ sub create_entity {
         }
     }    
 
-    # set any indirect properties        
+    # set any indirect mutable properties        
     if (%$indirect_values) {
         for my $property_name (keys %$indirect_values) {
+            my $property_meta = $indirect_properties{$property_name};
+
             $entity->$property_name($indirect_values->{$property_name});
         }
     }

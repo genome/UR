@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 3;
+use Test::More tests => 10;
 
 #use File::Basename;
 #use lib File::Basename::dirname(__FILE__)."/../..";
@@ -18,7 +18,7 @@ class Animal {
 class Person {
     is => 'Animal',
     has => [
-        cats    => { is => 'Cat', is_many => 1 },
+        cats    => { is => 'Cat', is_many => 1, reverse_as => 'owner' },
     ]
 };
 
@@ -42,26 +42,72 @@ my $c2 = Cat->create(name => 'nestor', age => 8, owner => $p, fluf => 22);
 my @c = $p->cats();
 is("@c","$c1 $c2", "got expected cat list for the owner");
 
+#########
 
-my $pv = $p->create_view(
+note('view 1: no aspects');
+my $pv1 = $p->create_view(
+    toolkit => 'text',
+    aspects => [ ]
+);
+ok($pv1, "got an XML viewer $pv1 for the object $p");
+
+my @a = $pv1->aspects();
+is(scalar(@a),0,"got expected aspect list @a")
+    or diag(Data::Dumper::Dumper(@a));
+
+my @an = $pv1->aspect_names();
+is("@an","","got expected aspect list @an");
+
+
+#########
+
+note('view 2: simple aspects');
+my $pv2 = $p->create_view(
     toolkit => 'text',
     aspects => [
         'name',
         'age',
         'cats',
-#        'cats' => {
-#            perspective => 'default',
-#            toolkit => 'text',
-#            aspects => [
-#                'name',
-#                'age',
-#                'fluf',
-#                'owner'
-#            ],
-#        }
     ]
 );
-ok($pv, "got an XML viewer for the person");
+ok($pv2, "got an XML viewer $pv2 for the object $p");
+
+@a = $pv2->aspects();
+is(scalar(@a),3,"got expected aspect list @a")
+ or diag(Data::Dumper::Dumper(@a));
+
+@an = $pv2->aspect_names();
+is("@an","name age cats","got expected aspect list @an");
+
+#########
+
+note('view 3: aspects with properties');
+
+my $pv3 = $p->create_view(
+    toolkit => 'text',
+    aspects => [
+        { name => 'name', label => 'NAME' },
+        'age',
+        { 
+            name => 'cats', 
+            label => 'Kitties', 
+        },
+    ]
+);
+ok($pv3, "got an XML viewer $pv3 for the object $p");
+
+@a = $pv3->aspects();
+is(scalar(@a),3,"got expected aspect list @a");
+diag(Data::Dumper::Dumper(@a));
+
+@an = $pv3->aspect_names();
+is("@an","name age cats","got expected aspect list @an");
+
+#######
+
+
+
+__END__
 print($pv->widget);
 my $pv_expected_xml = undef;
 is($pv->widget,$pv_expected_xml,"XML is as expected for the person view");
