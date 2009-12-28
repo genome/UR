@@ -2,10 +2,9 @@ package UR::Object::View;
 
 use warnings;
 use strict;
+require UR;
 
 our $VERSION = $UR::VERSION;;
-
-require UR;
 
 class UR::Object::View {
     has_abstract_constant => [
@@ -14,112 +13,25 @@ class UR::Object::View {
         toolkit                 => { is_abstract => 1, is_constant => 1 },#is_class_wide => 1, is_constant => 1, is_optional => 0 },
     ],
     has_optional => [
-        subject => { id_class_by => 'subject_class_name', id_by => 'subject_id', 
+        subject => { id_class_by => 'subject_class_name', id_by => 'subject_id', is => 'UR::Object',  
                     doc => 'the object being observed' },
 
         aspects => { is => 'UR::Object::View::Aspect', is_many => 1, reverse_as => 'complete_view',
                     doc => 'the aspects of the subject this view renders' },
 
-        widget  => { doc => 'the object/data native to the specified toolkit which does the actual visualization' },
+        _widget  => { doc => 'the object/data native to the specified toolkit which does the actual visualization' },
 
-        _next_aspect_position   => { is => 'Number' },        
+        _next_aspect_position   => { is => 'Number', default_value => 0 },        
+        
         _misc_container         => { is => 'BLOB' },
     ],
-);
+};
 
-# This writes non-property based accessors for some internal things.
-
-our %default_values = 
-(
-    _next_aspect_position => 0,
-    _misc_container => undef,    
-);
-
-UR::Util->generate_readwrite_methods(%default_values)
-    or die "Failed to generate rw accessors for " . __PACKAGE__;
-
-
-=pod
-
-=head1 View Interface
-
-=over 4
-
-=item create
-
-The constructor requires the following params to be specified as key-value pairs:
-
-=over 4
-
-=item subject_class_name
-    
-The class of subject this viewer will view.  Constant for any given viewer,
-but this may be any abstract class up-to UR::Object itself.
-    
-=item perspective
-
-Used to describe the layout engine which gives logical content
-to the viewer.
-
-=item toolkit
-
-The specific (typically graphical) toolkit used to construct the UI.
-Examples are Gtk, Gkt2, Tk, HTML, XML.
-
-=back
-
-=item delete
-
-The destructor deletes subordinate components, and the related widget, 
-removing them all from the view of the user.
-
-=item show
-
-For stand-alone viewers, this puts the viewer in its own window.  For 
-viewers which are part of a larger viewer, this makes the viewer widget
-visible in the parent.
-
-=item hide
-
-Makes the viewer invisible.  This means hiding the window, or hiding the viewer
-widget in the parent widget for subordinate viewers.
-
-=item show_modal 
-
-This method shows the viewer in a window, and only returns after the window is closed.
-It should only be used for viewers which are a full interface capable of closing itself when done.
-
-=item aspects / add_aspect / remove_aspect
-
-An "aspect" is some characteristic of the "subject" which is rendered in the 
-viewer.  Any property of the subject is usable, as is any method.
-
-=over 4
-
-=item position
-
-The position within the viewer of this aspect.  The actual meaning will
-depend on the logic behind the perspective.
-
-=item perspective
-
-If a subordinate viewer will be used to render this aspect, this perspective
-will be used to for that viewer.
-
-=item aspects
-
-The value of the aspect may itself be an object, which may have a variety of properties
-renderable in the user interface.  A nested list of aspects allows control over nested 
-data.
-
-=back
-
-=cut
 
 sub generate_support_class {
     my $self = shift;
     my $extension_for_support_class = shift;
-    
+print "trying $extension_for_support_class on $self\n";
     return unless defined($extension_for_support_class);
     return unless $extension_for_support_class =~ /::/;
     
@@ -181,10 +93,11 @@ sub resolve_view_class_for_params {
         return;
     }
 
-    my $subject_class_object = $subject_class_name->__meta__;
     my $namespace = $subject_class_object->namespace;
-    my $vocabulary = ($namespace->can("get_vocabulary") ? $namespace->get_vocabulary() : UR->get_vocabulary);
+    my $vocabulary = ($namespace->can("get_vocabulary") ? $namespace->get_vocabulary() : undef);
+    $vocabulary = UR->get_vocabulary;
 
+    my $subject_class_object = $subject_class_name->__meta__;
     my $subclass_name = join("::",
         $subject_class_name,
         "View",
@@ -231,11 +144,138 @@ sub create {
 
     # Otherwise, we're using this as a factory to create the correct viewer subclass 
 
-    my $self = $subclass_name->create(@_);
+    my $self = $class->create(@_);
     return unless $self;
 
     return $self;
 }
+
+1;
+
+=pod
+
+=head1 NAME
+
+UR::Object::View - a base class for "views" of UR::Objects
+
+=head1 SYNOPSIS
+
+  $object = Acme::Product->get(1234);
+
+  $view = $object->create_view(
+    perspective         => 'inventory history', # defaults to 'default'
+    toolkit             => 'XML',              # Gtk, XML, HTML, JSON, defaults to 
+  );
+
+  $html = $view->widget;
+
+=head1 DESCRIPTION
+
+UR::Object::View is the badse class for "views" of UR::Objects.  
+
+Concrete subclasses specify the following as part of the class name:
+
+ SubjectClassName::View::Perspective::Toolkit
+
+The view takes a subject, and returns a "widget" made from the specified toolkit
+which renders the subject from the specified perspective.
+
+=head1 EXAMPLES
+
+$o = Acme::Product->get(1234);
+
+$v = Acme::Product::View::InventoryHistory::HTML->create();
+
+=head1 CLASS CONSTATNT METHODS
+
+=over 4
+
+=item subject_class_name
+    
+The class of subject this viewer will view.  Constant for any given viewer,
+but this may be any abstract class up-to UR::Object itself.
+    
+=item perspective
+
+Used to describe the layout logic which gives logical content
+to the viewer.
+
+=item toolkit
+
+The specific (typically graphical) toolkit used to construct the UI.
+Examples are Gtk, Gkt2, Tk, HTML, XML.
+
+=back
+
+=head1 INSTANCE CONSTANT METHODS
+
+=over 4
+
+=item widget
+
+An object of the specified toolkit which "renders" the subject.
+
+=back
+
+=head1 (POTENTIALLY) MUTABLE METHODS
+
+=over 4
+
+=item subject
+
+The particular "model" object, in MVC parlance, which is viewed by this view.
+This value may change
+
+=item aspects / add_aspect / remove_aspect
+
+Specifications for properties/methods of the subject which are rendered in
+the view.  Some views have mutable aspects, while others merely report
+which aspects are revealed by the perspective in question.
+
+An "aspect" is some characteristic of the "subject" which is rendered in the 
+viewer.  Any property of the subject is usable, as is any method.
+
+=back
+
+=head1 CONSTRUCTION, DESTRUCTION and CONTROL
+
+=over 4
+
+=item create
+
+The constructor requires the following params to be specified as key-value pairs:
+
+=item position
+
+The position within the viewer of this aspect.  The actual meaning will
+depend on the logic behind the perspective.
+
+=item show
+
+For stand-alone viewers, this puts the viewer in its own window.  For 
+viewers which are part of a larger viewer, this makes the viewer widget
+visible in the parent.
+
+=item hide
+
+Makes the viewer invisible.  This means hiding the window, or hiding the viewer
+widget in the parent widget for subordinate viewers.
+
+=item show_modal 
+
+This method shows the viewer in a window, and only returns after the window is closed.
+It should only be used for viewers which are a full interface capable of closing itself when done.
+
+=item delete
+
+The destructor deletes subordinate components, and the related widget, 
+removing them all from the view of the user.
+
+=back
+
+=cut
+
+__END__
 
 sub _delete_object {
     # This covers the needs of both unload() and delete().
@@ -273,16 +313,16 @@ sub hide {
 # remove_aspect()   remove_aspect()
 # default_aspects() set the default_value in the aspects() property in the subclass
 
-sub get_aspects {
+sub Xget_aspects {
     my $self = shift;
     return UR::Object::View::Aspect->get(viewer_id => $self->id, @_);
 }
 
-sub default_aspects {
+sub Xdefault_aspects {
     return [];
 }
 
-sub add_aspect {
+sub Xadd_aspect {
     my $self = shift;    
     my @previous_aspects = $self->get_aspects();
     my %aspect_creation_params;
@@ -338,7 +378,7 @@ sub add_aspect {
     }
 }
 
-sub remove_aspect {
+sub Xremove_aspect {
     my $self = shift;
     my @aspect_params;
     if (@_ == 1) {
@@ -358,90 +398,6 @@ sub remove_aspect {
     return 1;
 }
 
-=back
-
-=head1 Subject Interface
-
-=over 4
-
-=item subject_class_name
-
-This is constant for a given viewer.  Any assigned subject must be of this 
-class directly or indirectly.
-
-=item subject_id
-
-This indicates WHICH object of the class C<subject_class_name> is visible.
-This value can be changed directly, or indirecly by calling set_subject().
-
-=item get_subject
-
-Returns a reference to the current "subject" object.
-
-=item set_subject
-
-Sets the specified object to be the "subject" of the viewer.
-
-=back
-
-=cut
-
-no warnings;
-*subject_id = sub 
-{
-    if (@_ > 1)
-    {
-        my $self = $_[0];
-        my $new_id = $_[1];
-        my $old_id = $self->{subject_id};
-        if ($old_id ne $new_id)
-        {
-            $self->{subject_id} = $new_id;
-            $self->_bind_subject;
-        }
-    }
-    return $_[0]->{subject_id};
-};
-use warnings;
-
-sub get_subject
-{
-    my $self = shift;    
-    if (my $obj = $self->{subject})
-    {
-        return $obj
-    }    
-    else
-    {
-        my $subject_id = $self->subject_id;
-        return if not defined $subject_id;
-        
-        return $self->subject_class_name->get($self->subject_id);
-    }
-}
-
-
-sub set_subject
-{
-    my $self = shift;    
-    if (@_)
-    {
-        my $new_id = $_[0]->id;
-        $DB::single = 1;
-        $self->subject_id($new_id);
-        my $expected_obj = $self->subject_class_name->get($self->subject_id);
-        $self->{subject} = $_[0] unless $expected_obj eq $_[0];
-        $self->_bind_subject;
-    }
-    if (my $obj = $self->{subject})
-    {
-        return $obj
-    }
-    else
-    {
-        $self->subject_class_name->get($self->subject_id);
-    }
-}
 
 
 =pod
@@ -588,48 +544,4 @@ sub _update_subject_from_widget
 }
 
 1;
-
-
-=pod
-
-=head1 NAME
-
-UR::Object::View - a base class for viewer/editors of UR::Object
-
-=head1 SYNOPSIS
-
-    $object = Acme::Rocket->get($some_id);
-    
-    $viewer = $object->create_viewer(
-        perspective => "flight path"    # optional, default is "default"
-        aspects => \@these_properties,  # optional, default is set in perspective
-        toolkit => "gtk"                # optional, default is set by App::UI
-    );
-    
-    $view->show_modal();
-    
-    
-    $object2 = Acme::Rocket->get($another_id);    
-    
-    $viewer->set_subject($object2);
-    $viewer->show_modal();    
-    
-    $viewer->show();
-    App::UI->event_loop();
-
-    $viewer = $object->create_viewer(
-        perspective => "flight path"    # optional, default is "default"
-        aspects => [
-            'property1',
-            'parts' => {  
-                perspective => "ordered list",
-                aspects => [qw/make model mileage/],
-            },
-            'property3',
-        ]
-        toolkit => "gtk"                # optional, default is set by App::UI
-    );
-
-
-=cut
 
