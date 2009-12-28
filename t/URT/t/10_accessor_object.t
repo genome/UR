@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use Test::More 'no_plan';
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 use UR;
 

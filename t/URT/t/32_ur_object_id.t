@@ -2,6 +2,7 @@
 
 use Test::More tests => 24;
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; 
 use strict;

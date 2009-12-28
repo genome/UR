@@ -3,6 +3,7 @@ use warnings;
 use Test::More tests => 21; 
 
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
