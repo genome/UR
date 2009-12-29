@@ -107,7 +107,7 @@ sub resolve_subclass_for_comparison_operator {
                 $core_comparison_operator = $comparison_operator;
             }
 
-            $suffix = ucfirst(lc($core_comparison_operator));
+            $suffix = $subclass_suffix_for_builtin_symbolic_operator{$core_comparison_operator} || ucfirst(lc($core_comparison_operator));
         }
         $subclass_name = $class . '::' . ($not ? 'Not' : '') . $suffix;
         

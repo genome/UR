@@ -1433,8 +1433,10 @@ sub _extend_sql_for_column_operator_and_value {
             push @sql_params, $val;
         }        
     }
-    elsif ($op eq '[]' or $op =~ /in/i) {
+    elsif ($op =~ /\[\]/ or $op =~ /in/i) {
         no warnings 'uninitialized';
+        my $not = $op =~ m/not/i;
+
         unless (@$val)
         {
             # an empty list was passed-in.
@@ -1453,10 +1455,13 @@ sub _extend_sql_for_column_operator_and_value {
         {
             $sql .= "\n   or " if $cnt++;
             $sql .= $expr_sql;
+            $sql .= ' not ' if $not;
             $sql .= " in (" . join(",",map { "'$_'" } @set) . ")";
         }
         if ($has_null) {
-            $sql .= "\n  or $expr_sql is null"
+            $sql .= "\n  or $expr_sql is ";
+            $sql .= 'not' if ($not);
+            $sql .= ' null';
         }
         $sql .= "\n)\n" if $wrap;
     }       
@@ -1494,7 +1499,7 @@ sub _extend_sql_for_column_operator_and_value {
                    
     } else {
         # Something else?
-        die "Unkown operator $op!";
+        die "Unknown operator $op!";
     }
         
     if (@sql_params > 256) {
