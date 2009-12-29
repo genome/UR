@@ -8,36 +8,67 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object::View',
     has => [
-        buf     => { is => 'Text', is_optional => 1 },
+        content     => { is => 'Text', is_optional => 1 },
+
     ],
 );
 
+sub show {
+    my $self = shift;
+
+    my $content = $self->content;
+    print($$content,"\n");
+}
+
+sub widget {
+    my $self = shift;
+    return $self->content;
+}
 
 sub _create_widget {
     my $self = shift;
-    my $fh = IO::File->new('>-');
-    return $fh;
+    $self->_set_content();
+    $self->_widget(
 }
 
-sub indent {
-
-}
-
-sub _update_widget_from_subject {
+sub _set_subject {
     my $self = shift;
-    my @changes = @_;  # this is not currently resolved and passed-in
-    
-    my $subject = $self->get_subject();
-    my @aspects = $self->get_aspects;
+    $self->_set_content();
+}
+
+sub _add_aspect {
+    my $self = shift;
+    $self->_set_content();
+}
+
+sub _remove_aspect {
+    my $self = shift;
+    $self->_set_content();
+}
+
+sub _update_view_from_subject {
+    my $self = shift;
+    $self->_set_content();
+}
+
+sub _update_subject_from_view {
+    Carp::confess('currently text views are read-only!');
+}
+
+sub _set_content {
+    my $self = shift;
     
     my $text = $self->subject_class_name;
+    
+    my $subject = $self->subject();
     $text .= " with id " . $subject->id if $subject;
 
-    for my $aspect (sort { $a->position <=> $b->position } @aspects) {       
+    my @aspects = $self->aspects;
+    for my $aspect (sort { $a->number <=> $b->number } @aspects) {       
         my $aspect_text = '';
-        my $aspect_name = $aspect->aspect_name;
-        my $aspect_method = $aspect->method;
-        $aspect_text .= "  " . $aspect_name . ": ";
+        my $aspect_label = $aspect->label;
+        my $aspect_method = $aspect->name;
+        $aspect_text .= "  " . $aspect_label . ": ";
         if ($subject) {
             my @value = $subject->$aspect_method;
             if (@value == 1 and ref($value[0]) eq 'ARRAY') {
@@ -45,12 +76,12 @@ sub _update_widget_from_subject {
             }
                 
             # Delegate to a subordinate viewer if need be
-            if ($aspect->delegate_viewer_id) {
-                my $delegate_viewer = $aspect->delegate_viewer;
+            if ($aspect->delegate_view_id) {
+                my $delegate_viewer = $aspect->delegate_view;
                 foreach my $value ( @value ) {
-                    $delegate_viewer->set_subject($value);
+                    $delegate_viewer->subject($value);
                     $delegate_viewer->_update_widget_from_subject();
-                    $value = $delegate_viewer->buf();
+                    $value = $delegate_viewer->content();
                 }
             }
             no warnings 'uninitialized';
@@ -63,30 +94,11 @@ sub _update_widget_from_subject {
         
     }
     # The text widget won't print anything until show(),
-    # so store the data in the buffer for now
-    $self->buf($text);
+    # so store the data in the contentfer for now
+    $self->content($text);
     return 1;
 }
 
-sub _update_subject_from_widget {
-    1;
-}
-
-sub _add_aspect {
-    1;
-}
-
-sub _remove_aspect {
-    1;
-}
-
-sub show {
-    my $self = shift;
-    my $fh = $self->get_widget;
-    return unless $fh;
-
-    $fh->print($self->buf,"\n");
-}
 
 
 

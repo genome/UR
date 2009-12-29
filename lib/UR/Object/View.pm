@@ -13,17 +13,22 @@ class UR::Object::View {
         toolkit                 => { is_abstract => 1, is_constant => 1 },#is_class_wide => 1, is_constant => 1, is_optional => 0 },
     ],
     has_optional => [
-        subject => { id_class_by => 'subject_class_name', id_by => 'subject_id', is => 'UR::Object',  
-                    doc => 'the object being observed' },
-
-        aspects => { is => 'UR::Object::View::Aspect', 
+        subject => { 
+                    is => 'UR::Object',  
+                    id_class_by => 'subject_class_name', id_by => 'subject_id', 
+                    doc => 'the object being observed' 
+        },
+        aspects => { 
+                    is => 'UR::Object::View::Aspect', 
                     reverse_as => 'parent_view',
                     is_many => 1, 
                     specify_by => 'name',
                     order_by => 'number',
-                    doc => 'the aspects of the subject this view renders' },
-
-        _widget  => { doc => 'the object/data native to the specified toolkit which does the actual visualization' },
+                    doc => 'the aspects of the subject this view renders' 
+        },
+        _widget  => { 
+            doc => 'the object/data native to the specified toolkit which does the actual visualization' 
+        },
     ],
     has_many_optional => [
         aspect_names    => { via => 'aspects', to => 'name' },

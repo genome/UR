@@ -61,7 +61,13 @@ sub create {
         return;
     }
 
+    return $self; 
+}
+
+sub _create_delegate_view {
+    my $self = shift;
     my $parent_view = $self->parent_view;
+    my $name = $self->name;
     my $subject_class_name = $parent_view->subject_class_name;
     my $property_meta = $subject_class_name->__meta__->property($name);
     if ($property_meta) {
@@ -91,7 +97,6 @@ sub create {
             return;
         }
     }
-    
 }
 
 1;
@@ -100,7 +105,35 @@ sub create {
 
 =head1 NAME
 
-UR::Object::View::Aspect - a base class for a viewer which renders a particular aspect of its subject
+UR::Object::View::Aspect - a specification for one aspect of a view 
+
+=head1 SYNOPSIS
+
+ my $v = $o->create_view(
+   perspective => 'default',
+   toolkit => 'xml',
+   aspects => [
+     'id',
+     'name',
+     'title',
+     { 
+        name => 'department', 
+        perspective => 'logo'
+     },
+     { 
+        name => 'boss',
+        label => 'Supervisor',
+        aspects => [
+            'name',
+            'title',
+            { 
+              name => 'subordinates',
+              perspective => 'graph by title'
+            }
+        ]
+     }
+   ]
+ );
 
 =cut
 
