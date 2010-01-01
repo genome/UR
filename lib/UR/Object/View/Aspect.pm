@@ -64,7 +64,7 @@ sub create {
     return $self; 
 }
 
-sub _create_delegate_view {
+sub generate_delegate_view {
     my $self = shift;
     my $parent_view = $self->parent_view;
     my $name = $self->name;
@@ -73,29 +73,52 @@ sub _create_delegate_view {
     if ($property_meta) {
         my $aspect_type = $property_meta->data_type;
         if ($aspect_type->can("__meta__")) {
-            my $delegate_view = $aspect_type->create_view(
+            my $aspect_meta = $aspect_type->__meta__;
+            
+            my $delegate_view ||= $aspect_type->create_view(
                 subject_class_name => $aspect_type,
                 perspective => $parent_view->perspective,
                 toolkit => $parent_view->toolkit,
-            );
-            $delegate_view ||= $aspect_type->create_view(
-                subject_class_name => $aspect_type,
-                toolkit => $parent_view->toolkit,
+                parent_view => $parent_view,
+                aspects => [],
             );
             unless ($delegate_view) {
                 $self->error_message("Error creating delegate view for $name ($aspect_type)!");
                 $self->delete;
                 return;
             }
+            my @default_aspects_params = $delegate_view->_resolve_default_aspects();
+            
+            for my $aspect_params (@default_aspects_params) {
+                my $aspect_param_name = (ref($aspect_params) ?  $aspect_params->{name} : $aspect_params);
+                my $aspect_property_meta = $aspect_meta->property($aspect_param_name);
+                no strict; no warnings;
+                if ($aspect_property_meta->reverse_as() eq $name) {
+                    print "skip $aspect_param_name reverses as  $name!\n";
+                }
+                elsif ($property_meta=>reverse_as eq $aspect_param_name) {
+                    print "skip $aspect_param_name has $name reverse as it!\n";
+                }
+                else {
+                    print "kep $aspect_param_name!\n";
+                    $delegate_view->add_aspect(ref($aspect_params) ? %$aspect_params : $aspect_params);
+                }
+            }
             $self->delegate_view($delegate_view);
+            print "made view $delegate_view for $aspect_type\n";
+            return $delegate_view;
+        }
+        else {
+            die "$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!"; 
         }
     }
     else {
         unless ($subject_class_name->can($name)) {
             $self->error_message("No property/method $name found on $subject_class_name!  Invalid aspect!");
             $self->delete;
-            return;
+            die $self->error_message; 
         }
+        die "property $name on $subject_class_name has no meta?";
     }
 }
 

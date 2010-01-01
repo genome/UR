@@ -3,8 +3,8 @@ use strict;
 use warnings;
 use Test::More tests => 10;
 
-#use File::Basename;
-#use lib File::Basename::dirname(__FILE__)."/../..";
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
 
 use above 'UR';
 
@@ -106,8 +106,9 @@ is("@an","name age cats","got expected aspect list @an");
 my $s = $pv3->subject;
 is($s, $p, "subject is the original model object");
 
-my $w = $pv3->widget;
-print $w->getlines,"\n";
+$pv3->show;
+#my $c = $pv3->content;
+#note($c);
 
 #######
 
