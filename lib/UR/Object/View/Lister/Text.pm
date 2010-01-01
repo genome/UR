@@ -24,28 +24,28 @@ sub _update_widget_from_subject {
     my @changes = @_;  # this is not currently resolved and passed-in
     
 $DB::single=1;
-    my $subject = $self->get_subject();
+    my $subject = $self->subject();
     my $subject_class_meta = $subject->__meta__;
-    my @aspects = $self->get_aspects;
+    my @aspects = $self->aspects;
     
     my %data_for_this_object;
     my(%aspects_requiring_joins_by_name,%aspects_requiring_joins_by_via);
-    my %column_for_aspect_name;
+    my %column_for_label;
     for (my $i = 0; $i < @aspects; $i++) {
         my $aspect = $aspects[$i];
-        my $aspect_name = $aspect->aspect_name;
-        $column_for_aspect_name{$aspect_name} = $i;
+        my $label = $aspect->label;
+        $column_for_label{$label} = $i;
 
-        my $property_meta = $subject_class_meta->property_meta_for_name($aspect_name);
+        my $property_meta = $subject_class_meta->property_meta_for_name($label);
         if (my $via = $property_meta->via and $property_meta->is_many) {
-            $aspects_requiring_joins_by_name{$aspect_name} = $via;
+            $aspects_requiring_joins_by_name{$label} = $via;
             $aspects_requiring_joins_by_via{$via} ||= [];
-            push @{$aspects_requiring_joins_by_via{$via}}, $aspect_name;
+            push @{$aspects_requiring_joins_by_via{$via}}, $label;
         }
 
-        my $aspect_method = $aspect->method;
+        my $aspect_name = $aspect->name;
         if ($subject) {
-            my @value = $subject->$aspect_method;
+            my @value = $subject->$aspect_name;
             if (@value == 1 and ref($value[0]) eq 'ARRAY') {
                 @value = @{$value[0]};
             }
@@ -61,9 +61,9 @@ $DB::single=1;
             }
 
             if (@value == 1) {
-                $data_for_this_object{$aspect_name} = $value[0];
+                $data_for_this_object{$label} = $value[0];
             } else {
-                $data_for_this_object{$aspect_name} = \@value;
+                $data_for_this_object{$label} = \@value;
             }
         }
     }
@@ -76,13 +76,13 @@ $DB::single=1;
     # fill in the first row of data
     my @retval = ();
     foreach my $aspect ( @aspects ) {
-        my $aspect_name = $aspect->aspect_name;
-        my $col = $column_for_aspect_name{$aspect_name};
-        if (ref($data_for_this_object{$aspect_name})) {
+        my $label = $aspect->label;
+        my $col = $column_for_label{$label};
+        if (ref($data_for_this_object{$label})) {
             # it's a multi-value
-            $retval[0]->[$col] = shift @{$data_for_this_object{$aspect_name}};
+            $retval[0]->[$col] = shift @{$data_for_this_object{$label}};
         } else {
-            $retval[0]->[$col] = $data_for_this_object{$aspect_name};
+            $retval[0]->[$col] = $data_for_this_object{$label};
         }
     }
 
@@ -99,7 +99,7 @@ $DB::single=1;
                     $data = $data_for_this_object{$prop};
                     $data_for_this_object{$prop} = [];
                 }
-                $this_row[$column_for_aspect_name{$prop}] = $data;
+                $this_row[$column_for_label{$prop}] = $data;
             }
             last unless @this_row;
             push @retval, \@this_row;
@@ -134,7 +134,7 @@ sub _remove_aspect {
 
 sub show {
     my $self = shift;
-    my $fh = $self->get_widget;
+    my $fh = $self->widget;
     return unless $fh;
 
     $fh->print($self->buf,"\n");

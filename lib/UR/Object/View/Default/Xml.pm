@@ -19,19 +19,19 @@ sub _update_widget_from_subject {
     my $self = shift;
     my @changes = @_;  # this is not currently resolved and passed-in
     
-    my $subject = $self->get_subject();
-    my @aspects = $self->get_aspects;
+    my $subject = $self->subject();
+    my @aspects = $self->aspects;
     
     my $text = $self->subject_class_name;
     $text .= " with id " . $subject->id if $subject;
 
     for my $aspect (sort { $a->position <=> $b->position } @aspects) {       
         my $aspect_text = '';
-        my $aspect_name = $aspect->aspect_name;
-        my $aspect_method = $aspect->method;
-        $aspect_text .= "\t" . $aspect_name . ": ";
+        my $label = $aspect->label;
+        my $aspect_name = $aspect->name;
+        $aspect_text .= "\t" . $label . ": ";
         if ($subject) {
-            my @value = $subject->$aspect_method;
+            my @value = $subject->$aspect_name;
             if (@value == 1 and ref($value[0]) eq 'ARRAY') {
                 @value = @{$value[0]};
             }
@@ -74,7 +74,7 @@ sub _remove_aspect {
 
 sub show {
     my $self = shift;
-    my $fh = $self->get_widget;
+    my $fh = $self->widget;
     return unless $fh;
 
     $fh->print($self->buf,"\n");

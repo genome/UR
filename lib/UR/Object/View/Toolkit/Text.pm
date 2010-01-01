@@ -18,7 +18,7 @@ our $VERSION = $UR::VERSION;;
 sub show_viewer {
     my $class = shift;
     my $viewer = shift;
-    my $widget = $viewer->get_widget;
+    my $widget = $viewer->widget;
     return $$widget;
 }
 
@@ -28,7 +28,7 @@ return undef;
 
     my $class = shift;
     my $viewer = shift;
-    my $widget = $viewer->get_widget;
+    my $widget = $viewer->widget;
     print "DEL: $widget\n";
     return 1;
 }
@@ -39,7 +39,7 @@ return undef;
 
     my $class = shift;
     my $viewer = shift;
-    my $widget = $viewer->get_widget;
+    my $widget = $viewer->widget;
     print "WIN: $widget\n";
     return 1;
 }

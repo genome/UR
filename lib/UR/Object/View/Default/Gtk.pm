@@ -18,17 +18,17 @@ sub _update_widget_from_subject {
     my $self = shift;
     my @changes = @_;  # this is not currently resolved and passed-in
     
-    my $subject = $self->get_subject();
-    my @aspects = $self->get_aspects;
-    my $widget = $self->get_widget();
+    my $subject = $self->subject();
+    my @aspects = $self->aspects;
+    my $widget = $self->widget();
     
     my $text = $self->subject_class_name;
     $text .= " with id " . $subject->id . "\n" if $subject;
     for my $aspect (sort { $a->position <=> $b->position } @aspects) {       
-        my $aspect_name = $aspect->aspect_name;
-        $text .= "\n" . $aspect_name . ": ";
+        my $label = $aspect->label;
+        $text .= "\n" . $label . ": ";
         if ($subject) {
-            my @value = $subject->$aspect_name;
+            my @value = $subject->$label;
             $text .= join(", ", @value);
         }
         else {

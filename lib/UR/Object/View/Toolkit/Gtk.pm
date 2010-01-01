@@ -40,7 +40,7 @@ sub hide_viewer {
     my $class = shift;
     my $viewer = shift;
     $class->delete_window_around_viewer($viewer) or return;
-    my $widget = $viewer->get_widget;
+    my $widget = $viewer->widget;
     $widget->hide();
     return 1;
 }
@@ -58,12 +58,12 @@ sub create_window_for_viewer {
     $win->set_title("test title");
     
     # Extract the widget underlying the viewer and put it in the window.
-    my $widget = $viewer->get_widget;
+    my $widget = $viewer->widget;
     Carp::confess($widget) unless($widget);
     $win->add($widget);
     
     # Put the window in the hash of editors.
-    my $subject = $viewer->get_subject();
+    my $subject = $viewer->subject();
     $open_editors{$viewer} = $win;
     
     # Show the editor.        
@@ -94,8 +94,8 @@ sub create_window_for_viewer {
 sub delete_window_around_viewer {
     my $class = shift;
     my $viewer = shift;
-    my $subject = $viewer->get_subject;
-    my $widget = $viewer->get_widget;
+    my $subject = $viewer->subject;
+    my $widget = $viewer->widget;
     my $win = delete $open_editors{$viewer};
     $win->remove($widget);
     $win->destroy;

@@ -3,10 +3,13 @@ package UR::Object::View::Default::Gtk2;
 use strict;
 use warnings;
 
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
+class UR::Object::View::Default::Gtk2 {
     is => 'UR::Object::View',
-);
+    has_constant => [
+        perspective => 'default',
+        toolkit => 'gtk2'
+    ],
+};
 
 sub _create_widget {
     my $self = shift;
@@ -16,17 +19,17 @@ sub _create_widget {
 
 sub _update_widget_from_subject {
     my $self = shift;
-    my $subject = $self->get_subject();
-    my @aspects = $self->get_aspects;
-    my $widget = $self->get_widget();
+    my $subject = $self->subject();
+    my @aspects = $self->aspects;
+    my $widget = $self->widget();
     
     my $text = $self->subject_class_name;
     $text .= " with id " . $subject->id . "\n" if $subject;
     for my $aspect (sort { $a->position <=> $b->position } @aspects) {       
-        my $aspect_name = $aspect->aspect_name;
-        $text .= "\n" . $aspect_name . ": ";
+        my $label = $aspect->label;
+        $text .= "\n" . $label . ": ";
         if ($subject) {
-            my @value = $subject->$aspect_name;
+            my @value = $subject->$label;
             $text .= join(", ", @value);
         }
         else {
