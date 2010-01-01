@@ -49,7 +49,21 @@ sub create {
     my $class = shift;    
 
     my $params = $class->define_boolexpr(@_);
-    my $expected_class = $class->_resolve_view_class_for_params($params);
+    
+    # set values not specified in the params which can be inferred from the class name
+    my ($expected_class,$expected_perspective,$expected_toolkit) = ($class =~ /^(.*)::View::(.*?)::([^\:]+)$/);
+    unless ($params->specifies_value_for('subject_class_name')) {
+        $params = $params->add_filter(subject_class_name => $expected_class);
+    }
+    unless ($params->specifies_value_for('perspective')) {
+        $params = $params->add_filter(perspective => $expected_perspective);
+    }
+    unless ($params->specifies_value_for('toolkit')) {
+        $params = $params->add_filter(toolkit => $expected_toolkit);
+    }
+
+    # now go the other way, and use both to infer a final class name
+    $expected_class = $class->_resolve_view_class_for_params($params);
     unless ($expected_class) {
         die "Failed to resolve a subclass for " . __PACKAGE__ 
         . " from parameters.  Expected subject_class_name, perspective,"
@@ -76,7 +90,6 @@ sub create {
     }
 
     unless ($params->specifies_value_for('aspects')) {
-        warn "no aspects!";
         my @aspect_specs = $self->_resolve_default_aspects();
         for my $aspect_spec (@aspect_specs) {
             my $aspect = $self->add_aspect(ref($aspect_spec) ? %$aspect_spec : $aspect_spec);
@@ -96,7 +109,7 @@ sub _resolve_view_class_for_params {
     # The subject must be explicitly of class "SubjectClassName" or some subclass of it.
     my $class = shift;
     my %params = $class->define_boolexpr(@_)->params_list;
-    
+   
     my $subject_class_name = delete $params{subject_class_name};
     my $perspective = delete $params{perspective};
     my $toolkit = delete $params{toolkit};
@@ -158,7 +171,6 @@ sub _resolve_default_aspects {
         grep { not $_->implied_by }
         UR::Object::Property->get(class_name => \@c);
     my @aspects = sort keys %aspects;
-    print "DA @aspects\n"; 
     return @aspects;
 }
 
