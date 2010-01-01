@@ -1,10 +1,10 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 10;
+use Test::More tests => 24;
 
 use File::Basename;
-use lib File::Basename::dirname(__FILE__)."/../..";
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 
 use above 'UR';
 
