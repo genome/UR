@@ -48,7 +48,6 @@ sub _generate_content_for_aspect {
 
     my $self = shift;
     my $aspect = shift;
-    my @value = @_;
 
     my $subject = $self->subject;  
     my $aspect_name = $aspect->name;
