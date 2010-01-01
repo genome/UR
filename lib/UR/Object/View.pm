@@ -70,13 +70,11 @@ sub create {
         perspective         => $self->perspective,
         toolkit             => $self->toolkit
     );
-    print "expected class is $expected_class\n";
     unless ($expected_class and $expected_class eq $class) {
         $expected_class ||= '<uncertain>';
         die "constructed a $class object but properties indicate $expected_class should have been created.";
     }
 
-    print "checking aspects for $class\n";
     unless ($params->specifies_value_for('aspects')) {
         warn "no aspects!";
         my @aspect_specs = $self->_resolve_default_aspects();
@@ -154,11 +152,13 @@ sub _resolve_default_aspects {
     my $parent_view = $self->parent_view;
     my $subject_class_name = $self->subject_class_name;
     my $meta = $subject_class_name->__meta__;
-    my @aspects =  
-        sort 
-        map { $_->property_name }
-        grep { not $_->implied_by } 
-        $meta->properties(); 
+    my @c = ($meta->class_name, $meta->ancestry_class_names);
+    my %aspects =  
+        map { $_->property_name => 1 }
+        grep { not $_->implied_by }
+        UR::Object::Property->get(class_name => \@c);
+    my @aspects = sort keys %aspects;
+    print "DA @aspects\n"; 
     return @aspects;
 }
 
@@ -226,28 +226,28 @@ sub _bind_subject {
     # Make a new subscription for this subject
     my $subscription = $subject->create_subscription(
         callback => sub {
-            $self->_update_widget_from_subject(@_);
+            $self->_update_view_from_subject(@_);
         }
     );
     $observer_data->{$subject} = $subscription;
     
     # Set the viewer to show initial data.
-    $self->_update_widget_from_subject;
+    $self->_update_view_from_subject;
     
     return 1;
 }
 
-sub _update_widget_from_subject {
+sub _update_view_from_subject {
     # This is called whenever the view changes, or the subject changes.
     # It passes the change(s) along, so that the update can be targeted, if the developer chooses.
-    Carp::confess("The _update_widget_from_subject method must be implemented for all concreate "
-        . " viewer subclasses.  No _update_subject_from_widgetfor " 
+    Carp::confess("The _update_view_from_subject method must be implemented for all concreate "
+        . " viewer subclasses.  No _update_subject_from_viewfor " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
-sub _update_subject_from_widget {
-    Carp::confess("The _update_subject_from_widget method must be implemented for all concreate "
-        . " viewer subclasses.  No _update_subject_from_widgetfor " 
+sub _update_subject_from_view {
+    Carp::confess("The _update_subject_from_view method must be implemented for all concreate "
+        . " viewer subclasses.  No _update_subject_from_viewfor " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
@@ -458,12 +458,12 @@ in custom viewers.  Implementations which _do_ override this should take
 an undef subject, and be sure to un-bind a previously existing subject if 
 there is one set. 
 
-=item _update_widget_from_subject
+=item _update_view_from_subject
 
 If and when the property values of the subject change, this method will be called on 
 all viewers which render the changed aspect of the subject.
 
-=item _update_subject_from_widget
+=item _update_subject_from_view
 
 When the widget changes, it should call this method to save the UI changes
 to the subject.  This is not applicable to read-only views.

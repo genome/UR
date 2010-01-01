@@ -19,7 +19,7 @@ sub _create_widget {
     return $fh;
 }
 
-sub _update_widget_from_subject {
+sub _update_view_from_subject {
     my $self = shift;
     my @changes = @_;  # this is not currently resolved and passed-in
     
@@ -55,7 +55,7 @@ $DB::single=1;
                 my $delegate_viewer = $aspect->delegate_viewer;
                 foreach my $value ( @value ) {
                     $delegate_viewer->set_subject($value);
-                    $delegate_viewer->_update_widget_from_subject();
+                    $delegate_viewer->_update_view_from_subject();
                     $value = $delegate_viewer->buf();
                 }
             }
@@ -120,7 +120,7 @@ $DB::single=1;
     return 1;
 }
 
-sub _update_subject_from_widget {
+sub _update_subject_from_view {
     1;
 }
 

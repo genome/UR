@@ -65,6 +65,7 @@ sub create {
 }
 
 sub generate_delegate_view {
+no warnings;
     my $self = shift;
     my $parent_view = $self->parent_view;
     my $name = $self->name;
@@ -88,24 +89,23 @@ sub generate_delegate_view {
                 return;
             }
             my @default_aspects_params = $delegate_view->_resolve_default_aspects();
-            
+           
+            # add aspects which do not "go backward"
+            # no one wants to see an order, with a list of line items, which re-reprsent thier order on each
             for my $aspect_params (@default_aspects_params) {
                 my $aspect_param_name = (ref($aspect_params) ?  $aspect_params->{name} : $aspect_params);
                 my $aspect_property_meta = $aspect_meta->property($aspect_param_name);
                 no strict; no warnings;
                 if ($aspect_property_meta->reverse_as() eq $name) {
-                    print "skip $aspect_param_name reverses as  $name!\n";
+                    
                 }
-                elsif ($property_meta=>reverse_as eq $aspect_param_name) {
-                    print "skip $aspect_param_name has $name reverse as it!\n";
+                elsif ($property_meta->reverse_as eq $aspect_param_name) {
                 }
                 else {
-                    print "kep $aspect_param_name!\n";
                     $delegate_view->add_aspect(ref($aspect_params) ? %$aspect_params : $aspect_params);
                 }
             }
             $self->delegate_view($delegate_view);
-            print "made view $delegate_view for $aspect_type\n";
             return $delegate_view;
         }
         else {

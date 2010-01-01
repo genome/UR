@@ -17,7 +17,7 @@ sub _create_widget {
     return $label;
 }
 
-sub _update_widget_from_subject {
+sub _update_view_from_subject {
     my $self = shift;
     my $subject = $self->subject();
     my @aspects = $self->aspects;
@@ -40,16 +40,16 @@ sub _update_widget_from_subject {
     return 1;
 }
 
-sub _update_subject_from_widget {
+sub _update_subject_from_view {
     Carp::confess("This widget shouldn't be able to write to the object, it's a label?  How did I get called?");
 }
 
 sub _add_aspect {
-    shift->_update_widget_from_subject;
+    shift->_update_view_from_subject;
 }
 
 sub _remove_aspect {
-    shift->_update_widget_from_subject;
+    shift->_update_view_from_subject;
 }
 
 1;
