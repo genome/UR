@@ -17,6 +17,7 @@ $Data::Dumper::Useperl = 1;
 }
 
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use UR::Change;

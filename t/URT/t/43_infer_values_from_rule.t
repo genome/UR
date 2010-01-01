@@ -4,6 +4,7 @@ use Test::More;
 plan tests => 27;
 
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 

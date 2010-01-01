@@ -27,6 +27,7 @@ features (
         'DBD::SQLite'         => '1.14',
         'Sub::Name'           => '0.04',
         'Sub::Install'        => '0.924',
+        'Path::Class'         => '',
     ],
     'Moose' => [
         #-tests  => [ [ 't/URT/t/00-load.t' ], <t/URT/t/*-moose-*.t> ],

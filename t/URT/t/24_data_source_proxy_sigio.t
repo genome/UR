@@ -5,6 +5,7 @@ use Test::More;
 plan skip_all => "Broken with new data source changes.";
 
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
 

@@ -918,6 +918,8 @@ sub _normalize_property_description {
         [ is_id                           => qw//],
         [ id_by                           => qw//], 
         [ id_class_by                     => qw//],
+        [ specify_by                      => qw//],
+        [ order_by                        => qw//],
         [ via                             => qw//], 
         [ to                              => qw//],             
         [ where                           => qw/restrict filter/],
@@ -1041,6 +1043,14 @@ sub _normalize_property_description {
     #        }
     #        %$property_meta = $class->_normalize_property_description($property_meta->{property_name},$property_meta,\%new_class);
     #    }
+
+    if ($new_property{order_by} and not $new_property{is_many}) {
+        die "Cannot use order_by except on is_many properties!";
+    }
+
+    if ($new_property{specify_by} and not $new_property{is_many}) {
+        die "Cannot use specify_by except on is_many properties!";
+    }
 
     if (my @unknown = keys %old_property) {
         die "unknown meta-attributes present for $class_name $property_name: @unknown\n";

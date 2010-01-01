@@ -4,6 +4,7 @@ use warnings;
 use IO::Socket;
 use Data::Dumper;
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
 use Test::More tests => 774;

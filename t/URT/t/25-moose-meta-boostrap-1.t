@@ -17,6 +17,7 @@ sub class_isa_ok {
 }
 
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
 

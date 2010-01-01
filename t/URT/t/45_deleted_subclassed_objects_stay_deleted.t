@@ -4,6 +4,7 @@ use warnings;
 use Test::More tests => 11;
 
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; # dummy namespace
 

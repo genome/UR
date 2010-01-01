@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use Test::More 'no_plan';
 use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
 my ($p1,$p2,$p3,$p4,$p5,$p6,$p7,@obj,@got,@expected);
