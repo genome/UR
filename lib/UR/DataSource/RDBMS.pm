@@ -2155,7 +2155,9 @@ sub _sync_database {
                 # This is a real error.  Stop retrying and report.
                 for my $error (@failures)
                 {
-                    $self->error_message($self->id . ": Error executing SQL:\n$error->{cmd}{sql}\n" . $error->{error_message} . "\n");
+                    $self->error_message($self->id . ": Error executing SQL:\n$error->{cmd}{sql}\n" .
+                                         "PARAMS: '" . join("', '",@{$error->{cmd}{params}}) . "'\n" .
+                                         $error->{error_message} . "\n");
                 }
                 last;
             }
@@ -2175,7 +2177,7 @@ sub _sync_database {
 
     # Rollback to savepoint if there are errors.
     if (@failures) {
-        if ($savepoint eq "NONE") {
+        if (!$savepoint or $savepoint eq "NONE") {
             # A failure on a database which does not support savepoints.
             # We must rollback the entire transacation.
             # This is only a problem for a mixed raw-sql and UR::Object environment.
