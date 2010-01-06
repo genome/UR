@@ -34,6 +34,14 @@ if ($working_dir !~ m/\/URT/) {
     }
 }
 
+# Clear out any metaDB info that may be left over from some
+# prior test that mistakenly saved metaDB changes
+$DB::single=1;
+my $metadb = $working_dir .  "/DataSource/Meta.sqlite3";
+my $metadump = $working_dir . "/DataSource/Meta.sqlite3-dump";
+unlink($metadb);
+unlink($metadump);
+
 
 # Make a fresh sqlite database in tmp.
 
@@ -43,6 +51,8 @@ my $path = $INC{"UR.pm"};
 system "chmod -R o+w $path";
 
 my $sqlite_file = $ds_class->server;
+
+
 
 cleanup_files();
 
