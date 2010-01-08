@@ -2,8 +2,6 @@ use strict;
 use warnings;
 
 use File::Basename;
-use lib File::Basename::dirname(__FILE__)."/../..";
-use lib File::Basename::dirname(__FILE__)."/../../../lib/";
 
 use URT;
 use Test::More 'no_plan';
@@ -22,8 +20,6 @@ END {
 }
 
 setup_classes_and_db();
-
-#test failure conditions
 
 my @circular = URT::Circular->get();
 my $sqlite_ds = UR::Context->resolve_data_source_for_object($circular[0]);
@@ -59,7 +55,11 @@ eval{
 
 ok( !$@, 'no commit errors on deleting bridge entries w/ nullable foreign keys primary key' );
 
-my @left = URT::Left->get();
+my @bridges_check = URT::Bridge->get();
+
+is (scalar @bridges_check, 0, "couldn't retrieve deleted bridges");
+
+my @left = URT::Left->get(id=>[1..5]);
 my @right = URT::Right->get();
 
 while (my $left = shift @left){
