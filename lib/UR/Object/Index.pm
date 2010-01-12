@@ -125,7 +125,7 @@ sub get_objects_matching
                     my @value = grep { length($_) > 0 } @$value;
                     @hr = grep { $_ } map { @$_{@value} } @hr;
                 }
-                elsif ($op =~ /^not in$/i)
+                elsif ($op =~ m/^not \[\]/i or $op =~ /^not in$/i)
                 {                
                     $value = $value->{value};
                     

@@ -1466,8 +1466,10 @@ sub _extend_sql_for_column_operator_and_value {
             push @sql_params, $val;
         }        
     }
-    elsif ($op eq '[]' or $op =~ /in/i) {
+    elsif ($op =~ /\[\]/ or $op =~ /in/i) {
         no warnings 'uninitialized';
+        my $not = $op =~ m/not/i;
+
         unless (@$val)
         {
             # an empty list was passed-in.
@@ -1486,10 +1488,13 @@ sub _extend_sql_for_column_operator_and_value {
         {
             $sql .= "\n   or " if $cnt++;
             $sql .= $expr_sql;
+            $sql .= ' not ' if $not;
             $sql .= " in (" . join(",",map { "'$_'" } @set) . ")";
         }
         if ($has_null) {
-            $sql .= "\n  or $expr_sql is null"
+            $sql .= "\n  or $expr_sql is ";
+            $sql .= 'not' if ($not);
+            $sql .= ' null';
         }
         $sql .= "\n)\n" if $wrap;
     }       
@@ -1527,7 +1532,7 @@ sub _extend_sql_for_column_operator_and_value {
 
     } else {
         # Something else?
-        die "Unkown operator $op!";
+        die "Unknown operator $op!";
     }
 
     if (@sql_params > 256) {
@@ -2183,7 +2188,9 @@ sub _sync_database {
                 # This is a real error.  Stop retrying and report.
                 for my $error (@failures)
                 {
-                    $self->error_message($self->id . ": Error executing SQL:\n$error->{cmd}{sql}\n" . $error->{error_message} . "\n");
+                    $self->error_message($self->id . ": Error executing SQL:\n$error->{cmd}{sql}\n" .
+                                         "PARAMS: '" . join("', '",@{$error->{cmd}{params}}) . "'\n" .
+                                         $error->{error_message} . "\n");
                 }
                 last;
             }
@@ -2203,7 +2210,7 @@ sub _sync_database {
 
     # Rollback to savepoint if there are errors.
     if (@failures) {
-        if ($savepoint eq "NONE") {
+        if (!$savepoint or $savepoint eq "NONE") {
             # A failure on a database which does not support savepoints.
             # We must rollback the entire transacation.
             # This is only a problem for a mixed raw-sql and UR::Object environment.
