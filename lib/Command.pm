@@ -399,8 +399,8 @@ sub command_name
             else {
                 my ($b2,$e2) = _base_command_class_and_extension($base);
                 if ($b2) {
-                    $class = $b2;
                     $ext = $class->_command_name_for_class_word($e2) . ' ' . $ext;
+                    $base = $b2;
                     redo;
                 }
                 else {
