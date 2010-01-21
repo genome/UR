@@ -6,7 +6,7 @@ use warnings;
 #BEGIN { $ENV{UR_CONTEXT_BASE} = "URT::Context::Testing" };
 
 use File::Basename;
-use lib File::Basename::dirname(__FILE__)."/../../../lib";
+#use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use DBI;

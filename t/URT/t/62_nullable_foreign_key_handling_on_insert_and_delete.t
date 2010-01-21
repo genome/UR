@@ -2,11 +2,12 @@ use strict;
 use warnings;
 
 use File::Basename;
-
+use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
+
 use Test::More 'no_plan';
 
-use URT::DataSource::SomeSQLite;
+use URT::DataSource::CircFk;
 use Data::Dumper;
 
 =cut
@@ -16,7 +17,7 @@ use Data::Dumper;
 =cut
 
 END {
-    unlink URT::DataSource::SomeSQLite->server;
+    unlink URT::DataSource::CircFk->server;
 }
 
 setup_classes_and_db();
@@ -156,7 +157,7 @@ sub sql_has_update_and_delete{
 
 }
 sub setup_classes_and_db {
-    my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+    my $dbh = URT::DataSource::CircFk->get_default_dbh;
 
     ok($dbh, 'Got DB handle');
 
@@ -231,7 +232,7 @@ sub setup_classes_and_db {
             parent_id => { is => 'Integer'},
             parent => {is => 'URT::Circular', id_by => 'parent_id'}
         ],
-        data_source => 'URT::DataSource::SomeSQLite',
+        data_source => 'URT::DataSource::CircFk',
         table_name => 'circular',
     ), 'Defined URT::Circular class');
     ok(UR::Object::Type->define(
@@ -243,7 +244,7 @@ sub setup_classes_and_db {
             right_id => { is => 'Integer' },
             right => { is => 'URT::Right', id_by => 'right_id'},
         ],
-        data_source => 'URT::DataSource::SomeSQLite',
+        data_source => 'URT::DataSource::CircFk',
         table_name => 'left',
     ), 'Defined URT::Left class');
     ok(UR::Object::Type->define(
@@ -255,7 +256,7 @@ sub setup_classes_and_db {
             left_id => { is => 'Integer' },
             left => { is => 'URT::Left', id_by => 'left_id'},
         ],
-        data_source => 'URT::DataSource::SomeSQLite',
+        data_source => 'URT::DataSource::CircFk',
         table_name => 'right',
     ), 'Defined URT::Right class');
     ok(UR::Object::Type->define(
@@ -267,7 +268,7 @@ sub setup_classes_and_db {
                 beta_id => { is => 'Integer' }, 
                 beta => { is => 'URT::Beta', id_by => 'beta_id'},
             ],
-        data_source => 'URT::DataSource::SomeSQLite',
+        data_source => 'URT::DataSource::CircFk',
         table_name => 'alpha',
     ), 'Defined URT::Alpha class');
     ok(UR::Object::Type->define(
@@ -279,7 +280,7 @@ sub setup_classes_and_db {
                 gamma_id => { is => 'Integer' }, 
                 gamma => { is => 'URT::Gamma', id_by => 'gamma_id'},
             ],
-        data_source => 'URT::DataSource::SomeSQLite',
+        data_source => 'URT::DataSource::CircFk',
         table_name => 'beta',
     ), 'Defined URT::Beta class');
     ok(UR::Object::Type->define(
@@ -290,7 +291,7 @@ sub setup_classes_and_db {
             has => [
                 type => { is => 'Text' }, 
             ],
-        data_source => 'URT::DataSource::SomeSQLite',
+        data_source => 'URT::DataSource::CircFk',
         table_name => 'gamma',
     ), 'Defined URT::Alpha class');
     ok(UR::Object::Type->define(
@@ -299,7 +300,7 @@ sub setup_classes_and_db {
                 left_id => {is => 'Integer'},
                 right_id => {is => 'Integer'}
             ],
-        data_source => 'URT::DataSource::SomeSQLite',
+        data_source => 'URT::DataSource::CircFk',
         table_name => 'bridge',
     ), 'Defined URT::Bridge class');
 }
