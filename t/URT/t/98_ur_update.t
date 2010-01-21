@@ -35,6 +35,14 @@ if ($working_dir !~ m/\/URT/) {
     }
 }
 
+# Clear out any metaDB info that may be left over from some
+# prior test that mistakenly saved metaDB changes
+$DB::single=1;
+my $metadb = $working_dir .  "/DataSource/Meta.sqlite3";
+my $metadump = $working_dir . "/DataSource/Meta.sqlite3-dump";
+unlink($metadb);
+unlink($metadump);
+
 
 # Make a fresh sqlite database in tmp.
 
@@ -45,10 +53,14 @@ system "chmod -R o+w $path";
 
 my $sqlite_file = $ds_class->server;
 
+
+
 cleanup_files();
 
 sub cleanup_files {
     unlink $sqlite_file;
+    $DB::single = 1;
+    my $namespace_dir = URT->get_base_directory_name;
 
     for my $filename (
         qw|
@@ -60,9 +72,9 @@ sub cleanup_files {
             .deleted/Person.pm
         |
     ) {
-        if (-e $filename) {
+        if (-e "$namespace_dir/$filename") {
             #warn "unlinking $filename\n";
-            unlink $filename;
+            unlink "$namespace_dir/$filename";
         }
     }
 }

@@ -1649,7 +1649,7 @@ sub _sync_filesystem {
                 my $old_module_path = $class_obj->module_path;
                 my $new_module_path = $old_module_path;
                 $new_module_path =~ s/\/$namespace\//\/$namespace\/\.deleted\//;
-                $status_message_this_update .= ' (moving $old_module_path $new_module_path)';
+                $status_message_this_update .= " (moving $old_module_path to $new_module_path)";
                 rename $old_module_path, $new_module_path;
 
                 UR::Context::Transaction->log_change($class_obj, $class_obj->class_name, $class_obj->id, 'rewrite_module_header', Data::Dumper::Dumper({path => $new_module_path, data => $old_file_data}));

@@ -680,14 +680,22 @@ sub mk_object_set_accessors {
     
     my $rule_resolver = sub {
         my ($obj) = @_;        
+        my $loading_r_class_error = '';
         if (defined $r_class_name) {
             eval {
                 eval "use $r_class_name";
-                die $@ unless $r_class_name->can('class');
+                if ($@) {
+                    # Don't die yet.  The named class may not have a file associated with it
+                    $loading_r_class_error = "Couldn't load class $r_class_name: $@";
+                    $@ = '';
+                }
+
                 $r_class_name->class;
                 $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
             };
-            die $@ if $@;
+            if ($@) {
+                $loading_r_class_error .= "Couldn't get class object for $r_class_name: $@";
+            }
         }
         if ($r_class_meta and not $reverse_as) {
             # we have a real class on the other end, and it did not specify how to link back to us
@@ -712,6 +720,16 @@ sub mk_object_set_accessors {
                 #die "No relationships found between $r_class_name and $class_name.  Error in definition for $class_name $singular_name!"
             }
         }
+        if ($reverse_as and ! $r_class_meta) {
+            # we've resolved reverse_as, but there's not r_class_meta?!  
+            $self->error_message("Can't resolve reverse relationship $class_name -> $plural_name.  No class metadata for $r_class_name");
+            if ($loading_r_class_error) {
+                Carp::croak "While loading $r_class_name: $loading_r_class_error";
+            } else {
+                Carp::croak "Is class $r_class_name defined anywhere?";
+            }
+        }
+
         if ($reverse_as) {
             # join to get the data...
             unless ($r_class_meta) {
@@ -719,7 +737,7 @@ sub mk_object_set_accessors {
             }
             my $property_meta = $r_class_meta->property_meta_for_name($reverse_as);
             unless ($property_meta) {
-                die "Cannot process reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_as";
+                Carp::croak "Can't resolve reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_as";
             }
             my @property_links = $property_meta->id_by_property_links;
             #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_as); 
