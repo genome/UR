@@ -334,7 +334,7 @@ sub create_viewer {
     my $self = shift;
     my $class = $self->class;
 
-    my $viewer = UR::Object::Viewer->create_viewer(
+    my $viewer = UR::Object::Viewer->create(
         subject_class_name => $class,
         perspective => "default",
         @_
@@ -350,6 +350,30 @@ sub create_viewer {
     }
 
     return $viewer;
+}
+
+sub create_view {
+    my $self = shift;
+    my $class = $self->class;
+
+    # this will auto-subclass into ${class}::View::${perspective}::${toolkit},
+    # using $class or some parent class of $class
+    my $view = UR::Object::View->create(
+        subject_class_name => $class,
+        perspective => "default",
+        @_
+    );
+
+    unless ($view) {
+        $self->error_message("Error creating view: " . UR::Object::View->error_message);
+        return;
+    }
+
+    if (ref($self)) {
+        $view->subject($self);
+    }
+
+    return $view;
 }
 
 

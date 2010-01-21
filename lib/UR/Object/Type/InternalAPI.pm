@@ -559,7 +559,7 @@ sub autogenerate_new_object_id {
 }
 
 # from ::Object->generate_support_class
-our %support_class_suffixes = map { $_ => 1 } qw/Set Viewer Ghost Iterator/;
+our %support_class_suffixes = map { $_ => 1 } qw/Set View Viewer Ghost Iterator Value/;
 sub generate_support_class_for_extension {
     my $self = shift;
     my $extension_for_support_class = shift;

@@ -732,6 +732,9 @@ sub mk_object_set_accessors {
 
         if ($reverse_as) {
             # join to get the data...
+            unless ($r_class_meta) {
+                Carp::confess("No r_class_meta?"); 
+            }
             my $property_meta = $r_class_meta->property_meta_for_name($reverse_as);
             unless ($property_meta) {
                 Carp::croak "Can't resolve reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_as";
@@ -756,6 +759,9 @@ sub mk_object_set_accessors {
                 push @property_names, 'class';
             }
             my $tmp_rule = $r_class_name->define_boolexpr(@get_params);
+            if (my $order_by = $property_meta->order_by) {
+                push @get_params, $order_by;
+            }
             $rule_template = $tmp_rule->template;
             unless ($rule_template) {
                 die "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
@@ -892,17 +898,26 @@ sub mk_object_set_accessors {
         return unless $r_class_meta;
 
         my $r_ids = $r_class_meta->property_meta_for_name($reverse_as)->{id_by};
-        my @id_property_names = $r_class_name->__meta__->id_property_names;
-        @params_prefix = 
-            grep { 
-                my $id_property_name = $_;
-                ( (grep { $id_property_name eq $_ } @$r_ids) ? 0 : 1)
-            }
-            @id_property_names;
-        
-        # We only do the special single-value spec when there is one property not specified by the rule.
-        # This is common for a multi-column primary key where all columns reference a parent object, except an index value, etc.
-        @params_prefix = () unless scalar(@params_prefix) == 1;
+
+        my $cmeta = UR::Object::Type->get($class_name);
+        my $pmeta = $cmeta->{has}{$plural_name};
+        if (my $specify_by = $pmeta->{specify_by}) {
+            @params_prefix = ($specify_by);    
+        }
+        else {
+            # TODO: should this really be an auto-setting of the specify_by meta property?
+            my @id_property_names = $r_class_name->__meta__->id_property_names;
+            @params_prefix = 
+                grep { 
+                    my $id_property_name = $_;
+                    ( (grep { $id_property_name eq $_ } @$r_ids) ? 0 : 1)
+                }
+                @id_property_names;
+            
+            # We only do the special single-value spec when there is one property not specified by the rule.
+            # This is common for a multi-column primary key where all columns reference a parent object, except an index value, etc.
+            @params_prefix = () unless scalar(@params_prefix) == 1;
+        }
         $params_prefix_resolved = 1;
     };
 
