@@ -760,12 +760,12 @@ sub help_usage_command_pod
                 )
             .   (
                     $required_args
-                    ? "=head1 REQUIRED ARGUMENTS\n\n" . $required_args . "\n\n"
+                    ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
                     : ''
                 )
             .   (
                     $optional_args
-                    ? "=head1 OPTIONAL ARGUMENTS\n\n" . $optional_args . "\n\n"
+                    ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
                     : ''
                 )
             . "=head1 DESCRIPTION:\n\n"
@@ -831,7 +831,7 @@ sub help_options
     my $text = '';
     for my $row (@data) {
         if (defined($format) and $format eq 'pod') {
-            $text .= "\n=item " . $row->[0] . "\n  " . $row->[1] . "\n"; 
+            $text .= "\n=item " . $row->[0] . "\n\n" . $row->[1] . "\n";  
         }
         elsif (defined($format) and $format eq 'html') {
             $text .= "\n\t<br>" . $row->[0] . "<br> " . $row->[1] . "<br>\n";
