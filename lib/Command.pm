@@ -404,7 +404,8 @@ sub command_name
                     redo;
                 }
                 else {
-                    die "failed to resolve the command name for $base with extension $ext!";
+                    $base = $class->_command_name_for_class_word($base) . ' ' . $ext;
+                    return $base;
                 }
             }
         }
