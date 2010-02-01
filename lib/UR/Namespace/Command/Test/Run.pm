@@ -47,7 +47,7 @@ UR::Object::Type->define(
 sub help_brief { "Run the test suite against the source tree." }
 
 sub help_synopsis {
-    return <<EOS
+    return <<'EOS'
 cd MyNamespace
 ur test run --recurse                   # run all tests in the namespace
 ur test run                             # runs all tests in the t/ directory under pwd
