@@ -407,6 +407,7 @@ sub query {
 }
 
 
+our $construction_method = 'create';
 sub create_entity {
     my $self = shift;
 
@@ -423,12 +424,12 @@ sub create_entity {
         if (defined($sub_class_name) and ($sub_class_name ne $class)) {
             # delegate to the sub-class to create the object
             no warnings;
-            unless ($sub_class_name->can('create')) {
+            unless ($sub_class_name->can($construction_method)) {
                 $DB::single = 1;
-                print $sub_class_name->can('create');
-                die "$class has determined via $method_name that the correct subclass for this object is $sub_class_name.  This class cannot create!" . join(",",$sub_class_name->inheritance);
+                print $sub_class_name->can($construction_method);
+                die "$class has determined via $method_name that the correct subclass for this object is $sub_class_name.  This class cannot $construction_method!" . join(",",$sub_class_name->inheritance);
             }
-            return $sub_class_name->create(@_);
+            return $sub_class_name->$construction_method(@_);
         }
         # fall through if the class names match
     }
@@ -446,7 +447,7 @@ sub create_entity {
             unless ($rule->specifies_value_for($subclassify_by)) {
                 if ($class_meta->is_abstract) {
                     Carp::confess(
-                        "Invalid parameters for $class create():"
+                        "Invalid parameters for $class $construction_method():"
                         . " abstract class requires $subclassify_by to be specified"
                         . "\nParams were: " . Data::Dumper::Dumper({ $rule->params_list })
                     );               
@@ -468,10 +469,10 @@ sub create_entity {
             unless ($sub_class_name->isa($class)) {
                 die "class $sub_class_name is not a sub-class of $class!"; 
             }
-            return $sub_class_name->create(@_); 
+            return $sub_class_name->$construction_method(@_); 
         }
         else {
-            Carp::confess("Could not determine proper subclassing for abstract class $class during create()");
+            Carp::confess("Could not determine proper subclassing for abstract class $class during $construction_method()");
 
             Carp::confess("$class requires support for a 'type' class which has persistance.  Broken.  Fix me.");
             #my $params = $rule->legacy_params_hash;
@@ -528,11 +529,11 @@ sub create_entity {
                 push @missed_names, $name unless $rule->specifies_value_for($name);
             }
             if ( @missed_names ) { # Ok - prob w/ class def, list the ones we missed
-                $class->error_message("Attempt to create $class with multiple ids without these properties: ".join(', ', @missed_names));
+                $class->error_message("Attempt to $construction_method $class with multiple ids without these properties: ".join(', ', @missed_names));
                 return;
             }
             else { # Bad - something is really wrong... 
-                Carp::confess("Attempt to create $class failed to resolve id from underlying id properties.");
+                Carp::confess("Attempt to $construction_method $class failed to resolve id from underlying id properties.");
             }
         }
     }
@@ -592,15 +593,15 @@ sub create_entity {
 
     $params = { %$params };
 
-    my $indirect_values = {}; 
+    my $indirect_values = {};
     for my $property_name (keys %indirect_properties) {
         $indirect_values->{ $property_name } =
             delete $params->{ $property_name }
                 if ( exists $params->{ $property_name } );
     }
-   
+
     if (0) {
-    # if the indirect property is immutable, but it is via something which is 
+    # if the indirect property is immutable, but it is via something which is
     # mutable, we use those values to get or create the bridge.
     my %indirect_immutable_properties_via;
     for my $property_name (keys %$indirect_values) {
@@ -611,7 +612,7 @@ sub create_entity {
         }
     }
     for my $via (keys %indirect_immutable_properties_via) {
-        
+
     }
     }
 
@@ -652,11 +653,9 @@ sub create_entity {
         }
     }    
 
-    # set any indirect mutable properties        
+    # set any indirect mutable properties
     if (%$indirect_values) {
         for my $property_name (keys %$indirect_values) {
-            my $property_meta = $indirect_properties{$property_name};
-
             $entity->$property_name($indirect_values->{$property_name});
         }
     }
@@ -680,7 +679,7 @@ sub create_entity {
             }
             
             if (@errors_fatal_to_construction) {
-                my $msg = 'Failed to create ' . $class . ' with invalid immutable properties:'
+                my $msg = 'Failed to $construction_method ' . $class . ' with invalid immutable properties:'
                     . join("\n", @errors_fatal_to_construction);
                 #$entity->_delete_object;
                 #die $msg;
@@ -688,7 +687,8 @@ sub create_entity {
         }
     }
     
-    $entity->__signal_change__("create");
+    $entity->__signal_change__($construction_method);
+    $entity->__signal_change__('load') if $construction_method eq '__define__';
     $entity->{'__get_serial'} = $UR::Context::GET_COUNTER++;
     $UR::Context::all_objects_cache_size++;
     return $entity;

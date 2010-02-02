@@ -376,7 +376,6 @@ sub create_view {
     return $view;
 }
 
-
 sub create_mock {
     my $class = shift;
     my %params = @_;
@@ -503,25 +502,38 @@ sub __define__ {
     # Simply assert they already existed externally, and act as though they were just loaded...
     # It is used for classes defined in the source code (which is the default) by the "class {}" magic
     # instead of in some database, as we'd do for regular objects.  It is also used by some test cases.
-
-    my $class = shift;
-    my $class_meta = $class->__meta__;    
-    if (my $method_name = $class_meta->sub_classification_method_name) {
-        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
-        my $sub_class_name = $class->$method_name(@_);
-        if ($sub_class_name ne $class) {
-            # delegate to the sub-class to create the object
-            return $sub_class_name->define(@_);
-        }
+    if ($UR::initialized and substr($_[0], 0, 4) ne 'UR::') {
+        # the nornal implementation has all create() features
+        my $self;
+        do {
+            local $UR::Context::construction_method = '__define__';
+            $self = $UR::Context::current->create_entity(@_);
+        };
+        return unless $self;
+        $self->{db_committed} = { %$self };
+        $self->__signal_change__("load");
+        return $self;
     }
+    else {
+        # used during boostrapping
+        my $class = shift;
+        my $class_meta = $class->__meta__;
+        if (my $method_name = $class_meta->sub_classification_method_name) {
+            my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
+            my $sub_class_name = $class->$method_name(@_);
+            if ($sub_class_name ne $class) {
+                # delegate to the sub-class to create the object
+                return $sub_class_name->__define__(@_);
+            }
+        }
 
-    my $self = $class->_create_object(@_);
-    return unless $self;
-    $self->{db_committed} = { %$self };
-    $self->__signal_change__("load");
-    return $self;
+        my $self = $class->_create_object(@_);
+        return unless $self;
+        $self->{db_committed} = { %$self };
+        $self->__signal_change__("load");
+        return $self;
+    }
 }
-
 
 # Handling of references within the current process
 
