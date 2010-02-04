@@ -2600,7 +2600,7 @@ sub _default_save_sql_for_object {
 
                 push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@insert_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
 
-                $DB::single = 1;
+                #$DB::single = 1;
                 my @pk_values = $self->_id_values_for_primary_key($table, $object_to_save);
                 my $where = $self->_matching_where_clause($table, \@pk_values);
                 
