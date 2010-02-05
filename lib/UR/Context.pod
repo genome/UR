@@ -231,6 +231,16 @@ falls below this number.
 
 Manually run the object cache pruner.
 
+=item reload
+
+  UR::Context->reload($object);
+  UR::Context->reload('Some::Class', 'property_name', value);
+
+Ask the context to load an object's data from an underlying Context, even if
+the object is already cached.  With a single parameter, it will use that
+object's ID parameters as the basis for querying the data source.  C<reload>
+will also accept a class name and list of key/value parameters the same as
+C<get>.
 
 =item _light_cache
 
@@ -243,6 +253,34 @@ hold of any object references it wants to keep alive.  Light caching defaults
 to being off, and must be explicitly turned on with this method.
 
 =back
+
+=head1 Data Concurrency
+
+Currently, the Context is optimistic about data concurrency, meaning that 
+it does very little to prevent clobbering data in underlying Contexts during
+a commit() if other processes have changed an object's data after the Context
+has cached and object.  For example, a database has an object with ID 1 and
+a property with value 'bob'.  A program loads this object and changes the
+property to 'fred', but does not yet commit().  Meanwhile, another program
+loads the same object, changes the value to 'joe' and does commit().  Finally
+the first program calls commit().  The final value in the database will be
+'fred', and no exceptions will be raised.
+
+As part of the caching behavior, the Context keeps a record of what the
+object's state is as it's loaded from the underlying Context.  This is how 
+the Context knows what object have been changed during C<commit()>.
+
+If an already cached object's data is reloaded as part of some other query,
+data consistency of each property will be checked.  If there are no
+conflicting changes, then any differences between the object's initial state
+and the current state in the underlying Context will be applied to the
+object's notion of what it thinks its intial state is.
+
+In some future release, UR may support additional data concurrency methods
+such as pessimistic concurrency: check that the current state of all
+changed (or even all cached) objects in the underlying Context matches the
+initial state before committing changes downstream.  Or allowing the object
+cache to operate in write-through mode for some or all classes.
 
 =head1 Internal Methods
 
