@@ -2345,21 +2345,25 @@ sub __create_object_fabricator_for_loading_template {
             # The object already exists.            
             my $dbsu = $pending_db_object->{db_saved_uncommitted};
             my $dbc = $pending_db_object->{db_committed};
-            if ($dbsu) {
-                # Update its db_saved_uncommitted snapshot.
-                %$dbsu = (%$dbsu, %$pending_db_object_data);
-            }
-            elsif ($dbc) {
+            #elsif ($dbc) {
+            if ($dbc) {
                 # only go over property names as a joined query may pull back columns that
                 # are not properties (e.g. find DNA for PSE ID 1001 would get PSE attributes in the query)
                 for my $property (@property_names) {
                     no warnings;
+$DB::single=1 if ($class eq 'URT::Thing' and $property eq 'value');
                     if ($pending_db_object_data->{$property} ne $dbc->{$property}) {
                         # This has changed in the database since we loaded the object.
                         
                         # Ensure that none of the outside changes conflict with 
                         # any inside changes, then apply the outside changes.
-                        if ($pending_db_object->{$property} eq $dbc->{$property}) {
+                        my $cached_value = $pending_db_object->{$property};
+                        if ($cached_value eq $dbc->{$property}    # haven't changed it locally...
+                            or
+                            $cached_value eq $pending_db_object_data->{$property}  # we changed it to the same as the DB
+                            or
+                            $pending_db_object_data->{$property} eq $dbsu->{$property}   # we tried to save it the same, but no_commit was on
+                           ) {
                             # no changes to this property in the application
                             # update the underlying db_committed
                             $dbc->{$property} = $pending_db_object_data->{$property};
@@ -2367,21 +2371,32 @@ sub __create_object_fabricator_for_loading_template {
                             $pending_db_object->$property($pending_db_object_data->{$property}); 
                         }
                         else {
+$DB::single=1;
                             # conflicting change!
                             # Since the user could be catching this exception, go ahead and update the
                             # object's notion of what is in the database
                             my %old_dbc = %$dbc;
                             @$dbc{@property_names} = @$pending_db_object_data{@property_names};
             
+                            my $old_value = defined($old_dbc{$property})
+                                            ? "'" . $old_dbc{$property} . "'"
+                                            : '(undef)';
+                            my $new_db_value = defined($pending_db_object_data->{$property})
+                                            ? "'" . $pending_db_object_data->{$property} . "'"
+                                            : '(undef)';
+                            my $new_obj_value = defined($pending_db_object->{$property})
+                                            ? "'" . $pending_db_object->{$property} . "'"
+                                            : '(undef)';
+
                             Carp::confess(qq(
                                 A change has occurred in the database for
                                 $class property $property on object $pending_db_object->{id}
-                                from '$old_dbc{$property}' to '$pending_db_object_data->{$property}'.                                    
-                                At the same time, this application has made a change to 
-                                that value to $pending_db_object->{$property}.
-    
-                                The application should lock data which it will update 
-                                and might be updated by other applications. 
+                                from $old_value to $new_db_value.
+                                At the same time, this application has made a change to
+                                that value to $new_obj_value.
+
+                                The application should lock data which it will update
+                                and might be updated by other applications.
                             ));
                         }
                     }
@@ -2389,7 +2404,11 @@ sub __create_object_fabricator_for_loading_template {
                 # Update its db_committed snapshot.
                 %$dbc = (%$dbc, %$pending_db_object_data);
             }
-            
+            if ($dbsu) {
+                # Update its db_saved_uncommitted snapshot.
+                %$dbsu = (%$dbsu, %$pending_db_object_data);
+            }
+
             if ($dbc || $dbsu) {
                 $dsx->debug_message("object was already loaded", 4);
             }
@@ -2586,10 +2605,17 @@ sub __create_object_fabricator_for_loading_template {
                         foreach my $property ( @property_names ) {
                             next if (ref($already_loaded->{$property}) || ref($pending_db_object->{$property}));
                             no warnings 'uninitialized';
-                            if (($already_loaded->{'db_committed'}->{$property} ne $already_loaded->{$property}) and
+                            if (($already_loaded->{'db_committed'}->{$property} ne $already_loaded->{$property})
+                                and
                                 ($already_loaded->{$property} ne $pending_db_object->{$property})
+                                and
+                                ($already_loaded->{$property} ne $pending_db_object_data->{$property})
+                                and 
+                                ($already_loaded->{'db_saved_uncommitted'}->{$property} ne $pending_db_object_data->{$property})
                             ) {
+
                                  # conflicting change!
+$DB::single=1;
 
                                  # Since the user may be trapping exceptions, first clean up the object in the
                                  # cache under the un-subclassed slot, and reload the object's notion of what
@@ -2599,15 +2625,26 @@ sub __create_object_fabricator_for_loading_template {
                                  my %old_dbc = %$dbc;
                                  @$dbc{@property_names} = @$pending_db_object_data{@property_names};
 
+                                 my $old_value = defined($old_dbc{$property})
+                                                 ? "'" . $old_dbc{$property} . "'"
+                                                 : '(undef)';
+                                 my $new_db_value = defined($pending_db_object_data->{$property})
+                                                 ? "'" . $pending_db_object_data->{$property} . "'"
+                                                 : '(undef)';
+                                 my $new_obj_value = defined($already_loaded->{$property})
+                                                 ? "'" . $already_loaded->{$property} . "'"
+                                                 : '(undef)';
+
+
                                  Carp::confess(qq(
                                      A change has occurred in the database for
                                      $class property $property on object $pending_db_object->{id}
-                                     from '$old_dbc{$property}' to '$pending_db_object_data->{$property}'.
-                                     At the same time, this application has made a change to 
-                                     that value to $already_loaded->{$property}.
-         
-                                     The application should lock data which it will update 
-                                     and might be updated by other applications. 
+                                     from $old_value to $new_db_value.
+                                     At the same time, this application has made a change to
+                                     that value to $new_obj_value.
+
+                                     The application should lock data which it will update
+                                     and might be updated by other applications.
                                  ));
                             } elsif ($already_loaded->{$property} ne $pending_db_object->{$property}) {
                                 $different = 1;
@@ -3875,20 +3912,20 @@ sub reload {
     
     my $class = shift;
     if (ref $class) {
-         # Trying to reload a specific object?
-         if (@_) {
-             Carp::confess("load() on an instance with parameters is not supported");
-             return;
-         }
-         @_ = ('id' ,$class->id());
-         $class = ref $class;
+        # Trying to reload a specific object?
+        if (@_) {
+            Carp::confess("load() on an instance with parameters is not supported");
+            return;
+        }
+        @_ = ('id' ,$class->id());
+        $class = ref $class;
     }
 
-    my ($rule, @extra) = UR::BoolExpr->resolve_normalized($class,@_);        
+    my ($rule, @extra) = UR::BoolExpr->resolve_normalized($class,@_);
     
     if (@extra) {
         if (scalar @extra == 2 and $extra[0] eq "sql") {
-            return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
+           return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
         }
         else {
             die "Odd parameters passed directly to $class load(): @extra.\n"
