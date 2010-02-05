@@ -2345,7 +2345,6 @@ sub __create_object_fabricator_for_loading_template {
             # The object already exists.            
             my $dbsu = $pending_db_object->{db_saved_uncommitted};
             my $dbc = $pending_db_object->{db_committed};
-            #elsif ($dbc) {
             if ($dbc) {
                 # only go over property names as a joined query may pull back columns that
                 # are not properties (e.g. find DNA for PSE ID 1001 would get PSE attributes in the query)
