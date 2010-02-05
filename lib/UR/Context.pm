@@ -2351,7 +2351,6 @@ sub __create_object_fabricator_for_loading_template {
                 # are not properties (e.g. find DNA for PSE ID 1001 would get PSE attributes in the query)
                 for my $property (@property_names) {
                     no warnings;
-$DB::single=1 if ($class eq 'URT::Thing' and $property eq 'value');
                     if ($pending_db_object_data->{$property} ne $dbc->{$property}) {
                         # This has changed in the database since we loaded the object.
                         
@@ -2371,7 +2370,6 @@ $DB::single=1 if ($class eq 'URT::Thing' and $property eq 'value');
                             $pending_db_object->$property($pending_db_object_data->{$property}); 
                         }
                         else {
-$DB::single=1;
                             # conflicting change!
                             # Since the user could be catching this exception, go ahead and update the
                             # object's notion of what is in the database
@@ -2615,7 +2613,6 @@ $DB::single=1;
                             ) {
 
                                  # conflicting change!
-$DB::single=1;
 
                                  # Since the user may be trapping exceptions, first clean up the object in the
                                  # cache under the un-subclassed slot, and reload the object's notion of what
