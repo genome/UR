@@ -659,14 +659,14 @@ sub resolve_class_name_for_table_name {
     $vocabulary = 'UR::Vocabulary' unless eval { $vocabulary->__meta__ };
     if ($vocabulary) {
         @words = 
-        map { $vocabulary->convert_to_title_case($_) } 
-        map { $vocabulary->plural_to_singular($_) }
-        map { lc($_) }
-        split("_",$table_name);
+            map { $vocabulary->convert_to_title_case($_) } 
+            map { $vocabulary->plural_to_singular($_) }
+            map { lc($_) }
+            split("_",$table_name);
     } else {
         @words = 
-        map { ucfirst(lc($_)) }
-        split("_",$table_name);
+            map { ucfirst(lc($_)) }
+            split("_",$table_name);
     }
 
     if ($self->can('_resolve_class_name_for_table_name_fixups')) {
@@ -712,8 +712,8 @@ sub resolve_property_name_for_column_name {
     my $column_name = shift;
 
     my @words =                 
-    map { lc($_) }
-    split("_",$column_name);
+        map { lc($_) }
+        split("_",$column_name);
 
     my $type_name =  join("_",@words);
     return $type_name;
@@ -724,8 +724,8 @@ sub resolve_attribute_name_for_column_name {
     my $column_name = shift;
 
     my @words =                 
-    map { lc($_) }
-    split("_",$column_name);
+        map { lc($_) }
+        split("_",$column_name);
 
     my $type_name =  join(" ",@words);
     return $type_name;
@@ -755,7 +755,7 @@ sub refresh_database_metadata_for_table_name {
 
     my $data_source_id = $data_source->id;
     my $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source_id,
-        table_name => $table_name);
+                                                         table_name => $table_name);
     if ($table_object) {
         # Already exists, update the existing entry
         # Instead of deleting and recreating the table object (the old way),
@@ -799,8 +799,7 @@ sub refresh_database_metadata_for_table_name {
     }
 
     my %columns_to_delete = map {$_->column_name, $_} UR::DataSource::RDBMS::TableColumn->get(table_name => $table_name,
-        data_source => $data_source_id);
-
+                                                                                              data_source => $data_source_id);
 
 
     for my $column_data (@$all_column_data) {
@@ -812,8 +811,8 @@ sub refresh_database_metadata_for_table_name {
         delete $columns_to_delete{$column_data->{'COLUMN_NAME'}};
 
         my $column_obj = UR::DataSource::RDBMS::TableColumn->get(table_name => $table_name,
-            data_source => $data_source_id,
-            column_name => $column_data->{'COLUMN_NAME'});
+                                                                 data_source => $data_source_id,
+                                                                 column_name => $column_data->{'COLUMN_NAME'});
         if ($column_obj) {
             # Already exists, change the attributes
             $column_obj->owner($table_object->{owner});
@@ -874,9 +873,9 @@ sub refresh_database_metadata_for_table_name {
 
     # Make a note of what FKs exist in the Meta DB involving this table
     my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
-        table_name => $table_name);
+                                                                  table_name => $table_name);
     push @fks_in_meta_db, UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
-        r_table_name => $table_name);
+                                                                   r_table_name => $table_name);
     my %fks_in_meta_db_by_fingerprint;
     foreach my $fk ( @fks_in_meta_db ) {
         my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
@@ -889,8 +888,7 @@ sub refresh_database_metadata_for_table_name {
     my $db_owner = $data_source->owner;
     my $fk_sth = $data_source->get_foreign_key_details_from_data_dictionary('', $db_owner, $table_name, '', '', '');
 
-    my %fk;     # hold the fk constraints that this
-    # invocation of foreign_key_info created
+    my %fk;     # hold the fk constraints that this invocation of foreign_key_info created
 
     my @constraints;
     my %fks_in_real_db;
@@ -903,10 +901,10 @@ sub refresh_database_metadata_for_table_name {
             }
 
             my $fk = UR::DataSource::RDBMS::FkConstraint->get(table_name => $data->{'FK_TABLE_NAME'},
-                data_source => $data_source_id,
-                fk_constraint_name => $data->{'FK_NAME'},
-                r_table_name => $data->{'UK_TABLE_NAME'},
-            );
+                                                              data_source => $data_source_id,
+                                                              fk_constraint_name => $data->{'FK_NAME'},
+                                                              r_table_name => $data->{'UK_TABLE_NAME'},
+                                                          );
 
             unless ($fk) {
                 # Postgres puts quotes around things that look like keywords
@@ -965,10 +963,10 @@ sub refresh_database_metadata_for_table_name {
             }
 
             my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $data->{'FK_NAME'},
-                table_name => $data->{'FK_TABLE_NAME'},
-                r_table_name => $data->{'UK_TABLE_NAME'},
-                data_source => $table_object->{'data_source'},
-            );
+                                                              table_name => $data->{'FK_TABLE_NAME'},
+                                                              r_table_name => $data->{'UK_TABLE_NAME'},
+                                                              data_source => $table_object->{'data_source'},
+                                                          );
             unless ($fk) {
                 # Postgres puts quotes around things that look like keywords
                 foreach ( $data->{'FK_TABLE_NAME'}, $data->{'UK_TABLE_NAME'}, $data->{'UK_TABLE_NAME'}, $data->{'UK_COLUMN_NAME'}) {
@@ -1043,12 +1041,12 @@ sub refresh_database_metadata_for_table_name {
             }
 
             push @new_pk, [
-            table_name => $table_name,
-            data_source => $data_source_id,
-            owner => $data_source->owner,
-            column_name => $data->{'COLUMN_NAME'},
-            rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
-            ];
+                            table_name => $table_name,
+                            data_source => $data_source_id,
+                            owner => $data_source->owner,
+                            column_name => $data->{'COLUMN_NAME'},
+                            rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
+                        ];
             #        $table_object->{primary_key_constraint_name} = $data->{PK_NAME};
             #        $embed{primary_key_constraint_column_names} ||= {};
             #        $embed{primary_key_constraint_column_names}{$table_object} ||= [];
@@ -1098,11 +1096,15 @@ sub refresh_database_metadata_for_table_name {
         }
 
         # compare primary key constraints to unique constraints
-        my $pk_columns_serial = join(',', sort map { $_->column_name }
-            UR::DataSource::RDBMS::PkConstraintColumn->get(data_source => $data_source_id,
-                table_name => $table_name,
-                owner => $data_source->owner,
-            ));
+        my $pk_columns_serial =
+            join(',',
+                sort map { $_->column_name }
+                    UR::DataSource::RDBMS::PkConstraintColumn->get(
+                        data_source => $data_source_id,
+                        table_name => $table_name,
+                        owner => $data_source->owner,
+                    )
+                );
         for my $uc_name ( keys %uc ) {
 
             # see if primary key constraint has the same name as
@@ -1116,8 +1118,7 @@ sub refresh_database_metadata_for_table_name {
 
             # see if any unique constraints cover the exact same column(s) as
             # the primary key column(s)
-            my $uc_columns_serial = join ',',
-            sort @{ $uc{$uc_name} };
+            my $uc_columns_serial = join ',', sort @{ $uc{$uc_name} };
 
             if ( $pk_columns_serial eq $uc_columns_serial ) {
                 delete $uc{$uc_name};
@@ -1127,12 +1128,14 @@ sub refresh_database_metadata_for_table_name {
         # Create new UniqueConstraintColumn objects for the columns that don't exist, and delete the
         # objects if they don't apply anymore
         foreach my $uc_name ( keys %uc ) {
-            my %constraint_objs = map { $_->column_name => $_ } UR::DataSource::RDBMS::UniqueConstraintColumn->get(
-                data_source => $data_source_id,
-                table_name => $table_name,
-                owner => $data_source->owner || '',
-                constraint_name => $uc_name,
-            );
+            my %constraint_objs =
+                map { $_->column_name => $_ }
+                UR::DataSource::RDBMS::UniqueConstraintColumn->get(
+                    data_source => $data_source_id,
+                    table_name => $table_name,
+                    owner => $data_source->owner || '',
+                    constraint_name => $uc_name,
+                );
 
             foreach my $col_name ( @{$uc{$uc_name}} ) {
                 if ($constraint_objs{$col_name} ) {
@@ -1192,9 +1195,12 @@ sub _make_foreign_key_fingerprint {
     my($self,$fk) = @_;
 
     my @fk_cols = sort {$a->column_name cmp $b->column_name} $fk->get_related_column_objects();
-    my $fingerprint = join(':', $fk->table_name,
-        $fk->r_table_name,
-        map { $_->column_name, $_->r_column_name } @fk_cols);
+    my $fingerprint =
+        join(':',
+            $fk->table_name,
+            $fk->r_table_name,
+            map { $_->column_name, $_->r_column_name } @fk_cols
+        );
     return $fingerprint;
 }
 
@@ -1274,8 +1280,8 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
             # No metaDB info... try and make a guess based on the class' ID proeprties
             for my $meta ($class_meta, $class_meta->ancestry_class_metas) {
                 @primary_keys = grep { $_ }  # Only interested in the properties with columns defined
-                map { $_->column_name }
-                $meta->direct_id_property_metas;
+                                map { $_->column_name }
+                                $meta->direct_id_property_metas;
                 if (@primary_keys > 1) {
                     Carp::croak("Tables with multiple primary keys (i.e. " .
                         $table_name  . ": " .
@@ -1357,7 +1363,7 @@ sub create_iterator_closure_for_rule {
         my ($expr_sql, $operator, $value_position) = @$filter_spec;
         my $value = $values[$value_position];
         my ($more_sql, @more_params) = 
-        $self->_extend_sql_for_column_operator_and_value($expr_sql, $operator, $value);
+            $self->_extend_sql_for_column_operator_and_value($expr_sql, $operator, $value);
 
         $where_clause .= ($where_clause ? "\nand " : ($connect_by_clause ? "start with " : "where "));
 
@@ -1575,11 +1581,9 @@ sub _resolve_ids_from_class_name_and_sql {
     }
 
     my $class_meta = $class_name->__meta__;
-    my @id_columns = 
-    map {
-        $class_meta->property_meta_for_name($_)->column_name
-    } 
-    $class_meta->id_property_names;
+    my @id_columns = map
+                         { $class_meta->property_meta_for_name($_)->column_name } 
+                         $class_meta->id_property_names;
 
     # query for the ids
 
@@ -1596,7 +1600,7 @@ sub _resolve_ids_from_class_name_and_sql {
     my @id_fetch_set;
 
     while ($data = $sth->fetchrow_hashref()) {
-        #ensure everything is uppercased. this is totally a hack right now but it makes sql queries work again.
+        # ensure everything is uppercased. this is totally a hack right now but it makes sql queries work again.
         foreach my $key (keys %$data) {
             $data->{uc($key)} = delete $data->{$key};
         }
@@ -1678,8 +1682,10 @@ sub _sync_database {
                     my $table_name = $change->{table_name};
                     my $id = $change->{id};                    
                     $all_tables{$table_name}++;
-                    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
-                    UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
+                    my $table =
+                        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class)
+                        ||
+                        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
 
                     if ($change->{type} eq 'insert')
                     {
@@ -1706,8 +1712,9 @@ sub _sync_database {
 
     my %tables_requiring_lock;
     for my $table_name (keys %all_tables) {
-        my $table_object = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
-        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
+        my $table_object = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class)
+                           ||
+                           UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
 
         unless ($table_object) {
             warn "looking up schema for RDBMS table $table_name...\n";
@@ -1753,8 +1760,9 @@ sub _sync_database {
     my %dependants;
 
     for my $table_name (keys %all_tables) {
-        my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
-        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
+        my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class)
+                    ||
+                    UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
 
         my @fk = $table->fk_constraints;
 
@@ -1778,8 +1786,9 @@ sub _sync_database {
         for my $fk (@fk)
         {
             my $r_table_name = $fk->r_table_name;
-            my $r_table = UR::DataSource::RDBMS::Table->get(table_name => $r_table_name, data_source => $self->class) ||
-            UR::DataSource::RDBMS::Table->get(table_name => $r_table_name, data_source => 'UR::DataSource::Meta');
+            my $r_table = UR::DataSource::RDBMS::Table->get(table_name => $r_table_name, data_source => $self->class)
+                          ||
+                          UR::DataSource::RDBMS::Table->get(table_name => $r_table_name, data_source => 'UR::DataSource::Meta');
 
             # RULES:
             # insert r_table_name       before insert table_name
@@ -1850,9 +1859,9 @@ sub _sync_database {
 
             # Process something with minimal deps as a work-around.
             my @ordered_by_least_number_of_prerequisites =
-            sort{ scalar(keys(%{$prerequisites{$a}})) <=>  scalar(keys(%{$prerequisites{$b}})) }
-            grep { $prerequisites{$_} }
-            keys %all_unresolved;
+                sort{ scalar(keys(%{$prerequisites{$a}})) <=>  scalar(keys(%{$prerequisites{$b}})) }
+                grep { $prerequisites{$_} }
+                keys %all_unresolved;
 
             @ready_to_add = ($ordered_by_least_number_of_prerequisites[0]);
             warn "Circular dependency! Pushing @ready_to_add to brute-force the save.\n";
@@ -1866,8 +1875,8 @@ sub _sync_database {
 
             # Find commands which have no unresolved prerequisites.
             @ready_to_add =
-            grep { not $prerequisites{$_} }
-            keys %all_unresolved;
+                grep { not $prerequisites{$_} }
+                keys %all_unresolved;
 
             # If there are none of the above, find commands
             # with only self-referencing prerequisites.
@@ -1875,18 +1884,17 @@ sub _sync_database {
             {
                 # Find commands with only circular dependancies.
                 @ready_to_add =
+                    # The circular prerequisite must be the only prerequisite on the table.
+                    grep { scalar(keys(%{$prerequisites{$_}})) == 1 }
 
-                # The circular prerequisite must be the only prerequisite on the table.
-                grep { scalar(keys(%{$prerequisites{$_}})) == 1 }
+                    # The prerequisite must be the same as the the table itself.
+                    grep { $prerequisites{$_}{$_} }
 
-                # The prerequisite must be the same as the the table itself.
-                grep { $prerequisites{$_}{$_} }
+                    # There must be prerequisites for the given table,
+                    grep { $prerequisites{$_} }
 
-                # There must be prerequisites for the given table,
-                grep { $prerequisites{$_} }
-
-                # Look at all of the unresolved table commands.
-                keys %all_unresolved;
+                    # Look at all of the unresolved table commands.
+                    keys %all_unresolved;
 
                 # Note this for below.
                 # It records the $fk object which is circular.
@@ -1938,17 +1946,18 @@ sub _sync_database {
             # A circular foreign key requires that the
             # items be inserted in a specific order.
             my (@rcol_sets) = 
-            map { [ $_->column_names ] } 
-            @$circular_fk_list;
+                map { [ $_->column_names ] } 
+                @$circular_fk_list;
 
             # Get the IDs and objects which need to be saved.
             my @cmds = @{ $explicit_commands_by_type_and_table{$dml_type}{$table_name} };
             my @ids =  map { $_->{id} } @cmds;
 
             # my @objs = $cmds[0]->{class}->is_loaded(\@ids);
-            my $is_loaded_class = ($dml_type eq 'delete')
-            ? $cmds[0]->{class}->ghost_class
-            : $cmds[0]->{class};
+            my $is_loaded_class =
+                ($dml_type eq 'delete')
+                ? $cmds[0]->{class}->ghost_class
+                : $cmds[0]->{class};
 
             my @objs = $is_loaded_class->is_loaded(\@ids);
             my %objs = map { $_->id => $_ } @objs;
@@ -1982,8 +1991,7 @@ sub _sync_database {
             }
 
             if ($dml_type eq 'delete') {
-                @local_explicit_commands =
-                reverse @local_explicit_commands;
+                @local_explicit_commands = reverse @local_explicit_commands;
             }
 
             push @explicit_commands_in_order, @local_explicit_commands;
@@ -2025,8 +2033,9 @@ sub _sync_database {
                 my $tables;
                 my @all_table_names = $class_object->all_table_names;                
                 for my $table_name (@all_table_names) {                    
-                    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
-                    UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
+                    my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class)
+                                ||
+                                UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
                     push @$tables, $table;
                     $column_objects_by_class_and_column_name{$class_name} ||= {};             
                     my $columns = $column_objects_by_class_and_column_name{$class_name};
@@ -2040,25 +2049,25 @@ sub _sync_database {
             }
 
             my @column_objects = 
-            map {
-                my $column = $column_objects_by_class_and_column_name{$class_name}{$_};
-                unless ($column) {
-                    print "looking at parent classes for $class_name\n";
-                    for my $ancestor_class_name ($class_object->ancestry_class_names) {
-                        $column = $column_objects_by_class_and_column_name{$ancestor_class_name}{$_};
-                        if ($column) {
-                            $column_objects_by_class_and_column_name{$class_name}{$_} = $column;
-                            last;
+                map {
+                    my $column = $column_objects_by_class_and_column_name{$class_name}{$_};
+                    unless ($column) {
+                        print "looking at parent classes for $class_name\n";
+                        for my $ancestor_class_name ($class_object->ancestry_class_names) {
+                            $column = $column_objects_by_class_and_column_name{$ancestor_class_name}{$_};
+                            if ($column) {
+                                $column_objects_by_class_and_column_name{$class_name}{$_} = $column;
+                                last;
+                            }
+                        }
+                        unless ($column) {
+                            #$DB::single = 1;
+                            die "Failed to find a column object column $_ for class $class_name";
                         }
                     }
-                    unless ($column) {
-                        #$DB::single = 1;
-                        die "Failed to find a column object column $_ for class $class_name";
-                    }
+                    $column;
                 }
-                $column;
-            }
-            @{ $cmd->{column_names} };
+                @{ $cmd->{column_names} };
 
             # print "Column Types: @column_types\n";
 
@@ -2102,8 +2111,9 @@ sub _sync_database {
         $self->debug_message("Locking tables: @tables_requiring_lock.");
         my $max_failed_attempts = 10;
         for my $table_name (@tables_requiring_lock) {
-            my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class) ||
-            UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
+            my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $self->class)
+                        ||
+                        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
             my $dbh = $table->dbh;
             my $sth = $dbh->prepare("lock table $table_name in exclusive mode");
             my $failed_attempts = 0;
@@ -2240,8 +2250,8 @@ sub _sync_database {
     # do so, and warn software support.  This should never occur.
     if (@previous_failure_sets) {
         my $msg = "Dependency failure saving: " . Dumper(\@explicit_commands_in_order)
-        . "\n\nThe following error sets were produced:\n"
-        . Dumper(\@previous_failure_sets) . "\n\n" . Carp::cluck . "\n\n";
+                  . "\n\nThe following error sets were produced:\n"
+                  . Dumper(\@previous_failure_sets) . "\n\n" . Carp::cluck . "\n\n";
 
         $self->warning_message($msg);
         $UR::Context::current->send_email(
@@ -2341,9 +2351,9 @@ sub _id_values_for_primary_key {
             my $table_name = $table_obj->table_name;
             my $class_name = $class_obj->class_name;
             Carp::croak("While committing, metadata for table $table_name does not match class $class_name.\n  Table primary key columns are " .
-                join(', ',@pk_cols) .
-                "\n  class ID property columns " .
-                join('', @columns));
+                        join(', ',@pk_cols) .
+                        "\n  class ID property columns " .
+                        join('', @columns));
         }
     }
 
@@ -2353,8 +2363,8 @@ sub _id_values_for_primary_key {
     if (@bad_pk_cols) {
         my $table_name = $table_obj->table_name;
         Carp::croak("Metadata for table $table_name is inconsistent.\n" .
-            "Column(s) named " . join(',',@bad_pk_cols) . " appear as primary key constraint columns," .
-            " but do not appear as column names.  Check the dd_pk_constraint_columns data in the MetaDB");
+                    "Column(s) named " . join(',',@bad_pk_cols) . " appear as primary key constraint columns," .
+                    " but do not appear as column names.  Check the dd_pk_constraint_columns data in the MetaDB");
     }
 
     my @id_values_in_pk_order = @values[@column_index{@pk_cols}];
@@ -2409,9 +2419,9 @@ sub _default_save_sql_for_object {
     # Handle each table.  There is usually only one, unless,
     # there is inheritance within the schema.
     my @save_table_names = 
-    map  { uc }
-    grep { not /[^\w\.]/ } # remove any views from the list
-    $class_object->all_table_names;
+        map  { uc }
+        grep { not /[^\w\.]/ } # remove any views from the list
+        $class_object->all_table_names;
 
     @save_table_names = reverse @save_table_names unless ($object_to_save->isa('UR::Entity::Ghost'));
 
@@ -2422,13 +2432,15 @@ sub _default_save_sql_for_object {
 
         my $dsn = ref($self) ? $self->id : $self;  # The data source name
 
-        my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $dsn) ||
-        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
+        my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $dsn)
+                    ||
+                    UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
         unless ($table) {
             $self->generate_schema_for_class_meta($class_object,1);
             # try again...
-            $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $dsn) ||
-            UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
+            $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $dsn)
+                     ||
+                     UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => 'UR::DataSource::Meta');
             unless ($table) {
                 Carp::confess("No table $table_name found for data source $dsn!");
             }
@@ -2493,7 +2505,7 @@ sub _default_save_sql_for_object {
             @values = $self->_id_values_for_primary_key($table,$object_to_save);
             my $where = $self->_matching_where_clause($table, \@values);
 
-            if (@non_pk_nullable_fk_columns){
+            if (@non_pk_nullable_fk_columns) {
                 #generate an update statement to set nullable fk columns to null pre delete
                 my $update_sql = "UPDATE ";
                 $update_sql .= "${db_owner}." if ($db_owner);
@@ -2526,10 +2538,10 @@ sub _default_save_sql_for_object {
             if (@save_table_names > 1)
             {
                 my @changes = 
-                map { $_ => $change_summary->{$_} }
-                grep { $class_object->table_for_property($_) eq $table_name }
-                keys %$change_summary;
-                $changes_for_this_table = {@changes};
+                    map { $_ => $change_summary->{$_} }
+                    grep { $class_object->table_for_property($_) eq $table_name }
+                    keys %$change_summary;
+                    $changes_for_this_table = {@changes};
             }
             else
             {
@@ -2570,9 +2582,9 @@ sub _default_save_sql_for_object {
             $sql = " INSERT INTO ";
             $sql .= "${db_owner}." if ($db_owner) and $table_name !~ /\./;
             $sql .= "$table_name_to_update (" 
-            . join(",", @changed_cols) 
-            . ") VALUES (" 
-            . join(',', split(//,'?' x scalar(@changed_cols))) . ")";
+                    . join(",", @changed_cols) 
+                    . ") VALUES (" 
+                    . join(',', split(//,'?' x scalar(@changed_cols))) . ")";
 
             @values = map { 
                 # when there is a column but no property, use NULL as the value
@@ -2685,12 +2697,12 @@ sub get_dbic_schema {
     die $@ if $@;
 
 #    require DBIx::Class::Schema;
-    #
+#
 #    my $schema_isa = $schema_name . '::ISA';
 #    { no strict 'refs';
 #      @$schema_isa = ('DBIx::Class::Schema');
 #    }
-    #
+#
 #    $schema_name->load_classes();
 
     return $schema_name->connect($self->_dbi_connect_args);
@@ -2711,20 +2723,20 @@ sub _generate_class_data_for_loading {
                 next;
             }
             @id_column_names =
-            map { 
-                my $t = $inheritance_class_object->table_name;
-                ($t) = ($t =~ /(\S+)\s*$/); 
-                $t . '.' . $_ 
-            }
-            grep { defined }
-            map { 
-                my $p = $inheritance_class_object->property_meta_for_name($_);
-                die ("No property $_ found for " . $inheritance_class_object->class_name . "?") unless $p;
-                $p->column_name;
-            } 
-            map { $_->property_name }
-            grep { $_->column_name }
-            $inheritance_class_object->direct_id_property_metas;
+                map { 
+                    my $t = $inheritance_class_object->table_name;
+                    ($t) = ($t =~ /(\S+)\s*$/); 
+                    $t . '.' . $_ 
+                }
+                grep { defined }
+                map { 
+                    my $p = $inheritance_class_object->property_meta_for_name($_);
+                    die ("No property $_ found for " . $inheritance_class_object->class_name . "?") unless $p;
+                    $p->column_name;
+                } 
+                map { $_->property_name }
+                grep { $_->column_name }
+                $inheritance_class_object->direct_id_property_metas;
 
             last if (@id_column_names);
         }
@@ -2751,11 +2763,11 @@ sub _generate_class_data_for_loading {
         $subclassify_by   ||= $co->subclassify_by;
 
         push @all_table_properties, 
-        map { [$co, $_, $table_name, 0 ] }
-        sort { $a->property_name cmp $b->property_name }
-        grep { (defined $_->column_name && $_->column_name ne '') or
-            (defined $_->calculate_sql && $_->calculate_sql ne '') }
-        UR::Object::Property->get( type_name => $co->type_name );
+            map { [$co, $_, $table_name, 0 ] }
+            sort { $a->property_name cmp $b->property_name }
+            grep { (defined $_->column_name && $_->column_name ne '') or
+                (defined $_->calculate_sql && $_->calculate_sql ne '') }
+            UR::Object::Property->get( type_name => $co->type_name );
 
         @direct_table_properties = @all_table_properties if $class_meta eq $co;
     }
@@ -2919,9 +2931,9 @@ sub _generate_template_data_for_loading {
 
     my @filters = $rule_template->_property_names;
     my %filters =     
-    map { $_ => 0 }
-    grep { substr($_,0,1) ne '-' }
-    @filters;
+        map { $_ => 0 }
+        grep { substr($_,0,1) ne '-' }
+        @filters;
 
     #print Data::Dumper::Dumper($rule_template->constant_value_id, $rule_template->logic_type, $rule_template->logic_detail);
 
@@ -2949,8 +2961,8 @@ sub _generate_template_data_for_loading {
         my @id_property_objects = $co->direct_id_property_metas;
         my %id_properties = map { $_->property_name => 1 } @id_property_objects;
         my @id_column_names =
-        map { $_->column_name }
-        @id_property_objects;
+            map { $_->column_name }
+            @id_property_objects;
         my $table_name = $co->table_name;
         if ($table_name) {
             $first_table_name ||= $table_name;
@@ -2964,24 +2976,24 @@ sub _generate_template_data_for_loading {
                     $prev_table_alias = $prev_table_name;
                 }
                 push @sql_joins,
-                $table_name =>
-                {
-                    $id_property_objects[0]->column_name => { 
-                        link_table_name => $prev_table_alias, 
-                        link_column_name => $prev_id_column_name 
-                    },
-                    -is_required => 1,
-                };
+                    $table_name =>
+                    {
+                        $id_property_objects[0]->column_name => { 
+                            link_table_name => $prev_table_alias, 
+                            link_column_name => $prev_id_column_name 
+                        },
+                        -is_required => 1,
+                    };
             }
             $prev_table_name = $table_name;
             $prev_id_column_name = $id_property_objects[0]->column_name;
         }
 
         my @properties_to_query = sort 
-        keys(%filters), 
-        ($hints ? @$hints : ()),
-        ($order_by ? @$order_by : ()),
-        ($group_by ? @$group_by : ());
+                                  keys(%filters), 
+                                  ($hints ? @$hints : ()),
+                                  ($order_by ? @$order_by : ()),
+                                  ($group_by ? @$group_by : ());
 
         while (my $property_name = shift @properties_to_query) {
             my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);
@@ -2993,7 +3005,7 @@ sub _generate_template_data_for_loading {
                 $value_position = $rule_template->value_position_for_property_name($property_name);
                 unless (defined $value_position) {
                     die "No value position found in rule template for filter property $property_name?!"
-                    . Data::Dumper::Dumper($rule_template);
+                        . Data::Dumper::Dumper($rule_template);
                 }
                 delete $filters{$property_name};
             }
@@ -3008,12 +3020,12 @@ sub _generate_template_data_for_loading {
                 my $expr_sql = $property->expr_sql;
                 if (defined $value_position) {
                     push @sql_filters, 
-                    $table_name => 
-                    { 
-                        # cheap hack of putting a whitespace differentiates 
-                        # from a regular column below
-                        " " . $expr_sql => { operator => $operator, value_position => $value_position }
-                    };
+                         $table_name => 
+                         { 
+                             # cheap hack of putting a whitespace differentiates 
+                             # from a regular column below
+                             " " . $expr_sql => { operator => $operator, value_position => $value_position }
+                         };
                     delete $filters{$property_name};
                 }
                 next;
@@ -3027,10 +3039,10 @@ sub _generate_template_data_for_loading {
                 # normal column: filter on it
                 if (defined $value_position) {
                     push @sql_filters, 
-                    $table_name => 
-                    { 
-                        $column_name => { operator => $operator, value_position => $value_position }
-                    };
+                         $table_name => 
+                         { 
+                             $column_name => { operator => $operator, value_position => $value_position }
+                         };
                     delete $filters{$property_name};
                 }
             }
@@ -3152,55 +3164,54 @@ sub _generate_template_data_for_loading {
                     my @source_property_names = @{ $join->{source_property_names} };
 
                     @source_table_and_column_names =
-                    map {
-                        if ($_->[0] =~ /^(.*)\s+(\w+)\s*$/s) {
-                            # This "table_name" was actually a bit of SQL with an inline view and an alias
-                            # FIXME - this won't work if they used the optional "as" keyword
-                            $_->[0] = $1;
-                            $_->[2] = $2;
+                        map {
+                            if ($_->[0] =~ /^(.*)\s+(\w+)\s*$/s) {
+                                # This "table_name" was actually a bit of SQL with an inline view and an alias
+                                # FIXME - this won't work if they used the optional "as" keyword
+                                $_->[0] = $1;
+                                $_->[2] = $2;
+                            }
+                            $_;
                         }
-                        $_;
-                    }
-                    map {
-                        my $p = $source_class_object->property_meta_for_name($_);
-                        unless ($p) {
-                            Carp::confess("No property $_ for class ".$source_class_object->class_name);
+                        map {
+                            my $p = $source_class_object->property_meta_for_name($_);
+                            unless ($p) {
+                                Carp::confess("No property $_ for class ".$source_class_object->class_name);
+                            }
+                            my($table_name,$column_name) = $p->table_and_column_name_for_property();
+                            if ($table_name && $column_name) {
+                                [$table_name, $column_name];
+                            } else {
+                                #Carp::confess("Can't determine table and column for property $_ in class " .
+                                #              $source_class_object->class_name);
+                                ();
+                            }
                         }
-                        my($table_name,$column_name) = $p->table_and_column_name_for_property();
-                        if ($table_name && $column_name) {
-                            [$table_name, $column_name];
-                        } else {
-                            #Carp::confess("Can't determine table and column for property $_ in class " .
-                            #              $source_class_object->class_name);
-                            ();
-                        }
-                    }
-                    @source_property_names;
+                        @source_property_names;
                 }
 
                 my @foreign_property_names = @{ $join->{foreign_property_names} };
                 my @foreign_property_meta = 
-                map {
-                    $foreign_class_object->property_meta_for_name($_)
-                }
-                @foreign_property_names;
+                    map { $foreign_class_object->property_meta_for_name($_) }
+                    @foreign_property_names;
                 my $foreign_table_name;
                 my @foreign_column_names = 
-                map {
-                    # TODO: encapsulate
-                    if ($_->is_calculated) {
-                        if ($_->calculate_sql) {
-                            $_->calculate_sql;
+                    map {
+                        # TODO: encapsulate
+                        if ($_->is_calculated) {
+                            if ($_->calculate_sql) {
+                                $_->calculate_sql;
+                            } else {
+                                ();
+                            }
                         } else {
-                            ();
+                            my $foreign_column_name;
+                            ($foreign_table_name, $foreign_column_name) = $_->table_and_column_name_for_property();
+                            $foreign_column_name;
                         }
-                    } else {
-                        my $foreign_column_name;
-                        ($foreign_table_name, $foreign_column_name) = $_->table_and_column_name_for_property();
-                        $foreign_column_name;
                     }
-                }
-                @foreign_property_meta;
+                    @foreign_property_meta;
+
                 unless (@foreign_column_names) {
                     # all calculated properties: don't try to join any further
                     last;
@@ -3244,18 +3255,16 @@ sub _generate_template_data_for_loading {
                                 push @keys, $where->[$n];
                             }
                             my @foreign_filter_property_meta = 
-                            map {
-                                $foreign_class_object->property_meta_for_name($_)
-                            }
-                            @keys;
+                                map { $foreign_class_object->property_meta_for_name($_) }
+                                @keys;
 
 
                             my @foreign_filter_column_names = 
-                            map {
-                                # TODO: encapsulate
-                                $_->is_calculated ? (defined($_->calculate_sql) ? ($_->calculate_sql) : () ) : ($_->column_name)
-                            }
-                            @foreign_filter_property_meta;
+                                map {
+                                    # TODO: encapsulate
+                                    $_->is_calculated ? (defined($_->calculate_sql) ? ($_->calculate_sql) : () ) : ($_->column_name)
+                                }
+                                @foreign_filter_property_meta;
 
                             for (my $n = 0; $n < @keys; $n++) {
                                 my $meta = $foreign_filter_property_meta[$n];
@@ -3265,21 +3274,21 @@ sub _generate_template_data_for_loading {
                         }
 
                         push @sql_joins,
-                        "$foreign_table_name $alias" =>
-                        {
-                            (
-                                map {
-                                    $foreign_column_names[$_] => { 
-                                        link_table_name     => $last_alias_for_this_chain                # join alias
-                                        || $source_table_and_column_names[$_][2]  # SQL inline view alias
-                                        || $source_table_and_column_names[$_][0], # table_name
-                                        link_column_name    => $source_table_and_column_names[$_][1] 
+                            "$foreign_table_name $alias" =>
+                            {
+                                (
+                                    map {
+                                        $foreign_column_names[$_] => { 
+                                            link_table_name     => $last_alias_for_this_chain                # join alias
+                                            || $source_table_and_column_names[$_][2]  # SQL inline view alias
+                                            || $source_table_and_column_names[$_][0], # table_name
+                                            link_column_name    => $source_table_and_column_names[$_][1] 
+                                        }
                                     }
-                                }
-                                (0..$#foreign_column_names)
-                            ),
-                            @extra_filters,
-                        };
+                                    (0..$#foreign_column_names)
+                                ),
+                                @extra_filters,
+                            };
                         $alias_sql_join{$alias} = $sql_joins[-1];
 
                         # Add all of the columns in the join table to the return list
@@ -3290,13 +3299,13 @@ sub _generate_template_data_for_loading {
                         }
                         else {
                             push @all_table_properties,
-                            map {
-                                my $new = [@$_]; 
-                                $new->[2] = $alias;
-                                $new->[3] = $object_num; 
-                                $new 
-                            }
-                            @{ $foreign_class_loading_data->{direct_table_properties} };                
+                                 map {
+                                     my $new = [@$_]; 
+                                     $new->[2] = $alias;
+                                     $new->[3] = $object_num; 
+                                     $new 
+                                 }
+                                 @{ $foreign_class_loading_data->{direct_table_properties} };                
                         }
                     }
                 }
@@ -3309,14 +3318,14 @@ sub _generate_template_data_for_loading {
                 if ($group_by) {
                     if ($group_by_property_names{$property_name}) {
                         my ($p) = 
-                        map {
-                            my $new = [@$_]; 
-                            $new->[2] = $alias;
-                            $new->[3] = 0; 
-                            $new 
-                        }
-                        grep { $_->[1]->property_name eq $final_accessor }
-                        @{ $foreign_class_loading_data->{direct_table_properties} };
+                            map {
+                                my $new = [@$_]; 
+                                $new->[2] = $alias;
+                                $new->[3] = 0; 
+                                $new 
+                            }
+                            grep { $_->[1]->property_name eq $final_accessor }
+                            @{ $foreign_class_loading_data->{direct_table_properties} };
                         push @all_table_properties, $p;
                         #print "PROPERTY $property_name IS INVOLVED IN GROUPING: $p\n";
                     }
@@ -3441,9 +3450,9 @@ sub _generate_template_data_for_loading {
             }
 
             push @sql_filters, 
-            $alias_for_property_value => { 
-                $sql_lvalue => { operator => $operator, value_position => $value_position } 
-            };
+                $alias_for_property_value => { 
+                    $sql_lvalue => { operator => $operator, value_position => $value_position } 
+                };
         }
     } # next delegated property
 
@@ -3496,8 +3505,7 @@ sub _generate_template_data_for_loading {
                 Carp::croak "Joins cannot use variable values currently!"
             }
             else {
-                my ($more_sql, @more_params) = 
-                $self->_extend_sql_for_column_operator_and_value($expr_sql, $operator, $value);   
+                my ($more_sql, @more_params) = $self->_extend_sql_for_column_operator_and_value($expr_sql, $operator, $value);   
                 if ($more_sql) {
                     $from_clause .= $more_sql;
                     push @sql_params, @more_params;
@@ -3645,8 +3653,9 @@ sub validate_subscription {
     my $retval = $self->SUPER::validate_subscription(@_);
     return $retval if $retval;
 
-    return 1 if ($subscription_property eq 'connect' or
-        $subscription_property eq 'query');
+    return 1 if ($subscription_property eq 'connect'
+                 or
+                 $subscription_property eq 'query');
 
     return;
 }
