@@ -819,7 +819,7 @@ sub _infer_direct_property_from_rule {
         eval {
             # Inside an eval in case the get() throws an exception, the next 
             # property in the rule may succeed
-            my @alternate_objects = $alternate_class->get( $alternate_get_property  => $value_from_rule );
+            my @alternate_objects = $self->query($alternate_class, $alternate_get_property  => $value_from_rule );
             @alternate_values = map { $_->$alternate_wanted_property } @alternate_objects;
         };
         next unless (@alternate_values);
@@ -893,7 +893,7 @@ sub _infer_delegated_property_from_rule {
         
     my @alternate_values;
     eval {
-        my @alternate_objects = $alternate_class->get(%alternate_get_params);
+        my @alternate_objects = $self->query($alternate_class, %alternate_get_params);
         @alternate_values = map { $_->$alternate_wanted_property } @alternate_objects;
     };
     return @alternate_values;
