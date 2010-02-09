@@ -306,8 +306,10 @@ sub _build_data_tree
     no warnings;
     my ($object,@values,$hr,$value);
     for my $object ($UR::Context::current->all_objects_loaded($self->indexed_class_name)) {            
-        @values = map { $object->$_ } @indexed_property_names;
-        @values = (undef) unless(@values);
+        if (@indexed_property_names) {
+            @values = map { $object->$_ } @indexed_property_names;
+            @values = (undef) unless(@values);
+        }
         $hr = $hr_base;
         for $value (@values)
         {
