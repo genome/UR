@@ -593,6 +593,9 @@ sub get_nullable_foreign_key_columns_for_table{
         my @fk_columns = UR::DataSource::RDBMS::FkConstraintColumn->get(fk_constraint_name => $fk->fk_constraint_name, data_source => $self->id);
         for my $fk_col (@fk_columns){
             my $column_obj = UR::DataSource::RDBMS::TableColumn->get(data_source => $self->id, table_name => $fk_col->table_name, column_name=> $fk_col->column_name);
+            unless ($column_obj) {
+                Carp::croak("Can't find TableColumn for table name ".$fk_col->table_name." column ".$fk_col->table_name." while processing foreign key constraint named ".$fk->fk_constraint_name);
+            }
             if ($column_obj->nullable and $column_obj->nullable ne 'N'){
                 my $col = $column_obj->column_name;
                 push @nullable_fk_columns, $col;
