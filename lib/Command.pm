@@ -827,24 +827,31 @@ sub help_options
             chomp $doc;
         }
         $max_name_length = length($param_name) if $max_name_length < length($param_name);
-        push @data, [$param_name, $doc];
+
+        my $default_value = $property_meta->default_value;
+        if (defined $default_value) {
+            $default_value = "\nDefault value '$default_value' if not specified";
+        }
+
+        push @data, [$param_name, $doc, $default_value];
     }
     my $text = '';
     for my $row (@data) {
         if (defined($format) and $format eq 'pod') {
-            $text .= "\n=item " . $row->[0] . "\n\n" . $row->[1] . "\n";  
+            $text .= "\n=item " . $row->[0] . "\n\n" . $row->[1] . "\n". $row->[2] . "\n";  
         }
         elsif (defined($format) and $format eq 'html') {
-            $text .= "\n\t<br>" . $row->[0] . "<br> " . $row->[1] . "<br>\n";
+            $text .= "\n\t<br>" . $row->[0] . "<br> " . $row->[1] . "<br>" . $row->[2]."<br>\n";
         }
         else {
             $text .= sprintf(
-                " %s\n%s\n",
+                "  %s\n%s\n",
                 Term::ANSIColor::colored($row->[0], 'bold'),
                 Text::Wrap::wrap(
-                    "  ", # 1st line indent,
-                    "  ", # all other lines indent,
+                    "    ", # 1st line indent,
+                    "    ", # all other lines indent,
                     $row->[1],
+                    $row->[2],
                 ),
             );
         }
