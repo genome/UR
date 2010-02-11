@@ -828,30 +828,43 @@ sub help_options
         }
         $max_name_length = length($param_name) if $max_name_length < length($param_name);
 
-        my $default_value = $property_meta->default_value;
-        if (defined $default_value) {
-            $default_value = "\nDefault value '$default_value' if not specified";
+        my $param_type = $property_meta->data_type;
+        if ($param_type !~ m/::/) {
+            $param_type = ucfirst(lc($param_type));
         }
 
-        push @data, [$param_name, $doc, $default_value];
+        my $default_value = $property_meta->default_value;
+        if (defined $default_value) {
+            if ($param_type eq 'Boolean') {
+                $default_value = $default_value ? "'true'" : "'false' (--no$param_name)";
+            } else {
+                $default_value = "'$default_value'";
+            }
+            $default_value = "\nDefault value $default_value if not specified";
+        }
+
+        push @data, [$param_name, $param_type, $doc, $default_value];
+        if ($param_type eq 'Boolean') {
+            push @data, ['no'.$param_name, $param_type, "Make $param_name 'false'" ];
+        }
     }
     my $text = '';
     for my $row (@data) {
         if (defined($format) and $format eq 'pod') {
-            $text .= "\n=item " . $row->[0] . "\n\n" . $row->[1] . "\n". $row->[2] . "\n";  
+            $text .= "\n=item " . $row->[0] . "\n\n" . $row->[2] . "\n". $row->[3] . "\n";
         }
         elsif (defined($format) and $format eq 'html') {
-            $text .= "\n\t<br>" . $row->[0] . "<br> " . $row->[1] . "<br>" . $row->[2]."<br>\n";
+            $text .= "\n\t<br>" . $row->[0] . "<br> " . $row->[2] . "<br>" . $row->[3]."<br>\n";
         }
         else {
             $text .= sprintf(
                 "  %s\n%s\n",
-                Term::ANSIColor::colored($row->[0], 'bold'),
+                Term::ANSIColor::colored($row->[0], 'bold') . "   " . $row->[1],
                 Text::Wrap::wrap(
                     "    ", # 1st line indent,
                     "    ", # all other lines indent,
-                    $row->[1],
                     $row->[2],
+                    $row->[3],
                 ),
             );
         }
