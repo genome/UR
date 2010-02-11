@@ -3601,33 +3601,23 @@ sub _sync_databases {
     my @invalid = grep { $_->__errors__ } @changed_objects;
     if (@invalid) {
         # Create a helpful error message for the developer.
-        my $msg = "Invalid data for save!";
-        $self->error_message($msg);
+        $self->error_message('Invalid data for save!');
         my @msg;
         for my $obj (@invalid)
         {
             no warnings;
+            my $msg = $obj->class . " identified by " . $obj->__display_name__ . " has problems on\n";
             my @problems = $obj->__errors__;
-            push @msg,
-                $obj->__display_name__
-                . " has "
-                . join
-                (
-                    ", ",
-                    (
-                        map
-                        {
-                            $_->desc . "  Problems on "
-                            . join(",", $obj->__meta__->all_property_names)
-                            . " values ("
-                            . join(",", map { $obj->$_ } $obj->__meta__->all_property_names)
-                            . ")"
-                        } @problems
-                    )
-                )
-                . ".\n";
+            foreach my $error ( @problems ) {
+                my @property_names = $error->properties;
+                my $desc = $error->desc;
+                my $prop_noun = scalar(@property_names) > 1 ? 'properties' : 'property';
+                #$msg .= "    $desc for $prop_noun " . join(', ', map { "'$_'" } @property_names) . "\n";
+                $msg .= "    $prop_noun " . join(', ', map { "'$_'" } @property_names) . ": $desc\n";
+            }
+            $msg .= "    Current state:\n" . Data::Dumper::Dumper($obj);
+            $self->error_message($msg);
         }
-        $self->error_message($msg . ": " . join("  ", @msg));
         goto PROBLEM_SAVING;
         #return;
     }

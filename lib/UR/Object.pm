@@ -125,7 +125,7 @@ sub __errors__ {
                 push @tags, UR::Object::Tag->create(
                     type => 'invalid',
                     properties => [$property_name],
-                    desc => "No value specified for required property $property_name."
+                    desc => "No value specified for required property",
                 );                
             }
         }
