@@ -381,6 +381,10 @@ $DB::single=1;
             . join(", ", map { "'" . $_->property_name . "'" } @id_by)
             . (@id_by > 1 ? ' ]' : '');
         $seen{'id_by_property_links'} = 1;
+
+        if (defined $property->id_class_by) {
+            push @fields, sprintf("id_class_by => '%s'", $property->id_class_by);
+        }
     }
 
     if ($property->via) {

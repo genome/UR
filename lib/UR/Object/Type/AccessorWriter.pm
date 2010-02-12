@@ -170,7 +170,7 @@ sub mk_id_based_object_accessor {
             $id = $id_resolver->(@id);
             return if not defined $id;
             if ($concrete_r_class_name eq 'UR::Object') {
-                Carp::cluck("Querying by using UR::Object class is deprecated.");
+                Carp::carp("Querying by using UR::Object class is deprecated.");
             }
             if (@_ || $where) { 
                 # There were additional params passed in 
