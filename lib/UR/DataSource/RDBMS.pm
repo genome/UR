@@ -113,12 +113,14 @@ sub generate_schema_for_class_meta {
         my @new = $self->generate_schema_for_class_meta($p,$temp);
         push @defined, @new;
 
-        if (my $parent_table = grep { $_->isa("UR::DataSource::RDBMS::Table") } @new) {
+        my $parent_table;
+        if (($parent_table) = grep { $_->isa("UR::DataSource::RDBMS::Table") } @new) {
             my @id_by = $class_meta->id_property_names;            
             my @column_names = map { $class_meta->property($_)->column_name } @id_by;
+            my $r_table_name = $parent_table->table_name;
+            $DB::single = 1; # get pk columns
             my @r_id_by = $p->id_property_names;
             my @r_column_names = map { $class_meta->property($_)->column_name } @r_id_by;
-            my $r_table_name = $p->table_name;
             push @fks_to_generate, [$class_meta->class_name, $table_name, $r_table_name, \@column_names, \@r_column_names];
         }
     }
@@ -147,7 +149,13 @@ sub generate_schema_for_class_meta {
     }
 
     ## print "handling table $table_name\n";
-    
+
+    if ($table_name =~ /[^\w\.]/) {
+        # pass back anything from parent classes, but do nothing for special "view" tables
+        $DB::single = 1;
+        return @defined;   
+    }
+ 
     my $t = '-'; 
 
     my $table = $self->refresh_database_metadata_for_table_name($table_name);
