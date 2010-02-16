@@ -325,7 +325,6 @@ sub _get_display_fields_for_property {
         $seen{'is_delegated'} = 1;
     }
     elsif ($property->is_calculated) {
-$DB::single=1;
         my @calc_fields;
         if (my $calc_from = $property->calculate_from) {
             if ($calc_from and @$calc_from == 1) {
@@ -411,8 +410,37 @@ $DB::single=1;
     }
 
     if ($property->where) {
-        my %where = @{ $property->where };
-        push @fields, 'where => [ ' . join(', ', map { sprintf("%s => '%s'", $_, $where{$_}) } keys %where) . ' ]';
+        my @where_parts = ();
+
+        my @where = @{ $property->where };
+        while (@where) {
+            my $prop_name = shift @where;
+            my $comparison = shift @where;
+            if (! ref($comparison)) {
+                # It's a strictly equals comparison.
+                # wrap it in quotes...
+                $comparison = "'$comparison'";
+
+            } elsif (ref($comparison) eq 'HASH') {
+                # It's a more complicated operator
+                my @operator_parts = ();
+                foreach my $key ( 'operator', 'value', keys %$comparison ) {
+                    if ($comparison->{$key}) {
+                        if (ref($comparison->{$key})) {
+                            my $class_name = $property->class_name;
+                            Carp::croak("Modulewriter doesn't know how to handle property $property_name of class $class_name.  Its 'where' has a non-scalar value for the '$key' key");
+                        }
+                        push @operator_parts, "$key => '" . delete($comparison->{$key}) . "'";
+                    }
+                }
+                $comparison = '{ ' . join(', ', @operator_parts) . ' } ';
+            } else {
+                my $class_name = $property->class_name;
+                Carp::croak("Modulewriter doesn't know how to handle property $property_name of class $class_name.  Its 'where' is not a simple scalar or hashref");
+            }
+            push @where_parts, "$prop_name => $comparison";
+        }
+        push @fields, 'where => [ ' . join(', ', @where_parts) . ' ]';
     }
 
     if (my $values_arrayref = $property->valid_values) {

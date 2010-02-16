@@ -42,6 +42,7 @@ $c = UR::Object::Type->define(
     ],
     has => [
 #        test_obj => { is => 'URT::TestClass', id_by => ['prop1','prop2','prop3'] },
+        something => { is => 'String' },
     ],
 );
 ok($c, 'Defined URT::Remote class');
@@ -77,7 +78,7 @@ my $test_class_definition =
     ],
     has_many => [
         property_cs => { is => 'String', is_optional => 1 },
-        remotes => { is => 'URT::Remote', reverse_as => 'testobj' },
+        remotes => { is => 'URT::Remote', reverse_as => 'testobj', where => [ something => { operator => 'like', value => '%match%' } ] },
     ],
     has_optional => [
         property_d => { is => 'Number' },
