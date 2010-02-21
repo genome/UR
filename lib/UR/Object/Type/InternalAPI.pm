@@ -824,7 +824,7 @@ sub _load {
         {
             # If so, that class may be able to generate a support
             # class.
-            $class_obj = $full_base_class_name->generate_support_class($suffix);
+            $class_obj = $full_base_class_name->__extend_namespace__($suffix);
             if ($class_obj)
             {
                 # Autogeneration worked.

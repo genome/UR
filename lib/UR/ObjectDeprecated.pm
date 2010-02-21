@@ -499,18 +499,6 @@ sub ghost_class {
 }
 
 
-# KEEP FUNCTIONALITY, BUT RENAME/REFACTOR
-
-sub generate_support_class {
-    # A class Foo can implement this method to have a chance to auto-define Foo::Bar 
-    # TODO: make a Class::Autouse::ExtendNamespace Foo => sub { } to handle this.
-    # Right now, UR::ModuleLoader will try it after "use".
-    my $class  = shift;
-    my $ext = shift;
-    my $class_meta = $class->__meta__;
-    return $class_meta->generate_support_class_for_extension($ext);
-}
-
 # Old things still use this directly, sadly.
 
 sub preprocess_params {

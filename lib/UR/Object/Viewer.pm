@@ -154,7 +154,7 @@ will be used to for that viewer.
 
 =cut
 
-sub generate_support_class {
+sub __extend_namespace__ {
     my $self = shift;
     my $subject_class_name_plus_keyword = ref($self) || $self;
     my $extension_for_support_class = shift;

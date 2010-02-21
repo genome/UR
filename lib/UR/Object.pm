@@ -535,6 +535,16 @@ sub __define__ {
     }
 }
 
+sub __extend_namespace__ {
+    # A class Foo can implement this method to have a chance to auto-define Foo::Bar 
+    # TODO: make a Class::Autouse::ExtendNamespace Foo => sub { } to handle this.
+    # Right now, UR::ModuleLoader will try it after "use".
+    my $class  = shift;
+    my $ext = shift;
+    my $class_meta = $class->__meta__;
+    return $class_meta->generate_support_class_for_extension($ext);
+}
+
 # Handling of references within the current process
 
 sub __weaken__ {
