@@ -1,13 +1,16 @@
 Revision history for UR
 
+0.13    2010-02-21
+        Circular foreign key constraints between tables are now handled smartly handled in UR::DataSource::RDBMS. 
+        The new view API is available.  The old "viewer" API is still available in this release, but is deprecated.
+
 0.12	2009-09-09
-        'ur test run' can now run tests in parallel and can submit tests as jobs
-            to LSF
+        'ur test run' can now run tests in parallel and can submit tests as jobs to LSF
         Command modules now have support for Getopt::Complete for bash tab-completion
-	Bugfixes related to saving objects to File data sources.
-	Several more fixes for merging between database and in-memory objects.
-	Property names beginning with an underscore are now handled properly during rule
-            and object creation
+        Bugfixes related to saving objects to File data sources.
+        Several more fixes for merging between database and in-memory objects.
+        Property names beginning with an underscore are now handled properly during rule
+        and object creation
 
 0.11    2009-07-30
         Fix bug in merge between database/in-memory data sets with changes.
