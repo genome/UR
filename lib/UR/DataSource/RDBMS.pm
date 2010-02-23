@@ -118,7 +118,7 @@ sub generate_schema_for_class_meta {
             my @id_by = $class_meta->id_property_names;            
             my @column_names = map { $class_meta->property($_)->column_name } @id_by;
             my $r_table_name = $parent_table->table_name;
-            $DB::single = 1; # get pk columns
+            #$DB::single = 1; # get pk columns
             my @r_id_by = $p->id_property_names;
             my @r_column_names = map { $class_meta->property($_)->column_name } @r_id_by;
             push @fks_to_generate, [$class_meta->class_name, $table_name, $r_table_name, \@column_names, \@r_column_names];
