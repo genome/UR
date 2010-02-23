@@ -70,6 +70,15 @@ sub _build_all_sub_commands {
     for my $target (sort keys %target_classes) {
         my $target_class_name = $target_classes{$target};
         my $class_name = $delegating_class_name . '::' . $target;
+
+        # skip commands which have a module
+        my $module_name = $class_name;
+        $module_name =~ s|::|/|g;
+        $module_name .= '.pm';
+        if (my @matches = grep { -e $_ . '/' . $module_name } @INC) {
+            next;
+        }
+
         my @new_class_names = $class->_build_sub_command($class_name,$delegating_class_name,$target_class_name);
         for my $new_class_name (@new_class_names) {
             eval "sub ${new_class_name}::_target_class_name { '$target_class_name' }";
