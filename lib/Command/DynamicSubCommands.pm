@@ -38,12 +38,18 @@ sub _build_all_sub_commands {
     my $delegating_class_name = $class;
     eval "sub ${class}::_delegating_class_name { '$delegating_class_name' }";
 
-    #$ref_class->class;
-
     my $module = $ref_class;
     $module =~ s/::/\//g;
     $module .= '.pm';
     my $base_path = $INC{$module};
+    unless ($base_path) {
+        if (UR::Object::Type->get($ref_class)) {
+            $base_path = $INC{$module};
+        }
+        unless ($base_path) {
+           die "Failed to find the path for ref class $ref_class!"; 
+        }
+    }
     $base_path =~ s/$module//;
 
     my $ref_path = $ref_class;
