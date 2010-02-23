@@ -1159,7 +1159,6 @@ sub sub_command_dirs
     $module .= '.pm';
     my $path = $INC{$module};
     unless ($path) {
-        print Dumper("no $module in \%INC: ", \%INC);
         return;
     }
     $path =~ s/.pm$//;
