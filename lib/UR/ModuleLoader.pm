@@ -56,6 +56,11 @@ sub dynamically_load_class {
     my ($namespace) = ($class =~ /^(.*?)::/);
     return unless $namespace;
 
+    if (defined($func) and $func eq "class" and @params > 1 and $class ne "UR::Object::Type") {
+        # a "class" statement caught by the above define_class call
+        return;
+    }
+
     unless ($namespace->isa("UR::Namespace")) {
         return;
     }
