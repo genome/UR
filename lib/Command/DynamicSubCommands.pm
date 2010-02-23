@@ -105,6 +105,8 @@ sub sub_command_dirs {
 
 sub sub_command_classes { @{ shift->__meta__->{_sub_commands} } }
 
+sub _target_class_name { undef }
+
 1;
 
 =pod
