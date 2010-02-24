@@ -12,27 +12,36 @@ END {
     unlink URT::DataSource::SomeSQLite->server;
 }
 
+# This test uses 3 independent groups of classes/tables:
+# 1) One class where no subclassing is involved (URT::Thing uses table thing)
+# 2) A pair of classes where we need to do a join to get the subclassed data
+#    URT::Fruit uses the fruit table.  URT::Apple is its subclass and uses table
+#    apple
+# 3) A pair of classes where the child class has no table of its own.
+#    URT::Vehicle uses table vehicle.  URT::Car is its subclass and has no table
+
 my $dbh = &setup_classes_and_db();
 
 
-# The DB table the test updates changes depending on which class we're futzing with
-my %table_for_class = ('URT::Thing' => 'thing',
-                       'URT::ParentThing' => 'childthing',
-                       'URT::ChildThing' => 'childthing',
-                       'URT::ReblessParentThing' => 'reblessparentthing',
-                       'URT::ReblessChildThing' => 'reblessparentthing',
+# The test messes with the 'value' property/column.  This hash maps the class name 
+# with which table contains the 'value' column
+my %table_for_class = ('URT::Thing'   => 'thing',
+                       'URT::Fruit'   => 'apple',
+                       'URT::Apple'   => 'apple',
+                       'URT::Vehicle' => 'vehicle',
+                       'URT::Car'     => 'vehicle',
                       );
 
-# Context exception messages complain about the class the object lives in, not the one it's loaded from
+# Context exception messages complain about the class the data originally comes from
 my %complaint_class = ('URT::Thing' => 'URT::Thing',
-                       'URT::ParentThing' => 'URT::ChildThing',
-                       'URT::ChildThing' => 'URT::ChildThing',
-                       'URT::ReblessParentThing' => 'URT::ReblessParentThing',
-                       'URT::ReblessChildThing' => 'URT::ReblessParentThing',
+                       'URT::Fruit' => 'URT::Apple',
+                       'URT::Apple' => 'URT::Apple',
+                       'URT::Vehicle' => 'URT::Vehicle',
+                       'URT::Car' => 'URT::Vehicle',
                      );
 
 my $obj_id = 1; 
-foreach my $test_class ( 'URT::Thing', 'URT::ParentThing', 'URT::ChildThing', 'URT::ReblessParentThing', 'URT::ReblessChildThing') {
+foreach my $test_class ( 'URT::Thing', 'URT::Fruit', 'URT::Apple', 'URT::Vehicle', 'URT::Car') {
     diag("Working on class $test_class");
     UR::DBI->no_commit(0);
 
@@ -107,11 +116,8 @@ foreach my $test_class ( 'URT::Thing', 'URT::ParentThing', 'URT::ChildThing', 'U
     ok(UR::Context->commit(), 'calling commit()');
     ok($dbh->do("update $test_table set value = 7 where thing_id = $this_pass_obj_id"), 'Updated value for thing in the DB to 7');
     ok($thing->value(8), 'Changed object value to 8');
-# FIXME - this seems to do the wrong thing in _most_ cases.
-# I'd expect the value to remain 8, db_committed to be 6? and db_saved_uncommitted to be 7
     ok(eval { $cx->reload($thing) },'Reloading object again');
     is($@, '', 'No exceptions during reload');
-    #is($thing->value, 7, 'Value is 7');
     is($thing->value, 8, 'Value is 8');
     
     ok(UR::DBI->no_commit(1), 'Turned on no_commit');
@@ -123,7 +129,7 @@ foreach my $test_class ( 'URT::Thing', 'URT::ParentThing', 'URT::ChildThing', 'U
     $message = $@;
     $message =~ s/\s+/ /gm;   # collapse whitespace
     like($message,
-         qr/A change has occurred in the database for $complaint_class property 'value' on object ID $this_pass_obj_id from '7' to '10'. At the same time, this application has made a change to that value to '11'/,
+         qr/A change has occurred in the database for $complaint_class property 'value' on object ID $this_pass_obj_id from '9' to '10'. At the same time, this application has made a change to that value to '11'/,
          'Exception message looks correct');
     is($thing->value, 11, 'Value is 11');
 }
@@ -145,14 +151,14 @@ sub setup_classes_and_db {
     ok( $dbh->do("create table thing (thing_id integer PRIMARY KEY, value integer)"),
         'created thing table');
 
-    ok($dbh->do("create table parentthing (thing_id integer PRIMARY KEY, parentvalue integer) "),
-         'created parentthing table');
+    ok($dbh->do("create table fruit (thing_id integer PRIMARY KEY, fruitvalue integer) "),
+         'created fruit table');
 
-    ok($dbh->do("create table childthing(thing_id integer PRIMARY KEY references parentthing(thing_id), value integer)"),
-         'created subthing table');
+    ok($dbh->do("create table apple(thing_id integer PRIMARY KEY references fruit(thing_id), value integer)"),
+         'created apple table');
 
-    ok($dbh->do("create table reblessparentthing (thing_id integer PRIMARY KEY, value integer) "),
-         'created reblessparentthing table');
+    ok($dbh->do("create table vehicle (thing_id integer PRIMARY KEY, value integer) "),
+         'created vehicle table');
 
     my $sth = $dbh->prepare('insert into thing values (?,?)');
     ok($sth, 'Prepared insert statement');
@@ -161,20 +167,20 @@ sub setup_classes_and_db {
     }
     $sth->finish;
 
-    my $parentsth = $dbh->prepare('insert into parentthing values (?,?)');
-    ok($parentsth, 'Prepared parentthing insert statement');
-    my $childsth = $dbh->prepare('insert into childthing values (?,?)');
-    ok($childsth, 'Prepared childthing insert statement');
-    my $parent2sth = $dbh->prepare('insert into reblessparentthing values (?,?)');
-    ok($parent2sth, 'Prepared reblessparentthing insert statement');
+    my $fruitsth = $dbh->prepare('insert into fruit values (?,?)');
+    ok($fruitsth, 'Prepared fruit insert statement');
+    my $applesth = $dbh->prepare('insert into apple values (?,?)');
+    ok($applesth, 'Prepared apple insert statement');
+    my $vehiclesth = $dbh->prepare('insert into vehicle values (?,?)');
+    ok($vehiclesth, 'Prepared vehicle insert statement');
     foreach my $val ( 1,2,3,4,5 ) {   # one item for each class here, too
-        $parentsth->execute($val,1);
-        $childsth->execute($val,1);
-        $parent2sth->execute($val,1);
+        $fruitsth->execute($val,1);
+        $applesth->execute($val,1);
+        $vehiclesth->execute($val,1);
     }
-    $parentsth->finish;
-    $childsth->finish;
-    $parent2sth->finish;
+    $fruitsth->finish;
+    $applesth->finish;
+    $vehiclesth->finish;
 
     ok($dbh->commit(), 'DB commit');
 
@@ -189,46 +195,46 @@ sub setup_classes_and_db {
 
     # A pair of classes, one that inherits from another.  The child class
     # has a table that gets joined
-    sub URT::ParentThing::resolve_subclass_name {
-        return 'URT::ChildThing';    # All are ChildThings
+    sub URT::Fruit::resolve_subclass_name {
+        return 'URT::Apple';    # All are Apples for this test
     }
     UR::Object::Type->define(
-        class_name => 'URT::ParentThing',
+        class_name => 'URT::Fruit',
         sub_classification_method_name => 'resolve_subclass_name',
         id_by => 'thing_id',
-        has => [ 'parentvalue' ],
+        has => [ 'fruitvalue' ],
         data_source => 'URT::DataSource::SomeSQLite',
-        table_name => 'parentthing',
+        table_name => 'fruit',
         is_abstract => 1,
     );
 
     UR::Object::Type->define(
-        class_name => 'URT::ChildThing',
-        is => 'URT::ParentThing',
+        class_name => 'URT::Apple',
+        is => 'URT::Fruit',
         id_by => 'thing_id',
         has => [ 'value' ],
         data_source => 'URT::DataSource::SomeSQLite',
-        table_name => 'childthing',
+        table_name => 'apple',
     );
 
 
     # Another pair of classes.  This time, the child class does not have its own table.
-    sub URT::ReblessParentThing::resolve_subclass_name {
-        return 'URT::ReblessChildThing';    # All are ChildThings
+    sub URT::Vehicle::resolve_subclass_name {
+        return 'URT::Car';    # All are Cars for this test
     }
     UR::Object::Type->define(
-        class_name => 'URT::ReblessParentThing',
+        class_name => 'URT::Vehicle',
         sub_classification_method_name => 'resolve_subclass_name',
         id_by => 'thing_id',
         has => [ 'value' ],
         data_source => 'URT::DataSource::SomeSQLite',
-        table_name => 'reblessparentthing',
+        table_name => 'vehicle',
         is_abstract => 1,
     );
 
     UR::Object::Type->define(
-        class_name => 'URT::ReblessChildThing',
-        is => 'URT::ReblessParentThing',
+        class_name => 'URT::Car',
+        is => 'URT::Vehicle',
     );
 
     return $dbh;
