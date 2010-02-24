@@ -68,7 +68,7 @@ foreach my $class ( 'URT::Thing', 'URT::SubclassedThing' ) {
     my $message = $@;
     $message =~ s/\s+/ /gm;
     like($message,
-         qr/A change has occurred in the database for $class property color on object 3 from 'red' to 'orange'. At the same time, this application has made a change to that value to 'blue'./,
+         qr/A change has occurred in the database for $class property 'color' on object ID 3 from 'red' to 'orange'. At the same time, this application has made a change to that value to 'blue'./,
          'Error message looks correct');
     is($things[0]->color, 'blue', 'color remains what we set it to');
     #is($things[0]->{'db_committed'}->{'color'}, 'orange', 'db_committed for the color was updated to what we set the database to');

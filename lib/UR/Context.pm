@@ -2168,6 +2168,175 @@ sub _create_import_iterator_for_underlying_context {
 }
 
 
+# Called by the object fabricator closure that's created in __create_object_fabricator_for_loading_template
+# below.  This will check the data in an existing cached object, compare it with data that's currently being
+# loaded in from the database, and depending on the data:
+# 1) update the current value for the property
+# 2) update the db_committed/db_saved_uncommitted
+# 3) throw an exception if there are conflicting data changes
+# Returns true if there were any differences
+
+sub __merge_db_data_with_existing_object {
+    my($self, $class_name, $existing_object, $pending_db_object_data, $property_names) = @_;
+
+$DB::single = 1 if  $DB::stopper;
+    my ($dbc, $dbsu);
+    $dbc = $existing_object->{'db_committed'} if (exists $existing_object->{'db_committed'});
+    $dbsu = $existing_object->{'db_saved_uncommitted'} if (exists $existing_object->{'db_saved_uncommitted'});
+
+    if (!$dbc and !$dbsu) {
+        my $id = $existing_object->id;
+        Carp::croak("$class_name ID '$id' has just been loaded, but it exists in the application as a new unsaved object!\nDump: " . Data::Dumper::Dumper($existing_object) . "\n");
+    }
+
+    my $different = 0;
+    my $conflict = undef;
+
+    foreach my $property ( @$property_names ) {
+        no warnings 'uninitialized';
+
+        next unless (exists $existing_object->{$property});   # All direct properties are stored in the same-named hash key, right?
+
+        my $object_value = $existing_object->{$property};
+        my $db_value     = $pending_db_object_data->{$property};
+
+        if ($dbc and $object_value ne $dbc->{$property}) {
+            $different = 1;
+        }
+
+        
+        if ( $object_value eq $db_value                      # current value matches DB value
+             or
+             ($dbc and $object_value eq $dbc->{$property})    # current value hasn't changed since it was loaded from the DB
+             or
+             ($dbc and $db_value eq $dbc->{$property})    # DB value matches what it was when we loaded it from the DB
+             or
+             ($dbsu and $db_value eq $dbsu->{$property})      # we tried to save to the DB the same value, but no_commit was on - happens in test cases
+        ) {
+            # no conflict.  Check the next one
+            next;
+        } else {
+            $conflict = $property;
+            last;
+        }
+    }
+
+    if (defined $conflict) {
+        # conflicting change!
+        # Since the user could be catching this exception, go ahead and update the
+        # object's notion of what is in the database
+        my %old_dbc = %$dbc;
+        @$dbc{@$property_names} = @$pending_db_object_data{@$property_names} if ($dbc);
+
+        my $old_value = defined($old_dbc{$conflict})
+                        ? "'" . $old_dbc{$conflict} . "'"
+                        : '(undef)';
+        my $new_db_value = defined($pending_db_object_data->{$conflict})
+                        ? "'" . $pending_db_object_data->{$conflict} . "'"
+                        : '(undef)';
+        my $new_obj_value = defined($existing_object->{$conflict})
+                        ? "'" . $existing_object->{$conflict} . "'"
+                        : '(undef)';
+
+        my $obj_id = $existing_object->id;
+
+        Carp::croak("\nA change has occurred in the database for $class_name property '$conflict' on object ID $obj_id from $old_value to $new_db_value.\n"
+        #Carp::croak("\nA change has occurred in the database for $class_name property $conflict on object $obj_id from $old_value to $new_db_value.\n"
+                    . "At the same time, this application has made a change to that value to $new_obj_value.\n\n"
+                    . "The application should lock data which it will update and might be updated by other applications.");
+
+    }
+ 
+    # No conflicts.  Update db_committed and db_saved_uncommitted based on the DB data
+    if ($dbc) {
+        %$dbc = (%$dbc, %$pending_db_object_data);
+    } 
+    if ($dbsu) {
+        %$dbsu = (%$dbsu, %$pending_db_object_data);
+    }
+
+    if (! $different) {
+        # The object has no local changes.  Go ahead and update the current value, too
+        foreach my $property ( @$property_names ) {
+            next if ($existing_object->{$property} eq $pending_db_object_data->{$property});
+
+            $existing_object->$property($pending_db_object_data->{$property});
+        }
+    }
+
+    return $different;
+}
+
+
+#sub __old_merge_db_data_with_existing_object {
+#    my($self, $class_name, $existing_object, $pending_db_object_data, $property_names) = @_;
+#
+#    my $dbc = $existing_object->{'db_committed'};
+#    my $dbsu = $existing_object->{'db_saved_uncommitted'};
+#
+#    my $different = 0;
+#
+#$DB::single=1 if ($class_name =~ m/Rebless/);
+#    for my $property (@$property_names) {
+#        no warnings 'uninitialized';
+#        if ($pending_db_object_data->{$property} ne $dbc->{$property}) {
+#            # This has changed in the database since we loaded the object.
+#
+#            $different = 1;
+#
+#            # Ensure that none of the outside changes conflict with
+#            # any inside changes, then apply the outside changes.
+#            my $cached_value = $existing_object->{$property};
+#            if ($dbc and $cached_value eq $dbc->{$property}    # haven't changed it locally...
+#                or
+#                $cached_value eq $pending_db_object_data->{$property}  # we changed it to the same as the DB
+#                or
+#                ($dbsu and $pending_db_object_data->{$property} eq $dbsu->{$property})   # we tried to save it the same, but no_commit was on
+#               ) {
+#                # no changes to this property in the application
+#                # update the underlying db_committed
+#                if ($dbc) {
+#                    $dbc->{$property} = $pending_db_object_data->{$property};
+#                }
+#                if ($dbsu) {
+#                    $dbsu->{$property} = $pending_db_object_data->{$property};
+#                }
+#                
+#                # update the regular state of the object in the application
+#                $existing_object->$property($pending_db_object_data->{$property});
+#            }
+#            else {
+#                # conflicting change!
+#                # Since the user could be catching this exception, go ahead and update the
+#                # object's notion of what is in the database
+#                my %old_dbc = %$dbc;
+#                @$dbc{@$property_names} = @$pending_db_object_data{@$property_names};
+#
+#                my $old_value = defined($old_dbc{$property})
+#                                ? "'" . $old_dbc{$property} . "'"
+#                                : '(undef)';
+#                my $new_db_value = defined($pending_db_object_data->{$property})
+#                                ? "'" . $pending_db_object_data->{$property} . "'"
+#                                : '(undef)';
+#                my $new_obj_value = defined($existing_object->{$property})
+#                                ? "'" . $existing_object->{$property} . "'"
+#                                : '(undef)';
+#
+#                my $obj_id = $existing_object->id;
+#
+#                Carp::croak("\nA change has occurred in the database for $class_name property '$property' on object ID $obj_id from $old_value to $new_db_value.\n"
+#                #Carp::croak("\nA change has occurred in the database for $class_name property $property on object $obj_id from $old_value to $new_db_value.\n"
+#                            . "At the same time, this application has made a change to that value to $new_obj_value.\n\n"
+#                            . "The application should lock data which it will update and might be updated by other applications.");
+#            }
+#        }
+#    }
+#    return $different;
+#}
+
+
+
+
 sub __create_object_fabricator_for_loading_template {
     my ($self, $loading_template, $template_data, $rule, $rule_template, $values, $dsx) = @_;
 
@@ -2342,92 +2511,93 @@ sub __create_object_fabricator_for_loading_template {
 
         # Handle the object based-on whether it is already loaded in the current context.
         if ($pending_db_object = $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id}) {
+            $self->__merge_db_data_with_existing_object($class, $pending_db_object, $pending_db_object_data, \@property_names);
             # The object already exists.            
-            my $dbsu = $pending_db_object->{db_saved_uncommitted};
-            my $dbc = $pending_db_object->{db_committed};
-            if ($dbc) {
-                # only go over property names as a joined query may pull back columns that
-                # are not properties (e.g. find DNA for PSE ID 1001 would get PSE attributes in the query)
-                for my $property (@property_names) {
-                    no warnings;
-                    if ($pending_db_object_data->{$property} ne $dbc->{$property}) {
-                        # This has changed in the database since we loaded the object.
-                        
-                        # Ensure that none of the outside changes conflict with 
-                        # any inside changes, then apply the outside changes.
-                        my $cached_value = $pending_db_object->{$property};
-                        if ($cached_value eq $dbc->{$property}    # haven't changed it locally...
-                            or
-                            $cached_value eq $pending_db_object_data->{$property}  # we changed it to the same as the DB
-                            or
-                            $pending_db_object_data->{$property} eq $dbsu->{$property}   # we tried to save it the same, but no_commit was on
-                           ) {
-                            # no changes to this property in the application
-                            # update the underlying db_committed
-                            $dbc->{$property} = $pending_db_object_data->{$property};
-                            # update the regular state of the object in the application
-                            $pending_db_object->$property($pending_db_object_data->{$property}); 
-                        }
-                        else {
-                            # conflicting change!
-                            # Since the user could be catching this exception, go ahead and update the
-                            # object's notion of what is in the database
-                            my %old_dbc = %$dbc;
-                            @$dbc{@property_names} = @$pending_db_object_data{@property_names};
-            
-                            my $old_value = defined($old_dbc{$property})
-                                            ? "'" . $old_dbc{$property} . "'"
-                                            : '(undef)';
-                            my $new_db_value = defined($pending_db_object_data->{$property})
-                                            ? "'" . $pending_db_object_data->{$property} . "'"
-                                            : '(undef)';
-                            my $new_obj_value = defined($pending_db_object->{$property})
-                                            ? "'" . $pending_db_object->{$property} . "'"
-                                            : '(undef)';
-
-                            Carp::confess(qq(
-                                A change has occurred in the database for
-                                $class property $property on object $pending_db_object->{id}
-                                from $old_value to $new_db_value.
-                                At the same time, this application has made a change to
-                                that value to $new_obj_value.
-
-                                The application should lock data which it will update
-                                and might be updated by other applications.
-                            ));
-                        }
-                    }
-                }
-                # Update its db_committed snapshot.
-                %$dbc = (%$dbc, %$pending_db_object_data);
-            }
-            if ($dbsu) {
-                # Update its db_saved_uncommitted snapshot.
-                %$dbsu = (%$dbsu, %$pending_db_object_data);
-            }
-
-            if ($dbc || $dbsu) {
-                $dsx->debug_message("object was already loaded", 4);
-            }
-            else {
-                # No db_committed key.  This object was "create"ed 
-                # even though it existed in the database, and now 
-                # we've tried to load it.  Raise an error.
-                Carp::croak("$class $pending_db_object_id has just been loaded, but it exists in the application as a new unsaved object!\n" . Data::Dumper::Dumper($pending_db_object) . "\n");
-            }
-            
-            # TODO move up
-            #if ($loading_base_object and not $rule_without_recursion_desc->evaluate($pending_db_object)) {
-            #    # The object is changed in memory and no longer matches the query rule (= where clause)
-            #    if ($loading_base_object and $rule_specifies_id) {
-            #        $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
-            #        $UR::Context::all_params_loaded->{$class}{$rule_id}++;
-            #    }
-            #    $pending_db_object->__signal_change__('load');
-            #    return;
-            #    #$pending_db_object = undef;
-            #    #redo;
-            #}
+#            my $dbsu = $pending_db_object->{db_saved_uncommitted};
+#            my $dbc = $pending_db_object->{db_committed};
+#            if ($dbc) {
+#                # only go over property names as a joined query may pull back columns that
+#                # are not properties (e.g. find DNA for PSE ID 1001 would get PSE attributes in the query)
+#                for my $property (@property_names) {
+#                    no warnings;
+#                    if ($pending_db_object_data->{$property} ne $dbc->{$property}) {
+#                        # This has changed in the database since we loaded the object.
+#                        
+#                        # Ensure that none of the outside changes conflict with 
+#                        # any inside changes, then apply the outside changes.
+#                        my $cached_value = $pending_db_object->{$property};
+#                        if ($cached_value eq $dbc->{$property}    # haven't changed it locally...
+#                            or
+#                            $cached_value eq $pending_db_object_data->{$property}  # we changed it to the same as the DB
+#                            or
+#                            $pending_db_object_data->{$property} eq $dbsu->{$property}   # we tried to save it the same, but no_commit was on
+#                           ) {
+#                            # no changes to this property in the application
+#                            # update the underlying db_committed
+#                            $dbc->{$property} = $pending_db_object_data->{$property};
+#                            # update the regular state of the object in the application
+#                            $pending_db_object->$property($pending_db_object_data->{$property}); 
+#                        }
+#                        else {
+#                            # conflicting change!
+#                            # Since the user could be catching this exception, go ahead and update the
+#                            # object's notion of what is in the database
+#                            my %old_dbc = %$dbc;
+#                            @$dbc{@property_names} = @$pending_db_object_data{@property_names};
+#            
+#                            my $old_value = defined($old_dbc{$property})
+#                                            ? "'" . $old_dbc{$property} . "'"
+#                                            : '(undef)';
+#                            my $new_db_value = defined($pending_db_object_data->{$property})
+#                                            ? "'" . $pending_db_object_data->{$property} . "'"
+#                                            : '(undef)';
+#                            my $new_obj_value = defined($pending_db_object->{$property})
+#                                            ? "'" . $pending_db_object->{$property} . "'"
+#                                            : '(undef)';
+#
+#                            Carp::confess(qq(
+#                                A change has occurred in the database for
+#                                $class property $property on object $pending_db_object->{id}
+#                                from $old_value to $new_db_value.
+#                                At the same time, this application has made a change to
+#                                that value to $new_obj_value.
+#
+#                                The application should lock data which it will update
+#                                and might be updated by other applications.
+#                            ));
+#                        }
+#                    }
+#                }
+#                # Update its db_committed snapshot.
+#                %$dbc = (%$dbc, %$pending_db_object_data);
+#            }
+#            if ($dbsu) {
+#                # Update its db_saved_uncommitted snapshot.
+#                %$dbsu = (%$dbsu, %$pending_db_object_data);
+#            }
+#
+#            if ($dbc || $dbsu) {
+#                $dsx->debug_message("object was already loaded", 4);
+#            }
+#            else {
+#                # No db_committed key.  This object was "create"ed 
+#                # even though it existed in the database, and now 
+#                # we've tried to load it.  Raise an error.
+#                Carp::croak("$class $pending_db_object_id has just been loaded, but it exists in the application as a new unsaved object!\n" . Data::Dumper::Dumper($pending_db_object) . "\n");
+#            }
+#            
+#            # TODO move up
+#            #if ($loading_base_object and not $rule_without_recursion_desc->evaluate($pending_db_object)) {
+#            #    # The object is changed in memory and no longer matches the query rule (= where clause)
+#            #    if ($loading_base_object and $rule_specifies_id) {
+#            #        $pending_db_object->{load}{param_key}{$class}{$rule_id}++;
+#            #        $UR::Context::all_params_loaded->{$class}{$rule_id}++;
+#            #    }
+#            #    $pending_db_object->__signal_change__('load');
+#            #    return;
+#            #    #$pending_db_object = undef;
+#            #    #redo;
+#            #}
         } # end handling objects which are already loaded
         else {
             # Handle the case in which the object is completely new in the current context.
@@ -2596,60 +2766,65 @@ sub __create_object_fabricator_for_loading_template {
                     # These need to be subclassed, but there is no added data to load.
                     # Just remove and re-add from the core data structure.
                     my $already_loaded = $subclass_name->is_loaded($pending_db_object->id);
+$DB::single=1 if $DB::stopper;
 
                     my $different;
+                    my $merge_exception;
                     if ($already_loaded) {
-                        foreach my $property ( @property_names ) {
-                            next if (ref($already_loaded->{$property}) || ref($pending_db_object->{$property}));
-                            no warnings 'uninitialized';
-                            if (($already_loaded->{'db_committed'}->{$property} ne $already_loaded->{$property})
-                                and
-                                ($already_loaded->{$property} ne $pending_db_object->{$property})
-                                and
-                                ($already_loaded->{$property} ne $pending_db_object_data->{$property})
-                                and 
-                                ($already_loaded->{'db_saved_uncommitted'}->{$property} ne $pending_db_object_data->{$property})
-                            ) {
-
-                                 # conflicting change!
-
-                                 # Since the user may be trapping exceptions, first clean up the object in the
-                                 # cache under the un-subclassed slot, and reload the object's notion of what
-                                 # is in the database
-                                 delete $UR::Context::all_objects_loaded->{$already_loaded->class}->{$already_loaded->id};
-                                 my $dbc = $already_loaded->{'db_committed'};
-                                 my %old_dbc = %$dbc;
-                                 @$dbc{@property_names} = @$pending_db_object_data{@property_names};
-
-                                 my $old_value = defined($old_dbc{$property})
-                                                 ? "'" . $old_dbc{$property} . "'"
-                                                 : '(undef)';
-                                 my $new_db_value = defined($pending_db_object_data->{$property})
-                                                 ? "'" . $pending_db_object_data->{$property} . "'"
-                                                 : '(undef)';
-                                 my $new_obj_value = defined($already_loaded->{$property})
-                                                 ? "'" . $already_loaded->{$property} . "'"
-                                                 : '(undef)';
-
-
-                                 Carp::confess(qq(
-                                     A change has occurred in the database for
-                                     $class property $property on object $pending_db_object->{id}
-                                     from $old_value to $new_db_value.
-                                     At the same time, this application has made a change to
-                                     that value to $new_obj_value.
-
-                                     The application should lock data which it will update
-                                     and might be updated by other applications.
-                                 ));
-                            } elsif ($already_loaded->{$property} ne $pending_db_object->{$property}) {
-                                $different = 1;
-                                last;
-                            }
-                        }
+                        eval { $different = $self->__merge_db_data_with_existing_object($class, $already_loaded, $pending_db_object_data, \@property_names) };
+                        $merge_exception = $@;
+#                        foreach my $property ( @property_names ) {
+#                            next if (ref($already_loaded->{$property}) || ref($pending_db_object->{$property}));
+#                            no warnings 'uninitialized';
+#                            if (($already_loaded->{'db_committed'}->{$property} ne $already_loaded->{$property})
+#                                and
+#                                #($already_loaded->{$property} ne $pending_db_object->{$property})
+#                                ($already_loaded->{'db_committed'}->{$property} ne $pending_db_object->{$property})
+#                                and
+#                                ($already_loaded->{$property} ne $pending_db_object_data->{$property})
+#                                and 
+#                                ($already_loaded->{'db_saved_uncommitted'}->{$property} ne $pending_db_object_data->{$property})
+#                            ) {
+#
+#                                 # conflicting change!
+#
+#                                 # Since the user may be trapping exceptions, first clean up the object in the
+#                                 # cache under the un-subclassed slot, and reload the object's notion of what
+#                                 # is in the database
+#                                 delete $UR::Context::all_objects_loaded->{$already_loaded->class}->{$already_loaded->id};
+#                                 my $dbc = $already_loaded->{'db_committed'};
+#                                 my %old_dbc = %$dbc;
+#                                 @$dbc{@property_names} = @$pending_db_object_data{@property_names};
+#
+#                                 my $old_value = defined($old_dbc{$property})
+#                                                 ? "'" . $old_dbc{$property} . "'"
+#                                                 : '(undef)';
+#                                 my $new_db_value = defined($pending_db_object_data->{$property})
+#                                                 ? "'" . $pending_db_object_data->{$property} . "'"
+#                                                 : '(undef)';
+#                                 my $new_obj_value = defined($already_loaded->{$property})
+#                                                 ? "'" . $already_loaded->{$property} . "'"
+#                                                 : '(undef)';
+#
+#
+#                                 Carp::confess(qq(
+#                                     A change has occurred in the database for
+#                                     $class property $property on object $pending_db_object->{id}
+#                                     from $old_value to $new_db_value.
+#                                     At the same time, this application has made a change to
+#                                     that value to $new_obj_value.
+#
+#                                     The application should lock data which it will update
+#                                     and might be updated by other applications.
+#                                 ));
+#                            } elsif ($already_loaded->{$property} ne $pending_db_object->{$property}) {
+#                                $different = 1;
+#                                last;
+#                            }
+#                        }
                     }
                     
-                    if ($already_loaded and !$different) {
+                    if ($already_loaded and !$different and !$merge_exception) {
                         if ($pending_db_object == $already_loaded) {
                             print "ALREADY LOADED SAME OBJ?\n";
                             $DB::single = 1;
@@ -2690,11 +2865,16 @@ sub __create_object_fabricator_for_loading_template {
                         $pending_db_object->__signal_change__("unload");
                         delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$id};
                         delete $UR::Context::all_objects_are_loaded->{$prev_class_name};
+                        if ($merge_exception) {
+                            # Now that we've removed traces of the incorrectly-subclassed $pending_db_object,
+                            # we can pass up any exception generated in __merge_db_data_with_existing_object
+                            die $merge_exception;
+                        }
                         if ($already_loaded) {
                             # The new object should replace the old object.  Since other parts of the user's program
                             # may have references to this object, we need to copy the values from the new object into
                             # the existing cached object
-                            @$already_loaded{@property_names,'db_committed'} = @$pending_db_object{@property_names,'db_committed'};
+                           # @$already_loaded{@property_names,'db_committed'} = @$pending_db_object{@property_names,'db_committed'};  # __merge... above already did this
                             $pending_db_object = $already_loaded;
                         } else {
                             # This is a completely new object
