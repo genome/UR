@@ -2174,16 +2174,20 @@ sub _create_import_iterator_for_underlying_context {
 # 1) update the current value for the property
 # 2) update the db_committed/db_saved_uncommitted
 # 3) throw an exception if there are conflicting data changes
-# Returns true if there were any differences
+# Returns true if $existing_object has been changed since it was loaded.  This is used in one of the
+# branches of the object fabricator.
 
 sub __merge_db_data_with_existing_object {
     my($self, $class_name, $existing_object, $pending_db_object_data, $property_names) = @_;
 
-    my ($dbc, $dbsu);
-    $dbc = $existing_object->{'db_committed'} if (exists $existing_object->{'db_committed'});
-    $dbsu = $existing_object->{'db_saved_uncommitted'} if (exists $existing_object->{'db_saved_uncommitted'});
+    my $expected_db_data;
+    if (exists $existing_object->{'db_saved_uncommitted'}) {
+        $expected_db_data = $existing_object->{'db_saved_uncommitted'};
 
-    if (!$dbc and !$dbsu) {
+    } elsif (exists $existing_object->{'db_committed'}) {
+        $expected_db_data = $existing_object->{'db_committed'};
+
+    } else {
         my $id = $existing_object->id;
         Carp::croak("$class_name ID '$id' has just been loaded, but it exists in the application as a new unsaved object!\nDump: " . Data::Dumper::Dumper($existing_object) . "\n");
     }
@@ -2196,21 +2200,20 @@ sub __merge_db_data_with_existing_object {
 
         next unless (exists $existing_object->{$property});   # All direct properties are stored in the same-named hash key, right?
 
-        my $object_value = $existing_object->{$property};
-        my $db_value     = $pending_db_object_data->{$property};
+        my $object_value      = $existing_object->{$property};
+        my $db_value          = $pending_db_object_data->{$property};
+        my $expected_db_value = $expected_db_data->{$property};
 
-        if ($dbc and $object_value ne $dbc->{$property}) {
+        if ($object_value ne $expected_db_value) {
             $different = 1;
         }
 
         
-        if ( $object_value eq $db_value                      # current value matches DB value
+        if ( $object_value eq $db_value              # current value matches DB value
              or
-             ($dbc and $object_value eq $dbc->{$property})    # current value hasn't changed since it was loaded from the DB
+             ($object_value eq $expected_db_value)   # current value hasn't changed since it was loaded from the DB
              or
-             ($dbc and $db_value eq $dbc->{$property})    # DB value matches what it was when we loaded it from the DB
-             or
-             ($dbsu and $db_value eq $dbsu->{$property})      # we tried to save to the DB the same value, but no_commit was on - happens in test cases
+             ($db_value eq $expected_db_value)       # DB value matches what it was when we loaded it from the DB
         ) {
             # no conflict.  Check the next one
             next;
@@ -2224,8 +2227,8 @@ sub __merge_db_data_with_existing_object {
         # conflicting change!
         # Since the user could be catching this exception, go ahead and update the
         # object's notion of what is in the database
-        my %old_dbc = %$dbc;
-        @$dbc{@$property_names} = @$pending_db_object_data{@$property_names} if ($dbc);
+        my %old_dbc = %$expected_db_data;
+        @$expected_db_data{@$property_names} = @$pending_db_object_data{@$property_names};
 
         my $old_value = defined($old_dbc{$conflict})
                         ? "'" . $old_dbc{$conflict} . "'"
@@ -2240,19 +2243,13 @@ sub __merge_db_data_with_existing_object {
         my $obj_id = $existing_object->id;
 
         Carp::croak("\nA change has occurred in the database for $class_name property '$conflict' on object ID $obj_id from $old_value to $new_db_value.\n"
-        #Carp::croak("\nA change has occurred in the database for $class_name property $conflict on object $obj_id from $old_value to $new_db_value.\n"
                     . "At the same time, this application has made a change to that value to $new_obj_value.\n\n"
                     . "The application should lock data which it will update and might be updated by other applications.");
 
     }
  
     # No conflicts.  Update db_committed and db_saved_uncommitted based on the DB data
-    if ($dbc) {
-        %$dbc = (%$dbc, %$pending_db_object_data);
-    } 
-    if ($dbsu) {
-        %$dbsu = (%$dbsu, %$pending_db_object_data);
-    }
+    %$expected_db_data = (%$expected_db_data, %$pending_db_object_data);
 
     if (! $different) {
         # The object has no local changes.  Go ahead and update the current value, too
