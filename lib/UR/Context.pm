@@ -2254,6 +2254,7 @@ sub __merge_db_data_with_existing_object {
     if (! $different) {
         # The object has no local changes.  Go ahead and update the current value, too
         foreach my $property ( @$property_names ) {
+            no warnings 'uninitialized';
             next if ($existing_object->{$property} eq $pending_db_object_data->{$property});
 
             $existing_object->$property($pending_db_object_data->{$property});
