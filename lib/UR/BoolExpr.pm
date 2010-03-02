@@ -361,7 +361,7 @@ sub resolve {
             # not match an actual property 
             if (!exists $subject_class_props{$property_name}) {
                 if (my $attr = $subject_class_meta->property_meta_for_name($property_name)) {
-                    Carp::croak("Property '$property_name' found but not in array of properties in class metadata for $subject_class_name");
+                    Carp::croak("Property '$property_name' found but not in array of properties in class metadata for $subject_class");
                 }
                 else {
                     push @extra, ($key => $value);
