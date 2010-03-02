@@ -980,8 +980,6 @@ Items can be removed from the assigned group in a way symetrical with how they a
 
 =back
 
-=back
-
 =head2 Extended API
 
 These methods are available on any class defined by UR.  They
@@ -1302,8 +1300,6 @@ monitored through hooks, as can the other messages.
 =back
 
 See L<UR::ModuleBase> for more information.
-
-=back
 
 =head1 SEE ALSO
 
