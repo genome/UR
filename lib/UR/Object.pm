@@ -379,6 +379,9 @@ sub create_view {
 sub create_mock {
     my $class = shift;
     my %params = @_;
+
+    require Test::MockObject;
+
     my $self = Test::MockObject->new();
     my $subject_class_object = $class->__meta__;
     for my $class_object ($subject_class_object,$subject_class_object->ancestry_class_metas) {
