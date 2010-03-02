@@ -410,7 +410,7 @@ sub create_mock {
                             $params{$property_name} = $property->default_value;
                         } else {
                             unless ($property->is_calculated) {
-                                die 'Failed to provide value for required mutable property '. $property_name;
+                                Carp::croak("Failed to provide value for required mutable property '$property_name'");
                             }
                         }
                     }
@@ -421,7 +421,7 @@ sub create_mock {
                     if (defined($property->default_value)) {
                         $params{$property_name} = $property->default_value;
                     } else {
-                        die 'Failed to provide value for required property '. $property_name;
+                        Carp::croak("Failed to provide value for required property '$property_name'");
                     }
                 }
                 if ($property->is_many) {

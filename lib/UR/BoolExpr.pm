@@ -304,7 +304,7 @@ sub resolve {
     my $subject_class = shift;
     my $subject_class_meta = $subject_class->__meta__;
     unless ($subject_class_meta) {
-        die "No meta for $subject_class?!";
+        Carp::croak("No class metadata for $subject_class?!");
     }    
 
     my %subject_class_props = map {$_, 1}  ( $subject_class_meta->all_property_type_names);
@@ -361,7 +361,7 @@ sub resolve {
             # not match an actual property 
             if (!exists $subject_class_props{$property_name}) {
                 if (my $attr = $subject_class_meta->property_meta_for_name($property_name)) {
-                    die "Property found but not in array of properties?";
+                    Carp::croak("Property '$property_name' found but not in array of properties in class metadata for $subject_class_name");
                 }
                 else {
                     push @extra, ($key => $value);
@@ -398,7 +398,7 @@ sub resolve {
                 my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
                 my $one_or_many = $subject_class_props{$property_name};
                 unless (defined $one_or_many) {
-                    die "$subject_class: '$property_name' ($key => $value)\n" . Data::Dumper::Dumper({ @_ });
+                    Carp::croak("No property metadata for $subject_class property '$property_name' for rule parameters ($key => $value)\n" . Data::Dumper::Dumper({ @_ }));
                 }
                 
                 my $is_many;
@@ -409,7 +409,7 @@ sub resolve {
                 }
                 else {
                     if ($UR::initialized) {
-                        Carp::confess("no meta for property $subject_class $property_name?\n");
+                        Carp::croak("No property metadata for $subject_class property '$property_name'?\n");
                     }
                     else {
                         # this has to run during bootstrapping in 2 cases currently...
@@ -459,14 +459,14 @@ sub resolve {
                         last if $property_type;
                     }
                     unless ($property_type) {
-                        die "No property type found for $subject_class $key?";
+                        Carp::croak("No property metadata for $subject_class property '$key'");
                     }
                 }
 
                 if ($property_type->is_delegated) {
                     my $property_meta = $subject_class_meta->property_meta_for_name($key);
                     unless ($property_meta) {
-                        die "Failed to find meta for $key on " . $subject_class_meta->class_name . "?!";
+                        Carp::croak("No property metadata for $subject_class property '$key'");
                     }
                     my @joins = $property_meta->get_property_name_pairs_for_join();
                     for my $join (@joins) {
@@ -494,7 +494,7 @@ sub resolve {
                     $value = $value->$key;
                 }
                 else {
-                    die "Incorrect data type " . ref($value) . " for $subject_class property $key!";    
+                    Carp::croak("Incorrect data type in rule " . ref($value) . " for $subject_class property '$key'!");    
                 }
             }
         }
@@ -520,7 +520,7 @@ sub resolve {
     if (wantarray) {
         return ($rule, @extra);
     } elsif (@extra && defined wantarray) {
-        Carp::confess("Unknown parameters for $subject_class: @extra");
+        Carp::croak("Unknown parameters in rule for $subject_class: @extra");
     }
     else {
         return $rule;

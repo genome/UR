@@ -87,7 +87,7 @@ sub value_id_to_values {
     my $value_id = shift;
 
     unless (defined $value_id) {
-        Carp::confess();
+        Carp::confess('No value_id passed in to value_id_to_values()!?');
     }
 
     my $method_identifier = substr($value_id,0,2);
