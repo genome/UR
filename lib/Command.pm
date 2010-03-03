@@ -97,7 +97,10 @@ sub execute {
         $self->usage_message($self->help_usage_complete_text);
         #print $self->help_usage_complete_text;
         for my $problem (@problems) {
-            $self->error_message($problem->desc);
+            my @properties = $problem->properties;
+            $self->error_message("Property " .
+                                 join(',', map { "'$_'" } @properties) .
+                                 ': ' . $problem->desc);
         }
         $self->delete() if $was_called_as_class_method;
         return;
