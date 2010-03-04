@@ -48,7 +48,7 @@ class UR::Object::View {
 sub create {
     my $class = shift;    
 
-    my $params = $class->define_boolexpr(@_);
+    my ($params,@extra) = $class->define_boolexpr(@_);
     
     # set values not specified in the params which can be inferred from the class name
     my ($expected_class,$expected_perspective,$expected_toolkit) = ($class =~ /^(.*)::View::(.*?)::([^\:]+)$/);
@@ -75,7 +75,7 @@ sub create {
         $expected_class->create(@_);
     }
 
-    my $self = $expected_class->SUPER::create($params);
+    my $self = $expected_class->SUPER::create(@_);
     return unless $self;
 
     $class = ref($self);
