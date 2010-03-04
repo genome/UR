@@ -331,6 +331,11 @@ sub help_detail
     return "!!! define help_detail() in module " . ref($self) || $self . "!";
 }
 
+sub sub_command_category 
+{
+    return;
+}
+
 sub sub_command_sort_position 
 { 
     # override to do something besides alpha sorting by name
@@ -894,33 +899,77 @@ sub help_sub_commands
     #my $command_name_method = ($params{brief} ? 'command_name_brief' : 'command_name');
     
     my @sub_command_classes = $class->sorted_sub_command_classes;
+
+    my %categories;
+    my @categories;
+    for my $sub_command_class (@sub_command_classes) {
+        my $category = $sub_command_class->sub_command_category;
+        $category = '' if not defined $category;
+        my $sub_commands_within_category = $categories{$category};
+        unless ($sub_commands_within_category) {
+            if (defined $category and length $category) {
+                push @categories, $category;
+            }
+            else {
+                unshift @categories,''; 
+            }
+            $sub_commands_within_category = $categories{$category} = [];
+        }
+        push @$sub_commands_within_category,$sub_command_class;
+    }
+
     no warnings;
     local  $Text::Wrap::columns = 60;
-    my @data =
-    map {
-        my @rows = split("\n",Text::Wrap::wrap('', ' ', $_->help_brief));
-        chomp @rows;
-        (
-            [
-            $_->$command_name_method,
-            $_->_shell_args_usage_string_abbreviated,
-            $rows[0],
-            ],
-            map { 
-                [ 
-                '',
-                ' ',
-                $rows[$_],
-                ]
-            } (1..$#rows)
-        );
-    } 
     
-    @sub_command_classes;
+    my $full_text = '';
+    my @full_data;
+    for my $category (@categories) {
+        my $sub_commands_within_this_category = $categories{$category};
+        my @data = map {
+                my @rows = split("\n",Text::Wrap::wrap('', ' ', $_->help_brief));
+                chomp @rows;
+                (
+                    [
+                        $_->$command_name_method,
+                        $_->_shell_args_usage_string_abbreviated,
+                        $rows[0],
+                    ],
+                    map { 
+                        [ 
+                            '',
+                            ' ',
+                            $rows[$_],
+                        ]
+                    } (1..$#rows)
+                );
+            } 
+            @$sub_commands_within_this_category;
 
-    $DB::single = 1;
+        if ($category) {
+            # add a space between categories
+            push @full_data, ['','',''] if @full_data;
+
+            if ($category =~ /\D/) {
+                # non-numeric categories show their category as a header
+                $category .= ':' if $category =~ /\S/;
+                push @full_data, 
+                    [
+                        Term::ANSIColor::colored(uc($category), 'blue'),
+                        '',
+                        ''
+                    ];
+
+            }
+            else {
+                # numeric categories just sort
+            }
+        }
+
+        push @full_data, @data;
+    }
+
     my @max_width_found = (0,0,0);
-    for (@data) {
+    for (@full_data) {
         for my $c (0..2) {
             $max_width_found[$c] = length($_->[$c]) if $max_width_found[$c] < length($_->[$c]);
         }
@@ -928,15 +977,16 @@ sub help_sub_commands
 
     my @colors = (qw/ red   bold /);
     my $text = '';
-    for my $row (@data) {
+    for my $row (@full_data) {
         for my $c (0..2) {
-            $text .= '  ';
+            $text .= ' ';
             $text .= Term::ANSIColor::colored($row->[$c], $colors[$c]),
             $text .= ' ';
             $text .= ' ' x ($max_width_found[$c]-length($row->[$c]));
         }
         $text .= "\n";
     }
+        
     return $text;
 }
 
@@ -1432,7 +1482,7 @@ Command - Base class for modules implementing the Command Pattern
   }
 
   # Another part of the code
-  
+ 
   my $cmd = TopLevelNamespace::SomeObj::Command->create(some_obj_id => $some_obj->id);
   $cmd->execute();
 
