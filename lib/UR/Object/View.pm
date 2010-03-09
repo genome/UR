@@ -71,11 +71,11 @@ sub create {
         . "Received $params."
     }
 
-    if ($expected_class ne $class) {
-        $expected_class->create(@_);
+    unless ($class->isa($expected_class)) {
+        return $expected_class->create(@_);
     }
 
-    my $self = $expected_class->SUPER::create(@_);
+    my $self = $expected_class->SUPER::create($params);
     return unless $self;
 
     $class = ref($self);
@@ -114,7 +114,11 @@ sub _resolve_view_class_for_params {
     my $perspective = delete $params{perspective};
     my $toolkit = delete $params{toolkit};
     my $aspects = delete $params{aspects};
-    
+   
+    unless($subject_class_name and $perspective and $toolkit) {
+        Carp::confess("Bad params @_.  Expected subject_class_name, perspective, toolkit.");
+    }
+
     $perspective = lc($perspective);
     $toolkit = lc($toolkit);
 
