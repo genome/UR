@@ -520,7 +520,7 @@ sub resolve {
     if (wantarray) {
         return ($rule, @extra);
     } elsif (@extra && defined wantarray) {
-        Carp::croak("Unknown parameters in rule for $subject_class: @extra");
+        Carp::confess("Unknown parameters in rule for $subject_class: " . join(",", map { defined($_) ? "'$_'" : "(undef)" } @extra));
     }
     else {
         return $rule;
