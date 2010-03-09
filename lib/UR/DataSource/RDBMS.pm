@@ -2964,6 +2964,7 @@ sub _generate_template_data_for_loading {
         $pk_used,
         @delegated_properties,    
         %outer_joins,
+        %filters_satisfied
     );
 
     for my $co ( $class_meta, @parent_class_objects ) {
@@ -3018,7 +3019,8 @@ sub _generate_template_data_for_loading {
                     die "No value position found in rule template for filter property $property_name?!"
                         . Data::Dumper::Dumper($rule_template);
                 }
-                delete $filters{$property_name};
+                #delete $filters{$property_name};
+                $filters_satisfied{$property_name} = 1;
             }
 
             $pk_used = 1 if $id_properties{ $property_name };
@@ -3037,7 +3039,8 @@ sub _generate_template_data_for_loading {
                              # from a regular column below
                              " " . $expr_sql => { operator => $operator, value_position => $value_position }
                          };
-                    delete $filters{$property_name};
+                    #delete $filters{$property_name};
+                    $filters_satisfied{$property_name} = 1;
                 }
                 next;
             }
@@ -3054,7 +3057,8 @@ sub _generate_template_data_for_loading {
                          { 
                              $column_name => { operator => $operator, value_position => $value_position }
                          };
-                    delete $filters{$property_name};
+                    #delete $filters{$property_name};
+                    $filters_satisfied{$property_name} = 1;
                 }
             }
             elsif ($property->is_transient) {
@@ -3062,11 +3066,13 @@ sub _generate_template_data_for_loading {
             }
             elsif ($property->is_delegated) {
                 push @delegated_properties, $property;
-                delete $filters{$property_name};
+                #delete $filters{$property_name};
+                $filters_satisfied{$property_name} = 1;
             }
-            elsif ($property->is_calculated) {
+            elsif ($property->is_calculated || $property->is_constant) {
                 $needs_further_boolexpr_evaluation_after_loading = 1;
-                delete $filters{$property_name};
+                #delete $filters{$property_name};
+                $filters_satisfied{$property_name} = 1;
             }
             else {
                 next;
@@ -3074,6 +3080,7 @@ sub _generate_template_data_for_loading {
         }
     } # end of inheritance loop
 
+    delete @filters{keys %filters_satisfied};
     if ( my @errors = keys(%filters) ) { 
         my $class_name = $class_meta->class_name;
         $self->error_message("Unknown param(s) >@errors< used to generate SQL for $class_name!");
