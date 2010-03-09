@@ -1,0 +1,2 @@
+package UR::Env::UR_CONTEXT_MONITOR_QUERY;
+1;
