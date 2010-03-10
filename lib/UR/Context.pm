@@ -1140,13 +1140,14 @@ sub get_objects_for_class_and_rule {
         $load = ($cache_is_complete ? 0 : 1);
     }
 
-    $self->_log_query($class,"QUERY: rule $normalized_rule") if ($self->monitor_query);
+    my $is_monitor_query = $self->monitor_query;
+    $self->_log_query($class,"QUERY: rule $normalized_rule") if ($is_monitor_query);
 
     # optimization for the common case
     if (!$load and !$return_closure) {
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
         my $obj_count = scalar(@c);
-        $self->_log_query($class,"QUERY: matched $obj_count cached objects") if ($self->monitor_query);
+        $self->_log_query($class,"QUERY: matched $obj_count cached objects") if ($is_monitor_query);
         foreach ( @c ) {
             unless (exists $_->{'__get_serial'}) {
                 # This is a weakened reference.  Convert it back to a regular ref
@@ -1159,12 +1160,12 @@ sub get_objects_for_class_and_rule {
         }
         if (wantarray) {
             # array context
-            $self->_log_query($class,"QUERY: returning $obj_count objects\n\n") if ($self->monitor_query);
+            $self->_log_query($class,"QUERY: returning $obj_count objects\n\n") if ($is_monitor_query);
             return @c;
 
         } elsif (! defined wantarray) {
             # void context
-            $self->_log_query($class,"QUERY: returning 0 objects (null context)\n\n") if ($self->monitor_query);
+            $self->_log_query($class,"QUERY: returning 0 objects (null context)\n\n") if ($is_monitor_query);
             return;
 
         } elsif ($obj_count > 1) {
@@ -1172,7 +1173,7 @@ sub get_objects_for_class_and_rule {
 
         } else {
             # scalar context
-            if ($self->monitor_query) {
+            if ($is_monitor_query) {
                 $obj_count = $c[0] ? '1 object' : '0 objects';
                 $self->_log_query($class,"QUERY: returning $obj_count\n\n");
             }
@@ -1192,7 +1193,7 @@ sub get_objects_for_class_and_rule {
     else {
         $cached = [ sort $object_sorter $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule) ];
     }
-    $self->_log_query($class, "QUERY: matched ".scalar(@$cached)." cached objects") if ($self->monitor_query);
+    $self->_log_query($class, "QUERY: matched ".scalar(@$cached)." cached objects") if ($is_monitor_query);
     foreach ( @$cached ) {
         unless (exists $_->{'__get_serial'}) {
             # This is a weakened reference.  Convert it back to a regular ref
@@ -1210,7 +1211,7 @@ sub get_objects_for_class_and_rule {
     if ($load) {
         # this returns objects from the underlying context after importing them into the current context,
         # but only if they did not exist in the current context already
-        $self->_log_query($class, "QUERY: importing from underlying context with rule $normalized_rule") if ($self->monitor_query);
+        $self->_log_query($class, "QUERY: importing from underlying context with rule $normalized_rule") if ($is_monitor_query);
         my $underlying_context_iterator = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
 
         # Some thoughts about the loading iterator's behavior around changing objects....
@@ -1242,7 +1243,6 @@ sub get_objects_for_class_and_rule {
         my($last_loaded_id, $next_obj_current_context, $next_obj_underlying_context,$underlying_context_objects_loaded);
         my $me_loading_iterator_as_string;  # See note below the closure definition
 
-        my $monitor_query = $self->monitor_query;
         $underlying_context_objects_loaded = 0;
         # this will interleave the above with any data already present in the current context
         $loading_iterator = sub {
@@ -1250,7 +1250,7 @@ sub get_objects_for_class_and_rule {
             if ($underlying_context_iterator && ! $next_obj_underlying_context) {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
  
-                if ($monitor_query and $next_obj_underlying_context) {
+                if ($is_monitor_query and $next_obj_underlying_context) {
                     $self->_log_query($class, "QUERY: loading 1 object from underlying context");
                     $underlying_context_objects_loaded++;
                 }
@@ -1275,7 +1275,7 @@ sub get_objects_for_class_and_rule {
             # We're turning off warnings to avoid complaining in the elsif()
             no warnings 'uninitialized';
             if (!$next_obj_underlying_context) {
-                $self->_log_query($class, "QUERY: loaded $underlying_context_objects_loaded objects from underlying context\n\n") if ($monitor_query);
+                $self->_log_query($class, "QUERY: loaded $underlying_context_objects_loaded objects from underlying context\n\n") if ($is_monitor_query);
                 $underlying_context_iterator = undef;
 
             } elsif ($last_loaded_id eq $next_obj_underlying_context->id) {
@@ -1306,7 +1306,7 @@ sub get_objects_for_class_and_rule {
                 and $comparison_result == 0 # $next_obj_underlying_context->id eq $next_obj_current_context->id
             ) {
                 # the database and the cache have the same object "next"
-                $self->_log_query($class, "QUERY: loaded object was already cached") if ($monitor_query);
+                $self->_log_query($class, "QUERY: loaded object was already cached") if ($is_monitor_query);
                 $next_object = $next_obj_current_context;
                 $next_obj_current_context = undef;
                 $next_obj_underlying_context = undef;
