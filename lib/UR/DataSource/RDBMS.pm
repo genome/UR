@@ -3079,7 +3079,7 @@ sub _generate_template_data_for_loading {
 
     if ( my @errors = keys(%filters_to_satisfy) ) { 
         my $class_name = $class_meta->class_name;
-        $self->error_message("Unknown param(s) >@errors< used to generate SQL for $class_name!");
+        $self->error_message("Unknown param(s) (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
         print Data::Dumper::Dumper($rule_template);
         Carp::confess();
     }
