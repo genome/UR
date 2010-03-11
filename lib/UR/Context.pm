@@ -112,18 +112,38 @@ sub monitor_query {
     return ref($self) ? $self->{'monitor_query'} : $master_monitor_query;
 }
 
-sub _log_query {
+my %_query_log_times;
+sub _log_query_for_rule {
     return if $UR::Object::Type::bootstrapping;
     my $self = shift;
-    my($subject_class,$message) = @_;
+    my($subject_class,$rule,$message) = @_;
 
     my $monitor_level;
     return unless ($monitor_level = $self->monitor_query);
     return if (substr($subject_class, 0,4) eq 'UR::' and $monitor_level < 2);   # Don't log queries for internal classes
 
+    my $elapsed_time = 0;
+    if ($rule) {
+        my $time_now = Time::HiRes::time();
+        if (! exists $_query_log_times{$rule}) {
+            $_query_log_times{$rule} = $time_now;
+        } else {
+            $elapsed_time = $time_now - $_query_log_times{$rule};
+        }
+    }
+
+    if ($elapsed_time) {
+        $message .= sprintf("  Elapsed %.4f s", $elapsed_time);
+    }
     $self->status_message($message);
 }
-    
+
+sub _log_done_elapsed_time_for_rule {
+    my($self, $rule) = @_;
+
+    delete $_query_log_times{$rule};
+}
+
 
 sub resolve_data_sources_for_class_meta_and_rule {
     my $self = shift;
@@ -375,7 +395,7 @@ sub query {
             and my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}
             )
         {
-            $self->_log_query($_[0], "QUERY: class $_[0] by ID $_[1]\nQUERY: matched 1 cached object\nQUERY: returning 1 object\n\n") if ($self->monitor_query);
+            $self->_log_query_for_rule($_[0], undef, "QUERY: class $_[0] by ID $_[1]\nQUERY: matched 1 cached object\nQUERY: returning 1 object\n\n") if ($self->monitor_query);
 
             $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
             return $obj;
@@ -1141,13 +1161,13 @@ sub get_objects_for_class_and_rule {
     }
 
     my $is_monitor_query = $self->monitor_query;
-    $self->_log_query($class,"QUERY: rule $normalized_rule") if ($is_monitor_query);
+    $self->_log_query_for_rule($class,$normalized_rule,"QUERY: rule $normalized_rule") if ($is_monitor_query);
 
     # optimization for the common case
     if (!$load and !$return_closure) {
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
         my $obj_count = scalar(@c);
-        $self->_log_query($class,"QUERY: matched $obj_count cached objects") if ($is_monitor_query);
+        $self->_log_query_for_rule($class,$normalized_rule,"QUERY: matched $obj_count cached objects") if ($is_monitor_query);
         foreach ( @c ) {
             unless (exists $_->{'__get_serial'}) {
                 # This is a weakened reference.  Convert it back to a regular ref
@@ -1158,14 +1178,18 @@ sub get_objects_for_class_and_rule {
             }
             $_->{'__get_serial'} = $this_get_serial;
         }
+
+        if ($is_monitor_query) {
+            $self->_log_query_for_rule($class,$normalized_rule,"QUERY: matched $obj_count object(s). Query complete.") if ($is_monitor_query);
+            $self->_log_done_elapsed_time_for_rule($normalized_rule) if ($is_monitor_query);
+        }
+
         if (wantarray) {
             # array context
-            $self->_log_query($class,"QUERY: returning $obj_count objects\n\n") if ($is_monitor_query);
             return @c;
 
         } elsif (! defined wantarray) {
             # void context
-            $self->_log_query($class,"QUERY: returning 0 objects (null context)\n\n") if ($is_monitor_query);
             return;
 
         } elsif ($obj_count > 1) {
@@ -1173,10 +1197,6 @@ sub get_objects_for_class_and_rule {
 
         } else {
             # scalar context
-            if ($is_monitor_query) {
-                $obj_count = $c[0] ? '1 object' : '0 objects';
-                $self->_log_query($class,"QUERY: returning $obj_count\n\n");
-            }
             return $c[0];
         }
     }
@@ -1193,7 +1213,7 @@ sub get_objects_for_class_and_rule {
     else {
         $cached = [ sort $object_sorter $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule) ];
     }
-    $self->_log_query($class, "QUERY: matched ".scalar(@$cached)." cached objects") if ($is_monitor_query);
+    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: matched ".scalar(@$cached)." cached objects") if ($is_monitor_query);
     foreach ( @$cached ) {
         unless (exists $_->{'__get_serial'}) {
             # This is a weakened reference.  Convert it back to a regular ref
@@ -1211,7 +1231,7 @@ sub get_objects_for_class_and_rule {
     if ($load) {
         # this returns objects from the underlying context after importing them into the current context,
         # but only if they did not exist in the current context already
-        $self->_log_query($class, "QUERY: importing from underlying context with rule $normalized_rule") if ($is_monitor_query);
+        $self->_log_query_for_rule($class, $normalized_rule, "QUERY: importing from underlying context with rule $normalized_rule") if ($is_monitor_query);
         my $underlying_context_iterator = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
 
         # Some thoughts about the loading iterator's behavior around changing objects....
@@ -1251,7 +1271,7 @@ sub get_objects_for_class_and_rule {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
  
                 if ($is_monitor_query and $next_obj_underlying_context) {
-                    $self->_log_query($class, "QUERY: loading 1 object from underlying context");
+                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context");
                     $underlying_context_objects_loaded++;
                 }
                 # See if this newly loaded object needs to be inserted into any of the other
@@ -1275,7 +1295,10 @@ sub get_objects_for_class_and_rule {
             # We're turning off warnings to avoid complaining in the elsif()
             no warnings 'uninitialized';
             if (!$next_obj_underlying_context) {
-                $self->_log_query($class, "QUERY: loaded $underlying_context_objects_loaded objects from underlying context\n\n") if ($is_monitor_query);
+                if ($is_monitor_query) {
+                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loaded $underlying_context_objects_loaded objects from underlying context. Query complete.");
+                    $self->_log_done_elapsed_time_for_rule($normalized_rule);
+                }
                 $underlying_context_iterator = undef;
 
             } elsif ($last_loaded_id eq $next_obj_underlying_context->id) {
@@ -1306,7 +1329,7 @@ sub get_objects_for_class_and_rule {
                 and $comparison_result == 0 # $next_obj_underlying_context->id eq $next_obj_current_context->id
             ) {
                 # the database and the cache have the same object "next"
-                $self->_log_query($class, "QUERY: loaded object was already cached") if ($is_monitor_query);
+                $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loaded object was already cached") if ($is_monitor_query);
                 $next_object = $next_obj_current_context;
                 $next_obj_current_context = undef;
                 $next_obj_underlying_context = undef;
@@ -2022,6 +2045,8 @@ sub _create_import_iterator_for_underlying_context {
         $class_name->all_objects_are_loaded(undef);
     }
 
+    my $is_monitor_query = $self->monitor_query();
+
     # Make the iterator we'll return.
     my $underlying_context_iterator = sub {
         my $object;
@@ -2142,16 +2167,22 @@ sub _create_import_iterator_for_underlying_context {
                 # callback is just given the row returned from the DB query.  For multiple data sources,
                 # we need to smash together the primary and all the secondary lists
                 my $imported_object;
-{ no warnings 'uninitialized';
-$self->_log_query($class_name,'QUERY: calling object fabricator for next db row: '.join(',',@$next_db_row));
-}
+
+                my $object_creation_time;
+                if ($is_monitor_query) {
+                    $object_creation_time = Time::HiRes::time();
+                }
+
                 if (@secondary_data) {
                     $imported_object = $object_fabricator->([@$next_db_row, @secondary_data]);
                 } else { 
                     $imported_object = $object_fabricator->($next_db_row);
                 }
                     
-$self->_log_query($class_name,"QUERY: done with object fabricator");
+                if ($is_monitor_query) {
+                    $self->_log_query_for_rule($class_name, $rule, sprintf("QUERY: object fabricator took %.4f s",Time::HiRes::time() - $object_creation_time));
+                }
+
                 if ($imported_object and not ref($imported_object)) {
                     # object requires sub-classsification in a way which involves different db data.
                     $re_iterate = 1;
