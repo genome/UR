@@ -1132,6 +1132,16 @@ sub get_objects_for_class_and_rule {
     
     my $meta = $class->__meta__();    
 
+    # A query on a subclass where the parent class is_abstract and has a subclassify_by property
+    # (meaning that the parent class has a property which directly stores the proper subclass for
+    # each row - subclasses inherit the property from the parent, and the subclass isn't is_abstract)
+    # should have a filter added to the rule to keep only rows of the subclass we're interested in.
+    # This will improve the SQL performance when it's later constructed.
+    my $subclassify_by = $meta->subclassify_by;
+    if ($subclassify_by and ! $meta->is_abstract and ! $rule->specifies_value_for($subclassify_by)) {
+        $rule = $rule->add_filter($subclassify_by => $class);
+    }
+
     # If $load is undefined, and there is no underlying context, we define it to FALSE explicitly
     # TODO: instead of checking for a data source, skip this
     # We'll always go to the underlying context, even if it has nothing. 
