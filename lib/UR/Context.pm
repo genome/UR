@@ -2030,9 +2030,7 @@ sub _create_import_iterator_for_underlying_context {
         until ($object) { # note that we return directly when the db is out of data
             
             my ($next_db_row);
-$self->_log_query($class_name,'QUERY: Before call to db_iterator');
             ($next_db_row) = $db_iterator->() if ($db_iterator);
-$self->_log_query($class_name, 'QUERY: after call to db_iterator');
 
             unless ($next_db_row) {
                 if ($rows == 0) {
