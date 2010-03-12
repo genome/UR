@@ -39,7 +39,8 @@ our $cache_size_lowwater;                     # low water mark for cache size
 our $GET_COUNTER = 1;                         # This is where the serial number for the __get_serial key comes from
 
 our $object_fabricators = {};         # Maps object fabricator closures to the hashref of things they want to put into all_params_loaded
-our $loading_iterators = [];          # 
+our $is_multiple_loading_iterators = 0; # A boolean flag used in the loading iterator to control whether we need to inject loaded objects into other loading iterators' cached lists
+our $loading_iterators = [];          # A list of active loading iterators
 
 # For bootstrapping.
 $UR::Context::current = __PACKAGE__;
@@ -1281,21 +1282,21 @@ sub get_objects_for_class_and_rule {
             if ($underlying_context_iterator && ! $next_obj_underlying_context) {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
  
-                #if ($is_monitor_query and $next_obj_underlying_context) {
-                #    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context") if ($return_closure);
-                #    $underlying_context_objects_count++;
-                #}
+                if ($is_monitor_query and $next_obj_underlying_context) {
+                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context") if ($return_closure);
+                    $underlying_context_objects_count++;
+                }
                 # See if this newly loaded object needs to be inserted into any of the other
                 # loading iterators' cached list.  We only need to check this is there is more
                 # than one iterator running....
-                if ($next_obj_underlying_context and @$UR::Context::loading_iterators > 1) {
+                if ($next_obj_underlying_context and $UR::Context::is_multiple_loading_iterators) {
                     $self->_inject_object_into_other_loading_iterators($next_obj_underlying_context, $me_loading_iterator_as_string);
                 }
             }
 
             unless ($next_obj_current_context) {
                 ($next_obj_current_context) = shift @$cached;
-                #$cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
+                $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
             }
 
             if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
@@ -1399,6 +1400,7 @@ sub get_objects_for_class_and_rule {
                                                  \$underlying_context_objects_count,
                                                  \$cached_objects_count
                                                ];
+        $UR::Context::is_multiple_loading_iterators = 1 if (@$UR::Context::loading_iterators > 1);
     }
     
     if ($return_closure) {
@@ -1453,6 +1455,7 @@ sub UR::Context::loading_iterator_tracker::DESTROY {
             }
 
             splice(@$UR::Context::loading_iterators, $i, 1);
+            $UR::Context::is_multiple_loading_iterators = 0 if ($count == 2);  # If count was 2 at the top, and we removed one, it's now 1 and it's not multiple
             return;
         }
     }
