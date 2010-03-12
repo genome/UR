@@ -1281,10 +1281,10 @@ sub get_objects_for_class_and_rule {
             if ($underlying_context_iterator && ! $next_obj_underlying_context) {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
  
-                if ($is_monitor_query and $next_obj_underlying_context) {
-                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context") if ($return_closure);
-                    $underlying_context_objects_count++;
-                }
+                #if ($is_monitor_query and $next_obj_underlying_context) {
+                #    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context") if ($return_closure);
+                #    $underlying_context_objects_count++;
+                #}
                 # See if this newly loaded object needs to be inserted into any of the other
                 # loading iterators' cached list.  We only need to check this is there is more
                 # than one iterator running....
@@ -1295,7 +1295,7 @@ sub get_objects_for_class_and_rule {
 
             unless ($next_obj_current_context) {
                 ($next_obj_current_context) = shift @$cached;
-                $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
+                #$cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
             }
 
             if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
@@ -2071,7 +2071,7 @@ sub _create_import_iterator_for_underlying_context {
         $class_name->all_objects_are_loaded(undef);
     }
 
-    my $is_monitor_query = $self->monitor_query();
+    #my $is_monitor_query = $self->monitor_query();
 
     # Make the iterator we'll return.
     my $underlying_context_iterator = sub {
