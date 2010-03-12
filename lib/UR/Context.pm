@@ -1270,10 +1270,11 @@ sub get_objects_for_class_and_rule {
         #    object, and then don't try to get its ID at the end if the iterator if it's deleted
  
         # These are captured by the closure...
-        my($last_loaded_id, $next_obj_current_context, $next_obj_underlying_context,$underlying_context_objects_loaded);
+        my($last_loaded_id, $next_obj_current_context, $next_obj_underlying_context,$underlying_context_objects_count,$cached_objects_count);
         my $me_loading_iterator_as_string;  # See note below the closure definition
 
-        $underlying_context_objects_loaded = 0;
+        $underlying_context_objects_count = 0;
+        $cached_objects_count = 0;
         # this will interleave the above with any data already present in the current context
         $loading_iterator = sub {
             PICK_NEXT_OBJECT_FOR_LOADING:
@@ -1281,8 +1282,8 @@ sub get_objects_for_class_and_rule {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
  
                 if ($is_monitor_query and $next_obj_underlying_context) {
-                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context");
-                    $underlying_context_objects_loaded++;
+                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context") if ($return_closure);
+                    $underlying_context_objects_count++;
                 }
                 # See if this newly loaded object needs to be inserted into any of the other
                 # loading iterators' cached list.  We only need to check this is there is more
@@ -1292,7 +1293,11 @@ sub get_objects_for_class_and_rule {
                 }
             }
 
-            ($next_obj_current_context) = shift @$cached unless ($next_obj_current_context);
+            unless ($next_obj_current_context) {
+                ($next_obj_current_context) = shift @$cached;
+                $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
+            }
+
             if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
                  my $obj_to_complain_about = $next_obj_current_context;
                  # undef it in case the user traps the exception, next time we'll pull another off the list
@@ -1306,8 +1311,7 @@ sub get_objects_for_class_and_rule {
             no warnings 'uninitialized';
             if (!$next_obj_underlying_context) {
                 if ($is_monitor_query) {
-                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loaded $underlying_context_objects_loaded objects from underlying context. Query complete.");
-                    $self->_log_done_elapsed_time_for_rule($normalized_rule);
+                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loaded $underlying_context_objects_count object(s) total from underlying context.");
                 }
                 $underlying_context_iterator = undef;
 
@@ -1392,6 +1396,8 @@ sub get_objects_for_class_and_rule {
                                                  $rule,
                                                  $object_sorter,
                                                  $cached,
+                                                 \$underlying_context_objects_count,
+                                                 \$cached_objects_count
                                                ];
     }
     
@@ -1432,10 +1438,20 @@ sub get_objects_for_class_and_rule {
 }
 
 sub UR::Context::loading_iterator_tracker::DESTROY {
+    # Items in the listref are: $loading_iterator_string, $rule, $object_sorter, $cached, \$underlying_context_objects_count, \$cached_objects_count
+
     my $count = scalar(@$UR::Context::loading_iterators);
     for (my $i = 0; $i < $count; $i++) {
         if ($_[0] eq $UR::Context::loading_iterators->[$i]->[0]) {
             # That's me!
+            if ($UR::Context::current->monitor_query) {
+                my $me_iter = $UR::Context::loading_iterators->[$i];
+                my $rule = $me_iter->[1];
+                my $count = ${$me_iter->[4]} + ${$me_iter->[5]};
+                $UR::Context::current->_log_query_for_rule($rule->subject_class_name, $rule, "QUERY: Query complete after returning $count object(s) for rule $rule.");
+                $UR::Context::current->_log_done_elapsed_time_for_rule($rule);
+            }
+
             splice(@$UR::Context::loading_iterators, $i, 1);
             return;
         }
@@ -2178,10 +2194,10 @@ sub _create_import_iterator_for_underlying_context {
                 # we need to smash together the primary and all the secondary lists
                 my $imported_object;
 
-                my $object_creation_time;
-                if ($is_monitor_query) {
-                    $object_creation_time = Time::HiRes::time();
-                }
+                #my $object_creation_time;
+                #if ($is_monitor_query) {
+                #    $object_creation_time = Time::HiRes::time();
+                #}
 
                 if (@secondary_data) {
                     $imported_object = $object_fabricator->([@$next_db_row, @secondary_data]);
@@ -2189,9 +2205,9 @@ sub _create_import_iterator_for_underlying_context {
                     $imported_object = $object_fabricator->($next_db_row);
                 }
                     
-                if ($is_monitor_query) {
-                    $self->_log_query_for_rule($class_name, $rule, sprintf("QUERY: object fabricator took %.4f s",Time::HiRes::time() - $object_creation_time));
-                }
+                #if ($is_monitor_query) {
+                #    $self->_log_query_for_rule($class_name, $rule, sprintf("QUERY: object fabricator took %.4f s",Time::HiRes::time() - $object_creation_time));
+                #}
 
                 if ($imported_object and not ref($imported_object)) {
                     # object requires sub-classsification in a way which involves different db data.
