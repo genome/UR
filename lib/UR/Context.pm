@@ -1172,13 +1172,13 @@ sub get_objects_for_class_and_rule {
     }
 
     my $is_monitor_query = $self->monitor_query;
-    $self->_log_query_for_rule($class,$normalized_rule,"QUERY: rule $normalized_rule") if ($is_monitor_query);
+    $self->_log_query_for_rule($class,$normalized_rule,"QUERY: Query start for rule $normalized_rule") if ($is_monitor_query);
 
     # optimization for the common case
     if (!$load and !$return_closure) {
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
         my $obj_count = scalar(@c);
-        $self->_log_query_for_rule($class,$normalized_rule,"QUERY: matched $obj_count cached objects") if ($is_monitor_query);
+        $self->_log_query_for_rule($class,$normalized_rule,"QUERY: matched $obj_count cached objects (no loading)") if ($is_monitor_query);
         foreach ( @c ) {
             unless (exists $_->{'__get_serial'}) {
                 # This is a weakened reference.  Convert it back to a regular ref
@@ -1191,25 +1191,14 @@ sub get_objects_for_class_and_rule {
         }
 
         if ($is_monitor_query) {
-            $self->_log_query_for_rule($class,$normalized_rule,"QUERY: matched $obj_count object(s). Query complete.") if ($is_monitor_query);
+            $self->_log_query_for_rule($class,$normalized_rule,"QUERY: Query complete after returning $obj_count object(s) for rule $rule") if ($is_monitor_query);
             $self->_log_done_elapsed_time_for_rule($normalized_rule) if ($is_monitor_query);
         }
 
-        if (wantarray) {
-            # array context
-            return @c;
-
-        } elsif (! defined wantarray) {
-            # void context
-            return;
-
-        } elsif ($obj_count > 1) {
-            Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__);
-
-        } else {
-            # scalar context
-            return $c[0];
-        }
+        return @c if wantarray;           # array context
+        return unless defined wantarray;  # null context
+        Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
+        return $c[0];                     # scalar context
     }
 
     my $normalized_rule_template = $normalized_rule->template;
