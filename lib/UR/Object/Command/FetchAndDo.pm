@@ -188,7 +188,7 @@ sub _subject_class_filterable_properties {
 
     return sort { $a->property_name cmp $b->property_name }
            grep { substr($_->property_name, 0, 1) ne '_' }  # Skip 'private' properties starting with '_'
-           grep { index($_->data_type, '::') == -1 }  # Can't filter object-type properties from a lister, right?
+           grep { ! $_->data_type or index($_->data_type, '::') == -1 }  # Can't filter object-type properties from a lister, right?
            values %props;
 }
 
