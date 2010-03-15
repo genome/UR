@@ -1178,7 +1178,6 @@ sub get_objects_for_class_and_rule {
     if (!$load and !$return_closure) {
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
         my $obj_count = scalar(@c);
-        $self->_log_query_for_rule($class,$normalized_rule,"QUERY: matched $obj_count cached objects (no loading)") if ($is_monitor_query);
         foreach ( @c ) {
             unless (exists $_->{'__get_serial'}) {
                 # This is a weakened reference.  Convert it back to a regular ref
@@ -1191,8 +1190,9 @@ sub get_objects_for_class_and_rule {
         }
 
         if ($is_monitor_query) {
-            $self->_log_query_for_rule($class,$normalized_rule,"QUERY: Query complete after returning $obj_count object(s) for rule $rule") if ($is_monitor_query);
-            $self->_log_done_elapsed_time_for_rule($normalized_rule) if ($is_monitor_query);
+            $self->_log_query_for_rule($class,$normalized_rule,"QUERY: matched $obj_count cached objects (no loading)");
+            $self->_log_query_for_rule($class,$normalized_rule,"QUERY: Query complete after returning $obj_count object(s) for rule $rule");
+            $self->_log_done_elapsed_time_for_rule($normalized_rule);
         }
 
         return @c if wantarray;           # array context
