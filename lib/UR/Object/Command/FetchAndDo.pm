@@ -42,12 +42,39 @@ sub _filter_doc {
     my $doc = <<EOS;
 Filtering:
 ----------
- Create filter equations by combining filterable properties with operators and values.
+ Create filter equations by combining filterable properties with operators and
+     values.
  Combine and separate these 'equations' by commas.  
  Use single quotes (') to contain values with spaces: name='genome center'
  Use percent signs (%) as wild cards in like (~).
+ Use backslash or single quotes to escape characters which have special meaning
+     to the shell such as < > and &
+
+Operators:
+----------
+ =  (exactly equal to)
+ ~  (like the value)
+ >  (greater than)
+ >= (greater than or equal to)
+ <  (less than)
+ <= (less than or equal to)
+
+Examples:
+---------
+EOS
+    if (my $help_synopsis = $class->help_synopsis) {
+        $doc .= " $help_synopsis\n";
+    } else {
+        $doc .= <<EOS
+ lister-command --filter name=Bob --show id,name,address
+ lister-command --filter name='something with space',employees\>200,other_property~some%
+EOS
+    }
+
+    $doc .= <<EOS;
 
 Filterable Properties: 
+----------------------
 EOS
 
     # Try to get the subject class name
@@ -59,14 +86,33 @@ EOS
 
     if ( $self->subject_class_name ) {
         if ( my @properties = $self->_subject_class_filterable_properties ) {
+            my $longest_name = 0;
+            foreach my $property ( @properties ) {
+                my $name_len = length($property->property_name);
+                $longest_name = $name_len if ($name_len > $longest_name);
+            }
+
             for my $property ( @properties ) {
-                $doc .= sprintf(" %s\n", $property->property_name);
-                next; # TODO doc??
-                $doc .= sprintf(
-                    " %s: %s\n",
-                    $property->property_name,
-                    ( $property->description || 'no doc' ),
-                );
+                my $property_doc = $property->doc;
+                unless ($property_doc) {
+                    eval {
+                        foreach my $ancestor_class_meta ( $property->class_meta->ancestry_class_metas ) {
+                            my $ancestor_property_meta = $ancestor_class_meta->property_meta_for_name($property->property_name);
+                            if ($ancestor_property_meta and $ancestor_property_meta->doc) {
+                                $property_doc = $ancestor_property_meta->doc;
+                                last;
+                            }
+                        }
+                    };
+                }
+                $property_doc ||= ' (undocumented)';
+                $property_doc =~ s/\n//gs;   # Get rid of embeded newlines
+
+                my $data_type = $property->data_type || '';
+                $data_type = ucfirst(lc $data_type);
+
+                $doc .= sprintf(" %${longest_name}s  ($data_type): $property_doc\n",
+                                $property->property_name);
             }
         }
         else {
@@ -74,24 +120,10 @@ EOS
         }
     }
     else {
-        $doc .= " Need subject class name to get properties.\n"
+        $doc .= " Can't determine the list of filterable properties without a subject_class_name";
     }
 
-    $doc .= <<EOS;
-
-Operators:
- =  (exactly equal to)
- ~  (like the value)
- >  (greater than)
- >= (greater than or equal to)
- <  (less than)
- <= (less than or equal to)
-
-Examples:
- name='genome center'
- employees>200
- name~genome%,employees>200
-EOS
+    return $doc;
 }
 
 ########################################################################
@@ -151,11 +183,13 @@ sub _subject_class_filterable_properties {
     $self->_validate_subject_class
         or return;
 
-    return sort { 
-        $a->property_name cmp $b->property_name
-    } grep {
-        $_->column_name ne ''
-    } $self->subject_class->all_property_metas;
+    my %props = map { $_->property_name => $_ }
+                    $self->subject_class->property_metas;
+
+    return sort { $a->property_name cmp $b->property_name }
+           grep { substr($_->property_name, 0, 1) ne '_' }  # Skip 'private' properties starting with '_'
+           grep { index($_->data_type, '::') == -1 }  # Can't filter object-type properties from a lister, right?
+           values %props;
 }
 
 sub _hint_string {

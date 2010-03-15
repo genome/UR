@@ -833,7 +833,7 @@ sub help_options
 
         if (!$doc) {
             if (!$valid_values) {
-                $doc = "undocumented";
+                $doc = "(undocumented)";
             }
             else {
                 $doc = '';

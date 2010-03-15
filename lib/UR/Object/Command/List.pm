@@ -48,8 +48,8 @@ sub help_detail {
 
     return join(
         "\n",
-        $self->_filter_doc,
         $self->_style_doc,
+        $self->_filter_doc,
     );
 }
 
