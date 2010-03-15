@@ -837,7 +837,7 @@ sub help_options
         $max_name_length = length($param_name) if $max_name_length < length($param_name);
 
         my $param_type = $property_meta->data_type || '';
-        if ($param_type !~ m/::/) {
+        if (defined($params_type) and $param_type !~ m/::/) {
             $param_type = ucfirst(lc($param_type));
         }
 
