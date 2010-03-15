@@ -818,6 +818,19 @@ sub help_options
         #$param_name = "--$param_name";
         my $doc = $property_meta->doc;
         my $valid_values = $property_meta->valid_values;
+        unless ($doc) {
+            # Maybe a parent class has documentation for this property
+            eval {
+                foreach my $ancestor_class_meta ( $property_meta->class_meta->ancestry_class_metas ) {
+                    my $ancestor_property_meta = $ancestor_class_meta->property_meta_for_name($property_meta->property_name);
+                    if ($ancestor_property_meta and $ancestor_property_meta->doc) {
+                        $doc = $ancestor_property_meta->doc;
+                        last;
+                    }
+                }
+            };
+        }
+
         if (!$doc) {
             if (!$valid_values) {
                 $doc = "undocumented";
@@ -837,7 +850,7 @@ sub help_options
         $max_name_length = length($param_name) if $max_name_length < length($param_name);
 
         my $param_type = $property_meta->data_type || '';
-        if (defined($params_type) and $param_type !~ m/::/) {
+        if (defined($param_type) and $param_type !~ m/::/) {
             $param_type = ucfirst(lc($param_type));
         }
 
