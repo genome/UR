@@ -661,7 +661,9 @@ sub create_entity {
                 if ( exists $params->{ $property_name } );
     }
 
-    if (0) {
+
+    my %final_creation_params = ( %default_values, %$params, @extra, id => $id);
+
     # if the indirect property is immutable, but it is via something which is
     # mutable, we use those values to get or create the bridge.
     my %indirect_immutable_properties_via;
@@ -672,9 +674,56 @@ sub create_entity {
             $indirect_immutable_properties_via{$via}{$property_name} = delete $indirect_values->{$property_name};
         }
     }
-    for my $via (keys %indirect_immutable_properties_via) {
 
-    }
+    for my $via (keys %indirect_immutable_properties_via) {
+$DB::single=1;
+        my $via_property_meta = $class_meta->property_meta_for_name($via);
+
+        my($source_indirect_property, $source_value) = each %{$indirect_immutable_properties_via{$via}};  # There'll only ever be one key/value
+        delete $params->{$source_indirect_property};
+        delete $default_values{$source_indirect_property};
+        my $indirect_property_meta = $class_meta->property_meta_for_name($source_indirect_property);
+
+        my $foreign_object = $via_property_meta->data_type->get($indirect_property_meta->to => $source_value);
+        unless ($foreign_object) {
+            $foreign_object = $via_property_meta->data_type->create($indirect_property_meta->to => $source_value);
+        }
+
+        my @joins = $indirect_property_meta->_get_joins();
+        my %local_properties_to_set;
+        foreach my $join ( @joins ) {
+            for (my $i = 0; $i < @{$join->{'source_property_names'}}; $i++) {
+                my $source_property_name = $join->{'source_property_names'}->[$i];
+                next unless (exists $direct_properties{$source_property_name});
+                my $foreign_property_name = $join->{'foreign_property_names'}->[$i];
+                my $value = $foreign_object->$foreign_property_name;
+                $local_properties_to_set{$source_property_name} = $value;
+            }
+        }
+        %$params = (%local_properties_to_set, %$params);
+
+        #my $object_from_last_join = undef;
+        #foreach my $join ( @joins ) {
+        #    my %target_get_params;
+        #    for (my $i = 0; $i < @{$join->{'source_property_names'}}; $i++) {
+        #        my $source_property_name = $join->{'source_property_names'}->[$i];
+        #        my $source_property_value = $object_from_last_join ? $object_from_last_join->$_ : $final_creation_params{$_};
+        #        my $foreign_property_name = $join->{'foreign_property_names'}->[$i];
+        #        $target_get_params{$foreign_property_name} = $source_property_value;
+        #    }
+        #    my $foreign_class = $join->{'foreign_class'};
+        #    eval { $object_from_last_join = $foreign_class->get_or_create(%target_get_params); };
+        #    if ($@) {
+        #        $self->error_message("Can't create dependant $foreign_class object with params " 
+        #                             . join(',', map { "$_ => '".$target_get_params{$_}."'" } keys(%target_get_params))
+        #                             . " while fulfilling indirect immutable property " . $indirect_immutable_properties_via{$via}
+        #                             . " of class $class");
+        #        Carp::croak($@);
+        #    }
+        #}
+
+        1;
+
     }
 
     my $set_values = {};

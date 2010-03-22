@@ -42,6 +42,24 @@ UR::Object::Type->define(
     ],
 );
 
+# Make a pair of classes we'll use to test setting indirect properties at 
+# creation time.  The ObjThing has an int_value, through a bridge, to an IntThing's intval
+UR::Object::Type->define(
+    class_name => 'URT::BridgeThing',
+    has => [
+        int_thing => { is => 'URT::IntThing', id_by => 'int_thing_id' },
+        int_value => { via => 'int_thing', to => 'intval' },
+    ],
+);
+
+UR::Object::Type->define(
+    class_name => 'URT::ObjThing',
+    has => [
+        bridge_thing => { is => 'URT::BridgeThing', id_by => 'bridge_thing_id' },
+        int_value => { via => 'bridge_thing', to => 'int_value', default_value => 1234 },
+    ],
+);
+
 UR::Object::Type->define(
     class_name => 'URT::CommandThing',
     is => 'Command',
@@ -88,6 +106,29 @@ ok($o, 'Created an IntThing with the value 0');
 is($o->intval, 0, 'it has the right value for boolval');
 is($o->intval(1), 1, 'we can set the value');
 is($o->intval, 1, 'And it returns the correct value after setting it');
+
+
+#$o = URT::ObjThing->create(id => 1);
+#ok($o, 'Created an ObjThing without an int_value');
+#is($o->int_value, 1234, 'It has the default value for int_value');
+#ok($o->int_thing_id, 'The ObjThing has an int_thing_id');
+#ok($o->int_thing, 'We can get its int_thing object');
+#is($o->int_thing->id, $o->int_thing_id, "The IDs match for the hangoff object");
+#is($o->int_thing->intval, 1234, "The int_thing's intval is 1234");
+
+$o = URT::ObjThing->create(id => 2, int_value => 9876);
+ok($o, 'Created ObjThing with int_value 9876');
+is($o->int_value, 9876, 'It has the correct value for int_value');
+ok($o->bridge_thing_id, 'The ObjThing has a bridge_thing_id');
+ok($o->bridge_thing, 'We can get its bridge_thing object');
+is($o->bridge_thing->id, $o->bridge_thing_id, 'The IDs match for bridge_thing_id and URT::BridgeThing ID param');
+$o = $o->bridge_thing;
+is($o->int_value, 9876, 'The BridgeThing has the correct value for int_value');
+ok($o->int_thing_id, 'The BridgeThing has an int_thing_id value');
+ok($o->int_thing, 'We can get its int_thing object');
+is($o->int_thing->id, $o->int_thing_id, "The IDs match for the hangoff object");
+is($o->int_thing->intval, 9876, "The int_thing's intval is 1234");
+
 
 $p = URT::Parent->create(id => 2, name => 'Fred');
 ok($p, 'Created a parent object with a name');
