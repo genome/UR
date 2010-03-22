@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 45;
+use Test::More tests => 64;
 
 UR::Object::Type->define(
     class_name => 'URT::Parent',
@@ -108,13 +108,18 @@ is($o->intval(1), 1, 'we can set the value');
 is($o->intval, 1, 'And it returns the correct value after setting it');
 
 
-#$o = URT::ObjThing->create(id => 1);
-#ok($o, 'Created an ObjThing without an int_value');
-#is($o->int_value, 1234, 'It has the default value for int_value');
-#ok($o->int_thing_id, 'The ObjThing has an int_thing_id');
-#ok($o->int_thing, 'We can get its int_thing object');
-#is($o->int_thing->id, $o->int_thing_id, "The IDs match for the hangoff object");
-#is($o->int_thing->intval, 1234, "The int_thing's intval is 1234");
+$o = URT::ObjThing->create(id => 1);
+ok($o, 'Created an ObjThing without an int_value');
+is($o->int_value, 1234, 'It has the default value for int_value');
+ok($o->bridge_thing_id, 'The ObjThing has a bridge_thing_id');
+ok($o->bridge_thing, 'We can get its bridge_thing object');
+is($o->bridge_thing->id, $o->bridge_thing_id, 'The IDs match for bridge_thing_id and URT::BridgeThing ID param');
+$o = $o->bridge_thing;
+is($o->int_value, 1234, 'The BridgeThing has the correct value for int_value');
+ok($o->int_thing, 'We can get its int_thing object');
+is($o->int_thing->id, $o->int_thing_id, "The IDs match for the hangoff object");
+is($o->int_thing->intval, 1234, "The int_thing's intval is 1234");
+
 
 $o = URT::ObjThing->create(id => 2, int_value => 9876);
 ok($o, 'Created ObjThing with int_value 9876');
