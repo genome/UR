@@ -31,8 +31,7 @@ sub for_each_class_object {
     my $class_meta = shift;
 
 $DB::single=1;
-    $viewer ||= UR::Object::Viewer->create_viewer(
-                    subject_class_name => 'UR::Object::Type',
+    $viewer ||= UR::Object::Type->create_viewer(
                     perspective => 'default',
                     toolkit => 'text',
                     aspects => [
