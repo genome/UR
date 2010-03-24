@@ -198,7 +198,7 @@ sub __extend_namespace__ {
     return $class_obj;
 }
 
-sub create_viewer {
+sub create {
     my $class = shift;    
 
     if ($class ne __PACKAGE__) {
