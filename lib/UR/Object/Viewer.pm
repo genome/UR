@@ -61,7 +61,7 @@ UR::Object::Type->define(
         toolkit                 => { is_abstract => 1, is_constant => 1 },#is_class_wide => 1, is_constant => 1, is_optional => 0 },
         #default_aspects         => { is => 'ARRAY', is_abstract => 1, is_class_wide => 1, is_constant => 1, is_optional => 1, default_value => [] },
         default_aspects         => { is => 'ARRAY', is_abstract => 1, is_constant => 1, is_optional => 1, default_value => [] },
-        subject_id              => { },    
+        subject_id              => { is_optional => 1 },
 #        _subject_object         => { is_transient => 1, default_value => undef },        
 #        _widget                 => { is_transient => 1, default_value => undef },
     ],
