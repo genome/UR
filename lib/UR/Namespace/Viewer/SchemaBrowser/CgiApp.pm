@@ -17,14 +17,14 @@ UR::Object::Type->define(
 );
 
 use File::Temp;
-use Sys::Hostname;
+use Sys::Hostname qw();
 use Net::HTTPServer;
 
 use Class::Autouse \&dynamically_load_page_class;
 
 sub create {
 my($class, %params) = @_;
-$DB::single=1;
+#$DB::single=1;
     my $port = delete $params{'port'};
     my $data_dir = delete $params{'data_dir'};
     my $sessions = delete $params{'sessions'};
@@ -60,7 +60,7 @@ $DB::single=1;
 
     $self->port($port);
     $self->data_dir($data_dir);
-    $self->hostname(hostname());
+    $self->hostname(Sys::Hostname::hostname());
     $self->timeout($timeout);
     $self->http_server($server);
 
