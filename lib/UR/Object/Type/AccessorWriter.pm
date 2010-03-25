@@ -144,8 +144,15 @@ sub mk_id_based_object_accessor {
                 }
                 $id_decomposer ||= $concrete_r_class_name->__meta__->get_composite_id_decomposer;
                 @id = $id_decomposer->($object_value->id);
-                for my $id_property_name (@$id_by) {
-                    $self->$id_property_name(shift @id);
+                if (@$id_by == 1) {
+                    my $id_property_name = $id_by->[0];
+                    $self->$id_property_name($object_value->id);
+                } else {
+                    @id = $id_decomposer->($object_value->id);
+                    Carp::croak('cannot match id columns') unless (@id == @$id_by);
+                    for my $id_property_name (@$id_by) {
+                        $self->$id_property_name(shift @id);
+                    }
                 }
             }
             else {
