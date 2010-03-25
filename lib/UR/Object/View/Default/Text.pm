@@ -82,6 +82,7 @@ sub _generate_content {
 
     # the header line is the class followed by the id
     my $text = $self->subject_class_name;
+$DB::single=1 if $text eq 'Genome::Model::Build::Input';
     $text =~ s/::/ /g;
     my $subject = $self->subject();
     if ($subject) {
@@ -126,6 +127,7 @@ sub _generate_content_for_aspect {
     }
     
     my $aspect_name = $aspect->name;
+$DB::single=1 if $aspect_name eq 'inputs';
     my @value = $subject->$aspect_name;
     
     if (@value == 0) {
@@ -139,7 +141,7 @@ sub _generate_content_for_aspect {
     
     if (Scalar::Util::blessed($value[0])) {
         unless ($aspect->delegate_view) {
-            $aspect->generate_delegate_view;
+            $aspect->generate_delegate_view('identity');
         }
     }
     
@@ -147,12 +149,12 @@ sub _generate_content_for_aspect {
     # This means we replace the value(s) with their
     # subordinate widget content.
     if (my $delegate_view = $aspect->delegate_view) {
-        if (@value == 1) {
-            $delegate_view->subject($value[0]);
-            $delegate_view->_update_view_from_subject();
-            $value[0] = $delegate_view->content();
-        }
-        else {
+#        if (@value == 1) {
+#            $delegate_view->subject($value[0]);
+#            $delegate_view->_update_view_from_subject();
+#            $value[0] = $delegate_view->content();
+#        }
+#        else {
             # TODO: it is bad to recycle a view here??
             # Switch to a set view, which is the standard lister.
             foreach my $value ( @value ) {
@@ -160,10 +162,13 @@ sub _generate_content_for_aspect {
                 $delegate_view->_update_view_from_subject();
                 $value = $delegate_view->content();
             }
-        }
+#        }
     }
     
-    if (@value == 1 and index($value[0],"\n") == -1) {
+    if (@value == 1 and !defined $value[0]) {
+        $aspect_text .= "(undef)\n";
+    }
+    elsif (@value == 1 and index($value[0],"\n") == -1) {
         # one item, one row in the value or sub-view of the item:
         $aspect_text .= $value[0] . "\n";
     }

@@ -64,21 +64,49 @@ sub create {
     return $self; 
 }
 
+sub find_property_meta_with {
+    my $self = shift;
+    my $property_meta = shift;
+    my $accessor = shift;
+   
+    my $value = $property_meta->$accessor;
+    return $property_meta if defined $value;
+
+    my $via = $property_meta->via_property_meta;
+    if (defined $via) {
+        return $self->find_property_meta_with($via,$accessor);
+    }
+    else {
+        return;
+    }
+}
+
 sub generate_delegate_view {
 no warnings;
     my $self = shift;
     my $parent_view = $self->parent_view;
+    my $perspective = shift || $parent_view->perspective;
     my $name = $self->name;
     my $subject_class_name = $parent_view->subject_class_name;
     my $property_meta = $subject_class_name->__meta__->property($name);
     if ($property_meta) {
         my $aspect_type = $property_meta->data_type;
+$DB::single=1;
+        if (my $delegated_to_meta = $property_meta->final_property_meta) {
+            $aspect_type = $delegated_to_meta->data_type;
+        }
+
+        unless (defined $aspect_type) {
+            $self->error_message("No data_type defined for $subject_class_name->$name");
+            return;
+        }
+
         if ($aspect_type->can("__meta__")) {
             my $aspect_meta = $aspect_type->__meta__;
             
             my $delegate_view ||= $aspect_type->create_view(
                 subject_class_name => $aspect_type,
-                perspective => $parent_view->perspective,
+                perspective => $perspective,
                 toolkit => $parent_view->toolkit,
                 parent_view => $parent_view,
                 aspects => [],

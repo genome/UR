@@ -227,6 +227,8 @@ sub _bind_subject {
     # It handles the case in which the subject is undef.
     my $self = shift;
     my $subject = $self->subject();
+    return unless defined $subject;
+
     my $observer_data = $self->_observer_data;
 
     # See if we've already done this.    
