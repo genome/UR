@@ -54,7 +54,7 @@ $DB::single=1;
             if ($aspect->delegate_viewer_id) {
                 my $delegate_viewer = $aspect->delegate_viewer;
                 foreach my $value ( @value ) {
-                    $delegate_viewer->set_subject($value);
+                    $delegate_viewer->subject($value);
                     $delegate_viewer->_update_view_from_subject();
                     $value = $delegate_viewer->buf();
                 }

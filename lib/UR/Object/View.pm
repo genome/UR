@@ -101,6 +101,11 @@ sub create {
         if (! @aspect_specs) {
             @aspect_specs = $self->_resolve_default_aspects();
         }
+        if (@aspect_specs == 1 and ref($aspect_specs[0]) eq 'ARRAY') {
+            # Got an arrayref, expand back into an array
+            @aspect_specs = @{$aspect_specs[0]};
+        }
+
         for my $aspect_spec (@aspect_specs) {
             my $aspect = $self->add_aspect(ref($aspect_spec) ? %$aspect_spec : $aspect_spec);
             unless ($aspect) {

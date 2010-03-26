@@ -6,7 +6,7 @@ use warnings;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object::View::Default::Text',
-    has_many => [
+    has => [
        default_aspects => { is => 'ARRAY', is_constant => 1, value => ['is','direct_property_names'], },
     ],
 );

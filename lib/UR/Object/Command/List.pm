@@ -450,7 +450,7 @@ $DB::single=1;
         $fh->seek(0,0);
         $this_row_tab_delimited = '';
 
-        $viewer->set_subject($object);
+        $viewer->subject($object);
         $viewer->show();
         $tab_delimited .= $this_row_tab_delimited;
         #$tab_delimited .= $viewer->buf();
