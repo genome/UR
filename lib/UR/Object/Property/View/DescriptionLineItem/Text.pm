@@ -42,7 +42,7 @@ print "\n\n*** In _update_view_from_subject for Property View ".Data::Dumper::Du
         $data_type_string = '(no type)';
     }
 
-    my $text = sprintf("\n %2s %25s %-25s  %25s  $nullable",
+    my $text = sprintf(" %2s %30s %-40s  %25s  $nullable",
                $property_meta->is_id ? "ID" : "  ",
                $property_meta->property_name,
                $column_name,
