@@ -6,24 +6,14 @@ use IO::File;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Object::View',
-    has_optional => [
-        buf => { is => 'String' },
-    ],
+    is => 'UR::Object::View::Default::Text',
 );
 
-
-sub _create_widget {
-    my $self = shift;
-    my $fh = IO::File->new('>-');
-    return $fh;
-}
 
 sub _update_view_from_subject {
     my $self = shift;
     my @changes = @_;  # this is not currently resolved and passed-in
     
-$DB::single=1;
     my $subject = $self->subject();
     my $subject_class_meta = $subject->__meta__;
     my @aspects = $self->aspects;
@@ -34,29 +24,29 @@ $DB::single=1;
     for (my $i = 0; $i < @aspects; $i++) {
         my $aspect = $aspects[$i];
         my $label = $aspect->label;
+        my $aspect_name = $aspect->name;
         $column_for_label{$label} = $i;
 
-        my $property_meta = $subject_class_meta->property_meta_for_name($label);
+        my $property_meta = $subject_class_meta->property_meta_for_name($aspect_name);
         if (my $via = $property_meta->via and $property_meta->is_many) {
-            $aspects_requiring_joins_by_name{$label} = $via;
+            $aspects_requiring_joins_by_name{$aspect_name} = $via;
             $aspects_requiring_joins_by_via{$via} ||= [];
-            push @{$aspects_requiring_joins_by_via{$via}}, $label;
+            push @{$aspects_requiring_joins_by_via{$via}}, $aspect_name;
         }
 
-        my $aspect_name = $aspect->name;
         if ($subject) {
             my @value = $subject->$aspect_name;
             if (@value == 1 and ref($value[0]) eq 'ARRAY') {
                 @value = @{$value[0]};
             }
                 
-            # Delegate to a subordinate viewer if need be
-            if ($aspect->delegate_viewer_id) {
-                my $delegate_viewer = $aspect->delegate_viewer;
+            # Delegate to a subordinate view if need be
+            if ($aspect->delegate_view_id) {
+                my $delegate_view = $aspect->delegate_view;
                 foreach my $value ( @value ) {
-                    $delegate_viewer->subject($value);
-                    $delegate_viewer->_update_view_from_subject();
-                    $value = $delegate_viewer->buf();
+                    $delegate_view->subject($value);
+                    $delegate_view->_update_view_from_subject();
+                    $value = $delegate_view->content();
                 }
             }
 
@@ -116,7 +106,8 @@ $DB::single=1;
 
     # The text widget won't print anything until show(),
     # so store the data in the buffer for now
-    $self->buf($text);
+    my $widget = $self->widget;
+    ${$widget->[0]} = $text;   # Update the contents
     return 1;
 }
 
@@ -131,15 +122,6 @@ sub _add_aspect {
 sub _remove_aspect {
     1;
 }
-
-sub show {
-    my $self = shift;
-    my $fh = $self->widget;
-    return unless $fh;
-
-    $fh->print($self->buf,"\n");
-}
-
 
 
 1;
