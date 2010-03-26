@@ -71,7 +71,7 @@ my($self, $params) = @_;
             next unless $obj;
             next if ($already_printed{$obj}++);
 
-            $viewers{$obj->class} ||= UR::Object::Viewer->create(
+            $viewers{$obj->class} ||= UR::Object::View->create(
                                           subject_class_name => $obj->class,
                                           perspective => 'default',
                                           toolkit => 'text',

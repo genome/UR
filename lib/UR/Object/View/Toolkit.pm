@@ -7,8 +7,8 @@ UR::Object::View::Toolkit
 
 =head1 SYNOPSIS
 
-$v1 = $obj->create_viewer(toolkit => "gtk");
-$v2 = $obj->create_viewer(toolkit => "tk");
+$v1 = $obj->create_view(toolkit => "gtk");
+$v2 = $obj->create_view(toolkit => "tk");
 
 is($v1->_toolkit_delegate, "UR::Object::View::Toolkit::Gtk");
 is($v2->_toolkit_delegate, "UR::Object::View::Toolkit::Tk");

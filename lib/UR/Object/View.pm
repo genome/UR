@@ -131,6 +131,7 @@ sub _resolve_view_class_for_params {
     
     my $subclass_name;
     for my $possible_subject_class_name (@possible_subject_class_names) {
+
         $subclass_name = join("::",
             $possible_subject_class_name,
             "View",
@@ -154,7 +155,7 @@ sub _resolve_view_class_for_params {
         }
         
         unless($subclass_name->isa(__PACKAGE__)) {
-            warn "Subclass $subclass_name exists but is not a view?!";
+            Carp::carp("Subclass $subclass_name exists but is not a view?!");
             next;
         }
 
@@ -227,6 +228,8 @@ sub _bind_subject {
     # It handles the case in which the subject is undef.
     my $self = shift;
     my $subject = $self->subject();
+    return unless $subject;
+
     my $observer_data = $self->_observer_data;
 
     # See if we've already done this.    

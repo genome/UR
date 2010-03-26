@@ -433,7 +433,8 @@ $DB::single=1;
         $tab_delimited .= $self->_get_header_string."\n";
     }
 
-    my $viewer = UR::Object::Viewer->create_viewer(
+    #my $viewer = UR::Object::Viewer->create_viewer(
+    my $viewer = UR::Object::View->create(
                        subject_class_name => 'UR::Object',
                        perspective => 'lister',
                        toolkit => 'text',

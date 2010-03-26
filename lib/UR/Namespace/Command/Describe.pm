@@ -31,25 +31,34 @@ sub for_each_class_object {
     my $class_meta = shift;
 
 $DB::single=1;
-    $viewer ||= UR::Object::Type->create_viewer(
+    $viewer ||= UR::Object::Type->create_view(
                     perspective => 'default',
                     toolkit => 'text',
                     aspects => [
                         'namespace', 'table_name', 'data_source_id', 'is_abstract', 'is_final',
                         'is_singleton', 'is_transactional', 'schema_name', 'meta_class_name',
                         'first_sub_classification_method_name', 'sub_classification_method_name',
-                        'Properties' => {
-                            method => 'all_property_metas',
+                        {
+                            #name => 'Properties',
+                            label => 'Properties',
+                            #name => 'all_property_metas',
+                            name => 'properties',
+                            #method => 'all_property_metas',
                             subject_class_name => 'UR::Object::Property',
                             perspective => 'description line item',
                             toolkit => 'text',
                             aspects => ['is_id', 'property_name', 'column_name', 'data_type', 'is_optional' ],
+                            #aspects => [],
                         },
-                        'Relationships' => {
-                            method => 'all_reference_metas',
+                        {
+                            #name => 'References',
+                            #method => 'all_reference_metas',
+                            label => 'References',
+                            name => 'all_reference_metas',
                             subject_class_name => 'UR::Object::Reference',
                             perspective => 'description line item',
                             toolkit => 'text',
+                            aspects => [],
                         }
                     ],
                 );
@@ -58,8 +67,9 @@ $DB::single=1;
         return;
     }
 
-    $viewer->set_subject($class_meta);
-    $viewer->show();
+    $viewer->subject($class_meta);
+    #$viewer->show();
+print $viewer->content();
     print "\n";
 }
 

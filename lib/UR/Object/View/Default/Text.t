@@ -43,7 +43,7 @@ my @c = $p->cats();
 is("@c","$c1 $c2", "got expected cat list for the owner");
 
 
-my $pv = $p->create_viewer(
+my $pv = $p->create_view(
     toolkit => 'text',
     aspects => [
         'name',
@@ -65,7 +65,7 @@ print($pv->buf);
 my $pv_expected_xml = '';
 is($pv->buf,$pv_expected_xml,"XML is as expected for the person view");
 
-my $c1v = $c1->create_viewer(toolkit => 'text');
+my $c1v = $c1->create_view(toolkit => 'text');
 print($c1v->buf);
 ok($c1v, "got an XML viewer for one of the cats");
 my $c1v_expected_xml = '';

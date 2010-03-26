@@ -51,7 +51,7 @@ $DB::single=1;
     # I added CGI to the list of special cased words in GSC::Vocabulary.  It looks like
     # UR::Object::Viewer::create() is hard coded to use App::Vocabulary instead of whatever
     # the current namespace's vocabulary is
-    my $v = $namespace->create_viewer(perspective => "schema browser", toolkit => "cgi app");
+    my $v = $namespace->create_view(perspective => "schema browser", toolkit => "cgi app");
 
     printf("URL is http://%s:%d/\n",$v->hostname, $v->port);
 

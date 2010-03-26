@@ -122,7 +122,7 @@ sub _generate_content_for_aspect {
         
     if (!$subject) {
         $aspect_text .= "-\n";
-        next;
+        return $aspect_text;
     }
     
     my $aspect_name = $aspect->name;

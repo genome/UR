@@ -33,7 +33,7 @@ class UR::Object::View::Aspect {
 
 sub create {
     my $class = shift;
-    my $bx = $class->define_boolexpr(@_);
+    my($bx,%extra) = $class->define_boolexpr(@_);
 
     # TODO: it would be nice to have this in the class definition:
     #  increment_for => 'parent_view'
@@ -50,6 +50,66 @@ sub create {
             $bx = $bx->add_filter(label => $label);
         }
     }
+
+    if (keys %extra) {
+        # This is a sub-view
+        my $delegate_subject_class_name;
+        if (exists $extra{'subject_class_name'}) {
+            $delegate_subject_class_name = $extra{'subject_class_name'};
+        } else {
+            # FIXME This duplicates functionality below in generate_delegate_view, but generate_delegate_view()
+            # doesn't take any args to tweak the properties of that delegated view :(
+            # Try to figure it out based on the name of the aspect...
+            my $parent_view;
+            if (my $view_id = $bx->value_for('parent_view_id')) {
+                $parent_view = UR::Object::View->get($view_id);
+            } elsif ($bx->specifies_value_for('parent_view')) {
+                $parent_view = $bx->value_for('parent_view');
+            } 
+            unless ($parent_view) {
+                Carp::croak("Can't determine parent view from keys/values: ",join(', ', map { sprintf("%s => '%s'", $_, $extra{$_}) } keys %extra));
+            }
+
+            my $class_meta = $parent_view->subject_class_name->__meta__;
+            unless ($class_meta) {
+                Carp::croak("No class metadata for class "
+                            . $parent_view->subject_class_meta
+                            . ".  Can't create delegate view on aspect named "
+                            . $bx->value_for('name') );
+            }
+
+            my $property_meta = $class_meta->property_meta_for_name($bx->value_for('name'));
+            unless ($property_meta) {
+                Carp::croak("No property metadata for class " . $class_meta->class_name
+                            . " property " . $bx->value_for('name')
+                            . ".  Can't create delegate view on aspect named " . $bx->value_for('name'));
+            }
+
+            unless ($property_meta->data_type) {
+                Carp::croak("Property metadata for class " . $class_meta->class_name
+                            . " property " . $property_meta->property_name
+                            . " has no data_type.  Can't create delegate view on aspect named " . $bx->value_for('name'));
+            }
+
+            $delegate_subject_class_name = $property_meta->data_type;
+        }
+        unless ($delegate_subject_class_name) {
+            Carp::croak("Can't determine subject_class_name for delegate view on aspect named " . $bx->value_for('name'));
+        }
+                 
+        my $delegate_view = $delegate_subject_class_name->create_view(
+                                perspective => $bx->value_for('perspective'),
+                                toolkit     => $bx->value_for('toolkit'),
+                                %extra
+                             );
+        unless ($delegate_view) {
+            Carp::croak("Can't create delegate view for aspect named " . $bx->value_for('name') . ": ".$delegate_subject_class_name->error_message);
+        }
+        #$bx->add_filter(delegate_view_id => $delegate_view->id);
+print "Adding filter to bx for aspect ".$bx->value_for('name')." delegate_view_id ".$delegate_view->id.": ". Data::Dumper::Dumper($delegate_view)."\n";
+        $bx = $bx->add_filter(delegate_view => $delegate_view);
+    }
+                                
 
     my $self = $class->SUPER::create($bx);
     return unless $self;
@@ -73,9 +133,13 @@ no warnings;
     my $property_meta = $subject_class_name->__meta__->property($name);
     if ($property_meta) {
         my $aspect_type = $property_meta->data_type;
+        unless ($aspect_type) {
+            Carp::confess("Property meta for class ".$property_meta->class_name." property ".$property_meta->property_name." has no data_type");
+        }
         if ($aspect_type->can("__meta__")) {
             my $aspect_meta = $aspect_type->__meta__;
             
+            print "For aspect $name of parent view on $subject_class_name, creating delegate view with params: subject_class_name $aspect_type perspective ".$parent_view->perspective." toolkit ".$parent_view->toolkit." parent_view dump ".Data::Dumper::Dumper($parent_view)."\n\n\n";
             my $delegate_view ||= $aspect_type->create_view(
                 subject_class_name => $aspect_type,
                 perspective => $parent_view->perspective,
@@ -109,16 +173,16 @@ no warnings;
             return $delegate_view;
         }
         else {
-            die "$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!"; 
+            Carp::croak("$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!"); 
         }
     }
     else {
         unless ($subject_class_name->can($name)) {
             $self->error_message("No property/method $name found on $subject_class_name!  Invalid aspect!");
             $self->delete;
-            die $self->error_message; 
+            Carp::croak($self->error_message);
         }
-        die "property $name on $subject_class_name has no meta?";
+        Carp::croak("property $name on $subject_class_name has no meta?");
     }
 }
 
