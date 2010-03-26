@@ -29,6 +29,13 @@ class UR::Object::View {
             order_by => 'number',
             doc => 'the aspects of the subject this view renders' 
         },
+        default_aspects => {
+            is => 'ARRAY',
+            is_abstract => 1,
+            is_constant => 1,
+            is_many => 1,
+            default_value => [],
+            doc => 'List of default aspect names' },
     ],
     has_optional_transient => [
         _widget  => { 
@@ -65,10 +72,10 @@ sub create {
     # now go the other way, and use both to infer a final class name
     $expected_class = $class->_resolve_view_class_for_params($params);
     unless ($expected_class) {
-        die "Failed to resolve a subclass for " . __PACKAGE__ 
-        . " from parameters.  Expected subject_class_name, perspective,"
-        . " and toolkit to be part of the parameters, or class definition.  "
-        . "Received $params."
+        Carp::croak("Failed to resolve a subclass for " . __PACKAGE__ 
+                    . " from parameters.  Expected subject_class_name, perspective,"
+                    . " and toolkit to be part of the parameters, or class definition.  "
+                    . "Received $params.");
     }
 
     unless ($class->isa($expected_class)) {
@@ -86,11 +93,14 @@ sub create {
     );
     unless ($expected_class and $expected_class eq $class) {
         $expected_class ||= '<uncertain>';
-        die "constructed a $class object but properties indicate $expected_class should have been created.";
+        Carp::croak("constructed a $class object but properties indicate $expected_class should have been created.");
     }
 
     unless ($params->specifies_value_for('aspects')) {
-        my @aspect_specs = $self->_resolve_default_aspects();
+        my @aspect_specs = $self->default_aspects();
+        if (! @aspect_specs) {
+            @aspect_specs = $self->_resolve_default_aspects();
+        }
         for my $aspect_spec (@aspect_specs) {
             my $aspect = $self->add_aspect(ref($aspect_spec) ? %$aspect_spec : $aspect_spec);
             unless ($aspect) {
@@ -228,7 +238,6 @@ sub _bind_subject {
     # It handles the case in which the subject is undef.
     my $self = shift;
     my $subject = $self->subject();
-    return unless $subject;
 
     my $observer_data = $self->_observer_data;
 
@@ -241,6 +250,8 @@ sub _bind_subject {
         my ($class, $id, $method,$callback) = @$s;
         $class->cancel_change_subscription($id, $method,$callback);
     }
+
+    return unless $subject;
 
     # Make a new subscription for this subject
     my $subscription = $subject->create_subscription(

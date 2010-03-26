@@ -106,7 +106,6 @@ sub create {
             Carp::croak("Can't create delegate view for aspect named " . $bx->value_for('name') . ": ".$delegate_subject_class_name->error_message);
         }
         #$bx->add_filter(delegate_view_id => $delegate_view->id);
-print "Adding filter to bx for aspect ".$bx->value_for('name')." delegate_view_id ".$delegate_view->id.": ". Data::Dumper::Dumper($delegate_view)."\n";
         $bx = $bx->add_filter(delegate_view => $delegate_view);
     }
                                 
@@ -139,7 +138,6 @@ no warnings;
         if ($aspect_type->can("__meta__")) {
             my $aspect_meta = $aspect_type->__meta__;
             
-            print "For aspect $name of parent view on $subject_class_name, creating delegate view with params: subject_class_name $aspect_type perspective ".$parent_view->perspective." toolkit ".$parent_view->toolkit." parent_view dump ".Data::Dumper::Dumper($parent_view)."\n\n\n";
             my $delegate_view ||= $aspect_type->create_view(
                 subject_class_name => $aspect_type,
                 perspective => $parent_view->perspective,

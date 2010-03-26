@@ -37,6 +37,7 @@ my($self, $params) = @_;
 
     my %viewers;
     foreach my $item ( @{$params->{' '}} ) {
+print "Looking up item $item\n";
         my @meta_objs = ();
 
         if ($item eq $namespace or $item =~ m/::/) {
@@ -79,7 +80,7 @@ my($self, $params) = @_;
  
 
             my $viewer = $viewers{$obj->class};
-            $viewer->set_subject($obj);
+            $viewer->subject($obj);
             $viewer->show();
             print "\n";
         }
