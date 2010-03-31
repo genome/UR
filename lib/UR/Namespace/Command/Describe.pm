@@ -30,7 +30,6 @@ sub for_each_class_object {
     my $self = shift;
     my $class_meta = shift;
 
-$DB::single=1;
     $viewer ||= UR::Object::Type->create_view(
                     perspective => 'default',
                     toolkit => 'text',
@@ -62,9 +61,9 @@ $DB::single=1;
     }
 
     $viewer->subject($class_meta);
-    #$viewer->show();
-print $viewer->content();
-    print "\n";
+    $viewer->show();
+    #print $viewer->content();
+    #print "\n";
 }
 
     

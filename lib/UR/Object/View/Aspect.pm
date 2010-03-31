@@ -123,15 +123,55 @@ sub create {
     return $self; 
 }
 
+
+sub _look_for_recursion {
+    my $self = shift;
+
+    my $parent_view = $self->parent_view;
+    my $subject = $parent_view->subject;
+
+    $parent_view = $parent_view->parent_view;
+    while($parent_view) {
+        return 1 if ($parent_view->subject eq $subject);
+        $parent_view = $parent_view->parent_view;
+    }
+    return 0;
+}
+
+        
+
 sub generate_delegate_view {
 no warnings;
     my $self = shift;
+
     my $parent_view = $self->parent_view;
+
+    # works, but duplicates some info in the output
+    #if (my @recursion_candidates = UR::Object::View::Aspect->get(name => $self->name, label => $self->label)) {
+    #    my $fingerprint = join("\t", $parent_view->subject, $parent_view->toolkit, $parent_view->perspective);
+    #    foreach ( @recursion_candidates ) {
+    #        my $candidate_parent = $_->parent_view;
+    #        my $candidate_fingerprint = join("\t", $candidate_parent->subject, $candidate_parent->toolkit, $candidate_parent->perspective);
+    #        return if (($_->id ne $self->id) and ($candidate_fingerprint eq $fingerprint));
+    #    }
+    #}
+
     my $name = $self->name;
     my $subject_class_name = $parent_view->subject_class_name;
     my $property_meta = $subject_class_name->__meta__->property($name);
+
+
+    my $retval;
     if ($property_meta) {
         my $aspect_type = $property_meta->data_type;
+
+$DB::single=1 if $aspect_type eq 'Cat';
+print "Looking for other views...  I look like subject_class_name  $aspect_type, perspective => ".$parent_view->perspective." toolkit => ".$parent_view->toolkit." subject => ".$parent_view->subject."\n";
+        #my @possible_other_views = UR::Object::View->get(perspective => $parent_view->perspective, toolkit => $parent_view->toolkit, subject => $parent_view->subject);
+        #return if (@possible_other_views);
+        return if $self->_look_for_recursion;
+print "Didn't find any\n";
+
         unless ($aspect_type) {
             Carp::confess("Property meta for class ".$property_meta->class_name." property ".$property_meta->property_name." has no data_type");
         }
@@ -148,7 +188,7 @@ no warnings;
             unless ($delegate_view) {
                 $self->error_message("Error creating delegate view for $name ($aspect_type)!");
                 $self->delete;
-                return;
+                #return;
             }
             my @default_aspects_params = $delegate_view->_resolve_default_aspects();
            
@@ -168,7 +208,7 @@ no warnings;
                 }
             }
             $self->delegate_view($delegate_view);
-            return $delegate_view;
+            $retval = $delegate_view;
         }
         else {
             Carp::croak("$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!"); 
@@ -182,6 +222,9 @@ no warnings;
         }
         Carp::croak("property $name on $subject_class_name has no meta?");
     }
+
+    #delete $self->{'_recursion_detection'}->{$parent_view->subject};
+    return $retval;
 }
 
 1;

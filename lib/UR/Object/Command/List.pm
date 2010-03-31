@@ -439,15 +439,10 @@ sub format_and_print{
                        aspects => [ @{$self->{'show'}} ],
                   );
 
-    my $this_row_tab_delimited;
-
     my $count = 0;
     while (my $object = $self->_get_next_object_from_iterator()) {
-        $this_row_tab_delimited = '';
-
         $viewer->subject($object);
         $tab_delimited .= $viewer->content() . "\n";
-        #$tab_delimited .= $viewer->buf();
         $count++;
     }
 

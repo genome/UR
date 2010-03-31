@@ -12,8 +12,6 @@ UR::Object::Type->define(
 sub _update_view_from_subject {
     my $self = shift;
 
-print "\n\n*** In _update_view_from_subject for Property View ".Data::Dumper::Dumper($self)."\n\n";
-#Carp::confess();
     my $property_meta = $self->subject;
     return unless ($property_meta);
 
@@ -49,7 +47,6 @@ print "\n\n*** In _update_view_from_subject for Property View ".Data::Dumper::Du
                $data_type_string,
               );
 
-    #$self->buf($text);
     my $widget = $self->widget();
     my $buffer_ref = $widget->[0];
     $$buffer_ref = $text;

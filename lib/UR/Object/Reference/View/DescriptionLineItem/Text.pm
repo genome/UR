@@ -27,7 +27,6 @@ sub _update_view_from_subject {
                        $ref_meta->delegation_name,
                        $r_class_name,
                        $relation_detail);
-    #$self->buf($text);
     my $widget = $self->widget();
     my $buffer_ref = $widget->[0];
     $$buffer_ref = $text;

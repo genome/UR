@@ -20,7 +20,6 @@ sub is_sub_command_delegator { 0;}
 sub execute {
 my($self, $params) = @_;
 
-    $DB::single=1;
     my $namespace = $self->namespace_name;
     # FIXME why dosen't require work here?
     eval "use  $namespace";
@@ -37,7 +36,6 @@ my($self, $params) = @_;
 
     my %viewers;
     foreach my $item ( @{$params->{' '}} ) {
-print "Looking up item $item\n";
         my @meta_objs = ();
 
         if ($item eq $namespace or $item =~ m/::/) {

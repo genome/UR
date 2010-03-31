@@ -102,6 +102,7 @@ sub _generate_content {
     return $text;
 }
 
+our %recursion_detection;
 sub _generate_content_for_aspect {
     # This does two odd things:
     # 1. It gets the value(s) for an aspect, then expects to just print them
@@ -138,9 +139,14 @@ sub _generate_content_for_aspect {
     }
     
     if (Scalar::Util::blessed($value[0])) {
+#print "Detecting recursion for >>$value[0]<<\n";
+#        next if $recursion_detection{$value[0]}++;
         unless ($aspect->delegate_view) {
             $aspect->generate_delegate_view;
         }
+#        delete $recursion_detection{$value[0]};
+#print "Removing recursion flag for >>$value[0]<<\n";
+
     }
     
     # Delegate to a subordinate viewer if needed.

@@ -44,13 +44,14 @@ is("@c","$c1 $c2", "got expected cat list for the owner");
 
 
 my $pv = $p->create_view(
-    toolkit => 'text',
+    toolkit => 'xml',
     aspects => [
         'name',
         'age',
-        'cats' => {
+        {
+            name => 'cats',
             perspective => 'default',
-            toolkit => 'text',
+            toolkit => 'xml',
             aspects => [
                 'name',
                 'age',
@@ -60,14 +61,16 @@ my $pv = $p->create_view(
         }
     ]
 );
-ok($pv, "got an XML viewer for the person");
-print($pv->buf);
-my $pv_expected_xml = '';
-is($pv->buf,$pv_expected_xml,"XML is as expected for the person view");
+#ok($pv, "got an XML viewer for the person");
+#print($pv->content);
+#print "After calling conetnt\n";
+#my $pv_expected_xml = '';
+#is($pv->content,$pv_expected_xml,"XML is as expected for the person view");
 
 my $c1v = $c1->create_view(toolkit => 'text');
-print($c1v->buf);
-ok($c1v, "got an XML viewer for one of the cats");
+ok($c1v, 'Created text viewer for a cat');
+print($c1v->content);
+ok($c1v, "got a text viewer for one of the cats");
 my $c1v_expected_xml = '';
-is($c1v->buf,$c1v_expected_xml,"XML is as expected for the cat view");
+is($c1v->content,$c1v_expected_xml,"XML is as expected for the cat view");
 
