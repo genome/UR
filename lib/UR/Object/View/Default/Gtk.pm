@@ -64,7 +64,7 @@ sub _remove_aspect {
 
 =head1 NAME
 
-UR::Object::View::Default::Gtk - Gtk adaptor for object viewers
+UR::Object::View::Default::Gtk - Gtk adaptor for object views
 
 =head1 DESCRIPTION
 

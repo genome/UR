@@ -6,7 +6,7 @@ use warnings;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object::View::Default::Text',
-    doc => "Viewer used by 'ur describe' for each reference (relationship) line item",
+    doc => "View used by 'ur describe' for each reference (relationship) line item",
 );
 
 sub _update_view_from_subject {
@@ -42,7 +42,7 @@ sub _update_view_from_subject {
 
 =head1 NAME
 
-UR::Object::Reference::View::DescriptionLineItem::Text - Viewer class for Reference objects
+UR::Object::Reference::View::DescriptionLineItem::Text - View class for Reference objects
 
 =head1 DESCRIPTION
 

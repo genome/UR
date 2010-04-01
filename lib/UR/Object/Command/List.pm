@@ -432,7 +432,7 @@ sub format_and_print{
         $tab_delimited .= $self->_get_header_string."\n";
     }
 
-    my $viewer = UR::Object::View->create(
+    my $view = UR::Object::View->create(
                        subject_class_name => 'UR::Object',
                        perspective => 'lister',
                        toolkit => 'text',
@@ -441,8 +441,8 @@ sub format_and_print{
 
     my $count = 0;
     while (my $object = $self->_get_next_object_from_iterator()) {
-        $viewer->subject($object);
-        $tab_delimited .= $viewer->content() . "\n";
+        $view->subject($object);
+        $tab_delimited .= $view->content() . "\n";
         $count++;
     }
 

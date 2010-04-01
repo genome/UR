@@ -18,11 +18,11 @@ UR::Object::Type->define(
 
 =head1 NAME
 
-UR::DataSource::RDBMS::TableColumn::View::Default::Text - Viewer class for RDBMS column objects
+UR::DataSource::RDBMS::TableColumn::View::Default::Text - View class for RDBMS column objects
 
 =head1 DESCRIPTION
 
-This class defines a text-mode viewer for RDBMS column objects, and is used by
+This class defines a text-mode view for RDBMS column objects, and is used by
 the 'ur info' command.
 
 =cut

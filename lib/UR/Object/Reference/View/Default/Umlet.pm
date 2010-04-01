@@ -57,7 +57,7 @@ Arrow 1</panel_attributes>
 
 =head1 NAME 
 
-UR::Object::Reference::View::Default::Umlet - Viewer class for References in an Umlet diagram
+UR::Object::Reference::View::Default::Umlet - View class for References in an Umlet diagram
 
 =head1 DESCRIPTION
 

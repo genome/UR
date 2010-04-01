@@ -15,37 +15,37 @@ UR::Object::Type->define(
 
 our $VERSION = $UR::VERSION;;
 
-sub show_viewer {
+sub show_view {
     my $class = shift;
-    my $viewer = shift;
-    my $widget = $viewer->widget;
+    my $view = shift;
+    my $widget = $view->widget;
     return $$widget;
 }
 
 # This doesn't really apply for text?!
-sub hide_viewer {
+sub hide_view {
 return undef;
 
     my $class = shift;
-    my $viewer = shift;
-    my $widget = $viewer->widget;
+    my $view = shift;
+    my $widget = $view->widget;
     print "DEL: $widget\n";
     return 1;
 }
 
 # This doesn't really apply for text?!
-sub create_window_for_viewer {
+sub create_window_for_view {
 return undef;
 
     my $class = shift;
-    my $viewer = shift;
-    my $widget = $viewer->widget;
+    my $view = shift;
+    my $widget = $view->widget;
     print "WIN: $widget\n";
     return 1;
 }
 
 # This doesn't really apply for text?!
-sub delete_window_around_viewer {
+sub delete_window_around_view {
 return undef;
 
     my $class = shift;

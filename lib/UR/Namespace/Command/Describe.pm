@@ -25,12 +25,12 @@ our @CLASS_PROPERTIES_NOT_TO_PRINT = qw(
 );
     
     
-our $viewer;
+our $view;
 sub for_each_class_object {
     my $self = shift;
     my $class_meta = shift;
 
-    $viewer ||= UR::Object::Type->create_view(
+    $view ||= UR::Object::Type->create_view(
                     perspective => 'default',
                     toolkit => 'text',
                     aspects => [
@@ -55,14 +55,14 @@ sub for_each_class_object {
                         }
                     ],
                 );
-    unless ($viewer) {
-        $self->error_message("Can't initialize viewer");
+    unless ($view) {
+        $self->error_message("Can't initialize view");
         return;
     }
 
-    $viewer->subject($class_meta);
-    $viewer->show();
-    #print $viewer->content();
+    $view->subject($class_meta);
+    $view->show();
+    #print $view->content();
     #print "\n";
 }
 

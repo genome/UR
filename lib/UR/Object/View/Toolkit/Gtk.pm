@@ -16,10 +16,10 @@ UR::Object::Type->define(
     ]
 );
 
-sub show_viewer_modally {
+sub show_view_modally {
     my $class = shift;
-    my $viewer = shift;
-    my $window = $class->create_window_for_viewer($viewer);
+    my $view = shift;
+    my $window = $class->create_window_for_view($view);
     return unless $window;
     $window->set_modal(1);
     $window->show_all;
@@ -28,54 +28,54 @@ sub show_viewer_modally {
     return 1;
 }
 
-sub show_viewer {
+sub show_view {
     my $class = shift;
-    my $viewer = shift;
-    my $window = $class->create_window_for_viewer($viewer) or return;
+    my $view = shift;
+    my $window = $class->create_window_for_view($view) or return;
     $window->show_all;
     return 1;
 }
 
-sub hide_viewer {
+sub hide_view {
     my $class = shift;
-    my $viewer = shift;
-    $class->delete_window_around_viewer($viewer) or return;
-    my $widget = $viewer->widget;
+    my $view = shift;
+    $class->delete_window_around_view($view) or return;
+    my $widget = $view->widget;
     $widget->hide();
     return 1;
 }
 
 our %open_editors;
-sub create_window_for_viewer {
+sub create_window_for_view {
     my $class = shift;
-    my $viewer = shift;
+    my $view = shift;
     
     my @params = @_;
     my %params = @_; #_compile_hash(@_);
     
-    # Make a window for the viewer.
+    # Make a window for the view.
     my $win = new Gtk::Window;
     $win->set_title("test title");
     
-    # Extract the widget underlying the viewer and put it in the window.
-    my $widget = $viewer->widget;
+    # Extract the widget underlying the view and put it in the window.
+    my $widget = $view->widget;
     Carp::confess($widget) unless($widget);
     $win->add($widget);
     
     # Put the window in the hash of editors.
-    my $subject = $viewer->subject();
-    $open_editors{$viewer} = $win;
+    my $subject = $view->subject();
+    $open_editors{$view} = $win;
     
     # Show the editor.        
     $win->set_default_size(400,200);
     $win->show_all;
 
-    # Destroy viewer if window is cloased.
+    # Destroy view if window is cloased.
     $win->signal_connect('delete_event', sub 
     {       
         if (App::UI->remove_window($win))
         {
-            $class->delete_window_around_viewer($viewer);
+            $class->delete_window_around_view($view);
             return 0;
         }
         else
@@ -91,12 +91,12 @@ sub create_window_for_viewer {
     return $win;
 }
 
-sub delete_window_around_viewer {
+sub delete_window_around_view {
     my $class = shift;
-    my $viewer = shift;
-    my $subject = $viewer->subject;
-    my $widget = $viewer->widget;
-    my $win = delete $open_editors{$viewer};
+    my $view = shift;
+    my $subject = $view->subject;
+    my $widget = $view->widget;
+    my $win = delete $open_editors{$view};
     $win->remove($widget);
     $win->destroy;
     App::UI::Gtk->remove_window($win);

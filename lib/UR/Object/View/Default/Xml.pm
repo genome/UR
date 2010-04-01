@@ -43,10 +43,10 @@ sub _generate_content {
 sub _generate_content_for_aspect {
     # This does two odd things:
     # 1. It gets the value(s) for an aspect, then expects to just print them
-    #    unless there is a delegate viewer.  In which case, it replaces them 
+    #    unless there is a delegate view.  In which case, it replaces them 
     #    with the delegate's content.
     # 2. In cases where more than one value is returned, it recycles the same
-    #    viewer and keeps the content.
+    #    view and keeps the content.
     # 
     # These shortcuts make it hard to abstract out logic from toolkit-specifics
 
@@ -75,7 +75,7 @@ sub _generate_content_for_aspect {
         }
     }
     
-    # Delegate to a subordinate viewer if needed.
+    # Delegate to a subordinate view if needed.
     # This means we replace the value(s) with their
     # subordinate widget content.
     my $aspect_text = '';

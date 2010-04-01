@@ -29,12 +29,12 @@ my($self, $params) = @_;
     }
 
     # Loop through each command line parameter and see what kind of thing it is
-    # create a viewer and display it
+    # create a view and display it
     my @class_aspects = qw( );
     my @table_aspects = qw( );
     my %already_printed;
 
-    my %viewers;
+    my %views;
     foreach my $item ( @{$params->{' '}} ) {
         my @meta_objs = ();
 
@@ -70,16 +70,16 @@ my($self, $params) = @_;
             next unless $obj;
             next if ($already_printed{$obj}++);
 
-            $viewers{$obj->class} ||= UR::Object::View->create(
+            $views{$obj->class} ||= UR::Object::View->create(
                                           subject_class_name => $obj->class,
                                           perspective => 'default',
                                           toolkit => 'text',
                                        );
  
 
-            my $viewer = $viewers{$obj->class};
-            $viewer->subject($obj);
-            $viewer->show();
+            my $view = $views{$obj->class};
+            $view->subject($obj);
+            $view->show();
             print "\n";
         }
    

@@ -61,7 +61,7 @@ my $pv = $p->create_view(
         }
     ]
 );
-ok($pv, "got an XML viewer for the person");
+ok($pv, "got an XML view for the person");
 my $pv_got_content = $pv->content;
 ok($pv_got_content, 'Person XML view generated some content');
 SKIP: {
@@ -71,12 +71,12 @@ SKIP: {
 }
 
 my $c1v = $c1->create_view(toolkit => 'text');
-ok($c1v, 'Created text viewer for a cat');
-ok($c1v, "got a text viewer for one of the cats");
+ok($c1v, 'Created text view for a cat');
+ok($c1v, "got a text view for one of the cats");
 
 my $c1v_expected_text = "Cat '" . $c1->id . "' age: 2 fluf: 11 name: fluffy owner: Person '" . $p->id . "' age: 99 cats: Cat '" . $c1->id . "' (REUSED ADDR) Cat '".$c2->id."' age: 8 fluf: 22 name: nestor owner: Person '".$p->id."' (REUSED ADDR) name: Fester";
 my $c1v_got_content = $c1v->content;
-ok($c1v_got_content, 'Cat text viewer generated some content');
+ok($c1v_got_content, 'Cat text view generated some content');
 chomp $c1v_got_content;
 # Convert all whitespace to a single space
 $c1v_got_content =~ s/\n/ /mg;

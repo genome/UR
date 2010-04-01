@@ -265,7 +265,7 @@ sub __errors__ {
 #  boolean expressions
 #  sets
 #  iterators
-#  viewers
+#  views
 #  mock objects
 
 sub define_boolexpr {
@@ -334,22 +334,24 @@ sub create_viewer {
     my $self = shift;
     my $class = $self->class;
 
-    my $viewer = UR::Object::Viewer->create(
+    Carp::carp("create_viewer is deprecated.  Use create_view instead");
+
+    my $view = UR::Object::Viewer->create(
         subject_class_name => $class,
         perspective => "default",
         @_
     );
 
-    unless ($viewer) {
-        $self->error_message("Error creating viewer: " . UR::Object::Viewer->error_message);
+    unless ($view) {
+        $self->error_message("Error creating view: " . UR::Object::Viewer->error_message);
         return;
     }
 
     if (ref($self)) {
-        $viewer->set_subject($self);
+        $view->set_subject($self);
     }
 
-    return $viewer;
+    return $view;
 }
 
 sub create_view {
@@ -984,7 +986,7 @@ Items can be removed from the assigned group in a way symetrical with how they a
 
 These methods are available on any class defined by UR.  They
 are convenience methods around L<UR::Context>, L<UR::Object::Set>,
-L<UR::BoolExpr>, L<UR::Object::Viewer>, L<UR::Observer> 
+L<UR::BoolExpr>, L<UR::Object::View>, L<UR::Observer> 
 and L<Mock::Object>.
 
 =over 4
@@ -1225,7 +1227,7 @@ changed.
 
 Work is in-progress on an API to request the portion of the changes in effect in the 
 current transaction which would impact the return value of a given list of properties.  
-This would be directly usable by a viewer/observer.
+This would be directly usable by a view/observer.
 
 =item __define__ 
 

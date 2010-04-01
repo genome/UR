@@ -274,7 +274,7 @@ sub widget {
 
 sub _create_widget {
     Carp::confess("The _create_widget method must be implemented for all concrete "
-        . " viewer subclasses.  No _create_widget for " 
+        . " view subclasses.  No _create_widget for " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
@@ -306,7 +306,7 @@ sub _bind_subject {
     );
     $observer_data->{$subject} = $subscription;
     
-    # Set the viewer to show initial data.
+    # Set the view to show initial data.
     $self->_update_view_from_subject;
     
     return 1;
@@ -316,13 +316,13 @@ sub _update_view_from_subject {
     # This is called whenever the view changes, or the subject changes.
     # It passes the change(s) along, so that the update can be targeted, if the developer chooses.
     Carp::confess("The _update_view_from_subject method must be implemented for all concreate "
-        . " viewer subclasses.  No _update_subject_from_viewfor " 
+        . " view subclasses.  No _update_subject_from_viewfor " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
 sub _update_subject_from_view {
     Carp::confess("The _update_subject_from_view method must be implemented for all concreate "
-        . " viewer subclasses.  No _update_subject_from_viewfor " 
+        . " view subclasses.  No _update_subject_from_viewfor " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
@@ -330,17 +330,17 @@ sub _update_subject_from_view {
 
 sub show {
     my $self = shift;
-    $self->_toolkit_package->show_viewer($self);
+    $self->_toolkit_package->show_view($self);
 }
 
 sub show_modal {
     my $self = shift;
-    $self->_toolkit_package->show_viewer_modally($self);
+    $self->_toolkit_package->show_view_modally($self);
 }
 
 sub hide {
     my $self = shift;
-    $self->_toolkit_package->hide_viewer($self);
+    $self->_toolkit_package->hide_view($self);
 }
 
 sub _toolkit_package {
@@ -411,19 +411,19 @@ flexible the of the perspective logic is.
 
 =item show
 
-For stand-alone viewers, this puts the viewer widget in its a window.  For 
-viewers which are part of a larger viewer, this makes the viewer widget
+For stand-alone views, this puts the view widget in its a window.  For 
+views which are part of a larger view, this makes the view widget
 visible in the parent.
 
 =item hide
 
-Makes the viewer invisible.  This means hiding the window, or hiding the viewer
-widget in the parent widget for subordinate viewers.
+Makes the view invisible.  This means hiding the window, or hiding the view
+widget in the parent widget for subordinate views.
 
 =item show_modal 
 
-This method shows the viewer in a window, and only returns after the window is closed.
-It should only be used for viewers which are a full interface capable of closing itself 
+This method shows the view in a window, and only returns after the window is closed.
+It should only be used for views which are a full interface capable of closing itself 
 when done.
 
 =item widget
@@ -452,13 +452,13 @@ determine which class of view to construct, and must be provided to create().
 
 =item subject_class_name
     
-The class of subject this viewer will view.  Constant for any given viewer,
+The class of subject this view will view.  Constant for any given view,
 but this may be any abstract class up-to UR::Object itself.
     
 =item perspective
 
 Used to describe the layout logic which gives logical content
-to the viewer.
+to the view.
 
 =item toolkit
 
@@ -487,7 +487,7 @@ the view.  Some views have mutable aspects, while others merely report
 which aspects are revealed by the perspective in question.
 
 An "aspect" is some characteristic of the "subject" which is rendered in the 
-viewer.  Any property of the subject is usable, as is any method.
+view.  Any property of the subject is usable, as is any method.
 
 =back
 
@@ -529,14 +529,14 @@ It updates the widget to reflect changes to the widget due to a change in subjec
 
 This method has a default implementation which does a general subscription
 to changes on the subject.  It probably does not need to be overridden
-in custom viewers.  Implementations which _do_ override this should take 
+in custom views.  Implementations which _do_ override this should take 
 an undef subject, and be sure to un-bind a previously existing subject if 
 there is one set. 
 
 =item _update_view_from_subject
 
 If and when the property values of the subject change, this method will be called on 
-all viewers which render the changed aspect of the subject.
+all views which render the changed aspect of the subject.
 
 =item _update_subject_from_view
 
@@ -559,7 +559,7 @@ The toolkit class related to a view is responsible for handling show/hide logic,
 etc. in the base UR::Object::View class.
 
 Returns the name of a class which is derived from UR::Object::View::Toolkit
-which implements certain utility methods for viewers of a given toolkit.
+which implements certain utility methods for views of a given toolkit.
 
 =back
 

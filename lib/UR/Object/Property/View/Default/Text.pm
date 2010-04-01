@@ -19,7 +19,7 @@ UR::Object::Type->define(
 
 =head1 NAME
 
-UR::Object::Property::View::Default::Text - Viewer class for UR::Object::Property
+UR::Object::Property::View::Default::Text - View class for UR::Object::Property
 
 =head1 DESCRIPTION
 

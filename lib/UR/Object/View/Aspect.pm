@@ -9,7 +9,7 @@ our $VERSION = $UR::VERSION;;
 class UR::Object::View::Aspect {
     id_by => [
         parent_view     => { is => 'UR::Object::View', id_by => 'parent_view_id', 
-                            doc => "the id of the viewer object this is an aspect-of" },
+                            doc => "the id of the view object this is an aspect-of" },
         
         number          => { is => 'Integer', 
                             doc => "aspects of a view are numbered" },
@@ -27,7 +27,7 @@ class UR::Object::View::Aspect {
                             doc => 'position of this aspect within the parent view (meaning is view and toolkit dependent)' },
 
         delegate_view      => { is => 'UR::Object::View', id_by => 'delegate_view_id', 
-                            doc => "This aspect gets rendered via another viewer" },
+                            doc => "This aspect gets rendered via another view" },
     ],
 };
 

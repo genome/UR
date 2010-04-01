@@ -15,7 +15,7 @@ is($v2->_toolkit_delegate, "UR::Object::View::Toolkit::Tk");
 
 =head1 DESCRIPTION
 
-Each viewer delegates to one of these to interact with the toolkit environment
+Each view delegates to one of these to interact with the toolkit environment
 
 =cut
 

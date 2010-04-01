@@ -49,7 +49,7 @@ $DB::single=1;
 
     # FIXME the vocabulary converted "cgi app" into CgiApp, instead of CGIApp even though
     # I added CGI to the list of special cased words in GSC::Vocabulary.  It looks like
-    # UR::Object::Viewer::create() is hard coded to use App::Vocabulary instead of whatever
+    # UR::Object::View::create() is hard coded to use App::Vocabulary instead of whatever
     # the current namespace's vocabulary is
     my $v = $namespace->create_view(perspective => "schema browser", toolkit => "cgi app");
 

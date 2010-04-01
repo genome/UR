@@ -104,7 +104,7 @@ Throws one away.
 Sets/gets a filter to be applied to all attribute lists returned in
 the application.  This gives the application developer final veto
 power over expressed attributes in the app.  In most cases, developers
-will write viewer components which use attributes, and will ignore
+will write view components which use attributes, and will ignore
 them rather than plug-in at this low level to augment/mangle/supress.
 
 The filter will be given an object reference and a refrence to an

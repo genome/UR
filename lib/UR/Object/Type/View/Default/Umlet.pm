@@ -16,7 +16,7 @@ UR::Object::Type->define(
 
 =head1 NAME
 
-UR::Object::Type::View::Default::Umlet - Viewer class for class metaobjects
+UR::Object::Type::View::Default::Umlet - View class for class metaobjects
 
 =head1 DESCRIPTION
 

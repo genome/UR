@@ -155,11 +155,11 @@ $DB::single=1;
 
 =head1 NAME
 
-UR::Namespace::View::SchemaBrowser::CgiApp - Viewer class for metadata via the browser namespace command
+UR::Namespace::View::SchemaBrowser::CgiApp - View class for metadata via the browser namespace command
 
 =head1 DESCRIPTION
 
-This class implements the viewer behavior behind the metadata web browser.  
+This class implements the view behavior behind the metadata web browser.  
 
 =head1 SEE ALSO
 

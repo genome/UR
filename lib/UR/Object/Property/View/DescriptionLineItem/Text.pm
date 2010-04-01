@@ -6,7 +6,7 @@ use warnings;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object::View::Default::Text',
-    doc => "Viewer used by 'ur describe' for each property line item",
+    doc => "View used by 'ur describe' for each property line item",
 );
 
 sub _update_view_from_subject {
@@ -61,7 +61,7 @@ sub _update_view_from_subject {
 
 =head1 NAME 
 
-UR::Object::Property::View::DescriptionLineItem::Text - Viewer class for UR::Object::Property
+UR::Object::Property::View::DescriptionLineItem::Text - View class for UR::Object::Property
 
 =head1 DESCRIPTION
 

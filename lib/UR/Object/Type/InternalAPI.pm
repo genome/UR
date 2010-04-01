@@ -730,7 +730,7 @@ sub _load {
 
     # While core entity classes are actually loaded,
     # support classes dynamically generate for them as needed.
-    # Examples are Acme::Employee::Viewer::emp_id, and Acme::Equipment::Ghost
+    # Examples are Acme::Employee::View::emp_id, and Acme::Equipment::Ghost
 
     # Try to parse the class name.
     my $class_name = $params->{class_name};
@@ -814,7 +814,7 @@ sub _load {
 
         # See if a class exists for the same name w/o the suffix.
         # This may cause this function to be called recursively for
-        # classes like Acme::Equipment::Set::Viewer::upc_code,
+        # classes like Acme::Equipment::Set::View::upc_code,
         # which would fire recursively for three extensions of
         # Acme::Equipment.
         my $full_base_class_name = $prefix . ($base ? "::" . $base : "");

@@ -13,7 +13,7 @@ UR::Object::Type->define(
     ]
 );
 
-# Behaving just like Text viewers should be ok...
+# Behaving just like Text views should be ok...
 # Maybe that means they should be combined somehow?
 
 1;

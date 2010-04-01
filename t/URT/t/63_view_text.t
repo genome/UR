@@ -53,7 +53,7 @@ for my $toolkit ('xml','text') {
         toolkit => $toolkit, 
         aspects => [ ]
     );
-    ok($pv1, "got an XML viewer $pv1 for the object $p");
+    ok($pv1, "got an XML view $pv1 for the object $p");
 
     my @a = $pv1->aspects();
     is(scalar(@a),0,"got expected aspect list @a")
@@ -74,7 +74,7 @@ for my $toolkit ('xml','text') {
             'cats',
         ]
     );
-    ok($pv2, "got an XML viewer $pv2 for the object $p");
+    ok($pv2, "got an XML view $pv2 for the object $p");
 
     @a = $pv2->aspects();
     is(scalar(@a),3,"got expected aspect list @a")
@@ -98,7 +98,7 @@ for my $toolkit ('xml','text') {
             },
         ]
     );
-    ok($pv3, "got an XML viewer $pv3 for the object $p");
+    ok($pv3, "got an XML view $pv3 for the object $p");
 
     @a = $pv3->aspects();
     is(scalar(@a),3,"got expected aspect list @a")
