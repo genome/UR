@@ -52,6 +52,7 @@ class UR::Object::View {
     ]
 };
 
+
 sub create {
     my $class = shift;    
 
@@ -214,6 +215,45 @@ sub __signal_change__ {
     }
     return 1;
 }
+
+# _encompassing_view() and _subject_is_used_in_an_encompassing_view() are used by the
+# default views (UR::Object::View::Default::*) to detect an infinite recursion situation
+# where it's asked to render an object A that references a B which refers back to A
+
+# If this view is embedded in another view, return the encompassing view
+sub _encompassing_view {
+    my $self = shift;
+
+    my @aspects = UR::Object::View::Aspect->get();
+    foreach my $aspect ( @aspects ) {
+        my $delegate_view = $aspect->delegate_view;
+        if ($self and $delegate_view and ($delegate_view eq $self)) {
+            # Found the right aspect that uses me
+            return $aspect->parent_view;
+        }
+    }
+
+    # $self must be the top-level view
+    return;
+}
+
+# If the subject of the view is also the subject of an encompassing view, return true
+sub _subject_is_used_in_an_encompassing_view {
+    my($self,$subject) = @_;
+
+    $subject = $self->subject unless (@_ == 2);
+
+    my $encompassing = $self->_encompassing_view;
+    while($encompassing) {
+        if ($encompassing->subject eq $subject) {
+            return 1;
+        } else {
+            $encompassing = $encompassing->_encompassing_view();
+        }
+    }
+    return;
+}
+
 
 # rendering implementation
 

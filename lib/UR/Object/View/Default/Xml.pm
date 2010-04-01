@@ -23,12 +23,16 @@ sub _generate_content {
     $subject_id_txt = "'$subject_id_txt'" if $subject_id_txt =~ /\s/;
     $text .= " id=$subject_id_txt>\n";
     
-    # the content for any given aspect is handled separately
-    my @aspects = $self->aspects;
-    for my $aspect (sort { $a->number <=> $b->number } @aspects) {
-        next if $aspect->name eq 'id';
-        my $aspect_text = $self->_generate_content_for_aspect($aspect);
-        $text .= $aspect_text;
+    # Don't recurse back into something we're already in the process of showing
+    unless ($self->_subject_is_used_in_an_encompassing_view()) {
+
+        # the content for any given aspect is handled separately
+        my @aspects = $self->aspects;
+        for my $aspect (sort { $a->number <=> $b->number } @aspects) {
+            next if $aspect->name eq 'id';
+            my $aspect_text = $self->_generate_content_for_aspect($aspect);
+            $text .= $aspect_text;
+        }
     }
 
     $text .= '</' . $self->subject_class_name . ">\n";

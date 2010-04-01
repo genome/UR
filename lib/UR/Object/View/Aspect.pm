@@ -146,16 +146,6 @@ no warnings;
 
     my $parent_view = $self->parent_view;
 
-    # works, but duplicates some info in the output
-    #if (my @recursion_candidates = UR::Object::View::Aspect->get(name => $self->name, label => $self->label)) {
-    #    my $fingerprint = join("\t", $parent_view->subject, $parent_view->toolkit, $parent_view->perspective);
-    #    foreach ( @recursion_candidates ) {
-    #        my $candidate_parent = $_->parent_view;
-    #        my $candidate_fingerprint = join("\t", $candidate_parent->subject, $candidate_parent->toolkit, $candidate_parent->perspective);
-    #        return if (($_->id ne $self->id) and ($candidate_fingerprint eq $fingerprint));
-    #    }
-    #}
-
     my $name = $self->name;
     my $subject_class_name = $parent_view->subject_class_name;
     my $property_meta = $subject_class_name->__meta__->property($name);
@@ -164,13 +154,6 @@ no warnings;
     my $retval;
     if ($property_meta) {
         my $aspect_type = $property_meta->data_type;
-
-$DB::single=1 if $aspect_type eq 'Cat';
-print "Looking for other views...  I look like subject_class_name  $aspect_type, perspective => ".$parent_view->perspective." toolkit => ".$parent_view->toolkit." subject => ".$parent_view->subject."\n";
-        #my @possible_other_views = UR::Object::View->get(perspective => $parent_view->perspective, toolkit => $parent_view->toolkit, subject => $parent_view->subject);
-        #return if (@possible_other_views);
-        return if $self->_look_for_recursion;
-print "Didn't find any\n";
 
         unless ($aspect_type) {
             Carp::confess("Property meta for class ".$property_meta->class_name." property ".$property_meta->property_name." has no data_type");
@@ -223,7 +206,6 @@ print "Didn't find any\n";
         Carp::croak("property $name on $subject_class_name has no meta?");
     }
 
-    #delete $self->{'_recursion_detection'}->{$parent_view->subject};
     return $retval;
 }
 

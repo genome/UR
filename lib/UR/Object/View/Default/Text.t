@@ -61,16 +61,16 @@ my $pv = $p->create_view(
         }
     ]
 );
-#ok($pv, "got an XML viewer for the person");
-#print($pv->content);
-#print "After calling conetnt\n";
-#my $pv_expected_xml = '';
-#is($pv->content,$pv_expected_xml,"XML is as expected for the person view");
+ok($pv, "got an XML viewer for the person");
+print($pv->content);
+print "After calling conetnt\n";
+my $pv_expected_xml = '';
+is($pv->content,$pv_expected_xml,"XML is as expected for the person view");
 
 my $c1v = $c1->create_view(toolkit => 'text');
 ok($c1v, 'Created text viewer for a cat');
 print($c1v->content);
 ok($c1v, "got a text viewer for one of the cats");
 my $c1v_expected_xml = '';
-is($c1v->content,$c1v_expected_xml,"XML is as expected for the cat view");
+is($c1v->content,$c1v_expected_xml,"text is as expected for the cat view");
 

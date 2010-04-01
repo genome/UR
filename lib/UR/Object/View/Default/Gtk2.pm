@@ -24,16 +24,23 @@ sub _update_view_from_subject {
     my $widget = $self->widget();
     
     my $text = $self->subject_class_name;
-    $text .= " with id " . $subject->id . "\n" if $subject;
-    for my $aspect (sort { $a->position <=> $b->position } @aspects) {       
-        my $label = $aspect->label;
-        $text .= "\n" . $label . ": ";
-        if ($subject) {
-            my @value = $subject->$label;
-            $text .= join(", ", @value);
-        }
-        else {
-            $text .= "-";
+    $text .= " with id " . $subject->id if $subject;
+
+    # Don't recurse back into something we're already in the process of showing
+    if ($self->_subject_is_used_in_an_encompassing_view()) {
+        $text .= " (REUSED ADDR)\n";
+    } else {
+        $text .= "\n";
+        for my $aspect (sort { $a->position <=> $b->position } @aspects) {       
+            my $label = $aspect->label;
+            $text .= "\n" . $label . ": ";
+            if ($subject) {
+                my @value = $subject->$label;
+                $text .= join(", ", @value);
+            }
+            else {
+                $text .= "-";
+            }
         }
     }
     $widget->set_text($text);

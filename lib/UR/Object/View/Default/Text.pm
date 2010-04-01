@@ -58,6 +58,7 @@ sub _update_view_from_subject {
 sub content {
     # retuns the current value of the scalar ref containing the text content.
     my $self = shift;
+
     my $widget = $self->widget();
     if (@_) {
         die "the widget reference for a view isn't changeable.  change its content.."; 
@@ -89,20 +90,24 @@ sub _generate_content {
         $subject_id_txt = "'$subject_id_txt'" if $subject_id_txt =~ /\s/;
         $text .= " $subject_id_txt";
     }
-    $text .= "\n";
     
-    # the content for any given aspect is handled separately
-    my @aspects = $self->aspects;
-    for my $aspect (sort { $a->number <=> $b->number } @aspects) {
-        next if $aspect->name eq 'id';
-        my $aspect_text = $self->_generate_content_for_aspect($aspect);
-        $text .= $aspect_text;
+    # Don't recurse back into something we're already in the process of showing
+    if ($self->_subject_is_used_in_an_encompassing_view()) {
+        $text .= " (REUSED ADDR)\n";
+    } else {
+        $text .= "\n";
+        # the content for any given aspect is handled separately
+        my @aspects = $self->aspects;
+        for my $aspect (sort { $a->number <=> $b->number } @aspects) {
+            next if $aspect->name eq 'id';
+            my $aspect_text = $self->_generate_content_for_aspect($aspect);
+            $text .= $aspect_text;
+        }
     }
     
     return $text;
 }
 
-our %recursion_detection;
 sub _generate_content_for_aspect {
     # This does two odd things:
     # 1. It gets the value(s) for an aspect, then expects to just print them
@@ -139,13 +144,9 @@ sub _generate_content_for_aspect {
     }
     
     if (Scalar::Util::blessed($value[0])) {
-#print "Detecting recursion for >>$value[0]<<\n";
-#        next if $recursion_detection{$value[0]}++;
         unless ($aspect->delegate_view) {
             $aspect->generate_delegate_view;
         }
-#        delete $recursion_detection{$value[0]};
-#print "Removing recursion flag for >>$value[0]<<\n";
 
     }
     
