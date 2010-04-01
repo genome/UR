@@ -224,13 +224,11 @@ sub __signal_change__ {
 sub _encompassing_view {
     my $self = shift;
 
-    my @aspects = UR::Object::View::Aspect->get();
-    foreach my $aspect ( @aspects ) {
-        my $delegate_view = $aspect->delegate_view;
-        if ($self and $delegate_view and ($delegate_view eq $self)) {
-            # Found the right aspect that uses me
-            return $aspect->parent_view;
-        }
+    my @aspects = UR::Object::View::Aspect->get(delegate_view_id => $self->id);
+    if (@aspects) {
+        # FIXME - is it possible for there to be more than one thing in @aspects here?
+        # And if so, how do we differentiate them
+        return $aspects[0]->parent_view;
     }
 
     # $self must be the top-level view
