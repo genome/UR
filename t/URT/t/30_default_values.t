@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 64;
+use Test::More tests => 69;
 
 UR::Object::Type->define(
     class_name => 'URT::Parent',
@@ -132,7 +132,17 @@ is($o->int_value, 9876, 'The BridgeThing has the correct value for int_value');
 ok($o->int_thing_id, 'The BridgeThing has an int_thing_id value');
 ok($o->int_thing, 'We can get its int_thing object');
 is($o->int_thing->id, $o->int_thing_id, "The IDs match for the hangoff object");
-is($o->int_thing->intval, 9876, "The int_thing's intval is 1234");
+is($o->int_thing->intval, 9876, "The int_thing's intval is 9876");
+
+
+
+my $int_thing = URT::IntThing->get(intval => 1234);
+ok($int_thing, 'Got the IntThing with intval 1234, again');
+$o = URT::ObjThing->create(id => 3);
+ok($o, 'Created another ObjThing without an int_value');
+is($o->int_value, 1234, "The ObjThing's int_value is the default 1234");
+ok($o->bridge_thing, "This ObjThing's bridge_thing property has a value");
+is($o->bridge_thing->int_thing_id, $int_thing->id, 'The bridge_thing points to the original IntThing having the value 1234');
 
 
 $p = URT::Parent->create(id => 2, name => 'Fred');
