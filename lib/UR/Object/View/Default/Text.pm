@@ -170,7 +170,7 @@ sub _generate_content_for_aspect {
         }
     }
     
-    if (@value == 1 and index($value[0],"\n") == -1) {
+    if (@value == 1 and defined($value[0]) and index($value[0],"\n") == -1) {
         # one item, one row in the value or sub-view of the item:
         $aspect_text .= $value[0] . "\n";
     }
@@ -201,9 +201,12 @@ sub _generate_content_for_aspect {
         }
 
         for my $value (@value) {
-            my @rows = split(/\n/,$value);
-            my $value_indented = join("\n", map { $aspect_indent . $_ } @rows);
-            chomp $value_indented;
+            my $value_indented = '';
+            if (defined $value) {
+                my @rows = split(/\n/,$value);
+                $value_indented = join("\n", map { $aspect_indent . $_ } @rows);
+                chomp $value_indented;
+            }
             $aspect_text .= $value_indented . "\n";
         }
     }
