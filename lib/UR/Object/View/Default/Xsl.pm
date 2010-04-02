@@ -6,8 +6,13 @@ use IO::File;
 
 class UR::Object::View::Default::Xsl {
     is => 'UR::Object::View::Default::Text',
-    has_optional => [
-        xsl_file => { value => 'html' },
+    has => [
+        output_format => { value => 'html' },
+        xsl_path => {
+            doc => 'absolute path where xsl files will be found, expected ' .
+                   'format is $xsl_path/$output_format/$perspective/' .
+                   '$normalized_class_name.xsl'
+        },
     ]
 };
 
@@ -17,15 +22,15 @@ sub _generate_content {
     my $subject = $self->subject;
     return unless $subject;
 
+    unless ($self->xsl_path && -e $self->xsl_path) {
+        die 'xsl_path does not exist';
+    }
+
     # get the xml for the equivalent perspective
     $DB::single = 1;
     my $xml_view = $subject->create_view(
         perspective => $self->perspective,
         toolkit => 'xml',
-
-        # custom for this view
-        instance_id => $self->instance_id, 
-        use_lsf_file => $self->use_lsf_file, 
     );   
     my $xml_content = $xml_view->_generate_content();
 
@@ -33,27 +38,34 @@ sub _generate_content {
     # it turns out we don't need it, since the file will be HTML.pm.xsl for xml->html conversion
     # my $toolkit = $self->toolkit;
 
-    # get the xsl
-    unless ($self->xsl_file) {
-        my $view_class_name = $xml_view->__meta__->class_name;
-        my $view_module_path  = $INC{$view_class_name};
-        die "No path found for view class $view_class_name\n" unless $view_module_path;
-        my $xsl_file_expected = $view_module_path . '.xsl';
-        die "No XSL file found at $xsl_file_expected" unless -e $xsl_file_expected;
-        $self->xsl_file($xsl_file_expected);
-    }
-    unless (-e $self->xsl_file) {
-        die "Failed to find xsl file: " . $self->xsl_file;
-    }
     my $parser = XML::LibXML->new;
     my $xslt = XML::LibXSLT->new;
-    my @template_lines;
-    my $fh = IO::File->new($self->xsl_file);
-    while (my $line = $fh->getline()) {
-        push @template_lines,$line;
-    }
-    $fh->close();
-    my $xsl_template = join("",@template_lines);
+
+    my $output_format = $self->output_format;
+    my $xsl_path = $self->xsl_path; 
+
+    my @include_files = $xml_view->xsl_template_files(
+        $output_format,
+        $xsl_path . '/'
+    );
+
+    my @includes = map {
+      "<xsl:include href=\"$xsl_path/$_\"/>\n";
+    } @include_files;
+
+    my $perspective = $self->perspective;
+    my $xsl_template = <<STYLE;
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:variable name="rest">/cgi-bin/rest.cgi</xsl:variable>
+  <xsl:variable name="xsl">/cgi-bin/xsl.cgi</xsl:variable>
+  <xsl:variable name="currentPerspective">$perspective</xsl:variable>
+  <xsl:variable name="currentToolkit">html</xsl:variable>
+  <xsl:include href="$xsl_path/$output_format/$perspective/root.xsl"/>
+@includes
+</xsl:stylesheet>
+STYLE
 
     # convert the xml
     my $source = $parser->parse_string($xml_content);
