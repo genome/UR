@@ -77,6 +77,16 @@ sub output_stream {
     return $output_stream;
 }
 
+# Do not return any aspects by default if we're embedded in another view
+# The creator of the view will have to specify them manually
+sub _resolve_default_aspects {
+    my $self = shift;
+    unless ($self->parent_view) {
+        return $self->SUPER::_resolve_default_aspects;
+    }
+    return;
+}
+
 sub _generate_content {
     my $self = shift;
 
@@ -120,7 +130,7 @@ sub _generate_content_for_aspect {
     my $indent_text = $self->indent_text;
     
     my $aspect_text = $indent_text . $aspect->label . ": ";
-        
+       
     if (!$subject) {
         $aspect_text .= "-\n";
         next;
@@ -128,8 +138,12 @@ sub _generate_content_for_aspect {
     
     my $aspect_name = $aspect->name;
 $DB::single=1 if $aspect_name eq 'inputs';
-    my @value = $subject->$aspect_name;
-    
+
+    my @value;
+    eval {
+        @value = $subject->$aspect_name;
+    };
+ 
     if (@value == 0) {
         $aspect_text .= "-\n";
         return $aspect_text;
@@ -141,7 +155,7 @@ $DB::single=1 if $aspect_name eq 'inputs';
     
     if (Scalar::Util::blessed($value[0])) {
         unless ($aspect->delegate_view) {
-            $aspect->generate_delegate_view('identity');
+            $aspect->generate_delegate_view;
         }
     }
     
