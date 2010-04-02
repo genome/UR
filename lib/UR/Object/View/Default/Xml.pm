@@ -183,6 +183,16 @@ sub _generate_content_for_aspect {
     return $aspect_text;
 }
 
+# Do not return any aspects by default if we're embedded in another view
+# The creator of the view will have to specify them manually
+sub _resolve_default_aspects {
+    my $self = shift;
+    unless ($self->parent_view) {
+        return $self->SUPER::_resolve_default_aspects;
+    }
+    return;
+}
+
 sub _indent {
     my ($self,$indent,$value) = @_;
     chomp $value;
