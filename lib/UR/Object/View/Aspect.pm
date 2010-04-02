@@ -85,15 +85,15 @@ sub generate_delegate_view {
 no warnings;
     my $self = shift;
     my $parent_view = $self->parent_view;
-    my $perspective = shift || $parent_view->perspective;
     my $name = $self->name;
     my $subject_class_name = $parent_view->subject_class_name;
     my $property_meta = $subject_class_name->__meta__->property($name);
     if ($property_meta) {
         my $aspect_type = $property_meta->data_type;
-$DB::single=1;
-        if (my $delegated_to_meta = $property_meta->final_property_meta) {
-            $aspect_type = $delegated_to_meta->data_type;
+        unless (defined $aspect_type) {
+            if (my $delegated_to_meta = $property_meta->final_property_meta) {
+                $aspect_type = $delegated_to_meta->data_type;
+            }
         }
 
         unless (defined $aspect_type) {
@@ -106,7 +106,7 @@ $DB::single=1;
             
             my $delegate_view ||= $aspect_type->create_view(
                 subject_class_name => $aspect_type,
-                perspective => $perspective,
+                perspective => $parent_view->perspective,
                 toolkit => $parent_view->toolkit,
                 parent_view => $parent_view,
                 aspects => [],
@@ -137,7 +137,7 @@ $DB::single=1;
             return $delegate_view;
         }
         else {
-            die "$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!"; 
+            die "$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!";
         }
     }
     else {
