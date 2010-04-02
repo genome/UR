@@ -5,22 +5,10 @@ use warnings;
 use IO::File;
 
 class UR::Object::View::Default::Html {
-    is => 'UR::Object::View::Default::Text',
-    has_constant => [
-        toolkit     => { value => 'html' },
-    ]
+    is => 'UR::Object::View::Default::Xsl',
 };
 
-sub _generate_content {
-    # if there is no HTML implementation, put the Text in pre tags.
-    # TODO: use default XSL on default XML.
-    my $self = shift;
-    my $content = "<pre>\n" . $self->SUPER::_generate_content() . "\n</pre>";
-    return $content;
-}
-
 1;
-
 
 =pod
 
