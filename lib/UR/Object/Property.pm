@@ -161,6 +161,7 @@ sub final_property_meta {
 
     my $closure;
     $closure = sub { 
+        return unless defined $_[0];
         if ($_[0]->is_delegated and $_[0]->via) {
             return $closure->($_[0]->via_property_meta);
         } else {
@@ -169,7 +170,7 @@ sub final_property_meta {
     };
     my $final = $closure->($self);
 
-    return if $final->id eq $self->id;
+    return if !defined $final || $final->id eq $self->id;
     return $final;
 }
 
