@@ -112,7 +112,12 @@ sub _generate_content_for_aspect {
         
     if (Scalar::Util::blessed($value[0])) {
         unless ($aspect->delegate_view) {
-            $aspect->generate_delegate_view;
+            eval {
+                $aspect->generate_delegate_view;
+            };
+            if ($@) {
+                warn $@;
+            }
         }
     }
     
