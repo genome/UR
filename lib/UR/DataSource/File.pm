@@ -280,7 +280,7 @@ sub _comparator_for_operator_and_property {
 
     } elsif ($operator eq '[]' or $operator eq 'in') {
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
-            # Numeric 'in' comparison  returns undef is we're within the range of the list
+            # Numeric 'in' comparison  returns undef if we're within the range of the list
             # but don't actually match any of the items in the list
             @$value = sort { $a <=> $b } @$value;  # sort the values first
             return sub {
@@ -341,8 +341,8 @@ sub _comparator_for_operator_and_property {
         # Not that this isn't precisely correct, as \\% should really mean a literal \
         # followed by a wildcard, but we can't be correct in all cases without including 
         # a real parser.  This will catch most cases.
-        $value =~ s/(?<!\\)%/*/;
-        $value =~ s/(?<!\\)_/./;
+        $value =~ s/(?<!\\)%/.*/g;
+        $value =~ s/(?<!\\)_/./g;
         my $regex = qr($value);
         return sub {
                    if ($$next_candidate_row->[$index] =~ $regex) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 50;
+use Test::More tests => 52;
 
 use IO::File;
 
@@ -44,6 +44,10 @@ is($thing->thing_color, 'green', 'thing_color is correct');
 #my @things = URT::Things->get('thing_color ne' => 'red');
 my @things = URT::Things->get(thing_color => {operator => 'not in', value => ['red','green']});
 is(scalar(@things), 2, 'Get where color ne "red" returned 3 items');
+
+@things = URT::Things->get(thing_color => { operator => 'like', value => 'ye%o%' });
+is(scalar(@things), 1, 'Returned one thing for "thing_color like" "ye%o%"');
+is($things[0]->thing_name, 'Frank', 'It was the right thing');
 
 
 @things = URT::Things->get();
