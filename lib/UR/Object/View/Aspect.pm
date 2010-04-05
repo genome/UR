@@ -123,7 +123,6 @@ sub create {
     return $self; 
 }
 
-
 sub _look_for_recursion {
     my $self = shift;
 
@@ -137,8 +136,6 @@ sub _look_for_recursion {
     }
     return 0;
 }
-
-        
 
 sub generate_delegate_view {
 no warnings;
@@ -156,8 +153,15 @@ no warnings;
         my $aspect_type = $property_meta->data_type;
 
         unless ($aspect_type) {
+            if (my $delegated_to_meta = $property_meta->final_property_meta) {
+                $aspect_type = $delegated_to_meta->data_type;
+            }
+        }
+
+        unless ($aspect_type) {
             Carp::confess("Property meta for class ".$property_meta->class_name." property ".$property_meta->property_name." has no data_type");
         }
+
         if ($aspect_type->can("__meta__")) {
             my $aspect_meta = $aspect_type->__meta__;
             

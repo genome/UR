@@ -252,6 +252,51 @@ sub _subject_is_used_in_an_encompassing_view {
     return;
 }
 
+sub all_subject_classes {
+    my $self = shift;
+
+    my @classes = ();
+    my $old_cb = UR::ModuleBase->message_callback('error');
+    UR::ModuleBase->message_callback('error', sub {});
+
+    for my $aspect ($self->aspects) {
+        unless ($aspect->delegate_view) {
+            eval {
+                $aspect->generate_delegate_view;
+            };
+        }
+        if ($aspect->delegate_view) {
+            push @classes, $aspect->delegate_view->all_subject_classes
+        }
+    }
+    UR::ModuleBase->message_callback('error', $old_cb);
+
+    push @classes, $self->subject_class_name;
+
+    my %saw;
+    my @uclasses = grep(!$saw{$_}++,@classes);
+
+    return @uclasses;
+}
+
+sub all_subject_classes_ancestry {
+    my $self = shift;
+
+    my @classes = $self->all_subject_classes;
+
+    my @aclasses;
+    for my $class (@classes) {
+        my $m = UR::Object::Type->get($class);
+        next unless $m;
+
+        push @aclasses, reverse($class, $m->ancestry_class_names);
+    }
+
+    my %saw;
+    my @uaclasses = grep(!$saw{$_}++,@aclasses);
+
+    return @uaclasses;
+}
 
 # rendering implementation
 
@@ -281,6 +326,7 @@ sub _bind_subject {
     # It handles the case in which the subject is undef.
     my $self = shift;
     my $subject = $self->subject();
+    return unless defined $subject;
 
     my $observer_data = $self->_observer_data;
 

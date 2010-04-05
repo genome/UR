@@ -83,6 +83,7 @@ sub _generate_content {
 
     # the header line is the class followed by the id
     my $text = $self->subject_class_name;
+$DB::single=1 if $text eq 'Genome::Model::Build::Input';
     $text =~ s/::/ /g;
     my $subject = $self->subject();
     if ($subject) {
@@ -125,15 +126,20 @@ sub _generate_content_for_aspect {
     my $indent_text = $self->indent_text;
     
     my $aspect_text = $indent_text . $aspect->label . ": ";
-        
+       
     if (!$subject) {
         $aspect_text .= "-\n";
         return $aspect_text;
     }
     
     my $aspect_name = $aspect->name;
-    my @value = $subject->$aspect_name;
-    
+$DB::single=1 if $aspect_name eq 'inputs';
+
+    my @value;
+    eval {
+        @value = $subject->$aspect_name;
+    };
+ 
     if (@value == 0) {
         $aspect_text .= "-\n";
         return $aspect_text;
@@ -154,12 +160,12 @@ sub _generate_content_for_aspect {
     # This means we replace the value(s) with their
     # subordinate widget content.
     if (my $delegate_view = $aspect->delegate_view) {
-        if (@value == 1) {
-            $delegate_view->subject($value[0]);
-            $delegate_view->_update_view_from_subject();
-            $value[0] = $delegate_view->content();
-        }
-        else {
+#        if (@value == 1) {
+#            $delegate_view->subject($value[0]);
+#            $delegate_view->_update_view_from_subject();
+#            $value[0] = $delegate_view->content();
+#        }
+#        else {
             # TODO: it is bad to recycle a view here??
             # Switch to a set view, which is the standard lister.
             foreach my $value ( @value ) {
@@ -167,7 +173,7 @@ sub _generate_content_for_aspect {
                 $delegate_view->_update_view_from_subject();
                 $value = $delegate_view->content();
             }
-        }
+#        }
     }
     
     if (@value == 1 and defined($value[0]) and index($value[0],"\n") == -1) {
