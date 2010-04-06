@@ -6,6 +6,7 @@ use strict;
 use Sys::Hostname;
 use Cwd;
 use Scalar::Util qw(blessed);
+use Sub::Name;
 
 our %meta_classes;
 our $bootstrapping = 1;
@@ -352,6 +353,7 @@ sub get_composite_id_decomposer {
                 }
             };
         }
+        Sub::Name::subname('UR::Object::Type::InternalAPI::composite_id_decomposer(closure)',$resolver);
         $self->{get_composite_id_decomposer} = $decomposer;
     }
     return $decomposer;
@@ -407,6 +409,7 @@ sub get_composite_id_resolver {
                 }
             };
         }
+        Sub::Name::subname('UR::Object::Type::InternalAPI::composite_id_resolver(closure)',$resolver);
         $self->{get_composite_id_resolver} = $resolver;
     }    
     return $resolver;
