@@ -353,7 +353,7 @@ sub get_composite_id_decomposer {
                 }
             };
         }
-        Sub::Name::subname('UR::Object::Type::InternalAPI::composite_id_decomposer(closure)',$resolver);
+        Sub::Name::subname('UR::Object::Type::InternalAPI::composite_id_decomposer(closure)',$decomposer);
         $self->{get_composite_id_decomposer} = $decomposer;
     }
     return $decomposer;
