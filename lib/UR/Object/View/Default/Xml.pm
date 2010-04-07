@@ -89,9 +89,9 @@ sub _generate_content_for_aspect {
     my @value;
     eval {
         @value = $subject->$aspect_name;
-        if (@value == 1 and ref($value[0]) eq 'ARRAY') {
-            @value = @{$value[0]};
-        }
+#        if (@value == 1 and ref($value[0]) eq 'ARRAY') {
+#            @value = @{$value[0]};
+#        }
     };
     if ($@) {
 #        @value = ('(exception)');

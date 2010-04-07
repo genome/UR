@@ -1,4 +1,4 @@
-package UR::Object::View::Default::Html;
+package UR::Object::View::Default::Xsl;
 
 use strict;
 use warnings;
@@ -8,6 +8,7 @@ class UR::Object::View::Default::Xsl {
     is => 'UR::Object::View::Default::Text',
     has => [
         output_format => { value => 'html' },
+        transform => { is => 'Boolean', value => 0 },
         xsl_path => {
             doc => 'absolute path where xsl files will be found, expected ' .
                    'format is $xsl_path/$output_format/$perspective/' .
@@ -19,8 +20,8 @@ class UR::Object::View::Default::Xsl {
 sub _generate_content {
     my $self = shift;
 
-    my $subject = $self->subject;
-    return unless $subject;
+#    my $subject = $self->subject;
+#    return unless $subject;
 
     unless ($self->xsl_path && -e $self->xsl_path) {
         die 'xsl_path does not exist';
@@ -28,18 +29,16 @@ sub _generate_content {
 
     # get the xml for the equivalent perspective
     $DB::single = 1;
-    my $xml_view = $subject->create_view(
+    my $xml_view = UR::Object::View->create(
+        subject_class_name => $self->subject_class_name,
         perspective => $self->perspective,
-        toolkit => 'xml',
+        toolkit => 'xml'
     );   
-    my $xml_content = $xml_view->_generate_content();
+#    my $xml_content = $xml_view->_generate_content();
 
     # subclasses typically have this as a constant value
     # it turns out we don't need it, since the file will be HTML.pm.xsl for xml->html conversion
     # my $toolkit = $self->toolkit;
-
-    my $parser = XML::LibXML->new;
-    my $xslt = XML::LibXSLT->new;
 
     my $output_format = $self->output_format;
     my $xsl_path = $self->xsl_path; 
@@ -61,11 +60,27 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:variable name="rest">/cgi-bin/rest.cgi</xsl:variable>
   <xsl:variable name="xsl">/cgi-bin/xsl.cgi</xsl:variable>
   <xsl:variable name="currentPerspective">$perspective</xsl:variable>
-  <xsl:variable name="currentToolkit">html</xsl:variable>
+  <xsl:variable name="currentToolkit">$output_format</xsl:variable>
   <xsl:include href="$xsl_path/$output_format/$perspective/root.xsl"/>
 @includes
 </xsl:stylesheet>
 STYLE
+
+    if ($self->transform) {
+        return $self->transform_xml($xml_view,$xsl_template);
+    } else {
+        return $xsl_template;
+    }
+}
+
+sub transform_xml {
+    my ($self,$xml_view,$xsl_template) = @_;
+
+    $xml_view->subject($self->subject);
+    my $xml_content = $xml_view->_generate_content();
+
+    my $parser = XML::LibXML->new;
+    my $xslt = XML::LibXSLT->new;
 
     # convert the xml
     my $source = $parser->parse_string($xml_content);
