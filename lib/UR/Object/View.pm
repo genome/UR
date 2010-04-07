@@ -154,13 +154,13 @@ sub _resolve_view_class_for_params {
             join ("",
                 $vocabulary->convert_to_title_case (
                     map { ucfirst(lc($_)) }
-                    split(/\s+/,$perspective)
+                    split(/-+/,$perspective)
                 )
             ),
             join ("",
                 $vocabulary->convert_to_title_case (
                     map { ucfirst(lc($_)) }
-                    split(/\s+/,$toolkit)
+                    split(/-+/,$toolkit)
                 )
             )
         );
