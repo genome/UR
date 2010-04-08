@@ -17,6 +17,7 @@ use strict;
 use warnings;
 
 use Fcntl qw(:DEFAULT :flock);
+ use Errno qw(EINTR EAGAIN);
 use File::Temp;
 use File::Basename;
 
@@ -628,6 +629,11 @@ sub create_iterator_closure_for_rule {
                 $line = <$fh>;
 
                 unless (defined $line) {
+                    if ($!) {
+                        redo READ_LINE_FROM_FILE if ($! == EAGAIN or $! == EINTR);
+                        Carp::croak("getline() failed for DataSource $self boolexpr $rule: $!");
+                    }
+
                     # at EOF.  Close up shop and return
                     flock($fh,LOCK_UN);
                     $fh = undef;
