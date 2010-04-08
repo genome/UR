@@ -396,7 +396,10 @@ sub query {
             and my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}
             )
         {
-            $self->_log_query_for_rule($_[0], undef, "QUERY: class $_[0] by ID $_[1]\nQUERY: matched 1 cached object\nQUERY: returning 1 object\n\n") if ($self->monitor_query);
+            if ($self->monitor_query) {
+                $self->_log_query_for_rule($_[0], undef, Carp::shortmess("QUERY: class $_[0] by ID $_[1]"));
+                $self->_log_query_for_rule($_[0], undef, "QUERY: matched 1 cached object\nQUERY: returning 1 object\n\n");
+            }
 
             $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
             return $obj;
@@ -1217,7 +1220,7 @@ sub get_objects_for_class_and_rule {
     }
 
     my $is_monitor_query = $self->monitor_query;
-    $self->_log_query_for_rule($class,$normalized_rule,"QUERY: Query start for rule $normalized_rule") if ($is_monitor_query);
+    $self->_log_query_for_rule($class,$normalized_rule,Carp::shortmess("QUERY: Query start for rule $normalized_rule")) if ($is_monitor_query);
 
     # optimization for the common case
     if (!$load and !$return_closure) {
