@@ -163,7 +163,11 @@ sub final_property_meta {
     $closure = sub { 
         return unless defined $_[0];
         if ($_[0]->is_delegated and $_[0]->via) {
-            return $closure->($_[0]->via_property_meta);
+            if ($_[0]->to) {
+                return $closure->($_[0]->to_property_meta);
+            } else {
+                return $closure->($_[0]->via_property_meta);
+            }
         } else {
             return $_[0];
         }

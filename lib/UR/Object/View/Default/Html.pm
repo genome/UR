@@ -6,6 +6,10 @@ use IO::File;
 
 class UR::Object::View::Default::Html {
     is => 'UR::Object::View::Default::Xsl',
+    has => {
+        output_format => { value => 'html' },
+        transform => { value => 1 }
+    }
 };
 
 1;

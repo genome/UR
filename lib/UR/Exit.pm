@@ -87,7 +87,7 @@ and warn if debugging.
 sub death
 {
     unless ($ENV{'UR_STACK_DUMP_ON_DIE'}) {
-        die @_;
+        return; 
     }
 
     # workaround common error    
@@ -96,24 +96,33 @@ sub death
         exit 1;
     }
 
-    # check the call stack depth for up-stream evals
-    # this handler is only to pretty-up things which AREN'T caught.
-    my $call_stack_depth = 0;
-    for (1) {
-        my @details = caller($call_stack_depth);
-        #print Data::Dumper::Dumper(\@details);
-        last if scalar(@details) == 0;
+    if (defined $^S) {
+        # $^S is defined when perl is executing (as opposed to interpreting)
+        if ($^S) {
+            # $^S is true when its executing in an eval, false outside of one 
+            return;
+        }
+    } else {
+        # interpreter is parsing a module or string eval
+        # check the call stack depth for up-stream evals
+        # fall back to perls default handler if there is one
+        my $call_stack_depth = 0;
+        for (1) {
+            my @details = caller($call_stack_depth);
+            #print Data::Dumper::Dumper(\@details);
+            last if scalar(@details) == 0;
 
-        if ($details[1] =~ /\(eval .*\)/) {
-            #print "<no carp due to eval string>";
-            return;
+            if ($details[1] =~ /\(eval .*\)/) {
+                #print "<no carp due to eval string>";
+                return;
+            }
+            elsif ($details[3] eq "(eval)") {
+                #print "<no carp due to eval block>";
+                return;
+            }
+            $call_stack_depth++;
+            redo;
         }
-        elsif ($details[3] eq "(eval)") {
-            #print "<no carp due to eval block>";
-            return;
-        }
-        $call_stack_depth++;
-        redo;
     }
 
     if 
@@ -133,8 +142,9 @@ sub death
         # Dump the call stack in other cases.
         # This is a developer error occurring while things are
         # initializing.
+        local $Carp::CarpLevel = 1;
         Carp::confess(@_);
-	return;
+    	return;
     }
 }
 
