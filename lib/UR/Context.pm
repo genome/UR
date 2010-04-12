@@ -392,17 +392,35 @@ sub query {
     # Fast optimization for the default case.
     {
         no warnings;
-        if (exists $UR::Context::all_objects_loaded->{$_[0]}
-            and my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}
-            )
-        {
-            if ($self->monitor_query) {
-                $self->_log_query_for_rule($_[0], undef, Carp::shortmess("QUERY: class $_[0] by ID $_[1]"));
-                $self->_log_query_for_rule($_[0], undef, "QUERY: matched 1 cached object\nQUERY: returning 1 object\n\n");
-            }
+        if (exists $UR::Context::all_objects_loaded->{$_[0]}) {
+            if (my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}) {
+                # Matched the class and ID directly - pull it right out of the cache
+                if ($self->monitor_query) {
+                    $self->_log_query_for_rule($_[0], undef, Carp::shortmess("QUERY: class $_[0] by ID $_[1]"));
+                    $self->_log_query_for_rule($_[0], undef, "QUERY: matched 1 cached object\nQUERY: returning 1 object\n\n");
+                }
 
-            $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
-            return $obj;
+                $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
+                return $obj;
+
+            } elsif (my $subclasses = $UR::Object::_init_subclasses_loaded{$_[0]}) {
+                # Check subclasses of the requested class, along with the ID
+                # yes, it only goes one level deep.  This should catch enough cases to be worth it.
+                # Deeper searches will be covered by get_objects_for_class_and_rule()
+                foreach my $subclass (@$subclasses) {
+                    if (exists $UR::Context::all_objects_loaded->{$subclass} and
+                        my $obj = $UR::Context::all_objects_loaded->{$subclass}->{$_[1]}
+                    ) {
+                        if ($self->monitor_query) {
+                            $self->_log_query_for_rule($_[0], undef, Carp::shortmess("QUERY: class $_[0] by ID $_[1]"));
+                            $self->_log_query_for_rule($_[0], undef, "QUERY: matched 1 cached object in subclass $subclass\nQUERY: returning 1 object\n\n");
+                        }
+
+                        $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
+                        return $obj;
+                    }
+                }
+            }
         }
     };
 
