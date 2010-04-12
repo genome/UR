@@ -330,30 +330,6 @@ sub create_iterator {
     return $iterator;    
 }
 
-sub create_viewer {
-    my $self = shift;
-    my $class = $self->class;
-
-    Carp::carp("create_viewer is deprecated.  Use create_view instead");
-
-    my $view = UR::Object::Viewer->create(
-        subject_class_name => $class,
-        perspective => "default",
-        @_
-    );
-
-    unless ($view) {
-        $self->error_message("Error creating view: " . UR::Object::Viewer->error_message);
-        return;
-    }
-
-    if (ref($self)) {
-        $view->set_subject($self);
-    }
-
-    return $view;
-}
-
 sub create_view {
     my $self = shift;
     my $class = $self->class;
