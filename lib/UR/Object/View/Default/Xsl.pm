@@ -67,7 +67,7 @@ sub _generate_content {
 
     my @include_files = $xml_view->xsl_template_files(
         $output_format,
-        $xsl_path . '/',
+        $xsl_path,
         $perspective
     );
 
@@ -83,7 +83,7 @@ sub _generate_content {
     }
 
     my @includes = map {
-      "<xsl:include href=\"$xsl_path/$_\"/>\n";
+      "<xsl:include href=\"$xsl_path$_\"/>\n";
     } @include_files;
 
     my $rest_var = $self->rest_variable;
@@ -95,7 +95,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:variable name="rest">$rest_var</xsl:variable>
   <xsl:variable name="currentPerspective">$perspective</xsl:variable>
   <xsl:variable name="currentToolkit">$output_format</xsl:variable>
-  <xsl:include href="$xsl_path/$rootxsl"/>
+  <xsl:include href="$xsl_path$rootxsl"/>
 @includes
 </xsl:stylesheet>
 STYLE
