@@ -16,17 +16,19 @@ sub xsl_template_files {
     my $self = shift;  #usually this is a view without a subject attached
     my $output_format = shift;
     my $root_path = shift;
+    my $perspective = shift || lc($self->perspective);
 
-    my $perspective = lc($self->perspective);
-
-    my @possible_xsl_names = map {
+    my @xsl_names = map {
        $_ =~ s/::/_/g;
-       "/$output_format/$perspective/" . lc($_) . '.xsl';
+       my $pf = "/$output_format/$perspective/" . lc($_) . '.xsl';
+       my $df = "/$output_format/default/" . lc($_) . '.xsl';
+
+       -e $root_path . $pf ? $pf : (-e $root_path . $df ? $df : undef)
     } $self->all_subject_classes_ancestry;
 
     my @found_xsl_names = grep { 
-        -e $root_path . $_ 
-    } @possible_xsl_names;
+        defined
+    } @xsl_names;
 
     return @found_xsl_names;
 }

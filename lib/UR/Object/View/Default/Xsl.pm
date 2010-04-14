@@ -9,7 +9,13 @@ class UR::Object::View::Default::Xsl {
     has => [
         output_format => { value => 'html' },
         transform => { is => 'Boolean', value => 0 },
+        rest_variable => { value => '/rest' },
+        desired_perspective => { },
         xsl_path => {
+            doc => 'web relative path starting with / where the xsl ' .
+                   'is located when serving from a web service'
+        },
+        xsl_root => {
             doc => 'absolute path where xsl files will be found, expected ' .
                    'format is $xsl_path/$output_format/$perspective/' .
                    '$normalized_class_name.xsl'
@@ -20,20 +26,34 @@ class UR::Object::View::Default::Xsl {
 sub _generate_content {
     my $self = shift;
 
+    if (!$self->desired_perspective) {
+        $self->desired_perspective($self->perspective);
+    }
 #    my $subject = $self->subject;
 #    return unless $subject;
 
-    unless ($self->xsl_path && -e $self->xsl_path) {
-        die 'xsl_path does not exist';
+    unless ($self->xsl_root && -e $self->xsl_root) {
+        die 'xsl_root does not exist:' . $self->xsl_root;
     }
 
     # get the xml for the equivalent perspective
     $DB::single = 1;
-    my $xml_view = UR::Object::View->create(
-        subject_class_name => $self->subject_class_name,
-        perspective => $self->perspective,
-        toolkit => 'xml'
-    );   
+    my $xml_view;
+    eval {
+        $xml_view = UR::Object::View->create(
+            subject_class_name => $self->subject_class_name,
+            perspective => $self->desired_perspective,
+            toolkit => 'xml'
+        );   
+    };
+    if ($@) {
+        $xml_view = UR::Object::View->create(
+            subject_class_name => $self->subject_class_name,
+            perspective => $self->perspective,
+            toolkit => 'xml'
+        );
+    }
+
 #    my $xml_content = $xml_view->_generate_content();
 
     # subclasses typically have this as a constant value
@@ -41,27 +61,41 @@ sub _generate_content {
     # my $toolkit = $self->toolkit;
 
     my $output_format = $self->output_format;
-    my $xsl_path = $self->xsl_path; 
+    my $xsl_path = $self->xsl_root; 
+
+    my $perspective = $self->desired_perspective;
 
     my @include_files = $xml_view->xsl_template_files(
         $output_format,
-        $xsl_path . '/'
+        $xsl_path . '/',
+        $perspective
     );
+
+    my $rootxsl = "/$output_format/$perspective/root.xsl";
+    if (!-e $xsl_path . $rootxsl) {
+        $rootxsl = "/$output_format/default/root.xsl";
+    }
+
+    unless ($self->transform) {
+        # when not transforming we'll return a relative path
+        # suitable for urls
+        $xsl_path = $self->xsl_path; 
+    }
 
     my @includes = map {
       "<xsl:include href=\"$xsl_path/$_\"/>\n";
     } @include_files;
 
-    my $perspective = $self->perspective;
+    my $rest_var = $self->rest_variable;
+
     my $xsl_template = <<STYLE;
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:variable name="rest">/cgi-bin/rest.cgi</xsl:variable>
-  <xsl:variable name="xsl">/cgi-bin/xsl.cgi</xsl:variable>
+  <xsl:variable name="rest">$rest_var</xsl:variable>
   <xsl:variable name="currentPerspective">$perspective</xsl:variable>
   <xsl:variable name="currentToolkit">$output_format</xsl:variable>
-  <xsl:include href="$xsl_path/$output_format/$perspective/root.xsl"/>
+  <xsl:include href="$xsl_path/$rootxsl"/>
 @includes
 </xsl:stylesheet>
 STYLE
