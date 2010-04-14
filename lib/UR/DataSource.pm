@@ -763,7 +763,7 @@ sub _first_class_in_inheritance_with_a_table {
     #        shift->SUPER::_first_class_in_inheritance_with_a_table(\@_);
     #    }
     #/;
-    die "Error setting data in subclass: $@" if $@;
+    #die "Error setting data in subclass: $@" if $@;
     return $found;
 }
 

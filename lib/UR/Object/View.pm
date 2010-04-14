@@ -125,7 +125,7 @@ sub _resolve_view_class_for_params {
     # The subject must be explicitly of class "SubjectClassName" or some subclass of it.
     my $class = shift;
     my %params = $class->define_boolexpr(@_)->params_list;
-   
+
     my $subject_class_name = delete $params{subject_class_name};
     my $perspective = delete $params{perspective};
     my $toolkit = delete $params{toolkit};
@@ -154,13 +154,13 @@ sub _resolve_view_class_for_params {
             join ("",
                 $vocabulary->convert_to_title_case (
                     map { ucfirst(lc($_)) }
-                    split(/-+/,$perspective)
+                    split(/-+|\s+/,$perspective)
                 )
             ),
             join ("",
                 $vocabulary->convert_to_title_case (
                     map { ucfirst(lc($_)) }
-                    split(/-+/,$toolkit)
+                    split(/-+|\s+/,$toolkit)
                 )
             )
         );
