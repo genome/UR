@@ -204,7 +204,7 @@ sub _execute_delegate_class_with_params {
         # The delegate class should have emitted an error message.
         # This is just in case the developer is sloppy, and the user will think the task did not fail.
         print STDERR "Exiting.\n";
-        return 1;;
+        return;
     }
 
     $command_object->dump_status_messages(1);
