@@ -324,12 +324,15 @@ sub _run_tests {
         # running concurrently and using lsf will always use the last object's lsf_params.
         # though I doubt anyone would ever really need to do that...
         My::TAP::Parser::IteratorFactory::LSF->lsf_params($self->lsf_params);
+        My::TAP::Parser::IteratorFactory::LSF->max_jobs($self->jobs);
 
         $harness->callback('parser_args',
                            sub {
                                my($args, $job_as_arrayref) = @_;
                                $args->{'iterator_factory_class'} = 'My::TAP::Parser::IteratorFactory::LSF';
                            });
+
+
     }
 
     my $aggregator = TAP::Parser::Aggregator->new();
@@ -465,6 +468,7 @@ my $state = { 'listen'     => undef, # The listening socket
               # running_jobs => [],  # we're not tracking workers that are working for now...
               lsf_jobids   => [],    # jobIDs of the worker processes
               lsf_params   => '',    # params when running bsub
+              max_jobs     => 0,     # Max number of jobs
             };
 
 END  {
@@ -485,6 +489,15 @@ sub lsf_params {
     return $state->{'lsf_params'};
 }
 
+sub max_jobs {
+    my $proto = shift;
+
+    if (@_) {
+        $state->{'max_jobs'} = shift;
+    }
+    return $state->{'max_jobs'};
+}
+
 
 sub make_process_iterator {
     my $proto = shift;
@@ -497,12 +510,13 @@ sub next_idle_worker {
 
     $proto->process_events();
 
-    my $did_create_worker = 0;
     while(! @{$state->{'idle_jobs'}} ) {
 
-        $proto->create_new_worker unless ($did_create_worker++);
+        if (@{$state->{'lsf_jobids'}} < $state->{'max_jobs'}) {
+            $proto->create_new_worker();
+        }
 
-        sleep(3);
+        sleep(1);
 
         $proto->process_events();
     }
