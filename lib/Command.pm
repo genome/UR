@@ -377,42 +377,6 @@ sub _time_now
     UR::Time->now;    
 }
 
-sub command_name 
-{
-    my $self = shift;
-    my $class = ref($self) || $self;
-    if ( my ($base,$ext) = $class->_base_command_class_and_extension() ) {
-        $ext = $class->_command_name_for_class_word($ext);
-        for (1) {
-            unless ($base->can("command_name")) {
-                local $SIG{__DIE__};
-                eval "use $base";
-            }
-            if ($base->can("command_name")) {
-                return $base->command_name . " " . $ext;
-            }
-            elsif ($ext eq "command") {
-                return $base;
-            }
-            else {
-                my ($b2,$e2) = _base_command_class_and_extension($base);
-                if ($b2) {
-                    $ext = $class->_command_name_for_class_word($e2) . ' ' . $ext;
-                    $base = $b2;
-                    redo;
-                }
-                else {
-                    $base = $class->_command_name_for_class_word($base) . ' ' . $ext;
-                    return $base;
-                }
-            }
-        }
-    }
-    else {
-        return lc($base);
-    }
-}
-
 sub color_command_name 
 {
     my $text = shift;
@@ -445,20 +409,23 @@ sub _command_name_for_class_word
     return $s;
 }
 
+sub command_name
+{
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my @words = grep { $_ ne 'Command' } split(/::/,$class);
+    my $n = join(' ', map { $self->_command_name_for_class_word($_) }  @words);
+    return $n;
+}
+
 sub command_name_brief
 {
     my $self = shift;
     my $class = ref($self) || $self;
-    my @words;
-    if ( my ($base,$ext) = $class->_base_command_class_and_extension() ) {
-        $ext = $class->_command_name_for_class_word($ext);
-        return $ext;
-    }
-    else {
-        return $self->command_name;
-    }
+    my @words = grep { $_ ne 'Command' } split(/::/,$class);
+    my $n = join(' ', map { $self->_command_name_for_class_word($_) } $words[-1]);
+    return $n;
 }
-
 #
 # Methods to transform shell args into command properties
 #
@@ -895,12 +862,13 @@ sub help_options
 
 sub sorted_sub_command_classes {
     no warnings;
+    my @c = shift->sub_command_classes;
     return sort {
             ($a->sub_command_sort_position <=> $b->sub_command_sort_position)
             ||
             ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
         } 
-        shift->sub_command_classes;
+        @c;
 }
 
 sub help_sub_commands
