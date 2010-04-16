@@ -460,26 +460,33 @@ sub mk_calculation_accessor {
         );
     }
 
-    if ($accessor) {
-        my $full_name = join( '::', $class_name, $accessor_name );
-        $accessor = Sub::Name::subname $full_name => $accessor;
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $accessor_name,
-            code => $accessor,
-        });
-    }
-    elsif (@src) {
-        my $src = join("\n",@src);
-        #print ">>$src<<\n";
-        eval $src;
-        if ($@) {
-            Carp::croak "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$@\n";
+    if (!$accessor) {
+        if (@src) {
+            my $src = join("\n",@src);
+            #print ">>$src<<\n";
+            eval $src;
+            if ($@) {
+                Carp::croak "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$@\n";
+            }
+            $accessor = \&{ $class_name . '::' . $accessor_name };
+            unless ($accessor) {
+                Cqrp::confess("Failed to generate code body for calculated property ${class_name}::${accessor_name}!");
+            }
+        }
+        else {
+            Carp::croak "Error implementing calcuation accessor for $class_name $accessor_name!";
         }
     }
-    else {
-        Carp::croak "Error implementing calcuation accessor for $class_name $accessor_name!";
-    }
+
+    my $full_name = join( '::', $class_name, $accessor_name );
+    $accessor = Sub::Name::subname $full_name => $accessor;
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
+
+    return $accessor;
 }
 
 sub mk_dimension_delegate_accessors {
