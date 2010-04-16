@@ -18,17 +18,18 @@ class UR::Object::Command::List {
             is_optional => 1,
             doc => 'Specify which columns to show, in order.' 
         },
-        style => { 
+        as => { 
             is => 'Text',
             is_optional => 1,
             default_value => 'text',
-            doc => 'Style of the list: text (default), csv, pretty, html, xml',
+            valid_values => ['text','csv','xml','html','pretty','newtext'],
+            doc => 'The format for output.  Defaults to text in evenly-spaced columns.  The "pretty" option is colored, and vertical.  Also supports csv, xml.',
         },
-        noheaders => { 
+        headers => { 
             is => 'Boolean',
             is_optional => 1,
-            default => 0,
-            doc => 'Do not include headers',
+            default => 1,
+            doc => 'Include headers.  Use "--no-header" to turn off headers.',
         },
         output => {
             is => 'IO::Handle',
@@ -68,24 +69,11 @@ EOS
 
 ##############################
 
-sub valid_styles {
-    return (qw/ text csv pretty html xml newtext/);
-}
-
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
 	$DB::single=1;
 
-    # validate style
-    $self->error_message( 
-        sprintf(
-            'Invalid style (%s).  Please choose from: %s', 
-            $self->style, 
-            join(', ', valid_styles()),
-        ) 
-    ) 
-        and return unless grep { $self->style eq $_ } valid_styles();
     unless ( ref $self->output ){
         my $ofh = IO::File->new("> ".$self->output);
         $self->error_message("Can't open file handle to output param ".$self->output) and die unless $ofh;
@@ -95,21 +83,18 @@ sub create {
     return $self;
 }
 
-sub _hint_string 
-{
+sub _hint_string {
     my $self = shift;
     return $self->show;
 }
 
-sub _do
-{
+sub _do {
     my ($self, $iterator) = @_;    
 
     #$DB::single = $DB::stopper;
     
     # prevent commits due to changes here
-    # this can be prevented by careful use of environment variables if you REALLY want to use this to update data
-    $ENV{UR_DBI_NO_COMMIT} = 1 unless (exists $ENV{UR_DBI_NO_COMMIT});
+    local $ENV{UR_DBI_NO_COMMIT} = 1;
 
     # Determine things to show
     if ( my $show = $self->show ) {
@@ -145,11 +130,11 @@ sub _do
         $self->show([ map { $_->property_name } $self->_subject_class_filterable_properties ]);
     }
 
-    my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
+    my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->as;
     my $style_module = $style_module_name->new( 
         iterator =>$iterator, 
         show =>$self->show, 
-        noheaders =>$self->noheaders,
+        noheaders => !$self->headers,
         output => $self->output
     );
     $style_module->format_and_print;
