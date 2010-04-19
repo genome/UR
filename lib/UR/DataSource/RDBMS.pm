@@ -2210,7 +2210,7 @@ sub _sync_database {
                 for my $error (@failures)
                 {
                     $self->error_message($self->id . ": Error executing SQL:\n$error->{cmd}{sql}\n" .
-                                         "PARAMS: '" . join("', '",@{$error->{cmd}{params}}) . "'\n" .
+                                         "PARAMS: " . join(', ',map { defined($_) ? "'$_'" : '(undef)' } @{$error->{cmd}{params}}) . "\n" .
                                          $error->{error_message} . "\n");
                 }
                 last;
