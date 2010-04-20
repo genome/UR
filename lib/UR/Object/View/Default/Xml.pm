@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use IO::File;
 use XML::Dumper;
+use XML::Generator;
 
 class UR::Object::View::Default::Xml {
     is => 'UR::Object::View::Default::Text',
@@ -167,8 +168,11 @@ sub _generate_content_for_aspect {
 
                     $aspect_text .= $self->_indent($indent_text . $indent_text, $xmlrep); 
                 } else {
+                    my $escaped_value = $value;
+                    XML::Generator::util::escape($escaped_value, XML::Generator::util::ESCAPE_ALWAYS | XML::Generator::util::ESCAPE_GT); #modifies in place
+                    
                     $aspect_text .= $indent_text . $indent_text . "<value>\n";
-                    $aspect_text .= $self->_indent($indent_text . $indent_text, $value);
+                    $aspect_text .= $self->_indent($indent_text . $indent_text, $escaped_value);
                     $aspect_text .= $indent_text . $indent_text . "</value>\n";
                 }
 #                if ($value !~ /\n/) {
