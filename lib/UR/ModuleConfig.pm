@@ -26,7 +26,7 @@ configuration methods should inherit from the module.
 =cut
 
 # set up package
-require 5.6.0;
+require 5.006_000;
 use warnings;
 use strict;
 our $VERSION = $UR::VERSION;;

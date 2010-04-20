@@ -25,7 +25,7 @@ This module subclasses DBI, and provides a few extra methods useful when using a
 =cut
 
 # set up package
-require 5.6.0;
+require 5.006_000;
 use warnings;
 use strict;
 our $VERSION = $UR::VERSION;;

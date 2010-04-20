@@ -20,7 +20,7 @@ an application exits.
 =cut
 
 # set up module
-require 5.6.0;
+require 5.006_000;
 use warnings;
 use strict;
 our $VERSION = $UR::VERSION;;

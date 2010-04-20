@@ -44,7 +44,7 @@ package UR::Context::Process;
 
 our $VERSION = $UR::VERSION;;
 
-require 5.6.0;
+require 5.006_000;
 
 use strict;
 use warnings;
