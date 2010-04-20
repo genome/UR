@@ -851,6 +851,12 @@ sub help_options
         if (defined $default_value) {
             if ($param_type eq 'Boolean') {
                 $default_value = $default_value ? "'true'" : "'false' (--no$param_name)";
+            } elsif ($property_meta->is_many && ref($default_value) eq 'ARRAY') {
+                if (@$default_value) {
+                    $default_value = "('" . join("','",@$default_value) . "')";
+                } else {
+                    $default_value = "()";
+                }
             } else {
                 $default_value = "'$default_value'";
             }
@@ -1035,9 +1041,9 @@ sub _shell_args_property_meta
     }
     
     @result = ( 
-        (sort { $a->{shell_args_position} <=> $b->{shell_args_position} } @positional),
         (sort { $a->property_name cmp $b->property_name } @required),
-        (sort { $a->property_name cmp $b->property_name } @optional)
+        (sort { $a->property_name cmp $b->property_name } @optional),
+        (sort { $a->{shell_args_position} <=> $b->{shell_args_position} } @positional),
     );
     
     return @result;
