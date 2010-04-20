@@ -16,6 +16,10 @@ UR::Object::Type->define(
     has_optional => [
         input  => { is => 'ARRAY', doc => 'list of input file pathnames' },
         output => { is => 'String', doc => 'pathname of the output file' },
+        bare_args => {
+            is_many => 1,
+            shell_args_position => 1
+        }
     ],
 );
 
@@ -59,7 +63,7 @@ sub execute {
     } elsif ($inputs and $inputs =~ m/,/) {
         @input = split(',',$inputs);
     } elsif (!$inputs) {
-        @input = @{ $self->bare_args };
+        @input = $self->bare_args;
         @input = ('.')  unless @input;  # when no inputs at all are given, start with '.'
     } else {
         $self->error_message("Couldn't determine input files and directories");

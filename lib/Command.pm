@@ -21,11 +21,7 @@ UR::Object::Type->define(
                                  doc => 'when set, this property is a positional argument when run from a shell' },
     ],
     has_optional => [
-        # use the above shell_args_position to map to named args instead
-        bare_args   => { is => 'ARRAY', is_deprecated => 1 },
-        
         is_executed => { is => 'Boolean' },
-        
         result      => { is => 'Scalar', is_output => 1 },
     ],
 );
@@ -229,11 +225,9 @@ sub create
 {
     my $class = shift;
     my ($rule,%extra) = $class->define_boolexpr(@_);
-    my $bare_args = delete $extra{" "};
     my @params_list = $rule->params_list;
     my $self = $class->SUPER::create(@params_list, %extra);
     return unless $self;
-    $self->bare_args($bare_args) if $bare_args;
 
     # set non-optional boolean flags to false.
     for my $property_meta ($self->_shell_args_property_meta) {
@@ -314,10 +308,6 @@ sub help_brief
     }
 }
 
-sub help_bare_args
-{
-    return ''
-}
 
 sub help_synopsis 
 {
@@ -579,7 +569,7 @@ sub resolve_class_and_params_for_argv
     # Not a problem in Perl. :)  (which is probably why it was never fixed)
     local @ARGV;
     @ARGV = @argv;
-    
+   
     do {
         # GetOptions also likes to emit warnings instead of return a list of errors :( 
         my @errors;
@@ -598,8 +588,6 @@ sub resolve_class_and_params_for_argv
     # A: Yes.  Use '<>'.  But we need to process this anyway, so it won't help us.
 
     if (my @names = $self->_bare_shell_argument_names) {
-        # for now we only do this for selfes which explicitly implement the method
-        # this lets us stay backward compatible with old stuff for now
         for (my $n=0; $n < @ARGV; $n++) {
             my $name = $names[$n];
             unless ($name) {
@@ -622,13 +610,11 @@ sub resolve_class_and_params_for_argv
                 $params_hash->{$name} = $value;
             }
         }
+    } elsif (@ARGV) {
+        ## argv but no names
+        $self->error_message("Unexpected bare arguments: @ARGV!");
+        return($self, undef);
     }
-
-
-
-    #TODO when everything is converted to use bare_shell_argument_names, 
-    # this should throw an error if there are any @ARGV left.
-    $params_hash->{" "} = [@ARGV];
 
     for my $key (keys %$params_hash) {
         # handle any has-many comma-sep values
@@ -643,9 +629,16 @@ sub resolve_class_and_params_for_argv
         }
 
         # turn dashes into underscores
-        next unless $key =~ /-/;
         my $new_key = $key;
-        $new_key =~ s/\-/_/g;
+
+        next unless ($new_key =~ tr/-/_/);
+        if (exists $params_hash->{$new_key} && exists $params_hash->{$key}) {
+            # this corrects a problem where is_many properties badly interact
+            # with bare args leaving two entries in the hash like:
+            # a-bare-opt => [], a_bare_opt => ['with','vals']
+            delete $params_hash->{$key};
+            next;
+        }
         $params_hash->{$new_key} = delete $params_hash->{$key};
     }
 
@@ -1018,7 +1011,6 @@ sub _shell_args_property_meta
     for my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
         next if $property_name eq 'id';
-        next if $property_name eq 'bare_args';
         next if $property_name eq 'result';
         next if $property_name eq 'is_executed';
         next if $property_name =~ /^_/;

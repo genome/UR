@@ -10,12 +10,17 @@ class Vending::Command::Service::Show::Inventory {
         subject_class_name => { value => 'Vending::Merchandise' },
         show => { value => 'id,location_name,name,insert_date' },
         filter => { is_calculated => 1 },
+        bare_args => {
+            is_optional => 1,
+            is_many => 1,
+            shell_args_position => 1
+        }
     ],
 };
 
 sub filter {
     my $self = shift;
-    my $slot_names = $self->bare_args;
+    my $slot_names = [$self->bare_args];
 
 $DB::single=1;
     my $filter = 'machine_id='.$self->machine_id;

@@ -10,6 +10,13 @@ use IO::File;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "Command",
+    has => [
+        bare_args => {
+            is_optional => 1,
+            is_many => 1,
+            shell_args_position => 1
+        }
+    ]
 );
 
 sub sub_command_sort_position { 1 }
@@ -40,7 +47,7 @@ EOS
 sub execute {
     my $self = shift;
     
-    my $name_array = $self->bare_args;
+    my $name_array = [$self->bare_args];
     unless ($name_array) {
         $self->error_message("No name specified!");
         return;

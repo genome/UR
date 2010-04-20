@@ -96,12 +96,6 @@ $DB::single=1;
     #    }
     #}
 
-    if (@{ $self->bare_args }) {
-        $self->error_message("Bare paramters not supported: @{ $self->bare_args }\n");
-        $self->status_message($self->help_usage_complete_text,"\n");
-        return;
-    }
-
     $self->_init;
 
     my $namespace = $self->namespace_name;

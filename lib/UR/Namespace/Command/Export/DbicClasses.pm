@@ -7,6 +7,13 @@ use UR;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Namespace::Command::RunsOnModulesInTree',
+    has => [
+        bare_args => {
+            is_optional => 1,
+            is_many => 1,
+            shell_args_position => 1
+        }
+    ]
 );
 
 sub help_brief {
@@ -30,7 +37,7 @@ sub x_execute {
     my $params = shift;
     
 $DB::single=1;
-    unless (@{ $self->bare_args }) {
+    unless ($self->bare_args) {
         $self->error_message("No class names were specified on the command line");
         $self->status_message($self->help_usage_complete_text,"\n");
         return;
@@ -50,7 +57,7 @@ $DB::single=1;
         return;
     }
 
-    foreach my $class_name ( @{$self->bare_args} ) {
+    foreach my $class_name ( $self->bare_args ) {
         my $class = UR::Object::Type->get(class_name => $class_name);
 
         unless ($class) {

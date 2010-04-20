@@ -8,13 +8,20 @@ package UR::Namespace::Command::Test::Window;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'Command'
+    is => 'Command',
+    has => {
+        bare_args => {
+            is_optional => 1,
+            is_many => 1,
+            shell_args_position => 1
+        }
+    }
 );
 
 sub execute {
     my $self = shift;
     
-    my $bare_args = $self->bare_args;
+    my $bare_args = [$self->bare_args];
     if (@$bare_args > 0) {
         for my $code (@$bare_args) {
             no strict;

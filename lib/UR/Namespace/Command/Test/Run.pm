@@ -22,6 +22,8 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
     has => [
+       bare_args => { is_optional => 1, is_many => 1, shell_args_position => 1
+       },
         recurse           => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.'                                                },
         'time'            => { is => 'String',  doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
         long              => { is => 'Boolean', doc => 'Run tests including those flagged as long',                                          is_optional => 1                       },
@@ -96,7 +98,7 @@ sub execute {
 
     # nasty parsing of command line args
     # this may no longer be needed..
-    my @tests = @{ $self->bare_args || [] }; 
+    my @tests = $self->bare_args; 
 
     if ($self->recurse) {
         if (@tests) {

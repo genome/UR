@@ -7,7 +7,14 @@ use UR;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Namespace::Command'
+    is => 'UR::Namespace::Command',
+    has => [
+        bare_args => {
+            is_optional => 1,
+            is_many => 1,
+            shell_args_position => 1
+        }
+    ]
 );
 
 
@@ -37,7 +44,7 @@ sub execute {
     unless ($self->_init()) {
         return; 
     }
-    for my $src (@{ $self->bare_args }) {
+    for my $src ($self->bare_args) {
         eval "use Data::Dumper; use YAML; no strict; no warnings; \n" . $src;
         if ($@) {
             print STDERR "EXCEPTION:\n$@";
