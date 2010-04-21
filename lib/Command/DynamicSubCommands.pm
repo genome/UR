@@ -81,7 +81,10 @@ sub _build_all_sub_commands {
         my $module_name = $class_name;
         $module_name =~ s|::|/|g;
         $module_name .= '.pm';
+
         if (my @matches = grep { -e $_ . '/' . $module_name } @INC) {
+            my $c = UR::Object::Type->get($class_name);
+            push @subclasses, $class_name;
             next;
         }
 
