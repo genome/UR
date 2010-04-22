@@ -304,6 +304,8 @@ sub _run_tests {
     $harness_args{'jobs'} = $self->jobs if ($self->jobs > 1);
     $harness_args{'switches'} = $perl_opts if $perl_opts;
     $harness_args{'test_args'} = $self->script_opts if $self->script_opts;
+    $harness_args{'multiplexer_class'} = 'My::TAP::Parser::Multiplexer';
+    $harness_args{'scheduler_class'} = 'My::TAP::Parser::Scheduler';
 
     my $timelog_sum = $self->time();
     my $timelog_dir;
@@ -352,6 +354,17 @@ sub _run_tests {
         $ENV{UR_DBI_NO_COMMIT} = 1;
         $DB::single=1;
 
+        $SIG{'INT'} = sub {
+                              print "\nInterrupt...\n";
+                              
+                              $My::TAP::Parser::Iterator::Process::LSF::SHOULD_EXIT = 1;
+                              #My::TAP::Parser::IteratorFactory::LSF->_kill_running_jobs();
+                              #sleep(1);
+                              #$aggregator->stop();
+                              #$formatter->summary($aggregator);
+                              #exit(0);
+                          };
+ 
         #runtests(@tests);
         $harness->aggregate_tests( $aggregator, @tests );
     };
@@ -417,6 +430,9 @@ sub get_status_file_list {
         }
         elsif ($tool eq "cvs") {
             @lines = IO::File->new("cvs -q up |")->getlines;
+        } 
+        elsif ($tool eq "git") {
+            @lines = IO::File->new("git diff --name-status")->getlines;
         }
         else {
             die "Unknown tool $tool.  Try svn, svk, or cvs.\n";
@@ -448,6 +464,30 @@ sub get_status_file_list {
     return @modules;
 }
 
+package My::TAP::Parser::Multiplexer;
+use base 'TAP::Parser::Multiplexer';
+
+sub _iter {
+    my $self = shift;
+
+    my $original_iter = $self->SUPER::_iter(@_);
+    return sub {
+        for(1) {
+            # This is a hack...
+            # the closure _iter returns does a select() on the subprocess' output handle
+            # which returns immediately after you hit control-C with no results, and the
+            # existing code in there expects real results from select().  This way, we catch
+            # the exception that happens when you do that, and give it a chance to try again
+            my @retval = eval { &$original_iter };
+            if (index($@, q(Can't use an undefined value as an ARRAY reference))>= 0) {
+                redo;
+            } elsif ($@) {
+                die $@;
+            }
+            return @retval;
+        }
+    };
+}
 
 package My::TAP::Parser::IteratorFactory::LSF;
 
@@ -471,14 +511,19 @@ my $state = { 'listen'     => undef, # The listening socket
               max_jobs     => 0,     # Max number of jobs
             };
 
-END  {
+sub _kill_running_jobs  {
     # The worker processes should notice when the master goes away,
     # but just in case, we'll kill them off
     foreach my $jobid ( @{$state->{'lsf_jobids'}} ) {
-        print STDERR "bkilling LSF jobid $jobid\n";
+        print "bkilling LSF jobid $jobid\n";
         `bkill $jobid`;
     }
 }
+
+END {
+    &_kill_running_jobs();
+}
+
 
 sub lsf_params {
     my $proto = shift;
@@ -652,9 +697,34 @@ sub _timelog_file_for_command_list {
     Carp::croak("Can't determine time log file for command line: ",join(' ',@$command_list));
 }
 
+package My::TAP::Parser::Scheduler;
+
+use base 'TAP::Parser::Scheduler';
+
+sub get_job {
+    my $self = shift;
+
+    if ($My::TAP::Parser::Iterator::Process::LSF::SHOULD_EXIT) {
+        our $already_printed;
+
+        unless ($already_printed) {
+            print "\n\n  ",$self->{'count'}," Tests not yet run before interrupt\n";
+            print "------------------------------------------\n";
+            foreach my $job ( $self->get_all ) {
+                print $job->{'description'},"\n";
+            }
+            $already_printed = 1;
+        }
+        return;
+    }
+
+    $self->SUPER::get_job(@_);
+}
 
 
 package My::TAP::Parser::Iterator::Process::LSF;
+
+our $SHOULD_EXIT = 0;
 
 use base 'TAP::Parser::Iterator::Process';
 
@@ -672,7 +742,6 @@ sub _initialize {
     }
 
     my $handle = My::TAP::Parser::IteratorFactory::LSF->next_idle_worker();
-
     # Tell the worker to run the command
     $handle->print(join(' ', @command) . "\n");
 
@@ -695,6 +764,19 @@ sub next_raw {
     my $self = shift;
 
     My::TAP::Parser::IteratorFactory::LSF->process_events();
+
+    if ($SHOULD_EXIT) {
+        $DB::single=1;
+        if  ($self->{'sel'}) {
+            foreach my $h ( $self->{'sel'}->handles ) {
+                $h->close;
+                $self->{'sel'}->remove($h);
+            }
+            return "1..0 # Skipped: Interrupted by user";
+        } else {
+           return;
+        }
+    }
     $self->SUPER::next_raw(@_);
 }
 
