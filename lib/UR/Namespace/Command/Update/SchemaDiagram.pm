@@ -15,6 +15,11 @@ UR::Object::Type->define(
         depth => { type => 'Integer', doc => 'Max distance of related tables to include.  Default is 1.  0 means show only the named tables, -1 means to include everything', is_optional => 1},
         file => { type => 'String', doc => 'Pathname of the Umlet (.uxf) file' },
         show_columns => { type => 'Boolean', is_optional => 1, default => 1, doc => 'Include column names in the diagram' },
+        initial_name => {
+            is_many => 1,
+            is_optional => 1,
+            shell_args_position => 1
+        }
     ],
 );
 
@@ -67,7 +72,7 @@ $DB::single=1;
         @initial_name_list = map { $_->table_name}
                                  UR::DataSource::RDBMS::Table->get(namespace => $namespace);
     } else {
-        @initial_name_list = @{$params->{' '}};
+        @initial_name_list = $self->initial_name;
     }
 
     my $diagram;

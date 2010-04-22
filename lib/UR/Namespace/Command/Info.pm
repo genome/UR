@@ -7,6 +7,13 @@ use UR;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Namespace::Command',
+    has => [
+        subject => {
+            is_optional => 1,
+            is_many => 1,
+            shell_args_position => 1
+        }
+    ]
 );
 
 
@@ -35,7 +42,7 @@ my($self, $params) = @_;
     my %already_printed;
 
     my %views;
-    foreach my $item ( @{$params->{' '}} ) {
+    foreach my $item ( $self->subject ) {
         my @meta_objs = ();
 
         if ($item eq $namespace or $item =~ m/::/) {
