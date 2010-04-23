@@ -206,6 +206,11 @@ sub _resolve_default_aspects {
 
 sub _indent {
     my ($self,$indent,$value) = @_;
+    
+    unless(defined $value) {
+        $value = '';
+    }
+    
     chomp $value;
     my @rows = split(/\n/,$value);
     my $value_indented = join("\n", map { $indent . $_ } @rows);
