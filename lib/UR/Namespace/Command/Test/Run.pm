@@ -355,7 +355,7 @@ sub _run_tests {
         $DB::single=1;
 
         $SIG{'INT'} = sub {
-                              print "\nInterrupt...\n";
+                              print "\n\nInterrupt...\n\n";
                               
                               $My::TAP::Parser::Iterator::Process::LSF::SHOULD_EXIT = 1;
                               #My::TAP::Parser::IteratorFactory::LSF->_kill_running_jobs();
@@ -713,6 +713,7 @@ sub get_job {
             foreach my $job ( $self->get_all ) {
                 print $job->{'description'},"\n";
             }
+            print "------------------------------------------\n";
             $already_printed = 1;
         }
         return;
