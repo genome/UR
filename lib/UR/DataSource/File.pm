@@ -586,7 +586,7 @@ sub create_iterator_closure_for_rule {
     my $fh;  # File handle we'll be reading from
     my $iterator = sub {
 
-	unless (ref($fh)) {
+        unless (ref($fh)) {
             $fh = $self->get_default_handle();
             # Lock the file for reading...  For more fine-grained locking we could move this to
             # after READ_LINE_FROM_FILE: but that would slow down read operations a bit.  If
@@ -631,7 +631,7 @@ sub create_iterator_closure_for_rule {
                 unless (defined $line) {
                     if ($!) {
                         redo READ_LINE_FROM_FILE if ($! == EAGAIN or $! == EINTR);
-                        Carp::croak("getline() failed for DataSource $self boolexpr $rule: $!");
+                        Carp::confess("getline() failed for DataSource $self boolexpr $rule: $!");
                     }
 
                     # at EOF.  Close up shop and return
