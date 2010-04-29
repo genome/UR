@@ -28,6 +28,8 @@ features (
         'Sub::Name'           => '0.04',
         'Sub::Install'        => '0.924',
         'Path::Class'         => '',
+        'XML::Dumper'         => '',
+        'XML::Generator'      => '',
     ],
     'Moose' => [
         #-tests  => [ [ 't/URT/t/00-load.t' ], <t/URT/t/*-moose-*.t> ],
