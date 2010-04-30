@@ -626,12 +626,23 @@ sub create_iterator_closure_for_rule {
             } else {
                 $self->{'_last_read_fingerprint'} = $fingerprint;
 
+                # Hack for OSX 10.5.
+                # At EOF, the getline below will return undef.  Most builds of Perl
+                # will also set $! to 0 at EOF so you can distinguish between the cases
+                # of EOF (which may have actually happened a while ago because of buffering)
+                # and an actual read error.  OSX 10.5's Perl does not, and so $!
+                # retains whatever value it had after the last failed syscall, likely 
+                # a stat() while looking for a Perl module.  This should have no effect
+                # other platforms where you can't trust $! at arbitrary points in time
+                # anyway
+                $! = 0;
                 $line = <$fh>;
 
                 unless (defined $line) {
                     if ($!) {
                         redo READ_LINE_FROM_FILE if ($! == EAGAIN or $! == EINTR);
-                        Carp::confess("getline() failed for DataSource $self boolexpr $rule: $!");
+                        my $pathname = $self->server();
+                        Carp::confess("getline() failed for DataSource $self pathname $pathname boolexpr $rule: $!");
                     }
 
                     # at EOF.  Close up shop and return
