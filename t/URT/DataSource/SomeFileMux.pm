@@ -5,6 +5,9 @@ use warnings;
 
 use UR::Object::Type;
 use URT;
+
+use File::Temp qw();
+
 class URT::DataSource::SomeFileMux {
     is => ['UR::DataSource::FileMux', 'UR::Singleton'],
     type_name => 'urt datasource somefilemux',
@@ -25,8 +28,7 @@ sub sort_order {
 sub delimiter { "\t" }
 
 BEGIN {
-    our $BASE_PATH = "/tmp/some_filemux_$$/";
-    mkdir $BASE_PATH;
+    our $BASE_PATH = File::Temp::tempdir( CLEANUP => 1 );
 }
 
 # Note that the file resolver is called as a normal function (with the parameters
@@ -36,13 +38,6 @@ sub file_resolver {
     my $type = shift;
     our $BASE_PATH;
     return "$BASE_PATH/$type";
-}
-
-END { 
-    our $BASE_PATH;
-    my @files = glob("$BASE_PATH/*");
-    unlink @files;
-    rmdir $BASE_PATH;
 }
 
 1;

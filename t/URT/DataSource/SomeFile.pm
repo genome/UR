@@ -2,11 +2,11 @@ package URT::DataSource::SomeFile;
 use strict;
 use warnings;
 
-#use UR::Object::Type;
 use URT;
+use File::Temp qw();
 
-our $FILE = "/tmp/ur_testsuite_db_$$.csv";
-unlink $FILE if -e $FILE;
+our(undef, $FILE) = File::Temp::tempfile();
+END { unlink $FILE };
 
 class URT::DataSource::SomeFile {
     is => ['UR::Singleton', 'UR::DataSource::File'],
