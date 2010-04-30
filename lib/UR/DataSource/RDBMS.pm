@@ -1449,6 +1449,7 @@ sub create_iterator_closure_for_rule {
         return $next_db_row;
     }; # end of iterator closure
 
+    Sub::Name::subname('UR::DataSource::RDBMS::__datasource_iterator(closure)__', $iterator);
     return $iterator;
 }
 

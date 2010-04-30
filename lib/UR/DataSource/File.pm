@@ -702,6 +702,8 @@ sub create_iterator_closure_for_rule {
         }
     }; # end sub $iterator
 
+    Sub::Name::subname('UR::DataSource::File::__datasource_iterator(closure)__', $iterator);
+
     my $count = $self->_open_query_count() || 0;
     $self->_open_query_count($count+1);
     bless $iterator, 'UR::DataSource::File::Tracker';
