@@ -9,7 +9,8 @@ class UR::Object::View::Default::Xsl {
     has => [
         output_format => { value => 'html' },
         transform => { is => 'Boolean', value => 0 },
-        rest_variable => { value => '/rest' },
+        xsl_variables => { is => 'Hash', is_optional => 1 },
+        rest_variable => { value => '/rest', is_deprecated => 1 },
         desired_perspective => { },
         xsl_path => {
             doc => 'web relative path starting with / where the xsl ' .
@@ -86,15 +87,33 @@ sub _generate_content {
       "<xsl:include href=\"$xsl_path$_\"/>\n";
     } @include_files;
 
-    my $rest_var = $self->rest_variable;
+    my $xsl_vars = <<MARK; 
+  <xsl:variable name="currentPerspective">$perspective</xsl:variable>
+  <xsl:variable name="currentToolkit">$output_format</xsl:variable>
+MARK
+
+    if (my $vars = $self->xsl_variables) {
+
+        while (my ($key,$val) = each %$vars) {
+            $xsl_vars .= <<MARK;
+  <xsl:variable name="$key">$val</xsl:variable>
+MARK
+        }
+        
+    } else {
+        my $rest_var = $self->rest_variable;
+
+        $xsl_vars .= <<MARK;
+  <xsl:variable name="rest">$rest_var</xsl:variable>
+MARK
+ 
+    }
 
     my $xsl_template = <<STYLE;
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-  <xsl:variable name="rest">$rest_var</xsl:variable>
-  <xsl:variable name="currentPerspective">$perspective</xsl:variable>
-  <xsl:variable name="currentToolkit">$output_format</xsl:variable>
+$xsl_vars
   <xsl:include href="$xsl_path$rootxsl"/>
 @includes
 </xsl:stylesheet>
