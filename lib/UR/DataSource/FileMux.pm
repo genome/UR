@@ -178,6 +178,8 @@ sub create_iterator_closure_for_rule {
 
         return;
     };
+
+    Sub::Name::subname('UR::DataSource::FileMux::__datasource_iterator(closure)__', $iterator);
     return $iterator;
 }
 
