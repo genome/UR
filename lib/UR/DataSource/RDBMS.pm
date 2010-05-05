@@ -108,7 +108,7 @@ sub generate_schema_for_class_meta {
    
     my @fks_to_generate;
     for my $p ($class_meta->parent_class_metas) {
-        next if $p->class_name eq 'UR::Object';
+        next if ($p->class_name eq 'UR::Object' or $p->class_name eq 'UR::Entity');
         next unless $p->class_name->isa("UR::Object");
         my @new = $self->generate_schema_for_class_meta($p,$temp);
         push @defined, @new;
@@ -756,8 +756,17 @@ sub refresh_database_metadata_for_table_name {
     # FKs, etc # were changed
     my $data_was_changed_for_this_table = 0;
 
+    # The class definition can specify a table name as <schema>.<table_name> to override the
+    # data source's default schema/owner.
+    my($ds_owner,$dd_table_name) = $self->_resolve_owner_and_table_from_table_name($table_name);
+    #my $dd_table_name = $table_name;
+    #if ($table_name =~ m/(\w+)\.(\w+)/) {
+    #    $ds_owner = $1;
+    #    $dd_table_name = $2;
+    #}
+
     # TABLE
-    my $table_sth = $data_source->get_table_details_from_data_dictionary('%', $data_source->owner, $table_name, "TABLE,VIEW");
+    my $table_sth = $data_source->get_table_details_from_data_dictionary('%', $ds_owner, $dd_table_name, "TABLE,VIEW");
     my $table_data = $table_sth->fetchrow_hashref();
     unless ($table_data && %$table_data) {
         #$self->error_message("No data for table $table_name in data source $data_source.");
@@ -798,7 +807,7 @@ sub refresh_database_metadata_for_table_name {
     # COLUMNS
     # mysql databases seem to require you to actually put in the database name in the first arg
     my $db_name = ($data_source->can('db_name')) ? $data_source->db_name : '%';
-    my $column_sth = $data_source->get_column_details_from_data_dictionary($db_name, $data_source->owner, $table_name, '%');
+    my $column_sth = $data_source->get_column_details_from_data_dictionary($db_name, $ds_owner, $dd_table_name, '%');
     unless ($column_sth) {
         $self->error_message("Error getting column data for table $table_name in data source $data_source.");
         return;
@@ -896,8 +905,8 @@ sub refresh_database_metadata_for_table_name {
     # constraints on this table against columns in other tables
 
 
-    my $db_owner = $data_source->owner;
-    my $fk_sth = $data_source->get_foreign_key_details_from_data_dictionary('', $db_owner, $table_name, '', '', '');
+    #my $db_owner = $data_source->owner;
+    my $fk_sth = $data_source->get_foreign_key_details_from_data_dictionary('', $ds_owner, $dd_table_name, '', '', '');
 
     my %fk;     # hold the fk constraints that this invocation of foreign_key_info created
 
@@ -960,7 +969,7 @@ sub refresh_database_metadata_for_table_name {
     # get foreign_key_info the other way
     # constraints on other tables against columns in this table
 
-    my $fk_reverse_sth = $data_source->get_foreign_key_details_from_data_dictionary('', '', '', '', $db_owner, $table_name);
+    my $fk_reverse_sth = $data_source->get_foreign_key_details_from_data_dictionary('', '', '', '', $ds_owner, $dd_table_name);
 
     %fk = ();   # resetting this prevents data_source referencing
     # tables from fouling up their fk objects
@@ -1033,7 +1042,7 @@ sub refresh_database_metadata_for_table_name {
 
     # get primary_key_info
 
-    my $pk_sth = $data_source->get_primary_key_details_from_data_dictionary(undef, $db_owner, $table_name);
+    my $pk_sth = $data_source->get_primary_key_details_from_data_dictionary(undef, $ds_owner, $dd_table_name);
 
     if ($pk_sth) {
         my @new_pk;
@@ -1054,7 +1063,7 @@ sub refresh_database_metadata_for_table_name {
             push @new_pk, [
                             table_name => $table_name,
                             data_source => $data_source_id,
-                            owner => $data_source->owner,
+                            owner => $ds_owner,
                             column_name => $data->{'COLUMN_NAME'},
                             rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
                         ];
@@ -1082,7 +1091,7 @@ sub refresh_database_metadata_for_table_name {
     # and each other DataSource class needs its own implementation
 
     # The above was moved into each data source's class
-    if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($table_name)) {
+    if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($dd_table_name)) {
         my %uc = %$uc;
 
         # check for redundant unique constraints
@@ -1113,7 +1122,7 @@ sub refresh_database_metadata_for_table_name {
                     UR::DataSource::RDBMS::PkConstraintColumn->get(
                         data_source => $data_source_id,
                         table_name => $table_name,
-                        owner => $data_source->owner,
+                        owner => $ds_owner,
                     )
                 );
         for my $uc_name ( keys %uc ) {
@@ -1144,7 +1153,7 @@ sub refresh_database_metadata_for_table_name {
                 UR::DataSource::RDBMS::UniqueConstraintColumn->get(
                     data_source => $data_source_id,
                     table_name => $table_name,
-                    owner => $data_source->owner || '',
+                    owner => $ds_owner || '',
                     constraint_name => $uc_name,
                 );
 
@@ -1155,7 +1164,7 @@ sub refresh_database_metadata_for_table_name {
                     my $uc = UR::DataSource::RDBMS::UniqueConstraintColumn->create(
                         data_source => $data_source_id,
                         table_name => $table_name,
-                        owner => $data_source->owner,
+                        owner => $ds_owner,
                         constraint_name => $uc_name,
                         column_name => $col_name,
                     );
@@ -1215,6 +1224,17 @@ sub _make_foreign_key_fingerprint {
     return $fingerprint;
 }
 
+
+sub _resolve_owner_and_table_from_table_name {
+    my($self, $table_name) = @_;
+
+    if ($table_name =~ m/(\w+)\.(\w+)/) {
+        return($1,$2);
+    } else {
+        return($self->owner, $table_name);
+    }
+}
+
 # Derived classes should define a method to return a ref to an array of hash refs
 # describing all the bitmap indicies in the DB.  Each hash ref should contain
 # these keys: table_name, column_name, index_name
@@ -1224,7 +1244,7 @@ sub _make_foreign_key_fingerprint {
 # Implemented methods should take one optional argument: a table name
 #
 # FIXME The API for bitmap_index and unique_index methods here aren't the same as
-# the other data_dictionary methods.  These tqo return hashrefs of massaged
+# the other data_dictionary methods.  These two return hashrefs of massaged
 # data while the others return DBI statement handles.
 sub get_bitmap_index_details_from_data_dictionary {
     my $class = shift;
@@ -2338,7 +2358,7 @@ sub _id_values_for_primary_key {
     my ($self,$table_obj,$object_to_save) = @_;
 
     unless ($table_obj && $object_to_save) {
-        Carp::confess("Both table and class object should be passed for $self!");
+        Carp::confess("Both table and object_to_save should be passed for $self!");
     }
 
     my $class_obj; # = $object_to_save->__meta__;
@@ -2349,7 +2369,7 @@ sub _id_values_for_primary_key {
         }
     }
     unless (defined $class_obj) {
-        Carp::confess("Can't find class object for this table! " . $table_obj->table_name);
+        Carp::croak("Can't find class object with table " . $table_obj->table_name . " while searching inheritance for object of class ".$self->class);
     }
 
     my @pk_cols = $table_obj->primary_key_constraint_column_names;
@@ -2467,14 +2487,13 @@ sub _default_save_sql_for_object {
         else {
             Carp::confess("NO CLASS FOR $table_name: @table_class_obj!\n");
         }        
-        my $table_name_to_update = $table_name;
 
 
         my $data_source = $UR::Context::current->resolve_data_source_for_object($object_to_save);
         unless ($data_source) {
             Carp::confess("No ds on $object_to_save!");
         }
-        my $db_owner = $data_source->owner;
+        my($db_owner, $table_name_to_update) = $self->_resolve_owner_and_table_from_table_name($table_name);
 
         # The "action" now can vary on a per-table basis.
 

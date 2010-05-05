@@ -124,12 +124,14 @@ my($self,$table_name) = @_;
         where i.index_type = 'BITMAP'
     );
 
+    my @select_params;
     if ($table_name) {
-        $sql .= " and i.table_name = ?";
+        @select_params = $self->_resolve_owner_and_table_from_table_name($table_name);
+        $sql .= " and i.table_owner = ? and i.table_name = ?";
     }
 
     my $dbh = $self->get_default_dbh;
-    my $rows = $dbh->selectall_arrayref($sql, undef, $table_name);
+    my $rows = $dbh->selectall_arrayref($sql, undef, @select_params);
     return undef unless $rows;
     
     my @ret = map { { table_name => $_->[0], column_name => $_->[1], index_name => $_->[2] } } @$rows;
@@ -168,8 +170,8 @@ sub get_unique_index_details_from_data_dictionary {
     my $sth = $dbh->prepare($sql);
     return undef unless $sth;
 
-    my $db_owner = $self->owner();
-    $sth->execute($table_name, $db_owner, $table_name, $db_owner);
+    my($db_owner,$dd_table_name) = $self->_resolve_owner_and_table_from_table_name($table_name);
+    $sth->execute($table_name, $db_owner, $dd_table_name, $db_owner);
 
     my $ret;
     while (my $data = $sth->fetchrow_hashref()) {
