@@ -151,6 +151,16 @@ sub connect
     }
     
     $params[2] = 'xxx';
+
+    # Param 3 is usually a hashref of connection modifiers
+    if (ref($params[3]) and ref($params[3]) =~ m/HASH/) {
+        my $string = join(', ',
+                          map { $_ . ' => ' . $params[3]->{$_} }
+                              keys(%{$params[3]})
+                         );
+        $params[3] = "{ $string }";
+    }
+        
     my $params_stringified = join(",", map { defined($_) ? "'$_'" : 'undef' } @params);  
     UR::DBI::before_execute("connecting with params: ($params_stringified)");
     
