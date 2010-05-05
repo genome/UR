@@ -152,7 +152,7 @@ sub _generate_loading_templates_arrayref {
     my $sql_cols;
     foreach my $column_data ( @$old_sql_cols ) {
         my $propertys_column_name = $column_data->[1]->column_name;
-        next unless (exists $column_to_position_map{$propertys_column_name});
+        next unless ($propertys_column_name and exists($column_to_position_map{$propertys_column_name}));
 
         push @$sql_cols, $column_data;
     }
