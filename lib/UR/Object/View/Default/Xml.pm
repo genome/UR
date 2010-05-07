@@ -170,10 +170,9 @@ sub _generate_content_for_aspect {
                 } else {
                     my $escaped_value = $value;
                     XML::Generator::util::escape($escaped_value, XML::Generator::util::ESCAPE_ALWAYS | XML::Generator::util::ESCAPE_GT); #modifies in place
-                    
-                    $aspect_text .= $indent_text . $indent_text . "<value>\n";
-                    $aspect_text .= $self->_indent($indent_text . $indent_text, $escaped_value);
-                    $aspect_text .= $indent_text . $indent_text . "</value>\n";
+
+                    $escaped_value = defined $escaped_value ? $escaped_value : '';
+                    $aspect_text .= $indent_text . $indent_text . "<value>$escaped_value</value>\n";
                 }
 #                if ($value !~ /\n/) {
 #                    # multi-value no newline(s)
