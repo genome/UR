@@ -984,9 +984,18 @@ sub mk_object_set_accessors {
         }
         else {
             if ($r_class_meta) {
-                my $new = $r_class_name->create(@where,@_);
-                return unless $new;
-                push @{ $self->{$plural_name} ||= [] }, $new;
+                my $obj;
+                if (@_ == 1 and $_[0]->isa($r_class_name)) {
+                    $obj = $_[0];
+                }
+                else { 
+                    $obj = $r_class_name->create(@where,@_);
+                    unless ($obj) {
+                        $self->error_message("Failed to add $singular_name:" . $r_class_name->error_message);
+                        return;
+                    }
+                }
+                push @{ $self->{$plural_name} ||= [] }, $obj;
             }
             else { 
                 if (@_ != 1) {
