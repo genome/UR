@@ -7,10 +7,6 @@ use UR;
 class UR::Object::Set {
     is => 'UR::Value',
     is_abstract => 1,
-    subclassify_by => 'member_class_name',
-    type_has => [
-        member_class_name   => { is => 'Text' },
-    ],
     has => [
         rule                => { is => 'UR::BoolExpr', id_by => 'id' },
         member_class_name   => { via => 'rule', to => 'subject_class_name' },
