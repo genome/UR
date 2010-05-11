@@ -44,6 +44,7 @@ class UR::Object::View {
         },
         _observer_data => {
             is_transient => 1,
+            value => {},
             doc => '  hooks around the subject which monitor it for changes'
         }
     ],
@@ -200,15 +201,16 @@ sub __signal_change__ {
     # after the widget is produced
     # are reflected in the widget
     my ($self,$method,@details) = @_;
+
     if ($self->_widget) {
         if ($method eq 'subject' or $method =~ 'aspects') {
             $self->_bind_subject();
         }
-        elsif ($method eq 'delete') {
+        elsif ($method eq 'delete' or $method eq 'unload') {
             my $observer_data = $self->_observer_data;
             for my $subscription (values %$observer_data) {
-                my ($class, $id, $callback) = @$subscription;
-                $class->cancel_change_subscription($id, $callback);
+                my ($class, $id, $method, $callback) = @$subscription;
+                $class->cancel_change_subscription($id, $method, $callback);
             }
             $self->_widget(undef);
         }

@@ -439,7 +439,7 @@ sub cancel_change_subscription ($@)
             or
             ($callback eq $cancel_callback)
             or
-            ($note =~ $callback)
+            (defined $note && $note =~ $callback)
         )
         {
             # Remove the callback from the subscription list.
