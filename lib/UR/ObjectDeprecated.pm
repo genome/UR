@@ -468,7 +468,7 @@ sub cancel_change_subscription ($@)
             # Tell the class that a subscription has been cancelled, if it cares
             # (most classes do not impliment this, and the default UR::Object version is ignored.
 
-            unless($class->inform_subscription_cancellation($property,$id,$callback))
+            unless($class eq '' || $class->inform_subscription_cancellation($property,$id,$callback))
             {
                 Carp::confess("Failed to validate requested subscription cancellation: @_\n");
                 return 0; # If/when the above is removed.

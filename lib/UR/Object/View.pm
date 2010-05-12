@@ -121,11 +121,21 @@ sub create {
     return $self;
 }
 
+our %view_class_cache = ();
 sub _resolve_view_class_for_params {
     # View modules use standardized naming:  SubjectClassName::View::Perspective::Toolkit.
     # The subject must be explicitly of class "SubjectClassName" or some subclass of it.
     my $class = shift;
-    my %params = $class->define_boolexpr(@_)->params_list;
+    my $bx = $class->define_boolexpr(@_);
+    
+    if (exists $view_class_cache{$bx->id}) {
+        if (!defined $view_class_cache{$bx->id}) {
+            return;
+        }
+        return $view_class_cache{$bx->id};
+    }
+    
+    my %params = $bx->params_list;
 
     my $subject_class_name = delete $params{subject_class_name};
     my $perspective = delete $params{perspective};
@@ -176,9 +186,11 @@ sub _resolve_view_class_for_params {
             next;
         }
 
+        $view_class_cache{$bx->id} = $subclass_name;
         return $subclass_name;
     }
 
+    $view_class_cache{$bx->id} = undef;
     return;
 }
 
@@ -395,6 +407,7 @@ sub _toolkit_package {
     return "UR::Object::View::Toolkit::" . ucfirst(lc($toolkit));
 }
 
+1;
 
 =pod
 
