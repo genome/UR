@@ -3764,6 +3764,9 @@ print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
         $parent_last = $#objects_to_check;
     }
 
+    # FIXME - Need a way to disconnect all datasources, not just this one
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
+
     my $start = $length;  # First child starts checking after parent's range
     $parent_last = $length - 1; 
     while ($children-- > 0) {
@@ -3782,7 +3785,6 @@ print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
             $start += $length;
 
         } elsif (defined $pid) {
-            Genome::DataSource::GMSchema->disconnect_default_dbh;
             $pipe->writer();
             my $last = $start + $length;
             $last = $#objects_to_check if ($last > $#objects_to_check);
