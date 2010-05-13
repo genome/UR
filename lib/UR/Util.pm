@@ -317,8 +317,9 @@ print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
         $parent_last = $#things_to_check;
     }
 
-    # FIXME - Need a way to disconnect all datasources, not just this one
-    Genome::DataSource::GMSchema->disconnect_default_dbh;
+    # FIXME - There needs to be some code in here to disconnect datasources
+    # Oracle in particular (maybe all DBs?), stops working right unless you
+    # disconnect before forking
 
     my $start = $length;  # First child starts checking after parent's range
     $parent_last = $length - 1;

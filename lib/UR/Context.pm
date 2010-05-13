@@ -3753,20 +3753,18 @@ sub _sync_databases {
     }
 
     # Determine what has changed.
-print "Getting changed objects\n";
     my @changed_objects = (
         $self->all_objects_loaded('UR::Object::Ghost'),
-        # grep { $_->__changes__ } $self->all_objects_loaded('UR::Object')
-        UR::Util->mapreduce_grep(sub { $_[0]->__changes__ },$self->all_objects_loaded('UR::Object'))
+        grep { $_->__changes__ } $self->all_objects_loaded('UR::Object')
+        #UR::Util->mapreduce_grep(sub { $_[0]->__changes__ },$self->all_objects_loaded('UR::Object'))
     );
 
     return 1 unless (@changed_objects);
 
     # Ensure validity.
     # This is primarily to catch custom validity logic in class overrides.
-    #my @invalid = grep { $_->__errors__ } @changed_objects;
-print "Getting invalid objects\n";
-    my @invalid = UR::Util->mapreduce_grep(sub { $_[0]->__errors__}, @changed_objects);
+    my @invalid = grep { $_->__errors__ } @changed_objects;
+    #my @invalid = UR::Util->mapreduce_grep(sub { $_[0]->__errors__}, @changed_objects);
     if (@invalid) {
         # Create a helpful error message for the developer.
         $self->error_message('Invalid data for save!');
@@ -3780,7 +3778,6 @@ print "Getting invalid objects\n";
                 my @property_names = $error->properties;
                 my $desc = $error->desc;
                 my $prop_noun = scalar(@property_names) > 1 ? 'properties' : 'property';
-                #$msg .= "    $desc for $prop_noun " . join(', ', map { "'$_'" } @property_names) . "\n";
                 $msg .= "    $prop_noun " . join(', ', map { "'$_'" } @property_names) . ": $desc\n";
             }
             $msg .= "    Current state:\n" . Data::Dumper::Dumper($obj);
