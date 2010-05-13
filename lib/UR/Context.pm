@@ -3754,14 +3754,14 @@ print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
         }
     };
 
-    my @objects_to_check = @_;
+    my @things_to_check = @_;
     my($children, $length,$parent_last);
     if ($ENV{'UR_NR_CPU'}) {
-        $length = POSIX::ceil(scalar(@objects_to_check) / $ENV{'UR_NR_CPU'});
+        $length = POSIX::ceil(scalar(@things_to_check) / $ENV{'UR_NR_CPU'});
         $children = $ENV{'UR_NR_CPU'} - 1;
     } else {
         $children = 0;
-        $parent_last = $#objects_to_check;
+        $parent_last = $#things_to_check;
     }
 
     # FIXME - Need a way to disconnect all datasources, not just this one
@@ -3774,7 +3774,7 @@ print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
         unless ($pipe) {
             Carp::carp("pipe() failed: $!\nUnable to create pipes to communicate with child processes to verify transaction, falling back to serial verification");
             $cleanup->();
-            $parent_last = $#objects_to_check;
+            $parent_last = $#things_to_check;
             last;
         }
 
@@ -3787,47 +3787,60 @@ print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
         } elsif (defined $pid) {
             $pipe->writer();
             my $last = $start + $length;
-            $last = $#objects_to_check if ($last > $#objects_to_check);
+            $last = $#things_to_check if ($last > $#things_to_check);
 
 print "PID $$ checking from $start to $last\n";
 my $start_time = Time::HiRes::time();
-            my @objects = grep { $subref->($_) } @objects_to_check[$start .. $last];
+            #my @objects = grep { $subref->($_) } @things_to_check[$start .. $last];
+            my @matching;
+            for (my $i = $start; $i <= $last; $i++) {
+                if ($subref->($things_to_check[$i])) {
+                    push @matching, $i;
+                }
+            }
 my $end_time = Time::HiRes::time();
-print "PID $$ found ".scalar(@objects). " matching objects in ",$end_time - $start_time ," sec\n";
+print "PID $$ found ".scalar(@matching). " matching objects in ",$end_time - $start_time ," sec\n";
             # FIXME - when there's a more general framework for passing objects between
             # processes, use that instead
 #print "The matches are:\n"; printf("%s  %s\n", $_->class ,$_->id) foreach @objects;
-            $pipe->printf("%s\n%s\n",$_->class, $_->id) foreach @objects;
+            #$pipe->printf("%s\n%s\n",$_->class, $_->id) foreach @objects;
+            $pipe->print("$_\n") foreach @matching;
+
 
             exit;
 
         } else {
             Carp::carp("fork() failed: $!\nUnable to create child processes to ver+ify transaction, falling back to serial verification");
             $cleanup->();
-            $parent_last = $#objects_to_check;
+            $parent_last = $#things_to_check;
         }
     }
 print "Parent pid $$ checking 0 to $parent_last\n";
 my $start_time = Time::HiRes::time();
-    my @objects = grep { $subref->($_) } @objects_to_check[0 .. $parent_last];
+    my @matches = grep { $subref->($_) } @things_to_check[0 .. $parent_last];
 my $end_time = Time::HiRes::time();
-print "Parent pid $$ found ".scalar(@objects). " matching objects in ",$end_time - $start_time ," sec\n";
+print "Parent pid $$ found ".scalar(@matches). " matching objects in ",$end_time - $start_time ," sec\n";
 
     foreach my $handle ( @read_handles ) {
         READ_FROM_CHILD:
         while(1) {
-            my $match_class = $handle->getline();
-            last READ_FROM_CHILD unless $match_class;
-            chomp($match_class);
+            my $match_idx = $handle->getline();
+            last READ_FROM_CHILD unless $match_idx;
+            chomp $match_idx;
 
-            my $match_id = $handle->getline();
-            unless (defined $match_id) {
-                Carp::carp("Protocol error.  Tried to get object ID for class $match_class while verifying transaction");
-                last READ_FROM_CHILD;
-            }
-            chomp($match_id);
+            push @matches, $things_to_check[$match_idx];
+            #my $match_class = $handle->getline();
+            #last READ_FROM_CHILD unless $match_class;
+            #chomp($match_class);
 
-            push @objects, $match_class->get($match_id);
+            #my $match_id = $handle->getline();
+            #unless (defined $match_id) {
+            #    Carp::carp("Protocol error.  Tried to get object ID for class $match_class while verifying transaction");
+            #    last READ_FROM_CHILD;
+            #}
+            #chomp($match_id);
+
+            #push @objects, $match_class->get($match_id);
         }
         $handle->close();
     }
@@ -3836,7 +3849,7 @@ print "Parent pid $$ found ".scalar(@objects). " matching objects in ",$end_time
 my $total_end_time = Time::HiRes::time();
 print "Parallel grep took ",$total_end_time - $total_start_time ," sec\n";
 
-    return @objects;
+    return @matches;
 }
 
 
