@@ -4,13 +4,16 @@ use strict;
 use warnings;
 use IO::File;
 use XML::Dumper;
-use XML::Generator;
+use XML::LibXML;
 
 class UR::Object::View::Default::Xml {
     is => 'UR::Object::View::Default::Text',
     has_constant => [
         toolkit     => { value => 'xml' },
-    ]
+    ],
+    has => [
+        _xml_doc    => { is => 'XML::LibXML::Document', doc => 'The LibXML document used to create the content for this view', is_transient => 1 }
+    ],
 };
 
 sub xsl_template_files {
@@ -39,35 +42,47 @@ sub _generate_content {
 
     my $subject = $self->subject();
     return '' unless $subject;
+    
+    my $xml_doc = XML::LibXML->createDocument();
+    $self->_xml_doc($xml_doc);
 
     # the header line is the class followed by the id
-    my $text = '<object type="' . $self->subject_class_name . '"';
-    my $subject_id_txt = $subject->id;
-    $subject_id_txt =~ s/\t/%09/g;
-    $text .= " id=\"$subject_id_txt\">\n";
-    $text .= "  <display_name>" . $subject->__display_name__ . "</display_name>\n"; 
-    $text .= "  <label_name>" . $subject->__label_name__ . "</label_name>\n";
+    my $object = $xml_doc->createElement('object');
+    $xml_doc->setDocumentElement($object);
+    
+    $object->addChild( $xml_doc->createAttribute('type', $self->subject_class_name) );
+    $object->addChild( $xml_doc->createAttribute('id', $subject->id) );
+    
+    my $display_name = $object->addChild( $xml_doc->createElement('display_name') );
+    $display_name->addChild( $xml_doc->createTextNode($subject->__display_name__) );
+    
+    my $label_name = $object->addChild( $xml_doc->createElement('label_name' ));
+    $label_name->addChild( $xml_doc->createTextNode($subject->__label_name__) );
 
-    $text .= "  <types>\n";
+    my $types = $object->addChild( $xml_doc->createElement('types') );
     foreach my $c ($self->subject_class_name,$subject->__meta__->ancestry_class_names) {
-        $text .= "    <isa type=\"$c\"/>\n";
+        my $isa = $types->addChild( $xml_doc->createElement('isa') );
+        $isa->addChild( $xml_doc->createAttribute('type', $c) );
     }
-    $text .= "  </types>\n";
-   
+    
     unless ($self->_subject_is_used_in_an_encompassing_view()) {
         # the content for any given aspect is handled separately
         my @aspects = $self->aspects;
         if (@aspects) {
             for my $aspect (sort { $a->number <=> $b->number } @aspects) {
                 next if $aspect->name eq 'id';
-                my $aspect_text = $self->_generate_content_for_aspect($aspect);
-                $text .= $aspect_text;
+                
+                my $aspect_node = $self->_generate_content_for_aspect($aspect);
+                $object->addChild( $aspect_node ) if $aspect_node; #If aspect has no values, it won't be included
             }
         }
     }
-    $text .= "</object>\n";
 
-    return $text;
+
+#From the XML::LibXML documentation:
+#If $format is 1, libxml2 will add ignorable white spaces, so the nodes content is easier to read. Existing text nodes will not be altered
+#If $format is 2 (or higher), libxml2 will act as $format == 1 but it add a leading and a trailing line break to each text node.
+    return $xml_doc->toString(1);
 }
 
 sub _generate_content_for_aspect {
@@ -83,34 +98,32 @@ sub _generate_content_for_aspect {
     my $self = shift;
     my $aspect = shift;
 
-    my $subject = $self->subject;  
+    my $subject = $self->subject;
+    my $xml_doc = $self->_xml_doc;  
     my $aspect_name = $aspect->name;
-    my $indent_text = $self->indent_text;
+    
+    my $aspect_node = $xml_doc->createElement('aspect');
+    $aspect_node->addChild( $xml_doc->createAttribute('name', $aspect_name) );
     
     my $aspect_meta = $self->subject_class_name->__meta__->property($aspect_name);
 
     my @value;
     eval {
         @value = $subject->$aspect_name;
-#        if (@value == 1 and ref($value[0]) eq 'ARRAY') {
-#            @value = @{$value[0]};
-#        }
     };
     if ($@) {
-#        @value = ('(exception)');
-
         my ($file,$line) = ($@ =~ /at (.*?) line (\d+)$/m);
+        
+        my $exception = $aspect_node->addChild( $xml_doc->createElement('exception') );
+        $exception->addChild( $xml_doc->createAttribute('file', $file) );
+        $exception->addChild( $xml_doc->createAttribute('line', $line) );
+        $exception->addChild( $xml_doc->createCDATASection($@) );
 
-        my $aspect_text = '';
-
-        $aspect_text .= $indent_text . "<aspect name=\"$aspect_name\">\n";
-        $aspect_text .= $indent_text . $indent_text . "<exception file=\"$file\" line=\"$line\"><![CDATA[$@]]></exception>\n";
-        $aspect_text .= $indent_text . "</aspect>\n";
-        return $aspect_text;
+        return $aspect_node;
     }
     
     if (@value == 0) {
-        return ''; 
+        return; 
     }
         
     if (Scalar::Util::blessed($value[0])) {
@@ -127,70 +140,54 @@ sub _generate_content_for_aspect {
     # Delegate to a subordinate view if needed.
     # This means we replace the value(s) with their
     # subordinate widget content.
-    my $aspect_text = '';
     if (my $delegate_view = $aspect->delegate_view) {
-        $aspect_text .= $self->_indent($indent_text,"<aspect name=\"$aspect_name\">\n");
         foreach my $value ( @value ) {
             $delegate_view->subject($value);
             $delegate_view->_update_view_from_subject();
-            $value = $delegate_view->content();
-            $value = $self->_indent($indent_text . $indent_text,$value);
-            $aspect_text .= $value;
+            
+            if ($delegate_view->can('_xml_doc') and $delegate_view->_xml_doc) {
+                my $delegate_xml_doc = $delegate_view->_xml_doc;
+                my $delegate_root = $delegate_xml_doc->documentElement;
+                #cloneNode($deep = 1)
+                $aspect_node->addChild( $delegate_root->cloneNode(1) );
+            } else {
+                my $delegate_text = $delegate_view->content();
+
+                #The delegate view may not be XML at all--wrap it in our aspect tag so that it parses
+                #(assuming that whatever delegate was selected properly escapes anything that needs escaping)
+                my $aspect_text = "<aspect name=\"$aspect_name\">\n$delegate_text\n</aspect>";
+                my $parser = XML::LibXML->new;
+                my $delegate_xml_doc = $parser->parse_string($aspect_text);
+                $aspect_node = $delegate_xml_doc->documentElement;
+                $xml_doc->adoptNode( $aspect_node );
+            }            
         }
-        $aspect_text .= $self->_indent($indent_text,"</aspect>\n");
     }
     else {
-        $aspect_text .= $indent_text . "<aspect name=\"$aspect_name\">";
-#        if (@value < 2) {
-#            if ($value[0] !~ /\n/) {
-#                # single value, no newline
-#                $aspect_text .= $value[0];
-#            }
-#            else {
-#                # single value with newlines
-#                $aspect_text .= 
-#                    "\n" 
-#                    . $self->_indent($indent_text . $indent_text, $value[0]) 
-#            }
-#        }
-#        else {
-        {
-            $aspect_text .= "\n";
+        for my $value (@value) {
 
-#            my $d = XML::Dumper->new;
-
-#            $aspect_text .= $self->_indent($indent_text . $indent_text, $d->pl2xml(\@value));
-            for my $value (@value) {
-
-                if (ref($value)) {
-                    my $d = XML::Dumper->new;
-                    my $xmlrep = $d->pl2xml($value);
-
-                    $aspect_text .= $self->_indent($indent_text . $indent_text, $xmlrep); 
-                } else {
-                    my $escaped_value = $value;
-                    XML::Generator::util::escape($escaped_value, XML::Generator::util::ESCAPE_ALWAYS | XML::Generator::util::ESCAPE_GT); #modifies in place
-
-                    $escaped_value = defined $escaped_value ? $escaped_value : '';
-                    $aspect_text .= $indent_text . $indent_text . "<value>$escaped_value</value>\n";
+            if (ref($value)) {
+                my $d = XML::Dumper->new;
+                my $xmlrep = $d->pl2xml($value);
+                
+                my $parser = XML::LibXML->new;
+                my $ref_xml_doc = $parser->parse_string($xmlrep);
+                my $ref_root = $ref_xml_doc->documentElement;
+                $xml_doc->adoptNode( $ref_root );
+                $aspect_node->addChild( $ref_root );
+            } else {
+                my $value_node = $aspect_node->addChild( $xml_doc->createElement('value') );
+                
+                unless(defined $value) {
+                    $value = '';
                 }
-#                if ($value !~ /\n/) {
-#                    # multi-value no newline(s)
-#                    $aspect_text .= $indent_text . $indent_text . "<value>$value</value>\n";
-#                }
-#                else {
-                    # multi-value with newline(s)
-#                    $aspect_text .= $self->_indent($indent_text . $indent_text, $value) 
-#                }
+                
+                $value_node->addChild( $xml_doc->createTextNode($value) );
             }
-            $aspect_text .= $indent_text;
         }
-        $aspect_text .= "</aspect>\n";
     }
 
-
-
-    return $aspect_text;
+    return $aspect_node;
 }
 
 # Do not return any aspects by default if we're embedded in another view
@@ -201,20 +198,6 @@ sub _resolve_default_aspects {
         return $self->SUPER::_resolve_default_aspects;
     }
     return;
-}
-
-sub _indent {
-    my ($self,$indent,$value) = @_;
-    
-    unless(defined $value) {
-        $value = '';
-    }
-    
-    chomp $value;
-    my @rows = split(/\n/,$value);
-    my $value_indented = join("\n", map { $indent . $_ } @rows);
-    chomp $value_indented;
-    return $value_indented . "\n";
 }
 
 1;

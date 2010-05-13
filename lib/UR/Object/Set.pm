@@ -9,6 +9,7 @@ class UR::Object::Set {
     is_abstract => 1,
     has => [
         rule                => { is => 'UR::BoolExpr', id_by => 'id' },
+        rule_display        => { via => 'rule', to => '__display_name__'},
         member_class_name   => { via => 'rule', to => 'subject_class_name' },
     ],
     doc => 'an unordered group of distinct UR::Objects'
