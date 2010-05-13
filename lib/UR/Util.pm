@@ -263,6 +263,149 @@ sub generate_readonly_methods
     return 1;
 }
 
+=pod 
+
+=item mapreduce_grep
+
+    my @matches = UR::Util->map_reduce_grep { shift->some_test } @candidates;
+
+Works similar to the Perl C<grep> builtin, but in a possibly-parallel fashion.
+If the environment variable UR_NR_CPU is set to a number greater than one, it
+will fork off child processes to perform the test on slices of the input
+list, collect the results, and return the matching items as a list.
+
+The test function is called with a single argument, an item from the list to
+be tested, and should return a true of false value.
+
+=cut
+
+sub mapreduce_grep($&@) {
+    my $class = shift;
+    my $subref = shift;
+$DB::single=1;
+
+my $total_start_time = Time::HiRes::time();
+    # First check fast... should we do parallel at all?
+    if (!$ENV{'UR_NR_CPU'} or $ENV{'UR_NR_CPU'} < 2) {
+        #return grep { $subref->($_) } @_;
+        my @ret = grep { $subref->($_) } @_;
+my $total_end_time = Time::HiRes::time();
+print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
+        return @ret;
+    }
+
+    my(@read_handles, @child_pids);
+    my $cleanup = sub {
+        foreach my $handle ( @read_handles ) {
+            $handle->close();
+        }
+
+        kill 'TERM', @child_pids;
+
+        foreach my $pid ( @child_pids ) {
+            waitpid($pid,0);
+        }
+    };
+
+    my @things_to_check = @_;
+    my($children, $length,$parent_last);
+    if ($ENV{'UR_NR_CPU'}) {
+        $length = POSIX::ceil(scalar(@things_to_check) / $ENV{'UR_NR_CPU'});
+        $children = $ENV{'UR_NR_CPU'} - 1;
+    } else {
+        $children = 0;
+        $parent_last = $#things_to_check;
+    }
+
+    # FIXME - Need a way to disconnect all datasources, not just this one
+    Genome::DataSource::GMSchema->disconnect_default_dbh;
+
+    my $start = $length;  # First child starts checking after parent's range
+    $parent_last = $length - 1;
+    while ($children-- > 0) {
+        my $pipe = IO::Pipe->new();
+        unless ($pipe) {
+            Carp::carp("pipe() failed: $!\nUnable to create pipes to communicate with child processes to verify transact+ion, falling back to serial verification");
+            $cleanup->();
+            $parent_last = $#things_to_check;
+            last;
+        }
+
+        my $pid = fork();
+        if ($pid) {
+            $pipe->reader();
+            push @read_handles, $pipe;
+            $start += $length;
+
+        } elsif (defined $pid) {
+            $pipe->writer();
+            my $last = $start + $length;
+            $last = $#things_to_check if ($last > $#things_to_check);
+
+print "PID $$ checking from $start to $last\n";
+my $start_time = Time::HiRes::time();
+            #my @objects = grep { $subref->($_) } @things_to_check[$start .. $last];
+            my @matching;
+            for (my $i = $start; $i <= $last; $i++) {
+                if ($subref->($things_to_check[$i])) {
+                    push @matching, $i;
+                }
+            }
+my $end_time = Time::HiRes::time();
+print "PID $$ found ".scalar(@matching). " matching objects in ",$end_time - $start_time ," sec\n";
+            # FIXME - when there's a more general framework for passing objects between
+            # processes, use that instead
+#print "The matches are:\n"; printf("%s  %s\n", $_->class ,$_->id) foreach @objects;
+            #$pipe->printf("%s\n%s\n",$_->class, $_->id) foreach @objects;
+            $pipe->print("$_\n") foreach @matching;
+
+
+            exit;
+
+        } else {
+            Carp::carp("fork() failed: $!\nUnable to create child processes to ver+ify transaction, falling back to seri+al verification");
+            $cleanup->();
+            $parent_last = $#things_to_check;
+        }
+    }
+print "Parent pid $$ checking 0 to $parent_last\n";
+my $start_time = Time::HiRes::time();
+    my @matches = grep { $subref->($_) } @things_to_check[0 .. $parent_last];
+my $end_time = Time::HiRes::time();
+print "Parent pid $$ found ".scalar(@matches). " matching objects in ",$end_time - $start_time ," sec\n";
+
+    foreach my $handle ( @read_handles ) {
+        READ_FROM_CHILD:
+        while(1) {
+            my $match_idx = $handle->getline();
+            last READ_FROM_CHILD unless $match_idx;
+            chomp $match_idx;
+
+            push @matches, $things_to_check[$match_idx];
+            #my $match_class = $handle->getline();
+            #last READ_FROM_CHILD unless $match_class;
+            #chomp($match_class);
+
+            #my $match_id = $handle->getline();
+            #unless (defined $match_id) {
+            #    Carp::carp("Protocol error.  Tried to get object ID for class $match_class while verifying transaction"+);
+            #    last READ_FROM_CHILD;
+            #}
+            #chomp($match_id);
+
+            #push @objects, $match_class->get($match_id);
+        }
+        $handle->close();
+    }
+
+    $cleanup->();
+my $total_end_time = Time::HiRes::time();
+print "Parallel grep took ",$total_end_time - $total_start_time ," sec\n";
+
+    return @matches;
+}
+
+
 1;
 
 =pod
