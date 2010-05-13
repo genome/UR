@@ -135,8 +135,14 @@ sub transform_xml {
     my $parser = XML::LibXML->new;
     my $xslt = XML::LibXSLT->new;
 
+    my $source;
+    if($xml_view->can('_xml_doc') and $xml_view->_xml_doc) {
+        $source = $xml_view->_xml_doc;
+    } else {
+        $source = $parser->parse_string($xml_content);
+    }
+
     # convert the xml
-    my $source = $parser->parse_string($xml_content);
     my $style_doc = $parser->parse_string($xsl_template);
     my $stylesheet = $xslt->parse_stylesheet($style_doc);
     my $results = $stylesheet->transform($source);
