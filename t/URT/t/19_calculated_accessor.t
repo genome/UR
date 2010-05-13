@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 12;
+use Test::More tests => 13;
 
 UR::Object::Type->define(
     class_name => 'Acme',
@@ -57,7 +57,9 @@ UR::Object::Type->define(
     has => [
         quantity    => { type => 'Number' },
         unit_price  => { type => 'Money'  },
-        sub_total   => { type => 'Money', calculate => 'sum',
+        sum_total   => { type => 'Money', calculate => 'sum',
+                            calculate_from => ['quantity','unit_price'] },
+        sub_total   => { type => 'Money', calculate => 'product',
                             calculate_from => ['quantity','unit_price'] },
                             
     ],
@@ -65,6 +67,5 @@ UR::Object::Type->define(
 
 my $line = Acme::LineItem->create(quantity => 5, unit_price => 2);
 ok($line, "made an order line item");
-is($line->sub_total,7, "got the correct sub-total");
-
-
+is($line->sum_total,7, "got the correct sum-total");
+is($line->sub_total,10, "got the correct sub-total");
