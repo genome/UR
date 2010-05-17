@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 39;
+use Test::More tests => 40;
 
 UR::Object::Type->define(
     class_name => 'Acme',
@@ -41,6 +41,7 @@ sub Acme::Employee::email_address {
     return $self->user_name . '@somewhere.tv';
 }
 
+$calculate_called = 0;
 my $e1 = Acme::Employee->create(first_name => "John", last_name => "Doe");
 ok($e1, "created an employee object");
 
@@ -51,6 +52,7 @@ ok($e1->can("email_address"), "employees have an email_address");
 is($e1->full_name,"John Doe", "name check works");
 is($e1->user_name, "jdoe", "user_name check works");
 is($e1->email_address, 'jdoe@somewhere.tv', "email_address check works");
+is($calculate_called, 0, 'The cached calculation sub has not been called yet');
 
 $calculate_called = 0;
 my $saved_uc_full_name = uc($e1->full_name);
