@@ -399,11 +399,11 @@ sub generic_data_type {
     return $generic_data_type_for_vendor_data_type{$_[0]->{data_type}};
 }
 
-sub is_indirect {
-    my $self = shift;
-
-    return ($self->is_delegated || $self->is_calculated || $self->is_legacy_eav);
-}
+#sub is_indirect {
+#    my $self = shift;
+#
+#    return ($self->is_delegated || $self->is_calculated || $self->is_legacy_eav);
+#}
 
 
 

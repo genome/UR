@@ -654,10 +654,11 @@ sub create_entity {
         foreach my $prop ( @property_objects ) {
             my $name = $prop->property_name;
             $default_values{ $prop->property_name } = $prop->default_value if (defined $prop->default_value);
+
             if ($prop->is_many) {
                 $set_properties{$name} = $prop;
             }
-            elsif ($prop->is_indirect) {
+            elsif ($prop->is_delegated || $prop->is_legacy_eav) {
                 $indirect_properties{$name} = $prop;
             }
             else {
@@ -3922,10 +3923,12 @@ sub _reverse_all_changes {
                     foreach my $property_name ( keys %property_names ) {
                         # only do this if the column is not part of the
                         # primary key
+                        my $property_meta = $property_names{$property_name};
                         next if ($id_props{$property_name} ||
-                                 $property_names{$property_name}->is_indirect ||
-                                 ! $property_names{$property_name}->is_mutable ||
-                                 $property_names{$property_name}->is_transient);
+                                 $property_meta->is_delegated ||
+                                 $property_meta->is_legacy_eav ||
+                                 ! $property_meta->is_mutable ||
+                                 $property_meta->is_transient);
                         $object->$property_name($saved->{$property_name});
                     }
                 }
