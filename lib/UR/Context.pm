@@ -750,6 +750,26 @@ sub create_entity {
             delete $params->{ $property_name }
                 if ( exists $params->{ $property_name } );
     }
+
+   # If a property is calculated + constant, that means we need to run the 
+   # calculation once and cache the value in the object
+   foreach my $property_name ( keys %immutable_properties )  {
+       my $property_meta = $property_objects{$property_name};
+       if (!exists($params->{$property_name}) and $property_meta and $property_meta->is_calculated) {
+           # If we call the regular accessor here, it'll go into the read-only
+           # accessor closure.  Instead, we need to look up the 'calculate'
+           # meta-property
+           my $sub = $property_meta->calculate;
+           unless ($sub) {
+               Carp::croak("Can't use undefined value as subroutine reference while resolving value for class $class property $property_name");
+           }
+           my $value = eval { $sub->($class,$params) };
+           if ($@) {
+               Carp::croak("Can't resolve value for class $class property $property_name: $@");
+           }
+           $params->{$property_name} = $value;
+       }
+   }
     
     # create the object.
     my $entity = $class->_create_object(%default_values, %$params, @extra, id => $id);

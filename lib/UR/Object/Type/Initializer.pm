@@ -993,7 +993,10 @@ sub _normalize_property_description {
     }
     
     if (!defined($new_property{is_mutable})) {
-        if ($new_property{is_delegated} or $new_property{is_calculated}) {
+        if ($new_property{is_delegated}
+               or
+             (defined $class_data->{'subclassify_by'} and $class_data->{'subclassify_by'} eq $property_name)
+        ) {
             $new_property{is_mutable} = 0;
         }
         else {
