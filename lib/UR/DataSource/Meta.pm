@@ -130,6 +130,8 @@ sub generate_for_namespace {
     my $meta_datasource_filename = $meta_datasource->module_base_name();
 
     my $meta_datasource_filepath = $namespace_path;
+    return unless defined($meta_datasource_filepath);  # This namespace could be fabricated at runtime
+
     $meta_datasource_filepath =~ s/.pm//;
     $meta_datasource_filepath .= '/DataSource';
     mkdir($meta_datasource_filepath);
