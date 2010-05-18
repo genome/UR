@@ -11,7 +11,7 @@ UR::Object::Type->define(
     class_name => 'Acme::ParentCommand',
     is => 'Command',
     has => [
-        param_a => { is => 'String', is_optional => 1 },
+        param_a => { is => 'String', is_optional => 1, doc => 'Some documentation for param a' },
         param_b => { is => 'String', is_optional => 0 },
     ],
 );
@@ -44,14 +44,14 @@ $usage_string = '';
 my $rv = Acme::ParentCommand->_execute_with_shell_params_and_return_exit_code('--help');
 ok(! $rv, 'Parent command executed');
 like($usage_string, qr(REQUIRED ARGUMENTS\s+param-b\s+String), 'Parent help text lists param-b as required');
-like($usage_string, qr(OPTIONAL ARGUMENTS\s+param-a\s+String), 'Parent help text lists param-a as optional');
+like($usage_string, qr(OPTIONAL ARGUMENTS\s+param-a\s+String\s+Some documentation for param a), 'Parent help text lists param-a as optional');
 unlike($usage_string, qr(REQUIRED ARGUMENTS\s+param-a\s+String), 'Parent help text does not list param-a as required');
 unlike($usage_string, qr(OPTIONAL ARGUMENTS\s+param-b\s+String), 'Parent help text does not list param-b as optional');
 
 $usage_string = '';
 $rv = Acme::ChildCommand->_execute_with_shell_params_and_return_exit_code('--help');
 ok(! $rv, 'Child command executed');
-like($usage_string, qr(param-a\s+String), 'Child help text mentions param-a');
+like($usage_string, qr(param-a\s+String\s+Some documentation for param a), 'Child help text mentions param-a');
 like($usage_string, qr(param-b\s+String), 'Child help text mentions param-b');
 unlike($usage_string, qr(OPTIONAL ARGUMENTS\s+param-a\s+String), 'Child help text does not list param-a as optional');
 

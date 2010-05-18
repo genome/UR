@@ -783,8 +783,7 @@ sub help_options
             eval {
                 foreach my $ancestor_class_meta ( $property_meta->class_meta->ancestry_class_metas ) {
                     my $ancestor_property_meta = $ancestor_class_meta->property_meta_for_name($property_meta->property_name);
-                    if ($ancestor_property_meta and $ancestor_property_meta->doc) {
-                        $doc = $ancestor_property_meta->doc;
+                    if ($ancestor_property_meta and $doc = $ancestor_property_meta->doc) {
                         last;
                     }
                 }
