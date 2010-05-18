@@ -977,12 +977,19 @@ sub _shell_args_property_meta
 {
     my $self = shift;
     my $class_meta = $self->__meta__;
-    my @property_meta = $class_meta->get_all_property_metas(@_);
-    my @result;
+
+    # Find which property metas match the rules.  We have to do it this way
+    # because just calling 'get_all_property_metas()' will product multiple matches 
+    # if a property is overridden in a child class
+    my $rule = UR::Object::Property->define_boolexpr(@_);
     my %seen;
     my (@positional,@required,@optional);
-    for my $property_meta (@property_meta) {
+    foreach my $property_meta ( $class_meta->get_all_property_metas() ) {
         my $property_name = $property_meta->property_name;
+
+        next if $seen{$property_name}++;
+        next unless $rule->evaluate($property_meta);
+
         next if $property_name eq 'id';
         next if $property_name eq 'result';
         next if $property_name eq 'is_executed';
@@ -993,8 +1000,6 @@ sub _shell_args_property_meta
         next if $property_meta->is_calculated;
 #        next if $property_meta->{is_output}; # TODO: This was breaking the G::M::T::Annotate::TranscriptVariants annotator. This should probably still be here but temporarily roll back
         next if $property_meta->is_transient;
-        next if $seen{$property_name};
-        $seen{$property_name} = 1;
         next if $property_meta->is_constant;
         if ($property_meta->{shell_args_position}) {
             push @positional, $property_meta;
@@ -1007,6 +1012,7 @@ sub _shell_args_property_meta
         }
     }
     
+    my @result;
     @result = ( 
         (sort { $a->property_name cmp $b->property_name } @required),
         (sort { $a->property_name cmp $b->property_name } @optional),
