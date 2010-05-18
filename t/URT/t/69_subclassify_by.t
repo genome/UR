@@ -35,7 +35,7 @@ UR::Object::Type->define(
 
 my $e1 = eval { Acme::Employee->create(name => 'Bob') };
 ok(! $e1, 'Unable to create an object from the abstract class');
-like($@, qr(abstract class requires subclass_name to be specified), 'The exception was correct');
+like($@, qr/abstract class requires param 'subclass_name' to be specified/, 'The exception was correct');
 
 $e1 = Acme::Employee->create(name => 'Bob', subclass_name => 'Acme::Employee::Worker');
 ok($e1, 'Created an object from the base class and specified subclass_name');
@@ -71,19 +71,27 @@ is($e1->subclass_name, 'Acme::Employee::Boss', 'subclass_name is correct');
 
 $e1 = eval { Acme::Employee::Worker->create(name => 'Joe', subclass_name => 'Acme::Employee') };
 ok(! $e1, 'Creating an object from a subclass with the base class as subclass_name did not work');
-is($@, 'blah', 'Excaption was correct');
+like($@,
+     qr/Value for subclassifying param 'subclass_name' \(Acme::Employee\) does not match the class it was called on \(Acme::Employee::Worker\)/,
+     'Exception was correct');
 
 $e1 = eval { Acme::Employee::Worker->create(name => 'Joe', subclass_name => 'Acme::Employee::Boss') };
 ok(! $e1, 'Creating an object from a subclass with another subclass as subclass_name did not work');
-is($@, 'blah', 'Exception was correct');
+like($@,
+     qr/Value for subclassifying param 'subclass_name' \(Acme::Employee::Boss\) does not match the class it was called on \(Acme::Employee::Worker\)/,
+     'Exception was correct');
 
 $e1 = eval { Acme::Employee::Boss->create(name => 'Joe', subclass_name => 'Acme::Employee::Worker') };
 ok(! $e1, 'Creating an object from a subclass with another subclass as subclass_name did not work');
-is($@, 'blah', 'Exception was correct');
+like($@,
+     qr/Value for subclassifying param 'subclass_name' \(Acme::Employee::Worker\) does not match the class it was called on \(Acme::Employee::Boss\)/,
+     'Exception was correct');
 
 $e1 = eval { Acme::Employee->create(name => 'Mike', subclass_name => 'Acme::Employee::NonExistent') };
 ok(! $e1, 'Creating an object from the base class and gave invalid subclass_name did not work');
-is($@, 'blah', 'Exception was correct');
+like($@,
+     qr/Class Acme::Employee::NonExistent is not a subclass of Acme::Employee/,
+     'Exception was correct');
 
 
 

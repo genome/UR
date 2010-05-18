@@ -652,7 +652,8 @@ sub create_entity {
     my %default_values;
     my %immutable_properties;
 
-    for my $co ( reverse( $class_meta, $class_meta->ancestry_class_metas ) ) {
+    my @reverse_inheritance = reverse( $class_meta, $class_meta->ancestry_class_metas );
+    for my $co ( @reverse_inheritance ) {
         # Reverse map the ID into property values.
         # This has to occur for all subclasses which represent table rows.
 
@@ -684,8 +685,30 @@ sub create_entity {
                 $immutable_properties{$name} = 1;
             }
         }
+     }
+
+    foreach my $co ( @reverse_inheritance ) {
+        # If this class inherits from something with sbclassify_by, make sure the param
+        # actually matches
+        if ( $class ne $co->class_name
+                 and $co->is_abstract
+                 and my $subclassify_by = $co->subclassify_by
+           ) {
+            my $param_value = $rule->value_for($subclassify_by);
+            $param_value = $default_values{$subclassify_by} unless (defined $param_value);
+            if (! defined $param_value) {
+                # This should have been taken care of by the time we got here...
+                Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                            "Can't use undefined value as a subclass name for param '$subclassify_by'");
+
+            } elsif ($param_value ne $class) {
+                Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                            "Value for subclassifying param '$subclassify_by' " .
+                            "($param_value) does not match the class it was called on ($class)");
+            }
+        }
     }
-    
+
     my @indirect_property_names = keys %indirect_properties;
     my @direct_property_names = keys %direct_properties;
 
