@@ -15,6 +15,19 @@ class UR::Object::Set {
     doc => 'an unordered group of distinct UR::Objects'
 };
 
+sub get_with_special_parameters {
+    my $class = shift;
+    my $bx = shift;
+    my @params = @_;
+
+    my $member_class = $class;
+    $member_class =~ s/::Set$//;
+
+    my $rule = UR::BoolExpr->resolve($member_class, $bx->params_list, @params);
+
+    return $class->get($rule->id);
+}
+
 sub members {
     my $self = shift;
     my $rule = $self->rule;
