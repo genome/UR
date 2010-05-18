@@ -2611,7 +2611,7 @@ sub _default_save_sql_for_object {
             my @changed_cols = reverse sort $table->column_names; 
 
             $sql = " INSERT INTO ";
-            $sql .= "${db_owner}." if ($db_owner) and $table_name !~ /\./;
+            $sql .= "${db_owner}." if ($db_owner);
             $sql .= "$table_name_to_update (" 
                     . join(",", @changed_cols) 
                     . ") VALUES (" 
