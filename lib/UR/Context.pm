@@ -527,22 +527,34 @@ sub create_entity {
         my $subclassify_by = $class_meta->subclassify_by;
         if ($subclassify_by) {
             unless ($rule->specifies_value_for($subclassify_by)) {
-                if ($class_meta->is_abstract) {
-                    my %params_list = $rule->params_list;
-                    my @params_strings;
-                    foreach my $key ( keys %params_list ) {
-                        my $val = $params_list{$key};
-                        $val = '(undef)' unless defined ($val);
-                        push @params_strings, "$key => '$val'";
+                my $property_meta = $class_meta->property($subclassify_by);
+                if ($property_meta->is_calculated) {
+                    # This is ugly... it duplicates code below just above the call to _create_entity()
+                    # If we call the regular accessor here, it'll go into the read-only
+                    # accessor closure.  Instead, we need to look up the 'calculate'
+                    # meta-property
+                    my $sub = $property_meta->calculate;
+                    unless ($sub) {
+                        Carp::croak("Can't use undefined value as subroutine reference while resolving "
+                                    . "value for class $class calculated property '$subclassify_by'");
                     }
+                    my $value = eval { $sub->($class,{ $rule->params_list }) };
+                    if ($@) {
+                        Carp::croak("Can't resolve value for class $class property '$subclassify_by': $@");
+                    }
+                    ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
+                }
+                elsif ($class_meta->is_abstract) {
+                    my %params_list = $rule->params_list;
                     Carp::croak(
                         "Invalid parameters for $class->$construction_method():"
                         . " abstract class requires param '$subclassify_by' to be specified"
-                        . "\nParams were: " 
-                        .  join(', ', @params_strings)
+                        . "\nParams were: " . UR::Util->display_string_for_params_list(%params_list)
                     );               
                 }
                 else {
+                    # It seems that we should never get to this code (else part of two $class_meta->is_abstract...)
+                    die "else part in the subclassify by.  How'd we get here??";
                     ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $subclassify_by => $class, @_);
                     unless ($rule and $rule->specifies_value_for($subclassify_by)) {
                         Carp::croak("Invalid parameters for $class->$construction_method(): " .
@@ -652,8 +664,8 @@ sub create_entity {
     my %default_values;
     my %immutable_properties;
 
-    my @reverse_inheritance = reverse( $class_meta, $class_meta->ancestry_class_metas );
-    for my $co ( @reverse_inheritance ) {
+    my @inheritance = ( $class_meta, $class_meta->ancestry_class_metas );
+    for my $co ( reverse @inheritance ) {
         # Reverse map the ID into property values.
         # This has to occur for all subclasses which represent table rows.
 
@@ -686,28 +698,6 @@ sub create_entity {
             }
         }
      }
-
-    foreach my $co ( @reverse_inheritance ) {
-        # If this class inherits from something with sbclassify_by, make sure the param
-        # actually matches
-        if ( $class ne $co->class_name
-                 and $co->is_abstract
-                 and my $subclassify_by = $co->subclassify_by
-           ) {
-            my $param_value = $rule->value_for($subclassify_by);
-            $param_value = $default_values{$subclassify_by} unless (defined $param_value);
-            if (! defined $param_value) {
-                # This should have been taken care of by the time we got here...
-                Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                            "Can't use undefined value as a subclass name for param '$subclassify_by'");
-
-            } elsif ($param_value ne $class) {
-                Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                            "Value for subclassifying param '$subclassify_by' " .
-                            "($param_value) does not match the class it was called on ($class)");
-            }
-        }
-    }
 
     my @indirect_property_names = keys %indirect_properties;
     my @direct_property_names = keys %direct_properties;
@@ -789,26 +779,49 @@ sub create_entity {
                 if ( exists $params->{ $property_name } );
     }
 
-   # If a property is calculated + constant, that means we need to run the 
-   # calculation once and cache the value in the object
-   foreach my $property_name ( keys %immutable_properties )  {
-       my $property_meta = $property_objects{$property_name};
-       if (!exists($params->{$property_name}) and $property_meta and $property_meta->is_calculated) {
-           # If we call the regular accessor here, it'll go into the read-only
-           # accessor closure.  Instead, we need to look up the 'calculate'
-           # meta-property
-           my $sub = $property_meta->calculate;
-           unless ($sub) {
-               Carp::croak("Can't use undefined value as subroutine reference while resolving value for class $class property $property_name");
-           }
-           my $value = eval { $sub->($class,$params) };
-           if ($@) {
-               Carp::croak("Can't resolve value for class $class property $property_name: $@");
-           }
-           $params->{$property_name} = $value;
-       }
-   }
-    
+    # If a property is calculated + immutable, and it wasn't supplied in the params,
+    # that means we need to run the calculation once and store the value in the
+    # object as a read-only attribute
+    foreach my $property_name ( keys %immutable_properties )  {
+        my $property_meta = $property_objects{$property_name};
+        if (!exists($params->{$property_name}) and $property_meta and $property_meta->is_calculated) {
+            # If we call the regular accessor here, it'll go into the read-only
+            # accessor closure.  Instead, we need to look up the 'calculate'
+            # meta-property
+            my $sub = $property_meta->calculate;
+            unless ($sub) {
+                Carp::croak("Can't use undefined value as subroutine reference while resolving value for class $class property '$property_name'");
+            }
+            my $value = eval { $sub->($class,$params) };
+            if ($@) {
+                Carp::croak("Can't resolve value for class $class property '$property_name': $@");
+            }
+            $params->{$property_name} = $value;
+        }
+     }
+
+     foreach my $co ( @inheritance ) {
+        # If this class inherits from something with subclassify_by, make sure the param
+        # actually matches
+        if ( $class ne $co->class_name
+                 and $co->is_abstract
+                 and my $subclassify_by = $co->subclassify_by
+           ) {
+            my $param_value = $rule->value_for($subclassify_by);
+            $param_value = $default_values{$subclassify_by} unless (defined $param_value);
+            if (! defined $param_value) {
+                # This should have been taken care of by the time we got here...
+                Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                            "Can't use undefined value as a subclass name for param '$subclassify_by'");
+
+            } elsif ($param_value ne $class) {
+                Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                            "Value for subclassifying param '$subclassify_by' " .
+                            "($param_value) does not match the class it was called on ($class)");
+            }
+        }
+    }
+
     # create the object.
     my $entity = $class->_create_object(%default_values, %$params, @extra, id => $id);
     unless ($entity) {
