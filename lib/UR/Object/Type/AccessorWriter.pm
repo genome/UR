@@ -1183,12 +1183,12 @@ sub initialize_direct_accessors {
             my $id_class_by = $property_data->{id_class_by};
             $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where, $id_class_by);
         }
-#        elsif ($property_data->{'is_calculated'} and ! $property_data->{'is_mutable'}) {
-#            # For calculated + immutable properties, their calculation function is called
-#            # by UR::Context->create_entity(), which then stores the value in the object's
-#            # hash.  So, the accessor just needs to pull the data like a regular r/o accessor
-#            $self->mk_ro_accessor($class_name, $accessor_name, $property_data->{'column_name'});
-#        }
+        elsif ($property_data->{'is_calculated'} and ! $property_data->{'is_mutable'}) {
+            # For calculated + immutable properties, their calculation function is called
+            # by UR::Context->create_entity(), which then stores the value in the object's
+            # hash.  So, the accessor just needs to pull the data like a regular r/o accessor
+            $self->mk_ro_accessor($class_name, $accessor_name, $property_data->{'column_name'});
+        }
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
             if ($property_data->{is_mutable}) {
