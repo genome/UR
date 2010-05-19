@@ -526,7 +526,7 @@ sub create_entity {
         # and delegate to that subclass.
         my $subclassify_by = $class_meta->subclassify_by;
         if ($subclassify_by) {
-            unless ($rule->specifies_value_for($subclassify_by)) {
+            if (! $rule->specifies_value_for($subclassify_by)) {
                 my $property_meta = $class_meta->property($subclassify_by);
                 if ($property_meta->is_calculated) {
                     # This is ugly... it duplicates code below just above the call to _create_entity()
@@ -543,6 +543,12 @@ sub create_entity {
                         Carp::croak("Can't resolve value for class $class property '$subclassify_by': $@");
                     }
                     ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
+
+                }
+                elsif ($property_meta->is_delegated) {
+                    my $value = $self->infer_property_value_from_rule($subclassify_by, $rule);
+                    ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
+
                 }
                 elsif ($class_meta->is_abstract) {
                     my %params_list = $rule->params_list;
@@ -561,7 +567,7 @@ sub create_entity {
                                     "Can't create BoolExpr setting value of param '$subclassify_by' to $class");
                     }
                 } 
-            }           
+            }
 
             my $sub_class_name = $rule->value_for($subclassify_by);
             unless (defined $sub_class_name) {

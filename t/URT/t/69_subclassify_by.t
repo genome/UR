@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 42;
+use Test::More tests => 53;
 
 UR::Object::Type->define(
     class_name => 'Acme',
@@ -95,6 +95,65 @@ like($@,
      qr/Class Acme::Employee::NonExistent is not a subclass of Acme::Employee/,
      'Exception was correct');
 
+SKIP: {
+
+    skip 'subclassing with indirect property known not working', 11;
+diag('Tests for indirect property subclassing');
+UR::Object::Type->define(
+    class_name => 'Acme::Rank',
+    has => [
+        name => { is => 'String' },
+        soldier_subclass => { is_calculated => 1,
+            calculate => q( return 'Acme::Soldier::'.ucfirst($self->name) )
+        },
+    ]
+);
+
+UR::Object::Type->define(
+    class_name => 'Acme::Soldier',
+    is_abstract => 1,
+    subclassify_by => 'subclass_name',
+    has => [
+        name => { is => 'String' },
+        rank => { is => 'Acme::Rank' },
+        subclass_name => { via => 'rank', to => 'soldier_subclass' },
+    ],
+);
+
+UR::Object::Type->define(
+    class_name => 'Acme::Soldier::Private',
+    is => 'Acme::Soldier',
+);
+
+UR::Object::Type->define(
+    class_name => 'Acme::Soldier::General',
+    is => 'Acme::Soldier',
+);
+
+my $private = Acme::Rank->create(name => 'Private');
+my $general = Acme::Rank->create(name => 'General');
+
+is($private->soldier_subclass, 'Acme::Soldier::Private', 'Private Rank returns correct soldier subclass');
+is($general->soldier_subclass, 'Acme::Soldier::General', 'General Rank returns correct soldier subclass');
+
+my $s = eval { Acme::Soldier->create(name => 'Pyle') };
+ok(!$s, 'Unable to create an object from the abstract class without a subclass_name');
+like($@, qr/abstract class requires param 'subclass_name' to be specified/, 'Exception is correct');
+
+$s = Acme::Soldier->create(name => 'Pyle', rank => $private);
+ok($s, 'Created object from abstract parent with additional properties');
+isa_ok($s, 'Acme::Soldier::Private');
+
+$s = Acme::Soldier::Private->create(name => 'Beetle');
+ok($s, 'Created object from child class');
+isa_ok($s, 'Acme::Soldier::Private');
+is($s->rank_id, $private->id, 'Its rank_id points to the Private Rank object');
+
+$s = eval { Acme::Soldier::Private->create(name => 'Patton', rank => $general) };
+ok(! $s, 'Unable to create an object from a child class when its rank indicates a different subclass');
+like($@, qr/blah/, 'Exception is correct');
+
+} # end skip indirect property subclassing
 
 diag('Tests for calculated subclassing');
 
