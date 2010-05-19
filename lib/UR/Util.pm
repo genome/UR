@@ -407,6 +407,28 @@ print "Parallel grep took ",$total_end_time - $total_start_time ," sec\n";
 }
 
 
+# Used in several places when printing out hash-like parameters
+# to the user, such as in error messages
+sub display_string_for_params_list {
+    my $class = shift;
+
+    my %params;
+    if (ref($_[0]) =~ 'HASH') {
+        %params = %{$_[0]};
+    } else {
+        %params = @_;
+    }
+
+    my @strings;
+    foreach my $key ( keys %params ) {
+        my $val = $params{$key};
+        $val = defined($val) ? "'$val'" : '(undef)';
+        push @strings, "$key => $val";
+    }
+    return join(', ', @strings);
+}
+
+
 1;
 
 =pod
