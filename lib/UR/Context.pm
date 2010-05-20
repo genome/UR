@@ -490,11 +490,89 @@ sub query {
 
 
 our $construction_method = 'create';
+
+# Pulled out the complicated code of create_entity() below that deals with
+# abstract classes and subclassify_by
+sub _create_entity_from_abstract_class {
+    my $self = shift;
+
+    my $class = shift;
+    my $class_meta = $class->__meta__;
+    my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
+
+    # Determine the correct subclass for this object
+    # and delegate to that subclass.
+    my $subclassify_by = $class_meta->subclassify_by;
+    unless (defined $subclassify_by) {
+        Carp::croak("Can't call $construction_method on abstract class $class without a subclassify_by property");
+    }
+
+    if (! $rule->specifies_value_for($subclassify_by)) {
+        my $property_meta = $class_meta->property($subclassify_by);
+        if ($property_meta->is_calculated) {
+            # This is ugly... it duplicates code below just above the call to _create_entity()
+            # If we call the regular accessor here, it'll go into the read-only
+            # accessor closure.  Instead, we need to look up the 'calculate'
+            # meta-property
+            my $sub = $property_meta->calculate;
+            unless ($sub) {
+                Carp::croak("Can't use undefined value as subroutine reference while resolving "
+                            . "value for class $class calculated property '$subclassify_by'");
+            }
+            my $value = eval { $sub->($class,{ $rule->params_list }) };
+            if ($@) {
+                Carp::croak("Can't resolve value for class $class property '$subclassify_by': $@");
+            }
+            ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
+
+        }
+        elsif ($property_meta->is_delegated) {
+            my $value = $self->infer_property_value_from_rule($subclassify_by, $rule);
+            ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
+
+        }
+        elsif ($class_meta->is_abstract) {
+            my %params_list = $rule->params_list;
+            Carp::croak(
+                "Invalid parameters for $class->$construction_method():"
+                . " abstract class requires param '$subclassify_by' to be specified"
+                . "\nParams were: " . UR::Util->display_string_for_params_list(%params_list)
+            );
+        }
+        else {
+            # It seems that we should never get to this code (else part of two $class_meta->is_abstract...)
+            die "else part in the subclassify by.  How'd we get here??";
+            ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $subclassify_by => $class, @_);
+            unless ($rule and $rule->specifies_value_for($subclassify_by)) {
+                Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                            "Can't create BoolExpr setting value of param '$subclassify_by' to $class");
+            }
+        }
+    }
+
+    my $sub_class_name = $rule->value_for($subclassify_by);
+    unless (defined $sub_class_name) {
+        Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                    "Can't use undefined value as a subclass name for param '$subclassify_by'");
+    }
+    if ($sub_class_name eq $class) {
+        Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                    "Value for $subclassify_by cannot be the same as the original class");
+    }
+    unless ($sub_class_name->isa($class)) {
+        Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                    "Class $sub_class_name is not a subclass of $class");
+    }
+    return $sub_class_name->$construction_method(@_); 
+}
+
+
+
 sub create_entity {
     my $self = shift;
 
     my $class = shift;        
-    my $class_meta = $class->__meta__;        
+    my $class_meta = $class->__meta__;
     
     # Few different ways for automagic subclassing...
 
@@ -520,100 +598,36 @@ sub create_entity {
     # Extract the value of that property from the rule to determine the subclass create() should 
     # really be called on
     if ($class_meta->is_abstract) {
-        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
-
-        # Determine the correct subclass for this object
-        # and delegate to that subclass.
-        my $subclassify_by = $class_meta->subclassify_by;
-        if ($subclassify_by) {
-            if (! $rule->specifies_value_for($subclassify_by)) {
-                my $property_meta = $class_meta->property($subclassify_by);
-                if ($property_meta->is_calculated) {
-                    # This is ugly... it duplicates code below just above the call to _create_entity()
-                    # If we call the regular accessor here, it'll go into the read-only
-                    # accessor closure.  Instead, we need to look up the 'calculate'
-                    # meta-property
-                    my $sub = $property_meta->calculate;
-                    unless ($sub) {
-                        Carp::croak("Can't use undefined value as subroutine reference while resolving "
-                                    . "value for class $class calculated property '$subclassify_by'");
-                    }
-                    my $value = eval { $sub->($class,{ $rule->params_list }) };
-                    if ($@) {
-                        Carp::croak("Can't resolve value for class $class property '$subclassify_by': $@");
-                    }
-                    ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
-
-                }
-                elsif ($property_meta->is_delegated) {
-                    my $value = $self->infer_property_value_from_rule($subclassify_by, $rule);
-                    ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
-
-                }
-                elsif ($class_meta->is_abstract) {
-                    my %params_list = $rule->params_list;
-                    Carp::croak(
-                        "Invalid parameters for $class->$construction_method():"
-                        . " abstract class requires param '$subclassify_by' to be specified"
-                        . "\nParams were: " . UR::Util->display_string_for_params_list(%params_list)
-                    );               
-                }
-                else {
-                    # It seems that we should never get to this code (else part of two $class_meta->is_abstract...)
-                    die "else part in the subclassify by.  How'd we get here??";
-                    ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $subclassify_by => $class, @_);
-                    unless ($rule and $rule->specifies_value_for($subclassify_by)) {
-                        Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                                    "Can't create BoolExpr setting value of param '$subclassify_by' to $class");
-                    }
-                } 
-            }
-
-            my $sub_class_name = $rule->value_for($subclassify_by);
-            unless (defined $sub_class_name) {
-                Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                            "Can't use undefined value as a subclass name for param '$subclassify_by'");
-            }
-            if ($sub_class_name eq $class) {
-                Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                            "Value for $subclassify_by cannot be the same as the original class");
-            }
-            unless ($sub_class_name->isa($class)) {
-                Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                            "Class $sub_class_name is not a subclass of $class");
-            }
-            return $sub_class_name->$construction_method(@_); 
-        }
-        else {
-            Carp::confess("Could not determine proper subclassing for abstract class $class during $construction_method()");
-
-            Carp::confess("$class requires support for a 'type' class which has persistance.  Broken.  Fix me.");
-            # You can accomplish this same thing now with a calculated subclassify_by
-
-            #my $params = $rule->legacy_params_hash;
-            #my $sub_classification_meta_class_name = $class_meta->sub_classification_meta_class_name;
-            # there is some other class of object which typifies each of the subclasses of this abstract class
-            # let that object tell us the class this object goes into
-            #my $type = $sub_classification_meta_class_name->get($type_id);
-            #unless ($type) {
-            #    Carp::confess(
-            #        "Invalid parameters for $class create():"
-            #        . "Failed to find a $sub_classification_meta_class_name"
-            #        . " with identifier $type_id."
-            #    );
-            #}
-            #my $subclass_name = $type->subclass_name($class);
-            #unless ($subclass_name) {
-            #    Carp::confess(
-            #        "Invalid parameters for $class create():"
-            #        . "$sub_classification_meta_class_name '$type_id'"
-            #        . " failed to return a s sub-class name for $class"
-            #    );
-            #}
-            #return $subclass_name->create(@_);
-        }
-
+        return $self->_create_entity_from_abstract_class($class, @_);
     }
+        #else {
+        #    Carp::confess("Could not determine proper subclassing for abstract class $class during $construction_method()");
+
+        #    Carp::confess("$class requires support for a 'type' class which has persistance.  Broken.  Fix me.");
+        #    # You can accomplish this same thing now with a calculated or indirect subclassify_by
+
+        #    #my $params = $rule->legacy_params_hash;
+        #    #my $sub_classification_meta_class_name = $class_meta->sub_classification_meta_class_name;
+        #    # there is some other class of object which typifies each of the subclasses of this abstract class
+        #    # let that object tell us the class this object goes into
+        #    #my $type = $sub_classification_meta_class_name->get($type_id);
+        #    #unless ($type) {
+        #    #    Carp::confess(
+        #    #        "Invalid parameters for $class create():"
+        #    #        . "Failed to find a $sub_classification_meta_class_name"
+        #    #        . " with identifier $type_id."
+        #    #    );
+        #    #}
+        #    #my $subclass_name = $type->subclass_name($class);
+        #    #unless ($subclass_name) {
+        #    #    Carp::confess(
+        #    #        "Invalid parameters for $class create():"
+        #    #        . "$sub_classification_meta_class_name '$type_id'"
+        #    #        . " failed to return a s sub-class name for $class"
+        #    #    );
+        #    #}
+        #    #return $subclass_name->create(@_);
+        #}
 
     # Normal case... just make a rule out of the passed-in params
     my $rule = UR::BoolExpr->resolve_normalized($class, @_);
