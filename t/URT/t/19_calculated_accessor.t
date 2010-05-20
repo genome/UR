@@ -113,8 +113,9 @@ UR::Object::Type->define(
         munged_name => { is_mutable => 0,
                          column_name => 'munged_name',
                          calculate => sub { 
+                             my($class, %params) = @_;
                              $calculate_called = 1; 
-                             return uc($_[1]->{'name'})
+                             return uc($params{'name'})
                          },
                      },
     ],

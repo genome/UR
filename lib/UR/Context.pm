@@ -519,7 +519,7 @@ sub _create_entity_from_abstract_class {
                 Carp::croak("Can't use undefined value as subroutine reference while resolving "
                             . "value for class $class calculated property '$subclassify_by'");
             }
-            my $value = eval { $sub->($class,{ $rule->params_list }) };
+            my $value = eval { $sub->($class, @_) };
             if ($@) {
                 Carp::croak("Can't resolve value for class $class property '$subclassify_by': $@");
             }
@@ -812,7 +812,7 @@ sub create_entity {
             unless ($sub) {
                 Carp::croak("Can't use undefined value as subroutine reference while resolving value for class $class property '$property_name'");
             }
-            my $value = eval { $sub->($class,$params) };
+            my $value = eval { $sub->($class,%default_values, %$params, @extra, id => $id) };
             if ($@) {
                 Carp::croak("Can't resolve value for class $class property '$property_name': $@");
             }
