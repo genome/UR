@@ -302,6 +302,7 @@ sub mk_indirect_rw_accessor {
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
         my @bridges = $self->$via(@where);
+	# TODO: we should throw an exception if >1 bridges are found, b/c this cannot be is_many and also rw.
         if (@_) {            
             $resolve_update_strategy->() unless (defined $update_strategy);
 
@@ -345,7 +346,7 @@ sub mk_indirect_rw_accessor {
                 }
             }
         }
-        return unless @bridges;
+        return undef unless @bridges;
         my @results = map { $_->$to } @bridges;
         $self->context_return(@results); 
     };

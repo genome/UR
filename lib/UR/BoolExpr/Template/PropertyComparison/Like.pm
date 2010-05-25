@@ -28,6 +28,11 @@ sub evaluate_subject_and_values {
 
 sub comparison_value_and_escape_character_to_regex {    
     my ($class, $value, $escape) = @_;
+	
+    # anyone who uses the % as an escape character deserves to suffer
+    if ($value eq '%') {
+	return '^.+$';
+    }
     
     my $regex = $value;
     # Handle the escape sequence    
