@@ -16,7 +16,7 @@ sub _load {
         
     # See if the requested object is loaded.
     my @loaded = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
-    $class->context_return(@loaded) if @loaded;
+    return $class->context_return(@loaded) if @loaded;
 
     # Auto generate the object on the fly.
     unless (defined $rule->value_for_id) {
