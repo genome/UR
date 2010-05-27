@@ -414,7 +414,7 @@ sub mk_indirect_rw_accessor {
 
 
 sub mk_calculation_accessor {
-    my ($self, $class_name, $accessor_name, $calculation_src, $calculate_from, $params, $is_constant) = @_;
+    my ($self, $class_name, $accessor_name, $calculation_src, $calculate_from, $params, $is_cached) = @_;
 
     my $accessor;
     my @src;
@@ -447,21 +447,6 @@ sub mk_calculation_accessor {
             '}'
         );
     }
-    elsif($is_constant) {
-        # memoize on a per-object basis
-        @src = ( 
-            "sub ${class_name}::${accessor_name} {",
-            'my $self = $_[0];',
-            "return \$self->{$accessor_name} if exists \$self->{$accessor_name};",
-            (map { "my \$$_ = \$self->$_;" } @$calculate_from),
-            "\$self->{$accessor_name} = eval {",
-            $calculation_src,
-            "};",
-            'die $@ if $@;',
-            "return \$self->{$accessor_name};",
-            '}'
-        );
-    }    
     else {
         @src = ( 
             "sub ${class_name}::${accessor_name} {",
@@ -489,6 +474,21 @@ sub mk_calculation_accessor {
         else {
             Carp::croak "Error implementing calcuation accessor for $class_name $accessor_name!";
         }
+    }
+
+    if ($accessor and $is_cached) {
+        # Wrap the already-compiled accessor in another function to memoize the
+        # result and save the data into the object
+        my $calculator_sub = $accessor;
+        $accessor = sub {
+            if (@_ > 1) {
+                Carp::croak("Cannot change property $accessor_name for class $class_name: cached calculated properties are read-only");
+            }
+            unless (exists $_[0]->{$accessor_name}) {
+                $_[0]->{$accessor_name} = $calculator_sub->(@_);
+            }
+            return $_[0]->{$accessor_name};
+        };
     }
 
     my $full_name = join( '::', $class_name, $accessor_name );
@@ -1184,7 +1184,7 @@ sub initialize_direct_accessors {
             my $id_class_by = $property_data->{id_class_by};
             $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where, $id_class_by);
         }
-        elsif ($property_data->{'is_calculated'} and ! $property_data->{'is_mutable'}) {
+        elsif ($property_data->{'is_calculated'} and ! $property_data->{'is_mutable'} and $property_data->{'column_name'}) {
             # For calculated + immutable properties, their calculation function is called
             # by UR::Context->create_entity(), which then stores the value in the object's
             # hash.  So, the accessor just needs to pull the data like a regular r/o accessor
