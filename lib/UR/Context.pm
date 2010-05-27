@@ -518,10 +518,8 @@ sub _create_entity_from_abstract_class {
                 Carp::croak("Can't use undefined value as subroutine reference while resolving "
                             . "value for class $class calculated property '$subclassify_by'");
             }
-            my $value = eval { $sub->($class, @_) };
-            if ($@) {
-                Carp::croak("Can't resolve value for class $class property '$subclassify_by': $@");
-            }
+            my $pending_object = bless { @_ }, $class;
+            my $value = $pending_object->$subclassify_by();
             ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
 
         }
@@ -2819,8 +2817,9 @@ sub __create_object_fabricator_for_loading_template {
                 else {
                     $subclass_name = $pending_db_object->$subclassify_by;
                     unless ($subclass_name) {
-                        die "Failed to sub-classify $class while loading; calling method '$subclassify_by' returned false.  Relevant object data: "
-                                       . Data::Dumper::Dumper($pending_db_object);
+                        Carp::croak("Failed to sub-classify $class while loading; calling method "
+                                    . "'$subclassify_by' returned false.  Relevant object data: "
+                                    . Data::Dumper::Dumper($pending_db_object));
                     }
                 }
 

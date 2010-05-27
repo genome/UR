@@ -4,8 +4,15 @@ use strict;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
-use UR;
-use Test::More tests => 55;
+use URT;
+use URT::DataSource::SomeSQLite;
+
+use Test::More tests => 61;
+
+END {
+    unlink URT::DataSource::SomeSQLite->server;
+}
+
 
 UR::Object::Type->define(
     class_name => 'Acme',
@@ -157,32 +164,40 @@ like($@, qr/blah/, 'Exception is correct');
 
 diag('Tests for calculated subclassing');
 
+# First, setup a table we'll use in the next section of tests...
+my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+$dbh->do(q(create table vehicle (vehicle_id integer NOT NULL PRIMARY KEY, color varchar NOT NULL, wheels integer NOT NULL)));
+
 $calculate_called = 0;
 UR::Object::Type->define(
     class_name => 'Acme::Vehicle',
     is_abstract => 1,
     subclassify_by => 'subclass_name',
+    id_by => 'vehicle_id',
     has => [
         color => { is => 'String' },
         wheels => { is => 'Integer' },
-        subclass_name => { calculate => sub { my $class = shift;
-                                              my %params = @_;
+        subclass_name => { calculate_from => ['wheels'],
+                           calculate => sub { my $wheels = shift;
+                                              #my %params = @_;
                                               $calculate_called = 1;
                                               no warnings 'uninitialized';
-                                              if (! exists $params{'wheels'}) {
+                                              if (! defined $wheels) {
                                                   return;
-                                              } elsif ($params{'wheels'} == 2) {
+                                              } elsif ($wheels == 2) {
                                                   return 'Acme::Motorcycle';
-                                              } elsif ($params{'wheels'} == 4) {
+                                              } elsif ($wheels == 4) {
                                                   return 'Acme::Car';
-                                              } elsif ($params{'wheels'} == 0) {
+                                              } elsif ($wheels == 0) {
                                                   return 'Acme::Sled';
                                               } else {
-                                                 die "Can't create a vehicle with $params{'wheels'} wheels";
+                                                 die "Can't create a vehicle with $wheels wheels";
                                               }
                                         },
                              },
     ],
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'vehicle',
 );
 
 UR::Object::Type->define(
@@ -228,3 +243,20 @@ is($v->subclass_name, 'Acme::Car', "It's subclass_name property is filled in");
 ok(! $calculate_called, "Reading the subclass_name property didn't call the calculation sub");
 
 
+diag('Tests for loading with calculated subclassing');
+$dbh->do(q(insert into vehicle(vehicle_id, color, wheels) values (99, 'blue', 2)));
+$dbh->do(q(insert into vehicle(vehicle_id, color, wheels) values (98, 'green', 3)));
+$dbh->do(q(insert into vehicle(vehicle_id, color, wheels) values (97, 'red', 4)));
+
+$calculate_called = 0;
+$v = Acme::Vehicle->get(99);
+ok($v, 'Get an Acme::Vehicle out of the DB');
+ok($calculate_called, 'The calculation function was called');
+isa_ok($v, 'Acme::Motorcycle');
+
+
+$calculate_called = 0;
+$v = eval { Acme::Vehicle->get(98) };
+ok(! $v, 'Acme::Vehicle with 3 wheels failed to load');
+ok($calculate_called, 'The calculation function was called');
+like($@, qr/Can't create a vehicle with 3 wheels/, 'Exception was correct');
