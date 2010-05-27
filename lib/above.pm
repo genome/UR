@@ -27,6 +27,16 @@ sub use_package {
     $module =~ s/::/\//g;
     $module .= ".pm";
 
+    ## paths already found in %used_above have
+    ## higher priority than paths based on cwd
+    for my $path (keys %used_libs) {
+        if (-e "$path/$module") {
+            eval "use $class";
+            die $@ if $@;
+            return;
+        }
+    }
+
     require Cwd;
     my $cwd = Cwd::cwd();
     my @parts = ($cwd =~ /\//g);

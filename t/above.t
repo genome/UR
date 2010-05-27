@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use File::Temp;
-use Test::More tests => 3;
+use Test::More tests => 4;
 use IO::File;
 
 my $d = File::Temp::tempdir; #(CLEANUP => 1);
@@ -26,6 +26,12 @@ my $src = q|perl -e 'use above "Foo"; print $INC{"Foo.pm"}'|;
 my $v = `$src`; 
 is(&clean_darwin($v), "$d/lib2//Foo.pm",
    "Got the original module, not the 2nd one, and not an error."); 
+
+chdir "$d/lib1" or die "Failed to chdir to $d/lib1: $!";
+$v = `$src`;
+is(&clean_darwin($v), "$d/lib2//Foo.pm",
+   "Got the original module, not the 2nd one, and not an error.");
+
 exit(0);
 
 # remove the /private from Mac OS X paths
