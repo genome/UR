@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 13;
+use Test::More tests => 15;
 
 UR::Object::Type->define(
     class_name => 'Acme',
@@ -56,3 +56,13 @@ is($e1->company,$b2->company, "company check works");
 # Hmmm... this only triggered the bug on DataSources backed by a real database
 my @matches = Acme::Employee->get(boss => 'nonsensical');
 ok(scalar(@matches) == 0, 'get employees by boss without boss objects correctly returns 0 items');
+
+
+SKIP: {
+    skip('Create with delegated property always creates a new delegated object', 2);
+    # We'd like some way to specify that it should link up to a delegated object
+    # that may already exist,  Alas, we're not there yet
+    my $e2 = Acme::Employee->create(name => 'Bob', boss_name => 'Bosser');
+    ok($e2, 'created an employee via a boss_name');
+    is($e2->boss_id, $b1->id, 'boss_id of new employee is correct');
+}

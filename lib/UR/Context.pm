@@ -281,7 +281,6 @@ sub infer_property_value_from_rule {
         return;
     }
 
-    
     if ($wanted_property_meta->is_delegated) {
         $self->context_return($self->_infer_delegated_property_from_rule($wanted_property_name,$rule));
     } else {
@@ -527,8 +526,14 @@ sub _create_entity_from_abstract_class {
 
         }
         elsif ($property_meta->is_delegated) {
-            my $value = $self->infer_property_value_from_rule($subclassify_by, $rule);
-            ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
+            Carp::croak("Can't use a delegated property as subclassify_by: class $class subclassify_by ($subclassify_by) is delegated");
+            #my @values = $self->infer_property_value_from_rule($subclassify_by, $rule);
+            #if (@values != 1) {
+            #    Carp::croak("Invalid parameters for $class->$construction_method(): "
+            #                . "expected to infer one value for param '$subclassify_by', but got ".scalar(@values)
+            #                . (scalar(@values) && ": ".join(',', @values)));
+            #}
+            #($rule, %extra) = $rule->add_filter($subclassify_by => $values[0]);
 
         }
         elsif ($class_meta->is_abstract) {
@@ -810,7 +815,7 @@ sub create_entity {
             # meta-property
             my $sub = $property_meta->calculate;
             unless ($sub) {
-                Carp::croak("Can't use undefined value as subroutine reference while resolving value for class $class property '$property_name'");
+                Carp::croak("Can't use an undefined value as subroutine reference while resolving value for class $class property '$property_name'");
             }
             my $value = eval { $sub->($class,%default_values, %$params, @extra, id => $id) };
             if ($@) {
@@ -822,7 +827,8 @@ sub create_entity {
 
      foreach my $co ( @inheritance ) {
         # If this class inherits from something with subclassify_by, make sure the param
-        # actually matches
+        # actually matches.  If it's not supplied, then set it to the same as the class create()
+        # is being called on
         if ( $class ne $co->class_name
                  and $co->is_abstract
                  and my $subclassify_by = $co->subclassify_by
@@ -832,7 +838,7 @@ sub create_entity {
             if (! defined $param_value) {
                 # This should have been taken care of by the time we got here...
                 Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                            "Can't use undefined value as a subclass name for param '$subclassify_by'");
+                            "Can't use an undefined value as a subclass name for param '$subclassify_by'");
 
             } elsif ($param_value ne $class) {
                 Carp::croak("Invalid parameters for $class->$construction_method(): " .

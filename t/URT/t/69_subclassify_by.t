@@ -96,8 +96,8 @@ like($@,
      'Exception was correct');
 
 SKIP: {
-
     skip 'subclassing with indirect property known not working', 11;
+
 diag('Tests for indirect property subclassing');
 UR::Object::Type->define(
     class_name => 'Acme::Rank',
@@ -115,7 +115,7 @@ UR::Object::Type->define(
     subclassify_by => 'subclass_name',
     has => [
         name => { is => 'String' },
-        rank => { is => 'Acme::Rank' },
+        rank => { is => 'Acme::Rank', id_by => 'rank_id' },
         subclass_name => { via => 'rank', to => 'soldier_subclass' },
     ],
 );
@@ -138,7 +138,7 @@ is($general->soldier_subclass, 'Acme::Soldier::General', 'General Rank returns c
 
 my $s = eval { Acme::Soldier->create(name => 'Pyle') };
 ok(!$s, 'Unable to create an object from the abstract class without a subclass_name');
-like($@, qr/abstract class requires param 'subclass_name' to be specified/, 'Exception is correct');
+like($@, qr/expected to infer one value for param 'subclass_name', but got 2/, 'Exception is correct');
 
 $s = Acme::Soldier->create(name => 'Pyle', rank => $private);
 ok($s, 'Created object from abstract parent with additional properties');

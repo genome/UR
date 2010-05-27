@@ -800,21 +800,22 @@ sub _normalize_class_description {
                     last PARENT_CLASS;
                 }
             }
-        }    
+        }
     }
 
     # normalize the data behind the property descriptions    
-    my @properties = keys %$instance_properties;
-    for my $property_name (@properties) {            
+    my @property_names = keys %$instance_properties;
+    for my $property_name (@property_names) {
         my %old_property = %{ $instance_properties->{$property_name} };        
         my %new_property = $class->_normalize_property_description($property_name, \%old_property, \%new_class);
         $instance_properties->{$property_name} = \%new_property;
     }
+
     # Find 'via' properties where the to is '-filter' and rewrite them to 
     # copy some attributes from the source property 
     # This feels like a hack, but it makes other parts of the system easier by
     # not having to deal with -filter
-    foreach my $property_name ( keys %$instance_properties ) {
+    foreach my $property_name ( @property_names ) {
         my $property_data = $instance_properties->{$property_name};
         if ($property_data->{'to'} && $property_data->{'to'} eq '-filter') {
             my $via = $property_data->{'via'};
@@ -838,6 +839,11 @@ sub _normalize_class_description {
             my $parent_class = $parent_class_name->__meta__;
             $desc = $parent_class->_preprocess_subclass_description($desc);
         }
+    }
+
+    if ($new_class{'subclassify_by'} and $instance_properties->{$new_class{'subclassify_by'}}->{'is_delegated'}) {
+        my $subclassify_by = $new_class{'subclassify_by'};
+        Carp::croak("Can't use a delegated property as subclassify_by: class $class_name subclassify_by ($subclassify_by) is delegated");
     }
 
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
