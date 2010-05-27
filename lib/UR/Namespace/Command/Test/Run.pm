@@ -400,7 +400,7 @@ sub _run_tests {
         $timelog_dir->rmtree;
     }
 
-    return 1;
+    return $aggregator->all_passed;
 }
 
 
