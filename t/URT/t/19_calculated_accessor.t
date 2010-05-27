@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 40;
+use Test::More tests => 41;
 
 UR::Object::Type->define(
     class_name => 'Acme',
@@ -118,6 +118,9 @@ UR::Object::Type->define(
                              return uc($params{'name'})
                          },
                      },
+        name2 => { calculate_from => ['self'],
+                   calculate => sub { return $_[0]->name },
+                 },
     ],
     data_source => 'URT::DataSource::SomeSQLite',
     table_name => 'thing',
@@ -151,6 +154,8 @@ $new_thing = Acme::SavedThing->get(name => 'Fred');
 ok($new_thing, 'Got another SavedThing from the DB');
 is($new_thing->munged_name, undef, 'The munged_name property is correctly undef');
 is($calculate_called, 0, 'The calculation sub was not called');
+
+is($new_thing->name, $new_thing->name2, 'calling calculated sub where calculate_from includes "self" works');
 
 ok(UR::Context->commit, 'Saved to the DB');
 
