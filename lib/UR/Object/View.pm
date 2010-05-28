@@ -65,6 +65,7 @@ sub create {
         $params = $params->add_filter(subject_class_name => $expected_class);
     }
     unless ($params->specifies_value_for('perspective')) {
+        $expected_perspective = join('-', split( /(?=[A-Z])/, $expected_perspective) ); #convert CamelCase to hyphenated-words
         $params = $params->add_filter(perspective => $expected_perspective);
     }
     unless ($params->specifies_value_for('toolkit')) {
