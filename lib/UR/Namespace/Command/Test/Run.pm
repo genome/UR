@@ -87,6 +87,10 @@ sub execute {
 
     $DB::single = 1;
 
+    unless ($self->SUPER::_init(@_)) {
+        return;
+    }
+
     if ($self->run_as_lsf_helper) {
         $self->_lsf_test_worker($self->run_as_lsf_helper);
         exit(0);
