@@ -269,6 +269,7 @@ sub mk_indirect_rw_accessor {
     my $adder;
     my $via_property_meta;
     my $r_class_name;
+    my $is_many;
 
     my $resolve_update_strategy = sub {
         unless (defined $update_strategy) {
@@ -281,6 +282,9 @@ sub mk_indirect_rw_accessor {
             # this is only allowed when the remote object has no direct properties
             # which are not id properties.
         
+            my $my_property_meta = $class_name->__meta__->property_meta_for_name($accessor_name);
+            $is_many = $my_property_meta->is_many;
+
             $via_property_meta ||= $class_name->__meta__->property_meta_for_name($via);
             unless ($via_property_meta) {
                 $via_property_meta = $class_name->__meta__->property_meta_for_name($via);
@@ -346,9 +350,21 @@ sub mk_indirect_rw_accessor {
                 }
             }
         }
-        return undef unless @bridges;
-        my @results = map { $_->$to } @bridges;
-        $self->context_return(@results); 
+        if (not defined $is_many) {
+            $resolve_update_strategy->();
+        }
+        if ($is_many) {
+            return unless @bridges;
+            my @results = map { $_->$to } @bridges;
+            $self->context_return(@results); 
+        }
+        else {
+            return undef unless @bridges;
+            my @results = map { $_->$to } @bridges;
+            $self->context_return(@results);
+            #my $value = $self->context_return(@results); 
+            #return $value;
+        }
     };
 
     Sub::Install::reinstall_sub({
