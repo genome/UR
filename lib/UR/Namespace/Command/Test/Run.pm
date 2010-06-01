@@ -355,9 +355,10 @@ sub _run_tests {
         $DB::single=1;
 
         $SIG{'INT'} = sub {
-                              print "\n\nInterrupt...\n\n";
+                              print "\n\nInterrupt.\nWaiting for running tests to finish...\n\n";
                               
                               $My::TAP::Parser::Iterator::Process::LSF::SHOULD_EXIT = 1;
+                              $SIG{'INT'} = 'DEFAULT';
                               #My::TAP::Parser::IteratorFactory::LSF->_kill_running_jobs();
                               #sleep(1);
                               #$aggregator->stop();
