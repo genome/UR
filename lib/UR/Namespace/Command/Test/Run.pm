@@ -43,6 +43,7 @@ UR::Object::Type->define(
         lsf_params        => { is => 'String',  doc => 'Params passed to bsub while submitting jobs to lsf',        is_optional => 1, default_value => '-q short -R select[type=LINUX64]',},
         run_as_lsf_helper => { is => 'String',  doc => 'Used internally by the test harness',                                                is_optional => 1, },
         inc               => { is => 'String',  doc => 'Additional paths for @INC, alias for -I',                              is_many => 1, is_optional => 1, },
+        color             => { is => 'Boolean', doc => 'Use TAP::Harness::Color to generate color output', default_value => 0 },
     ],
 );
 
@@ -296,6 +297,7 @@ sub _run_tests {
     my $formatter = TAP::Formatter::Console->new( {
                         jobs => $self->jobs,
                         show_count => 1,
+                        color => $self->color,
                     } );
     $formatter->quiet();
 
