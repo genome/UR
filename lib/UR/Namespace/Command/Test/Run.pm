@@ -286,9 +286,6 @@ sub _run_tests {
     if ($self->callcount()) {
         $perl_opts .= ' -d:callcount';
     }
-    if (my @inc = $self->inc) {
-        $perl_opts .= join(' ', map { '-I' . Path::Class::Dir->new($_)->absolute } @inc);
-    }
 
     if (UR::Util::used_libs()) {
         $ENV{'PERL5LIB'} = UR::Util::used_libs_perl5lib_prefix() . $ENV{'PERL5LIB'};
@@ -304,10 +301,14 @@ sub _run_tests {
     my %harness_args = ( formatter => $formatter );
 
     $harness_args{'jobs'} = $self->jobs if ($self->jobs > 1);
-    $harness_args{'switches'} = $perl_opts if $perl_opts;
     $harness_args{'test_args'} = $self->script_opts if $self->script_opts;
     $harness_args{'multiplexer_class'} = 'My::TAP::Parser::Multiplexer';
     $harness_args{'scheduler_class'} = 'My::TAP::Parser::Scheduler';
+    
+    if ($self->perl_opts || $self->inc) {
+        $harness_args{'switches'} = [ split(' ', $self->perl_opts),
+                                      map { '-I' . Path::Class::Dir->new($_)->absolute } $self->inc];
+    }
 
     my $timelog_sum = $self->time();
     my $timelog_dir;
