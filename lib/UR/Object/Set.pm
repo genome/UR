@@ -11,6 +11,7 @@ class UR::Object::Set {
         rule                => { is => 'UR::BoolExpr', id_by => 'id' },
         rule_display        => { via => 'rule', to => '__display_name__'},
         member_class_name   => { via => 'rule', to => 'subject_class_name' },
+        members             => { is => 'UR::Object' }
     ],
     doc => 'an unordered group of distinct UR::Objects'
 };
