@@ -87,7 +87,17 @@ sub execute {
 
     $DB::single = 1;
 
-    unless ($self->SUPER::_init(@_)) {
+    # calling _init() will produce an error if not run within a UR namespace dir
+    my $err_setting = $self->dump_error_messages();
+    $self->dump_error_messages(0);
+    eval {
+        if ($self->SUPER::_init(@_)) {
+            $self->status_message("Running tests within namespace ".$self->namespace_name);
+        }
+    };
+    $self->dump_error_messages($err_setting);
+    if ($@) {
+        $self->error_message("There was an exception initializing the test harness:\n$@");
         return;
     }
 
