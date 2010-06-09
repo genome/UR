@@ -12,8 +12,9 @@ UR::Object::Type->define(
 sub evaluate_subject_and_values {
     my $self = shift;
     my $subject = shift;
-    my $lower_bound = shift;
-    my $upper_bound = shift;
+    my $value = shift;
+    my $lower_bound = $value->[0];
+    my $upper_bound = $value->[1];
     my $property_name = $self->property_name;    
     my $property_value = $subject->$property_name;
     no warnings;
