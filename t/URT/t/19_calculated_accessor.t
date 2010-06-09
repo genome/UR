@@ -118,7 +118,7 @@ UR::Object::Type->define(
                              return uc($params{'name'})
                          },
                      },
-        name2 => { calculate_from => ['self'],
+        name2 => { calculate_from => ['__self__'],
                    calculate => sub { return $_[0]->name },
                  },
     ],
@@ -155,7 +155,7 @@ ok($new_thing, 'Got another SavedThing from the DB');
 is($new_thing->munged_name, undef, 'The munged_name property is correctly undef');
 is($calculate_called, 0, 'The calculation sub was not called');
 
-is($new_thing->name, $new_thing->name2, 'calling calculated sub where calculate_from includes "self" works');
+is($new_thing->name, $new_thing->name2, 'calling calculated sub where calculate_from includes __self__ works');
 
 ok(UR::Context->commit, 'Saved to the DB');
 

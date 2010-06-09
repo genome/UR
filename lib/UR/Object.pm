@@ -52,6 +52,13 @@ sub __meta__  {
     return $UR::Context::all_objects_loaded->{"UR::Object::Type"}{$class_name};
 }
 
+# The identity operation.  Not particularly useful by itself, but makes
+# things like mapping operations and arg declarations to calculated properties
+# easier
+sub __self__ {
+    return $_[0];
+}
+
 sub __label_name__ {
     # override to provide default labeling of the object
     my $self = $_[0];

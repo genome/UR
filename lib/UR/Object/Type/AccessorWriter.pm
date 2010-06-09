@@ -447,11 +447,11 @@ sub mk_calculation_accessor {
             if (@_) {
                 Carp::croak("$class_name $accessor_name is a read-only property derived from @$calculate_from");
             }
-            return $calculation_src->(map { ($_ eq 'self') ? $self : $self->$_ } @$calculate_from);
+            return $calculation_src->(map { $self->$_ } @$calculate_from);
         };
     }
     elsif ($calculation_src =~ /^[^\:\W]+$/) {
-        # built-in formula
+        # built-in formula like 'sum' or 'product'
         my $module_name = "UR::Object::Type::AccessorWriter::" . ucfirst(lc($calculation_src));
         eval "use $module_name";
         die $@ if $@;
