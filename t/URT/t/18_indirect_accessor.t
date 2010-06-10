@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 15;
+use Test::More tests => 19;
 
 UR::Object::Type->define(
     class_name => 'Acme',
@@ -58,11 +58,13 @@ my @matches = Acme::Employee->get(boss => 'nonsensical');
 ok(scalar(@matches) == 0, 'get employees by boss without boss objects correctly returns 0 items');
 
 
-SKIP: {
-    skip('Create with delegated property always creates a new delegated object', 2);
-    # We'd like some way to specify that it should link up to a delegated object
-    # that may already exist,  Alas, we're not there yet
-    my $e2 = Acme::Employee->create(name => 'Bob', boss_name => 'Bosser');
-    ok($e2, 'created an employee via a boss_name');
-    is($e2->boss_id, $b1->id, 'boss_id of new employee is correct');
-}
+my $e2 = Acme::Employee->create(name => 'Bob', boss_name => 'Chief');
+ok($e2, 'created an employee via a boss_name that already exists');
+is($e2->boss_id, $b2->id, 'boss_id of new employee is correct, did not make a new Acme::Boss');
+
+my %existing_boss_ids = map { $_->id => $_ } Acme::Boss->get();
+my $e3 = Acme::Employee->create(name => 'Freddy', boss_name => 'New Boss');
+ok($e3, 'Created an employee via a boss_name that did not previously exist');
+ok($e3->boss_id, 'it has a boss_id');
+ok($e3->boss, 'it has a boss object');
+ok(! exists $existing_boss_ids{$e3->boss_id}, 'The new boss_id did not exist before creating this employee');
