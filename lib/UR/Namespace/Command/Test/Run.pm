@@ -22,7 +22,7 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
     has => [
-       bare_args => { is_optional => 1, is_many => 1, shell_args_position => 1
+       bare_args => { is_optional => 1, is_many => 1, shell_args_position => 1, is_input => 1
        },
         recurse           => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.'                                                },
         'time'            => { is => 'String',  doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
@@ -418,7 +418,7 @@ sub _run_tests {
         $timelog_dir->rmtree;
     }
 
-    return $aggregator->all_passed;
+    return !$aggregator->has_problems;
 }
 
 
