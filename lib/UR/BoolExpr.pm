@@ -88,7 +88,23 @@ sub values {
     }
     my $value_id = $self->value_id;    
     return unless defined($value_id) and length($value_id);
-    return UR::BoolExpr::Util->value_id_to_values($value_id);
+    if (my $non_ur_object_refs = $self->{non_ur_object_refs}) {
+        # real objects cannot be serialized into the id easily, and require extra work extracting
+        my $rule_template = $self->template;
+        my @keys_sorted = $rule_template->_underlying_keys;
+        my @values_sorted = UR::BoolExpr::Util->value_id_to_values($value_id);
+        my $n = 0;
+        for my $key (@keys_sorted) {
+            if (exists $non_ur_object_refs->{$key}) {
+                $values_sorted[$n] = $non_ur_object_refs->{$key};
+            }
+            $n++;
+        }
+        return @values_sorted;
+    }
+    else {
+        UR::BoolExpr::Util->value_id_to_values($value_id);
+    }
 }
 
 sub value_for_id {
@@ -167,15 +183,6 @@ sub params_list {
     my @keys_sorted = $rule_template->_underlying_keys;
     my @constant_values_sorted = $rule_template->_constant_values;
     my @values_sorted = $self->values;    
-    if (my $non_ur_object_refs = $self->{non_ur_object_refs}) {
-        my $n = 0;
-        for my $key (@keys_sorted) {
-            if (exists $non_ur_object_refs->{$key}) {
-                $values_sorted[$n] = $non_ur_object_refs->{$key};
-            }
-            $n++;
-        }
-    }
     
     my ($v,$c) = (0,0);
     for (my $k=0; $k<@keys_sorted; $k++) {
@@ -394,6 +401,9 @@ sub resolve {
                 # replace the arrayref
                 $value = [ @$value ];
                 
+                # ensure we re-constitute the original array not a copy
+                push @non_ur_object_refs, $key, $value;
+
                 # transform objects into IDs if applicable
                 my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
                 my $one_or_many = $subject_class_props{$property_name};
@@ -535,10 +545,13 @@ sub normalize {
     if ($rule_template->{is_normalized}) {
         return $self;
     }
-    
     my @unnormalized_values = $self->values();
     
-    return $rule_template->get_normalized_rule_for_values(@unnormalized_values);
+    my $normalized = $rule_template->get_normalized_rule_for_values(@unnormalized_values);
+    return unless $normalized;
+
+    $normalized->{non_ur_object_refs} = $self->{non_ur_object_refs} if exists $self->{non_ur_object_refs};
+    return $normalized;
 }
 
 sub legacy_params_hash {
