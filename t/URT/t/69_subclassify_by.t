@@ -7,7 +7,7 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use URT::DataSource::SomeSQLite;
 
-use Test::More tests => 61;
+use Test::More tests => 84;
 
 END {
     unlink URT::DataSource::SomeSQLite->server;
@@ -44,7 +44,7 @@ UR::Object::Type->define(
 
 my $e1 = eval { Acme::Employee->create(name => 'Bob') };
 ok(! $e1, 'Unable to create an object from the abstract class without a subclass_name');
-like($@, qr/abstract class requires param 'subclass_name' to be specified/, 'The exception was correct');
+like($@, qr/Can't use undefined value as a subclass name/, 'The exception was correct');
 
 $e1 = Acme::Employee->create(name => 'Bob', subclass_name => 'Acme::Employee::Worker');
 ok($e1, 'Created an object from the base class and specified subclass_name');
@@ -102,8 +102,84 @@ like($@,
      qr/Class Acme::Employee::NonExistent is not a subclass of Acme::Employee/,
      'Exception was correct');
 
-SKIP: {
-    skip 'subclassing with indirect property known not working', 11;
+
+
+diag('Tests for default value subclassing');
+
+UR::Object::Type->define(
+    class_name => 'Acme::Tool',
+    is_abstract => 1,
+    subclassify_by => 'subclass_name',
+    has => [
+        sku => { is => 'Number'},
+        subclass_name => { is => 'String', default_value => 'Acme::Tool::Generic' },
+    ],
+);
+
+UR::Object::Type->define(
+    class_name => 'Acme::Tool::Hammer',
+    is => 'Acme::Tool',
+);
+
+UR::Object::Type->define(
+    class_name => 'Acme::Tool::Generic',
+    is => 'Acme::Tool',
+);
+
+my $t = eval { Acme::Tool->create(sku => 123) };
+ok($t, 'Created an Acme::Tool without subclass_name');
+ok(! $@, 'No exception during create');
+is($t->subclass_name, 'Acme::Tool::Generic', 'subclass_name took the default value');
+isa_ok($t, 'Acme::Tool::Generic');
+isa_ok($t, 'Acme::Tool');
+
+$t = eval { Acme::Tool->create(sku => 234, subclass_name => 'Acme::Tool::Generic') };
+ok($t, 'Created an Acme::Tool with subclass_name');
+ok(! $@, 'No exception during create');
+is($t->subclass_name, 'Acme::Tool::Generic', 'subclass_name has the correct value');
+isa_ok($t, 'Acme::Tool::Generic');
+isa_ok($t, 'Acme::Tool');
+
+$t = eval { Acme::Tool::Generic->create(sku => 456) };
+ok($t, 'Created an Acme::Tool::Generic without subclass_name');
+ok(! $@, 'No exception during create');
+is($t->subclass_name, 'Acme::Tool::Generic', 'subclass_name has the correct value');
+isa_ok($t, 'Acme::Tool::Generic');
+isa_ok($t, 'Acme::Tool');
+
+$t = eval { Acme::Tool::Generic->create(sku => 456, subclass_name => 'Acme::Tool::Generic') };
+ok($t, 'Created an Acme::Tool::Generic with subclass_name');
+ok(! $@, 'No exception during create');
+is($t->subclass_name, 'Acme::Tool::Generic', 'subclass_name has the correct value');
+isa_ok($t, 'Acme::Tool::Generic');
+isa_ok($t, 'Acme::Tool');
+
+$t = eval { Acme::Tool::Generic->create(sku => 567, subclass_name => 'Acme::Tool::Broken') };
+ok(! $t, 'Did not create an Acme::Tool::Generic with a non-matching subclass_name');
+like($@,
+     qr/Value for subclassifying param 'subclass_name' \(Acme::Tool::Broken\) does not match the class it was called on \(Acme::Tool::Generic\)/,
+     'Exception was correct');
+
+$t = eval { Acme::Tool->create(sku => 678, subclass_name => 'Acme::Tool::Hammer') };
+ok($t, 'Created an Acme::Tool with subclass_name Acme::Tool::Hammer');
+ok(! $@, 'No exception during create');
+is($t->subclass_name, 'Acme::Tool::Hammer', 'subclass_name has the correct value');
+isa_ok($t, 'Acme::Tool::Hammer');
+isa_ok($t, 'Acme::Tool');
+
+$t = eval { Acme::Tool::Hammer->create(sku => 789, subclass_name => 'Acme::Tool::Hammer') };
+ok($t, 'Created an Acme::Tool::Hammer with subclass_name Acme::Tool::Hammer');
+ok(! $@, 'No exception during create');
+is($t->subclass_name, 'Acme::Tool::Hammer', 'subclass_name has the correct value');
+isa_ok($t, 'Acme::Tool::Hammer');
+isa_ok($t, 'Acme::Tool');
+
+$t = eval { Acme::Tool::Hammer->create(sku => 678, subclass_name => 'Acme::Tool::Generic') };
+ok(! $t, 'Did not create an Acme::Tool::Hammer with a non-matching subclass_name');
+like($@,
+     qr/Value for subclassifying param 'subclass_name' \(Acme::Tool::Generic\) does not match the class it was called on \(Acme::Tool::Hammer\)/,
+     'Exception was correct');
+
 
 diag('Tests for indirect property subclassing');
 UR::Object::Type->define(
@@ -145,22 +221,35 @@ is($general->soldier_subclass, 'Acme::Soldier::General', 'General Rank returns c
 
 my $s = eval { Acme::Soldier->create(name => 'Pyle') };
 ok(!$s, 'Unable to create an object from the abstract class without a subclass_name');
-like($@, qr/expected to infer one value for param 'subclass_name', but got 2/, 'Exception is correct');
+like($@, qr/Delegated properties are not supported for subclassifying Acme::Soldier/, 'Exception is correct');
 
-$s = Acme::Soldier->create(name => 'Pyle', rank => $private);
-ok($s, 'Created object from abstract parent with additional properties');
+SKIP: {
+    skip 'Delegated properties are not supported for subclassifying', 2;
+    $s = eval { Acme::Soldier->create(name => 'Pyle', rank => $private) };
+    ok($s, 'Created object from abstract parent with additional properties');
+    isa_ok($s, 'Acme::Soldier::Private');
+}
+
+$s = Acme::Soldier->create(name => 'Pyle', subclass_name => 'Acme::Soldier::Private');
+ok($s, 'Created object from abstract parent with subclass_name');
 isa_ok($s, 'Acme::Soldier::Private');
+is($s->rank, $private, 'Rank object was filled in properly');
 
 $s = Acme::Soldier::Private->create(name => 'Beetle');
 ok($s, 'Created object from child class');
 isa_ok($s, 'Acme::Soldier::Private');
-is($s->rank_id, $private->id, 'Its rank_id points to the Private Rank object');
+SKIP: {
+    skip 'creation does not fill in rank_id for you', 1;
+    is($s->rank_id, $private->id, 'Its rank_id points to the Private Rank object');
+}
 
 $s = eval { Acme::Soldier::Private->create(name => 'Patton', rank => $general) };
-ok(! $s, 'Unable to create an object from a child class when its rank indicates a different subclass');
-like($@, qr/blah/, 'Exception is correct');
+SKIP: {
+    skip 'creation does not check rank->soldier_subclass against $entity->subclass_name', 2;
+    ok(! $s, 'Unable to create an object from a child class when its rank indicates a different subclass');
+    like($@, qr/Value for subclassifying param 'subclass_name' \(Acme::Soldier::General\) does not match/, 'Exception is correct');
+}
 
-} # end skip indirect property subclassing
 
 diag('Tests for calculated subclassing');
 
@@ -179,7 +268,6 @@ UR::Object::Type->define(
         wheels => { is => 'Integer' },
         subclass_name => { calculate_from => ['wheels'],
                            calculate => sub { my $wheels = shift;
-                                              #my %params = @_;
                                               $calculate_called = 1;
                                               no warnings 'uninitialized';
                                               if (! defined $wheels) {
@@ -218,8 +306,8 @@ UR::Object::Type->define(
 $calculate_called = 0;
 my $v = eval { Acme::Vehicle->create(color => 'blue') };
 ok(! $v, 'Unable to create an object from the abstract class without a subclass_name');
-like($@, qr/Can't use undefined value as a subclass name for param 'subclass_name'/, 'Exception was correct');
-ok($calculate_called, 'The calculation function was called');
+like($@, qr/Class Acme::Vehicle subclassify_by calculation property 'subclass_name' requires 'wheels' in the create\(\) params/, 'Exception was correct');
+ok(! $calculate_called, 'The calculation function was called');
 
 $calculate_called = 0;
 $v = Acme::Vehicle->create(color => 'blue', wheels => 2, subclass_name => 'Acme::Motorcycle');

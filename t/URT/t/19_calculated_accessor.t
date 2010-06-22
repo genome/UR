@@ -112,10 +112,11 @@ UR::Object::Type->define(
         name => { is => 'String' },
         munged_name => { is_mutable => 0,
                          column_name => 'munged_name',
+                         calculate_from => ['name'],
                          calculate => sub { 
-                             my($class, %params) = @_;
+                             my($name) = @_;
                              $calculate_called = 1; 
-                             return uc($params{'name'})
+                             return uc($name)
                          },
                      },
         name2 => { calculate_from => ['__self__'],
