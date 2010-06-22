@@ -492,6 +492,47 @@ our $construction_method = 'create';
 
 # Pulled out the complicated code of create_entity() below that deals with
 # abstract classes and subclassify_by
+sub _X_subclassify_entity_of_abstract_class {
+    my $self = shift;
+    my $entity = shift;
+
+    my $class_meta = $entity->__meta__;
+    my $class = $entity->class;
+    my $subclassify_by = $class_meta->subclassify_by;
+    unless (defined $subclassify_by) {
+        Carp::croak("Can't call $construction_method on abstract class $class without a subclassify_by property");
+    }
+
+    my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
+    # There are three ways the subclassify_by data can be resolved
+    # 1) It's a regular property and the rule/params gives a value
+    # 2) It's a calculated property.  Run the calculation once and
+    #    re-call create() supplying the value
+    # 3) It's a delegated property
+    my $sub_class_name = $rule->value_for($subclassify_by);
+    if (! defined($sub_class_name)) {
+        $sub_class_name = eval { $entity->$subclassify_by() };
+    }
+
+    # Remove the old, incorrectly-classed object
+    $entity->delete();
+
+    unless (defined $sub_class_name) {
+        Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                    "Can't use undefined value as a subclass name for param '$subclassify_by'");
+    }
+    if ($sub_class_name eq $class) {
+        Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                    "Resolved value for $subclassify_by cannot be the same as the original, abstract class");
+    }
+    unless ($sub_class_name->isa($class)) {
+        Carp::croak("Invalid parameters for $class->$construction_method(): " .
+                    "Resolved class $sub_class_name is not a subclass of $class");
+    }
+    return $sub_class_name->$construction_method(@_); 
+}
+
+    
 sub _create_entity_from_abstract_class {
     my $self = shift;
 
@@ -499,61 +540,64 @@ sub _create_entity_from_abstract_class {
     my $class_meta = $class->__meta__;
     my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
 
-    # Determine the correct subclass for this object
-    # and delegate to that subclass.
-    my $subclassify_by = $class_meta->subclassify_by;
+    # If we can easily determine the correct subclass, delegate to that subclass' create()
+    my $subclassify_by = $class_meta->subclassify_by();
     unless (defined $subclassify_by) {
         Carp::croak("Can't call $construction_method on abstract class $class without a subclassify_by property");
     }
 
-    if (! $rule->specifies_value_for($subclassify_by)) {
+    my $sub_class_name = $rule->value_for($subclassify_by);
+    unless (defined $sub_class_name) {
+        # The subclassification wasn't included in the rule
         my $property_meta = $class_meta->property($subclassify_by);
-        if ($property_meta->is_calculated) {
-            # This is ugly... it duplicates code below just above the call to _create_entity()
-            # If we call the regular accessor here, it'll go into the read-only
-            # accessor closure.  Instead, we need to look up the 'calculate'
-            # meta-property
+        unless ($property_meta) {
+            Carp::croak("Abstract class $class has subclassify_by $subclassify_by, but no property exists by that name");
+        }
+
+        # There are a few different ways the property can supply a value for subclassify_by...
+        # The sure-fire way to get a value is to go ahead an instantiate the object into the
+        # base/abstract class, and then we can just call the property as a method.  There's
+        # a lot of overhead in that, so first we'll try some of the easier, common-case ways
+
+        if ($property_meta->default_value) {
+            # The property has a default value
+            $sub_class_name = $property_meta->default_value();
+
+        } elsif ($property_meta->is_calculated and ref($property_meta->calculate) eq 'CODE') {
+            # It's calculated via a coderef
+
+            my $calculate_from = $property_meta->calculate_from;
+            my @calculate_params;
+            foreach my $prop_name ( @$calculate_from ) {
+                # The things in calculate_from must appear in the rule
+                unless ($rule->specifies_value_for($prop_name)) {
+                    Carp::croak("Class $class subclassify_by calculation property '$subclassify_by' "
+                                . "requires '$prop_name' in the $construction_method() params\n"
+                                . "Params were: " . UR::Util->display_string_for_params_list($rule->params_list));
+                }
+                push @calculate_params, $rule->value_for($prop_name);
+            }
+
             my $sub = $property_meta->calculate;
             unless ($sub) {
                 Carp::croak("Can't use undefined value as subroutine reference while resolving "
                             . "value for class $class calculated property '$subclassify_by'");
             }
-            my $pending_object = bless { @_ }, $class;
-            my $value = $pending_object->$subclassify_by();
-            ($rule, %extra) = $rule->add_filter($subclassify_by => $value);
+            $sub_class_name = $sub->(@calculate_params);
 
-        }
-        elsif ($property_meta->is_delegated) {
-            Carp::croak("Can't use a delegated property as subclassify_by: class $class subclassify_by ($subclassify_by) is delegated");
+        } elsif ($property_meta->is_calculated and !ref($property_meta->calculate)) {
+            # It's calculated via a string that's eval-ed
+            Carp::croak("Can't use a non-coderef as a calculation for class $class subclassify_by");
+
+        } elsif ($property_meta->is_delegated) {
+            Carp::croak("Delegated properties are not supported for subclassifying $class with property '$subclassify_by'");
             #my @values = $self->infer_property_value_from_rule($subclassify_by, $rule);
-            #if (@values != 1) {
-            #    Carp::croak("Invalid parameters for $class->$construction_method(): "
-            #                . "expected to infer one value for param '$subclassify_by', but got ".scalar(@values)
-            #                . (scalar(@values) && ": ".join(',', @values)));
-            #}
-            #($rule, %extra) = $rule->add_filter($subclassify_by => $values[0]);
 
-        }
-        elsif ($class_meta->is_abstract) {
-            my %params_list = $rule->params_list;
-            Carp::croak(
-                "Invalid parameters for $class->$construction_method():"
-                . " abstract class requires param '$subclassify_by' to be specified"
-                . "\nParams were: " . UR::Util->display_string_for_params_list(%params_list)
-            );
-        }
-        else {
-            # It seems that we should never get to this code (else part of two $class_meta->is_abstract...)
-            die "else part in the subclassify by.  How'd we get here??";
-            ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $subclassify_by => $class, @_);
-            unless ($rule and $rule->specifies_value_for($subclassify_by)) {
-                Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                            "Can't create BoolExpr setting value of param '$subclassify_by' to $class");
-            }
+        } else {
+            Carp::croak("Can't use undefined value as a subclass name for $class property '$subclassify_by'");
         }
     }
 
-    my $sub_class_name = $rule->value_for($subclassify_by);
     unless (defined $sub_class_name) {
         Carp::croak("Invalid parameters for $class->$construction_method(): " .
                     "Can't use undefined value as a subclass name for param '$subclassify_by'");
@@ -570,15 +614,13 @@ sub _create_entity_from_abstract_class {
 }
 
 
-
 sub create_entity {
     my $self = shift;
 
     my $class = shift;        
     my $class_meta = $class->__meta__;
     
-    # Few different ways for automagic subclassing...
-
+    # The old way of automagic subclassing...
     # #1 - The class specifies that we should call this other method (sub_classification_method_name)
     # to determine the correct subclass
     if (my $method_name = $class_meta->first_sub_classification_method_name) {
@@ -586,54 +628,22 @@ sub create_entity {
         my $sub_class_name = $class->$method_name(@_);
         if (defined($sub_class_name) and ($sub_class_name ne $class)) {
             # delegate to the sub-class to create the object
-            no warnings;
+            #no warnings;
             unless ($sub_class_name->can($construction_method)) {
                 $DB::single = 1;
-                #print $sub_class_name->can($construction_method);
-                Carp::croak("$class has determined via $method_name that the correct subclass for this object is $sub_class_name.  This class cannot $construction_method!" . join(",",$sub_class_name->inheritance));
+                Carp::croak("Can't locate object method '$construction_method' via package '$sub_class_name' "
+                            . "while resolving proper subclass for $class during $construction_method");
+
             }
             return $sub_class_name->$construction_method(@_);
         }
         # fall through if the class names match
-    }
-
-    # #2 - The class create() was called on is abstract and has a subclassify_by property named.
-    # Extract the value of that property from the rule to determine the subclass create() should 
-    # really be called on
-    if ($class_meta->is_abstract) {
+    } elsif ($class_meta->is_abstract) {
         return $self->_create_entity_from_abstract_class($class, @_);
     }
-        #else {
-        #    Carp::confess("Could not determine proper subclassing for abstract class $class during $construction_method()");
-
-        #    Carp::confess("$class requires support for a 'type' class which has persistance.  Broken.  Fix me.");
-        #    # You can accomplish this same thing now with a calculated or indirect subclassify_by
-
-        #    #my $params = $rule->legacy_params_hash;
-        #    #my $sub_classification_meta_class_name = $class_meta->sub_classification_meta_class_name;
-        #    # there is some other class of object which typifies each of the subclasses of this abstract class
-        #    # let that object tell us the class this object goes into
-        #    #my $type = $sub_classification_meta_class_name->get($type_id);
-        #    #unless ($type) {
-        #    #    Carp::confess(
-        #    #        "Invalid parameters for $class create():"
-        #    #        . "Failed to find a $sub_classification_meta_class_name"
-        #    #        . " with identifier $type_id."
-        #    #    );
-        #    #}
-        #    #my $subclass_name = $type->subclass_name($class);
-        #    #unless ($subclass_name) {
-        #    #    Carp::confess(
-        #    #        "Invalid parameters for $class create():"
-        #    #        . "$sub_classification_meta_class_name '$type_id'"
-        #    #        . " failed to return a s sub-class name for $class"
-        #    #    );
-        #    #}
-        #    #return $subclass_name->create(@_);
-        #}
 
     # Normal case... just make a rule out of the passed-in params
-    my $rule = UR::BoolExpr->resolve_normalized($class, @_);
+    my($rule,%extra) = UR::BoolExpr->resolve_normalized($class, @_);
 
     # Process parameters.  We do this here instead of 
     # waiting for _create_object to do it so that we can ensure that
@@ -687,8 +697,10 @@ sub create_entity {
     my %default_values;
     my %immutable_properties;
 
+    my %properties_seen;
     my @inheritance = ( $class_meta, $class_meta->ancestry_class_metas );
-    for my $co ( reverse @inheritance ) {
+    #for my $co ( reverse @inheritance ) {
+    for my $co ( @inheritance ) {
         # Reverse map the ID into property values.
         # This has to occur for all subclasses which represent table rows.
 
@@ -704,6 +716,8 @@ sub create_entity {
 
         foreach my $prop ( @property_objects ) {
             my $name = $prop->property_name;
+            next if ($properties_seen{$name}++);
+
             $default_values{ $prop->property_name } = $prop->default_value if (defined $prop->default_value);
 
             if ($prop->is_many) {
@@ -714,6 +728,8 @@ sub create_entity {
             }
             else {
                 $direct_properties{$name} = $prop;
+                #delete $indirect_properties{$name};  # If this overrides a parent property
+                #delete $default_values{$name};  # If this overrides a parent property
             }
             
             unless ($prop->is_mutable) {
@@ -802,6 +818,17 @@ sub create_entity {
                 if ( exists $params->{ $property_name } );
     }
 
+    # create the object.
+    my $entity = $class->_create_object(%default_values, %$params, @extra, id => $id);
+    return unless $entity;
+    #if ($class_meta->is_abstract) {
+    #    # The new way of automagic subclassing with the class meta's subclassify_by property
+    #    #return $self->_subclassify_entity_of_abstract_class($entity, %extra, %default_values, %$params, @extra, id => $id);
+    #    return $self->_subclassify_entity_of_abstract_class($entity, %extra, %default_values, %$params, @extra, id => $id, @_);
+    #    # FIXME - don't forget to remove the object cache entry that was created for the parent class obj
+    #}
+
+
     # If a property is calculated + immutable, and it wasn't supplied in the params,
     # that means we need to run the calculation once and store the value in the
     # object as a read-only attribute
@@ -811,14 +838,15 @@ sub create_entity {
             # If we call the regular accessor here, it'll go into the read-only
             # accessor closure.  Instead, we need to look up the 'calculate'
             # meta-property
-            my $sub = $property_meta->calculate;
-            unless ($sub) {
-                Carp::croak("Can't use an undefined value as subroutine reference while resolving value for class $class property '$property_name'");
-            }
-            my $value = eval { $sub->($class,%default_values, %$params, @extra, id => $id) };
-            if ($@) {
-                Carp::croak("Can't resolve value for class $class property '$property_name': $@");
-            }
+            #my $sub = $property_meta->calculate;
+            #unless ($sub) {
+            #    Carp::croak("Can't use an undefined value as subroutine reference while resolving value for class $class property '$property_name'");
+            #}
+            #my $value = eval { $sub->($entity) };
+            my $value = $entity->$property_name;
+            #if ($@) {
+            #    Carp::croak("Can't resolve value for class $class property '$property_name': $@");
+            #}
             $params->{$property_name} = $value;
         }
      }
@@ -844,12 +872,6 @@ sub create_entity {
                             "($param_value) does not match the class it was called on ($class)");
             }
         }
-    }
-
-    # create the object.
-    my $entity = $class->_create_object(%default_values, %$params, @extra, id => $id);
-    unless ($entity) {
-        return;
     }
 
     # add items for any multi properties
@@ -916,6 +938,8 @@ sub create_entity {
     $UR::Context::all_objects_cache_size++;
     return $entity;
 }
+
+
 
 sub delete_entity {
     my ($self,$entity) = @_;
@@ -2748,10 +2772,12 @@ sub __create_object_fabricator_for_loading_template {
                     (ref($pending_db_object) eq $class) # not already subclased  
             ) {
                 if ($sub_classification_method_name) {
+                    $DB::single=1;
                     $subclass_name = $class->$sub_classification_method_name($pending_db_object);
                     unless ($subclass_name) {
+                        my $pending_obj_id = eval { $pending_db_object->id };
                         Carp::confess(
-                            "Failed to sub-classify $class using method " 
+                            "Object with id '$pending_obj_id' loaded as abstract class $class failed to subclassify itself using method "
                             . $sub_classification_method_name
                         );
                     }
