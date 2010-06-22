@@ -841,10 +841,14 @@ sub _normalize_class_description {
         }
     }
 
-    if ($new_class{'subclassify_by'} and $instance_properties->{$new_class{'subclassify_by'}}->{'is_delegated'}) {
-        my $subclassify_by = $new_class{'subclassify_by'};
-        Carp::croak("Can't use a delegated property as subclassify_by: class $class_name subclassify_by ($subclassify_by) is delegated");
-    }
+    #if (my $subclassify_by = $new_class{'subclassify_by'}) {
+    #    my $subclassify_property = $instance_properties->{$subclassify_by};
+    #    if ($subclassify_property->{'is_delegated'}) {
+    #        Carp::croak("Invalid property for class $class subclassify_by '$subclassify_by': delegated properties are not supported");
+    #    } elsif ($subclassify_property->{'calculate'} and !ref($subclassify_property->{'calculate'})) {
+    #        Carp::croak("Invalid property for class $class subclassify_by '$subclassify_by': non-coderef calculations are not supported");
+    #    } 
+    #}
 
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $desc->{meta_class_name} ||= $meta_class_name;
