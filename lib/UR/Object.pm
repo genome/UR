@@ -53,8 +53,8 @@ sub __meta__  {
 }
 
 # The identity operation.  Not particularly useful by itself, but makes
-# things like mapping operations and arg declarations to calculated properties
-# easier
+# things like mapping operations easier and calculate_from metadata able
+# to include the object as function args to calculated properties
 sub __self__ {
     return $_[0];
 }
