@@ -430,7 +430,7 @@ sub mk_indirect_rw_accessor {
 
 
 sub mk_calculation_accessor {
-    my ($self, $class_name, $accessor_name, $calculation_src, $calculate_from, $params, $is_cached) = @_;
+    my ($self, $class_name, $accessor_name, $calculation_src, $calculate_from, $params, $is_cached, $column_name) = @_;
 
     my $accessor;
     my @src;
@@ -513,6 +513,25 @@ sub mk_calculation_accessor {
         as   => $accessor_name,
         code => $accessor,
     });
+
+    if ($column_name)
+    {
+        $column_name = uc($column_name);
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => $column_name,
+            code => $accessor,
+        });
+
+        # These are for backward-compatability with old modules.  Remove asap.
+        no strict 'refs';
+
+        ${$class_name . '::column_for_property'}
+            {$accessor_name} = $column_name;
+
+        ${$class_name . '::property_for_column'}
+            {$accessor_name} = $accessor_name;
+    }
 
     return $accessor;
 }
@@ -1199,11 +1218,20 @@ sub initialize_direct_accessors {
             my $id_class_by = $property_data->{id_class_by};
             $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where, $id_class_by);
         }
-        elsif ($property_data->{'is_calculated'} and ! $property_data->{'is_mutable'} and $property_data->{'column_name'}) {
+        elsif ($property_data->{'is_calculated'} and ! $property_data->{'is_mutable'}) {# and $property_data->{'column_name'}) {
             # For calculated + immutable properties, their calculation function is called
             # by UR::Context->create_entity(), which then stores the value in the object's
             # hash.  So, the accessor just needs to pull the data like a regular r/o accessor
-            $self->mk_ro_accessor($class_name, $accessor_name, $property_data->{'column_name'});
+            #$self->mk_ro_accessor($class_name, $accessor_name, $property_data->{'column_name'});
+            $self->mk_calculation_accessor(
+                $class_name,
+                $accessor_name,
+                $property_data->{'calculate'},
+                $property_data->{calculate_from},
+                $property_data->{calculate_params},
+                1,  # the value should be cached
+                $property_data->{'column_name'},
+            );
         }
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
@@ -1227,6 +1255,7 @@ sub initialize_direct_accessors {
                 $property_data->{calculate_from},
                 $property_data->{calculate_params},
                 $property_data->{is_constant},
+                $property_data->{column_name},
             );
         } 
         elsif (my $calculate_sql = $property_data->{'calculate_sql'}) {
@@ -1383,7 +1412,7 @@ updates the $to property on the refered-to object.
 =item mk_calculation_accessor
 
     $classobj->mk_calculation_accessor($class_name, $accessor_name, $calculation_src,
-                                       $calculate_from, $params, $is_constant);
+                                       $calculate_from, $params, $is_constant, $column_name);
 
 Creates a calculated accessor called $accessor_name.  If the $is_constant
 flag is true, then the accessor runs the calculation once, caches the result,
