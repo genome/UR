@@ -7,7 +7,7 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use URT::DataSource::SomeSQLite;
 
-use Test::More tests => 84;
+use Test::More tests => 98;
 
 END {
     unlink URT::DataSource::SomeSQLite->server;
@@ -238,10 +238,7 @@ is($s->rank, $private, 'Rank object was filled in properly');
 $s = Acme::Soldier::Private->create(name => 'Beetle');
 ok($s, 'Created object from child class');
 isa_ok($s, 'Acme::Soldier::Private');
-SKIP: {
-    skip 'creation does not fill in rank_id for you', 1;
-    is($s->rank_id, $private->id, 'Its rank_id points to the Private Rank object');
-}
+is($s->rank_id, $private->id, 'Its rank_id points to the Private Rank object');
 
 $s = eval { Acme::Soldier::Private->create(name => 'Patton', rank => $general) };
 SKIP: {

@@ -621,7 +621,7 @@ sub create_entity {
     my $class_meta = $class->__meta__;
     
     # The old way of automagic subclassing...
-    # #1 - The class specifies that we should call this other method (sub_classification_method_name)
+    # The class specifies that we should call a class method (sub_classification_method_name)
     # to determine the correct subclass
     if (my $method_name = $class_meta->first_sub_classification_method_name) {
         my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
@@ -638,7 +638,10 @@ sub create_entity {
             return $sub_class_name->$construction_method(@_);
         }
         # fall through if the class names match
+
     } elsif ($class_meta->is_abstract) {
+        # The new way of automagic subclassing.  The class specifies a property (subclassify_by)
+        # that holds/returns the correct subclass name
         return $self->_create_entity_from_abstract_class($class, @_);
     }
 
@@ -716,7 +719,7 @@ sub create_entity {
 
         foreach my $prop ( @property_objects ) {
             my $name = $prop->property_name;
-            next if ($properties_seen{$name}++);
+            #next if ($properties_seen{$name}++);
 
             $default_values{ $prop->property_name } = $prop->default_value if (defined $prop->default_value);
 
@@ -781,15 +784,30 @@ sub create_entity {
             Carp::croak("No metadata for class $class property $source_indirect_property while resolving indirect value for property $source_indirect_property");
         }
 
-        my $foreign_class = $via_property_meta->data_type;
-        my $foreign_object = $foreign_class->get($indirect_property_meta->to => $source_value);
+        my $foreign_property_meta;
+        if ($indirect_property_meta->to) {
+            # it's a real indirect property
+            my $foreign_property_meta = $indirect_property_meta->final_property_meta();
+        } else {
+            # We're probably dealing with a subclassify_by property where the subclass has
+            # implicitly overridden the indirect property in the parent class with a constant-value
+            # property in the subclass.  Try asking the parent class about a property of the same name
+            ($indirect_property_meta) = grep { $_->property_name eq $indirect_property_meta->property_name } $class_meta->ancestry_property_metas();
+            unless ($indirect_property_meta and $indirect_property_meta->to) {
+                Carp::croak("Can't resolve indirect relationship for possibly overridden property '$source_indirect_property'"
+                            . " in class $class.  Parent classes have no property named '$source_indirect_property'");
+            }
+            $foreign_property_meta = $indirect_property_meta->final_property_meta();
+        }
+        my $foreign_class = $foreign_property_meta->class_name;
+        my $foreign_property = $foreign_property_meta->property_name;
+        my $foreign_object = $foreign_class->get($foreign_property => $source_value);
         unless ($foreign_object) {
             # This will trigger recursion back here (into create_entity() ) if this property is multiply
             # indirect, such as through a bridge object
-            $foreign_object = $foreign_class->create($indirect_property_meta->to => $source_value);
+            $foreign_object = $foreign_class->create($foreign_property => $source_value);
             unless ($foreign_object) {
-                Carp::croak("Can't create object of class $foreign_class with params ("
-                            . $indirect_property_meta->to . " => '" . $source_value . "')"
+                Carp::croak("Can't create object of class $foreign_class with params ($foreign_property => '$source_value')"
                             . " while resolving indirect value for class $class property $source_indirect_property");
             }
 
@@ -860,6 +878,7 @@ sub create_entity {
                  and my $subclassify_by = $co->subclassify_by
            ) {
             my $param_value = $rule->value_for($subclassify_by);
+            $param_value = eval { $entity->$subclassify_by } unless (defined $param_value);
             $param_value = $default_values{$subclassify_by} unless (defined $param_value);
             if (! defined $param_value) {
                 # This should have been taken care of by the time we got here...
