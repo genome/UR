@@ -7,7 +7,7 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use URT::DataSource::SomeSQLite;
 
-use Test::More tests => 98;
+use Test::More tests => 102;
 
 END {
     unlink URT::DataSource::SomeSQLite->server;
@@ -221,14 +221,17 @@ is($general->soldier_subclass, 'Acme::Soldier::General', 'General Rank returns c
 
 my $s = eval { Acme::Soldier->create(name => 'Pyle') };
 ok(!$s, 'Unable to create an object from the abstract class without a subclass_name');
-like($@, qr/Delegated properties are not supported for subclassifying Acme::Soldier/, 'Exception is correct');
+like($@, qr/Infering a value for property 'subclass_name' via rule.*returned multiple values/, 'Exception is correct');
 
-SKIP: {
-    skip 'Delegated properties are not supported for subclassifying', 2;
-    $s = eval { Acme::Soldier->create(name => 'Pyle', rank => $private) };
-    ok($s, 'Created object from abstract parent with additional properties');
-    isa_ok($s, 'Acme::Soldier::Private');
-}
+$s = eval { Acme::Soldier->create(name => 'Pyle', rank => $private) };
+ok($s, 'Created object from abstract parent, subclassed via an indirect object property');
+is($s->subclass_name, 'Acme::Soldier::Private', 'subclass_name is correct');
+isa_ok($s, 'Acme::Soldier::Private');
+
+$s = eval { Acme::Soldier->create(name => 'Pyle', rank_id => $private->id) };
+ok($s, 'Created object from abstract parent, subclassed via an indirect object ID');
+is($s->subclass_name, 'Acme::Soldier::Private', 'subclass_name is correct');
+isa_ok($s, 'Acme::Soldier::Private');
 
 $s = Acme::Soldier->create(name => 'Pyle', subclass_name => 'Acme::Soldier::Private');
 ok($s, 'Created object from abstract parent with subclass_name');

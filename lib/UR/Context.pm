@@ -590,8 +590,18 @@ sub _create_entity_from_abstract_class {
             Carp::croak("Can't use a non-coderef as a calculation for class $class subclassify_by");
 
         } elsif ($property_meta->is_delegated) {
-            Carp::croak("Delegated properties are not supported for subclassifying $class with property '$subclassify_by'");
-            #my @values = $self->infer_property_value_from_rule($subclassify_by, $rule);
+            #Carp::croak("Delegated properties are not supported for subclassifying $class with property '$subclassify_by'");
+            my @values = $self->infer_property_value_from_rule($subclassify_by, $rule);
+            if (! @values ) {
+                Carp::croak("Invalid parameters for $class->$construction_method(): "
+                            . "Couldn't infer a value for indirect property '$subclassify_by' via rule $rule");
+            } elsif (@values > 1) {
+                Carp::croak("Invalid parameters for $class->$construction_method(): "
+                            . "Infering a value for property '$subclassify_by' via rule $rule returned multiple values: "
+                            . join(', ', @values));
+            } else {
+                $sub_class_name = $values[0];
+            }
 
         } else {
             Carp::croak("Can't use undefined value as a subclass name for $class property '$subclassify_by'");
