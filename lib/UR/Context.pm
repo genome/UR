@@ -711,10 +711,8 @@ sub create_entity {
     my %default_values;
     my %immutable_properties;
 
-    my %properties_seen;
     my @inheritance = ( $class_meta, $class_meta->ancestry_class_metas );
-    #for my $co ( reverse @inheritance ) {
-    for my $co ( @inheritance ) {
+    for my $co ( reverse @inheritance ) {
         # Reverse map the ID into property values.
         # This has to occur for all subclasses which represent table rows.
 
@@ -730,9 +728,8 @@ sub create_entity {
 
         foreach my $prop ( @property_objects ) {
             my $name = $prop->property_name;
-            #next if ($properties_seen{$name}++);
 
-            $default_values{ $prop->property_name } = $prop->default_value if (defined $prop->default_value);
+            $default_values{$name} = $prop->default_value if (defined $prop->default_value);
 
             if ($prop->is_many) {
                 $set_properties{$name} = $prop;
