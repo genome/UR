@@ -648,8 +648,9 @@ sub create_entity {
             return $sub_class_name->$construction_method(@_);
         }
         # fall through if the class names match
+    }
 
-    } elsif ($class_meta->is_abstract) {
+    if ($class_meta->is_abstract) {
         # The new way of automagic subclassing.  The class specifies a property (subclassify_by)
         # that holds/returns the correct subclass name
         return $self->_create_entity_from_abstract_class($class, @_);
