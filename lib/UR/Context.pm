@@ -609,16 +609,16 @@ sub _create_entity_from_abstract_class {
     }
 
     unless (defined $sub_class_name) {
-        Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                    "Can't use undefined value as a subclass name for param '$subclassify_by'");
+        Carp::croak("Invalid parameters for $class->$construction_method(): "
+                    . "Can't use undefined value as a subclass name for param '$subclassify_by'");
     }
     if ($sub_class_name eq $class) {
-        Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                    "Value for $subclassify_by cannot be the same as the original class");
+        Carp::croak("Invalid parameters for $class->$construction_method(): "
+                    . "Value for $subclassify_by cannot be the same as the original class");
     }
     unless ($sub_class_name->isa($class)) {
-        Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                    "Class $sub_class_name is not a subclass of $class");
+        Carp::croak("Invalid parameters for $class->$construction_method(): "
+                    . "Class $sub_class_name is not a subclass of $class");
     }
     return $sub_class_name->$construction_method(@_); 
 }
