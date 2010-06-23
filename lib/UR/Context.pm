@@ -831,6 +831,18 @@ sub create_entity {
                 next unless (exists $direct_properties{$source_property_name});
                 my $foreign_property_name = $join->{'foreign_property_names'}->[$i];
                 my $value = $foreign_object->$foreign_property_name;
+
+                if ($rule->specifies_value_for($source_property_name)
+                        and
+                        $rule->value_for($source_property_name) ne $value)
+                {
+                    Carp::croak("Invalid parameters for $class->$construction_method(): "
+                                . "Conflicting values for property '$source_property_name'.  $construction_method rule "
+                                . "specifies value '" . $rule->value_for($source_property_name) . "' but "
+                                . "indirect immutable property '$source_indirect_property' with value "
+                                . "$source_value requires it to be '$value'");
+                }
+
                 $local_properties_to_set{$source_property_name} = $value;
             }
         }

@@ -244,11 +244,8 @@ isa_ok($s, 'Acme::Soldier::Private');
 is($s->rank_id, $private->id, 'Its rank_id points to the Private Rank object');
 
 $s = eval { Acme::Soldier::Private->create(name => 'Patton', rank => $general) };
-SKIP: {
-    skip 'creation does not check rank->soldier_subclass against $entity->subclass_name', 2;
-    ok(! $s, 'Unable to create an object from a child class when its rank indicates a different subclass');
-    like($@, qr/Value for subclassifying param 'subclass_name' \(Acme::Soldier::General\) does not match/, 'Exception is correct');
-}
+ok(! $s, 'Unable to create an object from a child class when its rank indicates a different subclass');
+like($@, qr/Conflicting values for property 'rank_id'/, 'Exception is correct');
 
 
 diag('Tests for calculated subclassing');
