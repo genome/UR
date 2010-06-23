@@ -794,11 +794,7 @@ sub create_entity {
             Carp::croak("No metadata for class $class property $source_indirect_property while resolving indirect value for property $source_indirect_property");
         }
 
-        my $foreign_property_meta;
-        if ($indirect_property_meta->to) {
-            # it's a real indirect property
-            my $foreign_property_meta = $indirect_property_meta->final_property_meta();
-        } else {
+        unless ($indirect_property_meta->to) {
             # We're probably dealing with a subclassify_by property where the subclass has
             # implicitly overridden the indirect property in the parent class with a constant-value
             # property in the subclass.  Try asking the parent class about a property of the same name
@@ -807,10 +803,9 @@ sub create_entity {
                 Carp::croak("Can't resolve indirect relationship for possibly overridden property '$source_indirect_property'"
                             . " in class $class.  Parent classes have no property named '$source_indirect_property'");
             }
-            $foreign_property_meta = $indirect_property_meta->final_property_meta();
         }
-        my $foreign_class = $foreign_property_meta->class_name;
-        my $foreign_property = $foreign_property_meta->property_name;
+        my $foreign_class = $via_property_meta->data_type;
+        my $foreign_property = $indirect_property_meta->to;
         my $foreign_object = $foreign_class->get($foreign_property => $source_value);
         unless ($foreign_object) {
             # This will trigger recursion back here (into create_entity() ) if this property is multiply
