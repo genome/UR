@@ -4,6 +4,9 @@ use strict;
 use warnings;
 use IO::File;
 
+use XML::LibXML;
+use XML::LibXSLT;
+
 class UR::Object::View::Default::Xsl {
     is => 'UR::Object::View::Default::Text',
     has => [
@@ -23,6 +26,9 @@ class UR::Object::View::Default::Xsl {
         },
     ]
 };
+
+use Exporter 'import';
+our @EXPORT_OK = qw(type_to_url url_to_type);
 
 sub _generate_content {
     my $self = shift;
@@ -151,8 +157,34 @@ sub transform_xml {
     return $content;
 }
 
-1;
+sub type_to_url {
+    join(
+        '/',
+        map {
+            s/(?<!^)([[:upper:]]{1})/-$1/g;
+            lc;
+          } split( '::', $_[0] )
+    );
+}
 
+sub url_to_type {
+    join(
+        '::',
+        map {
+            $_ = ucfirst;
+            s/-(\w{1})/\u$1/g;
+            $_;
+          } split( '/', $_[0] )
+    );
+}
+
+## register a helper function for xslt
+#  this translates Genome::InstrumentData to genome/instrument-data
+XML::LibXSLT->register_function( 'urn:rest', 'typetourl', \&type_to_url );
+XML::LibXSLT->register_function( 'urn:rest', 'urltotype', \&url_to_type );
+
+
+1;
 
 =pod
 

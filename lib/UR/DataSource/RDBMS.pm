@@ -1813,8 +1813,26 @@ sub _sync_database {
             $all_table_commands{"delete $table_name"} = 1;
         }
 
-        # Go through the constraints.
         my $tmparray;
+
+        # handle multiple differnt ops on the same table
+        if ($insert{$table_name} and $update{$table_name}) {
+            # insert before update
+            $tmparray = $prerequisites{"update $table_name"}{"insert $table_name"} ||= [];
+            $tmparray = $dependants{"insert $table_name"}{"update $table_name"} ||= [];
+        }
+        if ($delete{$table_name} and $update{$table_name}) {
+            # update before delete
+            $tmparray = $prerequisites{"delete $table_name"}{"update $table_name"} ||= [];
+            $tmparray = $dependants{"update $table_name"}{"delete $table_name"} ||= [];
+        }
+        if ($delete{$table_name} and $insert{$table_name} and not $update{$table_name}) {
+            # delete before insert
+            $tmparray = $prerequisites{"insert $table_name"}{"delete $table_name"} ||= [];
+            $tmparray = $dependants{"delete $table_name"}{"insert $table_name"} ||= [];
+        }
+        
+        # Go through the constraints.
         for my $fk (@fk)
         {
             my $r_table_name = $fk->r_table_name;

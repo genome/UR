@@ -10,7 +10,7 @@ UR::Object::Type->define(
     id_by => [
         table => {
             is => 'UR::DataSource::RDBMS::Table',
-            id_by => [qw/data_source owner table_name column_name/],
+            id_by => [qw/data_source owner table_name/],
         },
         src => { is => 'Text' },
     ],

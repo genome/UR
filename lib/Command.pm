@@ -181,12 +181,12 @@ sub _execute_delegate_class_with_params {
 
     unless ($delegate_class) {
         $class->usage_message($class->help_usage_complete_text);
-        return 1;
+        return;
     }
     
     if (!$params or $params->{help}) {
         $delegate_class->usage_message($delegate_class->help_usage_complete_text,"\n");
-        return 1;
+        return;
     }
 
     $delegate_class->dump_status_messages(1);

@@ -22,7 +22,7 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
     has => [
-       bare_args => { is_optional => 1, is_many => 1, shell_args_position => 1
+       bare_args => { is_optional => 1, is_many => 1, shell_args_position => 1, is_input => 1
        },
         recurse           => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.'                                                },
         'time'            => { is => 'String',  doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
@@ -40,7 +40,7 @@ UR::Object::Type->define(
         callcount         => { is => 'Boolean', doc => 'Count the number of calls to each subroutine/method',                                is_optional => 1                       },
         jobs              => { is => 'Number',  doc => 'How many tests to run in parallel',                                                  is_optional => 1, default_value => 1,  },
         lsf               => { is => 'Boolean', doc => 'If true, tests will be submitted as jobs via bsub' },
-        lsf_params        => { is => 'String',  doc => 'Params passed to bsub while submitting jobs to lsf',        is_optional => 1, default_value => '-q short -R select[type=LINUX64]',},
+        lsf_params        => { is => 'String',  doc => 'Params passed to bsub while submitting jobs to lsf',        is_optional => 1, default_value => '-q short -R select[type==LINUX64]',},
         run_as_lsf_helper => { is => 'String',  doc => 'Used internally by the test harness',                                                is_optional => 1, },
         inc               => { is => 'String',  doc => 'Additional paths for @INC, alias for -I',                              is_many => 1, is_optional => 1, },
         color             => { is => 'Boolean', doc => 'Use TAP::Harness::Color to generate color output', default_value => 0 },
@@ -87,7 +87,17 @@ sub execute {
 
     $DB::single = 1;
 
-    unless ($self->SUPER::_init(@_)) {
+    # calling _init() will produce an error if not run within a UR namespace dir
+    my $err_setting = $self->dump_error_messages();
+    $self->dump_error_messages(0);
+    eval {
+        if ($self->SUPER::_init(@_)) {
+            $self->status_message("Running tests within namespace ".$self->namespace_name);
+        }
+    };
+    $self->dump_error_messages($err_setting);
+    if ($@) {
+        $self->error_message("There was an exception initializing the test harness:\n$@");
         return;
     }
 
@@ -408,7 +418,7 @@ sub _run_tests {
         $timelog_dir->rmtree;
     }
 
-    return $aggregator->all_passed;
+    return !$aggregator->has_problems;
 }
 
 
@@ -881,7 +891,7 @@ directory, and runs ALL tests under that directory.
 =item --lsf-params
 
  Parameters given to bsub when sceduling jobs.  The default is
- "-q short -R select[type=LINUX64]"
+ "-q short -R select[type==LINUX64]"
 
 =item --jobs <number>
 
