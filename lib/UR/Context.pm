@@ -657,7 +657,7 @@ sub create_entity {
     }
 
     # Normal case... just make a rule out of the passed-in params
-    my($rule,%extra) = UR::BoolExpr->resolve_normalized($class, @_);
+    my $rule = UR::BoolExpr->resolve_normalized($class, @_);
 
     # Process parameters.  We do this here instead of 
     # waiting for _create_object to do it so that we can ensure that
