@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 69;
+use Test::More tests => 75;
 
 UR::Object::Type->define(
     class_name => 'URT::Parent',
@@ -20,6 +20,14 @@ UR::Object::Type->define(
     is => 'URT::Parent',
     has => [
         color => { is => 'String', default_value => 'clear' },
+    ],
+);
+
+UR::Object::Type->define(
+    class_name => 'URT::GrandChild',
+    is => 'URT::Child',
+    has => [
+        name => { is => 'String', default_value => 'Doe' },
     ],
 );
 
@@ -154,6 +162,14 @@ is($p->name, 'Fred', 'Returns the correct name');
 my $c = URT::Child->create();
 ok($c, 'Created a child object without name or color');
 is($c->name, 'Anonymous', 'child has the default value for name');
+is($c->color, 'clear', 'child has the default value for color');
+is($c->name('Joe'), 'Joe', 'we can set the value for name');
+is($c->name, 'Joe', 'And it returns the correct name after setting it');
+is($c->color, 'clear', 'color still returns the default value');
+
+$c = URT::GrandChild->create();
+ok($c, 'Created a grandchild object without name or color');
+is($c->name, 'Doe', 'child has the default value for name');
 is($c->color, 'clear', 'child has the default value for color');
 is($c->name('Joe'), 'Joe', 'we can set the value for name');
 is($c->name, 'Joe', 'And it returns the correct name after setting it');
