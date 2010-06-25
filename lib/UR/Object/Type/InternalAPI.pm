@@ -933,7 +933,7 @@ sub _use_safe {
     my $class_path = $target_class . ".pm";
     $class_path =~ s/\:\:/\//g;
 
-    local @INC = @INC;
+    my @INC_COPY = @INC;
     if ($expected_directory) {
         unshift @INC, $expected_directory;
     }
@@ -966,7 +966,16 @@ sub _use_safe {
     # and isn't propogating the error message about what caused the compile to fail
     if ($@) {
         #local $SIG{__DIE__};
+
+        @INC = @INC_COPY;
         die ("ERROR DYNAMICALLY LOADING CLASS $target_class\n$@");
+    }
+
+    for (0..$#INC) {
+        if ($INC[$_] eq $expected_directory) {
+            splice @INC, $_, 1;
+            last;
+        }
     }
 
     return 1;
