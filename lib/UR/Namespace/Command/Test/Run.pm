@@ -241,7 +241,6 @@ sub _run_tests {
         push @cover_specific_modules, get_status_file_list('cvs');
     }
 
-
     if (@cover_specific_modules) {
         my $dbh = DBI->connect("dbi:SQLite:/gsc/var/cache/testsuite/coverage_metrics.sqlitedb","","");
         $dbh->{PrintError} = 0;
@@ -575,18 +574,40 @@ sub next_idle_worker {
 
     while(! @{$state->{'idle_jobs'}} ) {
 
+        my $did_create_new_worker = 0;
         if (@{$state->{'lsf_jobids'}} < $state->{'max_jobs'}) {
             $proto->create_new_worker();
+            $did_create_new_worker = 1;
         }
 
         sleep(1);
 
-        $proto->process_events();
+        my $count = $proto->process_events($did_create_new_worker ? 10 : 0);
+        if (! $did_create_new_worker and ! $count) {
+            unless ($proto->_verify_lsf_jobs_are_still_alive()) {
+                print "\n*** The LSF worker jobs are having trouble starting up... Exiting\n";
+                kill 'INT', $$;
+                sleep 2;
+                kill 'INT', $$;
+            }
+        }
     }
 
     my $worker = shift @{$state->{'idle_jobs'}};
     return $worker;
 }
+
+sub _verify_lsf_jobs_are_still_alive {
+    my $alive = 0;
+    foreach my $jobid ( @{$state->{'lsf_jobids'}} ) {
+        my @output = `bjobs $jobid`;
+        next unless $output[1];  # expired jobs only have 1 line of output: Job <xxxx> is not found
+        my @stat = split(/\s+/, $output[1]);
+        $alive++ if ($stat[2] eq 'RUN' or $stat[2] eq 'PEND');
+    }
+    return $alive;
+}
+        
 
 #sub worker_is_now_idle {
 #    my($proto, $worker) = @_;
@@ -623,6 +644,7 @@ sub create_new_worker {
 
 sub process_events {
     my $proto = shift;
+    my $timeout = shift || 0;
 
     my $listen = $state->{'listen'};
     unless ($listen) {
@@ -638,11 +660,13 @@ sub process_events {
         $select = $state->{'select'} = IO::Select->new($listen);
     }
 
+    my $processed_events = 0;
     while(1) {
-        my @ready = $select->can_read(0);
+        my @ready = $select->can_read($timeout);
         last unless (@ready);
 
         foreach my $handle ( @ready ) {
+            $processed_events++;
             if ($handle eq $listen) {
                 my $socket = $listen->accept();
                 unless ($socket) {
@@ -654,8 +678,10 @@ sub process_events {
             } else {
                 # shoulnd't get here...
             }
+            $timeout = 0;  # just do a poll() next time around
         }
     }
+    return $processed_events;
 }
 
 
@@ -762,7 +788,10 @@ sub _initialize {
 
     my $handle = My::TAP::Parser::IteratorFactory::LSF->next_idle_worker();
     # Tell the worker to run the command
-    $handle->print(join(' ', @command) . "\n");
+    unless($handle->print(join(' ', @command) . "\n")) {
+        print "Couldn't send command to worker on host ".$handle->peeraddr." port ".$handle->peerport.": $!\n";
+        print "Handle is " . ( $handle->connected ? '' : '_not_' ) . " connected\n";
+    }
 
     $self->{'out'} = $handle;
     $self->{'err'} = '';
