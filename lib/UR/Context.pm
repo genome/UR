@@ -492,47 +492,6 @@ our $construction_method = 'create';
 
 # Pulled out the complicated code of create_entity() below that deals with
 # abstract classes and subclassify_by
-sub _X_subclassify_entity_of_abstract_class {
-    my $self = shift;
-    my $entity = shift;
-
-    my $class_meta = $entity->__meta__;
-    my $class = $entity->class;
-    my $subclassify_by = $class_meta->subclassify_by;
-    unless (defined $subclassify_by) {
-        Carp::croak("Can't call $construction_method on abstract class $class without a subclassify_by property");
-    }
-
-    my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, @_);
-    # There are three ways the subclassify_by data can be resolved
-    # 1) It's a regular property and the rule/params gives a value
-    # 2) It's a calculated property.  Run the calculation once and
-    #    re-call create() supplying the value
-    # 3) It's a delegated property
-    my $sub_class_name = $rule->value_for($subclassify_by);
-    if (! defined($sub_class_name)) {
-        $sub_class_name = eval { $entity->$subclassify_by() };
-    }
-
-    # Remove the old, incorrectly-classed object
-    $entity->delete();
-
-    unless (defined $sub_class_name) {
-        Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                    "Can't use undefined value as a subclass name for param '$subclassify_by'");
-    }
-    if ($sub_class_name eq $class) {
-        Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                    "Resolved value for $subclassify_by cannot be the same as the original, abstract class");
-    }
-    unless ($sub_class_name->isa($class)) {
-        Carp::croak("Invalid parameters for $class->$construction_method(): " .
-                    "Resolved class $sub_class_name is not a subclass of $class");
-    }
-    return $sub_class_name->$construction_method(@_); 
-}
-
-    
 sub _create_entity_from_abstract_class {
     my $self = shift;
 
@@ -2806,7 +2765,6 @@ sub __create_object_fabricator_for_loading_template {
                     (ref($pending_db_object) eq $class) # not already subclased  
             ) {
                 if ($sub_classification_method_name) {
-                    $DB::single=1;
                     $subclass_name = $class->$sub_classification_method_name($pending_db_object);
                     unless ($subclass_name) {
                         my $pending_obj_id = eval { $pending_db_object->id };
