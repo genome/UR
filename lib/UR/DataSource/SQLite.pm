@@ -597,4 +597,107 @@ sub _get_info_from_sqlite_master {
 }
 
 
+# This is used if, for whatever reason, we can't sue the sqlite3 command-line
+# program to load up the database.  We'll make a good-faith effort to parse
+# the SQL text, but it won't be fancy.  This is intended to be used to initialize
+# meta DB dumps, so we should have to worry about escaping quotes, multi-line
+# statements, etc.
+#
+# The real DB file should be moved out of the way before this is called.  The existing
+# DB file will be removed.
+sub _load_db_from_dump_internal {
+    my $self = shift;
+    my $file_name = shift;
+
+$DB::single=1;
+    my $fh = IO::File->new($file_name);
+    unless ($fh) {
+        Carp::croak("Can't open DB dump file $file_name: $!");
+    }
+
+#    my $dbh = $self->get_default_handle();
+#    if ($dbh) {
+#        $self->disconnect_default_handle();
+        if (-f $self->_database_file_path) {
+            unless(unlink($self->_database_file_path)) {
+                Carp::croak("Can't remove DB file " . $self->_database_file_path . ": $!");
+            }
+        }
+#    }
+    my $dbh = $self->get_default_handle();
+
+    my $dump_file_contents = do { local( $/ ) ; <$fh> };
+    my @sql = split(';',$dump_file_contents);
+
+    for (my $i = 0; $i < @sql; $i++) {
+        my $sql = $sql[$i];
+        next unless ($sql =~ m/\S/);  # Skip blank lines
+        next if ($sql =~ m/BEGIN TRANSACTION|COMMIT/i);  # We're probably already in a transaction
+        unless ($dbh->do($sql)) {
+            Carp::croak("Error processing SQL statement $i from DB dump file:\n$sql\nDBI error was: $DBI::errstr\n");
+        }
+    }
+
+    $dbh->commit();
+    $self->disconnect_default_handle();
+
+    return 1;
+}
+
+sub _dump_db_to_file_internal {
+    my $self = shift;
+
+    my $file_name = $self->_data_dump_path();
+    my $fh = IO::File->new($file_name, '>');
+    unless ($fh) {
+        Carp::croak("Can't open DB dump file $file_name for writing: $!");
+    }
+
+    my $dbh = $self->get_default_handle();
+    unless ($dbh) {
+        Carp::croak("Can't open DB handle for ".$self->server.": $DBI::errstr");
+    }
+
+    $fh->print("BEGIN TRANSACTION;\n");
+
+    my @tables = $self->_get_table_names_from_data_dictionary();
+    foreach my $table ( @tables ) {
+        my($item_info) = $self->_get_info_from_sqlite_master($table);
+        my $creation_sql = $item_info->{'sql'};
+        $creation_sql .= ";" unless(substr($creation_sql, -1, 1) eq ";");
+        $creation_sql .= "\n" unless(substr($creation_sql, -1, 1) eq "\n");
+
+        $fh->print($creation_sql);
+
+        if ($item_info->{'type'} eq 'table') {
+            my $sth = $dbh->prepare("select * from $table");
+            unless ($sth) {
+                Carp::croak("Can't retrieve data from table $table: $DBI::errstr");
+            }
+            unless($sth->execute()) {
+                Carp::croak("execute() failed while retrieving data for table $table: $DBI::errstr");
+            }
+
+            while(my @row = $sth->fetchrow_array) {
+                foreach my $col ( @row ) {
+                    if (! defined $col) {
+                        $col = 'null';
+                    } elsif ($col =~ m/\D/) {
+                        $col = "'" . $col . "'";  # Put quotes around non-numeric stuff
+                    }
+                }
+                $fh->printf("INSERT INTO \"%s\" VALUES (%s);\n",
+                            $table,
+                            join(',', @row));
+            }
+        }
+    }
+    $fh->print("COMMIT;\n");
+
+    $fh->close();
+
+    return 1;
+}
+            
+
 1;
