@@ -44,6 +44,7 @@ UR::Object::Type->define(
         run_as_lsf_helper => { is => 'String',  doc => 'Used internally by the test harness',                                                is_optional => 1, },
         inc               => { is => 'String',  doc => 'Additional paths for @INC, alias for -I',                              is_many => 1, is_optional => 1, },
         color             => { is => 'Boolean', doc => 'Use TAP::Harness::Color to generate color output', default_value => 0 },
+        junit             => { is => 'Boolean', doc => 'Run all tests with junit style XML output. (requires TAP::Formatter::JUnit)' },
     ],
 );
 
@@ -57,6 +58,7 @@ ur test run                             # runs all tests in the t/ directory und
 ur test run t/mytest1.t My/Class.t      # run specific tests
 ur test run -v -t --cover-svk-changes   # run tests to cover latest svk updates
 ur test run -I ../some/path/            # Adds ../some/path to perl's @INC through -I
+ur test run --junit                     # writes test output in junit's xml format (consumable by Hudson integration system)
 EOS
 }
 
@@ -304,14 +306,26 @@ sub _run_tests {
         $ENV{'PERL5LIB'} = UR::Util::used_libs_perl5lib_prefix() . $ENV{'PERL5LIB'};
     }
 
-    my $formatter = TAP::Formatter::Console->new( {
-                        jobs => $self->jobs,
-                        show_count => 1,
-                        color => $self->color,
-                    } );
-    $formatter->quiet();
-
-    my %harness_args = ( formatter => $formatter );
+    my %harness_args;
+    my $formatter;
+    if ($self->junit) {
+        eval "use TAP::Formatter::JUnit;";
+        if ($@) {
+            Carp::croak("Couldn't use TAP::Formatter::JUnit for junit output: $@");
+        }
+        %harness_args = ( formatter_class => 'TAP::Formatter::JUnit',
+                          merge => 1,
+                          timer => 1,
+                        );
+    } else {
+        $formatter = TAP::Formatter::Console->new( {
+                            jobs => $self->jobs,
+                            show_count => 1,
+                            color => $self->color,
+                        } );
+        $formatter->quiet();
+        %harness_args = ( formatter => $formatter );
+    }
 
     $harness_args{'jobs'} = $self->jobs if ($self->jobs > 1);
     $harness_args{'test_args'} = $self->script_opts if $self->script_opts;
@@ -401,7 +415,7 @@ sub _run_tests {
             system("chmod -R g+rwx cover_db");
             system("/gsc/bin/cover | tee > coverage.txt");
         }
-        $formatter->summary($aggregator);
+        $formatter->summary($aggregator) if ($formatter);
     }
 
     if ($timelog_sum) {
