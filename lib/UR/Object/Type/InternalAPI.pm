@@ -948,11 +948,13 @@ sub _use_safe {
 
     if (!$found) {
         # not found
+        @INC = @INC_COPY;
         return;
     }
 
     if ($expected_directory and $expected_directory ne $found) {
         # not found in the specified location
+        @INC = @INC_COPY;
         return;
     }
 
