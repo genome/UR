@@ -884,9 +884,10 @@ sub use_module_with_namespace_constraints {
 #        $path = undef;
 #    }
 #    elsif ($path = $INC{$namespace_expected_module}) {
+
     if ($path = $INC{$namespace_expected_module}) {
         #print "got mod $namespace_expected_module at $path for $target_class\n";
-        $path =~ s/$namespace_expected_module//g;
+        $path =~ s/\/*$namespace_expected_module//g;
     }
     else {
         my $namespace_obj =  UR::Object::Type->is_loaded(class_name => $namespace_name);
