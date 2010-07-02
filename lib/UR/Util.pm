@@ -7,14 +7,10 @@ use Data::Dumper;
 
 sub null_sub { }
 
-# something in _use_safe is throwing extra slashes on the end of stuff
-# which breaks this check. so I added the two regexes to disregard trailing /
-# -eclark
 sub used_libs {
     my @extra;
     for my $i (@INC) {
-        $i =~ s/\/+$//;
-        last if $ENV{PERL5LIB} =~ /^$i\/*?\:/;
+        last if $ENV{PERL5LIB} =~ /^$i\:/;
         push @extra, $i;
     }
     return @extra;
