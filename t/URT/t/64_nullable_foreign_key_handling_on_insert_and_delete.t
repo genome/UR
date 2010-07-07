@@ -10,11 +10,12 @@ use Test::More 'no_plan';
 use URT::DataSource::CircFk;
 use Data::Dumper;
 
-=cut
-#This test verifies that sql generation is correct for inserts and deletes on tables with nullable foreign key constraints
-#For a new object, an INSERT statement should be returned, with null values in nullable foreign key columns, and a corresponding UPDATE statement to set foreign key values after the insert
-#For object deletion, an UPDATE statement setting nullable foreign keys to null is expected with the DELETE statement
-=cut
+# This test verifies that sql generation is correct for inserts and deletes
+# on tables with nullable foreign key constraints.  For a new object, an
+# INSERT statement should be returned, with null values in nullable foreign
+# key columns, and a corresponding UPDATE statement to set foreign key
+# values after the insert.  For object deletion, an UPDATE statement
+# setting nullable foreign keys to null is expected with the DELETE statement
 
 END {
     unlink URT::DataSource::CircFk->server;
