@@ -103,7 +103,8 @@ sub _journal_file_path {
 }
 
 sub _init_database {
-    my $self = shift;
+    my $self = shift->_singleton_object();
+
     my $db_file     = $self->_database_file_path;
     my $dump_file   = $self->_data_dump_path;
 
@@ -112,13 +113,12 @@ sub _init_database {
 
     if (-e $db_file) {
         if ($dump_time && ($db_time < $dump_time)) {
-            print "$db_time db $dump_time dump\n";
             my $bak_file = $db_file . '-bak';
             $self->warning_message("Dump file is newer than the db file.  Replacing db_file $db_file.");
             unlink $bak_file if -e $bak_file;
             rename $db_file, $bak_file;
             if (-e $db_file) {
-                die "Failed to move out-of-date file $db_file out of the way for reconstruction! $!";
+                Carp::croak "Failed to move out-of-date file $db_file out of the way for reconstruction! $!";
             }
         }
         #else {
@@ -131,8 +131,6 @@ sub _init_database {
         # initialize a new database from the one in the base class
         # should this be moved to connect time?
 
-        $DB::single = 1;
-        
         # TODO: auto re-create things as needed based on timestamp
 
         my $schema_file = $self->_schema_path;
@@ -140,7 +138,10 @@ sub _init_database {
         if (-e $dump_file) {
             # create from dump
             $self->warning_message("Re-creating $db_file from $dump_file.");
-            system("sqlite3 $db_file <$dump_file");
+            my $rv = system("sqlite3 $db_file <$dump_file");
+            if ($rv) {
+                $self->_load_db_from_dump_internal($dump_file);
+            }
             unless (-e $db_file) {
                 Carp::confess("Failed to import $dump_file into $db_file!");
             }
@@ -148,7 +149,10 @@ sub _init_database {
         elsif ( (not -e $db_file) and (-e $schema_file) ) {
             # create from schema
             $self->warning_message("Re-creating $db_file from $schema_file.");
-            system("sqlite3 $db_file <$schema_file");
+            my $rv = system("sqlite3 $db_file <$schema_file");
+            if ($rv) {
+                $self->_load_db_from_dump_internal($schema_file);
+            }
             unless (-e $db_file) {
                 Carp::confess("Failed to import $dump_file into $db_file!");
             }
@@ -540,9 +544,14 @@ sub commit {
         # The dump worked
         return 1;
     } elsif ($? == -1) {
-        $retval >>= 8;
-        $self->error_message("Dumping the SQLite database $db_filename from DataSource ",$self->get_name," to $dump_filename failed\nThe sqlite3 return code was $retval, errno $!");
-        return;
+        if ($! =~ m/No such file or directory/) {
+            # sqlite3 wasn't in the PATH?
+            return $self->_dump_db_to_file_internal();
+        } else {
+            $retval >>= 8;
+            $self->error_message("Dumping the SQLite database $db_filename from DataSource ",$self->get_name," to $dump_filename failed\nThe sqlite3 return code was $retval, errno $!");
+            return;
+        }
     }
 
     # Shouldn't get here...
@@ -616,22 +625,22 @@ sub _load_db_from_dump_internal {
     my $self = shift;
     my $file_name = shift;
 
-$DB::single=1;
     my $fh = IO::File->new($file_name);
     unless ($fh) {
         Carp::croak("Can't open DB dump file $file_name: $!");
     }
 
-#    my $dbh = $self->get_default_handle();
-#    if ($dbh) {
-#        $self->disconnect_default_handle();
-        if (-f $self->_database_file_path) {
-            unless(unlink($self->_database_file_path)) {
-                Carp::croak("Can't remove DB file " . $self->_database_file_path . ": $!");
-            }
+    my $db_file = $self->_database_file_path;
+    if (-f $db_file) {
+        unless(unlink($db_file)) {
+            Carp::croak("Can't remove DB file $db_file: $!");
         }
-#    }
-    my $dbh = $self->get_default_handle();
+    }
+
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file",'','',{ AutoCommit => 0, RaiseError => 0 });
+    unless($dbh) {
+        Carp::croak("Can't create DB handle for file $db_file: $DBI::errstr");
+    }
 
     my $dump_file_contents = do { local( $/ ) ; <$fh> };
     my @sql = split(';',$dump_file_contents);
@@ -646,7 +655,7 @@ $DB::single=1;
     }
 
     $dbh->commit();
-    $self->disconnect_default_handle();
+    $dbh->disconnect();
 
     return 1;
 }
@@ -660,9 +669,10 @@ sub _dump_db_to_file_internal {
         Carp::croak("Can't open DB dump file $file_name for writing: $!");
     }
 
-    my $dbh = $self->get_default_handle();
+    my $db_file = $self->_database_file_path;
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file",'','',{ AutoCommit => 0, RaiseError => 0 });
     unless ($dbh) {
-        Carp::croak("Can't open DB handle for ".$self->server.": $DBI::errstr");
+        Carp::croak("Can't create DB handle for file $db_file: $DBI::errstr");
     }
 
     $fh->print("BEGIN TRANSACTION;\n");
@@ -700,8 +710,9 @@ sub _dump_db_to_file_internal {
         }
     }
     $fh->print("COMMIT;\n");
-
     $fh->close();
+
+    $dbh->disconnect();
 
     return 1;
 }
