@@ -409,7 +409,7 @@ sub has_default_handle {
 }
 *has_default_dbh = \&has_default_handle;
 
-sub disconnect_default_dbh {
+sub disconnect_default_handle {
     my $self = shift->_singleton_object;
     my $dbh = $self->_default_dbh;
     unless ($dbh) {
@@ -420,6 +420,7 @@ sub disconnect_default_dbh {
     $self->_default_dbh(undef);
     return $dbh;
 }
+*disconnect_default_dbh = \&disconnect_default_handle;
 
 sub set_all_dbh_to_inactive_destroy {
     my $self = shift->_singleton_object;
