@@ -9,9 +9,6 @@ use URT;
 use Test::More tests => 64;
 use URT::DataSource::SomeSQLite;
 
-END {
-    unlink URT::DataSource::SomeSQLite->server;
-}
 my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
 &setup_classes_and_db($dbh);
 

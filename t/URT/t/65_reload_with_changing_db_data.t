@@ -8,10 +8,6 @@ use URT;
 use Test::More tests => 270;
 use URT::DataSource::SomeSQLite;
 
-END {
-    unlink URT::DataSource::SomeSQLite->server;
-}
-
 # This test uses 3 independent groups of classes/tables:
 # 1) One class where no subclassing is involved (URT::Thing uses table thing)
 # 2) A pair of classes where we need to do a join to get the subclassed data

@@ -8,10 +8,6 @@ use URT;
 use Test::More tests => 28;
 use URT::DataSource::SomeSQLite;
 
-END {
-    unlink URT::DataSource::SomeSQLite->server;
-}
-
 &setup_classes_and_db();
 
 my(@things,%things_by_id);

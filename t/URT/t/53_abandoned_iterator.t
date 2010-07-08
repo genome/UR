@@ -9,10 +9,6 @@ use URT;
 use Test::More tests => 15;
 use URT::DataSource::SomeSQLite;
 
-END {
-    unlink URT::DataSource::SomeSQLite->server;
-}
-
 &setup_classes_and_db();
 
 my $iter = URT::Thing->create_iterator(where => [ thing_value => { operator => '<', value => 15} ] );

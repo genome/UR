@@ -17,10 +17,6 @@ use Data::Dumper;
 # values after the insert.  For object deletion, an UPDATE statement
 # setting nullable foreign keys to null is expected with the DELETE statement
 
-END {
-    unlink URT::DataSource::CircFk->server;
-}
-
 setup_classes_and_db();
 
 my @circular = URT::Circular->get();

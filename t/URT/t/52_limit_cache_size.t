@@ -9,10 +9,6 @@ use URT;
 use Test::More tests => 23;
 use URT::DataSource::SomeSQLite;
 
-END {
-    unlink URT::DataSource::SomeSQLite->server;
-}
-
 &setup_classes_and_db();
 
 #UR::DBI->monitor_sql(1);

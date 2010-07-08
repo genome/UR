@@ -9,11 +9,6 @@ use URT::DataSource::SomeSQLite;
 
 use Test::More tests => 102;
 
-END {
-    unlink URT::DataSource::SomeSQLite->server;
-}
-
-
 UR::Object::Type->define(
     class_name => 'Acme',
     is => ['UR::Namespace'],
