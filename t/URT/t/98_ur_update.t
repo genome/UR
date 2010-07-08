@@ -52,13 +52,14 @@ my $path = $INC{"UR.pm"};
 system "chmod -R o+w $path";
 
 my $sqlite_file = $ds_class->server;
+IO::File->new($sqlite_file, 'w')->close();
 
 
 
 cleanup_files();
 
 sub cleanup_files {
-    unlink $sqlite_file;
+    #unlink $sqlite_file;
     $DB::single = 1;
     my $namespace_dir = URT->get_base_directory_name;
 
@@ -108,7 +109,7 @@ sub DummyExecutor::execute {
 
 ok($command_obj, "Created a dummy command object for updating the classes");
 
-my $dbh = $ds_class->get_default_dbh();
+my $dbh = $ds_class->get_default_handle();
 ok($dbh, 'Got database handle');
 
 # This wrapper to get_changes filters out things like the command-line parameters
