@@ -11,9 +11,11 @@ class URT::DataSource::CircFk {
 };
 
 our $FILE = "/tmp/ur_testsuite_db_$$.sqlite";
-unlink $FILE if -e $FILE;
+IO::File->new($FILE, 'w')->close();
 
-sub server { $FILE }
+END { unlink $FILE }
+
+sub _database_file_path { $FILE }
 
 sub owner { undef }
 

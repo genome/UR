@@ -131,17 +131,20 @@ is($related_load_count, 0, "correctly loaded 0 Related objects");
 
 
 sub create_data_sources {
+
+    IO::File->new($DB_FILE_1, 'w')->close();
     class URT::DataSource::SomeSQLite1 {
         is => 'UR::DataSource::SQLite',
         type_name => 'urt datasource somesqlite1',
     };
-    sub URT::DataSource::SomeSQLite1::server { $DB_FILE_1 };
+    sub URT::DataSource::SomeSQLite1::_database_file_path { $DB_FILE_1 };
 
+    IO::File->new($DB_FILE_2, 'w')->close();
     class URT::DataSource::SomeSQLite2 {
         is => 'UR::DataSource::SQLite',
         type_name => 'urt datasource somesqlite2',
     };
-    sub URT::DataSource::SomeSQLite2::server { $DB_FILE_2 };
+    sub URT::DataSource::SomeSQLite2::_database_file_path { $DB_FILE_2 };
 }
 
 

@@ -39,7 +39,7 @@ sub driver { "SQLite" }
 
 sub server {
     my $self = shift->_singleton_object();
-    $self->_init_database;
+    #$self->_init_database;
     return $self->_database_file_path;
 }
 
@@ -53,6 +53,13 @@ sub login {
 
 sub auth {
     undef
+}
+
+sub create_dbh {
+    my $self = shift->_singleton_object();
+
+    $self->_init_database;
+    return $self->SUPER::create_dbh(@_);
 }
 
 sub database_exists {

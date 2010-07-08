@@ -24,16 +24,13 @@ END {
     unlink $db_file;
 }
 # Hrm... seems that 'server' still isn't a proper property yet
+IO::File->new($db_file,'w')->close();
+sub URT::DataSource::OnTheFly::_database_file_path { return $db_file }
 my $ds = UR::Object::Type->define(
              class_name => 'URT::DataSource::OnTheFly',
              is => 'UR::DataSource::SQLite',
          );
 ok($ds, 'Defined data source');
-Sub::Install::install_sub({
-    code => sub { $db_file },
-    into => 'URT::DataSource::OnTheFly',
-    as   => 'server',
-});
 
 # Connect to the datasource's DB directly, create a couple of tables and some seed data
 my $dbh = URT::DataSource::OnTheFly->get_default_handle;

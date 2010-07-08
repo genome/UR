@@ -80,6 +80,8 @@ my $cleanup_files = sub { unlink @FILES_TO_DELETE };
 }
 
 {
+    my $db_file = '/tmp/TestcaseSqlite.sqlite3';
+    IO::File->new($db_file, 'w')->close();
     my($delegate_class, $create_params) = UR::Namespace::Command::Define::Datasource->resolve_class_and_params_for_argv(
                       qw(sqlite --dsname TestcaseSqlite2 --server /tmp/TestcaseSqlite.sqlite3 )
                   );
