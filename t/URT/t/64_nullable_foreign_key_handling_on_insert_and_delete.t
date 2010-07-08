@@ -5,7 +5,8 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More 'no_plan';
+use Test::More;
+plan tests => 81;
 
 use URT::DataSource::CircFk;
 use Data::Dumper;
