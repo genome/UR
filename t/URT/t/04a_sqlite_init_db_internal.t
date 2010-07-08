@@ -33,7 +33,7 @@ $fh->close();
     local $ENV{'PATH'} = '/nonexistent';
 
     # These _should_ ensure that we'll re-initialize the DB from the dump
-    my $db_file = URT::DataSource::SomeSQLite->_database_file_path;
+    my $db_file = URT::DataSource::SomeSQLite->server;
     unlink($db_file);
     URT::DataSource::SomeSQLite->disconnect;
     diag("initializing DB");

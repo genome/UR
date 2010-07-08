@@ -37,12 +37,6 @@ UR::Object::Type->define(
 
 sub driver { "SQLite" }
 
-sub server {
-    my $self = shift->_singleton_object();
-    #$self->_init_database;
-    return $self->_database_file_path;
-}
-
 sub owner { 
     undef
 }
@@ -64,7 +58,7 @@ sub create_dbh {
 
 sub database_exists {
     my $self = shift;
-    return 1 if -e $self->_database_file_path;
+    return 1 if -e $self->server;
     return 1 if -e $self->_data_dump_path; # exists virtually, and will dynamicaly instantiate
     return;
 }
@@ -72,7 +66,7 @@ sub database_exists {
 sub create_database {
     my $self = shift;
     die "Database exists!" if $self->database_exists;
-    my $path = $self->_database_file_path;
+    my $path = $self->server;
     return 1 if IO::File->new(">$path");
 }
 
@@ -89,23 +83,24 @@ sub _data_dump_path {
 }
 
 # FIXME is there a way to make this an object parameter instead of a method
-sub _database_file_path {
+sub server {
     my $self = shift->_singleton_object();
     my $path = $self->__meta__->module_path;
     $path =~ s/\.pm$/.sqlite3/ or Carp::confess("Odd module path $path");
     my $dir = File::Basename::dirname($path);
     return $path; 
 }
+*_database_file_path = \&server;
 
 sub _journal_file_path {
     my $self = shift->_singleton_object();
-    return $self->_database_file_path . "-journal";
+    return $self->server . "-journal";
 }
 
 sub _init_database {
     my $self = shift->_singleton_object();
 
-    my $db_file     = $self->_database_file_path;
+    my $db_file     = $self->server;
     my $dump_file   = $self->_data_dump_path;
 
     my $db_time     = (stat($db_file))[9];
@@ -531,7 +526,7 @@ sub commit {
     my $worked = $self->SUPER::commit(@_);
     return unless $worked;
 
-    my $db_filename = $self->_database_file_path();
+    my $db_filename = $self->server();
     my $dump_filename = $self->_data_dump_path();
 
     return 1 if ($has_no_pending_trans);
@@ -630,7 +625,7 @@ sub _load_db_from_dump_internal {
         Carp::croak("Can't open DB dump file $file_name: $!");
     }
 
-    my $db_file = $self->_database_file_path;
+    my $db_file = $self->server;
     if (-f $db_file) {
         unless(unlink($db_file)) {
             Carp::croak("Can't remove DB file $db_file: $!");
@@ -669,7 +664,7 @@ sub _dump_db_to_file_internal {
         Carp::croak("Can't open DB dump file $file_name for writing: $!");
     }
 
-    my $db_file = $self->_database_file_path;
+    my $db_file = $self->server;
     my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file",'','',{ AutoCommit => 0, RaiseError => 0 });
     unless ($dbh) {
         Carp::croak("Can't create DB handle for file $db_file: $DBI::errstr");

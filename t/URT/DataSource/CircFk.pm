@@ -15,7 +15,7 @@ IO::File->new($FILE, 'w')->close();
 
 END { unlink $FILE }
 
-sub _database_file_path { $FILE }
+sub server { $FILE }
 
 sub owner { undef }
 

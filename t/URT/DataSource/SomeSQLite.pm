@@ -28,19 +28,13 @@ END {
 }
 
 # Standard behavior is to put the DB file right next to the module
-#sub server { $FILE }
-
-# We'll change that...  _database_file_path() is called by server()
-sub _database_file_path {
+# We'll change that to point to the temp file
+sub server {
     our $FILE;
     return $FILE;
 }
 
 
 sub owner { undef }
-
-sub login { "gscguest" }
-
-sub auth { "guest_dev" }
 
 1;

@@ -137,14 +137,14 @@ sub create_data_sources {
         is => 'UR::DataSource::SQLite',
         type_name => 'urt datasource somesqlite1',
     };
-    sub URT::DataSource::SomeSQLite1::_database_file_path { $DB_FILE_1 };
+    sub URT::DataSource::SomeSQLite1::server { $DB_FILE_1 };
 
     IO::File->new($DB_FILE_2, 'w')->close();
     class URT::DataSource::SomeSQLite2 {
         is => 'UR::DataSource::SQLite',
         type_name => 'urt datasource somesqlite2',
     };
-    sub URT::DataSource::SomeSQLite2::_database_file_path { $DB_FILE_2 };
+    sub URT::DataSource::SomeSQLite2::server { $DB_FILE_2 };
 }
 
 

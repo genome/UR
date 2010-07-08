@@ -25,7 +25,7 @@ END {
 }
 # Hrm... seems that 'server' still isn't a proper property yet
 IO::File->new($db_file,'w')->close();
-sub URT::DataSource::OnTheFly::_database_file_path { return $db_file }
+sub URT::DataSource::OnTheFly::server { return $db_file }
 my $ds = UR::Object::Type->define(
              class_name => 'URT::DataSource::OnTheFly',
              is => 'UR::DataSource::SQLite',
