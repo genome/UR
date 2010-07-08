@@ -23,7 +23,7 @@ class URT::DataSource::SomeSQLite {
 };
 
 END {
-    my @paths_to_remove = map { __PACKAGE__->$_ } qw(_database_file_path _data_dump_path _schema_path);
+    my @paths_to_remove = map { __PACKAGE__->$_ } qw(server _data_dump_path _schema_path);
     unlink(@paths_to_remove);
 }
 
