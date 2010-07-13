@@ -30,7 +30,7 @@ class UR::DataSource::File {
         record_separator      => { is => 'String', default_value => "\n", doc => 'Delimiter between lines in the file' },
         column_order          => { is => 'ARRAY',  doc => 'Names of the columns in the file, in order' },
         cache_size            => { is => 'Integer', default_value => 100 },
-        skip_first_line       => { is => 'Integer', default_value => 0 },
+        skip_first_line       => { is => 'Integer', default_value => 0, doc => 'Number of lines at the start of the file to skip' },
     ],
     has_optional => [ 
         server                => { is => 'String', doc => 'pathname to the data file' },
@@ -42,7 +42,7 @@ class UR::DataSource::File {
         _open_query_count      => { is => 'Integer', doc => 'number of queries currently using this data source, used internally' },
         
     ],
-    doc => 'A read-only data source for line-oriented files',
+    doc => 'A data source for line-oriented files',
 };
 
 
