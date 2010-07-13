@@ -481,20 +481,20 @@ sub create_iterator_closure_for_rule {
 
     my @rule_columns_in_order;  # The order we should perform rule matches on - value is the index in @next_file_row to test
     my @comparison_for_column;  # closures to call to perform the match - same order as @rule_columns_in_order
-    my $last_id_column_in_rule = -1; # Last index in @rule_columns_in_order that applies when trying "the shortcut"
-    my $looking_for_id_columns = 1;  
+    my $last_sort_column_in_rule = -1; # Last index in @rule_columns_in_order that applies when trying "the shortcut"
+    my $looking_for_sort_columns = 1;
  
     my $next_candidate_row;  # This will be filled in by the closure below
     foreach my $column_name ( @$sort_order, @non_sort_columns ) {
         if (! $properties_in_rule{$column_name}) {
-            $looking_for_id_columns = 0;
+            $looking_for_sort_columns = 0;
             next;
-        } elsif ($looking_for_id_columns && $sort_columns{$column_name}) {
-            $last_id_column_in_rule++;
+        } elsif ($looking_for_sort_columns && $sort_columns{$column_name}) {
+            $last_sort_column_in_rule++;
         } else {
             # There's been a gap in the ID column list in the rule, stop looking for
             # further ID columns
-            $looking_for_id_columns = 0;
+            $looking_for_sort_columns = 0;
         }
 
         push @rule_columns_in_order, $column_name_to_index_map{$column_name};
@@ -530,7 +530,7 @@ sub create_iterator_closure_for_rule {
     # If there are ID columns mentioned in the rule, and there are items in the
     # cache, see if any of them are less than the comparators
     my $matched_in_cache = 0;
-    if ($last_id_column_in_rule >= 0) {
+    if ($last_sort_column_in_rule >= 0) {
         SEARCH_CACHE:
         for(my $file_cache_index = $self->file_cache_index - 1;
             $file_cache->[$file_cache_index] and $file_cache_index >= 0;
@@ -539,7 +539,7 @@ sub create_iterator_closure_for_rule {
             $next_candidate_row = $file_cache->[$file_cache_index];
 
             MATCH_COMPARATORS:
-            for (my $i = 0; $i <= $last_id_column_in_rule; $i++) {
+            for (my $i = 0; $i <= $last_sort_column_in_rule; $i++) {
                 my $comparison = $comparison_for_column[$i]->();
                 if ($comparison < 0) {
                     # last row read is earlier than the data we're looking for; we can
@@ -550,7 +550,7 @@ sub create_iterator_closure_for_rule {
                     last SEARCH_CACHE;
     
                 # FIXME - This test only works if we assumme that the ID columns are also UNIQUE columns
-                } elsif ($comparison > 0 or $i == $last_id_column_in_rule) {
+                } elsif ($comparison > 0 or $i == $last_sort_column_in_rule) {
                     # last row read is past what we're looking for ($comparison > 0)
                     # or, for the last ID-based comparator, it needs to be strictly less than, otherwise
                     # we may have missed some data - back up one slot in the cache and try again
@@ -568,7 +568,7 @@ sub create_iterator_closure_for_rule {
         for (my $i = 0; $i < @rule_columns_in_order; $i++) {
             my $column = $rule_columns_in_order[$i];
             my $column_name = $csv_column_order->[$column];
-            my $is_sorted = $i <= $last_id_column_in_rule ? ' (sorted)' : '';
+            my $is_sorted = $i <= $last_sort_column_in_rule ? ' (sorted)' : '';
             my $operator = $rule->operator_for($column_name) || '=';
             my $rule_value = $rule->value_for($column_name);   
             if (ref $rule_value eq 'ARRAY') {
@@ -686,7 +686,7 @@ sub create_iterator_closure_for_rule {
             for (my $i = 0; $i < @rule_columns_in_order; $i++) {
                 my $comparison = $comparison_for_column[$i]->();
 
-                if ($comparison > 0 and $i <= $last_id_column_in_rule) {
+                if ($comparison > 0 and $i <= $last_sort_column_in_rule) {
                     # We've gone past the last thing that could possibly match
                     $self->file_cache_index($file_cache_index);
 
