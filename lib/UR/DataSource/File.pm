@@ -461,23 +461,23 @@ sub create_iterator_closure_for_rule {
     my $class_meta = $class_name->__meta__;
     my $rule_template = $rule->template;
 
-    my $csv_column_order = $self->column_order;
-    my $csv_column_count = scalar @$csv_column_order;
+    my $csv_column_order_names = $self->column_order;
+    my $csv_column_count = scalar @$csv_column_order_names;
     my %properties_in_rule = map { $_ => 1 }
                              grep { $rule->specifies_value_for($_) }
-                             @$csv_column_order;
+                             @$csv_column_order_names;
 
-    my $sort_order = $self->sort_order;
-    my %sort_columns = map { $_ => 1 } @$sort_order;
-    my @non_sort_columns = grep { ! exists($sort_columns{$_}) } @$csv_column_order;
+    my $sort_order_names = $self->sort_order;
+    my %sort_column_names = map { $_ => 1 } @$sort_order_names;
+    my @non_sort_column_names = grep { ! exists($sort_column_names{$_}) } @$csv_column_order_names;
 
     my %column_name_to_index_map;
-    for (my $i = 0; $i < @$csv_column_order; $i++) {
-        $column_name_to_index_map{$csv_column_order->[$i]} = $i;
+    for (my $i = 0; $i < @$csv_column_order_names; $i++) {
+        $column_name_to_index_map{$csv_column_order_names->[$i]} = $i;
     }
 
     my %property_metas = map { $_ => UR::Object::Property->get(class_name => $class_name, column_name => uc($_)) }
-                         @$csv_column_order;
+                         @$csv_column_order_names;
 
     my @rule_columns_in_order;  # The order we should perform rule matches on - value is the index in @next_file_row to test
     my @comparison_for_column;  # closures to call to perform the match - same order as @rule_columns_in_order
@@ -485,11 +485,11 @@ sub create_iterator_closure_for_rule {
     my $looking_for_sort_columns = 1;
  
     my $next_candidate_row;  # This will be filled in by the closure below
-    foreach my $column_name ( @$sort_order, @non_sort_columns ) {
+    foreach my $column_name ( @$sort_order_names, @non_sort_column_names ) {
         if (! $properties_in_rule{$column_name}) {
             $looking_for_sort_columns = 0;
             next;
-        } elsif ($looking_for_sort_columns && $sort_columns{$column_name}) {
+        } elsif ($looking_for_sort_columns && $sort_column_names{$column_name}) {
             $last_sort_column_in_rule++;
         } else {
             # There's been a gap in the ID column list in the rule, stop looking for
@@ -567,7 +567,7 @@ sub create_iterator_closure_for_rule {
         my @filters_list;
         for (my $i = 0; $i < @rule_columns_in_order; $i++) {
             my $column = $rule_columns_in_order[$i];
-            my $column_name = $csv_column_order->[$column];
+            my $column_name = $csv_column_order_names->[$column];
             my $is_sorted = $i <= $last_sort_column_in_rule ? ' (sorted)' : '';
             my $operator = $rule->operator_for($column_name) || '=';
             my $rule_value = $rule->value_for($column_name);   
@@ -839,12 +839,12 @@ sub _sync_database {
     local $/;   # Make sure some wise guy hasn't changed this out from under us
     $/ = $record_separator;
 
-    my $csv_column_order = $self->column_order;
-    $_ = uc foreach @$csv_column_order;  # Force all column-namey things to upper-case
-    my $csv_column_count = scalar(@$csv_column_order);
+    my $csv_column_order_names = $self->column_order;
+    $_ = uc foreach @$csv_column_order_names;  # Force all column-namey things to upper-case
+    my $csv_column_count = scalar(@$csv_column_order_names);
     my %column_name_to_index_map;
-    for (my $i = 0; $i < @$csv_column_order; $i++) {
-        $column_name_to_index_map{$csv_column_order->[$i]} = $i;
+    for (my $i = 0; $i < @$csv_column_order_names; $i++) {
+        $column_name_to_index_map{$csv_column_order_names->[$i]} = $i;
     }
 
     my $changed_objects = delete $params{changed_objects};
@@ -857,7 +857,7 @@ sub _sync_database {
                                        grep { $_->column_name }
                                        $class_meta->all_property_metas;
     my @property_names_in_column_order;
-    foreach my $column_name ( @$csv_column_order ) {
+    foreach my $column_name ( @$csv_column_order_names ) {
         my $prop_meta = $column_name_to_property_meta{$column_name};
         unless ($prop_meta) {
             die "Data source " . $self->class . " id " . $self->id . 
@@ -890,20 +890,20 @@ sub _sync_database {
         }
     }
 
-    my $sort_order = $self->sort_order;
-    foreach my $sort_column_name ( @$sort_order ) {
+    my $sort_order_names = $self->sort_order;
+    foreach my $sort_column_name ( @$sort_order_names ) {
         unless (exists $column_name_to_index_map{uc $sort_column_name}) {
             Carp::croak("Column name '$sort_column_name' appears in the sort_order list, but not in the column_order list for data source ".$self->id);
         }
         $sort_column_name = uc $sort_column_name;  # Force all column-namey things to upper-case
     }
-    my $file_is_sorted = scalar(@$sort_order);
+    my $file_is_sorted = scalar(@$sort_order_names);
     my %column_sorts_numerically = map { $_->column_name => $_->is_numeric }
                                    values %column_name_to_property_meta;
     my $row_sort_sub = sub ($$) {
                            my $comparison;
 
-                           foreach my $column_name ( @$sort_order ) {
+                           foreach my $column_name ( @$sort_order_names ) {
                                my $i = $column_name_to_index_map{$column_name};
                                if ($column_sorts_numerically{$column_name}) {
                                    $comparison = $_[0]->[$i] <=> $_[1]->[$i];
@@ -914,7 +914,7 @@ sub _sync_database {
                            }
                            return 0;
                        };
-    if ($sort_order && $file_is_sorted && scalar(@$insert)) {
+    if ($sort_order_names && $file_is_sorted && scalar(@$insert)) {
         # the inserted things should be sorted the same way as the file
         my @sorted = sort $row_sort_sub @$insert;
         $insert = \@sorted;
