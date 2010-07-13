@@ -145,6 +145,7 @@ sub _invalidate_cache {
     my $file_cache = $self->{'_file_cache'};
     undef($_) foreach @$file_cache;
     $self->file_cache_index(0);
+    return 1;
 }
 
 sub _generate_loading_templates_arrayref {
