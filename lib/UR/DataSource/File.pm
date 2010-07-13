@@ -80,6 +80,14 @@ sub get_default_handle {
     return $self->{'_fh'};
 }
 
+sub disconnect_default_handle {
+    my $self = shift;
+
+    if ($self->{'_fh'}) {
+        $self->{'_fh'}->close();
+    }
+}
+
 sub _regex {
     my $self = shift;
 
