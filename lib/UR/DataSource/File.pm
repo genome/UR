@@ -17,7 +17,7 @@ use strict;
 use warnings;
 
 use Fcntl qw(:DEFAULT :flock);
- use Errno qw(EINTR EAGAIN);
+use Errno qw(EINTR EAGAIN);
 use File::Temp;
 use File::Basename;
 
@@ -38,7 +38,8 @@ class UR::DataSource::File {
         sort_order            => { is => 'ARRAY',  doc => 'Names of the columns by which the data file is sorted' },
         constant_values       => { is => 'ARRAY',  doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
         
-        file_cache_index      => { is => 'Integer', doc => 'index into the file cache where the next read will be placed' },
+        # REMOVE
+        #file_cache_index      => { is => 'Integer', doc => 'index into the file cache where the next read will be placed' },
         _open_query_count      => { is => 'Integer', doc => 'number of queries currently using this data source, used internally' },
         
     ],
@@ -125,26 +126,55 @@ sub server {
 
 
 our $MAX_CACHE_SIZE = 100;
-sub _file_cache {
+# REMOVE
+#sub _file_cache {
+#    my $self = shift;
+#
+#    unless ($self->{'_file_cache'}) {
+#        my @cache = ();
+#        #$#cache = $self->cache_size;
+#        $#cache = $MAX_CACHE_SIZE;
+#        $self->{'_file_cache'} = \@cache;
+#        $self->file_cache_index(-1);
+#
+#    }
+#    return $self->{'_file_cache'};
+#}
+
+
+# The offset cache is an arrayref containing two different kinds of data:
+# Even indexes (strting with 0) have concatenated data from the sorted columns
+# Odd indexes have the file offset that line came from
+sub _offset_cache {
     my $self = shift;
 
-    unless ($self->{'_file_cache'}) {
-        my @cache = ();
-        #$#cache = $self->cache_size;
-        $#cache = $MAX_CACHE_SIZE;
-        $self->{'_file_cache'} = \@cache;
-        $self->file_cache_index(-1);
-
+    unless ($self->{'_offset_cache'}) {
+        $self->{'_offset_cache'} = [];
     }
-    return $self->{'_file_cache'};
+    return $self->{'_offset_cache'};
 }
 
+sub _allocate_offset_cache_slot {
+    my $self = shift;
+
+    my $cache = $self->_offset_cache();
+    my $next = scalar(@$cache);
+    if ($next > $MAX_CACHE_SIZE) {
+        $next = 0;
+        $cache->[0] = undef;
+        $cache->[1] = -1;
+    }
+    return $next;
+}
+
+
+# REMOVE
 sub _invalidate_cache {
     my $self = shift;
  
-    my $file_cache = $self->{'_file_cache'};
-    undef($_) foreach @$file_cache;
-    $self->file_cache_index(0);
+#    my $file_cache = $self->{'_file_cache'};
+#    undef($_) foreach @$file_cache;
+#    $self->file_cache_index(0);
     return 1;
 }
 
@@ -483,7 +513,7 @@ sub create_iterator_closure_for_rule {
     my @comparison_for_column;  # closures to call to perform the match - same order as @rule_columns_in_order
     my $last_sort_column_in_rule = -1; # Last index in @rule_columns_in_order that applies when trying "the shortcut"
     my $looking_for_sort_columns = 1;
- 
+
     my $next_candidate_row;  # This will be filled in by the closure below
     foreach my $column_name ( @$sort_order_names, @non_sort_column_names ) {
         if (! $properties_in_rule{$column_name}) {
@@ -525,40 +555,40 @@ sub create_iterator_closure_for_rule {
     # against the file to set the initial/next position?
     my $file_pos;
 
-    my $file_cache = $self->_file_cache();
-
-    # If there are ID columns mentioned in the rule, and there are items in the
-    # cache, see if any of them are less than the comparators
-    my $matched_in_cache = 0;
-    if ($last_sort_column_in_rule >= 0) {
-        SEARCH_CACHE:
-        for(my $file_cache_index = $self->file_cache_index - 1;
-            $file_cache->[$file_cache_index] and $file_cache_index >= 0;
-            $file_cache_index--)
-        {
-            $next_candidate_row = $file_cache->[$file_cache_index];
-
-            MATCH_COMPARATORS:
-            for (my $i = 0; $i <= $last_sort_column_in_rule; $i++) {
-                my $comparison = $comparison_for_column[$i]->();
-                if ($comparison < 0) {
-                    # last row read is earlier than the data we're looking for; we can
-                    # continue on from the next thing in the cache
-                    $matched_in_cache = 1;
-                    $self->{'_last_read_fingerprint'} = $fingerprint; # This will make the iterator skip resetting the position
-                    $self->file_cache_index($file_cache_index + 1);
-                    last SEARCH_CACHE;
-    
-                # FIXME - This test only works if we assumme that the ID columns are also UNIQUE columns
-                } elsif ($comparison > 0 or $i == $last_sort_column_in_rule) {
-                    # last row read is past what we're looking for ($comparison > 0)
-                    # or, for the last ID-based comparator, it needs to be strictly less than, otherwise
-                    # we may have missed some data - back up one slot in the cache and try again
-                    next SEARCH_CACHE;
-                }
-            }
-        }
-    }
+    #my $file_cache = $self->_file_cache();
+    #
+    ## If there are ID columns mentioned in the rule, and there are items in the
+    ## cache, see if any of them are less than the comparators
+    #my $matched_in_cache = 0;
+    #if ($last_sort_column_in_rule >= 0) {
+    #    SEARCH_CACHE:
+    #    for(my $file_cache_index = $self->file_cache_index - 1;
+    #        $file_cache->[$file_cache_index] and $file_cache_index >= 0;
+    #        $file_cache_index--)
+    #    {
+    #        $next_candidate_row = $file_cache->[$file_cache_index];
+    #
+    #        MATCH_COMPARATORS:
+    #        for (my $i = 0; $i <= $last_sort_column_in_rule; $i++) {
+    #            my $comparison = $comparison_for_column[$i]->();
+    #            if ($comparison < 0) {
+    #                # last row read is earlier than the data we're looking for; we can
+    #                # continue on from the next thing in the cache
+    #                $matched_in_cache = 1;
+    #                $self->{'_last_read_fingerprint'} = $fingerprint; # This will make the iterator skip resetting the position
+    #                $self->file_cache_index($file_cache_index + 1);
+    #                last SEARCH_CACHE;
+   # 
+   #             # FIXME - This test only works if we assumme that the ID columns are also UNIQUE columns
+   #             } elsif ($comparison > 0 or $i == $last_sort_column_in_rule) {
+   #                 # last row read is past what we're looking for ($comparison > 0)
+   #                 # or, for the last ID-based comparator, it needs to be strictly less than, otherwise
+   #                 # we may have missed some data - back up one slot in the cache and try again
+   #                 next SEARCH_CACHE;
+   #             }
+   #         }
+   #     }
+   # }
 
     my($monitor_start_time,$monitor_printed_first_fetch);
     if ($ENV{'UR_DBI_MONITOR_SQL'}) {
@@ -581,12 +611,12 @@ sub create_iterator_closure_for_rule {
         UR::DBI->sql_fh->printf("\nFILE: %s\nFILTERS %s\n\n", $self->server, $filter_list);
     }
 
-    unless ($matched_in_cache) {
+    #unless ($matched_in_cache) {
         # this query either doesn't hit the leftmost sorted columns, or nothing
         # has been read from it yet
         $file_pos = 0;
         $self->{'_last_read_fingerprint'} = -1;  # This will force a seek and cache invalidation at the start of the iterator
-    }
+    #}
 
     #my $max_cache_size = $self->cache_size;
     my $max_cache_size = $MAX_CACHE_SIZE;
@@ -621,7 +651,7 @@ sub create_iterator_closure_for_rule {
             $self->_invalidate_cache();
         }
 
-        my $file_cache_index = $self->file_cache_index();
+        #my $file_cache_index = $self->file_cache_index();
 
         local $/;   # Make sure some wise guy hasn't changed this out from under us
         $/ = $record_separator;
@@ -630,9 +660,9 @@ sub create_iterator_closure_for_rule {
         READ_LINE_FROM_FILE:
         until($line) {
             
-            if ($file_cache->[$file_cache_index]) {
-                $next_candidate_row = $file_cache->[$file_cache_index++];
-            } else {
+            #if ($file_cache->[$file_cache_index]) {
+            #    $next_candidate_row = $file_cache->[$file_cache_index++];
+            #} else {
                 $self->{'_last_read_fingerprint'} = $fingerprint;
 
                 # Hack for OSX 10.5.
@@ -671,24 +701,24 @@ sub create_iterator_closure_for_rule {
                 $next_candidate_row = [ split($split_regex, $line, $csv_column_count) ];
                 $#{$a} = $csv_column_count-1;
 
-                if ($file_cache_index > $max_cache_size) {
-                    # cache is full
-                    # FIXME - this is using the @$file_cache list as a circular buffer with shift/push
-                    # it may be more efficient to keep track of head/tail instead
-                    shift @$file_cache;
-                    push @$file_cache, $next_candidate_row;
-                } else {
-                    $file_cache->[$file_cache_index++] = $next_candidate_row;
-                }
+                #if ($file_cache_index > $max_cache_size) {
+                #    # cache is full
+                #    # FIXME - this is using the @$file_cache list as a circular buffer with shift/push
+                #    # it may be more efficient to keep track of head/tail instead
+                #    shift @$file_cache;
+                #    push @$file_cache, $next_candidate_row;
+                #} else {
+                #    $file_cache->[$file_cache_index++] = $next_candidate_row;
+                #}
                
-            }
+            #}
 
             for (my $i = 0; $i < @rule_columns_in_order; $i++) {
                 my $comparison = $comparison_for_column[$i]->();
 
                 if ($comparison > 0 and $i <= $last_sort_column_in_rule) {
                     # We've gone past the last thing that could possibly match
-                    $self->file_cache_index($file_cache_index);
+                    #$self->file_cache_index($file_cache_index);
 
                     if ($monitor_start_time) {
                         UR::DBI->sql_fh->printf("FILE: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
@@ -706,7 +736,7 @@ sub create_iterator_closure_for_rule {
             }
             # All the comparisons return '0', meaning they passed
             $file_pos = $fh->tell();
-            $self->file_cache_index($file_cache_index);
+            #$self->file_cache_index($file_cache_index);
             return $next_candidate_row;
         }
     }; # end sub $iterator
