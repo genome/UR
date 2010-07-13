@@ -125,7 +125,8 @@ sub server {
 }
 
 
-our $MAX_CACHE_SIZE = 100;
+# Should be divisible by 3
+our $MAX_CACHE_SIZE = 99;
 # REMOVE
 #sub _file_cache {
 #    my $self = shift;
@@ -142,9 +143,10 @@ our $MAX_CACHE_SIZE = 100;
 #}
 
 
-# The offset cache is an arrayref containing two different kinds of data:
-# Even indexes (strting with 0) have concatenated data from the sorted columns
-# Odd indexes have the file offset that line came from
+# The offset cache is an arrayref containing three pieces of data:
+# 0: If this cache slot is being used by a loading iterator
+# 1: concatenated data from the sorted columns for comparison with where you are in the file
+# 2: the seek position that line came from
 sub _offset_cache {
     my $self = shift;
 
@@ -161,9 +163,18 @@ sub _allocate_offset_cache_slot {
     my $next = scalar(@$cache);
     if ($next > $MAX_CACHE_SIZE) {
         $next = 0;
-        $cache->[0] = undef;
-        $cache->[1] = -1;
+        # Search for an unused slot
+        while ($cache->[$next] and $next <= $MAX_CACHE_SIZE) {
+            $next += 3;
+        }
+        if ($next > $MAX_CACHE_SIZE) {
+            Carp::croak("Unable to find an open cache slot because there are too many outstanding loading iterators");
+        }
     }
+    $cache->[$next] = 1;
+    $cache->[$next+1] = undef;
+    $cache->[$next+2] = undef;
+
     return $next;
 }
 
@@ -481,8 +492,8 @@ sub _comparator_for_operator_and_property {
 }
         
 
-our $READ_FINGERPRINT = 0;
 our %iterator_data_source; 
+our %iterator_cache_slot;
 
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
@@ -505,6 +516,9 @@ sub create_iterator_closure_for_rule {
     for (my $i = 0; $i < @$csv_column_order_names; $i++) {
         $column_name_to_index_map{$csv_column_order_names->[$i]} = $i;
     }
+
+    # Index in the split-file-data for each sorted column in order
+    my @sort_order_column_indexes = map { $column_name_to_index_map{$_} } @$sort_order_names;
 
     my %property_metas = map { $_ => UR::Object::Property->get(class_name => $class_name, column_name => uc($_)) }
                          @$csv_column_order_names;
@@ -545,16 +559,6 @@ sub create_iterator_closure_for_rule {
 
     my $split_regex = $self->_regex();
 
-    # A method to tell if there's been interleaved reads on the same file handle.  If the
-    # last read was done at a different place in the file, then we need to reset the
-    # file pointer.  This will be a monotonically increasing number that's unique to each
-    # request
-    my $fingerprint = $READ_FINGERPRINT++;  
-
-    # FIXME - another performance boost might be to do some kind of binary search
-    # against the file to set the initial/next position?
-    my $file_pos;
-
     #my $file_cache = $self->_file_cache();
     #
     ## If there are ID columns mentioned in the rule, and there are items in the
@@ -590,6 +594,34 @@ sub create_iterator_closure_for_rule {
    #     }
    # }
 
+    # FIXME - another performance boost might be to do some kind of binary search
+    # against the file to set the initial/next position?
+    my $file_pos = 0;
+
+    # search in the offset cache for something helpful
+    my $offset_cache = $self->_offset_cache();
+
+$DB::single=1;
+    # Starting at index 1 because we're interested in the file and seek data, not if it's in use
+    # offset 0 is the in-use flag, offset 1 is a ref to the file data and offset 2 is the file seek pos
+    SEARCH_CACHE:
+    for (my $i = 1; $i < @$offset_cache; $i+=3) {
+        next unless (defined($offset_cache->[$i]) && defined($offset_cache->[$i+1]));
+
+        $next_candidate_row = $offset_cache->[$i];
+        for (my $c = 0; $c <= $last_sort_column_in_rule; $c++) {
+            my $comparison = $comparison_for_column[$i]->();
+
+            next SEARCH_CACHE if ($comparison > 0);
+        }
+        # If we made it this far, then the file data in this slot is earlier in the file
+        # than the data we're looking for.  So, if the seek pos data is later than what
+        # we've found yet, use it instead
+        if ($offset_cache->[$i+1] > $file_pos) {
+            $file_pos = $offset_cache->[$i+1];
+        }
+    }
+
     my($monitor_start_time,$monitor_printed_first_fetch);
     if ($ENV{'UR_DBI_MONITOR_SQL'}) {
         $monitor_start_time = Time::HiRes::time();
@@ -614,17 +646,20 @@ sub create_iterator_closure_for_rule {
     #unless ($matched_in_cache) {
         # this query either doesn't hit the leftmost sorted columns, or nothing
         # has been read from it yet
-        $file_pos = 0;
-        $self->{'_last_read_fingerprint'} = -1;  # This will force a seek and cache invalidation at the start of the iterator
+        #$file_pos = 0;
+        $self->{'_last_read_fingerprint'} = '';  # This will force a seek and cache invalidation at the start of the iterator
     #}
 
     #my $max_cache_size = $self->cache_size;
     my $max_cache_size = $MAX_CACHE_SIZE;
     my $record_separator = $self->record_separator;
+    my $cache_slot = $self->_allocate_offset_cache_slot();
 
     my $fh;  # File handle we'll be reading from
-    my $iterator = sub {
+    my $iterator;
+    $iterator = sub {
 
+$DB::single=1;
         unless (ref($fh)) {
             $fh = $self->get_default_handle();
             # Lock the file for reading...  For more fine-grained locking we could move this to
@@ -638,20 +673,20 @@ sub create_iterator_closure_for_rule {
             $monitor_printed_first_fetch = 1;
         }
 
-        if ($self->{'_last_read_fingerprint'} != $fingerprint) {
+        if ($self->{'_last_read_fingerprint'} ne $iterator) {
             UR::DBI->sql_fh->printf("FILE: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
-            #$fh->getline() if ($self->skip_first_line());
-            my $skip = $self->skip_first_line;
-            while ($skip-- > 0) {
-                scalar(<$fh>);
+            if ($file_pos == 0) {
+                my $skip = $self->skip_first_line;
+                while ($skip-- > 0) {
+                    scalar(<$fh>);
+                }
             }
+            $file_pos = $fh->tell();
 
             $self->_invalidate_cache();
         }
-
-        #my $file_cache_index = $self->file_cache_index();
 
         local $/;   # Make sure some wise guy hasn't changed this out from under us
         $/ = $record_separator;
@@ -663,7 +698,7 @@ sub create_iterator_closure_for_rule {
             #if ($file_cache->[$file_cache_index]) {
             #    $next_candidate_row = $file_cache->[$file_cache_index++];
             #} else {
-                $self->{'_last_read_fingerprint'} = $fingerprint;
+                $self->{'_last_read_fingerprint'} = $iterator;
 
                 # Hack for OSX 10.5.
                 # At EOF, the getline below will return undef.  Most builds of Perl
@@ -735,8 +770,21 @@ sub create_iterator_closure_for_rule {
                 # That comparison worked... stay in the for() loop for other comparisons
             }
             # All the comparisons return '0', meaning they passed
+
+            # Now see if the offset cache file data is different than the row we just read
+            COMPARE_TO_CACHE:
+            #for (my $i = 0; $i < @sort_order_column_indexes; $i++) {
+            foreach my $column ( @sort_order_column_indexes) {
+                no warnings 'uninitialized';
+                if ($offset_cache->[$cache_slot+1]->[$column] ne $next_candidate_row->[$column]) {
+                    # They're different.  Update the offset cache data
+                    $offset_cache->[$cache_slot+1] = $next_candidate_row;
+                    $offset_cache->[$cache_slot+2] = $file_pos;
+                    last COMPARE_TO_CACHE;
+                }
+            }
+
             $file_pos = $fh->tell();
-            #$self->file_cache_index($file_cache_index);
             return $next_candidate_row;
         }
     }; # end sub $iterator
@@ -747,6 +795,7 @@ sub create_iterator_closure_for_rule {
     $self->_open_query_count($count+1);
     bless $iterator, 'UR::DataSource::File::Tracker';
     $iterator_data_source{$iterator} = $self;
+    $iterator_cache_slot{$iterator} = $cache_slot;
     
     return $iterator;
 } 
@@ -756,6 +805,12 @@ sub UR::DataSource::File::Tracker::DESTROY {
     my $iterator = shift;
     my $ds = delete $iterator_data_source{$iterator};
     return unless $ds;   # The data source may have gone out of scope first during global destruction
+
+    my $cache_slot = delete $iterator_cache_slot{$iterator};
+    if (defined $cache_slot) {
+        # Mark this slot unused
+        $ds->_offset_cache->[$cache_slot] = 0;
+    }
 
     my $count = $ds->_open_query_count();
     $ds->_open_query_count(--$count);
