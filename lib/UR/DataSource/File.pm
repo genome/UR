@@ -731,6 +731,7 @@ $DB::single=1;
                     return;
                 }
 
+                my $last_read_size = length($line);
                 chomp $line;
                 # FIXME - to support record-oriented files, we need some replacement for this...
                 $next_candidate_row = [ split($split_regex, $line, $csv_column_count) ];
@@ -771,6 +772,8 @@ $DB::single=1;
             }
             # All the comparisons return '0', meaning they passed
 
+            $file_pos = $fh->tell();
+
             # Now see if the offset cache file data is different than the row we just read
             COMPARE_TO_CACHE:
             #for (my $i = 0; $i < @sort_order_column_indexes; $i++) {
@@ -779,12 +782,11 @@ $DB::single=1;
                 if ($offset_cache->[$cache_slot+1]->[$column] ne $next_candidate_row->[$column]) {
                     # They're different.  Update the offset cache data
                     $offset_cache->[$cache_slot+1] = $next_candidate_row;
-                    $offset_cache->[$cache_slot+2] = $file_pos;
+                    $offset_cache->[$cache_slot+2] = $file_pos - $last_read_size;
                     last COMPARE_TO_CACHE;
                 }
             }
 
-            $file_pos = $fh->tell();
             return $next_candidate_row;
         }
     }; # end sub $iterator
