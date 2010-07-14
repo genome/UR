@@ -654,7 +654,7 @@ sub create_iterator_closure_for_rule {
         # this query either doesn't hit the leftmost sorted columns, or nothing
         # has been read from it yet
         #$file_pos = 0;
-        $self->{'_last_read_fingerprint'} = '';  # This will force a seek and cache invalidation at the start of the iterator
+        $self->{'_last_read_fingerprint'} ||= '';
     #}
 
     #my $max_cache_size = $self->cache_size;
@@ -663,10 +663,10 @@ sub create_iterator_closure_for_rule {
     my $cache_slot = $self->_allocate_offset_cache_slot();
 
     my $fh;  # File handle we'll be reading from
-    my $iterator;
-    $iterator = sub {
+    my $read_fingerprint;   # The stringified version of $iterator (to avoid circular references), filled in below
+    my $iterator = sub {
 
-$DB::single=1;
+        $DB::single=1;
         unless (ref($fh)) {
             $fh = $self->get_default_handle();
             # Lock the file for reading...  For more fine-grained locking we could move this to
@@ -680,7 +680,7 @@ $DB::single=1;
             $monitor_printed_first_fetch = 1;
         }
 
-        if ($self->{'_last_read_fingerprint'} ne $iterator) {
+        if ($self->{'_last_read_fingerprint'} ne $read_fingerprint) {
             UR::DBI->sql_fh->printf("FILE: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position and invalidate the cache
             $fh->seek($file_pos,0);
@@ -693,6 +693,7 @@ $DB::single=1;
             $file_pos = $fh->tell();
 
             $self->_invalidate_cache();
+            $self->{'_last_read_fingerprint'} = $read_fingerprint;
         }
 
         local $/;   # Make sure some wise guy hasn't changed this out from under us
@@ -705,7 +706,6 @@ $DB::single=1;
             #if ($file_cache->[$file_cache_index]) {
             #    $next_candidate_row = $file_cache->[$file_cache_index++];
             #} else {
-                $self->{'_last_read_fingerprint'} = $iterator;
 
                 # Hack for OSX 10.5.
                 # At EOF, the getline below will return undef.  Most builds of Perl
@@ -797,6 +797,7 @@ $DB::single=1;
             return $next_candidate_row;
         }
     }; # end sub $iterator
+    $read_fingerprint = $iterator . '';
 
     Sub::Name::subname('UR::DataSource::File::__datasource_iterator(closure)__', $iterator);
 
