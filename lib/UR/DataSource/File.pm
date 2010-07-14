@@ -605,24 +605,27 @@ sub create_iterator_closure_for_rule {
     # search in the offset cache for something helpful
     my $offset_cache = $self->_offset_cache();
 
-$DB::single=1;
-    # Starting at index 1 because we're interested in the file and seek data, not if it's in use
-    # offset 0 is the in-use flag, offset 1 is a ref to the file data and offset 2 is the file seek pos
-    SEARCH_CACHE:
-    for (my $i = 1; $i < @$offset_cache; $i+=3) {
-        next unless (defined($offset_cache->[$i]) && defined($offset_cache->[$i+1]));
+    $DB::single=1;
+    # If the rule doesn't touch the sorted columns, then we can't use the offset cache for help :(
+    if ($last_sort_column_in_rule >= 0) {
+        # Starting at index 1 because we're interested in the file and seek data, not if it's in use
+        # offset 0 is the in-use flag, offset 1 is a ref to the file data and offset 2 is the file seek pos
+        SEARCH_CACHE:
+        for (my $i = 1; $i < @$offset_cache; $i+=3) {
+            next unless (defined($offset_cache->[$i]) && defined($offset_cache->[$i+1]));
 
-        $next_candidate_row = $offset_cache->[$i];
-        for (my $c = 0; $c <= $last_sort_column_in_rule; $c++) {
-            my $comparison = $comparison_for_column[$i]->();
+            $next_candidate_row = $offset_cache->[$i];
+            for (my $c = 0; $c <= $last_sort_column_in_rule; $c++) {
+                my $comparison = $comparison_for_column[$c]->();
 
-            next SEARCH_CACHE if ($comparison > 0);
-        }
-        # If we made it this far, then the file data in this slot is earlier in the file
-        # than the data we're looking for.  So, if the seek pos data is later than what
-        # we've found yet, use it instead
-        if ($offset_cache->[$i+1] > $file_pos) {
-            $file_pos = $offset_cache->[$i+1];
+                next SEARCH_CACHE if ($comparison > 0);
+            }
+            # If we made it this far, then the file data in this slot is earlier in the file
+            # than the data we're looking for.  So, if the seek pos data is later than what
+            # we've found yet, use it instead
+            if ($offset_cache->[$i+1] > $file_pos) {
+                $file_pos = $offset_cache->[$i+1];
+            }
         }
     }
 
