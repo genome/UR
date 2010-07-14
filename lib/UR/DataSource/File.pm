@@ -37,6 +37,9 @@ class UR::DataSource::File {
         file_list             => { is => 'ARRAY',  doc => 'list of pathnames of equivalent files' },
         sort_order            => { is => 'ARRAY',  doc => 'Names of the columns by which the data file is sorted' },
         constant_values       => { is => 'ARRAY',  doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
+
+        quick_disconnect      => { is => 'Boolean', default_value => 1, doc => 'Do not hold the file handle open between requests' },
+        handle_class          => { is => 'String', default_value => 'IO::File', doc => 'Class to use for new file handles' },
         
         # REMOVE
         #file_cache_index      => { is => 'Integer', doc => 'index into the file cache where the next read will be placed' },
@@ -64,7 +67,8 @@ sub get_default_handle {
             $filename = '/dev/null';
         }
 
-        my $fh = IO::File->new($filename);
+        my $handle_class = $self->handle_class;
+        my $fh = $handle_class->new($filename);
         unless($fh) {
             $self->error_message("Can't open ".$self->server." for reading: $!");
             return;
@@ -816,6 +820,8 @@ sub UR::DataSource::File::Tracker::DESTROY {
 
     my $count = $ds->_open_query_count();
     $ds->_open_query_count(--$count);
+
+    return unless ($ds->quick_disconnect);
     if ($count == 0) {
 	# All open queries have supposedly been fulfilled.  Close the
 	# file handle and undef it so get_default_handle() will re-open if necessary
