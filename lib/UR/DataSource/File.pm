@@ -22,7 +22,7 @@ use File::Temp;
 use File::Basename;
 use IO::File;
 
-our @CARP_NOT = qw( UR::Context );
+our @CARP_NOT = qw( UR::Context UR::DataSource::FileMux);
 
 class UR::DataSource::File {
     is => ['UR::DataSource'],
@@ -130,7 +130,7 @@ sub server {
 
 
 # Should be divisible by 3
-our $MAX_CACHE_SIZE = 99;
+our $MAX_CACHE_SIZE = 1000;
 # The offset cache is an arrayref containing three pieces of data:
 # 0: If this cache slot is being used by a loading iterator
 # 1: concatenated data from the sorted columns for comparison with where you are in the file
@@ -144,18 +144,24 @@ sub _offset_cache {
     return $self->{'_offset_cache'};
 }
 
+our %iterator_data_source; 
+our %iterator_cache_slot;
+
 sub _allocate_offset_cache_slot {
     my $self = shift;
 
     my $cache = $self->_offset_cache();
     my $next = scalar(@$cache);
+#print STDERR "_allocate_offset_cache_slot ".$self->server." current size is $next ";
     if ($next > $MAX_CACHE_SIZE) {
+#print STDERR "searching... \n";
         $next = 0;
         # Search for an unused slot
         while ($cache->[$next] and $next <= $MAX_CACHE_SIZE) {
             $next += 3;
         }
         if ($next > $MAX_CACHE_SIZE) {
+            #print STDERR scalar(keys(%iterator_data_source))." items in iterator_data_source ".scalar(keys(%iterator_cache_slot))." in iterator_cache_slot\n";
             Carp::croak("Unable to find an open cache slot because there are too many outstanding loading iterators");
         }
     }
@@ -163,6 +169,7 @@ sub _allocate_offset_cache_slot {
     $cache->[$next+1] = undef;
     $cache->[$next+2] = undef;
 
+#print STDERR "using slot $next current size ".scalar(@$cache)."\n";
     return $next;
 }
 
@@ -478,9 +485,6 @@ sub _comparator_for_operator_and_property {
 }
         
 
-our %iterator_data_source; 
-our %iterator_cache_slot;
-
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
@@ -552,7 +556,6 @@ sub create_iterator_closure_for_rule {
     # search in the offset cache for something helpful
     my $offset_cache = $self->_offset_cache();
 
-    $DB::single=1;
     # If the rule doesn't touch the sorted columns, then we can't use the offset cache for help :(
     if ($last_sort_column_in_rule >= 0) {
         # Starting at index 1 because we're interested in the file and seek data, not if it's in use
@@ -740,6 +743,7 @@ sub UR::DataSource::File::Tracker::DESTROY {
     my $cache_slot = delete $iterator_cache_slot{$iterator};
     if (defined $cache_slot) {
         # Mark this slot unused
+#print STDERR "Freeing cache slot $cache_slot\n";
         $ds->_offset_cache->[$cache_slot] = 0;
     }
 
