@@ -20,6 +20,7 @@ use Fcntl qw(:DEFAULT :flock);
 use Errno qw(EINTR EAGAIN);
 use File::Temp;
 use File::Basename;
+use IO::File;
 
 our @CARP_NOT = qw( UR::Context );
 
@@ -31,6 +32,8 @@ class UR::DataSource::File {
         column_order          => { is => 'ARRAY',  doc => 'Names of the columns in the file, in order' },
         cache_size            => { is => 'Integer', default_value => 100 },
         skip_first_line       => { is => 'Integer', default_value => 0, doc => 'Number of lines at the start of the file to skip' },
+        handle_class          => { is => 'String', default_value => 'IO::File', doc => 'Class to use for new file handles' },
+        quick_disconnect      => { is => 'Boolean', default_value => 1, doc => 'Do not hold the file handle open between requests' },
     ],
     has_optional => [ 
         server                => { is => 'String', doc => 'pathname to the data file' },
@@ -38,8 +41,6 @@ class UR::DataSource::File {
         sort_order            => { is => 'ARRAY',  doc => 'Names of the columns by which the data file is sorted' },
         constant_values       => { is => 'ARRAY',  doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
 
-        quick_disconnect      => { is => 'Boolean', default_value => 1, doc => 'Do not hold the file handle open between requests' },
-        handle_class          => { is => 'String', default_value => 'IO::File', doc => 'Class to use for new file handles' },
         
         # REMOVE
         #file_cache_index      => { is => 'Integer', doc => 'index into the file cache where the next read will be placed' },
@@ -74,8 +75,6 @@ sub get_default_handle {
             return;
         }
 
-        $self->_invalidate_cache();
-
         if ($ENV{'UR_DBI_MONITOR_SQL'}) {
             UR::DBI->sql_fh->printf("FILE: opened %s fileno %d\n\n",$self->server, $fh->fileno);
         }
@@ -88,8 +87,10 @@ sub get_default_handle {
 sub disconnect_default_handle {
     my $self = shift;
 
-    if ($self->{'_fh'}) {
-        $self->{'_fh'}->close();
+    if (my $fh = $self->{'_fh'}) {
+        flock($fh,LOCK_UN);
+        $fh->close();
+        $self->{'_fh'} = undef;
     }
 }
 
@@ -183,13 +184,11 @@ sub _allocate_offset_cache_slot {
 }
 
 
-# REMOVE
 sub _invalidate_cache {
     my $self = shift;
+
+    $self->{'_offset_cache'} = [];
  
-#    my $file_cache = $self->{'_file_cache'};
-#    undef($_) foreach @$file_cache;
-#    $self->file_cache_index(0);
     return 1;
 }
 
@@ -682,7 +681,7 @@ sub create_iterator_closure_for_rule {
 
         if ($self->{'_last_read_fingerprint'} ne $read_fingerprint) {
             UR::DBI->sql_fh->printf("FILE: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
-            # The last read was from a different request, reset the position and invalidate the cache
+            # The last read was from a different request, reset the position
             $fh->seek($file_pos,0);
             if ($file_pos == 0) {
                 my $skip = $self->skip_first_line;
@@ -692,7 +691,6 @@ sub create_iterator_closure_for_rule {
             }
             $file_pos = $fh->tell();
 
-            $self->_invalidate_cache();
             $self->{'_last_read_fingerprint'} = $read_fingerprint;
         }
 
@@ -729,7 +727,6 @@ sub create_iterator_closure_for_rule {
                     # at EOF.  Close up shop and return
                     flock($fh,LOCK_UN);
                     $fh = undef;
-                    $self->_invalidate_cache();
                  
                     if ($monitor_start_time) {
                         UR::DBI->sql_fh->printf("FILE: at EOF\nFILE: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
@@ -1156,6 +1153,7 @@ sub _sync_database {
 
     # Because of the rename/copy process during syncing, the previously opened filehandle may
     # not be valid anymore.  get_default_handle will reopen the file next time it's needed
+    $self->_invalidate_cache();
     $self->{_fh} = undef; 
 
     if ($ENV{'UR_DBI_MONITOR_SQL'}) {

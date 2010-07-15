@@ -13,6 +13,8 @@ class UR::DataSource::FileMux {
         column_order          => { is => 'ARRAY',  doc => 'Names of the columns in the file, in order' },
         cache_size            => { is => 'Integer', default_value => 100 },
         skip_first_line       => { is => 'Integer', default_value => 0 },
+        handle_class          => { is => 'String',  default_value => 'IO::File', doc => 'Class to use for new file handles' },
+        quick_disconnect      => { is => 'Boolean', default_value => 1, doc => 'Do not hold the file handle open between requests' },
         file_resolver         => { is => 'CODE',   doc => 'subref that will return a pathname given a rule' },
         constant_values       => { is => 'ARRAY',  default_value => [], doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
     ],
@@ -346,7 +348,7 @@ sub _common_params_for_concrete_data_sources {
     my $self = shift;
 
     my %params;
-    foreach my $param ( qw( delimiter skip_first_line column_order sort_order record_separator constant_values ) ) {
+    foreach my $param ( qw( delimiter skip_first_line column_order sort_order record_separator constant_values handle_class quick_disconnect ) ) {
         next unless defined $self->$param;
         my @vals = $self->$param;
         if (@vals > 1) {
