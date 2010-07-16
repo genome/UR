@@ -875,7 +875,7 @@ sub create_entity {
             my $adder = 'add_' . $singular_name;
             my $value = $set_values->{$property_name};
             unless (ref($value) eq 'ARRAY') {
-                die "odd non-array refrenced used for 'has-many' property $property_name for $class: $value!";
+                die "odd non-array refrence used for 'has-many' property $property_name for $class: $value!";
             }
             for my $item (@$value) {
                 if (ref($item) eq 'ARRAY') {
