@@ -98,7 +98,7 @@ note('test "add_param"');
 my $p2 = $o1->add_param(name => 'interesting', value => $v2);
 ok($p2, "added param 2");
 
-my @p = sort { $a->value_id <=> $b->value_id } $o1->params();
+@p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),2,"got two params");
 is($p[0],$p, "got the expected param 1 back");
 is($p[1],$p2, "got the expected param 2 back");
