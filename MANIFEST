@@ -79,7 +79,6 @@ lib/UR/DataSource/RDBMS/BitmapIndex.pm
 lib/UR/DataSource/RDBMS/Entity.pm
 lib/UR/DataSource/RDBMS/FkConstraint.pm
 lib/UR/DataSource/RDBMS/FkConstraintColumn.pm
-lib/UR/DataSource/RDBMS/PendingDDL.pm
 lib/UR/DataSource/RDBMS/PkConstraintColumn.pm
 lib/UR/DataSource/RDBMS/Table.pm
 lib/UR/DataSource/RDBMS/Table/View/Default/Text.pm
@@ -111,6 +110,7 @@ lib/UR/Env/UR_DBI_NO_COMMIT.pm
 lib/UR/Env/UR_DEBUG_OBJECT_RELEASE.pm
 lib/UR/Env/UR_IGNORE.pm
 lib/UR/Env/UR_MOOSE.pm
+lib/UR/Env/UR_NR_CPU.pm
 lib/UR/Env/UR_STACK_DUMP_ON_DIE.pm
 lib/UR/Env/UR_STACK_DUMP_ON_WARN.pm
 lib/UR/Env/UR_TEST_FILLDB.pm
@@ -199,10 +199,12 @@ lib/UR/Object/Reference/Property.pm
 lib/UR/Object/Reference/View/Default/Umlet.pm
 lib/UR/Object/Reference/View/DescriptionLineItem/Text.pm
 lib/UR/Object/Set.pm
+lib/UR/Object/Set/View/Default/Xml.pm
 lib/UR/Object/Tag.pm
 lib/UR/Object/Type.pm
 lib/UR/Object/Type.pod
 lib/UR/Object/Type/AccessorWriter.pm
+lib/UR/Object/Type/AccessorWriter/Product.pm
 lib/UR/Object/Type/AccessorWriter/Sum.pm
 lib/UR/Object/Type/DBICModuleWriter.pm
 lib/UR/Object/Type/Initializer.pm
@@ -211,6 +213,7 @@ lib/UR/Object/Type/InternalAPI.pm
 lib/UR/Object/Type/ModuleWriter.pm
 lib/UR/Object/Type/View/Default/Text.pm
 lib/UR/Object/Type/View/Default/Umlet.pm
+lib/UR/Object/Type/View/Default/Xml.pm
 lib/UR/Object/Umlet.pm
 lib/UR/Object/Umlet/Class.pm
 lib/UR/Object/Umlet/Diagram.pm
@@ -218,6 +221,7 @@ lib/UR/Object/Umlet/Other.pm
 lib/UR/Object/Umlet/PictureElement.pm
 lib/UR/Object/Umlet/Relation.pm
 lib/UR/Object/UserOperation.pm
+lib/UR/Object/Value.pm
 lib/UR/Object/View.pm
 lib/UR/Object/View/Aspect.pm
 lib/UR/Object/View/Default/Gtk.pm
@@ -287,10 +291,10 @@ t/URT/38Related.pm
 t/URT/43Primary.pm
 t/URT/43Related.pm
 t/URT/Context/Testing.pm
-t/URT/DataModel.pm
 t/URT/DataSource/CircFk.pm
 t/URT/DataSource/Meta.pm
 t/URT/DataSource/Meta.sqlite3
+t/URT/DataSource/Meta.sqlite3-bak
 t/URT/DataSource/Meta.sqlite3-dump
 t/URT/DataSource/Meta.sqlite3-schema
 t/URT/DataSource/SomeFile.pm
@@ -299,17 +303,14 @@ t/URT/DataSource/SomeMySQL.pm
 t/URT/DataSource/SomeOracle.pm
 t/URT/DataSource/SomePostgreSQL.pm
 t/URT/DataSource/SomeSQLite.pm
-t/URT/DataSource/TestMe.pm
-t/URT/DataSource/TestMe.sqlite3-dump
-t/URT/DataSource/TestMe.sqlite3-schema
 t/URT/ObjWithHash.pm
-t/URT/ProcessingProfile.pm
 t/URT/RAMThingy.pm
 t/URT/t/00-load.t
 t/URT/t/01_object.t
 t/URT/t/02_class_construction.t
 t/URT/t/03_rules.t
 t/URT/t/04a_sqlite.t
+t/URT/t/04a_sqlite_init_db_internal.t
 t/URT/t/04b_mysql.t
 t/URT/t/04c_postresql.t
 t/URT/t/04d_oracle.t
@@ -385,6 +386,9 @@ t/URT/t/65_reload_with_changing_db_data.t
 t/URT/t/66_nullable_hangoff_data.t
 t/URT/t/67_composite_id_with_id_class_by_rt55121.t
 t/URT/t/68_trapped_death_does_not_stack_trace.t
+t/URT/t/69_subclassify_by.t
+t/URT/t/70_command_help_text.t
+t/URT/t/71_ur_value.t
 t/URT/t/80_command_define_datasource.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction.t
