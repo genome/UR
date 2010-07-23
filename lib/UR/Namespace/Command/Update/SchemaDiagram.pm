@@ -50,6 +50,9 @@ use constant MAX_X_AUTO_POSITION => 1000;
 # most of the code
 sub execute {
     my $self = shift;
+
+    $self->_init or return;
+
     my $params = shift;
     
 $DB::single=1;

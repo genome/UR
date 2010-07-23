@@ -27,6 +27,8 @@ sub is_sub_command_delegator { 0;}
 sub execute {
 my($self, $params) = @_;
 
+    $self->_init or return;
+
     my $namespace = $self->namespace_name;
     # FIXME why dosen't require work here?
     eval "use  $namespace";

@@ -35,6 +35,8 @@ sub help_brief {
 sub execute {
     my $self = shift;
 
+    $self->_init or return;
+
     $self->warning_message("This command is not yet implemented.  See the documentation for UR::DataSource::File for more information about creating file-based data sources");
     return;
 }

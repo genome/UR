@@ -32,7 +32,8 @@ sub help_description {
 sub execute {
     my $self = shift;
 
-$DB::single=1;
+    $self->_init or return;
+
     my $namespace = $self->namespace_name;
     unless ($namespace) {
         $self->error_message("This command must be run from a namespace directory.");

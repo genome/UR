@@ -31,9 +31,11 @@ sub help_brief {
 
 sub execute {
     my $self = shift;
+
+    $self->_init or return;
+
     my $params = shift;
   
-$DB::single=1;
     my $namespace = $self->namespace_name;
     # FIXME why dosen't require work here?
     eval "use  $namespace";
