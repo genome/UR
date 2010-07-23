@@ -6,8 +6,10 @@ $UR::Namespace::Command::OPTS_SPEC = [
           ],
           '>create-completion-spec-file',
           [
-            'classname=s',
+            'output=s',
             undef,
+            'classname=s',
+            'files',
             'help!',
             undef
           ],
@@ -16,9 +18,9 @@ $UR::Namespace::Command::OPTS_SPEC = [
             '>class',
             [
               'extends=s',
-              undef,
+              'files',
               'bare-args=s@',
-              'bare-args',
+              'files',
               'help!',
               undef
             ],
@@ -113,7 +115,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
             '>namespace',
             [
               'bare-args=s@',
-              'bare-args',
+              'files',
               'help!',
               undef
             ],
@@ -123,7 +125,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
           '>describe',
           [
             'subject-list=s@',
-            'subject-list',
+            'files',
             'help!',
             undef
           ],
@@ -147,9 +149,9 @@ $UR::Namespace::Command::OPTS_SPEC = [
             '>dbic-classes',
             [
               'bare-args=s@',
-              'bare-args',
+              'files',
               'subject-list=s@',
-              'subject-list',
+              'files',
               'help!',
               undef
             ],
@@ -159,7 +161,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
           '>info',
           [
             'subject=s@',
-            'subject',
+            'files',
             'help!',
             undef
           ],
@@ -168,14 +170,14 @@ $UR::Namespace::Command::OPTS_SPEC = [
             '>classes',
             [
               'subject-list=s@',
-              'subject-list',
+              'files',
               'help!',
               undef
             ],
             '>modules',
             [
               'subject-list=s@',
-              'subject-list',
+              'files',
               'help!',
               undef
             ],
@@ -200,7 +202,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
           '>redescribe',
           [
             'subject-list=s@',
-            'subject-list',
+            'files',
             'help!',
             undef
           ],
@@ -211,7 +213,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'force!',
               undef,
               'subject-list=s@',
-              'subject-list',
+              'files',
               'help!',
               undef
             ],
@@ -223,7 +225,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
             'force!',
             undef,
             'subject-list=s@',
-            'subject-list',
+            'files',
             'help!',
             undef
           ],
@@ -236,7 +238,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
                 'file=s',
                 undef,
                 'show=s',
-                undef,
+                'files',
                 'filter=s',
                 undef,
                 'noheaders!',
@@ -252,14 +254,14 @@ $UR::Namespace::Command::OPTS_SPEC = [
             '>compile',
             [
               'subject-list=s@',
-              'subject-list',
+              'files',
               'help!',
               undef
             ],
             '>eval',
             [
               'bare-args=s@',
-              'bare-args',
+              'files',
               'help!',
               undef
             ],
@@ -288,7 +290,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'coverage!',
               undef,
               'inc=s@',
-              'inc',
+              undef,
               'jobs=s',
               undef,
               'long!',
@@ -306,7 +308,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'time=s',
               undef,
               'bare-args=s@',
-              'bare-args',
+              'files',
               'help!',
               undef
             ],
@@ -326,14 +328,14 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'verbose!',
               undef,
               'subject-list=s@',
-              'subject-list',
+              'files',
               'help!',
               undef
             ],
             '>window',
             [
               'bare-args=s@',
-              'bare-args',
+              'files',
               'help!',
               undef
             ],
@@ -357,7 +359,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'show-methods!',
               undef,
               'initial-name=s@',
-              'initial-name',
+              'files',
               'help!',
               undef
             ],
@@ -374,7 +376,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'table-name=s',
               undef,
               'subject-list=s@',
-              'subject-list',
+              'files',
               'help!',
               undef
             ],
@@ -389,7 +391,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'show-columns!',
               undef,
               'initial-name=s@',
-              'initial-name',
+              'files',
               'help!',
               undef
             ],
