@@ -1058,19 +1058,24 @@ sub _shell_arg_getopt_complete_specification_from_property_meta
     my ($self,$property_meta) = @_;
     my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
     my $completions = $property_meta->valid_values;
-    unless ($completions) {
+    if ($completions) {
+        if (ref($completions) eq 'ARRAY') {
+            $completions = [ @$completions ];
+        }
+    }
+    else {
         my $type = $property_meta->data_type;
-        if ($type =~ /File(system|)(Path|)/i) {
+        if ((!defined $type) || $type =~ /File(system|)(Path|)/i) {
             $completions = 'files';
         }
-        elsif ($type =~ /Directory(Path|)/i) {
+        elsif ($type && $type =~ /Directory(Path|)/i) {
             $completions = 'directories'
         }
     }
     return (
         $arg_name .  $self->_shell_arg_getopt_qualifier_from_property_meta($property_meta),
         $completions, 
-        ($property_meta->is_many ? ($arg_name => []) : ())
+#        ($property_meta->is_many ? ($arg_name => []) : ())
     );
 }
 
@@ -1093,7 +1098,7 @@ sub _shell_args_getopt_complete_specification
     my $self = shift;
     my @getopt;
     for my $meta ($self->_shell_args_property_meta) {
-        my ($spec, $completions) = $self->_shell_arg_getopt_specification_from_property_meta($meta);
+        my ($spec, $completions) = $self->_shell_arg_getopt_complete_specification_from_property_meta($meta);
         push @getopt, $spec, $completions;
     }
     return @getopt; 
