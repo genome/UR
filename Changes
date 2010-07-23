@@ -8,6 +8,7 @@ Revision history for UR
 	Calculated properties can now be memoized
 	subclassify_by for an abstract class can now be a regular, indirect or calculated property
 	New environment variable UR_CONTEXT_MONITOR_QUERY for printing Context/query info to stdout
+	SQLite data sources can initialize themselves even if the sqlite3 executable cannot be found
 	Test harness improvements: --junit and --color options, control-C stops tests and reports results
         'use lib' within an autoloaded module stays in effect after the module is loaded
 	
