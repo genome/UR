@@ -425,7 +425,6 @@ $DB::single=1;
 #   ->_sync_filesystem()
 #
 
-
 sub _update_database_metadata_objects_for_schema_changes {
     my ($self, %params) = @_;
     my $data_source = delete $params{data_source};
@@ -448,7 +447,7 @@ sub _update_database_metadata_objects_for_schema_changes {
 
     # from the database now
     my @current_table_names = $data_source->_get_table_names_from_data_dictionary();
-    my %current_table_names = map { s/"|'//g; uc($_) => 1 } @current_table_names;
+    my %current_table_names = map { s/"|'//g; uc($_) => $_ } @current_table_names;
 
     my %all_table_names = (%current_table_names, %previous_table_names);
 
@@ -464,6 +463,10 @@ sub _update_database_metadata_objects_for_schema_changes {
         my $table_object;
         my $last_recorded_ddl_time;
         my $last_object_revision;
+
+        # UR always keeps table names stored in upper-case.  Some databases (mysql)
+        # are case sensitive when querying the data dictionary
+        my $db_table_name = $current_table_names{$table_name};
 
         eval {
             #($table_object) = $data_source->get_tables(table_name => $table_name);
@@ -483,7 +486,7 @@ sub _update_database_metadata_objects_for_schema_changes {
                     $dsn . " " . $table_name
                 )
             );
-            my $table_object = $data_source->refresh_database_metadata_for_table_name($table_name);
+            my $table_object = $data_source->refresh_database_metadata_for_table_name($db_table_name);
             next unless $table_object; 
 
             $table_object->last_ddl_time($last_ddl_time_for_table_name->{$table_name});
@@ -497,7 +500,7 @@ sub _update_database_metadata_objects_for_schema_changes {
             ) {
                 my $last_update = $table_object->last_ddl_time || $table_object->last_object_revision;
                 my $this_update = $last_ddl_time_for_table_name->{$table_name} || "<unknown date>";
-                my $table_object = $data_source->refresh_database_metadata_for_table_name($table_name);
+                my $table_object = $data_source->refresh_database_metadata_for_table_name($db_table_name);
                 unless ($table_object) {
                     #$DB::single = 1;
                     print;

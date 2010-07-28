@@ -146,7 +146,16 @@ my($self,$table_name) = @_;
     return $ret;
 }
 
+sub get_column_details_from_data_dictionary {
+    my $self = shift;
 
+    # Mysql seems wierd about the distinction between catalog/database and schema/owner
+    # For 'ur update classes', it works if we just pass in undef for catalog
+    # The passed-in args are: $self,$catalog,$schema,$table,$column
+    my $catalog = shift;
+
+    return $self->SUPER::get_column_details_from_data_dictionary(undef, @_);
+}
 
 1;
 

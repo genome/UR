@@ -792,7 +792,7 @@ sub refresh_database_metadata_for_table_name {
         # Create a brand new one from scratch
 
         $table_object = UR::DataSource::RDBMS::Table->create(
-            table_name => $table_name,
+            table_name => uc($table_name),
             table_type => $table_data->{TABLE_TYPE},
             owner => $table_data->{TABLE_SCHEM},
             data_source => $data_source_id,
