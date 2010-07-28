@@ -15,11 +15,11 @@ BEGIN {
     # this is an attempt to get around it...
 
     # for the cpan shell, and other parsers
-    $VERSION = 'v0.13';
+    $VERSION = 'v0.14';
 
     # for actual inspection
     ${VERSION} 
-        = qv('0.13'); 
+        = qv('0.14'); 
 };
 
 # Ensure we get detailed errors while starting up.

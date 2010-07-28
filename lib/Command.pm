@@ -623,7 +623,7 @@ sub help_usage_complete_text {
                 ' ', 
                 '    ', 
                 Term::ANSIColor::colored($self->command_name, 'bold'),
-                $self->_shell_args_usage_string,
+                $self->_shell_args_usage_string || '',
             ),
             ( $synopsis 
                 ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
@@ -640,7 +640,7 @@ sub help_usage_complete_text {
             sprintf(
                 "%s\n%s\n", 
                 Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
-                Text::Wrap::wrap(' ', ' ', $self->help_detail)
+                Text::Wrap::wrap(' ', ' ', $self->help_detail || '')
             ),
             ( $sub_commands 
                 ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
@@ -815,7 +815,7 @@ sub help_options
                     "    ", # 1st line indent,
                     "    ", # all other lines indent,
                     $row->[2],
-                    $row->[3],
+                    $row->[3] || '',
                 ),
             );
         }

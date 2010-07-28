@@ -98,12 +98,12 @@ note('test "add_param"');
 my $p2 = $o1->add_param(name => 'interesting', value => $v2);
 ok($p2, "added param 2");
 
-my @p = sort { $a->value_id <=> $b->value_id } $o1->params();
+@p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),2,"got two params");
 is($p[0],$p, "got the expected param 1 back");
 is($p[1],$p2, "got the expected param 2 back");
 
-my @pv = sort { $a->id <=> $b->id } $o1->param_values();
+@pv = sort { $a->id <=> $b->id } $o1->param_values();
 is(scalar(@pv),2,"got two param values");
 is($pv[0],$v1,"got expected value 1");
 is($pv[1],$v2,"got expected value 2");
@@ -123,15 +123,15 @@ is($pv[0],$v1,"got expected value 1");
 #<>#
 note('test "add_param_value"');
 $DB::single = 1;
-my $p2 = $o1->add_param_value(name => 'interesting', value => $v2);
+$p2 = $o1->add_param_value(name => 'interesting', value => $v2);
 ok($p2, "added another param");
 
-my @p = sort { $a->value_id <=> $b->value_id } $o1->params();
+@p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),2,"got two params");
 is($p[0],$p, "got the expected param 1 back");
 is($p[1],$p2, "got the expected param 2 back");
 
-my @pv = sort { $a->id <=> $b->id } $o1->param_values();
+@pv = sort { $a->id <=> $b->id } $o1->param_values();
 is(scalar(@pv),2,"got two param values");
 is($pv[0],$v1,"got expected value 1");
 is($pv[1],$v2,"got expected value 2");
@@ -151,16 +151,16 @@ is($pv[0],$v1,"got expected value 1");
 #<>#
 note('test "add_interesting_param_value" with a key-value pair');
 $DB::single = 1;
-my $p2 = $o1->add_interesting_param_value(value => $v2);
+$p2 = $o1->add_interesting_param_value(value => $v2);
 ok($p2, "added an intereting param");
 is($p2->name,'interesting', "the param name was set automatically during addition");
 
-my @p = sort { $a->value_id <=> $b->value_id } $o1->params();
+@p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),2,"got two params");
 is($p[0],$p, "got the expected param 1 back");
 is($p[1],$p2, "got the expected param 2 back");
 
-my @pv = sort { $a->id <=> $b->id } $o1->param_values();
+@pv = sort { $a->id <=> $b->id } $o1->param_values();
 is(scalar(@pv),2,"got two param values");
 is($pv[0],$v1,"got expected value 1");
 is($pv[1],$v2,"got expected value 2");
@@ -180,16 +180,16 @@ is($pv[0],$v1,"got expected value 1");
 #<>#
 note('test "add_interesting_param_value" without a key-value pair');
 $DB::single = 1;
-my $p2 = $o1->add_interesting_param_value($v2);
+$p2 = $o1->add_interesting_param_value($v2);
 ok($p2, "added an intereting param");
 is($p2->name,'interesting', "the param name was set automatically during addition");
 
-my @p = sort { $a->value_id <=> $b->value_id } $o1->params();
+@p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),2,"got two params");
 is($p[0],$p, "got the expected param 1 back");
 is($p[1],$p2, "got the expected param 2 back");
 
-my @pv = sort { $a->id <=> $b->id } $o1->param_values();
+@pv = sort { $a->id <=> $b->id } $o1->param_values();
 is(scalar(@pv),2,"got two param values");
 is($pv[0],$v1,"got expected value 1");
 is($pv[1],$v2,"got expected value 2");
