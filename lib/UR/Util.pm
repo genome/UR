@@ -10,7 +10,7 @@ sub null_sub { }
 sub used_libs {
     my @extra;
     for my $i (@INC) {
-        last if $ENV{PERL5LIB} =~ /^$i\:/;
+        last if ($ENV{'PERL5LIB'} and $ENV{PERL5LIB} =~ /^$i\:/;
         push @extra, $i;
     }
     return @extra;
