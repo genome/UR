@@ -23,36 +23,4 @@ UR::Object::Type->define(
 
 =cut
 
-sub create {
-    my $class = shift;
-    my %params = $class->preprocess_params(@_);
-
-    my $class_object;
-    if (!$params{type_name}) {
-        if (my $class_name = $params{class_name}) {
-            $class_object = UR::Object::Type->get(class_name => $class_name);
-            unless ($class_object) {
-                Carp::confess("Failed to find a class object for class $class_name!");
-            }
-            $params{type_name} = $class_object->type_name;
-        }
-        else {
-            Carp::confess("Missing type_name!");
-        }
-    }
-    if (!$params{parent_type_name}) {
-        if (my $parent_class_name = $params{parent_class_name}) {
-            my $parent_class_object = UR::Object::Type->get(class_name => $parent_class_name);
-            unless ($parent_class_object) {
-                Carp::confess("Failed to find a class object for class $parent_class_name!");
-            }
-            $params{parent_type_name} = $parent_class_object->type_name;
-        }
-        else {
-            Carp::confess("Missing type_name!");
-        }
-    }
-    $class->SUPER::create(%params);
-}
-
 1;
