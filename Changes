@@ -1,5 +1,9 @@
 Revision history for UR
 
+0.15	2010-08-03
+	Improved 'ur update classes' interaction with MySQL databases
+	Integration with Getopt::Complete got bash command-line tab completion
+	
 0.14	2010-07-26
 	Metadata about data source entities (tables, columns, etc) is autodiscovered within commit() if it doesn't already exist in the MetaDB
 	The new View API now has working default toolkits for HTML, Text, XML and XSL.  The old Viewer API has been removed.
