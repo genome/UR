@@ -35,16 +35,6 @@ eval {
     binmode STDERR, ":utf8";
 };
 
-sub import {
-    my $class = $_[0];
-    if ($ENV{GETOPT_COMPLETE_CACHE}) {
-        # This environment variable is used to interrogate the module
-        # when building a cache of options.
-        our @OPTS_SPEC = $class->resolve_option_completion_spec();
-    }
-    shift->SUPER::import(@_);
-}
-
 sub _init_subclass {
     # Each Command subclass has an automatic wrapper around execute().
     # This ensures it can be called as a class or instance method, 
@@ -404,7 +394,9 @@ sub _command_name_for_class_word
     my $self = shift;
     my $s = shift;
     $s =~ s/_/-/g;
-    $s =~ s/([a-z])([A-Z])/$1-$2/g;
+    $s =~ s/^([A-Z])/\L$1/; # ignore first capital because that is assumed
+    $s =~ s/([A-Z])/-$1/g; # all other capitals prepend a dash
+    $s =~ s/([a-zA-Z])([0-9])/$1-$2/g; # treat number as begining word
     $s = lc($s);
     return $s;
 }
@@ -436,66 +428,39 @@ sub _resolved_params_from_get_options {
 }
 
 sub resolve_option_completion_spec {
-    my ($class,@argv) = @_;
+    my $class = shift;
     my @completion_spec;
-
-    # todo: this should not be needed b/c
-    # things wanting caching will find the cache data upstream
-
-    my $my_path = $class->__meta__->module_path;
-    my $cached_opts_path  = $my_path . '.opts';
-    if (-e $cached_opts_path) {
-        my $my_mtime = (stat($my_path))[9];
-        my $cache_mtime = (stat($cached_opts_path))[9];
-        if ($cache_mtime >= $my_mtime) {
-            my $content = join('',IO::File->new($cached_opts_path)->getlines);
-            no strict;
-            no warnings;
-            my $data = eval $content;
-            @completion_spec = @$data;
-            return @completion_spec;
-        }
-        else {
-            warn "\nstale cache, removing $cached_opts_path";
-            unlink $cached_opts_path;
-        }
-    }
 
     if ($class->is_sub_command_delegator) {
         my @sub = $class->sub_command_names;
         for my $sub (@sub) {
-            my $sub_class = $class->class_for_sub_command($sub); 
-            my $v =  $sub_class;
-            my $sub_tree = \$v; 
-            push @completion_spec, '>' . $sub, $sub_tree;
+            my $sub_class = $class->class_for_sub_command($sub);
+            my $sub_tree = $sub_class->resolve_option_completion_spec() if defined($sub_class);
+
+            # Hack to fix several broken commands, this should be removed once commands are fixed.
+            # If the commands were not broken then $sub_tree will always exist.
+            # Basically if $sub_tree is undef then we need to remove '>' to not break the OPTS_SPEC
+            if ($sub_tree) {
+                push @completion_spec, '>' . $sub => $sub_tree;
+            }
+            else {
+                print "WARNING: Found $sub listed as delegator but no delegatees!\n";
+                print "\t Changing $sub to non-delegating command, suggest investigating to correct completion.\n";
+                push @completion_spec, $sub => undef;
+            }
         }
         push @completion_spec, "help!" => undef;
     }
     else {
         my $params_hash;
-        ($params_hash,@completion_spec) = $class->_shell_args_getopt_complete_specification;
+        @completion_spec = $class->_shell_args_getopt_complete_specification;
         no warnings;
         unless (grep { /^help\W/ } @completion_spec) {
             push @completion_spec, "help!" => undef;
         }
     }
-    
-    # TODO: this should be auto-created by the Getopt::Complete::Cache module
-    # when we have some more hooks in place.
-    unless (-e $cached_opts_path) {
-        eval {
-            my $fh = IO::File->new('>' . $cached_opts_path);
-            if ($fh) {
-                warn "caching options for $class...\n";
-                my $src = Data::Dumper::Dumper(\@completion_spec);
-                $src =~ s/^\$VAR1/\$${class}::OPTS_SPEC/;
-                #print STDERR ">> $src\n";
-                $fh->print($src);
-            }
-        };
-    }
 
-    return @completion_spec;
+    return \@completion_spec
 }
 
 sub resolve_class_and_params_for_argv
@@ -532,7 +497,7 @@ sub resolve_class_and_params_for_argv
     }
 
     # Thes nasty GetOptions modules insist on working on
-    # the real @ARGV, while we like a little moe flexibility.
+    # the real @ARGV, while we like a little more flexibility.
     # Not a problem in Perl. :)  (which is probably why it was never fixed)
     local @ARGV;
     @ARGV = @argv;
@@ -1093,19 +1058,24 @@ sub _shell_arg_getopt_complete_specification_from_property_meta
     my ($self,$property_meta) = @_;
     my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
     my $completions = $property_meta->valid_values;
-    unless ($completions) {
+    if ($completions) {
+        if (ref($completions) eq 'ARRAY') {
+            $completions = [ @$completions ];
+        }
+    }
+    else {
         my $type = $property_meta->data_type;
-        if ($type =~ /File(system|)(Path|)/i) {
+        if ((!defined $type) || $type =~ /File(system|)(Path|)/i) {
             $completions = 'files';
         }
-        elsif ($type =~ /Directory(Path|)/i) {
+        elsif ($type && $type =~ /Directory(Path|)/i) {
             $completions = 'directories'
         }
     }
     return (
         $arg_name .  $self->_shell_arg_getopt_qualifier_from_property_meta($property_meta),
         $completions, 
-        ($property_meta->is_many ? ($arg_name => []) : ())
+#        ($property_meta->is_many ? ($arg_name => []) : ())
     );
 }
 
@@ -1127,13 +1097,11 @@ sub _shell_args_getopt_complete_specification
 {
     my $self = shift;
     my @getopt;
-    my @params;
     for my $meta ($self->_shell_args_property_meta) {
-        my ($spec, $completions, @params_addition) = $self->_shell_arg_getopt_specification_from_property_meta($meta);
-        push @getopt,$spec, $completions;
-        push @params, @params_addition; 
+        my ($spec, $completions) = $self->_shell_arg_getopt_complete_specification_from_property_meta($meta);
+        push @getopt, $spec, $completions;
     }
-    return { @params}, @getopt; 
+    return @getopt; 
 }
 
 sub _shell_args_usage_string
@@ -1233,7 +1201,7 @@ sub sub_command_names
 {
     my $class = shift;
     my @sub_command_classes = $class->sub_command_classes;
-    my @sub_command_names= map { $_->command_name_brief } @sub_command_classes;
+    my @sub_command_names = map { $_->command_name_brief } @sub_command_classes;
     return @sub_command_names;
 }
 

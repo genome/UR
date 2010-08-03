@@ -1,7 +1,13 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
+
+BEGIN {
+        eval "use Getopt::Complete::Cache class => 'UR::Namespace::Command', above => 1;";
+};
+
 use above "UR";
+
 UR::Namespace::Command->execute_with_shell_params_and_exit();
 
 =pod
