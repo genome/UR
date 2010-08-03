@@ -124,6 +124,7 @@ lib/UR/Manual/Cookbook.pod
 lib/UR/Manual/Metadata.pod
 lib/UR/Manual/Overview.pod
 lib/UR/Manual/Presentation.pod
+lib/UR/Manual/SchemaDesign.pod
 lib/UR/Manual/Tutorial.pod
 lib/UR/Manual/UR.pod
 lib/UR/Manual/UR_Presentation.pdf
@@ -133,7 +134,9 @@ lib/UR/ModuleLoader.pm
 lib/UR/Moose.pm
 lib/UR/Namespace.pm
 lib/UR/Namespace/Command.pm
+lib/UR/Namespace/Command.pm.opts
 lib/UR/Namespace/Command/Browser.pm
+lib/UR/Namespace/Command/CreateCompletionSpecFile.pm
 lib/UR/Namespace/Command/Define.pm
 lib/UR/Namespace/Command/Define/Class.pm
 lib/UR/Namespace/Command/Define/Datasource.pm
@@ -389,6 +392,8 @@ t/URT/t/68_trapped_death_does_not_stack_trace.t
 t/URT/t/69_subclassify_by.t
 t/URT/t/70_command_help_text.t
 t/URT/t/71_ur_value.t
+t/URT/t/72_command_name_validation.t
+t/URT/t/73_opts_spec_creation_and_validation.t
 t/URT/t/80_command_define_datasource.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction.t
