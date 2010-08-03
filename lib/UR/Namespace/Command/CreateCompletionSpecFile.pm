@@ -6,7 +6,6 @@ use warnings;
 use UR;
 use Getopt::Complete;
 use Getopt::Complete::Cache;
-use above 'Genome';
 use IO::File;
 
 UR::Object::Type->define(
