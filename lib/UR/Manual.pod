@@ -12,6 +12,8 @@ L<UR::Manual::Overview> - UR from Ten Thousand Feet
 
 L<UR::Manual::Tutorial> - Getting started with UR
 
+L<UR::Manual::SchemaDesign> - A few things to keep in mind when designing a database schema
+
 L<UR::Manual::Presentation> - Slides for a presentation on UR
 
 L<UR::Manual::Cookbook> - Recepies for getting stuff working
