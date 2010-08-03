@@ -1001,10 +1001,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
             unless ($class->class_name->isa('UR::Entity')) {
                 my $inheritance = UR::Object::Inheritance->create(
-                    type_name => $class->type_name,
                     class_name => $class->class_name,
                     parent_class_name => "UR::Entity",
-                    parent_type_name => "table row",
                     inheritance_priority => 0,
                 );
                 Carp::confess("Failed to generate inheritance link!?") unless $inheritance;
@@ -1264,7 +1262,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $class_meta = $classes_to_check_id_properties{$class_name};
         my $property_meta = $class_meta->property_meta_for_name('id');
         if ($property_meta && $property_meta->column_name && scalar($class_meta->direct_id_property_metas) > 1) {
-            $self->warning_message("Class $class_name cannot have multiple ID properties when one concrete ID property is named 'id'");
+            $self->warning_message("Class $class_name cannot have multiple ID properties when one concrete ID property is named 'id'. It will likely not function correctly unless it is renamed");
         }
         unless ($property_meta->is_id) {
             $self->warning_message("Class $class_name has a property named 'id' that is not an ID property.  It will likely not function correctly unless it is renamed");
