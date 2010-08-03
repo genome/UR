@@ -30,6 +30,7 @@ features (
         'Path::Class'         => '',
         'XML::Dumper'         => '',
         'XML::Generator'      => '',
+        'XML::LibXML'         => '',
     ],
     'Moose' => [
         #-tests  => [ [ 't/URT/t/00-load.t' ], <t/URT/t/*-moose-*.t> ],
