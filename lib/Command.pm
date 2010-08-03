@@ -432,7 +432,11 @@ sub resolve_option_completion_spec {
     my @completion_spec;
 
     if ($class->is_sub_command_delegator) {
-        my @sub = $class->sub_command_names;
+        my @sub = eval { $class->sub_command_names};
+        if ($@) {
+            $class->warning_message("Couldn't load class $class: $@\nSkipping $class...");
+            return;
+        }
         for my $sub (@sub) {
             my $sub_class = $class->class_for_sub_command($sub);
             my $sub_tree = $sub_class->resolve_option_completion_spec() if defined($sub_class);
