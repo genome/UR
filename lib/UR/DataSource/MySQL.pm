@@ -157,6 +157,16 @@ sub get_column_details_from_data_dictionary {
     return $self->SUPER::get_column_details_from_data_dictionary(undef, @_);
 }
 
+sub get_foreign_key_details_from_data_dictionary {
+    my $self = shift;
+
+    # Mysql requires undef in some fields instead of an empty string
+    my @new_params = map { length($_) ? $_ : undef } @_;
+
+    return $self->SUPER::get_foreign_key_details_from_data_dictionary(@new_params);
+}
+
+
 1;
 
 =pod
