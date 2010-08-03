@@ -239,7 +239,8 @@ sub _class_objects_in_tree
     for my $class_name (sort { uc($a) cmp uc($b) } @class_names) {
         eval "use $class_name";
         if ($@) {
-            print STDERR "Failed to use class $class_name!";
+            print STDERR "Failed to use class $class_name!\n";
+            print STDERR $@,"\n";
             next;
         }
         my $c = UR::Object::Type->is_loaded(class_name => $class_name);
