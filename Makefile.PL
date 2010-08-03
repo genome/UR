@@ -31,6 +31,7 @@ features (
         'XML::Dumper'         => '',
         'XML::Generator'      => '',
         'XML::LibXML'         => '',
+        'Getopt::Complete'    => '0.13',
     ],
     'Moose' => [
         #-tests  => [ [ 't/URT/t/00-load.t' ], <t/URT/t/*-moose-*.t> ],
