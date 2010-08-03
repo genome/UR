@@ -16,7 +16,18 @@ This will load all the data sources under the DataSource subdirectory of the
 Namespace, find out what has changed between the last time you ran update
 classes (possibly never) and now, save the current database schema information
 in the Namespace's MetaDB, and update the class definitions for any changed
-entities.  
+entities.
+
+=head2 Possible conflicts
+
+Avoid tables called 'type' or 'types'.  It will conflict with the class
+metadata class names where their class names end in '::Type'.  The 'ur update
+classes' tool will rename the class to 'YourNamespace::TypeTable' to avoid the
+conflict, while keeping the table_name the same.
+
+A table with multiple primary keys should not have one of them called 'id'.
+This will result in a conflict with the requirement that a class must have
+have a property called 'id' that uniquely identifies a member.  
 
 =head1 Relationships
 

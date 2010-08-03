@@ -133,7 +133,9 @@ an amalgamation of the directly named id properties such that no two objects
 of that class will have the same 'id'. If there are no id_by properties
 given (including MyClass above that doesn't have _any_ properties), then an
 implicit 'id' property will get created. Instances of that class will have
-an 'id' generated internally by an algorithm.
+an 'id' generated internally by an algorithm.  Finally, if the class has
+more than one ID property, none of them may be called 'id', since that name
+will be reserved for the amalgamated-value property.
 
 You'll find that the parser for class definitions is pretty accepting about
 the kinds of data structures it will take. The first thing after class is
