@@ -694,6 +694,13 @@ sub resolve_class_name_for_table_name {
         $addl = '';
     }
     $class_name = $namespace . "::" . $addl . join("",@words);
+
+    if (substr($class_name, -6) eq '::Type') {
+        # Don't overwrite class metadata objects for a table called 'type'
+        $class_name .= 'Table';
+        $self->warning_message("Class for table $table_name will be $class_name");
+    }
+
     return $class_name;
 }
 
