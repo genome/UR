@@ -565,6 +565,14 @@ sub _normalize_class_description {
         @$id_properties = @replacement;
     };
     
+    if (@$id_properties > 1
+        and grep {$_ eq 'id'} @$id_properties)
+    {
+        Carp::croak("Cannot initialize class $class_name: "
+                    . "Cannot have an ID property named 'id' when the class has multiple ID properties ("
+                    . join(', ', map { "'$_'" } @$id_properties)
+                    . ")");
+    }
 
     # Flatten and format the property list(s) in the class description.
     # NOTE: we normalize the details at the end of normalizing the class description.
