@@ -925,6 +925,7 @@ sub refresh_database_metadata_for_table_name {
         while (my $data = $fk_sth->fetchrow_hashref()) {
 
             foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME ) ) {
+                next unless defined($data->{$_});
                 $data->{$_} = uc($data->{$_});
 
                 # Postgres puts quotes around things that look like keywords
@@ -999,6 +1000,7 @@ sub refresh_database_metadata_for_table_name {
         while (my $data = $fk_reverse_sth->fetchrow_hashref()) {
 
             foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME ) ) {
+                next unless defined($data->{$_});
                 $data->{$_} = uc($data->{$_});
 
                 # Postgres puts quotes around things that look like keywords
@@ -2414,6 +2416,7 @@ sub _id_values_for_primary_key {
 
     my $class_obj; # = $object_to_save->__meta__;
     foreach my $possible_class_obj ($object_to_save->__meta__->all_class_metas) {
+        next unless ($possible_class_obj->table_name);
         if (lc($possible_class_obj->table_name) eq lc($table_obj->table_name)) {
             $class_obj = $possible_class_obj;
             last;

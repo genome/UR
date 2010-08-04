@@ -387,8 +387,8 @@ my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_
 
     # So we're all on the same page...
     # FIXME - looks like 'ur update classes' standarized on upper case :(
-    $fk_table = lc($fk_table);
-    $pk_table = lc($pk_table);
+    $fk_table = lc($fk_table) if (defined $fk_table);
+    $pk_table = lc($pk_table) if (defined $pk_table);
 
     # first, build a data structure to collect columns of the same foreign key together
     my %fk_info;
