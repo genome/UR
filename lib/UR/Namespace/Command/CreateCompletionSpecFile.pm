@@ -34,6 +34,12 @@ sub is_sub_command_delegator { 0; }
 sub execute {
     my($self, $params) = @_;
     my $class = $params->{'classname'};
+    
+    eval "use above '$class';";
+    if ($@) {
+        $self->error_message("Unable to use above $class.\n$@");
+        return;
+    }
 
     (my $module_path) = Getopt::Complete::Cache->module_and_cache_paths_for_package($class, 1);
     my $cache_path = $module_path . ".opts";
