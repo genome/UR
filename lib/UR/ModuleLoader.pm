@@ -91,7 +91,7 @@ sub dynamically_load_class {
             my $namespace_module_dir = $namespace->__meta__->module_directory;
             unless ($class =~ /^UR::/ or index($class_module_dir,$namespace_module_dir) == 0) {
                 Carp::confess(
-                    "Attempt to load a module from outside the namespace tree!\n"
+                    "Attempt to load module $class from outside the namespace tree!\n"
                     . "class path $class_module_dir is not under "
                     . "namespace $namespace_module_dir!\n"
                 );
