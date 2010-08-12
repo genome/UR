@@ -3169,7 +3169,7 @@ sub _generate_template_data_for_loading {
 
     DELEGATED_PROPERTY:
     for my $delegated_property (@delegated_properties) {
-        my $last_alias_for_this_chain;
+        my $last_alias_for_this_delegate;
         my $alias_for_property_value;
 
         my $property_name = $delegated_property->property_name;
@@ -3215,7 +3215,6 @@ sub _generate_template_data_for_loading {
         my $final_join = $joins[-1];
 
         my @source_table_and_column_names;
-        my %aliases_for_this_delegate;
         while (my $object_join = shift @joins) {
             #$DB::single = 1;
             #print "\tjoin $object_join\n";
@@ -3227,6 +3226,7 @@ sub _generate_template_data_for_loading {
             my @joins_for_object = ($object_join);
 
             my $joins_for_object = 0;
+            my $last_alias_for_this_chain = $last_alias_for_this_delegate;
             while (my $join = shift @joins_for_object) {
 
                 $joins_for_object++;
@@ -3324,7 +3324,7 @@ sub _generate_template_data_for_loading {
 
                 my $alias = $joins_done{$join->{id}};
 
-                unless ($alias) {            
+                unless ($alias) {
                     $alias = "${relationship_name}_${alias_num}";
                     $alias_num++;
 
@@ -3368,8 +3368,8 @@ sub _generate_template_data_for_loading {
                                     map {
                                         $foreign_column_names[$_] => { 
                                             link_table_name     => $last_alias_for_this_chain                # join alias
-                                            || $source_table_and_column_names[$_][2]  # SQL inline view alias
-                                            || $source_table_and_column_names[$_][0], # table_name
+                                                                   || $source_table_and_column_names[$_][2]  # SQL inline view alias
+                                                                   || $source_table_and_column_names[$_][0], # table_name
                                             link_column_name    => $source_table_and_column_names[$_][1] 
                                         }
                                     }
@@ -3470,6 +3470,7 @@ sub _generate_template_data_for_loading {
                 }
 
                 if ($joins_for_object == 1) {
+                    $last_alias_for_this_delegate = $alias;
                     $last_class_object_excluding_inherited_joins = $last_class_object if ($last_class_object->property_meta_for_name($final_accessor));
                     # on the first iteration, we figure out the remaining inherited iterations
                     # TODO: get this into the join logic itself in the property meta
