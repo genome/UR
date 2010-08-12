@@ -3308,7 +3308,7 @@ sub _generate_template_data_for_loading {
                     # some calculated properties, be sure to re-check for a match after loading the object
                     $needs_further_boolexpr_evaluation_after_loading = 1;
                 }
-                if ($foreign_table_name =~ /^(.*)\s+(\w+)\s*$/s) {
+                if ($foreign_table_name and $foreign_table_name =~ /^(.*)\s+(\w+)\s*$/s) {
                     $foreign_table_name = $1;
                 }
 
@@ -3457,18 +3457,6 @@ sub _generate_template_data_for_loading {
                 $last_class_name = $foreign_class_name;
                 $last_class_object = $foreign_class_object;
 
-                if (!@joins and not $alias_for_property_value) {
-                    if (grep { $_->[1]->property_name eq $final_accessor } @{ $foreign_class_loading_data->{direct_table_properties} }) {
-                        $alias_for_property_value = $alias;
-                        #print "found alias for $property_name on $foreign_class_name: $alias\n";
-                    }
-                    else {
-                        # The thing we're joining to isn't a database-backed column (maybe calculated?)
-                        $needs_further_boolexpr_evaluation_after_loading = 1;
-                        next DELEGATED_PROPERTY;
-                    }
-                }
-
                 if ($joins_for_object == 1) {
                     $last_alias_for_this_delegate = $alias;
                     $last_class_object_excluding_inherited_joins = $last_class_object if ($last_class_object->property_meta_for_name($final_accessor));
@@ -3494,6 +3482,19 @@ sub _generate_template_data_for_loading {
                         next;
                     }
                 }
+
+                if (!@joins and not $alias_for_property_value) {
+                    if (grep { $_->[1]->property_name eq $final_accessor } @{ $foreign_class_loading_data->{direct_table_properties} }) {
+                        $alias_for_property_value = $alias;
+                        #print "found alias for $property_name on $foreign_class_name: $alias\n";
+                    }
+                    else {
+                        # The thing we're joining to isn't a database-backed column (maybe calculated?)
+                        $needs_further_boolexpr_evaluation_after_loading = 1;
+                        next DELEGATED_PROPERTY;
+                    }
+                }
+
 
             } # next join for this object
         } # next object join
