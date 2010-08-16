@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 17;
+use Test::More tests => 11;
 use URT::DataSource::SomeSQLite;
 
 # This tests a get() with several unusual properties....
