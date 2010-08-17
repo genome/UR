@@ -3405,7 +3405,7 @@ sub _generate_template_data_for_loading {
                 }
 
                 if ($foreign_class_object->table_name) {
-                    $join_aliases_for_this_object->{$foreign_class_object->table_name} = $alias;
+                    $join_aliases_for_this_object->{$foreign_table_name} = $alias;
                     @source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
                 }
 
