@@ -3167,9 +3167,12 @@ sub _generate_template_data_for_loading {
     my %joins_done;
     my @joins_done;
 
+    # FIXME - this needs to be broken out into delegated-property-join-resolver
+    # and inheritance-join-resolver methods that can be called recursively.
+    # It would better encapsulate what's going on and avoid bugs with complicated
+    # get()s
     DELEGATED_PROPERTY:
     for my $delegated_property (@delegated_properties) {
-        my $last_alias_for_this_delegate;
         my $alias_for_property_value;
 
         my $property_name = $delegated_property->property_name;
@@ -3214,6 +3217,9 @@ sub _generate_template_data_for_loading {
 
         my $final_join = $joins[-1];
 
+        my $join_aliases_for_this_delegate;
+        my $join_aliases_for_this_object;
+
         my @source_table_and_column_names;
         while (my $object_join = shift @joins) {
             #$DB::single = 1;
@@ -3226,7 +3232,7 @@ sub _generate_template_data_for_loading {
             my @joins_for_object = ($object_join);
 
             my $joins_for_object = 0;
-            my $last_alias_for_this_chain = $last_alias_for_this_delegate;
+
             while (my $join = shift @joins_for_object) {
 
                 $joins_for_object++;
@@ -3367,7 +3373,7 @@ sub _generate_template_data_for_loading {
                                 (
                                     map {
                                         $foreign_column_names[$_] => { 
-                                            link_table_name     => $last_alias_for_this_chain                # join alias
+                                            link_table_name     => $join_aliases_for_this_object->{$source_table_and_column_names[$_][0]} # join alias
                                                                    || $source_table_and_column_names[$_][2]  # SQL inline view alias
                                                                    || $source_table_and_column_names[$_][0], # table_name
                                             link_column_name    => $source_table_and_column_names[$_][1] 
@@ -3399,7 +3405,7 @@ sub _generate_template_data_for_loading {
                 }
 
                 if ($foreign_class_object->table_name) {
-                    $last_alias_for_this_chain = $alias;
+                    $join_aliases_for_this_object->{$foreign_class_object->table_name} = $alias;
                     @source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
                 }
 
@@ -3458,7 +3464,7 @@ sub _generate_template_data_for_loading {
                 $last_class_object = $foreign_class_object;
 
                 if ($joins_for_object == 1) {
-                    $last_alias_for_this_delegate = $alias;
+                    #$last_alias_for_this_delegate = $alias;
                     $last_class_object_excluding_inherited_joins = $last_class_object if ($last_class_object->property_meta_for_name($final_accessor));
                     # on the first iteration, we figure out the remaining inherited iterations
                     # TODO: get this into the join logic itself in the property meta
