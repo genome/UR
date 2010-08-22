@@ -548,7 +548,7 @@ sub normalize {
     my @unnormalized_values = $self->values();
     
     my $normalized = $rule_template->get_normalized_rule_for_values(@unnormalized_values);
-    return unless $normalized;
+    return unless defined $normalized;
 
     $normalized->{non_ur_object_refs} = $self->{non_ur_object_refs} if exists $self->{non_ur_object_refs};
     return $normalized;
