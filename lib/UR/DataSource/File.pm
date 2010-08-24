@@ -130,7 +130,7 @@ sub server {
 
 
 # Should be divisible by 3
-our $MAX_CACHE_SIZE = 1000;
+our $MAX_CACHE_SIZE = 99;
 # The offset cache is an arrayref containing three pieces of data:
 # 0: If this cache slot is being used by a loading iterator
 # 1: concatenated data from the sorted columns for comparison with where you are in the file
@@ -162,7 +162,9 @@ sub _allocate_offset_cache_slot {
         }
         if ($next > $MAX_CACHE_SIZE) {
             #print STDERR scalar(keys(%iterator_data_source))." items in iterator_data_source ".scalar(keys(%iterator_cache_slot))." in iterator_cache_slot\n";
-            Carp::croak("Unable to find an open cache slot because there are too many outstanding loading iterators");
+            Carp::carp("Unable to find an open cache slot because there are too many outstanding loading iterators");
+            # We'll let it go ahead and expand the list
+            $MAX_CACHE_SIZE += 3;
         }
     }
     $cache->[$next] = 1;
