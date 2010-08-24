@@ -635,7 +635,8 @@ sub _normalize_class_description {
             if (ref($tmp[0])) {
                 $params = shift @tmp;
                 unless (ref($params) eq 'HASH') {
-                    Carp::confess("class $class_name property $name has an arrayref instead of a hashref describing its meta-attributes!");
+                    my $seen_type = ref($params);
+                    Carp::confess("class $class_name property $name has a $seen_type reference instead of a hashref describing its meta-attributes!");
                 }
                 %$params = (@added_property_meta, %$params) if @added_property_meta;
             }
