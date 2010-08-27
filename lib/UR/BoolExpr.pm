@@ -280,7 +280,8 @@ sub resolve_normalized {
     return ($normalized_rule,@extra) if wantarray;
     if (@extra) {
         no warnings;
-        Carp::confess("Extra params found: @extra\n");
+        my $rule_class = $normalized_rule->subject_class_name;
+        Carp::confess("Extra params for class $rule_class found: @extra\n");
     }
     return $normalized_rule;
 }
