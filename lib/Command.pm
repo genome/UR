@@ -1279,7 +1279,6 @@ sub class_for_sub_command
 our $stderr = \*STDERR;
 
 our %msgdata;
-our $dump_status_default = 0;
 
 sub _get_msgdata {
     my $self = $_[0];
@@ -1330,7 +1329,7 @@ for my $type (qw/error warning status debug usage/) {
             chomp $msg if defined $msg;
 
             unless (defined ($msgdata->{'dump_' . $type . '_messages'})) {
-                $msgdata->{'dump_' . $type . '_messages'} = $type eq "status" ? $dump_status_default : 1;
+                $msgdata->{'dump_' . $type . '_messages'} = $type eq "status" ? (exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} && $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} ? 1 : 0) : 1;
             }
 
             if (my $code = $msgdata->{ $type . "_messages_callback"}) {
