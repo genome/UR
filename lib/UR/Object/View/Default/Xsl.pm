@@ -44,14 +44,13 @@ sub _generate_content {
     }
 
     # get the xml for the equivalent perspective
-    $DB::single = 1;
     my $xml_view;
     eval {
         $xml_view = UR::Object::View->create(
             subject_class_name => $self->subject_class_name,
             perspective => $self->desired_perspective,
             toolkit => 'xml'
-        );   
+        );
     };
     if ($@) {
         $xml_view = UR::Object::View->create(
@@ -68,7 +67,7 @@ sub _generate_content {
     # my $toolkit = $self->toolkit;
 
     my $output_format = $self->output_format;
-    my $xsl_path = $self->xsl_root; 
+    my $xsl_path = $self->xsl_root;
 
     my $perspective = $self->desired_perspective;
 
@@ -83,17 +82,22 @@ sub _generate_content {
         $rootxsl = "/$output_format/default/root.xsl";
     }
 
+    my $commonxsl = "/$output_format/common.xsl";
+    if (-e $xsl_path . $commonxsl) {
+        push(@include_files, $commonxsl);
+    }
+
     unless ($self->transform) {
         # when not transforming we'll return a relative path
         # suitable for urls
-        $xsl_path = $self->xsl_path; 
+        $xsl_path = $self->xsl_path;
     }
 
     my @includes = map {
       "<xsl:include href=\"$xsl_path$_\"/>\n";
     } @include_files;
 
-    my $xsl_vars = <<MARK; 
+    my $xsl_vars = <<MARK;
   <xsl:variable name="currentPerspective">$perspective</xsl:variable>
   <xsl:variable name="currentToolkit">$output_format</xsl:variable>
 MARK
@@ -105,14 +109,14 @@ MARK
   <xsl:variable name="$key">$val</xsl:variable>
 MARK
         }
-        
+
     } else {
         my $rest_var = $self->rest_variable;
 
         $xsl_vars .= <<MARK;
   <xsl:variable name="rest">$rest_var</xsl:variable>
 MARK
- 
+
     }
 
     my $xsl_template = <<STYLE;
@@ -190,7 +194,7 @@ XML::LibXSLT->register_function( 'urn:rest', 'urltotype', \&url_to_type );
 
 =head1 NAME
 
-UR::Object::View::Default::Xsl - base class for views which use XSL on an XML view to generate content 
+UR::Object::View::Default::Xsl - base class for views which use XSL on an XML view to generate content
 
 =head1 SYNOPSIS
 
@@ -201,7 +205,7 @@ UR::Object::View::Default::Xsl - base class for views which use XSL on an XML vi
   }
 
   #####
-  
+
   Acme/Product/View/OrderStatus/Html.pm.xsl
 
   #####
@@ -215,7 +219,7 @@ UR::Object::View::Default::Xsl - base class for views which use XSL on an XML vi
         'id',
         'name',
         'qty_on_hand',
-        'outstanding_orders' => [   
+        'outstanding_orders' => [
           'id',
           'status',
           'customer' => [
@@ -229,7 +233,7 @@ UR::Object::View::Default::Xsl - base class for views which use XSL on an XML vi
   $xml1 = $v->content;
 
   $o->qty_on_hand(200);
-  
+
   $xml2 = $v->content;
 
 =head1 DESCRIPTION
