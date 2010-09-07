@@ -47,7 +47,7 @@ sub property {
         # optimize for the common case
         $p = $_[0]->direct_property_meta($_[1]);
         unless ($p) {
-            for (@{ $_[0]->{_ordered_inherited_class_names} }) {
+            for ($_[0]->ancestry_class_names) {
                 $p = $_->__meta__->direct_property_meta($_[1]);
                 last if $p;
             }
