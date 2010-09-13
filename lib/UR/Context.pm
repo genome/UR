@@ -392,9 +392,10 @@ sub query {
     {
         no warnings;
         if (exists $UR::Context::all_objects_loaded->{$_[0]}) {
+            my $is_monitor_query = $self->monitor_query;
             if (my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}) {
                 # Matched the class and ID directly - pull it right out of the cache
-                if ($self->monitor_query) {
+                if ($is_monitor_query) {
                     $self->_log_query_for_rule($_[0], undef, Carp::shortmess("QUERY: class $_[0] by ID $_[1]"));
                     $self->_log_query_for_rule($_[0], undef, "QUERY: matched 1 cached object\nQUERY: returning 1 object\n\n");
                 }
@@ -410,7 +411,7 @@ sub query {
                     if (exists $UR::Context::all_objects_loaded->{$subclass} and
                         my $obj = $UR::Context::all_objects_loaded->{$subclass}->{$_[1]}
                     ) {
-                        if ($self->monitor_query) {
+                        if ($is_monitor_query) {
                             $self->_log_query_for_rule($_[0], undef, Carp::shortmess("QUERY: class $_[0] by ID $_[1]"));
                             $self->_log_query_for_rule($_[0], undef, "QUERY: matched 1 cached object in subclass $subclass\nQUERY: returning 1 object\n\n");
                         }
