@@ -614,6 +614,11 @@ sub get {
             }
         }
 
+        if (defined($hints) and ref($hints) ne 'ARRAY') {
+            Carp::croak('-hints of a rule must be an arrayref of property names');
+        }
+
+
         $id_only = 0 if ($matches_all);
     
         #if (@$constant_value_normalized_positions > 1) {
