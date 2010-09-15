@@ -297,7 +297,6 @@ t/URT/Context/Testing.pm
 t/URT/DataSource/CircFk.pm
 t/URT/DataSource/Meta.pm
 t/URT/DataSource/Meta.sqlite3
-t/URT/DataSource/Meta.sqlite3-bak
 t/URT/DataSource/Meta.sqlite3-dump
 t/URT/DataSource/Meta.sqlite3-schema
 t/URT/DataSource/SomeFile.pm

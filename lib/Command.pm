@@ -1329,7 +1329,7 @@ for my $type (qw/error warning status debug usage/) {
             chomp $msg if defined $msg;
 
             unless (defined ($msgdata->{'dump_' . $type . '_messages'})) {
-                $msgdata->{'dump_' . $type . '_messages'} = $type eq "status" ? 0 : 1;
+                $msgdata->{'dump_' . $type . '_messages'} = $type eq "status" ? (exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} && $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} ? 1 : 0) : 1;
             }
 
             if (my $code = $msgdata->{ $type . "_messages_callback"}) {
