@@ -570,7 +570,7 @@ sub create_iterator_closure_for_rule {
             for (my $c = 0; $c <= $last_sort_column_in_rule; $c++) {
                 my $comparison = $comparison_for_column[$c]->();
 
-                next SEARCH_CACHE if ($comparison > 0);
+                next SEARCH_CACHE unless ($comparison < 0);
             }
             # If we made it this far, then the file data in this slot is earlier in the file
             # than the data we're looking for.  So, if the seek pos data is later than what
