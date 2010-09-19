@@ -2,10 +2,11 @@ package UR::Object::Type::View::Default::Umlet;
 
 use strict;
 use warnings;
+use UR;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Object::Type::View::Default::Umlet'
+    is => 'UR::Object::View'
 );
 
 # This will go away when UR::Object::Type stuff is all moved to UR::Object stuff
