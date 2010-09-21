@@ -31,7 +31,8 @@ use Exporter 'import';
 our @EXPORT_OK = qw(type_to_url url_to_type);
 
 sub _generate_content {
-    my $self = shift;
+
+    my ($self, %params) = @_;
 
     if (!$self->desired_perspective) {
         $self->desired_perspective($self->perspective);
@@ -49,14 +50,16 @@ sub _generate_content {
         $xml_view = UR::Object::View->create(
             subject_class_name => $self->subject_class_name,
             perspective => $self->desired_perspective,
-            toolkit => 'xml'
+            toolkit => 'xml',
+            %params
         );
     };
     if ($@) {
         $xml_view = UR::Object::View->create(
             subject_class_name => $self->subject_class_name,
             perspective => $self->perspective,
-            toolkit => 'xml'
+            toolkit => 'xml',
+            %params
         );
     }
 
