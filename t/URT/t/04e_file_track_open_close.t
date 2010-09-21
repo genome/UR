@@ -102,7 +102,7 @@ is($file_new, 0, 'new() was not called on the file handle');
 is($file_open, 0, 'open() was not called on the file handle');
 is($file_close, 0, 'close() was not called on the file handle');
 is($file_seek, 1, 'seek() was called on the file handle');
-is($file_seek_pos, $file_line_length, 'seek() was to the correct position');
+is($file_seek_pos, $file_line_length * 2, 'seek() was to the correct position');
 
 # This one should still be in the data source's cache
 &clear_trackers();
@@ -113,7 +113,7 @@ is($file_new, 0, 'new() was not called on the file handle');
 is($file_open, 0, 'open() was not called on the file handle');
 is($file_close, 0, 'close() was not called on the file handle');
 is($file_seek, 1, 'seek() was called on the file handle');
-is($file_seek_pos, $file_line_length, 'seek() was to the correct position');
+is($file_seek_pos, $file_line_length * 2, 'seek() was to the correct position');
 
 
 # This datasource points to the same file (not a problem since we're not writing to it)
