@@ -567,15 +567,21 @@ sub create_iterator_closure_for_rule {
             next unless (defined($offset_cache->[$i]) && defined($offset_cache->[$i+1]));
 
             $next_candidate_row = $offset_cache->[$i];
+            my $matched = 0;
+            COMPARE_VALUES:
             for (my $c = 0; $c <= $last_sort_column_in_rule; $c++) {
                 my $comparison = $comparison_for_column[$c]->();
 
-                next SEARCH_CACHE unless ($comparison < 0);
+                next SEARCH_CACHE if $comparison > 0;
+                if ($comparison < 0) {
+                    $matched = 1;
+                    last COMPARE_VALUES;
+                }
             }
             # If we made it this far, then the file data in this slot is earlier in the file
             # than the data we're looking for.  So, if the seek pos data is later than what
             # we've found yet, use it instead
-            if ($offset_cache->[$i+1] > $file_pos) {
+            if ($matched and $offset_cache->[$i+1] > $file_pos) {
                 $file_pos = $offset_cache->[$i+1];
             }
         }
@@ -682,6 +688,7 @@ sub create_iterator_closure_for_rule {
             $next_candidate_row = [ split($split_regex, $line, $csv_column_count) ];
             $#{$a} = $csv_column_count-1;
 
+            $file_pos = $fh->tell();
 
             for (my $i = 0; $i < @rule_columns_in_order; $i++) {
                 my $comparison = $comparison_for_column[$i]->();
@@ -694,6 +701,10 @@ sub create_iterator_closure_for_rule {
                     }
 
                     flock($fh,LOCK_UN);
+
+                    # Save the info from the last row we read
+                    $offset_cache->[$cache_slot+1] = $next_candidate_row;
+                    $offset_cache->[$cache_slot+2] = $file_pos - $last_read_size;
                     return;
                 
                 } elsif ($comparison) {
@@ -704,8 +715,6 @@ sub create_iterator_closure_for_rule {
                 # That comparison worked... stay in the for() loop for other comparisons
             }
             # All the comparisons return '0', meaning they passed
-
-            $file_pos = $fh->tell();
 
             # Now see if the offset cache file data is different than the row we just read
             COMPARE_TO_CACHE:
