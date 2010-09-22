@@ -31,6 +31,7 @@ features (
         'XML::Dumper'         => '',
         'XML::Generator'      => '',
         'XML::LibXML'         => '',
+        'XML::LibXSLT'        => '',
         'Getopt::Complete'    => '0.13',
     ],
     'Moose' => [
