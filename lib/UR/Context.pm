@@ -1706,7 +1706,7 @@ sub _get_template_data_for_loading {
             $operator ||= '=';  # FIXME - shouldn't the template return this for us?
             my @secondary_params = ($delegated_property->to . ' ' . $operator);
 
-            my $class_meta = UR::Object::Type->get(class_name => $delegated_property->class_name);
+            my $class_meta = UR::Object::Type->get($delegated_property->class_name);
             my $relation_property = $class_meta->property_meta_for_name($delegated_property->via);
      
             my $secondary_class = $relation_property->data_type;
