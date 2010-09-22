@@ -479,7 +479,7 @@ sub __changes__ {
 }
 
 sub __signal_change__ {
-    # all mutable property accessors ("setters" call this method to tell the 
+    # all mutable property accessors ("setters") call this method to tell the 
     # current context about a state change.
     $UR::Context::current->add_change_to_transaction_log(@_);
 }
