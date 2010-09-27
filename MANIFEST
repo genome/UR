@@ -64,6 +64,7 @@ lib/UR/DataSource/Code.db
 lib/UR/DataSource/Code.pm
 lib/UR/DataSource/Code.schema
 lib/UR/DataSource/CSV.pm
+lib/UR/DataSource/Default.pm
 lib/UR/DataSource/File.pm
 lib/UR/DataSource/FileMux.pm
 lib/UR/DataSource/Meta.pm
@@ -93,6 +94,7 @@ lib/UR/DBIx/ContextualFetch.pm
 lib/UR/Debug.pm
 lib/UR/DeletedRef.pm
 lib/UR/Env.pod
+lib/UR/Env/UR_COMMAND_DUMP_STATUS_MESSAGES.pm
 lib/UR/Env/UR_CONTEXT_BASE.pm
 lib/UR/Env/UR_CONTEXT_CACHE_SIZE_HIGHWATER.pm
 lib/UR/Env/UR_CONTEXT_CACHE_SIZE_LOWWATER.pm
@@ -230,6 +232,7 @@ lib/UR/Object/View/Aspect.pm
 lib/UR/Object/View/Default/Gtk.pm
 lib/UR/Object/View/Default/Gtk2.pm
 lib/UR/Object/View/Default/Html.pm
+lib/UR/Object/View/Default/Json.pm
 lib/UR/Object/View/Default/Text.pm
 lib/UR/Object/View/Default/Xml.pm
 lib/UR/Object/View/Default/Xsl.pm
@@ -318,6 +321,7 @@ t/URT/t/04c_postresql.t
 t/URT/t/04d_oracle.t
 t/URT/t/04e_file.t
 t/URT/t/04e_file_sync_database.t
+t/URT/t/04e_file_track_open_close.t
 t/URT/t/04f_filemux.t
 t/URT/t/04f_filemux_sync_database.t
 t/URT/t/05_get_create_get.t
@@ -367,6 +371,10 @@ t/URT/t/47b_indirect_is_many_accessor_mutable_with_id_class_by.t
 t/URT/t/47c_is_many_accessor_with_id_class_by.t
 t/URT/t/48_inline_datasources.t
 t/URT/t/49_complicated_get.t
+t/URT/t/49b_complicated_get_2.t
+t/URT/t/49c_complicated_get_3.t
+t/URT/t/49d_complicated_get_joining_through_view.t
+t/URT/t/49e_complicated_get_joining_through_view2.t
 t/URT/t/50_get_and_reload.t
 t/URT/t/51_get_with_hints.t
 t/URT/t/52_limit_cache_size.t
@@ -393,6 +401,8 @@ t/URT/t/70_command_help_text.t
 t/URT/t/71_ur_value.t
 t/URT/t/72_command_name_validation.t
 t/URT/t/73_opts_spec_creation_and_validation.t
+t/URT/t/74_xsl_view_url_convert.t
+t/URT/t/75_custom_loader.t
 t/URT/t/80_command_define_datasource.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction.t

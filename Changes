@@ -1,5 +1,11 @@
 Revision history for UR
 
+0.16	2010-09-27
+	File datasources build an on-the-fly index to improve its ability to seek within the file
+	Initial support for classes to supply custom logic for loading data
+	Compile-time speed improvements
+	Bug fixes for SQL generation with indirect properties, and the object cache pruner
+
 0.15	2010-08-03
 	Improved 'ur update classes' interaction with MySQL databases
 	Integration with Getopt::Complete for bash command-line tab completion
