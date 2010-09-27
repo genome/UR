@@ -5,9 +5,17 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 10;
+use Test::More;
 
-use UR::Object::View::Default::Xsl qw/url_to_type type_to_url/;
+BEGIN {
+    eval "use XML::LibXSLT";
+    if ($@ =~ qr(Can't locate XML/LibXSLT.pm in \@INC)) {
+        plan skip_all => 'XML::LibXSLT does not exist on the system';
+    } else {
+        plan tests => 11;
+        use_ok('UR::Object::View::Default::Xsl',  qw/url_to_type type_to_url/);
+    }
+}
 
 my @ct = qw{
   genome/instrument-data  Genome::InstrumentData
