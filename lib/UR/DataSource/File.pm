@@ -155,15 +155,22 @@ sub _allocate_offset_cache_slot {
 #print STDERR "_allocate_offset_cache_slot ".$self->server." current size is $next ";
     if ($next > $MAX_CACHE_SIZE) {
 #print STDERR "searching... \n";
-        $next = 0;
-        # Search for an unused slot
-        while ($cache->[$next] and $next <= $MAX_CACHE_SIZE) {
-            $next += 3;
+        my $last_offset_cache_slot = $self->{'_last_offset_cache_slot'};
+        if ($last_offset_cache_slot >= $MAX_CACHE_SIZE) {
+            $next = 0;
+        } else {
+            $next = $last_offset_cache_slot + 3;
         }
-        if ($next > $MAX_CACHE_SIZE) {
+        # Search for an unused slot
+        while ($cache->[$next] and $next != $last_offset_cache_slot) {
+            $next += 3;
+            $next = 0 if ($next > $MAX_CACHE_SIZE);
+        }
+        if ($next > $MAX_CACHE_SIZE or $next eq $last_offset_cache_slot) {
             #print STDERR scalar(keys(%iterator_data_source))." items in iterator_data_source ".scalar(keys(%iterator_cache_slot))." in iterator_cache_slot\n";
             Carp::carp("Unable to find an open file offset cache slot because there are too many outstanding loading iterators.  Temporarily expanding the cache...");
             # We'll let it go ahead and expand the list
+            $next = $MAX_CACHE_SIZE;
             $MAX_CACHE_SIZE += 3;
         }
     }
@@ -171,6 +178,7 @@ sub _allocate_offset_cache_slot {
     $cache->[$next+1] = undef;
     $cache->[$next+2] = undef;
 
+    $self->{'_last_offset_cache_slot'} = $next;
 #print STDERR "using slot $next current size ".scalar(@$cache)."\n";
     return $next;
 }
@@ -716,6 +724,18 @@ sub create_iterator_closure_for_rule {
             $file_pos = $fh->tell();
             my $file_pos_before_read = $file_pos - $last_read_size;
 
+            # Every 1000 lines read, leave a breadcrumb about what we've seen
+            unless ($lines_read % 1000) {
+                $offset_cache->[$cache_slot+1] = $next_candidate_row;
+                $offset_cache->[$cache_slot+2] = $file_pos_before_read;
+                $self->_free_offset_cache_slot($cache_slot);
+
+                # get a new slot
+                $cache_slot = $self->_allocate_offset_cache_slot();
+                $offset_cache->[$cache_slot+1] = $next_candidate_row;
+                $offset_cache->[$cache_slot+2] = $file_pos_before_read;
+            }
+
             for (my $i = 0; $i < @rule_columns_in_order; $i++) {
                 my $comparison = $comparison_for_column[$i]->();
 
@@ -741,19 +761,6 @@ sub create_iterator_closure_for_rule {
                 # That comparison worked... stay in the for() loop for other comparisons
             }
             # All the comparisons return '0', meaning they passed
-
-            
-            # Every 1000 lines read, leave a breadcrumb about what we've seen
-            unless ($lines_read % 1000) {
-                $offset_cache->[$cache_slot+1] = $next_candidate_row;
-                $offset_cache->[$cache_slot+2] = $file_pos_before_read;
-                $self->_free_offset_cache_slot($cache_slot);
-
-                # get a new slot
-                $cache_slot = $self->_allocate_offset_cache_slot();
-                $offset_cache->[$cache_slot+1] = $next_candidate_row;
-                $offset_cache->[$cache_slot+2] = $file_pos_before_read;
-            }
 
             # Now see if the offset cache file data is different than the row we just read
             COMPARE_TO_CACHE:
