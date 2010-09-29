@@ -100,6 +100,7 @@ sub _generate_content {
     my $xsl_vars = <<MARK;
   <xsl:variable name="currentPerspective">$perspective</xsl:variable>
   <xsl:variable name="currentToolkit">$output_format</xsl:variable>
+  <xsl:variable name="GENOME_DEV_MODE">$ENV{GENOME_DEV_MODE}</xsl:variable>
 MARK
 
     if (my $vars = $self->xsl_variables) {
