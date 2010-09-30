@@ -3340,30 +3340,18 @@ sub _generate_template_data_for_loading {
                         # TODO This may not work correctly if the property we're joining on doesn't 
                         # have a table to get data from
                         if ($where) {
-
-
                             # temp hack
                             # todo: switch to rule processing
-                            my @keys;
                             for (my $n = 0; $n < @$where; $n += 2) {
-                                push @keys, $where->[$n];
-                            }
-                            my @foreign_filter_property_meta = 
-                                map { $foreign_class_object->property_meta_for_name($_) }
-                                @keys;
-
-
-                            my @foreign_filter_column_names = 
-                                map {
-                                    # TODO: encapsulate
-                                    $_->is_calculated ? (defined($_->calculate_sql) ? ($_->calculate_sql) : () ) : ($_->column_name)
+                                my $key =$where->[$n];
+                                my ($name,$op) = ($key =~ /^(\S+)\s*(.*)/);
+                                my $meta = $foreign_class_object->property_meta_for_name($name);
+                                unless ($meta) {
+                                    print "no meta for $name in " . $foreign_class_object->id; 
                                 }
-                                @foreign_filter_property_meta;
-
-                            for (my $n = 0; $n < @keys; $n++) {
-                                my $meta = $foreign_filter_property_meta[$n];
-                                my $value = $where->[$n*2+1];
-                                push @extra_filters, $meta->column_name => { value => $value };
+                                my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
+                                my $value = $where->[$n+1];
+                                push @extra_filters, $column => { value => $value, ($op ? (operator => $op) : ()) };
                             }
                         }
 
