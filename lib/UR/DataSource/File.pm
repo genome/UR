@@ -524,9 +524,10 @@ sub create_iterator_closure_for_rule {
 
     my $csv_column_order_names = $self->column_order;
     my $csv_column_count = scalar @$csv_column_order_names;
-    my %properties_in_rule = map { $_ => 1 }
-                             grep { $rule->specifies_value_for($_) }
-                             @$csv_column_order_names;
+
+$DB::single=1;
+    my $operators_for_properties = $rule_template->operators_for_properties();
+    my $values_for_properties = $rule->legacy_params_hash;
 
     my $sort_order_names = $self->sort_order;
     my %sort_column_names = map { $_ => 1 } @$sort_order_names;
@@ -550,7 +551,7 @@ sub create_iterator_closure_for_rule {
 
     my $next_candidate_row;  # This will be filled in by the closure below
     foreach my $column_name ( @$sort_order_names, @non_sort_column_names ) {
-        if (! $properties_in_rule{$column_name}) {
+        if (! $operators_for_properties->{$column_name}) {
             $looking_for_sort_columns = 0;
             next;
         } elsif ($looking_for_sort_columns && $sort_column_names{$column_name}) {
@@ -563,8 +564,8 @@ sub create_iterator_closure_for_rule {
 
         push @rule_columns_in_order, $column_name_to_index_map{$column_name};
          
-        my $operator = $rule->operator_for($column_name);
-        my $rule_value = $rule->value_for($column_name);
+        my $operator = $operators_for_properties->{$column_name};
+        my $rule_value = $values_for_properties->{$column_name};
     
         my $comparison_function = $self->_comparator_for_operator_and_property($property_metas{$column_name},
                                                                                \$next_candidate_row,
@@ -624,8 +625,8 @@ sub create_iterator_closure_for_rule {
             my $column = $rule_columns_in_order[$i];
             my $column_name = $csv_column_order_names->[$column];
             my $is_sorted = $i <= $last_sort_column_in_rule ? ' (sorted)' : '';
-            my $operator = $rule->operator_for($column_name) || '=';
-            my $rule_value = $rule->value_for($column_name);   
+            my $operator = $operators_for_properties->{$column_name} || '=';
+            my $rule_value = $values_for_properties{$column_name}
             if (ref $rule_value eq 'ARRAY') {
                 $rule_value = '[' . join(',', @$rule_value) . ']';
             }
