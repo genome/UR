@@ -528,6 +528,11 @@ sub create_iterator_closure_for_rule {
 $DB::single=1;
     my $operators_for_properties = $rule_template->operators_for_properties();
     my $values_for_properties = $rule->legacy_params_hash;
+    foreach ( values %$values_for_properties ) {
+        if (ref eq 'HASH' and exists $_->{'value'}) {
+            $_ = $_->{'value'};
+        }
+    }
 
     my $sort_order_names = $self->sort_order;
     my %sort_column_names = map { $_ => 1 } @$sort_order_names;
@@ -626,7 +631,7 @@ $DB::single=1;
             my $column_name = $csv_column_order_names->[$column];
             my $is_sorted = $i <= $last_sort_column_in_rule ? ' (sorted)' : '';
             my $operator = $operators_for_properties->{$column_name} || '=';
-            my $rule_value = $values_for_properties{$column_name}
+            my $rule_value = $values_for_properties->{$column_name};
             if (ref $rule_value eq 'ARRAY') {
                 $rule_value = '[' . join(',', @$rule_value) . ']';
             }
