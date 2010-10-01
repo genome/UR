@@ -646,6 +646,7 @@ $DB::single=1;
 
     my $record_separator = $self->record_separator;
     my $cache_slot = $self->_allocate_offset_cache_slot();
+    my $cache_insert_counter = 100;  # a "breadcrumb" will be left in the offset cache after this many lines are read
 
     my $lines_read = 0;
     my $printed_first_match = 0;
@@ -730,8 +731,8 @@ $DB::single=1;
             $file_pos = $fh->tell();
             my $file_pos_before_read = $file_pos - $last_read_size;
 
-            # Every 1000 lines read, leave a breadcrumb about what we've seen
-            unless ($lines_read % 1000) {
+            # Every so many lines read, leave a breadcrumb about what we've seen
+            unless ($lines_read % $cache_insert_counter) {
                 $offset_cache->[$cache_slot+1] = $next_candidate_row;
                 $offset_cache->[$cache_slot+2] = $file_pos_before_read;
                 $self->_free_offset_cache_slot($cache_slot);
@@ -740,6 +741,8 @@ $DB::single=1;
                 $cache_slot = $self->_allocate_offset_cache_slot();
                 $offset_cache->[$cache_slot+1] = $next_candidate_row;
                 $offset_cache->[$cache_slot+2] = $file_pos_before_read;
+
+                $cache_insert_counter << 2;  # Double the insert counter
             }
 
             for (my $i = 0; $i < @rule_columns_in_order; $i++) {
