@@ -241,7 +241,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;                        
-                } elsif($op eq "between") {
+                } elsif($op eq "between" or $op eq 'between []') {
                     my @thr;
                     my ($min,$max) = @{ $value->{value} };
                     foreach my $h (@hr) {

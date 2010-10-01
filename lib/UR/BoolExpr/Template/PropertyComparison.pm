@@ -102,6 +102,10 @@ sub resolve_subclass_for_comparison_operator {
                 $not = 1;
                 $core_comparison_operator = $1;
             }
+            elsif ($comparison_operator =~ m/between/) {
+                $not = 0;
+                $core_comparison_operator = 'between';
+            }
             else {
                 $not = 0;
                 $core_comparison_operator = $comparison_operator;

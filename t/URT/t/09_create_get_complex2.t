@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More tests => 5;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -29,6 +29,9 @@ is(scalar(@obj),2);
 is(scalar(@obj),4);
 
 @obj = Acme::Product->get(genius => { operator => "between", value => [5,7] });
+is(scalar(@obj),4);
+
+@obj = Acme::Product->get('genius between' => [5,7] );
 is(scalar(@obj),4);
 
 @obj = sort Acme::Product->get(name => { operator => "not in", value => ['jet pack', 'dynamite'] });
