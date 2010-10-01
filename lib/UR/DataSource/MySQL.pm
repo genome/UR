@@ -32,6 +32,8 @@ sub owner { uc(shift->_singleton_object->login) }
 #}
 
  
+sub _sql_like_supports_escape { 0 };  # can't do an 'escape' clause with the 'like' operator
+
 sub can_savepoint { 1;} 
 
 sub _init_created_dbh
