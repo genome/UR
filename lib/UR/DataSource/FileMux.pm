@@ -125,52 +125,67 @@ sub create_iterator_closure_for_rule {
 
     # Results are coming from more than one data source.  Make an iterator encompassing all of them
     my $base_sub_ds_name = $self->id;
-    my($ds_iterator,@constant_values);
+
+    my(@ds_iterators, @ds_next_row, @ds_constant_values);
+    foreach my $data_source_construction_data ( @data_source_construction_data ) {
+        my $subject_class_name   = $data_source_construction_data->{'subject_class_name'};
+        my $file_resolver        = $data_source_construction_data->{'file_resolver'};
+        my $file_resolver_params = $data_source_construction_data->{'file_resolver_params'};
+
+        my @sub_ds_name_parts;
+        my $this_ds_rule_params = $rule->legacy_params_hash;
+        for (my $i = 0; $i < @$required_for_get; $i++) {
+            my $param_name = $required_for_get->[$i];
+            my $param_value = $file_resolver_params->[$i];
+            push @sub_ds_name_parts, $param_name . $param_value;
+            $this_ds_rule_params->{$param_name} = $param_value;
+        }
+        my $sub_ds_id = join('::', $base_sub_ds_name, @sub_ds_name_parts);
+
+        my $resolved_file = $file_resolver->(@$file_resolver_params);
+        unless ($resolved_file) {
+            Carp::croak "Can't create data source: file resolver for $sub_ds_id returned false for params "
+                        . join(',',@$file_resolver_params);
+        }
+        my $this_ds_obj  = $self->get_or_create_data_source($concrete_ds_type, $sub_ds_id, $resolved_file);
+        my $this_ds_rule = UR::BoolExpr->resolve($subject_class_name,%$this_ds_rule_params);
+
+        my @constant_values = map { $this_ds_rule->value_for($_) }
+                                  @constant_value_properties;
+        
+        my $ds_iterator = $this_ds_obj->create_iterator_closure_for_rule($this_ds_rule);
+         
+        push @ds_constant_values, \@constant_values;
+        push @ds_iterators, $ds_iterator;
+        my $obj = $ds_iterator->();
+        push @ds_next_row, $obj;
+    }
+
+    unless (scalar(@ds_constant_values) == scalar(@ds_iterators)
+               and
+            scalar(@ds_constant_values) == scalar(@ds_next_row) )
+    {
+        Carp::croak("Internal error in UR::DataSource::FileMux: arrays for iterators, constant_values and next_row have differing sizes");
+    }
+ 
+
     my $iterator = sub {
         if ($monitor_start_time and ! $monitor_printed_first_fetch) {
             $self->sql_fh->printf("FILEMux: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
             $monitor_printed_first_fetch = 1;
         }
         
-        while (@data_source_construction_data) {
-            unless ($ds_iterator) {
-                # data we stashed away from above
-                my $subject_class_name   = $data_source_construction_data[0]->{'subject_class_name'};
-                my $file_resolver        = $data_source_construction_data[0]->{'file_resolver'};
-                my $file_resolver_params = $data_source_construction_data[0]->{'file_resolver_params'};
-
-                # Construct the name of the subordinate data source and the params for a rule against it
-                my @sub_ds_name_parts;
-                my $this_ds_rule_params = $rule->legacy_params_hash;
-                for (my $i = 0; $i < @$required_for_get; $i++) {
-                    my $param_name = $required_for_get->[$i];
-                    my $param_value = $file_resolver_params->[$i];
-                    push @sub_ds_name_parts, $param_name . $param_value;
-                    $this_ds_rule_params->{$param_name} = $param_value;
-                }
-                my $sub_ds_id = join('::', $base_sub_ds_name, @sub_ds_name_parts);
-                  
-
-                my $resolved_file = $file_resolver->(@$file_resolver_params);
-                unless ($resolved_file) {
-                    Carp::croak "Can't create data source: file resolver for $sub_ds_id returned false for params "
-                                . join(',',@$file_resolver_params);
-                }
-                my $this_ds_obj  = $self->get_or_create_data_source($concrete_ds_type, $sub_ds_id, $resolved_file);
-                my $this_ds_rule = UR::BoolExpr->resolve($subject_class_name,%$this_ds_rule_params);
-
-                @constant_values = map { $this_ds_rule->value_for($_) }
-                                       @constant_value_properties;
-
-                $ds_iterator = $this_ds_obj->create_iterator_closure_for_rule($this_ds_rule);
-            }
-
-            while (my $thing = $ds_iterator->()) {
-                push @$thing, @constant_values;
+        while (@ds_iterators) {
+            while ($ds_next_row[0]) {
+                my $thing = $ds_next_row[0];
+                push @$thing, @{$ds_constant_values[0]};
+                $ds_next_row[0] = $ds_iterators[0]->();
                 return $thing;
             }
-            shift @data_source_construction_data;
-            $ds_iterator = undef;  # Next time we'll create an iterator for the next data source
+            shift @ds_iterators;
+            shift @ds_constant_values;
+            shift @ds_next_row;
+ 
         }
 
         if ($monitor_start_time) {
