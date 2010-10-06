@@ -806,13 +806,13 @@ sub create_entity {
 
     my $set_values = {};
     for my $property_name (keys %set_properties) {
-        my $param_values =
-            delete $params->{ $property_name }
-                if ( exists $params->{ $property_name } );
-        my $default_values =
-            delete $default_values{ $property_name }
-                if ( exists $default_values{ $property_name } );
-        $set_values->{ $property_name } = $param_values || $default_values;
+        if (exists $default_values{ $property_name }) {
+            $set_values->{ $property_name } = delete $default_values{ $property_name };
+        }
+        if (exists $params->{ $property_name }) {
+            $set_values->{ $property_name } = delete $params->{ $property_name };
+        }
+
     }
 
     # create the object.
