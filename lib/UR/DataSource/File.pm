@@ -525,7 +525,6 @@ sub create_iterator_closure_for_rule {
     my $csv_column_order_names = $self->column_order;
     my $csv_column_count = scalar @$csv_column_order_names;
 
-$DB::single=1;
     my $operators_for_properties = $rule_template->operators_for_properties();
     my $values_for_properties = $rule->legacy_params_hash;
     foreach ( values %$values_for_properties ) {
@@ -742,7 +741,7 @@ $DB::single=1;
                 $offset_cache->[$cache_slot+1] = $next_candidate_row;
                 $offset_cache->[$cache_slot+2] = $file_pos_before_read;
 
-                $cache_insert_counter << 2;  # Double the insert counter
+                $cache_insert_counter <<= 2;  # Double the insert counter
             }
 
             for (my $i = 0; $i < @rule_columns_in_order; $i++) {
