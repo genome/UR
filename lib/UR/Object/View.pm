@@ -33,7 +33,7 @@ class UR::Object::View {
             is => 'ARRAY',
             is_abstract => 1,
             is_constant => 1,
-            is_many => 0,
+            is_many => 1,
             default_value => [],
             doc => 'List of default aspect names' },
     ],

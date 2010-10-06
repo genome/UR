@@ -806,9 +806,11 @@ sub create_entity {
 
     my $set_values = {};
     for my $property_name (keys %set_properties) {
-        if (exists $default_values{ $property_name }) {
-            $set_values->{ $property_name } = delete $default_values{ $property_name };
-        }
+
+#TODO(ec) Reenable this when we figure out how to make View's work.
+#        if (exists $default_values{ $property_name }) {
+#            $set_values->{ $property_name } = delete $default_values{ $property_name };
+#        }
         if (exists $params->{ $property_name }) {
             $set_values->{ $property_name } = delete $params->{ $property_name };
         }
