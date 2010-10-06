@@ -113,7 +113,6 @@ sub create_iterator_closure_for_rule {
                                                file_resolver_params => $resolver_params,
                                              };
  
-        
     }
     delete $WORKING_RULES{$rule->id};
 
@@ -123,9 +122,11 @@ sub create_iterator_closure_for_rule {
         $monitor_printed_first_fetch = 0;
     }
 
-    # Results are coming from more than one data source.  Make an iterator encompassing all of them
     my $base_sub_ds_name = $self->id;
 
+    # Fill in @ds_iterators with iterators for all the underlying data sources
+    # pre-fill @ds_next_row with the next object from each data source
+    # @ds_constant_values is the constant_values for objects of those data sources
     my(@ds_iterators, @ds_next_row, @ds_constant_values);
     foreach my $data_source_construction_data ( @data_source_construction_data ) {
         my $subject_class_name   = $data_source_construction_data->{'subject_class_name'};
@@ -152,13 +153,14 @@ sub create_iterator_closure_for_rule {
 
         my @constant_values = map { $this_ds_rule->value_for($_) }
                                   @constant_value_properties;
-        
+
         my $ds_iterator = $this_ds_obj->create_iterator_closure_for_rule($this_ds_rule);
-         
+        my $initial_obj = $ds_iterator->();
+        next unless $initial_obj;
+
         push @ds_constant_values, \@constant_values;
         push @ds_iterators, $ds_iterator;
-        my $obj = $ds_iterator->();
-        push @ds_next_row, $obj;
+        push @ds_next_row, $initial_obj;
     }
 
     unless (scalar(@ds_constant_values) == scalar(@ds_iterators)
@@ -169,23 +171,96 @@ sub create_iterator_closure_for_rule {
     }
  
 
+    # Create a closure that can sort the next possible rows in @ds_next_row and return the index of
+    # the one that sorts earliest
+    my $sorter;
+    if (@ds_iterators == 0 ) {
+       # No underlying data sources, no data to return
+       return sub {};
+
+    } elsif (@ds_iterators == 1 ) {
+        # Only one underlying data source.  
+        $sorter = sub { 0 };
+
+    } else {
+        # more than one underlying data source, make a real sorter
+
+        my %column_name_to_row_index;
+        my $column_order_names = $self->column_order;
+        my $constant_values = $self->constant_values;
+        push @$column_order_names, @$constant_values;
+        for (my $i = 0; $i < @$column_order_names; $i++) {
+            $column_name_to_row_index{$column_order_names->[$i]} = $i;
+        }
+
+        my $sort_order = $self->sort_order;
+        if (! $sort_order or ! @$sort_order ) {
+            # They didn't specify sorting,  Try finding out the class' ID properties
+            # and sort by them
+
+            my $subject_class_meta = $rule->subject_class_name->__meta__;
+            my @id_properties = $subject_class_meta->direct_id_property_names;
+
+            $sort_order = [];
+            foreach my $property_name ( @id_properties ) {
+                my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
+                my $column_name = $property_meta->column_name;
+                next unless $column_name;
+                next unless ($column_name_to_row_index{$column_name});
+                push @$sort_order, $column_name;
+            }
+        }
+        my @row_index_sort_order = map { $column_name_to_row_index{$_} } @$sort_order;
+
+        $sorter = sub {
+            my $lowest_obj_idx = 0;
+            COMPARE_OBJECTS:
+            for(my $compare_obj_idx = 1; $compare_obj_idx < @ds_next_row; $compare_obj_idx++) {
+
+                COMPARE_COLUMNS:
+                for (my $i = 0; $i < @row_index_sort_order; $i++) {
+                    my $column_num = $row_index_sort_order[$i];
+
+                    my $comparison = $ds_next_row[$lowest_obj_idx]->[$column_num] cmp $ds_next_row[$compare_obj_idx]->[$column_num]
+                                     ||
+                                     $ds_next_row[$lowest_obj_idx]->[$column_num] <=> $ds_next_row[$compare_obj_idx]->[$column_num];
+
+                    if ($comparison == -1) {
+                        next COMPARE_OBJECTS;
+                    } elsif ($comparison == 1) {
+                        $lowest_obj_idx = $compare_obj_idx;
+                        next COMPARE_OBJECTS;
+                    }
+                }
+            }
+
+            return $lowest_obj_idx;
+        };
+    }
+
+
     my $iterator = sub {
         if ($monitor_start_time and ! $monitor_printed_first_fetch) {
             $self->sql_fh->printf("FILEMux: FIRST FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);
             $monitor_printed_first_fetch = 1;
         }
         
-        while (@ds_iterators) {
-            while ($ds_next_row[0]) {
-                my $thing = $ds_next_row[0];
-                push @$thing, @{$ds_constant_values[0]};
-                $ds_next_row[0] = $ds_iterators[0]->();
-                return $thing;
+        while (@ds_next_row) {
+            my $next_row_idx = $sorter->();
+            my $next_row_to_return = $ds_next_row[$next_row_idx];
+
+            push @$next_row_to_return, @{$ds_constant_values[$next_row_idx]};
+
+            my $refill_row = $ds_iterators[$next_row_idx]->();
+            if ($refill_row) {
+                $ds_next_row[$next_row_idx] = $refill_row;
+            } else {
+                # This iterator is exhausted
+                splice(@ds_iterators, $next_row_idx, 1);
+                splice(@ds_constant_values, $next_row_idx, 1);
+                splice(@ds_next_row, $next_row_idx, 1);
             }
-            shift @ds_iterators;
-            shift @ds_constant_values;
-            shift @ds_next_row;
- 
+            return $next_row_to_return;
         }
 
         if ($monitor_start_time) {

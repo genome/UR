@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 16;
+use Test::More tests => 31;
 
 use IO::File;
 
@@ -24,8 +24,8 @@ ok($obj, 'Got a robot thing with id 5');
 is($obj->thing_name, 'Tom', 'Name is correct');
 is($obj->thing_color, 'red', 'Color is correct');
 
-$obj = URT::Thing->get(thing_id => 5, thing_type => 'person');
-ok(!$obj, 'Correctly found no person thing with id 5');
+$obj = URT::Thing->get(thing_id => 3, thing_type => 'person');
+ok(!$obj, 'Correctly found no person thing with id 3');
 
 
 my @objs = URT::Thing->get(thing_type => ['person','robot'], thing_id => 7);
@@ -43,6 +43,14 @@ $obj = eval { URT::Thing->get(thing_id => 2) };
 ok(!$obj, "Correctly couldn't retrieve a Thing without a thing_type");
 like($error_message, qr(Recursive entry.*URT::Thing), 'Error message did mention recursive call trapped');
 
+my $iter = URT::Thing->create_iterator(thing_type => ['person', 'robot']);
+ok($iter, 'Created an iterator for all Things');
+my $expected_id = 1;
+while (my $obj = $iter->next()) {
+    ok($obj, 'Got an object from the iterator');
+    is($obj->id, $expected_id++, 'Its ID was the expected value');
+}
+
 
 sub setup_files_and_classes {
     my $dir = $URT::DataSource::SomeFileMux::BASE_PATH;
@@ -52,14 +60,14 @@ sub setup_files_and_classes {
     my $f = IO::File->new(">$file") || die "Can't open $file for writing: $!";
     $f->print(join($delimiter, qw(1 Joel grey)),"\n");
     $f->print(join($delimiter, qw(2 Mike blue)),"\n");
-    $f->print(join($delimiter, qw(3 Frank black)),"\n");
-    $f->print(join($delimiter, qw(4 Clayton green)),"\n");
+    $f->print(join($delimiter, qw(4 Frank black)),"\n");
+    $f->print(join($delimiter, qw(5 Clayton green)),"\n");
 
     $f->close();
 
     $file = "$dir/robot";
     $f = IO::File->new(">$file") || die "Can't open $file for writing: $!";
-    $f->print(join($delimiter, qw(5 Crow gold)),"\n");
+    $f->print(join($delimiter, qw(3 Crow gold)),"\n");
     $f->print(join($delimiter, qw(6 Tom red)),"\n");
     $f->print(join($delimiter, qw(7 Gypsy purple)),"\n");
     $f->close();
@@ -72,7 +80,7 @@ sub setup_files_and_classes {
         has => [
             thing_name => { is => 'String' },
             thing_color => { is => 'String' },
-            thing_type => { is => 'String' },
+            thing_type => { is => 'String', valid_values => ['person', 'robot'] },
         ],
         table_name => 'wefwef',
         data_source => 'URT::DataSource::SomeFileMux',
