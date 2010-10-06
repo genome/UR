@@ -98,11 +98,12 @@ sub _generate_content {
     } @include_files;
 
     my $time = time . "000";
+    my $dev = exists $ENV{GENOME_DEV_MODE} ? $ENV{GENOME_DEV_MODE} : 0;
 
     my $xsl_vars = <<MARK;
   <xsl:variable name="currentPerspective">$perspective</xsl:variable>
   <xsl:variable name="currentToolkit">$output_format</xsl:variable>
-  <xsl:variable name="GENOME_DEV_MODE">$ENV{GENOME_DEV_MODE}</xsl:variable>
+  <xsl:variable name="GENOME_DEV_MODE">$dev</xsl:variable>
   <xsl:variable name="currentTime">$time</xsl:variable>
 MARK
 
