@@ -32,12 +32,20 @@ sub owner { uc(shift->_singleton_object->login) }
 #}
 
  
+sub _sql_like_supports_escape { 0 };  # can't do an 'escape' clause with the 'like' operator
+
 sub can_savepoint { 1;} 
 
 sub _init_created_dbh
 {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
+
+    my @val = $dbh->selectrow_array('select @@lower_case_table_names');
+    unless ($val[0] == 1) {
+        $self->warning_message("UR requires the mysqld server variable lower_case_variable_names be set to 1 for case-insensitive table names in queries.  The current value is $val[0]");
+    }
+
     $dbh->{LongTruncOk} = 0;
     return $dbh;
 }

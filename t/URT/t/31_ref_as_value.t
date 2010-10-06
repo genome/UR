@@ -8,7 +8,7 @@ use URT;
 use strict;
 use warnings;
 
-plan tests => 22;
+plan tests => 24;
 
 my $o = URT::ObjWithHash->create(myhash1 => { aaa => 111, bbb => 222 }, mylist => [ ccc => 333, ddd => 444 ]); 
 my @h = ($o->myhash1, $o->mylist); 
@@ -99,3 +99,32 @@ is_deeply($c->foo,[qw{foo bar baz}],'Checking array for alpha-sort');
     ) }, "created TestClassC with psuedo-hash like array");
 #    diag "data was: " . Data::Dumper::Dumper($d);
 #}
+
+
+# new rule logic seems to allow boolexpr references to be cloned
+
+for my $c ('Bar') {
+    class Foo { 
+        has => [ 
+            a => { is => $c }, 
+            b => { is => $c }, 
+            c => { is => $c }
+        ] 
+    }; 
+
+    my @r = map { bless({ id => $_ },"Bar"); } (100..102); 
+    my @f = qw/a b c/;
+
+    my $oo = Foo->define_boolexpr(a => $r[0], c => $r[2], b => $r[1]); 
+    my %pp = $oo->params_list; 
+    my @pp = @pp{@f}; 
+
+    my $o = $oo->normalize; 
+    my %p = $o->params_list; 
+    my @p = @p{@f}; 
+
+    my $str = Data::Dumper::Dumper(\@r,\%pp,\%p,$oo,$o); 
+    is("@pp", "@r", "unnormalized rule decomposes correctly") or diag $str;
+    is("@p",  "@r", "normalized rule decomposes correctly") or diag $str;
+}
+

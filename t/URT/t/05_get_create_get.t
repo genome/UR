@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 11;
+use Test::More tests=> 12;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -22,6 +22,9 @@ is($p1->id, 1, 'ID is correct');
 is($p1->name, 'jet pack', 'name is correct');
 is($p1->genius, 6, 'name is correct');
 is($p1->manufacturer_name, 'Lockheed Martin', 'name is correct');
+
+my @prods = URT::Product->get('genius between' => [1,10]);
+is(scalar(@prods), 1, 'get() with between works');
  
 
 sub create_tables_and_classes {

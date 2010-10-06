@@ -578,12 +578,12 @@ This document describes UR version v0.16.
         ],
         data_source => 'MyDB1',
         table_name => 'Animal'
-    }
+    };
 
     class Cat { 
         is => 'Animal', 
         has => [
-            feet    => { is => 'Number' },
+            feet    => { is => 'Number', default_value => 4 },
             fur     => { is => 'Text', valid_values => [qw/fluffy scruffy/] },
         ],
         data_source => 'MyDB1',
@@ -672,9 +672,10 @@ Next, define a data source representing your database, Music/DataSource/DB1.pm
     use Music;
     
     class Music::DataSource::DB1 {
-        is => ['UR::DataSource::Mysql'],
+        is => ['UR::DataSource::MySQL', 'UR::Singleton'],
         has_constant => [
-            server  => { value => 'mysql.example.com' },
+            server  => { value => 'database=music' },
+            owner   => { value => 'music' },
             login   => { value => 'mysqluser' },
             auth    => { value => 'mysqlpasswd' },
         ]
@@ -683,7 +684,7 @@ Next, define a data source representing your database, Music/DataSource/DB1.pm
     or to get something going quickly, SQLite has smart defaults...
 
     class Music::DataSource::DB1 {
-        is => 'UR::DataSource::SQLite',
+        is => ['UR::DataSource::SQLite', 'UR::Singleton'],
     };
     
 
@@ -699,7 +700,7 @@ Create a class to represent artists, who have many CDs, in Music/Artist.pm
             cds  => { is => 'Music::Cd', is_many => 1, reverse_as => 'artist' }
         ],
         data_source => 'Music::DataSource::DB1',
-        table_name => 'ARTISTS',
+        table_name => 'ARTIST',
     };
 
 Create a class to represent CDs, in Music/Cd.pm
@@ -716,7 +717,7 @@ Create a class to represent CDs, in Music/Cd.pm
             artist_name => { via => 'artist', to => 'name' },
         ],
         data_source => 'Music::DataSource::DB1',
-        table_name => 'CDS',
+        table_name => 'CD',
     };
 
 
@@ -750,15 +751,14 @@ Regardless, if the classes and database tables are present, you can then use the
     my @cds_2007 = Music::Cd->get(year => 2007, artist => $first_artist);
    
     # Use non-equality operators:
-    my @same_some_artists = Music::Artist->get(
-        'name like' => 'John%',
+    my @some_cds = Music::Cd->get(
         'year between' => ['2004','2009']
     );
 
     # This will use a JOIN with the ARTISTS table internally to filter
     # the data in the database.  @some_cds will contain Music::Cd objects.
     # As a side effect, related Artist objects will be loaded into the cache
-    my @some_cds = Music::Cd->get(
+    @some_cds = Music::Cd->get(
         year => '2007', 
         'artist_name like' => 'Bob%' 
     );
