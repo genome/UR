@@ -92,6 +92,8 @@ sub _generate_content {
         # suitable for urls
         $xsl_path = $self->xsl_path;
     }
+    
+    no warnings;
 
     my @includes = map {
       "<xsl:include href=\"$xsl_path$_\"/>\n";
