@@ -314,9 +314,11 @@ sub _get_joins {
                             next unless ($id_by_property and $id_by_property->is_delegated);
                            
                             push @joins, $id_by_property->_get_joins();
+                            $source_class = $joins[-1]->{'foreign_class'};
+                            @source_property_names = @{$joins[-1]->{'foreign_property_names'}};
                         }
                     }
-                    
+
                     push @joins, {
                         id => $id,
                         source_class => $source_class,
