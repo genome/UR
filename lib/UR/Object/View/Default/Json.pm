@@ -35,14 +35,14 @@ sub _jsobj {
 
     my %jsobj = ();
     
-    unless ($self->_subject_is_used_in_an_encompassing_view()) {
+#    unless ($self->_subject_is_used_in_an_encompassing_view()) {
         # the content for any given aspect is handled separately
         for my $aspect ($self->aspects) { 
                 
             my $val = $self->_generate_content_for_aspect($aspect);
             $jsobj{$aspect->name} = $val if defined $val;
         }
-    }
+#    }
 
     return \%jsobj;
 }
@@ -55,6 +55,7 @@ sub _generate_content_for_aspect {
     my $aspect_name = $aspect->name;
 
     my $aspect_meta = $self->subject_class_name->__meta__->property($aspect_name);
+    warn $aspect_name if ref($subject) =~ /Set/;
 
     my @value;
     eval {
@@ -102,7 +103,7 @@ sub _generate_content_for_aspect {
     else {
         for my $value (@value) {
             if (ref($value)) {
-                push @$ref, 'ref';
+                push @$ref, 'ref';  #TODO(ec) make this render references
             } else {
                 push @$ref, $value;
             }
