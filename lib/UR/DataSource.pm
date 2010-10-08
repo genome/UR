@@ -410,10 +410,10 @@ sub _generate_template_data_for_loading {
             #print "\tjoin $join\n";
 
             my $source_class_name = $join->{source_class};
-            my $source_class_object = $join->{'source_class_meta'};
+            my $source_class_object = $join->{'source_class_meta'} || $source_class_name->__meta__;
 
             my $foreign_class_name = $join->{foreign_class};
-            my $foreign_class_object = $join->{'foreign_class_meta'};
+            my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
             my($foreign_data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
             if (! $foreign_data_source) {
                 $needs_further_boolexpr_evaluation_after_loading = 1;
