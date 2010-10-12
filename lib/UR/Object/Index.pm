@@ -100,6 +100,7 @@ sub get_objects_matching
                         # Get the values using the regular or negative match op.
                         foreach my $h (@hr) {
                             foreach my $k (sort keys %$h) {
+                                next unless $k ne '';  # an earlier undef value got saved as an empty string here
                                 if($k !~ /$regex/) {
                                     push @thr, $h->{$k};
                                 }
@@ -111,6 +112,7 @@ sub get_objects_matching
                         # Standard positive match
                         for my $h (@hr) {
                             for my $k (sort keys %$h) {
+                                next unless $k ne '';  # an earlier undef value got saved as an empty string here
                                 if ($k =~ /$regex/) {
                                     push @thr, $h->{$k};
                                 }
@@ -175,6 +177,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k != $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -185,6 +188,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k > $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -195,6 +199,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k < $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -205,6 +210,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k >= $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -215,6 +221,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k <= $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -225,6 +232,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k ne $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -303,7 +311,6 @@ sub _build_data_tree
     }
     
     # _add_object in bulk.
-    no warnings;
     my ($object,@values,$hr,$value);
     for my $object ($UR::Context::current->all_objects_loaded($self->indexed_class_name)) {            
         if (@indexed_property_names) {
@@ -313,6 +320,7 @@ sub _build_data_tree
         $hr = $hr_base;
         for $value (@values)
         {
+            no warnings 'uninitialized';  # in case $value is undef
             $hr->{$value} ||= {};
             $hr = $hr->{$value};
         }            

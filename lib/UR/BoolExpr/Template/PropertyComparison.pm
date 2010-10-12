@@ -89,7 +89,7 @@ sub resolve_subclass_for_comparison_operator {
     
     my $subclass_name;
     
-    if (!defined($comparison_operator)) {
+    if (!defined($comparison_operator) or $comparison_operator eq '') {
         $subclass_name = $class . '::Equals';
     }    
     else {
