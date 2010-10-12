@@ -17,6 +17,7 @@ class URT::Item {
         parent  => { is => "URT::Item", is_optional => 1, id_by => ['parent_name','parent_group'] },
         foo     => { is => "String", is_optional => 1 },
         bar     => { is => "String", is_optional => 1 },
+        score   => { is => 'Integer' },
     ]
 };
 
@@ -44,10 +45,10 @@ is("@p", "name group", "property names are correct");
 my $b = URT::Item->create(name => 'Joe', group => 'shirts');
 ok($b, 'made a base class object');
 
-my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts');
+my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts', score => 1);
 ok($p, "made a parent object");
 
-my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins');
+my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins', score => 2);
 ok($c, "made a child object which references it");
 
 my $u = URT::UnrelatedItem->create(name => 'Bob', group => 'shirts');
@@ -104,7 +105,7 @@ is($t->operator_for('bar'),'=', "operator for param 2 is correct");
 
 
 # Make a rule on the parent class
-$r = URT::Item->define_boolexpr(name => 'Bob', group => 'shirts');
+$r = URT::Item->define_boolexpr(name => 'Bob', group => 'shirts', score => '01');
 ok($r->evaluate($p), 'Original parent object evaluated though rule');
 
 ok(! $r->evaluate($c), 'Child object with different params evaluated through parent rule returns false');

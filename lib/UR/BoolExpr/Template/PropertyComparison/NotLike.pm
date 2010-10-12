@@ -21,9 +21,13 @@ sub evaluate_subject_and_values {
             $escape
         );
     my $property_name = $self->property_name;    
-    my $property_value = $subject->$property_name;
-    no warnings;
-    return ($property_value =~ $regex ? '' : 1);
+    my @property_value = $subject->$property_name;
+
+    no warnings 'uninitialized';
+    foreach my $property_value ( @property_values ) {
+        return '' if ($property_value =~ $regex);
+    }
+    return 1;
 }
 
 sub comparison_value_and_escape_character_to_regex {    
@@ -66,7 +70,10 @@ UR::BoolExpr::Template::PropertyComparison::NotLike - Perform a negated SQL-ish 
 The input test value is assummed to be an SQL 'like' value, where '_'
 represents a one character wildcard, and '%' means a 0 or more character
 wildcard.  It gets converted to a perl regular expression and used in a
-negated  match against an object's properties
+negated match against an object's properties
+
+If the property returns multiple values, this comparison returns false if
+any of the values matches the pattern
 
 =cut
 

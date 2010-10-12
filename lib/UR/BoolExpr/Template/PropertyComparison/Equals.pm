@@ -19,19 +19,24 @@ sub evaluate_subject_and_values {
     if ($@) {
         $DB::single = 1;
     }
-    no warnings;
-    if (@property_value == 1) {
-        return ($property_value[0] eq $comparison_value ? 1 : '');
-    }
-    elsif (@property_value == 0) {
+    no warnings 'uninitialized';
+    if (@property_value == 0) {
         return ($comparison_value eq '' ? 1 : '');
     }
-    else {
-        for (@property_value) {
-            return 1 if $_ eq $comparison_value
+
+    no warnings 'numeric';
+    my $cv_is_number = Scalar::Util::looks_like_number($comparison_value);
+
+    foreach my $property_value ( @property_value ) {
+        my $pv_is_number = Scalar::Util::looks_like_number($property_value);
+
+        if ($pv_is_number and $cv_is_number) {
+            return 1 if $property_value == $comparison_value;
+        } else {
+            return 1 if $property_value eq $comparison_value;
         }
-        return '';
     }
+    return '';
 }
 
 
@@ -42,5 +47,9 @@ sub evaluate_subject_and_values {
 =head1 NAME
 
 UR::BoolExpr::Template::PropertyComparison::Equals - Perform a strictly equals test
+
+=head1 DESCRIPTION
+
+If the property returns multiple values, this comparison returns true if any of the values are equal to the comparison value
 
 =cut

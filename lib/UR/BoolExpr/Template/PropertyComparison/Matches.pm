@@ -15,9 +15,13 @@ sub evaluate_subject_and_values {
     my $subject = shift;
     my $comparison_value = shift;    
     my $property_name = $self->property_name;    
-    my $property_value = $subject->$property_name;
-    no warnings;
-    return ($property_value =~ /$comparison_value/ ? 1 : '');
+    my @property_value = $subject->$property_name;
+
+    no warnings 'uninitialized';
+    foreach my $property_value ( @property_value ) {
+        return 1 if ( $property_value =~ m/$comparison_value/ );
+    }
+    return '';
 }
 
 
@@ -28,5 +32,9 @@ sub evaluate_subject_and_values {
 =head1 NAME 
 
 UR::BoolExpr::Template::PropertyComparison::Matches - Perform a Perl regular expression match
+
+=head1 DESCRIPTION
+
+If the property returns multiple values, this comparison returns true if any of the values match
 
 =cut
