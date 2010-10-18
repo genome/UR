@@ -155,7 +155,7 @@ sub rollback
     }
 
     if ($self->state ne "open") {
-        Carp::confess("Cannot commit a transaction that is " . $self->state . ".")
+        Carp::confess("Cannot rollback a transaction that is " . $self->state . ".")
     }
 
     $self->__signal_change__('prerollback');
