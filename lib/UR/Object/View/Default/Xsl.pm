@@ -92,7 +92,7 @@ sub _generate_content {
         # suitable for urls
         $xsl_path = $self->xsl_path;
     }
-    
+
     no warnings;
 
     my @includes = map {
@@ -102,9 +102,15 @@ sub _generate_content {
     my $time = time . "000";
     my $dev = exists $ENV{GENOME_DEV_MODE} ? $ENV{GENOME_DEV_MODE} : 0;
 
+
+    my $display_name = $self->subject->__display_name__;
+    my $label_name = $self->subject->__label_name__;
+
     my $xsl_vars = <<MARK;
   <xsl:variable name="currentPerspective">$perspective</xsl:variable>
   <xsl:variable name="currentToolkit">$output_format</xsl:variable>
+  <xsl:variable name="displayName">$display_name</xsl:variable>
+  <xsl:variable name="labelName">$label_name</xsl:variable>
   <xsl:variable name="GENOME_DEV_MODE">$dev</xsl:variable>
   <xsl:variable name="currentTime">$time</xsl:variable>
 MARK
