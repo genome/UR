@@ -95,62 +95,65 @@ sub _generate_content {
 
     no warnings;
 
-    my @includes = map {
-      "<xsl:include href=\"$xsl_path$_\"/>\n";
-    } @include_files;
+    my $xslns = 'http://www.w3.org/1999/XSL/Transform';
+
+    my $doc = XML::LibXML::Document->new("1.0", "ISO-8859-1");
+    my $ss = $doc->createElementNS($xslns, 'stylesheet');
+    $ss->setAttribute('version', '1.0');
+    $doc->setDocumentElement($ss);
+    $ss->setNamespace($xslns, 'xsl', 1);
 
     my $time = time . "000";
     my $dev = exists $ENV{GENOME_DEV_MODE} ? $ENV{GENOME_DEV_MODE} : 0;
 
 
+    ## this is the wrong place for this information
+    #  since it is already part of the XML document
+    #  it shouldn't be hard coded into the transform
     my $display_name = $self->subject->__display_name__;
     my $label_name = $self->subject->__label_name__;
 
-    my $xsl_vars = <<MARK;
-  <xsl:variable name="currentPerspective">$perspective</xsl:variable>
-  <xsl:variable name="currentToolkit">$output_format</xsl:variable>
-  <xsl:variable name="displayName">$display_name</xsl:variable>
-  <xsl:variable name="labelName">$label_name</xsl:variable>
-  <xsl:variable name="GENOME_DEV_MODE">$dev</xsl:variable>
-  <xsl:variable name="currentTime">$time</xsl:variable>
-MARK
+    my $set_var = sub {
+        my $e = $doc->createElementNS($xslns, 'variable');
+        $e->setAttribute('name', $_[0]);
+        $e->appendChild( $doc->createTextNode( $_[1] ) );
+        $ss->appendChild($e)
+    };
+
+    $set_var->('currentPerspective',$perspective);
+    $set_var->('currentToolkit',$output_format);
+    $set_var->('displayName',$display_name);
+    $set_var->('labelName',$label_name);
+    $set_var->('GENOME_DEV_MODE',$dev);
+    $set_var->('currentTime',$time);
 
     if (my $vars = $self->xsl_variables) {
-
         while (my ($key,$val) = each %$vars) {
-            $xsl_vars .= <<MARK;
-  <xsl:variable name="$key">$val</xsl:variable>
-MARK
+            $set_var->($key, $val);
         }
-
     } else {
-        my $rest_var = $self->rest_variable;
-
-        $xsl_vars .= <<MARK;
-  <xsl:variable name="rest">$rest_var</xsl:variable>
-MARK
-
+        $set_var->('rest',$self->rest_variable);
     }
 
-    my $xsl_template = <<STYLE;
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<xsl:stylesheet version="1.0"
-xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-$xsl_vars
-  <xsl:include href="$xsl_path$rootxsl"/>
-@includes
-</xsl:stylesheet>
-STYLE
+    my $rootn = $doc->createElementNS($xslns, 'include');
+    $rootn->setAttribute('href',"$xsl_path$rootxsl");
+    $ss->appendChild($rootn);
+
+    for (@include_files) {
+        my $e = $doc->createElementNS($xslns, 'include');
+        $e->setAttribute('href',"$xsl_path$_");
+        $ss->appendChild($e)
+    }
 
     if ($self->transform) {
-        return $self->transform_xml($xml_view,$xsl_template);
+        return $self->transform_xml($xml_view,$doc); #$xsl_template);
     } else {
-        return $xsl_template;
+        return $doc->toString(1); # $xsl_template;
     }
 }
 
 sub transform_xml {
-    my ($self,$xml_view,$xsl_template) = @_;
+    my ($self,$xml_view,$style_doc) = @_;
 
     $xml_view->subject($self->subject);
     my $xml_content = $xml_view->_generate_content();
@@ -166,7 +169,6 @@ sub transform_xml {
     }
 
     # convert the xml
-    my $style_doc = $parser->parse_string($xsl_template);
     my $stylesheet = $xslt->parse_stylesheet($style_doc);
     my $results = $stylesheet->transform($source);
     my $content = $stylesheet->output_string($results);
