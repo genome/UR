@@ -74,6 +74,7 @@ sub _generate_content {
                 next if $aspect->name eq 'id';
 
                 my $aspect_node = $self->_generate_content_for_aspect($aspect);
+
                 $object->addChild( $aspect_node ) if $aspect_node; #If aspect has no values, it won't be included
             }
         }

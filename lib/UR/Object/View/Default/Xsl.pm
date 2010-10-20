@@ -115,11 +115,15 @@ sub _generate_content {
   <xsl:variable name="currentTime">$time</xsl:variable>
 MARK
 
-    if (my $vars = $self->xsl_variables) {
+    if ($self->subject->id) {
+        my $id = $self->subject->id;
+        $xsl_vars .= '<xsl:variable name="objectId">' . $id . '</xsl:variable>';
+    }
 
+    if (my $vars = $self->xsl_variables) {
         while (my ($key,$val) = each %$vars) {
             $xsl_vars .= <<MARK;
-  <xsl:variable name="$key">$val</xsl:variable>
+<xsl:variable name="$key">$val</xsl:variable>
 MARK
         }
 
@@ -154,6 +158,10 @@ sub transform_xml {
 
     $xml_view->subject($self->subject);
     my $xml_content = $xml_view->_generate_content();
+
+    # remove invalid XML entities
+    $xml_content =~ s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
+    $xsl_template =~ s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
 
     my $parser = XML::LibXML->new;
     my $xslt = XML::LibXSLT->new;
