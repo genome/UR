@@ -1543,6 +1543,10 @@ sub _extend_sql_for_column_operator_and_value {
             push @sql_params, $val;
         }        
     }
+    elsif ($op =~ m/^between( \[\])?/i) {
+        $sql .= "$expr_sql between ? and ?";
+        push @sql_params, @$val;
+    }
     elsif ($op =~ /\[\]/ or $op =~ /in/i) {
         no warnings 'uninitialized';
         my $not = $op =~ m/not/i;
@@ -1599,9 +1603,6 @@ sub _extend_sql_for_column_operator_and_value {
             .  " or $expr_sql is null)";                                                     
             push @sql_params, $val;
         }                                
-    } elsif ($op eq "between") {
-        $sql .= "$expr_sql $op ? and ?";
-        push @sql_params, @$val;
     } elsif ($op eq 'true' ) {
         $sql .= "( $expr_sql is not null and $expr_sql != 0 )";
     } elsif ($op eq 'false' ) {

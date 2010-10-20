@@ -83,9 +83,9 @@ is($p->name, 'Anonymous', 'object has default value for name');
 is($p->name('Bob'), 'Bob', 'We can set the name');
 is($p->name, 'Bob', 'And it returns the correct name after setting it');
 
-$p = URT::Parent->create(id => 100, name => '');
+$p = URT::Parent->create(id => 100, name => undef);
 ok($p, 'Created a parent object with the empty string for the name');
-is($p->name, '', 'Name is correctly empty');
+is($p->name, undef, 'Name is correctly empty');
 is($p->name('Joe'), 'Joe', 'We can set it to something else');
 is($p->name, 'Joe', 'And it returns the correct name after setting it');
 

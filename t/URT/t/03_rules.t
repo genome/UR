@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 29;
+use Test::More tests => 37;
 use Data::Dumper;
 
 class URT::Item {
@@ -44,7 +44,7 @@ is("@p", "name group", "property names are correct");
 my $b = URT::Item->create(name => 'Joe', group => 'shirts');
 ok($b, 'made a base class object');
 
-my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts');
+my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts', foo => 'foo');
 ok($p, "made a parent object");
 
 my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins');
@@ -53,7 +53,21 @@ ok($c, "made a child object which references it");
 my $u = URT::UnrelatedItem->create(name => 'Bob', group => 'shirts');
 ok($u, 'made an unrelated item object');
 
-my $r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
+my $r = URT::Item->define_boolexpr(foo => '');   # '' is the same as undef
+ok($r, "Created a rule to get URT::Items with null 'foo's");
+ok($r->specifies_value_for('foo'), 'Rule specifies a falue for foo');
+is($r->value_for('foo'), '', "rule's value for property foo is empty string");
+ok(! $r->specifies_value_for('name'), 'rule does not specify a value for name');
+my @results = URT::Item->get($r);
+is(scalar(@results), 2, 'Got 2 URT::Items with the rule');
+ok(scalar(grep { $_->name eq 'Joe' } @results), 'Joe was returned');
+ok(scalar(grep { $_->name eq 'Fred' } @results), 'Fred was returned');
+ok(! scalar(grep { $_->name eq 'Bob' } @results), 'Bob was not returned');
+
+
+
+
+$r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [parent_name => 'name', parent_group => 'group'], bar => 555);
 ok($r, "got a rule to get objects using -recurse");
 
 is($r->template->value_position_for_property_name('foo'),0, "position is as expected for variable param 1");

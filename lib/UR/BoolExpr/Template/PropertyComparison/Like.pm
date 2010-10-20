@@ -14,7 +14,11 @@ sub evaluate_subject_and_values {
     my $self = shift;
     my $subject = shift;
     my $comparison_value = shift;    
+
+    return '' unless defined ($comparison_value);  # property like NULL should always be false
+
     my $escape = shift;    
+
     my $regex = $self->
         comparison_value_and_escape_character_to_regex(
             $comparison_value,
@@ -29,6 +33,8 @@ sub evaluate_subject_and_values {
 sub comparison_value_and_escape_character_to_regex {    
     my ($class, $value, $escape) = @_;
 	
+    return '' unless defined($value);
+
     # anyone who uses the % as an escape character deserves to suffer
     if ($value eq '%') {
 	return '^.+$';
