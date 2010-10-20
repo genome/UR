@@ -24,7 +24,7 @@ sub evaluate_subject_and_values {
     my @property_value = $subject->$property_name;
 
     no warnings 'uninitialized';
-    foreach my $property_value ( @property_values ) {
+    foreach my $property_value ( @property_value ) {
         return '' if ($property_value =~ $regex);
     }
     return 1;

@@ -45,7 +45,7 @@ is("@p", "name group", "property names are correct");
 my $b = URT::Item->create(name => 'Joe', group => 'shirts');
 ok($b, 'made a base class object');
 
-my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts', score => 1);
+my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts', score => 1, foo => 'foo');
 ok($p, "made a parent object");
 
 my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins', score => 2);
