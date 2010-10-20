@@ -24,6 +24,12 @@ class UR::Object::Command::List {
             default_value => 'text',
             doc => 'Style of the list: text (default), csv, pretty, html, xml',
         },
+        csv_delimiter => {
+           is => 'Text',
+           is_optional => 1,
+           default_value => ',',
+           doc => 'For the csv output style, specify the field delimiter',
+        },
         noheaders => { 
             is => 'Boolean',
             is_optional => 1,
@@ -147,10 +153,11 @@ sub _do
 
     my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
     my $style_module = $style_module_name->new( 
-        iterator =>$iterator, 
-        show =>$self->show, 
-        noheaders =>$self->noheaders,
-        output => $self->output
+        iterator => $iterator,
+        show => $self->show,
+        csv_delimiter => $self->csv_delimiter,
+        noheaders => $self->noheaders,
+        output => $self->output,
     );
     $style_module->format_and_print;
 
@@ -268,13 +275,14 @@ use base 'UR::Object::Command::List::Style';
 sub _get_header_string{
     my $self = shift;
 
-    return join(",", map { lc } @{$self->{show}});
+    my $delimiter = $self->{'csv_delimiter'};
+    return join($delimiter, map { lc } @{$self->{show}});
 }
 
 sub _get_object_string {
     my ($self, $object) = @_;
 
-    return $self->_object_properties_to_string($object, ',');
+    return $self->_object_properties_to_string($object, $self->{'csv_delimiter'});
 }
 
 package UR::Object::Command::List::Pretty;

@@ -25,7 +25,6 @@ sub undo {
     my $changed_aspect = $self->changed_aspect;
     my $undo_data = $self->undo_data;
 
-
     if (0) {
         no warnings;
         my @k = qw/changed_class_name changed_id changed_aspect undo_data/;
@@ -62,6 +61,9 @@ sub undo {
     elsif ($changed_aspect eq "_delete_object") {
         #$changed_obj = $changed_class_name->_create_object(%$changed_obj);
     }
+    elsif ($changed_aspect eq "__define__") {
+        UR::Object::unload($changed_obj);
+    }
     elsif ($changed_aspect eq "create") {
         UR::Object::delete($changed_obj);
     }
@@ -87,11 +89,13 @@ sub undo {
     elsif ($changed_aspect eq "unload") {
         $changed_obj = UR::Object::_create_object($changed_class_name,%$changed_obj);
         UR::Object::__signal_change__($changed_obj,"load") if $changed_obj;
-    }
-    elsif ($changed_aspect eq "commit") {
-        Carp::confess();
-    }
-    elsif ($changed_aspect eq "rollback") {
+    } elsif ($changed_aspect eq "commit") {
+        if ($changed_class_name eq 'UR::Context::Transaction') {
+            # Transactions are not actually changes only markers, nothing to undo.
+        } else {
+            Carp::confess();
+        }
+    } elsif ($changed_aspect eq "rollback") {
         Carp::confess();
     } elsif ($changed_aspect eq 'rewrite_module_header') {
         my $VAR1;
