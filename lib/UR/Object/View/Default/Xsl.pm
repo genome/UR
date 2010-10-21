@@ -165,7 +165,6 @@ sub transform_xml {
 
     # remove invalid XML entities
     $xml_content =~ s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
-    $style_doc =~ s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
 
     my $parser = XML::LibXML->new;
     my $xslt = XML::LibXSLT->new;
