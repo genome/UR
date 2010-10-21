@@ -34,11 +34,41 @@ sub create {
     $self->{callback} = $callback;
 
     my %params = $rule->params_list;
-    my $subscription = $self->subject_class_name->create_subscription(
+    my ($subscription, $delete_subscription);
+    $subscription = $self->subject_class_name->create_subscription(
         id => $self->subject_id,
         method => $self->aspect,
         callback => $callback,
         note => "$self",
+    );
+
+    # because subscription is low level it is note deleted by the low level _delete_object
+    # but the delete signal is fired so we can cleanup with a subscription on delete
+    # if someone adds there own delete signal we want to make sure ours gets run last
+    my $delete_callback;
+    $delete_callback = sub {
+        # cancel original subscription
+        $self->subject_class_name->cancel_change_subscription(
+            $self->subject_id,
+            $self->aspect,
+            $self->callback,
+            "$self",
+        );
+        # cancel our delete subscription
+        $self->class->cancel_change_subscription(
+            $self->id,
+            'delete',
+            $delete_callback,
+            "$self",
+        ); 
+    };
+    # create our delete subscription to cleanup if the observer gets deleted
+    $delete_subscription = $self->class->create_subscription(
+        id => $self->id,
+        method => 'delete',
+        callback => $delete_callback,
+        note => "$self",
+        priority => 1000, # "last"
     );
 
     return $self;
