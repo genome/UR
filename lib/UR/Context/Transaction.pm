@@ -187,6 +187,7 @@ sub rollback
     local $log_all_changes = 0;
 
 
+    $self->__signal_change__('rollback', 1);
     my @changes_to_undo = reverse $self->get_changes();
     my $transaction_change = pop @changes_to_undo;
     for my $change (@changes_to_undo) {
@@ -202,12 +203,10 @@ sub rollback
 
     for my $change (@changes_to_undo) {
         unless($change->isa('UR::DeletedRef')) {
-            $self->__signal_change__('rollback', 0);
             Carp::confess("Failed to undo a change during transaction rollback.");
         }
     }
 
-    $self->__signal_change__('rollback', 1);
     $transaction_change->undo;
     $transaction_change->delete;
 
