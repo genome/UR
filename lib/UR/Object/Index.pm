@@ -59,8 +59,8 @@ sub create {
 sub get_objects_matching
 {
     # The hash access below generates warnings
-    # where undef is a value.  Igore these.
-    no warnings;
+    # where undef is a value.  Ignore these.
+    no warnings 'uninitialized';
     
     my @hr = (shift->{data_tree});
     my $value;
@@ -100,6 +100,7 @@ sub get_objects_matching
                         # Get the values using the regular or negative match op.
                         foreach my $h (@hr) {
                             foreach my $k (sort keys %$h) {
+                                next unless $k ne '';  # an earlier undef value got saved as an empty string here
                                 if($k !~ /$regex/) {
                                     push @thr, $h->{$k};
                                 }
@@ -111,6 +112,7 @@ sub get_objects_matching
                         # Standard positive match
                         for my $h (@hr) {
                             for my $k (sort keys %$h) {
+                                next unless $k ne '';  # an earlier undef value got saved as an empty string here
                                 if ($k =~ /$regex/) {
                                     push @thr, $h->{$k};
                                 }
@@ -119,13 +121,18 @@ sub get_objects_matching
                     }
                     @hr = grep { $_ } @thr;
                 } 
-                elsif ($op =~ /^in$/i)
+                elsif ($op =~ /^in( \[\])?/i)
                 {                
                     $value = $value->{value};
-                    my @value = grep { length($_) > 0 } @$value;
-                    @hr = grep { $_ } map { @$_{@value} } @hr;
+                    my $has_null = ( (grep { length($_) == 0 } @$value) ? 1 : 0);
+                    if ($has_null) {
+                        @hr = grep { $_ } map { @$_{@$value} } @hr;
+                    } else {
+                        my @value = grep { length($_) > 0 } @$value;
+                        @hr = grep { $_ } map { @$_{@value} } @hr;
+                    }
                 }
-                elsif ($op =~ m/^not \[\]/i or $op =~ /^not in$/i)
+                elsif ($op =~ m/^not \[\]/i or $op =~ /^not in( \[\])?$/i)
                 {                
                     $value = $value->{value};
                     
@@ -175,7 +182,10 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
-                            if($k != $value->{value}) {
+                            # An empty string for $k means the object's value was loaded as NULL
+                            # and we want things like 0 != NULL to be true to match the SQL that
+                            # gets generated for the same rule
+                            if($k eq '' or $k != $value->{value}) {  
                                 push @thr, $h->{$k};
                             }
                         }
@@ -185,6 +195,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k > $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -195,6 +206,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k < $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -205,6 +217,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k >= $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -215,6 +228,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k <= $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -225,6 +239,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
+                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
                             if($k ne $value->{value}) {
                                 push @thr, $h->{$k};
                             }
@@ -303,7 +318,6 @@ sub _build_data_tree
     }
     
     # _add_object in bulk.
-    no warnings;
     my ($object,@values,$hr,$value);
     for my $object ($UR::Context::current->all_objects_loaded($self->indexed_class_name)) {            
         if (@indexed_property_names) {
@@ -313,6 +327,7 @@ sub _build_data_tree
         $hr = $hr_base;
         for $value (@values)
         {
+            no warnings 'uninitialized';  # in case $value is undef
             $hr->{$value} ||= {};
             $hr = $hr->{$value};
         }            

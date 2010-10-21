@@ -127,6 +127,11 @@ sub _generate_content {
     $set_var->('GENOME_DEV_MODE',$dev);
     $set_var->('currentTime',$time);
 
+    if ($self->subject->id) {
+        my $id = $self->subject->id;
+        $set_var->('objectId', $self->subject->id);
+    }
+
     if (my $vars = $self->xsl_variables) {
         while (my ($key,$val) = each %$vars) {
             $set_var->($key, $val);
@@ -157,6 +162,10 @@ sub transform_xml {
 
     $xml_view->subject($self->subject);
     my $xml_content = $xml_view->_generate_content();
+
+    # remove invalid XML entities
+    $xml_content =~ s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
+    $style_doc =~ s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
 
     my $parser = XML::LibXML->new;
     my $xslt = XML::LibXSLT->new;

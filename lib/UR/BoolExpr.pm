@@ -354,6 +354,7 @@ sub resolve {
         
         if (!exists $subject_class_props{$key}) {
             if (my $pos = index($key,' ')) {
+                # Maybe this is the new syntax with "property operator" => value
                 $property_name = substr($key,0,$pos);
                 $operator = substr($key,$pos+1);
                 if (substr($operator,0,1) eq ' ') {
@@ -396,7 +397,7 @@ sub resolve {
                     $value = $value->{value};
                 }
             }
-            elsif ($ref eq "ARRAY") {
+            elsif ($ref eq "ARRAY" and $operator ne 'between') {
                 $key .= " []";
                 
                 # replace the arrayref
@@ -508,7 +509,12 @@ sub resolve {
                     Carp::croak("Incorrect data type in rule " . ref($value) . " for $subject_class property '$key'!");    
                 }
             }
-        }
+
+        }# elsif (defined $value and ! length($value)) {
+         #   # empty string - rewrite to undef
+         #   $value = undef;
+        #}
+
         push @keys, $key;
         push @values, $value;
     }
