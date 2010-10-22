@@ -128,7 +128,7 @@ ok($circle->radius == 1, 'default radius is 1');
     print "Should fail to rollback transaction no longer on stack...\n";
     ok($transaction->state eq 'committed', "transaction is already committed");
     my $rv= eval {$transaction->rollback()} || 0;
-    ok($rv == 0, "properly failed transaction rollback for already commited transaction");
+    ok($rv == 0, "properly failed transaction rollback for already committed transaction");
 };
 
 

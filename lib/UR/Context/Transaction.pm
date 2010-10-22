@@ -246,7 +246,7 @@ sub commit
     $self->__signal_change__('precommit');
 
     $self->state("committed");
-    if ($self->state eq 'commited') {
+    if ($self->state eq 'committed') {
         $self->__signal_change__('commit',1);
     }
     else {
