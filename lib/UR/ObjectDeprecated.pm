@@ -429,7 +429,7 @@ sub cancel_change_subscription ($@)
     return unless $arrayref;   # This thing didn't have a subscription in the first place
     my $index = 0;
 
-    while ($index <= @$arrayref)
+    while ($index < @$arrayref)
     {
         my ($cancel_callback, $note) = @{ $arrayref->[$index] };
 
