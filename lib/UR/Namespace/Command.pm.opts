@@ -185,6 +185,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             [
               'subject-class-name=s',
               undef,
+              'csv-delimiter=s',
+              undef,
               'filter=s',
               undef,
               'noheaders!',
@@ -239,6 +241,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
                 undef,
                 'show=s',
                 'files',
+                'csv-delimiter=s',
+                undef,
                 'filter=s',
                 undef,
                 'noheaders!',
