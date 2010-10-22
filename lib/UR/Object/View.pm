@@ -75,9 +75,9 @@ sub create {
     # now go the other way, and use both to infer a final class name
     $expected_class = $class->_resolve_view_class_for_params($params);
     unless ($expected_class) {
-        Carp::croak("Failed to resolve a subclass for " . __PACKAGE__ 
-                    . " from parameters.  Expected subject_class_name, perspective,"
-                    . " and toolkit to be part of the parameters, or class definition.  "
+        my $subject_class_name = $params->value_for('subject_class_name');
+        Carp::croak("Failed to resolve a subclass of " . __PACKAGE__ 
+                    . " for $subject_class_name from parameters.  "
                     . "Received $params.");
     }
 
