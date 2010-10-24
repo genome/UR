@@ -15,11 +15,11 @@ BEGIN {
     # this is an attempt to get around it...
 
     # for the cpan shell, and other parsers
-    $VERSION = 'v0.16';
+    $VERSION = 'v0.17';
 
     # for actual inspection
     ${VERSION} 
-        = qv('0.16'); 
+        = qv('0.17'); 
 };
 
 # Ensure we get detailed errors while starting up.
@@ -547,7 +547,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version v0.16.
+This document describes UR version v0.17.
 
 =head1 SYNOPSIS
 
