@@ -74,7 +74,7 @@ $DB::single=1;
 sub create {
 my $class = shift;
 
-    my $params = $class->preprocess_params(@_);
+    my $params = { $class->define_boolexpr(@_)->normalize->params_list };
     my $column_name = delete $params->{'column_name'};
     my $r_column_name = delete $params->{'r_column_name'};
 
