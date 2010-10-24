@@ -826,42 +826,44 @@ laboratory automation and analysis systems for high-throughput genomics.
  
  Scott Smith	    sakoht@cpan.org	    Orginal Architecture
  Anthony Brummett   brummett@cpan.org	Primary Development
-
- Craig Pohl
- Todd Hepler
+ Josh McMichael
+ Eric Clark                              
+ Nathan Nutter                          
  Ben Oberkfell
- Kevin Crouse
+ Eddie Belter
+ Feiyu Du
  Adam Dukes
+ Brian Derickson    
+ Craig Pohl
+ Gabe Sanderson
+ Todd Hepler
+ Jason Walker
+ James Weible
  Indraniel Das
  Shin Leong
- Eddie Belter
  Ken Swanson
  Scott Abbott
  Alice Diec
  William Schroeder
- Eric Clark
  Shawn Leonard
  Lynn Carmichael
- Jason Walker
  Amy Hawkins
- Gabe Sanderson
- James Weible
- James Eldred
  Michael Kiwala
+ Kevin Crouse
  Mark Johnson
  Kyung Kim
  Jon Schindler
  Justin Lolofie
- Chris Harris
  Jerome Peirick
  Ryan Richt
  John Osborne
- Josh McMichael
+ Chris Harris
+ James Eldred
  David Dooling
  
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (C) 2002-2009 Washington University in St. Louis, MO.
+Copyright (C) 2002-2010 Washington University in St. Louis, MO.
 
 This sofware is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.
