@@ -412,7 +412,7 @@ sub command_name
     my $self = shift;
     my $class = ref($self) || $self;
     my $prepend = '';
-    if ($class =~ /^($entry_point_class)(::.+|)$/) {
+    if (defined($entry_point_class) and $class =~ /^($entry_point_class)(::.+|)$/) {
         $prepend = $entry_point_bin;
         $class = $2;
         if ($class =~ s/^:://) {
