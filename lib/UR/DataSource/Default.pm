@@ -60,7 +60,7 @@ sub create_iterator_closure_for_rule {
     if ("@$headers" ne "@$expected_headers") {
         # translate the headers into the appropriate order
         my @mapping = _map_fields($headers,$expected_headers);
-        print Data::Dumper::Dumper($headers,$expected_headers,\@mapping);
+        # print Data::Dumper::Dumper($headers,$expected_headers,\@mapping);
         my $orig_iterator = $iterator;
         $iterator = sub {
             my $result = $orig_iterator->();
