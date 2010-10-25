@@ -41,6 +41,16 @@ sub undo {
         return 1;
     }
 
+    # For tracking "external" changes allow the undo to execute a closure
+    if ($changed_aspect eq 'external_change') {
+        if (ref($undo_data) eq 'CODE') {
+            return eval { &$undo_data };
+        }
+        else {
+            die $self->error_message("'external_change' expects a code ref for undo data!");
+        }
+    }
+
     my $changed_obj;
     if ($changed_aspect eq "delete" or $changed_aspect eq "unload") {
         $undo_data = '' unless defined $undo_data;
