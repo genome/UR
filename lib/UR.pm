@@ -244,7 +244,7 @@ UR::Object::Type->define(
         composite_id_separator           => { is => 'Text', len => 2 , default_value => "\t", is_optional => 1},        
         
         # details used by the managment of the "real" entity outside of the app (persistence) 
-        table_name                       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },        
+        table_name                       => { is => 'Text', len => undef, is_optional => 1, source => 'data dictionary' },        
         query_hint                       => { is => 'Text', len => 1024 , is_optional => 1},        
         id_sequence_generator_name       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary', doc => 'override the default choice for sequence generator name' },
 
