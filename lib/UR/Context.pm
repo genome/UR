@@ -1191,9 +1191,9 @@ sub prune_object_cache {
     $is_pruning = 1;
     #$main::did_prune=1;
     my $t1;
-    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'} || $ENV{'UR_DEBUG_OBJECT_PRUNING'}) {
         $t1 = Time::HiRes::time();
-        print STDERR "MEM PRUNE begin at $t1 ",scalar(localtime($t1)),"\n";
+        print STDERR Carp::longmess("MEM PRUNE begin at $t1 ",scalar(localtime($t1)),"\n");
     }
         
 
@@ -1210,7 +1210,7 @@ sub prune_object_cache {
         next unless ($class_meta->is_uncachable());
         $data_source_for_class{$class} = $class_meta->data_source_id;
         #next unless $class_meta->{'data_source_id'};  # Can't unload objects with no data source
-        $classes_to_prune{$class} = 1;
+        $classes_to_prune{$class} = 0;
     }
 
     # NOTE: This pokes right into the object cache and futzes with Index IDs directly.
@@ -1218,7 +1218,7 @@ sub prune_object_cache {
     my %indexes_by_class;
     foreach my $idx_id ( keys %{$UR::Context::all_objects_loaded->{'UR::Object::Index'}} ) {
         my $class = substr($idx_id, 0, index($idx_id, $index_id_sep));
-        next unless $classes_to_prune{$class};
+        next unless exists $classes_to_prune{$class};
         push @{$indexes_by_class{$class}}, $UR::Context::all_objects_loaded->{'UR::Object::Index'}->{$idx_id};
     }
 
@@ -1276,6 +1276,7 @@ sub prune_object_cache {
                     
                     $all_objects_cache_size--;
                     $deleted_count++;
+                    $classes_to_prune{$class}++;
                 }
             }
         }
@@ -1283,7 +1284,7 @@ sub prune_object_cache {
     $is_pruning = 0;
 
     $cache_last_prune_serial = $target_serial;
-    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'} || $ENV{'UR_DEBUG_OBJECT_PRUNING'}) {
         my $t2 = Time::HiRes::time();
         printf("MEM PRUNE complete, $deleted_count objects marked after $pass passes in %.4f sec\n\n\n",$t2-$t1);
     }
