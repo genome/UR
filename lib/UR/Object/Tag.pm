@@ -1,6 +1,6 @@
-# Methods for setting transient attributes on objects.
-
 package UR::Object::Tag;
+
+#TODO: update these to be UR::Value objects instead of some ancient hack
 
 =pod
 
@@ -160,6 +160,16 @@ sub filter
         return $old;
     }
     return $filter;
+}
+
+sub __display_name__ {
+    my $self = $_[0];
+    my $msg = uc($self->type) . ": " . $self->desc;
+    my @properties = $self->properties;
+    if (@properties) {
+        $msg .= " on " . join(",",@properties);
+    }
+    return $msg;
 }
 
 1;
