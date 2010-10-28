@@ -1083,11 +1083,29 @@ sub _shell_arg_getopt_complete_specification_from_property_meta
     }
     else {
         my $type = $property_meta->data_type;
-        if ((!defined $type) || $type =~ /File(system|)(Path|)/i) {
-            $completions = 'files';
+        my @complete_as_files = (
+            'File','FilePath','Filesystem','FileSystem','FilesystemPath','FileSystemPath',
+            'Text','String',
+        );
+        my @complete_as_directories = (
+            'Directory','DirectoryPath','Dir','DirPath',
+        );
+        if (!defined($type)) {
+            $completions = 'files'; 
         }
-        elsif ($type && $type =~ /Directory(Path|)/i) {
-            $completions = 'directories'
+        else {
+            for my $pattern (@complete_as_files) {
+                if (!$type || $type eq $pattern) {
+                    $completions = 'files';
+                    last;
+                }
+            }
+            for my $pattern (@complete_as_directories) {
+                if ( $type && $type eq $pattern) {
+                    $completions = 'directories';
+                    last;
+                }
+            }
         }
     }
     return (
