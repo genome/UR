@@ -8,7 +8,9 @@ use Data::Dumper;
 use File::Basename;
 use Getopt::Long;
 use Term::ANSIColor;
+use POSIX qw/floor ceil/;
 require Text::Wrap;
+require Text::Table;
 
 our $entry_point_class;
 our $entry_point_bin;
@@ -83,18 +85,19 @@ sub execute {
 
     # handle __errors__ objects before execute
     if (my @problems = $self->__errors__) {
-        $self->usage_message($self->help_usage_complete_text);
-        #print $self->help_usage_complete_text;
         for my $problem (@problems) {
             my @properties = $problem->properties;
             $self->error_message("Property " .
                                  join(',', map { "'$_'" } @properties) .
                                  ': ' . $problem->desc);
         }
+        my $command_name = $self->command_name;
+        $self->error_message("Please see '$command_name --help' for more information.");
         $self->delete() if $was_called_as_class_method;
         return;
     }
 
+    $DB::single = 1;
     my $result = $self->_execute_body(@_);
 
     $self->is_executed(1);
@@ -180,7 +183,13 @@ sub _execute_delegate_class_with_params {
         return;
     }
     
-    if (!$params or $params->{help}) {
+    if ( $delegate_class->is_sub_command_delegator && !$params->{help} ) {
+        my $command_name = $delegate_class->command_name;
+        $delegate_class->status_message("Sub-commands for '$command_name':");
+        $delegate_class->status_message($delegate_class->sub_commands_table,"\n");
+        return;
+    }
+    if ( $params->{help} ) {
         $delegate_class->usage_message($delegate_class->help_usage_complete_text,"\n");
         return;
     }
@@ -494,6 +503,10 @@ sub resolve_class_and_params_for_argv
             shift @argv;
             return $class_for_sub_command->resolve_class_and_params_for_argv(@argv);
         }
+        elsif ( $argv[0] and $argv[0] =~ /\-\-help/ ) {
+            my %params = (help => 1);
+            return ($self, \%params);
+        }
         
         if ($self->is_executable and @argv) {
             # this has sub-commands, and is also executable
@@ -612,7 +625,7 @@ sub help_usage_complete_text {
         if ($self->is_sub_command_delegator) {
             # show the list of sub-commands
             $text = sprintf(
-                "Commands for %s\n%s",
+                "Sub-commands for %s\n%s",
                 Term::ANSIColor::colored($command_name, 'bold'),
                 $self->help_sub_commands,
             );
@@ -851,6 +864,40 @@ sub sorted_sub_command_classes {
             ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
         } 
         @c;
+}
+
+sub sorted_sub_command_names {
+    my $class = shift;
+    my @sub_command_classes = $class->sorted_sub_command_classes;
+    my @sub_command_names = map { $_->command_name_brief } @sub_command_classes;
+    return @sub_command_names;
+}
+
+sub sub_commands_table {
+    my $class = shift;
+    my @sub_command_names = $class->sorted_sub_command_names;
+
+    my $max_length = 0;
+    for (@sub_command_names) {
+        $max_length = length($_) if ($max_length < length($_));
+    }
+    my $col_spacer = '_'x$max_length;
+
+    my $n_cols = floor(80/$max_length);
+    my $n_rows = ceil(@sub_command_names/$n_cols);
+    my @tb_rows;
+    for (my $i = 0; $i < @sub_command_names; $i += $n_cols) {
+        my $end = $i + $n_cols - 1;
+        $end = $#sub_command_names if ($end > $#sub_command_names);
+        push @tb_rows, [@sub_command_names[$i..$end]];
+    }
+    my @col_alignment;
+    for (my $i = 0; $i < $n_cols; $i++) {
+        push @col_alignment, { sample => "&$col_spacer" };
+    }
+    my $tb = Text::Table->new(@col_alignment);
+    $tb->load(@tb_rows);
+    return $tb;
 }
 
 sub help_sub_commands
@@ -1309,6 +1356,7 @@ sub class_for_sub_command
 # The filehandle to print these messages to.  In normal operation this'll just be
 # STDERR, but the test case can change it to capture the messages to somewhere else
 our $stderr = \*STDERR;
+our $stdout = \*STDOUT;
 
 our %msgdata;
 
@@ -1368,7 +1416,12 @@ for my $type (qw/error warning status debug usage/) {
                 $code->($self,$msg);
             }
             if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
-                (ref($fh) ? $fh : $stderr)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                if ( $type eq 'usage' ) {
+                    (ref($fh) ? $fh : $stdout)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                }
+                else {
+                    (ref($fh) ? $fh : $stderr)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                }
             }
             if ($msgdata->{ "queue_" . $type . "_messages"}) {
                 my $a = $msgdata->{ $type . "_messages_arrayref" } ||= [];
