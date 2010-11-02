@@ -13,6 +13,7 @@ UR::Object::Type->define(
     is => 'UR::Namespace::Command',
     has => [
         classname => {
+            is => 'Text',
             shell_args_position => 1,
             doc => 'The base class to use as trunk of command tree, e.g. UR::Namespace::Command',
         },
@@ -32,8 +33,8 @@ sub help_brief {
 sub is_sub_command_delegator { 0; }
 
 sub execute {
-    my($self, $params) = @_;
-    my $class = $params->{'classname'};
+    my $self = shift;
+    my $class = $self->classname;
     
     eval "use above '$class';";
     if ($@) {
@@ -43,15 +44,14 @@ sub execute {
 
     (my $module_path) = Getopt::Complete::Cache->module_and_cache_paths_for_package($class, 1);
     my $cache_path = $module_path . ".opts";
+    unless ($self->output) {
+        $self->output($cache_path);
+    }
+    $self->status_message("Generating " . $self->output . " file for $class.");
+    $self->status_message("This may take some time and may generate harmless warnings...");
 
     my $fh;
-    if ($self->output) {
-        $fh = IO::File->new('>' . $self->output) || die "Cannot create file at " . $self->output . "\n";
-    }
-    else {
-        $fh = IO::File->new('>' . $cache_path) || die "Cannot create file at $cache_path\n";
-    }
-    
+    $fh = IO::File->new('>' . $self->output) || die "Cannot create file at " . $self->output . "\n";
     
     if ($fh) {
         my $src = Data::Dumper::Dumper($class->resolve_option_completion_spec());
