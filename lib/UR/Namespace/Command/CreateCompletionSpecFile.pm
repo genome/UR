@@ -14,7 +14,7 @@ UR::Object::Type->define(
     has => [
         classname => {
             shell_args_position => 1,
-            doc => 'The base class to use as trunk of command tree, e.g. Genome::Command or Genome::Model::Tools',
+            doc => 'The base class to use as trunk of command tree, e.g. UR::Namespace::Command',
         },
         output => {
             is => 'Text',
@@ -26,7 +26,7 @@ UR::Object::Type->define(
 
 
 sub help_brief {
-    "Creates a .opts file beside class/module passed as argument, e.g. Genome::Command.";
+    "Creates a .opts file beside class/module passed as argument, e.g. UR::Namespace::Command.";
 }
 
 sub is_sub_command_delegator { 0; }
