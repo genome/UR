@@ -343,7 +343,7 @@ sub add_change_to_transaction_log {
             : ('')
         );
     my @check_properties    = ($property    ? ($property, '')    : ('') );
-    my @check_ids           = ($id          ? ($id, '')          : ('') );
+    my @check_ids           = (defined($id) ? ($id, '')          : ('') );
 
     #my @per_class  = grep { defined $_ } @$all_change_subscriptions{@check_classes};
     #my @per_method = grep { defined $_ } map { @$_{@check_properties} } @per_class;
@@ -806,9 +806,11 @@ sub create_entity {
 
     my $set_values = {};
     for my $property_name (keys %set_properties) {
-        $set_values->{ $property_name } =
-            delete $params->{ $property_name }
-                if ( exists $params->{ $property_name } );
+        if (exists $params->{ $property_name }) {
+            delete $default_values{ $property_name };
+            $set_values->{ $property_name } = delete $params->{ $property_name };
+        }
+
     }
 
     # create the object.

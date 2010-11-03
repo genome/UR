@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 29;
+use Test::More tests => 37;
 use Data::Dumper;
 
 class URT::Item {
@@ -17,6 +17,7 @@ class URT::Item {
         parent  => { is => "URT::Item", is_optional => 1, id_by => ['parent_name','parent_group'] },
         foo     => { is => "String", is_optional => 1 },
         bar     => { is => "String", is_optional => 1 },
+        score   => { is => 'Integer' },
     ]
 };
 
@@ -44,16 +45,30 @@ is("@p", "name group", "property names are correct");
 my $b = URT::Item->create(name => 'Joe', group => 'shirts');
 ok($b, 'made a base class object');
 
-my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts');
+my $p = URT::FancyItem->create(name => 'Bob', group => 'shirts', score => 1, foo => 'foo');
 ok($p, "made a parent object");
 
-my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins');
+my $c = URT::FancyItem->create(parent => $p, name => 'Fred', group => 'skins', score => 2);
 ok($c, "made a child object which references it");
 
 my $u = URT::UnrelatedItem->create(name => 'Bob', group => 'shirts');
 ok($u, 'made an unrelated item object');
 
-my $r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
+my $r = URT::Item->define_boolexpr(foo => '');   # '' is the same as undef
+ok($r, "Created a rule to get URT::Items with null 'foo's");
+ok($r->specifies_value_for('foo'), 'Rule specifies a falue for foo');
+is($r->value_for('foo'), '', "rule's value for property foo is empty string");
+ok(! $r->specifies_value_for('name'), 'rule does not specify a value for name');
+my @results = URT::Item->get($r);
+is(scalar(@results), 2, 'Got 2 URT::Items with the rule');
+ok(scalar(grep { $_->name eq 'Joe' } @results), 'Joe was returned');
+ok(scalar(grep { $_->name eq 'Fred' } @results), 'Fred was returned');
+ok(! scalar(grep { $_->name eq 'Bob' } @results), 'Bob was not returned');
+
+
+
+
+$r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [parent_name => 'name', parent_group => 'group'], bar => 555);
 ok($r, "got a rule to get objects using -recurse");
 
 is($r->template->value_position_for_property_name('foo'),0, "position is as expected for variable param 1");
@@ -104,7 +119,7 @@ is($t->operator_for('bar'),'=', "operator for param 2 is correct");
 
 
 # Make a rule on the parent class
-$r = URT::Item->define_boolexpr(name => 'Bob', group => 'shirts');
+$r = URT::Item->define_boolexpr(name => 'Bob', group => 'shirts', score => '01');
 ok($r->evaluate($p), 'Original parent object evaluated though rule');
 
 ok(! $r->evaluate($c), 'Child object with different params evaluated through parent rule returns false');

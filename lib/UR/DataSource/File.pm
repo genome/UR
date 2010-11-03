@@ -304,8 +304,7 @@ sub _things_in_list_are_numeric {
     my $self = shift;
 
     foreach ( @{$_[0]} ) {
-        no warnings 'numeric';
-        return 0 if ($_ + 0 ne $_);
+        return 0 if (! Scalar::Util::looks_like_number($_));
     }
     return 1;
 }

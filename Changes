@@ -1,25 +1,29 @@
 Revision history for UR
 
+0.17    2010-10-24
+        Fixed bug with default datasources dumping debug info during queries.
+        Deprecated old parts of the UR::Object API.
+
 0.16	2010-09-27
-	File datasources build an on-the-fly index to improve its ability to seek within the file
-	Initial support for classes to supply custom logic for loading data
-	Compile-time speed improvements
-	Bug fixes for SQL generation with indirect properties, and the object cache pruner
+	    File datasources build an on-the-fly index to improve its ability to seek within the file
+	    Initial support for classes to supply custom logic for loading data
+	    Compile-time speed improvements
+	    Bug fixes for SQL generation with indirect properties, and the object cache pruner
 
 0.15	2010-08-03
-	Improved 'ur update classes' interaction with MySQL databases
-	Integration with Getopt::Complete for bash command-line tab completion
+        Improved 'ur update classes' interaction with MySQL databases
+        Integration with Getopt::Complete for bash command-line tab completion
 	
 0.14	2010-07-26
-	Metadata about data source entities (tables, columns, etc) is autodiscovered within commit() if it doesn't already exist in the MetaDB
-	The new View API now has working default toolkits for HTML, Text, XML and XSL.  The old Viewer API has been removed.
-	Smarter property merging when the Context reloads an already cached object and the data in the data source has changed
-	Added a built-in 'product' calculation property type
-	Calculated properties can now be memoized
-	subclassify_by for an abstract class can now be a regular, indirect or calculated property
-	New environment variable UR_CONTEXT_MONITOR_QUERY for printing Context/query info to stdout
-	SQLite data sources can initialize themselves even if the sqlite3 executable cannot be found
-	Test harness improvements: --junit and --color options, control-C stops tests and reports results
+        Metadata about data source entities (tables, columns, etc) is autodiscovered within commit() if it doesn't already exist in the MetaDB
+        The new View API now has working default toolkits for HTML, Text, XML and XSL.  The old Viewer API has been removed.
+        Smarter property merging when the Context reloads an already cached object and the data in the data source has changed
+        Added a built-in 'product' calculation property type
+        Calculated properties can now be memoized
+        subclassify_by for an abstract class can now be a regular, indirect or calculated property
+        New environment variable UR_CONTEXT_MONITOR_QUERY for printing Context/query info to stdout
+        SQLite data sources can initialize themselves even if the sqlite3 executable cannot be found
+        Test harness improvements: --junit and --color options, control-C stops tests and reports results
         'use lib' within an autoloaded module stays in effect after the module is loaded
 	
 0.13    2010-02-21

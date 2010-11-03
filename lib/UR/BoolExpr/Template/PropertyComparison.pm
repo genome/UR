@@ -74,6 +74,7 @@ our %subclass_suffix_for_builtin_symbolic_operator = (
     '<'     => "LessThan",
     '>'     => "GreaterThan",    
     '[]'    => "In",
+    'in []' => "In",
     '!='    => "NotEqual",
     'ne'    => "NotEqual",
     '<='    => 'LessOrEqual',
@@ -89,7 +90,7 @@ sub resolve_subclass_for_comparison_operator {
     
     my $subclass_name;
     
-    if (!defined($comparison_operator)) {
+    if (!defined($comparison_operator) or $comparison_operator eq '') {
         $subclass_name = $class . '::Equals';
     }    
     else {
@@ -117,7 +118,7 @@ sub resolve_subclass_for_comparison_operator {
         
         my $subclass_meta = UR::Object::Type->get($subclass_name);
         unless ($subclass_meta) {
-            Carp::confess("Unknown operator $comparison_operator");
+            Carp::confess("Unknown operator '$comparison_operator'");
         }
     }
     

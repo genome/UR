@@ -154,6 +154,12 @@ sub rollback
         }
     }
 
+    if ($self->state ne "open") {
+        Carp::confess("Cannot rollback a transaction that is " . $self->state . ".")
+    }
+
+    $self->__signal_change__('prerollback');
+
     my $begin_point = $self->begin_point;
     unless ($self eq $open_transaction_stack[-1]) {
         # This is not the top transaction on the stack.
@@ -181,22 +187,38 @@ sub rollback
     local $log_all_changes = 0;
 
 
+    $self->__signal_change__('rollback', 1);
     my @changes_to_undo = reverse $self->get_changes();
+    my $transaction_change = pop @changes_to_undo;
+    my $transaction = $transaction_change->changed_class_name->get($transaction_change->changed_id);
+    unless ($self == $transaction && $transaction_change->changed_aspect eq 'create') {
+        die "First change was not the creation of this transaction!";
+    }
     for my $change (@changes_to_undo) {
         if ($change == $changes_to_undo[0]) {
             # the transaction reverses itself in its own context,
             # but the removal of the transaction itself happens in the parent context
             $UR::Context::current = $parent;
         }
+
         $change->undo;
         $change->delete;
     }
+
+    for my $change (@changes_to_undo) {
+        unless($change->isa('UR::DeletedRef')) {
+            Carp::confess("Failed to undo a change during transaction rollback.");
+        }
+    }
+
+    $transaction_change->undo;
+    $transaction_change->delete;
 
     $#change_log = $begin_point-1;
 
     unless($self->isa("UR::DeletedRef")) {
         $DB::single = 1;
-        Carp::confess("Odd number of changes after rollback");
+        Carp::confess("Failed to remove transaction during rollback.");
     }
 
     pop @open_transaction_stack;
@@ -218,15 +240,22 @@ sub commit
     }
 
     if ($self->state ne "open") {
-        Carp::confess("Transaction not open!?")
+        Carp::confess("Cannot commit a transaction that is " . $self->state . ".")
     }
 
     unless ($open_transaction_stack[-1] == $self) {
         # TODO: decide if this should work like rollback, and commit nested transactions automatically
         Carp::confess("Cannot commit a transaction with open sub-transactions!");
     }
+    $self->__signal_change__('precommit');
 
     $self->state("committed");
+    if ($self->state eq 'committed') {
+        $self->__signal_change__('commit',1);
+    }
+    else {
+        $self->__signal_change__('commit',0);
+    }
     pop @open_transaction_stack;
     #$self->delete();
 

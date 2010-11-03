@@ -25,7 +25,6 @@ sub undo {
     my $changed_aspect = $self->changed_aspect;
     my $undo_data = $self->undo_data;
 
-
     if (0) {
         no warnings;
         my @k = qw/changed_class_name changed_id changed_aspect undo_data/;
@@ -42,6 +41,16 @@ sub undo {
         return 1;
     }
 
+    # For tracking "external" changes allow the undo to execute a closure
+    if ($changed_aspect eq 'external_change') {
+        if (ref($undo_data) eq 'CODE') {
+            return eval { &$undo_data };
+        }
+        else {
+            die $self->error_message("'external_change' expects a code ref for undo data!");
+        }
+    }
+
     my $changed_obj;
     if ($changed_aspect eq "delete" or $changed_aspect eq "unload") {
         $undo_data = '' unless defined $undo_data;
@@ -54,6 +63,7 @@ sub undo {
     else {
         $changed_obj = $changed_class_name->get($changed_id);
     }
+    # TODO: if no changed object, die?
 
 
     if ($changed_aspect eq "_create_object") {
@@ -61,6 +71,9 @@ sub undo {
     }
     elsif ($changed_aspect eq "_delete_object") {
         #$changed_obj = $changed_class_name->_create_object(%$changed_obj);
+    }
+    elsif ($changed_aspect eq "__define__") {
+        UR::Object::unload($changed_obj);
     }
     elsif ($changed_aspect eq "create") {
         UR::Object::delete($changed_obj);
@@ -87,11 +100,13 @@ sub undo {
     elsif ($changed_aspect eq "unload") {
         $changed_obj = UR::Object::_create_object($changed_class_name,%$changed_obj);
         UR::Object::__signal_change__($changed_obj,"load") if $changed_obj;
-    }
-    elsif ($changed_aspect eq "commit") {
-        Carp::confess();
-    }
-    elsif ($changed_aspect eq "rollback") {
+    } elsif ($changed_aspect eq "commit") {
+        if ($changed_obj->isa('UR::Context::Transaction')) {
+            UR::Object::unload($changed_obj);
+        } else {
+            Carp::confess();
+        }
+    } elsif ($changed_aspect eq "rollback") {
         Carp::confess();
     } elsif ($changed_aspect eq 'rewrite_module_header') {
         my $VAR1;

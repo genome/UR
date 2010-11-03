@@ -1279,13 +1279,13 @@ sub _complete_class_meta_object_definitions {
 
         if (not defined $self->schema_name) {
             if (my $schema_name = $parent_class->schema_name) {
-                $self->schema_name($schema_name);
+                $self->{'schema_name'} = $self->{'db_committed'}->{'schema_name'} = $schema_name;
             }
         }
 
         if (not defined $self->data_source_id) {
             if (my $data_source_id = $parent_class->data_source_id) {
-                $self->data_source_id($data_source_id);
+                $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $data_source_id;
             }
         }
 

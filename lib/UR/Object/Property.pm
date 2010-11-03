@@ -314,19 +314,19 @@ sub _get_joins {
                             next unless ($id_by_property and $id_by_property->is_delegated);
                            
                             push @joins, $id_by_property->_get_joins();
+                            $source_class = $joins[-1]->{'foreign_class'};
+                            @source_property_names = @{$joins[-1]->{'foreign_property_names'}};
                         }
                     }
-                    
+
                     push @joins, {
-                        id => $id,
-                        source_class => $source_class,
-                        source_class_meta => $class_meta,
-                        source_property_names => \@source_property_names,
-                        foreign_class => $foreign_class,
-                        foreign_class_meta => $foreign_class_meta,
-                        foreign_property_names => \@foreign_property_names,
-                        where => $where,
-                    }
+                                   id => $id,
+                                   source_class => $source_class,
+                                   source_property_names => \@source_property_names,
+                                   foreign_class => $foreign_class,
+                                   foreign_property_names => \@foreign_property_names,
+                                   where => $where,
+                                 };
                 }
                 elsif (my $reverse_as = $self->reverse_as) { 
                     my $foreign_class = $self->data_type;

@@ -85,10 +85,11 @@ sub property_diff {
 
 sub _create_object {
     my $class = shift;
- 
-    #my $params = { $class->define_bx(@_)->params_list };
-    my $params = $class->preprocess_params(@_);
 
+    my $params;
+    my ($bx,@extra) = $class->define_boolexpr(@_);
+    my $bxn = $bx->normalize;
+    $params = { $bxn->params_list, @extra };
     my $id = $params->{id};
     unless (defined($id)) {
         Carp::confess(
@@ -429,7 +430,7 @@ sub cancel_change_subscription ($@)
     return unless $arrayref;   # This thing didn't have a subscription in the first place
     my $index = 0;
 
-    while ($index <= @$arrayref)
+    while ($index < @$arrayref)
     {
         my ($cancel_callback, $note) = @{ $arrayref->[$index] };
 
@@ -496,66 +497,6 @@ sub ghost_class {
     my $class = $_[0]->class;
     $class = $class . '::Ghost';
     return $class;
-}
-
-
-# Old things still use this directly, sadly.
-
-sub preprocess_params {
-    if (@_ == 2 and ref($_[1]) eq 'HASH') {
-        # already processed, just throw it back to the caller
-        if (wantarray) {
-            # ... after flattening it out
-            return %{ $_[1] };
-        }
-        else {
-            # .. just the reference
-            return $_[1];
-        }
-    }
-    else {
-        my $class = shift;
-        $class = (ref($class)?ref($class):$class);
-
-        # get the rule object, which has the old params pre-cached
-        my ($rule, @extra) = $class->can("define_boolexpr")->($class,@_);
-        my $normalized_rule = $rule->normalize;
-        my $rule_params = $normalized_rule->legacy_params_hash;
-
-        # catch only case where sql is passed in
-        if (@extra == 2 && $extra[0] eq "sql"
-            && $rule_params->{_unique} == 0
-            && $rule_params->{_none} == 1
-            && (keys %$rule_params) == 2
-        ) {
-
-            push @extra,
-                "_unique" => 0,
-                "_param_key" => (
-                    ref($extra[1])
-                        ? join("\n", map { defined($_) ? "'$_'" : "undef"} @{$extra[1]})
-                        : $extra[1]
-                );
-
-            if (wantarray) {
-                return @extra;
-            }
-            else {
-                return { @extra }
-            }
-        }
-
-        if (wantarray) {
-            # flatten out the cached params hash
-            #return %{ $rule->{legacy_params_hash} };
-            return %{ $rule_params }, @extra;
-        }
-        else {
-            # duplicate the reference, and return the duplicate
-            #return { %{ $rule->{legacy_params_hash} } };
-            return { %{ $rule_params }, @extra };
-        }
-    }
 }
 
 1;

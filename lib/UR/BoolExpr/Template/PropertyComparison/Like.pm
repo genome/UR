@@ -14,21 +14,31 @@ sub evaluate_subject_and_values {
     my $self = shift;
     my $subject = shift;
     my $comparison_value = shift;    
+
+    return '' unless defined ($comparison_value);  # property like NULL should always be false
+
     my $escape = shift;    
+
     my $regex = $self->
         comparison_value_and_escape_character_to_regex(
             $comparison_value,
             $escape
         );
     my $property_name = $self->property_name;    
-    my $property_value = $subject->$property_name;
-    no warnings;
-    return ($property_value =~ $regex ? 1 : '');
+
+    no warnings 'uninitialized';
+    my @property_value = $subject->$property_name;
+    foreach my $value ( @property_value ) {
+        return 1 if $value =~ $regex;
+    }
+    return '';
 }
 
 sub comparison_value_and_escape_character_to_regex {    
     my ($class, $value, $escape) = @_;
 	
+    return '' unless defined($value);
+
     # anyone who uses the % as an escape character deserves to suffer
     if ($value eq '%') {
 	return '^.+$';
@@ -71,7 +81,11 @@ UR::BoolExpr::Template::PropertyComparison::Like - Perform an SQL-ish like test
 The input test value is assummed to be an SQL 'like' value, where '_'
 represents a one character wildcard, and '%' means a 0 or more character
 wildcard.  It gets converted to a perl regular expression and used to match
-against an object's properties
+against an object's properties.
+
+If the property returns multiple values, this comparison returns true if any of the values
+match.
+
 
 =cut
 
