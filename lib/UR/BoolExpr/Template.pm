@@ -273,6 +273,13 @@ sub operator_for {
     }
 }
 
+sub operators_for_properties {
+    my %properties = map { $_ => $_[0]->{'_property_meta_hash'}->{$_}->{'operator'} || '=' }
+                        @{ $_[0]->{'_property_names_arrayref'} };
+    return \%properties;
+}
+    
+
 sub add_filter {
     my $self = shift;
     my $property_name = shift;

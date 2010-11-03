@@ -221,9 +221,9 @@ sub create_iterator_closure_for_rule {
                 for (my $i = 0; $i < @row_index_sort_order; $i++) {
                     my $column_num = $row_index_sort_order[$i];
 
-                    my $comparison = $ds_next_row[$lowest_obj_idx]->[$column_num] cmp $ds_next_row[$compare_obj_idx]->[$column_num]
+                    my $comparison = $ds_next_row[$lowest_obj_idx]->[$column_num] <=> $ds_next_row[$compare_obj_idx]->[$column_num]
                                      ||
-                                     $ds_next_row[$lowest_obj_idx]->[$column_num] <=> $ds_next_row[$compare_obj_idx]->[$column_num];
+                                     $ds_next_row[$lowest_obj_idx]->[$column_num] cmp $ds_next_row[$compare_obj_idx]->[$column_num];
 
                     if ($comparison == -1) {
                         next COMPARE_OBJECTS;
