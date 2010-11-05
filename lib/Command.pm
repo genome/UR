@@ -95,7 +95,6 @@ sub execute {
         return;
     }
 
-    $DB::single = 1;
     my $result = $self->_execute_body(@_);
 
     $self->is_executed(1);
