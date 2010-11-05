@@ -8,9 +8,7 @@ use Data::Dumper;
 use File::Basename;
 use Getopt::Long;
 use Term::ANSIColor;
-use POSIX qw/floor ceil/;
 require Text::Wrap;
-require Text::Table;
 
 our $entry_point_class;
 our $entry_point_bin;
@@ -185,12 +183,12 @@ sub _execute_delegate_class_with_params {
     
     if ( $delegate_class->is_sub_command_delegator && !$params->{help} ) {
         my $command_name = $delegate_class->command_name;
-        $delegate_class->status_message("Sub-commands for '$command_name':");
-        $delegate_class->status_message($delegate_class->sub_commands_table,"\n");
+        $delegate_class->status_message($delegate_class->help_usage_complete_text);
+        $delegate_class->error_message("Please specify a valid sub-command for '$command_name'.");
         return;
     }
     if ( $params->{help} ) {
-        $delegate_class->usage_message($delegate_class->help_usage_complete_text,"\n");
+        $delegate_class->usage_message($delegate_class->help_usage_complete_text);
         return;
     }
 
@@ -625,7 +623,7 @@ sub help_usage_complete_text {
         if ($self->is_sub_command_delegator) {
             # show the list of sub-commands
             $text = sprintf(
-                "Sub-commands for %s\n%s",
+                "Sub-commands for %s:\n%s",
                 Term::ANSIColor::colored($command_name, 'bold'),
                 $self->help_sub_commands,
             );
@@ -864,40 +862,6 @@ sub sorted_sub_command_classes {
             ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
         } 
         @c;
-}
-
-sub sorted_sub_command_names {
-    my $class = shift;
-    my @sub_command_classes = $class->sorted_sub_command_classes;
-    my @sub_command_names = map { $_->command_name_brief } @sub_command_classes;
-    return @sub_command_names;
-}
-
-sub sub_commands_table {
-    my $class = shift;
-    my @sub_command_names = $class->sorted_sub_command_names;
-
-    my $max_length = 0;
-    for (@sub_command_names) {
-        $max_length = length($_) if ($max_length < length($_));
-    }
-    my $col_spacer = '_'x$max_length;
-
-    my $n_cols = floor(80/$max_length);
-    my $n_rows = ceil(@sub_command_names/$n_cols);
-    my @tb_rows;
-    for (my $i = 0; $i < @sub_command_names; $i += $n_cols) {
-        my $end = $i + $n_cols - 1;
-        $end = $#sub_command_names if ($end > $#sub_command_names);
-        push @tb_rows, [@sub_command_names[$i..$end]];
-    }
-    my @col_alignment;
-    for (my $i = 0; $i < $n_cols; $i++) {
-        push @col_alignment, { sample => "&$col_spacer" };
-    }
-    my $tb = Text::Table->new(@col_alignment);
-    $tb->load(@tb_rows);
-    return $tb;
 }
 
 sub help_sub_commands
