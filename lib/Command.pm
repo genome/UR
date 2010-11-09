@@ -184,8 +184,8 @@ sub _execute_delegate_class_with_params {
         $class->usage_message($class->help_usage_complete_text);
         return;
     }
-    
-    if ( $delegate_class->is_sub_command_delegator && !$params->{help} ) {
+
+    if ( $delegate_class->is_sub_command_delegator && !defined($params) ) {
         my $command_name = $delegate_class->command_name;
         $delegate_class->status_message($delegate_class->help_usage_complete_text);
         $delegate_class->error_message("Please specify a valid sub-command for '$command_name'.");
@@ -500,12 +500,8 @@ sub resolve_class_and_params_for_argv
             shift @argv;
             return $class_for_sub_command->resolve_class_and_params_for_argv(@argv);
         }
-        elsif ( $argv[0] and $argv[0] =~ /\-\-help/ ) {
-            my %params = (help => 1);
-            return ($self, \%params);
-        }
         
-        if ($self->is_executable and @argv) {
+        if (@argv) {
             # this has sub-commands, and is also executable
             # fall through to the execution_logic...
         }
