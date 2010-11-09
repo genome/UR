@@ -175,6 +175,11 @@ sub _execute_with_shell_params_and_return_exit_code
 sub _execute_delegate_class_with_params {
     my ($class, $delegate_class, $params) = @_;
 
+    $delegate_class->dump_status_messages(1);
+    $delegate_class->dump_warning_messages(1);
+    $delegate_class->dump_error_messages(1);
+    $delegate_class->dump_debug_messages(0);
+
     unless ($delegate_class) {
         $class->usage_message($class->help_usage_complete_text);
         return;
@@ -190,11 +195,6 @@ sub _execute_delegate_class_with_params {
         $delegate_class->usage_message($delegate_class->help_usage_complete_text);
         return;
     }
-
-    $delegate_class->dump_status_messages(1);
-    $delegate_class->dump_warning_messages(1);
-    $delegate_class->dump_error_messages(1);
-    $delegate_class->dump_debug_messages(0);
 
     my $command_object = $delegate_class->create(%$params);
 
