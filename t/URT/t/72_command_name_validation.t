@@ -9,17 +9,6 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use UR;
 use Test::More;
 
-BEGIN {
-    eval "use Getopt::Complete::Cache;";
-    if ($@ =~ qr(Can't locate Getopt/Complete/Cache.pm in \@INC)) {
-        plan skip_all => 'Getopt::Complete::Cache does not exist on the system';
-    } else {
-        plan tests => 7;  # This should match the number of keys in %tests below
-        use_ok('Getopt::Complete::Cache');
-    }
-}
-
-
 my %tests = (
     'WordWord' => 'word-word',
     'Word456Word' => 'word-456-word',
@@ -30,6 +19,7 @@ my %tests = (
     '456' => '456',
 );          
                
+plan tests => scalar(keys(%tests));
 
 for my $class (keys %tests) {
 

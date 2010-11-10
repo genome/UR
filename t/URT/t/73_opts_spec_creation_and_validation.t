@@ -7,11 +7,18 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 
 use UR;
-use Getopt::Complete::Cache;
 use Test::More;
 use File::Temp;
 
-plan tests => 6;
+BEGIN {
+    eval "use Getopt::Complete::Cache;";
+    if ($@ =~ qr(Can't locate Getopt/Complete/Cache.pm in \@INC)) {
+        plan skip_all => 'Getopt::Complete::Cache does not exist on the system';
+    } else {
+        plan tests => 7;  # This should match the number of keys in %tests below
+        use_ok('Getopt::Complete::Cache');
+    }
+}
 
 my $fh = File::Temp->new();
 my $fname = $fh->filename;
