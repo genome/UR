@@ -31,12 +31,16 @@ features (
         'XML::Dumper'         => '',
         'XML::Generator'      => '',
         'XML::LibXML'         => '',
-        'XML::LibXSLT'        => '',
-        'Getopt::Complete'    => '0.15',
     ],
     'Moose' => [
         #-tests  => [ [ 't/URT/t/00-load.t' ], <t/URT/t/*-moose-*.t> ],
         'Moose' => '0.31',
+    ],
+    GetoptComplete => [
+        'Getopt::Complete'    => '0.17',
+    ],
+    'XSLT' => [
+        'XML::LibXSLT'        => '',
     ]
 );
 
