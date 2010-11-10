@@ -183,9 +183,6 @@ sub operator_returns_object_count {
 
     @result = URT::Thing->get(value => { operator => $operator, value => $value });
     is(scalar(@result), $expected_count, "value $print_operator $print_value (old syntax) returns $expected_count item(s)");
-    if (@result) {
-        diag("Object IDs were: ".join(',',map { $_->id} @result));
-    }
     URT::Thing->unload();
 
 
@@ -193,18 +190,12 @@ sub operator_returns_object_count {
     my $property_string = "value $operator";
     @result = URT::Thing->get($property_string => $value);
     is(scalar(@result), $expected_count, "value $print_operator $print_value (new syntax) loads $expected_count item(s)");
-    if (@result) {
-        diag("Object IDs were: ".join(',',map { $_->id} @result));
-    }
 
     URT::Thing->unload();  # clear object and query cache
     URT::Thing->get(1);    # Get an object into the cache
 
     @result = URT::Thing->get($property_string => $value);
     is(scalar(@result), $expected_count, "value $print_operator $print_value (new syntax) returns $expected_count item(s)");
-    if (@result) {
-        diag("Object IDs were: ".join(',',map { $_->id} @result));
-    }
     URT::Thing->unload();
 }
 
