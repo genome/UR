@@ -178,10 +178,6 @@ sub operator_returns_object_count {
     # Original non-eq-operator syntax
     @result = URT::Thing->get(value => { operator => $operator, value => $value });
     is(scalar(@result), $expected_count, "value $print_operator $print_value (old syntax) loads $expected_count item(s)");
-    if (@result) {
-        diag("Object IDs were: ".join(',',map { $_->id} @result));
-    }
-
     URT::Thing->unload();  # clear object and query cache
     URT::Thing->get(1);    # Get an object into the cache
 
