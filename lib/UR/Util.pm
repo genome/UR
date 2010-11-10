@@ -284,13 +284,11 @@ sub mapreduce_grep($&@) {
     my $subref = shift;
 $DB::single=1;
 
-my $total_start_time = Time::HiRes::time();
+
     # First check fast... should we do parallel at all?
     if (!$ENV{'UR_NR_CPU'} or $ENV{'UR_NR_CPU'} < 2) {
         #return grep { $subref->($_) } @_;
         my @ret = grep { $subref->($_) } @_;
-my $total_end_time = Time::HiRes::time();
-print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
         return @ret;
     }
 
@@ -343,8 +341,6 @@ print "Serial grep took ",$total_end_time - $total_start_time ," sec\n";
             my $last = $start + $length;
             $last = $#things_to_check if ($last > $#things_to_check);
 
-print "PID $$ checking from $start to $last\n";
-my $start_time = Time::HiRes::time();
             #my @objects = grep { $subref->($_) } @things_to_check[$start .. $last];
             my @matching;
             for (my $i = $start; $i <= $last; $i++) {
@@ -352,11 +348,8 @@ my $start_time = Time::HiRes::time();
                     push @matching, $i;
                 }
             }
-my $end_time = Time::HiRes::time();
-print "PID $$ found ".scalar(@matching). " matching objects in ",$end_time - $start_time ," sec\n";
             # FIXME - when there's a more general framework for passing objects between
             # processes, use that instead
-#print "The matches are:\n"; printf("%s  %s\n", $_->class ,$_->id) foreach @objects;
             #$pipe->printf("%s\n%s\n",$_->class, $_->id) foreach @objects;
             $pipe->print("$_\n") foreach @matching;
 
@@ -369,11 +362,7 @@ print "PID $$ found ".scalar(@matching). " matching objects in ",$end_time - $st
             $parent_last = $#things_to_check;
         }
     }
-print "Parent pid $$ checking 0 to $parent_last\n";
-my $start_time = Time::HiRes::time();
     my @matches = grep { $subref->($_) } @things_to_check[0 .. $parent_last];
-my $end_time = Time::HiRes::time();
-print "Parent pid $$ found ".scalar(@matches). " matching objects in ",$end_time - $start_time ," sec\n";
 
     foreach my $handle ( @read_handles ) {
         READ_FROM_CHILD:
@@ -400,8 +389,6 @@ print "Parent pid $$ found ".scalar(@matches). " matching objects in ",$end_time
     }
 
     $cleanup->();
-my $total_end_time = Time::HiRes::time();
-print "Parallel grep took ",$total_end_time - $total_start_time ," sec\n";
 
     return @matches;
 }
