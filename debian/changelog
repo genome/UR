@@ -12,7 +12,7 @@ libur-perl (0v0.17-1) unstable; urgency=low
   * Bugfixes for handling observers during software transaction commit and rollback
   * Addition of a new UR::Change type (external_change) to track non-UR entities that need undo-ing during a rollback
 
- -- Anthony Brummett <brummett@cpan.org> Wed, 10 Nov 2010 00:00:01 -0500
+ -- Anthony Brummett <brummett@cpan.org>  Wed, 10 Nov 2010 00:00:01 -0500
 
 libur-perl (0v0.16-1) unstable; urgency=low
 
@@ -21,7 +21,7 @@ libur-perl (0v0.16-1) unstable; urgency=low
   * Compile-time speed improvements
   * Bug fixes for SQL generation with indirect properties, and the object cache pruner
 
- -- Anthony Brummett <brummett@cpan.org> Mon, 27 Sep 2010 00:00:01 -0500
+ -- Anthony Brummett <brummett@cpan.org>  Mon, 27 Sep 2010 00:00:01 -0500
 
 libur-perl (0v0.15-2) unstable; urgency=low
 
