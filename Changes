@@ -1,14 +1,23 @@
 Revision history for UR
 
-0.17    2010-10-24
+0.17    2010-11-10
         Fixed bug with default datasources dumping debug info during queries.
         Deprecated old parts of the UR::Object API.
+        Bugfixes for MySQL data sources with handling of between and like operators, and table/column name case sensitivity
+        MySQL data sources will complain if the 'lower_case_table_names' setting is not set to 1
+        Bugfixes for FileMux data sources to return objects from iterators in correct sorted order
+        File data sources remember their file offsets more often to improve seeking
+        Bugfixes for handling is_many values passed in during create()
+        New class for JSON-formatted Set views 
+        More consistent behavior during evaluation of BoolExprs with is_many values and undef/NULL values
+        Bugfixes for handling observers during software transaction commit and rollback
+        Addition of a new UR::Change type (external_change) to track non-UR entities that need undo-ing during a rollback
 
 0.16	2010-09-27
-	    File datasources build an on-the-fly index to improve its ability to seek within the file
-	    Initial support for classes to supply custom logic for loading data
-	    Compile-time speed improvements
-	    Bug fixes for SQL generation with indirect properties, and the object cache pruner
+        File datasources build an on-the-fly index to improve its ability to seek within the file
+        Initial support for classes to supply custom logic for loading data
+        Compile-time speed improvements
+        Bug fixes for SQL generation with indirect properties, and the object cache pruner
 
 0.15	2010-08-03
         Improved 'ur update classes' interaction with MySQL databases
