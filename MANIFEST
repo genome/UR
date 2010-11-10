@@ -272,7 +272,6 @@ lib/UR/Value/DateTime.pm
 lib/UR/Value/Decimal.pm
 lib/UR/Value/DirectoryPath.pm
 lib/UR/Value/FilePath.pm
-lib/UR/Value/FilesystemPath.pm
 lib/UR/Value/FOF.pm
 lib/UR/Value/HASH.pm
 lib/UR/Value/Integer.pm
