@@ -41,6 +41,7 @@ lib/UR/BoolExpr/Template/Or.pm
 lib/UR/BoolExpr/Template/PropertyComparison.pm
 lib/UR/BoolExpr/Template/PropertyComparison/Between.pm
 lib/UR/BoolExpr/Template/PropertyComparison/Equals.pm
+lib/UR/BoolExpr/Template/PropertyComparison/False.pm
 lib/UR/BoolExpr/Template/PropertyComparison/GreaterOrEqual.pm
 lib/UR/BoolExpr/Template/PropertyComparison/GreaterThan.pm
 lib/UR/BoolExpr/Template/PropertyComparison/In.pm
@@ -51,6 +52,7 @@ lib/UR/BoolExpr/Template/PropertyComparison/Matches.pm
 lib/UR/BoolExpr/Template/PropertyComparison/NotEqual.pm
 lib/UR/BoolExpr/Template/PropertyComparison/NotIn.pm
 lib/UR/BoolExpr/Template/PropertyComparison/NotLike.pm
+lib/UR/BoolExpr/Template/PropertyComparison/True.pm
 lib/UR/BoolExpr/Util.pm
 lib/UR/Change.pm
 lib/UR/Context.pm
@@ -109,6 +111,7 @@ lib/UR/Env/UR_DBI_MONITOR_DML.pm
 lib/UR/Env/UR_DBI_MONITOR_EVERY_FETCH.pm
 lib/UR/Env/UR_DBI_MONITOR_SQL.pm
 lib/UR/Env/UR_DBI_NO_COMMIT.pm
+lib/UR/Env/UR_DEBUG_OBJECT_PRUNING.pm
 lib/UR/Env/UR_DEBUG_OBJECT_RELEASE.pm
 lib/UR/Env/UR_IGNORE.pm
 lib/UR/Env/UR_MOOSE.pm
@@ -204,6 +207,7 @@ lib/UR/Object/Reference/Property.pm
 lib/UR/Object/Reference/View/Default/Umlet.pm
 lib/UR/Object/Reference/View/DescriptionLineItem/Text.pm
 lib/UR/Object/Set.pm
+lib/UR/Object/Set/View/Default/Json.pm
 lib/UR/Object/Set/View/Default/Xml.pm
 lib/UR/Object/Tag.pm
 lib/UR/Object/Type.pm
@@ -375,6 +379,7 @@ t/URT/t/49b_complicated_get_2.t
 t/URT/t/49c_complicated_get_3.t
 t/URT/t/49d_complicated_get_joining_through_view.t
 t/URT/t/49e_complicated_get_joining_through_view2.t
+t/URT/t/49f_complicated_get_indirect_id_by.t
 t/URT/t/50_get_and_reload.t
 t/URT/t/51_get_with_hints.t
 t/URT/t/52_limit_cache_size.t
@@ -403,8 +408,11 @@ t/URT/t/72_command_name_validation.t
 t/URT/t/73_opts_spec_creation_and_validation.t
 t/URT/t/74_xsl_view_url_convert.t
 t/URT/t/75_custom_loader.t
+t/URT/t/76_is_many_default_values.t
+t/URT/t/77_sql_undef_value_handling.t
 t/URT/t/80_command_define_datasource.t
 t/URT/t/98_ur_update.t
+t/URT/t/99_transaction-observers.t
 t/URT/t/99_transaction.t
 t/URT/Thingy.pm
 t/URT/Vocabulary.pm
