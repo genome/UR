@@ -3141,7 +3141,7 @@ sub __create_object_fabricator_for_loading_template {
         return $pending_db_object;
         
     }; # end of per-class object fabricator
-    Sub::Name::subname('UR::Context::__object_fabricator(closure)__', $object_fabricator);
+    Sub::Name::subname("UR::Context::__object_fabricator(closure)__ ($class_name)", $object_fabricator);
 
     # remember all the changes to $UR::Context::all_params_loaded that should be made.
     # This fixes the problem where you create an iterator for a query, read back some of
