@@ -396,8 +396,10 @@ sub resolve {
                     $value = $value->{value};
                 }
             }
-            elsif ($ref eq "ARRAY" and $operator ne 'between') {
-                $key .= " []";
+            elsif ($ref eq "ARRAY" and $operator ne 'between' and $operator ne 'not between') {
+                if (substr($key, -3, 3) ne ' in') {
+                    $key = join(' ', $key, 'in');
+                }
                 
                 # replace the arrayref
                 $value = [ @$value ];
@@ -656,10 +658,12 @@ sub _resolve_from_filter_array {
             
             if (@list_parts > 1) {
                 # rule component
-                $key .= " []";
+                if (substr($key, -3, 3) ne ' in') {
+                    $key = join(' ', $key, 'in');
+                }
                 $value = \@list_parts;
         
-                $rule_filter = [$fdata->[0],"[]",\@list_parts];
+                $rule_filter = [$fdata->[0],"in",\@list_parts];
             }
             elsif (@range_parts >= 2) {
                 if (@range_parts > 2) {
