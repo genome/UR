@@ -177,8 +177,6 @@ sub is_unique {
                         grep {  
                             $_->{operator} !~ /^(not |)like(-.|)$/i
                             and
-                            $_->{operator} ne '[]'
-                            and
                             $_->{operator} !~ /^(not |)in/i
                         }                                              
                         @properties_used_from_constraint;
@@ -525,14 +523,13 @@ sub get {
                     }
                 }    
                 elsif ($id_related->{$property}) {
-                    #if ($op eq "" or $op eq "eq" or $op eq "=" or $op eq '[]') {
                     if ($op eq "" or $op eq "eq" or $op eq "=") {
                         $id_parts{$id_pos->{$property}} = $key_pos;                        
                     }
                     else {
                         # We're doing some sort of gray-area comparison on an ID                        
                         # field, and though we could possibly resolve an ID
-                        # from things like an [] op, it's more than we've done
+                        # from things like an 'in' op, it's more than we've done
                         # before.
                         $id_only = 0;
                     }

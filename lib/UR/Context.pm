@@ -2655,7 +2655,7 @@ sub __create_object_fabricator_for_loading_template {
     my $load_rule_id = $load_rule->id;
 
     my @rule_properties_with_in_clauses =
-        grep { $rule_template_without_recursion_desc->operator_for($_) eq '[]' } 
+        grep { $rule_template_without_recursion_desc->operator_for($_) eq 'in' } 
              $rule_template_without_recursion_desc->_property_names;
 
     #my $rule_template_without_in_clause = $rule_template_without_recursion_desc;
@@ -2667,7 +2667,7 @@ sub __create_object_fabricator_for_loading_template {
             # but the two result in different rules in the end.
             #$rule_template_without_in_clause = $rule_template_without_in_clause->remove_filter($property_name);
             #$rule_template_without_in_clause = $rule_template_without_in_clause->add_filter($property_name);
-            $rule_template_id_without_in_clause =~ s/($property_name) \[\]/$1/;
+            $rule_template_id_without_in_clause =~ s/($property_name) in/$1/;
         }
         $rule_template_without_in_clause = UR::BoolExpr::Template->get($rule_template_id_without_in_clause);
     }

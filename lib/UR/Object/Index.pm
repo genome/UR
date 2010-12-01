@@ -121,7 +121,7 @@ sub get_objects_matching
                     }
                     @hr = grep { $_ } @thr;
                 } 
-                elsif ($op =~ /^in( \[\])?/i)
+                elsif ($op =~ /^in/i)
                 {                
                     $value = $value->{value};
                     my $has_null = ( (grep { length($_) == 0 } @$value) ? 1 : 0);
@@ -132,7 +132,7 @@ sub get_objects_matching
                         @hr = grep { $_ } map { @$_{@value} } @hr;
                     }
                 }
-                elsif ($op =~ m/^not \[\]/i or $op =~ /^not in( \[\])?$/i)
+                elsif ($op =~ /^not in$/i)
                 {                
                     $value = $value->{value};
                     
@@ -256,7 +256,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;                        
-                } elsif($op eq "between" or $op eq 'between []') {
+                } elsif($op eq 'between') {
                     my @thr;
                     my ($min,$max) = @{ $value->{value} };
                     foreach my $h (@hr) {

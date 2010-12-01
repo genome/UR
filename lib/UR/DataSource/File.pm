@@ -351,7 +351,7 @@ sub _comparator_for_operator_and_property {
                    };
         }
 
-    } elsif ($operator eq '[]' or $operator eq 'in') {
+    } elsif ($operator eq 'in') {
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             # Numeric 'in' comparison  returns undef if we're within the range of the list
             # but don't actually match any of the items in the list
@@ -387,7 +387,7 @@ sub _comparator_for_operator_and_property {
 
         }
 
-    } elsif ($operator eq 'not []' or $operator eq 'not in') {
+    } elsif ($operator eq 'not in') {
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             return sub {
                 foreach ( @$value ) {

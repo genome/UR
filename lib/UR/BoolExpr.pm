@@ -203,7 +203,7 @@ sub params_list {
             }
             my $value = $values_sorted[$v];
             if ($op) {
-                if ($op ne "[]") {
+                if ($op ne 'in') {
                     if ($op =~ /^(.+)-(.+)$/) {
                         $value = { operator => $1, value => $value, escape => $2 };
                     }
@@ -325,7 +325,6 @@ sub resolve {
     }
     
     # Handle the single ID.
-    #if (@in_params % 2 == 1) {
     if (@in_params == 1) {
         unshift @in_params, "id";
     } elsif (@in_params % 2 == 1) {

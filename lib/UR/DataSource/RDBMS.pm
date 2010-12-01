@@ -1525,7 +1525,7 @@ sub _extend_sql_for_column_operator_and_value {
     my ($self, $expr_sql, $op, $val, $escape) = @_;
 
     $op ||= '';
-    if ($op eq '[]' and not ref($val) eq 'ARRAY') {
+    if ($op eq 'in' and not ref($val) eq 'ARRAY') {
         #$DB::single = 1;
         $val = [];
     }    
