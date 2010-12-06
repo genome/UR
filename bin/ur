@@ -3,7 +3,8 @@ use strict;
 use warnings;
 
 BEGIN {
-        eval "use Getopt::Complete::Cache class => 'UR::Namespace::Command', above => 1;";
+    eval "use Getopt::Complete::Cache class => 'UR::Namespace::Command', above => 1;";
+    exit if ($@);
 };
 
 use above "UR";
