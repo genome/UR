@@ -2651,7 +2651,7 @@ sub __create_object_fabricator_for_loading_template {
     # $rule can contain params that may not apply to the subclass that's currently loading.
     # define_boolexpr() in array context will return the portion of the rule that actually applies
     #my($load_rule, undef) = $load_class_name->define_boolexpr($rule->params_list);
-    my($load_rule, undef) = UR::BoolExpr->resolve($load_class_name, $rule->params_list);
+    my($load_rule, @extra_params) = UR::BoolExpr->resolve($load_class_name, $rule->params_list);
     my $load_rule_id = $load_rule->id;
 
     my @rule_properties_with_in_clauses =
@@ -2872,7 +2872,7 @@ sub __create_object_fabricator_for_loading_template {
             # Make a note in all_params_loaded (essentially, the query cache) that we've made a
             # match on this rule, and some equivalent rules
             if ($loading_base_object and not $rule_specifies_id) {
-                if ($rule_class_name ne $load_class_name) {
+                if ($rule_class_name ne $load_class_name and scalar(@extra_params) == 0) {
                     $pending_db_object->{load}{param_key}{$load_class_name}{$load_rule_id}++;
                     $UR::Context::all_params_loaded->{$load_class_name}{$load_rule_id} = undef;
                     $all_params_loaded_items->{$load_class_name}{$load_rule_id}++;
