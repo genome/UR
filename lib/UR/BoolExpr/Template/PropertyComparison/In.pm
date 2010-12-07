@@ -14,8 +14,8 @@ UR::Object::Type->define(
 sub evaluate_subject_and_values {
     my $self = shift;
     my $subject = shift;
-    my $comparison_value = shift;    
-    my $property_name = $self->property_name;    
+    my $comparison_values = shift;
+    my $property_name = $self->property_name;
     my @property_values = $subject->$property_name;
 
     if (@property_values == 1 and ref($property_values[0]) eq 'ARRAY') {
@@ -23,7 +23,7 @@ sub evaluate_subject_and_values {
     }
 
     no warnings qw(uninitialized);
-    foreach my $comparison_value (@$comparison_value) {
+    foreach my $comparison_value (@$comparison_values) {
         my $cv_is_number = Scalar::Util::looks_like_number($comparison_value);
 
         foreach my $property_value ( @property_values ) {
