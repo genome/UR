@@ -26,6 +26,11 @@ sub evaluate_subject_and_values {
     foreach my $comparison_value (@$comparison_values) {
         my $cv_is_number = Scalar::Util::looks_like_number($comparison_value);
 
+        # undef should match missing values
+        if (! defined($comparison_value) and ! scalar(@property_values)) {
+            return 1;
+        }
+
         foreach my $property_value ( @property_values ) {
             my $pv_is_number = Scalar::Util::looks_like_number($property_value);
 
