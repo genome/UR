@@ -3491,6 +3491,11 @@ sub _get_objects_for_class_and_rule_from_cache {
             }
             
             my @properties = sort keys %params;
+            unless (@properties) {
+                # All the supplied filters were is_many properties
+                return grep { $rule->evaluate($_) } $self->all_objects_loaded($class);
+            }
+
             my @values = map { $params{$_} } @properties;
             
             unless (@properties == @values) {
