@@ -403,8 +403,14 @@ sub resolve {
                 # replace the arrayref
                 $value = [ @$value ];
                 
-                # ensure we re-constitute the original array not a copy
-                push @non_ur_object_refs, $key, $value;
+                # listrefs containing references (blessed or not) need to store
+                # their values verbatim, since the value_id cannot recreate them properly
+                foreach my $val (@$value) {
+                    if (ref($val)) {
+                        push @non_ur_object_refs, $key, $value;
+                        last;
+                    }
+                }
 
                 # transform objects into IDs if applicable
                 my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
