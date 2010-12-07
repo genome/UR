@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 39;
+use Test::More tests => 43;
 use URT::DataSource::SomeSQLite;
 
 &setup_classes_and_db();
@@ -96,12 +96,17 @@ is(scalar(@things), 2, 'Got 2 things with related_optional_values in [4,16,20]')
 @things = URT::Thing->get('related_optional_values in' => [25,26,-2]);
 is(scalar(@things), 0, 'Got 0 things with related_optional_values in [-2,25,26]');
 
-#@things = URT::Thing->get('related_optional_values in' => [19, undef, 5]);
-#is(scalar(@things), 8, 'All 8 things with related_optional_values in [undef, 5,19]');
+@things = URT::Thing->get('related_optional_values in' => [19, undef, 5]);
+is(scalar(@things), 8, 'All 8 things with related_optional_values in [undef, 5,19]');
 
-#@things = URT::Thing->get('related_optional_values not in' => [19, undef, 5]);
-#is(scalar(@things), 8, 'All 8 things with related_optional_values in [undef, 5,19]');
+@things = URT::Thing->get('related_optional_values not in' => [undef, 6, 22]);
+is(scalar(@things), 0, 'Got 0 things with related_optional_values not in [undef, 6, 22]');
 
+@things = URT::Thing->get('related_optional_values not in' => [7,8]);
+is(scalar(@things), 6, 'Got 6 things with related_optional_values not in [7,8]');
+
+@things = URT::Thing->get('related_optional_values not in' => [500,501, -22]);
+is(scalar(@things), 8, 'All 8 things with related_optional_values not in [500,501, -22]');
 
 
 sub setup_classes_and_db {
@@ -182,7 +187,3 @@ sub setup_classes_and_db {
     );
 
 }
-        
-   
-
-
