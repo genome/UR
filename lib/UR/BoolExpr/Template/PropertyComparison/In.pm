@@ -22,7 +22,7 @@ sub evaluate_subject_and_values {
         @property_values = @{$property_values[0]};
     }
 
-    no warnings qw(numeric uninitialized);
+    no warnings qw(uninitialized);
     foreach my $comparison_value (@$comparison_value) {
         my $cv_is_number = Scalar::Util::looks_like_number($comparison_value);
 
