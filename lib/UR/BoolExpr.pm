@@ -91,11 +91,16 @@ sub values {
     if (my $non_ur_object_refs = $self->{non_ur_object_refs}) {
         # real objects cannot be serialized into the id easily, and require extra work extracting
         my $rule_template = $self->template;
+        #my @constant_values_sorted = $rule_template->_constant_values;
         my @keys_sorted = $rule_template->_underlying_keys;
         my @values_sorted = UR::BoolExpr::Util->value_id_to_values($value_id);
+
         my $n = 0;
         for my $key (@keys_sorted) {
-            if (exists $non_ur_object_refs->{$key}) {
+            if (substr($key,0,1) eq '-') {
+                # keys starting with '-' come from the constant_values in the template
+                next;
+            } elsif (exists $non_ur_object_refs->{$key}) {
                 $values_sorted[$n] = $non_ur_object_refs->{$key};
             }
             $n++;
