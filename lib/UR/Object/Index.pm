@@ -300,7 +300,7 @@ sub _build_data_tree
 {        
     my $self = $_[0];
     
-    my @indexed_property_names = $self->indexed_property_names;        
+    my @indexed_property_names = $self->indexed_property_names;
     my $hr_base = $self->{data_tree};
     
     # _remove_object in bulk.
