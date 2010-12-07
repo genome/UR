@@ -8,6 +8,7 @@ use UR;
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
     is => ['UR::BoolExpr::Template::PropertyComparison'],
+    doc => "Returns true if any of the property's values appears in the comparison value list",
 );
 
 sub evaluate_subject_and_values {
@@ -49,6 +50,7 @@ UR::BoolExpr::Template::PropertyComparison::In - Perform an In test
 
 =head1 DESCRIPTION
 
-Returns true if any of the property's values appears in the comparison value list
+Returns true if any of the property's values appears in the comparison value list.
+Think of 'in' as short for 'intersect', and not just SQL's 'IN' operator.
 
 =cut
