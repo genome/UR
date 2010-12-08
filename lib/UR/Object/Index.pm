@@ -84,7 +84,7 @@ sub get_objects_matching
                 $op = lc($op);
                 if ($op eq 'like' or $op eq 'not like')
                 {
-                    my $not = 1 if (substr($op,1,1) eq 'n');
+                    my $not = 1 if (substr($op,0,1) eq 'n');
                     my $comparison_value = $value->{value};                        
                     my $escape = $value->{escape};
                     
