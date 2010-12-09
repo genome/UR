@@ -1,3 +1,12 @@
+libur-perl (0v0.18-1) unstable; urgency=low
+
+  * Bugfix for queries involving subclasses without tables
+  * Preliminary support for building debian packages
+  * Bugfixes for queries with the 'in' and 'not in' operators
+  *Object cache indexing sped up by replacing regexes with direct string comparisons
+
+ -- Anthony Brummett <brummett@cpan.org>  Fri, 10 Dec 2010 00:00:01 -0500
+
 libur-perl (0v0.17-1) unstable; urgency=low
 
   * Fixed bug with default datasources dumping debug info during queries.

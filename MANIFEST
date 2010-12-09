@@ -8,6 +8,12 @@ bin/ur
 bin/xsl/command_ui.xsl
 bin/xsl/error.xsl
 Changes
+debian/changelog
+debian/compat
+debian/control
+debian/copyright
+debian/rules
+debian/watch
 inc/Module/AutoInstall.pm
 inc/Module/Install.pm
 inc/Module/Install/AutoInstall.pm
@@ -316,7 +322,9 @@ t/URT/RAMThingy.pm
 t/URT/t/00-load.t
 t/URT/t/01_object.t
 t/URT/t/02_class_construction.t
+t/URT/t/03_rule_values.t
 t/URT/t/03_rules.t
+t/URT/t/03_rules_construction.t
 t/URT/t/04a_sqlite.t
 t/URT/t/04a_sqlite_init_db_internal.t
 t/URT/t/04b_mysql.t
@@ -408,7 +416,10 @@ t/URT/t/73_opts_spec_creation_and_validation.t
 t/URT/t/74_xsl_view_url_convert.t
 t/URT/t/75_custom_loader.t
 t/URT/t/76_is_many_default_values.t
+t/URT/t/77_index_undef_value_handling.t
 t/URT/t/77_sql_undef_value_handling.t
+t/URT/t/78_get_by_subclass_params_load_properly.t
+t/URT/t/79_like_operator.t
 t/URT/t/80_command_define_datasource.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction-observers.t
