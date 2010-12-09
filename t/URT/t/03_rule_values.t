@@ -95,7 +95,6 @@ is_deeply(\@values, $expected, "Normalized rule's values are correct");
 
 $r = URT::Item->define_boolexpr(name => [$fh], score => 1, foo => undef, -hints => ['ritem']);
 # These values are in the same order as the original rule definition
-$DB::stopper=1;
 @values = $r->values();
 is(scalar(@values), 3, 'Got back 3 values from rule');
 $expected = [[$fh], 1, undef];
