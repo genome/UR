@@ -20,7 +20,7 @@ use Fcntl qw(:DEFAULT :flock);
 use Errno qw(EINTR EAGAIN);
 use File::Temp;
 use File::Basename;
-use IO::File;
+use IO::File qw();
 
 our @CARP_NOT = qw( UR::Context UR::DataSource::FileMux);
 
