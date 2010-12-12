@@ -1,8 +1,4 @@
-
-# The diff command delegates to sub-commands under the adjoining directory.
-
 package UR::Namespace::Command::List;
-
 use warnings;
 use strict;
 use UR;
@@ -10,11 +6,10 @@ use UR;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
+    doc => "list objects, classes, modules"
 );
 
-sub help_brief {
-   "List various types of things." 
-}
+sub sub_command_sort_position { 5 }
 
 1;
 

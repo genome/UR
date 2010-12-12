@@ -1,8 +1,4 @@
-
-# The diff command delegates to sub-commands under the adjoining directory.
-
 package UR::Namespace::Command::Update;
-
 use warnings;
 use strict;
 use UR;
@@ -10,11 +6,10 @@ use UR;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command",
+    doc => 'update parts of the source tree of a UR namespace'
 );
 
-sub help_brief {
-   "Update different elements of the UR system";
-}
+sub sub_command_sort_position { 4 }
 
 1;
 

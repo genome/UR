@@ -24,7 +24,7 @@ my $fh = File::Temp->new();
 my $fname = $fh->filename;
 
 # Create the file
-isnt(UR::Namespace::Command::CreateCompletionSpecFile->execute({classname => 'UR::Namespace::Command', output => $fname}), 0, 'creating ur spec file in tmp');
+isnt(UR::Namespace::Command::Update::TabCompletionSpec->execute({classname => 'UR::Namespace::Command', output => $fname}), 0, 'creating ur spec file in tmp');
 
 # Try loading/parsing the file
 ok(-f $fname, 'Output options file exists');

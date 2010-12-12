@@ -1,5 +1,5 @@
 
-package UR::Namespace::Command::Rewrite;
+package UR::Namespace::Command::Update::RewriteClassHeader;
 
 use strict;
 use warnings;
@@ -23,7 +23,7 @@ sub params_as_getopt_specification
 
 sub help_brief
 {
-    "Rewrites class descriptions headers to normalize manual changes."
+    "Update::RewriteClassHeaders class descriptions headers to normalize manual changes."
 }
 
 sub help_detail

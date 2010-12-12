@@ -1,5 +1,5 @@
 
-package UR::Namespace::Command::Diff::Update;
+package UR::Namespace::Command::Old::DiffUpdate;
 
 use strict;
 use warnings;

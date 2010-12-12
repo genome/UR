@@ -1,6 +1,6 @@
 
 
-package UR::Namespace::Command::Rename::Class;                         
+package UR::Namespace::Command::Update::RenameClass;                         
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use UR;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => "UR::Namespace::Command::Rewrite",
+    is => "UR::Namespace::Command::Update::RewriteClassHeader",
 );
 
 # Standard methods used to output help.
