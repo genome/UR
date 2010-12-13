@@ -1071,7 +1071,7 @@ sub _infer_delegated_property_from_rule {
 
     my $rule_template = $rule->template;
     my $subject_class_name = $rule->subject_class_name;
-    my $subject_class_meta = UR::Object::Type->get($subject_class_name);
+    my $subject_class_meta = $subject_class_name->__meta__;
 
     my $wanted_property_meta = $subject_class_meta->property_meta_for_name($wanted_property_name);
     unless ($wanted_property_meta->via) {
@@ -1079,34 +1079,29 @@ sub _infer_delegated_property_from_rule {
     }
 
     my $linking_property_meta = $subject_class_meta->property_meta_for_name($wanted_property_meta->via);
-    my $alternate_wanted_property = $wanted_property_meta->to;
+    my $final_property_meta = $wanted_property_meta->final_property_meta;
 
-    my($reference,$ref_name_getter,$ref_r_name_getter,$alternate_class);
     if ($linking_property_meta->reverse_as) {
         eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
-        $reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
-                                                delegation_name => $linking_property_meta->reverse_as);
-        $ref_name_getter = 'r_property_name';
-        $ref_r_name_getter = 'property_name';
-        $alternate_class = $reference->class_name;
-    } else {
-        $reference = UR::Object::Reference->get(class_name => $linking_property_meta->class_name,
-                                                delegation_name => $linking_property_meta->property_name);
-        $ref_name_getter = 'property_name';
-        $ref_r_name_getter = 'r_property_name';
-        $alternate_class = $reference->r_class_name;
-    }
-
-    my %alternate_get_params;
-    my @ref_properties = $reference->get_property_links;
-    foreach my $ref_property ( @ref_properties ) {
-        my $ref_property_name = $ref_property->$ref_name_getter;
-        if ($rule_template->specifies_value_for($ref_property_name)) {
-            my $value = $rule->value_for($ref_property_name);
-            $alternate_get_params { $ref_property->$ref_r_name_getter } = $value;
+        if ($linking_property_meta->data_type ne $final_property_meta->class_name) {
+            Carp::croak("UR::Context::_infer_delegated_property_from_rule() doesn't handle multiple levels of indiretion yet");
         }
     }
-        
+
+    my @rule_translation = $linking_property_meta->get_property_name_pairs_for_join();
+
+    my %alternate_get_params;
+    foreach my $pair ( @rule_translation ) {
+        my $rule_param = $pair->[0];
+        next unless ($rule_template->specifies_value_for($rule_param));
+        my $alternate_param = $pair->[1];
+
+        my $value = $rule->value_for($rule_param);
+        $alternate_get_params{$alternate_param} = $value;
+    }
+
+    my $alternate_class = $final_property_meta->class_name;
+    my $alternate_wanted_property = $wanted_property_meta->to;
     my @alternate_values;
     eval {
         my @alternate_objects = $self->query($alternate_class, %alternate_get_params);
