@@ -12,7 +12,6 @@ UR::Object::Type->define(
     is => "Command",
     has => [
         nsname => {
-            is_optional => 1,
             shell_args_position => 1,
             doc => 'the name of the namespace, and first "word" in all classes',
         },
