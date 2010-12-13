@@ -1011,42 +1011,44 @@ sub _infer_direct_property_from_rule {
     my $subject_class_name = $rule->subject_class_name;
     my $subject_class_meta = UR::Object::Type->get($subject_class_name);
 
-
     my($alternate_class,$alternate_get_property, $alternate_wanted_property);
 
     my @r_values; # There may be multiple properties in the rule that will get to the wanted property
     PROPERTY_IN_RULE:
     foreach my $property_name ( @properties_in_rule) {
         my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
-        if ($property_meta->is_delegated) {
+        my $final_property_meta = $property_meta->final_property_meta || $property_meta;
+        $alternate_get_property = $final_property_meta->property_name;
+        $alternate_class   = $final_property_meta->class_name;
 
-            my $linking_property_meta = $subject_class_meta->property_meta_for_name($property_meta->via);
-            my($reference,$ref_name_getter, $ref_r_name_getter);
-            if ($linking_property_meta->reverse_as) {
-                eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
-                $reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
-                                                        delegation_name => $linking_property_meta->reverse_as);
-                $ref_name_getter = 'r_property_name';
-                $ref_r_name_getter = 'property_name';
-                $alternate_class = $reference->class_name;
-            } else {
-                $reference = UR::Object::Reference->get(class_name => $linking_property_meta->class_name,
-                                                        delegation_name => $linking_property_meta->property_name);
-                $ref_name_getter = 'property_name';
-                $ref_r_name_getter = 'r_property_name';
-                $alternate_class = $reference->r_class_name;
-            }
+        #if ($property_meta->is_delegated) {
+            #my $linking_property_meta = $subject_class_meta->property_meta_for_name($property_meta->via);
+            #my($reference,$ref_name_getter, $ref_r_name_getter);
+            #if ($linking_property_meta->reverse_as) {
+                #eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
+                #$reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
+                #                                        delegation_name => $linking_property_meta->reverse_as);
+                #$ref_name_getter = 'r_property_name';
+                #$ref_r_name_getter = 'property_name';
+                #$alternate_class = $reference->class_name;
+            #} else {
+                #$reference = UR::Object::Reference->get(class_name => $linking_property_meta->class_name,
+                #                                        delegation_name => $linking_property_meta->property_name);
+            #    $ref_name_getter = 'property_name';
+            #    $ref_r_name_getter = 'r_property_name';
+            #    $alternate_class = $reference->r_class_name;
+            #}
 
-            my @ref_properties = $reference->get_property_links;
-            foreach my $ref_property ( @ref_properties ) {
-                my $ref_property_name = $ref_property->$ref_name_getter;
-                if ($ref_property_name eq $wanted_property_name) {
-                    $alternate_wanted_property = $ref_property->$ref_r_name_getter;
-                }
-            }
-            $alternate_get_property = $property_meta->to;
+            #my @ref_properties = $reference->get_property_links;
+            #foreach my $ref_property ( @ref_properties ) {
+            #    my $ref_property_name = $ref_property->$ref_name_getter;
+            #    if ($ref_property_name eq $wanted_property_name) {
+            #        $alternate_wanted_property = $ref_property->$ref_r_name_getter;
+            #    }
+            #}
+            #$alternate_get_property = $property_meta->to;
             #next PROPERTY_IN_RULE unless $alternate_wanted_property;
-        }
+        #}
 
         unless ($alternate_wanted_property) {
             # Either this was also a direct property of the rule, or there's no
