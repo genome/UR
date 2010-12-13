@@ -16,7 +16,6 @@ UR::Object::Type->define(
             is => 'Text',
             is_optional => 1,
             shell_args_position => 2,
-            is_many => 1,
             doc => 'DBI connection string for the primary data source',
         },
     ],
@@ -27,15 +26,24 @@ sub sub_command_sort_position { 1 }
 
 sub execute {
     my $self = shift;
+    my $c;
 
-    $self->status_message(">> ur define namespace " . $self->namespace);
+    $self->status_message("*** ur define namespace " . $self->namespace);
     UR::Namespace::Command::Define::Namespace->execute(nsname => $self->namespace) or return;
 
+    $self->status_message("*** cd " . $self->namespace);
     chdir $self->namespace or ($self->error_message("error changing to namespace dir? $!") and return);
    
-    $self->status_message(">> ur define datasource " . $self->db);
-    UR::Namespace::Command::Define::DataSource->execute(dbid => $self->db_dsn) or return;
+    $self->status_message("\n*** ur define db " . $self->db);
+    $c = UR::Namespace::Command::Define::Db->create(uri => $self->db) or return;
+    $c->dump_status_messages(1);
+    $c->execute();
 
+    $self->status_message("\n*** ur update classes");
+    my $c = UR::Namespace::Command::Update::Classes->create();
+    $c->dump_status_messages(1);
+    $c->execute();
+    
     return 1; 
 }
 
