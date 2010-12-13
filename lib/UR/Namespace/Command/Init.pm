@@ -27,23 +27,26 @@ sub sub_command_sort_position { 1 }
 sub execute {
     my $self = shift;
     my $c;
+    my $t = UR::Context::Transaction->begin();
 
     $self->status_message("*** ur define namespace " . $self->namespace);
-    UR::Namespace::Command::Define::Namespace->execute(nsname => $self->namespace) or return;
+    UR::Namespace::Command::Define::Namespace->execute(nsname => $self->namespace)->result or die;
 
     $self->status_message("*** cd " . $self->namespace);
-    chdir $self->namespace or ($self->error_message("error changing to namespace dir? $!") and return);
+    chdir $self->namespace or ($self->error_message("error changing to namespace dir? $!") and die);
    
     $self->status_message("\n*** ur define db " . $self->db);
     $c = UR::Namespace::Command::Define::Db->create(uri => $self->db) or return;
     $c->dump_status_messages(1);
-    $c->execute();
+    $c->execute() or die;
 
     $self->status_message("\n*** ur update classes");
     my $c = UR::Namespace::Command::Update::Classes->create();
     $c->dump_status_messages(1);
-    $c->execute();
+    $c->execute() or die;
     
+    $t->commit;
+
     return 1; 
 }
 
