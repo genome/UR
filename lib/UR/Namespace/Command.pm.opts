@@ -1,25 +1,11 @@
 $UR::Namespace::Command::OPTS_SPEC = [
-          '>browser',
-          [
-            'help!',
-            undef
-          ],
-          '>create-completion-spec-file',
-          [
-            'output=s',
-            'files',
-            'classname=s',
-            'files',
-            'help!',
-            undef
-          ],
           '>define',
           [
             '>class',
             [
               'extends=s',
               'files',
-              'bare-args=s@',
+              'names=s@',
               'files',
               'help!',
               undef
@@ -28,10 +14,10 @@ $UR::Namespace::Command::OPTS_SPEC = [
             [
               '>file',
               [
-                'nosingleton!',
-                undef,
                 'server=s',
                 'files',
+                'singleton!',
+                undef,
                 'dsid=s',
                 'files',
                 'dsname=s',
@@ -112,9 +98,18 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'help!',
               undef
             ],
+            '>db',
+            [
+              'uri=s',
+              'files',
+              'name=s',
+              'files',
+              'help!',
+              undef
+            ],
             '>namespace',
             [
-              'bare-args=s@',
+              'nsname=s',
               'files',
               'help!',
               undef
@@ -124,43 +119,16 @@ $UR::Namespace::Command::OPTS_SPEC = [
           ],
           '>describe',
           [
-            'subject-list=s@',
+            'classes-or-modules=s@',
             'files',
             'help!',
             undef
           ],
-          '>diff',
+          '>init',
           [
-            '>rewrite',
-            [
-              'help!',
-              undef
-            ],
-            '>update',
-            [
-              'help!',
-              undef
-            ],
-            'help!',
-            undef
-          ],
-          '>export',
-          [
-            '>dbic-classes',
-            [
-              'bare-args=s@',
-              'files',
-              'subject-list=s@',
-              'files',
-              'help!',
-              undef
-            ],
-            'help!',
-            undef
-          ],
-          '>info',
-          [
-            'subject=s@',
+            'namespace=s',
+            'files',
+            'db=s',
             'files',
             'help!',
             undef
@@ -169,14 +137,14 @@ $UR::Namespace::Command::OPTS_SPEC = [
           [
             '>classes',
             [
-              'subject-list=s@',
+              'classes-or-modules=s@',
               'files',
               'help!',
               undef
             ],
             '>modules',
             [
-              'subject-list=s@',
+              'classes-or-modules=s@',
               'files',
               'help!',
               undef
@@ -201,20 +169,37 @@ $UR::Namespace::Command::OPTS_SPEC = [
             'help!',
             undef
           ],
-          '>redescribe',
+          '>old',
           [
-            'subject-list=s@',
-            'files',
-            'help!',
-            undef
-          ],
-          '>rename',
-          [
-            '>class',
+            '>diff-rewrite',
             [
-              'force!',
-              undef,
-              'subject-list=s@',
+              'help!',
+              undef
+            ],
+            '>diff-update',
+            [
+              'help!',
+              undef
+            ],
+            '>export-dbic-classes',
+            [
+              'bare-args=s@',
+              'files',
+              'classes-or-modules=s@',
+              'files',
+              'help!',
+              undef
+            ],
+            '>info',
+            [
+              'subject=s@',
+              'files',
+              'help!',
+              undef
+            ],
+            '>redescribe',
+            [
+              'classes-or-modules=s@',
               'files',
               'help!',
               undef
@@ -222,12 +207,13 @@ $UR::Namespace::Command::OPTS_SPEC = [
             'help!',
             undef
           ],
-          '>rewrite',
+          '>sys',
           [
-            'force!',
-            undef,
-            'subject-list=s@',
-            'files',
+            '>class-browser',
+            [
+              'help!',
+              undef
+            ],
             'help!',
             undef
           ],
@@ -257,7 +243,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>compile',
             [
-              'subject-list=s@',
+              'classes-or-modules=s@',
               'files',
               'help!',
               undef
@@ -331,14 +317,14 @@ $UR::Namespace::Command::OPTS_SPEC = [
               undef,
               'verbose!',
               undef,
-              'subject-list=s@',
+              'classes-or-modules=s@',
               'files',
               'help!',
               undef
             ],
             '>window',
             [
-              'bare-args=s@',
+              'src=s@',
               'files',
               'help!',
               undef
@@ -367,7 +353,7 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'help!',
               undef
             ],
-            '>classes',
+            '>classes-from-db',
             [
               'class-name=s',
               undef,
@@ -379,7 +365,25 @@ $UR::Namespace::Command::OPTS_SPEC = [
               undef,
               'table-name=s',
               undef,
-              'subject-list=s@',
+              'classes-or-modules=s@',
+              'files',
+              'help!',
+              undef
+            ],
+            '>rename-class',
+            [
+              'force!',
+              undef,
+              'classes-or-modules=s@',
+              'files',
+              'help!',
+              undef
+            ],
+            '>rewrite-class-header',
+            [
+              'force!',
+              undef,
+              'classes-or-modules=s@',
               'files',
               'help!',
               undef
@@ -395,6 +399,15 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'show-columns!',
               undef,
               'initial-name=s@',
+              'files',
+              'help!',
+              undef
+            ],
+            '>tab-completion-spec',
+            [
+              'output=s',
+              'files',
+              'classname=s',
               'files',
               'help!',
               undef
