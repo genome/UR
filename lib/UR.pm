@@ -361,7 +361,6 @@ UR::Object::Type->define(
         valid_values                    => { is => 'ARRAY', is_optional => 1, },
         doc                             => { is => 'Text', len => 1000, is_optional => 1 },
         is_id                           => { is => 'Integer', default_value => undef, doc => 'denotes this is an ID property of the class, and ranks them' },
-        #is_id                           => { is => 'Boolean', default_value => 0, doc => 'denotes this is an ID property of the class, and ranks them' },
         is_optional                     => { is => 'Boolean' , default_value => 0},
         is_transient                    => { is => 'Boolean' , default_value => 0},
         is_constant                     => { is => 'Boolean' , default_value => 0},  # never changes
@@ -402,6 +401,7 @@ UR::Object::Type->define(
         plural_name                     => { is => 'Text' },
 
         class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
+        r_class_meta                    => { is => 'UR::Object::Type', id_by => 'data_type' },
         unique_metas                    => { is => 'UR::Object::Property::Unique', reverse_as => 'property_meta', is_many => 1 },
     ],
     unique_constraints => [
