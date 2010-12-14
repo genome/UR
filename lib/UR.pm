@@ -294,6 +294,10 @@ UR::Object::Type->define(
         #all_id_property_metas            => { via => 'ancestry_property_metas', to => 'all_property_metas', where => [is_id => 1] },
         all_id_property_metas            => { via => 'all_id_token_metas', to => 'property_meta', is_many => 1 },
         all_id_property_names            => { via => 'all_id_token_metas', to => 'property_name', is_many => 1 },
+        direct_id_by_property_metas      => { via => 'direct_property_metas', to => '__self__', where => ['id_by true' => 1], is_many => 1, doc => "Properties with 'id_by' metadata, ie. direct object accessor properties" } ,
+        all_id_by_property_metas         => { via => 'all_class_metas', to => 'direct_id_by_property_metas', is_many => 1},
+        direct_reverse_as_property_metas => { via => 'direct_property_metas', to => '__self__', where => ['reverse_as true' => 1], is_many => 1, doc => "Properties with 'reverse_as' metadata, ie. indirect object accessor properties" },
+        all_reverse_as_property_metas    => { via => 'all_class_metas', to => 'direct_reverse_as_property_metas', is_many => 1},
 
         # these should go away when the is_id meta-property is working, since they don't seem that useful
         direct_id_token_metas            => { is => 'UR::Object::Property::ID', reverse_as => 'class_meta', is_many => 1 },
