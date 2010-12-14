@@ -279,8 +279,8 @@ UR::Object::Type->define(
         # There's also a property_meta_by_name() method defined in the class
         direct_property_metas            => { is => 'UR::Object::Property', reverse_as => 'class_meta', is_many => 1 },
         direct_property_names            => { via => 'direct_property_metas', to => 'property_name', is_many => 1 },
-        #direct_id_property_metas         => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [ is_id => 1 ], is_many => 1 },
-        #direct_id_property_names         => { via => 'direct_property_metas', to => 'property_name', is_many => 1, where => [ is_id => 1 ] },
+        #direct_id_property_metas         => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [ 'is_id true' => 1 ], is_many => 1 },
+        #direct_id_property_names         => { via => 'direct_property_metas', to => 'property_name', is_many => 1, where => [ 'is_id true' => 1 ] },
         direct_id_property_metas         => { via => 'direct_id_token_metas', to => 'property_meta', is_many => 1 },
         direct_id_property_names         => { via => 'direct_id_token_metas', to => 'property_name', is_many => 1 },
 
@@ -291,7 +291,7 @@ UR::Object::Type->define(
 
         all_property_metas               => { via => 'all_class_metas', to => 'direct_property_metas', is_many => 1 },
         all_property_names               => { via => 'all_property_metas', to => 'property_name', is_many => 1 },
-        #all_id_property_metas            => { via => 'ancestry_property_metas', to => 'all_property_metas', where => [is_id => 1] },
+        #all_id_property_metas            => { via => 'ancestry_property_metas', to => 'all_property_metas', where => ['is_id true' => 1] },
         all_id_property_metas            => { via => 'all_id_token_metas', to => 'property_meta', is_many => 1 },
         all_id_property_names            => { via => 'all_id_token_metas', to => 'property_name', is_many => 1 },
         direct_id_by_property_metas      => { via => 'direct_property_metas', to => '__self__', where => ['id_by true' => 1], is_many => 1, doc => "Properties with 'id_by' metadata, ie. direct object accessor properties" } ,
@@ -360,7 +360,8 @@ UR::Object::Type->define(
         default_value                   => { is_optional => 1 },
         valid_values                    => { is => 'ARRAY', is_optional => 1, },
         doc                             => { is => 'Text', len => 1000, is_optional => 1 },
-        is_id                           => { is => 'Boolean', default_value => 0, doc => 'denotes this is an ID property of the class' },
+        is_id                           => { is => 'Integer', default_value => undef, doc => 'denotes this is an ID property of the class, and ranks them' },
+        #is_id                           => { is => 'Boolean', default_value => 0, doc => 'denotes this is an ID property of the class, and ranks them' },
         is_optional                     => { is => 'Boolean' , default_value => 0},
         is_transient                    => { is => 'Boolean' , default_value => 0},
         is_constant                     => { is => 'Boolean' , default_value => 0},  # never changes

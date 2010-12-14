@@ -1235,7 +1235,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                     . UR::Object::Property::Unique->error_message
                 );
             }
-            $pk_cols{$property_name} = 1;
+            $pk_cols{$property_name} = $pos;
         }
 
         # all primary key properties are non-nullable, regardless of what the DB allows
@@ -1243,7 +1243,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             my $name = $property->property_name;
             if ($pk_cols{$name}) {
                 $property->is_optional(0);
-                $property->is_id(1);
+                $property->is_id($pk_cols{$name});
             }
         }
     } # next table (looking just for PK constraint changes)

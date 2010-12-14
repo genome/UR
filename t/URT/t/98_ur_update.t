@@ -199,6 +199,7 @@ ok($trans, "CREATED PERSON and began transaction");
         ok($command_obj->execute(),'Executing update after creating person table');
 
         initialize_check_change_data_structures();
+$DB::single=1;
         @changes = get_changes();
         # FIXME The test should probably break out each type of changed thing and check
         # that the counts of each type are correct, and not just the count of all changes
@@ -533,7 +534,7 @@ sub initialize_check_change_data_structures {
         }, 
         "URT::Person\tperson_id" => {
             create => '',
-            is_id  => 1,   # Created as an ID property
+            is_id  => '',   # Created as an ID property
         },
     },
     'UR::Object::Property::ID' => {
@@ -652,7 +653,7 @@ sub initialize_check_change_data_structures {
     'UR::Object::Property' => {
         "URT::Car\tcar_id" => {
             create => '',
-            is_id  => 1,
+            is_id  => '',
         },
         "URT::Car\tcolor" => {
             create => '',
@@ -675,7 +676,7 @@ sub initialize_check_change_data_structures {
 
         "URT::Employee\temployee_id" => {
            create => '',
-           is_id  => 1,
+           is_id  => '',
         },
         "URT::Employee\trank" => {
            create => '',
@@ -689,7 +690,7 @@ sub initialize_check_change_data_structures {
         },
         "URT::Person\tperson_id" => {
            create => '',
-           is_id  => 1,
+           is_id  => '',
         },
         "URT::Person\tpostal_address" => {
            create => '',
@@ -855,7 +856,7 @@ sub initialize_check_change_data_structures {
     'UR::Object::Property' => {
         "URT::Employee\temployee_id" => {
             create => '',
-            is_id  => 1,
+            is_id  => '',
         },
         "URT::Employee\trank" => {
             create => '',
@@ -866,7 +867,7 @@ sub initialize_check_change_data_structures {
 
         "URT::Person\tperson_id" => {
             create => '',
-            is_id  => 1,
+            is_id  => '',
         },
         "URT::Person\tname" => {
             create => '',

@@ -1210,15 +1210,19 @@ sub _complete_class_meta_object_definitions {
     # decompose the embedded complex data structures into normalized objects
     my $inheritance = $self->{is};
     my $properties = $self->{has};
-    my $id_properties = $self->{id_by};
-    my %id_properties = map { $_ => 1 } @$id_properties;
     my $relationships = $self->{relationships} || [];
     my $constraints = $self->{constraints};
     my $data_source = $self->{'data_source_id'};
+
+    my $id_properties = $self->{id_by};
+    my %id_properties;
+    for (my $i = '0 but true'; $i < @$id_properties; $i++) {
+        $id_properties{$id_properties->[$i]} = $i;
+    }
     
     # mark id/non-id properites
     foreach my $pinfo ( values %$properties ) {
-        $pinfo->{'is_id'} = exists($id_properties{$pinfo->{'property_name'}}) || 0;
+        $pinfo->{'is_id'} = $id_properties{$pinfo->{'property_name'}};
     }
     
     # handle inheritance
