@@ -964,17 +964,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                              $table_name)
                      );
 
-            my $type_name = $data_source->resolve_type_name_for_table_name($table_name);
-            $type_name .= ' view' if ($table->table_type =~ m/view/i);
-            unless ($type_name) {
-                Carp::confess(
-                    "Failed to resolve a type name for new table "
-                    . $table_name
-                );
-            }
-
             if ($class) {
-                $class->type_name($type_name);
                 $class->doc($table->remarks ? $table->remarks: undef);
                 $class->data_source($data_source);
                 $class->table_name($table_name);
@@ -983,7 +973,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             } else {
                 $class = UR::Object::Type->create(
                             class_name => $class_name,
-                            type_name => $type_name,
                             doc => ($table->remarks ? $table->remarks: undef),
                             data_source_id => $data_source,
                             table_name => $table_name,
@@ -1100,20 +1089,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 );
             }
 
-            my $attribute_name = $data_source->resolve_attribute_name_for_column_name($column->column_name);
-            unless ($attribute_name) {
-                Carp::confess(
-                    "Failed to resolve a attribute name for new column "
-                    . $column->column_name
-                );
-            }
-
-            my $type_name = $class->type_name;
-
             $property = UR::Object::Property->create(
                 class_name     => $class_name,
-                type_name      => $type_name,
-                attribute_name => $attribute_name,
                 property_name  => $property_name,
                 column_name    => $column_name,
                 data_type      => $column->data_type,
@@ -1169,7 +1146,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table_name);
         my $class_name = $class->class_name;
-        my $type_name = $class->type_name;
         my @properties = UR::Object::Property->get(class_name => $class_name);
 
         unless (@properties) {
@@ -1214,19 +1190,10 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             }
             
             my $property_name = $property->property_name;
-            my $attribute_name = $property->attribute_name;
-            unless ($attribute_name) {
-                $self->error_message(
-                    "Failed to find attribute name for table $table_name column $pk_col!"
-                    . UR::Object::Property::Unique->error_message
-                );
-            }
 
             my $id_property = UR::Object::Property::ID->create(
                 class_name => $class_name,
-                type_name => $type_name,
                 property_name => $property_name,
-                attribute_name => $attribute_name,
                 position => $pos
             );
             unless ($id_property) {
@@ -1288,7 +1255,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table->table_name);
         my $class_name = $class->class_name;
-        my $type_name = $class->type_name;
 
         my @properties = UR::Object::Property->get(class_name => $class_name);
 
@@ -1315,12 +1281,9 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 }
 
                 my $property_name = $property->property_name;
-                my $attribute_name = $property->attribute_name;
                 my $uc = UR::Object::Property::Unique->create(
                     class_name => $class_name,
-                    type_name => $type_name,
                     property_name => $property_name,
-                    attribute_name => $attribute_name,
                     unique_group => $uc_name
                 );
                 unless ($uc) {
@@ -1371,9 +1334,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         my $class_name = $class->class_name;
         my $r_class_name = $r_class->class_name;
-
-        my $type_name = $class->type_name;
-        my $r_type_name = $r_class->type_name;
 
         # Don't bother rebuilding this cache unless this FK's related class is different
         # than the one in the last pass through this loop.  Because of the way they get
@@ -1435,8 +1395,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 }
             }
 
-            my $delegation_name = $r_class->type_name;
-            $delegation_name =~ s/ /_/g;
+            my $delegation_name = lc($r_class->class_name);
+            $delegation_name =~ s/::/_/g;
             if ($matched) {
                 $delegation_name = $delegation_name . "_" . $prefix if $prefix;
                 $delegation_name .= ($suffix !~ /\D/ ? "" : "_") . $suffix if $suffix;
@@ -1458,8 +1418,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                                  tha_id => $reference_id,
                                  class_name => $class_name,
                                  r_class_name => $r_class_name,
-                                 type_name => $type_name,
-                                 r_type_name => $r_type_name,
                                  delegation_name => $delegation_name,
                                  constraint_name => $fk->fk_constraint_name,
                             );
@@ -1478,7 +1436,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 #    column_name => $column_name
                 #);
                 my $property = $properties[$i];
-                my $attribute_name = $property->attribute_name;
                 my $property_name = $property_names[$i];
 
                 my $r_column_name = $r_column_names[$i];
@@ -1487,7 +1444,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 #    column_name => $r_column_name
                 #);
                 my $r_property = $r_properties[$i];
-                my $r_attribute_name = $r_property->attribute_name;
                 my $r_property_name = $r_property_names[$i];
 
                 my $id_meta = UR::Object::Property::ID->get(
@@ -1501,9 +1457,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 my $reference_property = UR::Object::Reference::Property->create(
                     tha_id => $reference_id,
                     rank => $id_meta->position,
-                    attribute_name => $attribute_name,
                     property_name => $property_name,
-                    r_attribute_name => $r_attribute_name,
                     r_property_name => $r_property_name
                 );
                 unless ($reference_property) {
