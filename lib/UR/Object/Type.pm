@@ -481,23 +481,6 @@ Returns a list of ID column names for each direct property meta.
 Return lists of property meta objects and their names for properties that
 have no column name.
 
-=item reference_metas
-
-  @ref_objs = $class_obj->reference_metas
-
-Returns a list of L<UR::Object::Reference> objects for this class.  Reference
-meta objects are how the system tracks class properties that return objects
-of another class.
-
-=item reference_property_metas
-
-  @ref_prop_objs = $class_obj->reference_property_metas
-
-Returns a list of L<UR::Object::Reference::Property> objects for this class.
-Reference Property meta objects are the details of how the properties of
-one class relate to the ID properties of anotehr class for properties that
-return objects of another class.
-
 =head1 METHODS
 
 =item property_meta_for_name
