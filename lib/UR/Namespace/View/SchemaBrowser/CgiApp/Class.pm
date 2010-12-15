@@ -58,7 +58,7 @@ $DB::single=1;
     if ($class_obj) {
         my @class_detail;
         foreach my $prop_name ( qw( namespace doc er_role is_abstract is_final is_singleton
-                                    sub_classification_meta_class_name subclassify_by type_name) ) {
+                                    sub_classification_meta_class_name subclassify_by ) ) {
 
             push @class_detail, { PROPERTY_NAME => $prop_name, PROPERTY_VALUE => $class_obj->$prop_name };
         }
