@@ -343,10 +343,6 @@ sub AUTOLOAD {
         Carp::confess("Failed to determine package name from autoload string $autoload");
     }
 
-    if (my $subref = $package->_smart_can($function)) {
-        goto $subref;
-    }
-
     # switch these to use Class::AutoCAN / CAN?
     no strict;
     no warnings;
@@ -369,123 +365,6 @@ sub AUTOLOAD {
         @_ = ("Can't locate object method \"$function\" via package \"$package\" (perhaps you forgot to load \"$package\"?)");
         goto $subref;
     }
-}
-
-=pod
-
-=item C<can>
-
-  MyClass->can('some_subroutine_name');
-
-The normal version of can() is in UNIVERSAL.  We override it here so
-that functions implimented by AUTOSUB will be found where
-UNIVERSAL::can() would fail to do so.
-
-=cut
-
-sub _smart_can
-{
-    
-    my ($self,$function) = @_;
-    #print "CAN @_\n";
-
-    # Default functionality.  Defer upstream.  This will check all classes.
-    # For a real/normal function.
-    # This is disabled because UNIVERSAL::can somehow returns a subref which puts us in an infinite loop...
-    #my $code = UNIVERSAL::can($self,$function);
-    #return $code if $code;
-
-    return if $function  =~ /^(id|unique)_properties_override$/;    
-
-    my $class = ref($self) || $self;
-
-    if ($self->isa("UR::Object")) {
-        my $delegate_method = $function;
-        my $remote_method = "";
-        my $src;
-        for (1) {
-            my $code = $self->SUPER::can($delegate_method);
-            if ($code) {
-                no strict 'refs';
-                next;
-                Carp::cluck();
-                $src = qq|
-                    # dynamically generated
-                    sub ${class}::${function} {
-                        my \$self = shift;
-                        my \$delegate = \$self->$delegate_method;
-                        return \$delegate->$remote_method;     
-                    }
-                |;
-                $src =~ s/^\s{20}//mg;
-            }
-            else {
-                my $reference;
-                if (
-                    $reference = UR::Object::Reference->get(
-                        class_name => $class,
-                        accessor_name_for_object => $delegate_method,
-                    )
-                ) {
-                    # generate a method to return an object
-                    my $accessor_name_for_id = $reference->accessor_name_for_id;
-                    my $r_class_name = $reference->r_class_name;
-                    $src = qq|
-                        # dynamically generated object accessor
-                        sub ${class}::${function} {
-                            my \$self = shift;
-                            my \$obj = $r_class_name->get(\$self->$accessor_name_for_id);
-                            return \$obj;     
-                        }
-                    |;
-                    $src =~ s/^\s{24}//mg;
-                    $src =~ s/^\s*//;
-                }
-                elsif (                
-                    $reference = UR::Object::Reference->get(
-                        class_name => $class,
-                        accessor_name_for_id => $delegate_method,
-                    ) 
-                ) {
-                    # generate a method to return a value                    
-                    print "make method $delegate_method to return a value for $class\n";
-                }
-            }
-            
-            # failed to delegate, back through the method name
-            # and try subsets...
-            if ($delegate_method =~ /(^.+)_([^_]+)$/) {
-                $delegate_method = $1;
-                $remote_method = $2 . ($remote_method ? "_" . $remote_method : "");
-                redo;
-            }
-        }
-        if ($src) {
-            #print $src;
-            eval $src;
-            if ($@) {
-                Carp::confess("Error creating dynamic accessor for delegated method call: $@");
-            }
-            return $class->can($function);
-        }
-    }
-
-    # See if any of the classes can autogenerate a function with the desired
-    # name.  Use it if found.
-    no strict;
-    for my $class (grep {$_} ($self, inheritance($self) ))
-    {
-    if (my $AUTOSUB = UNIVERSAL::can($class,"AUTOSUB"))
-    {                    
-        if (my $subref = $AUTOSUB->($function,$class))
-        {
-        return $subref;
-        }
-    }
-    }
-    
-    # Return nothing if we found nothing.
-    return;
 }
 
 =pod
