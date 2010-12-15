@@ -3,24 +3,6 @@ package UR::Object::Reference::Property;
 use strict;
 use warnings;
 
-=cut
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Reference::Property',
-    english_name => 'type attribute has a',
-    id_properties => [qw/tha_id rank/],
-    properties => [
-        rank                             => { type => 'NUMBER', len => 2 },
-        tha_id                           => { type => 'NUMBER', len => 10 },
-        attribute_name                   => { type => 'VARCHAR2', len => 64, is_optional => 1 },
-        property_name                    => { type => 'VARCHAR2', len => 64, is_optional => 1 },
-        r_attribute_name                 => { type => 'VARCHAR2', len => 64, is_optional => 1 },
-        r_property_name                  => { type => 'VARCHAR2', len => 64, is_optional => 1 },
-    ],
-);
-
-=cut
-
 sub reference_id {
     # forward-compatible alias for the old "type has a" now "reference"
     shift->tha_id
@@ -99,19 +81,15 @@ sub get {
             my $property_name = $property_names[$i];
             my $property_meta = $class_meta->property_meta_for_name($property_name);
             next unless $property_meta;
-            my $attribute_name = $property_meta->attribute_name;
 
             my $r_property_name = $r_property_names[$i];
             my $r_property_meta = $r_class_meta->property_meta_for_name($r_property_name);
-            my $r_attribute_name = $r_property_meta->attribute_name;
 
             my %get_define_params = ( 
                          tha_id           => $ref->tha_id,
                          rank             => $i+1,
                          property_name    => $property_name,
-                         attribute_name   => $attribute_name,
                          r_property_name  => $r_property_name,
-                         r_attribute_name => $r_attribute_name,
                      );
             my $rp = $class->SUPER::get(%get_define_params) 
                       ||
@@ -144,35 +122,7 @@ sub get {
     $class->context_return(grep { $rule->evaluate($_) } @defined_objects);
 }
 
-sub _create_object
-{
-    my $class = shift;
-    my %params = @_;
-    if ($params{attribute_name} and not $params{property_name}) {
-        my $property_name = $params{attribute_name};
-        $property_name =~ s/ /_/g;
-        $params{property_name} = $property_name;
-    }
-    elsif ($params{property_name} and not $params{attribute_name}) {
-        my $attribute_name = $params{property_name};
-        $attribute_name =~ s/_/ /g;
-        $params{attribute_name} = $attribute_name;
-    }
-    if ($params{r_attribute_name} and not $params{r_property_name}) {
-        my $r_property_name = $params{r_attribute_name};
-        $r_property_name =~ s/ /_/g;
-        $params{r_property_name} = $r_property_name;
-    }
-    elsif ($params{r_property_name} and not $params{r_attribute_name}) {
-        my $r_attribute_name = $params{r_property_name};
-        $r_attribute_name =~ s/_/ /g;
-        $params{r_attribute_name} = $r_attribute_name;
-    }
-    return $class->SUPER::_create_object(%params);
-}
-
-sub get_with_special_parameters 
-{
+sub get_with_special_parameters {
     my $class = shift;
     my $rule = shift;
     my %extra = @_;    
