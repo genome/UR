@@ -434,10 +434,8 @@ UR::Object::Type->define(
     properties => [
         tha_id                          => { is => 'Text', len => 128, source => 'data dictionary' },
         class_name                      => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        type_name                       => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
         delegation_name                 => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
         r_class_name                    => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        r_type_name                     => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
         #r_delegation_name               => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
         constraint_name                 => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
         source                          => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
