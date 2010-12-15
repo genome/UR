@@ -1553,7 +1553,6 @@ sub ungenerate {
 #
 #    # Infrastructurey, hang-off data.  Things we can get via their class_name
 #    foreach my $meta_type ( qw( UR::Object::Inheritance UR::Object::Property
-#                                UR::Object::Reference 
 #                                UR::Object::Property::Unique UR::Object::Property::ID
 #                                UR::Object::Property::Calculated::From ) )
 #    {
