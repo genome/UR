@@ -1448,13 +1448,10 @@ sub _complete_class_meta_object_definitions {
                 unless ($property) {
                     die "Failed to find property $property_name on class $class_name!";
                 }
-                my $attribute_name = $property->attribute_name;
                 my $u = UR::Object::Property::Unique->__define__(
-                    type_name => $type_name,
                     class_name => $class_name,
                     unique_group => $name,
                     property_name => $property_name,
-                    attribute_name => $attribute_name
                 );
                 unless ($u) {
                     Carp::confess("Failed to define unique constriant field");
