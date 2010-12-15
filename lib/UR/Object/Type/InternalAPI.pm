@@ -1169,7 +1169,7 @@ sub unique_property_sets
     #for my $unique_object ( $self->get_unique_objects )  # old API
     for my $unique_object ( $self->unique_metas )         # new API
     {
-        my $property_object = UR::Object::Property->get(class_name => $unique_object->class_name, attribute_name => $unique_object->attribute_name);
+        my $property_object = UR::Object::Property->get(class_name => $unique_object->class_name, property_name => $unique_object->property_name);
         my $unique_group = $unique_object->unique_group;
         $all{$unique_group} ||= [];
         push @{ $all{$unique_group} }, $property_object->property_name;
