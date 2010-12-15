@@ -1,20 +1,32 @@
-
 package UR::Namespace::Command::Describe;
-
 use strict;
 use warnings;
 use UR;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Namespace::Command::RunsOnModulesInTree'
+    is => 'UR::Namespace::Command::RunsOnModulesInTree',
+    has => [
+        classes_or_modules => {
+            is_optional => 0,
+            is_many => 1,
+            shell_args_position => 99,
+            doc => 'classes to describe by class name or module path',
+        },
+    ],
+    doc => 'show class properties, relationships, meta-data',
 );
 
+sub sub_command_sort_position { 3 }
 
-sub help_brief {
-    "Outputs class description(s) to stdout.";
+sub help_synopsis {
+    return <<EOS
+ur describe UR::Object
+
+ur describe Acme::Order Acme::Product Acme::Order::LineItem
+
+EOS
 }
-
 
 # The class metadata has lots of properties that we're not interested in
 our @CLASS_PROPERTIES_NOT_TO_PRINT = qw(
@@ -24,13 +36,11 @@ our @CLASS_PROPERTIES_NOT_TO_PRINT = qw(
     all_class_metas
 );
     
-    
-our $view;
 sub for_each_class_object {
     my $self = shift;
     my $class_meta = shift;
 
-    $view ||= UR::Object::Type->create_view(
+    my $view = UR::Object::Type->create_view(
                     perspective => 'default',
                     toolkit => 'text',
                     aspects => [
@@ -71,6 +81,5 @@ sub for_each_class_object {
     $view->subject($class_meta);
     $view->show();
 }
-
 
 1;

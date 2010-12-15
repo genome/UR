@@ -908,6 +908,7 @@ sub help_sub_commands
     for my $sub_command_class (@sub_command_classes) {
         my $category = $sub_command_class->sub_command_category;
         $category = '' if not defined $category;
+        next if $sub_command_class->_is_hidden_in_docs();
         my $sub_commands_within_category = $categories{$category};
         unless ($sub_commands_within_category) {
             if (defined $category and length $category) {
@@ -989,9 +990,11 @@ sub help_sub_commands
         }
         $text .= "\n";
     }
-        
+    $DB::single = 1;        
     return $text;
 }
+
+sub _is_hidden_in_docs { return; }
 
 #
 # Methods which transform command properties into shell args (getopt)

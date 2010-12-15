@@ -12,7 +12,7 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Namespace::Command',
     has => [
-        subject_list => {
+        classes_or_modules => {
             is_many => 1,
             is_optional => 1,
             shell_args_position => 99
@@ -62,7 +62,7 @@ sub execute
         die "This command can only be run from a directory tree under a UR namespace module.\n";
     }
 
-    my @subject_list = $self->subject_list;
+    my @subject_list = $self->classes_or_modules;
 
     if ($self->can("for_each_class_object") ne __PACKAGE__->can("for_each_class_object")) {
 

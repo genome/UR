@@ -1,4 +1,4 @@
-package UR::Namespace::Command::Browser;
+package UR::Namespace::Command::Sys::ClassBrowser;
 
 use strict;
 use warnings;

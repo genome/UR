@@ -1,6 +1,4 @@
-
 package UR::Namespace::Command::Define::Class;
-
 use strict;
 use warnings;
 use UR;
@@ -8,12 +6,12 @@ use UR;
 class UR::Namespace::Command::Define::Class {
     is => 'UR::Namespace::Command',
     has => [
-        extends => { doc => "The base class.  Defaults to UR::Object.", default_value => 'UR::Object' },
-        bare_args => {
+        names => {
             is_optional => 1,
             is_many => 1,
             shell_args_position => 1
-        }
+        },
+        extends => { doc => "The base class.  Defaults to UR::Object.", default_value => 'UR::Object' },
     ],
     doc => 'Add one or more classes to the current namespace'
 };
@@ -40,7 +38,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    my @class_names = $self->bare_args;
+    my @class_names = $self->names;
     unless (@class_names) {
         $self->error_message("No class name(s) provided!");
         return;

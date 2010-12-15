@@ -740,17 +740,7 @@ sub _normalize_class_description {
     $new_class{'__properties_in_class_definition_order'} = \@properties_in_class_definition_order;
     
     unless ($new_class{type_name}) {
-        if ($new_class{table_name} and $new_class{table_name} !~ /\s/) {
-            $new_class{type_name} = lc($new_class{table_name});
-            $new_class{type_name} =~ s/_/ /g;
-        }
-        elsif ($class_name) {
-            $new_class{type_name} = lc($new_class{class_name});
-            $new_class{type_name} =~ s/::/ /g;
-        }
-        else {
-            Carp::confess("Unable to resolve type name for class $class_name????");
-        }
+        $new_class{type_name} = $new_class{class_name};
     }
     
     if (($new_class{data_source_id} and not ref($new_class{data_source_id})) and not $new_class{schema_name}) {
