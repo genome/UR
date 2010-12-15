@@ -603,9 +603,15 @@ sub get_nullable_foreign_key_columns_for_table{
 
     my @fk = $table->fk_constraints;
     for my $fk (@fk){
-        my @fk_columns = UR::DataSource::RDBMS::FkConstraintColumn->get(fk_constraint_name => $fk->fk_constraint_name, owner => $table->owner, data_source => $self->id);
+        my @fk_columns = UR::DataSource::RDBMS::FkConstraintColumn->get(
+                             fk_constraint_name => $fk->fk_constraint_name,
+                             owner => $table->owner,
+                             data_source => $self->id);
         for my $fk_col (@fk_columns){
-            my $column_obj = UR::DataSource::RDBMS::TableColumn->get(data_source => $self->id, table_name => $fk_col->table_name, owner => $fk_col->owner, column_name=> $fk_col->column_name);
+            my $column_obj = UR::DataSource::RDBMS::TableColumn->get(data_source => $self->id,
+                                 table_name => $fk_col->table_name,
+                                 owner => $fk_col->owner,
+                                 column_name=> $fk_col->column_name);
             unless ($column_obj) {
                 Carp::croak("Can't find TableColumn metadata object for table name ".$fk_col->table_name." column ".$fk_col->column_name." while processing foreign key constraint named ".$fk->fk_constraint_name);
             }
@@ -836,9 +842,10 @@ sub refresh_database_metadata_for_table_name {
     }
 
     my %columns_to_delete = map {$_->column_name, $_}
-                                UR::DataSource::RDBMS::TableColumn->get(table_name  => $ur_table_name,
-                                                                        owner       => $ur_owner,
-                                                                        data_source => $data_source_id);
+                                UR::DataSource::RDBMS::TableColumn->get(
+                                    table_name  => $ur_table_name,
+                                    owner       => $ur_owner,
+                                    data_source => $data_source_id);
 
 
     for my $column_data (@$all_column_data) {
@@ -1355,7 +1362,10 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
         }
 
         my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-        my $table_meta = UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => $self->id);
+        my $table_meta = UR::DataSource::RDBMS::Table->get(
+                             table_name => $ds_table,
+                             owner => $ds_owner,
+                             data_source => $self->id);
 
         my @primary_keys;
         if ($table_meta) {
@@ -1775,9 +1785,15 @@ sub _sync_database {
                     $all_tables{$table_name}++;
                     my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
                     my $table =
-                        UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => $self->class)
+                        UR::DataSource::RDBMS::Table->get(
+                            table_name => $ds_table,
+                            owner => $ds_owner,
+                            data_source => $self->class)
                         ||
-                        UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => 'UR::DataSource::Meta');
+                        UR::DataSource::RDBMS::Table->get(
+                            table_name => $ds_table,
+                            owner => $ds_owner,
+                            data_source => 'UR::DataSource::Meta');
 
                     if ($change->{type} eq 'insert')
                     {
@@ -1805,9 +1821,15 @@ sub _sync_database {
     my %tables_requiring_lock;
     for my $table_name (keys %all_tables) {
         my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-        my $table_object = UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => $self->class)
+        my $table_object = UR::DataSource::RDBMS::Table->get(
+                               table_name => $ds_table,
+                               owner => $ds_owner,
+                               data_source => $self->class)
                            ||
-                           UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => 'UR::DataSource::Meta');
+                           UR::DataSource::RDBMS::Table->get(
+                               table_name => $ds_table,
+                               owner => $ds_owner,
+                               data_source => 'UR::DataSource::Meta');
 
         unless ($table_object) {
             warn "looking up schema for RDBMS table $table_name...\n";
@@ -1855,9 +1877,15 @@ sub _sync_database {
 
     for my $table_name_from_class (keys %all_tables) {
         my($ds_owner,$ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name_from_class);
-        my $table = UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => $self->class)
+        my $table = UR::DataSource::RDBMS::Table->get(
+                        table_name => $ds_table,
+                        owner => $ds_owner,
+                        data_source => $self->class)
                     ||
-                    UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => 'UR::DataSource::Meta');
+                    UR::DataSource::RDBMS::Table->get(
+                        table_name => $ds_table,
+                        owner => $ds_owner,
+                        data_source => 'UR::DataSource::Meta');
 
         my @fk = $table->fk_constraints;
 
@@ -2148,9 +2176,15 @@ sub _sync_database {
                 my @all_table_names = $class_object->all_table_names;                
                 for my $table_name (@all_table_names) {                    
                     my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-                    my $table = UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => $self->class)
+                    my $table = UR::DataSource::RDBMS::Table->get(
+                                    table_name => $ds_table,
+                                    owner => $ds_owner,
+                                    data_source => $self->class)
                                 ||
-                                UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => 'UR::DataSource::Meta');
+                                UR::DataSource::RDBMS::Table->get(
+                                    table_name => $ds_table,
+                                    owner => $ds_owner,
+                                    data_source => 'UR::DataSource::Meta');
                     push @$tables, $table;
                     $column_objects_by_class_and_column_name{$class_name} ||= {};             
                     my $columns = $column_objects_by_class_and_column_name{$class_name};
@@ -2227,9 +2261,15 @@ sub _sync_database {
         my $max_failed_attempts = 10;
         for my $table_name (@tables_requiring_lock) {
             my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-            my $table = UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => $self->class)
+            my $table = UR::DataSource::RDBMS::Table->get(
+                            table_name => $ds_table,
+                            owner => $ds_owner,
+                            data_source => $self->class)
                         ||
-                        UR::DataSource::RDBMS::Table->get(table_name => $ds_table, owner => $ds_owner, data_source => 'UR::DataSource::Meta');
+                        UR::DataSource::RDBMS::Table->get(
+                            table_name => $ds_table,
+                            owner => $ds_owner,
+                            data_source => 'UR::DataSource::Meta');
             my $dbh = $table->dbh;
             my $sth = $dbh->prepare("lock table $table_name in exclusive mode");
             my $failed_attempts = 0;
@@ -2555,15 +2595,27 @@ sub _default_save_sql_for_object {
 
         my $dsn = ref($self) ? $self->id : $self;  # The data source name
 
-        my $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name_to_update, owner => $db_owner, data_source => $dsn)
+        my $table = UR::DataSource::RDBMS::Table->get(
+                        table_name => $table_name_to_update,
+                        owner => $db_owner,
+                        data_source => $dsn)
                     ||
-                    UR::DataSource::RDBMS::Table->get(table_name => $table_name_to_update, owner => $db_owner, data_source => 'UR::DataSource::Meta');
+                    UR::DataSource::RDBMS::Table->get(
+                        table_name => $table_name_to_update,
+                        owner => $db_owner,
+                        data_source => 'UR::DataSource::Meta');
         unless ($table) {
             $self->generate_schema_for_class_meta($class_object,1);
             # try again...
-            $table = UR::DataSource::RDBMS::Table->get(table_name => $table_name_to_update, owner => $db_owner, data_source => $dsn)
+            $table = UR::DataSource::RDBMS::Table->get(
+                         table_name => $table_name_to_update,
+                         owner => $db_owner,
+                         data_source => $dsn)
                      ||
-                     UR::DataSource::RDBMS::Table->get(table_name => $table_name_to_update, owner => $db_owner, data_source => 'UR::DataSource::Meta');
+                     UR::DataSource::RDBMS::Table->get(
+                         table_name => $table_name_to_update,
+                         owner => $db_owner,
+                         data_source => 'UR::DataSource::Meta');
             unless ($table) {
                 Carp::confess("No table $table_name found for data source $dsn!");
             }
@@ -2638,7 +2690,15 @@ sub _default_save_sql_for_object {
                 for (@non_pk_nullable_fk_columns){
                     unshift @update_values, undef;
                 }
-                my $update_command = {type => 'update', table_name => $table_name, column_names=> \@non_pk_nullable_fk_columns, sql => $update_sql, params => \@update_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh};
+                my $update_command = { type         => 'update',
+                                       table_name   => $table_name,
+                                       column_names => \@non_pk_nullable_fk_columns,
+                                       sql          => $update_sql,
+                                       params       => \@update_values,
+                                       class        => $table_class,
+                                       id           => $id,
+                                       dbh          => $data_source->get_default_dbh
+                                     };
                 push @commands, $update_command;
             }
 
@@ -2647,7 +2707,15 @@ sub _default_save_sql_for_object {
             $sql .= "${db_owner}." if ($db_owner);
             $sql .= "$table_name_to_update WHERE $where";
 
-            push @commands, { type => 'delete', table_name => $table_name, column_names => undef, sql => $sql, params => \@values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+            push @commands, { type         => 'delete',
+                              table_name   => $table_name,
+                              column_names => undef,
+                              sql          => $sql,
+                              params       => \@values,
+                              class        => $table_class,
+                              id           => $id,
+                              dbh          => $data_source->get_default_dbh
+                           };
 
             #print Data::Dumper::Dumper \@commands;
         }                    
@@ -2691,7 +2759,15 @@ sub _default_save_sql_for_object {
                 $sql .= "${db_owner}." if ($db_owner);
                 $sql .= "$table_name_to_update SET " . join(",", map { "$_ = ?" } @changed_cols) . " WHERE $where";
 
-                push @commands, { type => 'update', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+                push @commands, { type         => 'update',
+                                  table_name   => $table_name,
+                                  column_names => \@changed_cols,
+                                  sql          => $sql,
+                                  params       => \@values,
+                                  class        => $table_class,
+                                  id           => $id,
+                                  dbh          => $data_source->get_default_dbh
+                                };
             }
         }
         elsif ($table_action eq 'insert')
@@ -2732,7 +2808,15 @@ sub _default_save_sql_for_object {
                     }
                 }
 
-                push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@insert_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+                push @commands, { type         => 'insert',
+                                  table_name   => $table_name,
+                                  column_names => \@changed_cols,
+                                  sql          => $sql,
+                                  params       => \@insert_values,
+                                  class        => $table_class,
+                                  id           => $id,
+                                  dbh          => $data_source->get_default_dbh
+                                };
 
                 #$DB::single = 1;
                 my @pk_values = $self->_id_values_for_primary_key($table, $object_to_save);
@@ -2747,11 +2831,27 @@ sub _default_save_sql_for_object {
                 $update_sql .= "${db_owner}." if ($db_owner);
                 $update_sql .= "$table_name_to_update SET ". join(",", map { "$_ = ?" } @update_cols) . " WHERE $where";
 
-                push @commands, { type => 'update', table_name => $table_name, column_names => \@update_cols, sql => $update_sql, params => \@update_values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+                push @commands, { type         => 'update',
+                                  table_name   => $table_name,
+                                  column_names => \@update_cols,
+                                  sql          => $update_sql,
+                                  params       => \@update_values,
+                                  class        => $table_class,
+                                  id           => $id,
+                                  dbh          => $data_source->get_default_dbh
+                                };
             }
             else 
             {
-                push @commands, { type => 'insert', table_name => $table_name, column_names => \@changed_cols, sql => $sql, params => \@values, class => $table_class, id => $id, dbh => $data_source->get_default_dbh };
+                push @commands, { type         => 'insert',
+                                  table_name   => $table_name,
+                                  column_names => \@changed_cols,
+                                  sql          => $sql,
+                                  params       => \@values,
+                                  class        => $table_class,
+                                  id           => $id,
+                                  dbh          => $data_source->get_default_dbh
+                                };
             }
 
         }
