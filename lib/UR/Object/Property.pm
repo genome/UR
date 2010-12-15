@@ -6,40 +6,6 @@ use Lingua::EN::Inflect;
 
 our $VERSION = $UR::VERSION;;
 
-=pod
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Property',
-    english_name => 'entity type attribute',
-    id_properties => [qw/type_name attribute_name/],
-    properties => [
-        attribute_name                   => { type => 'VARCHAR2', len => 64 },
-        type_name                        => { type => 'VARCHAR2', len => 64 },
-        class_name                       => { type => 'VARCHAR2', len => 64 },
-        column_name                      => { type => 'VARCHAR2', len => 64, is_optional => 1 },
-        data_length                      => { type => 'VARCHAR2', len => 32, is_optional => 1 },
-        default_value                    => { is_optional => 1 },
-        data_type                        => { type => 'VARCHAR2', len => 64, is_optional => 1 },
-        doc                              => { type => 'VARCHAR2', len => 1000, is_optional => 1 },
-        is_class_wide                    => { type => 'BOOL', len => undef },
-        is_constant                      => { type => 'BOOL', len => undef },
-        is_optional                      => { type => 'BOOL', len => undef },
-        is_transient                     => { type => 'BOOL', len => undef },
-        is_delegated                     => { type => 'BOOL', len => undef },
-        is_calculated                    => { type => 'BOOL', len => undef },
-        is_mutable                       => { type => 'BOOL', len => undef },
-        is_numeric                       => { calculate_from => ['data_type'], },
-        property_name                    => { type => 'VARCHAR2', len => 64 },
-        property_type                    => { type => 'VARCHAR2', len => 64 },
-        source                           => { type => 'VARCHAR2', len => 64 },
-    ],
-    unique_constraints => [
-        { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },
-    ],
-);
-
-=cut
-
 our @CARP_NOT = qw( UR::DataSource::RDBMS );
 
 # Implements the is_numeric calculated property - returns true if it's ok to use
@@ -66,34 +32,6 @@ sub _create_object {
     my $class = shift;
     my ($bx,%extra) = $class->define_boolexpr(@_);
     my %params = ($bx->params_list,%extra);
-    #print Data::Dumper::Dumper(\%params);
-    #%params = $class->preprocess_params(@_);
-   
-=cut
- 
-    if ($params{attribute_name} and not $params{property_name}) {
-        my $property_name = $params{attribute_name};
-        $property_name =~ s/ /_/g;
-        $params{property_name} = $property_name;
-    }
-    elsif ($params{property_name} and not $params{attribute_name}) {
-        my $attribute_name = $params{property_name};
-        $attribute_name =~ s/_/ /g;
-        $params{attribute_name} = $attribute_name;
-    }
-    unless ($params{class_name} and $params{type_name}) {   
-        my $class_obj;
-        if ($params{type_name}) {
-            $class_obj = UR::Object::Type->is_loaded(type_name => $params{type_name});
-            $params{class_name} = $class_obj->class_name;
-        } 
-        elsif ($params{class_name}) {
-            $class_obj = UR::Object::Type->is_loaded(class_name => $params{class_name});
-            $params{type_name} = $class_obj->type_name;
-        } 
-    }
-
-=cut
     
     my ($singular_name,$plural_name);
     if ($params{is_many}) {
@@ -363,8 +301,9 @@ sub label_text
 {
     # The name of the property in friendly terms.
     my ($self,$obj) = @_;
-    my $attribute_name = $self->attribute_name;
-    my @words = App::Vocabulary->filter_vocabulary(map { ucfirst(lc($_)) } split(/\s+/,$attribute_name));
+    my $attribute_name = lc($self->property_name);
+    $attribute_name =~ s/_/ /g;
+    my @words = UR::Vocabulary->filter_vocabulary(map { ucfirst(lc($_)) } split(/\s+/,$attribute_name));
     my $label = join(" ", @words);
     return $label;
 }
