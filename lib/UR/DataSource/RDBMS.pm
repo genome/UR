@@ -705,28 +705,6 @@ sub resolve_class_name_for_table_name {
     return $class_name;
 }
 
-sub resolve_type_name_for_table_name {
-    my $self = shift->_singleton_class_name;
-    my $table_name = shift;
-
-    my $namespace = $self->get_namespace;
-    my $vocabulary = $namespace->get_vocabulary;
-    $vocabulary = 'UR::Vocabulary' unless eval { $vocabulary->__meta__ };
-
-    my $vocab_obj = eval { $vocabulary->__meta__ };
-    my @words =         
-    (
-        (
-            map { $vocabulary->plural_to_singular($_) }
-            map { lc($_) }
-            split("_",$table_name)
-        )
-    );
-
-    my $type_name =  join(" ",@words);
-    return $type_name;
-}
-
 sub resolve_property_name_for_column_name {
     my $self = shift->_singleton_class_name;
     my $column_name = shift;
@@ -735,20 +713,8 @@ sub resolve_property_name_for_column_name {
         map { lc($_) }
         split("_",$column_name);
 
-    my $type_name =  join("_",@words);
-    return $type_name;
-}
-
-sub resolve_attribute_name_for_column_name {
-    my $self = shift->_singleton_class_name;
-    my $column_name = shift;
-
-    my @words =                 
-        map { lc($_) }
-        split("_",$column_name);
-
-    my $type_name =  join(" ",@words);
-    return $type_name;
+    my $property_name =  join("_",@words);
+    return $property_name;
 }
 
 sub refresh_database_metadata_for_table_name {
@@ -2472,17 +2438,6 @@ sub _default_save_sql_for_object {
 
     my ($class,$id) = ($object_to_save->class, $object_to_save->id);
 
-    # This was in some of the UR::Object::* meta-data stuff.
-    # Reason unknown.
-    #my $self = shift;
-    #my $class_obj = UR::Object::Type->get(type_name => $self->type_name);
-    #if ($class_obj and $class_obj->table_name) {
-    #    return $self->SUPER::default_save_sql(@_);
-    #}
-    #else {
-    #    return;
-    #}
-
     my $class_object = $object_to_save->__meta__;
 
     # This object may have uncommitted changes already saved.  
@@ -2859,7 +2814,7 @@ sub _generate_class_data_for_loading {
             sort { $a->property_name cmp $b->property_name }
             grep { (defined $_->column_name && $_->column_name ne '') or
                 (defined $_->calculate_sql && $_->calculate_sql ne '') }
-            UR::Object::Property->get( type_name => $co->type_name );
+            UR::Object::Property->get( class_name => $co->class_name );
 
         @direct_table_properties = @all_table_properties if $class_meta eq $co;
     }
@@ -3051,7 +3006,6 @@ sub _generate_template_data_for_loading {
     %filters_to_satisfy = %filters;
 
     for my $co ( $class_meta, @parent_class_objects ) {
-        my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
         my @id_property_objects = $co->direct_id_property_metas;
         my %id_properties = map { $_->property_name => 1 } @id_property_objects;
@@ -3091,7 +3045,7 @@ sub _generate_template_data_for_loading {
                                   ($group_by ? @$group_by : ());
 
         while (my $property_name = shift @properties_to_query) {
-            my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);
+            my $property = UR::Object::Property->get(class_name => $class_name, property_name => $property_name);
             next unless $property;
 
             my ($operator, $value_position); 
