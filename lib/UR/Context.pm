@@ -2113,7 +2113,6 @@ sub _create_import_iterator_for_underlying_context {
         my ($rule_template, @values) = $rule->template_and_values();
         my $rule_template_specifies_value_for_subtype   = $template_data->{rule_template_specifies_value_for_subtype};
         my $class_table_name                            = $template_data->{class_table_name};
-        #my @type_names_under_class_with_no_table        = @{ $template_data->{type_names_under_class_with_no_table} };
    
         warn "Implement me carefully";
         
@@ -2135,18 +2134,10 @@ sub _create_import_iterator_for_underlying_context {
             }
         }
         elsif (not $class_table_name) {
-            #$DB::single = 1;
-            # we're in a sub-class, and don't have the type specified
-            # check to make sure we have a table, and if not add to the filter
-            #my $rule = $class_name->define_boolexpr(
-            #    $rule_template->get_rule_for_values(@values)->params_list, 
-            #    $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
-            #);
             die "No longer supported!";
             my $rule = UR::BoolExpr->resolve(
                            $class_name,
                            $rule_template->get_rule_for_values(@values)->params_list,
-                           #$sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
                         );
             return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial)
         }
