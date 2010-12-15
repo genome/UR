@@ -455,7 +455,6 @@ UR::Object::Type->define(
     id_properties => [qw/class_name unique_group property_name/],
     properties => [
         class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
         property_name                    => { is => 'Text', len => 256, source => 'data dictionary' },
         attribute_name                   => { is => 'Text', len => 256, source => 'data dictionary' },
         unique_group                     => { is => 'Text', len => 256, source => 'data dictionary' },
@@ -472,8 +471,6 @@ UR::Object::Type->define(
     properties => [
         position                         => { is => 'NUMBER', len => 2, source => 'data dictionary' },
         class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
-        attribute_name                   => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
         property_name                    => { is => 'Text', len => 256, source => 'data dictionary' },
 
         class_meta                       => { is => 'UR::Object::Type', id_by => 'class_name' },
