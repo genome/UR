@@ -100,11 +100,10 @@ sub direct_id_token_metas
 sub direct_id_property_metas
 {
     my $self = _object(shift);
-    my $template = UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'attribute_name');
+    my $template = UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name');
     my @id_property_objects =
-        #map { UR::Object::Property->get(class_name => $_->class_name, attribute_name => $_->attribute_name) }
         map { $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $_) }
-        map { $template->get_rule_for_values($_->class_name, $_->attribute_name) }
+        map { $template->get_rule_for_values($_->class_name, $_->property_name) }
         $self->direct_id_token_metas;
     if (@id_property_objects == 0) {
         @id_property_objects = $self->property_meta_for_name("id");
@@ -647,7 +646,6 @@ sub generate_support_class_for_extension {
         my $class_props = UR::Util::deep_copy($subject_class_obj->{has});    
         for (values %$class_props) {
             delete $_->{class_name};
-            delete $_->{type_name};
             delete $_->{property_name};
             $_->{is_optional} = !$id_property_names{$_};
         }
@@ -657,7 +655,6 @@ sub generate_support_class_for_extension {
                 class_name => $new_class_name,
                 is => \@parent_class_names, 
                 is_abstract => 0,
-                type_name => $subject_class_obj->type_name . " ghost",
                 has => [%$class_props],
                 attributes_have => $attributes_have,
                 id_properties => \@id_property_names,
@@ -1054,39 +1051,10 @@ sub mk_table {
 # object and not a class name.
 #
 
-sub _object
-{
+sub _object {
     return ref($_[0]) ? $_[0] : $_[0]->__meta__;
 }
 
-
-# FIXME These *type_names methods should be replaced via the new metadata API.
-# also of note, type_names are going away, so maybe don't bother
-# What exactly are these used for?
-sub Xderived_type_names
-{
-    #Carp::confess();
-    my $self = shift;
-    my $class_name = $self->class_name;
-    my @sub_class_links = UR::Object::Inheritance->get(parent_class_name => $class_name);
-    my @sub_type_names = map { $_->type_name } @sub_class_links;
-    return @sub_type_names;
-}
-
-sub Xall_derived_type_names
-{
-    #Carp::confess();
-    my $self = shift;
-    my @sub_type_names = $self->derived_type_names;
-    my @all_sub_type_names;
-    while (@sub_type_names) {
-        push @all_sub_type_names, @sub_type_names;
-        @sub_type_names =
-            map { $_->type_name }
-            UR::Object::Inheritance->get(parent_type_name => \@sub_type_names);
-    }
-    return @all_sub_type_names;
-}
 
 # new version gets everything, including "id" itself and object ref properties
 sub all_property_type_names {
@@ -1251,7 +1219,7 @@ sub unique_property_set_hashref {
 # only matter while running ur update
 
 # Args are:
-# 1) An UR::Object::Property object with attribute_name, class_name, id, property_name, type_name
+# 1) An UR::Object::Property object with class_name, id, property_name
 # 2) The method called: _create_object, load, 
 # 3) An id?
 sub _property_change_callback {
@@ -1265,7 +1233,7 @@ sub _property_change_callback {
 
     if ($method eq 'create') {
         unless ($class_obj->{'has'}->{$property_name}) {
-            my @attr = qw( class_name attribute_name data_length data_type is_delegated is_optional property_name type_name );
+            my @attr = qw( class_name data_length data_type is_delegated is_optional property_name);
 
             my %new_property;
             foreach my $attr_name (@attr ) {
@@ -1389,7 +1357,7 @@ sub _unique_property_change_callback {
 }
 
 # Args here are:  
-# 1) an UR::Object::Inheritance object with class_name, id, parent_class_name, type_name, parent_type_name
+# 1) an UR::Object::Inheritance object with class_name, id, parent_class_name
 # 2) method called to fire this off:  _create_object, load, 
 # 3) Some kind of id property's value?
 sub _inheritance_change_callback {
