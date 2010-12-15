@@ -761,11 +761,8 @@ sub mk_object_set_accessors {
         if ($r_class_meta and not $reverse_as) {
             # we have a real class on the other end, and it did not specify how to link back to us
             # try to infer how, otherwise fall back to the same logic we use with "primitives"
-            my @possible_relationships = UR::Object::Reference->get(
-                class_name => $r_class_name,
-                r_class_name => $class_name
-            );
-            #print "got " . join(", ", map { $_->id } @possible_relationships) . "\n";
+            my @possible_relationships = grep { $_->data_type eq $class_name } $r_class_meta->all_property_metas();
+
             if (@possible_relationships > 1) {
                 Carp::croak "$class_name has an ambiguous definition for property \"$singular_name\"."
                     . "  The target class $r_class_name has " . scalar(@possible_relationships) 
@@ -774,7 +771,7 @@ sub mk_object_set_accessors {
                     . join(",",map { '"' . $_->delegation_name . '"' } @possible_relationships) . ".\n";
             }
             elsif (@possible_relationships == 1) {
-                $reverse_as = $possible_relationships[0]->delegation_name;
+                $reverse_as = $possible_relationships[0]->property_name;
             }
             elsif (@possible_relationships == 0) {
                 # we now fall through to the logic below and try direct arrayref storage
