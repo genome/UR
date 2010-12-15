@@ -200,7 +200,7 @@ sub get_property_name_pairs_for_join {
     my ($self) = @_;
     my @linkage = $self->_get_direct_join_linkage();
     unless (@linkage) {
-        Carp::croak("No linkage for property " . $self->id);
+        Carp::croak("Cannot resolve underlying property joins for property ".$self->id);
     }
     if ($self->reverse_as) {
         return map { [ $_->[1] => $_->[0] ] } @linkage;
@@ -220,10 +220,6 @@ sub _get_direct_join_linkage {
         }
 
         my @my_id_by = @{ $self->id_by };
-        #my @their_id_by = map { $_->property_name }
-        #                  sort { $a->is_id <=> $b->is_id }
-        #                  grep { $_->is_id }
-        #                  $r_class_meta->properties;
         my @their_id_by = @{ $r_class_meta->{'id_by'} };
         unless (@their_id_by) {
             @their_id_by = ( 'id' );
@@ -320,10 +316,9 @@ sub _get_joins {
                 if (my $id_by = $self->id_by) { 
                     my(@source_property_names, @foreign_property_names);
                     # This ensures the linking properties will be in the right order
-                    foreach my $ref_property ( $self->id_by_property_links ) {
-                        push @source_property_names, $ref_property->property_name;
-                        push @foreign_property_names, $ref_property->r_property_name;
-                    }
+                    my @pairs = $self->get_property_name_pairs_for_join;
+                    @source_property_names  = map { $_->[0] } @pairs;
+                    @foreign_property_names = map { $_->[1] } @pairs;
                
                     if (ref($id_by) eq 'ARRAY') {
                         # satisfying the id_by requires joins of its own
@@ -415,28 +410,6 @@ our %generic_data_type_for_vendor_data_type =
 sub generic_data_type {
     no warnings;
     return $generic_data_type_for_vendor_data_type{$_[0]->{data_type}};
-}
-
-#sub is_indirect {
-#    my $self = shift;
-#
-#    return ($self->is_delegated || $self->is_calculated || $self->is_legacy_eav);
-#}
-
-
-
-sub id_by_property_links {
-    my $self = shift;
-    my @r = sort { $a->rank <=> $b->rank } UR::Object::Reference::Property->get(tha_id => $self->class_name . "::" . $self->property_name);
-    return @r;
-}
-
-sub r_id_by_property_links {
-    my $self = shift;
-    my $r_id_by = $self->reverse_as;
-    my $r_class_name = $self->data_type;
-    my @r = sort { $a->rank <=> $b->rank } UR::Object::Reference::Property->get(tha_id => $self->class_name . "::" . $self->property_name);
-    return @r;
 }
 
 

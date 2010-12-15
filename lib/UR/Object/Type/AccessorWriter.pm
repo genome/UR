@@ -800,20 +800,15 @@ sub mk_object_set_accessors {
             unless ($property_meta) {
                 Carp::croak "Can't resolve reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_as";
             }
-            my @property_links = $property_meta->id_by_property_links;
-            #my @property_links = UR::Object::Reference::Property->get(tha_id => $r_class_name . '::' . $reverse_as); 
-            unless (@property_links) {
-                #$DB::single = 1;
-                Carp::croak("No property links for $r_class_name -> $reverse_as?  Cannot build accessor for $singular_name/$plural_name relationship.");
-            }
+            my @property_links = $property_meta->get_property_name_pairs_for_join;
             my @get_params;
             for my $link (@property_links) {
-                my $my_property_name = $link->r_property_name;
+                my $my_property_name = $link->[1];
                 push @property_names, $my_property_name;
                 unless ($obj->can($my_property_name)) {
                     Carp::croak "Cannot handle indirect relationship $r_class_name -> $reverse_as.  Class $class_name has no property named $my_property_name";
                 }
-                push @get_params, $link->property_name, ($obj->$my_property_name || undef);
+                push @get_params, $link->[0], ($obj->$my_property_name || undef);
             }
             if (my $id_class_by = $property_meta->id_class_by) {
                 push @get_params, $id_class_by, $class_name;
