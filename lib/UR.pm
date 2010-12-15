@@ -334,10 +334,6 @@ UR::Object::Type->define(
         all_reference_metas              => { via => 'all_class_metas', to => 'reference_metas', is_many => 1 },
         
     ],    
-    unique_constraints => [
-        { properties => [qw/type_name/], sql => 'SUPER_FAKE_O2' },
-        #{ properties => [qw/data_source table_name/], sql => 'SUPER_FAKE_05' },
-    ],
 );
 
 UR::Object::Type->define(
@@ -400,7 +396,7 @@ UR::Object::Type->define(
         unique_metas                    => { is => 'UR::Object::Property::Unique', reverse_as => 'property_meta', is_many => 1 },
     ],
     unique_constraints => [
-        { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },
+        { properties => [qw/property_name class_name/], sql => 'SUPER_FAKE_O4' },
     ],
 );
 
