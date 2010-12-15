@@ -7,11 +7,8 @@ use UR;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command::Define::Datasource::RdbmsWithAuth",
+    doc => "Add an Oracle data source to the current namespace."
 );
-
-sub help_brief {
-   "Add an Oracle data source to the current namespace."
-}
 
 sub _data_source_sub_class_name {
     'UR::DataSource::Oracle'

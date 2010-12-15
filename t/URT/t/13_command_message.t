@@ -9,9 +9,9 @@ use lib File::Basename::dirname(__FILE__).'/../..';
 
 use Test::More tests => 774;
 
-use UR::Namespace::Command::Diff;
+use UR::Namespace::Command::Old::DiffRewrite;
 
-my $c = "UR::Namespace::Command::Diff";
+my $c = "UR::Namespace::Command::Old::DiffRewrite";
 
 # The messaging methods print to the filehandle $Command::stderr, which defaults
 # to STDERR.  Redefine it so the messages are printed to a filehandle we

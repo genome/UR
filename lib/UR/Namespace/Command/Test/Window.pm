@@ -10,20 +10,22 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => {
-        bare_args => {
+        src => {
             is_optional => 1,
             is_many => 1,
             shell_args_position => 1
         }
-    }
+    },
+    doc => 'repl tk window'
 );
 
 sub execute {
     my $self = shift;
+    require Tk;
     
-    my $bare_args = [$self->bare_args];
-    if (@$bare_args > 0) {
-        for my $code (@$bare_args) {
+    my $src = [$self->src];
+    if (@$src > 0) {
+        for my $code (@$src) {
             no strict;
             no warnings;
             eval $code;
@@ -38,21 +40,19 @@ sub execute {
 
 package DebugWindow;
 
-use Tk;
 our $tmp;
-if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
-    #$tmp = $ENV{TEMP};
-    $tmp ||= 'C:/temp';
-}
-else {
-    $tmp = $ENV{TMPDIR};
-    $tmp ||= '/tmp';
-    require Gtk;
-}
-
 our $workspace;
 
 sub new {
+    if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
+        #$tmp = $ENV{TEMP};
+        $tmp ||= 'C:/temp';
+    }
+    else {
+        $tmp = $ENV{TMPDIR};
+        $tmp ||= '/tmp';
+    }
+
     # Make a window
     my $debug_window  = new MainWindow(-title=>"Debug");
 
@@ -92,6 +92,7 @@ sub new {
 }
 
 sub new_gtk {
+    require Gtk;
     my $debug_window = DebugWindow::new();
     my $frame = $debug_window->Frame()->pack(-expand=>0,-fill=>'both',-anchor=>'nw');
     my $continuous_refresh = 0;

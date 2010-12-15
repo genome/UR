@@ -1,5 +1,5 @@
 
-package UR::Namespace::Command::Update::Classes;
+package UR::Namespace::Command::Update::ClassesFromDb;
 
 use strict;
 use warnings;

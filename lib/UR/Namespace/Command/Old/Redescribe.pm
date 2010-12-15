@@ -1,5 +1,5 @@
 
-package UR::Namespace::Command::Redescribe;
+package UR::Namespace::Command::Old::Redescribe;
 
 use strict;
 use warnings;

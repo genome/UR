@@ -1,5 +1,5 @@
 
-package UR::Namespace::Command::Diff::Rewrite;
+package UR::Namespace::Command::Old::DiffRewrite;
 
 use strict;
 use warnings;

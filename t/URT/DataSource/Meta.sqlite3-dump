@@ -1,3 +1,4 @@
+PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 CREATE TABLE dd_bitmap_index (
     data_source varchar NOT NULL,
@@ -16,6 +17,11 @@ CREATE TABLE dd_fk_constraint (
     last_object_revision timestamp NOT NULL,
     PRIMARY KEY(data_source, owner, r_owner, table_name, r_table_name, fk_constraint_name)
 );
+INSERT INTO "dd_fk_constraint" VALUES('URT::DataSource::CircFk','main','main','CIRCULAR','CIRCULAR','CIRCULAR_PARENT_ID_CIRCULAR_ID_FK','2010-12-12 16:22:22');
+INSERT INTO "dd_fk_constraint" VALUES('URT::DataSource::CircFk','main','main','BRIDGE','RIGHT','BRIDGE_RIGHT_ID_RIGHT_ID_FK','2010-12-12 16:22:24');
+INSERT INTO "dd_fk_constraint" VALUES('URT::DataSource::CircFk','main','main','BRIDGE','LEFT','BRIDGE_LEFT_ID_LEFT_ID_FK','2010-12-12 16:22:24');
+INSERT INTO "dd_fk_constraint" VALUES('URT::DataSource::CircFk','main','main','BETA','GAMMA','BETA_GAMMA_ID_GAMMA_ID_FK','2010-12-12 16:22:25');
+INSERT INTO "dd_fk_constraint" VALUES('URT::DataSource::CircFk','main','main','ALPHA','BETA','ALPHA_BETA_ID_BETA_ID_FK','2010-12-12 16:22:25');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -27,6 +33,11 @@ CREATE TABLE dd_fk_constraint_column (
 
     PRIMARY KEY(data_source, owner, table_name, fk_constraint_name, column_name)
 );
+INSERT INTO "dd_fk_constraint_column" VALUES('CIRCULAR_PARENT_ID_CIRCULAR_ID_FK','URT::DataSource::CircFk','main','CIRCULAR','CIRCULAR','PARENT_ID','ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('BRIDGE_RIGHT_ID_RIGHT_ID_FK','URT::DataSource::CircFk','main','BRIDGE','RIGHT','RIGHT_ID','ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('BRIDGE_LEFT_ID_LEFT_ID_FK','URT::DataSource::CircFk','main','BRIDGE','LEFT','LEFT_ID','ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('ALPHA_BETA_ID_BETA_ID_FK','URT::DataSource::CircFk','main','ALPHA','BETA','BETA_ID','ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('BETA_GAMMA_ID_GAMMA_ID_FK','URT::DataSource::CircFk','main','BETA','GAMMA','GAMMA_ID','ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -35,6 +46,11 @@ CREATE TABLE dd_pk_constraint_column (
     rank integer NOT NULL,
     PRIMARY KEY (data_source,owner,table_name,column_name,rank)
 );
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::CircFk','','CIRCULAR','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::CircFk','','BRIDGE','left_id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::CircFk','','BRIDGE','right_id',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::CircFk','','BETA','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('URT::DataSource::CircFk','','ALPHA','id',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -46,6 +62,10 @@ CREATE TABLE dd_table (
      remarks varchar,
      PRIMARY KEY(data_source, owner, table_name)
 );
+INSERT INTO "dd_table" VALUES('URT::DataSource::CircFk','main','CIRCULAR','TABLE','entity',NULL,'2010-12-12 16:22:22',NULL);
+INSERT INTO "dd_table" VALUES('URT::DataSource::CircFk','main','BRIDGE','TABLE','bridge',NULL,'2010-12-12 16:22:24',NULL);
+INSERT INTO "dd_table" VALUES('URT::DataSource::CircFk','main','BETA','TABLE','entity',NULL,'2010-12-12 16:22:25',NULL);
+INSERT INTO "dd_table" VALUES('URT::DataSource::CircFk','main','ALPHA','TABLE','entity',NULL,'2010-12-12 16:22:26',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -58,6 +78,14 @@ CREATE TABLE dd_table_column (
     remarks varchar,
     PRIMARY KEY(data_source, owner, table_name, column_name)
 );
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::CircFk','main','CIRCULAR','ID','Integer',NULL,'1','2010-12-12 16:22:22','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::CircFk','main','CIRCULAR','PARENT_ID','Integer',NULL,'1','2010-12-12 16:22:22','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::CircFk','main','BRIDGE','LEFT_ID','Integer',NULL,'1','2010-12-12 16:22:24','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::CircFk','main','BRIDGE','RIGHT_ID','Integer',NULL,'1','2010-12-12 16:22:24','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::CircFk','main','BETA','ID','Integer',NULL,'1','2010-12-12 16:22:25','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::CircFk','main','BETA','GAMMA_ID','Integer',NULL,'1','2010-12-12 16:22:25','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::CircFk','main','ALPHA','BETA_ID','Integer',NULL,'1','2010-12-12 16:22:26','');
+INSERT INTO "dd_table_column" VALUES('URT::DataSource::CircFk','main','ALPHA','ID','Integer',NULL,'1','2010-12-12 16:22:26','');
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

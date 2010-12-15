@@ -1,4 +1,4 @@
-package UR::Namespace::Command::CreateCompletionSpecFile;
+package UR::Namespace::Command::Update::TabCompletionSpec;
 
 use strict;
 use warnings;

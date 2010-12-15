@@ -1,4 +1,4 @@
-package UR::Namespace::Command::Export::DbicClasses;
+package UR::Namespace::Command::Old::ExportDbicClasses;
 
 use strict;
 use warnings;
