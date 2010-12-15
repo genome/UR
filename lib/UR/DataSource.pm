@@ -146,16 +146,12 @@ sub _generate_class_data_for_loading {
         push @all_properties, 
             map { [$co, $_, $table_name, 0] }
             sort { $a->property_name cmp $b->property_name }
-            UR::Object::Property->get( type_name => $co->type_name );
+            UR::Object::Property->get( class_name => $co->class_name );
     }
 
     my $sub_typing_property = $class_meta->subclassify_by;
 
     my $class_table_name = $class_meta->table_name;
-    #my @type_names_under_class_with_no_table;
-    #unless($class_table_name) {
-    #    my @type_names_under_class_with_no_table = ($class_meta->type_name, $class_meta->all_derived_type_names);
-    #}
 
     my $class_data = {
         class_name                          => $class_name,
@@ -164,7 +160,7 @@ sub _generate_class_data_for_loading {
         parent_class_objects                => [$class_meta->ancestry_class_metas], ##
         sub_classification_method_name      => $sub_classification_method_name,
         sub_classification_meta_class_name  => $sub_classification_meta_class_name,
-        subclassify_by    => $subclassify_by,
+        subclassify_by                      => $subclassify_by,
         
         all_properties                      => \@all_properties,
         all_id_property_names               => [$class_meta->all_id_property_names()],
@@ -177,7 +173,6 @@ sub _generate_class_data_for_loading {
         # "table" concept is stretched to mean any valid structure identifier 
         # within the datasource.
         first_table_name                    => $first_table_name,
-        #type_names_under_class_with_no_table => \@type_names_under_class_with_no_table,
         class_table_name                    => $class_table_name,
     };
     
@@ -217,7 +212,6 @@ sub _generate_template_data_for_loading {
 
     my $sub_typing_property                 = $class_data->{sub_typing_property};
     my $class_table_name                    = $class_data->{class_table_name};
-    #my @type_names_under_class_with_no_table= @{ $class_data->{type_names_under_class_with_no_table} };
     
     # individual query/boolexpr based
     
@@ -274,7 +268,6 @@ sub _generate_template_data_for_loading {
 
 #        $first_table_name ||= $table_name;
 
-        my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
         
         last if ( ($class_name eq 'UR::Object') or (not $class_name->isa("UR::Object")) );
@@ -311,7 +304,7 @@ sub _generate_template_data_for_loading {
 
         for my $property_name (sort keys %filters)
         {                
-            my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);                
+            my $property = UR::Object::Property->get(class_name => $class_name, property_name => $property_name);                
             next unless $property;
             
             my $operator       = $rule_template->operator_for($property_name);
@@ -502,7 +495,7 @@ sub _generate_template_data_for_loading {
                     map { [$foreign_class_object, $_, $alias, $object_num] }
                     sort { $a->property_name cmp $b->property_name }
                     grep { defined($_->column_name) && $_->column_name ne '' }
-                    UR::Object::Property->get( type_name => $foreign_class_object->type_name );
+                    UR::Object::Property->get(class_name => $foreign_class_object->class_name );
               
                 $joins_done{$join->{id}} = $alias;
                 push @joins_done, $join;
