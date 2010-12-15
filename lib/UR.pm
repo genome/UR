@@ -454,7 +454,7 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Property::Unique',
-    id_properties => [qw/type_name unique_group attribute_name/],
+    id_properties => [qw/class_name unique_group property_name/],
     properties => [
         class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
         type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
@@ -470,7 +470,7 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Property::ID',
-    id_properties => [qw/type_name position/],
+    id_properties => [qw/class_name position/],
     properties => [
         position                         => { is => 'NUMBER', len => 2, source => 'data dictionary' },
         class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
