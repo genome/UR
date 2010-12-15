@@ -1146,7 +1146,6 @@ use Data::Dumper;
 sub initialize_direct_accessors {
     my $self = shift;
     my $class_name = $self->{class_name};    
-    my $type_name = $self->{type_name};
 
     my %id_property_names;
     for my $property_name (@{ $self->{id_by} }) {
@@ -1190,7 +1189,6 @@ sub initialize_direct_accessors {
         
         my $accessor_name = $property_name;
         my $column_name = $property_data->{column_name};
-        my $attribute_name = $property_data->{attribute_name};
         my $is_transient = $property_data->{is_transient};
         my $where = $property_data->{where};
         
