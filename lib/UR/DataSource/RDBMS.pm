@@ -159,7 +159,7 @@ sub generate_schema_for_class_meta {
  
     my $t = '-'; 
 
-    my $table = $self->refresh_database_metadata_for_table_name($table_name);
+    my $table = $self->refresh_database_metadata_for_table_name($table_name, $method);
  
     my %existing_columns;
     if ($table) {
@@ -172,7 +172,7 @@ sub generate_schema_for_class_meta {
     }
     else {
         ## print "adding table $table_name\n";
-        my ($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
+        my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
         $table = UR::DataSource::RDBMS::Table->$method(
             table_name  => $ds_table,
             data_source => $self->id,
@@ -244,7 +244,7 @@ sub generate_schema_for_class_meta {
         my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
         my($ds_r_owner, $ds_r_table) = $self->_resolve_owner_and_table_from_table_name($r_table_name);
         
-        my $fk = UR::DataSource::RDBMS::FkConstraint->create(
+        my $fk = UR::DataSource::RDBMS::FkConstraint->$method(
             fk_constraint_name => $fk_id,
             table_name      => $ds_table,
             r_table_name    => $ds_r_table,
@@ -257,23 +257,29 @@ sub generate_schema_for_class_meta {
             die "failed to generate an implied foreign key constraint for $table_name => $r_table_name!"
                 . UR::DataSource::RDBMS::FkConstraint->error_message;
         }
+        push @defined, $fk;
 
         for (my $n = 0; $n < @$column_names; $n++) {
             my $column_name = $column_names->[$n];
             my $r_column_name = $r_column_names->[$n];
-            my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get_or_create(
-                fk_constraint_name => $fk_id,
-                table_name      => $ds_table,
-                column_name     => $column_name,
-                r_table_name    => $ds_r_table,
-                r_column_name   => $r_column_name,
-                owner           => $ds_owner,
-                data_source     => $self->id,
-            );
+            my %fkcol_params = ( fk_constraint_name => $fk_id,
+                                 table_name      => $ds_table,
+                                 column_name     => $column_name,
+                                 r_table_name    => $ds_r_table,
+                                 r_column_name   => $r_column_name,
+                                 owner           => $ds_owner,
+                                 data_source     => $self->id,
+                               );
+
+            my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params);
+            unless ($fkcol) {
+                $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->$method(%fkcol_params);
+            }
             unless ($fkcol) {
                 die "failed to generate an implied foreign key constraint for $table_name => $r_table_name!"
                     . UR::DataSource::RDBMS::FkConstraint->error_message;
             }
+            push @defined, $fkcol;
         }
     }
     
@@ -761,7 +767,10 @@ sub resolve_attribute_name_for_column_name {
 }
 
 sub refresh_database_metadata_for_table_name {
-    my ($self,$db_table_name) = @_;
+    my ($self,$db_table_name, $creation_method) = @_;
+
+    $creation_method ||= 'create';
+
     my $data_source = $self;
 
     my $ur_table_name = uc($db_table_name);
@@ -813,7 +822,7 @@ sub refresh_database_metadata_for_table_name {
     } else {
         # Create a brand new one from scratch
 
-        $table_object = UR::DataSource::RDBMS::Table->create(
+        $table_object = UR::DataSource::RDBMS::Table->$creation_method(
             table_name => $ur_table_name,
             table_type => $table_data->{TABLE_TYPE},
             owner => $table_data->{TABLE_SCHEM},
@@ -876,7 +885,7 @@ sub refresh_database_metadata_for_table_name {
         } else {
             # It's new, create it from scratch
 
-            $column_obj = UR::DataSource::RDBMS::TableColumn->create(
+            $column_obj = UR::DataSource::RDBMS::TableColumn->$creation_method(
                 column_name => uc($column_data->{COLUMN_NAME}),
                 table_name  => $ur_table_name,
                 owner       => $table_object->{owner},
@@ -976,7 +985,7 @@ sub refresh_database_metadata_for_table_name {
                                                           );
 
             unless ($fk) {
-                $fk = UR::DataSource::RDBMS::FkConstraint->create(
+                $fk = UR::DataSource::RDBMS::FkConstraint->$creation_method(
                     fk_constraint_name => $constraint_name,
                     table_name      => $fk_table_name,
                     r_table_name    => $r_table_name,
@@ -991,16 +1000,18 @@ sub refresh_database_metadata_for_table_name {
             }
 
             if ($fk{$fk->id}) {
-                my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get_or_create(
-                    fk_constraint_name => $constraint_name,
-                    table_name      => $fk_table_name,
-                    column_name     => $fk_column_name,
-                    r_table_name    => $r_table_name,
-                    r_column_name   => $r_column_name,
-                    owner           => $table_object->{owner},
-                    data_source     => $table_object->{data_source},
-                );
-
+                my %fkcol_params = ( fk_constraint_name => $constraint_name,
+                                     table_name      => $fk_table_name,
+                                     column_name     => $fk_column_name,
+                                     r_table_name    => $r_table_name,
+                                     r_column_name   => $r_column_name,
+                                     owner           => $table_object->{owner},
+                                     data_source     => $table_object->{data_source},
+                                   );
+                my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params);
+                unless ($fkcol) {
+                    $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->$creation_method(%fkcol_params);
+                }
             }
 
             my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
@@ -1051,7 +1062,7 @@ sub refresh_database_metadata_for_table_name {
                                                               data_source        => $table_object->{'data_source'},
                                                           );
             unless ($fk) {
-                $fk = UR::DataSource::RDBMS::FkConstraint->create(
+                $fk = UR::DataSource::RDBMS::FkConstraint->$creation_method(
                     fk_constraint_name => $constraint_name,
                     table_name      => $fk_table_name,
                     r_table_name    => $r_table_name,
@@ -1069,15 +1080,17 @@ sub refresh_database_metadata_for_table_name {
             }
 
             if ($fk{$fk->fk_constraint_name}) {
-                UR::DataSource::RDBMS::FkConstraintColumn->get_or_create(
-                    fk_constraint_name => $constraint_name,
-                    table_name      => $fk_table_name,
-                    column_name     => $fk_column_name,
-                    r_table_name    => $r_table_name,
-                    r_column_name   => $r_column_name,
-                    owner           => $table_object->{owner},
-                    data_source     => $table_object->{data_source},
-                );
+                my %fkcol_params = ( fk_constraint_name => $constraint_name,
+                                     table_name      => $fk_table_name,
+                                     column_name     => $fk_column_name,
+                                     r_table_name    => $r_table_name,
+                                     r_column_name   => $r_column_name,
+                                     owner           => $table_object->{owner},
+                                     data_source     => $table_object->{data_source},
+                                 );
+                unless ( UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params) ) {
+                    UR::DataSource::RDBMS::FkConstraintColumn->$creation_method(%fkcol_params);
+                }
             }
 
 
@@ -1133,7 +1146,7 @@ sub refresh_database_metadata_for_table_name {
         }
 
         for my $data (@new_pk) {
-            my $pk = UR::DataSource::RDBMS::PkConstraintColumn->create(@$data);
+            my $pk = UR::DataSource::RDBMS::PkConstraintColumn->$creation_method(@$data);
             unless ($pk) {
                 $self->error_message("Failed to create primary key @$data");
                 return;
@@ -1221,7 +1234,7 @@ sub refresh_database_metadata_for_table_name {
                 if ($constraint_objs{$col_name} ) {
                     delete $constraint_objs{$col_name};
                 } else {
-                    my $uc = UR::DataSource::RDBMS::UniqueConstraintColumn->create(
+                    my $uc = UR::DataSource::RDBMS::UniqueConstraintColumn->$creation_method(
                         data_source => $data_source_id,
                         table_name => $ur_table_name,
                         owner => $ds_owner,
