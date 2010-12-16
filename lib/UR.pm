@@ -331,12 +331,6 @@ UR::Object::Type->define(
         all_id_column_names              => { via => 'all_class_metas', to => 'direct_id_column_names', is_many => 1 },
         all_columnless_property_metas    => { via => 'all_class_metas', to => 'direct_columnless_property_metas', is_many => 1 },
         all_columnless_property_names    => { via => 'all_class_metas', to => 'direct_columnless_property_names', is_many => 1 },
-
-        # Reference objects
-        reference_metas                  => { is => 'UR::Object::Reference', reverse_as => 'class_meta', is_many => 1 },
-        reference_property_metas         => { is => 'UR::Object::Reference::Property', via => 'reference_metas', to => 'reference_property_metas', is_many => 1 },
-        all_reference_metas              => { via => 'all_class_metas', to => 'reference_metas', is_many => 1 },
-        
     ],    
     unique_constraints => [
         { properties => [qw/type_name/], sql => 'SUPER_FAKE_O2' },
