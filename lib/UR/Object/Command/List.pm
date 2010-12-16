@@ -298,10 +298,11 @@ sub _get_object_string{
     my $out;
     for my $property ( @{$self->{show}} )
     {
+        my $value = join(', ', $object->$property);
         $out .= sprintf(
             "%s: %s\n",
             Term::ANSIColor::colored($property, 'red'),
-            Term::ANSIColor::colored($object->$property, 'cyan'),
+            Term::ANSIColor::colored($value, 'cyan'),
         );
     }
 
