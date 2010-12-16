@@ -85,8 +85,6 @@ our %meta_classes = map { $_ => 1 }
         UR::Object::Property
         UR::Object::Property::ID
         UR::Object::Property::Unique
-        UR::Object::Reference
-        UR::Object::Reference::Property
         UR::Object::Inheritance
     /;
 
@@ -1465,106 +1463,6 @@ sub _complete_class_meta_object_definitions {
                 }
                 push @subordinate_objects, $u;
             }
-        }
-    }
-#print "constraints ",$t2-$t1,"\n" if $t2-$t1 > 0.001;
-#$t1=$t2;
-
-    if ($relationships) {
-        for (my $i = 0; $i < @$relationships; $i += 2) {
-            my $delegation_name = $relationships->[$i];
-            my $data = $relationships->[$i+1];
-            #print Data::Dumper::Dumper($delegation_name, $data);
-            
-            my $constraint_name;
-            my @property_names;
-            my $r_class_name;
-
-            if (my $id_by = $data->{id_by}) {
-                # new-style from the "has" list
-                $constraint_name = $data->{constraint_name};
-                @property_names = @{ $data->{id_by} };
-                $r_class_name = $data->{data_type};                        
-            }
-            else {
-                # old style from the "relationships" list                
-                $constraint_name = delete $data->{constraint_name};
-                @property_names = @{ delete $data->{properties} };
-                $r_class_name = delete $data->{class_name};            
-            }
-
-            # handle cases where the fk does not have an id, but is the name of the target
-            while (grep { $delegation_name eq $_ } @property_names) {
-                $delegation_name .= "_obj";
-            }
-            
-            #my @attribute_names =
-            #    map {
-            #        my $p = UR::Object::Property->get(
-            #            class_name => $class_name,
-            #            property_name => $_
-            #        );
-            #        unless ($p) {
-            #            Carp::confess("No property $_ for class $class_name!?");
-            #        }
-            #        $p->attribute_name;
-            #    } @property_names;
-            # 
-            #my $r_class_obj = UR::Object::Type->get(class_name => $r_class_name);
-            #unless ($r_class_obj) {
-            #    warn "Class $class_name cannot find $r_class_name for $delegation_name relationship.  Ignoring this relationship.\n";
-            #    next;
-            #}
-            #my $r_type_name = $r_class_obj->type_name;
-            #my @r_class_inheritance = ($r_class_name, $r_class_name->__meta__->ancestry_class_names);
-            #my @r_property_names = $r_class_obj->id_property_names;
-            #my @r_attribute_names =
-            #    map {
-            #        my $r_property_name = $_;
-            #        map {
-            #            my $p = UR::Object::Property->get(
-            #                class_name => $_,
-            #                property_name => $r_property_name,
-            #            );
-            #            ($p ? ($p->attribute_name) : ());
-            #        } @r_class_inheritance
-            #    } @r_property_names;
-
-            my $tha = UR::Object::Reference->__define__(
-                id => $class_name . "::" . $delegation_name,
-                class_name => $class_name,
-                type_name => $type_name,
-                r_class_name => $r_class_name,
-                r_type_name => $r_class_name,   # FIXME - we don't need type names anymore, right?
-                delegation_name => $delegation_name,
-                constraint_name => $constraint_name,
-                source => ($constraint_name ? 'data dictionary' : ""),
-                description => "",
-            );
-            unless ($tha) {
-                Carp::confess("Failed to define relationship $delegation_name");
-            }
-            push @subordinate_objects, $tha;
-
-            #my $rank = 0;
-            #for my $property_name (@property_names) {
-            #    my $attribute_name = shift @attribute_names;
-            #    my $r_property_name = shift @r_property_names;
-            #    my $r_attribute_name = shift @r_attribute_names;
-            #    $rank++;
-            #    my $rp = UR::Object::Reference::Property->__define__(
-            #        tha_id => $tha->tha_id,
-            #        rank => $rank,
-            #        property_name => $property_name,
-            #        r_property_name => $r_property_name,
-            #        attribute_name => $attribute_name,
-            #        r_attribute_name => $r_attribute_name
-            #    );
-            #    unless ($rp) {
-            #        Carp::confess("Failed to define relationship $delegation_name property $property_name");
-            #    }
-            #    push @subordinate_objects, $rp;
-            #}
         }
     }
 
