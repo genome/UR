@@ -87,7 +87,7 @@ sub fk_constraints {
 my $self = shift;
 
     my $fk_class = $self->_fk_constraint_class;
-    my @fks = $fk_class->get(data_source => $self->data_source, table_name => $self->table_name);
+    my @fks = $fk_class->get(data_source => $self->data_source, table_name => $self->table_name, owner => $self->owner);
     return @fks;
 }
 
@@ -100,7 +100,7 @@ sub ref_fk_constraints {
 my $self = shift;
 
     my $fk_class = $self->_fk_constraint_class;
-    my @fks = $fk_class->get(data_source => $self->data_source, r_table_name => $self->table_name);
+    my @fks = $fk_class->get(data_source => $self->data_source, r_table_name => $self->table_name, r_owner => $self->owner);
     return @fks;
 }
 

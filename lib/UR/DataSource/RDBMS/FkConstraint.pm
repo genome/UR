@@ -45,7 +45,7 @@ sub _table_classes {
 }
 
 sub get_with_special_params {
-my($class,$rule,%args) = @_;
+    my($class,$rule,%args) = @_;
 
 $DB::single=1;
     my $column_name = delete $args{'column_name'};
@@ -57,6 +57,7 @@ $DB::single=1;
     my @objects;
     foreach my $fk ( @fks ) {
         my %fkc_args = ( data_source => $fk->data_source,
+                         owner       => $fk->owner,
                          table_name => $fk->table_name,
                          r_table_name => $fk->r_table_name,
                        );
@@ -72,7 +73,7 @@ $DB::single=1;
 
 
 sub create {
-my $class = shift;
+    my $class = shift;
 
     my $params = { $class->define_boolexpr(@_)->normalize->params_list };
     my $column_name = delete $params->{'column_name'};
@@ -96,6 +97,7 @@ my $class = shift;
          
         my $col_class = $self->_fk_constraint_column_class;
         $col_class->create(data_source        => $self->data_source,
+                           owner              => $self->owner,
                            fk_constraint_name => $self->fk_constraint_name,
                            table_name         => $self->table_name,
                            column_name        => $col_name,
@@ -110,7 +112,7 @@ my $class = shift;
         
 
 sub get_related_column_objects {
-my($self,$prop_name) = @_;
+    my($self,$prop_name) = @_;
 
     my @fkcs = UR::DataSource::RDBMS::FkConstraintColumn->get(
                   data_source        => $self->data_source,
