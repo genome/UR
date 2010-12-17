@@ -56,13 +56,21 @@ sub for_each_class_object {
                             aspects => ['is_id', 'property_name', 'column_name', 'data_type', 'is_optional' ],
                         },
                         {
-                            label => 'References',
-                            name => 'all_reference_metas',
-                            subject_class_name => 'UR::Object::Reference',
-                            perspective => 'description line item',
+                            label => "References",
+                            name => 'all_id_by_property_metas',
+                            subject_class_name => 'UR::Object::Property',
+                            perspective => 'reference description',
                             toolkit => 'text',
                             aspects => [],
-                        }
+                        },
+                        {
+                            label => "Referents",
+                            name => 'all_reverse_as_property_metas',
+                            subject_class_name => 'UR::Object::Property',
+                            perspective => 'reference description',
+                            toolkit => 'text',
+                            aspects => [],
+                        },
                     ],
                 );
     unless ($view) {

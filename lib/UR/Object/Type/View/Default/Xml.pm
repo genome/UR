@@ -36,8 +36,8 @@ UR::Object::Type->define(
                 },
                 {
                     label              => 'References',
-                    name               => 'all_reference_metas',
-                    subject_class_name => 'UR::Object::Reference',
+                    name               => 'all_id_by_property_metas',
+                    subject_class_name => 'UR::Object::Property',
                     perspective        => 'default',
                     toolkit            => 'xml',
                     aspects            => [],

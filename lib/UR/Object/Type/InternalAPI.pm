@@ -1286,6 +1286,17 @@ sub _property_change_callback {
       #  1;
       #
     #}
+
+    # Invalidate the cache used by all_property_names()
+    $class_obj->{'_all_property_names'} = undef;
+    #my @subclasses = $class_obj->subclasses_loaded($class_obj->class_name);
+    my @subclasses = @{$UR::Object::_init_subclasses_loaded{$class_obj->class_name}};
+    my %seen;
+    while (my $subclass = shift @subclasses) {
+        my $sub_meta = UR::Object::Type->get(class_name => $subclass);
+        $sub_meta->{'_all_property_names'} = undef;
+        push @subclasses, $sub_meta->subclasses_loaded($subclass);
+    }
     
 }
 
@@ -1336,6 +1347,8 @@ sub _id_property_change_callback {
         Carp::confess("Shouldn't be here as ID properties can't change");
         1;
     }
+
+    $class->{'_all_id_property_names'} = undef;  #  Invalidate the cache used by all_id_property_names
 }
 
 
@@ -1434,6 +1447,8 @@ sub _inheritance_change_callback {
         $DB::single=1;
         1;
     }
+
+    $class->{'_ordered_inherited_class_names'} = undef; # invalidate the cache used by ancestry_class_names()
 }
 
 
@@ -1553,7 +1568,6 @@ sub ungenerate {
 #
 #    # Infrastructurey, hang-off data.  Things we can get via their class_name
 #    foreach my $meta_type ( qw( UR::Object::Inheritance UR::Object::Property
-#                                UR::Object::Reference 
 #                                UR::Object::Property::Unique UR::Object::Property::ID
 #                                UR::Object::Property::Calculated::From ) )
 #    {

@@ -1009,8 +1009,7 @@ sub _infer_direct_property_from_rule {
     my $rule_template = $rule->template;
     my @properties_in_rule = $rule_template->_property_names; # FIXME - why is this method private?
     my $subject_class_name = $rule->subject_class_name;
-    my $subject_class_meta = UR::Object::Type->get($subject_class_name);
-
+    my $subject_class_meta = $subject_class_name->__meta__;
 
     my($alternate_class,$alternate_get_property, $alternate_wanted_property);
 
@@ -1018,35 +1017,9 @@ sub _infer_direct_property_from_rule {
     PROPERTY_IN_RULE:
     foreach my $property_name ( @properties_in_rule) {
         my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
-        if ($property_meta->is_delegated) {
-
-            my $linking_property_meta = $subject_class_meta->property_meta_for_name($property_meta->via);
-            my($reference,$ref_name_getter, $ref_r_name_getter);
-            if ($linking_property_meta->reverse_as) {
-                eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
-                $reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
-                                                        delegation_name => $linking_property_meta->reverse_as);
-                $ref_name_getter = 'r_property_name';
-                $ref_r_name_getter = 'property_name';
-                $alternate_class = $reference->class_name;
-            } else {
-                $reference = UR::Object::Reference->get(class_name => $linking_property_meta->class_name,
-                                                        delegation_name => $linking_property_meta->property_name);
-                $ref_name_getter = 'property_name';
-                $ref_r_name_getter = 'r_property_name';
-                $alternate_class = $reference->r_class_name;
-            }
-
-            my @ref_properties = $reference->get_property_links;
-            foreach my $ref_property ( @ref_properties ) {
-                my $ref_property_name = $ref_property->$ref_name_getter;
-                if ($ref_property_name eq $wanted_property_name) {
-                    $alternate_wanted_property = $ref_property->$ref_r_name_getter;
-                }
-            }
-            $alternate_get_property = $property_meta->to;
-            #next PROPERTY_IN_RULE unless $alternate_wanted_property;
-        }
+        my $final_property_meta = $property_meta->final_property_meta || $property_meta;
+        $alternate_get_property = $final_property_meta->property_name;
+        $alternate_class   = $final_property_meta->class_name;
 
         unless ($alternate_wanted_property) {
             # Either this was also a direct property of the rule, or there's no
@@ -1098,7 +1071,7 @@ sub _infer_delegated_property_from_rule {
 
     my $rule_template = $rule->template;
     my $subject_class_name = $rule->subject_class_name;
-    my $subject_class_meta = UR::Object::Type->get($subject_class_name);
+    my $subject_class_meta = $subject_class_name->__meta__;
 
     my $wanted_property_meta = $subject_class_meta->property_meta_for_name($wanted_property_name);
     unless ($wanted_property_meta->via) {
@@ -1106,34 +1079,29 @@ sub _infer_delegated_property_from_rule {
     }
 
     my $linking_property_meta = $subject_class_meta->property_meta_for_name($wanted_property_meta->via);
-    my $alternate_wanted_property = $wanted_property_meta->to;
+    my $final_property_meta = $wanted_property_meta->final_property_meta;
 
-    my($reference,$ref_name_getter,$ref_r_name_getter,$alternate_class);
     if ($linking_property_meta->reverse_as) {
         eval{ $linking_property_meta->data_type->class() };  # Load the class if it isn't already loaded
-        $reference = UR::Object::Reference->get(class_name => $linking_property_meta->data_type,
-                                                delegation_name => $linking_property_meta->reverse_as);
-        $ref_name_getter = 'r_property_name';
-        $ref_r_name_getter = 'property_name';
-        $alternate_class = $reference->class_name;
-    } else {
-        $reference = UR::Object::Reference->get(class_name => $linking_property_meta->class_name,
-                                                delegation_name => $linking_property_meta->property_name);
-        $ref_name_getter = 'property_name';
-        $ref_r_name_getter = 'r_property_name';
-        $alternate_class = $reference->r_class_name;
-    }
-
-    my %alternate_get_params;
-    my @ref_properties = $reference->get_property_links;
-    foreach my $ref_property ( @ref_properties ) {
-        my $ref_property_name = $ref_property->$ref_name_getter;
-        if ($rule_template->specifies_value_for($ref_property_name)) {
-            my $value = $rule->value_for($ref_property_name);
-            $alternate_get_params { $ref_property->$ref_r_name_getter } = $value;
+        if ($linking_property_meta->data_type ne $final_property_meta->class_name) {
+            Carp::croak("UR::Context::_infer_delegated_property_from_rule() doesn't handle multiple levels of indiretion yet");
         }
     }
-        
+
+    my @rule_translation = $linking_property_meta->get_property_name_pairs_for_join();
+
+    my %alternate_get_params;
+    foreach my $pair ( @rule_translation ) {
+        my $rule_param = $pair->[0];
+        next unless ($rule_template->specifies_value_for($rule_param));
+        my $alternate_param = $pair->[1];
+
+        my $value = $rule->value_for($rule_param);
+        $alternate_get_params{$alternate_param} = $value;
+    }
+
+    my $alternate_class = $final_property_meta->class_name;
+    my $alternate_wanted_property = $wanted_property_meta->to;
     my @alternate_values;
     eval {
         my @alternate_objects = $self->query($alternate_class, %alternate_get_params);
@@ -1703,7 +1671,7 @@ sub _get_template_data_for_loading {
         my %seen_properties;
         foreach my $delegated_property ( @$this_ds_delegations ) {
             my $delegated_property_name = $delegated_property->property_name;
-            next if ($seen_properties{$delegated_property_name});
+            next if ($seen_properties{$delegated_property_name}++);
 
             my $operator = $rule_template->operator_for($delegated_property_name);
             $operator ||= '=';  # FIXME - shouldn't the template return this for us?
@@ -1715,46 +1683,17 @@ sub _get_template_data_for_loading {
             my $secondary_class = $relation_property->data_type;
 
             # we can also add in any properties in the property's joins that also appear in the rule
+            my @property_pairs = $relation_property->get_property_name_pairs_for_join();
+            foreach my $pair ( @property_pairs ) {
+                my($primary_property, $secondary_property) = @$pair;
+                next if ($seen_properties{$primary_property}++);
+                next unless ($rule_template->specifies_value_for($primary_property));
 
-            my $reference = UR::Object::Reference->get(class_name => $delegated_property->class_name,
-                                                       delegation_name => $delegated_property->via);
-            my $reverse = 0;
-            unless ($reference) {
-                # Reference objects are only created for forward-linking properties.  
-                # Maybe this is a reverse_as-type property?  Try the joins data structure...
-                my @joins = $delegated_property->_get_joins;
-                foreach my $join ( @joins ) {
-                    my @references = UR::Object::Reference->get(class_name   => $join->{'foreign_class'},
-                                                                r_class_name => $join->{'source_class'});
-                    if (@references == 1) {
-                        $reverse = 1;
-                        $reference = $references[0];
-                        last;
-                    } elsif (@references) {
-                        Carp::confess(sprintf("Don't know what to do with more than one %d Reference objects between %s and %s",
-                                               scalar(@references), $delegated_property->class_name, $join->{'foreign_class'}));
-                    }
-                }
-                unless ($reference) {
-                    # FIXME - should we just next instead of dying?
-                    my $linking_property = $class_meta->property_meta_for_name($delegated_property->via);
-                    Carp::confess(sprintf("No Reference link found between %s and %s", $delegated_property->class_name, $linking_property->data_type));
-                }
-            }
+                my $operator = $rule_template->operator_for($primary_property);
+                $operator ||= '=';
 
-                
-            my @ref_properties = $reference->get_property_links();
-            my $property_getter = $reverse ? 'r_property_name' : 'property_name'; 
-            foreach my $ref_property ( @ref_properties ) {
-                next if ($seen_properties{$ref_property->$property_getter});
-                my $ref_property_name = $ref_property->$property_getter;
-                next unless ($rule_template->specifies_value_for($ref_property_name));
-
-                my $ref_operator = $rule_template->operator_for($ref_property_name);
-                $ref_operator ||= '=';
-
-                push @secondary_params, $ref_property->r_property_name . ' ' . $ref_operator;
-            }
+                push @secondary_params, "$secondary_property $operator";
+             }
 
             my $secondary_rule_template = UR::BoolExpr::Template->resolve($secondary_class, @secondary_params);
 
@@ -1791,36 +1730,17 @@ sub _create_secondary_rule_from_primary {
         $secondary_values[$pos] = $value;
         $seen_properties{$property->property_name}++;
 
-        my $reference = UR::Object::Reference->get(class_name => $property->class_name,
-                                                   delegation_name => $property->via);
-        my $reverse = 0;
-        unless ($reference) {
-            # FIXME - this code is almost exactly like the code in _get_template_data_for_loading
-            my @joins = $property->_get_joins;
-            foreach my $join ( @joins ) {
-                my @references = UR::Object::Reference->get(class_name   => $join->{'foreign_class'},
-                                                            r_class_name => $join->{'source_class'});
-                if (@references == 1) {
-                    $reverse = 1;
-                    $reference = $references[0];
-                    last;
-                } elsif (@references) {
-                    Carp::confess(sprintf("Don't know what to do with more than one %d Reference objects between %s and %s",
-                                           scalar(@references), $property->class_name, $join->{'foreign_class'}));
-                }
-            }
-        }
-        next unless $reference;
+        my $class_meta = $property->class_meta;
+        my $via_property = $class_meta->property_meta_for_name($property->via);
+        my @pairs = $via_property->get_property_name_pairs_for_join();
+        foreach my $pair ( @pairs ) {
+            my($primary_property_name, $secondary_property_name) = @$pair;
 
-        my @ref_properties = $reference->get_property_links();
-        my $property_getter = $reverse ? 'r_property_name' : 'property_name';
-        foreach my $ref_property ( @ref_properties ) {
-            my $ref_property_name = $ref_property->$property_getter;
-            next if ($seen_properties{$ref_property_name}++);
-            $value = $primary_rule->value_for($ref_property_name);
+            next if ($seen_properties{$primary_property_name}++);
+            $value = $primary_rule->value_for($primary_property_name);
             next unless $value;
 
-            $pos = $secondary_rule_template->value_position_for_property_name($ref_property->r_property_name);
+            $pos = $secondary_rule_template->value_position_for_property_name($secondary_property_name);
             $secondary_values[$pos] = $value;
         }
     }

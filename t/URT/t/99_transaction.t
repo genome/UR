@@ -49,14 +49,6 @@ diag("this is a slow test because it copies does deep diffs of large data trees 
 sub take_state_snapshot {
     my $state = {};
 
-    # Reference::Property objects are created/defined on demand now
-    # trick them into existance
-    my @refs = UR::Object::Reference->is_loaded();
-$DB::single=1;
-    foreach my $ref ( @refs ) {
-        UR::Object::Reference::Property->get(tha_id => $ref->tha_id);
-    }
-
     my $cx = $UR::Context::current;
 
     my @classes = sort UR::Object->subclasses_loaded;

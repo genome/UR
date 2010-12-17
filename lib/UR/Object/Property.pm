@@ -200,33 +200,47 @@ sub get_property_name_pairs_for_join {
     my ($self) = @_;
     my @linkage = $self->_get_direct_join_linkage();
     unless (@linkage) {
-        die "No linkage for property " . $self->id;
+        Carp::croak("Cannot resolve underlying property joins for property ".$self->id);
     }
-    if ($self->class_name eq $linkage[0]->class_name) {
-        return map { [ $_->property_name => $_->r_property_name ] } @linkage;
+    if ($self->reverse_as) {
+        return map { [ $_->[1] => $_->[0] ] } @linkage;
+    } else {
+        return map { [ $_->[0] => $_->[1] ] } @linkage;
     }
-    else {
-        return map { [ $_->r_property_name => $_->property_name ] } @linkage;
-    }    
 }
 
 sub _get_direct_join_linkage {
     my ($self) = @_;
-    my @obj;
+    my @retval;
     if (my $id_by = $self->id_by) {
-        @obj = 
-            sort { $a->rank <=> $b->rank } 
-            UR::Object::Reference::Property->get(
-                tha_id => $self->class_name . "::" . $self->property_name
-            );        
+        my $r_class_meta = $self->r_class_meta;
+        unless ($r_class_meta) {
+            Carp::croak("Property '" . $self->property_name . "' of class '" . $self->class_name . "' "
+                        . "has data_type '" . $self->data_type ."' with no class metadata");
+        }
+
+        my @my_id_by = @{ $self->id_by };
+        my @their_id_by = @{ $r_class_meta->{'id_by'} };
+        unless (@their_id_by) {
+            @their_id_by = ( 'id' );
+        }
+        unless (@my_id_by == @their_id_by) {
+            Carp::croak("Property '" . $self->property_name . "' of class '" . $self->class_name . "' "
+                        . "has " . scalar(@my_id_by) . " id_by elements, while its data_type ("
+                        . $self->data_tye .") has " . scalar(@their_id_by));
+        }
+
+        for (my $i = 0; $i < @my_id_by; $i++) {
+            push @retval, [ $my_id_by[$i], $their_id_by[$i] ];
+        }
 
     }
     elsif (my $reverse_as = $self->reverse_as) {
         my $r_class_name = $self->data_type;
-        @obj = 
+        @retval = 
             $r_class_name->__meta__->property_meta_for_name($reverse_as)->_get_direct_join_linkage();
     }
-    return @obj;
+    return @retval;
 }
 
 my @old = qw/source_class source_class_meta source_property_names foreign_class foreign_class_meta foreign_property_names/;
@@ -302,10 +316,9 @@ sub _get_joins {
                 if (my $id_by = $self->id_by) { 
                     my(@source_property_names, @foreign_property_names);
                     # This ensures the linking properties will be in the right order
-                    foreach my $ref_property ( $self->id_by_property_links ) {
-                        push @source_property_names, $ref_property->property_name;
-                        push @foreign_property_names, $ref_property->r_property_name;
-                    }
+                    my @pairs = $self->get_property_name_pairs_for_join;
+                    @source_property_names  = map { $_->[0] } @pairs;
+                    @foreign_property_names = map { $_->[1] } @pairs;
                
                     if (ref($id_by) eq 'ARRAY') {
                         # satisfying the id_by requires joins of its own
@@ -397,28 +410,6 @@ our %generic_data_type_for_vendor_data_type =
 sub generic_data_type {
     no warnings;
     return $generic_data_type_for_vendor_data_type{$_[0]->{data_type}};
-}
-
-#sub is_indirect {
-#    my $self = shift;
-#
-#    return ($self->is_delegated || $self->is_calculated || $self->is_legacy_eav);
-#}
-
-
-
-sub id_by_property_links {
-    my $self = shift;
-    my @r = sort { $a->rank <=> $b->rank } UR::Object::Reference::Property->get(tha_id => $self->class_name . "::" . $self->property_name);
-    return @r;
-}
-
-sub r_id_by_property_links {
-    my $self = shift;
-    my $r_id_by = $self->reverse_as;
-    my $r_class_name = $self->data_type;
-    my @r = sort { $a->rank <=> $b->rank } UR::Object::Reference::Property->get(tha_id => $self->class_name . "::" . $self->property_name);
-    return @r;
 }
 
 

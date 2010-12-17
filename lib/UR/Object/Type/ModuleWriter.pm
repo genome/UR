@@ -106,7 +106,7 @@ sub resolve_class_description_perl {
             
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->__meta__->all_property_type_names;
-    my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas reference_metas reference_property_metas meta_class_name/;
+    my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
         my $property_obj = $class_meta_meta->property_meta_for_name($property_name);
@@ -374,12 +374,12 @@ sub _get_display_fields_for_property {
         $seen{'implied_by'} = 1;
     }
 
-    if (my @id_by = $property->id_by_property_links) {
+    if (my @id_by = eval { $property->get_property_name_pairs_for_join }) {
         push @fields, "id_by => " 
             . (@id_by > 1 ? '[ ' : '')
-            . join(", ", map { "'" . $_->property_name . "'" } @id_by)
+            . join(", ", map { "'" . $_->[0] . "'" } @id_by)
             . (@id_by > 1 ? ' ]' : '');
-        $seen{'id_by_property_links'} = 1;
+        $seen{'get_property_name_pairs_for_join'} = 1;
 
         if (defined $property->id_class_by) {
             push @fields, sprintf("id_class_by => '%s'", $property->id_class_by);
