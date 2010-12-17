@@ -252,14 +252,18 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
 
     $personclass = UR::Object::Type->get('URT::Person');
     ok($personclass, 'Person class loaded');
-    is_deeply([sort $personclass->direct_column_names],
-            ['NAME','PERSON_ID','POSTAL_ADDRESS'],
+
+    my %got = map { $_ => 1} $personclass->direct_column_names;
+    is_deeply(\%got,
+            { NAME => 1, PERSON_ID => 1, POSTAL_ADDRESS => 1 },
             'Person object has all the right columns');
-    is_deeply([sort $personclass->class_name->__meta__->all_property_names],
-            ['name','person_id','postal_address'],
+    %got = map { $_ => 1 } $personclass->all_property_names;
+    is_deeply(\%got,
+            { name => 1, person_id => 1, postal_address => 1 },
             'Person object has all the right properties');
-    is_deeply([$personclass->direct_id_column_names],
-            ['PERSON_ID'],
+    %got = map { $_ => 1 } $personclass->direct_id_column_names;
+    is_deeply(\%got,
+            { PERSON_ID => 1 },
             'Person object has all the right id column names');
 
     my $employeeclass = UR::Object::Type->get('URT::Employee');
@@ -275,14 +279,17 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     ok(! $employeeclass->isa('URT::Car'), 'Employee class is correctly not a Car');
     ok($employeeclass->module_source_lines, 'Employee class module has at least one line');
 
-    is_deeply([sort $employeeclass->direct_column_names],
-            ['EMPLOYEE_ID','RANK'],
+    %got = map { $_ => 1 } $employeeclass->direct_column_names;
+    is_deeply(\%got,
+            { EMPLOYEE_ID => 1, RANK => 1 },
             'Employee object has all the right columns');
-    is_deeply([sort $employeeclass->class_name->__meta__->all_property_names],
-            ['employee_id','person_employee','rank'],
+    %got = map { $_ => 1 } $employeeclass->all_property_names;
+    is_deeply(\%got,
+            { employee_id => 1, person_employee => 1, rank => 1 },
             'Employee object has all the right properties');
-    is_deeply([$employeeclass->direct_id_column_names],
-             ['EMPLOYEE_ID'],
+    %got = map { $_ => 1 } $employeeclass->direct_id_column_names;
+    is_deeply(\%got,
+             { EMPLOYEE_ID => 1 },
             'Employee object has all the right id column names');
     ok($employeeclass->table_name eq 'EMPLOYEE', 'URT::Employee object comes from the employee table');
 
@@ -293,15 +300,17 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     isa_ok($carclass,'UR::Object::Type');
     ok(! $carclass->class_name->isa('URT::Person'), 'Car class is correctly not a Person');
 
-    is_deeply([sort $carclass->direct_column_names],
-            ['CAR_ID','COLOR','COST','MAKE','MODEL','OWNER_ID'],
+    %got = map { $_ => 1 } $carclass->direct_column_names;
+    is_deeply(\%got,
+            { CAR_ID => 1, COLOR => 1, COST => 1, MAKE => 1, MODEL => 1, OWNER_ID => 1 },
             'Car object has all the right columns');
-    # Is owner a property through owner_id?
-    is_deeply([sort $carclass->class_name->__meta__->all_property_names],
-            ['car_id','color','cost','make','model','owner_id','person_owner'],
+    %got = map { $_ => 1 } $carclass->all_property_names;
+    is_deeply(\%got, 
+            { car_id => 1, color => 1, cost => 1, make => 1, model => 1, owner_id => 1, person_owner => 1 },
             'Car object has all the right properties');
-    is_deeply([$carclass->direct_id_column_names],
-            ['CAR_ID'],
+    %got = map { $_ => 1 } $carclass->direct_id_column_names;
+    is_deeply(\%got,
+            { CAR_ID => 1 },
             'Car object has all the right id column names');
         ok($carclass->table_name eq 'CAR', 'Car object comes from the car table');
 
