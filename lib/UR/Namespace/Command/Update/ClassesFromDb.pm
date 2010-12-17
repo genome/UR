@@ -287,8 +287,6 @@ $DB::single=1;
     # At this point we allow the namespace to adjust the class tree as it chooses.
     #
 
-    #$DB::single = 1;
-
     $namespace->class;
     if (
         $namespace->can("_update_classes_from_data_sources") 
@@ -963,7 +961,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
     } # next table
 
-    $self->status_message("Updating class properties...\n");
+    $self->status_message("Updating direct class properties...\n");
 
     $self->status_message($_) foreach @saved_removed_column_messages;
 
@@ -1386,7 +1384,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         # Generate a delegation name that dosen't conflict with another already in use
         my %property_names_used = map { $_ => 1 }
                                         $class->all_property_names;
-        while($delegation_names_used{$delegation_name}) {
+        while($property_names_used{$delegation_name}) {
             $delegation_name =~ /^(.*?)(\d*)$/;
             $delegation_name = $1 . ( ($2 ? $2 : 0) + 1 );
         }
@@ -1436,15 +1434,24 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
 
         unless ($class->property_meta_for_name($delegation_name)) {
-            UR::Object::Property->create(class_name => $class_name,
-                                         property_name => $delegation_name, 
-                                         data_type => $r_class_name,
-                                         id_by => \@property_names,
-                                         constraint_name => $fk->fk_constraint_name,
-                                         is_delegated => 1,
-                                         is_specified_in_module_header => 1,
-                                        );
-        }
+            my $property = UR::Object::Property->create(class_name => $class_name,
+                                                        property_name => $delegation_name, 
+                                                        data_type => $r_class_name,
+                                                        id_by => \@property_names,
+                                                        constraint_name => $fk->fk_constraint_name,
+                                                        is_delegated => 1,
+                                                        is_specified_in_module_header => 1,
+                                                       );
+            no warnings;
+            $self->status_message(
+                sprintf("A %-40s property %-16s id by %-16s (%s)\n",
+                                                        $class_name,
+                                                        $delegation_name,
+                                                        join(',',@property_names),
+                                                        $r_class_name
+                                                      )
+            );
+}
 
     } # next fk constraint
 
