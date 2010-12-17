@@ -18,7 +18,7 @@ else {
     plan tests => 90;
 }
 
-use UR::Namespace::Command::Update::Classes;
+use UR::Namespace::Command::Update::ClassesFromDb;
 UR::DBI->no_commit(1);
 
 # This can only be run with the cwd at the top of the URT namespace
@@ -79,10 +79,10 @@ sub cleanup_files {
     }
 }
 
-UR::Namespace::Command::Update::Classes->dump_error_messages(1);
-UR::Namespace::Command::Update::Classes->dump_warning_messages(1);
-UR::Namespace::Command::Update::Classes->dump_status_messages(0);
-UR::Namespace::Command::Update::Classes->status_messages_callback(
+UR::Namespace::Command::Update::ClassesFromDb->dump_error_messages(1);
+UR::Namespace::Command::Update::ClassesFromDb->dump_warning_messages(1);
+UR::Namespace::Command::Update::ClassesFromDb->dump_status_messages(0);
+UR::Namespace::Command::Update::ClassesFromDb->status_messages_callback(
     sub {
         my $self = shift;
         my $msg = shift;
@@ -93,7 +93,7 @@ UR::Namespace::Command::Update::Classes->status_messages_callback(
 
 # We launch a similar command multiple times.
 
-my($delegate_class,$create_params) = UR::Namespace::Command::Update::Classes->resolve_class_and_params_for_argv(qw(--data-source URT::DataSource::SomeSQLite));
+my($delegate_class,$create_params) = UR::Namespace::Command::Update::ClassesFromDb->resolve_class_and_params_for_argv(qw(--data-source URT::DataSource::SomeSQLite));
 ok($delegate_class, "Resolving parameters for update: class is $delegate_class");
 my $command_obj = sub {
     my $command_obj = $delegate_class->create(%$create_params, _override_no_commit_for_filesystem_items => 1);
@@ -117,7 +117,7 @@ ok($dbh, 'Got database handle');
 my $trans;
 sub get_changes {
     my @changes =
-        grep { $_->changed_class_name ne 'UR::Namespace::Command::Update::Classes' }
+        grep { $_->changed_class_name ne 'UR::Namespace::Command::Update::ClassesFromDb' }
         grep { $_->changed_class_name ne "UR::Namespace::CommandParam" }
         grep { $_->changed_class_name ne 'UR::DataSource::Meta' && substr($_->changed_aspect,0,1) ne '_'}
         grep { $_->changed_aspect ne 'query' }
@@ -199,7 +199,6 @@ ok($trans, "CREATED PERSON and began transaction");
         ok($command_obj->execute(),'Executing update after creating person table');
 
         initialize_check_change_data_structures();
-$DB::single=1;
         @changes = get_changes();
         # FIXME The test should probably break out each type of changed thing and check
         # that the counts of each type are correct, and not just the count of all changes
