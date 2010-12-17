@@ -8,13 +8,17 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-plan tests => 36;
+plan tests => 44;
 
 ok( UR::Object::Type->define(
         class_name => 'URT::Related',
-        id_by => [rel_id => { is => 'Integer' }],
+        id_by => ['rel_id_a', 'rel_id_b'],
+        # purposefully make the complete definitions for the ID properties
+        # in a different order.  The real order should be whatever was in id_by
         has => [
+            rel_id_b => { is => 'Integer' },
             related_value => { is => 'String' },
+            rel_id_a => { is => 'Integer' },
         ],
      ), 'Define related class');
 
@@ -24,7 +28,7 @@ ok( UR::Object::Type->define(
         id_by => [ parent_id => { is => 'Integer' } ],
         has => [
             parent_value => { is => 'String' },
-            related_object => { is => 'URT::Related', id_by => 'rel_id' },
+            related_object => { is => 'URT::Related', id_by => ['rel_id_a', 'rel_id_b']},
             related_value => { via => 'related_object', to => 'related_value' },
         ]
    ), 'Define parent class');
@@ -43,15 +47,40 @@ my $parent_meta = URT::Parent->__meta__;
 ok($parent_meta, 'Parent class metadata');
 
 
-my @props = $parent_meta->direct_property_metas();
-is(scalar(@props), 5, 'Parent class has 5 direct properties with direct_property_metas');
-my @names = sort map { $_->property_name } @props;
-my @expected = qw(parent_id parent_value rel_id related_object related_value);
+my @props = $parent_meta->direct_id_property_metas();
+is(scalar(@props), 1, 'Parent class has 1 ID property');
+my @names = map { $_->property_name } @props;
+my @expected = qw(parent_id);
+is_deeply(\@names, \@expected, 'Property names match');
+
+
+my $related_meta = URT::Related->__meta__;
+ok($related_meta, 'Related class metadata');
+@props = $related_meta->direct_id_property_metas();
+is(scalar(@props), 2, 'Related class has 2 ID properties');
+@names = map { $_->property_name } @props;
+@expected = qw(rel_id_a rel_id_b);
+is_deeply(\@names, \@expected, 'Property names match');
+
+my $prop = $related_meta->property_meta_for_name('rel_id_a');
+# is_id actually returns "0 but true" for the first one
+is($prop->is_id + 0, 0, 'id position for Related property rel_id_a is 0');
+$prop = $related_meta->property_meta_for_name('rel_id_b');
+is($prop->is_id, 1, 'id position for Related property rel_id_b is 1');
+$prop = $related_meta->property_meta_for_name('related_value');
+is($prop->is_id, undef, 'id position for Related property rel_id_b is undef');
+
+
+
+@props = $parent_meta->direct_property_metas();
+is(scalar(@props), 6, 'Parent class has 6 direct properties with direct_property_metas');
+@names = sort map { $_->property_name } @props;
+@expected = qw(parent_id parent_value rel_id_a rel_id_b related_object related_value);
 is_deeply(\@names, \@expected, 'Property names check out');
 @names = sort $parent_meta->direct_property_names;
 is_deeply(\@names, \@expected, 'Property names from direct_property_names are correct');
 
-my $prop = $parent_meta->direct_property_meta(property_name => 'related_value');
+$prop = $parent_meta->direct_property_meta(property_name => 'related_value');
 ok($prop, 'singular property accessor works');
 
 
@@ -67,16 +96,16 @@ is_deeply(\@names, \@expected, 'Property names check out');
 is_deeply(\@names, \@expected, 'Property names from direct_property_names are correct');
 
 @props = $child_meta->all_property_metas();
-is(scalar(@props), 8, 'Child class has 8 properties through all_property_metas');
+is(scalar(@props), 9, 'Child class has 9 properties through all_property_metas');
 @names = sort map { $_->property_name } @props;
-@expected = qw(child_id child_value id parent_id parent_value rel_id related_object related_value),
+@expected = qw(child_id child_value id parent_id parent_value rel_id_a rel_id_b related_object related_value),
 is_deeply(\@names,\@expected, 'Property names check out');
 
 # properties() only returns properties with storage, not object accessors or the property named 'id'
 @props = $child_meta->properties();
-is(scalar(@props), 6, 'Child class has 6 properties through properties()');
+is(scalar(@props), 7, 'Child class has 7 properties through properties()');
 @names = sort map { $_->property_name } @props;
-@expected = qw(child_id child_value parent_id parent_value rel_id related_value),
+@expected = qw(child_id child_value parent_id parent_value rel_id_a rel_id_b related_value),
 is_deeply(\@names,\@expected, 'Property names check out');
 
 $prop = $child_meta->direct_property_meta(property_name => 'related_value');
@@ -89,18 +118,18 @@ ok(UR::Object::Property->create( class_name => 'URT::Child', property_name => 'e
    'Created an extra property on Child class');
 
 @props = $child_meta->properties();
-is(scalar(@props), 7, 'Child class now has 7 properties()');
+is(scalar(@props), 8, 'Child class now has 8 properties()');
 @names = map { $_->property_name } @props;
-@expected = qw(child_id child_value extra_property parent_id parent_value rel_id related_value),
+@expected = qw(child_id child_value extra_property parent_id parent_value rel_id_a rel_id_b related_value),
 is_deeply(\@names, \@expected, 'Property names check out');
 
 @props = $child_meta->direct_property_metas();
 is(scalar(@props), 3, 'Child class now has 3 direct_property_metas()');
 
 @props = $child_meta->all_property_metas();
-is(scalar(@props), 9, 'Child class now has 9 properties through all_property_names()');
+is(scalar(@props), 10, 'Child class now has 10 properties through all_property_names()');
 @names = sort map { $_->property_name } @props;
-@expected = qw(child_id child_value extra_property id parent_id parent_value rel_id related_object related_value),
+@expected = qw(child_id child_value extra_property id parent_id parent_value rel_id_a rel_id_b related_object related_value),
 is_deeply(\@names, \@expected, 'Property names check out');
 
 
@@ -109,23 +138,23 @@ ok(UR::Object::Property->create( class_name => 'URT::Parent', property_name => '
    'Created extra property on parent class');
 
 @props = $parent_meta->direct_property_metas();
-is(scalar(@props), 6, 'Parent class now has 6 direct properties with direct_property_metas');
+is(scalar(@props), 7, 'Parent class now has 7 direct properties with direct_property_metas');
 @names = sort map { $_->property_name } @props;
-@expected = qw(parent_extra parent_id parent_value rel_id related_object related_value);
+@expected = qw(parent_extra parent_id parent_value rel_id_a rel_id_b related_object related_value);
 is_deeply(\@names, \@expected, 'Property names check out');
 @names = sort $parent_meta->direct_property_names;
 is_deeply(\@names, \@expected, 'Property names from direct_property_names are correct');
 
 @props = $child_meta->properties();
-is(scalar(@props), 8, 'Child class now has 8 properties()');
+is(scalar(@props), 9, 'Child class now has 9 properties()');
 @names = map { $_->property_name } @props;
-@expected = qw(child_id child_value extra_property parent_extra parent_id parent_value rel_id related_value),
+@expected = qw(child_id child_value extra_property parent_extra parent_id parent_value rel_id_a rel_id_b related_value),
 is_deeply(\@names, \@expected, 'Property names check out');
 
 @props = $child_meta->all_property_metas();
-is(scalar(@props), 10, 'Child class now has 10 properties through all_property_names()');
+is(scalar(@props), 11, 'Child class now has 11 properties through all_property_names()');
 @names = sort map { $_->property_name } @props;
-@expected = qw(child_id child_value extra_property id parent_extra parent_id parent_value rel_id related_object related_value),
+@expected = qw(child_id child_value extra_property id parent_extra parent_id parent_value rel_id_a rel_id_b related_object related_value),
 is_deeply(\@names, \@expected, 'Property names check out');
 
 

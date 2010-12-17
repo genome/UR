@@ -83,7 +83,7 @@ sub execute {
     # Command parameter checking
     #
     
-$DB::single=1;
+#$DB::single=1;
     my $force_check_all_tables = $self->force_check_all_tables;
     my $force_rewrite_all_classes = $self->force_rewrite_all_classes;
     
@@ -261,7 +261,7 @@ $DB::single=1;
     # Update the classes based-on changes to the database schemas
     #
 
-    $DB::single = 1;
+    #$DB::single = 1;
 
     if (@data_dictionary_objects) {
         $self->status_message("Found " . keys(%changed_tables) . " tables with changes.") unless $force_rewrite_all_classes;
@@ -324,7 +324,6 @@ $DB::single=1;
             UR::Object::Type
             UR::Object::Inheritance
             UR::Object::Property
-            UR::Object::Property::ID
             UR::Object::Property::Unique
         /) {
             push @changed_class_meta_objects, grep { $_->__changes__ } $cx->all_objects_loaded($meta_class);
@@ -813,12 +812,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             for my $parent_class_link (@parent_class_links) {
                 $parent_class_link->delete;
             }
-            my @id_property_links = UR::Object::Property::ID->get(class_name => $class->class_name);
-            for my $id_property_link (@id_property_links) {
-                $id_property_link->delete;
-            }
             $class->delete;
-            #$DB::single = 1;
+
             $self->status_message(
                 sprintf("D %-40s class deleted for deleted table %s" . "\n",$class_name,$table_name)
             );
@@ -842,18 +837,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $table_name = uc $table->table_name;
         my $data_source = $table->data_source;
 
-        #my $class = grep { not $_->isa('UR::Object::Ghost') }
-        #                UR::Object::Type->get(
-        #                       namespace => $namespace,
-        #                       #data_source => $data_source,
-        #                       table_name => $table_name,
-        #                 );
-        #my $class =  UR::Object::Type->get(
-        #                       namespace => $namespace,
-        #                       #data_source => $data_source,
-        #                       table_name => $table_name,
-        #                 );
-        #my $class = $data_source->get_class_meta_for_table_name($table_name);
         my $class = $self->_get_class_meta_for_table_name(data_source => $data_source,
                                                           table_name => $table_name);
       
@@ -1112,11 +1095,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         # delete and re-create these objects: they're "bridges", so no developer supplied data is presesent
         my $table_name = $table->table_name;
 
-        #my $class = UR::Object::Type->get(
-        #    data_source => $table->data_source,
-        #    table_name => $table->table_name,
-        #);
-        #my $class = $table->__meta__();
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table_name);
         my $class_name = $class->class_name;
@@ -1128,24 +1106,15 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             #$DB::single = 1;
         }
 
-        my @old_id_properties =
-            UR::Object::Property::ID->get(
-                class_name=> $class_name
-            );
-        
-        #my @expected_pk_cols = map { $class->property_meta_for_name($_->property_name)->column_name } @old_id_properties;
-        my @expected_pk_cols = map { $_->column_name }
-                               grep { defined }
-                               map { $class->property_meta_for_name($_->property_name) }
-                               @old_id_properties;
+        my @expected_pk_cols = grep { defined }
+                               map { $_->column_name }
+                               $class->direct_id_property_metas;
         
         my @pk_cols = $table->primary_key_constraint_column_names;
         
         if ("@expected_pk_cols" eq "@pk_cols") {
             next;
         }
-        
-        for my $property (@old_id_properties) { $property->delete };        
         
         unless (@pk_cols) {
             # If there are no primary keys defined, then treat _all_ the columns
@@ -1163,30 +1132,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 # the column has been removed
                 next;
             }
-            
-            my $property_name = $property->property_name;
-            my $attribute_name = $property->attribute_name;
-            unless ($attribute_name) {
-                $self->error_message(
-                    "Failed to find attribute name for table $table_name column $pk_col!"
-                    . UR::Object::Property::Unique->error_message
-                );
-            }
-
-            my $id_property = UR::Object::Property::ID->create(
-                class_name => $class_name,
-                type_name => $type_name,
-                property_name => $property_name,
-                attribute_name => $attribute_name,
-                position => $pos
-            );
-            unless ($id_property) {
-                $self->error_message(
-                    "Failed to create identity specification for $class_name/$property_name ($pos)!"
-                    . UR::Object::Property::Unique->error_message
-                );
-            }
-            $pk_cols{$property_name} = $pos;
+            $pk_cols{$property->property_name} = $pos;
         }
 
         # all primary key properties are non-nullable, regardless of what the DB allows
@@ -1401,14 +1347,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             my $r_property = $r_properties[$i];
             my $r_attribute_name = $r_property->attribute_name;
             my $r_property_name = $r_property_names[$i];
-
-            my $id_meta = UR::Object::Property::ID->get(
-                class_name => $r_class_name,
-                property_name => $r_property_name,
-            );
-            unless ($id_meta) {
-                Carp::confess("Can't find a UR::Object::Property::ID for class $r_class_name property $r_property_name");
-            }
         }
 
         # Pick a name that isn't already a property in that class

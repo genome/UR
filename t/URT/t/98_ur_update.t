@@ -545,11 +545,6 @@ sub initialize_check_change_data_structures {
             is_id  => '',   # Created as an ID property
         },
     },
-    'UR::Object::Property::ID' => {
-        "person\t1" => { # and the ID property that goes with the primary key constraint
-            create => ''
-        },
-    }
 };
                         
 
@@ -705,19 +700,6 @@ sub initialize_check_change_data_structures {
         },
     },
 
-    # Each class has an ID property
-    'UR::Object::Property::ID' => {
-        "car\t1" => {
-            create => '',
-        },
-        "employee\t1" => {
-            create => '',
-        },
-        "person\t1" => {
-            create => '',
-        },
-    },
-
     # There a record of creating an instance of each class, and 
     # that we wrote a perl module on the filesystem
     'URT::Car::Type' => {
@@ -861,15 +843,6 @@ sub initialize_check_change_data_structures {
             create => '',
         },
         "URT::Person\tpostal_address" => {
-            create => '',
-        },
-    },
-
-    'UR::Object::Property::ID' => {
-        "employee\t1" => {
-            create => '',
-        },
-        "person\t1" => {
             create => '',
         },
     },

@@ -132,7 +132,7 @@ sub resolve_class_description_perl {
     }
 
     my %properties_by_section;
-    my %id_property_names = map { $_->property_name => 1 } $self->direct_id_token_metas;
+    my %id_property_names = map { $_ => 1 } $self->direct_id_property_names;
     my @properties = $self->direct_property_metas;
     foreach my $property_meta ( @properties ) {
         my $mentioned_section = $property_meta->is_specified_in_module_header;

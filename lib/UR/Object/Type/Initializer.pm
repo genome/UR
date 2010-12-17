@@ -83,7 +83,6 @@ our %meta_classes = map { $_ => 1 }
         UR::Object
         UR::Object::Type
         UR::Object::Property
-        UR::Object::Property::ID
         UR::Object::Property::Unique
         UR::Object::Inheritance
     /;
@@ -336,7 +335,6 @@ sub initialize_bootstrap_classes
 
     # It should be safe to set up these callbacks now.
     UR::Object::Property->create_subscription(callback => \&UR::Object::Type::_property_change_callback);
-    UR::Object::Property::ID->create_subscription(callback => \&UR::Object::Type::_id_property_change_callback);
     UR::Object::Property::Unique->create_subscription(callback => \&UR::Object::Type::_unique_property_change_callback);
     UR::Object::Inheritance->create_subscription(callback => \&UR::Object::Type::_inheritance_change_callback);
 }
@@ -1203,14 +1201,14 @@ sub _complete_class_meta_object_definitions {
     my $data_source = $self->{'data_source_id'};
 
     my $id_properties = $self->{id_by};
-    my %id_properties;
+    my %id_property_rank;
     for (my $i = '0 but true'; $i < @$id_properties; $i++) {
-        $id_properties{$id_properties->[$i]} = $i;
+        $id_property_rank{$id_properties->[$i]} = $i;
     }
     
     # mark id/non-id properites
     foreach my $pinfo ( values %$properties ) {
-        $pinfo->{'is_id'} = $id_properties{$pinfo->{'property_name'}};
+        $pinfo->{'is_id'} = $id_property_rank{$pinfo->{'property_name'}};
     }
     
     # handle inheritance
@@ -1396,33 +1394,6 @@ sub _complete_class_meta_object_definitions {
         push @subordinate_objects, $property_object;
     }
 
-    # make some of those property objects identity elements
-    my $position = 0;
-    if ($id_properties) {
-        for my $property_name (ref($id_properties) ? @$id_properties : split(/\s+/,$id_properties))
-        {
-            my $attribute_name = $property_name;
-            $attribute_name =~ s/_/ /g;
-            
-            my $id_indicator_object = UR::Object::Property::ID->__define__(
-                type_name => $type_name,
-                class_name => $class_name,
-                attribute_name => $attribute_name,
-                property_name => $property_name,
-                position => ++$position,
-            );
-            
-            unless ($id_indicator_object) {
-                $self->error_message("Error setting property $property_name as an identity property at position $position for class " . $self->class_name . ": " . $class->error_message);
-                for my $property_object (@subordinate_objects) { $property_object->unload }
-                $self->unload;        $DB::single = 1;
-                return;
-            }
-            
-            push @subordinate_objects, $id_indicator_object;
-        }
-    }
-
     if ($constraints) {
         my $property_rule_template = UR::BoolExpr::Template->resolve('UR::Object::Property','class_name','property_name');
 
@@ -1441,10 +1412,6 @@ sub _complete_class_meta_object_definitions {
                 $n++;
             }
             for my $property_name (sort @$properties) {
-                #my $property = UR::Object::Property->get(
-                #    class_name => $class_name,
-                #    property_name => $property_name,
-                #);
                 my $prop_rule = $property_rule_template->get_rule_for_values($class_name,$property_name);
                 my $property = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $prop_rule);
                 unless ($property) {

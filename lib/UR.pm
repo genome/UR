@@ -132,7 +132,6 @@ require UR::Object::Ghost;
 require UR::Object::Inheritance;
 require UR::Object::Type;
 require UR::Object::Property;
-require UR::Object::Property::ID;
 require UR::Object::Property::Unique;
 
 
@@ -277,10 +276,8 @@ UR::Object::Type->define(
         # There's also a property_meta_by_name() method defined in the class
         direct_property_metas            => { is => 'UR::Object::Property', reverse_as => 'class_meta', is_many => 1 },
         direct_property_names            => { via => 'direct_property_metas', to => 'property_name', is_many => 1 },
-        #direct_id_property_metas         => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [ 'is_id true' => 1 ], is_many => 1 },
-        #direct_id_property_names         => { via => 'direct_property_metas', to => 'property_name', is_many => 1, where => [ 'is_id true' => 1 ] },
-        direct_id_property_metas         => { via => 'direct_id_token_metas', to => 'property_meta', is_many => 1 },
-        direct_id_property_names         => { via => 'direct_id_token_metas', to => 'property_name', is_many => 1 },
+        direct_id_property_metas         => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [ 'is_id true' => 1, -order_by => 'is_id' ], is_many => 1 },
+        direct_id_property_names         => { via => 'direct_id_property_metas', to => 'property_name', is_many => 1 },
 
         ancestry_property_metas          => { via => 'ancestry_class_metas', to => 'direct_property_metas', is_many => 1 },
         ancestry_property_names          => { via => 'ancestry_class_metas', to => 'direct_property_names', is_many => 1 },
@@ -289,20 +286,13 @@ UR::Object::Type->define(
 
         all_property_metas               => { via => 'all_class_metas', to => 'direct_property_metas', is_many => 1 },
         all_property_names               => { via => 'all_property_metas', to => 'property_name', is_many => 1 },
-        #all_id_property_metas            => { via => 'ancestry_property_metas', to => 'all_property_metas', where => ['is_id true' => 1] },
-        all_id_property_metas            => { via => 'all_id_token_metas', to => 'property_meta', is_many => 1 },
-        all_id_property_names            => { via => 'all_id_token_metas', to => 'property_name', is_many => 1 },
+        all_id_property_metas            => { via => 'all_class_metas', to => 'direct_id_property_metas', is_many => 1 },
+        all_id_property_names            => { via => 'all_id_property_metas', to => 'property_name', is_many => 1 },
+
         direct_id_by_property_metas      => { via => 'direct_property_metas', to => '__self__', where => ['id_by true' => 1], is_many => 1, doc => "Properties with 'id_by' metadata, ie. direct object accessor properties" } ,
         all_id_by_property_metas         => { via => 'all_class_metas', to => 'direct_id_by_property_metas', is_many => 1},
         direct_reverse_as_property_metas => { via => 'direct_property_metas', to => '__self__', where => ['reverse_as true' => 1], is_many => 1, doc => "Properties with 'reverse_as' metadata, ie. indirect object accessor properties" },
         all_reverse_as_property_metas    => { via => 'all_class_metas', to => 'direct_reverse_as_property_metas', is_many => 1},
-
-        # these should go away when the is_id meta-property is working, since they don't seem that useful
-        direct_id_token_metas            => { is => 'UR::Object::Property::ID', reverse_as => 'class_meta', is_many => 1 },
-        direct_id_token_names            => { via => 'direct_id_token_metas', to => 'property_name', is_many => 1 },
-        ancestry_id_token_metas          => { via => 'ancestry_class_metas', to => 'direct_id_token_metas', is_many => 1 },
-        ancestry_id_token_names          => { via => 'ancestry_id_token_metas', to => 'property_name', is_many => 1 },
-        all_id_token_metas               => { via => 'all_class_metas', to => 'direct_id_token_metas', is_many => 1 },
 
         # Unique contstraint trackers
         direct_unique_metas              => { is => 'UR::Object::Property::Unique', reverse_as => 'class_meta', is_many => 1 },
@@ -315,7 +305,7 @@ UR::Object::Type->define(
 
         # Datasource related stuff
         direct_column_names              => { via => 'direct_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true' }] },
-        direct_id_column_names           => { via => 'get_direct_id_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true'}] },
+        direct_id_column_names           => { via => 'direct_id_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true'}] },
         ancestry_column_names            => { via => 'ancestry_class_metas', to => 'direct_column_names', is_many => 1 },
         ancestry_id_column_names         => { via => 'ancestry_class_metas', to => 'direct_id_column_names', is_many => 1 },
         # Are these *columnless* properties actually necessary?  The user could just use direct_property_metas(column_name => undef)
@@ -388,7 +378,6 @@ UR::Object::Type->define(
         is_dimension                    => { is => 'Boolean', is_optional => 1},
         is_specified_in_module_header   => { is => 'Boolean', default_value => 0 },
         position_in_module_header       => { is => 'Integer', is_optional => 1, doc => "Line in the class definition source's section this property appears" },
-        #rank                            => { is => 'Integer', is_optional => 1, doc => 'Order in which the properties are discovered while parsing the class definition' },
         singular_name                   => { is => 'Text' },
         plural_name                     => { is => 'Text' },
 
@@ -417,21 +406,6 @@ UR::Object::Type->define(
     ],
 );
 
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Property::ID',
-    id_properties => [qw/type_name position/],
-    properties => [
-        position                         => { is => 'NUMBER', len => 2, source => 'data dictionary' },
-        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
-        attribute_name                   => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        property_name                    => { is => 'Text', len => 256, source => 'data dictionary' },
-
-        class_meta                       => { is => 'UR::Object::Type', id_by => 'class_name' },
-        property_meta                    => { is => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
-    ],
-);
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Property::Calculated::From',

@@ -83,29 +83,17 @@ sub property_meta_for_name {
     return;
 }
 
-# FIXME This does pretty much exactly the same work as the property's code generated
-# by the class initializer, except that it sorts the items before returning
-# them.  Without this sorting, relation properties stop working correctly...
-# When properties can specify their sort order, try removing this override
-sub direct_id_token_metas
-{
-    my $self = _object(shift);
-    my @id_objects =
-        sort { $a->position <=> $b->position }
-        UR::Object::Property::ID->get( class_name => $self->class_name );
-   return @id_objects;
-}
-
-# FIXME Same sorting issues apply here, too
 sub direct_id_property_metas
 {
     my $self = _object(shift);
-    my $template = UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'attribute_name');
+    my $template = UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name', 'is_id true');
+    my $class_name = $self->class_name;
     my @id_property_objects =
-        #map { UR::Object::Property->get(class_name => $_->class_name, attribute_name => $_->attribute_name) }
         map { $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $_) }
-        map { $template->get_rule_for_values($_->class_name, $_->attribute_name) }
-        $self->direct_id_token_metas;
+        map { $template->get_rule_for_values($class_name, $_, 1) }
+        @{$self->{'id_by'}};
+
+    @id_property_objects = sort { $a->is_id <=> $b->is_id } @id_property_objects;
     if (@id_property_objects == 0) {
         @id_property_objects = $self->property_meta_for_name("id");
     }
@@ -1273,8 +1261,10 @@ sub _property_change_callback {
             }
             $class_obj->{'has'}->{$property_name} = \%new_property;
         }
+        &_id_property_change_callback($property_obj, 'create');
 
     } elsif ($method eq 'delete') {
+        &_id_property_change_callback($property_obj, 'delete');
         delete $class_obj->{'has'}->{$property_name};
 
     } elsif (exists $class_obj->{'has'}->{$property_name}->{$method}) {
@@ -1317,13 +1307,8 @@ sub _id_property_change_callback {
     my $class = UR::Object::Type->get(class_name => $property_obj->class_name);
     
     if ($method eq 'create') {
-        # Position is 1-based, and the list embedded in the class object is 0-based
-        my $pos = $property_obj->position;
-        if ($pos > 0) {
-            $pos--;
-        } else {
-            $pos = 0;
-        }
+        my $pos = $property_obj->id_by;
+        $pos += 0;  # make sure it's a number
         if ($pos <= @{$class->{'id_by'}}) {
             splice(@{$class->{'id_by'}}, $pos, 0, $property_obj->property_name);
         } else {
