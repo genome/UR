@@ -367,7 +367,8 @@ ok($trans, "DROPPED EMPLOYEE AND UPDATED PERSON began transaction");
 
     ok($command_obj->execute(), 'Updating schema');
     @changes = get_changes();
-    is(scalar(@changes), 16, "found changes for two more dropped tables");
+print "Changes:\n",Data::Dumper::Dumper(\@changes),"\n";
+    is(scalar(@changes), 15, "found changes for two more dropped tables");
 
 
 $trans = UR::Context::Transaction->begin();
