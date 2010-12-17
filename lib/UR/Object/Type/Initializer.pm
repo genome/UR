@@ -1639,15 +1639,6 @@ sub generate {
         }    
     }
 
-    #my @references = UR::Object::Reference->get(
-    #    class_name => $class_name
-    #);
-    #for my $reference (@references) {
-    #    unless ($reference->generate) {
-    #        Carp::confess("Failed to generate reference!");
-    #    }
-    #}
-
     # set the flag to prevent this from occurring multiple times.
     $self->generated(1);
 

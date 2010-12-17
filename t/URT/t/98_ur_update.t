@@ -718,26 +718,6 @@ sub initialize_check_change_data_structures {
         },
     },
 
-    # each foreign key has a related reference 
-    'UR::Object::Reference' => {
-        'URT::Car::person_owner' => {
-            create => '',
-        },
-        'URT::Employee::person_employee' => {
-            create => '',
-        },
-    },
-
-    # and each FK column has a related reference property
-    'UR::Object::Reference::Property' => {
-        "URT::Employee::person_employee\t1" => {
-            create => '',
-        },
-        "URT::Car::person_owner\t1" => {
-            create => '',
-        },
-    },
-
     # There a record of creating an instance of each class, and 
     # that we wrote a perl module on the filesystem
     'URT::Car::Type' => {
@@ -890,18 +870,6 @@ sub initialize_check_change_data_structures {
             create => '',
         },
         "person\t1" => {
-            create => '',
-        },
-    },
-
-    'UR::Object::Reference' => {
-        "URT::Employee::person_employee" => {
-            create => '',
-        },
-    },
-
-    'UR::Object::Reference::Property' => {
-        "URT::Employee::person_employee\t1" => {
             create => '',
         },
     },

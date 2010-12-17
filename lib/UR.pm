@@ -134,8 +134,6 @@ require UR::Object::Type;
 require UR::Object::Property;
 require UR::Object::Property::ID;
 require UR::Object::Property::Unique;
-require UR::Object::Reference;
-require UR::Object::Reference::Property;
 
 
 require UR::BoolExpr::Util;
@@ -403,53 +401,6 @@ UR::Object::Type->define(
     ],
 );
 
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Reference::Property',
-    id_properties => [qw/tha_id rank/],
-    properties => [
-        rank                            => { is => 'NUMBER', len => 2, source => 'data dictionary' },
-        tha_id                          => { is => 'Text', len => 128, source => 'data dictionary' },
-        attribute_name                  => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        r_attribute_name                => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        property_name                   => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        r_property_name                 => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-         
-        reference_meta                  => { is => 'UR::Object::Reference', id_by => 'tha_id' },
-
-        class_meta                      => { is => 'UR::Object::Type', via => 'reference_meta', to => 'class_meta' },
-        class_name                      => { via => 'class_meta', to => 'class_name' },
-	property_meta                   => { is => 'UR::Object::Property', id_by => [ 'class_name', 'property_name' ] },
-
-        r_class_meta                    => { is => 'UR::Object::Type', via => 'reference_meta', to => 'r_class_meta' },
-        r_class_name                    => { via => 'r_class_meta', to => 'class_name' },
-        r_property_meta                 => { is => 'UR::Object::Property', id_by => [ 'r_class_name', 'r_property_name'] },
-    ],
-);
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Reference',
-    id_properties => ['tha_id'],
-    properties => [
-        tha_id                          => { is => 'Text', len => 128, source => 'data dictionary' },
-        class_name                      => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        type_name                       => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        delegation_name                 => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        r_class_name                    => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        r_type_name                     => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        #r_delegation_name               => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        constraint_name                 => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        source                          => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        description                     => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        accessor_name_for_id            => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        accessor_name_for_object        => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-
-        reference_property_metas        => { is => 'UR::Object::Reference::Property', reverse_as => 'reference_meta', is_many => 1 },
-        class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
-        r_class_meta                    => { is => 'UR::Object::Type', id_by => 'r_class_name' },
-        property_meta                   => { is => 'UR::Object::Property', id_by => ['class_name', 'delegation_name'] },
-    ],
-);
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Property::Unique',
