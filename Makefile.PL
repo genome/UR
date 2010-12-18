@@ -29,22 +29,18 @@ features (
         'Path::Class'         => '',
         'XML::Dumper'         => '',
         'XML::Generator'      => '',
-        'XML::LibXML'         => '',
         'Net::HTTPServer'     => '',
         'CGI::Application'    => '',
         'XML::Simple'         => '',
         'Class::Inspector'    => '',
     ],
-    'Moose' => [
-        #-tests  => [ [ 't/URT/t/00-load.t' ], <t/URT/t/*-moose-*.t> ],
-        'Moose' => '0.31',
-    ],
-    GetoptComplete => [
+    'Getopt::Complete' => [
         'Getopt::Complete'    => '0.17',
     ],
     'XSLT' => [
+        'XML::LibXML'         => '',
         'XML::LibXSLT'        => '',
-    ]
+    ],
 );
 
 # things the tests need
