@@ -17,8 +17,5 @@ END { unlink $FILE }
 
 sub server { $FILE }
 
-sub login { "gscguest" }
-
-sub auth { "guest_dev" }
-
 1;
+
