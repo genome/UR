@@ -6,55 +6,12 @@ package UR;
 
 use strict;
 use warnings FATAL => 'all';
-
-# Set the version at compile time, since some other modules borrow it.
-use version;
-our $VERSION;
-BEGIN { 
-    # the first CPAN deploy using "version" is failing to install.
-    # this is an attempt to get around it...
-
-    # for the cpan shell, and other parsers
-    $VERSION = 'v0.18';
-
-    # for actual inspection
-    ${VERSION} 
-        = qv('0.18'); 
-};
+our $VERSION = '0.19';
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
 use Carp;
 $SIG{__DIE__} = \&Carp::confess;
-
-# This speeds up using the module tree by pre-calculaing meta-queries.
-# NOTE: it is currently not used because of deployment issues.
-use Storable qw(store_fd fd_retrieve);
-BEGIN {
-    if ( $INC{'UR.pm'} ) {
-        my $ur_dir = substr($INC{'UR.pm'}, 0, length($INC{'UR.pm'})-5);
-        #print "STDERR ur_dir is $ur_dir\n";
-        my $dump;
-        foreach my $dir ( '.', $ur_dir ) {
-            if (-f "$dir/ur_core.$VERSION.stor" and -s _) {
-                #print STDERR "Loading rules dump from $dir/ur_core.stor\n";
-                open($dump, "$dir/ur_core.$VERSION.stor");
-                last;
-            } elsif (-f "$dir/ur_core.stor.gz" and -s _) {
-                #print STDERR "Loading gzipped rules dump from $dir/ur_core.stor.gz\n";
-                open($dump, "gzip -dc $dir/ur_core.stor.gz |");
-                last;
-            }
-        }
-        if ($dump) {
-            $UR::DID_LOAD_FROM_DUMP = 1;
-
-            local $/;
-            my $data = fd_retrieve($dump);
-            ($UR::Object::rule_templates, $UR::Object::rules) = @$data;
-        }
-    }
-}
 
 # Ensure that, if the application changes directory, we do not 
 # change where we load modules while running.
