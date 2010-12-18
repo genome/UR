@@ -49,7 +49,6 @@ features (
 
 # things the tests need
 build_requires 'Test::More' => '0.62';
-build_requires 'Test::Fork' => '0.02';
 #build_requires 'Test::Deep' => '0.096';
 #build_requires 'Test::Differences' => '0.47';
 #build_requires 'Test::Exception' => '0.21';
