@@ -38,7 +38,7 @@ UR::Object::Type->define(
 sub driver { "SQLite" }
 
 sub owner { 
-    undef
+    $DBD::SQLite::VERSION <= 1.26 ? undef : 'main' 
 }
 
 sub login {

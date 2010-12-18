@@ -34,7 +34,5 @@ sub server {
     return $FILE;
 }
 
-
-sub owner { undef }
-
 1;
+
