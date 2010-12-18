@@ -12,23 +12,23 @@ perl_version '5.008';
 # prereqs (ordered)
 features (
     -core => [
-        'version'             => '0.74',
         'Carp'                => '',
         'Sys::Hostname'       => '1.11',
         'File::Basename'      => '2.73',
         'Lingua::EN::Inflect' => '1.88',
-        'FreezeThaw'          => '0.43',
         'Date::Format'        => '',
-        'YAML'                => '',
         'Data::Compare'       => '0.13',
         'Text::Diff'          => '0.35',
+        'Path::Class'         => '',
+        'XML::Dumper'         => '',
+        'XML::Generator'      => '',
+        
+        'FreezeThaw'          => '0.43',
+        'YAML'                => '',
         'DBI'                 => '1.601',
         'DBD::SQLite'         => '1.14',
         'Sub::Name'           => '0.04',
         'Sub::Install'        => '0.924',
-        'Path::Class'         => '',
-        'XML::Dumper'         => '',
-        'XML::Generator'      => '',
     ],
     'Getopt::Complete' => [
         'Getopt::Complete'    => '0.17',
