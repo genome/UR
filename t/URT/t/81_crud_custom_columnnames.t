@@ -66,7 +66,7 @@ my $expected = {
 };
 is_deeply(\%products_by_id, $expected, 'Data in DB is as expected');
 
-print Data::Dumper::Dumper(\%products_by_id);
+#note(Data::Dumper::Dumper(\%products_by_id));
 
 
 
