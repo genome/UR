@@ -2,7 +2,6 @@ package UR::Context;
 
 use strict;
 use warnings;
-use Date::Parse;
 use Sub::Name;
 
 require UR;

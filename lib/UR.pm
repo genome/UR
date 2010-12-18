@@ -727,8 +727,7 @@ See L<UR::Env> for details.
 Class::Autouse
 Cwd
 Data::Dumper
-Date::Calc
-Date::Parse
+Date::Format
 DBI
 File::Basename
 FindBin
