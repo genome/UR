@@ -40,7 +40,7 @@ features (
     ],
     'Getopt::Complete' => [
         # we may migrate some of the Command logic here and really depend on it
-        'Getopt::Complete'    => 'v0.17',
+        'Getopt::Complete'    => '0.18',
     ],
     'XSLT' => [
         # this stuff is hard to install and is only used by some views
