@@ -1,15 +1,10 @@
 Revision history for UR
 
-0.19    2010-12-18
-        New simplified "ur" command tree.
-        Compiles faster.
-        Handls SQLite > 1.26_04: fix for OS X
-
 0.18	2010-12-10
-        Bugfix for queries involving subclasses without tables
-        Preliminary support for building debian packages
-        Bugfixes for queries with the 'in' and 'not in' operators
-        Object cache indexing sped up by replacing regexes with direct string comparisons
+	Bugfix for queries involving subclasses without tables
+	Preliminary support for building debian packages
+	Bugfixes for queries with the 'in' and 'not in' operators
+	Object cache indexing sped up by replacing regexes with direct string comparisons
 
 0.17    2010-11-10
         Fixed bug with default datasources dumping debug info during queries.
