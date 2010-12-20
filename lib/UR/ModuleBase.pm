@@ -194,7 +194,7 @@ sub inheritance {
 
     my @ordered_inheritance;
     foreach my $parent_class (@parent_classes) {
-    push @ordered_inheritance, $parent_class, ($parent_class eq 'UR' ? () : inheritance($parent_class) );
+        push @ordered_inheritance, $parent_class, ($parent_class eq 'UR' ? () : inheritance($parent_class) );
     }
 
     return @ordered_inheritance;
