@@ -294,15 +294,6 @@ UR::Object::Type->define(
         direct_reverse_as_property_metas => { via => 'direct_property_metas', to => '__self__', where => ['reverse_as true' => 1], is_many => 1, doc => "Properties with 'reverse_as' metadata, ie. indirect object accessor properties" },
         all_reverse_as_property_metas    => { via => 'all_class_metas', to => 'direct_reverse_as_property_metas', is_many => 1},
 
-        # Unique contstraint trackers
-        direct_unique_metas              => { is => 'UR::Object::Property::Unique', reverse_as => 'class_meta', is_many => 1 },
-        direct_unique_property_metas     => { via => 'direct_unique_metas', to => 'property_meta', is_many => 1 },
-        direct_unique_property_names     => { via => 'direct_unique_metas', to => 'property_name', is_many => 1 },
-        ancestry_unique_property_metas   => { via => 'ancestry_class_metas', to => 'direct_unique_property_metas', is_many => 1 },
-        ancestry_unique_property_names   => { via => 'ancestry_class_metas', to => 'direct_unique_property_names', is_many => 1 },
-        all_unique_property_metas        => { via => 'all_class_metas', to => 'direct_unique_property_metas', is_many => 1 },
-        all_unique_property_names        => { via => 'all_class_metas', to => 'direct_unique_property_names', is_many => 1 },
-
         # Datasource related stuff
         direct_column_names              => { via => 'direct_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true' }] },
         direct_id_column_names           => { via => 'direct_id_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true'}] },
@@ -383,7 +374,6 @@ UR::Object::Type->define(
 
         class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
         r_class_meta                    => { is => 'UR::Object::Type', id_by => 'data_type' },
-        unique_metas                    => { is => 'UR::Object::Property::Unique', reverse_as => 'property_meta', is_many => 1 },
     ],
     unique_constraints => [
         { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },

@@ -83,7 +83,6 @@ our %meta_classes = map { $_ => 1 }
         UR::Object
         UR::Object::Type
         UR::Object::Property
-        UR::Object::Property::Unique
         UR::Object::Inheritance
     /;
 
@@ -335,7 +334,6 @@ sub initialize_bootstrap_classes
 
     # It should be safe to set up these callbacks now.
     UR::Object::Property->create_subscription(callback => \&UR::Object::Type::_property_change_callback);
-    UR::Object::Property::Unique->create_subscription(callback => \&UR::Object::Type::_unique_property_change_callback);
     UR::Object::Inheritance->create_subscription(callback => \&UR::Object::Type::_inheritance_change_callback);
 }
 
@@ -1415,20 +1413,8 @@ sub _complete_class_meta_object_definitions {
                 my $prop_rule = $property_rule_template->get_rule_for_values($class_name,$property_name);
                 my $property = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $prop_rule);
                 unless ($property) {
-                    die "Failed to find property $property_name on class $class_name!";
+                    Carp::croak("Constraint '$name' on class $class_name requires unknown property '$property_name'");
                 }
-                my $attribute_name = $property->attribute_name;
-                my $u = UR::Object::Property::Unique->__define__(
-                    type_name => $type_name,
-                    class_name => $class_name,
-                    unique_group => $name,
-                    property_name => $property_name,
-                    attribute_name => $attribute_name
-                );
-                unless ($u) {
-                    Carp::confess("Failed to define unique constriant field");
-                }
-                push @subordinate_objects, $u;
             }
         }
     }

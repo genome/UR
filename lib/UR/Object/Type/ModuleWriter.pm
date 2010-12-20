@@ -201,24 +201,15 @@ sub resolve_class_description_perl {
         $perl .= "    $section => [\n$section_src    ],\n";
     }
 
-    if (my @unique_constraint_props = sort { $a->unique_group cmp $b->unique_group }
-                                      UR::Object::Property::Unique->get(class_name => $self->class_name)) {
-        my %unique_groups;
-        for my $uc_prop (@unique_constraint_props) {
-            $unique_groups{$uc_prop->unique_group} ||= [];
-            push @{ $unique_groups{$uc_prop->unique_group} }, $uc_prop;
-        }
+    my $unique_groups = $self->unique_property_set_hashref;
+    if ($unique_groups and keys %$unique_groups) {
 
         $perl .= "    unique_constraints => [\n";
-        for my $unique_group (values %unique_groups) {
-            my @property_objects = map { 
-                    UR::Object::Property->get(class_name => $self->class_name, property_name => $_->property_name); 
-                } @$unique_group;
-            #my @property_names = sort map { $_->property_name } @property_objects;
-            my @property_names = sort map { $_->property_name } @$unique_group; 
+        for my $unique_group_name (keys %$unique_groups) {
+            my $property_names = join(' ', sort { $_ } @{ $unique_groups->{$unique_group_name}});
             $perl .= "        { "
-                . "properties => [qw/@property_names/], "
-                . "sql => '" . $unique_group->[0]->unique_group . "'"
+                . "properties => [qw/$property_names/], "
+                . "sql => '" . $unique_group_name . "'"
                 . " },\n";
         }
         $perl .= "    ],\n";

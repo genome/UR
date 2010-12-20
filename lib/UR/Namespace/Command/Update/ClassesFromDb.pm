@@ -324,7 +324,6 @@ sub execute {
             UR::Object::Type
             UR::Object::Inheritance
             UR::Object::Property
-            UR::Object::Property::Unique
         /) {
             push @changed_class_meta_objects, grep { $_->__changes__ } $cx->all_objects_loaded($meta_class);
 
@@ -1189,19 +1188,13 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         my @properties = UR::Object::Property->get(class_name => $class_name);
 
-        my @prev_unique_constraints =
-            UR::Object::Property::Unique->get(
-                class_name => $class_name
-            );
-
-        for my $constraint (@prev_unique_constraints) {
-            $constraint->delete;
-        }
-
         my @uc_names = $table->unique_constraint_names;
         for my $uc_name (@uc_names)
         {
+            $class->remove_unique_constraint($uc_name);
+
             my @uc_cols = map { ref($_) ? @$_ : $_ } $table->unique_constraint_column_names($uc_name);
+            my @uc_property_names;
             for my $uc_col (@uc_cols)
             {
                 my ($property) = grep { defined($_->column_name) and ($_->column_name eq $uc_col) } @properties;
@@ -1210,23 +1203,9 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                     $DB::single=1;
                     next;
                 }
-
-                my $property_name = $property->property_name;
-                my $attribute_name = $property->attribute_name;
-                my $uc = UR::Object::Property::Unique->create(
-                    class_name => $class_name,
-                    type_name => $type_name,
-                    property_name => $property_name,
-                    attribute_name => $attribute_name,
-                    unique_group => $uc_name
-                );
-                unless ($uc) {
-                    Carp::confess(
-                        "Error creating unique constraint $uc_name for class $class_name: "
-                        . UR::Object::Property::Unique->error_message
-                    );
-                }
+                push @uc_property_names, $property->property_name;
             }
+            $class->add_unique_constraint($uc_name, @uc_property_names);
         }
     } # next table (checking separately for unique constraints)
 
