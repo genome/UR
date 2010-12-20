@@ -1166,10 +1166,59 @@ sub property_for_column
 # This is primarily used by the class re-writer (ur update classes-from-db), but
 # BoolExprs use them,too
 
+# Adds a constraint by name and property list to the class metadata.  The class initializer
+# fills this data in via the 'constraints' key, so it shouldn't call add_unique_constraint()
+# directly
+sub add_unique_constraint {
+    my $self = shift;
+
+    unless (@_) {
+        Carp::croak('method add_unique_constraint requires a constraint name as a parameter');
+    }
+    my $constraint_name = shift;
+
+    my $constraints = $self->unique_property_set_hashref();
+    if (exists $constraints->{$constraint_name}) {
+        Carp::croak("A constraint named '$constraint_name' already exists for class ".$self->class_name);
+    }
+
+    unless (@_) {
+        Carp::croak('method add_unique_constraint requires one or more property names as parameters');
+    }
+    my @property_names = @_;
+
+    # Add a new constraint record
+    push @{ $self->{'constraints'} } , { sql => $constraint_name, properties => \@property_names };
+    # invalidate the other cached data
+    $self->_invalidate_cached_data_for_subclasses('_unique_property_sets', '_unique_property_set_hashref');
+}
+
+sub remove_unique_constraint {
+    my $self = shift;
+
+    unless (@_) {
+        Carp::croak("method remove_unique_constraint requires a constraint name as a parameter");
+    }
+
+    my $constraint_name = shift;
+    my $constraints = $self->unique_property_set_hashref();
+    unless (exists $constraints->{$constraint_name}) {
+        Carp::croak("There is no constraint named '$constraint_name' for class ".$self->class_name);
+    }
+
+    # Remove the constraint record
+    for (my $i = 0; $i < @{$self->{'constraints'}}; $i++) {
+        if ($self->{'constraints'}->[$i]->{'sql'} = $constraint_name) {
+            splice(@{$self->{'constraints'}}, $i, 1);
+        }
+    }
+    $self->_invalidate_cached_data_for_subclasses('_unique_property_sets', '_unique_property_set_hashref');
+}
+
+
 # This returns a list of lists.  Each inner list is the properties/columns
 # involved in the constraint
-sub unique_property_sets
-{
+sub unique_property_sets {
     my $self = shift; 
     if ($self->{_unique_property_sets}) {
         return @{ $self->{_unique_property_sets} };
@@ -1186,28 +1235,6 @@ sub unique_property_sets
         }
     }
     return @$unique_property_sets;
-
-    my %all;
-    #for my $unique_object ( $self->get_unique_objects )  # old API
-    for my $unique_object ( $self->unique_metas )         # new API
-    {
-        my $property_object = UR::Object::Property->get(class_name => $unique_object->class_name, attribute_name => $unique_object->attribute_name);
-        my $unique_group = $unique_object->unique_group;
-        $all{$unique_group} ||= [];
-        push @{ $all{$unique_group} }, $property_object->property_name;
-    }
-
-    for my $group (keys %all)
-    {
-        my $property_list = $all{$group};
-
-        if (@$property_list == 1)
-        {
-            $all{$group} = $property_list->[0]
-        }
-    }
-
-    return values(%all);
 }
 
 # Return the constraint information as a hashref
@@ -1252,6 +1279,9 @@ sub _property_change_callback {
     my $class_obj = UR::Object::Type->get(class_name => $property_obj->class_name);
     my $property_name = $property_obj->property_name;
 
+    $old_val = '' unless(defined $old_val);
+    $new_val = '' unless(defined $new_val);
+
     if ($method eq 'create') {
         unless ($class_obj->{'has'}->{$property_name}) {
             my @attr = qw( class_name attribute_name data_length data_type is_delegated is_optional property_name type_name );
@@ -1272,7 +1302,7 @@ sub _property_change_callback {
         }
         delete $class_obj->{'has'}->{$property_name};
 
-    } elsif ($method eq 'is_id' and $new_val != $old_val) {
+    } elsif ($method eq 'is_id' and $new_val ne $old_val) {
         my $change = $new_val ? 'create' : 'delete';
         &_id_property_change_callback($property_obj, $change);
     } #elsif ($method ne 'is_optional') {
@@ -1287,17 +1317,27 @@ sub _property_change_callback {
     } 
 
     # Invalidate the cache used by all_property_names()
-    $class_obj->{'_all_property_names'} = undef;
-    #my @subclasses = $class_obj->subclasses_loaded($class_obj->class_name);
-    my @subclasses = @{$UR::Object::_init_subclasses_loaded{$class_obj->class_name}};
+    $class_obj->_invalidate_cached_data_for_subclasses('_all_property_names');
+}
+
+# Some expensive-to-calculate data gets stored in the class meta hashref
+# and needs to be removed for all the existing subclasses
+sub _invalidate_cached_data_for_subclasses {
+    my($class_meta, @cache_keys) = @_;
+
+    delete @$class_meta{@cache_keys};
+
+    #my @subclasses = $class_meta->subclasses_loaded($class_obj->class_name);
+    my @subclasses = @{$UR::Object::_init_subclasses_loaded{$class_meta->class_name}};
     my %seen;
     while (my $subclass = shift @subclasses) {
         my $sub_meta = UR::Object::Type->get(class_name => $subclass);
-        $sub_meta->{'_all_property_names'} = undef;
-        push @subclasses, $sub_meta->subclasses_loaded($subclass);
+        delete @$sub_meta{@cache_keys};
+        #push @subclasses, $sub_meta->subclasses_loaded($subclass);
+        push @subclasses, @{$UR::Object::_init_subclasses_loaded{$sub_meta->class_name}};
     }
-    
 }
+
 
 # A streamlined version of the method just below that dosen't check that the
 # data in both places is the same before a delete operation.  What was happening
@@ -1345,55 +1385,6 @@ sub _id_property_change_callback {
     $class->{'_all_id_property_names'} = undef;  #  Invalidate the cache used by all_id_property_names
 }
 
-
-sub _unique_property_change_callback {
-    my $unique_obj = shift;
-    my $method = shift;
-
-    return if ($method eq 'load' || $method eq 'unload' || $method eq '_create_object' || $method eq '_delete_object');
-
-    my $class = UR::Object::Type->get(class_name => $unique_obj->class_name);
-    my $property_name = $unique_obj->property_name;
-
-    # The fact that this callback is running means we need to invalidate our caches about
-    # unique property data
-    delete $class->{'_unique_property_sets'};
-    delete $class->{'_unique_property_set_hashref'};
-
-    if ($method eq 'create') {
-        my $unique_properties = $class->unique_property_set_hashref();
-        my $unique_group = $unique_obj->unique_group;
-        unless ( exists $unique_properties->{$unique_group} and grep { $_ eq $property_name } @{$unique_properties->{$unique_group}} ) {
-            # Should this constraint be part of an already existing group?
-            foreach my $constraint ( @{$class->{'constraints'}} ) {
-                if ($constraint->{'sql'} eq $unique_group) {
-                    push(@{$constraint->{'properties'}}, $property_name);
-                    return;
-                }
-            }
-            # Didn't find an already existing constraint group, make a new one
-            push(@{$class->{'constraints'}}, { sql => $unique_group, properties => [ $property_name ] });
-        }
-    } elsif ($method eq 'delete') {
-        my $unique_group = $unique_obj->unique_group;
-        for (my $constraint_idx = 0; $constraint_idx < @{$class->{'constraints'}}; $constraint_idx++) {
-            next unless ($class->{'constraints'}->[$constraint_idx]->{'sql'} eq $unique_group);
-            for (my $property_idx = 0; $property_idx < @{$class->{'constraints'}->[$constraint_idx]->{'properties'}}; $property_idx++) {
-                if ($class->{'constraints'}->[$constraint_idx]->{'properties'}->[$property_idx] eq $property_name) {
-                    splice(@{$class->{'constraints'}->[$constraint_idx]->{'properties'}}, $property_idx, 1);
-                    if (scalar(@{$class->{'constraints'}->[$constraint_idx]->{'properties'}} == 0)) {
-                        # No properties left in this group.  Get rid of the whole thing.
-                        splice(@{$class->{'constraints'}}, $constraint_idx,1);
-                    }
-                    last;
-                }
-            } # end for property_idx
-        } # end for constraint_idx
-    } else {
-        1;
-    }
- 
-}
 
 # Args here are:  
 # 1) an UR::Object::Inheritance object with class_name, id, parent_class_name, type_name, parent_type_name
@@ -1562,7 +1553,6 @@ sub ungenerate {
 #
 #    # Infrastructurey, hang-off data.  Things we can get via their class_name
 #    foreach my $meta_type ( qw( UR::Object::Inheritance UR::Object::Property
-#                                UR::Object::Property::Unique UR::Object::Property::ID
 #                                UR::Object::Property::Calculated::From ) )
 #    {
 #        my @things = $meta_type->get(class_name => $class_name);

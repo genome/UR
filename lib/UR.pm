@@ -132,7 +132,6 @@ require UR::Object::Ghost;
 require UR::Object::Inheritance;
 require UR::Object::Type;
 require UR::Object::Property;
-require UR::Object::Property::Unique;
 
 
 require UR::BoolExpr::Util;
@@ -377,22 +376,6 @@ UR::Object::Type->define(
     ],
     unique_constraints => [
         { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },
-    ],
-);
-
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Property::Unique',
-    id_properties => [qw/type_name unique_group attribute_name/],
-    properties => [
-        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
-        property_name                    => { is => 'Text', len => 256, source => 'data dictionary' },
-        attribute_name                   => { is => 'Text', len => 256, source => 'data dictionary' },
-        unique_group                     => { is => 'Text', len => 256, source => 'data dictionary' },
-
-        class_meta                       => { is => 'UR::Object::Type', id_by => 'class_name' },
-        property_meta                    => { is => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
     ],
 );
 

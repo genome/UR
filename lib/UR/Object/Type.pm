@@ -423,31 +423,28 @@ the parent classes and their inheritance heirarchy, or for the given
 class and all of its inheritance heirarchy.  The lists may include duplicates
 if properties are overridden somewhere in the heirarchy.
 
-=item direct_unique_metas
+=item unique_property_set_hashref
 
-  @unique_objs = $class_obj->direct_unique_metas
+  $constraints = $class_obj->unique_property_set_hashref
 
-Returns a list of L<UR::Object::Property::Unique> objects for the given class.
-Unique metadata objects are used to detail a class's unique constraints.
+Return a hashref describing the unique constraints on the given class.  The
+keys of $constraint are constraint names, and the values are listrefs of 
+property names that make up the unique constraint.
 
-=item direct_unique_property_names
+=item add_unique_constraint
 
-=item direct_unique_property_metas
+  $class_obj->add_unique_constraint($constraint_name, @property_name_list)
 
-=item ancestry_unique_property_names
+Add a unique constraint to the given class.  It is an exception if the
+given $constraint_name already exists as a constraint on this class or
+its parent classes.
 
-=item ancestry_unique_property_metas
+=item remove_unique_constraint
 
-=item all_unique_property_names
+  $class_obj->remove_unique_constraint($constraint_name)
 
-=item all_unique_property_metas
-
-  @property_objs = $class_obj->direct_unique_property_metas;
-  @names = $class_obj->all_unique_property_names;
-
-Return lists of L<UR::Object::Property> objects or their names for every
-property involved in the unique constraints on the class, or its inheritance
-heirarchy.
+Remove a unique constraint from the given class.  It is an exception if
+the given constraint name does not exist.
 
 =item ancestry_table_names
 
