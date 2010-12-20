@@ -1161,9 +1161,11 @@ sub property_for_column
     return;
 }
 
-# ::Object unique_properties
-# FIXME The new API doesn't have a replacement for this 
-# FIXME - and it doesn't seem to be called by anything....
+
+# Methods for maintaining unique constraints
+# This is primarily used by the class re-writer (ur update classes-from-db), but
+# BoolExprs use them,too
+
 # This returns a list of lists.  Each inner list is the properties/columns
 # involved in the constraint
 sub unique_property_sets
@@ -1243,8 +1245,7 @@ sub unique_property_set_hashref {
 # 2) The method called: _create_object, load, 
 # 3) An id?
 sub _property_change_callback {
-    my $property_obj = shift;
-    my $method = shift;
+    my($property_obj,$method, $old_val, $new_val) = @_;
 
     return if ($method eq 'load' || $method eq 'unload' || $method eq '_create_object' || $method eq '_delete_object');
 
@@ -1261,21 +1262,29 @@ sub _property_change_callback {
             }
             $class_obj->{'has'}->{$property_name} = \%new_property;
         }
-        &_id_property_change_callback($property_obj, 'create');
+        if ($property_obj->is_id) {
+            &_id_property_change_callback($property_obj, 'create');
+        }
 
     } elsif ($method eq 'delete') {
-        &_id_property_change_callback($property_obj, 'delete');
+        if ($property_obj->is_id) {
+            &_id_property_change_callback($property_obj, 'delete');
+        }
         delete $class_obj->{'has'}->{$property_name};
 
-    } elsif (exists $class_obj->{'has'}->{$property_name}->{$method}) {
-        my $old_val = shift;
-        my $new_val = shift;
-        $class_obj->{'has'}->{$property_name}->{$method} = $new_val;
+    } elsif ($method eq 'is_id' and $new_val != $old_val) {
+        my $change = $new_val ? 'create' : 'delete';
+        &_id_property_change_callback($property_obj, $change);
     } #elsif ($method ne 'is_optional') {
       #  $DB::single=1;
       #  1;
       #
     #}
+
+    if (exists $class_obj->{'has'}->{$property_name}->{$method}) {
+        $class_obj->{'has'}->{$property_name}->{$method} = $new_val;
+
+    } 
 
     # Invalidate the cache used by all_property_names()
     $class_obj->{'_all_property_names'} = undef;
