@@ -322,7 +322,6 @@ sub execute {
     my $module_update_success = eval {
         for my $meta_class (qw/
             UR::Object::Type
-            UR::Object::Inheritance
             UR::Object::Property
         /) {
             push @changed_class_meta_objects, grep { $_->__changes__ } $cx->all_objects_loaded($meta_class);
@@ -807,12 +806,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             );
         }
         else {
-            my @parent_class_links = UR::Object::Inheritance->get(class_name => $class->class_name);
-            for my $parent_class_link (@parent_class_links) {
-                $parent_class_link->delete;
-            }
-            $class->delete;
-
             $self->status_message(
                 sprintf("D %-40s class deleted for deleted table %s" . "\n",$class_name,$table_name)
             );
@@ -932,14 +925,14 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 }
             }
 
-            unless ($class->class_name->isa('UR::Entity')) {
-                my $inheritance = UR::Object::Inheritance->create(
-                    class_name => $class->class_name,
-                    parent_class_name => "UR::Entity",
-                    inheritance_priority => 0,
-                );
-                Carp::confess("Failed to generate inheritance link!?") unless $inheritance;
-            }
+            #unless ($class->class_name->isa('UR::Entity')) {
+            #    my $inheritance = UR::Object::Inheritance->create(
+            #        class_name => $class->class_name,
+            #        parent_class_name => "UR::Entity",
+            #        inheritance_priority => 0,
+            #    );
+            #    Carp::confess("Failed to generate inheritance link!?") unless $inheritance;
+            #}
         }
     } # next table
 

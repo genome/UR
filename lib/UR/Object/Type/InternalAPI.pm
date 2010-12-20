@@ -1048,34 +1048,6 @@ sub _object
 }
 
 
-# FIXME These *type_names methods should be replaced via the new metadata API.
-# also of note, type_names are going away, so maybe don't bother
-# What exactly are these used for?
-sub Xderived_type_names
-{
-    #Carp::confess();
-    my $self = shift;
-    my $class_name = $self->class_name;
-    my @sub_class_links = UR::Object::Inheritance->get(parent_class_name => $class_name);
-    my @sub_type_names = map { $_->type_name } @sub_class_links;
-    return @sub_type_names;
-}
-
-sub Xall_derived_type_names
-{
-    #Carp::confess();
-    my $self = shift;
-    my @sub_type_names = $self->derived_type_names;
-    my @all_sub_type_names;
-    while (@sub_type_names) {
-        push @all_sub_type_names, @sub_type_names;
-        @sub_type_names =
-            map { $_->type_name }
-            UR::Object::Inheritance->get(parent_type_name => \@sub_type_names);
-    }
-    return @all_sub_type_names;
-}
-
 # new version gets everything, including "id" itself and object ref properties
 sub all_property_type_names {
     my $self = shift;
@@ -1383,57 +1355,6 @@ sub _id_property_change_callback {
     }
 
     $class->{'_all_id_property_names'} = undef;  #  Invalidate the cache used by all_id_property_names
-}
-
-
-# Args here are:  
-# 1) an UR::Object::Inheritance object with class_name, id, parent_class_name, type_name, parent_type_name
-# 2) method called to fire this off:  _create_object, load, 
-# 3) Some kind of id property's value?
-sub _inheritance_change_callback {
-    my $inh_obj = shift;
-    my $method = shift;
-
-    return if ($method eq 'load' || $method eq 'unload' || $method eq '_create_object' || $method eq '_delete_object');
-
-    my $class = UR::Object::Type->get(class_name => $inh_obj->class_name);
-    # The inheritance_priority is 1-based, while the list in the class object is 0-based,
-    # and newly created inheritance objects might not have a priority defined yet
-    my $prio = $inh_obj->inheritance_priority();
-    if ($prio > 0) {
-        $prio--;
-    } else {
-        $prio = 0;
-    }
-
-    if ($method eq 'create' or
-        ($method eq 'delete' and $class->{'is'}->[$prio] eq $inh_obj->parent_class_name)) {
-
-        if ($method eq 'create') {
-            # we perform this check because class ->create() will have made an "is" values
-            # ahead of time, and in such a case there will be nothing to do...
-            unless ($class->{is}[0] eq $inh_obj->parent_class_name) {                
-                splice(@{$class->{'is'}}, $prio, 0, $inh_obj->parent_class_name);
-            }
-            $prio++;
-        } else {
-            splice(@{$class->{'is'}}, $prio, 1);
-        }
-
-        # Renumber the remaining inheritances
-        for (my $i = $prio; $i < @{$class->{'is'}}; $i++) {
-            my $parent_class_name = $class->{'is'}->[$i];
-            my $obj = UR::Object::Inheritance->is_loaded(class_name => $class->class_name,
-                                                          parent_class_name => $parent_class_name);
-            next unless $obj;  # not loaded yet
-            $obj->inheritance_priority($i);
-        }
-    } elsif ($method eq 'inheritance_priority') {
-        $DB::single=1;
-        1;
-    }
-
-    $class->{'_ordered_inherited_class_names'} = undef; # invalidate the cache used by ancestry_class_names()
 }
 
 

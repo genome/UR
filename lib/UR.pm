@@ -129,7 +129,6 @@ require UR::Object;
 require UR::Object::Type;
 
 require UR::Object::Ghost;
-require UR::Object::Inheritance;
 require UR::Object::Type;
 require UR::Object::Property;
 
@@ -160,17 +159,6 @@ UR::Object::Type->define(
     id_by => [
         id  => { is => 'Scalar' }
     ]
-);
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Inheritance',
-    extends => ['UR::Object'],
-    id_properties => [qw/class_name parent_class_name/],
-    properties => [
-        parent_class_name                => { is => 'Text', len => 256, source => 'data dictionary' },
-        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
-        inheritance_priority             => { is => 'NUMBER', len => 2 },
-    ],
 );
 
 UR::Object::Type->define(

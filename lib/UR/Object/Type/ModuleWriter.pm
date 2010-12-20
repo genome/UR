@@ -19,21 +19,16 @@ sub resolve_class_description_perl {
 
     unless (@isa) {
         #Carp::cluck("No isa for $self->{class_name}!?");
-        my @i = UR::Object::Inheritance->get(
-            class_name => $self->class_name
-        );
-        my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_->parent_class_name) } @i;
+        my @i = ${ $self->is };
+        my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
         die "Parent class objects not all loaded for " . $self->class_name unless (@i == @parent_class_objects);
         @isa = map { $_->class_name } @parent_class_objects;
     }
 
     unless (@isa) {
         #Carp::confess("FAILED TO SET ISA FOR $self->{class_name}!?");
-        my @i = UR::Object::Inheritance->get(
-            class_name => $self->class_name
-        );
-        my @parent_class_objects = 
-            map { UR::Object::Type->is_loaded(class_name => $_->parent_class_name) } @i;
+        my @i = ${ $self->is };
+        my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
                     
         unless (@i and @i == @parent_class_objects) {
             $DB::single=1;

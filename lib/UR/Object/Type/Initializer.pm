@@ -83,7 +83,6 @@ our %meta_classes = map { $_ => 1 }
         UR::Object
         UR::Object::Type
         UR::Object::Property
-        UR::Object::Inheritance
     /;
 
 our $bootstrapping = 1;
@@ -332,9 +331,8 @@ sub initialize_bootstrap_classes
     }    
     $bootstrapping = 0;
 
-    # It should be safe to set up these callbacks now.
+    # It should be safe to set up callbacks now.
     UR::Object::Property->create_subscription(callback => \&UR::Object::Type::_property_change_callback);
-    UR::Object::Inheritance->create_subscription(callback => \&UR::Object::Type::_inheritance_change_callback);
 }
 
 sub _normalize_class_description {
@@ -1233,7 +1231,6 @@ sub _complete_class_meta_object_definitions {
         $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $inline_ds->id;
     }
 
-    my $n = 1;
     for my $parent_class_name (@$inheritance) {
         my $parent_class = $parent_class_name->__meta__;
         unless ($parent_class) {
@@ -1249,22 +1246,6 @@ sub _complete_class_meta_object_definitions {
             redo;
         }
         
-        my $obj =
-            UR::Object::Inheritance->__define__(
-                class_name => $self->class_name,
-                parent_class_name => $parent_class->class_name,
-            )
-            ||
-            UR::Object::Inheritance->is_loaded(
-                class_name => $self->class_name,
-                parent_class_name => $parent_class->class_name
-            );
-
-        unless ($obj) {
-            $self->error_message("Failed to make inheritance link from $class_name to $parent_class_name\n");
-            return;
-        }
-
         if (not defined $self->schema_name) {
             if (my $schema_name = $parent_class->schema_name) {
                 $self->{'schema_name'} = $self->{'db_committed'}->{'schema_name'} = $schema_name;
@@ -1276,9 +1257,6 @@ sub _complete_class_meta_object_definitions {
                 $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $data_source_id;
             }
         }
-
-        $obj->{inheritance_priority} = $n++;
-        push @subordinate_objects, $obj;
 
         # If a parent is declared as a singleton, we are too.
         # This only works for abstract singletons.
