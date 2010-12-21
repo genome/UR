@@ -481,7 +481,7 @@ This document describes UR version v0.19.
     
     $c->fur('scruffy');
 
-    commit();
+    UR::Context->commit();
 
   
 =head1 DESCRIPTION

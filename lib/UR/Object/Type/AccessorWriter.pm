@@ -283,6 +283,9 @@ sub mk_indirect_rw_accessor {
             # which are not id properties.
         
             my $my_property_meta = $class_name->__meta__->property_meta_for_name($accessor_name);
+            unless ($my_property_meta) {
+                Carp::confess("Failed to find property meta for $accessor_name on $class_name!");
+            }
             $is_many = $my_property_meta->is_many;
 
             $via_property_meta ||= $class_name->__meta__->property_meta_for_name($via);

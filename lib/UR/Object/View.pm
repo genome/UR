@@ -33,20 +33,20 @@ class UR::Object::View {
             is => 'ARRAY',
             is_abstract => 1,
             is_constant => 1,
-            is_many => 1,
-            default_value => [],
-            doc => 'List of default aspect names' },
+            is_many => 1, # technically this is one "ARRAY"
+            default_value => undef,
+            doc => 'a tree of default aspect descriptions' },
     ],
     has_optional_transient => [
         _widget  => { 
-
             doc => 'the object native to the specified toolkit which does the actual visualization' 
         },
         _observer_data => {
+            is => 'HASH',
             is_transient => 1,
-            value => {},
+            value => undef, # hashref set at construction time
             doc => '  hooks around the subject which monitor it for changes'
-        }
+        },
     ],
     has_many_optional => [
         aspect_names    => { via => 'aspects', to => 'name' },
@@ -84,6 +84,8 @@ sub create {
     unless ($class->isa($expected_class)) {
         return $expected_class->create(@_);
     }
+
+    $params->add_filter(_observer_data => {});
 
     my $self = $expected_class->SUPER::create($params);
     return unless $self;

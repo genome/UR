@@ -1,7 +1,7 @@
 
 =head1 NAME
 
-UR::BoolExpr::Template - an UR::BoolExpr minus specific values
+UR::BoolExpr::Template - a UR::BoolExpr minus specific values
 
 =head1 SYNOPSIS
 
@@ -27,7 +27,7 @@ UR::Object::Type->define(
     id_by => [
         subject_class_name              => { is => 'Text' },
         logic_type                      => { is => 'Text' },
-        logic_detail                    => { is => 'CSV' },
+        logic_detail                    => { is => 'Text' },
         constant_value_id               => { is => 'Text' }
     ],
     has => [
@@ -256,6 +256,20 @@ sub get_normalized_rule_for_values {
     return $rule;
 }
 
+sub _normalize_non_ur_values_hash {
+    my ($self,$unnormalized) = @_;
+    my %normalized;
+    if ($self->subject_class_name ne 'UR::Object::Property') {
+        my $normalized_positions_arrayref = $self->normalized_positions_arrayref;
+        my @reordered_values = @$unnormalized{@$normalized_positions_arrayref};
+        for (my $n = 0; $n < @reordered_values; $n++) {
+            my $value = $reordered_values[$n];
+            $normalized{$n} = $value if defined $value;
+        }
+    }
+    return \%normalized;
+}
+
 
 sub value_position_for_property_name {
     if (exists $_[0]{_property_meta_hash}{$_[1]}) {
@@ -334,8 +348,6 @@ sub resolve {
     return $class->get_by_subject_class_name_logic_type_and_logic_detail($subject_class_name, "And", join(',',@params_list));
 }
 
-    
-
 sub get {
     my $class = shift;
     my $id = shift;    
@@ -371,7 +383,7 @@ sub get {
         # TODO: move into subclass
         my (@keys, $num_values);
             
-        @keys = split(',',$logic_detail || '');
+        @keys = split(/,/,$logic_detail || '');
         $num_values = scalar(@keys);
     
         # See what properties are id-related for the class
@@ -582,7 +594,10 @@ sub get {
     
         # Sort the keys, and make an arrayref which will 
         # re-order the values to match.
-        my @keys_sorted = sort @keys;
+        my $last_key = '';
+        my @keys_sorted = map { $_ eq $last_key ? () : ($last_key = $_) } sort @keys;
+
+
         my $matches_all = scalar(@keys_sorted) == 0 ? 1 : 0;
         my $normalized_positions_arrayref = [];
         my $constant_value_normalized_positions = [];
@@ -593,7 +608,7 @@ sub get {
         my $page = undef;
         for my $key (@keys_sorted) {
             my $pos_list = $key_positions{$key};
-            my $pos = shift @$pos_list;
+            my $pos = pop @$pos_list;
             if (substr($key,0,1) eq '-') {
                 push @$constant_value_normalized_positions, $pos;
                 if ($key eq '-recurse') {
@@ -838,6 +853,56 @@ sub sorter {
 
     return $sorter;
 }
+
+sub params_list_for_values {
+    # This is the reverse of the bulk of resolve.
+    # It returns the params in list form, directly coercable into a hash if necessary.
+    # $r = UR::BoolExpr->resolve($c1,@p1);
+    # ($c2, @p2) = ($r->subject_class_name, $r->params_list);
+    
+    my $rule_template = shift;
+    my @values_sorted = @_;
+    
+    my @keys_sorted = $rule_template->_underlying_keys;
+    my @constant_values_sorted = $rule_template->_constant_values;
+    
+    my @params;
+    my ($v,$c) = (0,0);
+    for (my $k=0; $k<@keys_sorted; $k++) {
+        my $key = $keys_sorted[$k];                        
+        #if (substr($key,0,1) eq "_") {
+        #    next;
+        #}
+        #elsif (substr($key,0,1) eq '-') {
+        if (substr($key,0,1) eq '-') {
+            my $value = $constant_values_sorted[$c];
+            push @params, $key, $value;        
+            $c++;
+        }
+        else {
+            my ($property, $op) = ($key =~ /^(\-*\w+)\s*(.*)$/);        
+            unless ($property) {
+                die;
+            }
+            my $value = $values_sorted[$v];
+            if ($op) {
+                if ($op ne "in") {
+                    if ($op =~ /^(.+)-(.+)$/) {
+                        $value = { operator => $1, value => $value, escape => $2 };
+                    }
+                    else {
+                        $value = { operator => $op, value => $value };
+                    }
+                }
+            }
+            push @params, $property, $value;
+            $v++;
+        }
+    }
+
+    return @params; 
+}
+
 
 1;
 

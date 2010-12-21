@@ -20,7 +20,7 @@ is($things_by_id{'1'}->id, 1, 'Got value 1');
 is($things_by_id{'2'}->id, 2, 'Got value 2');
 is($things_by_id{'3'}->id, 3, 'Got value 3');
 
-@things = URT::Thing->get('value not' => [1,2,3,4,5]);
+@things = URT::Thing->get('value not in' => [1,2,3,4,5]);
 is(scalar(@things), 3, 'Got 3 things from the DB with NOT IN');
 %things_by_id = map { $_->value => $_ } @things;
 
@@ -36,7 +36,7 @@ is($things_by_id{'1'}->id, 1, 'Got value 1');
 is($things_by_id{'2'}->id, 2, 'Got value 2');
 is($things_by_id{'3'}->id, 3, 'Got value 3');
 
-@things = URT::Thing->get('value not' => [1,2,3,4,5]);
+@things = URT::Thing->get('value not in' => [1,2,3,4,5]);
 is(scalar(@things), 3, 'Got 3 things from the cache with NOT IN');
 %things_by_id = map { $_->value => $_ } @things;
 
@@ -54,7 +54,7 @@ is($things_by_id{'2'}->id, 2, 'Got value 2');
 is($things_by_id{'3'}->id, 3, 'Got value 3');
 
 
-@things = URT::Thing->get('value not' => [1,2,3,7,8]);
+@things = URT::Thing->get('value not in' => [1,2,3,7,8]);
 is(scalar(@things), 3, 'Got 3 things from the DB and cache with NOT IN');
 %things_by_id = map { $_->value => $_ } @things;
 

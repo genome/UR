@@ -64,6 +64,7 @@ my $pv = $p->create_view(
 ok($pv, "got an XML view for the person");
 my $pv_got_content = $pv->content;
 ok($pv_got_content, 'Person XML view generated some content');
+
 SKIP: {
     skip "Need a better way to validate XML output",1;
     my $pv_expected_xml = '';

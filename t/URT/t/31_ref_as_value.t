@@ -5,10 +5,11 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; 
+use URT::ObjWithHash;
 use strict;
 use warnings;
 
-plan tests => 24;
+plan tests => 25;
 
 my $o = URT::ObjWithHash->create(myhash1 => { aaa => 111, bbb => 222 }, mylist => [ ccc => 333, ddd => 444 ]); 
 my @h = ($o->myhash1, $o->mylist); 
@@ -128,3 +129,33 @@ for my $c ('Bar') {
     is("@p",  "@r", "normalized rule decomposes correctly") or diag $str;
 }
 
+
+
+my @p = (
+          'myhash1',
+          {
+            'bbb' => 222,
+            'aaa' => 111
+          },
+          'mylist',
+          [
+            'ccc',
+            333,
+            'ddd',
+            444
+          ],
+          'id',
+          'linus43.gsc.wustl.edu 21757 1286150139 10001',
+          'id',
+          'linus43.gsc.wustl.edu 21757 1286150139 10001',
+          'id',
+          'linus43.gsc.wustl.edu 21757 1286150139 10001',
+);
+my $b = URT::ObjWithHash->define_boolexpr(@p);
+my $n = $b->normalize;
+my %b = $b->params_list;
+my %n = $n->params_list;
+my @b = %b;
+my @n = %n;
+is("@n","@b", "normalization keeps references correct");
+ 
