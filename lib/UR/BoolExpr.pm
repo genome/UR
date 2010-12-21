@@ -293,13 +293,6 @@ sub resolve {
         $key = $in_params[$n++];
         $value = $in_params[$n++];
 
-        if ((substr($key,0,1)  eq '_') and ! $subject_class_props{$key}) {
-            # TODO: we silently ignore seemingly private undeclared properties
-            # because they were part of pre-boolexpr params lists.
-            # Eliminate the special handling for this b/c it hides typo errors.
-            next;
-        } 
-
         if (substr($key,0,1) eq '-') {
             # these are keys whose values live in the rule template
             push @keys, $key;
@@ -321,23 +314,25 @@ sub resolve {
                 $operator = '';
             }
             
-            # account for the case where this parameter does
-            # not match an actual property 
-            if (!exists $subject_class_props{$property_name}) {
-                if (my $attr = $subject_class_meta->property_meta_for_name($property_name)) {
-                    Carp::croak("Property '$property_name' found but not in array of properties in class metadata for $subject_class");
-                }
-                else {
-                    push @extra, ($key => $value);
-                    next;
-                }
-            }
         }
         else {
             $property_name = $key;
             $operator = '';
         }
-        
+       
+        # account for the case where this parameter does
+        # not match an actual property 
+        if (!exists $subject_class_props{$property_name}) {
+            if ((substr($key,0,1)  eq '_')) {
+                # TODO: we silently ignore seemingly private undeclared properties
+                # because they were part of pre-boolexpr params lists.
+                # Eliminate the special handling for this b/c it hides typo errors.
+                next;
+            } 
+            push @extra, ($key => $value);
+            next;
+        }
+
         # TODO: the rule template can be made w/o looking at the value passed-in,
         # and it could have a custom closure to process its values.  
         # This would buy some speed in this logic.
