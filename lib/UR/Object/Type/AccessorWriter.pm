@@ -283,6 +283,9 @@ sub mk_indirect_rw_accessor {
             # which are not id properties.
         
             my $my_property_meta = $class_name->__meta__->property_meta_for_name($accessor_name);
+            unless ($my_property_meta) {
+                Carp::confess("Failed to find property meta for $accessor_name on $class_name!");
+            }
             $is_many = $my_property_meta->is_many;
 
             $via_property_meta ||= $class_name->__meta__->property_meta_for_name($via);
@@ -761,7 +764,9 @@ sub mk_object_set_accessors {
         if ($r_class_meta and not $reverse_as) {
             # we have a real class on the other end, and it did not specify how to link back to us
             # try to infer how, otherwise fall back to the same logic we use with "primitives"
-            my @possible_relationships = grep { $_->data_type eq $class_name } $r_class_meta->all_property_metas();
+            my @possible_relationships = grep { $_->data_type eq $class_name }
+                                         grep { defined $_->data_type }
+                                         $r_class_meta->all_property_metas();
 
             if (@possible_relationships > 1) {
                 Carp::croak "$class_name has an ambiguous definition for property \"$singular_name\"."

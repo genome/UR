@@ -109,6 +109,8 @@ $test_class_definition =~ s/\s+/ /gm;
 $string =~ s/\n//gm;
 $string =~ s/\s+/ /gm;
 
+my $diffcmd = 'sdiff -s ';
+
 if ($string ne $test_class_definition) {
     ok(0, 'Rewritten class definition matches original');
     #is($string, $test_class_definition, 'Rewritten class definition matches original');
@@ -116,7 +118,7 @@ if ($string ne $test_class_definition) {
     diag("Generated definition:\n$orig_string\n");
     IO::File->new('>/tmp/old')->print($orig_test_class);
     IO::File->new('>/tmp/new')->print($orig_string);
-    system "kdiff3 /tmp/old /tmp/new";
+    system "$diffcmd/tmp/old /tmp/new";
 } else {
     ok(1, 'Rewritten class definition matches original');
 }

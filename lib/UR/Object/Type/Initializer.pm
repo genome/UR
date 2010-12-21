@@ -855,6 +855,10 @@ sub _normalize_property_description {
     my %old_property = %$property_data;
     my %new_class = %$class_data;
     
+    if (ref($old_property{id_by}) eq 'HASH') {
+        $DB::single = 1;    
+    }
+    
     delete $old_property{source};
 
     if ($old_property{implied_by} and $old_property{implied_by} eq $property_name) {
@@ -1070,6 +1074,11 @@ sub _normalize_property_description {
         $class->warnings_message("New data has odd self-referential 'implied_by' on $class_name $property_name!");
         delete $new_property{implied_by};
     }        
+
+    if (ref($new_property{id_by}) eq 'HASH') {
+        $DB::single = 1;    
+    }
+    
     
     return %new_property;
 }

@@ -65,18 +65,26 @@ sub dynamically_load_class {
         return;
     }
 
+    # TODO: this isn't safe against exceptions
+    # Instead, localize %loading with a copy of the previous %loading plus one class
     return if $loading{$class};    
     $loading{$class} = 1;
 
-    return unless ($namespace->should_dynamically_load_class($class));
+    unless ($namespace->should_dynamically_load_class($class)) {
+        delete $loading{$class};
+        return;
+    }
 
     # Attempt to get a class object, loading it as necessary (probably).
+    # TODO: this is a non-standard accessor
     my $meta = $namespace->get_member_class($class);
     unless ($meta) {
         delete $loading{$class};
         return;
     }
 
+    # Verify that the module came from a location which is safe.
+    # TODO: it's a little late, depending on the problem you're trying to prevent.
     my $class_module_dir = $meta->module_directory;
     if (defined $class_module_dir) {
         # Ensures that classes autoloaded from module files are under the correct

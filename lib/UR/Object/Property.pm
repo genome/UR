@@ -59,41 +59,19 @@ sub is_numeric {
     }
     return $self->{'_is_numeric'};
 }    
-        
-        
 
 sub _create_object {
     my $class = shift;
+    
+    my $h;
+    
     my ($bx,%extra) = $class->define_boolexpr(@_);
     my %params = ($bx->params_list,%extra);
-    #print Data::Dumper::Dumper(\%params);
-    #%params = $class->preprocess_params(@_);
-   
-=cut
- 
-    if ($params{attribute_name} and not $params{property_name}) {
-        my $property_name = $params{attribute_name};
-        $property_name =~ s/ /_/g;
-        $params{property_name} = $property_name;
-    }
-    elsif ($params{property_name} and not $params{attribute_name}) {
-        my $attribute_name = $params{property_name};
-        $attribute_name =~ s/_/ /g;
-        $params{attribute_name} = $attribute_name;
-    }
-    unless ($params{class_name} and $params{type_name}) {   
-        my $class_obj;
-        if ($params{type_name}) {
-            $class_obj = UR::Object::Type->is_loaded(type_name => $params{type_name});
-            $params{class_name} = $class_obj->class_name;
-        } 
-        elsif ($params{class_name}) {
-            $class_obj = UR::Object::Type->is_loaded(class_name => $params{class_name});
-            $params{type_name} = $class_obj->type_name;
-        } 
-    }
 
-=cut
+    $h = $params{id_by};
+    if (ref($h) eq 'HASH') {
+        $DB::single = 1;
+    }
     
     my ($singular_name,$plural_name);
     if ($params{is_many}) {
@@ -106,7 +84,15 @@ sub _create_object {
         $plural_name = Lingua::EN::Inflect::PL($singular_name);
     }
 
-    return $class->SUPER::_create_object(plural_name => $plural_name, singular_name => $singular_name, %params);
+    my $self = $class->SUPER::_create_object(plural_name => $plural_name, singular_name => $singular_name, %params);
+    return unless $self;
+
+    $h = $self->id_by;
+    if (ref($h) eq 'HASH') {
+        $DB::single = 1;
+    }
+    
+    return $self;
 }
 
 

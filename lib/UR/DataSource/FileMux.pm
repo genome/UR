@@ -16,7 +16,7 @@ class UR::DataSource::FileMux {
         handle_class          => { is => 'String',  default_value => 'IO::File', doc => 'Class to use for new file handles' },
         quick_disconnect      => { is => 'Boolean', default_value => 1, doc => 'Do not hold the file handle open between requests' },
         file_resolver         => { is => 'CODE',   doc => 'subref that will return a pathname given a rule' },
-        constant_values       => { is => 'ARRAY',  default_value => [], doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
+        constant_values       => { is => 'ARRAY',  default_value => undef, doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
     ],
     has_optional => [
         server                => { is => 'String', doc => 'pathname to the data file' },

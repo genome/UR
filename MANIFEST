@@ -39,6 +39,7 @@ lib/Command/Test/Tree1/Echo1.pm
 lib/Command/Test/Tree1/Echo2.pm
 lib/Devel/callcount.pm
 lib/UR.pm
+lib/UR/All.pm
 lib/UR/BoolExpr.pm
 lib/UR/BoolExpr/Template.pm
 lib/UR/BoolExpr/Template/And.pm
@@ -158,6 +159,7 @@ lib/UR/Namespace/Command/Define/Datasource/Pg.pm
 lib/UR/Namespace/Command/Define/Datasource/Rdbms.pm
 lib/UR/Namespace/Command/Define/Datasource/RdbmsWithAuth.pm
 lib/UR/Namespace/Command/Define/Datasource/Sqlite.pm
+lib/UR/Namespace/Command/Define/Db.pm
 lib/UR/Namespace/Command/Define/Namespace.pm
 lib/UR/Namespace/Command/Describe.pm
 lib/UR/Namespace/Command/Diff.pm
@@ -166,15 +168,24 @@ lib/UR/Namespace/Command/Diff/Update.pm
 lib/UR/Namespace/Command/Export.pm
 lib/UR/Namespace/Command/Export/DbicClasses.pm
 lib/UR/Namespace/Command/Info.pm
+lib/UR/Namespace/Command/Init.pm
 lib/UR/Namespace/Command/List.pm
 lib/UR/Namespace/Command/List/Classes.pm
 lib/UR/Namespace/Command/List/Modules.pm
 lib/UR/Namespace/Command/List/Objects.pm
+lib/UR/Namespace/Command/Old.pm
+lib/UR/Namespace/Command/Old/DiffRewrite.pm
+lib/UR/Namespace/Command/Old/DiffUpdate.pm
+lib/UR/Namespace/Command/Old/ExportDbicClasses.pm
+lib/UR/Namespace/Command/Old/Info.pm
+lib/UR/Namespace/Command/Old/Redescribe.pm
 lib/UR/Namespace/Command/Redescribe.pm
 lib/UR/Namespace/Command/Rename.pm
 lib/UR/Namespace/Command/Rename/Class.pm
 lib/UR/Namespace/Command/Rewrite.pm
 lib/UR/Namespace/Command/RunsOnModulesInTree.pm
+lib/UR/Namespace/Command/Sys.pm
+lib/UR/Namespace/Command/Sys/ClassBrowser.pm
 lib/UR/Namespace/Command/Test.pm
 lib/UR/Namespace/Command/Test/Callcount.pm
 lib/UR/Namespace/Command/Test/Callcount/List.pm
@@ -187,7 +198,11 @@ lib/UR/Namespace/Command/Test/Window.pm
 lib/UR/Namespace/Command/Update.pm
 lib/UR/Namespace/Command/Update/ClassDiagram.pm
 lib/UR/Namespace/Command/Update/Classes.pm
+lib/UR/Namespace/Command/Update/ClassesFromDb.pm
+lib/UR/Namespace/Command/Update/RenameClass.pm
+lib/UR/Namespace/Command/Update/RewriteClassHeader.pm
 lib/UR/Namespace/Command/Update/SchemaDiagram.pm
+lib/UR/Namespace/Command/Update/TabCompletionSpec.pm
 lib/UR/Namespace/View/SchemaBrowser/CgiApp.pm
 lib/UR/Namespace/View/SchemaBrowser/CgiApp/Base.pm
 lib/UR/Namespace/View/SchemaBrowser/CgiApp/Class.pm
@@ -208,6 +223,7 @@ lib/UR/Object/Property/ID.pm
 lib/UR/Object/Property/Unique.pm
 lib/UR/Object/Property/View/Default/Text.pm
 lib/UR/Object/Property/View/DescriptionLineItem/Text.pm
+lib/UR/Object/Property/View/ReferenceDescription/Text.pm
 lib/UR/Object/Reference.pm
 lib/UR/Object/Reference/Property.pm
 lib/UR/Object/Reference/View/Default/Umlet.pm
@@ -278,6 +294,7 @@ lib/UR/Value/DateTime.pm
 lib/UR/Value/Decimal.pm
 lib/UR/Value/DirectoryPath.pm
 lib/UR/Value/FilePath.pm
+lib/UR/Value/FilesystemPath.pm
 lib/UR/Value/FOF.pm
 lib/UR/Value/HASH.pm
 lib/UR/Value/Integer.pm
@@ -421,6 +438,7 @@ t/URT/t/77_sql_undef_value_handling.t
 t/URT/t/78_get_by_subclass_params_load_properly.t
 t/URT/t/79_like_operator.t
 t/URT/t/80_command_define_datasource.t
+t/URT/t/81_crud_custom_columnnames.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction-observers.t
 t/URT/t/99_transaction.t

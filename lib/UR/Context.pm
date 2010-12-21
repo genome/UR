@@ -2,7 +2,6 @@ package UR::Context;
 
 use strict;
 use warnings;
-use Date::Parse;
 use Sub::Name;
 
 require UR;
@@ -488,6 +487,40 @@ sub query {
     return $UR::Context::current->get_objects_for_class_and_rule($class, $rule);
 }
 
+sub _resolve_id_for_class_and_rule {
+    my ($self,$class_meta,$rule) = @_;
+   
+    my $class = $class_meta->class_name;
+    my $id;
+    my @id_property_names = $class_meta->id_property_names
+        or Carp::confess( # Bad should be at least one
+        "No id property names for class ($class).  This should not have happened."
+    );
+
+    if ( @id_property_names == 1 ) { # only 1 - try to auto generate
+        $id = $class_meta->autogenerate_new_object_id($rule);
+        unless ( defined $id ) {
+            $self->error_message("Failed to auto-generate an ID for single ID property class ($class)");
+            return;
+        }
+    }
+    else { # multiple
+        # Try to give a useful message by getting id prop names that are not deinfed
+        my @missed_names;
+        for my $name ( @id_property_names ) {
+            push @missed_names, $name unless $rule->specifies_value_for($name);
+        }
+        if ( @missed_names ) { # Ok - prob w/ class def, list the ones we missed
+            $self->error_message("Attempt to create $class with multiple ids without these properties: ".join(', ', @missed_names));
+            return;
+        }
+        else { # Bad - something is really wrong... 
+            Carp::confess("Attempt to create $class failed to resolve id from underlying id properties.");
+        }
+    }
+    
+    return $id;
+}
 
 our $construction_method = 'create';
 
@@ -618,39 +651,19 @@ sub create_entity {
 
     # Normal case... just make a rule out of the passed-in params
     my $rule = UR::BoolExpr->resolve_normalized($class, @_);
+    my $id = $rule->value_for_id;
 
     # Process parameters.  We do this here instead of 
     # waiting for _create_object to do it so that we can ensure that
     # we have an ID, and autogenerate an ID if necessary.
     my $params = $rule->legacy_params_hash;
-    my $id = $params->{id};        
+    #my $id = $params->{id};        
 
     # Whenever no params, or a set which has no ID, make an ID.
     unless (defined($id)) {
-        my @id_property_names = $class_meta->id_property_names
-            or Carp::confess( # Bad should be at least one
-            "No id property names for class ($class).  This should not have happened."
-        );
-        if ( @id_property_names == 1 ) { # only 1 - try to auto generate
-            $id = $class_meta->autogenerate_new_object_id($rule);
-            unless ( defined $id ) {
-                $class->error_message("Failed to auto-generate an ID for single ID property class ($class)");
-                return;
-            }
-        }
-        else { # multiple
-            # Try to give a useful message by getting id prop names that are not deinfed
-            my @missed_names;
-            for my $name ( @id_property_names ) {
-                push @missed_names, $name unless $rule->specifies_value_for($name);
-            }
-            if ( @missed_names ) { # Ok - prob w/ class def, list the ones we missed
-                $class->error_message("Attempt to $construction_method $class with multiple ids without these properties: ".join(', ', @missed_names));
-                return;
-            }
-            else { # Bad - something is really wrong... 
-                Carp::confess("Attempt to $construction_method $class failed to resolve id from underlying id properties.");
-            }
+        $id = $self->_resolve_id_for_class_and_rule($class_meta,$rule);
+        unless ($id) {
+            return;
         }
     }
 
@@ -689,7 +702,19 @@ sub create_entity {
         foreach my $prop ( @property_objects ) {
             my $name = $prop->property_name;
 
-            $default_values{$name} = $prop->default_value if (defined $prop->default_value);
+            my $default_value = $prop->default_value;
+            if (defined $default_value) {
+                if (ref($default_value)) {
+                    #warn (
+                    #    "a reference value $default_value is used as a default on "
+                    #    . $co->class_name 
+                    #    . " forcing a copy during construction "
+                    #    . " of $class $name..."
+                    #);
+                    $default_value = UR::Util::deep_copy($default_value);
+                }
+                $default_values{$name} = $default_value; 
+            }
 
             if ($prop->is_many) {
                 $set_properties{$name} = $prop;
@@ -935,7 +960,74 @@ sub create_entity {
     return $entity;
 }
 
+sub _construct_object {
+    my $self = shift;
+    my $class = shift;
+ 
+    #my $params = { $class->define_bx(@_)->params_list };
+    my $params;
+    my ($bx,@extra) = $class->define_boolexpr(@_);
+    my $bxn = $bx->normalize;
+    $params = { $bxn->params_list, @extra };
 
+    my $id = $params->{id};
+    unless (defined($id)) {
+        Carp::confess(
+            "No ID specified (or incomplete id params) for $class _construct_object.  Params were:\n" 
+            . Data::Dumper::Dumper($params)
+        );
+    }
+
+    # Ensure that we're not remaking things which exist.
+    if ($UR::Context::all_objects_loaded->{$class}->{$id}) {
+        # The object exists.  This is not an exception for some reason?  
+        # We just return false to indicate that the object is not creatable.
+        $class->error_message("An object of class $class already exists with id value '$id'");
+        return;
+    }
+
+    # get rid of internal flags (which start with '-' or '_', unless it's a named property)
+    #delete $params->{$_} for ( grep { /^_/ } keys %$params );
+    my %subject_class_props = map {$_, 1}  ( $class->__meta__->all_property_type_names);
+    delete $params->{$_} foreach ( grep { substr($_, 0, 1) eq '_' and ! $subject_class_props{$_} } keys %$params );
+
+    # TODO: The reference to UR::Entity can be removed when non-tablerow classes impliment property function for all critical internal data.
+    # Make the object.
+    my $object = bless {
+        map { $_ => $params->{$_} }
+        grep { $class->can($_) or not $class->isa('UR::Entity') }
+        keys %$params
+    }, $class;
+
+    # See if we're making something which was previously deleted and is pending save.
+    # We must capture the old db_committed data to ensure eventual saving is done correctly.
+    if (my $ghost = $UR::Context::all_objects_loaded->{$class . "::Ghost"}->{$id}) {    
+        # Note this object's database state in the new object so saves occurr correctly,
+        # as an update instead of an insert.
+        if (my $committed_data = $ghost->{db_committed})
+        {
+            $object->{db_committed} = { %$committed_data };
+        }
+
+        if (my $unsaved_data = $ghost->{'db_saved_uncommitted'})
+        {
+            $object->{'db_saved_uncommitted'} = { %$unsaved_data };
+        }
+        $ghost->__signal_change__("delete");
+        $self->_abandon_object($ghost);
+    }
+
+    # Put the object in the master repository of objects for the application.
+    $UR::Context::all_objects_loaded->{$class}->{$id} = $object;
+
+    # If we're using a light cache, weaken the reference.
+    if ($UR::Context::light_cache and substr($class,0,5) ne 'App::') {
+        Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$id});
+    }
+
+    # Return the new object.
+    return $object;
+}
 
 sub delete_entity {
     my ($self,$entity) = @_;
@@ -1000,6 +1092,50 @@ sub delete_entity {
         Carp::confess("Can't call delete as a class method.");
     }
 }
+
+sub _abandon_object {
+    my $self = shift;
+    my $object = $_[0];
+    my $class = $object->class;
+    my $id = $object->id;
+
+    if ($object->{'__get_serial'}) {
+        # Keep a correct accounting of objects.  This one is getting deleted by a method
+        # other than UR::Context::prune_object_cache
+        $UR::Context::all_objects_cache_size--;
+    }
+
+    # Remove the object from the main hash.
+    delete $UR::Context::all_objects_loaded->{$class}->{$id};
+    delete $UR::Context::all_objects_are_loaded->{$class};
+
+    # Decrement all of the param_keys it is using.
+    if ($object->{load} and $object->{load}->{param_key})
+    {
+        while (my ($class,$param_strings_hashref) = each %{ $object->{load}->{param_key} })
+        {
+            for my $param_string (keys %$param_strings_hashref) {
+                delete $UR::Context::all_params_loaded->{$class}->{$param_string};
+
+                foreach my $local_apl ( values %$UR::Context::object_fabricators ) {
+                    next unless ($local_apl and exists $local_apl->{$class});
+                    delete $local_apl->{$class}->{$param_string};
+                }
+            }
+        }
+    }
+
+    # Turn our $object reference into a UR::DeletedRef.
+    # Further attempts to use it will result in readable errors.
+    # The object can be resurrected.
+    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
+        print STDERR  "MEM DELETE object $object class ",$object->class," id ",$object->id,"\n";
+    }
+    UR::DeletedRef->bury($object);
+
+    return $object;
+}
+
 
 # This one works when the rule specifies the value of an indirect property, and we want
 # the value of a direct property of the class

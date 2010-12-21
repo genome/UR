@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 37;
+use Test::More tests => 38;
 use Data::Dumper;
 
 class URT::Item {
@@ -54,6 +54,23 @@ ok($c, "made a child object which references it");
 my $u = URT::UnrelatedItem->create(name => 'Bob', group => 'shirts');
 ok($u, 'made an unrelated item object');
 
+my $bx1 = URT::Item->define_boolexpr(name => ['Bob','Joe']);
+my @o = URT::Item->get($bx1);
+is(scalar(@o), 2, "got 2 items with an in-clause");
+
+=pod
+my $bx2a = URT::Item->define_boolexpr(name => 'Bob');
+my $bx2b = URT::Item->define_boolexpr(name => 'Joe');
+my $bx2c = UR::BoolExpr::Template::Or->get_by_subject_class_name_logic_type_and_logic_detail(
+    $bx2a->subject_class_name,
+    'Or', 
+    $bx2a->logic_detail . '|' . $bx2b->logic_detail,
+);
+my ($bx3a,$bx3b) = $bx2c->get_underlying_rule_templates();
+=cut
+
+#my $r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
+
 my $r = URT::Item->define_boolexpr(foo => '');   # '' is the same as undef
 ok($r, "Created a rule to get URT::Items with null 'foo's");
 ok($r->specifies_value_for('foo'), 'Rule specifies a falue for foo');
@@ -64,8 +81,6 @@ is(scalar(@results), 2, 'Got 2 URT::Items with the rule');
 ok(scalar(grep { $_->name eq 'Joe' } @results), 'Joe was returned');
 ok(scalar(grep { $_->name eq 'Fred' } @results), 'Fred was returned');
 ok(! scalar(grep { $_->name eq 'Bob' } @results), 'Bob was not returned');
-
-
 
 
 $r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [parent_name => 'name', parent_group => 'group'], bar => 555);

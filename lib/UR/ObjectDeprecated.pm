@@ -84,111 +84,13 @@ sub property_diff {
 }
 
 sub _create_object {
-    my $class = shift;
-
-    my $params;
-    my ($bx,@extra) = $class->define_boolexpr(@_);
-    my $bxn = $bx->normalize;
-    $params = { $bxn->params_list, @extra };
-    my $id = $params->{id};
-    unless (defined($id)) {
-        Carp::confess(
-            "No ID specified (or incomplete id params) for $class _create_object.  Params were:\n" 
-            . Dumper($params)
-        );
-    }
-
-    # Ensure that we're not remaking things which exist.
-    if ($UR::Context::all_objects_loaded->{$class}->{$id}) {
-        # The object exists.  This is not an exception for some reason?  
-        # We just return false to indicate that the object is not creatable.
-        $class->error_message("An object of class $class already exists with id value '$id'");
-        return;
-    }
-
-    # get rid of internal flags (which start with '-' or '_', unless it's a named property)
-    #delete $params->{$_} for ( grep { /^_/ } keys %$params );
-    my %subject_class_props = map {$_, 1}  ( $class->__meta__->all_property_type_names);
-    delete $params->{$_} foreach ( grep { substr($_, 0, 1) eq '_' and ! $subject_class_props{$_} } keys %$params );
-
-    # TODO: The reference to UR::Entity can be removed when non-tablerow classes impliment property function for all critical internal data.
-    # Make the object.
-    my $self = bless {
-        map { $_ => $params->{$_} }
-        grep { $class->can($_) or not $class->isa('UR::Entity') }
-        keys %$params
-    }, $class;
-
-    # See if we're making something which was previously deleted and is pending save.
-    # We must capture the old db_committed data to ensure eventual saving is done correctly.
-    if (my $ghost = $UR::Context::all_objects_loaded->{$class . "::Ghost"}->{$id}) {	
-        # Note this object's database state in the new object so saves occurr correctly,
-        # as an update instead of an insert.
-        if (my $committed_data = $ghost->{db_committed})
-        {
-            $self->{db_committed} = { %$committed_data };
-        }
-
-        if (my $unsaved_data = $ghost->{'db_saved_uncommitted'})
-        {
-            $self->{'db_saved_uncommitted'} = { %$unsaved_data };
-        }
-        $ghost->__signal_change__("delete");
-        $ghost->_delete_object;
-    }
-
-    # Put the object in the master repository of objects for the application.
-    $UR::Context::all_objects_loaded->{$class}->{$id} = $self;
-
-    # If we're using a light cache, weaken the reference.
-    if ($UR::Context::light_cache and substr($class,0,5) ne 'App::') {
-        Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$id});
-    }
-
-    # Return the new object.
-    return $self;
+    # warn "deprecated method call!";
+    $UR::Context::current->_construct_object(@_);
 }
 
 sub _delete_object {
-    my $self = $_[0];
-    my $class = $self->class;
-    my $id = $self->id;
-
-    if ($self->{'__get_serial'}) {
-        # Keep a correct accounting of objects.  This one is getting deleted by a method
-        # other than UR::Context::prune_object_cache
-        $UR::Context::all_objects_cache_size--;
-    }
-
-    # Remove the object from the main hash.
-    delete $UR::Context::all_objects_loaded->{$class}->{$id};
-    delete $UR::Context::all_objects_are_loaded->{$class};
-
-    # Decrement all of the param_keys it is using.
-    if ($self->{load} and $self->{load}->{param_key})
-    {
-        while (my ($class,$param_strings_hashref) = each %{ $self->{load}->{param_key} })
-        {
-            for my $param_string (keys %$param_strings_hashref) {
-                delete $UR::Context::all_params_loaded->{$class}->{$param_string};
-
-                foreach my $local_apl ( values %$UR::Context::object_fabricators ) {
-                    next unless ($local_apl and exists $local_apl->{$class});
-                    delete $local_apl->{$class}->{$param_string};
-                }
-            }
-        }
-    }
-
-    # Turn our $self reference into a UR::DeletedRef.
-    # Further attempts to use it will result in readable errors.
-    # The object can be resurrected.
-    if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-        print STDERR  "MEM DELETE object $self class ",$self->class," id ",$self->id,"\n";
-    }
-    UR::DeletedRef->bury($self);
-
-    return $self;
+    # warn "deprecated method call!";
+    $UR::Context::current->_abandon_object(@_);
 }
 
 # TODO: make this a context operation

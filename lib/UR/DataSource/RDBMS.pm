@@ -1808,17 +1808,18 @@ sub _sync_database {
                             owner => $ds_owner,
                             data_source => 'UR::DataSource::Meta');
 
+                    my $fully_qualified_table_name = defined $ds_owner ? join('.', $ds_owner, $ds_table) : $ds_table;
                     if ($change->{type} eq 'insert')
                     {
-                        push @{ $insert{$change->{table_name}} }, $change;
+                        push @{ $insert{$fully_qualified_table_name} }, $change;
                     }
                     elsif ($change->{type} eq 'update')
                     {
-                        push @{ $update{$change->{table_name}} }, $change;
+                        push @{ $update{$fully_qualified_table_name} }, $change;
                     }
                     elsif ($change->{type} eq 'delete')
                     {
-                        push @{ $delete{$change->{table_name}} }, $change;
+                        push @{ $delete{$fully_qualified_table_name} }, $change;
                     }
                     else
                     {

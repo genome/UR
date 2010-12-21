@@ -145,6 +145,7 @@ $DB::single=1;
             last;
         }
     }
+    no warnings;
     my $ref = $class_name->can($method_name);
 }
             
