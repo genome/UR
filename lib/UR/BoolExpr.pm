@@ -81,6 +81,36 @@ sub template_and_values {
 }
 
 
+# Returns true if the rule represents a subset of the things the other
+# rule would match.  It returns undef if the answer is not known, such as
+# when one of the values is a list and we didn't go to the trouble of 
+# searching the list for a matching value
+sub is_subset_of {
+    my($self, $other_rule) = @_;
+
+    my $my_template = $self->template;
+    my $other_template = $other_rule->template;
+    return unless ($my_template->is_subset_of($other_template));
+
+    my $values_match = 1;
+    foreach my $prop ( $other_template->_property_names ) {
+        my $my_operator = $my_template->operator_for($prop) || '=';
+        my $other_operator = $other_template->operator_for($prop) || '=';
+
+        my $my_value = $self->value_for($prop);
+        my $other_value = $other_rule->value_for($prop);
+
+        # If either is a list of values, return undef
+        return undef if (ref($my_value) || ref($other_value));
+
+        no warnings 'uninitialized';
+        $values_match = undef if ($my_value ne $other_value);
+    }
+
+    return $values_match;
+}
+
+
 sub values {
     my $self = shift;
     if ($self->{values}) {

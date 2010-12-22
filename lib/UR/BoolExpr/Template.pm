@@ -136,6 +136,31 @@ sub _resolve_indexing_params {
     return 1;
 }
 
+# Return true if this rule template's parameters is a subset of the other's parameters
+# Returns 0 if this rule specifies a parameter not in the other template
+# Returns undef if all the properties match, but their operators do not, meaning that
+# we do not know if an object evaluated as true under one rule's template would also be in the other
+sub is_subset_of {
+    my($self,$other_template) = @_;
+
+    return 0 unless (ref($other_template) and $self->isa(ref $other_template));
+
+    my $my_class = $self->subject_class_name;
+    my $other_class = $other_template->subject_class_name;
+    return unless ($my_class eq $other_class 
+                    or
+                   $my_class->isa($other_class));
+
+    my %operators = map { $_ => $self->operator_for($_) } $self->_property_names;
+    my $operators_match = 1;
+    foreach my $prop ( $other_template->_property_names ) {
+        return 0 unless exists $operators{$prop};
+        $operators_match = undef if ($operators{$prop} ne $other_template->operator_for($prop));
+    }
+    return $operators_match;
+}
+
+
 # This is set lazily currently
 
 sub is_unique {
