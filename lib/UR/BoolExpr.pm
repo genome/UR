@@ -88,6 +88,8 @@ sub template_and_values {
 sub is_subset_of {
     my($self, $other_rule) = @_;
 
+    return 0 unless (ref($other_rule) and $self->isa(ref $other_rule);
+
     my $my_template = $self->template;
     my $other_template = $other_rule->template;
     return unless ($my_template->is_subset_of($other_template));
@@ -868,6 +870,85 @@ The data used to create the rule can be re-extracted:
 
  Rules of this type compare a single property on the subject, using a specific comparison operator,
  against a specific value (or value set for certain operators).  This is the low-level non-composite rule.
+
+=head1 CONSTRUCTOR
+
+=over 4
+
+  my $bx = UR::BoolExpr->resolve('Some::Class', property_1 => 'value_1', ... property_n => 'value_n');
+  my $bx1 = Some::Class->define_boolexpr(property_1 => value_1, ... property_n => 'value_n');
+  my $bx2 = Some::Class->define_boolexpr('property_1 >' => 12345);
+
+Returns a UR::BoolExpr object that can be used to perform tests on the given class and
+properties.  The default comparison for each property is equality.  The last example shows
+using greater-than operator for property_1.
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=item evaluate
+
+    $bx->($object)
+
+Returns true if the given object satisfies the BoolExpr
+
+=item template_and_values
+
+  ($template, @values) = $bx->template_and_values();
+
+Returns the UR::BoolExpr::Template and list of the values for the given BoolExpr
+
+=item is_subset_of
+
+  $bx->is_subset_of($other_bx)
+
+Returns true if the set of objects that matches this BoolExpr is a subset of
+the set of objects that matches $other_bx.  In practice this means:
+
+  * The subject class of $bx isa the subject class of $other_bx
+  * all the properties from $bx also appear in $other_bx
+  * the operators and values for $bx's properties match $other_bx
+
+=item values
+
+  @values = $bx->values
+
+Return a list of the values from $bx.  The values will be in the same order
+the BoolExpr was created from
+
+=item value_for_id
+
+  $id = $bx->value_for_id
+
+If $bx's properties include all the ID properties of its subject class, 
+C<value_for_id> returns that value.  Otherwise, it returns the empty list.
+If the subject class has more than one ID property, this returns the value
+of the composite ID.
+
+=item specifies_value_for
+
+  $bx->specifies_value_for('property_name');
+
+Returns true if the filter list of $bx includes the given property name
+
+=item value_for
+
+  my $value = $bx->value_for('property_name');
+
+Return the value for the given property
+
+=item operator_for
+
+  my $operator = $bx->operator_for('property_name');
+
+Return a string for the operator of the given property.  A value of '' (the
+empty string) means equality ("=").  Other possible values inclue '<', '>',
+'<=', '>=', 'between', 'true', 'false', 'in', 'not <', 'not >', etc.
+
+=back
 
 =head1 INTERNAL STRUCTURE
 
