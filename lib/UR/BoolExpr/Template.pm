@@ -244,6 +244,15 @@ sub get_rule_for_values {
     return UR::BoolExpr->get($rule_id);
 }
 
+sub get_rule_for_value_id {
+    my $self = shift;
+    my $value_id = shift;
+
+    my $rule_id = UR::BoolExpr->__meta__->resolve_composite_id_from_ordered_values($self->id,$value_id);
+    return UR::BoolExpr->get($rule_id);
+}
+
+
 sub get_normalized_rule_for_values {
     my $self = shift;
     my @unnormalized_values = @_;
