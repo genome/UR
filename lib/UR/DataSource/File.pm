@@ -198,7 +198,16 @@ sub _free_offset_cache_slot {
         return;
     }
 
-    $cache->[$cache_slot] = 0;
+    if ($cache->[$cache_slot+1] and scalar(@{$cache->[$cache_slot+1]}) == 0) {
+        # There's no data in here.  Must have happened when the reader went all the
+        # way to the end of the file and found nothing.  Remove this entry completely
+        # because it's not helpful
+        splice(@$cache, $cache_slot,3);
+
+    } else {
+        # There is data in here, mark it as a free slot
+        $cache->[$cache_slot] = 0;
+    }
     return 1;
 }
        
