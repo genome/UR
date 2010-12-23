@@ -70,8 +70,8 @@ sub create_iterator_closure_for_rule {
             # tried and results should be entirely in the cache - ie. no objects.
             # So... remove the evidence that we tried this in case the user is catching the die
             # below and will continue on
-            $context->_forget_loading_was_done_with_class_and_rule($rule->subject_class_name, $rule);
-            Carp::croak "Can't resolve data source: no $param_name specified in rule with id ".$rule->id;
+            $context->_forget_loading_was_done_with_template_and_rule($rule->template_id, $rule->id);
+            Carp::croak "Can't resolve data source: no $param_name specified in rule $rule";
         }
 
         if (@values == 1 and ref($values[0]) eq 'ARRAY') {

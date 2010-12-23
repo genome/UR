@@ -41,13 +41,13 @@ foreach my $emp_class ( qw( URT::Employee URT::Employee2 URT::Employee3 URT::Emp
 my $employee;
 $employee = eval { URT::Employee->get(); };
 ok(!$employee, 'Correctly could not URT::Employee->get() with no params');
-like($@, qr/Can't resolve data source: no division specified in rule with id/, "Error message mentions 'division' property");
+like($@, qr/Can't resolve data source: no division specified in rule/, "Error message mentions 'division' property");
 
 my $error_message;
 UR::Context->message_callback('error', sub { $DB::single=1; $error_message = $_[0]->text });
 $employee = eval { URT::Employee->get(division => 'NorthAmerica') };
 ok(!$employee, 'Correctly could not URT::Employee->get() with only division');
-like($@, qr/Can't resolve data source: no department specified in rule with id/, "Error message mentions 'department' property");
+like($@, qr/Can't resolve data source: no department specified in rule/, "Error message mentions 'department' property");
 like($error_message, qr(Recursive entry.*URT::Employee), 'Error message did mention recursive call trapped');
 
 my @employees = eval { URT::Employee->get(division => 'NorthAmerica', department => 'sales') };
