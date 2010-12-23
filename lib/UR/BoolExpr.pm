@@ -88,7 +88,7 @@ sub template_and_values {
 sub is_subset_of {
     my($self, $other_rule) = @_;
 
-    return 0 unless (ref($other_rule) and $self->isa(ref $other_rule);
+    return 0 unless (ref($other_rule) and $self->isa(ref $other_rule));
 
     my $my_template = $self->template;
     my $other_template = $other_rule->template;
