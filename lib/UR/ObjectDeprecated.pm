@@ -141,10 +141,12 @@ sub unload {
             push @unloaded, $subclass->unload;
         }
 
-        # get rid of the param_key hash for this class
-        # this specifically gets rid of any cache for
-        # param_keys that returned 0 objects
-        delete $UR::Context::all_params_loaded->{$class};
+        # get rid of the loading info matching this class
+        foreach my $template_id ( keys %$UR::Context::all_params_loaded ) {
+            if (UR::BoolExpr::Template->get($template_id)->subject_class_name->isa($class)) {
+                delete $UR::Context::all_params_loaded->{$template_id};
+            }
+        }
 
         return @unloaded;
     }

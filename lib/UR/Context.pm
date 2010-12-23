@@ -28,7 +28,7 @@ our @CARP_NOT = qw( UR::Object::Iterator );
 our $all_objects_loaded ||= {};               # Master index of all tracked objects by class and then id.
 our $all_change_subscriptions ||= {};         # Index of other properties by class, property_name, and then value.
 our $all_objects_are_loaded ||= {};           # Track when a class informs us that all objects which exist are loaded.
-our $all_params_loaded ||= {};                # Track parameters used to load by class then _param_key
+our $all_params_loaded ||= {};                # Track parameters used to load by template_id then by rule_id
 
 # These items are used by prune_object_cache() to control the cache size
 our $all_objects_cache_size ||= 0;            # count of the unloadable objects we've loaded from data sources
@@ -1109,17 +1109,15 @@ sub _abandon_object {
     delete $UR::Context::all_objects_loaded->{$class}->{$id};
     delete $UR::Context::all_objects_are_loaded->{$class};
 
-    # Decrement all of the param_keys it is using.
-    if ($object->{load} and $object->{load}->{param_key})
-    {
-        while (my ($class,$param_strings_hashref) = each %{ $object->{load}->{param_key} })
-        {
-            for my $param_string (keys %$param_strings_hashref) {
-                delete $UR::Context::all_params_loaded->{$class}->{$param_string};
+    # Remove all of the load info it is using so it'll get re-loaded if asked for later
+    if ($object->{'__load'}) {
+        while (my ($template_id, $rules) = each %{ $object->{'__load'}} ) {
+            foreach my $rule_id ( keys %$rules ) {
+                delete $UR::Context::all_params_loaded->{$template_id}->{$rule_id};
 
-                foreach my $local_apl ( values %$UR::Context::object_fabricators ) {
-                    next unless ($local_apl and exists $local_apl->{$class});
-                    delete $local_apl->{$class}->{$param_string};
+                foreach my $loading_all_params_loaded ( values %$UR::Context::object_fabricators ) {
+                    next unless ($loading_all_params_loaded and exists $loading_all_params_loaded->{$template_id});
+                    delete $loading_all_params_loaded->{$template_id}->{$rule_id};
                 }
             }
         }
@@ -2219,12 +2217,16 @@ sub _create_import_iterator_for_underlying_context {
     my $rows = 0;                                   # number of rows the query returned
     
     my $recursion_desc                              = $template_data->{recursion_desc};
-    my $rule_template_without_recursion_desc;
-    my $rule_without_recursion_desc;
+    my($rule_template_without_recursion_desc, $rule_template_id_without_recursion);
+    my($rule_without_recursion_desc, $rule_id_without_recursion);
     if ($recursion_desc) {
         $rule_template_without_recursion_desc        = $template_data->{rule_template_without_recursion_desc};
+        $rule_template_id_without_recursion          = $rule_template_without_recursion_desc->id;
         $rule_without_recursion_desc                 = $rule_template_without_recursion_desc->get_rule_for_values(@values);    
+        $rule_id_without_recursion                   = $rule_without_recursion_desc->id;
     }
+    my $rule_id = $rule->id;
+    my $rule_template_id = $rule_template->id;
     
     my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
     
@@ -2327,8 +2329,7 @@ sub _create_import_iterator_for_underlying_context {
                         $UR::Context::all_objects_loaded->{$class_name}->{$id} = undef;
                     }
                     else {
-                        my $rule_id = $rule->id;
-                        $UR::Context::all_params_loaded->{$class_name}->{$rule_id} = 0;
+                        $UR::Context::all_params_loaded->{$rule_template_id}->{$rule_id} = 0;
                     }
                 }
                 
@@ -2351,9 +2352,9 @@ sub _create_import_iterator_for_underlying_context {
                 
                 if ($recursion_desc) {
                     my @results = $class_name->is_loaded($rule_without_recursion_desc);
-                    $UR::Context::all_params_loaded->{$class_name}{$rule_without_recursion_desc->id} = scalar(@results);
+                    $UR::Context::all_params_loaded->{$rule_template_id_without_recursion}{$rule_id_without_recursion} = scalar(@results);
                     for my $object (@results) {
-                        $object->{load}{param_key}{$class_name}{$rule_without_recursion_desc->id}++;
+                        $object->{__load}->{$rule_template_id_without_recursion}->{$rule_id_without_recursion}++;
                     }
                 }
                 
@@ -2703,21 +2704,22 @@ sub __create_object_fabricator_for_loading_template {
     }
 
     my $rule_class_name = $rule_template->subject_class_name;
+    my $template_id     = $rule_template->id;
     my $load_class_name = $class;
     # $rule can contain params that may not apply to the subclass that's currently loading.
     # define_boolexpr() in array context will return the portion of the rule that actually applies
     #my($load_rule, undef) = $load_class_name->define_boolexpr($rule->params_list);
     my($load_rule, @extra_params) = UR::BoolExpr->resolve($load_class_name, $rule->params_list);
     my $load_rule_id = $load_rule->id;
+    my $load_template_id = $load_rule->template_id;
 
     my @rule_properties_with_in_clauses =
         grep { $rule_template_without_recursion_desc->operator_for($_) eq 'in' } 
              $rule_template_without_recursion_desc->_property_names;
 
-    #my $rule_template_without_in_clause = $rule_template_without_recursion_desc;
-    my $rule_template_without_in_clause;
+    my($rule_template_without_in_clause,$rule_template_id_without_in_clause);
     if (@rule_properties_with_in_clauses) {
-        my $rule_template_id_without_in_clause = $rule_template_without_recursion_desc->id;
+        $rule_template_id_without_in_clause = $rule_template_without_recursion_desc->id;
         foreach my $property_name ( @rule_properties_with_in_clauses ) {
             # FIXME - removing and re-adding the filter should have the same effect as the substitute below,
             # but the two result in different rules in the end.
@@ -2764,7 +2766,7 @@ sub __create_object_fabricator_for_loading_template {
     
     # This is a local copy of what we want to put in all_params_loaded, when the object fabricator is
     # finalized
-    my $all_params_loaded_items = {};
+    my $local_all_params_loaded = {};
 
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
@@ -2929,24 +2931,22 @@ sub __create_object_fabricator_for_loading_template {
             # match on this rule, and some equivalent rules
             if ($loading_base_object and not $rule_specifies_id) {
                 if ($rule_class_name ne $load_class_name and scalar(@extra_params) == 0) {
-                    $pending_db_object->{load}{param_key}{$load_class_name}{$load_rule_id}++;
-                    $UR::Context::all_params_loaded->{$load_class_name}{$load_rule_id} = undef;
-                    $all_params_loaded_items->{$load_class_name}{$load_rule_id}++;
+                    $pending_db_object->{__load}->{$load_template_id}{$load_rule_id}++;
+                    $UR::Context::all_params_loaded->{$load_template_id}{$load_rule_id} = undef;
+                    $local_all_params_loaded->{$load_template_id}{$load_rule_id}++;
                 }
-                $pending_db_object->{load}{param_key}{$rule_class_name}{$rule_id}++;
-                $UR::Context::all_params_loaded->{$rule_class_name}{$rule_id} = undef;
-                $all_params_loaded_items->{$rule_class_name}{$rule_id}++;
+                $pending_db_object->{__load}->{$template_id}{$rule_id}++;
+                $UR::Context::all_params_loaded->{$template_id}{$rule_id} = undef;
+                $local_all_params_loaded->{$template_id}{$rule_id}++;
 
                 if (@rule_properties_with_in_clauses) {
                     # FIXME - confirm that all the object properties are filled in at this point, right?
                     my @values = @$pending_db_object{@rule_properties_with_in_clauses};
-                    #foreach my $property_name ( @rule_properties_with_in_clauses ) {
-                    #    push @values, $pending_db_object->$property_name;
-                    #}
                     my $r = $rule_template_without_in_clause->get_normalized_rule_for_values(@values);
+                    my $r_id = $r->id;
                     
-                    $UR::Context::all_params_loaded->{$rule_class_name}{$r->id} = undef;
-                    $all_params_loaded_items->{$rule_class_name}{$r->id}++;
+                    $UR::Context::all_params_loaded->{$rule_template_id_without_in_clause}{$r_id} = undef;
+                    $local_all_params_loaded->{$rule_template_id_without_in_clause}{$r_id}++;
                 }
             }
             
@@ -2996,7 +2996,8 @@ sub __create_object_fabricator_for_loading_template {
                             $loading_info = $dsx->_get_object_loading_info($pending_db_object);
                             
                             # Transfer the load info for the load we _just_ did to the subclass too.
-                            $loading_info->{$subclass_name} = $loading_info->{$class};
+                            my $subclassified_template = $rule_template->sub_classify($subclass_name);
+                            $loading_info->{$subclassified_template->id} = $loading_info->{$template_id};
                             $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
                         }
                         
@@ -3014,9 +3015,11 @@ sub __create_object_fabricator_for_loading_template {
                     }
                     else {
                         if ($loading_base_object) {
+                            my $subclassified_template = $rule_template->sub_classify($subclass_name);
+
                             $loading_info = $dsx->_get_object_loading_info($pending_db_object);
                             $dsx->_record_that_loading_has_occurred($loading_info);
-                            $loading_info->{$subclass_name} = delete $loading_info->{$class};
+                            $loading_info->{$subclassified_template->id} = delete $loading_info->{$template_id};
                             $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
                         }
                         
@@ -3113,8 +3116,8 @@ sub __create_object_fabricator_for_loading_template {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
                     my $rule_tmpl = $hint_data->[1];
                     my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
-                    $UR::Context::all_params_loaded->{$rule_tmpl->subject_class_name}->{$related_obj_rule->id} = undef;
-                    $all_params_loaded_items->{$rule_tmpl->subject_class_name}->{$related_obj_rule->id}++;
+                    $UR::Context::all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id} = undef;
+                    $local_all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id}++;
                  }
             }
         }
@@ -3135,32 +3138,34 @@ sub __create_object_fabricator_for_loading_template {
                 $recurse_property_value_found{$value_referencing_other_object} = 1;
                 # note that the direct query need not be done again
                 #my $equiv_params = $class->define_boolexpr($recurse_property_on_this_row => $value_referencing_other_object);
-                my $equiv_params = UR::BoolExpr->resolve(
+                my $equiv_rule = UR::BoolExpr->resolve_normalized(
                                        $class,
                                        $recurse_property_on_this_row => $value_referencing_other_object,
                                    );
-                my $equiv_param_key = $equiv_params->normalize->id;                
+                my $equiv_rule_id = $equiv_rule->id;
+                my $equiv_template_id = $equiv_rule->template_id;
                 
                 # note that the recursive query need not be done again
                 #my $equiv_params2 = $class->define_boolexpr($recurse_property_on_this_row => $value_referencing_other_object, -recurse => $recursion_desc);
-                my $equiv_params2 = UR::BoolExpr->resolve(
+                my $equiv_rule_2 = UR::BoolExpr->resolve_normalized(
                                         $class,
                                         $recurse_property_on_this_row => $value_referencing_other_object,
                                         -recurse => $recursion_desc,
                                      );
-                my $equiv_param_key2 = $equiv_params2->normalize->id;
+                my $equiv_rule_id_2 = $equiv_rule_2->id;
+                my $equiv_template_id_2 = $equiv_rule_2->template_id;
                 
                 # For any of the hierarchically related data which is already loaded, 
                 # note on those objects that they are part of that query.  These may have loaded earlier in this
                 # query, or in a previous query.  Anything NOT already loaded will be hit later by the if-block below.
                 my @subset_loaded = $class->is_loaded($recurse_property_on_this_row => $value_referencing_other_object);
-                $UR::Context::all_params_loaded->{$class}{$equiv_param_key} = undef;
-                $UR::Context::all_params_loaded->{$class}{$equiv_param_key2} = undef;
-                $all_params_loaded_items->{$class}{$equiv_param_key} = scalar(@subset_loaded);
-                $all_params_loaded_items->{$class}{$equiv_param_key2} = scalar(@subset_loaded);
+                $UR::Context::all_params_loaded->{$equiv_template_id}->{$equiv_rule_id} = undef;
+                $UR::Context::all_params_loaded->{$equiv_template_id_2}->{$equiv_rule_id_2} = undef;
+                $local_all_params_loaded->{$equiv_template_id}->{$equiv_rule_id} = scalar(@subset_loaded);
+                $local_all_params_loaded->{$equiv_template_id_2}->{$equiv_rule_id_2} = scalar(@subset_loaded);
                 for my $pending_db_object (@subset_loaded) {
-                    $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
-                    $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
+                    $pending_db_object->{__load}->{$equiv_template_id}->{$equiv_rule_id}++;
+                    $pending_db_object->{__load}->{$equiv_template_id_2}->{$equiv_rule_id_2}++;
                 }
             }
            
@@ -3170,27 +3175,29 @@ sub __create_object_fabricator_for_loading_template {
                 # This row was expected because some other row in the hierarchical query referenced it.
                 # Up the object count, and note on the object that it is a result of this query.
                 #my $equiv_params = $class->define_boolexpr($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
-                my $equiv_params = UR::BoolExpr->resolve(
+                my $equiv_rule = UR::BoolExpr->resolve_normalized(
                                        $class,
                                        $recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion,
                                     );
-                my $equiv_param_key = $equiv_params->normalize->id;
+                my $equiv_rule_id     = $equiv_rule->id;
+                my $equiv_template_id = $equiv_rule->template_id;
                 
                 # note that the recursive query need not be done again
                 #my $equiv_params2 = $class->define_boolexpr($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion, -recurse => $recursion_desc);
-                my $equiv_params2 = UR::BoolExpr->resolve(
+                my $equiv_rule_2 = UR::BoolExpr->resolve_normalized(
                                         $class,
                                         $recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion,
                                         -recurse => $recursion_desc
                                      );
-                my $equiv_param_key2 = $equiv_params2->normalize->id;
+                my $equiv_rule_id_2     = $equiv_rule_2->id;
+                my $equiv_template_id_2 = $equiv_rule_2->template_id;
                 
-                $UR::Context::all_params_loaded->{$class}{$equiv_param_key} = undef;
-                $UR::Context::all_params_loaded->{$class}{$equiv_param_key2} = undef;
-                $all_params_loaded_items->{$class}{$equiv_param_key}++;
-                $all_params_loaded_items->{$class}{$equiv_param_key2}++;
-                $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key}++;
-                $pending_db_object->{load}->{param_key}{$class}{$equiv_param_key2}++;
+                $UR::Context::all_params_loaded->{$equiv_template_id}->{$equiv_rule_id} = undef;
+                $UR::Context::all_params_loaded->{$equiv_template_id_2}->{$equiv_rule_id_2} = undef;
+                $local_all_params_loaded->{$equiv_template_id}->{$equiv_rule_id}++;
+                $local_all_params_loaded->{$equiv_template_id_2}->{$equiv_rule_id_2}++;
+                $pending_db_object->{__load}->{$equiv_template_id}->{$equiv_rule_id}++;
+                $pending_db_object->{__load}->{$equiv_template_id_2}->{$equiv_rule_id_2}++;
             }
         } # end of handling recursion
             
@@ -3210,7 +3217,7 @@ sub __create_object_fabricator_for_loading_template {
     # The new behavior builds up changes to be made to all_params_loaded, and someone
     # needs to call $object_fabricator->finalize() to apply these changes
     bless $object_fabricator, 'UR::Context::object_fabricator_tracker';
-    $UR::Context::object_fabricators->{$object_fabricator} = $all_params_loaded_items;
+    $UR::Context::object_fabricators->{$object_fabricator} = $local_all_params_loaded;
     
     return $object_fabricator;
 }
@@ -3218,14 +3225,14 @@ sub __create_object_fabricator_for_loading_template {
 sub UR::Context::object_fabricator_tracker::finalize {
     my $self = shift;
 
-    my $this_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
+    my $local_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
 
-    foreach my $class ( keys %$this_all_params_loaded ) {
+    foreach my $template_id ( keys %$local_all_params_loaded ) {
         while(1) {
-            my($rule_id,$val) = each %{$this_all_params_loaded->{$class}};
+            my($rule_id,$val) = each %{$local_all_params_loaded->{$template_id}};
             last unless defined $rule_id;
-            next unless exists $UR::Context::all_params_loaded->{$class}->{$rule_id};  # Has unload() removed this one earlier?
-            $UR::Context::all_params_loaded->{$class}->{$rule_id} += $val; 
+            next unless exists $UR::Context::all_params_loaded->{$template_id}->{$rule_id};  # Has unload() removed this one earlier?
+            $UR::Context::all_params_loaded->{$template_id}->{$rule_id} += $val; 
         }
     }
 }
@@ -3233,22 +3240,22 @@ sub UR::Context::object_fabricator_tracker::DESTROY {
     my $self = shift;
     # Don't apply the changes.  Maybe the importer closure just went out of scope before
     # it read all the data
-    my $this_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
-    if ($this_all_params_loaded) {
+    my $local_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
+    if ($local_all_params_loaded) {
         # finalize wasn't called on this iterator; maybe the importer closure went out
         # of scope before it read all the data.
         # Conditionally apply the changes from the local all_params_loaded.  If the Context's
         # all_params_loaded is defined, then another query has successfully run to
         # completion, and we should add our data to it.  Otherwise, we're the only query like
         # this and all_params_loaded should be cleaned out
-        foreach my $class ( keys %$this_all_params_loaded ) {
+        foreach my $template_id ( keys %$local_all_params_loaded ) {
             while(1) {
-                my($rule_id, $val) = each %{$this_all_params_loaded->{$class}};
+                my($rule_id, $val) = each %{$local_all_params_loaded->{$template_id}};
                 last unless $rule_id;
-                if (defined $UR::Context::all_params_loaded->{$class}->{$rule_id}) {
-                    $UR::Context::all_params_loaded->{$class}->{$rule_id} += $val;
+                if (defined $UR::Context::all_params_loaded->{$template_id}->{$rule_id}) {
+                    $UR::Context::all_params_loaded->{$template_id}->{$rule_id} += $val;
                 } else {
-                    delete $UR::Context::all_params_loaded->{$class}->{$rule_id};
+                    delete $UR::Context::all_params_loaded->{$template_id}->{$rule_id};
                 }
             }
         }
@@ -3367,27 +3374,27 @@ sub _cache_is_complete_for_class_and_normalized_rule {
 
     # See if we need to do a load():
 
-    my $param_key = $params->{_param_key};
+    my $template_id = $normalized_rule->template_id;
+    my $rule_id     = $normalized_rule->id;
     my $loading_is_in_progress_on_another_iterator = 
-            grep { exists $params->{_param_key}
-                   and
-                   exists $_->{$class}
+            grep { exists $_->{$template_id}
                    and 
-                   exists $_->{$class}->{$param_key}
+                   exists $_->{$template_id}->{$rule_id}
                  }
             values %$UR::Context::object_fabricators;
 
     return 0 if $loading_is_in_progress_on_another_iterator;
 
-    my $loading_was_done_before_with_these_params =
-            # complex (non-single-id) params
-            exists($params->{_param_key}) 
-            && (
+    # complex (non-single-id) params
+    my $loading_was_done_before_with_these_params = (
                 # exact match to previous attempt
-                exists ($UR::Context::all_params_loaded->{$class}->{$param_key})
+                (    exists ($UR::Context::all_params_loaded->{$template_id})
+                     and
+                     exists ($UR::Context::all_params_loaded->{$template_id}->{$rule_id})
+                )
                 ||
                 # this is a subset of a previous attempt
-                ($self->_loading_was_done_before_with_a_superset_of_this_params_hashref($class,$params))
+                ($self->_loading_was_done_before_with_a_superset_of_this_rule($normalized_rule))
             );
     
     my $object_is_loaded_or_non_existent =
@@ -3646,63 +3653,28 @@ sub _group_objects {
     return @groups;
 }
 
-sub _loading_was_done_before_with_a_superset_of_this_params_hashref  {
-    my ($self,$class,$input_params) = @_;
+sub _loading_was_done_before_with_a_superset_of_this_rule {
+    my($self,$rule) = @_;
 
-    my @params_property_names =
-        grep {
-            $_ ne "id"
-                and not (substr($_,0,1) eq "_")
-                and not (substr($_,0,1) eq "-")
-            }
-    keys %$input_params;
-
-    for my $try_class ( $class, $class->inheritance ) {
-        # more than one property, see if individual checks have been done for any of these...
-        my $try_class_meta = $try_class->__meta__;
-        next unless $try_class_meta;
-
-        my @param_combinations = $self->_get_all_subsets_of_params(
-                                     grep { $try_class_meta->property_meta_for_name($_) }
-                                          @params_property_names
-                                 );
-        # get rid of first (empty) entry.  For no params, this would
-        # have been caught by $all_objects_are_loaded
-        shift @param_combinations; 
-        foreach my $params ( @param_combinations ) {
-            my %get_hash = map { $_ => $input_params->{$_} } @$params;
-            #my $key = $try_class->define_boolexpr(%get_hash)->id;
-            my $rule = UR::BoolExpr->resolve_normalized($try_class, %get_hash);
-            my $key = $rule->id;
-            if (defined($key) and exists $all_params_loaded->{$try_class}->{$key} and defined $all_params_loaded->{$try_class}->{$key}) {
-
-                $all_params_loaded->{$try_class}->{$input_params->{_param_key}} = 1;
-                my $new_key = $input_params->{_param_key};
-                for my $obj ($self->all_objects_loaded($try_class)) {
-                    my $load_data = $obj->{load};
-                    next unless $load_data;
-                    my $param_key_data = $load_data->{param_key};
-                    next unless $param_key_data;
-                    my $class_data = $param_key_data->{$try_class};
-                    next unless $class_data;
-                    $class_data->{$new_key}++;
-                }
-                return 1;
+    my $template = $rule->template;
+    foreach my $loaded_template_id ( keys %$UR::Context::all_params_loaded ) {
+        my $loaded_template = UR::BoolExpr::Template->get($loaded_template_id);
+        if($template->is_subset_of($loaded_template)) {
+            foreach my $loaded_rule_id ( keys %{ $UR::Context::all_params_loaded->{$loaded_template_id} } ) {
+                my $loaded_rule = UR::BoolExpr->get($loaded_rule_id);
+                return 1 if ($rule->is_subset_of($loaded_rule));
             }
         }
-        # No sense looking further up the inheritance
-        # FIXME UR::ModuleBase is in the inheritance list, you can't call __meta__() on it
-        # and I'm having trouble getting a UR class object defined for it...
-        last if ($try_class eq 'UR::Object');
     }
     return;
 }
 
 
-sub _forget_loading_was_done_with_class_and_rule {
-    my($self,$class_name, $rule) = @_;
 
-    delete $all_params_loaded->{$class_name}->{$rule->id};
+sub _forget_loading_was_done_with_template_and_rule {
+    my($self,$template_id, $rule_id) = @_;
+
+    delete $all_params_loaded->{$template_id}->{$rule_id};
 }
 
 # Given a list of values, returns a list of lists containing all subsets of
@@ -5046,8 +5018,8 @@ with each get(), and is used by the L</Object Cache Pruner> to expire the
 least recently requested data.
 
 Objects also track what parameters have been used to get() them in the hash
-C<$obj-E<gt>{load}-E<gt>{param_key}>.  This is a copy of the data in
-C<$UR::Context::all_params_loaded-E<gt>{$class_name}>.  For each rule
+C<$obj-E<gt>{__load}>.  This is a copy of the data in
+C<$UR::Context::all_params_loaded-E<gt>{$template_id}>.  For each rule
 ID, it will have a count of the number of times that rule was used in a get().
 
 =head2 Deleted Objects and Ghosts
