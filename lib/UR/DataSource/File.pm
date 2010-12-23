@@ -553,8 +553,16 @@ sub create_iterator_closure_for_rule {
     # Index in the split-file-data for each sorted column in order
     my @sort_order_column_indexes = map { $column_name_to_index_map{$_} } @$sort_order_names;
 
-    my %property_metas = map { $_ => UR::Object::Property->get(class_name => $class_name, column_name => uc($_)) }
-                         @$csv_column_order_names;
+    my(%property_meta_for_column_name);
+    foreach my $column_name ( @$csv_column_order_names ) {
+        my $prop = UR::Object::Property->get(class_name => $class_name, column_name => uc($column_name));
+        our %WARNED_ABOUT_COLUMN;
+        unless ( $prop or $WARNED_ABOUT_COLUMN{$class_name . '::' . $column_name}++) {
+            $self->warning_message("Couldn't find a property in class $class_name that goes with column $column_name");
+            next;
+        }
+        $property_meta_for_column_name{$column_name} = $prop;
+    }
 
     my @rule_columns_in_order;  # The order we should perform rule matches on - value is the index in @next_file_row to test
     my @comparison_for_column;  # closures to call to perform the match - same order as @rule_columns_in_order
