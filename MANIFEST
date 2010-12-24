@@ -339,6 +339,7 @@ t/URT/RAMThingy.pm
 t/URT/t/00-load.t
 t/URT/t/01_object.t
 t/URT/t/02_class_construction.t
+t/URT/t/03_rule_subsets.t
 t/URT/t/03_rule_values.t
 t/URT/t/03_rules.t
 t/URT/t/03_rules_construction.t
@@ -439,6 +440,7 @@ t/URT/t/78_get_by_subclass_params_load_properly.t
 t/URT/t/79_like_operator.t
 t/URT/t/80_command_define_datasource.t
 t/URT/t/81_crud_custom_columnnames.t
+t/URT/t/82_boolexpr_op_underscore.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction-observers.t
 t/URT/t/99_transaction.t
