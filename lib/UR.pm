@@ -6,7 +6,22 @@ package UR;
 
 use strict;
 use warnings FATAL => 'all';
-our $VERSION = '0.19';
+
+# Set the version at compile time, since some other modules borrow it.
+use version;
+our $VERSION;
+BEGIN { 
+    # the first CPAN deploy using "version" is failing to install.
+    # this is an attempt to get around it...
+
+    # for the cpan shell, and other parsers
+    $VERSION = 'v0.19';
+
+    # for actual inspection
+    ${VERSION} 
+        = qv('0.19'); 
+};
+
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
