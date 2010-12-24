@@ -1,10 +1,20 @@
 Revision history for UR
 
+0.19    2010-12-24
+        faster compile
+        faster query cache resolution
+        leaner meta-data
+        less build deps, build dep fixes
+        hideable commands
+        fixes for newer sqlite API
+        revamped UR::BoolExpr API
+        new command tree
+
 0.18	2010-12-10
-	Bugfix for queries involving subclasses without tables
-	Preliminary support for building debian packages
-	Bugfixes for queries with the 'in' and 'not in' operators
-	Object cache indexing sped up by replacing regexes with direct string comparisons
+        Bugfix for queries involving subclasses without tables
+        Preliminary support for building debian packages
+        Bugfixes for queries with the 'in' and 'not in' operators
+        Object cache indexing sped up by replacing regexes with direct string comparisons
 
 0.17    2010-11-10
         Fixed bug with default datasources dumping debug info during queries.
