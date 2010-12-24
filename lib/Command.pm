@@ -10,6 +10,8 @@ use Getopt::Long;
 use Term::ANSIColor;
 require Text::Wrap;
 
+our $VERSION = $UR::VERSION;
+
 our $entry_point_class;
 our $entry_point_bin;
 
@@ -83,14 +85,14 @@ sub execute {
 
     # handle __errors__ objects before execute
     if (my @problems = $self->__errors__) {
-        $self->usage_message($self->help_usage_complete_text);
-        #print $self->help_usage_complete_text;
         for my $problem (@problems) {
             my @properties = $problem->properties;
             $self->error_message("Property " .
                                  join(',', map { "'$_'" } @properties) .
                                  ': ' . $problem->desc);
         }
+        my $command_name = $self->command_name;
+        $self->error_message("Please see '$command_name --help' for more information.");
         $self->delete() if $was_called_as_class_method;
         return;
     }
@@ -175,20 +177,26 @@ sub _execute_with_shell_params_and_return_exit_code
 sub _execute_delegate_class_with_params {
     my ($class, $delegate_class, $params) = @_;
 
-    unless ($delegate_class) {
-        $class->usage_message($class->help_usage_complete_text);
-        return;
-    }
-    
-    if (!$params or $params->{help}) {
-        $delegate_class->usage_message($delegate_class->help_usage_complete_text,"\n");
-        return;
-    }
-
     $delegate_class->dump_status_messages(1);
     $delegate_class->dump_warning_messages(1);
     $delegate_class->dump_error_messages(1);
     $delegate_class->dump_debug_messages(0);
+
+    unless ($delegate_class) {
+        $class->usage_message($class->help_usage_complete_text);
+        return;
+    }
+
+    if ( $delegate_class->is_sub_command_delegator && !defined($params) ) {
+        my $command_name = $delegate_class->command_name;
+        $delegate_class->status_message($delegate_class->help_usage_complete_text);
+        $delegate_class->error_message("Please specify a valid sub-command for '$command_name'.");
+        return;
+    }
+    if ( $params->{help} ) {
+        $delegate_class->usage_message($delegate_class->help_usage_complete_text);
+        return;
+    }
 
     my $command_object = $delegate_class->create(%$params);
 
@@ -495,7 +503,7 @@ sub resolve_class_and_params_for_argv
             return $class_for_sub_command->resolve_class_and_params_for_argv(@argv);
         }
         
-        if ($self->is_executable and @argv) {
+        if (@argv) {
             # this has sub-commands, and is also executable
             # fall through to the execution_logic...
         }
@@ -612,7 +620,7 @@ sub help_usage_complete_text {
         if ($self->is_sub_command_delegator) {
             # show the list of sub-commands
             $text = sprintf(
-                "Commands for %s\n%s",
+                "Sub-commands for %s:\n%s",
                 Term::ANSIColor::colored($command_name, 'bold'),
                 $self->help_sub_commands,
             );
@@ -853,6 +861,41 @@ sub sorted_sub_command_classes {
         @c;
 }
 
+sub sorted_sub_command_names {
+    my $class = shift;
+    my @sub_command_classes = $class->sorted_sub_command_classes;
+    my @sub_command_names = map { $_->command_name_brief } @sub_command_classes;
+    return @sub_command_names;
+}
+
+sub sub_commands_table {
+    my $class = shift;
+    my @sub_command_names = $class->sorted_sub_command_names;
+
+    my $max_length = 0;
+    for (@sub_command_names) {
+        $max_length = length($_) if ($max_length < length($_));
+    }
+    $max_length ||= 79;
+    my $col_spacer = '_'x$max_length;
+
+    my $n_cols = floor(80/$max_length);
+    my $n_rows = ceil(@sub_command_names/$n_cols);
+    my @tb_rows;
+    for (my $i = 0; $i < @sub_command_names; $i += $n_cols) {
+        my $end = $i + $n_cols - 1;
+        $end = $#sub_command_names if ($end > $#sub_command_names);
+        push @tb_rows, [@sub_command_names[$i..$end]];
+    }
+    my @col_alignment;
+    for (my $i = 0; $i < $n_cols; $i++) {
+        push @col_alignment, { sample => "&$col_spacer" };
+    }
+    my $tb = Text::Table->new(@col_alignment);
+    $tb->load(@tb_rows);
+    return $tb;
+}
+
 sub help_sub_commands
 {
     my $class = shift;
@@ -867,6 +910,7 @@ sub help_sub_commands
     for my $sub_command_class (@sub_command_classes) {
         my $category = $sub_command_class->sub_command_category;
         $category = '' if not defined $category;
+        next if $sub_command_class->_is_hidden_in_docs();
         my $sub_commands_within_category = $categories{$category};
         unless ($sub_commands_within_category) {
             if (defined $category and length $category) {
@@ -948,9 +992,11 @@ sub help_sub_commands
         }
         $text .= "\n";
     }
-        
+    $DB::single = 1;        
     return $text;
 }
+
+sub _is_hidden_in_docs { return; }
 
 #
 # Methods which transform command properties into shell args (getopt)
@@ -1083,11 +1129,29 @@ sub _shell_arg_getopt_complete_specification_from_property_meta
     }
     else {
         my $type = $property_meta->data_type;
-        if ((!defined $type) || $type =~ /File(system|)(Path|)/i) {
-            $completions = 'files';
+        my @complete_as_files = (
+            'File','FilePath','Filesystem','FileSystem','FilesystemPath','FileSystemPath',
+            'Text','String',
+        );
+        my @complete_as_directories = (
+            'Directory','DirectoryPath','Dir','DirPath',
+        );
+        if (!defined($type)) {
+            $completions = 'files'; 
         }
-        elsif ($type && $type =~ /Directory(Path|)/i) {
-            $completions = 'directories'
+        else {
+            for my $pattern (@complete_as_files) {
+                if (!$type || $type eq $pattern) {
+                    $completions = 'files';
+                    last;
+                }
+            }
+            for my $pattern (@complete_as_directories) {
+                if ( $type && $type eq $pattern) {
+                    $completions = 'directories';
+                    last;
+                }
+            }
         }
     }
     return (
@@ -1291,6 +1355,7 @@ sub class_for_sub_command
 # The filehandle to print these messages to.  In normal operation this'll just be
 # STDERR, but the test case can change it to capture the messages to somewhere else
 our $stderr = \*STDERR;
+our $stdout = \*STDOUT;
 
 our %msgdata;
 
@@ -1350,7 +1415,12 @@ for my $type (qw/error warning status debug usage/) {
                 $code->($self,$msg);
             }
             if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
-                (ref($fh) ? $fh : $stderr)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                if ( $type eq 'usage' ) {
+                    (ref($fh) ? $fh : $stdout)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                }
+                else {
+                    (ref($fh) ? $fh : $stderr)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                }
             }
             if ($msgdata->{ "queue_" . $type . "_messages"}) {
                 my $a = $msgdata->{ $type . "_messages_arrayref" } ||= [];

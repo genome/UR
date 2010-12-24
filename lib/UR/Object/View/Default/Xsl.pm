@@ -31,7 +31,8 @@ use Exporter 'import';
 our @EXPORT_OK = qw(type_to_url url_to_type);
 
 sub _generate_content {
-    my $self = shift;
+
+    my ($self, %params) = @_;
 
     if (!$self->desired_perspective) {
         $self->desired_perspective($self->perspective);
@@ -49,14 +50,16 @@ sub _generate_content {
         $xml_view = UR::Object::View->create(
             subject_class_name => $self->subject_class_name,
             perspective => $self->desired_perspective,
-            toolkit => 'xml'
+            toolkit => 'xml',
+            %params
         );
     };
     if ($@) {
         $xml_view = UR::Object::View->create(
             subject_class_name => $self->subject_class_name,
             perspective => $self->perspective,
-            toolkit => 'xml'
+            toolkit => 'xml',
+            %params
         );
     }
 
@@ -104,8 +107,6 @@ sub _generate_content {
     $ss->setNamespace($xslns, 'xsl', 1);
 
     my $time = time . "000";
-    my $dev = exists $ENV{GENOME_DEV_MODE} ? $ENV{GENOME_DEV_MODE} : 0;
-
 
     ## this is the wrong place for this information
     #  since it is already part of the XML document
@@ -124,7 +125,6 @@ sub _generate_content {
     $set_var->('currentToolkit',$output_format);
     $set_var->('displayName',$display_name);
     $set_var->('labelName',$label_name);
-    $set_var->('GENOME_DEV_MODE',$dev);
     $set_var->('currentTime',$time);
 
     if ($self->subject->id) {

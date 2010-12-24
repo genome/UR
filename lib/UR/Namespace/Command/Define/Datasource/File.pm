@@ -10,28 +10,23 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Namespace::Command::Define::Datasource',
     has => [
-                server => {
-                    is => 'String',
-                    doc => '"server" attribute for this data source, such as a database name',
-                },
-                nosingleton => {
-                    is => 'Boolean',
-                    doc => 'Created data source should not inherit from UR::Singleton (defalt is that it will)',
-                    default_value => 0,
-                },
-           ],
-           doc => '(Not yet implemented)',
+        server => {
+            is => 'String',
+            doc => '"server" attribute for this data source, such as a database name',
+        },
+        singleton => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'by default all data sources are singletons, but this can be turned off' 
+        },
+    ],
+    doc => 'Add a file-based data source (not yet implemented)'
 );
 
 sub help_description {
    "Define a UR datasource connected to a file";
 }
 
-sub help_brief {
-    'Add a file-based data source (not yet implemented)';
-}
-
-    
 sub execute {
     my $self = shift;
 

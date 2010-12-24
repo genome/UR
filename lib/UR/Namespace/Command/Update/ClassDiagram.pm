@@ -84,21 +84,17 @@ $DB::single=1;
         push @involved_classes, UR::Object::Type->get(class_name => $class_name);
     }
 
-    push @involved_classes ,$self->_get_related_items( names => \@initial_name_list,
-                                                       depth => $params->{'depth'},
-                                                       item_class => 'UR::Object::Type',
-                                                       item_param => 'class_name',
-                                                       related_class => 'UR::Object::Reference',
-                                                       related_param => 'r_class_name',
-                                                     );
-    push @involved_classes, $self->_get_related_items( names => \@initial_name_list,
-                                                       depth => $params->{'depth'},
-                                                       item_class => 'UR::Object::Type',
-                                                       item_param => 'class_name',
-                                                       related_class => 'UR::Object::Inheritance',
-                                                       related_param => 'parent_class_name',
-                                                     );
-    my %involved_class_names = map { $_->class_name => 1 } @involved_classes;
+    push @involved_classes, $self->_get_related_classes_via_inheritance(
+                                                        names => \@initial_name_list,
+                                                        depth => $params->{'depth'},
+                                                      );
+
+    push @involved_classes, $self->_get_related_classes_via_properties(
+                                                        #names => [ map { $_->class_name } @involved_classes ],
+                                                        names => \@initial_name_list,
+                                                        depth => $params->{'depth'},
+                                                      );
+    my %involved_class_names = map { $_->class_name => $_ } @involved_classes;
 
     # The initial placement, and how much to move over for the next box
     my($x_coord, $y_coord, $x_inc, $y_inc) = (20,20,40,40);
@@ -112,7 +108,7 @@ $DB::single=1;
 
     # First, place all the classes
     my @all_boxes = UR::Object::Umlet::Class->get( diagram_name => $diagram->name );
-    foreach my $class ( @involved_classes ) {
+    foreach my $class ( values %involved_class_names ) {
         my $umlet_class = UR::Object::Umlet::Class->get(diagram_name => $diagram->name,
                                                         subject_id => $class->class_name);
         my $created = 0;
@@ -172,48 +168,52 @@ $DB::single=1;
     }
 
     # Next, connect the classes together
-    foreach my $class ( @involved_classes ) {
-        foreach my $reference ( UR::Object::Reference->get(class_name => $class->class_name) )  {
+    foreach my $class ( values %involved_class_names ) {
+        my @properties = grep { $_->is_delegated and $_->data_type} $class->all_property_metas();
+        foreach my $property ( @properties ) {
 
-            next unless ($involved_class_names{$reference->r_class_name});
+            next unless (exists $involved_class_names{$property->data_type});
 
-            # FIXME There seems to be a bug in get() here.  It's returning all the ref properties with that
-            # class, and not just the single one with that tha_id
-            my @ref_property = UR::Object::Reference::Property->get(class_name => $class->class_name,
-                                                                     tha_id => $reference->tha_id);
-            my($ref_property) = grep { $_->tha_id eq $reference->tha_id } @ref_property;
+            my @property_links = eval { $property->get_property_name_pairs_for_join };
+            next unless @property_links;
+
+            my $id_by = join(':', map { $_->[0] } @property_links);
+            my $their_id_by = join (':', map { $_->[1] } @property_links);
 
             my $umlet_relation = UR::Object::Umlet::Relation->get( diagram_name => $diagram->name,
-                                                                   from_entity_name => $reference->class_name,
-                                                                   to_entity_name => $reference->r_class_name,
-                                                                   from_attribute_name => $ref_property->property_name,
-                                                                   to_attribute_name => $ref_property->r_property_name,
+                                                                   from_entity_name => $property->class_name,
+                                                                   to_entity_name => $property->data_type,
+                                                                   from_attribute_name => $id_by,
+                                                                   to_attribute_name => $their_id_by,
                                                                  );
             unless ($umlet_relation) {                             
                 $umlet_relation = UR::Object::Umlet::Relation->create( diagram_name => $diagram->name,
                                                                        relation_type => '&lt;-',
-                                                                       from_entity_name => $reference->class_name,
-                                                                       to_entity_name => $reference->r_class_name,
-                                                                       from_attribute_name => $ref_property->property_name,
-                                                                       to_attribute_name => $ref_property->r_property_name,
+                                                                       from_entity_name => $property->class_name,
+                                                                       to_entity_name => $property->data_type,
+                                                                       from_attribute_name => $id_by,
+                                                                       to_attribute_name => $their_id_by,
                                                                      );
-                 $umlet_relation->connect_entity_attributes();
+                 unless ($umlet_relation->connect_entity_attributes()) {
+                     # This didn't link to anything on the diagram
+                     $umlet_relation->delete;
+                 }
             }
 
         }
 
-        foreach my $inh ( UR::Object::Inheritance->get(class_name => $class->class_name) ) {
-            next unless ($involved_class_names{$inh->parent_class_name});
+        foreach my $parent_class_name ( @{ $class->is } ) {
+            next unless ($involved_class_names{$parent_class_name});
 
             my $umlet_relation = UR::Object::Umlet::Relation->get( diagram_name => $diagram->name,
                                                                    from_entity_name => $class->class_name,
-                                                                   to_entity_name => $inh->parent_class_name,
+                                                                   to_entity_name => $parent_class_name,
                                                                  );
             unless ($umlet_relation) {
                 $umlet_relation = UR::Object::Umlet::Relation->create( diagram_name => $diagram->name,
                                                                        relation_type => '&lt;&lt;-',
                                                                        from_entity_name => $class->class_name,
-                                                                       to_entity_name => $inh->parent_class_name,
+                                                                       to_entity_name => $parent_class_name,
                                                                      );
                  $umlet_relation->connect_entities();
             }
@@ -227,24 +227,37 @@ $DB::single=1;
 
 
 
-sub _get_related_items {
-my($self, %params) = @_;
+sub _get_related_classes_via_properties {
+    my($self, %params) = @_;
 
     return unless (@{$params{'names'}});
     return unless $params{'depth'};
 
-    my $item_class = $params{'item_class'};
-    my $item_param = $params{'item_param'};
-
-    my $related_class = $params{'related_class'};
-    my $related_param = $params{'related_param'};
+    # Make sure the named classes are loaded
+    foreach ( @{ $params{'names'} } ) {
+        eval { $_->class };
+    }
 
     # Get everything linked to the named things
-    my @related_names = map { $_->$related_param } $related_class->get($item_param => $params{'names'});
-    push @related_names, map { $_->$item_param } $related_class->get($related_param => $params{'names'});
+    my @related_names = grep { eval { $_->class } }
+                        #grep { $_ }
+                        map { $_->data_type }
+                        map { UR::Object::Property->get(class_name => $_ ) }
+                        @{ $params{'names'}};
+    push @related_names, grep { eval { $_->class } }
+                         #grep { $_ }
+                         map { $_->class_name }
+                         map { UR::Object::Property->get(data_type => $_ ) }
+                         @{ $params{'names'}};
     return unless @related_names;
 
-    my @objs = $item_class->get($item_param => \@related_names);
+    my @objs = map { UR::Object::Type->get(class_name => $_) } @related_names;
+
+    #my @related_names = grep { $_ } map { $_->$related_param } $related_class->get($item_param => $params{'names'});
+    #push @related_names, grep { $_ } map { $_->$item_param } $related_class->get($related_param => $params{'names'});
+    #return unless @related_names;
+#
+#    my @objs = $item_class->get($item_param => \@related_names);
 
     unless ($self->include_ur_object) {
         # Prune out UR::Object and UR::Entity
@@ -252,9 +265,45 @@ my($self, %params) = @_;
     }
 
     # make a recursive call to get the related objects by name
-    return ( @objs, $self->_get_related_items( %params, names => \@related_names, depth => --$params{'depth'}) );
+    return ( @objs, $self->_get_related_classes_via_properties( %params, names => \@related_names, depth => --$params{'depth'}) );
 }
     
+sub _get_related_classes_via_inheritance {
+    my($self,%params) = @_;
+
+    return unless (@{$params{'names'}});
+    return unless $params{'depth'};
+
+    my @related_class_names;
+    foreach my $class_name ( @{ $params{'names'} } ) {
+        # get the class loaded
+        eval { $class_name->class };
+        if ($@) {
+            $self->warning_message("Problem loading class $class_name: $@");
+            next;
+        }
+
+        # Get this class' parents
+        #push @related_class_names, $class_name->parent_classes;
+        push @related_class_names, @{ $class_name->__meta__->is };
+    }
+
+    my @objs = map { $_->__meta__ } @related_class_names;
+
+    unless ($self->include_ur_object) {
+        # Prune out UR::Object and UR::Entity
+        @objs = grep { $_->class_name ne 'UR::Object' and $_->class_name ne 'UR::Entity' } @objs;
+    }
+
+    # make a recursive call to get their parents
+    return ( @objs,
+             $self->_get_related_classes_via_inheritance( %params,
+                                                          names => \@related_class_names,
+                                                          depth => --$params{'depth'},
+                                                        )
+           );
+            
+}
 
 
 1;

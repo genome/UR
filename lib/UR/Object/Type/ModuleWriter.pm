@@ -19,21 +19,16 @@ sub resolve_class_description_perl {
 
     unless (@isa) {
         #Carp::cluck("No isa for $self->{class_name}!?");
-        my @i = UR::Object::Inheritance->get(
-            class_name => $self->class_name
-        );
-        my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_->parent_class_name) } @i;
+        my @i = ${ $self->is };
+        my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
         die "Parent class objects not all loaded for " . $self->class_name unless (@i == @parent_class_objects);
         @isa = map { $_->class_name } @parent_class_objects;
     }
 
     unless (@isa) {
         #Carp::confess("FAILED TO SET ISA FOR $self->{class_name}!?");
-        my @i = UR::Object::Inheritance->get(
-            class_name => $self->class_name
-        );
-        my @parent_class_objects = 
-            map { UR::Object::Type->is_loaded(class_name => $_->parent_class_name) } @i;
+        my @i = ${ $self->is };
+        my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
                     
         unless (@i and @i == @parent_class_objects) {
             $DB::single=1;
@@ -106,7 +101,7 @@ sub resolve_class_description_perl {
             
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->__meta__->all_property_type_names;
-    my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas reference_metas reference_property_metas meta_class_name/;
+    my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
         my $property_obj = $class_meta_meta->property_meta_for_name($property_name);
@@ -132,7 +127,7 @@ sub resolve_class_description_perl {
     }
 
     my %properties_by_section;
-    my %id_property_names = map { $_->property_name => 1 } $self->direct_id_token_metas;
+    my %id_property_names = map { $_ => 1 } $self->direct_id_property_names;
     my @properties = $self->direct_property_metas;
     foreach my $property_meta ( @properties ) {
         my $mentioned_section = $property_meta->is_specified_in_module_header;
@@ -201,24 +196,15 @@ sub resolve_class_description_perl {
         $perl .= "    $section => [\n$section_src    ],\n";
     }
 
-    if (my @unique_constraint_props = sort { $a->unique_group cmp $b->unique_group }
-                                      UR::Object::Property::Unique->get(class_name => $self->class_name)) {
-        my %unique_groups;
-        for my $uc_prop (@unique_constraint_props) {
-            $unique_groups{$uc_prop->unique_group} ||= [];
-            push @{ $unique_groups{$uc_prop->unique_group} }, $uc_prop;
-        }
+    my $unique_groups = $self->unique_property_set_hashref;
+    if ($unique_groups and keys %$unique_groups) {
 
         $perl .= "    unique_constraints => [\n";
-        for my $unique_group (values %unique_groups) {
-            my @property_objects = map { 
-                    UR::Object::Property->get(class_name => $self->class_name, property_name => $_->property_name); 
-                } @$unique_group;
-            #my @property_names = sort map { $_->property_name } @property_objects;
-            my @property_names = sort map { $_->property_name } @$unique_group; 
+        for my $unique_group_name (keys %$unique_groups) {
+            my $property_names = join(' ', sort { $_ } @{ $unique_groups->{$unique_group_name}});
             $perl .= "        { "
-                . "properties => [qw/@property_names/], "
-                . "sql => '" . $unique_group->[0]->unique_group . "'"
+                . "properties => [qw/$property_names/], "
+                . "sql => '" . $unique_group_name . "'"
                 . " },\n";
         }
         $perl .= "    ],\n";
@@ -374,12 +360,12 @@ sub _get_display_fields_for_property {
         $seen{'implied_by'} = 1;
     }
 
-    if (my @id_by = $property->id_by_property_links) {
+    if (my @id_by = eval { $property->get_property_name_pairs_for_join }) {
         push @fields, "id_by => " 
             . (@id_by > 1 ? '[ ' : '')
-            . join(", ", map { "'" . $_->property_name . "'" } @id_by)
+            . join(", ", map { "'" . $_->[0] . "'" } @id_by)
             . (@id_by > 1 ? ' ]' : '');
-        $seen{'id_by_property_links'} = 1;
+        $seen{'get_property_name_pairs_for_join'} = 1;
 
         if (defined $property->id_class_by) {
             push @fields, sprintf("id_class_by => '%s'", $property->id_class_by);

@@ -5,13 +5,8 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
-if ($ENV{UR_MOOSE}) { 
-    plan tests => 1;
-}
-else {
-    plan skip_all => ": only used when UR_MOOSE is set";
-}
+plan tests => 2;
 use_ok( 'UR' );
-
-diag( "Testing UR $UR::VERSION, Perl $], $^X" );
+use_ok( 'UR::All' );
+note( "Testing UR $UR::VERSION, Perl $], $^X" );
 

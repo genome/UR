@@ -190,6 +190,10 @@ sub rollback
     $self->__signal_change__('rollback', 1);
     my @changes_to_undo = reverse $self->get_changes();
     my $transaction_change = pop @changes_to_undo;
+    my $transaction = $transaction_change->changed_class_name->get($transaction_change->changed_id);
+    unless ($self == $transaction && $transaction_change->changed_aspect eq 'create') {
+        die "First change was not the creation of this transaction!";
+    }
     for my $change (@changes_to_undo) {
         if ($change == $changes_to_undo[0]) {
             # the transaction reverses itself in its own context,

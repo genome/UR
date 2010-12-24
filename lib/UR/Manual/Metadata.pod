@@ -49,11 +49,8 @@ UR Classes aren't just conceptual entities like a package name, they have
 object instances to represent them.  For every named class, you can get a
 L<UR::Object::Type> instance with that C<class_name>.  Each property defined
 on that class has a L<UR::Object::Property> with a matching C<class_name>
-and C<property_name> pair.  Parent-child relationships have
-L<UR::Object::Inheritance> instances, and has-a relationships have
-L<UR::Object::Reference> and L<UR::Object::Reference::Property> instances.
-Even those basic metadata classes have class, property and relationship
-objects of their own.
+and C<property_name> pair.  Even those basic metadata classes have class,
+property and relationship metadata of their own.
 
 =item Schema Objects
 

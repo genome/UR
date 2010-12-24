@@ -81,6 +81,38 @@ sub template_and_values {
 }
 
 
+# Returns true if the rule represents a subset of the things the other
+# rule would match.  It returns undef if the answer is not known, such as
+# when one of the values is a list and we didn't go to the trouble of 
+# searching the list for a matching value
+sub is_subset_of {
+    my($self, $other_rule) = @_;
+
+    return 0 unless (ref($other_rule) and $self->isa(ref $other_rule));
+
+    my $my_template = $self->template;
+    my $other_template = $other_rule->template;
+    return unless ($my_template->is_subset_of($other_template));
+
+    my $values_match = 1;
+    foreach my $prop ( $other_template->_property_names ) {
+        my $my_operator = $my_template->operator_for($prop) || '=';
+        my $other_operator = $other_template->operator_for($prop) || '=';
+
+        my $my_value = $self->value_for($prop);
+        my $other_value = $other_rule->value_for($prop);
+
+        # If either is a list of values, return undef
+        return undef if (ref($my_value) || ref($other_value));
+
+        no warnings 'uninitialized';
+        $values_match = undef if ($my_value ne $other_value);
+    }
+
+    return $values_match;
+}
+
+
 sub values {
     my $self = shift;
     if ($self->{values}) {
@@ -89,16 +121,9 @@ sub values {
     my $value_id = $self->value_id;    
     return unless defined($value_id) and length($value_id);
     if (my $non_ur_object_refs = $self->{non_ur_object_refs}) {
-        # real objects cannot be serialized into the id easily, and require extra work extracting
-        my $rule_template = $self->template;
-        my @keys_sorted = $rule_template->_underlying_keys;
         my @values_sorted = UR::BoolExpr::Util->value_id_to_values($value_id);
-        my $n = 0;
-        for my $key (@keys_sorted) {
-            if (exists $non_ur_object_refs->{$key}) {
-                $values_sorted[$n] = $non_ur_object_refs->{$key};
-            }
-            $n++;
+        for my $n (keys %$non_ur_object_refs) {
+            $values_sorted[$n] = $non_ur_object_refs->{$n};
         }
         return @values_sorted;
     }
@@ -173,51 +198,10 @@ sub params_list {
     # It returns the params in list form, directly coercable into a hash if necessary.
     # $r = UR::BoolExpr->resolve($c1,@p1);
     # ($c2, @p2) = ($r->subject_class_name, $r->params_list);
-    
     my $self = shift;
-    my @params;
-    
-    # Get the values
-    # Add a key for each underlying rule
-    my $rule_template = $self->template;
-    my @keys_sorted = $rule_template->_underlying_keys;
-    my @constant_values_sorted = $rule_template->_constant_values;
-    my @values_sorted = $self->values;    
-    
-    my ($v,$c) = (0,0);
-    for (my $k=0; $k<@keys_sorted; $k++) {
-        my $key = $keys_sorted[$k];                        
-        #if (substr($key,0,1) eq "_") {
-        #    next;
-        #}
-        #elsif (substr($key,0,1) eq '-') {
-        if (substr($key,0,1) eq '-') {
-            my $value = $constant_values_sorted[$c];
-            push @params, $key, $value;        
-            $c++;
-        }
-        else {
-            my ($property, $op) = ($key =~ /^(\-*\w+)\s*(.*)$/);        
-            unless ($property) {
-                die;
-            }
-            my $value = $values_sorted[$v];
-            if ($op) {
-                if ($op ne "[]") {
-                    if ($op =~ /^(.+)-(.+)$/) {
-                        $value = { operator => $1, value => $value, escape => $2 };
-                    }
-                    else {
-                        $value = { operator => $op, value => $value };
-                    }
-                }
-            }
-            push @params, $property, $value;
-            $v++;
-        }
-    }
-
-    return @params; 
+    my $template = $self->template;
+    my @values_sorted = $self->values;
+    return $template->params_list_for_values(@values_sorted);
 }
 
 # TODO: replace these with logical set operations
@@ -295,62 +279,58 @@ sub resolve_for_template_id_and_values {
 
 our $resolve_depth;
 sub resolve {
-    # Handle the case in which we've already processed the 
-    # params into a rule.
     $resolve_depth++;
     Carp::confess("Deep recursion!") if $resolve_depth > 10;
-    
+
+    # Handle the case in which we've already processed the params into a boolexpr
     if ( @_ == 3 and ref($_[2]) and ref($_[2])->isa("UR::BoolExpr") ) {
         $resolve_depth--;
         return $_[2];
     }
 
-    # This class.
+    # this class.
     my $class = shift;
 
-    # The class to which the parameters apply.
+    # the subject class is the class which the expression applies-to
     my $subject_class = shift;
     my $subject_class_meta = $subject_class->__meta__;
     unless ($subject_class_meta) {
         Carp::croak("No class metadata for $subject_class?!");
     }    
 
+    # this allows us to validate which params are real and which are not rapidly
     my %subject_class_props = map {$_, 1}  ( $subject_class_meta->all_property_type_names);
 
+    # support for legacy passing of hashref instead of object or list
+    # TODO: eliminate the need for this
     my @in_params;
     if (ref($_[0]) eq "HASH") {
 	   @in_params = %{$_[0]};
     } else {
 	   @in_params = @_;
     }
-    
-    # Handle the single ID.
-    #if (@in_params % 2 == 1) {
+
+    # when a parameter is a single value, it is expected to be an id or an array of ids
     if (@in_params == 1) {
         unshift @in_params, "id";
     } elsif (@in_params % 2 == 1) {
         Carp::carp("Odd number of params while creating $class: (",join(',',@in_params),")");
     }
 
-    # Split the params into keys and values
+    # split the params into keys and values
+    # where an operator is on the right-side, it is moved into the key
     my $count = @in_params;
     my (@keys,@values,@constant_values,$key,$value,$op,@extra,@non_ur_object_refs,$property_name, $operator);
-
     for(my $n = 0; $n < $count;) {
         $key = $in_params[$n++];
         $value = $in_params[$n++];
 
         if (substr($key,0,1) eq '-') {
-            # these are keys whose values live in the rule template            
+            # these are keys whose values live in the rule template
             push @keys, $key;
             push @constant_values, $value;
             next;
         }
-        
-        if ((substr($key,0,1)  eq '_') and ! $subject_class_props{$key}) {
-            # skip the param
-            next;
-        } 
         
         if (!exists $subject_class_props{$key}) {
             if (my $pos = index($key,' ')) {
@@ -366,45 +346,84 @@ sub resolve {
                 $operator = '';
             }
             
-            # account for the case where this parameter does
-            # not match an actual property 
-            if (!exists $subject_class_props{$property_name}) {
-                if (my $attr = $subject_class_meta->property_meta_for_name($property_name)) {
-                    Carp::croak("Property '$property_name' found but not in array of properties in class metadata for $subject_class");
-                }
-                else {
-                    push @extra, ($key => $value);
-                    next;
-                }
-            }
         }
         else {
             $property_name = $key;
             $operator = '';
         }
-        
+       
+        # account for the case where this parameter does
+        # not match an actual property 
+        if (!exists $subject_class_props{$property_name}) {
+            if ((substr($key,0,1)  eq '_')) {
+                # TODO: we silently ignore seemingly private undeclared properties
+                # because they were part of pre-boolexpr params lists.
+                # Eliminate the special handling for this b/c it hides typo errors.
+                next;
+            } 
+            push @extra, ($key => $value);
+            next;
+        }
+
+        # TODO: the rule template can be made w/o looking at the value passed-in,
+        # and it could have a custom closure to process its values.  
+        # This would buy some speed in this logic.
         my $ref = ref($value);
         if($ref) {
-            if ($ref eq "HASH") {
-                if (
+            my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
+            my $is_many;
+            my $data_type;
+            if ($property_meta) {
+                $is_many = $property_meta->is_many;
+                $data_type = $property_meta->data_type;
+            }
+            else {
+                if ($UR::initialized) {
+                    Carp::croak("No property metadata for $subject_class property '$property_name'?\n");
+                }
+                else {
+                    # this has to run during bootstrapping in 2 cases currently...
+                    $is_many = $subject_class_meta->{has}{$property_name}{is_many};
+                    $data_type = $subject_class_meta->{has}{$property_name}{data_type};
+                }
+            }
+            $data_type ||= '';  # avoid a warning about undefined below
+
+            if ($ref eq 'HASH') {
+                if ($data_type eq 'HASH') {
+                    # ensure we re-constitute the original array not a copy
+                    push @non_ur_object_refs, scalar(@values), $value;
+                }
+                elsif (
                     exists $value->{operator}
                     and exists $value->{value}
                 ) {
+                    # support for property => { operator => "like", value => "%foo%" }
+                    # instead of "property like" => "%foo%"
+                    # ... this is deprecated b/c it is ambiguous
                     $key .= " " . lc($value->{operator});
                     if (exists $value->{escape}) {
                         $key .= "-" . $value->{escape}
                     }
                     $value = $value->{value};
                 }
+                else {
+                    #die "Odd hash passed as value for $key!"
+                    push @non_ur_object_refs, scalar(@values), $value;
+                }
             }
-            elsif ($ref eq "ARRAY" and $operator ne 'between') {
-                $key .= " []";
-                
+            elsif ($ref eq "ARRAY") {
                 # replace the arrayref
                 $value = [ @$value ];
                 
-                # ensure we re-constitute the original array not a copy
-                push @non_ur_object_refs, $key, $value;
+                # listrefs containing references (blessed or not) need to store
+                # their values verbatim, since the value_id cannot recreate them properly
+                foreach my $val (@$value) {
+                    if (ref($val)) {
+                        push @non_ur_object_refs, $key, $value;
+                        last;
+                    }
+                }
 
                 # transform objects into IDs if applicable
                 my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
@@ -413,52 +432,47 @@ sub resolve {
                     Carp::croak("No property metadata for $subject_class property '$property_name' for rule parameters ($key => $value)\n" . Data::Dumper::Dumper({ @_ }));
                 }
                 
-                my $is_many;
-                my $data_type;
-                if ($property_meta) {
-                    $is_many = $property_meta->is_many;
-                    $data_type = $property_meta->data_type;
+                if ($data_type eq 'ARRAY' or $is_many) {
+                    # ensure we re-constitute the original array not a copy
+                    push @non_ur_object_refs, scalar(@values), $value;
                 }
                 else {
-                    if ($UR::initialized) {
-                        Carp::croak("No property metadata for $subject_class property '$property_name'?\n");
-                    }
-                    else {
-                        # this has to run during bootstrapping in 2 cases currently...
-                        $is_many = $subject_class_meta->{has}{$property_name}{is_many};
-                        $data_type = $subject_class_meta->{has}{$property_name}{data_type};
-                    }
-                }
-                $data_type ||= '';  # avoid a warning about undefined below
-                if ($data_type ne 'ARRAY' and !$is_many) {
                     no warnings;
-    
-                    # sort and replace the arrayref
+
+                    if ($operator ne 'between' and $operator ne 'not between') {
+                        if (substr($key, -3, 3) ne ' in') {
+                            $key = join(' ', $key, 'in');
+                        }
+                    }
+                    
+                    # sort
                     @$value = (
                         sort { $a <=> $b or $a cmp $b } 
                         @$value
                     );         
                     
                     # identify duplicates
-                    my $last = $value; # a safe value which can't be in the list
-                    for (@$value) {
-                        if ($_ eq $last) {
-                            $last = $value;
-                            last;
-                        }
-                        $last = $_;
-                    }
-    
-                    # only fix duplicates if they were found                    
-                    if ($last eq $value) {
-                        my $buffer;
-                        @$value =
-                            map {
-                                $buffer = $last;
-                                $last = $_;
-                                ($_ eq $buffer ? () : $_)
+                    if ($operator ne 'between' and $operator ne 'not between') {
+                        my $last = $value; # a safe value which can't be in the list
+                        for (@$value) {
+                            if ($_ eq $last) {
+                                $last = $value;
+                                last;
                             }
-                            @$value;
+                            $last = $_;
+                        }
+        
+                        # only fix duplicates if they were found                    
+                        if ($last eq $value) {
+                            my $buffer;
+                            @$value =
+                                map {
+                                    $buffer = $last;
+                                    $last = $_;
+                                    ($_ eq $buffer ? () : $_)
+                                }
+                                @$value;
+                        }                        
                     }
                 }
             }
@@ -500,7 +514,7 @@ sub resolve {
                     #
                 }
                 elsif ($value->isa($property_type->data_type)) {
-                    push @non_ur_object_refs, $key, $value;
+                    push @non_ur_object_refs, scalar(@values), $value;
                 }
                 elsif ($value->can($key)) {
                     $value = $value->$key;
@@ -509,12 +523,11 @@ sub resolve {
                     Carp::croak("Incorrect data type in rule " . ref($value) . " for $subject_class property '$key'!");    
                 }
             }
-
-        }# elsif (defined $value and ! length($value)) {
-         #   # empty string - rewrite to undef
-         #   $value = undef;
-        #}
-
+            else {
+                # other reference, code, etc.
+                push @non_ur_object_refs, scalar(@values), $value;
+            }
+        }
         push @keys, $key;
         push @values, $value;
     }
@@ -557,7 +570,9 @@ sub normalize {
     my $normalized = $rule_template->get_normalized_rule_for_values(@unnormalized_values);
     return unless defined $normalized;
 
-    $normalized->{non_ur_object_refs} = $self->{non_ur_object_refs} if exists $self->{non_ur_object_refs};
+    if (my $special = $self->{non_ur_object_refs}) {
+        $normalized->{non_ur_object_refs} = $rule_template->_normalize_non_ur_values_hash($special);
+    }
     return $normalized;
 }
 
@@ -587,11 +602,13 @@ sub resolve_for_string {
     my ($self, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
     my ($property, $op, $value);
+
     no warnings;
+    
     my @filters = map {
         unless (
             ($property, $op, $value) =
-            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|\:|\blike\b)\s*['"]?([^'"]*)['"]?\s*$/)
+            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|\:|\blike\b|\bbetween\b|\bin\b)\s*['"]?([^'"]*)['"]?\s*$/)
         ) {
             die "Unable to process filter $_\n";
         }
@@ -602,14 +619,13 @@ sub resolve_for_string {
         }
 
         [$property, $op, $value]
-    } split(/,/, $filter_string);
+    } split(/,|\s+and\s+/i, $filter_string);
 
     my @hints = split(",",$usage_hints_string);
     my @order = split(",",$order_string);
     my @page  = split(",",$page_string);
 
     use warnings;
-    
     return __PACKAGE__->_resolve_from_filter_array($subject_class_name, \@filters, \@hints, \@order, \@page);
 }
 
@@ -635,7 +651,7 @@ sub _resolve_from_filter_array {
         my $value;
     
         # process the operator
-        if ($fdata->[1] =~ /^(:|@)$/i) {
+        if ($fdata->[1] =~ /^(:|@|between|in)$/i) {
             
             my @list_parts;
             my @range_parts;
@@ -657,10 +673,12 @@ sub _resolve_from_filter_array {
             
             if (@list_parts > 1) {
                 # rule component
-                $key .= " []";
+                if (substr($key, -3, 3) ne ' in') {
+                    $key = join(' ', $key, 'in');
+                }
                 $value = \@list_parts;
         
-                $rule_filter = [$fdata->[0],"[]",\@list_parts];
+                $rule_filter = [$fdata->[0],"in",\@list_parts];
             }
             elsif (@range_parts >= 2) {
                 if (@range_parts > 2) {
@@ -711,7 +729,6 @@ sub _resolve_from_filter_array {
         push @keys, $key;
         push @values, $value;
     } 
-
     #$DB::single = $DB::stopper;
     if ($usage_hints or $order or $page) {
         # todo: incorporate hints in a smarter way
@@ -848,6 +865,85 @@ The data used to create the rule can be re-extracted:
 
  Rules of this type compare a single property on the subject, using a specific comparison operator,
  against a specific value (or value set for certain operators).  This is the low-level non-composite rule.
+
+=head1 CONSTRUCTOR
+
+=over 4
+
+  my $bx = UR::BoolExpr->resolve('Some::Class', property_1 => 'value_1', ... property_n => 'value_n');
+  my $bx1 = Some::Class->define_boolexpr(property_1 => value_1, ... property_n => 'value_n');
+  my $bx2 = Some::Class->define_boolexpr('property_1 >' => 12345);
+
+Returns a UR::BoolExpr object that can be used to perform tests on the given class and
+properties.  The default comparison for each property is equality.  The last example shows
+using greater-than operator for property_1.
+
+=back
+
+=head1 METHODS
+
+=over 4
+
+=item evaluate
+
+    $bx->($object)
+
+Returns true if the given object satisfies the BoolExpr
+
+=item template_and_values
+
+  ($template, @values) = $bx->template_and_values();
+
+Returns the UR::BoolExpr::Template and list of the values for the given BoolExpr
+
+=item is_subset_of
+
+  $bx->is_subset_of($other_bx)
+
+Returns true if the set of objects that matches this BoolExpr is a subset of
+the set of objects that matches $other_bx.  In practice this means:
+
+  * The subject class of $bx isa the subject class of $other_bx
+  * all the properties from $bx also appear in $other_bx
+  * the operators and values for $bx's properties match $other_bx
+
+=item values
+
+  @values = $bx->values
+
+Return a list of the values from $bx.  The values will be in the same order
+the BoolExpr was created from
+
+=item value_for_id
+
+  $id = $bx->value_for_id
+
+If $bx's properties include all the ID properties of its subject class, 
+C<value_for_id> returns that value.  Otherwise, it returns the empty list.
+If the subject class has more than one ID property, this returns the value
+of the composite ID.
+
+=item specifies_value_for
+
+  $bx->specifies_value_for('property_name');
+
+Returns true if the filter list of $bx includes the given property name
+
+=item value_for
+
+  my $value = $bx->value_for('property_name');
+
+Return the value for the given property
+
+=item operator_for
+
+  my $operator = $bx->operator_for('property_name');
+
+Return a string for the operator of the given property.  A value of '' (the
+empty string) means equality ("=").  Other possible values inclue '<', '>',
+'<=', '>=', 'between', 'true', 'false', 'in', 'not <', 'not >', etc.
+
+=back
 
 =head1 INTERNAL STRUCTURE
 

@@ -1,7 +1,7 @@
 
 =head1 NAME
 
-UR::BoolExpr::Template - an UR::BoolExpr minus specific values
+UR::BoolExpr::Template - a UR::BoolExpr minus specific values
 
 =head1 SYNOPSIS
 
@@ -18,6 +18,8 @@ use Scalar::Util qw(blessed);
 use Data::Dumper;
 use UR;
 
+our @CARP_NOT = qw(UR::BoolExpr);
+
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
     is_transactional => 0,
@@ -25,7 +27,7 @@ UR::Object::Type->define(
     id_by => [
         subject_class_name              => { is => 'Text' },
         logic_type                      => { is => 'Text' },
-        logic_detail                    => { is => 'CSV' },
+        logic_detail                    => { is => 'Text' },
         constant_value_id               => { is => 'Text' }
     ],
     has => [
@@ -134,6 +136,31 @@ sub _resolve_indexing_params {
     return 1;
 }
 
+# Return true if this rule template's parameters is a subset of the other's parameters
+# Returns 0 if this rule specifies a parameter not in the other template
+# Returns undef if all the properties match, but their operators do not, meaning that
+# we do not know if an object evaluated as true under one rule's template would also be in the other
+sub is_subset_of {
+    my($self,$other_template) = @_;
+
+    return 0 unless (ref($other_template) and $self->isa(ref $other_template));
+
+    my $my_class = $self->subject_class_name;
+    my $other_class = $other_template->subject_class_name;
+    return unless ($my_class eq $other_class 
+                    or
+                   $my_class->isa($other_class));
+
+    my %operators = map { $_ => $self->operator_for($_) } $self->_property_names;
+    my $operators_match = 1;
+    foreach my $prop ( $other_template->_property_names ) {
+        return 0 unless exists $operators{$prop};
+        $operators_match = undef if ($operators{$prop} ne $other_template->operator_for($prop));
+    }
+    return $operators_match;
+}
+
+
 # This is set lazily currently
 
 sub is_unique {
@@ -177,8 +204,6 @@ sub is_unique {
                         grep {  
                             $_->{operator} !~ /^(not |)like(-.|)$/i
                             and
-                            $_->{operator} ne '[]'
-                            and
                             $_->{operator} !~ /^(not |)in/i
                         }                                              
                         @properties_used_from_constraint;
@@ -219,6 +244,15 @@ sub get_rule_for_values {
     return UR::BoolExpr->get($rule_id);
 }
 
+sub get_rule_for_value_id {
+    my $self = shift;
+    my $value_id = shift;
+
+    my $rule_id = UR::BoolExpr->__meta__->resolve_composite_id_from_ordered_values($self->id,$value_id);
+    return UR::BoolExpr->get($rule_id);
+}
+
+
 sub get_normalized_rule_for_values {
     my $self = shift;
     my @unnormalized_values = @_;
@@ -256,6 +290,20 @@ sub get_normalized_rule_for_values {
     return $rule;
 }
 
+sub _normalize_non_ur_values_hash {
+    my ($self,$unnormalized) = @_;
+    my %normalized;
+    if ($self->subject_class_name ne 'UR::Object::Property') {
+        my $normalized_positions_arrayref = $self->normalized_positions_arrayref;
+        my @reordered_values = @$unnormalized{@$normalized_positions_arrayref};
+        for (my $n = 0; $n < @reordered_values; $n++) {
+            my $value = $reordered_values[$n];
+            $normalized{$n} = $value if defined $value;
+        }
+    }
+    return \%normalized;
+}
+
 
 sub value_position_for_property_name {
     if (exists $_[0]{_property_meta_hash}{$_[1]}) {
@@ -272,6 +320,13 @@ sub operator_for {
         return undef;
     }
 }
+
+sub operators_for_properties {
+    my %properties = map { $_ => $_[0]->{'_property_meta_hash'}->{$_}->{'operator'} || '=' }
+                        @{ $_[0]->{'_property_names_arrayref'} };
+    return \%properties;
+}
+    
 
 sub add_filter {
     my $self = shift;
@@ -327,8 +382,6 @@ sub resolve {
     return $class->get_by_subject_class_name_logic_type_and_logic_detail($subject_class_name, "And", join(',',@params_list));
 }
 
-    
-
 sub get {
     my $class = shift;
     my $id = shift;    
@@ -364,7 +417,7 @@ sub get {
         # TODO: move into subclass
         my (@keys, $num_values);
             
-        @keys = split(',',$logic_detail || '');
+        @keys = split(/,/,$logic_detail || '');
         $num_values = scalar(@keys);
     
         # See what properties are id-related for the class
@@ -518,14 +571,13 @@ sub get {
                     }
                 }    
                 elsif ($id_related->{$property}) {
-                    #if ($op eq "" or $op eq "eq" or $op eq "=" or $op eq '[]') {
                     if ($op eq "" or $op eq "eq" or $op eq "=") {
                         $id_parts{$id_pos->{$property}} = $key_pos;                        
                     }
                     else {
                         # We're doing some sort of gray-area comparison on an ID                        
                         # field, and though we could possibly resolve an ID
-                        # from things like an [] op, it's more than we've done
+                        # from things like an 'in' op, it's more than we've done
                         # before.
                         $id_only = 0;
                     }
@@ -576,7 +628,10 @@ sub get {
     
         # Sort the keys, and make an arrayref which will 
         # re-order the values to match.
-        my @keys_sorted = sort @keys;
+        my $last_key = '';
+        my @keys_sorted = map { $_ eq $last_key ? () : ($last_key = $_) } sort @keys;
+
+
         my $matches_all = scalar(@keys_sorted) == 0 ? 1 : 0;
         my $normalized_positions_arrayref = [];
         my $constant_value_normalized_positions = [];
@@ -587,7 +642,7 @@ sub get {
         my $page = undef;
         for my $key (@keys_sorted) {
             my $pos_list = $key_positions{$key};
-            my $pos = shift @$pos_list;
+            my $pos = pop @$pos_list;
             if (substr($key,0,1) eq '-') {
                 push @$constant_value_normalized_positions, $pos;
                 if ($key eq '-recurse') {
@@ -789,12 +844,12 @@ sub legacy_params_hash {
     }
 
     if ($self->is_unique and not $legacy_params_hash->{_unique}) {
-        warn "is_unique IS set but legacy params hash is NO for $self->{id}";
+        Carp::carp "is_unique IS set but legacy params hash is NO for $self->{id}";
         $DB::single = 1;
         $self->is_unique; 
     }
     if (!$self->is_unique and $legacy_params_hash->{_unique}) {        
-        warn "is_unique NOT set but legacy params hash IS for $self->{id}";
+        Carp::carp "is_unique NOT set but legacy params hash IS for $self->{id}";
         $DB::single = 1;
         $self->is_unique; 
     }       
@@ -832,6 +887,56 @@ sub sorter {
 
     return $sorter;
 }
+
+sub params_list_for_values {
+    # This is the reverse of the bulk of resolve.
+    # It returns the params in list form, directly coercable into a hash if necessary.
+    # $r = UR::BoolExpr->resolve($c1,@p1);
+    # ($c2, @p2) = ($r->subject_class_name, $r->params_list);
+    
+    my $rule_template = shift;
+    my @values_sorted = @_;
+    
+    my @keys_sorted = $rule_template->_underlying_keys;
+    my @constant_values_sorted = $rule_template->_constant_values;
+    
+    my @params;
+    my ($v,$c) = (0,0);
+    for (my $k=0; $k<@keys_sorted; $k++) {
+        my $key = $keys_sorted[$k];                        
+        #if (substr($key,0,1) eq "_") {
+        #    next;
+        #}
+        #elsif (substr($key,0,1) eq '-') {
+        if (substr($key,0,1) eq '-') {
+            my $value = $constant_values_sorted[$c];
+            push @params, $key, $value;        
+            $c++;
+        }
+        else {
+            my ($property, $op) = ($key =~ /^(\-*\w+)\s*(.*)$/);        
+            unless ($property) {
+                die;
+            }
+            my $value = $values_sorted[$v];
+            if ($op) {
+                if ($op ne "in") {
+                    if ($op =~ /^(.+)-(.+)$/) {
+                        $value = { operator => $1, value => $value, escape => $2 };
+                    }
+                    else {
+                        $value = { operator => $op, value => $value };
+                    }
+                }
+            }
+            push @params, $property, $value;
+            $v++;
+        }
+    }
+
+    return @params; 
+}
+
 
 1;
 

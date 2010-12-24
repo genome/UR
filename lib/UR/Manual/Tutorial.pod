@@ -6,7 +6,7 @@ UR::Manual::Tutorial - Step-by-step guide to building a set of classes for a sim
 
 =head1 Overview
 
-We'll use the familiar "CD Database" example used in many ORM tutorials:
+We'll use the familiar "Music Database" example used in many ORM tutorials:
 
 Our database has the following basic entities and relationships:
 
@@ -32,22 +32,15 @@ The tool for working with UR from the command line is 'ur' . It is installed
 with the UR module suite.
 
 Just type "ur" and hit enter, to see a list of valid ur commands: 
-
-  > ur
-  USAGE: 
-  commands:
-    ur browser      Start a web server to browse through the class and database structures.         
-    ur commit       Synchronizes class schema changes to the database schema.  (NOT IMPLEMENTED)    
-    ur define       Add logical entities to a namespace.                                            
-    ur describe     Outputs class description(s) to stdout.                                         
-    ur diff         Show a diff for various kinds of other ur commands.                             
-    ur info         Outputs description(s) of UR entities such as classes and tables to stdout      
-    ur list         List various types of things.                                                   
-    ur redescribe   Outputs class description(s) formatted to the latest standard.                  
-    ur rename       Rename logical schema elements.                                                 
-    ur rewrite      Rewrites class descriptions headers to normalize manual changes.                
-    ur test         Perform various tests.                                                          
-    ur update       Update different elements of the UR system           
+ > ur 
+ Sub-commands for ur:
+ init      NAMESPACE [DB]      initialize a new UR app in one command            
+ define    ...                 define namespaces, data sources and classes       
+ describe  CLASSES-OR-MODULES  show class properties, relationships, meta-data   
+ update    ...                 update parts of the source tree of a UR namespace 
+ list      ...                 list objects, classes, modules                    
+ sys       ...                 service launchers                                 
+ test      ...                 tools for testing and debugging   
 
 The "ur" command works a lot like the "svn" command: it is the entry point
 for a list of other subordinate commands.
@@ -66,11 +59,10 @@ granular commands which are under "ur define":
 =back
 
   > ur define
-  USAGE: 
-  commands:
-    ur define namespace    Write a new namespace module.                                      
-    ur define datasource   Add a data source to the current namespace.                        
-    ur define class        Tools for creation and maintenance of a UR-based software tree.
+  Sub-commands for ur define:
+   namespace  NSNAME               create a new namespace tree and top-level module 
+   db         URI NAME             add a data source to the current namespace       
+   class      --extends=? [NAMES]  Add one or more classes to the current namespace 
 
 At any point, you can put '--help' as a command line argument and get some
 (hopefully) helpful documentation.
@@ -89,22 +81,22 @@ A UR namespace is the top-level object that represents your data's class
 structure in the most general way. For this new project, we'll need to
 create a new namespace, perhaps within a testing directory.
 
-  ur define namespace CdExample
+  ur define namespace Music
 
 And you should see output like this:
 
-  A   CdExample (UR::Namespace)
-  A   CdExample::Vocabulary (UR::Vocabulary)
-  A   CdExample::DataSource::Meta (UR::DataSource::Meta)
-  A   CdExample/DataSource/Meta.sqlite3-dump (Metadata DB skeleton)
+  A   Music (UR::Namespace)
+  A   Music::Vocabulary (UR::Vocabulary)
+  A   Music::DataSource::Meta (UR::DataSource::Meta)
+  A   Music/DataSource/Meta.sqlite3-dump (Metadata DB skeleton)
 
-showing that it created 3 classes for you, CdExample, CdExample::Vocabulary
-and CdExample::DataSource::Meta, and shows what classes those inherit from.
+showing that it created 3 classes for you, Music, Music::Vocabulary
+and Music::DataSource::Meta, and shows what classes those inherit from.
 In addition, it has also created a file to hold your metadata. Other parts
 of the documentation give a more thorough description of Vocabulary and
 Metadata classes. 
 
-=head1 Define a DataSource
+=head1 Define a Data Source
 
 A UR DataSource is an object representing the location of your data. It's
 roughly analogous to a Schema class in DBIx::Class, or the "Base class" in
@@ -114,25 +106,28 @@ Note: Because UR can be used with objects which do NOT live in a database,
 using a data source is optional, but is the most common case.
 
 Most ur commands operate in the context of a Namespace, including the one to
-create a datasource, so you need to be within the CdExample's Namespace's directory:
+create a datasource, so you need to be within the Music's Namespace's directory:
 
-  cd CdExample
+  cd Music
 
 and then define the datasource. We specify the data source's type as a
 sub-command, and the name with the --dsname argument.  For this example,
 we'll use a brand new SQLite database. For some other, perhaps already
 existing database, give its connect string instead.
 
-  ur define datasource sqlite --dsname Example
+  ur define db dbi:SQLite:/var/lib/music.sqlite3 Example
 
 which generates this output:
 
-  A   CdExample::DataSource::Example (UR::DataSource::SQLite,UR::Singleton)
+  A   Music::DataSource::Example (UR::DataSource::SQLite,UR::Singleton)
      ...connecting...
      ....ok
 
+and creates a symlink to the database at:
+  Music/DataSource/Example.sqlite3
+
 and shows that it created a class for your data source called
-CdExample::DataSource::Example, which inherits from UR::DataSource::SQLite.
+Music::DataSource::Example, which inherits from UR::DataSource::SQLite.
 It also created an empty database file and connected to it to confirm that
 everything is OK. 
 
@@ -142,23 +137,23 @@ Here are the table creation statements for our example database. Put them
 into a file with your favorite editor and call it example-db.schema.txt:
 
   CREATE TABLE artist (
-     artist_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+     artist_id INTEGER NOT NULL PRIMARY KEY,
      name TEXT NOT NULL
   );
   CREATE TABLE cd (
-     cd_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+     cd_id INTEGER NOT NULL PRIMARY KEY,
      artist_id INTEGER NOT NULL CONSTRAINT CD_ARTIST_FK REFERENCES artist(artist_id),
      title TEXT NOT NULL,
      year INTEGER
   );
   CREATE TABLE track (
-     track_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+     track_id INTEGER NOT NULL PRIMARY KEY,
      cd_id INTEGER NOT NULL CONSTRAINT TRACK_CD_FK REFERENCES cd(cd_id),
      title TEXT NOT NULL
   );
 
 This new SQLite data source assumes the database file will have the pathname
-CdExample/DataSource/Example.sqlite3. You can populate the database schema
+Music/DataSource/Example.sqlite3. You can populate the database schema
 like this:
 
   sqlite3 DataSource/Example.sqlite3 < example-db.schema.txt
@@ -171,7 +166,7 @@ database.
 You could write those classes by hand, but it's easiest to start with an
 autogenerated group built from the database schema:
 
-  ur update classes
+  ur update classes-from-db
 
 is the command that performs all the magic. You'll see it go through several
 steps:
@@ -204,26 +199,25 @@ namespace
 There will now be a Perl module for each database table. For example, in
 Cd.pm:
 
-  package CdExample::Cd;
+  package Music::Cd;
   
   use strict;
   use warnings;
   
-  use CdExample;
-  class CdExample::Cd {
-      type_name => 'cd',
+  use Music;
+  class Music::Cd {
       table_name => 'CD',
       id_by => [
           cd_id => { is => 'INTEGER' },
       ],
       has => [
-          artist    => { is => 'CdExample::Artist', id_by => 'artist_id', constraint_name => 'CD_ARTIST_FK' },
+          artist    => { is => 'Music::Artist', id_by => 'artist_id', constraint_name => 'CD_ARTIST_FK' },
           artist_id => { is => 'INTEGER' },
           title     => { is => 'TEXT' },
           year      => { is => 'INTEGER', is_optional => 1 },
       ],
       schema_name => 'Example',
-      data_source => 'CdExample::DataSource::Example',
+      data_source => 'Music::DataSource::Example',
   };
   
   1;
@@ -231,7 +225,7 @@ Cd.pm:
 The first few lines are what you would see in any Perl module. The keyword
 C<class> tells the UR system to define a new class, and lists the properties
 of the new class. Some of the important parts are that instances of this
-class come from the CdExample::DataSource::Example datasource, in the table
+class come from the Music::DataSource::Example datasource, in the table
 'CD'. This class has 4 direct properties (cd_id, artist_id, title and year),
 and one indirect property (artist). Instances are identified by the cd_id
 property.
@@ -251,11 +245,11 @@ are key-value pairs of properties and their values.
   #!/usr/bin/perl
 
   use strict;
-  use CdExample;
+  use Music;
 
-  my $obj1 = CdExample::Artist->create(name => 'Elvis');
+  my $obj1 = Music::Artist->create(name => 'Elvis');
 
-  my $obj2 = CdExample::Artist->create(name => 'The Beatles');
+  my $obj2 = Music::Artist->create(name => 'The Beatles');
 
   UR::Context->commit();
 
@@ -272,44 +266,44 @@ Retrieving object instances from the database is done with the C<get()>
 method.  A C<get()> with no arguments will return a list of all the objects
 in the table.
 
-  @all_cds = CdExample::Cd->get();
+  @all_cds = Music::Cd->get();
 
 If you know the "id" (primary key) value of the objects you're interested in,
 you can pass that "id" value as a single argument to get:
 
-  $cd = CdExample::Cd->get(3);
+  $cd = Music::Cd->get(3);
 
 An arrayref of identity values can be passed-in as well. Note that if you
 query is going to return more than one item, and it is called in scalar
 context, it will generate an exception.
 
-  @some_cds = CdExample::Cd->get([1, 2, 4]);
+  @some_cds = Music::Cd->get([1, 2, 4]);
 
 To filter the return list by a property other than the ID property, give a
 list of key-value pairs:
 
-  @some_cds = CdExample::Cd->get(artist_id => 3);
+  @some_cds = Music::Cd->get(artist_id => 3);
 
 This will return all the CDs with the artist ID 5, 6 or 10.
 
-  @some_cds = CdExample::Cd->get(artist_id => [5, 6, 10]);
+  @some_cds = Music::Cd->get(artist_id => [5, 6, 10]);
 
 get() filters support operators other than strict equality. This will return
 a list of CDs with artist ID 2 and have the word 'Ticket' somewhere in the
 title.
 
-  @some_cds = CdExample::Cd->get(artist_id=> 2, title => { operator => 'like', value => '%Ticket%'} );
+  @some_cds = Music::Cd->get(artist_id=> 2, title => { operator => 'like', value => '%Ticket%'} );
 
 To search for NULL fields, use undef as the value:
 
-  @cds_with_no_year = CdExample::Cd->get(year => undef);
+  @cds_with_no_year = Music::Cd->get(year => undef);
 
 =head2 get_or_create
 
 C<get_or_create()> is used to retrieve an instance from the database if it
 exists, or create a new one if it does not.
 
-  $possibly_new = CdExample::Artist->get_or_create(name => 'The Band');
+  $possibly_new = Music::Artist->get_or_create(name => 'The Band');
 
 =head2 Update
 
@@ -325,7 +319,7 @@ database until you commit the changes with C<UR::Context-E<gt>commit>.
 
 The C<delete()> method does just what it says.
 
-  @all_tracks = CdExample::Track->get();
+  @all_tracks = Music::Track->get();
   foreach my $track ( @all_tracks ) {
      $track->delete();
   }
@@ -342,25 +336,24 @@ is a foreign key that forces a track to be related to one CD. If you edit
 the file Cd.pm, you can define a relationship so that CDs can have many
 tracks:
 
-  class CdExample::Cd {
-     type_name => 'cd',
+  class Music::Cd {
      table_name => 'CD',
      id_by => [
          cd_id => { is => 'INTEGER' },
      ],
      has => [
-         artist   => { is => 'CdExample::Artist', id_by => 'artist_id', constraint_name => 'CD_ARTIST_FK' },
+         artist   => { is => 'Music::Artist', id_by => 'artist_id', constraint_name => 'CD_ARTIST_FK' },
          artist_id => { is => 'INTEGER' },
          title    => { is => 'TEXT' },
          year     => { is => 'INTEGER' },
-         tracks   => { is => 'CdExample::Track', reverse_as => 'cd', is_many => 1 },  # This is the new line
+         tracks   => { is => 'Music::Track', reverse_as => 'cd', is_many => 1 },  # This is the new line
      ],
      schema_name => 'Example',
-     data_source => 'CdExample::DataSource::Example',
+     data_source => 'Music::DataSource::Example',
   };
 
 This tells the system that there is a new property called 'tracks' which
-returns items of the class CdExample::Track. It links them to the acting CD
+returns items of the class Music::Track. It links them to the acting CD
 object through the Track's cd property.
 
 After that is in place, you can ask for a list of all the tracks belonging
@@ -371,19 +364,18 @@ to a CD with the line
 You can also define indirect relationships through other indirect
 relationships. For example, if you edit Artist.pm to add a couple of lines:
 
-  class CdExample::Artist {
-      type_name => 'artist',
+  class Music::Artist {
       table_name => 'ARTIST',
       id_by => [
           artist_id => { is => 'INTEGER' },
       ],
       has => [
           name     => { is => 'TEXT' },
-          cds      => { is => 'CdExample::Cd', reverse_as => 'artist', is_many => 1 },
-          tracks   => { is => 'CdExample::Track', via => 'cds', to => 'tracks', is_many => 1},
+          cds      => { is => 'Music::Cd', reverse_as => 'artist', is_many => 1 },
+          tracks   => { is => 'Music::Track', via => 'cds', to => 'tracks', is_many => 1},
       ],
       schema_name => 'Example',
-      data_source => 'CdExample::DataSource::Example',
+      data_source => 'Music::DataSource::Example',
   };
 
 This defines a relationship 'cds' to return all the CDs from the acting
@@ -406,7 +398,7 @@ adding and removing items in the relationship. For example:
 
   $artist->add_cd(year => 1998, title => 'Cool Jams' );
 
-would create a new CdExample::Cd object with the given year and title. The
+would create a new Music::Cd object with the given year and title. The
 cd_id will be autogenerated by the system, and the artist_id will be
 automatically set to the artist_id of $artist. 
 
@@ -417,7 +409,7 @@ the select clause includes all the ID properties of the class. To find
 Artist objects that have no CDs, you might do this:
 
   my @artists_with_no_cds =
-         CdExample::Artist->get(sql => 'select artist.artist_id,
+         Music::Artist->get(sql => 'select artist.artist_id,
                                                count(cd.artist_id)
                                         from artist
                                         left join cd on cd.artist_id = artist.artist_id

@@ -1,6 +1,3 @@
-
-# The diff command delegates to sub-commands under the adjoining directory.
-
 package UR::Namespace::Command::Define;
 
 use warnings;
@@ -10,10 +7,12 @@ use UR;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Namespace::Command',
+    doc => "define namespaces, data sources and classes",
 );
 
-sub help_brief { "Add logical entities to a namespace." }
+sub sub_command_sort_position { 2 }
 
 sub shell_args_description { "[namespace|...]"; }
 
 1;
+

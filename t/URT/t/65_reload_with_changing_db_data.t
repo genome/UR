@@ -38,7 +38,7 @@ my %complaint_class = ('URT::Thing' => 'URT::Thing',
 
 my $obj_id = 1; 
 foreach my $test_class ( 'URT::Thing', 'URT::Fruit', 'URT::Apple', 'URT::Vehicle', 'URT::Car') {
-    diag("Working on class $test_class");
+    #diag("Working on class $test_class");
     UR::DBI->no_commit(0);
 
     my $test_table = $table_for_class{$test_class};

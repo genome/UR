@@ -81,9 +81,10 @@ sub get_objects_matching
             # property => { operator => "not like", value => "H~_WGS%", escape "~" }
             if (my $op = $value->{operator})
             {
-                if ($op =~ /^(not |)like$/i) 
+                $op = lc($op);
+                if ($op eq 'like' or $op eq 'not like')
                 {
-                    my $not = $1;
+                    my $not = 1 if (substr($op,0,1) eq 'n');
                     my $comparison_value = $value->{value};                        
                     my $escape = $value->{escape};
                     
@@ -121,7 +122,7 @@ sub get_objects_matching
                     }
                     @hr = grep { $_ } @thr;
                 } 
-                elsif ($op =~ /^in( \[\])?/i)
+                elsif ($op eq 'in')
                 {                
                     $value = $value->{value};
                     my $has_null = ( (grep { length($_) == 0 } @$value) ? 1 : 0);
@@ -132,7 +133,7 @@ sub get_objects_matching
                         @hr = grep { $_ } map { @$_{@value} } @hr;
                     }
                 }
-                elsif ($op =~ m/^not \[\]/i or $op =~ /^not in( \[\])?$/i)
+                elsif ($op eq 'not in')
                 {                
                     $value = $value->{value};
                     
@@ -158,7 +159,7 @@ sub get_objects_matching
                         @hr = grep { $_ } @thr;
                     }
 
-                } elsif ($op =~ /^true$/i) {
+                } elsif ($op eq 'true') {
                     my @thr;
                     foreach my $h ( @hr ) {
                         foreach my $k ( keys %$h ) {
@@ -168,7 +169,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;
-                } elsif ($op =~ /^false$/i) {
+                } elsif ($op eq 'false') {
                     my @thr;
                     foreach my $h ( @hr ) {
                         foreach my $k ( keys %$h ) {
@@ -178,7 +179,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;
-                } elsif($op =~ /^\!\=$/) {                        
+                } elsif($op eq '!=') {
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
@@ -191,7 +192,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;
-                } elsif($op =~ /^\>$/i) {
+                } elsif($op eq '>') {
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
@@ -202,7 +203,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;
-                } elsif($op =~ /^\<$/i) {
+                } elsif($op eq '<') {
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
@@ -213,7 +214,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;
-                } elsif($op =~ /^\>=$/i) {
+                } elsif($op eq '>=') {
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
@@ -224,7 +225,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;
-                } elsif($op =~ /^\<=$/i) {
+                } elsif($op eq '<=') {
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
@@ -235,7 +236,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;
-                } elsif($op =~ /^ne$/i) {
+                } elsif($op eq 'ne') {
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
@@ -246,7 +247,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;                        
-                } elsif($op =~ /^<>/) {
+                } elsif($op eq '<>') {
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
@@ -256,7 +257,7 @@ sub get_objects_matching
                         }
                     }
                     @hr = grep { $_ } @thr;                        
-                } elsif($op eq "between" or $op eq 'between []') {
+                } elsif($op eq 'between') {
                     my @thr;
                     my ($min,$max) = @{ $value->{value} };
                     foreach my $h (@hr) {
@@ -300,7 +301,7 @@ sub _build_data_tree
 {        
     my $self = $_[0];
     
-    my @indexed_property_names = $self->indexed_property_names;        
+    my @indexed_property_names = $self->indexed_property_names;
     my $hr_base = $self->{data_tree};
     
     # _remove_object in bulk.
@@ -321,7 +322,7 @@ sub _build_data_tree
     my ($object,@values,$hr,$value);
     for my $object ($UR::Context::current->all_objects_loaded($self->indexed_class_name)) {            
         if (@indexed_property_names) {
-            @values = map { $object->$_ } @indexed_property_names;
+            @values = map { my $val = $object->$_; defined $val ? $val : undef } @indexed_property_names;
             @values = (undef) unless(@values);
         }
         $hr = $hr_base;
@@ -415,9 +416,11 @@ sub _setup_change_subscription
                 $self->_remove_object(
                     $changed_object, 
                     { $changed_property => $old_value }
-                ) unless $changed_property =~ /^(create|load|__define__)$/;
+                ) if ($changed_property ne 'create' 
+                      and $changed_property ne 'load'
+                      and $changed_property ne '__define__');
                 
-                $self->_add_object($changed_object) unless $changed_property =~ /^(delete|unload)$/;
+                $self->_add_object($changed_object) if ($changed_property ne 'delete' and $changed_property ne 'unload');
             },
         note => "index monitor " . $self->id,
         priority => 0,

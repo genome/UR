@@ -16,7 +16,7 @@ class UR::DataSource::FileMux {
         handle_class          => { is => 'String',  default_value => 'IO::File', doc => 'Class to use for new file handles' },
         quick_disconnect      => { is => 'Boolean', default_value => 1, doc => 'Do not hold the file handle open between requests' },
         file_resolver         => { is => 'CODE',   doc => 'subref that will return a pathname given a rule' },
-        constant_values       => { is => 'ARRAY',  default_value => [], doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
+        constant_values       => { is => 'ARRAY',  default_value => undef, doc => 'Property names which are not in the data file(s), but are part of the objects loaded from the data source' },
     ],
     has_optional => [
         server                => { is => 'String', doc => 'pathname to the data file' },
@@ -70,8 +70,8 @@ sub create_iterator_closure_for_rule {
             # tried and results should be entirely in the cache - ie. no objects.
             # So... remove the evidence that we tried this in case the user is catching the die
             # below and will continue on
-            $context->_forget_loading_was_done_with_class_and_rule($rule->subject_class_name, $rule);
-            Carp::croak "Can't resolve data source: no $param_name specified in rule with id ".$rule->id;
+            $context->_forget_loading_was_done_with_template_and_rule($rule->template_id, $rule->id);
+            Carp::croak "Can't resolve data source: no $param_name specified in rule $rule";
         }
 
         if (@values == 1 and ref($values[0]) eq 'ARRAY') {
@@ -221,9 +221,9 @@ sub create_iterator_closure_for_rule {
                 for (my $i = 0; $i < @row_index_sort_order; $i++) {
                     my $column_num = $row_index_sort_order[$i];
 
-                    my $comparison = $ds_next_row[$lowest_obj_idx]->[$column_num] cmp $ds_next_row[$compare_obj_idx]->[$column_num]
+                    my $comparison = $ds_next_row[$lowest_obj_idx]->[$column_num] <=> $ds_next_row[$compare_obj_idx]->[$column_num]
                                      ||
-                                     $ds_next_row[$lowest_obj_idx]->[$column_num] <=> $ds_next_row[$compare_obj_idx]->[$column_num];
+                                     $ds_next_row[$lowest_obj_idx]->[$column_num] cmp $ds_next_row[$compare_obj_idx]->[$column_num];
 
                     if ($comparison == -1) {
                         next COMPARE_OBJECTS;

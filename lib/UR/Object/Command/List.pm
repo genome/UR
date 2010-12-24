@@ -3,12 +3,10 @@ package UR::Object::Command::List;
 use strict;
 use warnings;
 use IO::File;
-
-use above "UR";                 
+use UR;
 
 use Data::Dumper;
 require Term::ANSIColor;
-require XML::LibXML;
 
 class UR::Object::Command::List {
     is => 'UR::Object::Command::FetchAndDo',
@@ -298,10 +296,11 @@ sub _get_object_string{
     my $out;
     for my $property ( @{$self->{show}} )
     {
+        my $value = join(', ', $object->$property);
         $out .= sprintf(
             "%s: %s\n",
             Term::ANSIColor::colored($property, 'red'),
-            Term::ANSIColor::colored($object->$property, 'cyan'),
+            Term::ANSIColor::colored($value, 'cyan'),
         );
     }
 
@@ -314,6 +313,11 @@ use base 'UR::Object::Command::List::Style';
 sub format_and_print{
     my $self = shift;
     my $out;
+
+    eval "use XML::LibXML";
+    if ($@) {
+        die "Please install XML::LibXML (run sudo cpanm XML::LibXML) to use this tool!";
+    }
 
     my $doc = XML::LibXML->createDocument();
     my $results_node = $doc->createElement("results");

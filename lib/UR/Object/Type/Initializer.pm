@@ -83,11 +83,6 @@ our %meta_classes = map { $_ => 1 }
         UR::Object
         UR::Object::Type
         UR::Object::Property
-        UR::Object::Property::ID
-        UR::Object::Property::Unique
-        UR::Object::Reference
-        UR::Object::Reference::Property
-        UR::Object::Inheritance
     /;
 
 our $bootstrapping = 1;
@@ -336,11 +331,8 @@ sub initialize_bootstrap_classes
     }    
     $bootstrapping = 0;
 
-    # It should be safe to set up these callbacks now.
+    # It should be safe to set up callbacks now.
     UR::Object::Property->create_subscription(callback => \&UR::Object::Type::_property_change_callback);
-    UR::Object::Property::ID->create_subscription(callback => \&UR::Object::Type::_id_property_change_callback);
-    UR::Object::Property::Unique->create_subscription(callback => \&UR::Object::Type::_unique_property_change_callback);
-    UR::Object::Inheritance->create_subscription(callback => \&UR::Object::Type::_inheritance_change_callback);
 }
 
 sub _normalize_class_description {
@@ -740,17 +732,7 @@ sub _normalize_class_description {
     $new_class{'__properties_in_class_definition_order'} = \@properties_in_class_definition_order;
     
     unless ($new_class{type_name}) {
-        if ($new_class{table_name} and $new_class{table_name} !~ /\s/) {
-            $new_class{type_name} = lc($new_class{table_name});
-            $new_class{type_name} =~ s/_/ /g;
-        }
-        elsif ($class_name) {
-            $new_class{type_name} = lc($new_class{class_name});
-            $new_class{type_name} =~ s/::/ /g;
-        }
-        else {
-            Carp::confess("Unable to resolve type name for class $class_name????");
-        }
+        $new_class{type_name} = $new_class{class_name};
     }
     
     if (($new_class{data_source_id} and not ref($new_class{data_source_id})) and not $new_class{schema_name}) {
@@ -872,6 +854,10 @@ sub _normalize_property_description {
     my $class_name = $class_data->{class_name};
     my %old_property = %$property_data;
     my %new_class = %$class_data;
+    
+    if (ref($old_property{id_by}) eq 'HASH') {
+        $DB::single = 1;    
+    }
     
     delete $old_property{source};
 
@@ -1088,6 +1074,11 @@ sub _normalize_property_description {
         $class->warnings_message("New data has odd self-referential 'implied_by' on $class_name $property_name!");
         delete $new_property{implied_by};
     }        
+
+    if (ref($new_property{id_by}) eq 'HASH') {
+        $DB::single = 1;    
+    }
+    
     
     return %new_property;
 }
@@ -1210,15 +1201,19 @@ sub _complete_class_meta_object_definitions {
     # decompose the embedded complex data structures into normalized objects
     my $inheritance = $self->{is};
     my $properties = $self->{has};
-    my $id_properties = $self->{id_by};
-    my %id_properties = map { $_ => 1 } @$id_properties;
     my $relationships = $self->{relationships} || [];
     my $constraints = $self->{constraints};
     my $data_source = $self->{'data_source_id'};
+
+    my $id_properties = $self->{id_by};
+    my %id_property_rank;
+    for (my $i = '0 but true'; $i < @$id_properties; $i++) {
+        $id_property_rank{$id_properties->[$i]} = $i;
+    }
     
     # mark id/non-id properites
     foreach my $pinfo ( values %$properties ) {
-        $pinfo->{'is_id'} = exists($id_properties{$pinfo->{'property_name'}}) || 0;
+        $pinfo->{'is_id'} = $id_property_rank{$pinfo->{'property_name'}};
     }
     
     # handle inheritance
@@ -1245,7 +1240,6 @@ sub _complete_class_meta_object_definitions {
         $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $inline_ds->id;
     }
 
-    my $n = 1;
     for my $parent_class_name (@$inheritance) {
         my $parent_class = $parent_class_name->__meta__;
         unless ($parent_class) {
@@ -1261,22 +1255,6 @@ sub _complete_class_meta_object_definitions {
             redo;
         }
         
-        my $obj =
-            UR::Object::Inheritance->__define__(
-                class_name => $self->class_name,
-                parent_class_name => $parent_class->class_name,
-            )
-            ||
-            UR::Object::Inheritance->is_loaded(
-                class_name => $self->class_name,
-                parent_class_name => $parent_class->class_name
-            );
-
-        unless ($obj) {
-            $self->error_message("Failed to make inheritance link from $class_name to $parent_class_name\n");
-            return;
-        }
-
         if (not defined $self->schema_name) {
             if (my $schema_name = $parent_class->schema_name) {
                 $self->{'schema_name'} = $self->{'db_committed'}->{'schema_name'} = $schema_name;
@@ -1288,9 +1266,6 @@ sub _complete_class_meta_object_definitions {
                 $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $data_source_id;
             }
         }
-
-        $obj->{inheritance_priority} = $n++;
-        push @subordinate_objects, $obj;
 
         # If a parent is declared as a singleton, we are too.
         # This only works for abstract singletons.
@@ -1404,33 +1379,6 @@ sub _complete_class_meta_object_definitions {
         push @subordinate_objects, $property_object;
     }
 
-    # make some of those property objects identity elements
-    my $position = 0;
-    if ($id_properties) {
-        for my $property_name (ref($id_properties) ? @$id_properties : split(/\s+/,$id_properties))
-        {
-            my $attribute_name = $property_name;
-            $attribute_name =~ s/_/ /g;
-            
-            my $id_indicator_object = UR::Object::Property::ID->__define__(
-                type_name => $type_name,
-                class_name => $class_name,
-                attribute_name => $attribute_name,
-                property_name => $property_name,
-                position => ++$position,
-            );
-            
-            unless ($id_indicator_object) {
-                $self->error_message("Error setting property $property_name as an identity property at position $position for class " . $self->class_name . ": " . $class->error_message);
-                for my $property_object (@subordinate_objects) { $property_object->unload }
-                $self->unload;        $DB::single = 1;
-                return;
-            }
-            
-            push @subordinate_objects, $id_indicator_object;
-        }
-    }
-
     if ($constraints) {
         my $property_rule_template = UR::BoolExpr::Template->resolve('UR::Object::Property','class_name','property_name');
 
@@ -1449,128 +1397,12 @@ sub _complete_class_meta_object_definitions {
                 $n++;
             }
             for my $property_name (sort @$properties) {
-                #my $property = UR::Object::Property->get(
-                #    class_name => $class_name,
-                #    property_name => $property_name,
-                #);
                 my $prop_rule = $property_rule_template->get_rule_for_values($class_name,$property_name);
                 my $property = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $prop_rule);
                 unless ($property) {
-                    die "Failed to find property $property_name on class $class_name!";
+                    Carp::croak("Constraint '$name' on class $class_name requires unknown property '$property_name'");
                 }
-                my $attribute_name = $property->attribute_name;
-                my $u = UR::Object::Property::Unique->__define__(
-                    type_name => $type_name,
-                    class_name => $class_name,
-                    unique_group => $name,
-                    property_name => $property_name,
-                    attribute_name => $attribute_name
-                );
-                unless ($u) {
-                    Carp::confess("Failed to define unique constriant field");
-                }
-                push @subordinate_objects, $u;
             }
-        }
-    }
-#print "constraints ",$t2-$t1,"\n" if $t2-$t1 > 0.001;
-#$t1=$t2;
-
-    if ($relationships) {
-        for (my $i = 0; $i < @$relationships; $i += 2) {
-            my $delegation_name = $relationships->[$i];
-            my $data = $relationships->[$i+1];
-            #print Data::Dumper::Dumper($delegation_name, $data);
-            
-            my $constraint_name;
-            my @property_names;
-            my $r_class_name;
-
-            if (my $id_by = $data->{id_by}) {
-                # new-style from the "has" list
-                $constraint_name = $data->{constraint_name};
-                @property_names = @{ $data->{id_by} };
-                $r_class_name = $data->{data_type};                        
-            }
-            else {
-                # old style from the "relationships" list                
-                $constraint_name = delete $data->{constraint_name};
-                @property_names = @{ delete $data->{properties} };
-                $r_class_name = delete $data->{class_name};            
-            }
-
-            # handle cases where the fk does not have an id, but is the name of the target
-            while (grep { $delegation_name eq $_ } @property_names) {
-                $delegation_name .= "_obj";
-            }
-            
-            #my @attribute_names =
-            #    map {
-            #        my $p = UR::Object::Property->get(
-            #            class_name => $class_name,
-            #            property_name => $_
-            #        );
-            #        unless ($p) {
-            #            Carp::confess("No property $_ for class $class_name!?");
-            #        }
-            #        $p->attribute_name;
-            #    } @property_names;
-            # 
-            #my $r_class_obj = UR::Object::Type->get(class_name => $r_class_name);
-            #unless ($r_class_obj) {
-            #    warn "Class $class_name cannot find $r_class_name for $delegation_name relationship.  Ignoring this relationship.\n";
-            #    next;
-            #}
-            #my $r_type_name = $r_class_obj->type_name;
-            #my @r_class_inheritance = ($r_class_name, $r_class_name->__meta__->ancestry_class_names);
-            #my @r_property_names = $r_class_obj->id_property_names;
-            #my @r_attribute_names =
-            #    map {
-            #        my $r_property_name = $_;
-            #        map {
-            #            my $p = UR::Object::Property->get(
-            #                class_name => $_,
-            #                property_name => $r_property_name,
-            #            );
-            #            ($p ? ($p->attribute_name) : ());
-            #        } @r_class_inheritance
-            #    } @r_property_names;
-
-            my $tha = UR::Object::Reference->__define__(
-                id => $class_name . "::" . $delegation_name,
-                class_name => $class_name,
-                type_name => $type_name,
-                r_class_name => $r_class_name,
-                r_type_name => $r_class_name,   # FIXME - we don't need type names anymore, right?
-                delegation_name => $delegation_name,
-                constraint_name => $constraint_name,
-                source => ($constraint_name ? 'data dictionary' : ""),
-                description => "",
-            );
-            unless ($tha) {
-                Carp::confess("Failed to define relationship $delegation_name");
-            }
-            push @subordinate_objects, $tha;
-
-            #my $rank = 0;
-            #for my $property_name (@property_names) {
-            #    my $attribute_name = shift @attribute_names;
-            #    my $r_property_name = shift @r_property_names;
-            #    my $r_attribute_name = shift @r_attribute_names;
-            #    $rank++;
-            #    my $rp = UR::Object::Reference::Property->__define__(
-            #        tha_id => $tha->tha_id,
-            #        rank => $rank,
-            #        property_name => $property_name,
-            #        r_property_name => $r_property_name,
-            #        attribute_name => $attribute_name,
-            #        r_attribute_name => $r_attribute_name
-            #    );
-            #    unless ($rp) {
-            #        Carp::confess("Failed to define relationship $delegation_name property $property_name");
-            #    }
-            #    push @subordinate_objects, $rp;
-            #}
         }
     }
 
@@ -1746,15 +1578,6 @@ sub generate {
             push @$cols, $property_object->column_name;
         }    
     }
-
-    #my @references = UR::Object::Reference->get(
-    #    class_name => $class_name
-    #);
-    #for my $reference (@references) {
-    #    unless ($reference->generate) {
-    #        Carp::confess("Failed to generate reference!");
-    #    }
-    #}
 
     # set the flag to prevent this from occurring multiple times.
     $self->generated(1);

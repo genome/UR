@@ -34,8 +34,7 @@ UR::Object::Type->define(
     ]
 );
 
-sub create 
-{
+sub create {
     my $class = shift;
     
     my ($lib_path,$namespace_subdir,$working_subdir) =
@@ -57,43 +56,17 @@ sub create
     );    
 }
 
-sub command_name
-{
+sub command_name {
     my $class = shift;
     return "ur" if $class eq __PACKAGE__;
-    return $class->SUPER::command_name;
+    my $name = $class->SUPER::command_name;
+    $name =~ s/^u-r namespace/ur/;
+    return $name;
 }
 
-sub help_brief
-{
-    "Tools for creation and maintenance of a UR-based software tree."
-}
-
-sub help_detail 
-{
+sub help_detail {
     return shift->help_brief
 }
-
-sub validate_params 
-{
-    my $self = shift;
-    return unless $self->SUPER::validate_params(@_);
-    return 1;
-}
-
-# Switch to these when we can have properties beginning with underscore.
-
-#sub lib_path {
-#    shift->_lib_path(@_);
-#}
-
-#sub namespace_subdir {
-#    shift->_namespace_subdir(@_);
-#}
-
-#sub working_subdir {
-#    shift->_working_subdir(@_);
-#}
 
 sub namespace_path {
     my $self = shift;
@@ -119,8 +92,7 @@ sub namespace_name {
     return $namespace_name;
 }
 
-sub _test_cases_in_tree
-{
+sub _test_cases_in_tree {
     my $self = shift;
     my @test_cases;
     unless (@_) {
@@ -161,8 +133,7 @@ sub _test_cases_in_tree
     return sort @test_cases;
 }
 
-sub _modules_in_tree
-{
+sub _modules_in_tree {
     my $self = shift;
     my @modules;
     unless (@_) {
@@ -215,8 +186,7 @@ sub _modules_in_tree
     return sort @modules;
 }
 
-sub _class_names_in_tree
-{
+sub _class_names_in_tree {
     my $self = shift;
     $self->_init;
     my @modules = $self->_modules_in_tree(@_);
@@ -230,8 +200,7 @@ sub _class_names_in_tree
     return @class_names;
 }
 
-sub _class_objects_in_tree
-{
+sub _class_objects_in_tree {
     my $self = shift;
     $self->_init;
     my @class_names = $self->_class_names_in_tree(@_);
@@ -254,8 +223,7 @@ sub _class_objects_in_tree
     return @class_objects;
 }
 
-sub resolve_class_and_params_for_argv
-{
+sub resolve_class_and_params_for_argv {
     # This is used by execute_and_exit, but might be used within an application.
     my $self = shift;
     my ($delegate, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
@@ -331,8 +299,7 @@ sub _init {
 
 use Cwd;
 
-sub resolve_lib_namespace_working_dirs
-{
+sub resolve_lib_namespace_working_dirs {
     my $class = shift;
     my $cwd = shift;
     $cwd ||= cwd();

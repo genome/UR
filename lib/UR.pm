@@ -6,55 +6,12 @@ package UR;
 
 use strict;
 use warnings FATAL => 'all';
-
-# Set the version at compile time, since some other modules borrow it.
-use version;
-our $VERSION;
-BEGIN { 
-    # the first CPAN deploy using "version" is failing to install.
-    # this is an attempt to get around it...
-
-    # for the cpan shell, and other parsers
-    $VERSION = 'v0.17';
-
-    # for actual inspection
-    ${VERSION} 
-        = qv('0.17'); 
-};
+our $VERSION = '0.19';
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
 use Carp;
 $SIG{__DIE__} = \&Carp::confess;
-
-# This speeds up using the module tree by pre-calculaing meta-queries.
-# NOTE: it is currently not used because of deployment issues.
-use Storable qw(store_fd fd_retrieve);
-BEGIN {
-    if ( $INC{'UR.pm'} ) {
-        my $ur_dir = substr($INC{'UR.pm'}, 0, length($INC{'UR.pm'})-5);
-        #print "STDERR ur_dir is $ur_dir\n";
-        my $dump;
-        foreach my $dir ( '.', $ur_dir ) {
-            if (-f "$dir/ur_core.$VERSION.stor" and -s _) {
-                #print STDERR "Loading rules dump from $dir/ur_core.stor\n";
-                open($dump, "$dir/ur_core.$VERSION.stor");
-                last;
-            } elsif (-f "$dir/ur_core.stor.gz" and -s _) {
-                #print STDERR "Loading gzipped rules dump from $dir/ur_core.stor.gz\n";
-                open($dump, "gzip -dc $dir/ur_core.stor.gz |");
-                last;
-            }
-        }
-        if ($dump) {
-            $UR::DID_LOAD_FROM_DUMP = 1;
-
-            local $/;
-            my $data = fd_retrieve($dump);
-            ($UR::Object::rule_templates, $UR::Object::rules) = @$data;
-        }
-    }
-}
 
 # Ensure that, if the application changes directory, we do not 
 # change where we load modules while running.
@@ -129,13 +86,8 @@ require UR::Object;
 require UR::Object::Type;
 
 require UR::Object::Ghost;
-require UR::Object::Inheritance;
 require UR::Object::Type;
 require UR::Object::Property;
-require UR::Object::Property::ID;
-require UR::Object::Property::Unique;
-require UR::Object::Reference;
-require UR::Object::Reference::Property;
 
 
 require UR::BoolExpr::Util;
@@ -164,17 +116,6 @@ UR::Object::Type->define(
     id_by => [
         id  => { is => 'Scalar' }
     ]
-);
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Inheritance',
-    extends => ['UR::Object'],
-    id_properties => [qw/class_name parent_class_name/],
-    properties => [
-        parent_class_name                => { is => 'Text', len => 256, source => 'data dictionary' },
-        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
-        inheritance_priority             => { is => 'NUMBER', len => 2 },
-    ],
 );
 
 UR::Object::Type->define(
@@ -244,7 +185,7 @@ UR::Object::Type->define(
         composite_id_separator           => { is => 'Text', len => 2 , default_value => "\t", is_optional => 1},        
         
         # details used by the managment of the "real" entity outside of the app (persistence) 
-        table_name                       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },        
+        table_name                       => { is => 'Text', len => undef, is_optional => 1, source => 'data dictionary' },        
         query_hint                       => { is => 'Text', len => 1024 , is_optional => 1},        
         id_sequence_generator_name       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary', doc => 'override the default choice for sequence generator name' },
 
@@ -279,10 +220,8 @@ UR::Object::Type->define(
         # There's also a property_meta_by_name() method defined in the class
         direct_property_metas            => { is => 'UR::Object::Property', reverse_as => 'class_meta', is_many => 1 },
         direct_property_names            => { via => 'direct_property_metas', to => 'property_name', is_many => 1 },
-        #direct_id_property_metas         => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [ is_id => 1 ], is_many => 1 },
-        #direct_id_property_names         => { via => 'direct_property_metas', to => 'property_name', is_many => 1, where => [ is_id => 1 ] },
-        direct_id_property_metas         => { via => 'direct_id_token_metas', to => 'property_meta', is_many => 1 },
-        direct_id_property_names         => { via => 'direct_id_token_metas', to => 'property_name', is_many => 1 },
+        direct_id_property_metas         => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [ 'is_id true' => 1, -order_by => 'is_id' ], is_many => 1 },
+        direct_id_property_names         => { via => 'direct_id_property_metas', to => 'property_name', is_many => 1 },
 
         ancestry_property_metas          => { via => 'ancestry_class_metas', to => 'direct_property_metas', is_many => 1 },
         ancestry_property_names          => { via => 'ancestry_class_metas', to => 'direct_property_names', is_many => 1 },
@@ -291,29 +230,17 @@ UR::Object::Type->define(
 
         all_property_metas               => { via => 'all_class_metas', to => 'direct_property_metas', is_many => 1 },
         all_property_names               => { via => 'all_property_metas', to => 'property_name', is_many => 1 },
-        #all_id_property_metas            => { via => 'ancestry_property_metas', to => 'all_property_metas', where => [is_id => 1] },
-        all_id_property_metas            => { via => 'all_id_token_metas', to => 'property_meta', is_many => 1 },
-        all_id_property_names            => { via => 'all_id_token_metas', to => 'property_name', is_many => 1 },
+        all_id_property_metas            => { via => 'all_class_metas', to => 'direct_id_property_metas', is_many => 1 },
+        all_id_property_names            => { via => 'all_id_property_metas', to => 'property_name', is_many => 1 },
 
-        # these should go away when the is_id meta-property is working, since they don't seem that useful
-        direct_id_token_metas            => { is => 'UR::Object::Property::ID', reverse_as => 'class_meta', is_many => 1 },
-        direct_id_token_names            => { via => 'direct_id_token_metas', to => 'property_name', is_many => 1 },
-        ancestry_id_token_metas          => { via => 'ancestry_class_metas', to => 'direct_id_token_metas', is_many => 1 },
-        ancestry_id_token_names          => { via => 'ancestry_id_token_metas', to => 'property_name', is_many => 1 },
-        all_id_token_metas               => { via => 'all_class_metas', to => 'direct_id_token_metas', is_many => 1 },
-
-        # Unique contstraint trackers
-        direct_unique_metas              => { is => 'UR::Object::Property::Unique', reverse_as => 'class_meta', is_many => 1 },
-        direct_unique_property_metas     => { via => 'direct_unique_metas', to => 'property_meta', is_many => 1 },
-        direct_unique_property_names     => { via => 'direct_unique_metas', to => 'property_name', is_many => 1 },
-        ancestry_unique_property_metas   => { via => 'ancestry_class_metas', to => 'direct_unique_property_metas', is_many => 1 },
-        ancestry_unique_property_names   => { via => 'ancestry_class_metas', to => 'direct_unique_property_names', is_many => 1 },
-        all_unique_property_metas        => { via => 'all_class_metas', to => 'direct_unique_property_metas', is_many => 1 },
-        all_unique_property_names        => { via => 'all_class_metas', to => 'direct_unique_property_names', is_many => 1 },
+        direct_id_by_property_metas      => { via => 'direct_property_metas', to => '__self__', where => ['id_by true' => 1], is_many => 1, doc => "Properties with 'id_by' metadata, ie. direct object accessor properties" } ,
+        all_id_by_property_metas         => { via => 'all_class_metas', to => 'direct_id_by_property_metas', is_many => 1},
+        direct_reverse_as_property_metas => { via => 'direct_property_metas', to => '__self__', where => ['reverse_as true' => 1], is_many => 1, doc => "Properties with 'reverse_as' metadata, ie. indirect object accessor properties" },
+        all_reverse_as_property_metas    => { via => 'all_class_metas', to => 'direct_reverse_as_property_metas', is_many => 1},
 
         # Datasource related stuff
         direct_column_names              => { via => 'direct_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true' }] },
-        direct_id_column_names           => { via => 'get_direct_id_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true'}] },
+        direct_id_column_names           => { via => 'direct_id_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true'}] },
         ancestry_column_names            => { via => 'ancestry_class_metas', to => 'direct_column_names', is_many => 1 },
         ancestry_id_column_names         => { via => 'ancestry_class_metas', to => 'direct_id_column_names', is_many => 1 },
         # Are these *columnless* properties actually necessary?  The user could just use direct_property_metas(column_name => undef)
@@ -327,12 +254,6 @@ UR::Object::Type->define(
         all_id_column_names              => { via => 'all_class_metas', to => 'direct_id_column_names', is_many => 1 },
         all_columnless_property_metas    => { via => 'all_class_metas', to => 'direct_columnless_property_metas', is_many => 1 },
         all_columnless_property_names    => { via => 'all_class_metas', to => 'direct_columnless_property_names', is_many => 1 },
-
-        # Reference objects
-        reference_metas                  => { is => 'UR::Object::Reference', reverse_as => 'class_meta', is_many => 1 },
-        reference_property_metas         => { is => 'UR::Object::Reference::Property', via => 'reference_metas', to => 'reference_property_metas', is_many => 1 },
-        all_reference_metas              => { via => 'all_class_metas', to => 'reference_metas', is_many => 1 },
-        
     ],    
     unique_constraints => [
         { properties => [qw/type_name/], sql => 'SUPER_FAKE_O2' },
@@ -356,7 +277,7 @@ UR::Object::Type->define(
         default_value                   => { is_optional => 1 },
         valid_values                    => { is => 'ARRAY', is_optional => 1, },
         doc                             => { is => 'Text', len => 1000, is_optional => 1 },
-        is_id                           => { is => 'Boolean', default_value => 0, doc => 'denotes this is an ID property of the class' },
+        is_id                           => { is => 'Integer', default_value => undef, doc => 'denotes this is an ID property of the class, and ranks them' },
         is_optional                     => { is => 'Boolean' , default_value => 0},
         is_transient                    => { is => 'Boolean' , default_value => 0},
         is_constant                     => { is => 'Boolean' , default_value => 0},  # never changes
@@ -392,96 +313,17 @@ UR::Object::Type->define(
         is_dimension                    => { is => 'Boolean', is_optional => 1},
         is_specified_in_module_header   => { is => 'Boolean', default_value => 0 },
         position_in_module_header       => { is => 'Integer', is_optional => 1, doc => "Line in the class definition source's section this property appears" },
-        #rank                            => { is => 'Integer', is_optional => 1, doc => 'Order in which the properties are discovered while parsing the class definition' },
         singular_name                   => { is => 'Text' },
         plural_name                     => { is => 'Text' },
 
         class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
-        unique_metas                    => { is => 'UR::Object::Property::Unique', reverse_as => 'property_meta', is_many => 1 },
+        r_class_meta                    => { is => 'UR::Object::Type', id_by => 'data_type' },
     ],
     unique_constraints => [
         { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },
     ],
 );
 
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Reference::Property',
-    id_properties => [qw/tha_id rank/],
-    properties => [
-        rank                            => { is => 'NUMBER', len => 2, source => 'data dictionary' },
-        tha_id                          => { is => 'Text', len => 128, source => 'data dictionary' },
-        attribute_name                  => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        r_attribute_name                => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        property_name                   => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        r_property_name                 => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-         
-        reference_meta                  => { is => 'UR::Object::Reference', id_by => 'tha_id' },
-
-        class_meta                      => { is => 'UR::Object::Type', via => 'reference_meta', to => 'class_meta' },
-        class_name                      => { via => 'class_meta', to => 'class_name' },
-	property_meta                   => { is => 'UR::Object::Property', id_by => [ 'class_name', 'property_name' ] },
-
-        r_class_meta                    => { is => 'UR::Object::Type', via => 'reference_meta', to => 'r_class_meta' },
-        r_class_name                    => { via => 'r_class_meta', to => 'class_name' },
-        r_property_meta                 => { is => 'UR::Object::Property', id_by => [ 'r_class_name', 'r_property_name'] },
-    ],
-);
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Reference',
-    id_properties => ['tha_id'],
-    properties => [
-        tha_id                          => { is => 'Text', len => 128, source => 'data dictionary' },
-        class_name                      => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        type_name                       => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        delegation_name                 => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        r_class_name                    => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        r_type_name                     => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        #r_delegation_name               => { is => 'Text', len => 256, is_optional => 0, source => 'data dictionary' },
-        constraint_name                 => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        source                          => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        description                     => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        accessor_name_for_id            => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        accessor_name_for_object        => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-
-        reference_property_metas        => { is => 'UR::Object::Reference::Property', reverse_as => 'reference_meta', is_many => 1 },
-        class_meta                      => { is => 'UR::Object::Type', id_by => 'class_name' },
-        r_class_meta                    => { is => 'UR::Object::Type', id_by => 'r_class_name' },
-        property_meta                   => { is => 'UR::Object::Property', id_by => ['class_name', 'delegation_name'] },
-    ],
-);
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Property::Unique',
-    id_properties => [qw/type_name unique_group attribute_name/],
-    properties => [
-        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
-        property_name                    => { is => 'Text', len => 256, source => 'data dictionary' },
-        attribute_name                   => { is => 'Text', len => 256, source => 'data dictionary' },
-        unique_group                     => { is => 'Text', len => 256, source => 'data dictionary' },
-
-        class_meta                       => { is => 'UR::Object::Type', id_by => 'class_name' },
-        property_meta                    => { is => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
-    ],
-);
-
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Property::ID',
-    id_properties => [qw/type_name position/],
-    properties => [
-        position                         => { is => 'NUMBER', len => 2, source => 'data dictionary' },
-        class_name                       => { is => 'Text', len => 256, source => 'data dictionary' },
-        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
-        attribute_name                   => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        property_name                    => { is => 'Text', len => 256, source => 'data dictionary' },
-
-        class_meta                       => { is => 'UR::Object::Type', id_by => 'class_name' },
-        property_meta                    => { is => 'UR::Object::Property', id_by => ['class_name', 'property_name'] },
-    ],
-);
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Property::Calculated::From',
@@ -547,7 +389,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version v0.17.
+This document describes UR version v0.19.
 
 =head1 SYNOPSIS
 
@@ -600,7 +442,7 @@ This document describes UR version v0.17.
     
     $c->fur('scruffy');
 
-    commit();
+    UR::Context->commit();
 
   
 =head1 DESCRIPTION
@@ -803,8 +645,7 @@ See L<UR::Env> for details.
 Class::Autouse
 Cwd
 Data::Dumper
-Date::Calc
-Date::Parse
+Date::Format
 DBI
 File::Basename
 FindBin

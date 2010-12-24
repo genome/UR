@@ -54,6 +54,8 @@ Operators:
 ----------
  =  (exactly equal to)
  ~  (like the value)
+ :  (in the list of several values, slash "/" separated)
+    (or between two values, dash "-" separated)
  >  (greater than)
  >= (greater than or equal to)
  <  (less than)
@@ -67,7 +69,9 @@ EOS
     } else {
         $doc .= <<EOS
  lister-command --filter name=Bob --show id,name,address
- lister-command --filter name='something with space',employees\>200,other_property~some%
+ lister-command --filter name='something with space',employees\>200,job~%manager
+ lister-command --filter cost:20000-90000
+ lister-command --filter answer:yes/maybe
 EOS
     }
 

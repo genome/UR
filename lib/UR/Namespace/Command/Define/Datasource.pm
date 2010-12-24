@@ -24,6 +24,8 @@ UR::Object::Type->define(
     doc => 'add a data source to the current namespace'
 );
 
+sub _is_hidden_in_docs { 1 }
+
 sub sub_command_sort_position { 2 }
 
 sub data_source_module_pathname {
