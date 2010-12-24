@@ -4,8 +4,6 @@ use strict;
 use warnings;
 
 use UR;
-use Getopt::Complete;
-use Getopt::Complete::Cache;
 use IO::File;
 
 UR::Object::Type->define(
@@ -35,7 +33,15 @@ sub is_sub_command_delegator { 0; }
 sub execute {
     my $self = shift;
     my $class = $self->classname;
-    
+   
+    eval {
+        require Getopt::Complete;
+        require Getopt::Complete::Cache;
+    };
+    if ($@) {
+        die "Errors using Getopt::Complete.  Do you have Getopt::Complete installed?  If not try 'cpanm Getopt::Complete'";
+    }
+
     eval "use above '$class';";
     if ($@) {
         $self->error_message("Unable to use above $class.\n$@");

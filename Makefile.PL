@@ -25,6 +25,7 @@ features (
         'XML::Dumper'         => '',
         'XML::Generator'      => '',
         'XML::Simple'         => '',
+        'version'             => '',
         
         # C
         'FreezeThaw'          => '0.43',
