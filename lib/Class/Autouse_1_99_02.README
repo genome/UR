@@ -1,5 +1,5 @@
 UR depends on Class::Autouse version 1.99_02, which is not the default stable release.
-If you use Class::Autouse in your application, you will be foreced to this version.
+If you use Class::Autouse in your application, you will be forced to this version.
 
 It is part of the UR bundle as a separate module file to prevent installing over the default Class::Autouse.
 
