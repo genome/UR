@@ -138,7 +138,6 @@ lib/UR/Manual/Overview.pod
 lib/UR/Manual/Presentation.pod
 lib/UR/Manual/SchemaDesign.pod
 lib/UR/Manual/Tutorial.pod
-lib/UR/Manual/UR.pod
 lib/UR/Manual/UR_Presentation.pdf
 lib/UR/ModuleBase.pm
 lib/UR/ModuleConfig.pm

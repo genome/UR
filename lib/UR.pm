@@ -482,6 +482,8 @@ in-memory transactions for both.
 
 =head2 Manuals
 
+L<ur> - command line interface 
+
 L<UR::Manual::Overview> - UR from Ten Thousand Feet
 
 L<UR::Manual::Tutorial> - Getting started with UR 
@@ -493,8 +495,6 @@ L<UR::Manual::Cookbook> - Recepies for getting stuff working
 L<UR::Manual::Metadata> - UR's metadata system
 
 L<UR::Object::Type::Initializer> - Defining classes 
-
-L<UR::Manual::UR> - UR's command line tool
 
 =head2 Basic Entities
 

@@ -157,7 +157,7 @@ sub execute {
 
 =head1 NAME
 
-B<ur test callcount> - Collect callcount data into one file
+B<ur test callcount> - collect callcount data from running tests into one file
 
 =head1 SYNOPSIS
 
