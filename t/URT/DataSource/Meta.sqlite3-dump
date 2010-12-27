@@ -1,4 +1,3 @@
-PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 CREATE TABLE dd_bitmap_index (
     data_source varchar NOT NULL,
