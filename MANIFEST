@@ -147,8 +147,6 @@ lib/UR/Moose.pm
 lib/UR/Namespace.pm
 lib/UR/Namespace/Command.pm
 lib/UR/Namespace/Command.pm.opts
-lib/UR/Namespace/Command/Browser.pm
-lib/UR/Namespace/Command/CreateCompletionSpecFile.pm
 lib/UR/Namespace/Command/Define.pm
 lib/UR/Namespace/Command/Define/Class.pm
 lib/UR/Namespace/Command/Define/Datasource.pm
@@ -162,12 +160,6 @@ lib/UR/Namespace/Command/Define/Datasource/Sqlite.pm
 lib/UR/Namespace/Command/Define/Db.pm
 lib/UR/Namespace/Command/Define/Namespace.pm
 lib/UR/Namespace/Command/Describe.pm
-lib/UR/Namespace/Command/Diff.pm
-lib/UR/Namespace/Command/Diff/Rewrite.pm
-lib/UR/Namespace/Command/Diff/Update.pm
-lib/UR/Namespace/Command/Export.pm
-lib/UR/Namespace/Command/Export/DbicClasses.pm
-lib/UR/Namespace/Command/Info.pm
 lib/UR/Namespace/Command/Init.pm
 lib/UR/Namespace/Command/List.pm
 lib/UR/Namespace/Command/List/Classes.pm
@@ -179,10 +171,6 @@ lib/UR/Namespace/Command/Old/DiffUpdate.pm
 lib/UR/Namespace/Command/Old/ExportDbicClasses.pm
 lib/UR/Namespace/Command/Old/Info.pm
 lib/UR/Namespace/Command/Old/Redescribe.pm
-lib/UR/Namespace/Command/Redescribe.pm
-lib/UR/Namespace/Command/Rename.pm
-lib/UR/Namespace/Command/Rename/Class.pm
-lib/UR/Namespace/Command/Rewrite.pm
 lib/UR/Namespace/Command/RunsOnModulesInTree.pm
 lib/UR/Namespace/Command/Sys.pm
 lib/UR/Namespace/Command/Sys/ClassBrowser.pm
@@ -197,7 +185,6 @@ lib/UR/Namespace/Command/Test/Use.pm
 lib/UR/Namespace/Command/Test/Window.pm
 lib/UR/Namespace/Command/Update.pm
 lib/UR/Namespace/Command/Update/ClassDiagram.pm
-lib/UR/Namespace/Command/Update/Classes.pm
 lib/UR/Namespace/Command/Update/ClassesFromDb.pm
 lib/UR/Namespace/Command/Update/RenameClass.pm
 lib/UR/Namespace/Command/Update/RewriteClassHeader.pm
@@ -215,19 +202,11 @@ lib/UR/Object/Command/FetchAndDo.pm
 lib/UR/Object/Command/List.pm
 lib/UR/Object/Ghost.pm
 lib/UR/Object/Index.pm
-lib/UR/Object/Inheritance.pm
-lib/UR/Object/Inheritance/View/Default/Umlet.pm
 lib/UR/Object/Iterator.pm
 lib/UR/Object/Property.pm
-lib/UR/Object/Property/ID.pm
-lib/UR/Object/Property/Unique.pm
 lib/UR/Object/Property/View/Default/Text.pm
 lib/UR/Object/Property/View/DescriptionLineItem/Text.pm
 lib/UR/Object/Property/View/ReferenceDescription/Text.pm
-lib/UR/Object/Reference.pm
-lib/UR/Object/Reference/Property.pm
-lib/UR/Object/Reference/View/Default/Umlet.pm
-lib/UR/Object/Reference/View/DescriptionLineItem/Text.pm
 lib/UR/Object/Set.pm
 lib/UR/Object/Set/View/Default/Json.pm
 lib/UR/Object/Set/View/Default/Xml.pm
@@ -237,7 +216,6 @@ lib/UR/Object/Type.pod
 lib/UR/Object/Type/AccessorWriter.pm
 lib/UR/Object/Type/AccessorWriter/Product.pm
 lib/UR/Object/Type/AccessorWriter/Sum.pm
-lib/UR/Object/Type/DBICModuleWriter.pm
 lib/UR/Object/Type/Initializer.pm
 lib/UR/Object/Type/Initializer.pod
 lib/UR/Object/Type/InternalAPI.pm
@@ -251,7 +229,6 @@ lib/UR/Object/Umlet/Diagram.pm
 lib/UR/Object/Umlet/Other.pm
 lib/UR/Object/Umlet/PictureElement.pm
 lib/UR/Object/Umlet/Relation.pm
-lib/UR/Object/UserOperation.pm
 lib/UR/Object/Value.pm
 lib/UR/Object/View.pm
 lib/UR/Object/View/Aspect.pm
@@ -264,8 +241,6 @@ lib/UR/Object/View/Default/Xml.pm
 lib/UR/Object/View/Default/Xsl.pm
 lib/UR/Object/View/Lister/Text.pm
 lib/UR/Object/View/Toolkit.pm
-lib/UR/Object/View/Toolkit/Gtk.pm
-lib/UR/Object/View/Toolkit/Gtk2.pm
 lib/UR/Object/View/Toolkit/Text.pm
 lib/UR/Object/View/Toolkit/Umlet.pm
 lib/UR/ObjectDeprecated.pm
@@ -339,6 +314,7 @@ t/URT/RAMThingy.pm
 t/URT/t/00-load.t
 t/URT/t/01_object.t
 t/URT/t/02_class_construction.t
+t/URT/t/03_rule_subsets.t
 t/URT/t/03_rule_values.t
 t/URT/t/03_rules.t
 t/URT/t/03_rules_construction.t
@@ -439,6 +415,7 @@ t/URT/t/78_get_by_subclass_params_load_properly.t
 t/URT/t/79_like_operator.t
 t/URT/t/80_command_define_datasource.t
 t/URT/t/81_crud_custom_columnnames.t
+t/URT/t/82_boolexpr_op_underscore.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction-observers.t
 t/URT/t/99_transaction.t
