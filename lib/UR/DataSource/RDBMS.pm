@@ -1911,19 +1911,27 @@ sub _sync_database {
         my @fk = $table->fk_constraints;
 
         my $table_name = defined $ds_owner ? join('.', $ds_owner, $ds_table) : $ds_table;
+        my $matched_table_name;
         if ($insert{$table_name})
         {
+            $matched_table_name = 1;
             $all_table_commands{"insert $table_name"} = 1;
         }
 
         if ($update{$table_name})
         {
+            $matched_table_name = 1;
             $all_table_commands{"update $table_name"} = 1;
         }
 
         if ($delete{$table_name})
         {
+            $matched_table_name = 1;
             $all_table_commands{"delete $table_name"} = 1;
+        }
+
+        unless ($matched_table_name) {
+            Carp::carp("Possible metadata inconsistency: A change on table $table_name was not an insert, update or delete!");
         }
 
         my $tmparray;
