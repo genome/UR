@@ -1033,7 +1033,7 @@ sub refresh_database_metadata_for_table_name {
     if ($fk_reverse_sth) {
         while (my $data = $fk_reverse_sth->fetchrow_hashref()) {
 
-            foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME ) ) {
+            foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME PKTABLE_SCHEM FKTABLE_SCHEM UK_TABLE_SCHEM FK_TABLE_SCHEM) ) {
                 next unless defined($data->{$_});
                 $data->{$_} = uc($data->{$_});
 
@@ -1050,6 +1050,12 @@ sub refresh_database_metadata_for_table_name {
                                  || $data->{'FKCOLUMN_NAME'};
             my $r_column_name = $data->{'UK_COLUMN_NAME'}
                                 || $data->{'PKCOLUMN_NAME'};
+            my $owner         = $data->{'FK_TABLE_SCHEM'}
+                                || $data->{'FKTABLE_SCHEM'}
+                                || $table_object->owner;
+            my $r_owner       = $data->{'UK_TABLE_SCHEM'}
+                                || $data->{'PKTABLE_SCHEM'}
+                                || $table_object->owner;
 
             # MySQL returns primary key info with foreign_key_info()?!
             # They show up here with no $r_table_name or $r_column_name
@@ -1057,8 +1063,9 @@ sub refresh_database_metadata_for_table_name {
 
             my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $constraint_name,
                                                               table_name         => $fk_table_name,
-                                                              owner              => $table_object->{'owner'},
+                                                              owner              => $owner,
                                                               r_table_name       => $r_table_name,
+                                                              r_owner            => $r_owner,
                                                               data_source        => $table_object->{'data_source'},
                                                           );
             unless ($fk) {
@@ -1066,8 +1073,8 @@ sub refresh_database_metadata_for_table_name {
                     fk_constraint_name => $constraint_name,
                     table_name      => $fk_table_name,
                     r_table_name    => $r_table_name,
-                    owner           => $table_object->{owner},
-                    r_owner         => $table_object->{owner},
+                    owner           => $owner,
+                    r_owner         => $r_owner,
                     data_source     => $table_object->{data_source},
                     last_object_revision => $revision_time,
                 );
@@ -1085,7 +1092,7 @@ sub refresh_database_metadata_for_table_name {
                                      column_name     => $fk_column_name,
                                      r_table_name    => $r_table_name,
                                      r_column_name   => $r_column_name,
-                                     owner           => $table_object->{owner},
+                                     owner           => $owner,
                                      data_source     => $table_object->{data_source},
                                  );
                 unless ( UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params) ) {
