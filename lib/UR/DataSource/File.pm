@@ -571,7 +571,8 @@ sub create_iterator_closure_for_rule {
 
     my $next_candidate_row;  # This will be filled in by the closure below
     foreach my $column_name ( @$sort_order_names, @non_sort_column_names ) {
-        if (! $operators_for_properties->{$column_name}) {
+        my $property_name = $property_meta_for_column_name{$column_name}->property_name;
+        if (! $operators_for_properties->{$property_name}) {
             $looking_for_sort_columns = 0;
             next;
         } elsif ($looking_for_sort_columns && $sort_column_names{$column_name}) {
@@ -584,10 +585,10 @@ sub create_iterator_closure_for_rule {
 
         push @rule_columns_in_order, $column_name_to_index_map{$column_name};
          
-        my $operator = $operators_for_properties->{$column_name};
-        my $rule_value = $values_for_properties->{$column_name};
+        my $operator = $operators_for_properties->{$property_name};
+        my $rule_value = $values_for_properties->{$property_name};
     
-        my $comparison_function = $self->_comparator_for_operator_and_property($property_metas{$column_name},
+        my $comparison_function = $self->_comparator_for_operator_and_property($property_meta_for_column_name{$column_name},
                                                                                \$next_candidate_row,
                                                                                $column_name_to_index_map{$column_name},
                                                                                $operator,
