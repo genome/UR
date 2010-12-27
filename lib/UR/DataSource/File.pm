@@ -325,17 +325,27 @@ sub _things_in_list_are_numeric {
 # knows that if it's comparing an ID/sorted column, and the comparator
 # returns 1 then we've gone past the point where we can expect to ever
 # find another successful match and we should stop looking
+my $ALWAYS_FALSE = sub { -1 };
 sub _comparator_for_operator_and_property {
     my($self,$property,$next_candidate_row, $index, $operator,$value) = @_;
 
+    no warnings 'uninitialized';  # we're handling ''/undef/null specially below where it matters
+
     if ($operator eq 'between') {
+        if ($value->[0] eq '' or $value->[1] eq '') {
+            return $ALWAYS_FALSE;
+        }
+
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             if ($value->[0] > $value->[1]) {
                 # Will never be true
                 Carp::carp "'between' comparison will never be true with values ".$value->[0]," and ".$value->[1];
+                return $ALWAYS_FALSE;
             }
+
             # numeric 'between' comparison
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '');
                        if ($$next_candidate_row->[$index] < $value->[0]) {
                            return -1;
                        } elsif ($$next_candidate_row->[$index] > $value->[1]) {
@@ -347,9 +357,12 @@ sub _comparator_for_operator_and_property {
         } else {
             if ($value->[0] gt $value->[1]) {
                 Carp::carp "'between' comparison will never be true with values ".$value->[0]," and ".$value->[1];
+                return $ALWAYS_FALSE;
             }
+
             # A string 'between' comparison
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '');
                        if ($$next_candidate_row->[$index] lt $value->[0]) {
                            return -1;
                        } elsif ($$next_candidate_row->[$index] gt $value->[1]) {
@@ -361,11 +374,16 @@ sub _comparator_for_operator_and_property {
         }
 
     } elsif ($operator eq 'in') {
+        if (! @$value) {
+            return $ALWAYS_FALSE;
+        }
+
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             # Numeric 'in' comparison  returns undef if we're within the range of the list
             # but don't actually match any of the items in the list
             @$value = sort { $a <=> $b } @$value;  # sort the values first
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '');
                        if ($$next_candidate_row->[$index] < $value->[0]) {
                            return -1;
                        } elsif ($$next_candidate_row->[$index] > $value->[-1]) {
@@ -397,8 +415,13 @@ sub _comparator_for_operator_and_property {
         }
 
     } elsif ($operator eq 'not in') {
+        if (! @$value) {
+            return $ALWAYS_FALSE;
+        }
+
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             return sub {
+                return -1 if ($$next_candidate_row->[$index] eq '');
                 foreach ( @$value ) {
                     return -1 if $$next_candidate_row->[$index] == $_;
                 }
@@ -418,15 +441,19 @@ sub _comparator_for_operator_and_property {
         # 'like' is always a string comparison.  In addition, we can't know if we're ahead
         # or behind in the file's ID columns, so the only two return values are 0 and 1
         
+        return $ALWAYS_FALSE if ($value eq '');  # property like NULL is always false
+
         # Convert SQL-type wildcards to Perl-type wildcards
         # Convert a % to a *, and _ to ., unless they're preceeded by \ to escape them.
         # Not that this isn't precisely correct, as \\% should really mean a literal \
         # followed by a wildcard, but we can't be correct in all cases without including 
         # a real parser.  This will catch most cases.
+
         $value =~ s/(?<!\\)%/.*/g;
         $value =~ s/(?<!\\)_/./g;
         my $regex = qr($value);
         return sub {
+                   return -1 if ($$next_candidate_row->[$index] eq '');
                    if ($$next_candidate_row->[$index] =~ $regex) {
                        return 0;
                    } else {
@@ -435,10 +462,12 @@ sub _comparator_for_operator_and_property {
                };
 
     } elsif ($operator eq 'not like') {
-        $value =~ s/(?<!\\)%/*/;
+        return $ALWAYS_FALSE if ($value eq '');  # property like NULL is always false
+        $value =~ s/(?<!\\)%/.*/;
         $value =~ s/(?<!\\)_/./;
         my $regex = qr($value);
         return sub {
+                   return -1 if ($$next_candidate_row->[$index] eq '');
                    if ($$next_candidate_row->[$index] =~ $regex) {
                        return 1;
                    } else {
@@ -452,22 +481,27 @@ sub _comparator_for_operator_and_property {
         # Basic numeric comparisons
         if ($operator eq '=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        return $$next_candidate_row->[$index] <=> $value;
                    };
         } elsif ($operator eq '<') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        $$next_candidate_row->[$index] < $value ? 0 : 1;
                    };
         } elsif ($operator eq '<=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        $$next_candidate_row->[$index] <= $value ? 0 : 1;
                    };
         } elsif ($operator eq '>') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        $$next_candidate_row->[$index] > $value ? 0 : -1;
                    };
         } elsif ($operator eq '>=') {
             return sub { 
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        $$next_candidate_row->[$index] >= $value ? 0 : -1;
                    };
         } elsif ($operator eq 'true') {
@@ -476,10 +510,11 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq 'false') {
             return sub {
-                       $$next_candidate_row->[$index] ? 1 : 0;
+                       $$next_candidate_row->[$index] ? -1 : 0;
                    };
         } elsif ($operator eq '!=' or $operator eq 'ne') {
              return sub {
+                       return 0 if ($$next_candidate_row->[$index] eq '');  # null always != a number
                        $$next_candidate_row->[$index] != $value ? 0 : -1;
              }
         }
@@ -488,6 +523,7 @@ sub _comparator_for_operator_and_property {
         # Basic string comparisons
         if ($operator eq '=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '' xor $value eq '');
                        return $$next_candidate_row->[$index] cmp $value;
                    };
         } elsif ($operator eq '<') {
@@ -496,6 +532,7 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq '<=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '' or $value eq '');
                        $$next_candidate_row->[$index] le $value ? 0 : 1;
                    };
         } elsif ($operator eq '>') {
@@ -504,6 +541,7 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq '>=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '' or $value eq '');
                        $$next_candidate_row->[$index] ge $value ? 0 : -1;
                    };
         } elsif ($operator eq 'true') {
@@ -512,7 +550,7 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq 'false') {
             return sub {
-                       $$next_candidate_row->[$index] ? 1 : 0;
+                       $$next_candidate_row->[$index] ? -1 : 0;
                    };
         } elsif ($operator eq '!=' or $operator eq 'ne') {
              return sub {
