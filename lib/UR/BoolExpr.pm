@@ -619,7 +619,7 @@ sub resolve_for_string {
         }
 
         [$property, $op, $value]
-    } split(/,|\s+and\s+/i, $filter_string);
+    } split(/,/, $filter_string);
 
     my @hints = split(",",$usage_hints_string);
     my @order = split(",",$order_string);

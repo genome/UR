@@ -198,7 +198,16 @@ sub _free_offset_cache_slot {
         return;
     }
 
-    $cache->[$cache_slot] = 0;
+    if ($cache->[$cache_slot+1] and scalar(@{$cache->[$cache_slot+1]}) == 0) {
+        # There's no data in here.  Must have happened when the reader went all the
+        # way to the end of the file and found nothing.  Remove this entry completely
+        # because it's not helpful
+        splice(@$cache, $cache_slot,3);
+
+    } else {
+        # There is data in here, mark it as a free slot
+        $cache->[$cache_slot] = 0;
+    }
     return 1;
 }
        
@@ -316,17 +325,27 @@ sub _things_in_list_are_numeric {
 # knows that if it's comparing an ID/sorted column, and the comparator
 # returns 1 then we've gone past the point where we can expect to ever
 # find another successful match and we should stop looking
+my $ALWAYS_FALSE = sub { -1 };
 sub _comparator_for_operator_and_property {
     my($self,$property,$next_candidate_row, $index, $operator,$value) = @_;
 
+    no warnings 'uninitialized';  # we're handling ''/undef/null specially below where it matters
+
     if ($operator eq 'between') {
+        if ($value->[0] eq '' or $value->[1] eq '') {
+            return $ALWAYS_FALSE;
+        }
+
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             if ($value->[0] > $value->[1]) {
                 # Will never be true
                 Carp::carp "'between' comparison will never be true with values ".$value->[0]," and ".$value->[1];
+                return $ALWAYS_FALSE;
             }
+
             # numeric 'between' comparison
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '');
                        if ($$next_candidate_row->[$index] < $value->[0]) {
                            return -1;
                        } elsif ($$next_candidate_row->[$index] > $value->[1]) {
@@ -338,9 +357,12 @@ sub _comparator_for_operator_and_property {
         } else {
             if ($value->[0] gt $value->[1]) {
                 Carp::carp "'between' comparison will never be true with values ".$value->[0]," and ".$value->[1];
+                return $ALWAYS_FALSE;
             }
+
             # A string 'between' comparison
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '');
                        if ($$next_candidate_row->[$index] lt $value->[0]) {
                            return -1;
                        } elsif ($$next_candidate_row->[$index] gt $value->[1]) {
@@ -352,11 +374,16 @@ sub _comparator_for_operator_and_property {
         }
 
     } elsif ($operator eq 'in') {
+        if (! @$value) {
+            return $ALWAYS_FALSE;
+        }
+
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             # Numeric 'in' comparison  returns undef if we're within the range of the list
             # but don't actually match any of the items in the list
             @$value = sort { $a <=> $b } @$value;  # sort the values first
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '');
                        if ($$next_candidate_row->[$index] < $value->[0]) {
                            return -1;
                        } elsif ($$next_candidate_row->[$index] > $value->[-1]) {
@@ -388,8 +415,13 @@ sub _comparator_for_operator_and_property {
         }
 
     } elsif ($operator eq 'not in') {
+        if (! @$value) {
+            return $ALWAYS_FALSE;
+        }
+
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             return sub {
+                return -1 if ($$next_candidate_row->[$index] eq '');
                 foreach ( @$value ) {
                     return -1 if $$next_candidate_row->[$index] == $_;
                 }
@@ -409,15 +441,19 @@ sub _comparator_for_operator_and_property {
         # 'like' is always a string comparison.  In addition, we can't know if we're ahead
         # or behind in the file's ID columns, so the only two return values are 0 and 1
         
+        return $ALWAYS_FALSE if ($value eq '');  # property like NULL is always false
+
         # Convert SQL-type wildcards to Perl-type wildcards
         # Convert a % to a *, and _ to ., unless they're preceeded by \ to escape them.
         # Not that this isn't precisely correct, as \\% should really mean a literal \
         # followed by a wildcard, but we can't be correct in all cases without including 
         # a real parser.  This will catch most cases.
+
         $value =~ s/(?<!\\)%/.*/g;
         $value =~ s/(?<!\\)_/./g;
         my $regex = qr($value);
         return sub {
+                   return -1 if ($$next_candidate_row->[$index] eq '');
                    if ($$next_candidate_row->[$index] =~ $regex) {
                        return 0;
                    } else {
@@ -426,10 +462,12 @@ sub _comparator_for_operator_and_property {
                };
 
     } elsif ($operator eq 'not like') {
-        $value =~ s/(?<!\\)%/*/;
+        return $ALWAYS_FALSE if ($value eq '');  # property like NULL is always false
+        $value =~ s/(?<!\\)%/.*/;
         $value =~ s/(?<!\\)_/./;
         my $regex = qr($value);
         return sub {
+                   return -1 if ($$next_candidate_row->[$index] eq '');
                    if ($$next_candidate_row->[$index] =~ $regex) {
                        return 1;
                    } else {
@@ -443,22 +481,27 @@ sub _comparator_for_operator_and_property {
         # Basic numeric comparisons
         if ($operator eq '=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        return $$next_candidate_row->[$index] <=> $value;
                    };
         } elsif ($operator eq '<') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        $$next_candidate_row->[$index] < $value ? 0 : 1;
                    };
         } elsif ($operator eq '<=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        $$next_candidate_row->[$index] <= $value ? 0 : 1;
                    };
         } elsif ($operator eq '>') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        $$next_candidate_row->[$index] > $value ? 0 : -1;
                    };
         } elsif ($operator eq '>=') {
             return sub { 
+                       return -1 if ($$next_candidate_row->[$index] eq ''); # null always != a number
                        $$next_candidate_row->[$index] >= $value ? 0 : -1;
                    };
         } elsif ($operator eq 'true') {
@@ -467,10 +510,11 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq 'false') {
             return sub {
-                       $$next_candidate_row->[$index] ? 1 : 0;
+                       $$next_candidate_row->[$index] ? -1 : 0;
                    };
         } elsif ($operator eq '!=' or $operator eq 'ne') {
              return sub {
+                       return 0 if ($$next_candidate_row->[$index] eq '');  # null always != a number
                        $$next_candidate_row->[$index] != $value ? 0 : -1;
              }
         }
@@ -479,6 +523,7 @@ sub _comparator_for_operator_and_property {
         # Basic string comparisons
         if ($operator eq '=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '' xor $value eq '');
                        return $$next_candidate_row->[$index] cmp $value;
                    };
         } elsif ($operator eq '<') {
@@ -487,6 +532,7 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq '<=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '' or $value eq '');
                        $$next_candidate_row->[$index] le $value ? 0 : 1;
                    };
         } elsif ($operator eq '>') {
@@ -495,6 +541,7 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq '>=') {
             return sub {
+                       return -1 if ($$next_candidate_row->[$index] eq '' or $value eq '');
                        $$next_candidate_row->[$index] ge $value ? 0 : -1;
                    };
         } elsif ($operator eq 'true') {
@@ -503,7 +550,7 @@ sub _comparator_for_operator_and_property {
                    };
         } elsif ($operator eq 'false') {
             return sub {
-                       $$next_candidate_row->[$index] ? 1 : 0;
+                       $$next_candidate_row->[$index] ? -1 : 0;
                    };
         } elsif ($operator eq '!=' or $operator eq 'ne') {
              return sub {
@@ -544,8 +591,16 @@ sub create_iterator_closure_for_rule {
     # Index in the split-file-data for each sorted column in order
     my @sort_order_column_indexes = map { $column_name_to_index_map{$_} } @$sort_order_names;
 
-    my %property_metas = map { $_ => UR::Object::Property->get(class_name => $class_name, column_name => uc($_)) }
-                         @$csv_column_order_names;
+    my(%property_meta_for_column_name);
+    foreach my $column_name ( @$csv_column_order_names ) {
+        my $prop = UR::Object::Property->get(class_name => $class_name, column_name => uc($column_name));
+        our %WARNED_ABOUT_COLUMN;
+        unless ( $prop or $WARNED_ABOUT_COLUMN{$class_name . '::' . $column_name}++) {
+            $self->warning_message("Couldn't find a property in class $class_name that goes with column $column_name");
+            next;
+        }
+        $property_meta_for_column_name{$column_name} = $prop;
+    }
 
     my @rule_columns_in_order;  # The order we should perform rule matches on - value is the index in @next_file_row to test
     my @comparison_for_column;  # closures to call to perform the match - same order as @rule_columns_in_order
@@ -554,7 +609,8 @@ sub create_iterator_closure_for_rule {
 
     my $next_candidate_row;  # This will be filled in by the closure below
     foreach my $column_name ( @$sort_order_names, @non_sort_column_names ) {
-        if (! $operators_for_properties->{$column_name}) {
+        my $property_name = $property_meta_for_column_name{$column_name}->property_name;
+        if (! $operators_for_properties->{$property_name}) {
             $looking_for_sort_columns = 0;
             next;
         } elsif ($looking_for_sort_columns && $sort_column_names{$column_name}) {
@@ -567,10 +623,10 @@ sub create_iterator_closure_for_rule {
 
         push @rule_columns_in_order, $column_name_to_index_map{$column_name};
          
-        my $operator = $operators_for_properties->{$column_name};
-        my $rule_value = $values_for_properties->{$column_name};
+        my $operator = $operators_for_properties->{$property_name};
+        my $rule_value = $values_for_properties->{$property_name};
     
-        my $comparison_function = $self->_comparator_for_operator_and_property($property_metas{$column_name},
+        my $comparison_function = $self->_comparator_for_operator_and_property($property_meta_for_column_name{$column_name},
                                                                                \$next_candidate_row,
                                                                                $column_name_to_index_map{$column_name},
                                                                                $operator,
