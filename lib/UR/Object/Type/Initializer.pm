@@ -223,11 +223,8 @@ sub _construction_params_for_desc {
             my $parent_classes = $desc->{is};
             my @meta_parent_classes = map { $_ . '::Type' } @$parent_classes;
             for (@$parent_classes) {
-                # FIXME Sometimes Devel::DProf complains about "inconsistent subroutine return"
-                # somewhere in UR::ModuleLoader::define_class().  If you use all the required modules
-                # in your script, and comment out the very next eval, then Devel::DProf works ok
-                eval "use $_"; ## ignore failures just try $_->class
-                eval "$_->class";
+                __PACKAGE__->use_module_with_namespace_constraints($_);
+                eval {$_->class};
                 if ($@) {
                     die "Error with parent class $_ when defining $class_name! $@";
                 }
