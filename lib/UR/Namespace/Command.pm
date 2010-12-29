@@ -206,8 +206,8 @@ sub _class_objects_in_tree {
     my @class_names = $self->_class_names_in_tree(@_);
     my @class_objects;
     for my $class_name (sort { uc($a) cmp uc($b) } @class_names) {
-        eval "use $class_name";
-        if ($@) {
+        unless(UR::Object::Type->use_module_with_namespace_constraints($class_name)) {
+        #if ($@) {
             print STDERR "Failed to use class $class_name!\n";
             print STDERR $@,"\n";
             next;

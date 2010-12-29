@@ -751,7 +751,7 @@ sub _normalize_class_description {
         for my $parent_class_name (@{ $new_class{is} }) {
             no warnings;
             unless ($parent_class_name->can("__meta__")) {
-                eval "use $parent_class_name";
+                __PACKAGE__->use_module_with_namespace_constraints($parent_class_name);
                 die "Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@" if $@; 
             }
             unless ($parent_class_name->can("__meta__")) {
@@ -1151,7 +1151,7 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
     my @parent_classes = @{ $class_name . "::ISA" };
     for my $parent_class (@parent_classes) {
         unless ($parent_class->can("id")) {
-            eval "use $parent_class";
+            __PACKAGE__->use_module_with_namespace_constraints($parent_class);
             if ($@) {
                 die "Failed to find parent_class $parent_class for $class_name!";
             }
