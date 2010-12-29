@@ -29,8 +29,8 @@ sub help_brief {
 
 sub help_synopsis{
     return <<"EOS"
-ur update pod UR::Namespace::Command::Update
-ur update pod UR::Namespace::Command::Update::ClassesFromDb UR::Namespace::Command::Update::RenameClass
+ur update pod --output-path ./pod/ UR::Namespace::Command::Update
+ur update pod --output-path ./pod/ UR::Namespace::Command::Update::ClassesFromDb UR::Namespace::Command::Update::RenameClass
 EOS
 }
 
