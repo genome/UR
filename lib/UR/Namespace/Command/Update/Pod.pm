@@ -17,6 +17,7 @@ class UR::Namespace::Command::Update::Pod {
         },
         output_path => {
             is => 'Text',
+            is_optional => 1,
             doc => 'Location to output .pod files',
         },
     ],
@@ -68,6 +69,15 @@ sub execute {
         my $filename = $command->command_name . '.pod';
         $filename =~ s/ /-/g;
         my $pod_path = join('/', $self->output_path, $filename);
+        my $pod_path;
+        if (defined $self->output_path) {
+          my $filename = $command->command_name . '.pod';
+          $filename =~ s/ /-/g;
+          $pod_path = join('/', $self->output_path, $filename);
+        } else {
+          $pod_path = $command->__meta__->module_path;
+          $pod_path =~ s/.pm/.pod/;
+        }
 
         my $fh;
         $fh = IO::File->new('>' . $pod_path) || die "Cannot create file at " . $pod_path . "\n";
