@@ -66,9 +66,6 @@ sub execute {
             next;
         }
 
-        my $filename = $command->command_name . '.pod';
-        $filename =~ s/ /-/g;
-        my $pod_path = join('/', $self->output_path, $filename);
         my $pod_path;
         if (defined $self->output_path) {
           my $filename = $command->command_name . '.pod';
