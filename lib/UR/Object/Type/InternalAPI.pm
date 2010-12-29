@@ -859,20 +859,6 @@ sub use_module_with_namespace_constraints {
     my $namespace_expected_module = $namespace_name . ".pm";
 
     my $path;
-# Looks like this isn't needed anymore?  
-#    if ($namespace_name eq "App" or $namespace_name eq "UR") {
-#        #$module_name = $namespace_name . ".pm";
-#        #$path = $INC{$module_name};
-#        #unless ($path) {
-#        #    Carp::confess("No \%INC entry for $module_name?");
-#        #}
-#        #$path =~ s/\/[^\/]+\.pm//;
-#
-#        # use this directly to avoid boostrapping problems.
-#        $path = undef;
-#    }
-#    elsif ($path = $INC{$namespace_expected_module}) {
-
     if ($path = $INC{$namespace_expected_module}) {
         #print "got mod $namespace_expected_module at $path for $target_class\n";
         $path =~ s/\/*$namespace_expected_module//g;
