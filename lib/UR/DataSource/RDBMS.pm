@@ -2927,38 +2927,6 @@ sub disconnect {
 }
 
 
-sub resolve_dbic_schema_name {
-    my $self = shift;
-
-    my @schema_parts = split(/::/, ref($self) ? $self->class_name : $self);
-    # This will be something like namespace::DataSource::name, change it to namespace::DBIC::name
-    $schema_parts[1] = 'DBIC';
-    my $schema_name = join('::',@schema_parts);
-
-    return $schema_name;
-}
-
-
-sub get_dbic_schema {
-    my $self = shift;
-
-    my $schema_name = $self->resolve_dbic_schema_name();
-
-    eval "use $schema_name;";
-    die $@ if $@;
-
-#    require DBIx::Class::Schema;
-#
-#    my $schema_isa = $schema_name . '::ISA';
-#    { no strict 'refs';
-#      @$schema_isa = ('DBIx::Class::Schema');
-#    }
-#
-#    $schema_name->load_classes();
-
-    return $schema_name->connect($self->_dbi_connect_args);
-}
-
 sub _generate_class_data_for_loading {
     my ($self, $class_meta) = @_;
 
