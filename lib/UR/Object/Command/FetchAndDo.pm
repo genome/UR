@@ -159,7 +159,7 @@ sub _validate_subject_class {
     )
         and return if $subject_class_name =~ /^UR::/;
 
-    eval "use $subject_class_name;"; # dont check for errors
+    UR::Object::Type->use_module_with_namespace_constraints($subject_class_name);
     
     my $subject_class = $self->subject_class;
     $self->error_message(

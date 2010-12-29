@@ -73,7 +73,6 @@ sub URT::DataSource::SomeSQLite::owner { 'PROD_DB'; } # the default schema/owner
 sub URT::DataSource::SomeSQLite::get_foreign_key_details_from_data_dictionary {
 my $self = shift;
 
-$DB::single=1;
     my($fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
     unless ($fk_table eq 'PRODUCT' or $pk_table eq 'PEOPLE') {
         return UR::DataSource::SQLite::get_foreign_key_details_from_data_dictionary($self,@_);

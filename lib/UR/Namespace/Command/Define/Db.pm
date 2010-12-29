@@ -152,8 +152,8 @@ sub execute {
     my $method = '_post_module_written_' . lc($driver);
     $self->$method($module_path,$server);
 
-    eval "use $class_name";
-    if ($@) {
+    unless (UR::Object::Type->use_module_with_namespace_constraints($class_name)) {
+    #if ($@) {
         $self->error_message("Error in module $class_name!?: $@");
         return;
     }
