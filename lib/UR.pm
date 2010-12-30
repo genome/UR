@@ -33,7 +33,10 @@ $SIG{__DIE__} = \&Carp::confess;
 use Cwd;
 for my $dir (@INC) {
     next unless -d $dir;
-    $dir = Cwd::abs_path($dir);
+    my $abs_dir = Cwd::abs_path($dir);
+    my $qm_dir = quotemeta($dir);
+    $ENV{PERL5LIB} =~ s/$qm_dir/$abs_dir/;
+    $dir = $abs_dir;
 }
 
 # UR supports several environment variables, found under UR/ENV
