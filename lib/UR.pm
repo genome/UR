@@ -7,6 +7,7 @@ package UR;
 use strict;
 use warnings FATAL => 'all';
 
+
 # Set the version at compile time, since some other modules borrow it.
 use version;
 our $VERSION;
@@ -35,7 +36,10 @@ for my $dir (@INC) {
     next unless -d $dir;
     my $abs_dir = Cwd::abs_path($dir);
     my $qm_dir = quotemeta($dir);
-    $ENV{PERL5LIB} =~ s/$qm_dir/$abs_dir/;
+    if ($ENV{PERL5LIB}) {
+        print "$qm_dir\n$abs_dir\n$ENV{PERL5LIB}\n";
+        $ENV{PERL5LIB} =~ s/$qm_dir/$abs_dir/;
+    }
     $dir = $abs_dir;
 }
 
