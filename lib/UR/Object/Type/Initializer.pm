@@ -122,10 +122,13 @@ sub create {
     my $class_name = $desc->{class_name} ||= (caller(0))[0];
     my $meta_class_name = $desc->{meta_class_name};
     
+    no strict 'refs';
     unless (
         $meta_class_name eq __PACKAGE__ 
         or 
-        $meta_class_name->isa(__PACKAGE__)
+        # in newer Perl interpreters the ->isa() call can return true
+        # even if @ISA has been emptied (OS X) ???
+        (scalar(@{$meta_class_name . '::ISA'}) and $meta_class_name->isa(__PACKAGE__))
     ) {
         #print "making class $meta_class_name for $class_name\n";
         if (__PACKAGE__->get(class_name => $meta_class_name)) {
