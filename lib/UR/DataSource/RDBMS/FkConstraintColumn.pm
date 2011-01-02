@@ -18,7 +18,7 @@ UR::Object::Type->define(
         namespace                        => { calculate_from => [ 'data_source'],
                                               calculate => q( (split(/::/,$data_source))[0] ) },
         fk_constraint_name               => { type => 'varchar', len => undef, sql => 'fk_constraint_name' },
-        owner                            => { type => 'varchar', len => undef, sql => 'owner' },
+        owner                            => { type => 'varchar', len => undef, is_optional => 1, sql => 'owner' },
         table_name                       => { type => 'varchar', len => undef, sql => 'table_name' },
         r_column_name                    => { type => 'varchar', len => undef, sql => 'r_column_name' },
         r_table_name                     => { type => 'varchar', len => undef, sql => 'r_table_name' },
