@@ -89,6 +89,9 @@ sub server {
     my $self = shift->_singleton_object();
     my $path = $self->__meta__->module_path;
     $path =~ s/\.pm$/.sqlite3/ or Carp::confess("Odd module path $path");
+    if ($self->default_owner) {
+        $path .= "n";
+    }
     my $dir = File::Basename::dirname($path);
     return $path; 
 }
