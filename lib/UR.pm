@@ -37,7 +37,6 @@ for my $dir (@INC) {
     my $abs_dir = Cwd::abs_path($dir);
     my $qm_dir = quotemeta($dir);
     if ($ENV{PERL5LIB}) {
-        print "$qm_dir\n$abs_dir\n$ENV{PERL5LIB}\n";
         $ENV{PERL5LIB} =~ s/$qm_dir/$abs_dir/;
     }
     $dir = $abs_dir;
