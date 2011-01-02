@@ -501,7 +501,7 @@ sub convert_change_list_for_checking {
 # Changes after creating the person table and running ur update classes
 
 sub initialize_check_change_data_structures {
-    my $sqlite_owner = UR::DataSource::SQLite->default_owner;
+    my $sqlite_owner = UR::DataSource::SQLite->default_owner || '';
     $check_changes_1 = {
     'UR::DataSource::RDBMS::Table' => {
         "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON" => {
