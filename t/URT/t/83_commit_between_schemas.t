@@ -1,6 +1,14 @@
 use strict;
 use warnings;
-use Test::More tests=> 19;
+use Test::More;
+use DBD::SQLite;
+print $DBD::SQLite::VERSION,"\n";
+if ($DBD::SQLite::VERSION >= 1.26) {
+    plan skip_all => "know to not work on sqlite > 1.26_04"
+}
+else {
+    plan tests=> 19;
+}
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
