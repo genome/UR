@@ -247,6 +247,9 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     @changes = get_changes();
     $changes_as_hash = convert_change_list_for_checking(@changes);
     is_deeply($changes_as_hash, $check_changes_2, "Change list is correct");
+    #IO::File->new(">/Users/ssmith/git/ur/n98-249-got")->print(Data::Dumper::Dumper($changes_as_hash, \@changes));
+    #IO::File->new(">/Users/ssmith/git/ur/n98-249-exp")->print(Data::Dumper::Dumper($check_changes_2));
+    #exit;
 
     # Verify the Person.pm and Employee.pm modules exist
 
@@ -462,9 +465,9 @@ my $dbfile = shift;
 
 
 # Convert the list of changes to a data structure matching the expected changes
+my $nn = 1;
 sub convert_change_list_for_checking {
     my(@changes_list) = @_;
-
     my $changes = {};
     foreach my $change ( @changes_list ) {
         my $changed_class_name = $change->{'changed_class_name'};
@@ -476,8 +479,16 @@ sub convert_change_list_for_checking {
             die "Two types of changes for the same thing in the same transaction!?";
         }
 
+        #my $o = $changed_class_name->is_loaded($changed_id);
+        #if ($o) {
+        #    $change->{_current_value} = $o->{$changed_aspect};
+        #}
+
         $changes->{$changed_class_name}->{$changed_id}->{$changed_aspect} = defined($undo_data);
     }
+    #IO::File->new(">t98.$nn")->print(Data::Dumper::Dumper(\@changes_list));
+    #$nn++;
+
 
     return $changes;
 }
@@ -608,10 +619,10 @@ sub initialize_check_change_data_structures {
 
     'UR::DataSource::RDBMS::FkConstraint' => {
        # Both employee and car tables have foreign keys to person
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\t\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\t\tCAR\tPERSON\tFK_PERSON_ID2" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tCAR\tPERSON\tFK_PERSON_ID2" => {
             create => '',
         },
     },
@@ -781,7 +792,7 @@ sub initialize_check_change_data_structures {
     },
 
     'UR::DataSource::RDBMS::FkConstraint' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\t\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
             create => '',
         },
     },
@@ -874,7 +885,7 @@ sub initialize_check_change_data_structures {
         },
     },
     'UR::DataSource::RDBMS::FkConstraint::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\t\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
             delete => 1,
         },
     },
