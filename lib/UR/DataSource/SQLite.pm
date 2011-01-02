@@ -38,6 +38,9 @@ UR::Object::Type->define(
 sub driver { "SQLite" }
 
 sub default_owner {
+    unless (defined $DBD::SQLite::VERSION) {
+        require DBD::SQLite;
+    }
     $DBD::SQLite::VERSION < 1.26_04 ? undef : 'main' 
 }
 
