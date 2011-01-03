@@ -9,7 +9,7 @@ use URT::ObjWithHash;
 use strict;
 use warnings;
 
-plan tests => 25;
+plan tests => 27;
 
 my $o = URT::ObjWithHash->create(myhash1 => { aaa => 111, bbb => 222 }, mylist => [ ccc => 333, ddd => 444 ]); 
 my @h = ($o->myhash1, $o->mylist); 
@@ -152,7 +152,18 @@ my @p = (
           'linus43.gsc.wustl.edu 21757 1286150139 10001',
 );
 my $b = URT::ObjWithHash->define_boolexpr(@p);
+my $hu = $b->value_for('myhash1');
+my $au = $b->value_for('mylist');
+
+note($hu);
+note($au);
 my $n = $b->normalize;
+my $hn = $n->value_for('myhash1');
+my $an = $n->value_for('mylist');
+
+is($an,$au,"the normalized array is the same ref as the unnormalized");
+is($hn,$hu,"the normalized array is the same ref as the unnormalized");
+
 my %b = $b->params_list;
 my %n = $n->params_list;
 my @b = %b;

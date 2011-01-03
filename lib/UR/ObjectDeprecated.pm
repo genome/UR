@@ -85,6 +85,7 @@ sub property_diff {
 
 sub _create_object {
     # warn "deprecated method call!";
+    # old code calls this to do core construction but the context no longer does
     $UR::Context::current->_construct_object(@_);
 }
 

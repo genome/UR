@@ -70,7 +70,7 @@ TODO: {
 
         URT::Thing->unload();  # clear object and query cache
     }
-}
+};
 
 # For other values using the equality operator, it should return nothing
 foreach my $value ( 0, 1, -1) {

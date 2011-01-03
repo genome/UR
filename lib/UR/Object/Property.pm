@@ -60,42 +60,6 @@ sub is_numeric {
     return $self->{'_is_numeric'};
 }    
 
-sub _create_object {
-    my $class = shift;
-    
-    my $h;
-    
-    my ($bx,%extra) = $class->define_boolexpr(@_);
-    my %params = ($bx->params_list,%extra);
-
-    $h = $params{id_by};
-    if (ref($h) eq 'HASH') {
-        $DB::single = 1;
-    }
-    
-    my ($singular_name,$plural_name);
-    if ($params{is_many}) {
-        require Lingua::EN::Inflect;
-        $plural_name = $params{property_name};
-        $singular_name = Lingua::EN::Inflect::PL_V($plural_name);
-    }
-    else {
-        $singular_name = $params{property_name};
-        $plural_name = Lingua::EN::Inflect::PL($singular_name);
-    }
-
-    my $self = $class->SUPER::_create_object(plural_name => $plural_name, singular_name => $singular_name, %params);
-    return unless $self;
-
-    $h = $self->id_by;
-    if (ref($h) eq 'HASH') {
-        $DB::single = 1;
-    }
-    
-    return $self;
-}
-
-
 # Returns the table and column for this property.
 # If this particular property doesn't have a column_name, and it
 # overrides a property defined on a parent class, then walk up the

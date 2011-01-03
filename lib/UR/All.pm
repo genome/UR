@@ -1,5 +1,3 @@
-# this is not used by UR, but is present for testing
-# using all of the modules when only some are needed by most apps costs compile time
 require above;
 use Class::Autouse_1_99_02;
 use Command;
@@ -207,6 +205,7 @@ use UR::Value::Decimal;
 use UR::Value::DirectoryPath;
 use UR::Value::FOF;
 use UR::Value::FilePath;
+use UR::Value::FilesystemPath;
 use UR::Value::HASH;
 use UR::Value::Integer;
 use UR::Value::Iterator;

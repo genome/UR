@@ -9,7 +9,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 17;
+use Test::More tests => 19;
 use Data::Dumper;
 use IO::Handle;
 
@@ -93,12 +93,18 @@ is_deeply(\@values, $expected, "Normalized rule's values are correct");
 
 
 
-$r = URT::Item->define_boolexpr(name => [$fh], score => 1, foo => undef, -hints => ['ritem']);
+my @p = (name => [$fh], score => 1, foo => undef, -hints => ['ritem']);
+$r = URT::Item->define_boolexpr(@p);
+my @p2 = $r->params_list();
+#is("@p","@p2",'params return correctly with hint');
+is_deeply(\@p,\@p2, "match deeply");
+
 # These values are in the same order as the original rule definition
 @values = $r->values();
 is(scalar(@values), 3, 'Got back 3 values from rule');
 $expected = [[$fh], 1, undef];
 is_deeply(\@values, $expected, "Rule's values are correct");
+is($values[0][0], $p[1][0], 'object is preserved within the arrayref of references');
 
 $n = $r->normalize;
 ok($n, 'Normalized rule');

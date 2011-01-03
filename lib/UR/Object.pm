@@ -490,7 +490,7 @@ sub __define__ {
     # Simply assert they already existed externally, and act as though they were just loaded...
     # It is used for classes defined in the source code (which is the default) by the "class {}" magic
     # instead of in some database, as we'd do for regular objects.  It is also used by some test cases.
-    if ($UR::initialized and substr($_[0], 0, 4) ne 'UR::') {
+    if ($UR::initialized and $_[0] ne 'UR::Object::Property') { # and substr($_[0], 0, 4) ne 'UR::') {
         # the nornal implementation has all create() features
         my $self;
         do {

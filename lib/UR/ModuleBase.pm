@@ -8,6 +8,9 @@ BEGIN {
     $INC{"Class/Autouse.pm"} = $INC{"Class/Autouse_1_99_02.pm"};
     no strict;
     no warnings;
+    
+    # ensure that modules which inherit from this never fall into the
+    # replaced UNIVERSAL::can/isa
     *can = $Class::Autouse::ORIGINAL_CAN;
     *isa = $Class::Autouse::ORIGINAL_ISA;
 }

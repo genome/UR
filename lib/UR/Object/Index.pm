@@ -38,12 +38,11 @@ sub data_tree
 
 sub create {
     my $class = shift;
-    #my $params = $class->preprocess_params(@_);
-    #$params->{data_tree} ||= {};
-    #my $self = $class->_create_object($params);
-    #return unless $self;
-
-    my $self = $class->_create_object(@_);
+    
+    # NOTE: This is called from one location in UR::Context and relies
+    # on all properties including the ID being specifically defined.
+    
+    my $self = $UR::Context::current->_construct_object($class, @_);
     return unless $self;
     $self->{data_tree} ||= {};   
  

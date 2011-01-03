@@ -326,7 +326,6 @@ sub operators_for_properties {
                         @{ $_[0]->{'_property_names_arrayref'} };
     return \%properties;
 }
-    
 
 sub add_filter {
     my $self = shift;
@@ -453,6 +452,17 @@ sub get {
             $check_for_duplicate_rules{$property}++;
         }
 
+    
+        # each item in this list mutates the initial set of key-value pairs
+        my $extenders = [];
+        
+        # add new @$extenders for class-specific characteristics
+        # add new @keys at the same time
+        # flag keys as removed also at the same time
+
+        # note the positions for each key in the "original" rule
+        # by original, we mean the original plus the extensions from above
+        #
         my $id_position = undef;
         my $var_pos = 0;
         my $const_pos = 0;
@@ -482,16 +492,11 @@ sub get {
     
         }
 
-    
+        # Note whether there are properties not involved in the ID
         # Add value extenders for any cases of id-related properties,
         # or aliases.
-        my $extenders = [];    
-        my $template_id;    
-        
-        # Note whether there are properties not involved in the ID
         my $id_only = 1;
-        my $partial_id = 0;
-        
+        my $partial_id = 0;        
         my $key_op_hash = {};
         if (@$id_translations and @{$id_translations->[0]} == 1) {
             # single-property ID

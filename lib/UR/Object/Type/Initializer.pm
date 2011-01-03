@@ -942,6 +942,8 @@ sub _normalize_property_description {
         [ is_dimension                    => qw//],
         [ is_specified_in_module_header   => qw//],
         [ position_in_module_header       => qw//],
+        [ singular_name                   => qw//],
+        [ plural_name                     => qw//],
     ) {
         my ($primary_field_name, @alternate_field_names) = @$mapping;
         my @all_fields = ($primary_field_name, @alternate_field_names);
@@ -1064,7 +1066,7 @@ sub _normalize_property_description {
     }
 
     if (my @unknown = keys %old_property) {
-        die "unknown meta-attributes present for $class_name $property_name: @unknown\n";
+        Carp::confess("unknown meta-attributes present for $class_name $property_name: @unknown\n");
         #$new_property{unresolved_meta_attributes} = \%old_property;
         #my @tmp = %old_property;
         #print "noting for $new_property{property_name} on $class_name: @tmp\n";
@@ -1366,7 +1368,20 @@ sub _complete_class_meta_object_definitions {
         #    ]
         #)
  
-        my $property_object = UR::Object::Property->__define__(%$pinfo);
+        my ($singular_name,$plural_name);
+        unless ($pinfo->{plural_name} and $pinfo->{singular_name}) {
+            require Lingua::EN::Inflect;
+            if ($pinfo->{is_many}) {
+                $plural_name = $pinfo->{plural_name} ||= $pinfo->{property_name};
+                $pinfo->{singular_name} = Lingua::EN::Inflect::PL_V($plural_name);
+            }
+            else {                
+                $singular_name = $pinfo->{singular_name} ||= $pinfo->{property_name};
+                $pinfo->{plural_name} = Lingua::EN::Inflect::PL($singular_name);
+            }
+        }
+
+        my $property_object = UR::Object::Property->__define__(%$pinfo, id => $class_name . "\t" . $property_name);
         
         unless ($property_object) {
             $self->error_message("Error creating property $property_name for class " . $self->class_name . ": " . $class->error_message);
