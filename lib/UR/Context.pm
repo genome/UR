@@ -646,7 +646,8 @@ sub create_entity {
         my %set_properties;
         my %default_values;
         my %immutable_properties;
-    
+        my @deep_copy_default_values;
+
         for my $co ( @inheritance ) {
             # Reverse map the ID into property values.
             # This has to occur for all subclasses which represent table rows.
@@ -673,7 +674,7 @@ sub create_entity {
                         #    . " forcing a copy during construction "
                         #    . " of $class $name..."
                         #);
-                        $default_value = UR::Util::deep_copy($default_value);
+                        push @deep_copy_default_values, $name;
                     }
                     $default_values{$name} = $default_value; 
                 }
@@ -724,6 +725,7 @@ sub create_entity {
             \%immutable_properties,
             \@subclassify_by_methods,
             \%default_values,
+            (@deep_copy_default_values ? \@deep_copy_default_values : undef),
         ];
     }
     
@@ -739,9 +741,16 @@ sub create_entity {
         $immutable_properties,
         $subclassify_by_methods,
         $initial_default_values,
+        $deep_copy_default_values,
     ) = @$memo;
 
     my %default_values = %$initial_default_values;
+
+    if ($deep_copy_default_values) {
+        for my $name (@$deep_copy_default_values) {
+            $default_values{$name} = UR::Util::deep_copy($default_values{$name});
+        }
+    }
 
     # The old way of automagic subclassing...
     # The class specifies that we should call a class method (sub_classification_method_name)
