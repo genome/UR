@@ -462,7 +462,7 @@ sub query {
     # in order to have metadata for regular loading....
     if (!$rule->has_meta_options and ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value"))) {
         my $normalized_rule = $rule->normalize;
-        
+        print "$rule  $normalized_rule\n";
         my @objects = $class->_load($normalized_rule);
         
         return unless defined wantarray;
@@ -778,8 +778,9 @@ sub create_entity {
     }
 
     # Normal case... just make a rule out of the passed-in params
-    my $rule = UR::BoolExpr->resolve_normalized($class, @_);
-    my $params = { $rule->params_list }; ;
+    #my $rule = UR::BoolExpr->resolve_normalized($class, @_);
+    my $rule = UR::BoolExpr->resolve($class, @_);
+    my $params = { @{$rule->{_params_list}}, $rule->{template}->extend_params_list_for_values(@{$rule->{_params_list}}) }; ;
     my $id = $params->{id};
     unless (defined $id) {
         $id = $self->_resolve_id_for_class_and_rule($class_meta,$rule);

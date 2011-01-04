@@ -245,7 +245,7 @@ sub get_rule_for_value_id {
     return UR::BoolExpr->get($rule_id);
 }
 
-sub extend_params_list {
+sub extend_params_list_for_values {
     my $self = shift;
     #my @prev = @_;
     my $extenders = $self->normalization_extender_arrayref;
