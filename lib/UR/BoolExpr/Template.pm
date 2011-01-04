@@ -255,7 +255,7 @@ sub extend_params_list_for_values {
         for my $n (0 .. @$extenders-1) {
             my $extender = $extenders->[$n];
             my ($input_positions_arrayref,$subref,@more_keys) = @$extender;
-            my @more_values = $_[@$input_positions_arrayref];            
+            my @more_values = @_[@$input_positions_arrayref];            
             if ($subref) {
                 ## print "calling $subref on \n\t" . join("\n\t",@more_values) . "\n";
                 @more_values = $subject_class->$subref(@more_values);

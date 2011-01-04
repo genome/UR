@@ -771,7 +771,7 @@ sub create_entity {
     # Normal case... just make a rule out of the passed-in params
     #my $rule = UR::BoolExpr->resolve_normalized($class, @_);
     my $rule = UR::BoolExpr->resolve($class, @_);
-    my $params = { @{$rule->{_params_list}}, $rule->{template}->extend_params_list_for_values(@{$rule->{_params_list}}) }; ;
+    my $params = { @{$rule->{_params_list}}, $rule->{template}->extend_params_list_for_values(@{$rule->{values}}) }; ;
     my $id = $params->{id};
     unless (defined $id) {
         $id = $self->_resolve_id_for_class_and_rule($class_meta,$rule);
