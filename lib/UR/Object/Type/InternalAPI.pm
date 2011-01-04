@@ -717,7 +717,10 @@ sub _load {
     my $class = shift;
     my $rule = shift;
 
+    $rule = $rule->normalize;
     my $params = $rule->legacy_params_hash;
+
+print Data::Dumper::Dumper($params);
 
     # While core entity classes are actually loaded,
     # support classes dynamically generate for them as needed.
