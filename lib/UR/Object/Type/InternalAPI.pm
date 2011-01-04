@@ -46,28 +46,35 @@ sub ancestry_class_metas {
 
 }
 
+our $PROPERTY_META_FOR_NAME_TEMPLATE;
 sub property_meta_for_name {
     my ($self, $property_name) = @_;
+
+    if (exists($self->{'_property_meta_for_name'}) and $self->{'_property_meta_for_name'}->{$property_name}) {
+       return $self->{'_property_meta_for_name'}->{$property_name};
+    }
+    $PROPERTY_META_FOR_NAME_TEMPLATE ||= UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name');
+
     my $property;
-
-    my $rule_template = UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name');
-
     for my $class ($self->class_name, $self->ancestry_class_names) {
-        my $rule = $rule_template->get_rule_for_values($class, $property_name);
+        my $rule = $PROPERTY_META_FOR_NAME_TEMPLATE->get_rule_for_values($class, $property_name);
         $property = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $rule);
-        return $property if $property;
+        if ($property) {
+            return $self->{'_property_meta_for_name'}->{$property_name} = $property;
+        }
     }
     return;
 }
 
+our $DIRECT_ID_PROPERTY_METAS_TEMPLATE;
 sub direct_id_property_metas
 {
     my $self = _object(shift);
-    my $template = UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name', 'is_id true');
+    $DIRECT_ID_PROPERTY_METAS_TEMPLATE ||= UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name', 'is_id true');
     my $class_name = $self->class_name;
     my @id_property_objects =
         map { $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $_) }
-        map { $template->get_rule_for_values($class_name, $_, 1) }
+        map { $DIRECT_ID_PROPERTY_METAS_TEMPLATE->get_rule_for_values($class_name, $_, 1) }
         @{$self->{'id_by'}};
 
     @id_property_objects = sort { $a->is_id <=> $b->is_id } @id_property_objects;
@@ -1222,8 +1229,8 @@ sub _property_change_callback {
 
     # Invalidate the cache used by all_property_names()
     $class_obj->_invalidate_cached_data_for_subclasses('_all_property_names');
+    $class_obj->_invalidate_cached_data_for_subclasses('_property_meta_for_name');
     $class_obj->_invalidate_cached_data_for_subclasses('_all_property_type_names');
-
 }
 
 # Some expensive-to-calculate data gets stored in the class meta hashref
