@@ -282,18 +282,6 @@ sub get_objects_matching
 }
 
 
-# this is called by delete() and unload() to do cleanup
-
-sub _delete_object
-{
-    my $self = shift;
-    if (my $subscription = delete $self->{_get_change_subscription})
-    {
-        # cancel this
-    }
-    return $self->SUPER::_delete_object(@_);
-}
-
 # private methods
 
 sub _build_data_tree

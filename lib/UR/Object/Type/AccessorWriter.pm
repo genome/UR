@@ -35,7 +35,7 @@ sub mk_rw_accessor {
             }
             return $new;
         }
-        return $_[0]->{ $property_name };  # properties with default values are filled in at _create_object()
+        return $_[0]->{ $property_name };  # properties with default values are filled in at _construct_object()
     };
 
     Sub::Install::reinstall_sub({
