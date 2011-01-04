@@ -462,7 +462,6 @@ sub query {
     # in order to have metadata for regular loading....
     if (!$rule->has_meta_options and ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value"))) {
         my $normalized_rule = $rule->normalize;
-        print "$rule  $normalized_rule\n";
         my @objects = $class->_load($normalized_rule);
         
         return unless defined wantarray;

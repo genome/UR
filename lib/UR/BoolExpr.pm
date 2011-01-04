@@ -652,11 +652,12 @@ sub resolve {
         );
     }
     else {
-        $template = $pp{"@keys"} ||= UR::BoolExpr::Template::And->_fast_construct_and(
-            $subject_class,
-            \@keys,
-            \@constant_values,
-        );
+        $template = $subject_class_meta->{cache}{"UR::BoolExpr::resolve"}{"template for class and keys without constant values"}{"$subject_class @keys"} 
+            ||= UR::BoolExpr::Template::And->_fast_construct_and(
+                $subject_class,
+                \@keys,
+                \@constant_values,
+            );
     }
 
     my $value_id = ($complex_values ? UR::BoolExpr::Util->values_to_value_id(@values) : UR::BoolExpr::Util->values_to_value_id_simple(@values) );

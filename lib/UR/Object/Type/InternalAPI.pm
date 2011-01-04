@@ -684,8 +684,6 @@ sub _load {
     $rule = $rule->normalize;
     my $params = $rule->legacy_params_hash;
 
-print Data::Dumper::Dumper($params);
-
     # While core entity classes are actually loaded,
     # support classes dynamically generate for them as needed.
     # Examples are Acme::Employee::View::emp_id, and Acme::Equipment::Ghost
