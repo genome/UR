@@ -289,7 +289,7 @@ sub resolve_for_template_id_and_values {
 }
 
 my $resolve_depth;
-my $props;
+my $cache_property_names_for_class;
 sub resolve {
     $resolve_depth++;
     Carp::confess("Deep recursion!") if $resolve_depth > 10;
@@ -416,7 +416,7 @@ sub resolve {
     }
 
     my $subject_class_props =
-        $props->{$subject_class} ||=
+        $cache_property_names_for_class->{$subject_class} ||=
         { map {$_, 1}  ( $subject_class_meta->all_property_type_names) };
     
     my ($op,@extra);
