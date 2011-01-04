@@ -619,8 +619,8 @@ sub generate_support_class_for_extension {
         my $subject_class_metaobj = UR::Object::Type->get($self->meta_class_name);  # Class object for the subject_class
         #my %class_params = map { $_ => $subject_class_obj->$_ } $subject_class_obj->__meta__->all_property_names;
         my %class_params = map { $_ => $subject_class_obj->$_ }
-                           grep { my $p = $subject_class_metaobj->property_meta_for_name($_);
-                                  unless($p) { die "can't property_meta_for_name for $_"; }
+                           grep { my $p = $subject_class_metaobj->property_meta_for_name($_)
+                                    || Carp::croak("Can't no metadata for property '$_' of class ".$self->meta_class_name);
                                   ! $p->is_delegated and ! $p->is_calculated }
                            $subject_class_obj->__meta__->all_property_names;
         delete $class_params{generated};
@@ -1059,7 +1059,7 @@ sub all_property_type_names {
 sub table_for_property
 {
     my $self = _object(shift);
-    die 'must pass a property_name to table_for_property' unless @_;
+    Carp::croak('must pass a property_name to table_for_property') unless @_;
     my $property_name = shift;
     for my $class_object ( $self, $self->ancestry_class_metas )
     {
@@ -1077,7 +1077,7 @@ sub table_for_property
 sub column_for_property
 {
     my $self = _object(shift);
-    die 'must pass a property_name to column_for_property' unless @_;
+    Carp::croak('must pass a property_name to column_for_property') unless @_;
     my $property_name = shift;
     my $class_name = $self->class_name;
     my $column_name;
