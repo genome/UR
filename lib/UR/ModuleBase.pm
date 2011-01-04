@@ -4,6 +4,7 @@ package UR::ModuleBase;
 
 BEGIN {
     use Class::Autouse_1_99_02;
+    # the file above now does this, but just in case:
     # subsequent uses of this module w/o the special override should just do nothing...
     $INC{"Class/Autouse.pm"} = $INC{"Class/Autouse_1_99_02.pm"};
     no strict;
