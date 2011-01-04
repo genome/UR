@@ -49,11 +49,6 @@ sub UR::BoolExpr::Type::resolve_ordered_values_from_composite_id {
      return (substr($id,0,$pos), substr($id,$pos+1));
 }
 
-sub Xtemplate {
-    my $self = $_[0];
-    return $self->{template} ||= $self->__template;
-}
-
 # override the UR/system display name
 # this is used in stringification overload
 sub __display_name__ {
@@ -155,11 +150,6 @@ sub value_for {
     my $self = shift;
     my $property_name = shift;
     
-    #my $pdata = $self->template->{_property_meta_hash}{$property_name};
-    #die "no property $property_name found in rule $self!";
-    #my $ppos = $pdata->{value_position};
-    #return $self->value_for_position($ppos);
-
     # TODO: refactor to be more efficient
     my $h = $self->legacy_params_hash;
     my $v;
@@ -658,8 +648,6 @@ sub resolve {
     if (wantarray) {
         return ($rule, @extra);
     } elsif (@extra && defined wantarray) {
-        #$DB::single = 1;
-        #return $class->resolve($subject_class, @_);
         Carp::confess("Unknown parameters in rule for $subject_class: " . join(",", map { defined($_) ? "'$_'" : "(undef)" } @extra));
     }
     else {

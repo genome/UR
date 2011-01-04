@@ -942,7 +942,7 @@ sub _set_object_saved_committed {
     if ($object->{db_saved_uncommitted}) {
         if ($object->isa("UR::Object::Ghost")) {
             $object->__signal_change__("commit");
-            $object->_delete_object;
+            $UR::Context::current->_abandon_object($object);
         }
         else {
             %{ $object->{db_committed} } = (

@@ -21,9 +21,9 @@ sub _init_subclass {
 }
 
 
-sub create { die "Cannot create() ghosts.  Use _create_object." }
+sub create { Carp::croak('Cannot create() ghosts.') };
 
-sub delete { die "Cannot delete() ghosts.  Use _delete_object." }
+sub delete { Carp::croak('Cannot delete() ghosts.') };
 
 sub _load {
     shift->is_loaded(@_);

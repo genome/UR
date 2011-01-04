@@ -130,12 +130,10 @@ sub create {
         # even if @ISA has been emptied (OS X) ???
         (scalar(@{$meta_class_name . '::ISA'}) and $meta_class_name->isa(__PACKAGE__))
     ) {
-        #print "making class $meta_class_name for $class_name\n";
         if (__PACKAGE__->get(class_name => $meta_class_name)) {
             warn "class $meta_class_name already exists when creating class meta for $class_name?!";
         }
         else {
-            #print "class $meta_class_name creating!\n"; 
             __PACKAGE__->create(
                 __PACKAGE__->_construction_params_for_desc($desc)
             );
@@ -206,8 +204,6 @@ sub _construction_params_for_desc {
 
     if (
         $meta_class_name eq __PACKAGE__ 
-        #or 
-        #$meta_class_name->isa(__PACKAGE__)
     ) {
         if (@extended_metadata) {
             die "Cannot extend class metadata of $class_name because it is a class involved in UR boostrapping.";
@@ -430,24 +426,6 @@ sub _normalize_class_description {
         $new_class{is_transactional} = $UR::Object::Type::defaults{'is_transactional'};
     }
    
-    # This is temporary to ensure that GSC db classes get all of the required properties
-    # Remove after trunk merge. 
-    if (
-        $new_class{namespace} eq 'GSC'
-        and $new_class{is_abstract}  
-        and ($new_class{class_name} !~ /^(App|UR)::/)
-        and ($new_class{class_name} !~ /^Command(::|)$/)
-        and ($new_class{data_source_id})
-    ) {
-        unless ($new_class{subclassify_by} or $new_class{sub_classification_method_name}) {
-            $class->error_message(
-                "The sub_classification_method_name or subclassify_by and sub_classification_meta_class_name"
-                . " are required for abstract classes like $class_name!"
-            );
-            return;
-        }
-    }
-    
     unless ($new_class{is}) {
         no warnings;
         no strict 'refs';
@@ -471,14 +449,6 @@ sub _normalize_class_description {
         $new_class{'doc'} = undef;
     }
   
-#    for my $field (qw/is id_by has relationships constraints/) {
-#        if (exists $new_class{$field}
-#            and
-#            not ref($new_class{$field}) eq "ARRAY"
-#        ) {
-#            $new_class{$field} = [ $new_class{$field} ];
-#        }
-#    }
     for my $field (qw/is id_by has relationships constraints/) {
         next unless exists $new_class{$field};
         my $reftype = ref($new_class{$field});
@@ -511,8 +481,6 @@ sub _normalize_class_description {
     my $id_properties;
     if (not exists $new_class{id_by}) {
         if ($new_class{is}) {
-            #print "no id for $class_name, is $new_class{is}\n";
-            #$id_properties = $new_class{id_by} = [ @{ $new_class{is}[0]->__meta__->id_property_names } ];
             $id_properties = $new_class{id_by} = [];
         }
         else {
@@ -552,7 +520,6 @@ sub _normalize_class_description {
                 push @replacement, $name;
             }
             $old_class{id_implied}->{$name}->{'position_in_module_header'} = $pos++;
-            #$old_class{id_implied}->{$name}->{'rank'} = $property_rank++;
         }
         @$id_properties = @replacement;
     };
@@ -639,9 +606,6 @@ sub _normalize_class_description {
             unless (exists $params->{'position_in_module_header'}) {
                 $params->{'position_in_module_header'} = $pos++;
             }
-            #unless (exists $params->{'rank'}) {
-            #    $params->{'rank'} = $property_rank++;
-            #}
             unless (exists $params->{is_specified_in_module_header}) {
                 $params->{is_specified_in_module_header} = $class_name . '::' . $key;
             }
@@ -724,7 +688,6 @@ sub _normalize_class_description {
             $inherited_copy->{class_name} = $class_name;
             my $a = $inherited_copy->{overrides_class_names} ||= [];
             push @$a, $parent_property_data->{class_name};
-            #print "$class_name getting $parent_property_name copy from $parent_class_name\n";
         }
     }
     }
@@ -832,15 +795,6 @@ sub _normalize_class_description {
         }
     }
 
-    #if (my $subclassify_by = $new_class{'subclassify_by'}) {
-    #    my $subclassify_property = $instance_properties->{$subclassify_by};
-    #    if ($subclassify_property->{'is_delegated'}) {
-    #        Carp::croak("Invalid property for class $class subclassify_by '$subclassify_by': delegated properties are not supported");
-    #    } elsif ($subclassify_property->{'calculate'} and !ref($subclassify_property->{'calculate'})) {
-    #        Carp::croak("Invalid property for class $class subclassify_by '$subclassify_by': non-coderef calculations are not supported");
-    #    } 
-    #}
-
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $desc->{meta_class_name} ||= $meta_class_name;
     return $desc;
@@ -866,18 +820,6 @@ sub _normalize_property_description {
         delete $old_property{implied_by};
     }        
 
-    if ($old_property{is} and $old_property{is} =~ /::/) {
-        # new style properties are relationships :)
-        #push @{ $new_class{relationships} }, $property_name, $properties->{$property_name};
-        #next;
-    }
-    
-    #my @mutually_exclusive_option_group = (
-    #    ['transient','persistent'],
-    #    ['constant','mutable'],
-    #    ['abstract','concrete','final'],
-    #    ['class_wide','per_instance'],
-    #);
     # Only 1 of is_abstract, is_concrete or is_final may be set
     { no warnings 'uninitialized';
       if (  $old_property{is_abstract} 
@@ -1044,19 +986,6 @@ sub _normalize_property_description {
         @new_property{@names} = delete @old_property{@names};
     }
 
-    #    # extend the property definitions
-    #    for my $property_meta (values %{$new_class{has}}) {
-    #        my $unresolved = delete $property_meta->{unresolved_meta_attributes};
-    #        next unless $unresolved;
-    #        @$property_meta{@$attributes_have} 
-    #            = delete @$unresolved{@$attributes_have};
-    #        if (%$unresolved) {
-    #            my @tmp = %$unresolved;
-    #            die "unknown meta-attributes present for $class_name $property_meta->{property_name}: @tmp\n";
-    #        }
-    #        %$property_meta = $class->_normalize_property_description($property_meta->{property_name},$property_meta,\%new_class);
-    #    }
-
     if ($new_property{order_by} and not $new_property{is_many}) {
         die "Cannot use order_by except on is_many properties!";
     }
@@ -1067,9 +996,6 @@ sub _normalize_property_description {
 
     if (my @unknown = keys %old_property) {
         Carp::confess("unknown meta-attributes present for $class_name $property_name: @unknown\n");
-        #$new_property{unresolved_meta_attributes} = \%old_property;
-        #my @tmp = %old_property;
-        #print "noting for $new_property{property_name} on $class_name: @tmp\n";
     }
 
     if ($new_property{implied_by} and $new_property{implied_by} eq $property_name) {
@@ -1144,7 +1070,6 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
     my $self = shift;    
     my $class_name = $self->class_name;
     
-    #print "init (bs) $class_name\n";
     if ($class_name eq 'Genome::Model::Command::Ghost') {
     #    print Carp::longmess();
     }
@@ -1457,11 +1382,6 @@ sub _complete_class_meta_object_definitions {
 
     $self->__signal_change__("load");
 
-    # We've made changes since SUPER::define, but it wasn't defined in its
-    # true initinal state.  Rewrite now.
-    #$self->{db_committed} = { %$self };
-    #delete $self->{db_committed}{db_committed};
-
     # The inheritance method is high overhead because of the number of times it is called.
     # Cache on a per-class basis.
     my @i = $class_name->inheritance;
@@ -1473,7 +1393,6 @@ sub _complete_class_meta_object_definitions {
     Carp::confess("Odd inheritance @i for $class_name") unless $class_name->isa('UR::Object');
     my $src1 = " return shift->SUPER::inheritance(\@_) if ( (ref(\$_[0])||\$_[0]) ne '$class_name');  return (" . join(", ", map { "'$_'" } (@i)) . ")";
     my $src2 = qq|sub ${class_name}::inheritance { $src1 }|;
-    #print "evaling $src2\n";
     eval $src2  unless $class_name eq 'UR::Object';
     die $@ if $@;
 
