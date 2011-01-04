@@ -26,7 +26,7 @@ UR::Object::Type->define(
         subject_class_name  => { via => 'template' },
         logic_type          => { via => 'template' },
         logic_detail        => { via => 'template' },
-
+        
         num_values          => { via => 'template' },
         is_normalized       => { via => 'template' },
         is_id_only          => { via => 'template' },
@@ -49,7 +49,7 @@ sub UR::BoolExpr::Type::resolve_ordered_values_from_composite_id {
      return (substr($id,0,$pos), substr($id,$pos+1));
 }
 
-sub Xtemplate {
+sub template {
     my $self = $_[0];
     return $self->{template} ||= $self->__template;
 }
@@ -212,6 +212,10 @@ sub params_list {
     my $self = shift;
     my $template = $self->template;
     my @values_sorted = $self->values;
+    if (not blessed($template)) {
+        print Data::Dumper::Dumper($template);
+        Carp::confess();
+    }
     return $template->params_list_for_values(@values_sorted);
 }
 
@@ -289,7 +293,7 @@ sub resolve_for_template_id_and_values {
 }
 
 my $resolve_depth;
-my $props;
+my %pp;
 sub resolve {
     $resolve_depth++;
     Carp::confess("Deep recursion!") if $resolve_depth > 10;
@@ -416,7 +420,7 @@ sub resolve {
     }
 
     my $subject_class_props =
-        $props->{$subject_class} ||=
+        $subject_class_meta->{'cache'}{'UR::BoolExpr::resolve'} ||=
         { map {$_, 1}  ( $subject_class_meta->all_property_type_names) };
     
     my ($op,@extra);
@@ -431,6 +435,7 @@ sub resolve {
     my @xremove_values;
     my @extra_key_pos;
     my @extra_value_pos;
+    my $complex_values = 0;
     
     for my $value (@values) {
         $key = $keys[$kn++];
@@ -472,6 +477,7 @@ sub resolve {
         
         my $ref = ref($value);
         if($ref) {
+            $complex_values = 1;
             if ($ref eq "ARRAY" and $operator ne 'between' and $operator ne 'not between') {
                 my $data_type;
                 my $is_many;
@@ -548,10 +554,10 @@ sub resolve {
                     }
                     my @joins = $property_meta->get_property_name_pairs_for_join();
                     for my $join (@joins) {
+                        # does this really work for >1 joins?
                         my ($my_method, $their_method) = @$join;
                         push @xadd_keys, $my_method;
                         push @xadd_values, $value->$their_method;
-                        #print ":: @xkeys\n::@xvalues\n\n";
                     }
                     # TODO: this may need to be moved into the above get_property_name_pairs_for_join(),
                     # but the exact syntax for expressing that this is part of the join is unclear.
@@ -566,9 +572,9 @@ sub resolve {
                 elsif ($value->isa($property_meta->data_type)) {
                     push @hard_refs, $vn-1, $value;
                 }
-                elsif ($value->can($key)) {
+                elsif ($value->can($property_name)) {
                     # TODO: stop suporting foo_id => $foo, since you can do foo=>$foo, and foo_id=>$foo->id  
-                    $value = $value->$key;
+                    $value = $value->$property_name;
                 }
                 else {
                     Carp::croak("Incorrect data type in rule " . ref($value) . " for $subject_class property '$property_name' with op $operator!");    
@@ -639,15 +645,47 @@ sub resolve {
         @values = @new;        
     }    
 
-    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
-    my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);
+    #my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);    
+    #my $template_id = $subject_class . '/And/' . join(",",@keys) . "/" . $constant_value_id;
     
-    my $template_id = $subject_class . '/And/' . join(",",@keys) . "/" . $constant_value_id;
-    my $rule_id = join($UR::BoolExpr::Util::id_sep,$template_id,$value_id);
+    my $template;
+    if (@constant_values) {
+        $template = UR::BoolExpr::Template::And->_fast_construct_and(
+            $subject_class,
+            \@keys,
+            \@constant_values,
+        );
+    }
+    else {
+        $template = $pp{"@keys"} ||= UR::BoolExpr::Template::And->_fast_construct_and(
+            $subject_class,
+            \@keys,
+            \@constant_values,
+        );
+    }
 
-    my $rule = __PACKAGE__->get($rule_id);
+    my $value_id = ($complex_values ? UR::BoolExpr::Util->values_to_value_id(@values) : UR::BoolExpr::Util->values_to_value_id_simple(@values) );
+    
+    my $rule_id = join($UR::BoolExpr::Util::id_sep,$template->{id},$value_id);
 
+    my $rule = __PACKAGE__->get($rule_id); # flyweight constructor
+
+    $rule->{template} = $template;
     $rule->{values} = \@values;
+    
+    $vn = 0;
+    $cn = 0;
+    my @list;
+    for my $key (@keys) {
+        push @list, $key;
+        if (substr($key,0,1) eq '-') {
+            push @list, $constant_values[$cn++];
+        }
+        else {
+            push @list, $values[$vn++];
+        }
+    }
+    $rule->{_params_list} = \@list;
 
     if (@hard_refs) {
         $rule->{hard_refs} = { @hard_refs };
@@ -665,6 +703,28 @@ sub resolve {
     else {
         return $rule;
     }
+}
+
+sub _params_list {
+    my $list = $_[0]->{_params_list} ||= do {
+        my $self = $_[0];
+        my $template = $self->template;
+        my ($k,$v,$c) = ($self->{_keys}, $template->{values}, $template->{_constant_values});
+        my $vn = 0;
+        my $cn = 0;
+        my @list;
+        for my $key (@$k) {
+            push @list, $key;
+            if (substr($key,0,1) eq '-') {
+                push @list, $c->[$cn++];
+            }
+            else {
+                push @list, $v->[$vn++];
+            }
+        }
+        \@list;
+    };
+    return @$list;
 }
 
 sub normalize {
