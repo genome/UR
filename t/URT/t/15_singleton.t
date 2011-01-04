@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 21; 
+use Test::More tests => 23; 
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -74,7 +74,6 @@ my @objs = URT::Parent->get();
 is(scalar(@objs), 3, 'get() via parent class returns 3 objects');
 
 
-
-
-
-
+ok($obj->delete(), 'Delete the URT::ChildSingleton');
+my @objs = URT::Parent->get();
+is(scalar(@objs), 2, 'get() via parent class returns 2 objects');

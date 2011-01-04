@@ -71,9 +71,7 @@ sub log_change
     # wrappers (create/delete/load/unload/define) signal change also
     # and we undo the wrapper, thereby undoing these
     # -> ignore any signal from a method which is wrapped by another signalling method which gets undone
-    return if ($aspect eq "_create_object" or
-               $aspect eq "_delete_object" or
-               $aspect eq "load" or
+    return if ( $aspect eq "load" or
                $aspect eq "load_external"
               );
 
@@ -81,7 +79,6 @@ sub log_change
         #print "skipping @_\n";
         return;
     }
-    #print "logging: @_\n";
 
     if ($aspect eq "delete") {
         $undo_data = Data::Dumper::Dumper($object);

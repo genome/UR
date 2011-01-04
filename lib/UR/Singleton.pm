@@ -18,7 +18,6 @@ sub _init_subclass {
 
     # Write into the class's namespace the correct singleton overrides
     # to standard UR::Object methods.
-    #print "init singleton $class_name\n";
  
     my $src;
     if ($class_meta_object->is_abstract) {
@@ -41,8 +40,6 @@ sub _init_subclass {
         ;
     }
     
-    #print "SOURCE $src\n";
-    #eval "no warnings;\n" . $src;
     eval $src;
     Carp::confess($@) if $@;
 
@@ -93,6 +90,8 @@ sub _concrete_is_loaded {
 
 sub _concrete_load {
     my $class = shift;
+
+    $class = ref($class) || $class;
     no strict 'refs';
     my $varref = \${ $class . "::singleton" };
     unless ($$varref) {
@@ -109,8 +108,7 @@ sub _concrete_load {
             $default_values{$prop_name} = $val;
         }
    
-
-        $$varref = $class->_create_object(%default_values, id => $id);    
+        $$varref = $UR::Context::current->_construct_object($class,%default_values, id => $id);    
         $$varref->{db_committed} = { %$$varref };
         $$varref->__signal_change__("load");
         Scalar::Util::weaken($$varref);
@@ -132,12 +130,12 @@ sub init {
 # All singletons require special deletion logic since they keep a 
 #weakened reference to the singleton.
 
-sub _delete_object {
+sub delete {
     my $self = shift;
     my $class = $self->class;
+    $self->SUPER::delete();
     no strict 'refs';
     ${ $class . "::singleton" } = undef if ${ $class . "::singleton" } eq $self;
-    $self->SUPER::_delete_object(@_);
 }
 
 # In most cases, the id is the class name itself, but this is not necessary.
