@@ -75,5 +75,6 @@ is(scalar(@objs), 3, 'get() via parent class returns 3 objects');
 
 
 ok($obj->delete(), 'Delete the URT::ChildSingleton');
-my @objs = URT::Parent->get();
+@objs = URT::Parent->get();
 is(scalar(@objs), 2, 'get() via parent class returns 2 objects');
+

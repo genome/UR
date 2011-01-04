@@ -768,10 +768,17 @@ sub create_entity {
         return $self->_create_entity_from_abstract_class($class, @_);
     }
 
-    # Normal case... just make a rule out of the passed-in params
-    #my $rule = UR::BoolExpr->resolve_normalized($class, @_);
-    my $rule = UR::BoolExpr->resolve($class, @_);
-    my $params = { @{$rule->{_params_list}}, $rule->{template}->extend_params_list_for_values(@{$rule->{values}}) }; ;
+    # normal case: make a rule out of the passed-in params
+    # rather than normalizing the rule, we just do the extension part which is fast
+    my $rule = UR::BoolExpr->resolve($class, @_); 
+    my $template = $rule->{template};
+    my $params = { @{$rule->{_params_list}}, $template->extend_params_list_for_values(@{$rule->{values}}) };
+    if (my $a = $template->{_ambiguous_keys}) {
+        my $p = $template->{_ambiguous_property_names};
+        print ">>> amb: @$a : @$p\n";
+        @$params{@$p} = delete @$params{@$a};
+    }
+
     my $id = $params->{id};
     unless (defined $id) {
         $id = $self->_resolve_id_for_class_and_rule($class_meta,$rule);

@@ -430,6 +430,8 @@ sub resolve {
     my @xremove_values;
     my @extra_key_pos;
     my @extra_value_pos;
+    my @swap_key_pos;
+    my @swap_key_value;
     my $complex_values = 0;
     
     for my $value (@values) {
@@ -490,11 +492,13 @@ sub resolve {
                 }
                 $data_type ||= '';
                 
-                if ($data_type eq 'ARRAY' or $is_many) {
+                if ($data_type eq 'ARRAY') {
                     # ensure we re-constitute the original array not a copy
                     push @hard_refs, $vn-1, $value;
+                    push @swap_key_pos, $vn-1;
+                    push @swap_key_value, $property_name;
                 }
-                else {
+                elsif (not $is_many) {
                     no warnings;
                     
                     # sort and replace
@@ -527,6 +531,15 @@ sub resolve {
                                 @$value;
                         }                        
                     }
+
+                    # push @swap_key_pos, $vn-1;
+                    # push @swap_key_value, $property_name;
+                }
+                else {
+                    $DB::single = 1;
+                    # disable: break 47, enable: break 62
+                    #push @swap_key_pos, $vn-1;
+                    #push @swap_key_value, $property_name;
                 }
             }
             elsif (blessed($value)) {
@@ -584,6 +597,10 @@ sub resolve {
     }
     push @keys, @xadd_keys;
     push @values, @xadd_values;
+
+    if (@swap_key_pos) {
+        @keys[@swap_key_pos] = @swap_key_value;
+    }
 
     if (@extra_key_pos) {
         push @xremove_keys, @extra_key_pos;

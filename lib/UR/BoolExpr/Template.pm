@@ -35,6 +35,7 @@ UR::Object::Type->define(
         is_id_only                      => { is => 'Boolean' },
         is_partial_id                   => { is => 'Boolean' },  # True if at least 1, but not all the ID props are mentioned
         is_unique                       => { is => 'Boolean' },
+        
         matches_all                     => { is => 'Boolean' },
         key_op_hash                     => { is => 'HASH' },
         id_position                     => { is => 'Integer' },
@@ -44,6 +45,7 @@ UR::Object::Type->define(
         _property_meta_hash             => { is => 'HASH' },
         _property_names_arrayref        => { is => 'ARRAY' },
         num_values                      => { is => 'Integer' },
+        _ambiguous_keys                 => { is => 'ARRAY' },
         
         _keys                           => { is => 'ARRAY' },
         _constant_values                => { is => 'ARRAY' },
@@ -453,7 +455,6 @@ sub _fast_construct_and {
         $check_for_duplicate_rules{$property}++;
     }
 
-
     # each item in this list mutates the initial set of key-value pairs
     my $extenders = [];
     
@@ -678,8 +679,19 @@ sub _fast_construct_and {
         Carp::croak('-hints of a rule must be an arrayref of property names');
     }
 
-
     $id_only = 0 if ($matches_all);
+
+    # these are used to rapidly turn a bx used for querying into one
+    # suitable for object construction
+    my @ambiguous_keys;
+    my @ambiguous_property_names;
+    for (my $n=0; $n < @keys; $n++) {
+        my ($property,$op) = ($keys[$n] =~ /^(\w+)\b(.*)$/);
+        if ($op and $op ne 'eq' and $op ne '==') {
+            push @ambiguous_keys, $keys[$n];
+            push @ambiguous_property_names, $property;
+        }
+    }
 
     #if (@$constant_value_normalized_positions > 1) {
     #    Carp::confess("Not Implemented: multiple '-' options.  Fix me!");
@@ -723,6 +735,10 @@ sub _fast_construct_and {
         
         _keys                           => \@keys,    
         _constant_values                => $constant_values->[0],
+
+        _ambiguous_keys                 => (@ambiguous_keys ? \@ambiguous_keys : undef),
+        _ambiguous_property_names       => (@ambiguous_property_names ? \@ambiguous_property_names : undef),
+
     }, 'UR::BoolExpr::Template::And';
 
     $UR::Object::rule_templates->{$id} = $self;  

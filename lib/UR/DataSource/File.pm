@@ -569,6 +569,8 @@ sub create_iterator_closure_for_rule {
     my $rule_template = $rule->template;
 
     my $csv_column_order_names = $self->column_order;
+print Data::Dumper::Dumper($self);
+$DB::single = 1;
     my $csv_column_count = scalar @$csv_column_order_names;
 
     my $operators_for_properties = $rule_template->operators_for_properties();
