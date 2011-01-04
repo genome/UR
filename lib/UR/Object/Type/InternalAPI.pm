@@ -1276,6 +1276,8 @@ sub _property_change_callback {
 
     # Invalidate the cache used by all_property_names()
     $class_obj->_invalidate_cached_data_for_subclasses('_all_property_names');
+    $class_obj->_invalidate_cached_data_for_subclasses('_all_property_type_names');
+
 }
 
 # Some expensive-to-calculate data gets stored in the class meta hashref
