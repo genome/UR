@@ -83,17 +83,6 @@ sub property_diff {
     return $diff;
 }
 
-sub _create_object {
-    # warn "deprecated method call!";
-    # old code calls this to do core construction but the context no longer does
-    $UR::Context::current->_construct_object(@_);
-}
-
-sub _delete_object {
-    # warn "deprecated method call!";
-    $UR::Context::current->_abandon_object(@_);
-}
-
 # TODO: make this a context operation
 sub unload {
     my $proto = shift;
@@ -118,7 +107,7 @@ sub unload {
         if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
             print STDERR "MEM UNLOAD object $self class ",$self->class," id ",$self->id,"\n";
         }
-        $self->_delete_object;
+        $cx->_abandon_object($self);
         return $self;
     }
     else {
@@ -276,7 +265,7 @@ sub validate_subscription
     return 1 if (!defined($subscription_property));
 
     # All standard creation and destruction methods emit a signal.
-    return 1 if ($subscription_property =~ /^(_create_object|_delete_object|create|delete|commit|rollback|load|unload|load_external)$/);
+    return 1 if ($subscription_property =~ /^(create|delete|commit|rollback|load|unload|load_external)$/);
 
     # A defined attribute in our property list indicates the caller wants callbacks from our properties.
     my $class_object = $self->__meta__;

@@ -118,7 +118,6 @@ is_deeply(
 )
     or print Dumper([$r->params_list]);
 
-$DB::single = 1;
 $r = URT::FancyItem->define_boolexpr(foo => { operator => "between", value => [10,30] }, bar => { operator => "like", value => 'x%y' });
 $t = $r->template();
 is($t->operator_for('foo'),'between', "operator for param 1 is correct");

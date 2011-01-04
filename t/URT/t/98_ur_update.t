@@ -203,7 +203,7 @@ ok($trans, "CREATED PERSON and began transaction");
         # FIXME The test should probably break out each type of changed thing and check
         # that the counts of each type are correct, and not just the count of all changes
         my $changes_as_hash = convert_change_list_for_checking(@changes);
-        is_deeply($changes_as_hash, $check_changes_1, "Change list is correct") or $DB::single = 1;
+        is_deeply($changes_as_hash, $check_changes_1, "Change list is correct");
 
         my $personclass = UR::Object::Type->get('URT::Person');
         isa_ok($personclass, 'UR::Object::Type');  # FIXME why isn't this a UR::Object::Type
@@ -238,8 +238,6 @@ ok($dbh->do('CREATE TABLE employee (employee_id integer NOT NULL PRIMARY KEY CON
 ok($dbh->do('ALTER TABLE person ADD COLUMN postal_address varchar'), 'Add column to Person');
 ok($dbh->do('CREATE TABLE car (car_id integer NOT NULL PRIMARY KEY, owner_id integer NOT NULL CONSTRAINT fk_person_id2 REFERENCES person(person_id), make varchar, model varchar, color varchar, cost number)'), 'Create car table');
 
-#print join("\n",sort map { values %$_ } values %$UR::Context::all_objects_loaded);
-
 $trans = UR::Context::Transaction->begin();
 ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
 
@@ -247,9 +245,6 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
     @changes = get_changes();
     $changes_as_hash = convert_change_list_for_checking(@changes);
     is_deeply($changes_as_hash, $check_changes_2, "Change list is correct");
-    #IO::File->new(">/Users/ssmith/git/ur/n98-249-got")->print(Data::Dumper::Dumper($changes_as_hash, \@changes));
-    #IO::File->new(">/Users/ssmith/git/ur/n98-249-exp")->print(Data::Dumper::Dumper($check_changes_2));
-    #exit;
 
     # Verify the Person.pm and Employee.pm modules exist
 
@@ -372,7 +367,6 @@ ok($trans, "DROPPED EMPLOYEE AND UPDATED PERSON began transaction");
     @changes = get_changes();
     is(scalar(@changes), 15, "found changes for two more dropped tables");
 
-$DB::single = 1;
 $trans = UR::Context::Transaction->begin();
 ok($trans, "Restarted transaction since some data is not really sync'd at sync_filesystem");
 ok($command_obj->execute(), 'Updating schema anew.');
@@ -465,7 +459,6 @@ my $dbfile = shift;
 
 
 # Convert the list of changes to a data structure matching the expected changes
-my $nn = 1;
 sub convert_change_list_for_checking {
     my(@changes_list) = @_;
     my $changes = {};
@@ -479,16 +472,9 @@ sub convert_change_list_for_checking {
             die "Two types of changes for the same thing in the same transaction!?";
         }
 
-        #my $o = $changed_class_name->is_loaded($changed_id);
-        #if ($o) {
-        #    $change->{_current_value} = $o->{$changed_aspect};
-        #}
 
         $changes->{$changed_class_name}->{$changed_id}->{$changed_aspect} = defined($undo_data);
     }
-    #IO::File->new(">t98.$nn")->print(Data::Dumper::Dumper(\@changes_list));
-    #$nn++;
-
 
     return $changes;
 }
