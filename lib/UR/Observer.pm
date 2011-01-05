@@ -21,14 +21,13 @@ UR::Object::Type->define(
 
 sub create {
     my $class = shift;
-    #my ($rule,%extra) = $class->define_boolexpr(@_);
     my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);
     my $callback = delete $extra{callback};
     if (%extra) {
-        die("Odd params!?" . Data::Dumper::Dumper(\%extra));
+        Carp::croak("Cannot create observer.  Class $class has no property ".join(',',keys %extra));
     }
     unless ($callback) {
-        die "No callback supplied to observer!";
+        Carp::croak("'callback' argument is required for create()");
     }
     my $self = $class->SUPER::create($rule);
     $self->{callback} = $callback;
@@ -42,7 +41,7 @@ sub create {
         note => "$self",
     );
 
-    # because subscription is low level it is note deleted by the low level _delete_object
+    # because subscription is low level it is not deleted by the low level _abandon_object
     # but the delete signal is fired so we can cleanup with a subscription on delete
     # if someone adds there own delete signal we want to make sure ours gets run last
     my $delete_callback;

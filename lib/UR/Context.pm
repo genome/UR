@@ -462,7 +462,6 @@ sub query {
     # in order to have metadata for regular loading....
     if (!$rule->has_meta_options and ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value"))) {
         my $normalized_rule = $rule->normalize;
-        
         my @objects = $class->_load($normalized_rule);
         
         return unless defined wantarray;
@@ -652,11 +651,6 @@ sub create_entity {
             # Reverse map the ID into property values.
             # This has to occur for all subclasses which represent table rows.
     
-            #my @id_property_names = $co->id_property_names;
-            #my @values = $co->resolve_ordered_values_from_composite_id( $id );
-            #$#values = $#id_property_names;
-            #push @extra, map { $_ => shift(@values) } @id_property_names;
-    
             # deal with %property_objects
             my @property_objects = $co->direct_property_metas;
             my @property_names = map { $_->property_name } @property_objects;
@@ -687,8 +681,6 @@ sub create_entity {
                 }
                 else {
                     $direct_properties{$name} = $prop;
-                    #delete $indirect_properties{$name};  # If this overrides a parent property
-                    #delete $default_values{$name};  # If this overrides a parent property
                 }
                 
                 unless ($prop->is_mutable) {
@@ -759,7 +751,6 @@ sub create_entity {
         my $sub_class_name = $class->$first_sub_classification_method_name(@_);
         if (defined($sub_class_name) and ($sub_class_name ne $class)) {
             # delegate to the sub-class to create the object
-            #no warnings;
             unless ($sub_class_name->can($construction_method)) {
                 $DB::single = 1;
                 Carp::croak("Can't locate object method '$construction_method' via package '$sub_class_name' "
@@ -777,9 +768,16 @@ sub create_entity {
         return $self->_create_entity_from_abstract_class($class, @_);
     }
 
-    # Normal case... just make a rule out of the passed-in params
-    my $rule = UR::BoolExpr->resolve_normalized($class, @_);
-    my $params = { $rule->params_list }; ;
+    # normal case: make a rule out of the passed-in params
+    # rather than normalizing the rule, we just do the extension part which is fast
+    my $rule = UR::BoolExpr->resolve($class, @_); 
+    my $template = $rule->{template};
+    my $params = { @{$rule->{_params_list}}, $template->extend_params_list_for_values(@{$rule->{values}}) };
+    if (my $a = $template->{_ambiguous_keys}) {
+        my $p = $template->{_ambiguous_property_names};
+        @$params{@$p} = delete @$params{@$a};
+    }
+
     my $id = $params->{id};
     unless (defined $id) {
         $id = $self->_resolve_id_for_class_and_rule($class_meta,$rule);
@@ -918,7 +916,6 @@ sub create_entity {
                         "Can't use an undefined value as a subclass name for param '$subclassify_by'");
 
         } elsif ($param_value ne $class) {
-            print "HIIII $param_value $class\n";
             Carp::croak("Invalid parameters for $class->$construction_method(): " .
                         "Value for subclassifying param '$subclassify_by' " .
                         "($param_value) does not match the class it was called on ($class)");
@@ -977,8 +974,6 @@ sub create_entity {
             if (@errors_fatal_to_construction) {
                 my $msg = 'Failed to $construction_method ' . $class . ' with invalid immutable properties:'
                     . join("\n", @errors_fatal_to_construction);
-                #$entity->_delete_object;
-                #die $msg;
             }
         }
     }
@@ -1082,7 +1077,7 @@ sub delete_entity {
             }    
 
             # create ghost object
-            my $ghost = $entity->ghost_class->_create_object(id => $entity->id, %ghost_params);
+            my $ghost = $self->_construct_object($entity->ghost_class, id => $entity->id, %ghost_params);
             unless ($ghost) {
                 $DB::single = 1;
                 Carp::confess("Failed to constructe a deletion record for an unsync'd delete.");
@@ -1096,7 +1091,7 @@ sub delete_entity {
 
         }
         $entity->__signal_change__('delete');
-        $entity->_delete_object;
+        $self->_abandon_object($entity);
         return $entity;
     }
     else {
@@ -2354,7 +2349,7 @@ sub _create_import_iterator_for_underlying_context {
                     # we can set it to true.  This is needed in the case where the user
                     # gets an iterator for all the objects of some class, but unloads
                     # one or more of the instances (be calling unload or through the 
-                    # cache pruner) before the iterator completes.  If so, _delete_object()
+                    # cache pruner) before the iterator completes.  If so, _abandon_object()
                     # will have removed the key from the hash
                     if (exists($UR::Context::all_objects_are_loaded->{$class_name})) {
                         $class_name->all_objects_are_loaded(1);
@@ -2931,7 +2926,6 @@ sub __create_object_fabricator_for_loading_template {
             # note that we do this on the base class even if we know it's going to be put into a subclass below
             $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id} = $pending_db_object;
             $UR::Context::all_objects_cache_size++;
-            #$pending_db_object->__signal_change__('_create_object', $pending_db_object_id)
             
             # If we're using a light cache, weaken the reference.
             if ($UR::Context::light_cache and substr($class,0,5) ne 'App::') {

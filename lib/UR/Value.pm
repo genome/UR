@@ -43,8 +43,8 @@ sub _load {
         my $sub_class_name = $obj->$method_name;
         if ($sub_class_name ne $class) {
             # delegate to the sub-class to create the object
-            $obj->_delete_object();
-            $obj = $sub_class_name->_create_object($rule);
+            $UR::Context::current->_abandon_object($obj);
+            $obj = $UR::Context::current->_construct_object($sub_class_name,$rule);
             $obj->__signal_change__("load");
             return $obj;
         }

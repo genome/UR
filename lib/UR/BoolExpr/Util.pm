@@ -39,7 +39,7 @@ sub value_id_to_values_frozen {
 
 sub values_to_value_id {
     my $self = shift;
-    my $value_id = "";
+    my $value_id = "O:";
 
     for my $value (@_) {
 
@@ -79,7 +79,7 @@ sub values_to_value_id {
             $value_id .= $value . $record_sep;
         }        
     }
-    return "O:" . $value_id;
+    return $value_id;
 }
 
 sub value_id_to_values {
@@ -122,6 +122,12 @@ sub value_id_to_values {
         }
     }
     return @values;
+}
+
+*values_to_value_id_simple = \&values_to_value_id;
+sub Xvalues_to_value_id_simple {
+    my $self = shift;
+    return "O:" . join($record_sep, @_);
 }
 
 

@@ -90,12 +90,13 @@ is($r->template->value_position_for_property_name('foo'),0, "position is as expe
 is($r->template->value_position_for_property_name('bar'),1, "position is as expected for variable param 2");
 is($r->template->value_position_for_property_name('-recurse'),0, "position is as expected for constant param 1");
 
+my $expected = [foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555];
 is_deeply(
     [$r->params_list],
-    [foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555],
+    $expected,
     "params list for the rule is as expected"
 )
-    or print Dumper([$r->params_list]);
+    or print Dumper([$r->params_list],$expected);
     
 my $t = $r->template;
 ok($t, "got a template for the rule");
@@ -117,7 +118,6 @@ is_deeply(
 )
     or print Dumper([$r->params_list]);
 
-$DB::single = 1;
 $r = URT::FancyItem->define_boolexpr(foo => { operator => "between", value => [10,30] }, bar => { operator => "like", value => 'x%y' });
 $t = $r->template();
 is($t->operator_for('foo'),'between', "operator for param 1 is correct");

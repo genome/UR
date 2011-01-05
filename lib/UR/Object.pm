@@ -515,7 +515,8 @@ sub __define__ {
             }
         }
 
-        my $self = $class->_create_object(@_);
+        #my $self = $class->_create_object(@_);
+        my $self = $UR::Context::current->_construct_object($class, @_);
         return unless $self;
         $self->{db_committed} = { %$self };
         $self->__signal_change__("load");

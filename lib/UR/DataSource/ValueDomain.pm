@@ -17,7 +17,7 @@ UR::Object::Type->define(
 sub get_objects_for_rule {        
     my $class = shift;    
     my $rule = shift;
-    my $obj = $class->_create_object($rule);
+    my $obj = $UR::Context::current->_construct_object($rule);
     $obj->__signal_change__("define");
     return $obj;
 }

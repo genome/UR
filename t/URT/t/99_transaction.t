@@ -77,9 +77,12 @@ sub take_state_snapshot {
                 delete $copy->{_all_id_property_names};
                 delete $copy->{_id_property_sorter};
                 delete $copy->{_sorter};
+                delete $copy->{_property_meta_for_name};
                 delete $copy->{db_committed}{_id_property_sorter};
+                delete $copy->{db_committed}{_property_meta_for_name};
                 delete $copy->{db_committed}{_sorter};
                 delete $copy->{get_composite_id_resolver};
+                delete $copy->{cache};
             }
             for my $key (keys %$copy) {
                 if (! defined $copy->{$key}) {

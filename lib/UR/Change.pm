@@ -66,13 +66,7 @@ sub undo {
     # TODO: if no changed object, die?
 
 
-    if ($changed_aspect eq "_create_object") {
-        #$changed_obj->_delete_object();
-    }
-    elsif ($changed_aspect eq "_delete_object") {
-        #$changed_obj = $changed_class_name->_create_object(%$changed_obj);
-    }
-    elsif ($changed_aspect eq "__define__") {
+    if ($changed_aspect eq "__define__") {
         UR::Object::unload($changed_obj);
     }
     elsif ($changed_aspect eq "create") {
@@ -98,7 +92,7 @@ sub undo {
     elsif ($changed_aspect eq "load_external") {
     }
     elsif ($changed_aspect eq "unload") {
-        $changed_obj = UR::Object::_create_object($changed_class_name,%$changed_obj);
+        $changed_obj = $UR::Context::current->_construct_object($changed_class_name,%$changed_obj);
         UR::Object::__signal_change__($changed_obj,"load") if $changed_obj;
     } elsif ($changed_aspect eq "commit") {
         if ($changed_obj->isa('UR::Context::Transaction')) {
