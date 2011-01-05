@@ -775,7 +775,6 @@ sub create_entity {
     my $params = { @{$rule->{_params_list}}, $template->extend_params_list_for_values(@{$rule->{values}}) };
     if (my $a = $template->{_ambiguous_keys}) {
         my $p = $template->{_ambiguous_property_names};
-        print ">>> amb: @$a : @$p\n";
         @$params{@$p} = delete @$params{@$a};
     }
 
