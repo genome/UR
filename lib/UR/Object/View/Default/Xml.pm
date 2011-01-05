@@ -113,8 +113,6 @@ sub _generate_content_for_aspect {
     my $aspect_node = $xml_doc->createElement('aspect');
     $aspect_node->addChild( $xml_doc->createAttribute('name', $aspect_name) );
 
-    my $aspect_meta = $self->subject_class_name->__meta__->property($aspect_name);
-
     my @value;
     eval {
         @value = $subject->$aspect_name;
