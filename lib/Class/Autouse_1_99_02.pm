@@ -1,5 +1,15 @@
 package Class::Autouse;
 
+BEGIN {
+    if ($INC{"Class/Autouse.pm"}) {
+        die "Attempt to use Class::Autouse_1_99_02 when older Class::Autouse is in place.  Use the new one first!";
+    }
+    else {
+        # ensure attempts to use the old version are ignored
+        $INC{"Class/Autouse.pm"} = $INC{"Class/Autouse_1_99_02.pm"};
+    }
+}
+
 # See POD at end of file for documentation
 
 use 5.005;

@@ -688,6 +688,7 @@ sub _load {
     my $class = shift;
     my $rule = shift;
 
+    $rule = $rule->normalize;
     my $params = $rule->legacy_params_hash;
 
     # While core entity classes are actually loaded,

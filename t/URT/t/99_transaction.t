@@ -82,6 +82,7 @@ sub take_state_snapshot {
                 delete $copy->{db_committed}{_property_meta_for_name};
                 delete $copy->{db_committed}{_sorter};
                 delete $copy->{get_composite_id_resolver};
+                delete $copy->{cache};
             }
             for my $key (keys %$copy) {
                 if (! defined $copy->{$key}) {
