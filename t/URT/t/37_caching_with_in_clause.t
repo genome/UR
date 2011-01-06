@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 42;
+use Test::More tests => 61;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -71,6 +71,58 @@ is($query_count, 1, '1 new query was done');
 #ok($query_text =~ m/6,7/, q(Generated query does mention "('6','7')"));
 
 
+$load_count = 0;
+$query_count = 0;
+my $iter = URT::Parent->create_iterator(name => [5,7,2,99,102], is_cool => 1);
+ok($iter, 'Created iterator with an in-clause');
+ok($iter->next, 'Pull an object off the iterator');
+is($load_count, 0, 'loaded 0 new objects');
+is($query_count, 1, 'made 1 query');
+$iter = undef;
+
+
+$load_count = 0;
+$query_count = 0;
+@o = URT::Parent->get(name => [5,7,2,99,102], is_cool => 1);
+is(scalar(@o), 3, 'get() returned the correct number of items with in clause containing some non-matching values');
+is($load_count, 0, 'loaded 0 new objects');
+is($query_count, 1, 'made 1 query');
+
+
+$load_count = 0;
+$query_count = 0;
+@o = URT::Parent->get(name => 102, is_cool => 1,);
+is(scalar(@o), 0, 'get() correctly returns nothing for a non-matching name that was in the previous in-clause');
+is($load_count, 0, 'loaded 0 new objects');
+is($query_count, 0, 'no query was generated');
+
+$load_count = 0;
+$query_count = 0;
+@o = URT::Parent->get(name => 99, is_cool => 1,);
+is(scalar(@o), 0, 'get() correctly returns nothing for another non-matching name that was in the previous in-clause');
+is($load_count, 0, 'loaded 0 new objects');
+is($query_count, 0, 'no query was generated');
+
+
+$load_count = 0;
+$query_count = 0;
+@o = URT::Parent->get(name => 5);
+is(scalar(@o), 1, 'got one object by name that was in the previous in-clause');
+is($load_count, 0, 'loaded 0 new objects');
+is($query_count, 0, 'no query was generated');
+
+
+$load_count = 0;
+$query_count = 0;
+@o = URT::Parent->get(name => 99);
+is(scalar(@o), 1, 'There was one with name 99');
+is($load_count, 1, 'loaded 0 new objects');
+is($query_count, 1, 'no query was generated');
+
+
+
+
+
 unlink(URT::DataSource::SomeSQLite->server);  # Remove the DB file from /tmp/
 
 
@@ -78,7 +130,7 @@ sub create_db_tables {
     my $dbh = shift;
 
     ok($dbh->do('create table PARENT_TABLE
-                ( parent_id int NOT NULL PRIMARY KEY, name varchar)'),
+                ( parent_id int NOT NULL PRIMARY KEY, name varchar, is_cool integer)'),
        'created parent table');
 
     ok(UR::Object::Type->define( 
@@ -90,16 +142,19 @@ sub create_db_tables {
             ],
             has => [
                 'name' =>          { is => 'STRING' },
+                is_cool =>         { is => 'NUMBER' },
             ],
             data_source => 'URT::DataSource::SomeSQLite',
         ),
         "Created class for Parent");
 
-    my $sth = $dbh->prepare('insert into parent_table (parent_id, name) values (?,?)');
+    my $sth = $dbh->prepare('insert into parent_table (parent_id, name, is_cool) values (?,?,?)');
     ok($sth,'insert statement prepared');
     foreach my $n ( 1 .. 10 ) {
-        ok($sth->execute($n,$n), "inserted parent ID $n");
+        ok($sth->execute($n,$n,1), "inserted parent ID $n");
     }
+
+    $sth->execute(99,99,0);   # item 99 is not cool
 }
 
 

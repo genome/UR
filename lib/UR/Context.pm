@@ -1,4 +1,4 @@
-package UR::Context;
+package UR::Context;   # placeholder filled in below
 
 use strict;
 use warnings;
@@ -2723,7 +2723,7 @@ sub __create_object_fabricator_for_loading_template {
         grep { $rule_template_without_recursion_desc->operator_for($_) eq 'in' } 
              $rule_template_without_recursion_desc->_property_names;
 
-    my($rule_template_without_in_clause,$rule_template_id_without_in_clause);
+    my($rule_template_without_in_clause,$rule_template_id_without_in_clause,%in_clause_values);
     if (@rule_properties_with_in_clauses) {
         $rule_template_id_without_in_clause = $rule_template_without_recursion_desc->id;
         foreach my $property_name ( @rule_properties_with_in_clauses ) {
@@ -2734,6 +2734,28 @@ sub __create_object_fabricator_for_loading_template {
             $rule_template_id_without_in_clause =~ s/($property_name) in/$1/;
         }
         $rule_template_without_in_clause = UR::BoolExpr::Template->get($rule_template_id_without_in_clause);
+
+        # Make a note of all the values in the in-clauses.  As the objects get returned from the 
+        # data source, we'll remove these notes.  Anything that's left by the time the iterator is
+        # finalized must be values that matched nothing.  Then, finalize can put data in
+        # all_params_loaded showing it matches nothing
+        my %rule_properties_with_in_clauses = map { $_ => 1 } @rule_properties_with_in_clauses;
+        foreach my $property ( @rule_properties_with_in_clauses ) {
+            my @other_values = map { exists $rule_properties_with_in_clauses{$_}
+                                     ? undef   # placeholder filled in below
+                                     : $rule_without_recursion_desc->value_for($_) }
+                               $rule_template_without_in_clause->_property_names;
+            my $position_for_this_property = $rule_template_without_in_clause->value_position_for_property_name($property);
+
+            my $values_for_in_clause = $rule_without_recursion_desc->value_for($property);
+            foreach my $value ( @$values_for_in_clause ) {
+                $other_values[$position_for_this_property] = $value;
+                my $rule_with_this_in_property = $rule_template_without_in_clause->get_rule_for_values(@other_values);
+                $in_clause_values{$property}->{$value}
+                    = [$rule_template_id_without_in_clause, $rule_with_this_in_property->id];
+            }
+        }
+
     }
 
 
@@ -2773,6 +2795,7 @@ sub __create_object_fabricator_for_loading_template {
     # This is a local copy of what we want to put in all_params_loaded, when the object fabricator is
     # finalized
     my $local_all_params_loaded = {};
+    $local_all_params_loaded->{'__in_clause_values__'} = \%in_clause_values;
 
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
@@ -2952,6 +2975,13 @@ sub __create_object_fabricator_for_loading_template {
                     
                     $UR::Context::all_params_loaded->{$rule_template_id_without_in_clause}{$r_id} = undef;
                     $local_all_params_loaded->{$rule_template_id_without_in_clause}{$r_id}++;
+
+                    # remove the notes about these in-clause values since they matched something
+                    foreach my $property (@rule_properties_with_in_clauses) {
+                        my $value = $pending_db_object->{$property};
+                        delete $in_clause_values{$property}->{$value};
+                    }
+                        
                 }
             }
             
@@ -3233,11 +3263,21 @@ sub UR::Context::object_fabricator_tracker::finalize {
     my $local_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
 
     foreach my $template_id ( keys %$local_all_params_loaded ) {
+        next if ($template_id eq '__in_clause_values__');
         while(1) {
             my($rule_id,$val) = each %{$local_all_params_loaded->{$template_id}};
             last unless defined $rule_id;
             next unless exists $UR::Context::all_params_loaded->{$template_id}->{$rule_id};  # Has unload() removed this one earlier?
             $UR::Context::all_params_loaded->{$template_id}->{$rule_id} += $val; 
+        }
+    }
+
+    # Anything left in here is in-clause values that matched nothing.  Make a note in
+    # all_params_loaded showing that so later queries for those values won't hit the 
+    # data source
+    foreach my $property ( keys %{$local_all_params_loaded->{'__in_clause_values__'}} ) {
+        while (my($value, $data) = each %{$local_all_params_loaded->{'__in_clause_values__'}->{$property}} ) {
+            $UR::Context::all_params_loaded->{$data->[0]}->{$data->[1]} = 0;
         }
     }
 }
@@ -3254,6 +3294,7 @@ sub UR::Context::object_fabricator_tracker::DESTROY {
         # completion, and we should add our data to it.  Otherwise, we're the only query like
         # this and all_params_loaded should be cleaned out
         foreach my $template_id ( keys %$local_all_params_loaded ) {
+            next if ($template_id eq '__in_clause_values__');
             while(1) {
                 my($rule_id, $val) = each %{$local_all_params_loaded->{$template_id}};
                 last unless $rule_id;
