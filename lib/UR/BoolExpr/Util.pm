@@ -125,11 +125,6 @@ sub value_id_to_values {
 }
 
 *values_to_value_id_simple = \&values_to_value_id;
-sub Xvalues_to_value_id_simple {
-    my $self = shift;
-    return "O:" . join($record_sep, @_);
-}
-
 
 1;
 

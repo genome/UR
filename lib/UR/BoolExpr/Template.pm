@@ -693,10 +693,6 @@ sub _fast_construct_and {
         }
     }
 
-    #if (@$constant_value_normalized_positions > 1) {
-    #    Carp::confess("Not Implemented: multiple '-' options.  Fix me!");
-    #}
-    
     # Determine the rule template's ID.
     # The normalizer will store this.  Below, we'll
     # find or create the template for this ID.

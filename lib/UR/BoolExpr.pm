@@ -284,7 +284,6 @@ sub resolve_for_template_id_and_values {
 }
 
 my $resolve_depth;
-my %pp;
 sub resolve {
     $resolve_depth++;
     Carp::confess("Deep recursion!") if $resolve_depth > 10;
@@ -653,9 +652,6 @@ sub resolve {
         @values = @new;        
     }    
 
-    #my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);    
-    #my $template_id = $subject_class . '/And/' . join(",",@keys) . "/" . $constant_value_id;
-    
     my $template;
     if (@constant_values) {
         $template = UR::BoolExpr::Template::And->_fast_construct_and(
