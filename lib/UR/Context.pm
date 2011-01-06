@@ -1,4 +1,4 @@
-package UR::Context;   # placeholder filled in below
+package UR::Context;
 
 use strict;
 use warnings;
