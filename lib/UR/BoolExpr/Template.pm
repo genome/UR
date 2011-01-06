@@ -138,20 +138,34 @@ sub _resolve_indexing_params {
 sub is_subset_of {
     my($self,$other_template) = @_;
 
-    return 0 unless (ref($other_template) and $self->isa(ref $other_template));
+    my $other_template_id = $other_template->id;
+    my $cached_subset_data = $self->{'__cache'}->{'is_subset_of'} ||= {};
+    if (exists $cached_subset_data->{$other_template_id}) {
+        return $cached_subset_data->{$other_template_id};
+    }
+
+    unless (ref($other_template) and $self->isa(ref $other_template)) {
+        $cached_subset_data->{$other_template} = 0;
+        return 0;
+    }
 
     my $my_class = $self->subject_class_name;
     my $other_class = $other_template->subject_class_name;
-    return unless ($my_class eq $other_class 
-                    or
-                   $my_class->isa($other_class));
+    unless ($my_class eq $other_class or $my_class->isa($other_class)) {
+        $cached_subset_data->{$other_template} = undef;
+        return;
+    }
 
     my %operators = map { $_ => $self->operator_for($_) } $self->_property_names;
     my $operators_match = 1;
     foreach my $prop ( $other_template->_property_names ) {
-        return 0 unless exists $operators{$prop};
+        unless (exists $operators{$prop}) {
+            $operators_match = 0;
+            last;
+        }
         $operators_match = undef if ($operators{$prop} ne $other_template->operator_for($prop));
     }
+    $cached_subset_data = $operators_match;
     return $operators_match;
 }
 
