@@ -298,13 +298,7 @@ sub help_brief
             }
         }
         if ($self->is_sub_command_delegator) {
-            my @names = $self->sub_command_names;
-            if (@names) {
-                return ""
-            }
-            else {
-                return "no sub-commands implemented!"
-            }
+            return "";
         }
         else {
             return "no description!!!: define 'doc' in $self";
