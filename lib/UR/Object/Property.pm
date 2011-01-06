@@ -177,7 +177,7 @@ sub _get_direct_join_linkage {
         unless (@my_id_by == @their_id_by) {
             Carp::croak("Property '" . $self->property_name . "' of class '" . $self->class_name . "' "
                         . "has " . scalar(@my_id_by) . " id_by elements, while its data_type ("
-                        . $self->data_tye .") has " . scalar(@their_id_by));
+                        . $self->data_type .") has " . scalar(@their_id_by));
         }
 
         for (my $i = 0; $i < @my_id_by; $i++) {
