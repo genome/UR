@@ -32,20 +32,12 @@ $SIG{__DIE__} = \&Carp::confess;
 # Ensure that, if the application changes directory, we do not 
 # change where we load modules while running.
 use Cwd;
-if ($ENV{PERL5LIB}) {
-    my @PERL5LIB = split(':', $ENV{PERL5LIB});
-    for my $dir (@INC) {
-        next unless -d $dir;
-        my $abs_dir = Cwd::abs_path($dir);
-        $dir = $abs_dir;
-    }
-    $ENV{PERL5LIB} = join(':', @PERL5LIB);
-}
-for my $dir (@INC) {
+my @PERL5LIB = ($ENV{PERL5LIB} ? split(':', $ENV{PERL5LIB}) : ());
+for my $dir (@INC, @PERL5LIB) {
     next unless -d $dir;
-    my $abs_dir = Cwd::abs_path($dir);
-    $dir = $abs_dir;
+    $dir = Cwd::abs_path($dir);
 }
+$ENV{PERL5LIB} = join(':', @PERL5LIB);
 
 # UR supports several environment variables, found under UR/ENV
 # Any UR_* variable which is set but does NOT corresponde to a module found will cause an exit
