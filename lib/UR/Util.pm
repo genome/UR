@@ -3,6 +3,7 @@ package UR::Util;
 
 use warnings;
 use strict;
+use Cwd;
 use Data::Dumper;
 
 sub null_sub { }
@@ -12,10 +13,12 @@ sub used_libs {
     my @compiled_inc = UR::Util::compiled_inc();
     my @perl5lib = split(':', $ENV{PERL5LIB});
     map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);
+    map { $_ = Cwd::abs_path($_) } (@compiled_inc, @perl5lib);
     for my $inc (@INC) {
         $inc =~ s/\/+$//;
-        next if (grep { $_ =~ /^$inc$/ } @compiled_inc);
-        next if (grep { $_ =~ /^$inc$/ } @perl5lib);
+        my $abs_inc = Cwd::abs_path($inc); # should already be expanded by UR.pm
+        next if (grep { $_ =~ /^$abs_inc$/ } @compiled_inc);
+        next if (grep { $_ =~ /^$abs_inc$/ } @perl5lib);
         push @extra, $inc;
     }
     return @extra;
