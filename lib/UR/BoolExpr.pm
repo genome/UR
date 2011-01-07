@@ -503,30 +503,16 @@ sub resolve {
                     ];         
                     
                     if ($operator ne 'between' and $operator ne 'not between') {
-                        # identify duplicates
-                        my $dedup = 0;
-                        my $last = $value; # a safe value which can't be in the list
-                        for (@$value) {
-                            if ($_ eq $last) {
-                                $dedup = 1;
-                                last;
+                        my $last = $value;
+                        for (my $i = 0; $i < @$value;) {
+                            if ($last eq $value->[$i]) {
+                                splice(@$value, $i, 1);
                             }
-                            $last = $_;
-                        }
-        
-                        # only fix duplicates if they were found                    
-                        if ($dedup) {
-                            my $buffer;
-                            @$value =
-                                map {
-                                    $buffer = $last;
-                                    $last = $_;
-                                    ($_ eq $buffer ? () : $_)
-                                }
-                                @$value;
-                        }                        
-                    }
-
+                            else {
+                                $last = $value->[$i++];
+                             }
+                         }
+                     }
                     # push @swap_key_pos, $vn-1;
                     # push @swap_key_value, $property_name;
                 }

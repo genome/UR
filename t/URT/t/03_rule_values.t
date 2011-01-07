@@ -9,7 +9,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 19;
+use Test::More tests => 21;
 use Data::Dumper;
 use IO::Handle;
 
@@ -113,6 +113,14 @@ ok($n, 'Normalized rule');
 @values = $n->values();
 $expected = [undef, [$fh], 1];
 is_deeply(\@values, $expected, "Normalized rule's values are correct");
+
+
+# Check that duplicate values in an in-clause are handled correctly
+my $rule = URT::Item->define_boolexpr(name => ['Bob', 'Bob', 'Rob', 'Rob', 'Joe', 'Foo']);
+ok($rule, 'rule with duplicate values created');
+my $values = $rule->value_for('name');
+my @expected = ('Bob', 'Foo', 'Joe','Rob');
+is_deeply($values, \@expected, 'duplicates were filtered out correctly');
 
 
 
