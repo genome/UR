@@ -145,14 +145,14 @@ sub is_subset_of {
     }
 
     unless (ref($other_template) and $self->isa(ref $other_template)) {
-        $cached_subset_data->{$other_template} = 0;
+        $cached_subset_data->{$other_template_id} = 0;
         return 0;
     }
 
     my $my_class = $self->subject_class_name;
     my $other_class = $other_template->subject_class_name;
     unless ($my_class eq $other_class or $my_class->isa($other_class)) {
-        $cached_subset_data->{$other_template} = undef;
+        $cached_subset_data->{$other_template_id} = undef;
         return;
     }
 
@@ -165,7 +165,7 @@ sub is_subset_of {
         }
         $operators_match = undef if ($operators{$prop} ne $other_template->operator_for($prop));
     }
-    $cached_subset_data = $operators_match;
+    $cached_subset_data->{$other_template_id} = $operators_match;
     return $operators_match;
 }
 
