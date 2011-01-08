@@ -23,7 +23,7 @@ sub used_libs {
         next if (grep { $_ =~ /^$abs_inc$/ } @perl5lib);
         push @extra, $inc;
     }
-    push @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
+    unshift @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
     return @extra;
 }
 
