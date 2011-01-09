@@ -48,6 +48,7 @@ Module::Build->new(
     #'XML::LibXML'         => '',
     #'XML::LibXSLT'        => '',
   },
+  cpan_client => 'cpanm',
   script_files => [ 'bin/ur' ],
   test_files => [qw|t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t|],
   tap_harness_args => { 'jobs' =>  8 },

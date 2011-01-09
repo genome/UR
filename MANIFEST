@@ -486,3 +486,4 @@ t/Vending/t/coin_return.t
 t/Vending/vend
 t/Vending/vend_interactive.pl
 t/Vending/Vocabulary.pm
+META.yml
