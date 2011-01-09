@@ -287,7 +287,6 @@ lib/UR/Value/URL.pm
 lib/UR/Vocabulary.pm
 LICENSE
 MANIFEST			This list of files
-META.yml
 README
 t/above.t
 t/CdExample.pm
