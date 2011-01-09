@@ -7,6 +7,7 @@ bin/command-ui.cgi
 bin/ur
 bin/xsl/command_ui.xsl
 bin/xsl/error.xsl
+Build.PL
 Changes
 debian/changelog
 debian/compat
@@ -81,6 +82,9 @@ lib/UR/DataSource/Meta.sqlite3
 lib/UR/DataSource/Meta.sqlite3-dump
 lib/UR/DataSource/Meta.sqlite3-dump-boostrap
 lib/UR/DataSource/Meta.sqlite3-schema
+lib/UR/DataSource/Meta.sqlite3n
+lib/UR/DataSource/Meta.sqlite3n-dump
+lib/UR/DataSource/Meta.sqlite3n-schema
 lib/UR/DataSource/MySQL.pm
 lib/UR/DataSource/Oracle.pm
 lib/UR/DataSource/Pg.pm
@@ -185,6 +189,7 @@ lib/UR/Namespace/Command/Test/Window.pm
 lib/UR/Namespace/Command/Update.pm
 lib/UR/Namespace/Command/Update/ClassDiagram.pm
 lib/UR/Namespace/Command/Update/ClassesFromDb.pm
+lib/UR/Namespace/Command/Update/Pod.pm
 lib/UR/Namespace/Command/Update/RenameClass.pm
 lib/UR/Namespace/Command/Update/RewriteClassHeader.pm
 lib/UR/Namespace/Command/Update/SchemaDiagram.pm
@@ -281,7 +286,6 @@ lib/UR/Value/Text.pm
 lib/UR/Value/URL.pm
 lib/UR/Vocabulary.pm
 LICENSE
-Build.PL
 MANIFEST			This list of files
 META.yml
 README
@@ -302,6 +306,9 @@ t/URT/DataSource/Meta.pm
 t/URT/DataSource/Meta.sqlite3
 t/URT/DataSource/Meta.sqlite3-dump
 t/URT/DataSource/Meta.sqlite3-schema
+t/URT/DataSource/Meta.sqlite3n
+t/URT/DataSource/Meta.sqlite3n-dump
+t/URT/DataSource/Meta.sqlite3n-schema
 t/URT/DataSource/SomeFile.pm
 t/URT/DataSource/SomeFileMux.pm
 t/URT/DataSource/SomeMySQL.pm
@@ -408,6 +415,7 @@ t/URT/t/73_opts_spec_creation_and_validation.t
 t/URT/t/74_xsl_view_url_convert.t
 t/URT/t/75_custom_loader.t
 t/URT/t/76_is_many_default_values.t
+t/URT/t/77_file_undef_value_handling.t
 t/URT/t/77_index_undef_value_handling.t
 t/URT/t/77_sql_undef_value_handling.t
 t/URT/t/78_get_by_subclass_params_load_properly.t
@@ -415,6 +423,9 @@ t/URT/t/79_like_operator.t
 t/URT/t/80_command_define_datasource.t
 t/URT/t/81_crud_custom_columnnames.t
 t/URT/t/82_boolexpr_op_underscore.t
+t/URT/t/83_commit_between_schemas.t
+t/URT/t/84_class_definition_errors.t
+t/URT/t/97_used_libs.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction-observers.t
 t/URT/t/99_transaction.t
@@ -453,8 +464,12 @@ t/Vending/DataSource/coin_types.tsv
 t/Vending/DataSource/CoinType.pm
 t/Vending/DataSource/Machine.pm
 t/Vending/DataSource/Machine.sqlite3-dump
+t/Vending/DataSource/Machine.sqlite3n-dump
 t/Vending/DataSource/Meta.pm
 t/Vending/DataSource/Meta.sqlite3-dump
+t/Vending/DataSource/Meta.sqlite3n
+t/Vending/DataSource/Meta.sqlite3n-dump
+t/Vending/DataSource/Meta.sqlite3n-schema
 t/Vending/get_coin_by_value.pl
 t/Vending/Machine.pm
 t/Vending/machine_classes_1.uxf
