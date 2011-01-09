@@ -548,7 +548,7 @@ requires:
   XML::Generator: ''
   XML::Simple: ''
   YAML: ''
-  perl: 5.008
+  perl: v5.8.7
   version: ''
 resources:
   license: http://dev.perl.org/licenses/

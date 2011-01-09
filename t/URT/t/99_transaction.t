@@ -3,9 +3,32 @@
 use strict;
 use warnings;
 
+#BEGIN { $ENV{UR_CONTEXT_BASE} = "URT::Context::Testing" };
+
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT;
+use DBI;
+use IO::Pipe;
 use Test::More;
+
+our @test_input = (
+    ["URT::Foo" => "f1","f2"],
+    ["URT::Bar" => "b1","b2"],
+);
+our $num_classes = scalar(@test_input);
+our $num_trans = 5;
+
+if ($INC{"UR.pm"} =~ /blib/) {
+    plan skip_all => 'slow and not needed at install, just at dev time';
+}
+else {  
+    plan tests => ((($num_trans * 6) * $num_classes) + 1);
+}
+
 use Data::Dumper;
 use Data::Compare;
+
 
 # With Purity on (which UR::Util::deep_copy does), Data::Dumper::Dumper complains when it
 # encounters code refs with no way to disable the warning message.  This is an underhanded
@@ -25,14 +48,6 @@ use UR::Context;
 use UR::Context::Transaction;
 use UR::DataSource;
 
-our @test_input = (
-    ["URT::Foo" => "f1","f2"],
-    ["URT::Bar" => "b1","b2"],
-);
-
-our $num_classes = scalar(@test_input);
-our $num_trans = 5;
-plan tests => ((($num_trans * 6) * $num_classes) + 1);
 
 sub dump_states {
     my ($before,$after);

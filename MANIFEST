@@ -281,7 +281,7 @@ lib/UR/Value/Text.pm
 lib/UR/Value/URL.pm
 lib/UR/Vocabulary.pm
 LICENSE
-Makefile.PL
+Build.PL
 MANIFEST			This list of files
 META.yml
 README
