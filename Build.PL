@@ -1,17 +1,14 @@
+#!/usr/bin/env perl
 
 use warnings FATAL => 'all';
 use strict;
-use inc::Module::Install;
+use Module::Build;
 
-name     'UR';
-license 'perl';
-all_from 'lib/UR.pm';
-install_script 'bin/ur';
-perl_version '5.008';
-
-# prereqs (ordered)
-features (
-    -core => [
+Module::Build->new(
+  module_name => 'UR',
+  license => 'perl',
+  requires => {
+    'perl' => '5.008',
         # pure Perl
         'Carp'                => '',
         'Sys::Hostname'       => '1.11',
@@ -38,25 +35,23 @@ features (
         # possibly move to a web-specific 
         'Net::HTTPServer'     => '',
         'CGI::Application'    => '',
-    ],
-    'Getopt::Complete' => [
+        
+        #'Getopt::Complete' => [
         # we may migrate some of the Command logic here and really depend on it
-        'Getopt::Complete'    => '0.18',
-    ],
-    'XSLT' => [
+        # currently it is actually not _required_ to function
+        'Getopt::Complete'    => 'v0.20',
+        
+        #'XSLT' => [
         # this stuff is hard to install and is only used by some views
-        'XML::LibXML'         => '',
-        'XML::LibXSLT'        => '',
-    ],
-);
+        #'XML::LibXML'         => '',
+        #'XML::LibXSLT'        => '',
+  },
+  script_files => [ 'bin/ur' ],
+  test_files => [qw|t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t|],
+)->create_build_script;
 
-# things the tests need
-build_requires 'Test::More' => '0.62';
-#build_requires 'Test::Deep' => '0.096';
-#build_requires 'Test::Differences' => '0.47';
-#build_requires 'Test::Exception' => '0.21';
+# These were in Makefile.PL, but have no equivalent here yet:
+#  all_from 'lib/UR.pm'
+#  build_requires 'Test::More' => '0.62';
+#  tests('t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t');
 
-tests('t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t');
-
-auto_install();
-WriteAll();

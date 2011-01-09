@@ -1,25 +1,555 @@
 ---
-abstract: 'rich declarative classes, transactional objects'
-author:
-  - 'UR was built by the software development team at the Genome Center'
-build_requires:
-  Test::Fork: 0.02
-  Test::More: 0.62
+abstract: 'rich declarative transactional objects'
+author: []
 configure_requires:
-  ExtUtils::MakeMaker: 6.48
-distribution_type: module
-generated_by: 'Module::Install version 0.81'
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3607'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
 name: UR
-no_index:
-  directory:
-    - inc
-    - t
+provides:
+  Class::Autouse:
+    file: lib/Class/Autouse_1_99_02.pm
+    version: 1.99_02
+  Command:
+    file: lib/Command.pm
+    version: 0
+  Command::DynamicSubCommands:
+    file: lib/Command/DynamicSubCommands.pm
+  Command::Test:
+    file: lib/Command/Test.pm
+  Command::Test::Echo:
+    file: lib/Command/Test/Echo.pm
+  Command::Test::Tree1:
+    file: lib/Command/Test/Tree1.pm
+  Command::Test::Tree1::Echo1:
+    file: lib/Command/Test/Tree1/Echo1.pm
+  Command::Test::Tree1::Echo2:
+    file: lib/Command/Test/Tree1/Echo2.pm
+  DebugWindow:
+    file: lib/UR/Namespace/Command/Test/Window.pm
+  Devel::callsfrom:
+    file: lib/Devel/callcount.pm
+  My::TAP::Parser::Iterator::Process::LSF:
+    file: lib/UR/Namespace/Command/Test/Run.pm
+  My::TAP::Parser::IteratorFactory::LSF:
+    file: lib/UR/Namespace/Command/Test/Run.pm
+  My::TAP::Parser::Multiplexer:
+    file: lib/UR/Namespace/Command/Test/Run.pm
+  My::TAP::Parser::Scheduler:
+    file: lib/UR/Namespace/Command/Test/Run.pm
+  My::TAP::Parser::Timer:
+    file: lib/UR/Namespace/Command/Test/Run.pm
+  UR:
+    file: lib/UR.pm
+    version: v0.20.0
+  UR::BoolExpr:
+    file: lib/UR/BoolExpr.pm
+    version: 0
+  UR::BoolExpr::Template:
+    file: lib/UR/BoolExpr/Template.pm
+    version: 0
+  UR::BoolExpr::Template::And:
+    file: lib/UR/BoolExpr/Template/And.pm
+    version: 0
+  UR::BoolExpr::Template::Composite:
+    file: lib/UR/BoolExpr/Template/Composite.pm
+    version: 0
+  UR::BoolExpr::Template::Or:
+    file: lib/UR/BoolExpr/Template/Or.pm
+    version: 0
+  UR::BoolExpr::Template::PropertyComparison:
+    file: lib/UR/BoolExpr/Template/PropertyComparison.pm
+    version: 0
+  UR::BoolExpr::Template::PropertyComparison::Between:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/Between.pm
+  UR::BoolExpr::Template::PropertyComparison::Equals:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/Equals.pm
+  UR::BoolExpr::Template::PropertyComparison::False:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/False.pm
+  UR::BoolExpr::Template::PropertyComparison::GreaterOrEqual:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/GreaterOrEqual.pm
+  UR::BoolExpr::Template::PropertyComparison::GreaterThan:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/GreaterThan.pm
+  UR::BoolExpr::Template::PropertyComparison::In:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/In.pm
+  UR::BoolExpr::Template::PropertyComparison::LessOrEqual:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/LessOrEqual.pm
+  UR::BoolExpr::Template::PropertyComparison::LessThan:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/LessThan.pm
+  UR::BoolExpr::Template::PropertyComparison::Like:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/Like.pm
+  UR::BoolExpr::Template::PropertyComparison::Matches:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/Matches.pm
+  UR::BoolExpr::Template::PropertyComparison::NotEqual:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/NotEqual.pm
+  UR::BoolExpr::Template::PropertyComparison::NotIn:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/NotIn.pm
+  UR::BoolExpr::Template::PropertyComparison::NotLike:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/NotLike.pm
+  UR::BoolExpr::Template::PropertyComparison::True:
+    file: lib/UR/BoolExpr/Template/PropertyComparison/True.pm
+  UR::BoolExpr::Util:
+    file: lib/UR/BoolExpr/Util.pm
+  UR::Change:
+    file: lib/UR/Change.pm
+  UR::Context:
+    file: lib/UR/Context.pm
+  UR::Context::DefaultRoot:
+    file: lib/UR/Context/DefaultRoot.pm
+  UR::Context::Process:
+    file: lib/UR/Context/Process.pm
+    version: 0
+  UR::Context::Root:
+    file: lib/UR/Context/Root.pm
+  UR::Context::Transaction:
+    file: lib/UR/Context/Transaction.pm
+  UR::DBI:
+    file: lib/UR/DBI.pm
+    version: 0
+  UR::DBI::db:
+    file: lib/UR/DBI.pm
+  UR::DBI::st:
+    file: lib/UR/DBI.pm
+  UR::DBIx::ContextualFetch:
+    file: lib/UR/DBIx/ContextualFetch.pm
+    version: 1.03
+  UR::DBIx::ContextualFetch::db:
+    file: lib/UR/DBIx/ContextualFetch.pm
+  UR::DBIx::ContextualFetch::st:
+    file: lib/UR/DBIx/ContextualFetch.pm
+  UR::DataSource:
+    file: lib/UR/DataSource.pm
+  UR::DataSource::CSV:
+    file: lib/UR/DataSource/CSV.pm
+  UR::DataSource::Code:
+    file: lib/UR/DataSource/Code.pm
+  UR::DataSource::Default:
+    file: lib/UR/DataSource/Default.pm
+  UR::DataSource::File:
+    file: lib/UR/DataSource/File.pm
+  UR::DataSource::FileMux:
+    file: lib/UR/DataSource/FileMux.pm
+  UR::DataSource::Meta:
+    file: lib/UR/DataSource/Meta.pm
+  UR::DataSource::MySQL:
+    file: lib/UR/DataSource/MySQL.pm
+  UR::DataSource::Oracle:
+    file: lib/UR/DataSource/Oracle.pm
+  UR::DataSource::Pg:
+    file: lib/UR/DataSource/Pg.pm
+  UR::DataSource::RDBMS:
+    file: lib/UR/DataSource/RDBMS.pm
+  UR::DataSource::RDBMS::BitmapIndex:
+    file: lib/UR/DataSource/RDBMS/BitmapIndex.pm
+  UR::DataSource::RDBMS::Entity:
+    file: lib/UR/DataSource/RDBMS/Entity.pm
+  UR::DataSource::RDBMS::FkConstraint:
+    file: lib/UR/DataSource/RDBMS/FkConstraint.pm
+  UR::DataSource::RDBMS::FkConstraintColumn:
+    file: lib/UR/DataSource/RDBMS/FkConstraintColumn.pm
+  UR::DataSource::RDBMS::PkConstraintColumn:
+    file: lib/UR/DataSource/RDBMS/PkConstraintColumn.pm
+  UR::DataSource::RDBMS::Table:
+    file: lib/UR/DataSource/RDBMS/Table.pm
+  UR::DataSource::RDBMS::Table::View::Default::Text:
+    file: lib/UR/DataSource/RDBMS/Table/View/Default/Text.pm
+  UR::DataSource::RDBMS::TableColumn:
+    file: lib/UR/DataSource/RDBMS/TableColumn.pm
+  UR::DataSource::RDBMS::TableColumn::View::Default::Text:
+    file: lib/UR/DataSource/RDBMS/TableColumn/View/Default/Text.pm
+  UR::DataSource::RDBMS::UniqueConstraintColumn:
+    file: lib/UR/DataSource/RDBMS/UniqueConstraintColumn.pm
+  UR::DataSource::RemoteCache:
+    file: lib/UR/DataSource/RemoteCache.pm
+  UR::DataSource::SQLite:
+    file: lib/UR/DataSource/SQLite.pm
+  UR::DataSource::ValueDomain:
+    file: lib/UR/DataSource/ValueDomain.pm
+  UR::Debug:
+    file: lib/UR/Debug.pm
+  UR::DeletedRef:
+    file: lib/UR/DeletedRef.pm
+  UR::Env::UR_COMMAND_DUMP_STATUS_MESSAGES:
+    file: lib/UR/Env/UR_COMMAND_DUMP_STATUS_MESSAGES.pm
+  UR::Env::UR_CONTEXT_BASE:
+    file: lib/UR/Env/UR_CONTEXT_BASE.pm
+  UR::Env::UR_CONTEXT_CACHE_SIZE_HIGHWATER:
+    file: lib/UR/Env/UR_CONTEXT_CACHE_SIZE_HIGHWATER.pm
+  UR::Env::UR_CONTEXT_CACHE_SIZE_LOWWATER:
+    file: lib/UR/Env/UR_CONTEXT_CACHE_SIZE_LOWWATER.pm
+  UR::Env::UR_CONTEXT_LIBS:
+    file: lib/UR/Env/UR_USED_LIBS.pm
+  UR::Env::UR_CONTEXT_MONITOR_QUERY:
+    file: lib/UR/Env/UR_CONTEXT_MONITOR_QUERY.pm
+  UR::Env::UR_CONTEXT_ROOT:
+    file: lib/UR/Env/UR_CONTEXT_ROOT.pm
+  UR::Env::UR_DBI_DUMP_STACK_ON_CONNECT:
+    file: lib/UR/Env/UR_DBI_DUMP_STACK_ON_CONNECT.pm
+  UR::Env::UR_DBI_EXPLAIN_SQL_CALLSTACK:
+    file: lib/UR/Env/UR_DBI_EXPLAIN_SQL_CALLSTACK.pm
+  UR::Env::UR_DBI_EXPLAIN_SQL_IF:
+    file: lib/UR/Env/UR_DBI_EXPLAIN_SQL_IF.pm
+  UR::Env::UR_DBI_EXPLAIN_SQL_MATCH:
+    file: lib/UR/Env/UR_DBI_EXPLAIN_SQL_MATCH.pm
+  UR::Env::UR_DBI_EXPLAIN_SQL_SLOW:
+    file: lib/UR/Env/UR_DBI_EXPLAIN_SQL_SLOW.pm
+  UR::Env::UR_DBI_MONITOR_DML:
+    file: lib/UR/Env/UR_DBI_MONITOR_DML.pm
+  UR::Env::UR_DBI_MONITOR_EVERY_FETCH:
+    file: lib/UR/Env/UR_DBI_MONITOR_EVERY_FETCH.pm
+  UR::Env::UR_DBI_MONITOR_SQL:
+    file: lib/UR/Env/UR_DBI_MONITOR_SQL.pm
+  UR::Env::UR_DBI_NO_COMMIT:
+    file: lib/UR/Env/UR_DBI_NO_COMMIT.pm
+  UR::Env::UR_DEBUG_OBJECT_PRUNING:
+    file: lib/UR/Env/UR_DEBUG_OBJECT_PRUNING.pm
+  UR::Env::UR_DEBUG_OBJECT_RELEASE:
+    file: lib/UR/Env/UR_DEBUG_OBJECT_RELEASE.pm
+  UR::Env::UR_IGNORE:
+    file: lib/UR/Env/UR_IGNORE.pm
+  UR::Env::UR_MOOSE:
+    file: lib/UR/Env/UR_MOOSE.pm
+  UR::Env::UR_NR_CPU:
+    file: lib/UR/Env/UR_NR_CPU.pm
+  UR::Env::UR_STACK_DUMP_ON_DIE:
+    file: lib/UR/Env/UR_STACK_DUMP_ON_DIE.pm
+  UR::Env::UR_STACK_DUMP_ON_WARN:
+    file: lib/UR/Env/UR_STACK_DUMP_ON_WARN.pm
+  UR::Env::UR_TEST_FILLDB:
+    file: lib/UR/Env/UR_TEST_FILLDB.pm
+  UR::Env::UR_TEST_QUIET:
+    file: lib/UR/Env/UR_TEST_QUIET.pm
+  UR::Env::UR_USED_MODS:
+    file: lib/UR/Env/UR_USED_MODS.pm
+  UR::Env::UR_USE_DUMMY_AUTOGENERATED_IDS:
+    file: lib/UR/Env/UR_USE_DUMMY_AUTOGENERATED_IDS.pm
+  UR::Exit:
+    file: lib/UR/Exit.pm
+    version: 0
+  UR::ModuleBase:
+    file: lib/UR/ModuleBase.pm
+    version: 0
+  UR::ModuleBase::Message:
+    file: lib/UR/ModuleBase.pm
+  UR::ModuleConfig:
+    file: lib/UR/ModuleConfig.pm
+    version: 0
+  UR::ModuleLoader:
+    file: lib/UR/ModuleLoader.pm
+  UR::Moose:
+    file: lib/UR/Moose.pm
+  UR::Namespace:
+    file: lib/UR/Namespace.pm
+  UR::Namespace::Command:
+    file: lib/UR/Namespace/Command.pm
+  UR::Namespace::Command::Define:
+    file: lib/UR/Namespace/Command/Define.pm
+  UR::Namespace::Command::Define::Class:
+    file: lib/UR/Namespace/Command/Define/Class.pm
+  UR::Namespace::Command::Define::Datasource:
+    file: lib/UR/Namespace/Command/Define/Datasource.pm
+  UR::Namespace::Command::Define::Datasource::File:
+    file: lib/UR/Namespace/Command/Define/Datasource/File.pm
+  UR::Namespace::Command::Define::Datasource::Mysql:
+    file: lib/UR/Namespace/Command/Define/Datasource/Mysql.pm
+  UR::Namespace::Command::Define::Datasource::Oracle:
+    file: lib/UR/Namespace/Command/Define/Datasource/Oracle.pm
+  UR::Namespace::Command::Define::Datasource::Pg:
+    file: lib/UR/Namespace/Command/Define/Datasource/Pg.pm
+  UR::Namespace::Command::Define::Datasource::Rdbms:
+    file: lib/UR/Namespace/Command/Define/Datasource/Rdbms.pm
+  UR::Namespace::Command::Define::Datasource::RdbmsWithAuth:
+    file: lib/UR/Namespace/Command/Define/Datasource/RdbmsWithAuth.pm
+  UR::Namespace::Command::Define::Datasource::Sqlite:
+    file: lib/UR/Namespace/Command/Define/Datasource/Sqlite.pm
+  UR::Namespace::Command::Define::Db:
+    file: lib/UR/Namespace/Command/Define/Db.pm
+  UR::Namespace::Command::Define::Namespace:
+    file: lib/UR/Namespace/Command/Define/Namespace.pm
+  UR::Namespace::Command::Describe:
+    file: lib/UR/Namespace/Command/Describe.pm
+  UR::Namespace::Command::Init:
+    file: lib/UR/Namespace/Command/Init.pm
+  UR::Namespace::Command::List:
+    file: lib/UR/Namespace/Command/List.pm
+  UR::Namespace::Command::List::Classes:
+    file: lib/UR/Namespace/Command/List/Classes.pm
+  UR::Namespace::Command::List::Modules:
+    file: lib/UR/Namespace/Command/List/Modules.pm
+  UR::Namespace::Command::List::Objects:
+    file: lib/UR/Namespace/Command/List/Objects.pm
+  UR::Namespace::Command::Old:
+    file: lib/UR/Namespace/Command/Old.pm
+  UR::Namespace::Command::Old::DiffRewrite:
+    file: lib/UR/Namespace/Command/Old/DiffRewrite.pm
+  UR::Namespace::Command::Old::DiffUpdate:
+    file: lib/UR/Namespace/Command/Old/DiffUpdate.pm
+  UR::Namespace::Command::Old::ExportDbicClasses:
+    file: lib/UR/Namespace/Command/Old/ExportDbicClasses.pm
+  UR::Namespace::Command::Old::Info:
+    file: lib/UR/Namespace/Command/Old/Info.pm
+  UR::Namespace::Command::Old::Redescribe:
+    file: lib/UR/Namespace/Command/Old/Redescribe.pm
+  UR::Namespace::Command::RunsOnModulesInTree:
+    file: lib/UR/Namespace/Command/RunsOnModulesInTree.pm
+  UR::Namespace::Command::Sys:
+    file: lib/UR/Namespace/Command/Sys.pm
+  UR::Namespace::Command::Sys::ClassBrowser:
+    file: lib/UR/Namespace/Command/Sys/ClassBrowser.pm
+  UR::Namespace::Command::Test:
+    file: lib/UR/Namespace/Command/Test.pm
+  UR::Namespace::Command::Test::Callcount:
+    file: lib/UR/Namespace/Command/Test/Callcount.pm
+  UR::Namespace::Command::Test::Callcount::List:
+    file: lib/UR/Namespace/Command/Test/Callcount/List.pm
+  UR::Namespace::Command::Test::Compile:
+    file: lib/UR/Namespace/Command/Test/Compile.pm
+  UR::Namespace::Command::Test::Eval:
+    file: lib/UR/Namespace/Command/Test/Eval.pm
+  UR::Namespace::Command::Test::Run:
+    file: lib/UR/Namespace/Command/Test/Run.pm
+  UR::Namespace::Command::Test::TrackObjectRelease:
+    file: lib/UR/Namespace/Command/Test/TrackObjectRelease.pm
+  UR::Namespace::Command::Test::Use:
+    file: lib/UR/Namespace/Command/Test/Use.pm
+  UR::Namespace::Command::Test::Window:
+    file: lib/UR/Namespace/Command/Test/Window.pm
+  UR::Namespace::Command::Update:
+    file: lib/UR/Namespace/Command/Update.pm
+  UR::Namespace::Command::Update::ClassDiagram:
+    file: lib/UR/Namespace/Command/Update/ClassDiagram.pm
+  UR::Namespace::Command::Update::ClassesFromDb:
+    file: lib/UR/Namespace/Command/Update/ClassesFromDb.pm
+  UR::Namespace::Command::Update::RenameClass:
+    file: lib/UR/Namespace/Command/Update/RenameClass.pm
+  UR::Namespace::Command::Update::RewriteClassHeader:
+    file: lib/UR/Namespace/Command/Update/RewriteClassHeader.pm
+  UR::Namespace::Command::Update::SchemaDiagram:
+    file: lib/UR/Namespace/Command/Update/SchemaDiagram.pm
+  UR::Namespace::Command::Update::TabCompletionSpec:
+    file: lib/UR/Namespace/Command/Update/TabCompletionSpec.pm
+  UR::Namespace::View::SchemaBrowser::CgiApp:
+    file: lib/UR/Namespace/View/SchemaBrowser/CgiApp.pm
+  UR::Namespace::View::SchemaBrowser::CgiApp::Base:
+    file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/Base.pm
+  UR::Namespace::View::SchemaBrowser::CgiApp::Class:
+    file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/Class.pm
+  UR::Namespace::View::SchemaBrowser::CgiApp::File:
+    file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/File.pm
+  UR::Namespace::View::SchemaBrowser::CgiApp::Index:
+    file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/Index.pm
+  UR::Namespace::View::SchemaBrowser::CgiApp::Schema:
+    file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/Schema.pm
+  UR::Object:
+    file: lib/UR/Object.pm
+    version: 0
+  UR::Object::Accessorized:
+    file: lib/UR/Object/Accessorized.pm
+  UR::Object::Command::FetchAndDo:
+    file: lib/UR/Object/Command/FetchAndDo.pm
+  UR::Object::Command::List:
+    file: lib/UR/Object/Command/List.pm
+  UR::Object::Command::List::Csv:
+    file: lib/UR/Object/Command/List.pm
+  UR::Object::Command::List::Html:
+    file: lib/UR/Object/Command/List.pm
+  UR::Object::Command::List::Newtext:
+    file: lib/UR/Object/Command/List.pm
+  UR::Object::Command::List::Pretty:
+    file: lib/UR/Object/Command/List.pm
+  UR::Object::Command::List::Style:
+    file: lib/UR/Object/Command/List.pm
+  UR::Object::Command::List::Text:
+    file: lib/UR/Object/Command/List.pm
+  UR::Object::Command::List::Xml:
+    file: lib/UR/Object/Command/List.pm
+  UR::Object::Ghost:
+    file: lib/UR/Object/Ghost.pm
+  UR::Object::Index:
+    file: lib/UR/Object/Index.pm
+    version: 0
+  UR::Object::Iterator:
+    file: lib/UR/Object/Iterator.pm
+  UR::Object::Property:
+    file: lib/UR/Object/Property.pm
+    version: 0
+  UR::Object::Property::View::Default::Text:
+    file: lib/UR/Object/Property/View/Default/Text.pm
+  UR::Object::Property::View::DescriptionLineItem::Text:
+    file: lib/UR/Object/Property/View/DescriptionLineItem/Text.pm
+  UR::Object::Property::View::ReferenceDescription::Text:
+    file: lib/UR/Object/Property/View/ReferenceDescription/Text.pm
+  UR::Object::Set:
+    file: lib/UR/Object/Set.pm
+  UR::Object::Set::View::Default::Json:
+    file: lib/UR/Object/Set/View/Default/Json.pm
+  UR::Object::Set::View::Default::Xml:
+    file: lib/UR/Object/Set/View/Default/Xml.pm
+  UR::Object::Tag:
+    file: lib/UR/Object/Tag.pm
+    version: 0
+  UR::Object::Type:
+    file: lib/UR/Object/Type.pm
+    version: 0
+  UR::Object::Type::AccessorWriter:
+    file: lib/UR/Object/Type/AccessorWriter.pm
+  UR::Object::Type::AccessorWriter::Product:
+    file: lib/UR/Object/Type/AccessorWriter/Product.pm
+  UR::Object::Type::AccessorWriter::Sum:
+    file: lib/UR/Object/Type/AccessorWriter/Sum.pm
+  UR::Object::Type::Initializer:
+    file: lib/UR/Object/Type/Initializer.pm
+  UR::Object::Type::ModuleWriter:
+    file: lib/UR/Object/Type/ModuleWriter.pm
+  UR::Object::Type::View::Default::Text:
+    file: lib/UR/Object/Type/View/Default/Text.pm
+  UR::Object::Type::View::Default::Umlet:
+    file: lib/UR/Object/Type/View/Default/Umlet.pm
+  UR::Object::Type::View::Default::Xml:
+    file: lib/UR/Object/Type/View/Default/Xml.pm
+  UR::Object::Umlet:
+    file: lib/UR/Object/Umlet.pm
+  UR::Object::Umlet::Class:
+    file: lib/UR/Object/Umlet/Class.pm
+  UR::Object::Umlet::Diagram:
+    file: lib/UR/Object/Umlet/Diagram.pm
+  UR::Object::Umlet::Other:
+    file: lib/UR/Object/Umlet/Other.pm
+  UR::Object::Umlet::PictureElement:
+    file: lib/UR/Object/Umlet/PictureElement.pm
+  UR::Object::Umlet::Relation:
+    file: lib/UR/Object/Umlet/Relation.pm
+  UR::Object::Value:
+    file: lib/UR/Object/Value.pm
+  UR::Object::View:
+    file: lib/UR/Object/View.pm
+    version: 0
+  UR::Object::View::Aspect:
+    file: lib/UR/Object/View/Aspect.pm
+    version: 0
+  UR::Object::View::Default::Gtk:
+    file: lib/UR/Object/View/Default/Gtk.pm
+  UR::Object::View::Default::Gtk2:
+    file: lib/UR/Object/View/Default/Gtk2.pm
+  UR::Object::View::Default::Html:
+    file: lib/UR/Object/View/Default/Html.pm
+  UR::Object::View::Default::Json:
+    file: lib/UR/Object/View/Default/Json.pm
+  UR::Object::View::Default::Text:
+    file: lib/UR/Object/View/Default/Text.pm
+  UR::Object::View::Default::Xml:
+    file: lib/UR/Object/View/Default/Xml.pm
+  UR::Object::View::Default::Xsl:
+    file: lib/UR/Object/View/Default/Xsl.pm
+  UR::Object::View::Lister::Text:
+    file: lib/UR/Object/View/Lister/Text.pm
+  UR::Object::View::Toolkit:
+    file: lib/UR/Object/View/Toolkit.pm
+    version: 0
+  UR::Object::View::Toolkit::Text:
+    file: lib/UR/Object/View/Toolkit/Text.pm
+    version: 0
+  UR::Object::View::Toolkit::Umlet:
+    file: lib/UR/Object/View/Toolkit/Umlet.pm
+  UR::Observer:
+    file: lib/UR/Observer.pm
+  UR::Report:
+    file: lib/UR/Report.pm
+  UR::Service::DataSourceProxy:
+    file: lib/UR/Service/DataSourceProxy.pm
+  UR::Service::JsonRpcServer:
+    file: lib/UR/Service/JsonRpcServer.pm
+  UR::Service::RPC::Executer:
+    file: lib/UR/Service/RPC/Executer.pm
+  UR::Service::RPC::Message:
+    file: lib/UR/Service/RPC/Message.pm
+  UR::Service::RPC::Server:
+    file: lib/UR/Service/RPC/Server.pm
+  UR::Service::RPC::TcpConnectionListener:
+    file: lib/UR/Service/RPC/TcpConnectionListener.pm
+  UR::Service::XMLCommandExecutor:
+    file: lib/UR/Service/XMLCommandExecutor.pm
+  UR::Singleton:
+    file: lib/UR/Singleton.pm
+  UR::Test:
+    file: lib/UR/Test.pm
+  UR::Time:
+    file: lib/UR/Time.pm
+    version: 0
+  UR::Util:
+    file: lib/UR/Util.pm
+  UR::Value:
+    file: lib/UR/Value.pm
+  UR::Value::ARRAY:
+    file: lib/UR/Value/ARRAY.pm
+  UR::Value::Blob:
+    file: lib/UR/Value/Blob.pm
+  UR::Value::CSV:
+    file: lib/UR/Value/CSV.pm
+  UR::Value::DateTime:
+    file: lib/UR/Value/DateTime.pm
+  UR::Value::Decimal:
+    file: lib/UR/Value/Decimal.pm
+  UR::Value::DirectoryPath:
+    file: lib/UR/Value/DirectoryPath.pm
+  UR::Value::FOF:
+    file: lib/UR/Value/FOF.pm
+  UR::Value::FilePath:
+    file: lib/UR/Value/FilePath.pm
+  UR::Value::FilesystemPath:
+    file: lib/UR/Value/FilesystemPath.pm
+  UR::Value::HASH:
+    file: lib/UR/Value/HASH.pm
+  UR::Value::Integer:
+    file: lib/UR/Value/Integer.pm
+  UR::Value::Iterator:
+    file: lib/UR/Value/Iterator.pm
+  UR::Value::Number:
+    file: lib/UR/Value/Number.pm
+  UR::Value::PerlReference:
+    file: lib/UR/Value/PerlReference.pm
+  UR::Value::SCALAR:
+    file: lib/UR/Value/SCALAR.pm
+  UR::Value::Set:
+    file: lib/UR/Value/Set.pm
+  UR::Value::Text:
+    file: lib/UR/Value/Text.pm
+  UR::Value::URL:
+    file: lib/UR/Value/URL.pm
+  UR::Vocabulary:
+    file: lib/UR/Vocabulary.pm
+  above:
+    file: lib/above.pm
+  class_name:
+    file: lib/UR/Object/Type/Initializer.pm
+    version: 2
 requires:
-  perl: 5.8.0
+  CGI::Application: ''
+  Carp: ''
+  Class::Inspector: ''
+  DBD::SQLite: 1.14
+  DBI: 1.601
+  Data::Compare: 0.13
+  Date::Format: ''
+  File::Basename: 2.73
+  FreezeThaw: 0.43
+  Getopt::Complete: v0.20
+  Lingua::EN::Inflect: 1.88
+  Net::HTTPServer: ''
+  Path::Class: ''
+  Sub::Install: 0.924
+  Sub::Name: 0.04
+  Sys::Hostname: 1.11
+  Text::Diff: 0.35
+  XML::Dumper: ''
+  XML::Generator: ''
+  XML::Simple: ''
+  YAML: ''
+  perl: 5.008
+  version: ''
 resources:
   license: http://dev.perl.org/licenses/
-version: v0.20
+version: v0.20.0

@@ -1,5 +1,11 @@
 Revision history for UR
 
+0.20    2011-01-11
+        even faster compile (<.5s)
+        even faster object creation
+        documentation polish
+        switch from Module::Install to Module::Build
+
 0.19    2010-12-24
         faster compile
         faster query cache resolution
