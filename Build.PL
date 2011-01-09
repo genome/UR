@@ -50,7 +50,7 @@ Module::Build->new(
   },
   script_files => [ 'bin/ur' ],
   test_files => [qw|t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t|],
-  tap_harness_args => { 'jobs' =>  16 },
+  tap_harness_args => { 'jobs' =>  8 },
 )->create_build_script;
 
 # These were in Makefile.PL, but have no equivalent here yet:
