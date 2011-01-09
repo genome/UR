@@ -323,6 +323,8 @@ provides:
     file: lib/UR/Namespace/Command/Update/ClassDiagram.pm
   UR::Namespace::Command::Update::ClassesFromDb:
     file: lib/UR/Namespace/Command/Update/ClassesFromDb.pm
+  UR::Namespace::Command::Update::Pod:
+    file: lib/UR/Namespace/Command/Update/Pod.pm
   UR::Namespace::Command::Update::RenameClass:
     file: lib/UR/Namespace/Command/Update/RenameClass.pm
   UR::Namespace::Command::Update::RewriteClassHeader:
