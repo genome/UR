@@ -44,7 +44,7 @@ provides:
     file: lib/UR/Namespace/Command/Test/Run.pm
   UR:
     file: lib/UR.pm
-    version: v0.20.0
+    version: 0.20
   UR::BoolExpr:
     file: lib/UR/BoolExpr.pm
     version: 0
@@ -554,4 +554,4 @@ requires:
   version: ''
 resources:
   license: http://dev.perl.org/licenses/
-version: v0.20.0
+version: 0.20
