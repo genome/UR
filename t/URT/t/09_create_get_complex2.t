@@ -23,18 +23,18 @@ $p6 = Acme::Product->create(name => "plastique",    genius => 8,    manufacturer
 $p7 = Acme::Product->create(name => "mega copter",  genius => 2,    manufacturer_name => "Cheap Chopper");
 
 @obj = Acme::Product->get(name => { operator => "like", value => '%copter' });
-is(scalar(@obj),2);
+is(scalar(@obj),2, 'Two objects match name like "%copter"');
 
 @obj = Acme::Product->get(genius => { operator => ">=", value => 6 });
-is(scalar(@obj),4);
+is(scalar(@obj),4, '4 objects have genius >= 6');
 
 @obj = Acme::Product->get(genius => { operator => "between", value => [5,7] });
-is(scalar(@obj),4);
+is(scalar(@obj),4, '4 objects have genius between 5 and 7');
 
 @obj = Acme::Product->get('genius between' => [5,7] );
-is(scalar(@obj),4);
+is(scalar(@obj),4, '4 objects have genius between 5 and 7 (alternate syntax)');
 
 @obj = sort Acme::Product->get(name => { operator => "not in", value => ['jet pack', 'dynamite'] });
-is(scalar(@obj),5);
+is(scalar(@obj),5, '5 objects have name not in ["jet pack","dynamite"]');
 
  

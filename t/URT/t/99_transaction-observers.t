@@ -1,26 +1,10 @@
-#
-#===============================================================================
-#
-#         FILE:  99_transaction-observers.t
-#
-#  DESCRIPTION:  
-#
-#        FILES:  ---
-#         BUGS:  ---
-#        NOTES:  ---
-#       AUTHOR:  Nathan Nutter (nnutter@genome.wustl.edu), 
-#      COMPANY:  Genome Center at Washington University
-#      VERSION:  1.0
-#      CREATED:  10/12/2010 02:02:21 PM
-#     REVISION:  ---
-#===============================================================================
 
 use strict;
 use warnings;
 use UR;
 use IO::File;
 
-use Test::More;
+use Test::More tests => 52;
 
 UR::Object::Type->define(
     class_name => 'Circle',
@@ -89,7 +73,6 @@ ok($circle->radius == 1, 'default radius is 1');
 
 # Verify Transaction Rollback Observer Runs
 {
-    print "*** Starting rollback tests...\n";
     $circle->radius(3);
     ok($circle->radius == 3, "original radius is three");
     my $transaction = UR::Context::Transaction->begin();
@@ -110,7 +93,6 @@ ok($circle->radius == 1, 'default radius is 1');
 
 # Verify Transaction Commit Observer Runs
 {
-    print "*** Starting commit tests...\n";
     $circle->radius(4);
     ok($circle->radius == 4, "original radius (commit test) is four");
     my $transaction = UR::Context::Transaction->begin();
@@ -125,7 +107,6 @@ ok($circle->radius == 1, 'default radius is 1');
     ok($circle->radius == 6, "after commit, radius is six");
 
     # Trying to Rollback a Committed Transaction Fails
-    print "Should fail to rollback transaction no longer on stack...\n";
     ok($transaction->state eq 'committed', "transaction is already committed");
     my $rv= eval {$transaction->rollback()} || 0;
     ok($rv == 0, "properly failed transaction rollback for already committed transaction");
@@ -134,9 +115,7 @@ ok($circle->radius == 1, 'default radius is 1');
 
 
 # Test Nested Transactions
-print "*** Starting transaction within a transaction tests...\n";
 {
-    print "Testing inner rollback...\n";
     $circle->radius(3);
     ok($circle->radius == 3, "original radius is 3");
     my $outer_transaction = UR::Context::Transaction->begin();
@@ -161,9 +140,8 @@ print "*** Starting transaction within a transaction tests...\n";
     ok($circle->radius == 3, "after rollback, radius is 3");
 };
 
+# testing inner commit
 {
-    print "Testing inner commit...\n";
-    $DB::single = 1;
     $circle->radius(4);
     ok($circle->radius == 4, "original radius is 4");
     my $outer_transaction = UR::Context::Transaction->begin();

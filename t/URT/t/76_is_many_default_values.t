@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use Data::Dumper;
-use Test::More;
+use Test::More tests => 6;
 
 class Spy {
     has => [
@@ -22,7 +22,7 @@ class Spy {
 
     my $default_aliases = '007|Bond|James Bond';
     my $aliases = join('|', sort($spy->aliases));
-    print "Aliases: $aliases\nExpected Aliases: $default_aliases\n";
+    #print "Aliases: $aliases\nExpected Aliases: $default_aliases\n";
     ok($aliases eq $default_aliases, "Spy's default aliases are correct");
 }
 
@@ -33,7 +33,7 @@ class Spy {
     isa_ok($spy, 'Spy');
     ok($spy->name eq $name, "Spy's name is correct");
     my $aliases = join('|', sort($spy->aliases));
-    print "Aliases: $aliases\nExpected Aliases: $alias\n";
+    #print "Aliases: $aliases\nExpected Aliases: $alias\n";
     ok($aliases eq $alias, "Spy's aliases are correct");
 }
 
@@ -41,4 +41,3 @@ class Spy {
     ;
 }
 
-done_testing();

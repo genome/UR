@@ -23,8 +23,10 @@ use URT::DataSource::SomeSQLite;
 # UR::DataSource::RDBMS::_sync_database to process it as a prerequsite.  There was a bug 
 # that could cause data to get dropped on the floor in this case (fixed in commit da174c) 
 
-my ($fh1, $tmp_file1) = File::Temp::tempfile(CLEANUP => 1);
-my ($fh2, $tmp_file2) = File::Temp::tempfile(CLEANUP => 1);
+our($tmp_file1, $tmp_file2);
+$tmp_file1 = File::Temp::tmpnam() . "_ur_testsuite_83_db1.sqlite3";
+$tmp_file2 = File::Temp::tmpnam() . "_ur_testsuite_83_db2.sqlite3";
+END { unlink($tmp_file1, $tmp_file2); }
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 

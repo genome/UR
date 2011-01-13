@@ -218,7 +218,7 @@ is($file_seek_pos, $file_line_length, 'seek() set the file pos to 0');
 
 &clear_trackers();
 $lower_iter = undef;
-diag('Closing the lower case object iterator');
+#diag('Closing the lower case object iterator');
 is($file_new, 0, 'new() was not called on the file handle');
 is($file_open, 0, 'open() was not called on the file handle');
 is($file_close, 0, 'close() was not called on the file handle');
@@ -235,7 +235,7 @@ is($file_seek, 0, 'seek() was not called on the file handle');
 
 &clear_trackers();
 $upper_iter = undef;
-diag('Closing the upper case object iterator');
+#diag('Closing the upper case object iterator');
 is($file_new, 0, 'new() was not called on the file handle');
 is($file_open, 0, 'open() was not called on the file handle');
 is($file_close, 1, 'close() was called on the file handle');

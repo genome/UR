@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More tests => 21;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
