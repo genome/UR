@@ -205,7 +205,7 @@ time.
 
 =over 4
 
-=item1 _sub_commands_from 
+=item _sub_commands_from 
 
     $base_namespace = Acme::Order::Command->_sub_commands_from();
     # 'Acme::Task
@@ -219,7 +219,7 @@ time.
 
 =over 4
 
-=item1 _target_class_name
+=item _target_class_name
 
     $c= Acme::Order::Command::Purchasing->_target_class_name;
     # 'Acme::Task::Foo'
@@ -231,7 +231,9 @@ time.
 
 =head1 OPTIONAL OVERRIDES
 
-=item1 _build_sub_commmand
+=over 4
+
+=item _build_sub_commmand
 
     This can be overridden to customize the sub-command construction.
     By default, each target under _sub_commands_from will result in 
@@ -254,7 +256,7 @@ time.
     to be created.  The return list can include more than one class name,
     or zero class names.
 
-=item1 _build_all_sub_commands 
+=item _build_all_sub_commands 
 
     This is called once for any class which inherits from Command::DynamicSubCommands.
 
