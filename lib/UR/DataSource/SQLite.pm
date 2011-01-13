@@ -91,14 +91,22 @@ sub _data_dump_path {
 sub server {
     my $self = shift->_singleton_object();
     my $path = $self->__meta__->module_path;
-    $path =~ s/\.pm$/.sqlite3/ or Carp::confess("Odd module path $path");
-    if ($self->default_owner) {
-        $path .= "n";
-    }
+    my $ext = $self->_extension_for_db;
+    $path =~ s/\.pm$/$ext/ or Carp::confess("Odd module path $path");
+
     my $dir = File::Basename::dirname($path);
     return $path; 
 }
 *_database_file_path = \&server;
+
+
+# More recent versions of SQLite support enforced foreign keys
+# and have slightly different dump text.  We'll give the new
+# ones a different extension.
+sub _extension_for_db {
+    my $self = shift;
+    $self->default_owner ? '.sqlite3n' : '.sqlite3';
+}
 
 sub _journal_file_path {
     my $self = shift->_singleton_object();

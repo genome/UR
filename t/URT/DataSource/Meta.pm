@@ -13,5 +13,24 @@ UR::Object::Type->define(
     is => ['UR::DataSource::Meta'],
 );
 
+use File::Temp;
+
+# Override server() so we can make the metaDB file in
+# a temp dir
+
+sub server {
+    my $self = shift;
+
+    our $PATH;
+    $PATH ||= File::Temp::tmpnam() . "_ur_testsuite_metadb" . $self->_extension_for_db;
+    return $PATH;
+}
+
+END {
+    our $PATH;
+    unlink $PATH;
+}
+
+    
 
 1;
