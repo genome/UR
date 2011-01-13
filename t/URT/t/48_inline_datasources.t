@@ -7,6 +7,8 @@ use Data::Dumper;
 use Test::More;
 plan tests => 42;
 
+use File::Temp;
+
 &setup_files_and_classes();
 
 foreach my $class_name ( qw( URT::Office URT::Office2 URT::Employee
@@ -58,23 +60,18 @@ is($@, '', 'Correctly, no error message was generated');
 is(scalar(@employees), 3, 'Loaded 3 employees from NorthAmerica/finance');
 
 
-&cleanup();
-
-
-
-
-
 
 
 
 sub setup_files_and_classes {
 
-    mkdir "/tmp/inline_ds_$$";
-    mkdir "/tmp/inline_ds_$$/NorthAmerica";
-    mkdir "/tmp/inline_ds_$$/Europe";
+    our $tmp_dir = File::Temp->newdir('inline_ds_XXXX', TMPDIR => 1, CLEANUP => 1);
+    mkdir $tmp_dir;
+    mkdir "${tmp_dir}/NorthAmerica";
+    mkdir "${tmp_dir}/Europe";
 
-    @office_data_files = ("/tmp/inline_ds_$$/offices.csv", "/tmp/inline_ds_$$/offices2.csv");
-    our @files_to_remove_later = ( @office_data_files );
+    @office_data_files = ("${tmp_dir}/offices.csv", "${tmp_dir}/offices2.csv");
+    #our @files_to_remove_later = ( @office_data_files );
     
     # Fill in the data
     foreach my $name ( @office_data_files ) {
@@ -201,7 +198,7 @@ sub setup_files_and_classes {
             delimiter => "\t",
             column_order => [ qw( emp_id name office_id ) ],
             sort_order   => [ 'emp_id' ],
-            base_path => "/tmp/inline_ds_$$",
+            base_path => $tmp_dir,
             resolve_path_with => ['division','department'],
        },
     );
@@ -225,26 +222,15 @@ sub setup_files_and_classes {
             delimiter => "\t",
             column_order => [ qw( emp_id name office_id ) ],
             sort_order   => [ 'emp_id' ],
-            resolve_path_with => ["/tmp/inline_ds_$$/%s/%s", 'division','department'],
+            resolve_path_with => ["${tmp_dir}/%s/%s", 'division','department'],
         },
     );
 }
 
 sub employee_file_resolver {
     my($division, $department) = @_;
-    sprintf("/tmp/inline_ds_$$/$division/$department");
+    our $tmp_dir;
+    sprintf("${tmp_dir}/$division/$department");
 }
 
 
-sub cleanup {
-    my @files = glob("/tmp/inline_ds_$$/*/*");
-    push @files, glob("/tmp/inline_ds_$$/*");
-
-    foreach my $file ( @files ) {
-        if (-d $file) {
-            rmdir $file;
-        } else {
-            unlink $file;
-        }
-    }
-}
