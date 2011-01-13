@@ -197,7 +197,7 @@ package.
 
 Return a list of L<UR::Object::Type> class metadata object that exist in
 the given Namespace.  Note that this uses File::Find to find C<*.pm> files
-under the Namespace directory and calls C<UR::Object::Type-E<gt>get($name)
+under the Namespace directory and calls C<UR::Object::Type-E<gt>get($name)>
 for each package name to get the autoloader to use the package.  It's likely
 to be pretty slow.
 
