@@ -6,7 +6,7 @@ use File::Temp;
 use Test::More tests => 4;
 use IO::File;
 
-my $d = File::Temp::tempdir; #(CLEANUP => 1);
+my $d = File::Temp::tempdir(CLEANUP => 1);
 ok($d, "created working directory $d");
 
 mkdir "$d/lib1" or die $!;
@@ -31,6 +31,8 @@ chdir "$d/lib1" or die "Failed to chdir to $d/lib1: $!";
 $v = `$src`;
 is(&clean_darwin($v), "$d/lib2//Foo.pm",
    "Got the original module, not the 2nd one, and not an error.");
+
+chdir "$d/..";  # So File::Temp can remove $d
 
 exit(0);
 
