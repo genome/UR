@@ -28,7 +28,7 @@ sub server {
 
 END {
     our $PATH;
-    unlink $PATH;
+    unlink $PATH if ($PATH);
 }
 
     
