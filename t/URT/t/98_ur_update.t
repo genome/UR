@@ -24,24 +24,15 @@ UR::DBI->no_commit(1);
 # This can only be run with the cwd at the top of the URT namespace
 
 require Cwd;
+my $namespace_dir = URT->get_base_directory_name;
 my $working_dir = Cwd::abs_path();
-if ($working_dir !~ m/\/URT/) {
-    my($urt_dir) = ($INC{'URT.pm'} =~ m/^(.*)\.pm$/);
-    if (-d $urt_dir) {
-        chdir($urt_dir);
+if ($working_dir ne $namespace_dir) {
+    if (-d $namespace_dir) {
+        chdir($namespace_dir);
     } else {
         die "Cannot determine URT's namespace directory, exiting";
     }
 }
-
-# Clear out any metaDB info that may be left over from some
-# prior test that mistakenly saved metaDB changes
-$DB::single=1;
-my $metadb = $working_dir .  "/DataSource/Meta.sqlite3";
-my $metadump = $working_dir . "/DataSource/Meta.sqlite3-dump";
-unlink($metadb);
-unlink($metadump);
-
 
 # Make a fresh sqlite database in tmp.
 
@@ -70,6 +61,8 @@ sub cleanup_files {
             .deleted/Car.pm
             .deleted/Employee.pm
             .deleted/Person.pm
+            DataSource/Meta.sqlite3
+            DataSource/Meta.sqlite3-dump
         |
     ) {
         if (-e "$namespace_dir/$filename") {

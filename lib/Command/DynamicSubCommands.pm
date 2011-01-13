@@ -13,16 +13,36 @@ sub _init_subclass {
     my $subclass = shift;
     my $meta = $subclass->__meta__;
     if (grep { $_ eq __PACKAGE__ } $meta->parent_class_names) {
-        # The first time Foo::Bar is used, it makes Foo::Bar::*.
-        # Attempts to call methods on Foo::Bar::Baz, will use Foo::Bar and 
-        # ask that module if it wants to extend its namespace, but before 
-        # it tries Baz is generated here, and everything works.
-        
-        # Only do this for the immediate sub-class so it doesn't happen multiple times.
-        my @subclasses = $subclass->_build_all_sub_commands;
-        $subclass->__meta__->{_sub_commands} = \@subclasses;
+        my $delegating_class_name = $subclass;
+        eval "sub ${subclass}::_delegating_class_name { '$delegating_class_name' }";
     }
     return 1;
+}
+
+sub __extend_namespace__ {
+    # auto generate sub-classes at the time of first reference
+    my ($self,$ext) = @_;
+
+    my $meta = $self->SUPER::__extend_namespace__($ext);
+    return $meta if $meta;
+
+    unless ($self->can('_sub_commands_from')) {
+        die "Class " . $self->class . " does not implement _sub_commands_from()!\n"
+            . "This method should return the namespace to use a reference "
+            . "for defining sub-commands."
+    }
+    my $ref_class = $self->_sub_commands_from;
+    my $target_class_name = join('::', $ref_class, $ext);
+    my $target_class_meta = UR::Object::Type->get($target_class_name);
+    if ($target_class_meta and $target_class_name->isa($ref_class)) {
+        my $subclass_name = join('::', $self->class, $ext);
+        my $subclass = $self->_build_sub_command($subclass_name, $self->class, $target_class_name);
+
+        my $meta = $subclass->__meta__;
+        return $meta;
+    }
+
+    return;
 }
 
 sub _build_all_sub_commands {
@@ -36,7 +56,6 @@ sub _build_all_sub_commands {
     my $ref_class = $class->_sub_commands_from;
 
     my $delegating_class_name = $class;
-    eval "sub ${class}::_delegating_class_name { '$delegating_class_name' }";
 
     my $module = $ref_class;
     $module =~ s/::/\//g;
@@ -112,7 +131,16 @@ sub sub_command_dirs {
     return ( $class eq $class->_delegating_class_name ? 1 : 0 );
 }
 
-sub sub_command_classes { @{ shift->__meta__->{_sub_commands} } }
+sub sub_command_classes {
+    my $class = shift;
+
+    unless(exists $class->__meta__->{_sub_commands}) {
+        my @subclasses = $class->_build_all_sub_commands;
+        $class->__meta__->{_sub_commands} = \@subclasses;
+    }
+
+    return @{ $class->__meta__->{_sub_commands} };
+}
 
 sub _target_class_name { undef }
 
