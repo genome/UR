@@ -2749,6 +2749,7 @@ sub __create_object_fabricator_for_loading_template {
 
             my $values_for_in_clause = $rule_without_recursion_desc->value_for($property);
             foreach my $value ( @$values_for_in_clause ) {
+                $value = '' if (!defined $value);
                 $other_values[$position_for_this_property] = $value;
                 my $rule_with_this_in_property = $rule_template_without_in_clause->get_rule_for_values(@other_values);
                 $in_clause_values{$property}->{$value}
