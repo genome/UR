@@ -28,17 +28,6 @@ if ($working_dir ne $namespace_dir) {
     }
 }
 
-# Make a fresh sqlite database in tmp.
-
-my $ds_class = 'URT::DataSource::SomeSQLite';
-$ds_class->class;
-my $path = $INC{"UR.pm"};
-system "chmod -R o+w $path";
-
-my $sqlite_file = $ds_class->server;
-IO::File->new($sqlite_file, 'w')->close();
-
-
 
 cleanup_files();
 
@@ -55,8 +44,6 @@ sub cleanup_files {
             .deleted/Car.pm
             .deleted/Employee.pm
             .deleted/Person.pm
-            DataSource/Meta.sqlite3
-            DataSource/Meta.sqlite3-dump
         |
     ) {
         if (-e "$namespace_dir/$filename") {
@@ -95,6 +82,8 @@ sub DummyExecutor::execute {
 
 ok($command_obj, "Created a dummy command object for updating the classes");
 
+my $ds_class = 'URT::DataSource::SomeSQLite';  # The datasource we'll be making tables in
+$ds_class->class;
 my $dbh = $ds_class->get_default_handle();
 ok($dbh, 'Got database handle');
 
