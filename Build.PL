@@ -4,7 +4,7 @@ use warnings FATAL => 'all';
 use strict;
 use Module::Build;
 
-Module::Build->new(
+my $build = Module::Build->new(
   module_name => 'UR',
   license => 'perl',
   requires => {
@@ -52,7 +52,13 @@ Module::Build->new(
   script_files => [ 'bin/ur' ],
   test_files => [qw|t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t|],
   tap_harness_args => { 'jobs' =>  8 },
-)->create_build_script;
+);
+
+foreach my $metadb_type ( qw(sqlite3 sqlite3n sqlite3-dump sqlite3n-dump sqlite3-schema sqlite3n-schema) ) {
+    $build->add_build_element($metadb_type);
+}
+
+$build->create_build_script;
 
 # These were in Makefile.PL, but have no equivalent here yet:
 #  all_from 'lib/UR.pm'
