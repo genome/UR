@@ -33,10 +33,14 @@ my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 ok($dbh, 'Got a database handle');
 
 # A sqlite-ism way of pretending we have different schemas
-ok($dbh->do('commit'), 'Turn off transactions to attach databases');
+ok($dbh->do('commit'), 'Commit pending transactions');
+my $autocommit = $dbh->{'AutoCommit'};
+
 # I'd rather use memory DBs, but SQLite segfaults in commit() below
 ok($dbh->do("attach database '$tmp_file1' as PROD_DB"), 'defined PROD_DB schema');
 ok($dbh->do("attach database '$tmp_file2' as PEOPLE"), 'defined PEOPLE schema');
+
+$dbh->{'AutoCommit'} = $autocommit;
 ok($dbh->do('begin'), 'Turn transaction back on');
 
 ok($dbh->do('create table PEOPLE.PEOPLE
