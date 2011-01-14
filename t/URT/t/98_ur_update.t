@@ -10,13 +10,7 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use DBI;
 use IO::Pipe;
-use Test::More;
-if ($INC{"UR.pm"} =~ /blib/) {
-    plan skip_all => 'The test harness insists on making our db unwritable.  Run me individually or fix me!';
-}
-else {
-    plan tests => 90;
-}
+use Test::More tests => 90;
 
 use UR::Namespace::Command::Update::ClassesFromDb;
 UR::DBI->no_commit(1);

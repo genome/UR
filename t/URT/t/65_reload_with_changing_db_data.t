@@ -5,14 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 
 use URT;
-use Test::More;
-
-if ($INC{"UR.pm"} =~ /blib/) {
-    plan skip_all => 'The test harness insists on making our db unwritable.  Run me individually or fix me!';
-}
-else {
-    plan tests => 270;
-}
+use Test::More tests => 270;
 
 use URT::DataSource::SomeSQLite;
 
