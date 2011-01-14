@@ -339,8 +339,8 @@ t/URT/t/07_create_get_simple.t
 t/URT/t/08_create_get_complex1.t
 t/URT/t/09_create_get_complex2.t
 t/URT/t/10_accessor_object.t
-t/URT/t/11_misc1.t
-t/URT/t/12_accecssor_calculated.t
+t/URT/t/11_create_with_delegated_property.t
+t/URT/t/12_properties_metadata_query.t
 t/URT/t/13_command_message.t
 t/URT/t/14_ghost_objects.t
 t/URT/t/15_singleton.t
@@ -392,7 +392,6 @@ t/URT/t/53_abandoned_iterator.t
 t/URT/t/54_valid_values.t
 t/URT/t/55_on_the_fly_metadb.t
 t/URT/t/56_order_by_returns_items_in_order.t
-t/URT/t/56_properties_query.t
 t/URT/t/57_order_by_merge_new_objects.t
 t/URT/t/58_order_by_merge_changed_objects.t
 t/URT/t/59_get_merge_new_objs_with_db.t
