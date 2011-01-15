@@ -91,7 +91,6 @@ lib/UR/DataSource/RemoteCache.pm
 lib/UR/DataSource/SQLite.pm
 lib/UR/DataSource/ValueDomain.pm
 lib/UR/DBI.pm
-lib/UR/DBIx/ContextualFetch.pm
 lib/UR/Debug.pm
 lib/UR/DeletedRef.pm
 lib/UR/Env.pod
