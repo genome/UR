@@ -3,6 +3,8 @@ package UR::DataSource::Code;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 use File::Copy qw//;
 ##- use UR;
 

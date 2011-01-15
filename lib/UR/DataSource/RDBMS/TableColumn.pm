@@ -4,6 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::TableColumn;
 
 use UR;
+our $VERSION = $UR::VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::TableColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
@@ -100,7 +101,7 @@ sub is_time_data {
 
 =head1 NAME
 
-UR::DataSource::RDBMS::TableColumn - Metadata about a data source's table's columns
+UR::DataSource::RDBMS::TableColumn - metadata about a data source's table's columns
 
 =head1 DESCRIPTION
 

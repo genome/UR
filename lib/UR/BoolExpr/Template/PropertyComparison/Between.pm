@@ -1,8 +1,9 @@
-
 package UR::BoolExpr::Template::PropertyComparison::Between;
 
 use strict;
 use warnings;
+use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -42,7 +43,7 @@ sub evaluate_subject_and_values {
 
 =head1 NAME
 
-UR::BoolExpr::Template::PropertyComparison::Between - Perform a 'between' test
+UR::BoolExpr::Template::PropertyComparison::Between - perform a 'between' test
 
 =head1 DESCRIPTION
 

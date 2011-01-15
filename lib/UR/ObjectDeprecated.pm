@@ -4,6 +4,8 @@ package UR::Object;
 
 use warnings;
 use strict;
+require UR;
+our $VERSION = $UR::VERSION;
 
 use Data::Dumper;
 use Scalar::Util qw(blessed);

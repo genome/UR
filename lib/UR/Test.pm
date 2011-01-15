@@ -1,6 +1,8 @@
 package UR::Test;
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 use Test::More;
 
 sub check_properties {

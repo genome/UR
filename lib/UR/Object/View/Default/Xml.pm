@@ -2,6 +2,8 @@ package UR::Object::View::Default::Xml;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 use IO::File;
 use XML::Dumper;
 use XML::LibXML;

@@ -4,6 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::FkConstraintColumn;
 
 use UR;
+our $VERSION = $UR::VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::FkConstraintColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
@@ -32,7 +33,7 @@ UR::Object::Type->define(
 
 =head1 NAME 
 
-UR::DataSource::RDBMS::FkConstraintColumn - Metadata about a data source's foreign keys
+UR::DataSource::RDBMS::FkConstraintColumn - metadata about a data source's foreign keys
 
 =head1 DESCRIPTION
 

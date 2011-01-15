@@ -2,6 +2,7 @@ package UR::Object::Property;
 
 use warnings;
 use strict;
+require UR;
 use Lingua::EN::Inflect;
 
 our $VERSION = $UR::VERSION;;

@@ -4,6 +4,7 @@ package UR::Namespace::Command::Update::ClassesFromDb;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 use Text::Diff;
 
 UR::Object::Type->define(

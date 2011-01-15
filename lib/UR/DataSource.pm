@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 require UR;
+our $VERSION = $UR::VERSION;
 use Sys::Hostname;
 
 *namespace = \&get_namespace;

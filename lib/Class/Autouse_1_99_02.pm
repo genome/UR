@@ -1,4 +1,6 @@
-package Class::Autouse;
+# This is a dummy package pending the release of Class::Autouse 2.0
+package 
+    Class::Autouse;
 
 BEGIN {
     if ($INC{"Class/Autouse.pm"}) {

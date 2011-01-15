@@ -3,6 +3,8 @@ package UR::BoolExpr::Template::PropertyComparison::LessThan;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -38,7 +40,7 @@ sub evaluate_subject_and_values {
 
 =head1 NAME
 
-UR::BoolExpr::Template::PropertyComparison::LessThan - Perform a less than test
+UR::BoolExpr::Template::PropertyComparison::LessThan - perform a less than test
 
 =head1 DESCRIPTION 
 

@@ -23,7 +23,7 @@ information about the many classes and objects in the system - metadata.
 For example, for each class, there is an object, called a class metadata
 object, to represent it.  Each property in a class has metadata.  So does
 the relationship between parent and child classes and relationships involved
-in delegated properties.  Metadata about any database schemas your namespace
+in delegated properties.  metadata about any database schemas your namespace
 knows about is also tracked and stored.
 
 These classes define an API for introspection and reflection, a way for the

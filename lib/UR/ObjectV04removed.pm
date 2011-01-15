@@ -23,6 +23,9 @@ only change with major releases number increments.
 # this brings back those parts which got new names
 
 package UR::BoolExpr;
+use strict;
+use warnings;
+our $VERSION = $UR::VERSION;
 
 *get_rule_template = \&template;
 *rule_template = \&template;

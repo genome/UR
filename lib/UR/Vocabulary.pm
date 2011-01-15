@@ -6,6 +6,7 @@ use warnings;
 use Lingua::EN::Inflect ("PL_V","PL");
 
 require UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::Vocabulary',

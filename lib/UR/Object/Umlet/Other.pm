@@ -4,6 +4,7 @@ use warnings;
 package UR::Object::Umlet::Other;
 
 use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name      => __PACKAGE__,

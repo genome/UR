@@ -46,7 +46,7 @@ our $VERSION = $UR::VERSION;
 
 # set up module
 use base qw(UR::ModuleBase UR::ModuleConfig);
-use Date::Calc;
+use Date::Pcalc;
 use Date::Parse;
 use POSIX;
 use Time::Local;
@@ -55,8 +55,8 @@ use Time::Local;
 
 =head1 METHODS
 
-These methods use Perl builtin time methods and C<Date::Calc> (see
-L<Date::Calc>) to get date and time information and then format it or
+These methods use Perl builtin time methods and C<Date::Pcalc> (see
+L<Date::Pcalc>) to get date and time information and then format it or
 operate on it.
 
 =over 4
@@ -192,7 +192,7 @@ sub now
     {   
 	# calculate the time from the calculated offset
 	my ($y, $mon, $d, $h, $min, $s)
-            = Date::Calc::Add_Delta_YMDHMS(Date::Calc::Today_and_Now,
+            = Date::Pcalc::Add_Delta_YMDHMS(Date::Pcalc::Today_and_Now,
                                            @local_time_offset);
         # format the date accordingly
         return $class->numbers_to_datetime($s, $min, $h, $d, $mon, $y);
@@ -201,10 +201,10 @@ sub now
     if (my @db_now = $UR::Context::current->get_time_ymdhms()) {
         
         # get machine time
-        my (@now) = Date::Calc::Today_and_Now;
+        my (@now) = Date::Pcalc::Today_and_Now;
 
         # calculate difference
-        @local_time_offset = Date::Calc::Delta_YMDHMS(@now, @db_now);
+        @local_time_offset = Date::Pcalc::Delta_YMDHMS(@now, @db_now);
 
         # set flag to avoid database access next time
         $use_local_time = 1;
@@ -466,8 +466,8 @@ sub datetime_to_time
 This method accepts a date in the default format and will return a
 date $days in the past or future.  Use negative values for calculating
 dates in the past and positive values for dates in the future.  It is
-based on C<Date::Calc::Add_Delta_Days> (see
-L<Date::Calc/"Add_Delta_Days">).
+based on C<Date::Pcalc::Add_Delta_Days> (see
+L<Date::Pcalc/"Add_Delta_Days">).
 
 =cut
 
@@ -495,7 +495,7 @@ sub add_date_delta_days
     {
         $class->debug_message("parsed date $date: " . join('-', @time[3 .. 5]), 4);
         ($d, $m, $y) = @time[3 .. 5];
-        # correct for use with Date::Calc
+        # correct for use with Date::Pcalc
         ++$m;
         $y += 1900;
     }
@@ -507,7 +507,7 @@ sub add_date_delta_days
     }
 
     # add the days
-    ($y, $m, $d) = Date::Calc::Add_Delta_Days($y, $m, $d, $days);
+    ($y, $m, $d) = Date::Pcalc::Add_Delta_Days($y, $m, $d, $days);
     
     # format the string
     return POSIX::strftime($format, 0, 0, 0, $d, --$m, $y - 1900);
@@ -522,7 +522,7 @@ __END__
 
 =head1 SEE ALSO
 
-Date::Calc(3), Date::Parse(3), strftime(3), POSIX(3)
+Date::Pcalc(3), Date::Parse(3), strftime(3), POSIX(3)
 
 =cut
 

@@ -3,6 +3,7 @@ package UR::Namespace::Command::Define::Datasource::Rdbms;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 
 use IO::File;
 

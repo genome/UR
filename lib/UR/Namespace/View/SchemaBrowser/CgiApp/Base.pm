@@ -9,6 +9,8 @@ use base 'CGI::Application';
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 sub new {
 my $class = shift;

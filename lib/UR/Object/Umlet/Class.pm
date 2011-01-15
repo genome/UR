@@ -4,6 +4,7 @@ use warnings;
 package UR::Object::Umlet::Class;
 
 use UR;
+our $VERSION = $UR::VERSION;
 
 use IO::File;
 use XML::Simple;

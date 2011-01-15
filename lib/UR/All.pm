@@ -1,8 +1,11 @@
 require above;
+use strict;
+use warnings;
 use Class::Autouse_1_99_02;
 use Command;
 use Command::DynamicSubCommands;
 use UR;
+our $VERSION = $UR::VERSION;
 use UR::BoolExpr;
 use UR::BoolExpr::Template;
 use UR::BoolExpr::Template::And;

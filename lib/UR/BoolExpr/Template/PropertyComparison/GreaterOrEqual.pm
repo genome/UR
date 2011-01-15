@@ -3,6 +3,8 @@ package UR::BoolExpr::Template::PropertyComparison::GreaterOrEqual;
 
 use strict;
 use warnings;
+use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -38,7 +40,7 @@ sub evaluate_subject_and_values {
 
 =head1 NAME
 
-UR::BoolExpr::Template::PropertyComparison::GreaterOrEqual - Perform a greater than or equal test
+UR::BoolExpr::Template::PropertyComparison::GreaterOrEqual - perform a greater than or equal test
 
 =head1 DESCRIPTION
 

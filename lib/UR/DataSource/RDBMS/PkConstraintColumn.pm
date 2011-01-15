@@ -4,6 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::PkConstraintColumn;
 
 use UR;
+our $VERSION = $UR::VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::PkConstraintColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
@@ -30,7 +31,7 @@ UR::Object::Type->define(
 
 =head1 NAME
 
-UR::DataSource::RDBMS::PkConstraintColumn - Metadata about a data source's primary keys
+UR::DataSource::RDBMS::PkConstraintColumn - metadata about a data source's primary keys
 
 =head1 DESCRIPTION
 

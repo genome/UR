@@ -12,6 +12,7 @@ use Path::Class; # qw(file dir);
 use DBI;
 use Cwd;
 use UR;
+our $VERSION = $UR::VERSION;
 use File::Find;
 
 use TAP::Harness;

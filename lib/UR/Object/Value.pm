@@ -3,6 +3,7 @@ package UR::Object::Value;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 
 class UR::Object::Value {
     is => 'UR::Value',

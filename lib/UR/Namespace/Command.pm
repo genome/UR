@@ -10,6 +10,7 @@ use warnings;
 use Cwd;
 
 use UR;
+our $VERSION = $UR::VERSION;
 use Command;
 
 UR::Object::Type->define(

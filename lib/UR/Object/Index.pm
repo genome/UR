@@ -6,6 +6,7 @@ use base qw(UR::Object);
 
 use strict;
 use warnings;
+require UR;
 
 
 # wrapper for one of the ID properties to make it less ugly

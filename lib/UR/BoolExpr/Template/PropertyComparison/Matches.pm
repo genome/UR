@@ -4,6 +4,7 @@ package UR::BoolExpr::Template::PropertyComparison::Matches;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -31,7 +32,7 @@ sub evaluate_subject_and_values {
 
 =head1 NAME 
 
-UR::BoolExpr::Template::PropertyComparison::Matches - Perform a Perl regular expression match
+UR::BoolExpr::Template::PropertyComparison::Matches - perform a Perl regular expression match
 
 =head1 DESCRIPTION
 

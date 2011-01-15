@@ -4,6 +4,7 @@ package UR::BoolExpr::Template::PropertyComparison::Equals;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -46,7 +47,7 @@ sub evaluate_subject_and_values {
 
 =head1 NAME
 
-UR::BoolExpr::Template::PropertyComparison::Equals - Perform a strictly equals test
+UR::BoolExpr::Template::PropertyComparison::Equals - perform a strictly equals test
 
 =head1 DESCRIPTION
 

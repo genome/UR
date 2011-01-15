@@ -2,6 +2,8 @@ package UR::Object::View::Lister::Text;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 use IO::File;
 
 UR::Object::Type->define(

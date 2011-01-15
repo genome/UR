@@ -3,6 +3,8 @@ package UR::Object::Type::AccessorWriter::Product;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 sub calculate {
     my $self = shift;

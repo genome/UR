@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use UR;
+our $VERSION = $UR::VERSION;
 use Data::Dumper;
 
 class UR::Object::Command::FetchAndDo {

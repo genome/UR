@@ -74,7 +74,7 @@ sub evaluate_subject_and_values {
 
 =head1 NAME
 
-UR::BoolExpr::And -  A rule which is true if all the underlying conditions are true 
+UR::BoolExpr::Or -  a rule which is true if ANY of the underlying conditions are true 
 
 =head1 SEE ALSO
 

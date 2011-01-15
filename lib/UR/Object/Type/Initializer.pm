@@ -6,6 +6,7 @@ package UR::Object::Type;
 
 use strict;
 use warnings;
+require UR;
 
 use Carp ();
 use Sub::Name ();

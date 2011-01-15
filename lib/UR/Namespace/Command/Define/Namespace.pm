@@ -5,6 +5,7 @@ package UR::Namespace::Command::Define::Namespace;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 use IO::File;
 
 UR::Object::Type->define(

@@ -4,6 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::Entity;
 
 use UR::Object::Type;
+our $VERSION = $UR::VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::Entity',
     is => ['UR::Entity'],

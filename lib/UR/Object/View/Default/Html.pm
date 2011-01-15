@@ -2,6 +2,8 @@ package UR::Object::View::Default::Html;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 use IO::File;
 
 class UR::Object::View::Default::Html {

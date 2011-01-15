@@ -2,6 +2,7 @@ package UR::Namespace::Command::Describe;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

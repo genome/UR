@@ -4,6 +4,7 @@ package UR::BoolExpr::Template::PropertyComparison::NotLike;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -63,7 +64,7 @@ sub comparison_value_and_escape_character_to_regex {
 
 =head1 NAME
 
-UR::BoolExpr::Template::PropertyComparison::NotLike - Perform a negated SQL-ish like test
+UR::BoolExpr::Template::PropertyComparison::NotLike - perform a negated SQL-ish like test
 
 =head1 DESCRIPTION
 

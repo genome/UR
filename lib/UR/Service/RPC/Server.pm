@@ -5,6 +5,7 @@ use IO::Select;
 
 use strict;
 use warnings;
+our $VERSION = $UR::VERSION;
 
 # We're going to be essentially reimplementing an Event queue here. :(
 

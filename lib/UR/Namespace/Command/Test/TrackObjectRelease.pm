@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use UR;
+our $VERSION = $UR::VERSION;
 use IO::File;
 
 class UR::Namespace::Command::Test::TrackObjectRelease {

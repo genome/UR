@@ -5,6 +5,8 @@ package UR::Object::Type;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 #use warnings FATAL => 'all';
 
 use Carp ();

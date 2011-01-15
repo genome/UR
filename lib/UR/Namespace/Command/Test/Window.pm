@@ -5,6 +5,8 @@ use warnings;
 use above 'UR';
 
 package UR::Namespace::Command::Test::Window;
+require UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -33,12 +35,12 @@ sub execute {
         }
     }
     else {
-        DebugWindow->activate_with_gtk_support;
+        UR::Namespace::Command::Test::Window::Tk->activate_with_gtk_support;
     }
 
 }
 
-package DebugWindow;
+package UR::Namespace::Command::Test::Window::Tk;;
 
 our $tmp;
 our $workspace;

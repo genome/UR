@@ -5,6 +5,7 @@ use strict;
 use IO::File;
 use File::Find;
 use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

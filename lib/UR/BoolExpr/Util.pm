@@ -5,6 +5,8 @@ package UR::BoolExpr::Util;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 use Scalar::Util qw(blessed);
 use Data::Dumper;

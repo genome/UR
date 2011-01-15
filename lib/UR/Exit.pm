@@ -23,6 +23,7 @@ an application exits.
 require 5.006_000;
 use warnings;
 use strict;
+require UR;
 our $VERSION = $UR::VERSION;;
 our (@ISA, @EXPORT, @EXPORT_OK);
 

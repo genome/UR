@@ -2,6 +2,8 @@ package UR::Debug;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 our $verify_indexes = 0;
 

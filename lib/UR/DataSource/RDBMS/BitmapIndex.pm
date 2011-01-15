@@ -4,6 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::BitmapIndex;
 
 use UR;
+our $VERSION = $UR::VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::BitmapIndex',
     is => ['UR::DataSource::RDBMS::Entity'],
@@ -29,7 +30,7 @@ UR::Object::Type->define(
 
 =head1 NAME
 
-UR::DataSource::RDBMS::BitmapIndex - Metadata about a data source's bitmap indexes
+UR::DataSource::RDBMS::BitmapIndex - metadata about a data source's bitmap indexes
 
 =head1 DESCRIPTION
 

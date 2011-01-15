@@ -1,15 +1,4 @@
 
-=head1 NAME
-
-UR::BoolExpr::Template::PropertyComparison - implements logic for rules with a logic_type of "PropertyComparison" 
-
-=head1 SYNOPSIS
-
-=head1 DESCRIPTION
-
-=cut
-
-
 package UR::BoolExpr::Template::PropertyComparison;
 
 use warnings;
@@ -139,10 +128,13 @@ sub _get_for_subject_class_name_and_logic_detail {
 
 1;
 
-=pod
+=head1 NAME
+
+UR::BoolExpr::Template::PropertyComparison - implements logic for rules with a logic_type of "PropertyComparison" 
 
 =head1 SEE ALSO
 
-UR::Object(3), UR::BoolExpr::DefinitionType::Manual(3),
+UR::Object(3), UR::BoolExpr::Temmplate(3), UR::BoolExpr(3), UR::BoolExpr::Template::PropertyComparison::*
 
 =cut
+

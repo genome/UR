@@ -1,5 +1,8 @@
 Revision history for UR
 
+0.22    2011-01-12
+        VERSION refactoring for cleaner uploads
+
 0.20    2011-01-11
         faster compile (<.5s)
         faster object creation

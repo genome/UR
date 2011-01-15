@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use UR;
+our $VERSION = $UR::VERSION;
 
 # Transient class that represents the file as a datasource
 our $TheFile = '/dev/null';  # This will be filled in during create() below

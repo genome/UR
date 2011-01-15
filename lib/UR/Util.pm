@@ -3,6 +3,8 @@ package UR::Util;
 
 use warnings;
 use strict;
+require UR;
+our $VERSION = $UR::VERSION;
 use Cwd;
 use Data::Dumper;
 

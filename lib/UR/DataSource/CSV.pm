@@ -41,6 +41,7 @@ use warnings;
 # with that out of the way... on to the show!
 
 require UR;
+our $VERSION = $UR::VERSION;
 
 use File::Basename;
 

@@ -8,7 +8,19 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = '0.20';
+use version;
+our $VERSION;
+BEGIN { 
+    # the first CPAN deploy using "version" is failing to install.
+    # this is an attempt to get around it...
+
+    # for the cpan shell, and other parsers
+    $VERSION = 'v0.24';
+
+    # for actual inspection
+    ${VERSION} 
+        = qv('0.24'); 
+};
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
@@ -393,7 +405,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.20.
+This document describes UR version v0.24
 
 =head1 SYNOPSIS
 
@@ -708,7 +720,7 @@ laboratory automation and analysis systems for high-throughput genomics.
  
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (C) 2002-2010 Washington University in St. Louis, MO.
+Copyright (C) 2002-2011 Washington University in St. Louis, MO.
 
 This sofware is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.

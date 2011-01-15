@@ -2,6 +2,8 @@ package UR::Object::View::Default::Json;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 use JSON;
 

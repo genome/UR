@@ -3,6 +3,8 @@ package UR::Object::Set::View::Default::Xml;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 class UR::Object::Set::View::Default::Xml {
     is => 'UR::Object::View::Default::Xml',

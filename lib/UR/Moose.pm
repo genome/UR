@@ -1,5 +1,9 @@
 
 package UR::Moose;
+use strict;
+use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 # Moosify UR Objects :)
 

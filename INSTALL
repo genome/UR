@@ -1,5 +1,5 @@
-perl Makefile.PL
-make
-make test
-sudo make install
+perl Build.PL
+./Build
+./Build test
+sudo ./Build install
 

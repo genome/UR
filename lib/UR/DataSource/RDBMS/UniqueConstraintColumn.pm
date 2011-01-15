@@ -4,6 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::UniqueConstraintColumn;
 
 use UR::Object::Type;
+our $VERSION = $UR::VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::UniqueConstraintColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
@@ -30,7 +31,7 @@ UR::Object::Type->define(
 
 =head1 NAME
 
-UR::DataSource::RDBMS::UniqueConstraintColumn - Metadata about a data source's unique constraints
+UR::DataSource::RDBMS::UniqueConstraintColumn - metadata about a data source's unique constraints
 
 =head1 DESCRIPTION
 

@@ -4,6 +4,7 @@ package UR::BoolExpr::Template::PropertyComparison::In;
 use strict;
 use warnings;
 use UR;
+our $VERSION = $UR::VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -51,7 +52,7 @@ sub evaluate_subject_and_values {
 
 =head1 NAME
 
-UR::BoolExpr::Template::PropertyComparison::In - Perform an In test
+UR::BoolExpr::Template::PropertyComparison::In - perform an In test
 
 =head1 DESCRIPTION
 

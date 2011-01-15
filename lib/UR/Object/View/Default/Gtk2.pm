@@ -2,6 +2,8 @@ package UR::Object::View::Default::Gtk2;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 class UR::Object::View::Default::Gtk2 {
     is => 'UR::Object::View',

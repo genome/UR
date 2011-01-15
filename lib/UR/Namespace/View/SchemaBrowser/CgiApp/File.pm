@@ -2,6 +2,8 @@ package UR::Namespace::View::SchemaBrowser::CgiApp::File;
 
 use strict;
 use warnings;
+require UR;
+our $VERSION = $UR::VERSION;
 
 use base 'UR::Namespace::View::SchemaBrowser::CgiApp::Base';
 
