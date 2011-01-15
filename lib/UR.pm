@@ -362,7 +362,6 @@ do {
     UR::Context->_initialize_for_current_process();
 };
 
-require UR::Moose;          # a no-op unless UR_MOOSE is set to true currently
 require UR::ModuleLoader;   # signs us up with Class::Autouse
 require UR::Value::Iterator;
 
