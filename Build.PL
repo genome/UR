@@ -27,6 +27,7 @@ my $build = Module::Build->new(
     'XML::Simple'         => '',
     'version'             => '',
     'JSON'                => '',
+    'Test::Fork'          => '',
 
     # C
     'FreezeThaw'          => '0.43',
@@ -53,7 +54,20 @@ my $build = Module::Build->new(
   cpan_client => 'cpanm',
   script_files => [ 'bin/ur' ],
   test_files => [qw|t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t|],
-  tap_harness_args => { 'jobs' =>  8 },
+  tap_harness_args => { 
+      'jobs' =>  8,
+      'rules' => { 
+            par => [
+                #{ seq => '../ext/DB_File/t/*' },
+                #{ seq => '../ext/IO_Compress_Zlib/t/*' },
+                #{ seq => '../lib/CPANPLUS/*' },
+                #{ seq => '../lib/ExtUtils/t/*' },
+                #'*'
+                { seq => 't/URT/t/42*' },
+                '*'
+            ]
+      },
+  },
 );
 
 foreach my $metadb_type ( qw(sqlite3 sqlite3n sqlite3-dump sqlite3n-dump sqlite3-schema sqlite3n-schema) ) {
