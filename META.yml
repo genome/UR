@@ -25,8 +25,6 @@ provides:
     file: lib/Command/Test/Tree1/Echo1.pm
   Command::Test::Tree1::Echo2:
     file: lib/Command/Test/Tree1/Echo2.pm
-  DebugWindow:
-    file: lib/UR/Namespace/Command/Test/Window.pm
   Devel::callsfrom:
     file: lib/Devel/callcount.pm
   My::TAP::Parser::Iterator::Process::LSF:
@@ -41,7 +39,7 @@ provides:
     file: lib/UR/Namespace/Command/Test/Run.pm
   UR:
     file: lib/UR.pm
-    version: v0.23.0
+    version: v0.24.0
   UR::BoolExpr:
     file: lib/UR/BoolExpr.pm
     version: 0
@@ -129,13 +127,6 @@ provides:
     file: lib/UR/DBI.pm
   UR::DBI::st:
     file: lib/UR/DBI.pm
-  UR::DBIx::ContextualFetch:
-    file: lib/UR/DBIx/ContextualFetch.pm
-    version: 0
-  UR::DBIx::ContextualFetch::db:
-    file: lib/UR/DBIx/ContextualFetch.pm
-  UR::DBIx::ContextualFetch::st:
-    file: lib/UR/DBIx/ContextualFetch.pm
   UR::DataSource:
     file: lib/UR/DataSource.pm
     version: 0
@@ -425,6 +416,8 @@ provides:
   UR::Namespace::Command::Test::Window:
     file: lib/UR/Namespace/Command/Test/Window.pm
     version: 0
+  UR::Namespace::Command::Test::Window::Tk:
+    file: lib/UR/Namespace/Command/Test/Window.pm
   UR::Namespace::Command::Update:
     file: lib/UR/Namespace/Command/Update.pm
     version: 0
@@ -740,4 +733,4 @@ requires:
   version: ''
 resources:
   license: http://dev.perl.org/licenses/
-version: v0.23.0
+version: v0.24.0
