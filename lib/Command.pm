@@ -1479,7 +1479,7 @@ __END__
 
 =head1 NAME
 
-Command - Base class for modules implementing the Command Pattern
+Command - base class for modules implementing the command pattern
 
 =head1 SYNOPSIS
 

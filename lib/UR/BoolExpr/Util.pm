@@ -134,7 +134,7 @@ sub value_id_to_values {
 
 =head1 NAME
 
-UR::BoolExpr::Util - Non-OO module to collect utility functions used by the BoolExpr modules
+UR::BoolExpr::Util - non-OO module to collect utility functions used by the BoolExpr modules
 
 =cut
 

@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-UR::DataSource - A logical source of data, such as a database.
+UR::DataSource - manage the the relationship between objects and a specific storage system 
 
 =head1 SYNOPSIS
 

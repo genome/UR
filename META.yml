@@ -1,42 +1,14 @@
 ---
-name: UR
-version: v0.24.0
-author:
-abstract: rich declarative transactional objects
-license: perl
-requires:
-  CGI::Application: ""
-  Carp: ""
-  Class::Inspector: ""
-  DBD::SQLite: 1.14
-  DBI: 1.601
-  Data::Compare: 0.13
-  Date::Format: ""
-  Date::Pcalc: ""
-  File::Basename: 2.73
-  FreezeThaw: 0.43
-  Getopt::Complete: v0.20
-  JSON: ""
-  Lingua::EN::Inflect: 1.88
-  Net::HTTPServer: ""
-  Path::Class: ""
-  Sub::Install: 0.924
-  Sub::Name: 0.04
-  Sys::Hostname: 1.11
-  Test::Fork: ""
-  Text::Diff: 0.35
-  XML::Dumper: ""
-  XML::Generator: ""
-  XML::Simple: ""
-  YAML: ""
-  perl: v5.8.7
-  version: ""
+abstract: 'rich declarative transactional objects'
+author: []
 configure_requires:
-  Module::Build: 0.340201
-generated_by: Module::Build version 0.340201
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3607'
+license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
+name: UR
 provides:
   Command:
     file: lib/Command.pm
@@ -53,8 +25,6 @@ provides:
     file: lib/Command/Test/Tree1/Echo1.pm
   Command::Test::Tree1::Echo2:
     file: lib/Command/Test/Tree1/Echo2.pm
-  DB:
-    file: lib/Devel/callcount.pm
   Devel::callsfrom:
     file: lib/Devel/callcount.pm
   My::TAP::Parser::Iterator::Process::LSF:
@@ -737,5 +707,33 @@ provides:
   class_name:
     file: lib/UR/Object/Type/Initializer.pm
     version: 2
+requires:
+  CGI::Application: ''
+  Carp: ''
+  Class::Inspector: ''
+  DBD::SQLite: 1.14
+  DBI: 1.601
+  Data::Compare: 0.13
+  Date::Format: ''
+  Date::Pcalc: ''
+  File::Basename: 2.73
+  FreezeThaw: 0.43
+  Getopt::Complete: v0.20
+  JSON: ''
+  Lingua::EN::Inflect: 1.88
+  Net::HTTPServer: ''
+  Path::Class: ''
+  Sub::Install: 0.924
+  Sub::Name: 0.04
+  Sys::Hostname: 1.11
+  Test::Fork: ''
+  Text::Diff: 0.35
+  XML::Dumper: ''
+  XML::Generator: ''
+  XML::Simple: ''
+  YAML: ''
+  perl: v5.8.7
+  version: ''
 resources:
   license: http://dev.perl.org/licenses/
+version: v0.24.0
