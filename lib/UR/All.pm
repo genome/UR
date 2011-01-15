@@ -34,7 +34,6 @@ use UR::Context::Process;
 use UR::Context::Root;
 use UR::Context::Transaction;
 use UR::DBI;
-use UR::DBIx::ContextualFetch;
 use UR::DataSource;
 use UR::DataSource::CSV;
 use UR::DataSource::Code;
