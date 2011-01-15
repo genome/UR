@@ -1,5 +1,11 @@
 Revision history for UR
 
+0.25    2011-01-15
+        Updated docs.
+
+0.24    2011-01-15
+        Updated deps to compile fully on a new OSX installation (requires XCode).  
+
 0.22    2011-01-12
         VERSION refactoring for cleaner uploads
 
