@@ -15,6 +15,9 @@ use Test::More;
 if ($^O eq 'darwin') {
     plan skip_all => 'known to fail OS X'
 }
+elsif ($INC{"UR.pm"} =~ /blib/) {
+    plan skip_all => 'skip running during install',
+}
 else {
     plan tests => 90;
 }
