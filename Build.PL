@@ -16,6 +16,7 @@ my $build = Module::Build->new(
     'Sys::Hostname'       => '1.11',
     'File::Basename'      => '2.73',
     'Lingua::EN::Inflect' => '1.88',
+    'Date::Pcalc'         => '',
     'Date::Format'        => '',
     'Data::Compare'       => '0.13',
     'Text::Diff'          => '0.35',

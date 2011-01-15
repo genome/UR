@@ -715,6 +715,7 @@ requires:
   DBI: 1.601
   Data::Compare: 0.13
   Date::Format: ''
+  Date::Pcalc: ''
   File::Basename: 2.73
   FreezeThaw: 0.43
   Getopt::Complete: v0.20
