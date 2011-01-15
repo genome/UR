@@ -719,6 +719,7 @@ requires:
   File::Basename: 2.73
   FreezeThaw: 0.43
   Getopt::Complete: v0.20
+  JSON: ''
   Lingua::EN::Inflect: 1.88
   Net::HTTPServer: ''
   Path::Class: ''

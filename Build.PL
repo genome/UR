@@ -26,7 +26,8 @@ my $build = Module::Build->new(
     'XML::Generator'      => '',
     'XML::Simple'         => '',
     'version'             => '',
-    
+    'JSON'                => '',
+
     # C
     'FreezeThaw'          => '0.43',
     'YAML'                => '',
