@@ -5,7 +5,7 @@ use strict;
 use warnings;
 require UR;
 our $VERSION = "0.27"; # UR $VERSION;
-use Class::Autouse;
+use Class::Autouse_1_99_04;
 
 Class::Autouse->autouse(\&dynamically_load_class);
 Class::Autouse->sugar(\&define_class);
