@@ -1,13 +1,23 @@
+#!/usr/bin/env perl
+
 use strict;
 use warnings;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
+
 use above 'UR';
 use above 'URT';
 
-use Test::More tests => 20;
+use Test::More;
+if ($INC{"UR.pm"} =~ /blib/) {
+    plan skip_all => 'cannot run in the install test harness';
+}
+else {
+    plan tests => 20;
+}    
+
 use URT::DataSource::SomeSQLite;
 
 # This tests a get() by subclass specific parameters on a subclass with no table of its own.

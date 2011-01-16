@@ -4,7 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::PkConstraintColumn;
 
 use UR;
-our $VERSION = $UR::VERSION;
+our $VERSION = "0.26"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::PkConstraintColumn',
     is => ['UR::DataSource::RDBMS::Entity'],

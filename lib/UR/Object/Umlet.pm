@@ -5,7 +5,7 @@ package UR::Object::Umlet;
 
 # Top-level class for Umlet diagram related things
 use UR;
-our $VERSION = $UR::VERSION;
+our $VERSION = "0.26"; # UR $VERSION;
 
 UR::Object::Type->define(
     is => 'UR::Object',

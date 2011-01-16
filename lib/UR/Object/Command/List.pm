@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use IO::File;
 use UR;
-our $VERSION = $UR::VERSION;
+our $VERSION = "0.26"; # UR $VERSION;
 
 use Data::Dumper;
 require Term::ANSIColor;

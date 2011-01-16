@@ -7,7 +7,7 @@ require UR;
 
 # Used during bootstrapping.
 our @ISA = qw(UR::Object);
-our $VERSION = $UR::VERSION;;
+our $VERSION = "0.26"; # UR $VERSION;;
 
 # Most of the API for this module are legacy internals required by UR.
 use UR::Object::Type::InternalAPI;

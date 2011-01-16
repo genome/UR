@@ -8,7 +8,7 @@ use Carp;
 
 our @CARP_NOT = ('UR::Context');
 
-our $VERSION = $UR::VERSION;;
+our $VERSION = "0.26"; # UR $VERSION;;
 
 # readable stringification
 use overload ('""' => '__display_name__');

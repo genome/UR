@@ -3,7 +3,7 @@ package UR::Object::View::Toolkit::Umlet;
 use warnings;
 use strict;
 require UR;
-our $VERSION = $UR::VERSION;
+our $VERSION = "0.26"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

@@ -4,7 +4,7 @@ use warnings;
 package UR::Object::Umlet::PictureElement;
 
 use UR;
-our $VERSION = $UR::VERSION;
+our $VERSION = "0.26"; # UR $VERSION;
 
 use IO::Handle;
 

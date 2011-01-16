@@ -1,5 +1,9 @@
 Revision history for UR
 
+0.26    2011-01-16
+        yet another refactoring to ensure VERSION appears on all modules
+        fixes for tests which fail only in the install harness
+
 0.25    2011-01-15
         Updated docs.
 

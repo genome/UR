@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = $UR::VERSION;
+our $VERSION = "0.26"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::Meta',

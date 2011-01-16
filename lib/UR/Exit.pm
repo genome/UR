@@ -24,7 +24,7 @@ require 5.006_000;
 use warnings;
 use strict;
 require UR;
-our $VERSION = $UR::VERSION;;
+our $VERSION = "0.26"; # UR $VERSION;;
 our (@ISA, @EXPORT, @EXPORT_OK);
 
 require Exporter;

@@ -6,7 +6,7 @@ use above 'UR';
 
 package UR::Namespace::Command::Test::Window;
 require UR;
-our $VERSION = $UR::VERSION;
+our $VERSION = "0.26"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

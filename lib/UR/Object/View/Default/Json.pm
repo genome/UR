@@ -3,7 +3,7 @@ package UR::Object::View::Default::Json;
 use strict;
 use warnings;
 require UR;
-our $VERSION = $UR::VERSION;
+our $VERSION = "0.26"; # UR $VERSION;
 
 use JSON;
 
