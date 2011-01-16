@@ -5,7 +5,7 @@ use Class::Autouse_1_99_02;
 use Command;
 use Command::DynamicSubCommands;
 use UR;
-our $VERSION = "0.26"; # UR $VERSION;
+our $VERSION = "0.27"; # UR $VERSION;
 use UR::BoolExpr;
 use UR::BoolExpr::Template;
 use UR::BoolExpr::Template::And;

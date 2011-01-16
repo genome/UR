@@ -88,7 +88,7 @@ These methods create and change message handlers.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.26"; # UR $VERSION;;
+our $VERSION = "0.27"; # UR $VERSION;;
 
 # set up module
 use Carp;

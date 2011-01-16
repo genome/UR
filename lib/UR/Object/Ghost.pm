@@ -10,7 +10,7 @@ package UR::Object::Ghost;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.26"; # UR $VERSION;
+our $VERSION = "0.27"; # UR $VERSION;
 
 sub _init_subclass {
     my $class_name = pop;

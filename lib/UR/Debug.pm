@@ -3,7 +3,7 @@ package UR::Debug;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.26"; # UR $VERSION;
+our $VERSION = "0.27"; # UR $VERSION;
 
 our $verify_indexes = 0;
 
