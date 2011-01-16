@@ -9,6 +9,7 @@ BEGIN {
     else {
         # ensure attempts to use the old version are ignored
         $INC{"Class/Autouse.pm"} = $INC{"Class/Autouse_1_99_02.pm"};
+        $INC{"Class/Autouse_1_99_04.pm"} = $INC{"Class/Autouse_1_99_02.pm"};
     }
 }
 
