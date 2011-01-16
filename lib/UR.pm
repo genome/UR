@@ -361,6 +361,7 @@ do {
 
 require UR::ModuleLoader;   # signs us up with Class::Autouse
 require UR::Value::Iterator;
+require UR::Object::View;
 
 sub main::ur_core {
     print STDERR "Dumping rules and templates to ./ur_core.stor...\n";
