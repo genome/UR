@@ -353,7 +353,6 @@ require UR::Change;
 require UR::Context::Root;
 require UR::Context::Process;
 require UR::Object::Tag;
-require UR::Object::View;
 
 do {
     UR::Context->_initialize_for_current_process();
