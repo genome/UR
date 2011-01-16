@@ -18,7 +18,7 @@ else {
     plan tests => 20;
 }    
 
-use URT::DataSource::SomeSQLite;
+use_ok('URT::DataSource::SomeSQLite');
 
 # This tests a get() by subclass specific parameters on a subclass with no table of its own.
 # The idea is to make sure that queries run with any subclass specific parameters (which can

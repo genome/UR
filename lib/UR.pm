@@ -342,10 +342,6 @@ UR::Object::Type->define(
     extends => ['UR::Namespace'],
 );
 
-#my $src = shift(@ARGV);
-#eval $src;
-#die $@ if $@;
-
 require UR::Context;
 UR::Object::Type->initialize_bootstrap_classes;
 
@@ -357,6 +353,7 @@ require UR::Change;
 require UR::Context::Root;
 require UR::Context::Process;
 require UR::Object::Tag;
+require UR::Object::View;
 
 do {
     UR::Context->_initialize_for_current_process();
