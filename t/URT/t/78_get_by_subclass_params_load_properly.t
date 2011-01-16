@@ -15,7 +15,7 @@ if ($INC{"UR.pm"} =~ /blib/) {
     plan skip_all => 'cannot run in the install test harness';
 }
 else {
-    plan tests => 20;
+    plan tests => 21;
 }    
 
 use_ok('URT::DataSource::SomeSQLite');
@@ -53,7 +53,6 @@ SKIP: {
     is($rex->id, 2, 'Rex has correct id');
 };
 
-done_testing();
 
 sub setup_classes_and_db {
     my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
