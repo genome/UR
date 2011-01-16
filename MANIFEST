@@ -1,12 +1,4 @@
-bin/command-check.cgi
-bin/command-cleanup.cgi
-bin/command-dispatch.cgi
-bin/command-results.cgi
-bin/command-ui-xml.cgi
-bin/command-ui.cgi
 bin/ur
-bin/xsl/command_ui.xsl
-bin/xsl/error.xsl
 Build.PL
 Changes
 debian/changelog
@@ -112,7 +104,6 @@ lib/UR/Env/UR_DBI_NO_COMMIT.pm
 lib/UR/Env/UR_DEBUG_OBJECT_PRUNING.pm
 lib/UR/Env/UR_DEBUG_OBJECT_RELEASE.pm
 lib/UR/Env/UR_IGNORE.pm
-lib/UR/Env/UR_MOOSE.pm
 lib/UR/Env/UR_NR_CPU.pm
 lib/UR/Env/UR_STACK_DUMP_ON_DIE.pm
 lib/UR/Env/UR_STACK_DUMP_ON_WARN.pm
@@ -133,7 +124,6 @@ lib/UR/Manual/UR_Presentation.pdf
 lib/UR/ModuleBase.pm
 lib/UR/ModuleConfig.pm
 lib/UR/ModuleLoader.pm
-lib/UR/Moose.pm
 lib/UR/Namespace.pm
 lib/UR/Namespace/Command.pm
 lib/UR/Namespace/Command.pm.opts
@@ -340,10 +330,6 @@ t/URT/t/21_observer.t
 t/URT/t/22_cached_get_with_subclasses.t
 t/URT/t/23_data_source_proxy.t
 t/URT/t/24_data_source_proxy_sigio.t
-t/URT/t/25-moose-meta-boostrap-1.t
-t/URT/t/26-moose-meta-bootstrap-2.t
-t/URT/t/27-moose-basic-1.t
-t/URT/t/28-moose-basic-2.t
 t/URT/t/29_indirect_calculated_accessor.t
 t/URT/t/30_default_values.t
 t/URT/t/31_ref_as_value.t

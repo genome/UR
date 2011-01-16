@@ -261,9 +261,6 @@ provides:
   UR::Env::UR_IGNORE:
     file: lib/UR/Env/UR_IGNORE.pm
     version: 0.26
-  UR::Env::UR_MOOSE:
-    file: lib/UR/Env/UR_MOOSE.pm
-    version: 0.26
   UR::Env::UR_NR_CPU:
     file: lib/UR/Env/UR_NR_CPU.pm
     version: 0.26
@@ -298,9 +295,6 @@ provides:
     version: 0.26
   UR::ModuleLoader:
     file: lib/UR/ModuleLoader.pm
-    version: 0.26
-  UR::Moose:
-    file: lib/UR/Moose.pm
     version: 0.26
   UR::Namespace:
     file: lib/UR/Namespace.pm
