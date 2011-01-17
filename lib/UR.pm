@@ -200,7 +200,7 @@ UR::Object::Type->define(
         data_source_id                   => { is => 'Text', len => 256, is_optional => 1, 
                                                 doc => 'for classes which persist beyond their current process, the identifier for their storage manager' },
 
-        #data_source_meta                => { is => 'UR::DataSource', id_by => 'data_source_id', is_optional => 1, source => 'data dictionary' },
+        #data_source_meta                => { is => 'UR::DataSource', id_by => 'data_source_id', is_optional => 1,  },
 
         generated                        => { is => 'Boolean', is_transient => 1, default_value => 0,
                                                 doc => 'an internal flag set when the class meta has fabricated accessors and methods in the class namespace' },
@@ -218,7 +218,7 @@ UR::Object::Type->define(
         query_hint                       => { is => 'Text', len => 1024 , is_optional => 1,
                                                 doc => 'used to optimize access to underlying storage (database specific)' },
                                             
-        id_sequence_generator_name       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary', 
+        id_sequence_generator_name       => { is => 'Text', len => 256, is_optional => 1,  
                                                 doc => 'override the default choice for sequence generator name' },
 
         # different ways of handling subclassing at object load time
@@ -233,9 +233,9 @@ UR::Object::Type->define(
 
         
         # obsolete/internal
-        type_name                               => { is => 'Text', len => 256, source => 'data dictionary' },
-        er_role                                 => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary', default_value => 'entity' },
-        short_name                              => { is => 'Text', len => 16, is_optional => 1, source => 'data dictionary' },
+        type_name                               => { is => 'Text', len => 256,  },
+        er_role                                 => { is => 'Text', len => 256, is_optional => 1,  default_value => 'entity' },
+        short_name                              => { is => 'Text', len => 16, is_optional => 1,  },
         source                                  => { is => 'Text', len => 256 , default_value => 'data dictionary', is_optional => 1 }, # This is obsolete and should be removed later
         sub_classification_meta_class_name      => { is => 'Text', len => 1024 , is_optional => 1, 
                                                     doc => 'obsolete' },
