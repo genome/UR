@@ -909,7 +909,7 @@ sub create_from_inline_class_data {
     $ds_data->{'server'} ||= $ds_data->{'path'} || $ds_data->{'file'};
 
     my %ds_creation_params;
-    foreach my $param ( qw( delimieter record_separator column_order skip_first_line server file_list sort_order constant_values ) ) {
+    foreach my $param ( qw( delimiter record_separator column_order skip_first_line server file_list sort_order constant_values ) ) {
         if (exists $ds_data->{$param}) {
             if ($creation_param_is_list{$param} and ref($ds_data->{$param}) ne 'ARRAY') {
                 $ds_creation_params{$param} = \( $ds_data->{$param} );
