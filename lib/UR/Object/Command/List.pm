@@ -1,17 +1,27 @@
 package UR::Object::Command::List;
-
 use strict;
 use warnings;
-use IO::File;
-use UR;
-our $VERSION = "0.27"; # UR $VERSION;
 
+use IO::File;
 use Data::Dumper;
 require Term::ANSIColor;
+use UR;
+use UR::Object::Command::List::Style;
+
+our $VERSION = "0.27"; # UR $VERSION;
 
 class UR::Object::Command::List {
-    is => 'UR::Object::Command::FetchAndDo',
+    is => 'Command',
     has => [
+        subject_class => {
+            is => 'UR::Object::Type', 
+            id_by => 'subject_class_name',
+        }, 
+        filter => {
+            is => 'Text',  
+            is_optional => 1,
+            doc => 'Filter results based on the parameters.  See below for how to.'
+        },
         show => {
             is => 'Text',
             is_optional => 1,
@@ -42,40 +52,15 @@ class UR::Object::Command::List {
             default => \*STDOUT,
             doc => 'output handle for list, defauls to STDOUT',
         },
+        _fields => {
+            is_many => 1,
+            is_optional => 1,
+            doc => 'Methods which the caller intends to use on the fetched objects.  May lead to pre-fetching the data.'
+        },
     ], 
-    doc => 'fetches objects and lists them',
+    doc => 'lists objects matching specified params'
 };
 
-##############################
-
-sub help_detail {
-    my $self = shift;
-
-    return join(
-        "\n",
-        $self->_style_doc,
-        $self->_filter_doc,
-    );
-}
-
-sub _style_doc {
-    return <<EOS;
-Listing Styles:
----------------
- text - table like
- csv - comma separated values
- pretty - objects listed singly with color enhancements
- html - html table
- xml - xml document using elements
-
-EOS
-}
-
-##############################
-
-sub valid_styles {
-    return (qw/ text csv pretty html xml newtext/);
-}
 
 sub create {
     my $class = shift;
@@ -91,6 +76,7 @@ sub create {
         ) 
     ) 
         and return unless grep { $self->style eq $_ } valid_styles();
+
     unless ( ref $self->output ){
         my $ofh = IO::File->new("> ".$self->output);
         $self->error_message("Can't open file handle to output param ".$self->output) and die unless $ofh;
@@ -100,18 +86,32 @@ sub create {
     return $self;
 }
 
-sub _hint_string 
-{
-    my $self = shift;
-    return $self->show;
-}
 
-sub _do
-{
-    my ($self, $iterator) = @_;    
+sub execute {  
+    my $self = shift;    
+    $self->_validate_subject_class
+        or return;
 
-    #$DB::single = $DB::stopper;
-    
+    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
+        $self->subject_class_name, 
+        $self->_complete_filter, 
+        $self->_hint_string
+    );
+
+    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+        and return if %extra;
+  
+    # preloading the data ensures that the iterator doesn't trigger requery
+    # TODO: remove the iterator entirely from the lister --ss
+    $DB::single = 1;
+    my @results = $self->subject_class_name->get($bool_expr);
+
+    my $iterator;
+    unless ($iterator = $self->subject_class_name->create_iterator(where => $bool_expr)) {
+        $self->error_message($self->subject_class_name->error_message);
+        return;
+    }
+   
     # prevent commits due to changes here
     # this can be prevented by careful use of environment variables if you REALLY want to use this to update data
     $ENV{UR_DBI_NO_COMMIT} = 1 unless (exists $ENV{UR_DBI_NO_COMMIT});
@@ -163,381 +163,192 @@ sub _do
     return 1;
 }
 
-package UR::Object::Command::List::Style;
+sub _filter_doc {          
+    my $class = shift;
 
-sub new{
-    my ($class, %args) = @_;
-    foreach (qw/iterator show noheaders output/){
-        die "no value for $_!" unless defined $args{$_};
+    my $doc = <<EOS;
+Filtering:
+----------
+ Create filter equations by combining filterable properties with operators and
+     values.
+ Combine and separate these 'equations' by commas.  
+ Use single quotes (') to contain values with spaces: name='genome center'
+ Use percent signs (%) as wild cards in like (~).
+ Use backslash or single quotes to escape characters which have special meaning
+     to the shell such as < > and &
+
+Operators:
+----------
+ =  (exactly equal to)
+ ~  (like the value)
+ :  (in the list of several values, slash "/" separated)
+    (or between two values, dash "-" separated)
+ >  (greater than)
+ >= (greater than or equal to)
+ <  (less than)
+ <= (less than or equal to)
+
+Examples:
+---------
+EOS
+    if (my $help_synopsis = $class->help_synopsis) {
+        $doc .= " $help_synopsis\n";
+    } else {
+        $doc .= <<EOS
+ lister-command --filter name=Bob --show id,name,address
+ lister-command --filter name='something with space',employees\>200,job~%manager
+ lister-command --filter cost:20000-90000
+ lister-command --filter answer:yes/maybe
+EOS
     }
-    return bless(\%args, $class);
-}
 
-sub _get_next_object_from_iterator {
-    my $self = shift;
+    $doc .= <<EOS;
 
-    my $obj;
-    for (1) {
-        $obj = eval { $self->{'iterator'}->next };
-        if ($@) {
-            UR::Object::Command::List->warning_message($@);
-            redo;
-        }
+Filterable Properties: 
+----------------------
+EOS
+
+    # Try to get the subject class name
+    my $self = $class->create;
+    if ( not $self->subject_class_name 
+            and my $subject_class_name = $self->_resolved_params_from_get_options->{subject_class_name} ) {
+        $self = $class->create(subject_class_name => $subject_class_name);
     }
-    return $obj;
-}
-        
 
-sub _object_properties_to_string {
-    my ($self, $o, $char) = @_;
-    my @v;
-    return join(
-        $char, 
-        map { defined $_ ? $_ : '<NULL>' } 
-        map { 
-            if (substr($_,0,1) eq '(') {
-                @v = eval $_;
-                if ($@) {
-                    @v = ('<ERROR>'); # ($@ =~ /^(.*)$/);
+    if ( $self->subject_class_name ) {
+        if ( my @properties = $self->_subject_class_filterable_properties ) {
+            my $longest_name = 0;
+            foreach my $property ( @properties ) {
+                my $name_len = length($property->property_name);
+                $longest_name = $name_len if ($name_len > $longest_name);
+            }
+
+            for my $property ( @properties ) {
+                my $property_doc = $property->doc;
+                unless ($property_doc) {
+                    eval {
+                        foreach my $ancestor_class_meta ( $property->class_meta->ancestry_class_metas ) {
+                            my $ancestor_property_meta = $ancestor_class_meta->property_meta_for_name($property->property_name);
+                            if ($ancestor_property_meta and $ancestor_property_meta->doc) {
+                                $property_doc = $ancestor_property_meta->doc;
+                                last;
+                            }
+                        }
+                    };
                 }
+                $property_doc ||= ' (undocumented)';
+                $property_doc =~ s/\n//gs;   # Get rid of embeded newlines
+
+                my $data_type = $property->data_type || '';
+                $data_type = ucfirst(lc $data_type);
+
+                $doc .= sprintf(" %${longest_name}s  ($data_type): $property_doc\n",
+                                $property->property_name);
             }
-            else {
-                @v = map { defined $_ ? $_ : '<NULL>' } $o->$_;
-            }
-            if (@v > 1) {
-                no warnings;
-                join(',',@v)
-            }
-            else {
-                $v[0]
-            }
-        } @{$self->{show}}
-    );
-}
-
-sub format_and_print{
-    my $self = shift;
-
-    unless ( $self->{noheaders} ) {
-        $self->{output}->print($self->_get_header_string. "\n");
+        }
+        else {
+            $doc .= sprintf(" %s\n", $self->error_message);
+        }
+    }
+    else {
+        $doc .= " Can't determine the list of filterable properties without a subject_class_name";
     }
 
-    my $count = 0;
-    while (my $object = $self->_get_next_object_from_iterator()) {
-        $self->{output}->print($self->_get_object_string($object), "\n");
-        $count++;
-    }
-
+    return $doc;
 }
 
-package UR::Object::Command::List::Html;
-use base 'UR::Object::Command::List::Style';
-
-sub _get_header_string{
+sub _validate_subject_class {
     my $self = shift;
-    return "<tr><th>". join("</th><th>", map { uc } @{$self->{show}}) ."</th></tr>";
-}
 
-sub _get_object_string{
-    my ($self, $object) = @_;
+    my $subject_class_name = $self->subject_class_name;
+    $self->error_message("No subject_class_name indicated.")
+        and return unless $subject_class_name;
+
+    $self->error_message(
+        sprintf(
+            'This command is not designed to work on a base UR class (%s).',
+            $subject_class_name,
+        )
+    )
+        and return if $subject_class_name =~ /^UR::/;
+
+    UR::Object::Type->use_module_with_namespace_constraints($subject_class_name);
     
-    my $out = "<tr>";
-    for my $property ( @{$self->{show}} ){
-        $out .= "<td>" . $object->$property . "</td>";
-    }
+    my $subject_class = $self->subject_class;
+    $self->error_message(
+        sprintf(
+            'Can\'t get class meta object for class (%s).  Is this class a properly declared UR::Object?',
+            $subject_class_name,
+        )
+    )
+        and return unless $subject_class;
     
-    return $out . "</tr>";
+    $self->error_message(
+        sprintf(
+            'Can\'t find method (all_property_metas) in %s.  Is this a properly declared UR::Object class?',
+            $subject_class_name,
+        ) 
+    )
+        and return unless $subject_class->can('all_property_metas');
+
+    return 1;
 }
 
-sub format_and_print{
-    my $self = shift;
-    
-    $self->{output}->print("<table>");
-    
-    #cannot use super because \n screws up javascript
-    unless ( $self->{noheaders} ) {
-        $self->{output}->print($self->_get_header_string);
-    }
-
-    my $count = 0;
-    while (my $object = $self->_get_next_object_from_iterator()) {
-        $self->{output}->print($self->_get_object_string($object));
-        $count++;
-    }
-    
-    $self->{output}->print("</table>");
-}
-
-package UR::Object::Command::List::Csv;
-use base 'UR::Object::Command::List::Style';
-
-sub _get_header_string{
+sub _subject_class_filterable_properties {
     my $self = shift;
 
-    my $delimiter = $self->{'csv_delimiter'};
-    return join($delimiter, map { lc } @{$self->{show}});
+    $self->_validate_subject_class
+        or return;
+
+    my %props = map { $_->property_name => $_ }
+                    $self->subject_class->property_metas;
+
+    return sort { $a->property_name cmp $b->property_name }
+           grep { substr($_->property_name, 0, 1) ne '_' }  # Skip 'private' properties starting with '_'
+           grep { ! $_->data_type or index($_->data_type, '::') == -1 }  # Can't filter object-type properties from a lister, right?
+           values %props;
 }
 
-sub _get_object_string {
-    my ($self, $object) = @_;
-
-    return $self->_object_properties_to_string($object, $self->{'csv_delimiter'});
+sub _base_filter {
+    return;
 }
 
-package UR::Object::Command::List::Pretty;
-use base 'UR::Object::Command::List::Style';
-
-sub _get_header_string{
-    return '';
-}
-
-sub _get_object_string{
-    my ($self, $object) = @_;
-
-    my $out;
-    for my $property ( @{$self->{show}} )
-    {
-        my $value = join(', ', $object->$property);
-        $out .= sprintf(
-            "%s: %s\n",
-            Term::ANSIColor::colored($property, 'red'),
-            Term::ANSIColor::colored($value, 'cyan'),
-        );
-    }
-
-    return $out;
-}
-
-package UR::Object::Command::List::Xml;
-use base 'UR::Object::Command::List::Style';
-
-sub format_and_print{
+sub _complete_filter {
     my $self = shift;
-    my $out;
-
-    eval "use XML::LibXML";
-    if ($@) {
-        die "Please install XML::LibXML (run sudo cpanm XML::LibXML) to use this tool!";
-    }
-
-    my $doc = XML::LibXML->createDocument();
-    my $results_node = $doc->createElement("results");
-    $results_node->addChild( $doc->createAttribute("generated-at",UR::Time->now()) );
-
-    $doc->setDocumentElement($results_node);
-
-    my $count = 0;
-    while (my $object = $self->_get_next_object_from_iterator()) {
-        my $object_node = $results_node->addChild( $doc->createElement("object") );
-
-        my $object_reftype = ref $object;
-        $object_node->addChild( $doc->createAttribute("type",$object_reftype) );
-        $object_node->addChild( $doc->createAttribute("id",$object->id) );
-
-        for my $property ( @{$self->{show}} ) {
-
-             my $property_node = $object_node->addChild ($doc->createElement($property));
-
-             my @items = $object->$property;
-
-             my $reftype = ref $items[0];
-
-             if ($reftype && $reftype ne 'ARRAY' && $reftype ne 'HASH') {
-                 foreach (@items) {
-                     my $subobject_node = $property_node->addChild( $doc->createElement("object") );
-                     $subobject_node->addChild( $doc->createAttribute("type",$reftype) );
-                     $subobject_node->addChild( $doc->createAttribute("id",$_->id) );
-                     #$subobject_node->addChild( $doc->createTextNode($_->id) );
-                     #xIF
-                 }
-             } else {
-                 foreach (@items) {
-                     $property_node->addChild( $doc->createTextNode($_) );
-                 }
-             }
-
-         }
-        $count++;
-    }
-    $self->{output}->print($doc->toString(1));
+    return join(',', grep { defined $_ } $self->_base_filter,$self->filter);
 }
 
-package UR::Object::Command::List::Text;
-use base 'UR::Object::Command::List::Style';
-
-sub _get_header_string{
+sub help_detail {
     my $self = shift;
-    return join (
+    return join(
         "\n",
-        join("\t", map { uc } @{$self->{show}}),
-        join("\t", map { '-' x length } @{$self->{show}}),
+        $self->_style_doc,
+        $self->_filter_doc,
     );
 }
 
-sub _get_object_string{
-    my ($self, $object) = @_;
-    $self->_object_properties_to_string($object, "\t");
+sub _style_doc {
+    return <<EOS;
+Listing Styles:
+---------------
+ text - table like
+ csv - comma separated values
+ pretty - objects listed singly with color enhancements
+ html - html table
+ xml - xml document using elements
+
+EOS
 }
 
-sub format_and_print{
+sub valid_styles {
+    return (qw/ text csv pretty html xml newtext/);
+}
+
+sub _hint_string {
     my $self = shift;
-    my $tab_delimited;
-    unless ($self->{noheaders}){
-        $tab_delimited .= $self->_get_header_string."\n";
-    }
-
-    my $count = 0;
-    while (my $object = $self->_get_next_object_from_iterator()) {
-        $tab_delimited .= $self->_get_object_string($object)."\n";
-        $count++;
-    }
-
-    $self->{output}->print($self->tab2col($tab_delimited));
+    return $self->show;
 }
 
-sub tab2col{
-    my ($self, $data) = @_;
-
-    #turn string into 2d array of arrayrefs ($array[$rownum][$colnum])
-    my @rows = split("\n", $data);
-    @rows = map { [split("\t", $_)] } @rows;
-
-    my $output;
-    my @width;
-
-    #generate array of max widths per column
-    foreach my $row_ref (@rows) {
-        my @cols = @$row_ref;
-        my $index = $#cols;
-        for (my $i = 0; $i <= $index; $i++) {
-            my $l = (length $cols[$i]) + 3; #TODO test if we need this buffer space
-            $width[$i] = $l if ! defined $width[$i] or $l > $width[$i];
-        }
-    }
-    
-    #create a array of blanks to use as a templatel
-    my @column_template = map { ' ' x $_ } @width;
-
-    #iterate through rows and cols, substituting in the row entry in your template
-    foreach my $row_ref (@rows) {
-        my @cols = @$row_ref;
-        my $index = $#cols;
-        #only apply template for all but the last entry in a row 
-        for (my $i = 0; $i < $index; $i++) {
-            my $entry = $cols[$i];
-            my $template = $column_template[$i];
-            substr($template, 0, length $entry, $entry);
-            $output.=$template;
-        }
-        $output.=$cols[$index]."\n"; #Don't need traling spaces on the last entry
-    }
-    return $output;
-}
-
-package UR::Object::Command::List::Newtext;
-use base 'UR::Object::Command::List::Text';
-
-sub format_and_print{
-    my $self = shift;
-    my $tab_delimited;
-
-    unless ($self->{noheaders}){
-        $tab_delimited .= $self->_get_header_string."\n";
-    }
-
-    my $view = UR::Object::View->create(
-                       subject_class_name => 'UR::Object',
-                       perspective => 'lister',
-                       toolkit => 'text',
-                       aspects => [ @{$self->{'show'}} ],
-                  );
-
-    my $count = 0;
-    while (my $object = $self->_get_next_object_from_iterator()) {
-        $view->subject($object);
-        $tab_delimited .= $view->content() . "\n";
-        $count++;
-    }
-
-    $self->{output}->print($self->tab2col($tab_delimited));
-}
 
 1;
-=pod
 
-=head1 NAME
-
-UR::Object::Command::List - Fetches and lists objects in different styles.
-
-=head1 SYNOPSIS
-
- package MyLister;
-
- use strict;
- use warnings;
-
- use above "UR";
-
- class MyLister {
-     is => 'UR::Object::Command::List',
-     has => [
-     # add/modify properties
-     ],
- };
-
- 1;
-
-=head1 Provided by the Developer
-
-=head2 subject_class_name (optional)
-
-The subject_class_name is the class for which the objects will be fetched.  It can be specified one of two main ways:
-
-=over
-
-=item I<by_the_end_user_on_the_command_line>
-
-For this do nothing, the end user will have to provide it when the command is run.
-
-=item I<by_the_developer_in the_class_declartion>
-
-For this, in the class declaration, add a has key w/ arrayref of hashrefs.  One of the hashrefs needs to be subject_class_name.  Give it this declaration:
-
- class MyFetchAndDo {
-     is => 'UR::Object::Command::FetchAndDo',
-     has => [
-         subject_class_name => {
-             value => <CLASS NAME>,
-             is_constant => 1,
-         },
-     ],
- };
-
-=back
-
-=head2 show (optional)
-
-Add defaults to the show property:
-
- class MyFetchAndDo {
-     is => 'UR::Object::Command::FetchAndDo',
-     has => [
-         show => {
-             default_value => 'name,age', 
-         },
-     ],
- };
-
-=head2 helps (optional)
-
-Overwrite the help_brief, help_synopsis and help_detail methods to provide specific help.  If overwiting the help_detail method, use call '_filter_doc' to get the filter documentation and usage to combine with your specific help.
-
-=head1 List Styles
-
-text, csv, html, xml, pretty (inprogress)
-
-=cut
-
-
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/UR/Object/Command/List.pm $
-#$Id: List.pm 50329 2009-08-25 20:10:00Z abrummet $
