@@ -1033,8 +1033,17 @@ sub initializer_should_create_column_name_for_class_properties {
 # hashref, create a data_source instance (if appropriate) and return the class_name
 # of this new datasource.
 sub create_from_inline_class_data {
-    my $class = shift;
-    die "Class $class does not implement create_from_inline_class_data() for on-the-fly data sources";
+    my ($class,$class_data,$ds_data) = @_;
+    my %ds_data = %$ds_data;
+    my $ds_class_name = delete $ds_data{is};
+    unless (my $ds_class_meta = UR::Object::Type->get($ds_class_name)) {
+        die "No class $ds_class_name found!";
+    }
+    my $ds = $ds_class_name->__define__(%ds_data);
+    unless ($ds) {
+        die "Failed to construct $ds_class_name: " . $ds_class_name->error_message();
+    }
+    return $ds;
 }
 
 

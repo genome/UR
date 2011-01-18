@@ -1160,6 +1160,11 @@ sub _complete_class_meta_object_definitions {
         @{ $class_name . "::ISA" } = @$inheritance;
     }
 
+    if (not $data_source and $class_name->can("__load__")) {
+        # $data_source = UR::DataSource::Default->__define__;
+        $data_source = { is => 'UR::DataSource::Default' };
+    }
+
     # Create inline data source
     if ($data_source and ref($data_source) eq 'HASH') {
         $self->{'__inline_data_source_data'} = $data_source;

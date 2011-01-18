@@ -362,6 +362,9 @@ ok($command_obj->execute(), 'Updating schema anew.');
     ok(! UR::Object::Type->get('URT::Car'),'Correctly could not load Car class');
 
     $personclass = UR::Object::Type->get('URT::Person');
+    unless ($personclass) {
+        $DB::single = 1;
+    }
     $personclass->ungenerate;
     $DB::single = 1;
     $personclass->generate;

@@ -55,7 +55,7 @@ sub create_iterator_closure_for_rule {
         $iterator = $content;
     }
     else {
-        Carp::confess("Expected an arrayref of headers, and then content in the form of an arrayref or coderef");
+        Carp::confess("Expected an arrayref of properties, and then content in the form of an arrayref (rows,columns) or coderef/iterator returning rows from $subject_class_name __load__!\n");
     }
 
     if ("@$headers" ne "@$expected_headers") {
@@ -81,7 +81,10 @@ sub _map_fields {
     my @pos;
     for my $field (@$to) {
         my $pos = $from{$field};
-        die "Field not found $field!" unless defined $pos;
+        unless (defined $pos) {
+            print "@$from\n@$to\n" . Carp::longmess() . "\n";
+            die "Field not found $field!";
+        }
         push @pos, $pos;
     }
     return @pos;

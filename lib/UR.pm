@@ -154,59 +154,100 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'UR::Object::Type',
-    id_by => ['class_name'],
+    doc => 'class/type meta-objects for UR',
+
+    id_by => 'class_name',
     sub_classification_method_name => '_resolve_meta_class_name',
+    is_abstract => 1,
+
     has => [
-        type_name                        => { is => 'Text', len => 256, source => 'data dictionary' },
-        class_name                       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        doc                              => { is => 'Text', len => 1024, is_optional => 1, source => 'data dictionary' },
-      
+        class_name                       => { is => 'Text', len => 256, is_optional => 1, 
+                                                doc => 'the name for the class described' },
+        
         properties                       => { 
-                                                # this is calculated so we can do appropriate
-                                                # inheritance filtering.  We need an isa operator
-                                                # and its converse in order to be fully declarative
                                                 is_many => 1,
+                                                
+                                                # this is calculated instead of a regular relationship
+                                                # so we can do appropriate inheritance filtering.  
+                                                # We need an isa operator and its converse
+                                                # in order to be fully declarative internally here
                                                 calculate => 'shift->_properties(@_);',
-                                                doc => 'property meta objects for this class'
+                                                
+                                                doc => 'property meta-objects for the class'
                                             },
 
-        er_role                          => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary', default_value => 'entity' },
-        schema_name                      => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        data_source_id                      => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
-        #data_source_meta                 => { is => 'UR::DataSource', id_by => 'data_source_id', is_optional => 1, source => 'data dictionary' },
-        namespace                        => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary' },
+        doc                              => { is => 'Text', len => 1024, is_optional => 1, 
+                                                doc => 'a one-line description of the class/type' },
+      
+        is_abstract                      => { is => 'Boolean', default_value => 0,
+                                                doc => 'abstract classes must be subclassified into a concreate class at create/load time' },
 
-        is_abstract                      => { is => 'Boolean', default_value => 0 },
-        is_final                         => { is => 'Boolean', default_value => 0 },
-        is_singleton                     => { is => 'Boolean', default_value => 0 },
-        is_transactional                 => { is => 'Boolean', default_value => 1 },
+        is_final                         => { is => 'Boolean', default_value => 0,
+                                                doc => 'further subclassification is prohibited on final classes' },
 
-        generated                        => { is => 'Boolean', is_transient => 1, default_value => 0 },
-        meta_class_name                  => { is => 'Text' },
+        is_transactional                 => { is => 'Boolean', default_value => 1,
+                                                doc => 'non-transactional objects are left out of in-memory transactions' },
 
-        short_name                       => { is => 'Text', len => 16, is_optional => 1, source => 'data dictionary' },
-        source                           => { is => 'Text', len => 256 , default_value => 'data dictionary', is_optional => 1 }, # This is obsolete and should be removed later
-        composite_id_separator           => { is => 'Text', len => 2 , default_value => "\t", is_optional => 1},        
+        is_singleton                     => { is => 'Boolean', default_value => 0,
+                                                doc => 'singleton classes have only one instance, or have each instance fall into a distinct subclass' },
+
+        namespace                        => { is => 'Text', len => 256, is_optional => 1, 
+                                                doc => 'the first "word" in the class name, which points to a UR::Namespace' },
+                                            
+        schema_name                      => { is => 'Text', len => 256, is_optional => 1,
+                                                doc => 'an arbitrary grouping for classes for which instances share a common storage system' },
+        
+        data_source_id                   => { is => 'Text', len => 256, is_optional => 1, 
+                                                doc => 'for classes which persist beyond their current process, the identifier for their storage manager' },
+
+        #data_source_meta                => { is => 'UR::DataSource', id_by => 'data_source_id', is_optional => 1,  },
+
+        generated                        => { is => 'Boolean', is_transient => 1, default_value => 0,
+                                                doc => 'an internal flag set when the class meta has fabricated accessors and methods in the class namespace' },
+
+        meta_class_name                  => { is => 'Text', 
+                                                doc => 'even meta-classess have a meta-class' },
+
+        composite_id_separator           => { is => 'Text', len => 2 , default_value => "\t", is_optional => 1,
+                                                doc => 'for classes whose objects have a multi-value "id", this overrides using a "\t" to compose/decompose' },        
         
         # details used by the managment of the "real" entity outside of the app (persistence) 
-        table_name                       => { is => 'Text', len => undef, is_optional => 1, source => 'data dictionary' },        
-        query_hint                       => { is => 'Text', len => 1024 , is_optional => 1},        
-        id_sequence_generator_name       => { is => 'Text', len => 256, is_optional => 1, source => 'data dictionary', doc => 'override the default choice for sequence generator name' },
+        table_name                       => { is => 'Text', len => undef, is_optional => 1, 
+                                                doc => 'for classes with a data source, this specifies the table or equivalent data structure which holds instances' },
+
+        query_hint                       => { is => 'Text', len => 1024 , is_optional => 1,
+                                                doc => 'used to optimize access to underlying storage (database specific)' },
+                                            
+        id_sequence_generator_name       => { is => 'Text', len => 256, is_optional => 1,  
+                                                doc => 'override the default choice for sequence generator name' },
 
         # different ways of handling subclassing at object load time
-        subclassify_by                      => { is => 'Text', len => 256, is_optional => 1},
-        sub_classification_meta_class_name  => { is => 'Text', len => 1024 , is_optional => 1},
-        sub_classification_method_name      => { is => 'Text', len => 256, is_optional => 1},
-        first_sub_classification_method_name => { is => 'Text', len => 256, is_optional => 1 },
-        subclass_description_preprocessor   => { is => 'MethodName', len => 255, is_optional => 1 },
+        subclassify_by                      => { is => 'Text', len => 256, is_optional => 1,
+                                                doc => 'when set, the method specified will return the name of a specific subclass into which the object should go' },
+
+        subclass_description_preprocessor   => { is => 'MethodName', len => 255, is_optional => 1,
+                                                doc => 'a method which should pre-process the class description of sub-classes before construction' },
+        
+        sub_classification_method_name      => { is => 'Text', len => 256, is_optional => 1, 
+                                                doc => 'like subclassify_by, but examines whole objects not a single property' },
+
+        
+        # obsolete/internal
+        type_name                               => { is => 'Text', len => 256,  },
+        er_role                                 => { is => 'Text', len => 256, is_optional => 1,  default_value => 'entity' },
+        short_name                              => { is => 'Text', len => 16, is_optional => 1,  },
+        source                                  => { is => 'Text', len => 256 , default_value => 'data dictionary', is_optional => 1 }, # This is obsolete and should be removed later
+        sub_classification_meta_class_name      => { is => 'Text', len => 1024 , is_optional => 1, 
+                                                    doc => 'obsolete' },
+        first_sub_classification_method_name    => { is => 'Text', len => 256, is_optional => 1,
+                                                    doc => 'cached value to handle a complex inheritance hierarchy with storage at some levels but not others' },
 
 
-    ### Relationships with the other meta-classes (used internally) ###
+        ### Relationships with the other meta-classes (used internally) ###
 
         # UR::Namespaces are singletons referenced through their name
         namespace_meta                  => { is => 'UR::Namespace', id_by => 'namespace' },
         is                              => { is => 'ARRAY', is_mutable => 0, doc => 'List of the parent class names' },  
-        
 
         # linking to the direct parents, and the complete ancestry
         parent_class_metas              => { is => 'UR::Object::Type', id_by => 'is',
@@ -217,6 +258,7 @@ UR::Object::Type->define(
         ancestry_class_metas            => { is => 'UR::Object::Type', id_by => 'is',  where => [-recurse => [class_name => 'is']],
                                              doc => 'Climb the ancestry tree and return the class objects for all of them' },
         ancestry_class_names            => { via => 'ancestry_class_metas', to => 'class_name', is_many => 1 },
+
         # This one isn't useful on its own, but is used to build the all_* accessors below
         all_class_metas                 => { is => 'UR::Object::Type', calculate => 'return ($self, $self->ancestry_class_metas)' },
 
@@ -247,6 +289,7 @@ UR::Object::Type->define(
         direct_id_column_names           => { via => 'direct_id_property_metas', to => 'column_name', is_many => 1, where => [column_name => { operator => 'true'}] },
         ancestry_column_names            => { via => 'ancestry_class_metas', to => 'direct_column_names', is_many => 1 },
         ancestry_id_column_names         => { via => 'ancestry_class_metas', to => 'direct_id_column_names', is_many => 1 },
+        
         # Are these *columnless* properties actually necessary?  The user could just use direct_property_metas(column_name => undef)
         direct_columnless_property_metas => { is => 'UR::Object::Property', reverse_as => 'class_meta', where => [column_name => undef], is_many => 1 },
         direct_columnless_property_names => { via => 'direct_columnless_property_metas', to => 'property_name', is_many => 1 },
@@ -260,6 +303,7 @@ UR::Object::Type->define(
         all_columnless_property_names    => { via => 'all_class_metas', to => 'direct_columnless_property_names', is_many => 1 },
     ],    
     unique_constraints => [
+        # TODO: remove deps on this
         { properties => [qw/type_name/], sql => 'SUPER_FAKE_O2' },
         #{ properties => [qw/data_source table_name/], sql => 'SUPER_FAKE_05' },
     ],
