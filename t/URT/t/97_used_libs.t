@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 require UR::Util;
 
 my @used_libs;
@@ -35,3 +35,9 @@ ok(eq_array(\@used_libs, ['/foo']), 'only one item in PERL5LIB (no trailing colo
 $ENV{PERL5LIB} = '/bar/:/baz';
 @used_libs = UR::Util::used_libs();
 ok(eq_array(\@used_libs, ['/foo']), 'first dir in PERL5LIB ends with slash (@INC may not have slash)');
+
+
+@INC = ('/foo', '/foo', '/bar');
+$ENV{PERL5LIB} = '/bar';
+@used_libs = UR::Util::used_libs();
+ok(eq_array(\@used_libs, ['/foo']), 'remove duplicate elements from used_libs');

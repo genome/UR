@@ -24,7 +24,15 @@ sub used_libs {
         push @extra, $inc;
     }
     unshift @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
+    @extra = _unique_elements(@extra);
     return @extra;
+}
+
+sub _unique_elements {
+    my @list = @_;
+    my %seen = ();
+    my @unique = grep { ! $seen{$_} ++ } @list;
+    return @unique;
 }
 
 sub used_libs_perl5lib_prefix {
