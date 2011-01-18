@@ -15,10 +15,10 @@ sub used_libs {
     my @compiled_inc = UR::Util::compiled_inc();
     my @perl5lib = split(':', $ENV{PERL5LIB});
     map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);
-    map { $_ = Cwd::abs_path($_) } (@compiled_inc, @perl5lib);
+    map { $_ = Cwd::abs_path($_) || $_ } (@compiled_inc, @perl5lib);
     for my $inc (@INC) {
         $inc =~ s/\/+$//;
-        my $abs_inc = Cwd::abs_path($inc); # should already be expanded by UR.pm
+        my $abs_inc = Cwd::abs_path($inc) || $inc; # should already be expanded by UR.pm
         next if (grep { $_ =~ /^$abs_inc$/ } @compiled_inc);
         next if (grep { $_ =~ /^$abs_inc$/ } @perl5lib);
         push @extra, $inc;
