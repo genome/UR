@@ -237,7 +237,15 @@ sub _get_joins {
                 push @joins, { %$join, id => $id, where => $where };
             }
             unless ($to eq 'self' or $to eq '-filter') {
-                my $to_meta = $via_meta->data_type->__meta__->property_meta_for_name($to);
+                my $to_class_meta = eval { $via_meta->data_type->__meta__ };
+                unless ($to_class_meta) {
+                    Carp::croak("Can't get class metadata for " . $via_meta->data_type
+                                . " while resolving property '" . $self->property_name . "' in class " . $self->class_name . "\n"
+                                . "Is the data_type for property '" . $via_meta->property_name . "' in class "
+                                . $via_meta->class_name . " correct?");
+                }
+
+                my $to_meta = $to_class_meta->property_meta_for_name($to);
                 unless ($to_meta) {
                     my $property_name = $self->property_name;
                     my $class_name = $self->class_name;
