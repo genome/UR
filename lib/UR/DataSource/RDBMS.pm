@@ -3634,7 +3634,10 @@ sub _generate_template_data_for_loading {
 
         my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
         unless ($final_accessor_property_meta) {
-            die "Failed to find property $final_accessor for class " . $last_class_object_excluding_inherited_joins->class_name . "!";
+            Carp::croak("No property metadata for property named '$final_accessor' in class "
+                        . $last_class_object_excluding_inherited_joins->class_name
+                        . " while resolving joins for property '" . $delegated_property->property_name . "' in class "
+                        . $delegated_property->class_name);
         }
 
         # we don't know for all of the joined properties how they connect back,

@@ -524,11 +524,35 @@ sub _generate_template_data_for_loading {
         }
 
         my $final_accessor_property_meta = $last_class_object->property_meta_for_name($final_accessor);
+        if ($final_accessor_property_meta
+            and $final_accessor_property_meta->class_name eq 'UR::Object'
+            and $final_accessor_property_meta->property_name eq 'id')
+        {
+            # This is the 'fake' id property.  Remap it to the class' real ID property name
+            my @id_properties = $last_class_object->id_property_names;
+            if (@id_properties != 1) {
+                # TODO - we could add further joins and not have to evaluate later
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+                next;
+
+            } else {
+                $final_accessor_property_meta = $last_class_object->property_meta_for_name($id_properties[0]);
+            }
+            
+        }
+
+        unless ($final_accessor_property_meta) {
+            Carp::croak("No property metadata for property named '$final_accessor' in class " . $last_class_object->class_name
+                        . " while resolving joins for property '" .$delegated_property->property_name . "' in class "
+                        . $delegated_property->class_name);
+        }
+
+       
         my $sql_lvalue;
         if ($final_accessor_property_meta->is_calculated) {
             $sql_lvalue = $final_accessor_property_meta->calculate_sql;
             unless (defined($sql_lvalue)) {
-                    $needs_further_boolexpr_evaluation_after_loading = 1;
+                $needs_further_boolexpr_evaluation_after_loading = 1;
                 next;
             }
         }
