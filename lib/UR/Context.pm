@@ -2759,6 +2759,10 @@ sub __create_object_fabricator_for_loading_template {
 
     }
 
+    # This is a local copy of what we want to put in all_params_loaded, when the object fabricator is
+    # finalized
+    my $local_all_params_loaded = {};
+    $local_all_params_loaded->{'__in_clause_values__'} = \%in_clause_values;
 
     # If the rule has hints, we'll be loading more data than is being returned.  Set up some stuff so
     # we can mark in all_params_loaded that these other things got loaded, too
@@ -2789,15 +2793,17 @@ sub __create_object_fabricator_for_loading_template {
                 my $hint_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, 
                                                                                           @{$join->{'foreign_property_names'}});
                 push @{$rule_hints{$hint}}, [ [@{$join->{'foreign_property_names'}}] , $hint_rule_tmpl];
+
+                # Make notes in all_params_loaded about these things we're hinting on.
+                # This way, if they return no matches, then we'll remember that for later queries
+                my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
+                my $related_obj_rule = $hint_rule_tmpl->get_rule_for_values(@related_obj_values);
+                $UR::Context::all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = undef;
+                $local_all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = 0;
             }
         }
     }
     
-    # This is a local copy of what we want to put in all_params_loaded, when the object fabricator is
-    # finalized
-    my $local_all_params_loaded = {};
-    $local_all_params_loaded->{'__in_clause_values__'} = \%in_clause_values;
-
     my $object_fabricator = sub {
         my $next_db_row = $_[0];
         
