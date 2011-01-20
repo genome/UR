@@ -146,11 +146,13 @@ sub _init_database {
 
         my $schema_file = $self->_schema_path;
 
+        chomp(my $sqlite3_in_path = !system("which sqlite3"));
         if (-e $dump_file) {
             # create from dump
             $self->warning_message("Re-creating $db_file from $dump_file.");
-            my $rv = system("sqlite3 $db_file <$dump_file");
-            if ($rv) {
+            if ($sqlite3_in_path) {
+                system("sqlite3 $db_file <$dump_file");
+            } else {
                 $self->_load_db_from_dump_internal($dump_file);
             }
             unless (-e $db_file) {
@@ -160,8 +162,9 @@ sub _init_database {
         elsif ( (not -e $db_file) and (-e $schema_file) ) {
             # create from schema
             $self->warning_message("Re-creating $db_file from $schema_file.");
-            my $rv = system("sqlite3 $db_file <$schema_file");
-            if ($rv) {
+            if ($sqlite3_in_path) {
+                system("sqlite3 $db_file <$schema_file");
+            } else {
                 $self->_load_db_from_dump_internal($schema_file);
             }
             unless (-e $db_file) {
@@ -550,19 +553,18 @@ sub commit {
     return 1 unless $self->dump_on_commit or -e $dump_filename;
     
     # FIXME is there a way to do a dump from within DBI?    
-    my $retval = system("sqlite3 $db_filename .dump > $dump_filename; touch $db_filename");
-    if ($retval == 0) {
-        # The dump worked
-        return 1;
-    } elsif ($? == -1) {
-        if ($! =~ m/No such file or directory/) {
-            # sqlite3 wasn't in the PATH?
-            return $self->_dump_db_to_file_internal();
+    chomp(my $sqlite3_in_path = !system("which sqlite3"));
+    if ($sqlite3_in_path) {
+        my $retval = system("sqlite3 $db_filename .dump > $dump_filename; touch $db_filename");
+        if ($retval == 0) {
+            return 1;
         } else {
             $retval >>= 8;
             $self->error_message("Dumping the SQLite database $db_filename from DataSource ",$self->get_name," to $dump_filename failed\nThe sqlite3 return code was $retval, errno $!");
             return;
         }
+    } else {
+        return $self->_dump_db_to_file_internal();
     }
 
     # Shouldn't get here...
