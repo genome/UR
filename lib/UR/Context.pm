@@ -267,9 +267,8 @@ sub infer_property_value_from_rule {
     my($self,$wanted_property_name,$rule) = @_;
 
     # First, the easy case...  The property is directly mentioned in the rule
-    my $value = $rule->value_for($wanted_property_name);
-    if (defined $value) {
-        return $value;
+    if ($rule->specifies_value_for($wanted_property_name)) {
+        return $rule->value_for($wanted_property_name);
     }
 
     my $subject_class_name = $rule->subject_class_name;
