@@ -21,7 +21,7 @@ use Cwd;
 my @PERL5LIB = ($ENV{PERL5LIB} ? split(':', $ENV{PERL5LIB}) : ());
 for my $dir (@INC, @PERL5LIB) {
     next unless -d $dir;
-    $dir = Cwd::abs_path($dir);
+    $dir = Cwd::abs_path($dir) || $dir;
 }
 $ENV{PERL5LIB} = join(':', @PERL5LIB);
 

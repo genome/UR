@@ -15,16 +15,24 @@ sub used_libs {
     my @compiled_inc = UR::Util::compiled_inc();
     my @perl5lib = split(':', $ENV{PERL5LIB});
     map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);
-    map { $_ = Cwd::abs_path($_) } (@compiled_inc, @perl5lib);
+    map { $_ = Cwd::abs_path($_) || $_ } (@compiled_inc, @perl5lib);
     for my $inc (@INC) {
         $inc =~ s/\/+$//;
-        my $abs_inc = Cwd::abs_path($inc); # should already be expanded by UR.pm
+        my $abs_inc = Cwd::abs_path($inc) || $inc; # should already be expanded by UR.pm
         next if (grep { $_ =~ /^$abs_inc$/ } @compiled_inc);
         next if (grep { $_ =~ /^$abs_inc$/ } @perl5lib);
         push @extra, $inc;
     }
-    push @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
+    unshift @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
+    @extra = _unique_elements(@extra);
     return @extra;
+}
+
+sub _unique_elements {
+    my @list = @_;
+    my %seen = ();
+    my @unique = grep { ! $seen{$_} ++ } @list;
+    return @unique;
 }
 
 sub used_libs_perl5lib_prefix {
@@ -65,14 +73,9 @@ sub compiled_inc {
     return @compiled_inc;
 }
 
-sub deep_copy { 
-    require Data::Dumper;
-    local $Data::Dumper::Purity = 1;
-    my $original = $_[0];
-    # FIXME - this will cause Data::Dumper to emit a warning if $original contains a coderef...
-    my $src = "no strict; no warnings;\n" . Data::Dumper::Dumper($original) . "\n\$VAR1;";
-    my $copy = eval($src);
-    return $copy;
+sub deep_copy {
+    require Clone::PP;
+    return Clone::PP::clone($_[0]);
 }
 
 sub value_positions_map {

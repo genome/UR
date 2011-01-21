@@ -370,6 +370,15 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'help!',
               undef
             ],
+            '>pod',
+            [
+              'output-path=s',
+              'files',
+              'base-commands=s@',
+              'files',
+              'help!',
+              undef
+            ],
             '>rename-class',
             [
               'force!',

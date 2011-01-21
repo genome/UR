@@ -310,7 +310,7 @@ sub help_brief
 sub help_synopsis 
 {
     my $self = shift;
-    return;
+    return '';
 }
 
 sub help_detail 
@@ -464,8 +464,8 @@ sub resolve_option_completion_spec {
                 push @completion_spec, '>' . $sub => $sub_tree;
             }
             else {
-                print "WARNING: Found $sub listed as delegator but no delegatees!\n";
-                print "\t Changing $sub to non-delegating command, suggest investigating to correct completion.\n";
+                print "WARNING: $sub has sub_class $sub_class of ($class) but could not resolve option completion spec for it.\n".
+                      "Setting $sub to non-delegating command, investigate to correct tab completion.\n";
                 push @completion_spec, $sub => undef;
             }
         }

@@ -51,6 +51,9 @@ sub execute {
 
     (my $module_path) = Getopt::Complete::Cache->module_and_cache_paths_for_package($class, 1);
     my $cache_path = $module_path . ".opts";
+    if (-s $cache_path) {
+        rename($cache_path, "$cache_path.bak");
+    }
     unless ($self->output) {
         $self->output($cache_path);
     }
@@ -65,7 +68,18 @@ sub execute {
         $src =~ s/^\$VAR1/\$$class\:\:OPTS_SPEC/;
         $fh->print($src);
     }
-    print "\nOPTS_SPEC file created at $cache_path\n";
+    if (-s $cache_path) {
+        print "\nOPTS_SPEC file created at $cache_path\n";
+        unlink("$cache_path.bak");
+    } else {
+        if (-s "$cache_path.bak") {
+            print "\nERROR: $cache_path is 0 bytes, reverting to previous\n";
+            rename("$cache_path.bak", $cache_path);
+        } else {
+            print "\nERROR: $cache_path is 0 bytes and no backup exists, removing file\n";
+            unlink($cache_path);
+        }
+    }
 }
 
 1;
