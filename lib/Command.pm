@@ -310,7 +310,7 @@ sub help_brief
 sub help_synopsis 
 {
     my $self = shift;
-    return;
+    return '';
 }
 
 sub help_detail 
