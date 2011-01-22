@@ -60,6 +60,14 @@ END {
     }
 }
 
+use Class::Autouse;
+BEGIN {
+    my $v = $Class::Autouse::VERSION;
+    unless ($v >= 2.0 or $v eq '1.99_02' or $v eq '1.99_04') {
+        die "UR requires Class::Autouse 2.0 or greater (or 1.99_02 or 1.99_04)!!";
+    }
+};
+
 #
 # Because UR modules execute code when compiling to define their classes,
 # and require each other for that code to execute, there are bootstrapping 
