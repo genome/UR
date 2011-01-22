@@ -12,6 +12,8 @@ my $build = Module::Build->new(
     perl => 'v5.8.7',
 
     # pure Perl
+    'Class::Autouse'      => '2.0',
+    'Clone::PP'           => '1.02',
     'Carp'                => '',
     'Sys::Hostname'       => '1.11',
     'File::Basename'      => '2.73',

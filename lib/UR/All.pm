@@ -6,7 +6,7 @@ use warnings;
 our $VERSION = "0.27"; # UR $VERSION;
 
 require above;
-use Class::Autouse_1_99_04;
+use Class::Autouse; # 1.99_02, 1.99_04 or >= 2.0
 use Command;
 use Command::DynamicSubCommands;
 use UR;
