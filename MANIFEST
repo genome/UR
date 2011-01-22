@@ -10,7 +10,8 @@ debian/watch
 INSTALL
 lib/above.pm
 lib/Class/Autouse_1_99_02.pm
-lib/Class/Autouse_1_99_02.README
+lib/Class/Autouse_1_99_04.pm
+lib/Class/Autouse_1_99_0X.README
 lib/Command.pm
 lib/Command/DynamicSubCommands.pm
 lib/Command/Test.pm
@@ -202,14 +203,7 @@ lib/UR/Object/Type/Initializer.pod
 lib/UR/Object/Type/InternalAPI.pm
 lib/UR/Object/Type/ModuleWriter.pm
 lib/UR/Object/Type/View/Default/Text.pm
-lib/UR/Object/Type/View/Default/Umlet.pm
 lib/UR/Object/Type/View/Default/Xml.pm
-lib/UR/Object/Umlet.pm
-lib/UR/Object/Umlet/Class.pm
-lib/UR/Object/Umlet/Diagram.pm
-lib/UR/Object/Umlet/Other.pm
-lib/UR/Object/Umlet/PictureElement.pm
-lib/UR/Object/Umlet/Relation.pm
 lib/UR/Object/Value.pm
 lib/UR/Object/View.pm
 lib/UR/Object/View/Aspect.pm
@@ -223,7 +217,6 @@ lib/UR/Object/View/Default/Xsl.pm
 lib/UR/Object/View/Lister/Text.pm
 lib/UR/Object/View/Toolkit.pm
 lib/UR/Object/View/Toolkit/Text.pm
-lib/UR/Object/View/Toolkit/Umlet.pm
 lib/UR/ObjectDeprecated.pm
 lib/UR/ObjectV001removed.pm
 lib/UR/ObjectV04removed.pm
@@ -237,7 +230,6 @@ lib/UR/Service/RPC/Message.pm
 lib/UR/Service/RPC/Server.pm
 lib/UR/Service/RPC/TcpConnectionListener.pm
 lib/UR/Service/urinterface.js
-lib/UR/Service/XMLCommandExecutor.pm
 lib/UR/Singleton.pm
 lib/UR/Test.pm
 lib/UR/Time.pm
