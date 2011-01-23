@@ -8,7 +8,13 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = '0.27';
+our $VERSION = '0.28'; # UR $VERSION
+
+BEGIN {
+    # unless otherwise specified, begin uncaching at 1 million objects 
+    #$ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'} ||= 1_000_000;
+    #$ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} ||= 1_000;
+}
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
