@@ -8,7 +8,7 @@ our $VERSION = "0.28"; # UR $VERSION;
 use IO::File;
 
 class UR::Namespace::Command::Update::Pod {
-    is => ['UR::Namespace::Command'],
+    is => 'UR::Namespace::Command::Base',
     has => [
         executable_name => {
             is => 'Text',
