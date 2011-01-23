@@ -679,7 +679,7 @@ sub help_usage_command_pod
     my $command_name = $self->command_name;
     my $pod;
 
-    if (not $self->is_executable) {
+    if (0) { # (not $self->is_executable) {
         # no execute implemented
         if ($self->is_sub_command_delegator) {
             # show the list of sub-commands
@@ -702,35 +702,57 @@ sub help_usage_command_pod
         my $required_args = $self->help_options(is_optional => 0, format => "pod");
         my $optional_args = $self->help_options(is_optional => 1, format => "pod");
         my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
+        my $help_brief = $self->help_brief;
+        my $version = do { no strict; ${ $self->class . '::VERSION' } };
+
         $pod =
             "\n=pod"
             . "\n\n=head1 NAME"
             .  "\n\n"
-            .   $self->command_name . " - " . $self->help_brief . "\n\n"
-            .   (
-                    $synopsis 
-                    ? "=head1 SYNOPSIS\n\n" . $synopsis . "\n\n"
-                    : ''
-                )
-            .   (
-                    $required_args
-                    ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
-                    : ''
-                )
-            .   (
-                    $optional_args
-                    ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
-                    : ''
-                )
-            . "=head1 DESCRIPTION:\n\n"
-            . join('', map { "  $_\n" } split ("\n",$self->help_detail))
-            . "\n"
-            .   (
-                    $sub_commands
-                    ? "=head1 SUB-COMMANDS\n\n" . $sub_commands . "\n\n"
-                    : ''
-                )
-            . "\n\n=cut\n\n";
+            .   $self->command_name 
+            . ($help_brief ? " - " . $self->help_brief : '') 
+            . "\n\n";
+
+        if ($version) {
+            $pod .=
+                "\n\n=head1 VERSION"
+                . "\n\n"
+                . "This document describes " . $self->command_name . " version " . $version . '.'
+                . "\n\n";
+        }
+
+        if ($sub_commands) {
+            $pod .=
+                    (
+                        $sub_commands
+                        ? "=head1 SUB-COMMANDS\n\n" . $sub_commands . "\n\n"
+                        : ''
+                    )
+        }
+        else {
+            $pod .=
+                    (
+                        $synopsis 
+                        ? "=head1 SYNOPSIS\n\n" . $synopsis . "\n\n"
+                        : ''
+                    )
+                .   (
+                        $required_args
+                        ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
+                        : ''
+                    )
+                .   (
+                        $optional_args
+                        ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
+                        : ''
+                    )
+                . "=head1 DESCRIPTION:\n\n"
+                . join('', map { "  $_\n" } split ("\n",$self->help_detail))
+                . "\n";
+        }
+        
+        $pod .= "\n\n=cut\n\n";
+
     }
     return "\n$pod";
 }
