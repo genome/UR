@@ -69,7 +69,9 @@ END {
 use Class::Autouse;
 BEGIN {
     my $v = $Class::Autouse::VERSION;
-    unless ($v >= 2.0 or $v eq '1.99_02' or $v eq '1.99_04') {
+    unless (($v =~ /^\d+\.?\d*$/ && $v >= 2.0)
+            or $v eq '1.99_02'
+            or $v eq '1.99_04') {
         die "UR requires Class::Autouse 2.0 or greater (or 1.99_02 or 1.99_04)!!";
     }
 };
