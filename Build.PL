@@ -8,9 +8,17 @@ my $subclass = Module::Build->subclass(
     class_name => 'UR::ModuleBuildSelf',
     code => q{
         sub ACTION_docs {
+            # ensure docs get man pages and html
             my $self = shift;
             $self->depends_on('code');
             $self->depends_on('manpages', 'html');
+        }
+
+        sub man1page_name {
+            # without this we have "man ur-init.pod" instead of "man ur-init"
+            my ($self, $file) = @_;
+            $file =~ s/.pod$//;
+            return $self->SUPER::man1page_name($file);
         }
     }
 );
@@ -67,6 +75,7 @@ my $build = $subclass->new(
   cpan_client => 'cpanm',
   script_files => [ 'bin/ur' ],
   test_files => [qw|t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t|],
+  bindoc_dirs => ['pod'],
   tap_harness_args => { 
       'jobs' =>  8,
       'rules' => { 
