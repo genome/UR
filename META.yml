@@ -305,6 +305,9 @@ provides:
   UR::Namespace::Command:
     file: lib/UR/Namespace/Command.pm
     version: 0.28
+  UR::Namespace::Command::Base:
+    file: lib/UR/Namespace/Command/Base.pm
+    version: 0.28
   UR::Namespace::Command::Define:
     file: lib/UR/Namespace/Command/Define.pm
     version: 0.28

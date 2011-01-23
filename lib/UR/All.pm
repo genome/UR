@@ -96,6 +96,7 @@ use UR::ModuleConfig;
 use UR::ModuleLoader;
 use UR::Namespace;
 use UR::Namespace::Command;
+use UR::Namespace::Command::Base;
 use UR::Namespace::Command::Define;
 use UR::Namespace::Command::Define::Class;
 use UR::Namespace::Command::Define::Datasource;

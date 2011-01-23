@@ -4,8 +4,18 @@ use warnings FATAL => 'all';
 use strict;
 use Module::Build;
 
+my $subclass = Module::Build->subclass(
+    class_name => 'UR::ModuleBuildSelf',
+    code => q{
+        sub ACTION_docs {
+            my $self = shift;
+            $self->depends_on('code');
+            $self->depends_on('manpages', 'html');
+        }
+    }
+);
 
-my $build = Module::Build->new(
+my $build = $subclass->new(
   module_name => 'UR',
   license => 'perl',
   requires => {

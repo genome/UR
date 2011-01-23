@@ -5,6 +5,7 @@ package UR::Namespace::Command;
 use strict;
 use warnings;
 use UR;
+use UR::Namespace::Command::Base;
 
 our $VERSION = "0.28"; # UR $VERSION;
 
