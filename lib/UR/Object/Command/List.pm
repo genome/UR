@@ -261,7 +261,7 @@ EOS
     else {
         $doc .= " Can't determine the list of filterable properties without a subject_class_name";
     }
-
+    $self->delete;
     return $doc;
 }
 
