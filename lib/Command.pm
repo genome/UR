@@ -717,7 +717,8 @@ sub help_usage_command_pod
             $pod .=
                 "\n\n=head1 VERSION"
                 . "\n\n"
-                . "This document describes " . $self->command_name . " version " . $version . '.'
+                . "This document " # separated to trick the version updater 
+                . "describes " . $self->command_name . " version " . $version . '.'
                 . "\n\n";
         }
 
