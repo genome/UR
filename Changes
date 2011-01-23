@@ -1,5 +1,12 @@
 Revision history for UR
 
+0.28    2011-01-23
+        improvements to man page generation
+        fixed a bug in the last release causing tests to run infinitely
+
+0.27    2011-01-22
+        updated build process autogenerates man pages
+
 0.26    2011-01-16
         yet another refactoring to ensure VERSION appears on all modules
         fixes for tests which fail only in the install harness
