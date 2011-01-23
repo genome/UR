@@ -21,6 +21,7 @@ my $class = Module::Build->subclass(
 
         our $ns = 'UR';
         our $cmd_class = 'UR::Namespace::Command';
+        our $cmd_executable = 'ur';
 
         sub ACTION_ur_docs {
             # We want to use UR to autodocument our code.  This is done
@@ -49,7 +50,8 @@ my $class = Module::Build->subclass(
                 $cmd_class->class();
 
                 UR::Namespace::Command::Update::Pod->execute(
-                    base_commands => [ $cmd_class ],
+                    executable_name => $cmd_executable,
+                    class_name => $cmd_class,
                 );
                 # We need to move back for perl install to find ./lib
                 chdir $oldpwd;

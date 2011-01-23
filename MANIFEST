@@ -9,9 +9,6 @@ debian/rules
 debian/watch
 INSTALL
 lib/above.pm
-lib/Class/Autouse_1_99_02.pm
-lib/Class/Autouse_1_99_04.pm
-lib/Class/Autouse_1_99_0X.README
 lib/Command.pm
 lib/Command/DynamicSubCommands.pm
 lib/Command/Test.pm
