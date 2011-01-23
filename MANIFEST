@@ -182,6 +182,7 @@ lib/UR/Object.pm
 lib/UR/Object/Accessorized.pm
 lib/UR/Object/Command/FetchAndDo.pm
 lib/UR/Object/Command/List.pm
+lib/UR/Object/Command/List/Style.pm
 lib/UR/Object/Ghost.pm
 lib/UR/Object/Index.pm
 lib/UR/Object/Iterator.pm

@@ -469,6 +469,20 @@ provides:
   UR::Object::Command::List:
     file: lib/UR/Object/Command/List.pm
     version: 0.27
+  UR::Object::Command::List::Csv:
+    file: lib/UR/Object/Command/List/Style.pm
+  UR::Object::Command::List::Html:
+    file: lib/UR/Object/Command/List/Style.pm
+  UR::Object::Command::List::Newtext:
+    file: lib/UR/Object/Command/List/Style.pm
+  UR::Object::Command::List::Pretty:
+    file: lib/UR/Object/Command/List/Style.pm
+  UR::Object::Command::List::Style:
+    file: lib/UR/Object/Command/List/Style.pm
+  UR::Object::Command::List::Text:
+    file: lib/UR/Object/Command/List/Style.pm
+  UR::Object::Command::List::Xml:
+    file: lib/UR/Object/Command/List/Style.pm
   UR::Object::Ghost:
     file: lib/UR/Object/Ghost.pm
     version: 0.27
