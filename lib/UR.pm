@@ -719,15 +719,16 @@ XML::Simple
 
 =head1 AUTHORS
 
-UR was built by the software development team at the Genome Center
-at Washington University School of Medicine.  Incarnations of it run 
-laboratory automation and analysis systems for high-throughput genomics.
+UR was built by the software development team at The Genome Center
+at Washington University School of Medicine (Richard K. Wilson, PI).  
+
+Incarnations of it run laboratory automation and analysis systems 
+for high-throughput genomics.
  
- Scott Smith	    sakoht@cpan.org	    Orginal Architecture
- Anthony Brummett   brummett@cpan.org	Primary Development
+ Anthony Brummett   brummett@cpan.org
+ Nathan Nutter                          
  Josh McMichael
  Eric Clark                              
- Nathan Nutter                          
  Ben Oberkfell
  Eddie Belter
  Feiyu Du
@@ -757,7 +758,12 @@ laboratory automation and analysis systems for high-throughput genomics.
  Ryan Richt
  John Osborne
  Chris Harris
+ Philip Kimmey
+ Robert Long
+ Travis Abbott
+ Matthew Callaway
  James Eldred
+ Scott Smith	    sakoht@cpan.org	    
  David Dooling
  
 =head1 LICENCE AND COPYRIGHT
@@ -766,4 +772,6 @@ Copyright (C) 2002-2011 Washington University in St. Louis, MO.
 
 This sofware is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.
+
+=pod
 
