@@ -10,7 +10,7 @@ use Getopt::Long;
 use Term::ANSIColor;
 require Text::Wrap;
 
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.28"; # UR $VERSION;
 
 our $entry_point_class;
 our $entry_point_bin;

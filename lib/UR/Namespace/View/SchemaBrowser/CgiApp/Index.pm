@@ -3,7 +3,7 @@ package UR::Namespace::View::SchemaBrowser::CgiApp::Index;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.28"; # UR $VERSION;
 
 use base 'UR::Namespace::View::SchemaBrowser::CgiApp::Base';
 

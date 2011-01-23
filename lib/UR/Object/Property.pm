@@ -5,7 +5,7 @@ use strict;
 require UR;
 use Lingua::EN::Inflect;
 
-our $VERSION = "0.27"; # UR $VERSION;;
+our $VERSION = "0.28"; # UR $VERSION;;
 
 =pod
 

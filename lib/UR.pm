@@ -441,7 +441,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.27
+This document describes UR version 0.28
 
 =head1 SYNOPSIS
 

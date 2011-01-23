@@ -27,7 +27,7 @@ use warnings;
 package UR::Report;
 use base 'UR::ModuleBase';
 require UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.28"; # UR $VERSION;
 
 use Data::Dumper;
 use Time::HiRes;

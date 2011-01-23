@@ -3,7 +3,7 @@ package UR::DataSource::Default;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.28"; # UR $VERSION;
 
 class UR::DataSource::Default {
     is => ['UR::DataSource'],
