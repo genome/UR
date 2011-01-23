@@ -8,7 +8,7 @@ use IO::File; # required to import symbols used below
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => "UR::Namespace::Command",
+    is => "UR::Namespace::Command::Base",
     has_input => [
         uri => {
             is => 'Text',

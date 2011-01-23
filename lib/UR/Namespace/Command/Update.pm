@@ -6,7 +6,7 @@ our $VERSION = "0.28"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => "UR::Namespace::Command",
+    is => "UR::Namespace::Command::Base",
     doc => 'update parts of the source tree of a UR namespace'
 );
 

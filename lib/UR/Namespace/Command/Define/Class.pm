@@ -5,7 +5,7 @@ use UR;
 our $VERSION = "0.28"; # UR $VERSION;
 
 class UR::Namespace::Command::Define::Class {
-    is => 'UR::Namespace::Command',
+    is => 'UR::Namespace::Command::Base',
     has => [
         names => {
             is_optional => 1,
