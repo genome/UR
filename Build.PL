@@ -85,7 +85,7 @@ my $build = $subclass->new(
                 #{ seq => '../lib/CPANPLUS/*' },
                 #{ seq => '../lib/ExtUtils/t/*' },
                 #'*'
-                { seq => 't/URT/t/42*' },
+                { seq => '../t/URT/t/42*' },
                 '*'
             ]
       },
