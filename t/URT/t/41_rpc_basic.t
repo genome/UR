@@ -100,7 +100,7 @@ $resp = UR::Service::RPC::Message->recv($to_server,1);
 ok($resp, 'Got a response message back from the server');
 @return_values = $resp->return_value_list;
 is(scalar(@return_values), 0, 'Response return value is correctly empty');
-ok($resp->exception =~ m/Can't locate object method "some_undefined_function"/,
+ok($resp->exception =~ m/(Can't locate object method|Undefined sub).*some_undefined_function/,
    'Response excpetion correctly reflects calling an undefined function');
 
 
