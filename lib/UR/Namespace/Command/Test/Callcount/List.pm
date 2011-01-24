@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 # Transient class that represents the file as a datasource
 our $TheFile = '/dev/null';  # This will be filled in during create() below
@@ -48,7 +48,7 @@ class UR::Namespace::Command::Test::Callcount::List {
 };
 
 
-sub _fetch {
+sub _resolve_boolexpr {
     my $self = shift;
 
     my $filename = $self->file;
@@ -58,7 +58,7 @@ sub _fetch {
     }
     $TheFile = $filename;
 
-    $self->SUPER::_fetch(@_);
+    $self->SUPER::_resolve_boolexpr(@_);
 }
 
 

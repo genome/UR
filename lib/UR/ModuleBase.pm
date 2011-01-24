@@ -3,10 +3,11 @@
 package UR::ModuleBase;
 
 BEGIN {
-    use Class::Autouse_1_99_04;
+    use Class::Autouse;
     # the file above now does this, but just in case:
     # subsequent uses of this module w/o the special override should just do nothing...
-    $INC{"Class/Autouse.pm"} = $INC{"Class/Autouse_1_99_04.pm"};
+    $INC{"Class/Autouse_1_99_02.pm"} = 1;
+    $INC{"Class/Autouse_1_99_04.pm"} = 1;
     no strict;
     no warnings;
     
@@ -88,7 +89,7 @@ These methods create and change message handlers.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.27"; # UR $VERSION;;
+our $VERSION = "0.29"; # UR $VERSION;;
 
 # set up module
 use Carp;

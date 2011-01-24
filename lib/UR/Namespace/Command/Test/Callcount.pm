@@ -5,11 +5,11 @@ use strict;
 use IO::File;
 use File::Find;
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => "UR::Namespace::Command",
+    is => "UR::Namespace::Command::Base",
     has => [
         'sort' => { is => 'String', valid_values => ['count', 'sub'], default_value => 'count',
                     doc => 'The output file should be sorted by "count" (sub call counts) or "sub" (sub names)' },

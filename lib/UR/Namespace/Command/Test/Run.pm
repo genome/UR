@@ -12,7 +12,7 @@ use Path::Class; # qw(file dir);
 use DBI;
 use Cwd;
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 use File::Find;
 
 use TAP::Harness;
@@ -21,7 +21,7 @@ use TAP::Parser::Aggregator;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => "UR::Namespace::Command",
+    is => "UR::Namespace::Command::Base",
     has => [
        bare_args => { is_optional => 1, is_many => 1, shell_args_position => 1, is_input => 1
        },

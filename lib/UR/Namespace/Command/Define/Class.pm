@@ -2,10 +2,10 @@ package UR::Namespace::Command::Define::Class;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 class UR::Namespace::Command::Define::Class {
-    is => 'UR::Namespace::Command',
+    is => 'UR::Namespace::Command::Base',
     has => [
         names => {
             is_optional => 1,

@@ -42,7 +42,7 @@ truncated and all times are expected in 24 hour format.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 # set up module
 use base qw(UR::ModuleBase UR::ModuleConfig);

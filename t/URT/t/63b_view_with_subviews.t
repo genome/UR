@@ -1,7 +1,15 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More;
+
+eval "use XML::LibXML";
+if ($INC{"XML/LibXML.pm"}) {
+    plan tests => 11;
+}
+else {
+    plan skip_all => 'works only with systems which have XML::LibXML';
+}
 
 #use File::Basename;
 #use lib File::Basename::dirname(__FILE__)."/../..";

@@ -7,11 +7,11 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Namespace::Command',
+    is => 'UR::Namespace::Command::Base',
     has => [
         classes_or_modules => {
             is_many => 1,

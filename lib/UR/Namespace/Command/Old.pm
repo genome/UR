@@ -3,11 +3,11 @@ package UR::Namespace::Command::Old;
 use warnings;
 use strict;
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Namespace::Command',
+    is => 'UR::Namespace::Command::Base',
     doc => "define namespaces, data sources and classes",
 );
 

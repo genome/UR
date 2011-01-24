@@ -4,11 +4,11 @@ package UR::Namespace::Command::Test::Eval;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Namespace::Command',
+    is => 'UR::Namespace::Command::Base',
     has => [
         bare_args => {
             is_optional => 1,

@@ -3,10 +3,10 @@ package UR::All;
 use strict;
 use warnings;
 
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 require above;
-use Class::Autouse_1_99_04;
+use Class::Autouse; # 1.99_02, 1.99_04 or >= 2.0
 use Command;
 use Command::DynamicSubCommands;
 use UR;
@@ -96,6 +96,7 @@ use UR::ModuleConfig;
 use UR::ModuleLoader;
 use UR::Namespace;
 use UR::Namespace::Command;
+use UR::Namespace::Command::Base;
 use UR::Namespace::Command::Define;
 use UR::Namespace::Command::Define::Class;
 use UR::Namespace::Command::Define::Datasource;

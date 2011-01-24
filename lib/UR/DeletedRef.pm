@@ -3,7 +3,7 @@ package UR::DeletedRef;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 our $all_objects_deleted = {};
 our %burried;

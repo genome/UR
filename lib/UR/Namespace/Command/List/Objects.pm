@@ -3,7 +3,7 @@ package UR::Namespace::Command::List::Objects;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 use above "UR";
 

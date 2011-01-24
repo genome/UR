@@ -8,7 +8,13 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = '0.27';
+our $VERSION = "0.29"; # UR $VERSION
+
+BEGIN {
+    # unless otherwise specified, begin uncaching at 1 million objects 
+    #$ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'} ||= 1_000_000;
+    #$ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} ||= 1_000;
+}
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
@@ -59,6 +65,16 @@ END {
         }
     }
 }
+
+use Class::Autouse;
+BEGIN {
+    my $v = $Class::Autouse::VERSION;
+    unless (($v =~ /^\d+\.?\d*$/ && $v >= 2.0)
+            or $v eq '1.99_02'
+            or $v eq '1.99_04') {
+        die "UR requires Class::Autouse 2.0 or greater (or 1.99_02 or 1.99_04)!!";
+    }
+};
 
 #
 # Because UR modules execute code when compiling to define their classes,
@@ -433,7 +449,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.27
+This document describes UR version 0.29
 
 =head1 SYNOPSIS
 
@@ -705,15 +721,16 @@ XML::Simple
 
 =head1 AUTHORS
 
-UR was built by the software development team at the Genome Center
-at Washington University School of Medicine.  Incarnations of it run 
-laboratory automation and analysis systems for high-throughput genomics.
+UR was built by the software development team at The Genome Center
+at Washington University School of Medicine (Richard K. Wilson, PI).  
+
+Incarnations of it run laboratory automation and analysis systems 
+for high-throughput genomics.
  
- Scott Smith	    sakoht@cpan.org	    Orginal Architecture
- Anthony Brummett   brummett@cpan.org	Primary Development
+ Anthony Brummett   brummett@cpan.org
+ Nathan Nutter                          
  Josh McMichael
  Eric Clark                              
- Nathan Nutter                          
  Ben Oberkfell
  Eddie Belter
  Feiyu Du
@@ -743,7 +760,12 @@ laboratory automation and analysis systems for high-throughput genomics.
  Ryan Richt
  John Osborne
  Chris Harris
+ Philip Kimmey
+ Robert Long
+ Travis Abbott
+ Matthew Callaway
  James Eldred
+ Scott Smith	    sakoht@cpan.org	    
  David Dooling
  
 =head1 LICENCE AND COPYRIGHT
@@ -752,4 +774,6 @@ Copyright (C) 2002-2011 Washington University in St. Louis, MO.
 
 This sofware is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.
+
+=pod
 

@@ -8,7 +8,7 @@ require Term::ANSIColor;
 use UR;
 use UR::Object::Command::List::Style;
 
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 class UR::Object::Command::List {
     is => 'Command',
@@ -261,7 +261,7 @@ EOS
     else {
         $doc .= " Can't determine the list of filterable properties without a subject_class_name";
     }
-
+    $self->delete;
     return $doc;
 }
 

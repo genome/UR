@@ -4,7 +4,26 @@ use warnings FATAL => 'all';
 use strict;
 use Module::Build;
 
-my $build = Module::Build->new(
+my $subclass = Module::Build->subclass(
+    class_name => 'UR::ModuleBuildSelf',
+    code => q{
+        sub ACTION_docs {
+            # ensure docs get man pages and html
+            my $self = shift;
+            $self->depends_on('code');
+            $self->depends_on('manpages', 'html');
+        }
+
+        sub man1page_name {
+            # without this we have "man ur-init.pod" instead of "man ur-init"
+            my ($self, $file) = @_;
+            $file =~ s/.pod$//;
+            return $self->SUPER::man1page_name($file);
+        }
+    }
+);
+
+my $build = $subclass->new(
   module_name => 'UR',
   license => 'perl',
   requires => {
@@ -12,6 +31,8 @@ my $build = Module::Build->new(
     perl => 'v5.8.7',
 
     # pure Perl
+    'Class::Autouse'      => '2.0',
+    'Clone::PP'           => '1.02',
     'Carp'                => '',
     'Sys::Hostname'       => '1.11',
     'File::Basename'      => '2.73',
@@ -54,6 +75,7 @@ my $build = Module::Build->new(
   cpan_client => 'cpanm',
   script_files => [ 'bin/ur' ],
   test_files => [qw|t/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t|],
+  bindoc_dirs => ['pod'],
   tap_harness_args => { 
       'jobs' =>  8,
       'rules' => { 
@@ -63,7 +85,7 @@ my $build = Module::Build->new(
                 #{ seq => '../lib/CPANPLUS/*' },
                 #{ seq => '../lib/ExtUtils/t/*' },
                 #'*'
-                { seq => 't/URT/t/42*' },
+                { seq => '../t/URT/t/42*' },
                 '*'
             ]
       },
@@ -76,7 +98,4 @@ foreach my $metadb_type ( qw(sqlite3 sqlite3n sqlite3-dump sqlite3n-dump sqlite3
 
 $build->create_build_script;
 
-# These were in Makefile.PL, but have no equivalent here yet:
-#  all_from 'lib/UR.pm'
-#  build_requires 'Test::More' => '0.62';
 

@@ -2,7 +2,7 @@ package UR::Namespace::Command::Init;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -11,16 +11,16 @@ UR::Object::Type->define(
         namespace => {
             is => 'Text',
             shell_args_position => 1,
-            doc => 'create this namespace'
+            doc => 'the name of the namespace/app to create'
         },
         db => {
             is => 'Text',
             is_optional => 1,
             shell_args_position => 2,
-            doc => 'DBI connection string for the primary data source',
+            doc => 'the (optional) DBI connection string for the primary data source',
         },
     ],
-    doc => 'initialize a new UR app in one command',
+    doc => 'create a new ur app with default classes in place',
 );
 
 sub sub_command_sort_position { 1 }

@@ -4,7 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::FkConstraint;
 
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::FkConstraint',
     is => ['UR::DataSource::RDBMS::Entity'],

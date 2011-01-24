@@ -3,7 +3,7 @@ package UR::Object::Type;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 use Sys::Hostname;
 use Cwd;

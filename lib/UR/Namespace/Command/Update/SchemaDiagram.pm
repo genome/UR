@@ -6,11 +6,11 @@ package UR::Namespace::Command::Update::SchemaDiagram;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.27"; # UR $VERSION;
+our $VERSION = "0.29"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'UR::Namespace::Command',
+    is => 'UR::Namespace::Command::Base',
     has => [ 
         data_source => {type => 'String', doc => 'Which datasource to use', is_optional => 1},
         depth => { type => 'Integer', doc => 'Max distance of related tables to include.  Default is 1.  0 means show only the named tables, -1 means to include everything', is_optional => 1},
