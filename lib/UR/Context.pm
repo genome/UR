@@ -2978,6 +2978,7 @@ sub __create_object_fabricator_for_loading_template {
                     $local_all_params_loaded->{$rule_template_id_without_in_clause}{$r_id}++;
 
                     # remove the notes about these in-clause values since they matched something
+                    no warnings; # undef treated as an empty string below
                     foreach my $property (@rule_properties_with_in_clauses) {
                         my $value = $pending_db_object->{$property};
                         delete $in_clause_values{$property}->{$value};
