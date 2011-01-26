@@ -1,12 +1,6 @@
 bin/ur
 Build.PL
 Changes
-debian/changelog
-debian/compat
-debian/control
-debian/copyright
-debian/rules
-debian/watch
 INSTALL
 lib/above.pm
 lib/Command.pm
@@ -259,8 +253,10 @@ lib/UR/Value/URL.pm
 lib/UR/Vocabulary.pm
 LICENSE
 MANIFEST			This list of files
+MANIFEST.SKIP
 README
 t/above.t
+t/urbenchmark.pl
 t/CdExample.pm
 t/CdExample/Artist.pm
 t/CdExample/Cd.pm
@@ -391,6 +387,10 @@ t/URT/t/81_crud_custom_columnnames.t
 t/URT/t/82_boolexpr_op_underscore.t
 t/URT/t/83_commit_between_schemas.t
 t/URT/t/84_class_definition_errors.t
+t/URT/t/51b_unmatched_hints_query_cache.t
+t/URT/t/85_avoid_loading_using_hints.t
+t/URT/t/85_method_meta.t
+t/URT/t/86_custom_load.t
 t/URT/t/97_used_libs.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction-observers.t
