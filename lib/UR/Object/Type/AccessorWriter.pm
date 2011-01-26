@@ -198,20 +198,90 @@ sub mk_id_based_object_accessor {
 }
 
 sub mk_indirect_ro_accessor {
-    my ($self, $class_name, $accessor_name, $via, $to, $where) = @_;
+    my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where) = @_;
     my @where = ($where ? @$where : ());
     my $full_name = join( '::', $class_name, $accessor_name );
     my $filterable_accessor_name = 'get_' . $accessor_name;  # FIXME we need a better name for 
     my $filterable_full_name = join( '::', $class_name, $filterable_accessor_name );
 
+    my($self, $bridge_collector, $bridge_crosser, @bridges, @results);
+
+    my $resolve_bridge_logic = sub {
+        return if $bridge_collector;
+        # default actions
+        $bridge_collector = sub { @bridges = $self->$via(@where) };
+        $bridge_crosser = sub { @results = map { $_->$to} @bridges };
+        return if ($UR::Object::Type::bootstrapping);
+
+        # bail out and use the default subs if any of these fail
+        my $my_class_meta = $class_name->__meta__;
+            return unless ($my_class_meta);
+        my $my_property_meta = $my_class_meta->property_meta_for_name($accessor_name);
+            return unless ($my_property_meta);
+        my $via_property_meta = $my_class_meta->property_meta_for_name($via);
+            return unless ($via_property_meta);
+        my $to_property_meta  = $my_property_meta->to_property_meta();
+            return unless ($to_property_meta);
+        if ($my_property_meta->is_delegated and $my_property_meta->is_many
+            and $via_property_meta->is_many and $via_property_meta->to
+            and $via_property_meta->data_type and $via_property_meta->data_type->isa('UR::Object')
+            and $to_property_meta->is_delegated and $to_property_meta->via
+        ) {
+
+            my $bridge_class = $via_property_meta->data_type;
+
+            my @via_join_properties = $via_property_meta->get_property_name_pairs_for_join;
+            my (@my_join_properties,@their_join_properties);
+            for (my $i = 0; $i < @via_join_properties; $i++) {
+                ($my_join_properties[$i], $their_join_properties[$i]) = @{ $via_join_properties[$i] };
+            }
+            #my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, -hints => [$via_property_meta->to]);
+            my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties);
+
+            $bridge_collector = sub {
+                my @my_values = map { $self->$_} @my_join_properties;
+                my $bx = $bridge_template->get_rule_for_values(@my_values);
+                @bridges = $bridge_class->get($bx);
+             };
+
+             my $second_via_property_meta = $to_property_meta->via_property_meta; 
+             my $final_class_name = $second_via_property_meta->data_type;
+             
+             if ($final_class_name and $final_class_name->isa('UR::Object')) {
+                 my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
+                 if (@via2_join_properties > 1) {
+                     Carp::carp("via2 join not implemented :(");
+                     return;
+                 }
+                 my($my_property_name,$their_property_name) = @{ $via2_join_properties[0] };
+                 my $crosser_template = UR::BoolExpr::Template->resolve($final_class_name, "$their_property_name in");
+
+                 my $result_property_name = $to_property_meta->to;
+
+                 $bridge_crosser = sub {
+                     my @linking_values = map { $_->$my_property_name } @bridges;
+                     my $bx = $crosser_template->get_rule_for_values(\@linking_values);
+                     my @result_objects = $final_class_name->get($bx);
+                     @results = map { $_->$result_property_name } @result_objects;
+                 };
+             }
+                 
+        }
+    };
+                 
+
     my $accessor = Sub::Name::subname $full_name => sub {
-        my $self = shift;
+        $self = shift;
         Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
-        my @bridges = $self->$via(@where);
+
+        $resolve_bridge_logic->() unless ($bridge_collector);
+
+        $bridge_collector->($self);
+
         return unless @bridges;
         return $self->context_return(@bridges) if ($to eq '-filter');
 
-        my @results = map { $_->$to } @bridges;
+        $bridge_crosser->();
         $self->context_return(@results); 
     };
 
@@ -239,7 +309,6 @@ sub mk_indirect_ro_accessor {
 
     my $filterable_accessor = Sub::Name::subname $filterable_full_name => sub {
         my $self = shift;
-        #my @results = $accessor->($self);
         my @results = $self->$accessor_name();
         if (@_) {
             my $rule;
