@@ -227,6 +227,18 @@ sub generate_schema_for_class_meta {
         $column->remarks($property->doc);
     }
 
+    for my $property ( $class_meta->direct_id_property_metas ) {
+
+        unless (UR::DataSource::RDBMS::PkConstraintColumn->get(table_name => $table->table_name, owner => $table->owner, column_name => $property->column_name, data_source => $table->data_source)) {
+            UR::DataSource::RDBMS::PkConstraintColumn->$method(
+                column_name => $property->column_name,
+                data_source => $table->data_source,
+                owner       => $table->owner,
+                rank        => $property->is_id,
+                table_name  => $table->table_name );
+        }
+    }
+
     for my $property ($class_meta->properties) {
         my $id_by = $property->id_by;
         next unless $id_by;
