@@ -749,15 +749,17 @@ sub mk_object_set_accessors {
         my $loading_r_class_error = '';
         if (defined $r_class_name) {
             eval {
-                unless (__PACKAGE__->use_module_with_namespace_constraints($r_class_name)) {
-                #if ($@) {
+                $r_class_meta = UR::Object::Type->is_loaded($r_class_name);
+                unless ($r_class_meta or __PACKAGE__->use_module_with_namespace_constraints($r_class_name)) {
                     # Don't die yet.  The named class may not have a file associated with it
                     $loading_r_class_error = "Couldn't load class $r_class_name: $@";
                     $@ = '';
                 }
 
-                $r_class_name->class;
-                $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
+                unless ($r_class_meta) {
+                    $r_class_name->class;
+                    $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
+                }
             };
             if ($@) {
                 $loading_r_class_error .= "Couldn't get class object for $r_class_name: $@";
