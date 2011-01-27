@@ -3714,7 +3714,13 @@ sub _loading_was_done_before_with_a_superset_of_this_rule {
     foreach my $loaded_template_id ( keys %$UR::Context::all_params_loaded ) {
         my $loaded_template = UR::BoolExpr::Template->get($loaded_template_id);
         if($template->is_subset_of($loaded_template)) {
-            foreach my $loaded_rule_id ( keys %{ $UR::Context::all_params_loaded->{$loaded_template_id} } ) {
+            # Try limiting the possibilities by matching the previously-loaded rule value_id's
+            # on this rule's values
+            my @param_names = $loaded_template->_property_names;
+            my @values = map { $rule->value_for($_) } @param_names;
+            my $match_string = join('.+',@values);
+            my @candidates = grep { /O:.*$match_string/ } keys(%{ $UR::Context::all_params_loaded->{$loaded_template_id} });
+            foreach my $loaded_rule_id ( @candidates ) {
                 my $loaded_rule = UR::BoolExpr->get($loaded_rule_id);
                 return 1 if ($rule->is_subset_of($loaded_rule));
             }
