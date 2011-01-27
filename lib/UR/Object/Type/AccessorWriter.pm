@@ -820,7 +820,7 @@ sub mk_object_set_accessors {
                 push @get_params, $id_class_by, $class_name;
                 push @property_names, 'class';
             }
-            my $tmp_rule = $r_class_name->define_boolexpr(@get_params);
+            my $tmp_rule = $r_class_name->define_boolexpr(@get_params,@where);
             if (my $order_by = $property_meta->order_by) {
                 push @get_params, $order_by;
             }
@@ -835,18 +835,23 @@ sub mk_object_set_accessors {
         }
     };
 
+    my @where_values;
+    for (my $i = 1; $i < @where; $i+=2) {
+        push @where_values, $where[$i];
+    }
+
     my $rule_accessor = Sub::Name::subname $class_name ."::__$singular_name" . '_rule' => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         unless ($rule_template) {
             die "no indirect rule available for locally-stored 'has-many' relationship";
         }
-        if (@_ or @where) {
-            my $tmp_rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-            return $r_class_name->define_boolexpr($tmp_rule->params_list,@where, @_);
+        if (@_) {
+            my $tmp_rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values); 
+            return $r_class_name->define_boolexpr($tmp_rule->params_list, @_);
         }
         else {
-            return $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
+            return $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values); 
         }
     };
     Sub::Install::reinstall_sub({
@@ -860,9 +865,9 @@ sub mk_object_set_accessors {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) { 
-            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-            if (@_ or @where) {
-                return $r_class_name->get($rule->params_list,@where,@_);
+            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+            if (@_) {
+                return $r_class_name->get($rule->params_list,@_);
             }
             else {
                 return $r_class_name->get($rule);
@@ -912,9 +917,9 @@ sub mk_object_set_accessors {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) {
-            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-            if (@_ or @where) {
-                return $r_class_name->create_iterator($rule->params_list,@where,@_);
+            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+            if (@_) {
+                return $r_class_name->create_iterator($rule->params_list,@_);
             } else {
                 return UR::Object::Iterator->create_for_filter_rule($rule);
             }
@@ -933,9 +938,9 @@ sub mk_object_set_accessors {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) {
-            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names); 
-            if (@_ or @where) {
-                return $r_class_name->define_set($rule->params_list,@where,@_);
+            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values);
+            if (@_) {
+                return $r_class_name->define_set($rule->params_list,@_);
             } else {
                 return $rule; 
             }
@@ -988,11 +993,11 @@ sub mk_object_set_accessors {
             my $self = shift;
             $rule_resolver->($self) unless ($rule_template);
             if ($rule_template) {
-                my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
+                my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
                 $params_prefix_resolver->() unless $params_prefix_resolved;
                 unshift @_, @params_prefix if @_ == 1;
-                if (@where or @_) {
-                    return my $obj = $r_class_name->get($rule->params_list,@where,@_);
+                if (@_) {
+                    return my $obj = $r_class_name->get($rule->params_list,@_);
                 }
                 else {
                     return my $obj = $r_class_name->get($rule);
@@ -1027,8 +1032,8 @@ sub mk_object_set_accessors {
         if ($rule_template) {
             $params_prefix_resolver->() unless $params_prefix_resolved;
             unshift @_, @params_prefix if @_ == 1;
-            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);        
-            $r_class_name->create($rule->params_list,@where,@_);
+            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+            $r_class_name->create($rule->params_list,@_);
         }
         else {
             if ($r_class_meta) {
@@ -1065,7 +1070,7 @@ sub mk_object_set_accessors {
         $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) {
             # an id-linked "has-many"
-            my $rule = $rule_template->get_rule_for_values(map { $self->$_ } @property_names);
+            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
             $params_prefix_resolver->() unless $params_prefix_resolved;
             my @matches;
             if (@_ == 1 and ref($_[0])) {
