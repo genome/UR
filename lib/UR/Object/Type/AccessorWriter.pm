@@ -837,7 +837,11 @@ sub mk_object_set_accessors {
 
     my @where_values;
     for (my $i = 1; $i < @where; $i+=2) {
-        push @where_values, $where[$i];
+        if (ref($where[$i]) eq 'HASH' and exists($where[$i]->{'operator'})) {
+            push @where_values, $where[$i]->{'value'};  # the operator is already stored in the template
+        } else {
+            push @where_values, $where[$i];
+        }
     }
 
     my $rule_accessor = Sub::Name::subname $class_name ."::__$singular_name" . '_rule' => sub {
