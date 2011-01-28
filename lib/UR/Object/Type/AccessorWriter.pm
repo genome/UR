@@ -225,47 +225,89 @@ sub mk_indirect_ro_accessor {
         if ($my_property_meta->is_delegated and $my_property_meta->is_many
             and $via_property_meta->is_many and $via_property_meta->to
             and $via_property_meta->data_type and $via_property_meta->data_type->isa('UR::Object')
-            and $to_property_meta->is_delegated and $to_property_meta->via
         ) {
-
             my $bridge_class = $via_property_meta->data_type;
 
             my @via_join_properties = $via_property_meta->get_property_name_pairs_for_join;
             my (@my_join_properties,@their_join_properties);
-            for (my $i = 0; $i < @via_join_properties; $i++) {
+                for (my $i = 0; $i < @via_join_properties; $i++) {
                 ($my_join_properties[$i], $their_join_properties[$i]) = @{ $via_join_properties[$i] };
             }
+
+            my(@where_properties, @where_values);
+            if ($where) {
+                while (@$where) {
+                    my $where_property = shift @$where;
+                    my $where_value = shift @$where;
+                    if (ref($where_value) eq 'HASH' and $where_value->{'operator'}) {
+                        $where_property .= ' ' .$where_value->{'operator'};
+                        $where_value = $where_value->{'value'};
+                    }
+                    push @where_properties, $where_property;
+                    push @where_values, $where_value;
+                }
+            }
+         
             #my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, -hints => [$via_property_meta->to]);
-            my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties);
+            my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, @where_properties);
 
             $bridge_collector = sub {
                 my @my_values = map { $self->$_} @my_join_properties;
-                my $bx = $bridge_template->get_rule_for_values(@my_values);
+                my $bx = $bridge_template->get_rule_for_values(@my_values, @where_values);
                 @bridges = $bridge_class->get($bx);
              };
 
-             my $second_via_property_meta = $to_property_meta->via_property_meta; 
-             my $final_class_name = $second_via_property_meta->data_type;
+            if($to_property_meta->is_delegated and $to_property_meta->via) {
+                 # It's a "normal" doubly delegated property
+                 my $second_via_property_meta = $to_property_meta->via_property_meta; 
+                 my $final_class_name = $second_via_property_meta->data_type;
              
-             if ($final_class_name and $final_class_name->isa('UR::Object')) {
-                 my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
-                 if (@via2_join_properties > 1) {
-                     Carp::carp("via2 join not implemented :(");
-                     return;
+                 if ($final_class_name and $final_class_name->isa('UR::Object')) {
+                     my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
+                     if (@via2_join_properties > 1) {
+                         Carp::carp("via2 join not implemented :(");
+                         return;
+                     }
+                     my($my_property_name,$their_property_name) = @{ $via2_join_properties[0] };
+                     my $crosser_template = UR::BoolExpr::Template->resolve($final_class_name, "$their_property_name in");
+
+                     my $result_property_name = $to_property_meta->to;
+
+                     $bridge_crosser = sub {
+                         my @linking_values = map { $_->$my_property_name } @bridges;
+                         my $bx = $crosser_template->get_rule_for_values(\@linking_values);
+                         my @result_objects = $final_class_name->get($bx);
+                         @results = map { $_->$result_property_name } @result_objects;
+                     };
                  }
-                 my($my_property_name,$their_property_name) = @{ $via2_join_properties[0] };
-                 my $crosser_template = UR::BoolExpr::Template->resolve($final_class_name, "$their_property_name in");
 
-                 my $result_property_name = $to_property_meta->to;
+             } elsif ($to_property_meta->id_by and $to_property_meta->id_class_by) {
+                # Bridging through an 'id_class_by' property
+                # bucket the bridge items by the result class and do a get for
+                # each of those classes with a listref of IDs
+                my $result_class_resolver = $to_property_meta->id_class_by;
+                my $bridging_identifiers = $to_property_meta->id_by;
 
-                 $bridge_crosser = sub {
-                     my @linking_values = map { $_->$my_property_name } @bridges;
-                     my $bx = $crosser_template->get_rule_for_values(\@linking_values);
-                     my @result_objects = $final_class_name->get($bx);
-                     @results = map { $_->$result_property_name } @result_objects;
-                 };
-             }
-                 
+                $bridge_crosser = sub {
+                    my %result_class_names_and_ids;
+
+                    foreach my $bridge ( @bridges ) {
+                        my $result_class = $bridge->$result_class_resolver;
+                        $result_class_names_and_ids{$result_class} ||= [];
+
+                        my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
+                        my @id = map { $bridge->$_ } @$bridging_identifiers;
+                        my $id = $id_resolver->(@id);
+
+                        push @{ $result_class_names_and_ids{ $result_class } }, $id;
+                    }
+
+                    foreach my $result_class ( keys %result_class_names_and_ids ) {
+                        push @results, $result_class->get($result_class_names_and_ids{$result_class});
+                    }
+                };
+            }
+
         }
     };
                  
