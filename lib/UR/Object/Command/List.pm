@@ -108,7 +108,7 @@ sub execute {
         or return;
 
     my $bool_expr = $self->_resolve_boolexpr();
-    return if not $bool_expr;
+    return unless (defined $bool_expr);
   
     # preloading the data ensures that the iterator doesn't trigger requery
     my @results = $self->subject_class_name->get($bool_expr);

@@ -389,7 +389,7 @@ sub query {
     my $self = shift;
 
     # Fast optimization for the default case.
-    {
+    unless (Scalar::Util::blessed($_[1])) {   # This happens when query() is called with a class name and boolexpr
         no warnings;
         if (exists $UR::Context::all_objects_loaded->{$_[0]}) {
             my $is_monitor_query = $self->monitor_query;
