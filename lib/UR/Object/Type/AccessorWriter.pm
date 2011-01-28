@@ -232,10 +232,15 @@ sub _resolve_bridge_logic_for_indirect_property {
         }
 
         my(@where_properties, @where_values);
-        if ($where) {
-            while (@$where) {
-                my $where_property = shift @$where;
-                my $where_value = shift @$where;
+        if ($where or $via_property_meta->where) {
+            my @collected_where;
+            @collected_where = @$where if ($where);
+            push @collected_where, @{ $via_property_meta->where } if ($via_property_meta->where);
+            while (@collected_where) {
+                my $where_property = shift @collected_where;
+                my $where_value = shift @collected_where;
+                # FIXME Skip stuff like -hints and -order_by until UR::BE::Template->resolve() can handle them
+                next if (substr($where_property, 0, 1) eq '-');
                 if (ref($where_value) eq 'HASH' and $where_value->{'operator'}) {
                     $where_property .= ' ' .$where_value->{'operator'};
                     $where_value = $where_value->{'value'};
