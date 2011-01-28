@@ -517,7 +517,6 @@ sub resolve {
                     # push @swap_key_value, $property_name;
                 }
                 else {
-                    $DB::single = 1;
                     # disable: break 47, enable: break 62
                     #push @swap_key_pos, $vn-1;
                     #push @swap_key_value, $property_name;
