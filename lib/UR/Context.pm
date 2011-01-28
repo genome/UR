@@ -2788,15 +2788,24 @@ sub __create_object_fabricator_for_loading_template {
                 }
                 next if ( $join_has_all_id_props and ! scalar(keys %join_properties));
 
+                my @template_filter_names = @{$join->{'foreign_property_names'}};
+                my @where_values;
+                if ($join->{'where'}) {
+                    for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
+                        push @template_filter_names, $join->{'where'}->[$i];
+                        push @where_values, $join->{'where'}->[$i+1];
+                    }
+                }
+
                 $rule_hints{$hint} ||= [];
-                my $hint_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, 
-                                                                                          @{$join->{'foreign_property_names'}});
-                push @{$rule_hints{$hint}}, [ [@{$join->{'foreign_property_names'}}] , $hint_rule_tmpl];
+                my $hint_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
+                                                                     @template_filter_names);
+                push @{$rule_hints{$hint}}, [ [ $hint_rule_tmpl->_property_names ], $hint_rule_tmpl];
 
                 # Make notes in all_params_loaded about these things we're hinting on.
                 # This way, if they return no matches, then we'll remember that for later queries
                 my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
-                my $related_obj_rule = $hint_rule_tmpl->get_rule_for_values(@related_obj_values);
+                my $related_obj_rule = $hint_rule_tmpl->get_rule_for_values(@related_obj_values, @where_values);
                 $UR::Context::all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = undef;
                 $local_all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = 0;
             }
