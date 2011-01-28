@@ -204,13 +204,13 @@ sub mk_indirect_ro_accessor {
     my $filterable_accessor_name = 'get_' . $accessor_name;  # FIXME we need a better name for 
     my $filterable_full_name = join( '::', $class_name, $filterable_accessor_name );
 
-    my($self, $bridge_collector, $bridge_crosser, @bridges, @results);
+    my($bridge_collector, $bridge_crosser);
 
     my $resolve_bridge_logic = sub {
         return if $bridge_collector;
         # default actions
-        $bridge_collector = sub { @bridges = $self->$via(@where) };
-        $bridge_crosser = sub { @results = map { $_->$to} @bridges };
+        $bridge_collector = sub { my $self = shift; return $self->$via(@where) };
+        $bridge_crosser = sub { return map { $_->$to} @_ };
         return if ($UR::Object::Type::bootstrapping);
 
         # bail out and use the default subs if any of these fail
@@ -252,9 +252,10 @@ sub mk_indirect_ro_accessor {
             my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, @where_properties);
 
             $bridge_collector = sub {
+                my $self = shift;
                 my @my_values = map { $self->$_} @my_join_properties;
                 my $bx = $bridge_template->get_rule_for_values(@my_values, @where_values);
-                @bridges = $bridge_class->get($bx);
+                return $bridge_class->get($bx);
              };
 
             if($to_property_meta->is_delegated and $to_property_meta->via) {
@@ -274,10 +275,10 @@ sub mk_indirect_ro_accessor {
                      my $result_property_name = $to_property_meta->to;
 
                      $bridge_crosser = sub {
-                         my @linking_values = map { $_->$my_property_name } @bridges;
+                         my @linking_values = map { $_->$my_property_name } @_;
                          my $bx = $crosser_template->get_rule_for_values(\@linking_values);
                          my @result_objects = $final_class_name->get($bx);
-                         @results = map { $_->$result_property_name } @result_objects;
+                         return map { $_->$result_property_name } @result_objects;
                      };
                  }
 
@@ -291,7 +292,7 @@ sub mk_indirect_ro_accessor {
                 $bridge_crosser = sub {
                     my %result_class_names_and_ids;
 
-                    foreach my $bridge ( @bridges ) {
+                    foreach my $bridge ( @_ ) {
                         my $result_class = $bridge->$result_class_resolver;
                         $result_class_names_and_ids{$result_class} ||= [];
 
@@ -302,9 +303,11 @@ sub mk_indirect_ro_accessor {
                         push @{ $result_class_names_and_ids{ $result_class } }, $id;
                     }
 
+                    my @results;
                     foreach my $result_class ( keys %result_class_names_and_ids ) {
                         push @results, $result_class->get($result_class_names_and_ids{$result_class});
                     }
+                    return @results;
                 };
             }
 
@@ -313,17 +316,17 @@ sub mk_indirect_ro_accessor {
                  
 
     my $accessor = Sub::Name::subname $full_name => sub {
-        $self = shift;
+        my $self = shift;
         Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
 
         $resolve_bridge_logic->() unless ($bridge_collector);
 
-        $bridge_collector->($self);
+        my @bridges = $bridge_collector->($self);
 
         return unless @bridges;
         return $self->context_return(@bridges) if ($to eq '-filter');
 
-        $bridge_crosser->();
+        my @results = $bridge_crosser->(@bridges);
         $self->context_return(@results); 
     };
 
