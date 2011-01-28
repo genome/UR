@@ -656,6 +656,15 @@ sub _normalize_class_description {
                 }
                 $params->{id_by} = \@id_by_names;
             }
+
+            if (my $id_class_by = $params->{'id_class_by'}) {
+                if (ref $id_class_by) {
+                    Carp::croak("Cannot initialize class $class_name: "
+                                . "Property $name has an 'id_class_by' that is not a plain string");
+                }
+                push @tmp, $id_class_by, { implied_by => $name, is_specified_in_module_header => 0 };
+            }
+                
         } # next property in group
 
         for my $pdata (values %$properties) {
