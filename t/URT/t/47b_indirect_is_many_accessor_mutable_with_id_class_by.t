@@ -238,7 +238,9 @@ is($params[2]->value, $v3, "param 3's value is correct");
 my $o2 = URT::Thing->get(2);
 ok($o2, 'Got thingy w/ id 2');
 my @v = $o2->interesting_param_values;
-is_deeply(\@v,[$v1,$v2,$v3], 'Ineresting values match those from orginal object');
+@v = sort { $a->id cmp $b->id } @v;
+my @expected = sort { $a->id cmp $b->id } ( $v1, $v2, $v3 );
+is_deeply(\@v,\@expected, 'Ineresting values match those from orginal object');
 #is_deeply([ $o1->interesting_param_values ], [ $thing2->interesting_param_values ], 'Ineresting values match those from orginal object');
 
 #<>#

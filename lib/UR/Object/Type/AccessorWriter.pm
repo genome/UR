@@ -396,7 +396,7 @@ sub mk_indirect_ro_accessor {
 
 
 sub mk_indirect_rw_accessor {
-    my ($self, $class_name, $accessor_name, $via, $to, $where, $singular_name) = @_;
+    my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where, $singular_name) = @_;
     my @where = ($where ? @$where : ());
     my $full_name = join( '::', $class_name, $accessor_name );
     
@@ -441,9 +441,17 @@ sub mk_indirect_rw_accessor {
         return $update_strategy;
     };
  
+    my ($bridge_collector, $bridge_crosser);
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
-        my @bridges = $self->$via(@where);
+
+        unless ($bridge_collector) {
+            ($bridge_collector, $bridge_crosser)
+                = $ur_object_type->_resolve_bridge_logic_for_indirect_property($class_name, $accessor_name, $via, $to, \@where);
+        }
+
+        my @bridges = $bridge_collector->($self);
+
 	# TODO: we should throw an exception if >1 bridges are found, b/c this cannot be is_many and also rw.
         if (@_) {            
             $resolve_update_strategy->() unless (defined $update_strategy);
@@ -491,18 +499,10 @@ sub mk_indirect_rw_accessor {
         if (not defined $is_many) {
             $resolve_update_strategy->();
         }
-        if ($is_many) {
-            return unless @bridges;
-            my @results = map { $_->$to } @bridges;
-            $self->context_return(@results); 
-        }
-        else {
-            return undef unless @bridges;
-            my @results = map { $_->$to } @bridges;
-            $self->context_return(@results);
-            #my $value = $self->context_return(@results); 
-            #return $value;
-        }
+
+        return unless @bridges;
+        my @results = $bridge_crosser->(@bridges);
+        $self->context_return(@results);
     };
 
     Sub::Install::reinstall_sub({
