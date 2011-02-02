@@ -3741,7 +3741,10 @@ sub _loading_was_done_before_with_a_superset_of_this_rule {
             # on this rule's values
             my @param_names = $loaded_template->_property_names;
             my @values = @rule_values{ @param_names };
-            my $value_id = join($UR::BoolExpr::Util::record_sep, @values);
+            my $value_id;
+            { no warnings 'uninitialized';
+              $value_id = join($UR::BoolExpr::Util::record_sep, @values);
+            }
             my @candidates = grep { index($_, $value_id) > 0 } keys(%{ $UR::Context::all_params_loaded->{$loaded_template_id} });
             foreach my $loaded_rule_id ( @candidates ) {
                 my $loaded_rule = UR::BoolExpr->get($loaded_rule_id);
