@@ -220,7 +220,7 @@ sub _resolve_bridge_logic_for_indirect_property {
     }
 
     if ($my_property_meta->is_delegated and $my_property_meta->is_many
-        and $via_property_meta->is_many and $via_property_meta->to
+        and $via_property_meta->is_many and $via_property_meta->to and $via_property_meta->reverse_as
         and $via_property_meta->data_type and $via_property_meta->data_type->isa('UR::Object')
     ) {
         my $bridge_class = $via_property_meta->data_type;
