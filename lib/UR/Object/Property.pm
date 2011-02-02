@@ -140,6 +140,14 @@ sub to_property_meta {
     return unless $via_meta;
 
     my $remote_class = $via_meta->data_type;
+#    unless ($remote_class) {
+#        # Can we guess what the data type is for multiply indirect properties?
+#        if ($via_meta->to) {
+#            my $to_property_meta = $via_meta->to_property_meta;
+#            $remote_class = $to_property_meta->data_type if ($to_property_meta);
+#        }
+#    }
+    return unless $remote_class;
     my $remote_class_meta = UR::Object::Type->get($remote_class);
     return unless $remote_class_meta;
 
