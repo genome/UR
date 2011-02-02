@@ -61,6 +61,7 @@ class UR::Object::Command::List {
     doc => 'lists objects matching specified params'
 };
 
+sub sub_command_sort_position { .2 };
 
 sub create {
     my $class = shift;
