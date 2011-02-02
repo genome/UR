@@ -6,45 +6,9 @@ require UR;
 use Lingua::EN::Inflect;
 
 our $VERSION = "0.29"; # UR $VERSION;;
-
-=pod
-
-UR::Object::Type->define(
-    class_name => 'UR::Object::Property',
-    english_name => 'entity type attribute',
-    id_properties => [qw/type_name attribute_name/],
-    properties => [
-        attribute_name                   => { type => 'VARCHAR2', len => 64 },
-        type_name                        => { type => 'VARCHAR2', len => 64 },
-        class_name                       => { type => 'VARCHAR2', len => 64 },
-        column_name                      => { type => 'VARCHAR2', len => 64, is_optional => 1 },
-        data_length                      => { type => 'VARCHAR2', len => 32, is_optional => 1 },
-        default_value                    => { is_optional => 1 },
-        data_type                        => { type => 'VARCHAR2', len => 64, is_optional => 1 },
-        doc                              => { type => 'VARCHAR2', len => 1000, is_optional => 1 },
-        is_class_wide                    => { type => 'BOOL', len => undef },
-        is_constant                      => { type => 'BOOL', len => undef },
-        is_optional                      => { type => 'BOOL', len => undef },
-        is_transient                     => { type => 'BOOL', len => undef },
-        is_delegated                     => { type => 'BOOL', len => undef },
-        is_calculated                    => { type => 'BOOL', len => undef },
-        is_mutable                       => { type => 'BOOL', len => undef },
-        is_numeric                       => { calculate_from => ['data_type'], },
-        property_name                    => { type => 'VARCHAR2', len => 64 },
-        property_type                    => { type => 'VARCHAR2', len => 64 },
-        source                           => { type => 'VARCHAR2', len => 64 },
-    ],
-    unique_constraints => [
-        { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },
-    ],
-);
-
-=cut
-
 our @CARP_NOT = qw( UR::DataSource::RDBMS );
 
-# Implements the is_numeric calculated property - returns true if it's ok to use
-# numeric comparisons (==, <, <=>, etc) on the property
+# TODO: make these methods on UR::Value::Type metadata
 our %NUMERIC_TYPES = (
         'INTEGER' => 1,
         'NUMBER'  => 1,
@@ -61,6 +25,38 @@ sub is_numeric {
     return $self->{'_is_numeric'};
 }    
 
+# TODO: This is used by the code which maps RDBMS tables to 
+# UR types, and should really be in the RDBMS datasource and its subclasses.
+our %generic_data_type_for_vendor_data_type =
+(
+    'CHAR'        => 'Text',
+    'VARCHAR2'    => 'Text',
+    'NCHAR'       => 'Text',
+    'NVARCHAR2'   => 'Text',
+    'ROWID'       => 'Text',
+    'LONG'        => 'Text',
+    'LONGRAW'     => 'Text',
+    
+    'FLOAT'       => 'Float',
+    
+    'NUMBER'      => 'Float',  # not true, but sometimes true
+    
+    'DATE'        => 'DateTime',
+    'TIMESTAMP'   => 'DateTime',
+ 
+    'BLOB'        => 'Ugly',
+    'CLOB'        => 'Ugly',
+    'NCLOB'       => 'Ugly',
+    'RAW'         => 'Ugly',
+    'UNDEFINED'   => 'Ugly',
+);
+
+sub generic_data_type {
+    no warnings;
+    return $generic_data_type_for_vendor_data_type{$_[0]->{data_type}};
+}
+
+# TODO: this is a method on the data source which takes a given property.
 # Returns the table and column for this property.
 # If this particular property doesn't have a column_name, and it
 # overrides a property defined on a parent class, then walk up the
@@ -331,8 +327,7 @@ sub _get_joins {
 }
 
 
-sub label_text 
-{
+sub label_text {
     # The name of the property in friendly terms.
     my ($self,$obj) = @_;
     my $attribute_name = $self->attribute_name;
@@ -341,36 +336,32 @@ sub label_text
     return $label;
 }
 
-# A mapping of Oracle data types to generic types.
-our %generic_data_type_for_vendor_data_type =
-(
-    'CHAR'        => 'Text',
-    'VARCHAR2'    => 'Text',
-    'NCHAR'       => 'Text',
-    'NVARCHAR2'   => 'Text',
-    'ROWID'       => 'Text',
-    'LONG'        => 'Text',
-    'LONGRAW'     => 'Text',
-    
-    'FLOAT'       => 'Float',
-    
-    'NUMBER'      => 'Float',  # not true, but sometimes true
-    
-    'DATE'        => 'DateTime',
-    'TIMESTAMP'   => 'DateTime',
- 
-    'BLOB'        => 'Ugly',
-    'CLOB'        => 'Ugly',
-    'NCLOB'       => 'Ugly',
-    'RAW'         => 'Ugly',
-    'UNDEFINED'   => 'Ugly',
-);
+# This gets around the need to make a custom property subclass
+# when a class has an attributes_have specification.
 
-sub generic_data_type {
-    no warnings;
-    return $generic_data_type_for_vendor_data_type{$_[0]->{data_type}};
+# This primary example of this in base infrastructure is that
+# all Commands have is_input, is_output and is_param attributes.
+
+# Note: it's too permissive and will make an accessor for any hash key.
+# The updated code should not do this.
+
+sub CAN {
+    my ($thisclass, $method, $self) = @_;
+    if (ref($self)) {
+        my $accessor_key = '_' . $method . "_accessor";
+        if (my $method = $self->{$accessor_key}) {
+            return $method;
+        }
+        if (exists $self->{$method}) {
+            return $self->{$accessor_key} = sub {
+                return $_[0]->{$method};
+            }
+        }
+    }
+    return;
 }
 
+eval "use Class::AutoloadCAN";
 
 1;
 
