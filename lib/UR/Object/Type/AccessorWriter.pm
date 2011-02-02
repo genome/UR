@@ -500,9 +500,15 @@ sub mk_indirect_rw_accessor {
             $resolve_update_strategy->();
         }
 
-        return unless @bridges;
-        my @results = $bridge_crosser->(@bridges);
-        $self->context_return(@results);
+        if ($is_many) {
+            return unless @bridges;
+            my @results = $bridge_crosser->(@bridges);
+            $self->context_return(@results);
+        } else {
+            return undef unless @bridges;
+            my @results = map { $_->$to } @bridges;
+            $self->context_return(@results);
+        }
     };
 
     Sub::Install::reinstall_sub({
