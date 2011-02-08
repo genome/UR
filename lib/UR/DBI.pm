@@ -57,10 +57,11 @@ my %sub_env_map = ( monitor_sql => 'UR_DBI_MONITOR_SQL',
                     no_commit => 'UR_DBI_NO_COMMIT',
                     monitor_every_fetch => 'UR_DBI_MONITOR_EVERY_FETCH',
                     dump_stack_on_connect => 'UR_DBI_DUMP_STACK_ON_CONNECT',
+                    query_dbstop => 'UR_QUERY_DBSTOP',
                   );
 
 our ($monitor_sql,$monitor_dml,$no_commit,$monitor_every_fetch,$dump_stack_on_connect,
-    $explain_sql_slow,$explain_sql_if,$explain_sql_match,$explain_sql_callstack);
+    $explain_sql_slow,$explain_sql_if,$explain_sql_match,$explain_sql_callstack, $query_dbstop);
 
 while ( my($subname, $envname) = each ( %sub_env_map ) ) {
     no strict 'refs';
@@ -308,18 +309,37 @@ sub before_execute
         }
     }
     
+    if ($dbh and length($query_dbstop) and $query_dbstop) {
+        for my $val ($sql,@_) {
+            if ($val =~ /$query_dbstop/gi) {                
+                $sql_fh->print("\nDEBUG STOP AT QUERY MATCHING /$query_dbstop/gi"
+                    . ($val ne $sql ? " (on value '$val') " : "")                    
+                );
+                if ($monitor_sql) {
+                    $sql_fh->print("\n");
+                }
+                else {
+                    _print_sql_and_params($sql,@_);
+                }
+                $sql_fh->print(Carp::longmess());
+                $DB::single = 1;
+                last;
+            }
+        }
+    }
+
     my $start_time = _set_start_time();
     if ($monitor_sql){
-	_print_sql_and_params($sql,@_);
+    	_print_sql_and_params($sql,@_);
         if ($monitor_sql > 1) {
             $sql_fh->print(Carp::longmess("callstack begins"),"\n");
         }
-	_print_monitor_label("EXECUTE");        
+	    _print_monitor_label("EXECUTE");        
     }
     elsif($monitor_dml && $sql !~ /^\s*select/i){
-	_print_sql_and_params($sql,@_);
-	_print_monitor_label("EXECUTE");        
-	$monitor_dml=2;
+    	_print_sql_and_params($sql,@_);
+	    _print_monitor_label("EXECUTE");        
+    	$monitor_dml=2;
     }
     no warnings;            
     my $log_sql_str = _generate_sql_and_params_log_entry($sql, @_);

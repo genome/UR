@@ -1406,10 +1406,10 @@ sub prune_object_cache {
    
 # this is the underlying method for get/load/is_loaded in ::Object
 
-sub get_objects_for_class_and_rule {
+*get_objects_for_class_and_rule = \&_query;
+
+sub _query {
     my ($self, $class, $rule, $load, $return_closure) = @_;
-    #my @params = $rule->params_list;
-    #print "GET: $class @params\n";
 
     if ($cache_size_highwater
         and
@@ -1522,7 +1522,9 @@ sub get_objects_for_class_and_rule {
     if ($load) {
         # this returns objects from the underlying context after importing them into the current context,
         # but only if they did not exist in the current context already
+
         $self->_log_query_for_rule($class, $normalized_rule, "QUERY: importing from underlying context with rule $normalized_rule") if ($is_monitor_query);
+
         my $underlying_context_iterator = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
 
         # Some thoughts about the loading iterator's behavior around changing objects....
@@ -2156,66 +2158,17 @@ sub _create_import_iterator_for_underlying_context {
     # Make an iterator for the primary data source.
     # Primary here meaning the one for the class we're explicitly requesting.
     # We may need to join to other data sources to complete the query.
-    my ($db_iterator) 
-        = $dsx->create_iterator_closure_for_rule($rule);
+
+    $DB::single = 1;
+    my ($db_iterator) = $dsx->create_iterator_closure_for_rule($rule);
 
     my ($rule_template, @values) = $rule->template_and_values();
-    my ($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
-    my $class_name = $template_data->{class_name};
-
     my $group_by = $rule_template->group_by;
     my $order_by = $rule_template->order_by;
 
-    if (my $sub_typing_property) {
-        # When the rule has a property specified which indicates a specific sub-type, catch this and re-call
-        # this method recursively with the specific subclass name.
-        my ($rule_template, @values) = $rule->template_and_values();
-        my $rule_template_specifies_value_for_subtype   = $template_data->{rule_template_specifies_value_for_subtype};
-        my $class_table_name                            = $template_data->{class_table_name};
-        #my @type_names_under_class_with_no_table        = @{ $template_data->{type_names_under_class_with_no_table} };
-   
-        warn "Implement me carefully";
-        
-        if ($rule_template_specifies_value_for_subtype) {
-            #$DB::single = 1;
-            my $sub_classification_meta_class_name          = $template_data->{sub_classification_meta_class_name};
-            my $value = $rule->value_for($sub_typing_property);
-            my $type_obj = $sub_classification_meta_class_name->get($value);
-            if ($type_obj) {
-                my $subclass_name = $type_obj->subclass_name($class_name);
-                if ($subclass_name and $subclass_name ne $class_name) {
-                    #$rule = $subclass_name->define_boolexpr($rule->params_list, $sub_typing_property => $value);
-                    $rule = UR::BoolExpr->resolve_normalized($subclass_name, $rule->params_list, $sub_typing_property => $value);
-                    return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial);
-                }
-            }
-            else {
-                die "No $value for $class_name?\n";
-            }
-        }
-        elsif (not $class_table_name) {
-            #$DB::single = 1;
-            # we're in a sub-class, and don't have the type specified
-            # check to make sure we have a table, and if not add to the filter
-            #my $rule = $class_name->define_boolexpr(
-            #    $rule_template->get_rule_for_values(@values)->params_list, 
-            #    $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
-            #);
-            die "No longer supported!";
-            my $rule = UR::BoolExpr->resolve(
-                           $class_name,
-                           $rule_template->get_rule_for_values(@values)->params_list,
-                           #$sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
-                        );
-            return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial)
-        }
-        else {
-            # continue normally
-            # the logic below will handle sub-classifying each returned entity
-        }
-    }
-    
-    
+    my ($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
+
+    my $class_name                                  = $template_data->{class_name};
     my $loading_templates                           = $template_data->{loading_templates};
     my $sub_typing_property                         = $template_data->{sub_typing_property};
     my $next_db_row;

@@ -203,6 +203,7 @@ my @new = qw/foreign_class foreign_class_meta foreign_property_names source_clas
 sub _get_joins {
     my $self = shift;
     unless ($self->{_get_joins}) {
+        $DB::single = 1 if $self->{class_name} =~ /Genome::Model::Build/;
         my $class_meta = UR::Object::Type->get(class_name => $self->class_name);
         my @joins;
         

@@ -3324,6 +3324,7 @@ sub _generate_template_data_for_loading {
 
         my $property_name = $delegated_property->property_name;
         my @joins = $delegated_property->_get_joins;
+
         my $relationship_name = $delegated_property->via;
         unless ($relationship_name) {
             $relationship_name = $property_name;
@@ -3361,23 +3362,17 @@ sub _generate_template_data_for_loading {
         #    . " using joins ";
 
         my $last_class_object_excluding_inherited_joins;
-
         my $final_join = $joins[-1];
-
         my $join_aliases_for_this_delegate;
         my $join_aliases_for_this_object;
-
         my @source_table_and_column_names;
-        while (my $object_join = shift @joins) {
-            #$DB::single = 1;
-            #print "\tjoin $object_join\n";
-            #        print Data::Dumper::Dumper($object_join);
 
+        while (my $object_join = shift @joins) {
             $last_object_num = $object_num;
             $object_num++;
 
+            # this only loops once unless there is inheritance
             my @joins_for_object = ($object_join);
-
             my $joins_for_object = 0;
 
             while (my $join = shift @joins_for_object) {
@@ -3435,6 +3430,7 @@ sub _generate_template_data_for_loading {
                 my @foreign_property_meta = 
                     map { $foreign_class_object->property_meta_for_name($_) }
                     @foreign_property_names;
+
                 my $foreign_table_name;
                 my @foreign_column_names = 
                     map {
@@ -3518,6 +3514,7 @@ sub _generate_template_data_for_loading {
                                 ),
                                 @extra_filters,
                             };
+
                         $alias_sql_join{$alias} = $sql_joins[-1];
 
                         # Add all of the columns in the join table to the return list
