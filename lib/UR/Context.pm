@@ -2166,7 +2166,7 @@ sub _create_import_iterator_for_underlying_context {
     my $group_by = $rule_template->group_by;
     my $order_by = $rule_template->order_by;
 
-    my ($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
+    my ($template_data, @addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
 
     my $class_name                                  = $template_data->{class_name};
     my $loading_templates                           = $template_data->{loading_templates};

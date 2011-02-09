@@ -1,28 +1,18 @@
-# Index for cached objects.
-
 package UR::Object::Index;
 our $VERSION = "0.29"; # UR $VERSION;;
-use base qw(UR::Object);
-
 use strict;
 use warnings;
 require UR;
 
-
-# wrapper for one of the ID properties to make it less ugly
-
-sub indexed_property_names
-{
+sub indexed_property_names {
+    # wrapper for one of the ID properties to make it less ugly
     no warnings;
     return split(/,/,$_[0]->{indexed_property_string});
 }
 
-# the only non-id property has an accessor...
-
-sub data_tree
-{
-    if (@_ > 1)
-    {
+sub data_tree {
+    # the only non-id property has an accessor...
+    if (@_ > 1) {
         my $old = $_[0]->{data_tree};
         my $new = $_[1];
         if ($old ne $new)
@@ -35,11 +25,10 @@ sub data_tree
     return $_[0]->{data_tree};
 }
 
-# override create to initilize the index
-
 sub create {
     my $class = shift;
     
+    # override create to initilize the index
     # NOTE: This is called from one location in UR::Context and relies
     # on all properties including the ID being specifically defined.
     
@@ -54,10 +43,8 @@ sub create {
     return $self;
 }
 
-# this does a lookup as efficiently as possible
-
-sub get_objects_matching
-{
+sub get_objects_matching {
+    # this does a lookup as efficiently as possible
     # The hash access below generates warnings
     # where undef is a value.  Ignore these.
     no warnings 'uninitialized';
@@ -285,8 +272,7 @@ sub get_objects_matching
 
 # private methods
 
-sub _build_data_tree
-{        
+sub _build_data_tree {        
     my $self = $_[0];
     
     my @indexed_property_names = $self->indexed_property_names;
@@ -322,7 +308,6 @@ sub _build_data_tree
         }            
         $hr->{$object->id} = $object;
     }
-    
 }
 
 # FIXME maybe objects in an index should always be weakend?
@@ -354,13 +339,9 @@ sub weaken_reference_for_object {
     Scalar::Util::weaken($hr->{$object->id});
 }
  
-    
-sub _setup_change_subscription
-{
-    
+sub _setup_change_subscription {
     my $self = shift;
-    
-    
+       
     my $indexed_class_name = $self->indexed_class_name;        
     my @indexed_property_names = $self->indexed_property_names;
     
@@ -415,15 +396,13 @@ sub _setup_change_subscription
     );        
 }
 
-sub _get_change_subscription
-{        
+sub _get_change_subscription {        
     # accessor for the change subscription
     $_[0]->{_get_change_subscription} = $_[1] if (@_ > 1);
     return $_[0]->{_get_change_subscription};
 }
 
-sub _remove_object($$)
-{
+sub _remove_object {
     no warnings;
     
     my ($self, $object, $overrides) = @_;
@@ -448,8 +427,7 @@ sub _remove_object($$)
     delete $hr->{$object->id};
 }
 
-sub _add_object($$)
-{
+sub _add_object {
     # We get warnings when undef converts into an empty string.
     # For efficiency, we turn warnings off in this method.
     no warnings;
