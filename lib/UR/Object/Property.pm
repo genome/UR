@@ -203,7 +203,6 @@ my @new = qw/foreign_class foreign_class_meta foreign_property_names source_clas
 sub _get_joins {
     my $self = shift;
     unless ($self->{_get_joins}) {
-        $DB::single = 1 if $self->{class_name} =~ /Genome::Model::Build/;
         my $class_meta = UR::Object::Type->get(class_name => $self->class_name);
         my @joins;
         
@@ -235,7 +234,6 @@ sub _get_joins {
                     @$where = reverse @$where;
                 }            
                 my $join = pop @joins;
-                #my $where_rule = $join->{foreign_class}->define_boolexpr(@$where);                
                 my $where_rule = UR::BoolExpr->resolve($join->{foreign_class}, @$where);                
                 my $id = $join->{id};
                 $id .= ' ' . $where_rule->id;
@@ -313,13 +311,18 @@ sub _get_joins {
                         Carp::confess("No property '$reverse_as' in class $foreign_class, needed to resolve property '" .
                                       $self->property_name . "' of class " . $self->class_name);
                     }
-                    @joins = reverse $foreign_property_via->_get_joins();
-                    for (@joins) { 
-                        @$_{@new} = @$_{@old};
+                    for my $rjoin (reverse $foreign_property_via->_get_joins()) { 
+                        my %njoin = %$rjoin;
+                        @njoin{@new} = @njoin{@old};
+                        push @joins, \%njoin;
                     }
                     $joins[0]->{'where'} = $where if $where;
-
-                } else {
+                    my $sn = $self->{singular_name};
+                    my $ra = '__' . $sn . '_rule';
+                    $joins[0]->{'rule_accessor'} = $ra;
+                    
+                } 
+                else {
                     $self->error_message("Property $id has no 'id_by' or 'reverse_as' property metadata");
                 }
             }

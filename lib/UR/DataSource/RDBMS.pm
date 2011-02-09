@@ -3065,6 +3065,7 @@ sub _generate_template_data_for_loading {
 
     # class-based values
 
+
     my $class_name = $rule_template->subject_class_name;
     my $class_meta = $class_name->__meta__;
     my $class_data = $self->_get_class_data_for_loading($class_meta);       
@@ -3186,6 +3187,7 @@ sub _generate_template_data_for_loading {
         @delegated_properties,    
         %outer_joins,
         %filters_to_satisfy,
+        @rules_resolved_by_join,
     );
 
     %filters_to_satisfy = %filters;
@@ -3532,6 +3534,11 @@ sub _generate_template_data_for_loading {
                                      $new 
                                  }
                                  @{ $foreign_class_loading_data->{direct_table_properties} };                
+
+
+                            if (my $rule_accessor = $join->{rule_accessor}) {
+                                push @rules_resolved_by_join, $last_object_num => $rule_accessor;
+                            }
                         }
                     }
                 }
@@ -3806,7 +3813,7 @@ sub _generate_template_data_for_loading {
     # this is only used when making a real instance object instead of a "set"
     my $per_object_in_resultset_loading_detail;
     unless ($group_by) {
-        $per_object_in_resultset_loading_detail = $self->_generate_loading_templates_arrayref(\@all_table_properties);
+        $per_object_in_resultset_loading_detail = $self->_generate_loading_templates_arrayref(\@all_table_properties, \@rules_resolved_by_join);
     }
 
     my $parent_template_data = $self->SUPER::_generate_template_data_for_loading($rule_template);

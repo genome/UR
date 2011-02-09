@@ -620,6 +620,7 @@ sub _generate_loading_templates_arrayref {
     
     my $class = shift;
     my $sql_cols = shift;
+    my $rules_resolved_by_join = shift;
 
     use strict;
     use warnings;
@@ -644,12 +645,23 @@ sub _generate_loading_templates_arrayref {
                 id_property_names => undef,
                 id_column_positions => [],
                 id_resolver => undef, # subref
+                rules_resolved_by_join => [],
             };
             $templates[$object_num] = $template;
         }
         push @{ $template->{property_names} }, $prop->property_name;
         push @{ $template->{column_positions} }, $pos;
         $pos++;
+    }
+
+    if ($rules_resolved_by_join) {
+        $DB::single = 1;
+        for (my $n = 0; $n < @$rules_resolved_by_join; $n += 2) {
+            my $object_num = $rules_resolved_by_join->[$n];
+            my $rule_accessor = $rules_resolved_by_join->[$n+1];
+            my $template = $templates[$object_num];
+            push @{ $template->{rules_resolved_by_join} }, $rule_accessor;
+        }
     }
     
     # Post-process the template objects a bit to get the exact id positions.

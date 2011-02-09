@@ -2158,8 +2158,6 @@ sub _create_import_iterator_for_underlying_context {
     # Make an iterator for the primary data source.
     # Primary here meaning the one for the class we're explicitly requesting.
     # We may need to join to other data sources to complete the query.
-
-    $DB::single = 1;
     my ($db_iterator) = $dsx->create_iterator_closure_for_rule($rule);
 
     my ($rule_template, @values) = $rule->template_and_values();
@@ -2266,8 +2264,10 @@ sub _create_import_iterator_for_underlying_context {
     #my $is_monitor_query = $self->monitor_query();
 
     # Make the iterator we'll return.
+    my $last_object;
     my $underlying_context_iterator = sub {
         my $object;
+        my @all_joins_resolved;
         
         LOAD_AN_OBJECT:
         until ($object) { # note that we return directly when the db is out of data
@@ -2338,6 +2338,22 @@ sub _create_import_iterator_for_underlying_context {
                     }
                 }
 
+                if (defined $last_object) {
+                    my $tmp = $last_object;
+                    $last_object = undef;
+                    if (@all_joins_resolved) {
+                        $DB::single = 1;
+                        for my $rule_accessor_name (@all_joins_resolved) {
+                            my $rule = $tmp->$rule_accessor_name;
+                            my $template_id = $rule->template_id;
+                            my $rule_id = $rule->id;
+                            $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
+                        }
+                    }
+                    $tmp->__signal_change__('load');            
+                    return $tmp;
+                }
+
                 return;
             }
             
@@ -2383,7 +2399,7 @@ sub _create_import_iterator_for_underlying_context {
                 # The usual case is that the query is just against one data source, and so the importer
                 # callback is just given the row returned from the DB query.  For multiple data sources,
                 # we need to smash together the primary and all the secondary lists
-                my $imported_object;
+                my ($imported_object, $check_bx, $is_new, $joins_resolved);
 
                 #my $object_creation_time;
                 #if ($is_monitor_query) {
@@ -2391,20 +2407,26 @@ sub _create_import_iterator_for_underlying_context {
                 #}
 
                 if (@secondary_data) {
-                    $imported_object = $object_fabricator->([@$next_db_row, @secondary_data]);
+                    ($imported_object, $check_bx, $is_new, $joins_resolved) = $object_fabricator->([@$next_db_row, @secondary_data]);
                 } else { 
-                    $imported_object = $object_fabricator->($next_db_row);
+                    ($imported_object, $check_bx, $is_new, $joins_resolved) = $object_fabricator->($next_db_row);
                 }
                     
                 #if ($is_monitor_query) {
                 #    $self->_log_query_for_rule($class_name, $rule, sprintf("QUERY: object fabricator took %.4f s",Time::HiRes::time() - $object_creation_time));
                 #}
 
+                if ($check_bx) {
+                    $needs_further_boolexpr_evaluation_after_loading = 1;
+                }
+
                 if ($imported_object and not ref($imported_object)) {
-                    # object requires sub-classsification in a way which involves different db data.
+                    # object requires sub-classification in a way which involves different db data.
                     $re_iterate = 1;
                 }
+
                 push @imported, $imported_object;
+                push @all_joins_resolved, @$joins_resolved;
             }
             
             $object = $imported[-1];
@@ -2475,14 +2497,45 @@ sub _create_import_iterator_for_underlying_context {
                     redo LOAD_AN_OBJECT;
                 }
             }
+
+            $DB::single = 1;
+            # stay one behind
+            if (not defined $last_object) {
+                $last_object = $object;
+                $object = undef;
+                redo LOAD_AN_OBJECT;
+            }
+            elsif ($object == $last_object) {
+                $object = undef;
+                redo LOAD_AN_OBJECT;
+            }
+            else {
+                my $tmp = $last_object;
+                $last_object = $object;
+                $object = $tmp;
+            }
+
             
+            if (@all_joins_resolved) {
+                $DB::single = 1;
+                for my $rule_accessor_name (@all_joins_resolved) {
+                    my $rule = $object->$rule_accessor_name;
+                    my $template_id = $rule->template_id;
+                    my $rule_id = $rule->id;
+                    $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
+                }
+            }
+
+            $object->__signal_change__('load');            
+
             if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($object)) {
                 $object = undef;
                 redo LOAD_AN_OBJECT;
             }
             
         } # end of loop until we have a defined object to return
-        
+
+
         return $object;
     };
     
@@ -2610,8 +2663,6 @@ sub __create_object_fabricator_for_loading_template {
     my $subclassify_by            = $class_data->{subclassify_by};
     my $sub_classification_method_name              = $class_data->{sub_classification_method_name};
 
-    # FIXME, right now, we don't have a rule template for joined entities...
-    
     my $rule_template_id                            = $template_data->{rule_template_id};
     my $rule_template_without_recursion_desc        = $template_data->{rule_template_without_recursion_desc};
     my $rule_template_id_without_recursion_desc     = $template_data->{rule_template_id_without_recursion_desc};
@@ -2623,6 +2674,9 @@ sub __create_object_fabricator_for_loading_template {
     my $recursion_desc                              = $template_data->{recursion_desc};
     my $recurse_property_on_this_row                = $template_data->{recurse_property_on_this_row};
     my $recurse_property_referencing_other_rows     = $template_data->{recurse_property_referencing_other_rows};
+
+    # handle joins
+    my $rules_resolved_by_join                      = $loading_template->{rules_resolved_by_join};
 
     my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
 
@@ -2790,6 +2844,7 @@ sub __create_object_fabricator_for_loading_template {
         }
         
         my $pending_db_object;
+        my $is_new = 0;
         
         # skip if this object has been deleted but not committed
         do {
@@ -2990,7 +3045,6 @@ sub __create_object_fabricator_for_loading_template {
                     
                     if ($already_loaded and !$different and !$merge_exception) {
                         if ($pending_db_object == $already_loaded) {
-                            print "ALREADY LOADED SAME OBJ?\n";
                             $DB::single = 1;
                             die "The loaded object already exists in its target subclass?!";
                         }
@@ -3080,21 +3134,18 @@ sub __create_object_fabricator_for_loading_template {
                 }
                 
                 # the object may no longer match the rule after subclassifying...
-                if ($loading_base_object and not $rule->evaluate($pending_db_object)) {
-                    #print "Object does not match rule!" . Dumper($pending_db_object,[$rule->params_list]) . "\n";
-                    #$DB::single = 1;
-                    #$rule->evaluate($pending_db_object);
-                    #$DB::single = 1;
-                    #$rule->evaluate($pending_db_object);
-                    return;
-                    #$pending_db_object = undef;
-                    #redo;
+                if ($loading_base_object) {
+                    $needs_further_boolexpr_evaluation_after_loading = 1;
                 }
+
             } # end of sub-classification code
+            
+            $is_new = 1;
+=pod
 
             # Signal that the object has been loaded
             # NOTE: until this is done indexes cannot be used to look-up an object
-            #$pending_db_object->__signal_change__('load_external');
+            # $pending_db_object->__signal_change__('load_external');
             $pending_db_object->__signal_change__('load');
         
             #$DB::single = 1;
@@ -3105,10 +3156,13 @@ sub __create_object_fabricator_for_loading_template {
                 and 
                 not $rule->evaluate($pending_db_object)
             ) {
-                return;
+                return $pending_db_object, $rule;
                 #$pending_db_object = undef;
                 #redo;
             }
+
+=cut
+
         } # end handling newly loaded objects
         
         # If the rule had hints, mark that we loaded those things too, in all_params_loaded
@@ -3120,7 +3174,7 @@ sub __create_object_fabricator_for_loading_template {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
                     my $rule_tmpl = $hint_data->[1];
                     my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
-                    $UR::Context::all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id} = undef;
+                    $UR::Context::all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id} = undef if not exists $UR::Context::all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id};
                     $local_all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id}++;
                  }
             }
@@ -3204,8 +3258,9 @@ sub __create_object_fabricator_for_loading_template {
                 $pending_db_object->{__load}->{$equiv_template_id_2}->{$equiv_rule_id_2}++;
             }
         } # end of handling recursion
-            
-        return $pending_db_object;
+
+        $DB::single = 1;
+        return $pending_db_object, $needs_further_boolexpr_evaluation_after_loading, $is_new, $rules_resolved_by_join;
         
     }; # end of per-class object fabricator
     Sub::Name::subname("UR::Context::__object_fabricator(closure)__ ($class_name)", $object_fabricator);
@@ -3455,16 +3510,16 @@ sub _get_objects_for_class_and_rule_from_cache {
     #my @param_list = $rule->params_list;
     #print "CACHE-GET: $class @param_list\n";
     
-    my $strategy = $rule->{_context_query_strategy};    
+    my $strategy = $rule->{'cache'}{'UR::Context::_get_objects_for_class_and_rule_from_cache'};    
     unless ($strategy) {
         if ($rule->num_values == 0) {
-            $strategy = $rule->{_context_query_strategy} = "all";
+            $strategy = $rule->{'cache'}{'UR::Context::_get_objects_for_class_and_rule_from_cache'} = "all";
         }
         elsif ($rule->is_id_only) {
-            $strategy = $rule->{_context_query_strategy} = "id";
+            $strategy = $rule->{'cache'}{'UR::Context::_get_objects_for_class_and_rule_from_cache'} = "id";
         }        
         else {
-            $strategy = $rule->{_context_query_strategy} = "index";
+            $strategy = $rule->{'cache'}{'UR::Context::_get_objects_for_class_and_rule_from_cache'} = "index";
         }
     }
     
@@ -3559,7 +3614,7 @@ sub _get_objects_for_class_and_rule_from_cache {
             for my $key (keys %params) {
                 delete $params{$key} if substr($key,0,1) eq '-' or substr($key,0,1) eq '_';
                 my $prop_meta = $class_meta->property_meta_for_name($key);
-                if ($prop_meta && $prop_meta->is_many) {
+                if ($prop_meta && ($prop_meta->is_many || $prop_meta->is_delegated)) {
                     # These indexes perform poorly in the general case if we try to index
                     # the is_many properties.  Instead, strip them out from the basic param
                     # list, and evaluate the superset of indexed objects through the rule
@@ -3574,10 +3629,9 @@ sub _get_objects_for_class_and_rule_from_cache {
                 return grep { $rule->evaluate($_) } $self->all_objects_loaded($class);
             }
 
-            my @values = map { $params{$_} } @properties;
-            
+            my @values = map { $params{$_} } @properties;            
             unless (@properties == @values) {
-                Carp::confess();
+                Carp::confess("property count does not match value count???");
             }
             
             # find or create the index
@@ -3592,8 +3646,6 @@ sub _get_objects_for_class_and_rule_from_cache {
             
 
             # add the indexed objects to the results list
-            
-            
             if ($UR::Debug::verify_indexes) {
                 my @matches = $index->get_objects_matching(@values);        
                 @matches = sort @matches;
@@ -3615,6 +3667,9 @@ sub _get_objects_for_class_and_rule_from_cache {
             } else {
                 return $index->get_objects_matching(@values);
             }
+        }
+        else {
+            Carp::confess("No strategy for rule to find data in the memory cache?");
         }
     };
         

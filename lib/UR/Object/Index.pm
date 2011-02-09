@@ -15,8 +15,7 @@ sub data_tree {
     if (@_ > 1) {
         my $old = $_[0]->{data_tree};
         my $new = $_[1];
-        if ($old ne $new)
-        {
+        if ($old ne $new) {
             $_[0]->{data_tree} = $new;
             $_[0]->__signal_change__('data_tree', $old, $new);
         }
@@ -45,8 +44,10 @@ sub create {
 
 sub get_objects_matching {
     # this does a lookup as efficiently as possible
-    # The hash access below generates warnings
-    # where undef is a value.  Ignore these.
+
+    # TODO: this logic should be composed from all of the 
+    # UR::BoolExpr::Template::PropertyComparison::* modules
+
     no warnings 'uninitialized';
     
     my @hr = (shift->{data_tree});
@@ -331,8 +332,7 @@ sub weaken_reference_for_object {
 
     my $hr = $self->{data_tree};
     my $value;
-    for $value (@values)
-    {
+    for $value (@values) {
         $hr = $hr->{$value};
         return unless $hr;
     }
@@ -344,7 +344,9 @@ sub _setup_change_subscription {
        
     my $indexed_class_name = $self->indexed_class_name;        
     my @indexed_property_names = $self->indexed_property_names;
-    
+
+$DB::single = 1 if "@indexed_property_names" =~ /status/;    
+
     if (1) {            
         # This is a new indexing strategy which pays at index creation time instead of use.
         
