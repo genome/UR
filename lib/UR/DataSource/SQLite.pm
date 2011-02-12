@@ -146,15 +146,10 @@ sub _init_database {
 
         my $schema_file = $self->_schema_path;
 
-        chomp(my $sqlite3_in_path = !system("which sqlite3"));
         if (-e $dump_file) {
             # create from dump
             $self->warning_message("Re-creating $db_file from $dump_file.");
-            if ($sqlite3_in_path) {
-                system("sqlite3 $db_file <$dump_file");
-            } else {
-                $self->_load_db_from_dump_internal($dump_file);
-            }
+            $self->_load_db_from_dump_internal($dump_file);
             unless (-e $db_file) {
                 Carp::confess("Failed to import $dump_file into $db_file!");
             }
@@ -162,11 +157,7 @@ sub _init_database {
         elsif ( (not -e $db_file) and (-e $schema_file) ) {
             # create from schema
             $self->warning_message("Re-creating $db_file from $schema_file.");
-            if ($sqlite3_in_path) {
-                system("sqlite3 $db_file <$schema_file");
-            } else {
-                $self->_load_db_from_dump_internal($schema_file);
-            }
+            $self->_load_db_from_dump_internal($schema_file);
             unless (-e $db_file) {
                 Carp::confess("Failed to import $dump_file into $db_file!");
             }

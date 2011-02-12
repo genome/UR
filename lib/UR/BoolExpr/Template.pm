@@ -401,8 +401,11 @@ sub sub_classify {
 sub get_by_subject_class_name_logic_type_and_logic_detail {
     my $class = shift;
     my $subject_class_name = shift;
+        Carp::croak("Expected a subject class name as the first arg of UR::BoolExpr::Template constructor, got "
+                    . ( defined($subject_class_name) ? "'$subject_class_name'" : "(undef)" ) ) unless ($subject_class_name);
     my $logic_type = shift;
     my $logic_detail = shift;
+
     my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(); # intentionally an empty list of values
     return $class->get(join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id));
 }
@@ -681,7 +684,7 @@ sub _fast_construct_and {
                 $page = shift @constant_values;
             }
             else {
-                die "Unknown special param $key.  Expected one of: @meta_param_names";
+                Carp::croak("Unknown special param '$key'.  Expected one of: @meta_param_names");
             }
         }
         else {
@@ -758,7 +761,7 @@ sub _fast_construct_and {
 sub get {
     my $class = shift;
     my $id = shift;    
-    die "Non-id params not supported for " . __PACKAGE__ . " yet!" if @_;
+    Carp::croak("Non-id params not supported for " . __PACKAGE__ . " yet!") if @_;
 
     my $self = $UR::Object::rule_templates->{$id};
     return $self if $self;     
@@ -777,7 +780,7 @@ sub get {
     );
 
     unless ($logic_type) {
-        Carp::confess($id);
+        Carp::croak("Could not determine logic type from UR::BoolExpr::Template with id $id");
     }
 
     if ($logic_type eq "And") {

@@ -286,7 +286,7 @@ sub resolve_for_template_id_and_values {
 my $resolve_depth;
 sub resolve {
     $resolve_depth++;
-    Carp::confess("Deep recursion!") if $resolve_depth > 10;
+    Carp::confess("Deep recursion in UR::BoolExpr::resolve()!") if $resolve_depth > 10;
 
     # handle the case in which we've already processed the params into a boolexpr
     if ( @_ == 3 and ref($_[2]) and ref($_[2])->isa("UR::BoolExpr") ) {
