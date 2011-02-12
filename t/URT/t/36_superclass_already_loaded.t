@@ -18,7 +18,7 @@ ok($dbh, "got a db handle");
 our $load_count = 0;
 ok(URT::Parent->create_subscription(
                     method => 'load',
-                    callback => sub {$load_count++}),
+                    callback => sub {$load_count++;}),
      'Created a subscription for load');
 
 our $query_count = 0;

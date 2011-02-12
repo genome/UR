@@ -2265,9 +2265,11 @@ sub _create_import_iterator_for_underlying_context {
 
     # Make the iterator we'll return.
     my $last_object;
+    my @last_objects;
+    my %all_joins_resolved;
+
     my $underlying_context_iterator = sub {
         my $object;
-        my @all_joins_resolved;
         
         LOAD_AN_OBJECT:
         until ($object) { # note that we return directly when the db is out of data
@@ -2341,16 +2343,25 @@ sub _create_import_iterator_for_underlying_context {
                 if (defined $last_object) {
                     my $tmp = $last_object;
                     $last_object = undef;
-                    if (@all_joins_resolved) {
+                    if (%all_joins_resolved) {
                         $DB::single = 1;
-                        for my $rule_accessor_name (@all_joins_resolved) {
+                        for my $rule_accessor_name (keys %all_joins_resolved) {
                             my $rule = $tmp->$rule_accessor_name;
                             my $template_id = $rule->template_id;
                             my $rule_id = $rule->id;
                             $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
                         }
                     }
-                    $tmp->__signal_change__('load');            
+                    for my $o ($tmp, @last_objects) {
+                        if ($o->{NO_LOAD_SIGNAL}) {
+                            delete $o->{NO_LOAD_SIGNAL};
+                            $o->__signal_change__('load');            
+                        }
+                    }
+                    @last_objects = ();
+                    if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($tmp)) {
+                        return;
+                    }
                     return $tmp;
                 }
 
@@ -2399,7 +2410,7 @@ sub _create_import_iterator_for_underlying_context {
                 # The usual case is that the query is just against one data source, and so the importer
                 # callback is just given the row returned from the DB query.  For multiple data sources,
                 # we need to smash together the primary and all the secondary lists
-                my ($imported_object, $check_bx, $is_new, $joins_resolved);
+                my ($imported_object, $check_bx, $is_new, $joins_resolved, $rules_resolved);
 
                 #my $object_creation_time;
                 #if ($is_monitor_query) {
@@ -2407,9 +2418,9 @@ sub _create_import_iterator_for_underlying_context {
                 #}
 
                 if (@secondary_data) {
-                    ($imported_object, $check_bx, $is_new, $joins_resolved) = $object_fabricator->([@$next_db_row, @secondary_data]);
+                    ($imported_object, $check_bx, $is_new, $joins_resolved, $rules_resolved) = $object_fabricator->([@$next_db_row, @secondary_data]);
                 } else { 
-                    ($imported_object, $check_bx, $is_new, $joins_resolved) = $object_fabricator->($next_db_row);
+                    ($imported_object, $check_bx, $is_new, $joins_resolved, $rules_resolved) = $object_fabricator->($next_db_row);
                 }
                     
                 #if ($is_monitor_query) {
@@ -2426,22 +2437,34 @@ sub _create_import_iterator_for_underlying_context {
                 }
 
                 push @imported, $imported_object;
-                push @all_joins_resolved, @$joins_resolved;
+                if ($joins_resolved) {
+                    for my $accessor (@$joins_resolved) {
+                        $all_joins_resolved{$accessor} = 1;
+                    }
+                }
             }
             
             $object = $imported[-1];
             my $this_object_was_already_cached = defined($object)
                                               && ref($object)
-                                              && exists($object->{'__get_serial'});
+                                              && exists($object->{'__get_serial'})
+                                              && not exists($object->{'NO_LOAD_SIGNAL'});
 
+            my $signal;
             foreach my $obj (@imported) {
                 # The object importer will return undef for an object if no object
                 # got created for that $next_db_row, and will return a string if the object
                 # needs to be subclassed before being returned.  Don't put serial numbers on
                 # these
                 next unless (defined($obj) && ref($obj));
+                
+                my $prev_serial = $obj->{'__get_serial'};
 
                 $obj->{'__get_serial'} = $this_get_serial;
+
+                unless ($prev_serial) {
+                    $obj->{NO_LOAD_SIGNAL} = 1;
+                }
             }
 
             if ($this_object_was_already_cached) {
@@ -2477,14 +2500,7 @@ sub _create_import_iterator_for_underlying_context {
                         # the newly subclassed object 
                         redo LOAD_AN_OBJECT;
                     }
-                
-                #unless ($object->id eq $id) {
-                #    Carp::cluck("object id $object->{id} does not match expected id $id");
-                #    $DB::single = 1;
-                #    print "";
-                #    die;
-                #}
-               }
+                }    
             } # end of handling a possible subordinate iterator delegate
             
             unless ($object) {
@@ -2497,16 +2513,17 @@ sub _create_import_iterator_for_underlying_context {
                     redo LOAD_AN_OBJECT;
                 }
             }
-
-            $DB::single = 1;
+            
             # stay one behind
             if (not defined $last_object) {
                 $last_object = $object;
+                push @last_objects, grep { ref $_ } @imported;
                 $object = undef;
                 redo LOAD_AN_OBJECT;
             }
             elsif ($object == $last_object) {
                 $object = undef;
+                push @last_objects,  grep { ref $_ } @imported;
                 redo LOAD_AN_OBJECT;
             }
             else {
@@ -2514,11 +2531,14 @@ sub _create_import_iterator_for_underlying_context {
                 $last_object = $object;
                 $object = $tmp;
             }
-
             
-            if (@all_joins_resolved) {
-                $DB::single = 1;
-                for my $rule_accessor_name (@all_joins_resolved) {
+            if (%all_joins_resolved) {
+                for my $rule_accessor_name (keys %all_joins_resolved) {
+                    unless ($object->can($rule_accessor_name)) {
+                        $DB::single = 1;
+                        warn "no method $rule_accessor_name on $object!";
+                        next;
+                    }
                     my $rule = $object->$rule_accessor_name;
                     my $template_id = $rule->template_id;
                     my $rule_id = $rule->id;
@@ -2526,7 +2546,13 @@ sub _create_import_iterator_for_underlying_context {
                 }
             }
 
-            $object->__signal_change__('load');            
+            for my $o ($object, @last_objects) {
+                if ($o->{NO_LOAD_SIGNAL}) {
+                    delete $o->{NO_LOAD_SIGNAL};
+                    $o->__signal_change__('load');            
+                }
+            }
+            @last_objects = ();
 
             if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($object)) {
                 $object = undef;
@@ -2825,7 +2851,6 @@ sub __create_object_fabricator_for_loading_template {
         my $pending_db_object_data = { %initial_object_data };
         @$pending_db_object_data{@property_names} = @$next_db_row[@column_positions];
         
-        # resolve id
         my $pending_db_object_id;
         if ($multi_column_id) {
             $pending_db_object_id = $composite_id_resolver->(@$pending_db_object_data{@id_property_names})
@@ -2835,16 +2860,12 @@ sub __create_object_fabricator_for_loading_template {
         }
         
         unless (defined $pending_db_object_id) {
-            #$DB::single = $DB::stopper;
-            return undef;
+            return;
             Carp::confess(
                 "no id found in object data for $class_name?\n" 
                 . Data::Dumper::Dumper($pending_db_object_data)
             );
         }
-        
-        my $pending_db_object;
-        my $is_new = 0;
         
         # skip if this object has been deleted but not committed
         do {
@@ -2856,10 +2877,13 @@ sub __create_object_fabricator_for_loading_template {
             }
         };
 
-        # Handle the object based-on whether it is already loaded in the current context.
+        my $pending_db_object;
+        my $is_new;
+        
         if ($pending_db_object = $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id}) {
+            # Handle the case in which the object is already loaded in this context
             $self->__merge_db_data_with_existing_object($class, $pending_db_object, $pending_db_object_data, \@property_names);
-
+            $is_new = 0;
         }
         else {
             # Handle the case in which the object is completely new in the current context.
@@ -3005,7 +3029,6 @@ sub __create_object_fabricator_for_loading_template {
                         my $value = $pending_db_object->{$property};
                         delete $in_clause_values{$property}->{$value};
                     }
-                        
                 }
             }
             
@@ -3141,27 +3164,6 @@ sub __create_object_fabricator_for_loading_template {
             } # end of sub-classification code
             
             $is_new = 1;
-=pod
-
-            # Signal that the object has been loaded
-            # NOTE: until this is done indexes cannot be used to look-up an object
-            # $pending_db_object->__signal_change__('load_external');
-            $pending_db_object->__signal_change__('load');
-        
-            #$DB::single = 1;
-            if (
-                $loading_base_object
-                and
-                $needs_further_boolexpr_evaluation_after_loading 
-                and 
-                not $rule->evaluate($pending_db_object)
-            ) {
-                return $pending_db_object, $rule;
-                #$pending_db_object = undef;
-                #redo;
-            }
-
-=cut
 
         } # end handling newly loaded objects
         
@@ -3179,7 +3181,7 @@ sub __create_object_fabricator_for_loading_template {
                  }
             }
         }
-
+        
         # When there is recursion in the query, we record data from each 
         # recursive "level" as though the query was done individually.
         if ($recursion_desc and $loading_base_object) {
@@ -3259,7 +3261,6 @@ sub __create_object_fabricator_for_loading_template {
             }
         } # end of handling recursion
 
-        $DB::single = 1;
         return $pending_db_object, $needs_further_boolexpr_evaluation_after_loading, $is_new, $rules_resolved_by_join;
         
     }; # end of per-class object fabricator

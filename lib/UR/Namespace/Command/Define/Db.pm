@@ -206,7 +206,7 @@ sub _post_module_written_sqlite {
 
     $pathname =~ s/\.pm$/.sqlite3/;
     unless ($pathname eq $server) {
-        symlink ($server, $pathname) or die "no symline $pathname for $server! $!";
+        symlink ($server, $pathname) or die "no symlink $pathname for $server! $!";
     }
 
     return 1;

@@ -655,7 +655,6 @@ sub _generate_loading_templates_arrayref {
     }
 
     if ($rules_resolved_by_join) {
-        $DB::single = 1;
         for (my $n = 0; $n < @$rules_resolved_by_join; $n += 2) {
             my $object_num = $rules_resolved_by_join->[$n];
             my $rule_accessor = $rules_resolved_by_join->[$n+1];
