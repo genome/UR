@@ -1185,7 +1185,12 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my @uc_names = $table->unique_constraint_names;
         for my $uc_name (@uc_names)
         {
-            $class->remove_unique_constraint($uc_name);
+            eval { $class->remove_unique_constraint($uc_name) };
+            if ($@ =~ m/There is no constraint named/) {
+                next;  # it's OK if there's no UR metadata for this constraint yet
+            } else {
+                die $@;
+            }
 
             my @uc_cols = map { ref($_) ? @$_ : $_ } $table->unique_constraint_column_names($uc_name);
             my @uc_property_names;
