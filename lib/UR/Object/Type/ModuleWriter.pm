@@ -203,7 +203,7 @@ sub resolve_class_description_perl {
 
         $perl .= "    unique_constraints => [\n";
         for my $unique_group_name (keys %$unique_groups) {
-            my $property_names = join(' ', sort { $_ } @{ $unique_groups->{$unique_group_name}});
+            my $property_names = join(' ', sort { $a cmp $b } @{ $unique_groups->{$unique_group_name}});
             $perl .= "        { "
                 . "properties => [qw/$property_names/], "
                 . "sql => '" . $unique_group_name . "'"
