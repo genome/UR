@@ -2264,20 +2264,27 @@ sub _create_import_iterator_for_underlying_context {
     #my $is_monitor_query = $self->monitor_query();
 
     # Make the iterator we'll return.
-    my $last_object;
-    my @last_objects;
+    my @ancillary_objects;
     my %all_joins_resolved;
 
     my $underlying_context_iterator = sub {
-        my $object;
+        # The primary object won't be returned until all the hangoff data (from
+        # indirect/delegated/hinted properties) is also loaded.  We'll hang onto this
+        # "primary" object until the columns designating the primary object are different
+        my $object_to_return;
+        my $primary_object_for_this_db_row;
         
         LOAD_AN_OBJECT:
-        until ($object) { # note that we return directly when the db is out of data
+        until ($primary_object_for_this_db_row) { # note that we return directly when the db is out of data
             
             my ($next_db_row);
             ($next_db_row) = $db_iterator->() if ($db_iterator);
 
             unless ($next_db_row) {
+                #
+                # Start of code that runs when there are no more rows from the data source
+                #
+
                 if ($rows == 0) {
                     # if we got no data at all from the sql then we give a status
                     # message about it and we update all_params_loaded to indicate
@@ -2340,9 +2347,9 @@ sub _create_import_iterator_for_underlying_context {
                     }
                 }
 
-                if (defined $last_object) {
-                    my $tmp = $last_object;
-                    $last_object = undef;
+                if (defined $object_thats_loading) {
+                    my $tmp = $object_thats_loading;
+                    $object_thats_loading = undef;
                     if (%all_joins_resolved) {
                         $DB::single = 1;
                         for my $rule_accessor_name (keys %all_joins_resolved) {
@@ -2352,13 +2359,13 @@ sub _create_import_iterator_for_underlying_context {
                             $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
                         }
                     }
-                    for my $o ($tmp, @last_objects) {
+                    for my $o ($tmp, @ancillary_objects) {
                         if ($o->{NO_LOAD_SIGNAL}) {
                             delete $o->{NO_LOAD_SIGNAL};
                             $o->__signal_change__('load');            
                         }
                     }
-                    @last_objects = ();
+                    @ancillary_objects = ();
                     if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($tmp)) {
                         return;
                     }
@@ -2366,6 +2373,10 @@ sub _create_import_iterator_for_underlying_context {
                 }
 
                 return;
+
+                #
+                # End of code that runs when there are no more rows from the data source
+                #
             }
             
             # we count rows processed mainly for more concise sanity checking
@@ -2395,7 +2406,7 @@ sub _create_import_iterator_for_underlying_context {
                 unless ($secondary_db_row) {  
                     # It returned 0
                     # didn't join (but there is still more data we can read later)... throw this row out.
-                    $object = undef;
+                    $primary_object_for_this_db_row = undef;
                     redo LOAD_AN_OBJECT;
                 }
                 # $next_db_row is a read-only value from DBI, so we need to track our additional 
@@ -2444,11 +2455,11 @@ sub _create_import_iterator_for_underlying_context {
                 }
             }
             
-            $object = $imported[-1];
-            my $this_object_was_already_cached = defined($object)
-                                              && ref($object)
-                                              && exists($object->{'__get_serial'})
-                                              && not exists($object->{'NO_LOAD_SIGNAL'});
+            $primary_object_for_this_db_row = $imported[-1];
+            my $this_object_was_already_cached = defined($primary_object_for_this_db_row)
+                                              && ref($primary_object_for_this_db_row)
+                                              && exists($primary_object_for_this_db_row->{'__get_serial'})
+                                              && not exists($primary_object_for_this_db_row->{'NO_LOAD_SIGNAL'});
 
             my $signal;
             foreach my $obj (@imported) {
@@ -2472,7 +2483,7 @@ sub _create_import_iterator_for_underlying_context {
                 # FIXME - when we can stack contexts in the same application, and the 
                 # loaded context is recorded on the object, use that context as the
                 # test above instead of the existence of a __get_serial
-                $object = undef;
+                $primary_object_for_this_db_row = undef;
                 redo LOAD_AN_OBJECT;
             }
             
@@ -2481,7 +2492,7 @@ sub _create_import_iterator_for_underlying_context {
                 # data than is on the results row.  For each subclass (or set of subclasses),
                 # we make a more specific, subordinate iterator to delegate-to.
  
-                my $subclass_name = $object;
+                my $subclass_name = $primary_object_for_this_db_row;
 
                 unless (grep { not ref $_ } @imported[0..$#imported-1]) {
                     my $subclass_meta = UR::Object::Type->get(class_name => $subclass_name);
@@ -2495,74 +2506,74 @@ sub _create_import_iterator_for_underlying_context {
                             = $subordinate_iterator_for_class{$table_subclass} 
                                 = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx,$this_get_serial);
                     }
-                    ($object) = $sub_iterator->();
-                    if (! defined $object) {
+                    ($primary_object_for_this_db_row) = $sub_iterator->();
+                    if (! defined $primary_object_for_this_db_row) {
                         # the newly subclassed object 
                         redo LOAD_AN_OBJECT;
                     }
                 }    
             } # end of handling a possible subordinate iterator delegate
             
-            unless ($object) {
+            unless ($primary_object_for_this_db_row) {
                 redo LOAD_AN_OBJECT;
             }
             
             unless ($group_by) {
-                if ( (ref($object) ne $class_name) and (not $object->isa($class_name)) ) {
-                    $object = undef;
+                if ( (ref($primary_object_for_this_db_row) ne $class_name) and (not $primary_object_for_this_db_row->isa($class_name)) ) {
+                    $primary_object_for_this_db_row = undef;
                     redo LOAD_AN_OBJECT;
                 }
             }
             
             # stay one behind
-            if (not defined $last_object) {
-                $last_object = $object;
-                push @last_objects, grep { ref $_ } @imported;
-                $object = undef;
+            if (not defined $object_thats_loading) {
+                $object_thats_loading = $primary_object_for_this_db_row;
+                push @ancillary_objects, grep { ref $_ } @imported;
+                $primary_object_for_this_db_row = undef;
                 redo LOAD_AN_OBJECT;
             }
-            elsif ($object == $last_object) {
-                $object = undef;
-                push @last_objects,  grep { ref $_ } @imported;
+            elsif ($primary_object_for_this_db_row eq $object_thats_loading) {
+                $primary_object_for_this_db_row = undef;
+                push @ancillary_objects,  grep { ref $_ } @imported;
                 redo LOAD_AN_OBJECT;
             }
             else {
-                my $tmp = $last_object;
-                $last_object = $object;
-                $object = $tmp;
+                my $tmp = $object_thats_loading;
+                $object_thats_loading = $primary_object_for_this_db_row;
+                $primary_object_for_this_db_row = $tmp;
             }
             
             if (%all_joins_resolved) {
                 for my $rule_accessor_name (keys %all_joins_resolved) {
-                    unless ($object->can($rule_accessor_name)) {
+                    unless ($primary_object_for_this_db_row->can($rule_accessor_name)) {
                         $DB::single = 1;
-                        warn "no method $rule_accessor_name on $object!";
+                        warn "no method $rule_accessor_name on $primary_object_for_this_db_row!";
                         next;
                     }
-                    my $rule = $object->$rule_accessor_name;
+                    my $rule = $primary_object_for_this_db_row->$rule_accessor_name;
                     my $template_id = $rule->template_id;
                     my $rule_id = $rule->id;
                     $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
                 }
             }
 
-            for my $o ($object, @last_objects) {
+            for my $o ($primary_object_for_this_db_row, @ancillary_objects) {
                 if ($o->{NO_LOAD_SIGNAL}) {
                     delete $o->{NO_LOAD_SIGNAL};
                     $o->__signal_change__('load');            
                 }
             }
-            @last_objects = ();
+            @ancillary_objects = ();
 
-            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($object)) {
-                $object = undef;
+            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($primary_object_for_this_db_row)) {
+                $primary_object_for_this_db_row = undef;
                 redo LOAD_AN_OBJECT;
             }
             
         } # end of loop until we have a defined object to return
 
 
-        return $object;
+        return $primary_object_for_this_db_row;
     };
     
     Sub::Name::subname('UR::Context::__underlying_context_iterator(closure)__', $underlying_context_iterator);
