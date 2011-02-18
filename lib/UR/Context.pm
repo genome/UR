@@ -2263,122 +2263,124 @@ sub _create_import_iterator_for_underlying_context {
 
     #my $is_monitor_query = $self->monitor_query();
 
-    # Make the iterator we'll return.
-    my @ancillary_objects;
     my %all_joins_resolved;
+    
+    # This gets called by $underlying_context_iterator when there are no more rows from the DB.
+    # It's moved into its own closure to clean up the code
+    my $finalize_underlying_context_iterator = sub {
+        my($object_loading_now, $imported) = @_;
 
+        if ($rows == 0) {
+            # if we got no data at all from the sql then we give a status
+            # message about it and we update all_params_loaded to indicate
+            # that this set of parameters yielded 0 objects
+            
+            my $rule_template_is_id_only = $template_data->{rule_template_is_id_only};
+            if ($rule_template_is_id_only) {
+                my $id = $rule->value_for_id;
+                $UR::Context::all_objects_loaded->{$class_name}->{$id} = undef;
+            }
+            else {
+                $UR::Context::all_params_loaded->{$rule_template_id}->{$rule_id} = 0;
+            }
+        }
+                
+        if ( $template_data->{rule_matches_all} ) {
+            # No parameters.  We loaded the whole class.
+            # Doing a load w/o a specific ID w/o custom SQL loads the whole class.
+            # Set a flag so that certain optimizations can be made, such as 
+            # short-circuiting future loads of this class.        
+            #
+            # If the key still exists in the all_objects_are_loaded hash, then
+            # we can set it to true.  This is needed in the case where the user
+            # gets an iterator for all the objects of some class, but unloads
+            # one or more of the instances (be calling unload or through the 
+            # cache pruner) before the iterator completes.  If so, _abandon_object()
+            # will have removed the key from the hash
+            if (exists($UR::Context::all_objects_are_loaded->{$class_name})) {
+                $class_name->all_objects_are_loaded(1);
+            }
+        }
+        
+        if ($recursion_desc) {
+            my @results = $class_name->is_loaded($rule_without_recursion_desc);
+            $UR::Context::all_params_loaded->{$rule_template_id_without_recursion}{$rule_id_without_recursion} = scalar(@results);
+            for my $object (@results) {
+                $object->{__load}->{$rule_template_id_without_recursion}->{$rule_id_without_recursion}++;
+            }
+        }
+                
+        # Apply changes to all_params_loaded that each importer has collected
+        foreach (@object_fabricators) {
+            $_->finalize if ref($_) ne 'CODE';
+        }
+                
+        # If the SQL for the subclassed items was constructed properly, then each
+        # of these iterators should be at the end, too.  Call them one more time
+        # so they'll finalize their object fabricators.
+        foreach my $class ( keys %subordinate_iterator_for_class ) {
+            my $obj = $subordinate_iterator_for_class{$class}->();
+            if ($obj) {
+                # The last time this happened, it was because a get() was done on an abstract
+                # base class with only 'id' as a param.  When the subclassified rule was
+                # turned into SQL in UR::DataSource::RDBMS::_generate_template_data_for_loading()
+                # it removed that one 'id' filter, since it assummed any class with more than
+                # one ID property (usually classes have a named whatever_id property, and an alias 'id'
+                # property) will have a rule that covered both ID properties
+                Carp::carp("Leftover objects in subordinate iterator for $class.  This shouldn't happen, but it's not fatal...");
+                while ($obj = $subordinate_iterator_for_class{$class}->()) {1;}
+            }
+        }
+
+        if (defined $object_loading_now) {
+            if (%all_joins_resolved) {
+                $DB::single = 1;
+                for my $rule_accessor_name (keys %all_joins_resolved) {
+                    my $rule = $object_loading_now->$rule_accessor_name;
+                    my $template_id = $rule->template_id;
+                    my $rule_id = $rule->id;
+                    $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
+                }
+            }
+            for my $o ($object_loading_now, @$imported) {
+                next unless ref($o);
+                unless ($o->{'__get_serial'}) {
+                    $o->{'__get_serial'} = $this_get_serial;
+                    $o->__signal_change__('load');
+                }
+                
+            }
+            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($object_loading_now)) {
+                return;
+            }
+            return $object_loading_now;
+        }
+
+        return;
+    };
+
+    my $object_loading_now;              # the object we want to return when it's ready
     my $underlying_context_iterator = sub {
         # The primary object won't be returned until all the hangoff data (from
         # indirect/delegated/hinted properties) is also loaded.  We'll hang onto this
         # "primary" object until the columns designating the primary object are different
-        my $object_to_return;
-        my $primary_object_for_this_db_row;
-        
+        my $primary_object_for_this_db_row;  # The object represented by this pass of $next_db_row
+        my @imported;                        # objects loaded as a concequence of indirect/delegated/hinted properties in the query
+
         LOAD_AN_OBJECT:
-        until ($primary_object_for_this_db_row) { # note that we return directly when the db is out of data
-            
-            my ($next_db_row);
+        until ($primary_object_for_this_db_row) {
+            my $next_db_row;
             ($next_db_row) = $db_iterator->() if ($db_iterator);
 
             unless ($next_db_row) {
-                #
-                # Start of code that runs when there are no more rows from the data source
-                #
+                my $retval = $finalize_underlying_context_iterator->($object_loading_now, \@imported);
+                # these ensure this iterator will return undef next time it gets called
+                $db_iterator = undef;
+                $object_loading_now = undef;
 
-                if ($rows == 0) {
-                    # if we got no data at all from the sql then we give a status
-                    # message about it and we update all_params_loaded to indicate
-                    # that this set of parameters yielded 0 objects
-                    
-                    my $rule_template_is_id_only = $template_data->{rule_template_is_id_only};
-                    if ($rule_template_is_id_only) {
-                        my $id = $rule->value_for_id;
-                        $UR::Context::all_objects_loaded->{$class_name}->{$id} = undef;
-                    }
-                    else {
-                        $UR::Context::all_params_loaded->{$rule_template_id}->{$rule_id} = 0;
-                    }
-                }
-                
-                if ( $template_data->{rule_matches_all} ) {
-                    # No parameters.  We loaded the whole class.
-                    # Doing a load w/o a specific ID w/o custom SQL loads the whole class.
-                    # Set a flag so that certain optimizations can be made, such as 
-                    # short-circuiting future loads of this class.        
-                    #
-                    # If the key still exists in the all_objects_are_loaded hash, then
-                    # we can set it to true.  This is needed in the case where the user
-                    # gets an iterator for all the objects of some class, but unloads
-                    # one or more of the instances (be calling unload or through the 
-                    # cache pruner) before the iterator completes.  If so, _abandon_object()
-                    # will have removed the key from the hash
-                    if (exists($UR::Context::all_objects_are_loaded->{$class_name})) {
-                        $class_name->all_objects_are_loaded(1);
-                    }
-                }
-                
-                if ($recursion_desc) {
-                    my @results = $class_name->is_loaded($rule_without_recursion_desc);
-                    $UR::Context::all_params_loaded->{$rule_template_id_without_recursion}{$rule_id_without_recursion} = scalar(@results);
-                    for my $object (@results) {
-                        $object->{__load}->{$rule_template_id_without_recursion}->{$rule_id_without_recursion}++;
-                    }
-                }
-                
-                # Apply changes to all_params_loaded that each importer has collected
-                foreach (@object_fabricators) {
-                    $_->finalize if ref($_) ne 'CODE';
-                }
-                
-                # If the SQL for the subclassed items was constructed properly, then each
-                # of these iterators should be at the end, too.  Call them one more time
-                # so they'll finalize their object fabricators.
-                foreach my $class ( keys %subordinate_iterator_for_class ) {
-                    my $obj = $subordinate_iterator_for_class{$class}->();
-                    if ($obj) {
-                        # The last time this happened, it was because a get() was done on an abstract
-                        # base class with only 'id' as a param.  When the subclassified rule was
-                        # turned into SQL in UR::DataSource::RDBMS::_generate_template_data_for_loading()
-                        # it removed that one 'id' filter, since it assummed any class with more than
-                        # one ID property (usually classes have a named whatever_id property, and an alias 'id'
-                        # property) will have a rule that covered both ID properties
-                        warn "Leftover objects in subordinate iterator for $class.  This shouldn't happen, but it's not fatal...";
-                        while ($obj = $subordinate_iterator_for_class{$class}->()) {1;}
-                    }
-                }
-
-                if (defined $object_thats_loading) {
-                    my $tmp = $object_thats_loading;
-                    $object_thats_loading = undef;
-                    if (%all_joins_resolved) {
-                        $DB::single = 1;
-                        for my $rule_accessor_name (keys %all_joins_resolved) {
-                            my $rule = $tmp->$rule_accessor_name;
-                            my $template_id = $rule->template_id;
-                            my $rule_id = $rule->id;
-                            $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
-                        }
-                    }
-                    for my $o ($tmp, @ancillary_objects) {
-                        if ($o->{NO_LOAD_SIGNAL}) {
-                            delete $o->{NO_LOAD_SIGNAL};
-                            $o->__signal_change__('load');            
-                        }
-                    }
-                    @ancillary_objects = ();
-                    if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($tmp)) {
-                        return;
-                    }
-                    return $tmp;
-                }
-
-                return;
-
-                #
-                # End of code that runs when there are no more rows from the data source
-                #
+                return $retval;
             }
-            
+
             # we count rows processed mainly for more concise sanity checking
             $rows++;
 
@@ -2403,7 +2405,7 @@ sub _create_import_iterator_for_underlying_context {
                     # primary data source has more data left to read
                     return;
                 }
-                unless ($secondary_db_row) {  
+                unless ($secondary_db_row) {
                     # It returned 0
                     # didn't join (but there is still more data we can read later)... throw this row out.
                     $primary_object_for_this_db_row = undef;
@@ -2413,34 +2415,22 @@ sub _create_import_iterator_for_underlying_context {
                 # data seperately and smash them together before the object importer is called
                 push(@secondary_data, @$secondary_db_row);
             }
-            
+
             # get one or more objects from this row of results
             my $re_iterate = 0;
-            my @imported;
             for my $object_fabricator (@object_fabricators) {
                 # The usual case is that the query is just against one data source, and so the importer
                 # callback is just given the row returned from the DB query.  For multiple data sources,
                 # we need to smash together the primary and all the secondary lists
                 my ($imported_object, $check_bx, $is_new, $joins_resolved, $rules_resolved);
 
-                #my $object_creation_time;
-                #if ($is_monitor_query) {
-                #    $object_creation_time = Time::HiRes::time();
-                #}
-
                 if (@secondary_data) {
                     ($imported_object, $check_bx, $is_new, $joins_resolved, $rules_resolved) = $object_fabricator->([@$next_db_row, @secondary_data]);
-                } else { 
+                } else {
                     ($imported_object, $check_bx, $is_new, $joins_resolved, $rules_resolved) = $object_fabricator->($next_db_row);
                 }
-                    
-                #if ($is_monitor_query) {
-                #    $self->_log_query_for_rule($class_name, $rule, sprintf("QUERY: object fabricator took %.4f s",Time::HiRes::time() - $object_creation_time));
-                #}
 
-                if ($check_bx) {
-                    $needs_further_boolexpr_evaluation_after_loading = 1;
-                }
+                $needs_further_boolexpr_evaluation_after_loading = 1 if ($check_bx);
 
                 if ($imported_object and not ref($imported_object)) {
                     # object requires sub-classification in a way which involves different db data.
@@ -2449,49 +2439,26 @@ sub _create_import_iterator_for_underlying_context {
 
                 push @imported, $imported_object;
                 if ($joins_resolved) {
-                    for my $accessor (@$joins_resolved) {
+                    foreach my $accessor ( @$joins_resolved ) {
                         $all_joins_resolved{$accessor} = 1;
                     }
                 }
             }
-            
+
             $primary_object_for_this_db_row = $imported[-1];
-            my $this_object_was_already_cached = defined($primary_object_for_this_db_row)
-                                              && ref($primary_object_for_this_db_row)
-                                              && exists($primary_object_for_this_db_row->{'__get_serial'})
-                                              && not exists($primary_object_for_this_db_row->{'NO_LOAD_SIGNAL'});
-
-            my $signal;
-            foreach my $obj (@imported) {
-                # The object importer will return undef for an object if no object
-                # got created for that $next_db_row, and will return a string if the object
-                # needs to be subclassed before being returned.  Don't put serial numbers on
-                # these
-                next unless (defined($obj) && ref($obj));
-                
-                my $prev_serial = $obj->{'__get_serial'};
-
-                $obj->{'__get_serial'} = $this_get_serial;
-
-                unless ($prev_serial) {
-                    $obj->{NO_LOAD_SIGNAL} = 1;
-                }
-            }
-
+            my $this_object_was_already_cached = defined ($primary_object_for_this_db_row)
+                                                 && ref($primary_object_for_this_db_row)
+                                                 && exists($primary_object_for_this_db_row->{'__get_serial'});
             if ($this_object_was_already_cached) {
-                # Don't return objects that already exist in the current context
-                # FIXME - when we can stack contexts in the same application, and the 
-                # loaded context is recorded on the object, use that context as the
-                # test above instead of the existence of a __get_serial
                 $primary_object_for_this_db_row = undef;
                 redo LOAD_AN_OBJECT;
             }
-            
+
             if ($re_iterate) {
                 # It is possible that one or more objects go into subclasses which require more
                 # data than is on the results row.  For each subclass (or set of subclasses),
                 # we make a more specific, subordinate iterator to delegate-to.
- 
+
                 my $subclass_name = $primary_object_for_this_db_row;
 
                 unless (grep { not ref $_ } @imported[0..$#imported-1]) {
@@ -2525,46 +2492,44 @@ sub _create_import_iterator_for_underlying_context {
                 }
             }
             
-            # stay one behind
-            if (not defined $object_thats_loading) {
-                $object_thats_loading = $primary_object_for_this_db_row;
-                push @ancillary_objects, grep { ref $_ } @imported;
+            # don't actually return $primary_object_for_this_db_row until we've read through all
+            # the rows that represent that object.  Each time $primary_object_for_this_db_row is different
+            # than $object_loading_now, we can return $object_loading_now 
+            # In this way, the caller is staying one object behind
+            if (not defined $object_loading_now) {
+                # This is the first time through the loader
+                $object_loading_now = $primary_object_for_this_db_row;
                 $primary_object_for_this_db_row = undef;
                 redo LOAD_AN_OBJECT;
             }
-            elsif ($primary_object_for_this_db_row eq $object_thats_loading) {
+            elsif ($primary_object_for_this_db_row eq $object_loading_now) {
+                # objects are the same, keep going
                 $primary_object_for_this_db_row = undef;
-                push @ancillary_objects,  grep { ref $_ } @imported;
                 redo LOAD_AN_OBJECT;
             }
-            else {
-                my $tmp = $object_thats_loading;
-                $object_thats_loading = $primary_object_for_this_db_row;
-                $primary_object_for_this_db_row = $tmp;
-            }
+
+            # $primary_object_for_this_db_row is new
             
-            if (%all_joins_resolved) {
-                for my $rule_accessor_name (keys %all_joins_resolved) {
-                    unless ($primary_object_for_this_db_row->can($rule_accessor_name)) {
-                        $DB::single = 1;
-                        warn "no method $rule_accessor_name on $primary_object_for_this_db_row!";
-                        next;
-                    }
-                    my $rule = $primary_object_for_this_db_row->$rule_accessor_name;
-                    my $template_id = $rule->template_id;
-                    my $rule_id = $rule->id;
-                    $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
+            for my $rule_accessor_name (keys %all_joins_resolved) {
+                unless ($primary_object_for_this_db_row->can($rule_accessor_name)) {
+                    $DB::single = 1;
+                    warn "no method $rule_accessor_name on $primary_object_for_this_db_row!";
+                    next;
                 }
+                my $rule = $primary_object_for_this_db_row->$rule_accessor_name;
+                my $template_id = $rule->template_id;
+                my $rule_id = $rule->id;
+                $UR::Context::all_params_loaded->{$template_id}->{$rule_id}++;
             }
 
-            for my $o ($primary_object_for_this_db_row, @ancillary_objects) {
-                if ($o->{NO_LOAD_SIGNAL}) {
-                    delete $o->{NO_LOAD_SIGNAL};
-                    $o->__signal_change__('load');            
+            for my $obj (@imported) {
+                next unless ref($obj);
+                unless ($obj->{'__get_serial'}) {
+                    $obj->{'__get_serial'} = $this_get_serial;
+                    $obj->__signal_change__('load');            
                 }
             }
-            @ancillary_objects = ();
-
+            @imported = ();
             if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($primary_object_for_this_db_row)) {
                 $primary_object_for_this_db_row = undef;
                 redo LOAD_AN_OBJECT;
@@ -2573,7 +2538,9 @@ sub _create_import_iterator_for_underlying_context {
         } # end of loop until we have a defined object to return
 
 
-        return $primary_object_for_this_db_row;
+        my $retval = $object_loading_now;
+        $object_loading_now = $primary_object_for_this_db_row;
+        return $retval;
     };
     
     Sub::Name::subname('UR::Context::__underlying_context_iterator(closure)__', $underlying_context_iterator);
