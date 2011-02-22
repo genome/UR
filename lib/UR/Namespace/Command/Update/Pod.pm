@@ -64,7 +64,7 @@ sub execute {
 
     my @commands;
     if (my @targets = $self->targets) {
-        @commands = @targets;
+        @commands = map( $self->get_all_subcommands($_), @targets);
     }
     else {
         @commands = map( $self->get_all_subcommands($_), @base_commands);
