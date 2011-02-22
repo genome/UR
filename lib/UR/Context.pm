@@ -2373,11 +2373,13 @@ sub _create_import_iterator_for_underlying_context {
             ($next_db_row) = $db_iterator->() if ($db_iterator);
 
             unless ($next_db_row) {
-                my $retval = $finalize_underlying_context_iterator->($object_loading_now, \@imported);
-                # these ensure this iterator will return undef next time it gets called
-                $db_iterator = undef;
-                $object_loading_now = undef;
-
+                my $retval;
+                if ($object_loading_now) {
+                    $retval = $finalize_underlying_context_iterator->($object_loading_now, \@imported);
+                    # these ensure this iterator will return undef next time it gets called
+                    $db_iterator = undef;
+                    $object_loading_now = undef;
+                }
                 return $retval;
             }
 
@@ -2454,31 +2456,31 @@ sub _create_import_iterator_for_underlying_context {
                 redo LOAD_AN_OBJECT;
             }
 
-            if ($re_iterate) {
+            if ($re_iterate and $primary_object_for_this_db_row and ! ref($primary_object_for_this_db_row)) {
                 # It is possible that one or more objects go into subclasses which require more
                 # data than is on the results row.  For each subclass (or set of subclasses),
                 # we make a more specific, subordinate iterator to delegate-to.
 
                 my $subclass_name = $primary_object_for_this_db_row;
 
-                unless (grep { not ref $_ } @imported[0..$#imported-1]) {
-                    my $subclass_meta = UR::Object::Type->get(class_name => $subclass_name);
-                    my $table_subclass = $subclass_meta->most_specific_subclass_with_table();
-                    my $sub_iterator = $subordinate_iterator_for_class{$table_subclass};
-                    unless ($sub_iterator) {
-                        #print "parallel iteration for loading $subclass_name under $class_name!\n";
-                        my $sub_classified_rule_template = $rule_template->sub_classify($subclass_name);
-                        my $sub_classified_rule = $sub_classified_rule_template->get_normalized_rule_for_values(@values);
-                        $sub_iterator 
-                            = $subordinate_iterator_for_class{$table_subclass} 
-                                = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx,$this_get_serial);
-                    }
-                    ($primary_object_for_this_db_row) = $sub_iterator->();
-                    if (! defined $primary_object_for_this_db_row) {
-                        # the newly subclassed object 
-                        redo LOAD_AN_OBJECT;
-                    }
-                }    
+                my $subclass_meta = UR::Object::Type->get(class_name => $subclass_name);
+                my $table_subclass = $subclass_meta->most_specific_subclass_with_table();
+                my $sub_iterator = $subordinate_iterator_for_class{$table_subclass};
+                unless ($sub_iterator) {
+                    #print "parallel iteration for loading $subclass_name under $class_name!\n";
+                    my $sub_classified_rule_template = $rule_template->sub_classify($subclass_name);
+                    my $sub_classified_rule = $sub_classified_rule_template->get_normalized_rule_for_values(@values);
+                    $sub_iterator 
+                        = $subordinate_iterator_for_class{$table_subclass} 
+                            = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx,$this_get_serial);
+                }
+                ($primary_object_for_this_db_row) = $sub_iterator->();
+                if (! defined $primary_object_for_this_db_row) {
+                    # the newly subclassed object 
+                    redo LOAD_AN_OBJECT;
+                } else {
+                    $imported[-1] = $primary_object_for_this_db_row;
+                }
             } # end of handling a possible subordinate iterator delegate
             
             unless ($primary_object_for_this_db_row) {
