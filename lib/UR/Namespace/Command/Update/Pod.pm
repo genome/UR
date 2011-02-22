@@ -20,6 +20,12 @@ class UR::Namespace::Command::Update::Pod {
             shell_args_position => 2,
             doc => 'the command class which maps to the executable'
         },
+        targets => {
+            is => 'Text',
+            shell_args_position => 3,
+            is_many => 1,
+            doc => 'specific classes to document (documents all unless specified)',
+        },
         input_path => {
             is => 'Path',
             is_optional => 1,
@@ -55,7 +61,14 @@ sub execute {
     local $Command::entry_point_class   = $self->class_name;
 
     my @base_commands = $self->_class_names_in_tree($Command::entry_point_class);
-    my @commands = map( $self->get_all_subcommands($_), @base_commands);
+
+    my @commands;
+    if (my @targets = $self->targets) {
+        @commands = @targets;
+    }
+    else {
+        @commands = map( $self->get_all_subcommands($_), @base_commands);
+    }
     push @commands, @base_commands;
 
     local @INC = @INC;
