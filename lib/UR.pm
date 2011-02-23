@@ -31,6 +31,13 @@ for my $dir (@INC, @PERL5LIB) {
 }
 $ENV{PERL5LIB} = join(':', @PERL5LIB);
 
+# Also need to fix modules that were already loaded, so that when
+# a namespace is loaded the path will not change out from
+# underneath it.
+for my $module (keys %INC) {
+    $INC{$module} = Cwd::abs_path($INC{$module});
+}
+
 # UR supports several environment variables, found under UR/ENV
 # Any UR_* variable which is set but does NOT corresponde to a module found will cause an exit
 # (a hedge against typos such as UR_DBI_NO_COMMMMIT=1 leading to unexpected behavior)
