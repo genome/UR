@@ -2313,11 +2313,14 @@ sub _create_import_iterator_for_underlying_context {
     #my $is_monitor_query = $self->monitor_query();
 
     # Make the iterator we'll return.
+    my $next_object_to_return;
     my $underlying_context_iterator = sub {
-        my $object;
+        return undef unless $db_iterator;
+
+        my $primary_object_for_next_db_row;
         
         LOAD_AN_OBJECT:
-        until ($object) { # note that we return directly when the db is out of data
+        until ($primary_object_for_next_db_row) { # note that we return directly when the db is out of data
             
             my ($next_db_row);
             ($next_db_row) = $db_iterator->() if ($db_iterator);
@@ -2380,12 +2383,15 @@ sub _create_import_iterator_for_underlying_context {
                         # it removed that one 'id' filter, since it assummed any class with more than
                         # one ID property (usually classes have a named whatever_id property, and an alias 'id'
                         # property) will have a rule that covered both ID properties
-                        warn "Leftover objects in subordinate iterator for $class.  This shouldn't happen, but it's not fatal...";
+                        Carp::carp("Leftover objects in subordinate iterator for $class.  This shouldn't happen, but it's not fatal...");
                         while ($obj = $subordinate_iterator_for_class{$class}->()) {1;}
                     }
                 }
 
-                return;
+                $db_iterator = undef;
+                my $retval = $next_object_to_return;
+                $next_object_to_return = undef;
+                return $retval;
             }
             
             # we count rows processed mainly for more concise sanity checking
@@ -2410,12 +2416,14 @@ sub _create_import_iterator_for_underlying_context {
                 unless (defined $secondary_db_row) {
                     # That data source has no more data, so there can be no more joins even if the
                     # primary data source has more data left to read
-                    return;
+                    $db_iterator = undef;
+                    $primary_object_for_next_db_row = undef;
+                    last LOAD_AN_OBJECT;
                 }
                 unless ($secondary_db_row) {  
                     # It returned 0
                     # didn't join (but there is still more data we can read later)... throw this row out.
-                    $object = undef;
+                    $primary_object_for_next_db_row = undef;
                     redo LOAD_AN_OBJECT;
                 }
                 # $next_db_row is a read-only value from DBI, so we need to track our additional 
@@ -2454,10 +2462,10 @@ sub _create_import_iterator_for_underlying_context {
                 push @imported, $imported_object;
             }
             
-            $object = $imported[-1];
-            my $this_object_was_already_cached = defined($object)
-                                              && ref($object)
-                                              && exists($object->{'__get_serial'});
+            $primary_object_for_next_db_row = $imported[-1];
+            my $this_object_was_already_cached = defined($primary_object_for_next_db_row)
+                                              && ref($primary_object_for_next_db_row)
+                                              && exists($primary_object_for_next_db_row->{'__get_serial'});
 
             foreach my $obj (@imported) {
                 # The object importer will return undef for an object if no object
@@ -2474,63 +2482,64 @@ sub _create_import_iterator_for_underlying_context {
                 # FIXME - when we can stack contexts in the same application, and the 
                 # loaded context is recorded on the object, use that context as the
                 # test above instead of the existence of a __get_serial
-                $object = undef;
+                $primary_object_for_next_db_row = undef;
                 redo LOAD_AN_OBJECT;
             }
             
-            if ($re_iterate) {
+            if ($re_iterate and $primary_object_for_next_db_row and ! ref($primary_object_for_next_db_row)) {
                 # It is possible that one or more objects go into subclasses which require more
                 # data than is on the results row.  For each subclass (or set of subclasses),
                 # we make a more specific, subordinate iterator to delegate-to.
  
-                my $subclass_name = $object;
+                my $subclass_name = $primary_object_for_next_db_row;
 
-                unless (grep { not ref $_ } @imported[0..$#imported-1]) {
-                    my $subclass_meta = UR::Object::Type->get(class_name => $subclass_name);
-                    my $table_subclass = $subclass_meta->most_specific_subclass_with_table();
-                    my $sub_iterator = $subordinate_iterator_for_class{$table_subclass};
-                    unless ($sub_iterator) {
-                        #print "parallel iteration for loading $subclass_name under $class_name!\n";
-                        my $sub_classified_rule_template = $rule_template->sub_classify($subclass_name);
-                        my $sub_classified_rule = $sub_classified_rule_template->get_normalized_rule_for_values(@values);
-                        $sub_iterator 
-                            = $subordinate_iterator_for_class{$table_subclass} 
-                                = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx,$this_get_serial);
-                    }
-                    ($object) = $sub_iterator->();
-                    if (! defined $object) {
-                        # the newly subclassed object 
-                        redo LOAD_AN_OBJECT;
-                    }
-                
-                #unless ($object->id eq $id) {
-                #    Carp::cluck("object id $object->{id} does not match expected id $id");
-                #    $DB::single = 1;
-                #    print "";
-                #    die;
-                #}
-               }
-            } # end of handling a possible subordinate iterator delegate
-            
-            unless ($object) {
-                redo LOAD_AN_OBJECT;
-            }
-            
-            unless ($group_by) {
-                if ( (ref($object) ne $class_name) and (not $object->isa($class_name)) ) {
-                    $object = undef;
+                my $subclass_meta = UR::Object::Type->get(class_name => $subclass_name);
+                my $table_subclass = $subclass_meta->most_specific_subclass_with_table();
+                my $sub_iterator = $subordinate_iterator_for_class{$table_subclass};
+                unless ($sub_iterator) {
+                    #print "parallel iteration for loading $subclass_name under $class_name!\n";
+                    my $sub_classified_rule_template = $rule_template->sub_classify($subclass_name);
+                    my $sub_classified_rule = $sub_classified_rule_template->get_normalized_rule_for_values(@values);
+                    $sub_iterator 
+                        = $subordinate_iterator_for_class{$table_subclass} 
+                            = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx,$this_get_serial);
+                }
+                ($primary_object_for_next_db_row) = $sub_iterator->();
+                if (! defined $primary_object_for_next_db_row) {
+                    # the newly subclassed object 
                     redo LOAD_AN_OBJECT;
                 }
-            }
+                
+            } # end of handling a possible subordinate iterator delegate
             
-            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($object)) {
-                $object = undef;
+            unless ($primary_object_for_next_db_row) {
                 redo LOAD_AN_OBJECT;
             }
+            
+            if ( !$group_by and (ref($primary_object_for_next_db_row) ne $class_name) and (not $primary_object_for_next_db_row->isa($class_name)) ) {
+                $primary_object_for_next_db_row = undef;
+                redo LOAD_AN_OBJECT;
+            }
+
+            if (! $next_object_to_return or $next_object_to_return eq $primary_object_for_next_db_row) {
+                # The first time through the iterator, we need to buffer the object until
+                # $primary_object_for_next_db_row is something different.
+                $next_object_to_return = $primary_object_for_next_db_row;
+                $primary_object_for_next_db_row= undef;
+                redo LOAD_AN_OBJECT;
+            }
+            
+            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($primary_object_for_next_db_row)) {
+                $primary_object_for_next_db_row = undef;
+                redo LOAD_AN_OBJECT;
+            }
+
             
         } # end of loop until we have a defined object to return
         
-        return $object;
+        my $retval = $next_object_to_return;
+        $next_object_to_return = $primary_object_for_next_db_row;
+        return $retval;
     };
     
     Sub::Name::subname('UR::Context::__underlying_context_iterator(closure)__', $underlying_context_iterator);
