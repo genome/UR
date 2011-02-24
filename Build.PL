@@ -32,7 +32,7 @@ my $build = $subclass->new(
 
     # pure Perl
     'Class::Autouse'      => '2.0',
-    'Class::AutoloadCAN'  => '',
+    'Class::AutoloadCAN'  => '0.03',
     'Clone::PP'           => '1.02',
     'Carp'                => '',
     'Sys::Hostname'       => '1.11',
