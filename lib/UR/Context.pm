@@ -6,6 +6,8 @@ use Sub::Name;
 
 require UR;
 
+use UR::Context::ObjectFabricator;
+
 UR::Object::Type->define(
     class_name => 'UR::Context',    
     is_abstract => 1,
@@ -37,7 +39,6 @@ our $cache_size_highwater;                    # high water mark for cache size. 
 our $cache_size_lowwater;                     # low water mark for cache size
 our $GET_COUNTER = 1;                         # This is where the serial number for the __get_serial key comes from
 
-our $object_fabricators = {};         # Maps object fabricator closures to the hashref of things they want to put into all_params_loaded
 our $is_multiple_loading_iterators = 0; # A boolean flag used in the loading iterator to control whether we need to inject loaded objects into other loading iterators' cached lists
 our $loading_iterators = [];          # A list of active loading iterators
 
@@ -1120,9 +1121,8 @@ sub _abandon_object {
             foreach my $rule_id ( keys %$rules ) {
                 delete $UR::Context::all_params_loaded->{$template_id}->{$rule_id};
 
-                foreach my $loading_all_params_loaded ( values %$UR::Context::object_fabricators ) {
-                    next unless ($loading_all_params_loaded and exists $loading_all_params_loaded->{$template_id});
-                    delete $loading_all_params_loaded->{$template_id}->{$rule_id};
+                foreach my $fabricator ( UR::Context::ObjectFabricator->all_object_fabricators ) {
+                    $fabricator->delete_from_all_params_loaded($template_id, $rule_id);
                 }
             }
         }
@@ -2368,7 +2368,7 @@ sub _create_import_iterator_for_underlying_context {
                 
                 # Apply changes to all_params_loaded that each importer has collected
                 foreach (@object_fabricators) {
-                    $_->finalize if ref($_) ne 'CODE';
+                    $_->finalize if $_;
                 }
                 
                 # If the SQL for the subclassed items was constructed properly, then each
@@ -2446,9 +2446,9 @@ sub _create_import_iterator_for_underlying_context {
                 #}
 
                 if (@secondary_data) {
-                    $imported_object = $object_fabricator->([@$next_db_row, @secondary_data]);
+                    $imported_object = $object_fabricator->fabricate([@$next_db_row, @secondary_data]);
                 } else { 
-                    $imported_object = $object_fabricator->($next_db_row);
+                    $imported_object = $object_fabricator->fabricate($next_db_row);
                 }
                     
                 #if ($is_monitor_query) {
@@ -2770,7 +2770,6 @@ sub __create_object_fabricator_for_loading_template {
     # This is a local copy of what we want to put in all_params_loaded, when the object fabricator is
     # finalized
     my $local_all_params_loaded = {};
-    $local_all_params_loaded->{'__in_clause_values__'} = \%in_clause_values;
 
     # If the rule has hints, we'll be loading more data than is being returned.  Set up some stuff so
     # we can mark in all_params_loaded that these other things got loaded, too
@@ -2821,7 +2820,9 @@ sub __create_object_fabricator_for_loading_template {
         }
     }
     
+    my $fabricator_obj;  # filled in after the closure definition
     my $object_fabricator = sub {
+
         my $next_db_row = $_[0];
         
         my $pending_db_object_data = { %initial_object_data };
@@ -3276,61 +3277,12 @@ sub __create_object_fabricator_for_loading_template {
     #
     # The new behavior builds up changes to be made to all_params_loaded, and someone
     # needs to call $object_fabricator->finalize() to apply these changes
-    bless $object_fabricator, 'UR::Context::object_fabricator_tracker';
-    $UR::Context::object_fabricators->{$object_fabricator} = $local_all_params_loaded;
-    
-    return $object_fabricator;
-}
+    $fabricator_obj = UR::Context::ObjectFabricator->create(fabricator => $object_fabricator,
+                                                            context    => $self,
+                                                            all_params_loaded => $local_all_params_loaded,
+                                                            in_clause_values  => \%in_clause_values);
 
-sub UR::Context::object_fabricator_tracker::finalize {
-    my $self = shift;
-
-    my $local_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
-
-    foreach my $template_id ( keys %$local_all_params_loaded ) {
-        next if ($template_id eq '__in_clause_values__');
-        while(1) {
-            my($rule_id,$val) = each %{$local_all_params_loaded->{$template_id}};
-            last unless defined $rule_id;
-            next unless exists $UR::Context::all_params_loaded->{$template_id}->{$rule_id};  # Has unload() removed this one earlier?
-            $UR::Context::all_params_loaded->{$template_id}->{$rule_id} += $val; 
-        }
-    }
-
-    # Anything left in here is in-clause values that matched nothing.  Make a note in
-    # all_params_loaded showing that so later queries for those values won't hit the 
-    # data source
-    foreach my $property ( keys %{$local_all_params_loaded->{'__in_clause_values__'}} ) {
-        while (my($value, $data) = each %{$local_all_params_loaded->{'__in_clause_values__'}->{$property}} ) {
-            $UR::Context::all_params_loaded->{$data->[0]}->{$data->[1]} = 0;
-        }
-    }
-}
-sub UR::Context::object_fabricator_tracker::DESTROY {
-    my $self = shift;
-    # Don't apply the changes.  Maybe the importer closure just went out of scope before
-    # it read all the data
-    my $local_all_params_loaded = delete $UR::Context::object_fabricators->{$self};
-    if ($local_all_params_loaded) {
-        # finalize wasn't called on this iterator; maybe the importer closure went out
-        # of scope before it read all the data.
-        # Conditionally apply the changes from the local all_params_loaded.  If the Context's
-        # all_params_loaded is defined, then another query has successfully run to
-        # completion, and we should add our data to it.  Otherwise, we're the only query like
-        # this and all_params_loaded should be cleaned out
-        foreach my $template_id ( keys %$local_all_params_loaded ) {
-            next if ($template_id eq '__in_clause_values__');
-            while(1) {
-                my($rule_id, $val) = each %{$local_all_params_loaded->{$template_id}};
-                last unless $rule_id;
-                if (defined $UR::Context::all_params_loaded->{$template_id}->{$rule_id}) {
-                    $UR::Context::all_params_loaded->{$template_id}->{$rule_id} += $val;
-                } else {
-                    delete $UR::Context::all_params_loaded->{$template_id}->{$rule_id};
-                }
-            }
-        }
-    }
+    return $fabricator_obj;
 }
 
 
@@ -3448,11 +3400,8 @@ sub _cache_is_complete_for_class_and_normalized_rule {
     my $template_id = $normalized_rule->template_id;
     my $rule_id     = $normalized_rule->id;
     my $loading_is_in_progress_on_another_iterator = 
-            grep { exists $_->{$template_id}
-                   and 
-                   exists $_->{$template_id}->{$rule_id}
-                 }
-            values %$UR::Context::object_fabricators;
+            grep { $_->is_loading_in_progress_for_boolexpr($normalized_rule) }
+                UR::Context::ObjectFabricator->all_object_fabricators;
 
     return 0 if $loading_is_in_progress_on_another_iterator;
 
