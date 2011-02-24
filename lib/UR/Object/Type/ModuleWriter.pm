@@ -221,45 +221,7 @@ sub resolve_class_description_perl {
         $doc =~ s/\$VAR1 = //;
         $doc =~ s/;\s*$//;
     }
-    #$perl .= "    source => '" . $self->source . "',\n" if defined $self->source;
     $perl .= "    doc => $doc,\n" if defined($doc);
-
-#=cut
-#
-#    do {
-#        no warnings;
-#        
-#        my $new_desc = eval "{ $perl }";
-#        die $@ if $@;        
-#        
-#        my $old_desc = $self; #UR::Util::deep_copy($self);
-#        for my $key (keys %$old_desc) {            
-#            delete $old_desc->{$key} if $key =~ /^_/;            
-#        }
-#        for my $has (keys %{ $old_desc->{has} }) {
-#            my $p = $old_desc->{has}{$has};
-#            if ($p->{implied_by}) {
-#                delete $old_desc->{has}{$has};
-#            }
-#        }
-#        delete $old_desc->{db_committed};
-#        delete $old_desc->{id};
-#        delete $old_desc->{module_header_positions};
-#        delete $old_desc->{meta_class_name};        
-#        
-#        my $new_normalized = __PACKAGE__->_normalize_class_description(class_name => $class_name, %$new_desc);
-#        my $old_normalized = __PACKAGE__->_normalize_class_description(%$old_desc);
-#        my $old_src = Data::Dumper::Dumper($self);
-#        my $new_src = Data::Dumper::Dumper($new_normalized);
-#        unless ($old_src eq $new_src) {
-#            warn "source for $class_name does not normalize back to the original class!\n";
-#            print IO::File->new(">/tmp/old.pm")->print($old_src);
-#            print IO::File->new(">/tmp/new.pm")->print($new_src);        
-#        }
-#    };
-#
-#=cut
-
     return $perl;
 }
 
@@ -617,12 +579,6 @@ sub rewrite_module_header {
     my $self = shift;
     my $package = $self->class_name;
 
-if ($package->isa("UR::Object::Type")) {
-    print Carp::longmess($package);
-}
-
-    $DB::single = 1;
-
     # generate new class metadata
     my $new_meta_src = $self->resolve_module_header_source;
     unless ($new_meta_src) {
@@ -746,6 +702,7 @@ if ($package->isa("UR::Object::Type")) {
 }
 
 
+# TODO: move to UR::Util
 sub _is_number {
     my($self,$value) = @_;
     no warnings 'numeric';
