@@ -2,7 +2,6 @@ package UR::Object::Type;
 
 use warnings;
 use strict;
-
 require UR;
 
 # Used during bootstrapping.
