@@ -1,16 +1,14 @@
 package UR::Namespace::Command::Base;
-
 use strict;
 use warnings;
+use UR;
 use Cwd;
 
-use UR;
 our $VERSION = "0.29"; # UR $VERSION;
-use Command;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'Command',
+    is => 'Command::V1',
     has_transient => [ 
         lib_path            =>  {   type => "FilesystemPath", 
                                     is_optional => 1,

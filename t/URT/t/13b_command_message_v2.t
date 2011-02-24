@@ -9,18 +9,20 @@ use lib File::Basename::dirname(__FILE__).'/../..';
 
 use Test::More tests => 774;
 
-use UR::Namespace::Command::Old::DiffRewrite;
-
-my $c = "UR::Namespace::Command::Old::DiffRewrite";
+use above "URT";
+my $c = "UR::Namespace::Command::Foo";
+class UR::Namespace::Command::Foo {
+    is => 'Command::V2'
+};
 
 # The messaging methods print to the filehandle $Command::stderr, which defaults
 # to STDERR.  Redefine it so the messages are printed to a filehandle we
 # can read from, $stderr_twin, but regular perl diagnostic messages still go
 # to the real STDERR
 my $stderr_twin;
-$Command::stderr = undef;
-socketpair($Command::stderr,$stderr_twin, AF_UNIX, SOCK_STREAM, PF_UNSPEC);
-$Command::stderr->autoflush(1);
+$Command::V2::stderr = undef;
+socketpair($Command::V2::stderr,$stderr_twin, AF_UNIX, SOCK_STREAM, PF_UNSPEC);
+$Command::V2::stderr->autoflush(1);
 $stderr_twin->blocking(0);
 
 my $buffer;
