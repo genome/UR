@@ -1,7 +1,7 @@
 package UR::Object::Type;
-
 use warnings;
 use strict;
+
 require UR;
 our $VERSION = "0.29"; # UR $VERSION;
 
@@ -91,10 +91,11 @@ sub parent_class_names {
     return @{ $self->{is} };
 }
 
-# FIXME Take a look at id_property_names and all_id_property_names.  
-# They look extremely similar, but tests start dying if you replace one
-# with the other, or remove both and rely on the property's accessor method
-sub id_property_names {    
+sub id_property_names {
+    # FIXME Take a look at id_property_names and all_id_property_names.  
+    # They look extremely similar, but tests start dying if you replace one
+    # with the other, or remove both and rely on the property's accessor method
+
     my $self = _object(shift);
     my @id_by;
     #my $template = UR::BoolExpr::Template->resolve('UR::Object::Type', 'class_name');
@@ -113,7 +114,7 @@ sub id_property_names {
 }
 
 sub all_id_property_names {
-# return shift->id_property_names(@_); This makes URT/t/99_transaction.t fail
+    # return shift->id_property_names(@_); This makes URT/t/99_transaction.t fail
     my $self = shift;
     unless ($self->{_all_id_property_names}) {
         my ($tmp,$last) = ('','');
@@ -128,8 +129,7 @@ sub all_id_property_names {
     return @{ $self->{_all_id_property_names} };
 }
 
-sub direct_id_column_names
-{
+sub direct_id_column_names {
     my $self = _object(shift);
     my @id_column_names =
         map { $_->column_name }
@@ -138,8 +138,7 @@ sub direct_id_column_names
 }
 
 
-sub ancestry_table_names
-{
+sub ancestry_table_names {
     my $self = _object(shift);
     my @inherited_table_names =
         grep { defined($_) }
@@ -148,8 +147,7 @@ sub ancestry_table_names
     return @inherited_table_names;
 }
 
-sub all_table_names
-{
+sub all_table_names {
     my $self = _object(shift);
     my @table_names =
         grep { defined($_) }
@@ -270,9 +268,6 @@ sub subclassify_by {
     return $self->{'__subclassify_by'};
 }
 
-    
-
-
 sub resolve_composite_id_from_ordered_values {    
     my $self = shift;
     my $resolver = $self->get_composite_id_resolver;
@@ -346,7 +341,6 @@ sub _resolve_composite_id_separator {
     return $separator; 
 }
 
-
 sub get_composite_id_resolver {
     my $self = shift;    
     my $resolver;
@@ -388,59 +382,59 @@ sub get_composite_id_resolver {
     return $resolver;
 }
 
-    # UNUSED, BUT BETTER FOR MULTI-COLUMN FK
-    sub composite_id_list_scalar_mix {
-        # This is like the above, but handles the case of arrayrefs
-        # mixing with scalar values in a multi-property id.
+# UNUSED, BUT BETTER FOR MULTI-COLUMN FK
+sub composite_id_list_scalar_mix {
+    # This is like the above, but handles the case of arrayrefs
+    # mixing with scalar values in a multi-property id.
 
-        my ($self, @values) = @_;
+    my ($self, @values) = @_;
 
-        my @id_sets;
-        for my $value (@values) {
-            if (@id_sets == 0) {
-                if (not ref $value) {
-                    @id_sets = ($value);
-                }
-                else {
-                    @id_sets = @$value;
+    my @id_sets;
+    for my $value (@values) {
+        if (@id_sets == 0) {
+            if (not ref $value) {
+                @id_sets = ($value);
+            }
+            else {
+                @id_sets = @$value;
+            }
+        }
+        else {
+            if (not ref $value) {
+                for my $id_set (@id_sets) {
+                    $id_set .= "\t" . $value;
                 }
             }
             else {
-                if (not ref $value) {
+                for my $new_id (@$value) {
                     for my $id_set (@id_sets) {
                         $id_set .= "\t" . $value;
                     }
                 }
-                else {
-                    for my $new_id (@$value) {
-                        for my $id_set (@id_sets) {
-                            $id_set .= "\t" . $value;
-                        }
-                    }
-                }
             }
-        }
-
-        if (@id_sets == 1) {
-            return $id_sets[0];
-        }
-        else {
-            return \@id_sets;
         }
     }
 
+    if (@id_sets == 1) {
+        return $id_sets[0];
+    }
+    else {
+        return \@id_sets;
+    }
+}
 
-# Return a closure that sort can use to sort objects by all their ID properties
-# This should be the same order that an SQL query with 'order by ...' would return them
+
 sub id_property_sorter {
+    # Return a closure that sort can use to sort objects by all their ID properties
+    # This should be the same order that an SQL query with 'order by ...' would return them
     my $self = shift;
     return $self->{'_id_property_sorter'} ||= $self->sorter(); 
 }
 
-#TODO: make this take +/- indications of ascending/descending
-#TODO: make it into a closure for speed
-#TODO: there are possibilities of it sorting different than a DB on mixed numbers and alpha data
 sub sorter {
+    #TODO: make this take +/- indications of ascending/descending
+    #TODO: make it into a closure for speed
+    #TODO: there are possibilities of it sorting different than a DB on mixed numbers and alpha data
     my ($self,@properties) = @_;
     push @properties, $self->id_property_names;
     my $key = join(",",@properties);
@@ -989,11 +983,9 @@ sub mk_table {
 # object and not a class name.
 #
 
-sub _object
-{
+sub _object {
     return ref($_[0]) ? $_[0] : $_[0]->__meta__;
 }
-
 
 # new version gets everything, including "id" itself and object ref properties
 sub all_property_type_names {
@@ -1017,8 +1009,7 @@ sub all_property_type_names {
     return @$all_property_type_names;
 }
 
-sub table_for_property
-{
+sub table_for_property {
     my $self = _object(shift);
     Carp::croak('must pass a property_name to table_for_property') unless @_;
     my $property_name = shift;
@@ -1035,8 +1026,7 @@ sub table_for_property
     return;
 }
 
-sub column_for_property
-{
+sub column_for_property {
     my $self = _object(shift);
     Carp::croak('must pass a property_name to column_for_property') unless @_;
     my $property_name = shift;
@@ -1060,8 +1050,7 @@ sub column_for_property
     return;
 }
 
-sub property_for_column
-{
+sub property_for_column {
     my $self = _object(shift);
     die 'must pass a column_name to property_for_column' unless @_;
     my $column_name = shift;
@@ -1305,8 +1294,7 @@ sub _id_property_change_callback {
 # BOOTSTRAP CODE
 #
 
-sub get_with_special_parameters
-{
+sub get_with_special_parameters {
     my $class = shift;
     my $rule = shift;
     my %extra = @_;
@@ -1359,77 +1347,6 @@ sub ungenerate {
     delete $INC{$module_name};    
     $self->{'generated'} = 0;
 }
-
-
-
-# Experimental unloading of classes code
-#sub unload {
-#    my $self = shift;
-#    my $class_name = $self->class_name;
-#    return if ($class_name eq 'UR::Object::Type');  # A big no-no
-#
-#    # Unload instances of this class
-#    if (substr($class_name, -6) ne '::Type') {
-#        my @objs = $class_name->get();
-#        my $ds = UR::Context->resolve_data_sources_for_class_meta_and_rule($self);
-#        # Changed things with no data source can just be thrown away, right?
-#        if ($ds) {
-#            foreach (@objs) {
-#                if ($_->__changes__) {
-#                    die "Can't unload class object for $class_name, object instance with id ".$_->id." is changed";
-#                }
-#            }
-#        }
-#        $_->unload foreach @objs;
-#    }
-#
-#    # unload the associated ghost class.  Note that ghosts don't have ghosts of their own
-#    if (substr($class_name, -7,) ne '::Ghost') {
-#        my $ghost_class = $class_name . '::Ghost';
-#        my $ghost_class_meta = UR::Object::Type->is_loaded(class_name => $ghost_class);
-#        if ($ghost_class_meta) {
-#            eval { $ghost_class_meta->unload() };
-#            if ($@) {
-#                die "Can't unload class object for $class_name: unloading ghost class $ghost_class had errors:\n@_\n";
-#            }
-#        }
-#    }
-#
-#    # Associated meta-class?
-#    my $meta_class_object = UR::Object::Type->get(class_name => $self->meta_class_name);
-#    eval {$meta_class_object->unload(); };
-#    if ($@) {
-#        die "Can't unload class object for $class_name: unloading meta class object had errors:\n@_\n";
-#    }
-#
-#
-#    # try unloading any child classes
-#    foreach my $inh ( UR::Object::Inheritance->get(parent_class_name => $class_name) ) {
-#        my $child_class = $inh->class_name;
-#        my $child_class_meta = UR::Object::Type->get(class_name => $child_class);
-#        eval { $child_class_meta->unload() };
-#        if ($@) {
-#            die "Can't unload class object for $class_name: unloading child class $child_class had errors:\n@_\n";
-#        }
-#    }
-#
-#    # Infrastructurey, hang-off data.  Things we can get via their class_name
-#    foreach my $meta_type ( qw( UR::Object::Inheritance UR::Object::Property
-#                                UR::Object::Property::Calculated::From ) )
-#    {
-#        my @things = $meta_type->get(class_name => $class_name);
-#        $_->unload() foreach @things;
-#    }
-#    # And once more for Indexes
-#    {
-#        my @things = UR::Object::Index->get(indexed_class_name => $class_name);
-#         $_->unload() foreach @things;
-#    }
-#
-#    $self->ungenerate();
-#
-#    $self->SUPER::unload();
-#}
     
 1;
 
