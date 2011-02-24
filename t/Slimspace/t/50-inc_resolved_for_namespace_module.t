@@ -10,7 +10,8 @@ BEGIN {
     require File::Basename;
     my $dir = Cwd::abs_path(File::Basename::dirname(__FILE__) . '/../../');
     $symlink = $dir . '-symlink';
-    is(system("ln -sfT $dir $symlink"), 0, "Created symlink'd lib for Slimspace namespace");
+    unlink($symlink) if (-e $symlink);
+    is(system("ln -s $dir $symlink"), 0, "Created symlink'd lib for Slimspace namespace");
 };
 use lib $symlink;
 use Slimspace;
