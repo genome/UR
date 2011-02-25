@@ -646,6 +646,8 @@ sub create_entity {
         my %immutable_properties;
         my @deep_copy_default_values;
 
+        $DB::single = 1 if $class =~ /Tester/;
+
         for my $co ( @inheritance ) {
             # Reverse map the ID into property values.
             # This has to occur for all subclasses which represent table rows.

@@ -12,8 +12,12 @@ UR::Object::Type->define(
 
 sub _resolve_version {
     my ($class, $classdef) = @_;
-    
+    return $classdef if $class =~ /::Ghost$/;
+
     unless ($classdef->{class_name} =~ /^${class}::V\d+/) {
+        if ($classdef->{class_name} =~ /Ghost/) {
+            $DB::single = 1;
+        }
         my @base_classes = map { ref($_) ? @$_ : $_ } $classdef->{is};
         for my $base_class (@base_classes) {
             if ($base_class eq $class) {
@@ -28,9 +32,10 @@ sub _resolve_version {
                 }
                 $base_class = $class . '::V' . $version;
                 eval "use $base_class";
-                die $@ if $@;
+                Carp::confess($@) if $@;
             }
         }
+        print "resetting @{$classdef->{is}} to @base_classes\n";
         $classdef->{is} = \@base_classes;
     }
     return $classdef;

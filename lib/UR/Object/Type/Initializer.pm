@@ -797,17 +797,19 @@ sub _normalize_class_description {
             my $parent_class_meta = $parent_class_name->__meta__();
             foreach my $ancestor_class_meta ( $parent_class_meta->all_class_metas ) {
                 if (my $subclassify_by = $ancestor_class_meta->subclassify_by) {
-                    my %old_property = ( 
-                        property_name => $subclassify_by,
-                        default_value => $class_name,
-                        is_constant => 1,
-                        is_class_wide => 1,
-                        is_specified_in_module_header => 0,
-                        column_name => '',
-                        implied_by => $parent_class_meta->class_name . '::subclassify_by',
-                    );
-                    my %new_property = $class->_normalize_property_description($subclassify_by, \%old_property, \%new_class);
-                    $instance_properties->{$subclassify_by} = \%new_property;
+                    if (not $instance_properties->{$subclassify_by}) {
+                        my %old_property = ( 
+                            property_name => $subclassify_by,
+                            default_value => $class_name,
+                            is_constant => 1,
+                            is_class_wide => 1,
+                            is_specified_in_module_header => 0,
+                            column_name => '',
+                            implied_by => $parent_class_meta->class_name . '::subclassify_by',
+                        );
+                        my %new_property = $class->_normalize_property_description($subclassify_by, \%old_property, \%new_class);
+                        $instance_properties->{$subclassify_by} = \%new_property;
+                    }
                     last PARENT_CLASS;
                 }
             }
