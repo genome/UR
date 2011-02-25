@@ -726,6 +726,30 @@ sub _normalize_class_description {
         $new_class{extra} = \%old_class;
     };
 
+    # allow parent classes to adjust the description in systematic ways 
+    my $desc = \%new_class;
+    unless ($bootstrapping) {
+        for my $parent_class_name (@{ $new_class{is} }) {
+            # ensure the parent classes are fully processed
+            no warnings;
+            unless ($parent_class_name->can("__meta__")) {
+                __PACKAGE__->use_module_with_namespace_constraints($parent_class_name);
+                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@" if $@; 
+            }
+            unless ($parent_class_name->can("__meta__")) {
+                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name!"; 
+            }
+            my $parent_class = $parent_class_name->__meta__;
+            unless ($parent_class) {
+                warn "no class metadata bject for $parent_class_name!";
+                next;
+            }
+
+            # let the parent class preprocess our description
+            $desc = $parent_class->_preprocess_subclass_description($desc);
+        }
+    }
+
     # normalize the data behind the property descriptions    
     my @property_names = keys %$instance_properties;
     for my $property_name (@property_names) {
@@ -755,29 +779,7 @@ sub _normalize_class_description {
         }
     }
     
-    # allow parent classes to adjust the description in systematic ways 
-    my $desc = \%new_class;
-    unless ($bootstrapping) {
-        for my $parent_class_name (@{ $new_class{is} }) {
-            # ensure the parent classes are fully processed
-            no warnings;
-            unless ($parent_class_name->can("__meta__")) {
-                __PACKAGE__->use_module_with_namespace_constraints($parent_class_name);
-                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@" if $@; 
-            }
-            unless ($parent_class_name->can("__meta__")) {
-                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name!"; 
-            }
-            my $parent_class = $parent_class_name->__meta__;
-            unless ($parent_class) {
-                warn "no class metadata bject for $parent_class_name!";
-                next;
-            }
-
-            # let the parent class preprocess our description
-            $desc = $parent_class->_preprocess_subclass_description($desc);
-        }
-        
+    unless ($bootstrapping) {        
         # cascade extra meta attributes from the parent downward
         my @additional_property_meta_attributes;
         for my $parent_class_name (@{ $new_class{is} }) {
@@ -797,18 +799,20 @@ sub _normalize_class_description {
             my $parent_class_meta = $parent_class_name->__meta__();
             foreach my $ancestor_class_meta ( $parent_class_meta->all_class_metas ) {
                 if (my $subclassify_by = $ancestor_class_meta->subclassify_by) {
-                    my %old_property = ( 
-                        property_name => $subclassify_by,
-                        default_value => $class_name,
-                        is_constant => 1,
-                        is_class_wide => 1,
-                        is_specified_in_module_header => 0,
-                        column_name => '',
-                        implied_by => $parent_class_meta->class_name . '::subclassify_by',
-                    );
-                    my %new_property = $class->_normalize_property_description($subclassify_by, \%old_property, \%new_class);
-                    $instance_properties->{$subclassify_by} = \%new_property;
-                    last PARENT_CLASS;
+                    if (not $instance_properties->{$subclassify_by}) {
+                        my %old_property = ( 
+                            property_name => $subclassify_by,
+                            default_value => $class_name,
+                            is_constant => 1,
+                            is_class_wide => 1,
+                            is_specified_in_module_header => 0,
+                            column_name => '',
+                            implied_by => $parent_class_meta->class_name . '::subclassify_by',
+                        );
+                        my %new_property = $class->_normalize_property_description($subclassify_by, \%old_property, \%new_class);
+                        $instance_properties->{$subclassify_by} = \%new_property;
+                        last PARENT_CLASS;
+                    }
                 }
             }
         }
