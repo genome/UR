@@ -188,7 +188,7 @@ sub set_userenv {
     # there are two places to set these oracle variables-
     # 1. this method in UR::DataSource::Oracle is a class method
     # that can be called to change the values later
-    # 2. the method in Genome::DataSource::Oracle is called in
+    # 2. the method in YourSubclass::DataSource::Oracle is called in
     # _init_created_dbh which is called while the datasource
     # is still being set up- it operates directly on the db handle 
 

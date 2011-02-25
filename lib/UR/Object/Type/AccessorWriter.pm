@@ -351,6 +351,10 @@ sub mk_indirect_ro_accessor {
         $self->context_return(@results); 
     };
 
+    unless ($accessor_name) {
+        Carp::confess("No accessor name specified for indirect ro accessor $class_name $accessor!");
+    }
+
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $accessor_name,
@@ -1361,7 +1365,11 @@ sub initialize_direct_accessors {
             }
             @$isa = @old_isa;
         };
-        
+
+        unless ($accessor_name) {
+            Carp::confess("No accessor name for property $class_name $property_name?");
+        }        
+
         my $accessor_type;
         my @calculation_fields = (qw/calculate calc_perl calc_sql calculate_from/);
         if (my $id_by = $property_data->{id_by}) {

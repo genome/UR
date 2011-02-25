@@ -85,7 +85,6 @@ sub _generate_content {
 
     # the header line is the class followed by the id
     my $text = $self->subject_class_name;
-$DB::single=1 if $text eq 'Genome::Model::Build::Input';
     $text =~ s/::/ /g;
     my $subject = $self->subject();
     if ($subject) {

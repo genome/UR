@@ -247,13 +247,15 @@ UR::Object::Type->define(
         # different ways of handling subclassing at object load time
         subclassify_by                      => { is => 'Text', len => 256, is_optional => 1,
                                                 doc => 'when set, the method specified will return the name of a specific subclass into which the object should go' },
-
+        
         subclass_description_preprocessor   => { is => 'MethodName', len => 255, is_optional => 1,
                                                 doc => 'a method which should pre-process the class description of sub-classes before construction' },
         
         sub_classification_method_name      => { is => 'Text', len => 256, is_optional => 1, 
                                                 doc => 'like subclassify_by, but examines whole objects not a single property' },
 
+        use_parallel_versions               => { is => 'Boolean', is_optional => 1, default_value => 0,
+                                                doc => 'inheriting from the is class will redirect to a ::V? module implemeting a specific version' },
         
         # obsolete/internal
         type_name                               => { is => 'Text', len => 256,  },

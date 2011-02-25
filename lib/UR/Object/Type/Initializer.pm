@@ -31,7 +31,7 @@ our @CARP_NOT = qw( UR::ModuleLoader Class::Autouse );
     is_mutable         => 1,
     is_many            => 0,
     is_abstract        => 0,
-    default_version    => undef,
+    use_parallel_versions => 0,
 );
 
 # All those same comments also apply to UR::Object::Property's properties
@@ -231,6 +231,8 @@ sub _preprocess_subclass_description {
 
     my $current_desc = $prev_desc;
 
+    $DB::single = 1 if $current_desc->{class_name} =~ /AlignmentResult/;
+
     if (my $preprocessor = $self->subclass_description_preprocessor) {
         # the preprocessor must me a method name in the class being adjusted
         no strict 'refs';
@@ -380,6 +382,7 @@ sub _normalize_class_description {
         [ generated             => qw//],
         [ subclass_description_preprocessor => qw//],        
         [ id_sequence_generator_name => qw//],
+        [ use_parallel_versions => qw//],        
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                
         my @all_fields = ($primary_field_name, @alternate_field_names);
@@ -474,6 +477,7 @@ sub _normalize_class_description {
         }
     }
     
+
     # These may have been found and moved over.  Restore.
     $old_class{has}             = delete $new_class{has};
     $old_class{attributes_have} = delete $new_class{attributes_have};
@@ -687,24 +691,24 @@ sub _normalize_class_description {
    
     # NOT ENABLED YET
     if (0) {
-    # done processing direct properties of this process
-    # extend %$instance_properties with properties of the parent classes
-    my @parent_class_names = @{ $new_class{is} };
-    for my $parent_class_name (@parent_class_names) {
-        my $parent_class_meta = $parent_class_name->__meta__;
-        die "no meta for $parent_class_name while initializing $class_name?" unless $parent_class_meta;
-        my $parent_normalized_properties = $parent_class_meta->{has};
-        for my $parent_property_name (keys %$parent_normalized_properties) {
-            my $parent_property_data = $parent_normalized_properties->{$parent_property_name};
-            my $inherited_copy = $instance_properties->{$parent_property_name};
-            unless ($inherited_copy) {
-                $inherited_copy = UR::Util::deep_copy($parent_property_data);
+        # done processing direct properties of this process
+        # extend %$instance_properties with properties of the parent classes
+        my @parent_class_names = @{ $new_class{is} };
+        for my $parent_class_name (@parent_class_names) {
+            my $parent_class_meta = $parent_class_name->__meta__;
+            die "no meta for $parent_class_name while initializing $class_name?" unless $parent_class_meta;
+            my $parent_normalized_properties = $parent_class_meta->{has};
+            for my $parent_property_name (keys %$parent_normalized_properties) {
+                my $parent_property_data = $parent_normalized_properties->{$parent_property_name};
+                my $inherited_copy = $instance_properties->{$parent_property_name};
+                unless ($inherited_copy) {
+                    $inherited_copy = UR::Util::deep_copy($parent_property_data);
+                }
+                $inherited_copy->{class_name} = $class_name;
+                my $a = $inherited_copy->{overrides_class_names} ||= [];
+                push @$a, $parent_property_data->{class_name};
             }
-            $inherited_copy->{class_name} = $class_name;
-            my $a = $inherited_copy->{overrides_class_names} ||= [];
-            push @$a, $parent_property_data->{class_name};
         }
-    }
     }
 
     $new_class{'__properties_in_class_definition_order'} = \@properties_in_class_definition_order;
@@ -726,10 +730,10 @@ sub _normalize_class_description {
         $new_class{extra} = \%old_class;
     };
 
-    # allow parent classes to adjust the description in systematic ways 
-    my $desc = \%new_class;
+    # ensure parent classes are loaded
     unless ($bootstrapping) {
-        for my $parent_class_name (@{ $new_class{is} }) {
+        my @base_classes = map { ref($_) ? @$_ : $_ } $new_class{is};
+        for my $parent_class_name (@base_classes) {
             # ensure the parent classes are fully processed
             no warnings;
             unless ($parent_class_name->can("__meta__")) {
@@ -741,20 +745,59 @@ sub _normalize_class_description {
             }
             my $parent_class = $parent_class_name->__meta__;
             unless ($parent_class) {
-                warn "no class metadata bject for $parent_class_name!";
+                warn "no class metadata object for $parent_class_name!";
                 next;
             }
 
-            # let the parent class preprocess our description
-            $desc = $parent_class->_preprocess_subclass_description($desc);
+            # the the parent classes indicate version, if needed
+            if ($parent_class->{'use_parallel_versions'} and not $parent_class_name =~ /::Ghost/) {
+                $DB::single = 1;
+                unless ($class_name =~ /^${parent_class_name}::V\d+/) {
+                    my $ns = $parent_class_name;
+                    $ns =~ s/::.*//;
+                    my $version;
+                    if ($ns and $ns->can("component_version")) {
+                        $version = $ns->component_version($class);
+                    }
+                    unless ($version) {
+                        $version = '1';
+                    }
+                    $parent_class_name = $parent_class_name . '::V' . $version;
+                    eval "use $parent_class_name";
+                    Carp::confess("Error using versiond module $parent_class_name!:\n$@") if $@;
+                    redo;
+                }
+            }
         }
+        $new_class{is} = \@base_classes;
     }
 
     # normalize the data behind the property descriptions    
     my @property_names = keys %$instance_properties;
     for my $property_name (@property_names) {
         my %old_property = %{ $instance_properties->{$property_name} };        
-        my %new_property = $class->_normalize_property_description($property_name, \%old_property, \%new_class);
+        my %new_property = $class->_normalize_property_description1($property_name, \%old_property, \%new_class);
+        $instance_properties->{$property_name} = \%new_property;
+    }
+
+    # allow parent classes to adjust the description in systematic ways 
+    my $desc = \%new_class;
+    my @additional_property_meta_attributes;
+    unless ($bootstrapping) {
+        for my $parent_class_name (@{ $new_class{is} }) {
+            my $parent_class = $parent_class_name->__meta__;
+            $desc = $parent_class->_preprocess_subclass_description($desc);
+            if (my $parent_meta_properties = $parent_class->{attributes_have}) {
+                push @additional_property_meta_attributes, %$parent_meta_properties;
+            }
+        }
+    }
+
+    # normalize the data behind the property descriptions    
+    @property_names = keys %$instance_properties;
+    for my $property_name (@property_names) {
+        my %old_property = %{ $instance_properties->{$property_name} };        
+        my %new_property = $class->_normalize_property_description2(\%old_property, \%new_class);
         $instance_properties->{$property_name} = \%new_property;
     }
 
@@ -781,11 +824,10 @@ sub _normalize_class_description {
     
     unless ($bootstrapping) {        
         # cascade extra meta attributes from the parent downward
-        my @additional_property_meta_attributes;
         for my $parent_class_name (@{ $new_class{is} }) {
             my $parent_class = $parent_class_name->__meta__;
             if (my $parent_meta_properties = $parent_class->{attributes_have}) {
-                push @additional_property_meta_attributes, %$parent_meta_properties;
+                #push @additional_property_meta_attributes, %$parent_meta_properties;
             }
         }
 
@@ -809,8 +851,9 @@ sub _normalize_class_description {
                             column_name => '',
                             implied_by => $parent_class_meta->class_name . '::subclassify_by',
                         );
-                        my %new_property = $class->_normalize_property_description($subclassify_by, \%old_property, \%new_class);
-                        $instance_properties->{$subclassify_by} = \%new_property;
+                        my %new_property = $class->_normalize_property_description1($subclassify_by, \%old_property, \%new_class);
+                        my %new_property2 = $class->_normalize_property_description2(\%new_property, \%new_class);
+                        $instance_properties->{$subclassify_by} = \%new_property2;
                         last PARENT_CLASS;
                     }
                 }
@@ -859,7 +902,7 @@ sub _recursive_attributes_have {
     return $self->{_recursive_attributes_have};
 }
 
-sub _normalize_property_description {
+sub _normalize_property_description1 {
     my $class = shift;
     my $property_name = shift;
     my $property_data = shift;
@@ -867,10 +910,6 @@ sub _normalize_property_description {
     my $class_name = $class_data->{class_name};
     my %old_property = %$property_data;
     my %new_class = %$class_data;
-    
-    if (ref($old_property{id_by}) eq 'HASH') {
-        $DB::single = 1;    
-    }
     
     delete $old_property{source};
 
@@ -983,11 +1022,29 @@ sub _normalize_property_description {
             $new_property{data_type} =~ s/\(\d+\)$//;
         }
     }
+
+    if (%old_property) {
+        $new_property{unrecognized_meta_attributes} = \%old_property;
+        %new_property = (%old_property, %new_property);
+    }
     
+    return %new_property;
+}
+
+sub _normalize_property_description2 {
+    my $class = shift;
+    my $property_data = shift;
+    my $class_data = shift || $class;
+
+    my $property_name = $property_data->{property_name};
+    my $class_name = $property_data->{class_name};
+
+    my %new_property = %$property_data;
+    my %new_class = %$class_data;
+            
     if (grep { $_ ne 'is_calculated' && /calc/ } keys %new_property) {
         $new_property{is_calculated} = 1;
     }
-
     
     if ($new_property{via} 
         || $new_property{to} 
@@ -1048,22 +1105,14 @@ sub _normalize_property_description {
         die "Cannot use specify_by except on is_many properties!";
     }
 
-    if (%old_property) {
-        $new_property{unrecognized_meta_attributes} = \%old_property;
-    }
-
     if ($new_property{implied_by} and $new_property{implied_by} eq $property_name) {
         $class->warnings_message("New data has odd self-referential 'implied_by' on $class_name $property_name!");
         delete $new_property{implied_by};
     }        
-
-    if (ref($new_property{id_by}) eq 'HASH') {
-        $DB::single = 1;    
-    }
-    
     
     return %new_property;
 }
+
 
 sub _make_minimal_class_from_normalized_class_description {
     my $class = shift;
@@ -1124,9 +1173,6 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
     my $self = shift;    
     my $class_name = $self->class_name;
     
-    if ($class_name eq 'Genome::Model::Command::Ghost') {
-    #    print Carp::longmess();
-    }
     Carp::confess("re-initializing class $class_name") if $_inform_all_parent_classes_of_newly_loaded_subclass{$class_name};
     $_inform_all_parent_classes_of_newly_loaded_subclass{$class_name} = 1;    
     
