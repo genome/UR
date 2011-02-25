@@ -266,7 +266,7 @@ sub _resolve_bridge_logic_for_indirect_property {
              my $second_via_property_meta = $to_property_meta->via_property_meta; 
              my $final_class_name = $second_via_property_meta->data_type;
          
-             if ($final_class_name and $final_class_name->isa('UR::Object')) {
+             if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
                  my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
                  if (@via2_join_properties > 1) {
                      Carp::carp("via2 join not implemented :(");
@@ -308,7 +308,11 @@ sub _resolve_bridge_logic_for_indirect_property {
 
                 my @results;
                 foreach my $result_class ( keys %result_class_names_and_ids ) {
-                    push @results, $result_class->get($result_class_names_and_ids{$result_class});
+                    if($result_class eq 'UR::Value') { #can't group queries together for UR::Values
+                        push @results, map { $result_class->get($_) } @{$result_class_names_and_ids{$result_class}};
+                    } else {
+                        push @results, $result_class->get($result_class_names_and_ids{$result_class});
+                    }
                 }
                 return @results;
             };
