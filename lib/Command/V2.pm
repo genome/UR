@@ -111,7 +111,8 @@ sub execute {
     return $result;
 }
 
-sub _execute_body {    
+sub _execute_body
+{    
     # default implementation in the base class
     my $self = shift;
     my $class = ref($self) || $self;
@@ -127,7 +128,8 @@ sub _execute_body {
 #
 
 # TODO: abstract out all dispatchers for commands into a given API
-sub execute_with_shell_params_and_exit {
+sub execute_with_shell_params_and_exit
+{
     # This automatically parses command-line options and "does the right thing":
     my $class = shift;
     
@@ -161,7 +163,8 @@ My::Command->execute_with_shell_params_and_exit;
     exit $exit_code;
 }
 
-sub _execute_with_shell_params_and_return_exit_code {
+sub _execute_with_shell_params_and_return_exit_code
+{
     my $class = shift;
     my @argv = @_;
 
@@ -227,7 +230,8 @@ sub _execute_delegate_class_with_params {
 # Standard programmatic interface
 # 
 
-sub create {
+sub create 
+{
     my $class = shift;
     my ($rule,%extra) = $class->define_boolexpr(@_);
     my @params_list = $rule->params_list;
@@ -271,7 +275,8 @@ sub _bare_shell_argument_names {
 # Also, execute() could return a negative value; this is converted to
 # positive and used as the shell exit code.  NOTE: This means execute()
 # returning 0 and -1 mean the same thing
-sub exit_code_for_return_value {
+sub exit_code_for_return_value 
+{
     my $self = shift;
     my $return_value = shift;
     if (! $return_value) {
@@ -284,7 +289,8 @@ sub exit_code_for_return_value {
     return $return_value;
 }
 
-sub help_brief {
+sub help_brief 
+{
     my $self = shift;
     if (my $doc = $self->__meta__->doc) {
         return $doc;
@@ -306,21 +312,25 @@ sub help_brief {
 }
 
 
-sub help_synopsis {
+sub help_synopsis 
+{
     my $self = shift;
     return '';
 }
 
-sub help_detail {
+sub help_detail 
+{
     my $self = shift;
     return "!!! define help_detail() in module " . ref($self) || $self . "!";
 }
 
-sub sub_command_category {
+sub sub_command_category 
+{
     return;
 }
 
-sub sub_command_sort_position { 
+sub sub_command_sort_position 
+{ 
     # override to do something besides alpha sorting by name
     return '9999999999 ' . $_[0]->command_name_brief;
 }
@@ -330,14 +340,16 @@ sub sub_command_sort_position {
 # Self reflection
 #
 
-sub is_abstract {
+sub is_abstract 
+{
     # Override when writing an subclass which is also abstract.
     my $self = shift;
     my $class_meta = $self->__meta__;
     return $class_meta->is_abstract;
 }
 
-sub is_executable {
+sub is_executable 
+{
     my $self = shift;
     if ($self->can("_execute_body") eq __PACKAGE__->can("_execute_body")) {
         return;
@@ -350,7 +362,8 @@ sub is_executable {
     }
 }
 
-sub is_sub_command_delegator {
+sub is_sub_command_delegator
+{
     my $self = shift;
     if (scalar($self->sub_command_dirs)) {
         return 1;
@@ -360,13 +373,15 @@ sub is_sub_command_delegator {
     }
 }
 
-sub _time_now {
+sub _time_now 
+{
     # return the current time in context
     # this may not be the real time in selected cases
     UR::Time->now;    
 }
 
-sub color_command_name {
+sub color_command_name 
+{
     my $text = shift;
     
     my $colored_text = [];
@@ -380,13 +395,15 @@ sub color_command_name {
     return join(' ', @$colored_text);
 }
 
-sub _base_command_class_and_extension {
+sub _base_command_class_and_extension 
+{
     my $self = shift;
     my $class = ref($self) || $self;
     return ($class =~ /^(.*)::([^\:]+)$/); 
 }
 
-sub _command_name_for_class_word {
+sub _command_name_for_class_word 
+{
     my $self = shift;
     my $s = shift;
     $s =~ s/_/-/g;
@@ -397,7 +414,8 @@ sub _command_name_for_class_word {
     return $s;
 }
 
-sub command_name {
+sub command_name
+{
     my $self = shift;
     my $class = ref($self) || $self;
     my $prepend = '';
@@ -413,14 +431,14 @@ sub command_name {
     return $prepend . $n;
 }
 
-sub command_name_brief {
+sub command_name_brief
+{
     my $self = shift;
     my $class = ref($self) || $self;
     my @words = grep { $_ ne 'Command' } split(/::/,$class);
     my $n = join(' ', map { $self->_command_name_for_class_word($_) } $words[-1]);
     return $n;
 }
-
 #
 # Methods to transform shell args into command properties
 #
@@ -470,7 +488,8 @@ sub resolve_option_completion_spec {
     return \@completion_spec
 }
 
-sub resolve_class_and_params_for_argv {
+sub resolve_class_and_params_for_argv
+{
     # This is used by execute_with_shell_params_and_exit, but might be used within an application.
     my $self = shift;
     my @argv = @_;
@@ -658,7 +677,8 @@ sub help_usage_complete_text {
     return $text;
 }
 
-sub help_usage_command_pod {
+sub help_usage_command_pod
+{
     my $self = shift;
 
     my $command_name = $self->command_name;
@@ -743,7 +763,8 @@ sub help_usage_command_pod {
     return "\n$pod";
 }
 
-sub help_header {
+sub help_header
+{
     my $class = shift;
     return sprintf("%s - %-80s\n",
         $class->command_name
@@ -751,7 +772,8 @@ sub help_header {
     )
 }
 
-sub help_options {
+sub help_options
+{
     my $self = shift;
     my %params = @_;
 
@@ -896,7 +918,8 @@ sub sub_commands_table {
     return $tb;
 }
 
-sub help_sub_commands {
+sub help_sub_commands
+{
     my $class = shift;
     my %params = @_;
     my $command_name_method = 'command_name_brief';
@@ -1001,7 +1024,8 @@ sub _is_hidden_in_docs { return; }
 # Methods which transform command properties into shell args (getopt)
 #
 
-sub _shell_args_property_meta {
+sub _shell_args_property_meta
+{
     my $self = shift;
     my $class_meta = $self->__meta__;
 
@@ -1049,7 +1073,8 @@ sub _shell_args_property_meta {
     return @result;
 }
 
-sub _shell_arg_name_from_property_meta {
+sub _shell_arg_name_from_property_meta
+{
     my ($self, $property_meta,$singularize) = @_;
     my $property_name = ($singularize ? $property_meta->singular_name : $property_meta->property_name);
     my $param_name = $property_name;
@@ -1057,7 +1082,8 @@ sub _shell_arg_name_from_property_meta {
     return $param_name; 
 }
 
-sub _shell_arg_getopt_qualifier_from_property_meta {
+sub _shell_arg_getopt_qualifier_from_property_meta
+{
     my ($self, $property_meta) = @_;
 
     my $many = ($property_meta->is_many ? '@' : ''); 
@@ -1069,7 +1095,8 @@ sub _shell_arg_getopt_qualifier_from_property_meta {
     }
 }
 
-sub _shell_arg_usage_string_from_property_meta {
+sub _shell_arg_usage_string_from_property_meta 
+{
     my ($self, $property_meta) = @_;
     my $string = $self->_shell_arg_name_from_property_meta($property_meta);
     if ($property_meta->{shell_args_position}) {
@@ -1101,7 +1128,8 @@ sub _shell_arg_usage_string_from_property_meta {
     return $string;
 }
 
-sub _shell_arg_getopt_specification_from_property_meta {
+sub _shell_arg_getopt_specification_from_property_meta 
+{
     my ($self,$property_meta) = @_;
     my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
     return (
@@ -1111,7 +1139,8 @@ sub _shell_arg_getopt_specification_from_property_meta {
 }
 
 
-sub _shell_arg_getopt_complete_specification_from_property_meta {
+sub _shell_arg_getopt_complete_specification_from_property_meta 
+{
     my ($self,$property_meta) = @_;
     my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
     my $completions = $property_meta->valid_values;
@@ -1154,7 +1183,8 @@ sub _shell_arg_getopt_complete_specification_from_property_meta {
     );
 }
 
-sub _shell_args_getopt_specification {
+sub _shell_args_getopt_specification 
+{
     my $self = shift;
     my @getopt;
     my @params;
@@ -1167,7 +1197,8 @@ sub _shell_args_getopt_specification {
     return { @params}, @getopt; 
 }
 
-sub _shell_args_getopt_complete_specification {
+sub _shell_args_getopt_complete_specification
+{
     my $self = shift;
     my @getopt;
     for my $meta ($self->_shell_args_property_meta) {
@@ -1199,7 +1230,8 @@ sub _shell_args_usage_string
     return "";
 }
 
-sub _shell_args_usage_string_abbreviated {
+sub _shell_args_usage_string_abbreviated
+{
     my $self = shift;
     if ($self->is_sub_command_delegator) {
         return "...";
@@ -1223,7 +1255,8 @@ sub _shell_args_usage_string_abbreviated {
 # This is for cases in which the Foo::Bar command delegates to
 # Foo::Bar::Baz, Foo::Bar::Buz or Foo::Bar::Doh, depending on its paramters.
 
-sub sub_command_dirs {
+sub sub_command_dirs
+{
     my $class = shift;
     my $module = ref($class) || $class;
     $module =~ s/::/\//g;
@@ -1244,7 +1277,8 @@ sub sub_command_dirs {
     return $path;
 }
 
-sub sub_command_classes {
+sub sub_command_classes
+{
     my $class = shift;
     my @paths = $class->sub_command_dirs;
     return unless @paths;
@@ -1267,14 +1301,16 @@ sub sub_command_classes {
     return @classes;
 }
 
-sub sub_command_names {
+sub sub_command_names
+{
     my $class = shift;
     my @sub_command_classes = $class->sub_command_classes;
     my @sub_command_names = map { $_->command_name_brief } @sub_command_classes;
     return @sub_command_names;
 }
 
-sub class_for_sub_command {
+sub class_for_sub_command
+{
     my $self = shift;
     my $class = ref($self) || $self;
     my $sub_command = shift;
@@ -1471,47 +1507,46 @@ __END__
 
 =head1 NAME
 
-Command::V2 - base class for modules implementing the command pattern
+Command - base class for modules implementing the command pattern
 
 =head1 SYNOPSIS
 
-    use AcmeCo;
+  use TopLevelNamespace;
 
-    class AcmeCo::SomeObj::Command:DoX {
-        is => 'Command',
-        has => [
-            some_obj => { is => 'AcmeCo::SomeObj', id_by => 'some_obj_id' },
-            infile   => { is => 'System::File' },
-            verbose  => { is => 'Boolean', is_optional => 1 },
-        ],
-    };
+  class TopLevelNamespace::SomeObj::Command {
+    is => 'Command',
+    has => [
+        someobj => { is => 'TopLevelNamespace::SomeObj', id_by => 'some_obj_id' },
+        verbose => { is => 'Boolean', is_optional => 1 },
+    ],
+  };
 
-    sub execute {
-        my $self = shift;
-        if ($self->verbose) {
-            print "Working on id ",$self->some_obj_id,"\n";
-        }
-        my $result = $someobj->do_something();
-        if ($self->verbose) {
-            print "Result was $result\n";
-        }
-        return $result;
-    }
+  sub execute {
+      my $self = shift;
+      if ($self->verbose) {
+          print "Working on id ",$self->some_obj_id,"\n";
+      }
+      my $result = $someobj->do_something();
+      if ($self->verbose) {
+          print "Result was $result\n";
+      }
+      return $result;
+  }
 
-    sub help_brief {
-        return 'Call do_something on a SomeObj instance';
-    }
-    sub help_synopsis {
-        return 'cmd --some_obj_id 123 --verbose';
-    }
-    sub help_detail {
-        return 'This command performs a FooBarBaz transform on a SomObj object instance by calling its do_something method.';
-    }
+  sub help_brief {
+      return 'Call do_something on a SomeObj instance';
+  }
+  sub help_synopsis {
+      return 'cmd --some_obj_id 123 --verbose';
+  }
+  sub help_detail {
+      return 'This command performs a FooBarBaz transform on a SomObj object instance by calling its do_something method.';
+  }
 
-    # Another part of the code
-
-    my $cmd = ::SomeObj::Command->create(some_obj_id => $some_obj->id);
-    $cmd->execute();
+  # Another part of the code
+ 
+  my $cmd = TopLevelNamespace::SomeObj::Command->create(some_obj_id => $some_obj->id);
+  $cmd->execute();
 
 =head1 DESCRIPTION
 
