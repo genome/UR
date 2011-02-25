@@ -29,7 +29,7 @@ sub _resolve_version {
                 }
                 $base_class = $class . '::V' . $version;
                 eval "use $base_class";
-                Carp::confess("Error using versiond module $base_classe!:\n$@") if $@;
+                Carp::confess("Error using versiond module $base_class!:\n$@") if $@;
             }
         }
         $classdef->{is} = \@base_classes;
