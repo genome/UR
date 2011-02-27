@@ -31,7 +31,7 @@ our @CARP_NOT = qw( UR::ModuleLoader Class::Autouse );
     is_mutable         => 1,
     is_many            => 0,
     is_abstract        => 0,
-    use_parallel_versions => 0,
+    subclassify_by_version => 0,
 );
 
 # All those same comments also apply to UR::Object::Property's properties
@@ -380,7 +380,7 @@ sub _normalize_class_description {
         [ generated             => qw//],
         [ subclass_description_preprocessor => qw//],        
         [ id_sequence_generator_name => qw//],
-        [ use_parallel_versions => qw//],        
+        [ subclassify_by_version => qw//],        
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                
         my @all_fields = ($primary_field_name, @alternate_field_names);
@@ -748,7 +748,7 @@ sub _normalize_class_description {
             }
 
             # the the parent classes indicate version, if needed
-            if ($parent_class->{'use_parallel_versions'} and not $parent_class_name =~ /::Ghost/) {
+            if ($parent_class->{'subclassify_by_version'} and not $parent_class_name =~ /::Ghost/) {
                 $DB::single = 1;
                 unless ($class_name =~ /^${parent_class_name}::V\d+/) {
                     my $ns = $parent_class_name;
