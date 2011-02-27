@@ -657,7 +657,11 @@ sub create_entity {
     
             foreach my $prop ( @property_objects ) {
                 my $name = $prop->property_name;
-    
+   
+                unless (defined $name) {
+                    Carp::confess("no name on property for class " . $co->class_name . "?\n" . Data::Dumper::Dumper($prop));
+                }
+
                 my $default_value = $prop->default_value;
                 if (defined $default_value) {
                     if (ref($default_value)) {
@@ -675,7 +679,7 @@ sub create_entity {
                 if ($prop->is_many) {
                     $set_properties{$name} = $prop;
                 }
-                elsif ($prop->is_delegated || $prop->is_legacy_eav) {
+                elsif ($prop->is_delegated) {
                     $indirect_properties{$name} = $prop;
                 }
                 else {
@@ -812,7 +816,9 @@ sub create_entity {
     for my $property_name (keys %$indirect_values) {
         if ($immutable_properties->{$property_name}) {
             my $meta = $indirect_properties->{$property_name};
+            next unless $meta; # not indirect
             my $via = $meta->via;
+            next unless $via;  # not a via/to (id_by or reverse_id_by)
             $indirect_immutable_properties_via{$via}{$property_name} = delete $indirect_values->{$property_name};
         }
     }

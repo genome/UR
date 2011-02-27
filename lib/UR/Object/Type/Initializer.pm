@@ -231,8 +231,6 @@ sub _preprocess_subclass_description {
 
     my $current_desc = $prev_desc;
 
-    $DB::single = 1 if $current_desc->{class_name} =~ /AlignmentResult/;
-
     if (my $preprocessor = $self->subclass_description_preprocessor) {
         # the preprocessor must me a method name in the class being adjusted
         no strict 'refs';
@@ -1052,7 +1050,7 @@ sub _normalize_property_description2 {
         || $new_property{reverse_as}         
     ) {
         $new_property{is_delegated} = 1;
-        unless (defined $new_property{to}) {
+        if (defined $new_property{via} and not defined $new_property{to}) {
             $new_property{to} = $property_name;
         }
     }

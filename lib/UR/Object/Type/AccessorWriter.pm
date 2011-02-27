@@ -199,6 +199,8 @@ sub mk_id_based_object_accessor {
 sub _resolve_bridge_logic_for_indirect_property {
     my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where) = @_;
 
+    $DB::single = 1 if $accessor_name eq 'car_parts_prices';
+
     my $bridge_collector = sub { my $self = shift; return $self->$via(@$where) };
     my $bridge_crosser = sub { return map { $_->$to} @_ };
 
@@ -218,7 +220,7 @@ sub _resolve_bridge_logic_for_indirect_property {
     }
 
     if ($my_property_meta->is_delegated and $my_property_meta->is_many
-        and $via_property_meta->is_many and $via_property_meta->to and $via_property_meta->reverse_as
+        and $via_property_meta->is_many and $via_property_meta->reverse_as
         and $via_property_meta->data_type and $via_property_meta->data_type->isa('UR::Object')
     ) {
         my $bridge_class = $via_property_meta->data_type;
