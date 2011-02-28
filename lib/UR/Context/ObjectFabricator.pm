@@ -836,6 +836,60 @@ and not intended to be used directly.
 
 =head1 METHODS
 
+=over 4
+
+=item create_for_loading_template
+
+  my $fab = UR::Context::ObjectFabricator->create_for_loading_template(
+                $context, $loading_template, $template_data,
+                $rule, $rule_template, $values, $dsx);
+
+Returns an object fabricator instance that is able to construct objects
+of the rule's target class from rows of data returned by data source
+iterators.
+
+=item all_object_fabricators
+
+  my @fabs = UR::Context::ObjectFabricator->all_object_fabricators();
+
+Returns a list of all object fabricators that have not yet been finalized
+
+=item fabricate
+
+  my $ur_object = $fab->fabricate([columns,from,data,source]);
+
+Given a listref of data pulled from a data source iterator, it slices out
+the appropriate columns from the list and constructs a single object to
+return.
+
+=item is_loading_in_progress_for_boolexpr
+
+    my $bool = $fab->is_loading_in_progress_for_boolexpr($boolexpr);
+
+Given a UR::BoolExpr instance, it returns true if the given fabricator is
+prepared to construct objects matching this boolexpr.  This is used by 
+UR::Context to know if other iterators are still pulling in objects that
+could match another iterator's boolexpr, and it should therefore not trust
+that the object cache is conplete.
+
+=item finalize
+
+  $fab->finalize();
+
+Indicates to the iterator that the caller is done using it for constructing
+objects, probably because the data source has no more data or the iterator
+that was using this fabricator has gone out of scope.
+
+=item apply_all_params_loaded
+
+  $fab->apply_all_params_loaded();
+
+As the fabricator constructs objects, it buffers changes to all_params_loaded
+(the Context's query cache) to maintain consistancy if multiple iterators are
+working concurrently.  At the appripriate time, call apply_all_params_loaded()
+to take those changes and apply them to the current Context's all_params_loaded.
+
+=back
 
 =cut
 
