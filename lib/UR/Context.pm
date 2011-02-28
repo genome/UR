@@ -2133,14 +2133,6 @@ sub _create_secondary_loading_closures {
                                                        \@secondary_values,
                                                        $secondary_data_source
                                                 );
-            #my $secondary_object_importer = $self->__create_object_fabricator_for_loading_template(
-            #                                           $secondary_loading_template,
-            #                                           $secondary_template,
-            #                                           $secondary_rule,
-            #                                           $secondary_rule_template,
-            #                                           \@secondary_values,
-            #                                           $secondary_data_source
-            #                                    );
             next unless $secondary_object_importer;
             push @secondary_object_importers, $secondary_object_importer;
         }
@@ -2291,14 +2283,6 @@ sub _create_import_iterator_for_underlying_context {
                     \@values,
                     $dsx,
                 );
-                #$self->__create_object_fabricator_for_loading_template(
-                #    $loading_template, 
-                #    $template_data,
-                #    $rule,
-                #    $rule_template,
-                #    \@values,
-                #    $dsx,
-                #);
             next unless $object_fabricator;
             unshift @object_fabricators, $object_fabricator;
         }
