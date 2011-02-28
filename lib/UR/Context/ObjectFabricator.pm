@@ -166,51 +166,110 @@ sub create_for_loading_template {
     # finalized
     my $local_all_params_loaded = {};
 
-    # If the rule has hints, we'll be loading more data than is being returned.  Set up some stuff so
-    # we can mark in all_params_loaded that these other things got loaded, too
     my %rule_hints;
-    if (!$loading_base_object && $rule_template->hints) {
-        #$DB::single=1; 
+    if (!$loading_base_object) {
         my $query_class_meta = $rule_template->subject_class_name->__meta__;
-        foreach my $hint ( @{ $rule_template->hints } ) {
-            my $delegated_property_meta = $query_class_meta->property_meta_for_name($hint);
-            next unless $delegated_property_meta;
-            foreach my $join ( $delegated_property_meta->_get_joins ) {
-                next unless ($join->{'foreign_class'} eq $loading_template->{'data_class_name'});
 
-                # Is this the equivalent of loading by the class' ID?
-                my $foreign_class_meta = $join->{'foreign_class'}->__meta__;
-                my %join_properties = map { $_ => 1 } @{$join->{'foreign_property_names'}};
-                my $join_has_all_id_props = 1;
-                foreach my $foreign_id_prop ( $foreign_class_meta->all_id_property_metas ) {
-                    next if ($foreign_id_prop->class_name eq 'UR::Object');  # Skip the manufactured property called id
-                    next if (delete $join_properties{ $foreign_id_prop->property_name });
-                    # If we get here, there's an ID property that isn't mentioned in the join properties
-                    $join_has_all_id_props = 0;
-                    last;
-                }
-                next if ( $join_has_all_id_props and ! scalar(keys %join_properties));
+        # If the rule has hints, we'll be loading more data than is being returned.  Set up some stuff so
+        # we can mark in all_params_loaded that these other things got loaded, too
+        if ($rule_template->hints) {
+            HINT:
+            foreach my $hint ( @{ $rule_template->hints } ) {
+                my $delegated_property_meta = $query_class_meta->property_meta_for_name($hint);
+                next HINT unless $delegated_property_meta;
+                JOIN:
+                foreach my $join ( $delegated_property_meta->_get_joins ) {
+                    next unless ($join->{'foreign_class'} eq $loading_template->{'data_class_name'});
 
-                my @template_filter_names = @{$join->{'foreign_property_names'}};
-                my @where_values;
-                if ($join->{'where'}) {
-                    for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
-                        push @template_filter_names, $join->{'where'}->[$i];
-                        push @where_values, $join->{'where'}->[$i+1];
+                    # Is this the equivalent of loading by the class' ID?
+                    my $foreign_class_meta = $join->{'foreign_class'}->__meta__;
+                    my %join_properties = map { $_ => 1 } @{$join->{'foreign_property_names'}};
+                    my $join_has_all_id_props = 1;
+                    foreach my $foreign_id_prop ( $foreign_class_meta->all_id_property_metas ) {
+                        next if ($foreign_id_prop->class_name eq 'UR::Object');  # Skip the manufactured property called id
+                        next if (delete $join_properties{ $foreign_id_prop->property_name });
+                        # If we get here, there's an ID property that isn't mentioned in the join properties
+                        $join_has_all_id_props = 0;
+                        last;
                     }
+                    next JOIN if ( $join_has_all_id_props and ! scalar(keys %join_properties));
+
+                    my @template_filter_names = @{$join->{'foreign_property_names'}};
+                    my @where_values;
+                    if ($join->{'where'}) {
+                        for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
+                            push @template_filter_names, $join->{'where'}->[$i];
+                            push @where_values, $join->{'where'}->[$i+1];
+                        }
+                    }
+
+                    $rule_hints{$hint} ||= [];
+                    my $hint_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
+                                                                         @template_filter_names);
+                    push @{$rule_hints{$hint}}, [ [ $hint_rule_tmpl->_property_names ], $hint_rule_tmpl];
+
+                    # Make notes in all_params_loaded about these things we're hinting on.
+                    # This way, if they return no matches, then we'll remember that for later queries
+                    my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
+                    my $related_obj_rule = $hint_rule_tmpl->get_rule_for_values(@related_obj_values, @where_values);
+                    $UR::Context::all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = undef;
+                    $local_all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = 0;
                 }
+            }
 
-                $rule_hints{$hint} ||= [];
-                my $hint_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
-                                                                     @template_filter_names);
-                push @{$rule_hints{$hint}}, [ [ $hint_rule_tmpl->_property_names ], $hint_rule_tmpl];
+        } elsif (@{$template_data->{'joins'}}) {
+            # This non-primary object is getting loaded as a result of an indirect 
+            # property leading to a join.  Set up some stuff so we can note in all_params_loaded
+            # that these other things are getting loaded, too.  Look through the rule and see 
+            # which property in the rule gets us to this class
+            DELEGATION:
+            foreach my $delegated_property_name ( $rule_template->_property_names ) {
+                my $delegated_property_meta = $query_class_meta->property_meta_for_name($delegated_property_name);
+                next DELEGATION unless ($delegated_property_meta and $delegated_property_meta->is_delegated);
+                my $delegation_final_property_meta = $delegated_property_meta->final_property_meta;
 
-                # Make notes in all_params_loaded about these things we're hinting on.
-                # This way, if they return no matches, then we'll remember that for later queries
-                my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
-                my $related_obj_rule = $hint_rule_tmpl->get_rule_for_values(@related_obj_values, @where_values);
-                $UR::Context::all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = undef;
-                $local_all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = 0;
+                JOIN:
+                foreach my $join ( $delegated_property_meta->_get_joins ) {
+                    next JOIN unless ($join->{'foreign_class'} eq $loading_template->{'data_class_name'});
+
+                    # Is this the equivalent of loading by the class' ID?
+                    my $foreign_class_meta = $join->{'foreign_class'}->__meta__;
+                    my %join_properties = map { $_ => 1 } @{$join->{'foreign_property_names'}};
+                    my $join_has_all_id_props = 1;
+                    foreach my $foreign_id_prop ( $foreign_class_meta->all_id_property_metas ) {
+                        next if ($foreign_id_prop->class_name eq 'UR::Object');  # Skip the manufactured property called id
+                        next if (delete $join_properties{ $foreign_id_prop->property_name });
+                        # If we get here, there's an ID property that isn't mentioned in the join properties
+                        $join_has_all_id_props = 0;
+                        last;
+                    }
+                    next JOIN if ( $join_has_all_id_props and ! scalar(keys %join_properties));
+
+                    my @template_filter_names = @{$join->{'foreign_property_names'}};
+                    my @where_values;
+                    if ($join->{'where'}) {
+                        for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
+                            push @template_filter_names, $join->{'where'}->[$i];
+                            push @where_values, $join->{'where'}->[$i+1];
+                        }
+                    }
+
+                    if ($delegation_final_property_meta->class_name eq $join->{'foreign_class'}) {
+                        push @template_filter_names, $delegation_final_property_meta->property_name;
+                    }
+
+                    $rule_hints{$delegated_property_name} ||= [];
+                    my $hint_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
+                                                                         @template_filter_names);
+                    push @{$rule_hints{$delegated_property_name}}, [ [ $hint_rule_tmpl->_property_names ], $hint_rule_tmpl];
+
+                    ## Make notes in all_params_loaded about these things we're hinting on.
+                    ## This way, if they return no matches, then we'll remember that for later queries
+                    #my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
+                    #my $related_obj_rule = $hint_rule_tmpl->get_rule_for_values(@related_obj_values, @where_values);
+                    #$UR::Context::all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = undef;
+                    #$local_all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = 0;
+                }
             }
         }
     }
@@ -670,9 +729,9 @@ sub create_for_loading_template {
     # The new behavior builds up changes to be made to all_params_loaded, and someone
     # needs to call $object_fabricator->finalize() to apply these changes
     $fabricator_obj = $fab_class->_create(fabricator => $object_fabricator,
-                                         context    => $context,
-                                         all_params_loaded => $local_all_params_loaded,
-                                         in_clause_values  => \%in_clause_values);
+                                          context    => $context,
+                                          all_params_loaded => $local_all_params_loaded,
+                                          in_clause_values  => \%in_clause_values);
 
     return $fabricator_obj;
 }
@@ -765,10 +824,11 @@ sub apply_all_params_loaded {
 
     my $local_all_params_loaded = $self->{'all_params_loaded'};
 
-    foreach my $template_id ( keys %$local_all_params_loaded ) {
-        while(1) {
-            my($rule_id,$val) = each %{$local_all_params_loaded->{$template_id}};
-            last unless defined $rule_id;
+    my @template_ids = keys %$local_all_params_loaded;
+    foreach my $template_id ( @template_ids ) {
+        my @rule_ids = keys %{$local_all_params_loaded->{$template_id}};
+        foreach my $rule_id ( @rule_ids ) {
+            my $val = $local_all_params_loaded->{$template_id}->{$rule_id};
             next unless exists $UR::Context::all_params_loaded->{$template_id}->{$rule_id};  # Has unload() removed this one earlier?
             $UR::Context::all_params_loaded->{$template_id}->{$rule_id} += $val;
         }
@@ -777,9 +837,12 @@ sub apply_all_params_loaded {
     # Anything left in here is in-clause values that matched nothing.  Make a note in
     # all_params_loaded showing that so later queries for those values won't hit the 
     # data source
-    my $in_clause_values = $self->in_clause_values;
-    foreach my $property ( keys %$in_clause_values ) {
-        while (my($value, $data) = each %{$in_clause_values->{$property}} ) {
+    my $in_clause_values = $self->{'in_clause_values'};
+    my @properties = keys %$in_clause_values;
+    foreach my $property ( @properties ) {
+        my @values = keys %{$in_clause_values->{$property}};
+        foreach my $value ( @values ) {
+            my $data = $in_clause_values->{$property}->{$value};
             $UR::Context::all_params_loaded->{$data->[0]}->{$data->[1]} = 0;
         }
     }
@@ -801,7 +864,6 @@ sub DESTROY {
         # completion, and we should add our data to it.  Otherwise, we're the only query like
         # this and all_params_loaded should be cleaned out
         foreach my $template_id ( keys %$local_all_params_loaded ) {
-            next if ($template_id eq '__in_clause_values__');
             while(1) {
                 my($rule_id, $val) = each %{$local_all_params_loaded->{$template_id}};
                 last unless $rule_id;

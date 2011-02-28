@@ -2463,7 +2463,7 @@ sub _create_import_iterator_for_underlying_context {
                 }
                 push @imported, $imported_object;
             }
-            
+
             $primary_object_for_next_db_row = $imported[-1];
             my $this_object_was_already_cached = defined($primary_object_for_next_db_row)
                                               && ref($primary_object_for_next_db_row)
@@ -2538,7 +2538,13 @@ sub _create_import_iterator_for_underlying_context {
 
             
         } # end of loop until we have a defined object to return
-        
+
+        foreach my $object_fabricator ( @object_fabricators ) {
+            # Don't apply all_params_loaded for primary fab until it's all done
+            next if ($object_fabricator eq $object_fabricators[-1]);
+            $object_fabricator->apply_all_params_loaded;
+        }
+
         my $retval = $next_object_to_return;
         $next_object_to_return = $primary_object_for_next_db_row;
         return $retval;
