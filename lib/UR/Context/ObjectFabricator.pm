@@ -753,6 +753,16 @@ sub delete_from_all_params_loaded {
 sub finalize {
     my $self = shift;
 
+    $self->apply_all_params_loaded();
+
+    delete $all_object_fabricators{$self};
+    $self->{'all_params_loaded'} = undef;
+}   
+
+
+sub apply_all_params_loaded {
+    my $self = shift;
+
     my $local_all_params_loaded = $self->{'all_params_loaded'};
 
     foreach my $template_id ( keys %$local_all_params_loaded ) {
@@ -771,12 +781,11 @@ sub finalize {
     foreach my $property ( keys %$in_clause_values ) {
         while (my($value, $data) = each %{$in_clause_values->{$property}} ) {
             $UR::Context::all_params_loaded->{$data->[0]}->{$data->[1]} = 0;
-        }   
-    }   
+        }
+    }
 
-    delete $all_object_fabricators{$self};
-    $self->{'all_params_loaded'} = undef;
-}   
+    $self->{'all_params_loaded'} = {};
+}
 
 
 sub DESTROY {
