@@ -739,17 +739,6 @@ sub create_for_loading_template {
 
 
 sub all_object_fabricators {
-    #my @fabricators;
-    #my @delete;
-    #foreach my $key ( keys %all_object_fabricators ) {
-    #    if ($all_object_fabricators{$key}) {
-    #        push @fabricators, $all_object_fabricators{$key};
-    #    } else {
-    #        push @delete, $key;
-    #    }
-    #}
-    #delete @all_object_fabricators{@delete};
-    #return @fabricators;
     return values %all_object_fabricators;
 }
 
