@@ -87,7 +87,7 @@ for my $t (@t) {
     my $d = Time::HiRes::time()-$t1;
     my $diff = ($prev_d ? $d/$prev_d : 0);
     $prev_d = $d;
-    print "$d for $n of $t\n ...$diff x slower\n\n";
+    print "$d seconds for $n of: $t\n ...$diff x slower than the prior\n\n";
 }
 
 package Bar;

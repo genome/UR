@@ -28,9 +28,8 @@ sub mk_rw_accessor {
             # The accessors may compare undef and an empty
             # string.  For speed, we turn warnings off rather
             # than add extra code to make the warning disappear.
-            no warnings;
-
-            if ($old ne $new)
+            my $different = eval { no warnings;  $old ne $new };
+            if ($different or $@ =~ m/has no overloaded magic/)
             {
                 $_[0]->{ $property_name } = $new;
                 $_[0]->__signal_change__( $accessor_name, $old, $new ) unless $is_transient; # FIXME is $is_transient right here?  Maybe is_volitile instead (if at all)?
@@ -79,9 +78,8 @@ sub mk_ro_accessor {
             my $old = $_[0]->{ $property_name};
             my $new = $_[1];
 
-            no warnings;
-
-            if ($old ne $new)
+            my $different = eval { no warnings;  $old ne $new };
+            if ($different or $@ =~ m/has no overloaded magic/)
             {
                 Carp::croak("Cannot change read-only property $accessor_name for class $class_name!"
                 . "  Failed to update " . $_[0]->__display_name__ . " property: $property_name from $old to $new");
@@ -201,6 +199,8 @@ sub mk_id_based_object_accessor {
 sub _resolve_bridge_logic_for_indirect_property {
     my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where) = @_;
 
+    $DB::single = 1 if $accessor_name eq 'car_parts_prices';
+
     my $bridge_collector = sub { my $self = shift; return $self->$via(@$where) };
     my $bridge_crosser = sub { return map { $_->$to} @_ };
 
@@ -220,7 +220,7 @@ sub _resolve_bridge_logic_for_indirect_property {
     }
 
     if ($my_property_meta->is_delegated and $my_property_meta->is_many
-        and $via_property_meta->is_many and $via_property_meta->to and $via_property_meta->reverse_as
+        and $via_property_meta->is_many and $via_property_meta->reverse_as
         and $via_property_meta->data_type and $via_property_meta->data_type->isa('UR::Object')
     ) {
         my $bridge_class = $via_property_meta->data_type;
@@ -268,7 +268,7 @@ sub _resolve_bridge_logic_for_indirect_property {
              my $second_via_property_meta = $to_property_meta->via_property_meta; 
              my $final_class_name = $second_via_property_meta->data_type;
          
-             if ($final_class_name and $final_class_name->isa('UR::Object')) {
+             if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
                  my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
                  if (@via2_join_properties > 1) {
                      Carp::carp("via2 join not implemented :(");
@@ -310,7 +310,11 @@ sub _resolve_bridge_logic_for_indirect_property {
 
                 my @results;
                 foreach my $result_class ( keys %result_class_names_and_ids ) {
-                    push @results, $result_class->get($result_class_names_and_ids{$result_class});
+                    if($result_class eq 'UR::Value') { #can't group queries together for UR::Values
+                        push @results, map { $result_class->get($_) } @{$result_class_names_and_ids{$result_class}};
+                    } else {
+                        push @results, $result_class->get($result_class_names_and_ids{$result_class});
+                    }
                 }
                 return @results;
             };
@@ -348,6 +352,10 @@ sub mk_indirect_ro_accessor {
         my @results = $bridge_crosser->(@bridges);
         $self->context_return(@results); 
     };
+
+    unless ($accessor_name) {
+        Carp::confess("No accessor name specified for indirect ro accessor $class_name $accessor!");
+    }
 
     Sub::Install::reinstall_sub({
         into => $class_name,
@@ -710,7 +718,8 @@ sub mk_dimension_delegate_accessors {
                 # (farther below).
                 my $old = $delegate->$other_accessor_name;
                 my $new = shift;                    
-                if (do { no warnings; $old ne $new }) {
+                my $different = eval { no warnings; $old ne $new };
+                if ($different or $@ =~ m/has no overloaded magic/) {
                     $self->{$accessor_name} = undef;
                     for my $property (@$non_id_properties) {
                         if ($property eq $other_accessor_name) {
@@ -733,8 +742,8 @@ sub mk_dimension_delegate_accessors {
                 # set
                 my $old = $self->{ $other_accessor_name };
                 my $new = shift;
-                if ($old ne $new)
-                {
+                my $different = eval { no warnings; $old ne $new };
+                if ($different or $@ =~ m/has no overloaded magic/) {
                     $self->{ $other_accessor_name } = $new;
                     $self->__signal_change__( $other_accessor_name, $old, $new ) unless $is_transient;
                 }
@@ -771,8 +780,8 @@ sub mk_dimension_identifying_accessor {
         if (@_ > 1) {
             my $old = $_[0]->{ $accessor_name };
             my $new = $_[1];
-            if ($old ne $new)
-            {
+            my $different = eval { no warnings; $old ne $new };
+            if ($different or $@ =~ m/has no overloaded magic/) {
                 $_[0]->{ $accessor_name } = $new;
                 $_[0]->__signal_change__( $accessor_name, $old, $new ) unless $is_transient;
             }
@@ -839,8 +848,8 @@ sub mk_ro_class_accessor {
 
             no warnings;
 
-            if ($old ne $new)
-            {
+            my $different = eval { no warnings; $old ne $new };
+            if ($different or $@ =~ m/has no overloaded magic/) {
                 Carp::croak("Cannot change read-only class-wide property $accessor_name for class $class_name from $old to $new!");
             }
             return $new;
@@ -1358,7 +1367,11 @@ sub initialize_direct_accessors {
             }
             @$isa = @old_isa;
         };
-        
+
+        unless ($accessor_name) {
+            Carp::confess("No accessor name for property $class_name $property_name?");
+        }        
+
         my $accessor_type;
         my @calculation_fields = (qw/calculate calc_perl calc_sql calculate_from/);
         if (my $id_by = $property_data->{id_by}) {

@@ -183,6 +183,74 @@ sub get_unique_index_details_from_data_dictionary {
     return $ret;
 }
 
+sub set_userenv {
+
+    # there are two places to set these oracle variables-
+    # 1. this method in UR::DataSource::Oracle is a class method
+    # that can be called to change the values later
+    # 2. the method in YourSubclass::DataSource::Oracle is called in
+    # _init_created_dbh which is called while the datasource
+    # is still being set up- it operates directly on the db handle 
+
+    my ($self, %p) = @_;
+
+    my $dbh = $p{'dbh'} || $self->get_default_dbh();
+
+    # module is application name
+    my $module = $p{'module'} || $0;
+
+    # storing username in 'action' oracle variable
+    my $action = $p{'action'};
+    if (! defined($action)) {
+        $action = getpwuid($>); # real UID
+    }
+
+    die "Error setting userenv: module=$module action=$action" if (!$module or !$action);
+
+    my $sql = q{BEGIN dbms_application_info.set_module(?, ?); END;};
+
+    my $sth = $dbh->prepare($sql);
+    if (!$sth) {
+        warn "Couldnt prepare query to set module/action in Oracle";
+        return undef;
+    }
+
+    $sth->execute($module, $action) || warn "Couldnt set module/action in Oracle";
+}
+
+sub get_userenv {
+
+    # there are two ways to set these values but this is
+    # the only way to retreive the values after they are set
+
+    my ($self, $dbh) = @_;
+
+    if (!$dbh) {
+        $dbh = $self->get_default_dbh();
+    }
+
+    if (!$dbh) {
+        warn "No dbh";
+        return undef;
+    }
+
+    my $sql = q{
+        SELECT sys_context('USERENV','MODULE') as module,
+               sys_context('USERENV','ACTION') as action
+          FROM dual
+    };
+
+    my $sth = $dbh->prepare($sql);
+    return undef unless $sth;
+
+    $sth->execute() || die "execute failed: $!";
+    my $r = $sth->fetchrow_hashref();
+
+    return $r;
+}
+
+
+
 
 1;
 

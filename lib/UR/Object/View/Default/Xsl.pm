@@ -208,7 +208,6 @@ sub url_to_type {
 }
 
 ## register a helper function for xslt
-#  this translates Genome::InstrumentData to genome/instrument-data
 XML::LibXSLT->register_function( 'urn:rest', 'typetourl', \&type_to_url );
 XML::LibXSLT->register_function( 'urn:rest', 'urltotype', \&url_to_type );
 

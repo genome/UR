@@ -4,6 +4,7 @@ use warnings;
 use strict;
 require UR;
 use Lingua::EN::Inflect;
+use Class::AutoloadCAN;
 
 our $VERSION = "0.29"; # UR $VERSION;;
 our @CARP_NOT = qw( UR::DataSource::RDBMS );
@@ -360,7 +361,7 @@ sub CAN {
         if (my $method = $self->{$accessor_key}) {
             return $method;
         }
-        if (exists $self->{$method}) {
+        if (exists $self->class_name->__meta__->{attributes_have}{$method}) {
             return $self->{$accessor_key} = sub {
                 return $_[0]->{$method};
             }
@@ -369,7 +370,6 @@ sub CAN {
     return;
 }
 
-eval "use Class::AutoloadCAN";
 
 1;
 

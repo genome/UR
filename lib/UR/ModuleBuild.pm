@@ -18,8 +18,8 @@ our $cmd_class = 'UR::Namespace::Command';
 sub ACTION_ur_docs {
     # We want to use UR to autodocument our code.  This is done
     # with module introspection and requires some namespace hackery
-    # to work.  ./Build doc comes after ./Build and copies Genome.pm
-    # into ./blib to fake a Genome namespace so this will work.
+    # to work.  ./Build doc comes after ./Build and copies the root
+    # namespace module into ./blib to fake a Genome namespace so this will work.
     use File::Copy qw/copy/;
     $ENV{ANSI_COLORS_DISABLED} = 1;
     
@@ -28,14 +28,14 @@ sub ACTION_ur_docs {
 
         unshift @INC, "$ENV{PWD}/blib/lib";
 
-        my ($genome_src_dir) = grep { -s "$_/$ns.pm" } @INC;
-        unless ($genome_src_dir) {
+        my ($namespace_src_dr) = grep { -s "$_/$ns.pm" } @INC;
+        unless ($namespace_src_dr) {
         die "Failed to find $ns.pm in \@INC.\n";
         }
 
         chdir "$ENV{PWD}/blib/lib/$ns" || die "Can't find $ns/";
         unless (-e "../$ns.pm") {
-            copy "$genome_src_dir/$ns.pm", "../$ns.pm" || die "Can't find $ns.pm";
+            copy "$namespace_src_dr/$ns.pm", "../$ns.pm" || die "Can't find $ns.pm";
         }
 
         eval "use $ns";
