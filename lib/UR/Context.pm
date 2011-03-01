@@ -2529,6 +2529,11 @@ sub _create_import_iterator_for_underlying_context {
                 redo LOAD_AN_OBJECT;
             }
 
+            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($primary_object_for_next_db_row)) {
+                $primary_object_for_next_db_row = undef;
+                redo LOAD_AN_OBJECT;
+            }
+
             if (! $next_object_to_return or $next_object_to_return eq $primary_object_for_next_db_row) {
                 # The first time through the iterator, we need to buffer the object until
                 # $primary_object_for_next_db_row is something different.
@@ -2537,11 +2542,6 @@ sub _create_import_iterator_for_underlying_context {
                 redo LOAD_AN_OBJECT;
             }
             
-            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($primary_object_for_next_db_row)) {
-                $primary_object_for_next_db_row = undef;
-                redo LOAD_AN_OBJECT;
-            }
-
             
         } # end of loop until we have a defined object to return
 
