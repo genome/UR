@@ -262,13 +262,6 @@ sub create_for_loading_template {
                     my $hint_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
                                                                          @template_filter_names);
                     push @{$rule_hints{$delegated_property_name}}, [ [ $hint_rule_tmpl->_property_names ], $hint_rule_tmpl];
-
-                    ## Make notes in all_params_loaded about these things we're hinting on.
-                    ## This way, if they return no matches, then we'll remember that for later queries
-                    #my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
-                    #my $related_obj_rule = $hint_rule_tmpl->get_rule_for_values(@related_obj_values, @where_values);
-                    #$UR::Context::all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = undef;
-                    #$local_all_params_loaded->{$hint_rule_tmpl->id}->{$related_obj_rule->id} = 0;
                 }
             }
         }
