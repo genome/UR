@@ -4225,46 +4225,6 @@ successfully joins to the primary data.  You can think of these closures as
 performing the same work as an SQL C<join> between data in different data
 sources.
 
-=item __create_object_fabricator_for_loading_template
-
-  $subref = $context->__create_object_fabricator_for_loading_template(
-                          $loading_tmpl_hashref,
-                          $template_data,
-                          $boolexpr,
-                          $boolexpr_tmpl,
-                          $boolexpr_values_listref,
-                          $data_source);
-  $obj = $subref->($data_source_data_listref);
-
-This method is part of the object loading process, and is called by
-L</get_objects_for_class_and_rule> to transform a row of data returned by
-a data source iterator into a UR object.  
-
-For each class involved in a get request, the system prepares a loading
-template that describes which columns of the data source data are to be
-used to construct an instance of that class.  For example, in the case where
-a get() is done on a child class, and the parent and child classes store data
-in separate tables linked by a relation-property/foreign-key, then the query
-against the data source will involve and SQL join (for RDBMS data sources).
-That join will produce a result set that includes data from both tables.
-
-The C<$loading_tmpl_hashref> will have information about which columns of
-that result set map to which properties of each involved class.  The heart
-of the fabricator closure is a list slice extracting the data for that class
-and assigning it to a hash slice of properties to fill in the initial object
-data for its class.  The remainder of the closure is bookkeeping to keep the
-object cache ($UR::Context::all_objects_loaded) and query cache 
-($UR::Context::all_params_loaded) consistent.
-
-The interaction of the object fabricator, the query cache, object cache
-pruner and object loading iterators that may or may not have loaded all
-their data requires that the object fabricators keep a list of changes they
-plan to make to the query cache instead of applying them directly.  When
-the Underlying Context Loading iterator has loaded the last row from the
-Data Source Iterator, it calls C<finalize()> on the object fabricator to
-tell it to go ahead and apply its changes; essentially treating that
-data as a transaction.
-
 =item _cache_is_complete_for_class_and_normalized_rule
 
   ($is_cache_complete, $objects_listref) =
