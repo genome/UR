@@ -50,7 +50,7 @@ UR::Object::Type->define(
         name      => { is => 'String' },
         models    => { is => 'URT::Model', is_many => 1, reverse_as => 'manufacturer', is_optional => 1 },
         #model_ids => { via => 'models', to => 'model_id', is_many => 1, is_optional => 1 },
-        model_ids => { via => 'models', to => 'id', is_many => 1, is_optional => 1 },
+        model_ids => { via => 'models', to => 'model_id', is_many => 1, is_optional => 1 },
     ],
 );
 
@@ -139,7 +139,7 @@ $query_count = 0;
 @models = URT::Model->get(model_id => 99);
 is(scalar(@models), 0, 'Got no models with model_id 99');
 SKIP: {
-    skip 1, "via properties don't record info in all_params_loaded yet";
+    skip "via properties don't record info in all_params_loaded yet", 1;
     is($query_count, 0, 'Made no queries');
 }
 
