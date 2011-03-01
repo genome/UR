@@ -592,17 +592,12 @@ sub create_for_loading_template {
                     #print "Object does not match rule!" . Dumper($pending_db_object,[$rule->params_list]) . "\n";
                     #$DB::single = 1;
                     #$rule->evaluate($pending_db_object);
-                    #$DB::single = 1;
-                    #$rule->evaluate($pending_db_object);
                     return;
-                    #$pending_db_object = undef;
-                    #redo;
                 }
             } # end of sub-classification code
 
             # Signal that the object has been loaded
             # NOTE: until this is done indexes cannot be used to look-up an object
-            #$pending_db_object->__signal_change__('load_external');
             $pending_db_object->__signal_change__('load');
 
             #$DB::single = 1;
@@ -614,8 +609,6 @@ sub create_for_loading_template {
                 not $rule->evaluate($pending_db_object)
             ) {
                 return;
-                #$pending_db_object = undef;
-                #redo;
             }
         } # end handling newly loaded objects
 
@@ -623,7 +616,6 @@ sub create_for_loading_template {
         if (keys(%rule_hints)) {
             #$DB::single=1;
             foreach my $hint ( keys(%rule_hints) ) {
-                #my @other_objs = UR::Context->get_current->infer_property_value_from_rule($hint, $rule);
                 foreach my $hint_data ( @{ $rule_hints{$hint}} ) {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
                     my $rule_tmpl = $hint_data->[1];
@@ -649,7 +641,6 @@ sub create_for_loading_template {
                 # Log the smaller query which would get the hierarchically linked data directly as though it happened directly.
                 $recurse_property_value_found{$value_referencing_other_object} = 1;
                 # note that the direct query need not be done again
-                #my $equiv_params = $class->define_boolexpr($recurse_property_on_this_row => $value_referencing_other_object);
                 my $equiv_rule = UR::BoolExpr->resolve_normalized(
                                        $class,
                                        $recurse_property_on_this_row => $value_referencing_other_object,
@@ -658,7 +649,6 @@ sub create_for_loading_template {
                 my $equiv_template_id = $equiv_rule->template_id;
 
                 # note that the recursive query need not be done again
-                #my $equiv_params2 = $class->define_boolexpr($recurse_property_on_this_row => $value_referencing_other_object, -recurse => $recursion_desc);
                 my $equiv_rule_2 = UR::BoolExpr->resolve_normalized(
                                         $class,
                                         $recurse_property_on_this_row => $value_referencing_other_object,
@@ -686,7 +676,6 @@ sub create_for_loading_template {
             if (defined($value_by_which_this_object_is_loaded_via_recursion) and $recurse_property_value_found{$value_by_which_this_object_is_loaded_via_recursion}) {
                 # This row was expected because some other row in the hierarchical query referenced it.
                 # Up the object count, and note on the object that it is a result of this query.
-                #my $equiv_params = $class->define_boolexpr($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion);
                 my $equiv_rule = UR::BoolExpr->resolve_normalized(
                                        $class,
                                        $recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion,
@@ -695,7 +684,6 @@ sub create_for_loading_template {
                 my $equiv_template_id = $equiv_rule->template_id;
 
                 # note that the recursive query need not be done again
-                #my $equiv_params2 = $class->define_boolexpr($recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion, -recurse => $recursion_desc);
                 my $equiv_rule_2 = UR::BoolExpr->resolve_normalized(
                                         $class,
                                         $recurse_property_on_this_row => $value_by_which_this_object_is_loaded_via_recursion,
