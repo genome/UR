@@ -215,7 +215,7 @@ sub _get_joins {
                 Carp::croak "Can't resolve property '$property_name' of $class_name: No via meta for '$via'?";
             }
 
-            if ($via_meta->to eq '-filter') {
+            if (defined($via_meta->to) and $via_meta->to eq '-filter') {
                 return $via_meta->_get_joins;
             }
 
