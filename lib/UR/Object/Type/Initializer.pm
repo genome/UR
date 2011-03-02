@@ -749,7 +749,6 @@ sub _normalize_class_description {
 
             # the the parent classes indicate version, if needed
             if ($parent_class->{'subclassify_by_version'} and not $parent_class_name =~ /::Ghost/) {
-                $DB::single = 1;
                 unless ($class_name =~ /^${parent_class_name}::V\d+/) {
                     my $ns = $parent_class_name;
                     $ns =~ s/::.*//;

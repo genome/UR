@@ -118,10 +118,27 @@ sub _init_database {
 
     my $db_file     = $self->server;
     my $dump_file   = $self->_data_dump_path;
+    my $schema_file = $self->_schema_path;
 
     my $db_time     = (stat($db_file))[9];
-    my $dump_time   = (stat($dump_file))[9];  
+    my $dump_time   = (stat($dump_file))[9];
+    my $schema_time = (stat($schema_file))[9];
 
+    if ($schema_time && ((-e $db_file and $schema_time > $db_time) or (-e $dump_file and $schema_time > $dump_time))) {
+        $self->warning_message("Schema file is newer than the db file or the dump file.  Replacing db_file $db_file.");
+        my $dbbak_file = $db_file . '-bak';
+        my $dumpbak_file = $dump_file . '-bak';
+        unlink $dbbak_file if -e $dbbak_file;
+        unlink $dumpbak_file if -e $dumpbak_file;
+        rename $db_file, $dbbak_file if -e $db_file;
+        rename $dump_file, $dumpbak_file if -e $dump_file;
+        if (-e $db_file) {
+            Carp::croak "Failed to move out-of-date file $db_file out of the way for reconstruction! $!";
+        }
+        if (-e $dump_file) {
+            Carp::croak "Failed to move out-of-date file $dump_file out of the way for reconstruction! $!";
+        }
+    }
     if (-e $db_file) {
         if ($dump_time && ($db_time < $dump_time)) {
             my $bak_file = $db_file . '-bak';
@@ -132,9 +149,6 @@ sub _init_database {
                 Carp::croak "Failed to move out-of-date file $db_file out of the way for reconstruction! $!";
             }
         }
-        #else {
-        #   $self->debug_message("Leaving db in place.  Dump file is older.");
-        #}
     }
 
     # NOTE: don't make this an "else", since we might go into both branches because we delete the file above.
@@ -143,8 +157,6 @@ sub _init_database {
         # should this be moved to connect time?
 
         # TODO: auto re-create things as needed based on timestamp
-
-        my $schema_file = $self->_schema_path;
 
         if (-e $dump_file) {
             # create from dump
