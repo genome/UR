@@ -83,6 +83,9 @@ BEGIN {
     }
 };
 
+# Regular deps
+use Date::Format;
+
 #
 # Because UR modules execute code when compiling to define their classes,
 # and require each other for that code to execute, there are bootstrapping 
@@ -98,7 +101,6 @@ BEGIN {
 
 require UR::Exit;
 require UR::Util;
-require UR::Time;
 
 require UR::Report;         # this is used by UR::DBI
 require UR::DBI;            # this needs a new name, and need only be used by UR::DataSource::RDBMS

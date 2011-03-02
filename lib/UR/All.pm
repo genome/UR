@@ -191,7 +191,6 @@ use UR::Service::RPC::Server;
 use UR::Service::RPC::TcpConnectionListener;
 use UR::Singleton;
 use UR::Test;
-use UR::Time;
 use UR::Util;
 use UR::Value;
 use UR::Value::ARRAY;

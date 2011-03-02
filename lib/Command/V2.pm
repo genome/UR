@@ -312,25 +312,21 @@ sub help_brief
 }
 
 
-sub help_synopsis 
-{
+sub help_synopsis {
     my $self = shift;
     return '';
 }
 
-sub help_detail 
-{
+sub help_detail {
     my $self = shift;
     return "!!! define help_detail() in module " . ref($self) || $self . "!";
 }
 
-sub sub_command_category 
-{
+sub sub_command_category {
     return;
 }
 
-sub sub_command_sort_position 
-{ 
+sub sub_command_sort_position { 
     # override to do something besides alpha sorting by name
     return '9999999999 ' . $_[0]->command_name_brief;
 }
@@ -340,16 +336,14 @@ sub sub_command_sort_position
 # Self reflection
 #
 
-sub is_abstract 
-{
+sub is_abstract {
     # Override when writing an subclass which is also abstract.
     my $self = shift;
     my $class_meta = $self->__meta__;
     return $class_meta->is_abstract;
 }
 
-sub is_executable 
-{
+sub is_executable {
     my $self = shift;
     if ($self->can("_execute_body") eq __PACKAGE__->can("_execute_body")) {
         return;
@@ -362,8 +356,7 @@ sub is_executable
     }
 }
 
-sub is_sub_command_delegator
-{
+sub is_sub_command_delegator {
     my $self = shift;
     if (scalar($self->sub_command_dirs)) {
         return 1;
@@ -373,15 +366,7 @@ sub is_sub_command_delegator
     }
 }
 
-sub _time_now 
-{
-    # return the current time in context
-    # this may not be the real time in selected cases
-    UR::Time->now;    
-}
-
-sub color_command_name 
-{
+sub color_command_name {
     my $text = shift;
     
     my $colored_text = [];

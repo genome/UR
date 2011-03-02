@@ -13,8 +13,8 @@ UR::Object::Type->define(
         parent  => { is => 'UR::Context', id_by => 'parent_id', is_optional => 1 }
     ],
     doc => <<EOS
-The environment in which oo-activity occurs in UR.  The current context represents the current state 
-of everything.  It acts at the intermediary between the current application and underlying database(s).
+The environment in which all data examination and change occurs in UR.  The current context represents the current 
+state of everything, and acts as a manager/intermediary between the current application and underlying database(s).
 This is responsible for mapping object requests to database requests, managing caching, transaction
 consistency, locking, etc. by delegating to the correct components to handle these tasks.
 EOS
@@ -24,7 +24,6 @@ our @CARP_NOT = qw( UR::Object::Iterator );
 
 # These references all point to internal structures of the current process context.
 # They are created here for boostrapping purposes, because they must exist before the object itself does.
-
 our $all_objects_loaded ||= {};               # Master index of all tracked objects by class and then id.
 our $all_change_subscriptions ||= {};         # Index of other properties by class, property_name, and then value.
 our $all_objects_are_loaded ||= {};           # Track when a class informs us that all objects which exist are loaded.
@@ -89,10 +88,13 @@ sub _initialize_for_current_process {
 
 
 # the current context is either the process context, or the current transaction on-top of it
-
 *get_current = \&current;
 sub current {
     return $UR::Context::current;
+}
+
+sub now {
+    return Date::Format::time2str(q|%Y-%m-%d %H:%M:%S|,time());
 }
 
 my $master_monitor_query = 0;
@@ -3785,44 +3787,6 @@ sub _get_all_subsets_of_params {
 
 sub has_changes {
     return shift->get_current->has_changes(@_);
-}
-
-sub get_time_ymdhms {
-    my $self = shift;
-
-    return;
-    
-    # TODO: go through the DBs and find one with the ability to do systime.
-    # Failing that, return the local time.
-    
-    # Old UR::Time logic:
-    
-    return unless ($self->get_data_source->has_default_dbh);
-
-    $DB::single = 1;
- 
-    # synchronize with the database and store the difference 
-    # get database time (query is Oracle specific)
-    my $date_query = q(select sysdate from dual);
-    my ($db_time); # = ->dbh->selectrow_array($date_query);
-
-    # parse database time
-    my @db_now = strptime($db_time);
-    if (@db_now)
-    {
-        # correct month and year
-        ++$db_now[4];
-        $db_now[5] += 1900;
-        # reverse order
-        @db_now = reverse((@db_now)[0 .. 5]);
-    }
-    else
-    {
-        $self->warning_message("failed to parse $db_time with strptime");
-        # fall back to old method
-        @db_now = split(m/[-\s:]/, $db_time);
-    }
-    return @db_now;
 }
 
 sub commit {

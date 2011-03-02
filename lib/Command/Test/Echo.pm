@@ -16,7 +16,7 @@ class Command::Test::Echo {
 
 sub execute {
     my $self = shift;
-    print "job " . $self->id . " started at " . UR::Time->now . "\n";
+    print "job " . $self->id . " started at " . $self->__context__->now . "\n";
     print STDERR "test error!\n";
     for (1..10) {
         print $self->in,"\n";
