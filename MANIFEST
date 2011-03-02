@@ -351,7 +351,6 @@ t/URT/t/09_create_get_complex2.t
 t/URT/t/10_accessor_object.t
 t/URT/t/11_create_with_delegated_property.t
 t/URT/t/12_properties_metadata_query.t
-t/URT/t/13_command_message.t
 t/URT/t/13a_command_message_v1.t
 t/URT/t/13b_command_message_v2.t
 t/URT/t/14_ghost_objects.t
