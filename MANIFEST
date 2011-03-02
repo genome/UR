@@ -39,6 +39,7 @@ lib/UR/BoolExpr/Template/PropertyComparison/True.pm
 lib/UR/BoolExpr/Util.pm
 lib/UR/Change.pm
 lib/UR/Context.pm
+lib/UR/Context/ObjectFabricator.pm
 lib/UR/Context/DefaultRoot.pm
 lib/UR/Context/Process.pm
 lib/UR/Context/Root.pm

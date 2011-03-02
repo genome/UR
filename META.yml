@@ -119,6 +119,8 @@ provides:
   UR::Context::DefaultRoot:
     file: lib/UR/Context/DefaultRoot.pm
     version: 0.29
+  UR::Context::ObjectFabricator:
+    file: lib/UR/Context/ObjectFabricator.pm
   UR::Context::Process:
     file: lib/UR/Context/Process.pm
     version: 0.29
@@ -691,7 +693,6 @@ provides:
     file: lib/UR/Object/Type/Initializer.pm
     version: 2
 requires:
-  CGI::Application: ''
   Carp: ''
   Class::AutoloadCAN: 0.03
   Class::Autouse: 2.0
@@ -706,19 +707,14 @@ requires:
   Getopt::Complete: v0.20
   JSON: ''
   Lingua::EN::Inflect: 1.88
-  Net::HTTPServer: ''
   Path::Class: ''
   Sub::Install: 0.924
   Sub::Name: 0.04
   Sys::Hostname: 1.11
   Test::Fork: ''
   Text::Diff: 0.35
-  XML::Dumper: ''
-  XML::Generator: ''
-  XML::Simple: ''
   YAML: ''
   perl: v5.8.7
-  version: ''
 resources:
   license: http://dev.perl.org/licenses/
 version: 0.29
