@@ -168,14 +168,14 @@ is($file_seek, 0, 'seek() was not called on the file handle');
 
 &clear_trackers();
 # This get() won't close the handle because $all_iter is still running
-$obj = URT::LettersAlternate->get(8);
-ok($obj, 'Use get() to get the eighth object');
-is($obj->name, 'hhh', 'The name was correct');
+$obj = URT::LettersAlternate->get(9);
+ok($obj, 'Use get() to get the ninth object');
+is($obj->name, 'iii', 'The name was correct');
 is($file_new, 0, 'new() was not called on the file handle');
 is($file_open, 0, 'open() was not called on the file handle');
 is($file_close, 0, 'close() was not called on the file handle');
 is($file_seek, 1, 'seek() was called on the file handle');
-is($file_seek_pos, $file_line_length * 6, 'seek() set the file pos to 0'); # Because the lower-case iter gets us this far
+is($file_seek_pos, $file_line_length * 7, 'seek() set the file pos to the 7th line'); # Because the lower-case iter gets us this far
 
 &clear_trackers();
 my $upper_iter = URT::LettersAlternate->create_iterator(is_upper => 1);
@@ -203,7 +203,7 @@ is($file_new, 0, 'new() was not called on the file handle');
 is($file_open, 0, 'open() was not called on the file handle');
 is($file_close, 0, 'close() was not called on the file handle');
 is($file_seek, 1, 'seek() was called on the file handle');
-is($file_seek_pos, $file_line_length * 7, 'seek() set the file pos to 0');
+is($file_seek_pos, $file_line_length * 8, 'seek() set the file pos to the 8th line');
 
 &clear_trackers();
 $obj = $upper_iter->next();
@@ -213,7 +213,7 @@ is($file_new, 0, 'new() was not called on the file handle');
 is($file_open, 0, 'open() was not called on the file handle');
 is($file_close, 0, 'close() was not called on the file handle');
 is($file_seek, 1, 'seek() was called on the file handle');
-is($file_seek_pos, $file_line_length, 'seek() set the file pos to 0');
+is($file_seek_pos, $file_line_length * 2, 'seek() set the file pos to the 1th (second) line');
 
 
 &clear_trackers();
@@ -243,14 +243,14 @@ is($file_seek, 0, 'seek() was called on the file handle');
 
 
 &clear_trackers();
-$obj = URT::LettersAlternate->get(4);
-ok($obj, 'Got object with id 4');
-is($obj->name, 'DDD', 'It was the sixth object');
+$obj = URT::LettersAlternate->get(5);  # something not in the object cache so it will hit the data source
+ok($obj, 'Got object with id 5');
+is($obj->name, 'EEE', 'It has the right name');
 is($file_new, 1, 'new() was called on the file handle');
 is($file_open, 1, 'open() was called on the file handle');
 is($file_close, 1, 'close() was called on the file handle');
 is($file_seek, 1, 'seek() was called on the file handle');
-is($file_seek_pos, $file_line_length*2, 'seek() was to the correct position');  # The uppercase iter gets us this far
+is($file_seek_pos, $file_line_length*3, 'seek() was to the correct position');  # The uppercase iter gets us this far
 
 
 
