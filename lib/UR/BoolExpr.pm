@@ -950,7 +950,7 @@ UR::BoolExpr - a "where clause" for objects
         ssn => '123-45-6789',
         name => 'Pat Jones',
         status => 'active', 
-        start_date => UR::Time->now,
+        start_date => UR::Context->current->now,
         payroll_category => 'hourly',
     );    
         
