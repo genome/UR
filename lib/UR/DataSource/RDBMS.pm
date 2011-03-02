@@ -307,7 +307,7 @@ sub generate_schema_for_class_meta {
 
     unless ($temp) {
         my @ddl = $self->_resolve_ddl_for_table($table);
-        $t = UR::Time->now;
+        $t = $UR::Context::current->now;
         if (@ddl) {
             my $dbh = $table->data_source->get_default_handle;
             for my $ddl (@ddl) {
@@ -791,7 +791,7 @@ sub refresh_database_metadata_for_table_name {
     my @all_constraints;
 
     # this must be on or before the actual data dictionary queries
-    my $revision_time = UR::Time->now();
+    my $revision_time = $UR::Context::current->now();
 
     # We'll count a table object as changed even if any of the columns,
     # FKs, etc # were changed

@@ -197,21 +197,6 @@ sub now
         # format the date accordingly
         return $class->numbers_to_datetime($s, $min, $h, $d, $mon, $y);
     }
-    # else try to get time from database
-    if (my @db_now = $UR::Context::current->get_time_ymdhms()) {
-        
-        # get machine time
-        my (@now) = Date::Pcalc::Today_and_Now;
-
-        # calculate difference
-        @local_time_offset = Date::Pcalc::Delta_YMDHMS(@now, @db_now);
-
-        # set flag to avoid database access next time
-        $use_local_time = 1;
-
-        # return time in default format
-        return $class->numbers_to_datetime(reverse(@db_now));
-    }
     # else just get the time from the machine
     return $class->now_local;
 }

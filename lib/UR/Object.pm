@@ -71,6 +71,7 @@ sub __label_name__ {
 }
 
 sub __display_name__ {
+    # default stringification (does override "" unless you specifically choose to)
     my $self = shift;
     my $in_context_of_related_object = shift;
     
@@ -123,8 +124,10 @@ sub __errors__ {
         
         my $property_name = $property_metadata->property_name;
         
+        # TODO: is this making commits slow by calling lots of indirect accessors?
         my @values = $self->$property_name;
         next if @values > 1;
+
         my $value = $values[0];
 
         unless ($property_metadata->is_optional) {
@@ -142,6 +145,7 @@ sub __errors__ {
         next unless defined $value;
 
         # Check data type
+        # TODO: delegate to the data type module for this
         my $generic_data_type = $property_metadata->generic_data_type || "";
         my $data_length       = $property_metadata->data_length;
 
@@ -435,8 +439,9 @@ sub __changes__ {
  
     my ($self,$optional_property) = @_;
     
+    # performance optimization
     return unless $self->{_change_count};
-    #print "changes on $self! $self->{_change_count}\n";
+    
     my $meta = $self->__meta__;
     if (ref($meta) eq 'UR::DeletedRef') {
         print Data::Dumper::Dumper($self,$meta);
@@ -450,8 +455,7 @@ sub __changes__ {
 
     no warnings;
     my @changed;
-    if ($orig)
-    {
+    if ($orig) {
         my $class_name = $meta->class_name;
         @changed =
             grep {
@@ -463,13 +467,11 @@ sub __changes__ {
             grep { $_ }
             keys %$orig;
     }
-    else
-    {
+    else {
         @changed = $meta->all_property_names
     }
 
-    return map
-    {
+    return map {
         UR::Object::Tag->create
         (
             type => 'changed',
@@ -490,7 +492,7 @@ sub __define__ {
     # Simply assert they already existed externally, and act as though they were just loaded...
     # It is used for classes defined in the source code (which is the default) by the "class {}" magic
     # instead of in some database, as we'd do for regular objects.  It is also used by some test cases.
-    if ($UR::initialized and $_[0] ne 'UR::Object::Property') { # and substr($_[0], 0, 4) ne 'UR::') {
+    if ($UR::initialized and $_[0] ne 'UR::Object::Property') { 
         # the nornal implementation has all create() features
         my $self;
         do {
@@ -515,7 +517,6 @@ sub __define__ {
             }
         }
 
-        #my $self = $class->_create_object(@_);
         my $self = $UR::Context::current->_construct_object($class, @_);
         return unless $self;
         $self->{db_committed} = { %$self };

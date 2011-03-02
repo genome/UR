@@ -369,11 +369,10 @@ sub is_sub_command_delegator
     }
 }
 
-sub _time_now 
-{
+sub _time_now {
     # return the current time in context
     # this may not be the real time in selected cases
-    UR::Time->now;    
+    shift->__context__->now; 
 }
 
 sub color_command_name 
