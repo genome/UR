@@ -711,22 +711,30 @@ See L<UR::Env> for details.
 
 =head1 DEPENDENCIES
 
-Class::Autouse
-Cwd
-Data::Dumper
-Date::Format
-DBI
-File::Basename
-FindBin
-FreezeThaw
-Path::Class
-Scalar::Util
-Sub::Installer
-Sub::Name
-Sys::Hostname
-Text::Diff
-Time::HiRes
-XML::Simple
+perl => 'v5.8.7',
+
+Class::Autouse      
+Class::AutoloadCAN  
+Clone::PP           
+Carp                
+Sys::Hostname       
+File::Basename      
+Lingua::EN::Inflect 
+Date::Format        
+Data::Compare       
+Text::Diff          
+Path::Class         
+Class::Inspector    
+version             
+JSON                
+Test::Fork          
+FreezeThaw          
+YAML                
+DBI                 
+DBD::SQLite         
+Sub::Name           
+Sub::Install        
+Getopt::Complete   
 
 =head1 AUTHORS
 

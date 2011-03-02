@@ -5,8 +5,6 @@ use warnings;
 require UR;
 our $VERSION = "0.29"; # UR $VERSION;
 use IO::File;
-use XML::Dumper;
-use XML::LibXML;
 
 class UR::Object::View::Default::Xml {
     is => 'UR::Object::View::Default::Text',
@@ -41,6 +39,9 @@ sub xsl_template_files {
 
 sub _generate_content {
     my $self = shift;
+
+    require XML::Dumper;
+    require XML::LibXML;
 
     my $subject = $self->subject();
     return '' unless $subject;
