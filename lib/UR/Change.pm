@@ -56,6 +56,7 @@ sub undo {
     if ($changed_aspect eq "delete" or $changed_aspect eq "unload") {
         $undo_data = '' unless defined $undo_data;
         $changed_obj = eval "no strict; no warnings; " . $undo_data;
+        bless($changed_obj, 'UR::DeletedRef'); # changed class so that UR::Object::DESTROY is not called on a "fake" UR::Object
         if ($@) {
             Carp::confess("Error reconstructing $changed_aspect data for @_: $@");
         }
