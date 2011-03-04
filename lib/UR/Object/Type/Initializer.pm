@@ -1467,7 +1467,6 @@ sub _complete_class_meta_object_definitions {
     if (my $extra = $self->{extra}) {
         # some class characteristics may be only present in subclasses of UR::Object
         # we handle these at this point, since the above is needed for boostrapping
-        $DB::single = 1 if keys %$extra;
         my %still_not_found;
         for my $key (sort keys %$extra) {
             if ($self->can($key)) {
