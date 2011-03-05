@@ -24,6 +24,9 @@ provides:
     file: lib/Command/Test/Tree1/Echo1.pm
   Command::Test::Tree1::Echo2:
     file: lib/Command/Test/Tree1/Echo2.pm
+  Command::Tree:
+    file: lib/Command/Tree.pm
+    version: 0.29
   Command::V1:
     file: lib/Command/V1.pm
     version: 0.29
@@ -119,6 +122,8 @@ provides:
   UR::Context::DefaultRoot:
     file: lib/UR/Context/DefaultRoot.pm
     version: 0.29
+  UR::Context::ObjectFabricator:
+    file: lib/UR/Context/ObjectFabricator.pm
   UR::Context::Process:
     file: lib/UR/Context/Process.pm
     version: 0.29
