@@ -6,4 +6,5 @@
 ^dist-maint/
 ^MANIFEST.bak$
 ^_build/
+^Build$
 
