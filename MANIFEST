@@ -11,6 +11,7 @@ lib/Command/Test/Echo.pm
 lib/Command/Test/Tree1.pm
 lib/Command/Test/Tree1/Echo1.pm
 lib/Command/Test/Tree1/Echo2.pm
+lib/Command/Tree.pm
 lib/Command/V1.pm
 lib/Command/V2.pm
 lib/Devel/callcount.pm
@@ -40,6 +41,7 @@ lib/UR/BoolExpr/Util.pm
 lib/UR/Change.pm
 lib/UR/Context.pm
 lib/UR/Context/DefaultRoot.pm
+lib/UR/Context/ObjectFabricator.pm
 lib/UR/Context/Process.pm
 lib/UR/Context/Root.pm
 lib/UR/Context/Transaction.pm
@@ -231,7 +233,6 @@ lib/UR/Service/RPC/TcpConnectionListener.pm
 lib/UR/Service/urinterface.js
 lib/UR/Singleton.pm
 lib/UR/Test.pm
-lib/UR/Time.pm
 lib/UR/Util.pm
 lib/UR/Value.pm
 lib/UR/Value/ARRAY.pm
@@ -255,7 +256,6 @@ lib/UR/Value/URL.pm
 lib/UR/Vocabulary.pm
 LICENSE
 MANIFEST			This list of files
-MANIFEST.bak
 MANIFEST.SKIP
 META.yml
 pod/ur-define-class.pod
@@ -439,6 +439,9 @@ t/URT/t/86_custom_load.t
 t/URT/t/87_attributes_have.t
 t/URT/t/87_is_many_indirect_is_efficient.t
 t/URT/t/87b_is_many_id_class_by_is_efficient.t
+t/URT/t/87c_query_by_is_many_indirect_is_efficient.t
+t/URT/t/89_loading_with_boolexpr_evaluate.t
+t/URT/t/90-comparison_value_and_escape_character_to_regex.t
 t/URT/t/97_used_libs.t
 t/URT/t/98_ur_update.t
 t/URT/t/99_transaction-observers.t

@@ -619,9 +619,6 @@ provides:
   UR::Test:
     file: lib/UR/Test.pm
     version: 0.29
-  UR::Time:
-    file: lib/UR/Time.pm
-    version: 0.29
   UR::Util:
     file: lib/UR/Util.pm
     version: 0.29

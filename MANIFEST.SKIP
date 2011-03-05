@@ -4,3 +4,6 @@
 ^ubuntu-lucid/
 ^alt/
 ^dist-maint/
+^MANIFEST.bak$
+^_build/
+
