@@ -7,4 +7,5 @@
 ^MANIFEST.bak$
 ^_build/
 ^Build$
-
+^UR-.*\.tar\.gz$
+^blib
