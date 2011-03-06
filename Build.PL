@@ -61,6 +61,7 @@ my $build = $subclass->new(
     # possibly move to a web-specific 
     'Net::HTTPServer'     => '',
     'CGI::Application'    => '',
+    'URI::Escape'         => '',
     
     #'Getopt::Complete' => [
     # we may migrate some of the Command logic here and really depend on it
