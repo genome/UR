@@ -1,5 +1,7 @@
 package UR::Object::Command::List::Style;
 
+our $VERSION = "0.30"; # UR $VERSION;
+
 sub new{
     my ($class, %args) = @_;
     foreach (qw/iterator show noheaders output/){

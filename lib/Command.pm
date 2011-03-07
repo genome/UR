@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use UR;
 
+our $VERSION = "0.30"; # UR $VERSION;
+
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is_abstract => 1,
