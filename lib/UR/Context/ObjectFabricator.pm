@@ -202,7 +202,12 @@ sub create_for_loading_template {
                     $join_has_all_id_props = 0;
                     last;
                 }
-                next JOIN if ( $join_has_all_id_props and ! scalar(keys %join_properties));
+                if ( $join_has_all_id_props and ! scalar(keys %join_properties)) {
+                    # we don't need to add additional info in all_params_loaded if these connections
+                    # are only via id properties, since get()s by all id properties are handled by
+                    # looking directly into the object cache
+                    next JOIN;
+                }
 
                 my @template_filter_names = @{$join->{'foreign_property_names'}};
                 my @where_values;
