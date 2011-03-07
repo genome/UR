@@ -808,7 +808,7 @@ sub _normalize_class_description {
             my $via = $property_data->{'via'};
             my $via_property_data = $instance_properties->{$via};
             unless ($via_property_data) {
-                Carp::croak "Property $class_name '$property_name' filters '$via', but there is no property '$via'.";
+                Carp::croak "Cannot initialize class $class_name: Property '$property_name' filters '$via', but there is no property '$via'.";
             }
             
             $property_data->{'data_type'} = $via_property_data->{'data_type'};

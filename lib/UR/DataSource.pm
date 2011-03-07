@@ -690,7 +690,9 @@ sub _generate_loading_templates_arrayref {
             }                    
         }
         else {
-            die "No id column positions for template " . Data::Dumper::Dumper($template);
+            Carp::croak("Can't determine which columns will hold the ID property data for class "
+                        . $template->{data_class_name} . ".  It's ID properties are (" . join(', ', @id_property_names)
+                        . ") which do not appear in the class' property list (" . join(', ', @{$template->{'property_names'}}).")");
         }             
     }        
 
