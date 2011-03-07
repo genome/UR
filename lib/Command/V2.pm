@@ -765,9 +765,11 @@ sub _doc_name_version {
         . "describes " . $self->command_name;
 
     if ($version) {
-        $pod .= " version " . $version . '.'
+        $pod .= " version " . $version . " ($date at $time).\n\n";
     }
-    $pod .= "\n\n(built on $date at $time)\n\n";
+    else {
+        $pod .= " ($date at $time)\n\n";
+    }
 
     return $pod;
 }
