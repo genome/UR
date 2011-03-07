@@ -273,6 +273,12 @@ pod/ur-list-classes.pod
 pod/ur-list-modules.pod
 pod/ur-list-objects.pod
 pod/ur-list.pod
+pod/ur-old-diff-rewrite.pod
+pod/ur-old-diff-update.pod
+pod/ur-old-export-dbic-classes.pod
+pod/ur-old-info.pod
+pod/ur-old-redescribe.pod
+pod/ur-old.pod
 pod/ur-sys-class-browser.pod
 pod/ur-sys.pod
 pod/ur-test-callcount-list.pod

@@ -9,3 +9,4 @@
 ^Build$
 \.tar\.gz$
 ^blib
+^i
