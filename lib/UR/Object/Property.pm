@@ -6,7 +6,7 @@ require UR;
 use Lingua::EN::Inflect;
 use Class::AutoloadCAN;
 
-our $VERSION = "0.29"; # UR $VERSION;;
+our $VERSION = "0.30"; # UR $VERSION;;
 our @CARP_NOT = qw( UR::DataSource::RDBMS );
 
 # TODO: make these methods on UR::Value::Type metadata

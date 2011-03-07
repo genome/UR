@@ -4,7 +4,7 @@ use warnings;
 use UR;
 use Cwd;
 
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
