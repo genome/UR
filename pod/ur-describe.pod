@@ -10,7 +10,7 @@ ur describe - show class properties, relationships, meta-data
 
 =head1 VERSION
 
-This document describes ur describe version 0.28.
+This document describes ur describe version 0.29.
 
 =head1 SYNOPSIS
 

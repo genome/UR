@@ -10,7 +10,7 @@ ur update rewrite-class-header - Update::RewriteClassHeaders class descriptions 
 
 =head1 VERSION
 
-This document describes ur update rewrite-class-header version 0.28.
+This document describes ur update rewrite-class-header version 0.29.
 
 =head1 SYNOPSIS
 

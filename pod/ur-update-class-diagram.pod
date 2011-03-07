@@ -10,7 +10,7 @@ ur update class-diagram - Update an Umlet diagram based on the current class def
 
 =head1 VERSION
 
-This document describes ur update class-diagram version 0.28.
+This document describes ur update class-diagram version 0.29.
 
 =head1 SYNOPSIS
 

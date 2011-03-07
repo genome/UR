@@ -10,7 +10,7 @@ ur sys class-browser - Start a web server to browse through the class and databa
 
 =head1 VERSION
 
-This document describes ur sys class-browser version 0.28.
+This document describes ur sys class-browser version 0.29.
 
 =head1 SYNOPSIS
 

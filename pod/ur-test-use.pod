@@ -10,7 +10,7 @@ ur test use - Tests each module for compile errors by 'use'-ing it.  Also report
 
 =head1 VERSION
 
-This document describes ur test use version 0.28.
+This document describes ur test use version 0.29.
 
 =head1 SYNOPSIS
 
