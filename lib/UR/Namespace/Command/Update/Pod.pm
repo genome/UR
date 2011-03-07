@@ -82,6 +82,7 @@ sub execute {
     return if $errors;
 
     my @commands = map( $self->get_all_subcommands($_), @targets);
+    push @commands, @targets;
 
     if ($self->output_path) {
         unless (-d $self->output_path) {

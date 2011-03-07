@@ -715,6 +715,7 @@ requires:
   Sys::Hostname: 1.11
   Test::Fork: ''
   Text::Diff: 0.35
+  URI::Escape: ''
   XML::Dumper: ''
   XML::Generator: ''
   XML::Simple: ''
