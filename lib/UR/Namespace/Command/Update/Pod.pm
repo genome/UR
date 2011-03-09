@@ -4,11 +4,11 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 use IO::File;
 
 class UR::Namespace::Command::Update::Pod {
-    is => 'UR::Namespace::Command::Base',
+    is => 'Command::V2',
     has => [
         executable_name => {
             is => 'Text',
@@ -35,14 +35,14 @@ class UR::Namespace::Command::Update::Pod {
             is => 'Text',
             is_optional => 1,
             doc => 'optional location to output .pod files',
-        },
+        },        
     ],
     doc => "generate man-page-like POD for a commands"
 };
 
 sub help_synopsis {
     return <<"EOS"
-ur update pod -I ./lib -o ./pod ur UR::Namespace::Command
+ur update pod -i ./lib -o ./pod ur UR::Namespace::Command
 EOS
 }
 
@@ -57,25 +57,32 @@ sub execute {
     $DB::single = 1;
 
     local $ENV{ANSI_COLORS_DISABLED}    = 1;
-    local $Command::entry_point_bin     = $self->executable_name;
-    local $Command::entry_point_class   = $self->class_name;
+    my $entry_point_bin     = $self->executable_name;
+    my $entry_point_class   = $self->class_name;
 
-    my @base_commands = $self->_class_names_in_tree($Command::entry_point_class);
-
-    my @commands;
-    if (my @targets = $self->targets) {
-        @commands = map( $self->get_all_subcommands($_), @targets);
+    my @targets = $self->targets;
+    unless (@targets) {
+        @targets = ($entry_point_class);
     }
-    else {
-        @commands = map( $self->get_all_subcommands($_), @base_commands);
-    }
-    push @commands, @base_commands;
 
     local @INC = @INC;
     if ($self->input_path) {
         unshift @INC, $self->input_path;
         $self->status_message("using modules at " . $self->input_path);
     }
+
+    my $errors = 0;
+    for my $target (@targets) {
+        eval "use $target";
+        if ($@) {
+            $self->error_message("Failed to use $target: $@");
+            $errors++;
+        }
+    }
+    return if $errors;
+
+    my @commands = map( $self->get_all_subcommands($_), @targets);
+    push @commands, @targets;
 
     if ($self->output_path) {
         unless (-d $self->output_path) {
@@ -94,10 +101,15 @@ sub execute {
         }
     }
 
+    local $Command::V1::entry_point_bin = $entry_point_bin;
+    local $Command::V2::entry_point_bin = $entry_point_bin;
+    local $Command::V1::entry_point_class = $entry_point_class;
+    local $Command::V2::entry_point_class = $entry_point_class;
+
     for my $command (@commands) {
         my $pod;
         eval {
-            $pod = $command->help_usage_command_pod;
+            $pod = $command->help_usage_command_pod();
         };
 
         if($@) {
@@ -136,6 +148,18 @@ sub execute {
 sub get_all_subcommands {
     my $self = shift;
     my $command = shift;
+    my $src = "use $command";
+    eval $src;
+
+    if ($@) {
+        $self->error_message("Failed to load class $command: $@");
+    }
+    else {
+        my $module_name = $command;
+        $module_name =~ s|::|/|g;
+        $module_name .= '.pm';
+        $self->status_message("Loaded $command from $module_name at $INC{$module_name}\n");
+    }
 
     my @subcommands;
     eval {

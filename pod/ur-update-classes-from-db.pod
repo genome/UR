@@ -10,7 +10,7 @@ ur update classes-from-db - Update class definitions (and data dictionary cache)
 
 =head1 VERSION
 
-This document describes ur update classes-from-db version 0.28.
+This document describes ur update classes-from-db version 0.29.
 
 =head1 SYNOPSIS
 

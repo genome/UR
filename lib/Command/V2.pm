@@ -10,7 +10,7 @@ use Getopt::Long;
 use Term::ANSIColor;
 require Text::Wrap;
 
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 our $entry_point_class;
 our $entry_point_bin;
@@ -38,6 +38,61 @@ UR::Object::Type->define(
 
 # This is changed with "local" where used in some places
 $Text::Wrap::columns = 100;
+
+
+sub _doc_footer {
+    my $self = shift;
+    my $pod = '';
+
+    my @method_header_map = (
+        'LICENSE'   => '_doc_license',
+        'AUTHORS'   => '_doc_authors',
+        'CREDITS'   => '_doc_credits',
+        'BUGS'      => '_doc_bugs',
+        'SEE ALSO'  => '_doc_see_also'
+    );
+    
+    while (@method_header_map) {
+        my $header = shift @method_header_map;
+        my $method = shift @method_header_map;
+        my @txt = $self->$method;
+        next if (@txt == 0 or (@txt == 1 and not $txt[0]));
+        if (@txt == 1) { 
+            my @lines = split("\n",$txt[0]);
+            $pod .= "=head1 $header\n\n"
+                . join("  \n", @lines)
+                . "\n\n";        
+        }
+        else {
+            $pod .= "=head1 $header\n\n"
+                . join("\n  ",@txt);
+            $pod .= "\n\n";
+        }
+    }
+    
+    return $pod;
+}
+
+sub _doc_license {
+    return '';
+}
+
+sub _doc_authors {
+    return ();
+}
+
+sub _doc_credits {
+    return '';    
+}
+
+sub _doc_bugs {
+    return '';
+}
+
+sub _doc_see_also {
+    return ();
+}
+
 
 # Required for color output
 eval {
@@ -111,8 +166,7 @@ sub execute {
     return $result;
 }
 
-sub _execute_body
-{    
+sub _execute_body {    
     # default implementation in the base class
     my $self = shift;
     my $class = ref($self) || $self;
@@ -230,8 +284,7 @@ sub _execute_delegate_class_with_params {
 # Standard programmatic interface
 # 
 
-sub create 
-{
+sub create {
     my $class = shift;
     my ($rule,%extra) = $class->define_boolexpr(@_);
     my @params_list = $rule->params_list;
@@ -275,8 +328,7 @@ sub _bare_shell_argument_names {
 # Also, execute() could return a negative value; this is converted to
 # positive and used as the shell exit code.  NOTE: This means execute()
 # returning 0 and -1 mean the same thing
-sub exit_code_for_return_value 
-{
+sub exit_code_for_return_value {
     my $self = shift;
     my $return_value = shift;
     if (! $return_value) {
@@ -289,8 +341,7 @@ sub exit_code_for_return_value
     return $return_value;
 }
 
-sub help_brief 
-{
+sub help_brief {
     my $self = shift;
     if (my $doc = $self->__meta__->doc) {
         return $doc;
@@ -312,25 +363,21 @@ sub help_brief
 }
 
 
-sub help_synopsis 
-{
+sub help_synopsis {
     my $self = shift;
     return '';
 }
 
-sub help_detail 
-{
+sub help_detail {
     my $self = shift;
     return "!!! define help_detail() in module " . ref($self) || $self . "!";
 }
 
-sub sub_command_category 
-{
+sub sub_command_category {
     return;
 }
 
-sub sub_command_sort_position 
-{ 
+sub sub_command_sort_position { 
     # override to do something besides alpha sorting by name
     return '9999999999 ' . $_[0]->command_name_brief;
 }
@@ -340,16 +387,14 @@ sub sub_command_sort_position
 # Self reflection
 #
 
-sub is_abstract 
-{
+sub is_abstract {
     # Override when writing an subclass which is also abstract.
     my $self = shift;
     my $class_meta = $self->__meta__;
     return $class_meta->is_abstract;
 }
 
-sub is_executable 
-{
+sub is_executable {
     my $self = shift;
     if ($self->can("_execute_body") eq __PACKAGE__->can("_execute_body")) {
         return;
@@ -362,8 +407,7 @@ sub is_executable
     }
 }
 
-sub is_sub_command_delegator
-{
+sub is_sub_command_delegator {
     my $self = shift;
     if (scalar($self->sub_command_dirs)) {
         return 1;
@@ -373,15 +417,7 @@ sub is_sub_command_delegator
     }
 }
 
-sub _time_now 
-{
-    # return the current time in context
-    # this may not be the real time in selected cases
-    UR::Time->now;    
-}
-
-sub color_command_name 
-{
+sub color_command_name {
     my $text = shift;
     
     my $colored_text = [];
@@ -395,15 +431,13 @@ sub color_command_name
     return join(' ', @$colored_text);
 }
 
-sub _base_command_class_and_extension 
-{
+sub _base_command_class_and_extension {
     my $self = shift;
     my $class = ref($self) || $self;
     return ($class =~ /^(.*)::([^\:]+)$/); 
 }
 
-sub _command_name_for_class_word 
-{
+sub _command_name_for_class_word {
     my $self = shift;
     my $s = shift;
     $s =~ s/_/-/g;
@@ -414,8 +448,7 @@ sub _command_name_for_class_word
     return $s;
 }
 
-sub command_name
-{
+sub command_name {
     my $self = shift;
     my $class = ref($self) || $self;
     my $prepend = '';
@@ -431,22 +464,17 @@ sub command_name
     return $prepend . $n;
 }
 
-sub command_name_brief
-{
+sub command_name_brief {
     my $self = shift;
     my $class = ref($self) || $self;
     my @words = grep { $_ ne 'Command' } split(/::/,$class);
     my $n = join(' ', map { $self->_command_name_for_class_word($_) } $words[-1]);
     return $n;
 }
+
 #
 # Methods to transform shell args into command properties
 #
-
-my $_resolved_params_from_get_options = {};
-sub _resolved_params_from_get_options {
-    return $_resolved_params_from_get_options;
-}
 
 sub resolve_option_completion_spec {
     my $class = shift;
@@ -488,8 +516,7 @@ sub resolve_option_completion_spec {
     return \@completion_spec
 }
 
-sub resolve_class_and_params_for_argv
-{
+sub resolve_class_and_params_for_argv {
     # This is used by execute_with_shell_params_and_exit, but might be used within an application.
     my $self = shift;
     my @argv = @_;
@@ -599,8 +626,6 @@ sub resolve_class_and_params_for_argv
         $params_hash->{$new_key} = delete $params_hash->{$key};
     }
 
-    $_resolved_params_from_get_options = $params_hash;
-
     return $self, $params_hash;
 }
 
@@ -608,163 +633,152 @@ sub resolve_class_and_params_for_argv
 # Methods which let the command auto-document itself.
 #
 
+# LEGACY: poorly named
+sub help_usage_command_pod {
+    return shift->doc_manual(@_);
+}
+
+# LEGACY: poorly named
 sub help_usage_complete_text {
+    shift->doc_help(@_)
+}
+
+sub doc_help {
     my $self = shift;
 
     my $command_name = $self->command_name;
     my $text;
     
-    if (not $self->is_executable) {
-        # no execute implemented
-        if ($self->is_sub_command_delegator) {
-            # show the list of sub-commands
-            $text = sprintf(
-                "Sub-commands for %s:\n%s",
-                Term::ANSIColor::colored($command_name, 'bold'),
-                $self->help_sub_commands,
-            );
-        }
-        else {
-            # developer error
-            my (@sub_command_dirs) = $self->sub_command_dirs;
-            if (grep { -d $_ } @sub_command_dirs) {
-                $text .= "No execute() implemented in $self, and no sub-commands found!"
-            }
-            else {
-                $text .= "No execute() implemented in $self, and no directory of sub-commands found!"
-            }
-        }
-    }
-    else {
-        # standard: update this to do the old --help format
-        my $synopsis = $self->help_synopsis;
-        my $required_args = $self->help_options(is_optional => 0);
-        my $optional_args = $self->help_options(is_optional => 1);
-        my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
-        $text = sprintf(
-            "\n%s\n%s\n\n%s%s%s%s%s\n",
-            Term::ANSIColor::colored('USAGE', 'underline'),
-            Text::Wrap::wrap(
-                ' ', 
-                '    ', 
-                Term::ANSIColor::colored($self->command_name, 'bold'),
-                $self->_shell_args_usage_string || '',
-            ),
-            ( $synopsis 
-                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
-                : ''
-            ),
-            ( $required_args 
-                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED ARGUMENTS", 'underline'), $required_args)
-                : ''
-            ),
-            ( $optional_args 
-                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL ARGUMENTS", 'underline'), $optional_args)
-                : ''
-            ),
-            sprintf(
-                "%s\n%s\n", 
-                Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
-                Text::Wrap::wrap(' ', ' ', $self->help_detail || '')
-            ),
-            ( $sub_commands 
-                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
-                : ''
-            ),
-        );
-    }
+    # standard: update this to do the old --help format
+    my $synopsis = $self->help_synopsis;
+    my $required_args = $self->help_options(is_optional => 0);
+    my $optional_args = $self->help_options(is_optional => 1);
+    my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
+    $text = sprintf(
+        "\n%s\n%s\n\n%s%s%s%s%s\n",
+        Term::ANSIColor::colored('USAGE', 'underline'),
+        Text::Wrap::wrap(
+            ' ', 
+            '    ', 
+            Term::ANSIColor::colored($self->command_name, 'bold'),
+            $self->_shell_args_usage_string || '',
+        ),
+        ( $synopsis 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
+            : ''
+        ),
+        ( $required_args 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED ARGUMENTS", 'underline'), $required_args)
+            : ''
+        ),
+        ( $optional_args 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL ARGUMENTS", 'underline'), $optional_args)
+            : ''
+        ),
+        sprintf(
+            "%s\n%s\n", 
+            Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
+            Text::Wrap::wrap(' ', ' ', $self->help_detail || '')
+        ),
+        ( $sub_commands 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
+            : ''
+        ),
+    );
 
     return $text;
 }
 
-sub help_usage_command_pod
-{
+
+sub doc_manual {
+    my $self = shift;
+    my $pod = $self->_doc_name_version;
+
+    my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
+    my $required_args = $self->help_options(is_optional => 0, format => "pod");
+    my $optional_args = $self->help_options(is_optional => 1, format => "pod");
+    $pod .=
+            (
+                $synopsis 
+                ? "=head1 SYNOPSIS\n\n" . $synopsis . "\n\n"
+                : ''
+            )
+        .   (
+                $required_args
+                ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
+                : ''
+            )
+        .   (
+                $optional_args
+                ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
+                : ''
+            );
+
+    my $manual = $self->_doc_manual_body;
+    my $help = $self->help_detail;
+    if ($manual or $help) {
+        $pod .= "=head1 DESCRIPTION:\n\n";
+
+        my $txt = $manual || $help;        
+        if ($txt =~ /^\=/) {
+            # pure POD
+            $pod .= $manual;
+        }
+        else {
+            $txt =~ s/\n/\n\n/g;
+            $pod .= $txt;
+            #$pod .= join('', map { "  $_\n" } split ("\n",$txt)) . "\n";
+        }
+    }
+
+    $pod .= $self->_doc_footer();    
+    $pod .= "\n\n=cut\n\n";
+    return "\n$pod";
+}
+
+
+sub _doc_name_version {
     my $self = shift;
 
     my $command_name = $self->command_name;
     my $pod;
 
-    if (0) { # (not $self->is_executable) {
-        # no execute implemented
-        if ($self->is_sub_command_delegator) {
-            # show the list of sub-commands
-            $pod = "Commands:\n" . $self->help_sub_commands;
-        }
-        else {
-            # developer error
-            my (@sub_command_dirs) = $self->sub_command_dirs;
-            if (grep { -d $_ } @sub_command_dirs) {
-                $pod .= "No execute() implemented in $self, and no sub-commands found!"
-            }
-            else {
-                $pod .= "No execute() implemented in $self, and no directory of sub-commands found!"
-            }
-        }
+    # standard: update this to do the old --help format
+    my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
+    my $help_brief = $self->help_brief;
+    my $version = do { no strict; ${ $self->class . '::VERSION' } };
+    my $datetime = $self->__context__->now;
+    my ($date,$time) = split(' ',$datetime);
+
+    $pod =
+        "\n=pod"
+        . "\n\n=head1 NAME"
+        .  "\n\n"
+        .   $self->command_name 
+        . ($help_brief ? " - " . $self->help_brief : '') 
+        . "\n\n";
+
+    $pod .=
+        "\n\n=head1 VERSION"
+        . "\n\n"
+        . "This document " # separated to trick the version updater 
+        . "describes " . $self->command_name;
+
+    if ($version) {
+        $pod .= " version " . $version . " ($date at $time).\n\n";
     }
     else {
-        # standard: update this to do the old --help format
-        my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
-        my $required_args = $self->help_options(is_optional => 0, format => "pod");
-        my $optional_args = $self->help_options(is_optional => 1, format => "pod");
-        my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
-        my $help_brief = $self->help_brief;
-        my $version = do { no strict; ${ $self->class . '::VERSION' } };
-
-        $pod =
-            "\n=pod"
-            . "\n\n=head1 NAME"
-            .  "\n\n"
-            .   $self->command_name 
-            . ($help_brief ? " - " . $self->help_brief : '') 
-            . "\n\n";
-
-        if ($version) {
-            $pod .=
-                "\n\n=head1 VERSION"
-                . "\n\n"
-                . "This document " # separated to trick the version updater 
-                . "describes " . $self->command_name . " version " . $version . '.'
-                . "\n\n";
-        }
-
-        if ($sub_commands) {
-            $pod .=
-                    (
-                        $sub_commands
-                        ? "=head1 SUB-COMMANDS\n\n" . $sub_commands . "\n\n"
-                        : ''
-                    )
-        }
-        else {
-            $pod .=
-                    (
-                        $synopsis 
-                        ? "=head1 SYNOPSIS\n\n" . $synopsis . "\n\n"
-                        : ''
-                    )
-                .   (
-                        $required_args
-                        ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
-                        : ''
-                    )
-                .   (
-                        $optional_args
-                        ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
-                        : ''
-                    )
-                . "=head1 DESCRIPTION:\n\n"
-                . join('', map { "  $_\n" } split ("\n",$self->help_detail))
-                . "\n";
-        }
-        
-        $pod .= "\n\n=cut\n\n";
-
+        $pod .= " ($date at $time)\n\n";
     }
-    return "\n$pod";
+
+    return $pod;
 }
 
-sub help_header
-{
+sub _doc_manual_body {
+    return '';
+}
+
+sub help_header {
     my $class = shift;
     return sprintf("%s - %-80s\n",
         $class->command_name
@@ -772,8 +786,7 @@ sub help_header
     )
 }
 
-sub help_options
-{
+sub help_options {
     my $self = shift;
     my %params = @_;
 
@@ -918,8 +931,7 @@ sub sub_commands_table {
     return $tb;
 }
 
-sub help_sub_commands
-{
+sub help_sub_commands {
     my $class = shift;
     my %params = @_;
     my $command_name_method = 'command_name_brief';
@@ -1024,8 +1036,7 @@ sub _is_hidden_in_docs { return; }
 # Methods which transform command properties into shell args (getopt)
 #
 
-sub _shell_args_property_meta
-{
+sub _shell_args_property_meta {
     my $self = shift;
     my $class_meta = $self->__meta__;
 
@@ -1073,8 +1084,7 @@ sub _shell_args_property_meta
     return @result;
 }
 
-sub _shell_arg_name_from_property_meta
-{
+sub _shell_arg_name_from_property_meta {
     my ($self, $property_meta,$singularize) = @_;
     my $property_name = ($singularize ? $property_meta->singular_name : $property_meta->property_name);
     my $param_name = $property_name;
@@ -1082,8 +1092,7 @@ sub _shell_arg_name_from_property_meta
     return $param_name; 
 }
 
-sub _shell_arg_getopt_qualifier_from_property_meta
-{
+sub _shell_arg_getopt_qualifier_from_property_meta {
     my ($self, $property_meta) = @_;
 
     my $many = ($property_meta->is_many ? '@' : ''); 
@@ -1095,8 +1104,7 @@ sub _shell_arg_getopt_qualifier_from_property_meta
     }
 }
 
-sub _shell_arg_usage_string_from_property_meta 
-{
+sub _shell_arg_usage_string_from_property_meta {
     my ($self, $property_meta) = @_;
     my $string = $self->_shell_arg_name_from_property_meta($property_meta);
     if ($property_meta->{shell_args_position}) {
@@ -1128,8 +1136,7 @@ sub _shell_arg_usage_string_from_property_meta
     return $string;
 }
 
-sub _shell_arg_getopt_specification_from_property_meta 
-{
+sub _shell_arg_getopt_specification_from_property_meta {
     my ($self,$property_meta) = @_;
     my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
     return (
@@ -1139,8 +1146,7 @@ sub _shell_arg_getopt_specification_from_property_meta
 }
 
 
-sub _shell_arg_getopt_complete_specification_from_property_meta 
-{
+sub _shell_arg_getopt_complete_specification_from_property_meta {
     my ($self,$property_meta) = @_;
     my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
     my $completions = $property_meta->valid_values;
@@ -1183,8 +1189,7 @@ sub _shell_arg_getopt_complete_specification_from_property_meta
     );
 }
 
-sub _shell_args_getopt_specification 
-{
+sub _shell_args_getopt_specification {
     my $self = shift;
     my @getopt;
     my @params;
@@ -1197,8 +1202,7 @@ sub _shell_args_getopt_specification
     return { @params}, @getopt; 
 }
 
-sub _shell_args_getopt_complete_specification
-{
+sub _shell_args_getopt_complete_specification {
     my $self = shift;
     my @getopt;
     for my $meta ($self->_shell_args_property_meta) {
@@ -1208,8 +1212,7 @@ sub _shell_args_getopt_complete_specification
     return @getopt; 
 }
 
-sub _shell_args_usage_string
-{
+sub _shell_args_usage_string {
     my $self = shift;
     if ($self->is_executable) {
         return join(
@@ -1230,8 +1233,7 @@ sub _shell_args_usage_string
     return "";
 }
 
-sub _shell_args_usage_string_abbreviated
-{
+sub _shell_args_usage_string_abbreviated {
     my $self = shift;
     if ($self->is_sub_command_delegator) {
         return "...";
@@ -1255,58 +1257,64 @@ sub _shell_args_usage_string_abbreviated
 # This is for cases in which the Foo::Bar command delegates to
 # Foo::Bar::Baz, Foo::Bar::Buz or Foo::Bar::Doh, depending on its paramters.
 
-sub sub_command_dirs
-{
+sub sub_command_dirs {
     my $class = shift;
-    my $module = ref($class) || $class;
-    $module =~ s/::/\//g;
+    my $subdir = ref($class) || $class;
+    $subdir =~ s|::|\/|g;
+    my @dirs = grep { -d $_ } map { $_ . '/' . $subdir  } @INC;
+    return @dirs;
+}
+
+sub sub_command_classes {
+    my $class = shift;
+    my $mapping = $class->_build_sub_command_mapping;
+    return values %$mapping;
+}
+
+sub _build_sub_command_mapping {
+    my $class = shift;
+    $class = ref($class) || $class;
     
-    # multiple dirs is not working quite yet
-    #my @paths = grep { -d $_ } map { "$_/$module"  } @INC; 
-    #return @paths;
+    my $mapping;
+    do {
+        no strict 'refs';
+        $mapping = ${ $class . '::SUB_COMMAND_MAPPING'};
+    };
+    
+    unless (defined $mapping) {
+        my $subdir = $class; 
+        $subdir =~ s|::|\/|g;
 
-    $module .= '.pm';
-    my $path = $INC{$module};
-    unless ($path) {
-        return;
-    }
-    $path =~ s/.pm$//;
-    unless (-d $path) {
-        return;
-    }
-    return $path;
-}
-
-sub sub_command_classes
-{
-    my $class = shift;
-    my @paths = $class->sub_command_dirs;
-    return unless @paths;
-    @paths = 
-        grep { s/\.pm$// } 
-        map { glob("$_/*") } 
-        grep { -d $_ }
-        grep { defined($_) and length($_) } 
-        @paths;
-    return unless @paths;
-    my @classes =
-        grep {
-            ($_->is_sub_command_delegator or !$_->is_abstract) 
+        for my $lib (@INC) {
+            my $subdir_full_path = $lib . '/' . $subdir;
+            next unless -d $subdir_full_path;
+            my @files = glob($subdir_full_path . '/*');
+            next unless @files;
+            for my $file (@files) {
+                my $basename = basename($file);
+                $basename =~ s/.pm$//;
+                my $sub_command_class_name = $class . '::' . $basename;
+                my $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
+                unless ($sub_command_class_meta) {
+                    local $SIG{__DIE__};
+                    local $SIG{__WARN__};
+                    eval "use $sub_command_class_name";
+                }
+                $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
+                next unless $sub_command_class_name->isa("Command");
+                next if $sub_command_class_meta->is_abstract;
+                my $name = $class->_command_name_for_class_word($basename); 
+                $mapping->{$name} = $sub_command_class_name;
+            }
         }
-        grep { $_ and $_->isa('Command') }
-        map { $class->class_for_sub_command($_) }
-        map { s/_/-/g; $_ }
-        map { basename($_) }
-        @paths;
-    return @classes;
+    }
+    return $mapping;
 }
 
-sub sub_command_names
-{
+sub sub_command_names {
     my $class = shift;
-    my @sub_command_classes = $class->sub_command_classes;
-    my @sub_command_names = map { $_->command_name_brief } @sub_command_classes;
-    return @sub_command_names;
+    my $mapping = $class->_build_sub_command_mapping;
+    return keys %$mapping;
 }
 
 sub class_for_sub_command
@@ -1314,6 +1322,7 @@ sub class_for_sub_command
     my $self = shift;
     my $class = ref($self) || $self;
     my $sub_command = shift;
+
 
     return if $sub_command =~ /^\-/;
 

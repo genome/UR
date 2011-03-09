@@ -4,7 +4,7 @@ package UR::BoolExpr::Template::PropertyComparison::Like;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -33,40 +33,6 @@ sub evaluate_subject_and_values {
         return 1 if $value =~ $regex;
     }
     return '';
-}
-
-sub comparison_value_and_escape_character_to_regex {    
-    my ($class, $value, $escape) = @_;
-	
-    return '' unless defined($value);
-
-    # anyone who uses the % as an escape character deserves to suffer
-    if ($value eq '%') {
-	return '^.+$';
-    }
-    
-    my $regex = $value;
-    # Handle the escape sequence    
-    if (defined $escape)
-    {
-        $escape =~ s/\\/\\\\/g; # replace \ with \\
-        $regex =~ s/(?<!${escape})\%/\.\*/g;
-        $regex =~ s/(?<!${escape})\_/./g;
-        #LSF: Take away the escape characters.
-        $regex =~ s/$escape\%/\%/g;
-        $regex =~ s/$escape\_/\_/g;
-    }
-    else
-    {
-        $regex =~ s/\%/\.\*/g;
-        $regex =~ s/\_/./g;
-    }
-               
-    #TODO: escape all special characters in the regex.
-    
-    # Wrap the regex in delimiters.
-    $regex = "^${regex}\$";
-    return $regex;
 }
 
 1;

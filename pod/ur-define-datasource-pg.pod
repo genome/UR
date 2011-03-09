@@ -10,7 +10,7 @@ ur define datasource pg - Add a PostgreSQL data source to the current namespace.
 
 =head1 VERSION
 
-This document describes ur define datasource pg version 0.28.
+This document describes ur define datasource pg version 0.29.
 
 =head1 SYNOPSIS
 

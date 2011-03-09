@@ -10,7 +10,7 @@ ur define class - Add one or more classes to the current namespace
 
 =head1 VERSION
 
-This document describes ur define class version 0.28.
+This document describes ur define class version 0.29.
 
 =head1 SYNOPSIS
 

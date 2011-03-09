@@ -10,7 +10,7 @@ ur update - update parts of the source tree of a UR namespace
 
 =head1 VERSION
 
-This document describes ur update version 0.28.
+This document describes ur update version 0.29.
 
 =head1 SUB-COMMANDS
 

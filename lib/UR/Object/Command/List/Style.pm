@@ -1,5 +1,7 @@
 package UR::Object::Command::List::Style;
 
+our $VERSION = "0.30"; # UR $VERSION;
+
 sub new{
     my ($class, %args) = @_;
     foreach (qw/iterator show noheaders output/){
@@ -157,7 +159,7 @@ sub format_and_print{
 
     my $doc = XML::LibXML->createDocument();
     my $results_node = $doc->createElement("results");
-    $results_node->addChild( $doc->createAttribute("generated-at",UR::Time->now()) );
+    $results_node->addChild( $doc->createAttribute("generated-at",$UR::Context::current->now()) );
 
     $doc->setDocumentElement($results_node);
 

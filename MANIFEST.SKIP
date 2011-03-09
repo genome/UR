@@ -4,3 +4,9 @@
 ^ubuntu-lucid/
 ^alt/
 ^dist-maint/
+^MANIFEST.bak$
+^_build/
+^Build$
+\.tar\.gz$
+^blib
+^i

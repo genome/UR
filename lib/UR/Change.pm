@@ -7,7 +7,7 @@ use warnings;
 use IO::File;
 
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -56,6 +56,7 @@ sub undo {
     if ($changed_aspect eq "delete" or $changed_aspect eq "unload") {
         $undo_data = '' unless defined $undo_data;
         $changed_obj = eval "no strict; no warnings; " . $undo_data;
+        bless($changed_obj, 'UR::DeletedRef') if (ref $changed_obj); # changed class so that UR::Object::DESTROY is not called on a "fake" UR::Object
         if ($@) {
             Carp::confess("Error reconstructing $changed_aspect data for @_: $@");
         }

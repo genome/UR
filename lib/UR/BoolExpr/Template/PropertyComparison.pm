@@ -3,7 +3,7 @@ package UR::BoolExpr::Template::PropertyComparison;
 
 use warnings;
 use strict;
-our $VERSION = "0.29"; # UR $VERSION;;
+our $VERSION = "0.30"; # UR $VERSION;;
 
 # Define the class metadata.
 
@@ -124,6 +124,48 @@ sub _get_for_subject_class_name_and_logic_detail {
     my $id = $subclass_name->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, 'PropertyComparison', $logic_detail);
     
     return $subclass_name->get_or_create($id);
+}
+
+sub comparison_value_and_escape_character_to_regex {    
+    my ($class, $value, $escape) = @_;
+	
+    return '' unless defined($value);
+
+    # anyone who uses the % as an escape character deserves to suffer
+    if ($value eq '%') {
+	return '^.+$';
+    }
+
+    my $regex = $value;
+
+    # Escape all special characters in the regex.
+    $regex =~ s/([\(\)\[\]\{\}\+\*\.\?\|\^\$\-])/\\$1/g;
+    
+    # Handle the escape sequence    
+    if (defined $escape)
+    {
+        $escape =~ s/\\/\\\\/g; # replace \ with \\
+        $regex =~ s/(?<!${escape})\%/\.\*/g;
+        $regex =~ s/(?<!${escape})\_/./g;
+        #LSF: Take away the escape characters.
+        $regex =~ s/$escape\%/\%/g;
+        $regex =~ s/$escape\_/\_/g;
+    }
+    else
+    {
+        $regex =~ s/\%/\.\*/g;
+        $regex =~ s/\_/\./g;
+    }
+
+    # Wrap the regex in delimiters.
+    $regex = "^${regex}\$";
+
+    $regex = eval { qr($regex) };
+    if ($@) {
+        Carp::confess($@);
+    }
+
+    return $regex;
 }
 
 1;

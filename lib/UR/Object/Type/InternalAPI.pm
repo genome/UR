@@ -3,7 +3,7 @@ use warnings;
 use strict;
 
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 use Sys::Hostname;
 use Cwd;
@@ -809,34 +809,36 @@ sub use_module_with_namespace_constraints {
     # in order to be dynamically loaded.
 
     my @words = split("::",$target_class);
-
-    my $namespace_name = shift @words;
-    my $namespace_expected_module = $namespace_name . ".pm";
-
     my $path;
-    if ($path = $INC{$namespace_expected_module}) {
-        #print "got mod $namespace_expected_module at $path for $target_class\n";
-        $path =~ s/\/*$namespace_expected_module//g;
-    }
-    else {
-        my $namespace_obj =  UR::Object::Type->is_loaded(class_name => $namespace_name);
-        unless ($namespace_obj) {
-            #print("Skipping autoload of module name: $target_class since namespace $namespace_name is not loaded.\n");
-            return;
-        }
+    while (@words > 1) {
+        my $namespace_name = join("::",@words[0..$#words-1]);
+        my $namespace_expected_module = join("/",@words[0..$#words-1]) . ".pm";
 
-        eval { $path = $namespace_obj->module_directory };
-        if ($@) {
-            # non-module class
-            # don't auto-use, but don't make a lot of noise about it either
-            return;
+
+        if ($path = $INC{$namespace_expected_module}) {
+            #print "got mod $namespace_expected_module at $path for $target_class\n";
+            $path =~ s/\/*$namespace_expected_module//g;
         }
-        unless ($path) {
-            #Carp::cluck("No module_directory found for namespace $namespace_name."
-            #    . "  Cannot dynamically load $target_class.");
-            return;
-        }
+        else {
+            my $namespace_obj =  UR::Object::Type->is_loaded(class_name => $namespace_name);
+            if ($namespace_obj) {
+                eval { $path = $namespace_obj->module_directory };
+                if ($@) {
+                    # non-module class
+                    # don't auto-use, but don't make a lot of noise about it either
+                }
+            }
+        }    
+        last if $path;
+        pop @words;
     }
+
+    unless ($path) {
+        #Carp::cluck("No module_directory found for namespace $namespace_name."
+        #    . "  Cannot dynamically load $target_class.");
+        return;
+    }
+
 
     $self->_use_safe($target_class,$path);
     my $meta = UR::Object::Type->is_loaded(class_name => $target_class);

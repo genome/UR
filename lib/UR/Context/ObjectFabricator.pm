@@ -6,6 +6,8 @@ use warnings;
 use Scalar::Util;
 use UR::Context;
 
+our $VERSION = "0.30"; # UR $VERSION;
+
 # A helper package for UR::Context to keep track about 
 # These are normal Perl objects, not UR objects, so they get 
 # regular refcounting and scoping

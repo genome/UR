@@ -8,7 +8,7 @@ use Carp;
 
 our @CARP_NOT = ('UR::Context');
 
-our $VERSION = "0.29"; # UR $VERSION;;
+our $VERSION = "0.30"; # UR $VERSION;;
 
 # readable stringification
 use overload ('""' => '__display_name__');
@@ -950,7 +950,7 @@ UR::BoolExpr - a "where clause" for objects
         ssn => '123-45-6789',
         name => 'Pat Jones',
         status => 'active', 
-        start_date => UR::Time->now,
+        start_date => UR::Context->current->now,
         payroll_category => 'hourly',
     );    
         
