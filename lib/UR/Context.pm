@@ -2324,6 +2324,7 @@ sub _create_import_iterator_for_underlying_context {
 
     # Make the iterator we'll return.
     my $next_object_to_return;
+    my @object_ids_from_fabricators;
     my $underlying_context_iterator = sub {
         return undef unless $db_iterator;
 
@@ -2444,7 +2445,10 @@ sub _create_import_iterator_for_underlying_context {
             # get one or more objects from this row of results
             my $re_iterate = 0;
             my @imported;
-            for my $object_fabricator (@object_fabricators) {
+            #for my $object_fabricator (@object_fabricators) {
+            for (my $i = 0; $i < @object_fabricators; $i++) {
+                my $object_fabricator = $object_fabricators[$i];
+
                 # The usual case is that the query is just against one data source, and so the importer
                 # callback is just given the row returned from the DB query.  For multiple data sources,
                 # we need to smash together the primary and all the secondary lists
@@ -2470,6 +2474,21 @@ sub _create_import_iterator_for_underlying_context {
                     $re_iterate = 1;
                 }
                 push @imported, $imported_object;
+
+                # If the object ID for fabricator slot $i changes, then we can apply the 
+                # all_params_loaded changes from iterators 0 .. $i-1 because we know we've
+                # loaded all the hangoff data related to the previous object
+                # remember that the last fabricator in the list is for the primary object
+                if (defined $imported_object and ref($imported_object)) {
+                    if (!defined $object_ids_from_fabricators[$i]) {
+                        $object_ids_from_fabricators[$i] = $imported_object->id;
+                    } elsif ($object_ids_from_fabricators[$i] ne $imported_object->id) {
+                        for (my $j = 0; $j < $i; $j++) {
+                            $object_fabricators[$j]->apply_all_params_loaded;
+                        }
+                        $object_ids_from_fabricators[$i] = $imported_object->id;
+                    }
+                }
             }
 
             $primary_object_for_next_db_row = $imported[-1];
@@ -2547,11 +2566,11 @@ sub _create_import_iterator_for_underlying_context {
             
         } # end of loop until we have a defined object to return
 
-        foreach my $object_fabricator ( @object_fabricators ) {
-            # Don't apply all_params_loaded for primary fab until it's all done
-            next if ($object_fabricator eq $object_fabricators[-1]);
-            $object_fabricator->apply_all_params_loaded;
-        }
+        #foreach my $object_fabricator ( @object_fabricators ) {
+        #    # Don't apply all_params_loaded for primary fab until it's all done
+        #    next if ($object_fabricator eq $object_fabricators[-1]);
+        #    $object_fabricator->apply_all_params_loaded;
+        #}
 
         my $retval = $next_object_to_return;
         $next_object_to_return = $primary_object_for_next_db_row;
