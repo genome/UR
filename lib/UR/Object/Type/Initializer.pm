@@ -629,6 +629,7 @@ sub _normalize_class_description {
                     next if ($key eq 'is_specified_in_module_header' || $key eq 'position_in_module_header');
                     $properties->{$name}->{$key} = $params->{$key};
                 }
+                $params = $properties->{$name};
             } else {
                 $properties->{$name} = $params;
             }
