@@ -123,7 +123,7 @@ sub _get_for_subject_class_name_and_logic_detail {
     my $subclass_name = $class->resolve_subclass_for_comparison_operator($comparison_operator);    
     my $id = $subclass_name->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, 'PropertyComparison', $logic_detail);
     
-    return $subclass_name->get_or_create($id);
+    return $subclass_name->get($id);
 }
 
 sub comparison_value_and_escape_character_to_regex {    

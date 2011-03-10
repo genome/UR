@@ -1419,14 +1419,52 @@ sub get_objects_for_class_and_rule {
     #my @params = $rule->params_list;
     #print "GET: $class @params\n";
 
-    if ($cache_size_highwater
+    if (
+        $cache_size_highwater
         and
-        $all_objects_cache_size > $cache_size_highwater)
-    {
-
+        $all_objects_cache_size > $cache_size_highwater
+    ) {
         $self->prune_object_cache();
     }
+
+    if ($rule->template->isa("UR::BoolExpr::Template::Or")) {
+        $rule = $rule->normalize;
+        my @u = $rule->underlying_rules;
+        my @results;
+        for my $u (@u) {
+            if (wantarray) {
+                push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
+            }
+            else {
+                my $result = $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
+                push @results, $result;
+            }
+        }
+        if ($return_closure) {
+            Carp::confess("TOOD: implement iterator closures for OR rules");
+        }
+
+        # remove duplicates
+        my $last = 0;
+        my $plast = 0;
+        my $next = 0;
+        @results = grep { $plast = $last; $last = $_; $plast == $_ ? () : ($_) } sort @results;
     
+        return unless defined wantarray;
+        return @results if wantarray;
+        if (@results > 1) {
+            Carp::confess 
+                sprintf(
+                    "Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results:\n%s\n",
+                    $rule->subject_class_name,
+                    join(',', $rule->params_list),
+                    scalar(@results),
+                    Data::Dumper::Dumper(\@results)
+                );
+        }
+        return $results[0];
+    }
+
     # an identifier for all objects gotten in this request will be set/updated on each of them for pruning later
     my $this_get_serial = $GET_COUNTER++;
     
@@ -1593,8 +1631,7 @@ sub get_objects_for_class_and_rule {
                  $next_obj_current_context = undef;
                  Carp::croak("Attempt to fetch an object which matched $rule when the iterator was created, but was deleted in the meantime:\n"
                              . Data::Dumper::Dumper($obj_to_complain_about) );
-             }
-
+            }
 
             # We're turning off warnings to avoid complaining in the elsif()
             no warnings 'uninitialized';
@@ -1604,7 +1641,8 @@ sub get_objects_for_class_and_rule {
                 }
                 $underlying_context_iterator = undef;
 
-            } elsif ($last_loaded_id eq $next_obj_underlying_context->id) {
+            } 
+            elsif ($last_loaded_id eq $next_obj_underlying_context->id) {
                 # during a get() with -hints or is_many+is_optional (ie. something with an
                 # outer join), it's possible that the join can produce the same main object
                 # as it's chewing through the (possibly) multiple objects joined to it.

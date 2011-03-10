@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 38;
+use Test::More tests => 44;
 use Data::Dumper;
 
 class URT::Item {
@@ -58,16 +58,34 @@ my $bx1 = URT::Item->define_boolexpr(name => ['Bob','Joe']);
 my @o = URT::Item->get($bx1);
 is(scalar(@o), 2, "got 2 items with an in-clause");
 
-=pod
+## OR ##
+
 my $bx2a = URT::Item->define_boolexpr(name => 'Bob');
-my $bx2b = URT::Item->define_boolexpr(name => 'Joe');
-my $bx2c = UR::BoolExpr::Template::Or->get_by_subject_class_name_logic_type_and_logic_detail(
+my $bx2b = URT::Item->define_boolexpr(group => 'skins');
+
+my $bx2t = UR::BoolExpr::Template::Or->get_by_subject_class_name_logic_type_and_logic_detail(
     $bx2a->subject_class_name,
     'Or', 
     $bx2a->logic_detail . '|' . $bx2b->logic_detail,
 );
-my ($bx3a,$bx3b) = $bx2c->get_underlying_rule_templates();
-=cut
+my $bx2c = $bx2t->get_rule_for_values('Bob','skins');
+ok(defined($bx2c), "got OR rule: $bx2c");
+
+my ($bx3a,$bx3b) = $bx2c->template->get_underlying_rule_templates();
+is($bx3a,$bx2a->template, "first expression in composite matches");
+is($bx3b,$bx2b->template, "second expression in composite matches");
+
+my $bx3 = URT::Item->define_boolexpr(-or => [[name => 'Bob'], [group => 'skins']]);
+ok(defined($bx3), "created OR rule in a single expression");
+is($bx3, $bx2c, "matches the one individually composed");
+
+my %as_two = map { $_->id => $_ } (URT::Item->get($bx2a), URT::Item->get($bx2b));
+my %as_one = map { $_->id => $_ } URT::Item->get($bx3);
+my @as_two = sort keys %as_two;
+my @as_one = sort keys %as_one;
+is("@as_one","@as_two", "results using -or match queries done separately"); 
+
+# COMPLEX
 
 #my $r = URT::FancyItem->define_boolexpr(foo => 222, -recurse => [qw/parent_name name parent_group group/], bar => 555);
 
