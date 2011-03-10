@@ -77,7 +77,7 @@ is($bx3b,$bx2b->template, "second expression in composite matches");
 
 my $bx3 = URT::Item->define_boolexpr(-or => [[name => 'Bob'], [group => 'skins']]);
 ok(defined($bx3), "created OR rule in a single expression");
-is($bx3, $bx2c, "matches the one individually composed");
+is("$bx3", "$bx2c", "matches the one individually composed");
 
 my %as_two = map { $_->id => $_ } (URT::Item->get($bx2a), URT::Item->get($bx2b));
 my %as_one = map { $_->id => $_ } URT::Item->get($bx3);
