@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 18;
+use Test::More tests=> 22;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -163,14 +163,3 @@ $thing = URT::Related4->get(related_id => 1, value => 'related4');
 ok($thing, 'Got 1 related URT::Related4 thing by related_id');
 is($query_count, 0, 'Made no queries');
 
-
-
-$query_count = 0;
-$thing = URT::Main->get(related_4_values_alt => 'related4alt');
-ok($thing, 'Got one object for alternate 5-table join');
-is($query_count, 1, 'Made 1 query');
-
-$query_count = 0;
-$thing = URT::Related1->get(related_4_values_alt => 'related4alt');
-ok($thing, 'Got 1 related URT::Related1 thing by related_4_values_alt');
-is($query_count, 0, 'Made no queries');
