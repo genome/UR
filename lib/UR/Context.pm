@@ -3518,7 +3518,8 @@ sub _reverse_all_changes {
                                  $property_meta->is_delegated ||
                                  $property_meta->is_legacy_eav ||
                                  ! $property_meta->is_mutable ||
-                                 $property_meta->is_transient);
+                                 $property_meta->is_transient ||
+                                 $property_meta->is_constant);
                         $object->$property_name($saved->{$property_name});
                     }
                 }
