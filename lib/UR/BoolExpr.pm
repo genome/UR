@@ -302,13 +302,52 @@ sub resolve {
     my @in_params;
     if (ref($_[0]) eq "HASH") {
 	   @in_params = %{$_[0]};
-    } else {
+    } 
+    else {
 	   @in_params = @_;
     }
     
+    if (defined($in_params[0]) and $in_params[0] eq '-or') {
+        $DB::single = 1;
+        shift @in_params;
+        my @sub_queries = @{ shift @in_params };
+        my @expressions;
+        my @values;
+        while (@sub_queries) {
+            my $underlying_query;
+            if (ref($sub_queries[0]) eq 'ARRAY') {
+                $underlying_query = UR::BoolExpr->resolve($subject_class, @{$sub_queries[0]});
+                shift @sub_queries;
+            }
+            elsif (ref($sub_queries[0]) eq 'UR::BoolExpr::And') {
+                $underlying_query = shift @sub_queries;
+            }
+            else  {
+                $underlying_query = UR::BoolExpr->resolve($subject_class, @sub_queries[0,1]);
+                shift @sub_queries;
+                shift @sub_queries;
+            }
+
+            if ($underlying_query->{'_constant_values'}) {
+                Carp::confess("cannot use -* expressions in subordinate clauses of a logical <or>");
+            }
+            
+            unless ($underlying_query->template->isa("UR::BoolExpr::Template::And")) {
+                Carp::confess("$underlying_query is not an AND template");
+            }
+            push @expressions, $underlying_query->template->logic_detail;
+            push @values, $underlying_query->values;
+        }
+        my $bxt = UR::BoolExpr::Template::Or->get_by_subject_class_name_logic_type_and_logic_detail($subject_class,'Or',join('|',@expressions));
+        my $bx = $bxt->get_rule_for_values(@values);
+        return $bx;
+        return;
+    }
+
     if (@in_params == 1) {
         unshift @in_params, "id";
-    } elsif (@in_params % 2 == 1) {
+    }
+    elsif (@in_params % 2 == 1) {
         Carp::carp("Odd number of params while creating $class: (",join(',',@in_params),")");
     }
 

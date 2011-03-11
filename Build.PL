@@ -66,7 +66,7 @@ my $build = $subclass->new(
     #'Getopt::Complete' => [
     # we may migrate some of the Command logic here and really depend on it
     # currently it is actually not _required_ to function
-    #'Getopt::Complete'    => '0.20',
+    'Getopt::Complete'    => 'v0.20',
     
     #'XSLT' => [
     # this stuff is hard to install and is only used by some views

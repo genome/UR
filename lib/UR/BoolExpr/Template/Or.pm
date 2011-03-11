@@ -15,7 +15,7 @@ sub _underlying_keys {
     my $self = shift;
     my $logic_detail = $self->logic_detail;
     return unless $logic_detail;
-    my @underlying_keys = split("|",$logic_detail);
+    my @underlying_keys = split('\|',$logic_detail);
     return @underlying_keys;
 }
 
@@ -54,18 +54,36 @@ sub specifies_value_for {
 sub evaluate_subject_and_values {
     my $self = shift;
     my $subject = shift;
-
+$DB::single = 1;
     return unless (ref($subject) && $subject->isa($self->subject_class_name));
 
     my @underlying = $self->get_underlying_rule_templates;
     while (my $underlying = shift (@underlying)) {
-        my $n = $underlying->num_values;
+        my $n = $underlying->_variable_value_count;
         my @next_values = splice(@_,0,$n);
         if ($underlying->evaluate_subject_and_values($subject,@_)) {
             return 1;
         }
     }
     return;
+}
+
+sub params_list_for_values {
+    my $self = shift;
+    my @values_sorted = @_;
+    my @list;
+    my @t = $self->get_underlying_rule_templates;
+    for my $t (@t) {
+        my $c = $t->_variable_value_count;
+        my @l = $t->params_list_for_values(splice(@values_sorted,0,$c));
+        push @list, \@l; 
+    }
+    return -or => \@list;
+}
+
+sub get_normalized_rule_for_values {
+    my $self = shift;
+    return $self->get_rule_for_values(@_);
 }
 
 1;
