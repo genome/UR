@@ -61,8 +61,19 @@ sub group_by {
 }
 
 sub count {
-    $_[0]->__init unless $_[0]->{__init};
-    return $_[0]->{count};
+    my $self = shift;
+    Carp::confess("count is a group operation, and is not writable!") if @_;
+    unless (exists $self->{count}) {
+        # load
+        my $grouping_rule = $self->rule->add_filter(-group_by => []);
+        my @groups = UR::Context->get_objects_for_class_and_rule( 
+            $self->member_class_name, 
+            $grouping_rule, 
+            1,      #$load, !!!
+            0,      #$return_closure, 
+        );        
+    }
+    return $self->{count};
 }
 
 sub AUTOSUB {
