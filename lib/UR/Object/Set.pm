@@ -76,7 +76,7 @@ sub AUTOSUB {
     return sub {
         my $self = shift;
         if (@_) {
-            die "set properties are not mutable!";
+            Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
         }
         my $rule = $self->rule;
         if ($rule->specifies_value_for($method)) {
@@ -87,7 +87,7 @@ sub AUTOSUB {
             my @values = map { $_->$method } @members;
             return @values if wantarray;
             return if not defined wantarray;
-            die "Multiple values: @values match set propety $method!" if @values > 1 and not wantarray;
+            Carp::croak("Multiple matches for Set method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
             return $values[0];
         }
     }; 
