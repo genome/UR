@@ -2291,7 +2291,7 @@ sub _create_import_iterator_for_underlying_context {
             'And',
             join(",", @base_property_names, @non_aggregate_properties),
         );
-        push @object_fabricators, sub {
+        my $fab_subref = sub {
             my $row = $_[0];
             # my $ss_rule = $template->get_rule_for_values(@values, @$row[0..$division_point]);
             # not sure why the above gets an error but this doesn't...
@@ -2304,6 +2304,11 @@ sub _create_import_iterator_for_underlying_context {
             @$set{@aggregate_properties} = @$row[$division_point+1..$#$row];
             return $set;
         };
+        my $object_fabricator = UR::Context::ObjectFabricator->_create(
+                                    fabricator => $fab_subref,
+                                    context    => $self,
+                                );
+        unshift @object_fabricators, $object_fabricator;
     }
     else {
         # regular instances
@@ -3077,7 +3082,7 @@ sub _get_objects_for_class_and_rule_from_cache {
 
 sub _group_objects {
     my ($template,$values,$group_by,$objects)  = @_;
-    my $sub_template = $template;
+    my $sub_template = $template->remove_filter('-group_by');
     for my $property (@$group_by) {
         $sub_template = $sub_template->add_filter($property);
     }
@@ -3085,12 +3090,22 @@ sub _group_objects {
     my @groups;
     my %seen;
     for my $result (@$objects) {
-        my @extra_values = map { $result->$_ } @$group_by;
-        my $bx = $sub_template->get_rule_for_values(@$values,@extra_values);
-        next if $seen{$bx};
-        $seen{$bx} = 1;
-        my $group = $set_class->get($bx->id); 
-        push @groups, $group;
+        my %values_for_group_property;
+        foreach my $group_property ( @$group_by ) {
+            my @values = $result->$group_property;
+            if (@values) {
+                $values_for_group_property{$group_property} = \@values;
+            } else {
+                $values_for_group_property{$group_property} = [ undef ];
+            }
+        }
+        my @combinations = UR::Util::combinations_of_values(map { $values_for_group_property{$_} } @$group_by);
+        foreach my $extra_values ( @combinations ) {
+            my $bx = $sub_template->get_rule_for_values(@$values,@$extra_values);
+            next if $seen{$bx}++;
+            my $group = $set_class->get($bx->id);
+            push @groups, $group;
+        }
     }
     return @groups;
 }

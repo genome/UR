@@ -36,7 +36,9 @@ sub members {
     while (@_) {
         $rule = $rule->add_filter(shift, shift);
     }
-    return $self->member_class_name->get($rule);
+    my @members = $self->member_class_name->get($rule);
+    $self->{'__count'} = scalar(@members);
+    return $self->context_return(@members);
 }
 
 sub subset {
@@ -51,7 +53,7 @@ sub group_by {
     my $self = shift;
     my @group_by = @_;
     my $grouping_rule = $self->rule->add_filter(-group_by => \@group_by);
-    my @groups = UR::Context->get_objects_for_class_and_rule( 
+    my @groups = UR::Context->current->get_objects_for_class_and_rule( 
         $self->member_class_name, 
         $grouping_rule, 
         undef,  #$load, 
@@ -61,8 +63,37 @@ sub group_by {
 }
 
 sub count {
-    $_[0]->__init unless $_[0]->{__init};
-    return $_[0]->{count};
+    my $self = shift;
+
+    unless (exists $self->{'__count'}) {
+        my @members = $self->members;
+    }
+    return $self->{'__count'};
+
+
+    # If there are no member-class objects with changes, we can just interrogate the DB
+    my $has_changes = 0;
+    foreach my $obj ( $self->member_class_name->is_loaded() ) {
+        if ($obj->__changes__) {
+            $has_changes = 1;
+            last;
+        }
+    }
+
+    if ($has_changes) {
+        my @members = $self->members;
+        return scalar(@members);
+
+    } else {
+        my $count_rule = $self->rule->add_filter(-group_by => []);
+        my $set = UR::Context->current->get_objects_for_class_and_rule(
+                      $self->member_class_name,
+                      $count_rule,
+                      1,    # load
+                      0,    # return_closure
+                   );
+        return $set->{'count'};
+    }
 }
 
 sub AUTOSUB {
