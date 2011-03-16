@@ -67,6 +67,9 @@ sub count {
 
 sub AUTOSUB {
     my ($method,$class) = @_;
+    if (ref $class) {
+        $class = $class->class;
+    }
     my $member_class_name = $class;
     $member_class_name =~ s/::Set$//g; 
     return unless $member_class_name; 
