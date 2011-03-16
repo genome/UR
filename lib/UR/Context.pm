@@ -470,18 +470,7 @@ sub query {
         return @objects if wantarray;
         
         if ( @objects > 1 and defined(wantarray)) {
-            my %params = $rule->params_list();
-            $DB::single=1;
-            print "Got multiple matches for class $class\nparams were: ".join(', ', map { "$_ => " . $params{$_} } keys %params) . "\nmatched objects were:\n";
-            foreach my $o (@objects) {
-               print "Object $o\n";
-               foreach my $k ( keys %$o) {
-                   print "$k => ".$o->{$k}."\n";
-               }
-            }
-            Carp::confess("Multiple matches for $class query!". Data::Dumper::Dumper([$rule->params_list]));
-            Carp::confess("Multiple matches for $class, ids: ",map {$_->id} @objects, "\nParams: ",
-                           join(', ', map { "$_ => " . $params{$_} } keys %params)) if ( @objects > 1 and defined(wantarray));
+            Carp::croak("Multiple matches for $class query called in scalar context. $rule matches " . scalar(@objects). " objects");
         }
         
         return $objects[0];
@@ -2310,7 +2299,7 @@ sub _create_import_iterator_for_underlying_context {
             my $ss_rule = $template->get_rule_for_values(@values, @a); 
             my $set = $set_class->get($ss_rule->id);
             unless ($set) {
-                die "Failed to fabricate $set_class for rule $ss_rule!";
+                Carp::croak("Failed to fabricate $set_class for rule $ss_rule");
             }
             @$set{@aggregate_properties} = @$row[$division_point+1..$#$row];
             return $set;
@@ -2340,7 +2329,7 @@ sub _create_import_iterator_for_underlying_context {
     my @addl_join_comparators;
     if (@addl_loading_info) {
         if ($group_by) {
-            die "cross-datasource group-by is not supported yet!";
+            Carp::croak("cross-datasource group-by is not supported yet");
         }
         my($addl_object_fabricators, $addl_join_comparators) =
                 $self->_create_secondary_loading_closures( $template_data,
