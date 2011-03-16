@@ -36,9 +36,7 @@ sub members {
     while (@_) {
         $rule = $rule->add_filter(shift, shift);
     }
-    my @members = $self->member_class_name->get($rule);
-    $self->{'__count'} = scalar(@members);
-    return $self->context_return(@members);
+    return $self->member_class_name->get($rule);
 }
 
 sub subset {
@@ -67,11 +65,6 @@ sub count {
 
     Carp::croak("count() is a group operation, and is not writable") if @_;
 
-    unless (exists $self->{'__count'}) {
-        my @members = $self->members;
-    }
-    return $self->{'__count'};
-
     # If there are no member-class objects with changes, we can just interrogate the DB
     my $has_changes = 0;
     foreach my $obj ( $self->member_class_name->is_loaded() ) {
@@ -81,20 +74,23 @@ sub count {
         }
     }
 
-    if ($has_changes) {
-        my @members = $self->members;
-        return scalar(@members);
+    unless (exists $self->{'count'}) {
 
-    } else {
-        my $count_rule = $self->rule->add_filter(-group_by => []);
-        my $set = UR::Context->current->get_objects_for_class_and_rule(
-                      $self->member_class_name,
-                      $count_rule,
-                      1,    # load
-                      0,    # return_closure
-                   );
-        return $set->{'count'};
+        if ($has_changes) {
+            my @members = $self->members;
+            $self->{'count'} = scalar(@members);
+
+        } else {
+            my $count_rule = $self->rule->add_filter(-group_by => []);
+            UR::Context->current->get_objects_for_class_and_rule(
+                  $self->member_class_name,
+                  $count_rule,
+                  1,    # load
+                  0,    # return_closure
+             );
+        }
     }
+    return $self->{'count'};
 }
 
 sub AUTOSUB {

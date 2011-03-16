@@ -1506,7 +1506,10 @@ sub create_iterator_closure_for_rule {
     }
 
     # The full SQL statement for the template, besides the filter logic, is built here.    
-    my $order_by_clause = 'order by ' . join(', ',@$order_by_columns);
+    my $order_by_clause;
+    if (@$order_by_columns) {
+        $order_by_clause = 'order by ' . join(', ',@$order_by_columns);
+    }
 
     my $sql = "\nselect ";
     if ($select_hint) {
@@ -1517,7 +1520,7 @@ sub create_iterator_closure_for_rule {
     $sql .= "\n$where_clause" if defined($where_clause) and length($where_clause);
     $sql .= "\n$connect_by_clause" if $connect_by_clause;
     $sql .= "\n$group_by_clause" if $group_by_clause;
-    $sql .= "\n$order_by_clause"; 
+    $sql .= "\n$order_by_clause" if $order_by_clause;
 
     my $dbh = $self->get_default_dbh;    
     my $sth = $dbh->prepare($sql,$query_config);
@@ -3818,7 +3821,7 @@ sub _generate_template_data_for_loading {
         # when grouping, we're making set objects instead of regular objects
         # this means that we re-constitute the select clause and add a group_by clause
         #$DB::single = 1;
-        $group_by_clause = 'group by ' . $select_clause;
+        $group_by_clause = 'group by ' . $select_clause if (scalar(@$group_by));
 
         # FIXME - does it even make sense for the user to specify an order_by in the
         # get() request for Set objects?  If so, then we need to concatonate these order_by_columns
@@ -3826,7 +3829,8 @@ sub _generate_template_data_for_loading {
         $order_by_columns = $self->_select_clause_columns_for_table_property_data(@all_table_properties);
 
         # TODO: handle aggregates present in the class definition
-        $select_clause .= ', count(*) count';
+        $select_clause .= ', ' if $select_clause;
+        $select_clause .= 'count(*) count';
 
         unless (@$group_by == @all_table_properties) {
             print "mismatch table properties vs group by!\n";

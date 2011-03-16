@@ -2281,6 +2281,12 @@ sub _create_import_iterator_for_underlying_context {
         my $set_class = $class_name . '::Set';
         my $logic_type = $rule_template->logic_type;
         my @base_property_names = $rule_template->_property_names;
+        for (my $i = 0; $i < @base_property_names; $i++) {
+            my $operator = $rule_template->operator_for($base_property_names[$i]);
+            if ($operator ne '=') {
+                $base_property_names[$i] .= " $operator";
+            }
+        }
         
         my @non_aggregate_properties = @$group_by;
         my @aggregate_properties = ('count'); # TODO: make non-hard-coded
@@ -2886,6 +2892,12 @@ sub _get_objects_for_class_and_rule_from_cache {
     #my @param_list = $rule->params_list;
     #print "CACHE-GET: $class @param_list\n";
     
+    if ($template->group_by) {
+        $rule = $rule->remove_filter('-group_by');
+        $class = $rule->subject_class_name . '::Set';
+        $rule = $class->define_boolexpr(id => $rule->id);
+    }
+
     my $strategy = $rule->{_context_query_strategy};    
     unless ($strategy) {
         if ($rule->num_values == 0) {
