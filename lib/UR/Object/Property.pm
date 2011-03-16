@@ -242,7 +242,7 @@ sub _get_joins {
                 $id .= ' ' . $where_rule->id;
                 push @joins, { %$join, id => $id, where => $where };
             }
-            unless ($to eq 'self' or $to eq '-filter') {
+            unless ($to eq '__self__' or $to eq '-filter') {
                 my $to_class_meta = eval { $via_meta->data_type->__meta__ };
                 unless ($to_class_meta) {
                     Carp::croak("Can't get class metadata for " . $via_meta->data_type
