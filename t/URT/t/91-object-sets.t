@@ -92,7 +92,7 @@ is($query_count, 1, 'Made 1 query');
 $query_count = 0;
 my @members = $set->members();
 is(scalar(@members), 0, 'Set has no members');
-is($query_count, 1, 'Made no queries');
+is($query_count, 0, 'Made no queries');
 
 $query_count = 0;
 $set = URT::Person->define_set(is_cool => 1);
@@ -135,7 +135,7 @@ foreach my $subset ( @subsets ) {
     @members = $subset->members();
     is($query_count, 0, 'Getting members from subset made no queries');
 
-    my $expected_members = $people_by_car_color{$color};
+    my $expected_members = $people_by_car_color{$color || ''};
     is(scalar(@members), scalar(@$expected_members), 'Got the expected number of subset members');
     is_deeply([ map { $_->name } @members], $expected_members, 'Their names were correct');
 }
