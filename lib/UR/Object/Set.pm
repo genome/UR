@@ -36,7 +36,9 @@ sub members {
     while (@_) {
         $rule = $rule->add_filter(shift, shift);
     }
-    return $self->member_class_name->get($rule);
+    my @members = $self->member_class_name->get($rule);
+    $self->{'__count'} = scalar(@members);
+    return $self->context_return(@members);
 }
 
 sub subset {
@@ -51,7 +53,7 @@ sub group_by {
     my $self = shift;
     my @group_by = @_;
     my $grouping_rule = $self->rule->add_filter(-group_by => \@group_by);
-    my @groups = UR::Context->get_objects_for_class_and_rule( 
+    my @groups = UR::Context->current->get_objects_for_class_and_rule( 
         $self->member_class_name, 
         $grouping_rule, 
         undef,  #$load, 
@@ -62,22 +64,44 @@ sub group_by {
 
 sub count {
     my $self = shift;
-    Carp::confess("count is a group operation, and is not writable!") if @_;
-    unless (exists $self->{count}) {
-        # load
-        my $grouping_rule = $self->rule->add_filter(-group_by => []);
-        my @groups = UR::Context->get_objects_for_class_and_rule( 
-            $self->member_class_name, 
-            $grouping_rule, 
-            1,      #$load, !!!
-            0,      #$return_closure, 
-        );        
+
+    Carp::croak("count() is a group operation, and is not writable") if @_;
+
+    unless (exists $self->{'__count'}) {
+        my @members = $self->members;
     }
-    return $self->{count};
+    return $self->{'__count'};
+
+    # If there are no member-class objects with changes, we can just interrogate the DB
+    my $has_changes = 0;
+    foreach my $obj ( $self->member_class_name->is_loaded() ) {
+        if ($obj->__changes__) {
+            $has_changes = 1;
+            last;
+        }
+    }
+
+    if ($has_changes) {
+        my @members = $self->members;
+        return scalar(@members);
+
+    } else {
+        my $count_rule = $self->rule->add_filter(-group_by => []);
+        my $set = UR::Context->current->get_objects_for_class_and_rule(
+                      $self->member_class_name,
+                      $count_rule,
+                      1,    # load
+                      0,    # return_closure
+                   );
+        return $set->{'count'};
+    }
 }
 
 sub AUTOSUB {
     my ($method,$class) = @_;
+    if (ref $class) {
+        $class = $class->class;
+    }
     my $member_class_name = $class;
     $member_class_name =~ s/::Set$//g; 
     return unless $member_class_name; 
@@ -87,7 +111,7 @@ sub AUTOSUB {
     return sub {
         my $self = shift;
         if (@_) {
-            die "set properties are not mutable!";
+            Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
         }
         my $rule = $self->rule;
         if ($rule->specifies_value_for($method)) {
@@ -98,7 +122,7 @@ sub AUTOSUB {
             my @values = map { $_->$method } @members;
             return @values if wantarray;
             return if not defined wantarray;
-            die "Multiple values: @values match set propety $method!" if @values > 1 and not wantarray;
+            Carp::croak("Multiple matches for Set method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
             return $values[0];
         }
     }; 

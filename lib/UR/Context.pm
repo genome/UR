@@ -470,18 +470,7 @@ sub query {
         return @objects if wantarray;
         
         if ( @objects > 1 and defined(wantarray)) {
-            my %params = $rule->params_list();
-            $DB::single=1;
-            print "Got multiple matches for class $class\nparams were: ".join(', ', map { "$_ => " . $params{$_} } keys %params) . "\nmatched objects were:\n";
-            foreach my $o (@objects) {
-               print "Object $o\n";
-               foreach my $k ( keys %$o) {
-                   print "$k => ".$o->{$k}."\n";
-               }
-            }
-            Carp::confess("Multiple matches for $class query!". Data::Dumper::Dumper([$rule->params_list]));
-            Carp::confess("Multiple matches for $class, ids: ",map {$_->id} @objects, "\nParams: ",
-                           join(', ', map { "$_ => " . $params{$_} } keys %params)) if ( @objects > 1 and defined(wantarray));
+            Carp::croak("Multiple matches for $class query called in scalar context. $rule matches " . scalar(@objects). " objects");
         }
         
         return $objects[0];
@@ -2302,7 +2291,7 @@ sub _create_import_iterator_for_underlying_context {
             'And',
             join(",", @base_property_names, @non_aggregate_properties),
         );
-        push @object_fabricators, sub {
+        my $fab_subref = sub {
             my $row = $_[0];
             # my $ss_rule = $template->get_rule_for_values(@values, @$row[0..$division_point]);
             # not sure why the above gets an error but this doesn't...
@@ -2310,11 +2299,16 @@ sub _create_import_iterator_for_underlying_context {
             my $ss_rule = $template->get_rule_for_values(@values, @a); 
             my $set = $set_class->get($ss_rule->id);
             unless ($set) {
-                die "Failed to fabricate $set_class for rule $ss_rule!";
+                Carp::croak("Failed to fabricate $set_class for rule $ss_rule");
             }
             @$set{@aggregate_properties} = @$row[$division_point+1..$#$row];
             return $set;
         };
+        my $object_fabricator = UR::Context::ObjectFabricator->_create(
+                                    fabricator => $fab_subref,
+                                    context    => $self,
+                                );
+        unshift @object_fabricators, $object_fabricator;
     }
     else {
         # regular instances
@@ -2340,7 +2334,7 @@ sub _create_import_iterator_for_underlying_context {
     my @addl_join_comparators;
     if (@addl_loading_info) {
         if ($group_by) {
-            die "cross-datasource group-by is not supported yet!";
+            Carp::croak("cross-datasource group-by is not supported yet");
         }
         my($addl_object_fabricators, $addl_join_comparators) =
                 $self->_create_secondary_loading_closures( $template_data,
@@ -3088,7 +3082,7 @@ sub _get_objects_for_class_and_rule_from_cache {
 
 sub _group_objects {
     my ($template,$values,$group_by,$objects)  = @_;
-    my $sub_template = $template;
+    my $sub_template = $template->remove_filter('-group_by');
     for my $property (@$group_by) {
         $sub_template = $sub_template->add_filter($property);
     }
@@ -3096,12 +3090,22 @@ sub _group_objects {
     my @groups;
     my %seen;
     for my $result (@$objects) {
-        my @extra_values = map { $result->$_ } @$group_by;
-        my $bx = $sub_template->get_rule_for_values(@$values,@extra_values);
-        next if $seen{$bx};
-        $seen{$bx} = 1;
-        my $group = $set_class->get($bx->id); 
-        push @groups, $group;
+        my %values_for_group_property;
+        foreach my $group_property ( @$group_by ) {
+            my @values = $result->$group_property;
+            if (@values) {
+                $values_for_group_property{$group_property} = \@values;
+            } else {
+                $values_for_group_property{$group_property} = [ undef ];
+            }
+        }
+        my @combinations = UR::Util::combinations_of_values(map { $values_for_group_property{$_} } @$group_by);
+        foreach my $extra_values ( @combinations ) {
+            my $bx = $sub_template->get_rule_for_values(@$values,@$extra_values);
+            next if $seen{$bx}++;
+            my $group = $set_class->get($bx->id);
+            push @groups, $group;
+        }
     }
     return @groups;
 }
