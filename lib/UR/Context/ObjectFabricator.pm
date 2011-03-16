@@ -34,7 +34,7 @@ sub _create {
     $self->{'context'} = $params{'context'};
 
     $self->{'all_params_loaded'} = $params{'all_params_loaded'} || {};
-    $self->{'in_clause_values'} = $params{'in_clause_values'} || [];
+    $self->{'in_clause_values'} = $params{'in_clause_values'} || {};
 
     $all_object_fabricators{$self} = $self;
     Scalar::Util::weaken($all_object_fabricators{$self});
