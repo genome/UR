@@ -112,6 +112,26 @@ sub positions_of_values {
     return @translated_positions;
 }
 
+
+# Get all combinations of values
+# input is a list of listrefs of values
+sub combinations_of_values {
+    return [] unless @_;
+
+    my $first_values = shift;
+
+    $first_values = [ $first_values ] unless (ref($first_values) and ref($first_values) eq 'ARRAY');
+
+    my @retval;
+    foreach my $sub_combination ( &combinations_of_values(@_) ) {
+        foreach my $value ( @$first_values ) {
+            push @retval, [$value, @$sub_combination];
+        }
+    }
+
+    return @retval;
+}
+
 # generate a method
 sub _define_method {
     my $class = shift;
