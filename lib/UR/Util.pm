@@ -81,7 +81,6 @@ sub deep_copy {
 sub value_positions_map {
     my ($array) = @_;
     my %value_pos;
-    my $a;
     for (my $pos = 0; $pos < @$array; $pos++) {
         my $value = $array->[$pos];
         if (exists $value_pos{$value}) {
