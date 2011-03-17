@@ -3227,11 +3227,13 @@ sub _generate_template_data_for_loading {
             $prev_id_column_name = $id_property_objects[0]->column_name;
         }
 
-        my @properties_to_query = sort 
-                                  keys(%filters), 
-                                  ($hints ? @$hints : ()),
-                                  ($order_by ? @$order_by : ()),
-                                  ($group_by ? @$group_by : ());
+        my %properties_to_query = map { $_ => 1 }
+                                      keys(%filters),
+                                      ($hints ? @$hints : ()),
+                                      ($order_by ? @$order_by : ()),
+                                      ($group_by ? @$group_by : ());
+        my @properties_to_query = sort keys(%properties_to_query);
+
 
         while (my $property_name = shift @properties_to_query) {
             my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);
