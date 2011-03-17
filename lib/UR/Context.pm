@@ -1408,6 +1408,16 @@ sub get_objects_for_class_and_rule {
     #my @params = $rule->params_list;
     #print "GET: $class @params\n";
 
+    my $rule_template = $rule->template;
+    if ($rule_template->group_by and $rule_template->order_by) {
+        my %group_by = map { $_ => 1 } @{ $rule->template->group_by };
+        foreach my $order_by ( @{ $rule->template->order_by } ) {
+            unless ($group_by{$order_by}) {
+                Carp::croak("Property '$order_by' in the -order_by list must appear in the -group_by list for BoolExpr $rule");
+            }
+        }
+    }
+
     if (
         $cache_size_highwater
         and
@@ -1416,7 +1426,7 @@ sub get_objects_for_class_and_rule {
         $self->prune_object_cache();
     }
 
-    if ($rule->template->isa("UR::BoolExpr::Template::Or")) {
+    if ($rule_template->isa("UR::BoolExpr::Template::Or")) {
         $rule = $rule->normalize;
         my @u = $rule->underlying_rules;
         my @results;
