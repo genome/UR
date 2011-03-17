@@ -5,6 +5,8 @@ use warnings;
 use UR;
 our $VERSION = "0.30"; # UR $VERSION;
 
+our @CARP_NOT = qw( UR::Object::Type );
+
 class UR::Object::Set {
     is => 'UR::Value',
     is_abstract => 1,
