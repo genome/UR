@@ -13,6 +13,7 @@ our $VERSION = "0.30"; # UR $VERSION;;
 # readable stringification
 use overload ('""' => '__display_name__');
 use overload ('==' => sub { $_[0] . ''  eq $_[1] . '' } );
+use overload ('eq' => sub { $_[0] . ''  eq $_[1] . '' } );
 
 UR::Object::Type->define(
     class_name => 'UR::BoolExpr',
