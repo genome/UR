@@ -57,7 +57,7 @@ sub group_by {
         undef,  #$load, 
         0,      #$return_closure, 
     );
-    return @groups;
+    return $self->context_return(@groups);
 }
 
 sub count {
