@@ -8,7 +8,8 @@ use UR::Context;
 
 our $VERSION = "0.30"; # UR $VERSION;
 
-# A helper package for UR::Context to keep track about 
+# A helper package for UR::Context to keep track of the subrefs used
+# to create objects from database data
 # These are normal Perl objects, not UR objects, so they get 
 # regular refcounting and scoping
 
