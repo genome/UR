@@ -3112,7 +3112,7 @@ sub _group_objects {
         my @combinations = UR::Util::combinations_of_values(map { $values_for_group_property{$_} } @$group_by);
         foreach my $extra_values ( @combinations ) {
             my $bx = $sub_template->get_rule_for_values(@$values,@$extra_values);
-            next if $seen{$bx}++;
+            next if $seen{$bx->id}++;
             my $group = $set_class->get($bx->id);
             push @groups, $group;
         }
