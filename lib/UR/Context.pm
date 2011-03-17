@@ -2887,16 +2887,14 @@ sub _get_objects_for_class_and_rule_from_cache {
     # Get all objects which are loaded in the application which match
     # the specified parameters.
     my ($self, $class, $rule) = @_;
-    my ($template,@values) = $rule->template_and_values;
     
+    my $group_by = $rule->template->group_by;
+    $rule = $rule->remove_filter('-group_by');
+    my ($template,@values) = $rule->template_and_values;
+
     #my @param_list = $rule->params_list;
     #print "CACHE-GET: $class @param_list\n";
-    
-    if ($template->group_by) {
-        $rule = $rule->remove_filter('-group_by');
-        $class = $rule->subject_class_name . '::Set';
-        $rule = $class->define_boolexpr(id => $rule->id);
-    }
+
 
     my $strategy = $rule->{_context_query_strategy};    
     unless ($strategy) {
@@ -3081,7 +3079,7 @@ sub _get_objects_for_class_and_rule_from_cache {
         @results = sort $sorter @results;
     }
 
-    if (my $group_by = $template->group_by) {
+    if ($group_by) {
         # return sets instead of the actual objects
         @results = _group_objects($template,\@values,$group_by,\@results);
     }
