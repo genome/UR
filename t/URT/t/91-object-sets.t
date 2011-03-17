@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 55;
+use Test::More tests=> 63;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -171,4 +171,25 @@ foreach my $color ( keys %colors ) {
     is($query_count, $first_time ? 3 : 1, 'query count is correct');
     $first_time = 0;
 }
+
+
+# test creating/deleting/modifying objects that match extant sets
+
+# test having an -order_by in addition to -group_by.  It should throw an exception if
+# all the order_by columns don't appear in -group_by
+@subsets = URT::Person->get(-group_by => ['car_colors'], -order_by => ['car_colors']);
+is(scalar(@subsets), 4, 'Partitioning all people by car_colors yields 4 subsets, this time with order_by');
+foreach (@subsets) {
+    isa_ok($_, 'URT::Person::Set');
+}
+is_deeply([ map { $_->car_colors } @subsets ],
+          [undef, 'blue', 'red', 'yellow'],
+          'The color subsets were returned in the correct order');
+
+
+@subsets = eval { URT::Person->get(-group_by => ['is_cool'], -order_by => ['car_colors'])};
+is(scalar(@subsets), 0, 'Partitioning all people by is_cool, order_by car_colors returned no subsets');
+like($@,
+   qr(^Property 'car_colors' in the -order_by list must appear in the -group_by list),
+   'It threw the correct exception');
 
