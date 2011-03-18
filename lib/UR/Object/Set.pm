@@ -178,7 +178,7 @@ sub AUTOSUB {
             my @values = map { $_->$method } @members;
             return @values if wantarray;
             return if not defined wantarray;
-            Carp::croak("Multiple matches for Set method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+            Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
             return $values[0];
         }
     }; 
