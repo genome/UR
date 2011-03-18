@@ -1475,7 +1475,11 @@ sub get_objects_for_class_and_rule {
     # should have a filter added to the rule to keep only rows of the subclass we're interested in.
     # This will improve the SQL performance when it's later constructed.
     my $subclassify_by = $meta->subclassify_by;
-    if ($subclassify_by and ! $meta->is_abstract and ! $rule->specifies_value_for($subclassify_by)) {
+    if ($subclassify_by 
+        and ! $meta->is_abstract 
+        and ! $rule->template->group_by 
+        and ! $rule->specifies_value_for($subclassify_by)
+    ) {
         $rule = $rule->add_filter($subclassify_by => $class);
     }
 
