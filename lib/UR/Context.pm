@@ -3087,15 +3087,25 @@ sub _get_objects_for_class_and_rule_from_cache {
             push @results, map { $class->get($this => $_, -recurse => $recurse) } @values;
         }
     }
-    
-    if (@results > 1) {
-        my $sorter = $template->sorter;
-        @results = sort $sorter @results;
-    }
 
     if ($group_by) {
         # return sets instead of the actual objects
         @results = _group_objects($template,\@values,$group_by,\@results);
+    }
+
+
+    if (@results > 1) {
+        my $sorter;
+        if ($group_by) {
+            # We need to rewrite the original rule on the member class to be a rule
+            # on the Set class to do proper ordering
+            my $set_class = $template->subject_class_name . '::Set';
+            my $set_template = UR::BoolExpr::Template->resolve($set_class, -group_by => $group_by);
+            $sorter = $set_template->sorter;
+        } else {
+            $sorter = $template->sorter;
+        }
+        @results = sort $sorter @results;
     }
 
     # Return in the standard way.
