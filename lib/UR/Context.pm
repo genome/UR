@@ -1510,9 +1510,6 @@ sub get_objects_for_class_and_rule {
     my $is_monitor_query = $self->monitor_query;
     $self->_log_query_for_rule($class,$normalized_rule,Carp::shortmess("QUERY: Query start for rule $normalized_rule")) if ($is_monitor_query);
 
-    my $normalized_rule_template = $normalized_rule->template;
-    my $object_sorter = $normalized_rule_template->sorter();
-
     # optimization for the common case
     if (!$load and !$return_closure) {
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
@@ -1534,13 +1531,14 @@ sub get_objects_for_class_and_rule {
             $self->_log_done_elapsed_time_for_rule($normalized_rule);
         }
 
-        @c = sort $object_sorter @c;
-
         return @c if wantarray;           # array context
         return unless defined wantarray;  # null context
         Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
         return $c[0];                     # scalar context
     }
+
+    my $normalized_rule_template = $normalized_rule->template;
+    my $object_sorter = $normalized_rule_template->sorter();
 
     # the above process might have found all of the cached data required as a side-effect in which case
     # we have a value for this early 
@@ -3085,15 +3083,25 @@ sub _get_objects_for_class_and_rule_from_cache {
             push @results, map { $class->get($this => $_, -recurse => $recurse) } @values;
         }
     }
-    
-    if (@results > 1) {
-        my $sorter = $template->sorter;
-        @results = sort $sorter @results;
-    }
 
     if ($group_by) {
         # return sets instead of the actual objects
         @results = _group_objects($template,\@values,$group_by,\@results);
+    }
+
+
+    if (@results > 1) {
+        my $sorter;
+        if ($group_by) {
+            # We need to rewrite the original rule on the member class to be a rule
+            # on the Set class to do proper ordering
+            my $set_class = $template->subject_class_name . '::Set';
+            my $set_template = UR::BoolExpr::Template->resolve($set_class, -group_by => $group_by);
+            $sorter = $set_template->sorter;
+        } else {
+            $sorter = $template->sorter;
+        }
+        @results = sort $sorter @results;
     }
 
     # Return in the standard way.
