@@ -19,6 +19,67 @@ class UR::Object::Set {
     doc => 'an unordered group of distinct UR::Objects'
 };
 
+# I'll neave this in here commented out for the future
+# It's intended to keep 'count' for sets updated in real-time as objects are 
+# created/deleted/updated
+#sub _load {
+#    my $class = shift;
+#    my $self = $class->SUPER::_load(@_);
+#
+#    my $member_class_name = $rule->subject_class_name;
+#
+#    my $rule = $self->rule
+#    my $rule_template = $rule->template;
+#
+#    my @rule_properties = $rule_template->_property_names;
+#    my %rule_values = map { $_ => $rule->value_for($_) } @rule_properties;
+#
+#    my %underlying_comparator_for_property = map { $_->property_name => $_ } $rule_template->get_underlying_rule_templates;
+#
+#    my @aggregates = qw( count );
+#
+#    $member_class_name->create_subscription(
+#        note => 'set monitor '.$self->id,
+#        priority => 0,
+#        callback => sub {
+#            # make sure the aggregate values get invalidated when objects change
+#            my @agg_set = @$self{aggregates};
+#            return unless exists(@agg_set);   # returns only if none of the aggregates have values
+#
+#            my ($changed_object, $changed_property, $old_value, $new_value) = @_;
+#
+#            if ($changed_property eq 'create') {
+#                if ($rule->evaluate($changed_object)) {
+#                    $self->{'count'}++;
+#                }
+#            } elsif ($changed_property eq 'delete') {
+#                if ($rule->evaluate($changed_object)) {
+#                    $self->{'count'}--;
+#                }
+#            } elsif (exists $value_index_for_property{$changed_property}) {
+#
+#                my $comparator = $underlying_comparator_for_property{$changed_property};
+#
+#                # HACK!
+#                $changed_object->{$changed_property} = $old_value;
+#                my $evaled_before = $comparator->evaluate_subject_and_values($changed_object,$rule_values{$changed_property});
+#
+#                $changed_object->{$changed_property} = $new_value;
+#                my $evaled_after = $comparator->evaluate_subject_and_values($changed_object,$rule_values{$changed_property});
+#
+#                if ($evaled_before and ! $evaled_after) {
+#                    $self->{'count'}--;
+#                } elsif ($evaled_after and ! $evaled_before) {
+#                    $self->{'count'}++;
+#                }
+#            }
+#        }
+#    );
+#
+#    return $self;
+#}
+    
+
 sub get_with_special_parameters {
     my $class = shift;
     my $bx = shift;
@@ -76,21 +137,18 @@ sub count {
         }
     }
 
-    unless (exists $self->{'count'}) {
+    if ($has_changes) {
+        my @members = $self->members;
+        $self->{'count'} = scalar(@members);
 
-        if ($has_changes) {
-            my @members = $self->members;
-            $self->{'count'} = scalar(@members);
-
-        } else {
-            my $count_rule = $self->rule->add_filter(-group_by => []);
-            UR::Context->current->get_objects_for_class_and_rule(
-                  $self->member_class_name,
-                  $count_rule,
-                  1,    # load
-                  0,    # return_closure
-             );
-        }
+    } elsif (! exists $self->{'count'}) {
+        my $count_rule = $self->rule->add_filter(-group_by => []);
+        UR::Context->current->get_objects_for_class_and_rule(
+              $self->member_class_name,
+              $count_rule,
+              1,    # load
+              0,    # return_closure
+         );
     }
     return $self->{'count'};
 }

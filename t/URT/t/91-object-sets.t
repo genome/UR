@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 63;
+use Test::More tests=> 64;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -59,13 +59,13 @@ ok(UR::Object::Type->define(
 # Bob and Mike have red cars, Fred and Joe have blue cars.  Frank has no car.  Bob, Joe and Frank are cool
 # Bob also has a yellow car that's his primary car
 my $insert = $dbh->prepare('insert into person values (?,?,?,?)');
-foreach my $row ( [ 1, 'Bob',1, 25 ], [2, 'Fred',0, 30], [3, 'Mike',0, 35],[4,'Joe',1, 40], [5,'Frank', 1, 45] ) {
+foreach my $row ( [ 11, 'Bob',1, 25 ], [12, 'Fred',0, 30], [13, 'Mike',0, 35],[14,'Joe',1, 40], [15,'Frank', 1, 45] ) {
     $insert->execute(@$row);
 }
 $insert->finish();
 
 $insert = $dbh->prepare('insert into car values (?,?,?,?)');
-foreach my $row ( [ 1,'red',0,  1], [ 2,'blue',1, 2], [3,'red',1,3],[4,'blue',1,4],[5,'yellow',1,1] ) {
+foreach my $row ( [ 1,'red',0,  11], [ 2,'blue',1, 12], [3,'red',1,13],[4,'blue',1,14],[5,'yellow',1,11] ) {
     $insert->execute(@$row);
 }
 $insert->finish();
@@ -173,10 +173,10 @@ foreach my $color ( keys %colors ) {
 }
 
 
-# test creating/deleting/modifying objects that match extant sets
 
 # test having an -order_by in addition to -group_by.  It should throw an exception if
 # all the order_by columns don't appear in -group_by
+$query_count = 0;
 @subsets = URT::Person->get(-group_by => ['car_colors'], -order_by => ['car_colors']);
 is(scalar(@subsets), 4, 'Partitioning all people by car_colors yields 4 subsets, this time with order_by');
 foreach (@subsets) {
@@ -185,6 +185,7 @@ foreach (@subsets) {
 is_deeply([ map { $_->car_colors } @subsets ],
           [undef, 'blue', 'red', 'yellow'],
           'The color subsets were returned in the correct order');
+is($query_count, 3, 'query count is correct'); # there's 2 queries for car color indexing, one more for aggregating the car colors
 
 
 @subsets = eval { URT::Person->get(-group_by => ['is_cool'], -order_by => ['car_colors'])};
