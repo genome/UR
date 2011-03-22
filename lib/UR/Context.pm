@@ -470,18 +470,7 @@ sub query {
         return @objects if wantarray;
         
         if ( @objects > 1 and defined(wantarray)) {
-            my %params = $rule->params_list();
-            $DB::single=1;
-            print "Got multiple matches for class $class\nparams were: ".join(', ', map { "$_ => " . $params{$_} } keys %params) . "\nmatched objects were:\n";
-            foreach my $o (@objects) {
-               print "Object $o\n";
-               foreach my $k ( keys %$o) {
-                   print "$k => ".$o->{$k}."\n";
-               }
-            }
-            Carp::confess("Multiple matches for $class query!". Data::Dumper::Dumper([$rule->params_list]));
-            Carp::confess("Multiple matches for $class, ids: ",map {$_->id} @objects, "\nParams: ",
-                           join(', ', map { "$_ => " . $params{$_} } keys %params)) if ( @objects > 1 and defined(wantarray));
+            Carp::croak("Multiple matches for $class query called in scalar context. $rule matches " . scalar(@objects). " objects");
         }
         
         return $objects[0];
@@ -1419,6 +1408,16 @@ sub get_objects_for_class_and_rule {
     #my @params = $rule->params_list;
     #print "GET: $class @params\n";
 
+    my $rule_template = $rule->template;
+    if ($rule_template->group_by and $rule_template->order_by) {
+        my %group_by = map { $_ => 1 } @{ $rule->template->group_by };
+        foreach my $order_by ( @{ $rule->template->order_by } ) {
+            unless ($group_by{$order_by}) {
+                Carp::croak("Property '$order_by' in the -order_by list must appear in the -group_by list for BoolExpr $rule");
+            }
+        }
+    }
+
     if (
         $cache_size_highwater
         and
@@ -1427,7 +1426,7 @@ sub get_objects_for_class_and_rule {
         $self->prune_object_cache();
     }
 
-    if ($rule->template->isa("UR::BoolExpr::Template::Or")) {
+    if ($rule_template->isa("UR::BoolExpr::Template::Or")) {
         $rule = $rule->normalize;
         my @u = $rule->underlying_rules;
         my @results;
@@ -1476,7 +1475,11 @@ sub get_objects_for_class_and_rule {
     # should have a filter added to the rule to keep only rows of the subclass we're interested in.
     # This will improve the SQL performance when it's later constructed.
     my $subclassify_by = $meta->subclassify_by;
-    if ($subclassify_by and ! $meta->is_abstract and ! $rule->specifies_value_for($subclassify_by)) {
+    if ($subclassify_by 
+        and ! $meta->is_abstract 
+        and ! $rule->template->group_by 
+        and ! $rule->specifies_value_for($subclassify_by)
+    ) {
         $rule = $rule->add_filter($subclassify_by => $class);
     }
 
@@ -2292,6 +2295,12 @@ sub _create_import_iterator_for_underlying_context {
         my $set_class = $class_name . '::Set';
         my $logic_type = $rule_template->logic_type;
         my @base_property_names = $rule_template->_property_names;
+        for (my $i = 0; $i < @base_property_names; $i++) {
+            my $operator = $rule_template->operator_for($base_property_names[$i]);
+            if ($operator ne '=') {
+                $base_property_names[$i] .= " $operator";
+            }
+        }
         
         my @non_aggregate_properties = @$group_by;
         my @aggregate_properties = ('count'); # TODO: make non-hard-coded
@@ -2302,7 +2311,7 @@ sub _create_import_iterator_for_underlying_context {
             'And',
             join(",", @base_property_names, @non_aggregate_properties),
         );
-        push @object_fabricators, sub {
+        my $fab_subref = sub {
             my $row = $_[0];
             # my $ss_rule = $template->get_rule_for_values(@values, @$row[0..$division_point]);
             # not sure why the above gets an error but this doesn't...
@@ -2310,11 +2319,16 @@ sub _create_import_iterator_for_underlying_context {
             my $ss_rule = $template->get_rule_for_values(@values, @a); 
             my $set = $set_class->get($ss_rule->id);
             unless ($set) {
-                die "Failed to fabricate $set_class for rule $ss_rule!";
+                Carp::croak("Failed to fabricate $set_class for rule $ss_rule");
             }
             @$set{@aggregate_properties} = @$row[$division_point+1..$#$row];
             return $set;
         };
+        my $object_fabricator = UR::Context::ObjectFabricator->_create(
+                                    fabricator => $fab_subref,
+                                    context    => $self,
+                                );
+        unshift @object_fabricators, $object_fabricator;
     }
     else {
         # regular instances
@@ -2340,7 +2354,7 @@ sub _create_import_iterator_for_underlying_context {
     my @addl_join_comparators;
     if (@addl_loading_info) {
         if ($group_by) {
-            die "cross-datasource group-by is not supported yet!";
+            Carp::croak("cross-datasource group-by is not supported yet");
         }
         my($addl_object_fabricators, $addl_join_comparators) =
                 $self->_create_secondary_loading_closures( $template_data,
@@ -2362,6 +2376,7 @@ sub _create_import_iterator_for_underlying_context {
 
     # Make the iterator we'll return.
     my $next_object_to_return;
+    my @object_ids_from_fabricators;
     my $underlying_context_iterator = sub {
         return undef unless $db_iterator;
 
@@ -2482,7 +2497,10 @@ sub _create_import_iterator_for_underlying_context {
             # get one or more objects from this row of results
             my $re_iterate = 0;
             my @imported;
-            for my $object_fabricator (@object_fabricators) {
+            #for my $object_fabricator (@object_fabricators) {
+            for (my $i = 0; $i < @object_fabricators; $i++) {
+                my $object_fabricator = $object_fabricators[$i];
+
                 # The usual case is that the query is just against one data source, and so the importer
                 # callback is just given the row returned from the DB query.  For multiple data sources,
                 # we need to smash together the primary and all the secondary lists
@@ -2508,6 +2526,21 @@ sub _create_import_iterator_for_underlying_context {
                     $re_iterate = 1;
                 }
                 push @imported, $imported_object;
+
+                # If the object ID for fabricator slot $i changes, then we can apply the 
+                # all_params_loaded changes from iterators 0 .. $i-1 because we know we've
+                # loaded all the hangoff data related to the previous object
+                # remember that the last fabricator in the list is for the primary object
+                if (defined $imported_object and ref($imported_object)) {
+                    if (!defined $object_ids_from_fabricators[$i]) {
+                        $object_ids_from_fabricators[$i] = $imported_object->id;
+                    } elsif ($object_ids_from_fabricators[$i] ne $imported_object->id) {
+                        for (my $j = 0; $j < $i; $j++) {
+                            $object_fabricators[$j]->apply_all_params_loaded;
+                        }
+                        $object_ids_from_fabricators[$i] = $imported_object->id;
+                    }
+                }
             }
 
             $primary_object_for_next_db_row = $imported[-1];
@@ -2585,11 +2618,11 @@ sub _create_import_iterator_for_underlying_context {
             
         } # end of loop until we have a defined object to return
 
-        foreach my $object_fabricator ( @object_fabricators ) {
-            # Don't apply all_params_loaded for primary fab until it's all done
-            next if ($object_fabricator eq $object_fabricators[-1]);
-            $object_fabricator->apply_all_params_loaded;
-        }
+        #foreach my $object_fabricator ( @object_fabricators ) {
+        #    # Don't apply all_params_loaded for primary fab until it's all done
+        #    next if ($object_fabricator eq $object_fabricators[-1]);
+        #    $object_fabricator->apply_all_params_loaded;
+        #}
 
         my $retval = $next_object_to_return;
         $next_object_to_return = $primary_object_for_next_db_row;
@@ -2868,11 +2901,15 @@ sub _get_objects_for_class_and_rule_from_cache {
     # Get all objects which are loaded in the application which match
     # the specified parameters.
     my ($self, $class, $rule) = @_;
-    my ($template,@values) = $rule->template_and_values;
     
+    my $group_by = $rule->template->group_by;
+    $rule = $rule->remove_filter('-group_by');
+    my ($template,@values) = $rule->template_and_values;
+
     #my @param_list = $rule->params_list;
     #print "CACHE-GET: $class @param_list\n";
-    
+
+
     my $strategy = $rule->{_context_query_strategy};    
     unless ($strategy) {
         if ($rule->num_values == 0) {
@@ -3050,15 +3087,25 @@ sub _get_objects_for_class_and_rule_from_cache {
             push @results, map { $class->get($this => $_, -recurse => $recurse) } @values;
         }
     }
-    
-    if (@results > 1) {
-        my $sorter = $template->sorter;
-        @results = sort $sorter @results;
-    }
 
-    if (my $group_by = $template->group_by) {
+    if ($group_by) {
         # return sets instead of the actual objects
         @results = _group_objects($template,\@values,$group_by,\@results);
+    }
+
+
+    if (@results > 1) {
+        my $sorter;
+        if ($group_by) {
+            # We need to rewrite the original rule on the member class to be a rule
+            # on the Set class to do proper ordering
+            my $set_class = $template->subject_class_name . '::Set';
+            my $set_template = UR::BoolExpr::Template->resolve($set_class, -group_by => $group_by);
+            $sorter = $set_template->sorter;
+        } else {
+            $sorter = $template->sorter;
+        }
+        @results = sort $sorter @results;
     }
 
     # Return in the standard way.
@@ -3069,7 +3116,7 @@ sub _get_objects_for_class_and_rule_from_cache {
 
 sub _group_objects {
     my ($template,$values,$group_by,$objects)  = @_;
-    my $sub_template = $template;
+    my $sub_template = $template->remove_filter('-group_by');
     for my $property (@$group_by) {
         $sub_template = $sub_template->add_filter($property);
     }
@@ -3077,12 +3124,22 @@ sub _group_objects {
     my @groups;
     my %seen;
     for my $result (@$objects) {
-        my @extra_values = map { $result->$_ } @$group_by;
-        my $bx = $sub_template->get_rule_for_values(@$values,@extra_values);
-        next if $seen{$bx};
-        $seen{$bx} = 1;
-        my $group = $set_class->get($bx->id); 
-        push @groups, $group;
+        my %values_for_group_property;
+        foreach my $group_property ( @$group_by ) {
+            my @values = $result->$group_property;
+            if (@values) {
+                $values_for_group_property{$group_property} = \@values;
+            } else {
+                $values_for_group_property{$group_property} = [ undef ];
+            }
+        }
+        my @combinations = UR::Util::combinations_of_values(map { $values_for_group_property{$_} } @$group_by);
+        foreach my $extra_values ( @combinations ) {
+            my $bx = $sub_template->get_rule_for_values(@$values,@$extra_values);
+            next if $seen{$bx->id}++;
+            my $group = $set_class->get($bx->id);
+            push @groups, $group;
+        }
     }
     return @groups;
 }
@@ -3352,7 +3409,19 @@ sub _sync_databases {
                 my $prop_noun = scalar(@property_names) > 1 ? 'properties' : 'property';
                 $msg .= "    $prop_noun " . join(', ', map { "'$_'" } @property_names) . ": $desc\n";
             }
-            $msg .= "    Current state:\n" . Data::Dumper::Dumper($obj);
+
+            $msg .= "    Current state:\n";
+            my $datadumper = Data::Dumper::Dumper($obj);
+            my $nr_of_lines = $datadumper =~ tr/\n//;
+            if ($nr_of_lines > 40) {
+                # trim it down to the first and last 15 lines
+                $datadumper =~ m/^((?:.*\n){15})/;
+                $msg .= $1;
+                $datadumper =~ m/((?:.*\n?){3})$/;
+                $msg .= "[...]\n$1\n";
+            } else {
+                $msg .= $datadumper;
+            }
             $self->error_message($msg);
         }
         goto PROBLEM_SAVING;
@@ -3499,7 +3568,8 @@ sub _reverse_all_changes {
                                  $property_meta->is_delegated ||
                                  $property_meta->is_legacy_eav ||
                                  ! $property_meta->is_mutable ||
-                                 $property_meta->is_transient);
+                                 $property_meta->is_transient ||
+                                 $property_meta->is_constant);
                         $object->$property_name($saved->{$property_name});
                     }
                 }

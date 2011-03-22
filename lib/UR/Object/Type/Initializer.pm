@@ -629,6 +629,7 @@ sub _normalize_class_description {
                     next if ($key eq 'is_specified_in_module_header' || $key eq 'position_in_module_header');
                     $properties->{$name}->{$key} = $params->{$key};
                 }
+                $params = $properties->{$name};
             } else {
                 $properties->{$name} = $params;
             }
@@ -808,7 +809,7 @@ sub _normalize_class_description {
             my $via = $property_data->{'via'};
             my $via_property_data = $instance_properties->{$via};
             unless ($via_property_data) {
-                Carp::croak "Property $class_name '$property_name' filters '$via', but there is no property '$via'.";
+                Carp::croak "Cannot initialize class $class_name: Property '$property_name' filters '$via', but there is no property '$via'.";
             }
             
             $property_data->{'data_type'} = $via_property_data->{'data_type'};
@@ -818,6 +819,24 @@ sub _normalize_class_description {
             }
         }
     }
+
+    # Catch a mistake in the class definition where a property is 'via'
+    # something, and its 'to' # is the same as the via's reverse_as.  This
+    # ends up being a circular definition and generates junk SQL
+    foreach my $property_name ( @property_names ) {
+        my $property_data = $instance_properties->{$property_name};
+        my $via = $property_data->{'via'};
+        my $to  = $property_data->{'to'};
+        if (defined($via) and defined($to)) {
+            my $via_property_data = $instance_properties->{$via};
+            next unless ($via_property_data and $via_property_data->{'reverse_as'});
+            if ($via_property_data->{'reverse_as'} eq $to) {
+                Carp::croak("Cannot initialize class $class_name: Property '$property_name' defines "
+                            . "an incompatible relationship.  Its 'to' is the same as reverse_as for property '$via'");
+            }
+        }
+    }
+
     
     unless ($bootstrapping) {        
         # cascade extra meta attributes from the parent downward
