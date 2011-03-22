@@ -368,30 +368,62 @@ sub _build_sub_command_mapping {
     };
     
     unless (ref($mapping) eq 'HASH') {
+        # for My::Foo::Command::* commands and sub-trees
         my $subdir = $class; 
         $subdir =~ s|::|\/|g;
 
+        # for My::Foo::*::Command sub-trees
+        my $class_above = $class;
+        $class_above =~ s/::Command//;
+        my $subdir2 = $class_above;
+        $subdir2 =~ s|::|/|;
+        
+        # check everywhere
         for my $lib (@INC) {
             my $subdir_full_path = $lib . '/' . $subdir;
-            next unless -d $subdir_full_path;
-            my @files = glob($subdir_full_path . '/*');
-            next unless @files;
-            for my $file (@files) {
-                my $basename = basename($file);
+            
+            # find My::Foo::Command::*
+            if (-d $subdir_full_path) {
+                my @files = glob($subdir_full_path . '/*');
+                for my $file (@files) {
+                    my $basename = basename($file);
+                    $basename =~ s/.pm$//;
+                    my $sub_command_class_name = $class . '::' . $basename;
+                    my $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
+                    unless ($sub_command_class_meta) {
+                        local $SIG{__DIE__};
+                        local $SIG{__WARN__};
+                        # until _use_safe is refactored to be permissive, use directly...
+                        eval "use $sub_command_class_name";
+                    }
+                    $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
+                    next unless $sub_command_class_name->isa("Command");
+                    next if $sub_command_class_meta->is_abstract;
+                    my $name = $class->_command_name_for_class_word($basename); 
+                    $mapping->{$name} = $sub_command_class_name;
+                }                
+            }
+            
+            # find My::Foo::*::Command
+            $subdir_full_path = $lib . '/' . $subdir2;
+            my $pattern = $subdir_full_path . '/*/Command.pm';
+            my @paths = glob($pattern);
+            for my $file (@paths) {
+                next unless defined $file;
+                next unless length $file;
+                next unless -f $file;
+                my $last_word = File::Basename::basename($file);
+                $last_word =~ s/.pm$//;
+                my $dir = File::Basename::dirname($file);
+                my $second_to_last_word = File::Basename::basename($dir);
+                my $sub_command_class_name = $class_above . '::' . $second_to_last_word . '::' . $last_word;
+                next unless $sub_command_class_name->isa('Command');
+                next unless $sub_command_class_name->is_sub_command_delegator;
+                next if $sub_command_class_name->is_abstract;
+                my $basename = $second_to_last_word;
                 $basename =~ s/.pm$//;
-                my $sub_command_class_name = $class . '::' . $basename;
-                my $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
-                unless ($sub_command_class_meta) {
-                    local $SIG{__DIE__};
-                    local $SIG{__WARN__};
-                    # until _use_safe is refactored to be permissive, use directly...
-                    eval "use $sub_command_class_name";
-                }
-                $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
-                next unless $sub_command_class_name->isa("Command");
-                next if $sub_command_class_meta->is_abstract;
                 my $name = $class->_command_name_for_class_word($basename); 
-                $mapping->{$name} = $sub_command_class_name;
+                $mapping->{$name} = $sub_command_class_name;                
             }
         }
     }
