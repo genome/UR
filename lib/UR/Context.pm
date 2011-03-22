@@ -3409,7 +3409,19 @@ sub _sync_databases {
                 my $prop_noun = scalar(@property_names) > 1 ? 'properties' : 'property';
                 $msg .= "    $prop_noun " . join(', ', map { "'$_'" } @property_names) . ": $desc\n";
             }
-            $msg .= "    Current state:\n" . Data::Dumper::Dumper($obj);
+
+            $msg .= "    Current state:\n";
+            my $datadumper = Data::Dumper::Dumper($obj);
+            my $nr_of_lines = $datadumper =~ tr/\n//;
+            if ($nr_of_lines > 40) {
+                # trim it down to the first and last 15 lines
+                $datadumper =~ m/^((?:.*\n){15})/;
+                $msg .= $1;
+                $datadumper =~ m/((?:.*\n?){3})$/;
+                $msg .= "[...]\n$1\n";
+            } else {
+                $msg .= $datadumper;
+            }
             $self->error_message($msg);
         }
         goto PROBLEM_SAVING;
