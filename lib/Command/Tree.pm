@@ -387,13 +387,14 @@ sub _build_sub_command_mapping {
                 my @files = glob($subdir_full_path . '/*');
                 for my $file (@files) {
                     my $basename = basename($file);
-                    $basename =~ s/.pm$//;
+                    $basename =~ s/.pm$// or next;
                     my $sub_command_class_name = $class . '::' . $basename;
                     my $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
                     unless ($sub_command_class_meta) {
                         local $SIG{__DIE__};
                         local $SIG{__WARN__};
                         # until _use_safe is refactored to be permissive, use directly...
+                        print ">> $sub_command_class_name\n";
                         eval "use $sub_command_class_name";
                     }
                     $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
@@ -413,7 +414,7 @@ sub _build_sub_command_mapping {
                 next unless length $file;
                 next unless -f $file;
                 my $last_word = File::Basename::basename($file);
-                $last_word =~ s/.pm$//;
+                $last_word =~ s/.pm$// or next;
                 my $dir = File::Basename::dirname($file);
                 my $second_to_last_word = File::Basename::basename($dir);
                 my $sub_command_class_name = $class_above . '::' . $second_to_last_word . '::' . $last_word;
