@@ -807,7 +807,7 @@ sub resolve_for_string {
     my @filters = map {
         unless (
             ($property, $op, $value) =
-            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|\:|\blike\b|\bbetween\b|\bin\b)\s*['"]?([^'"]*)['"]?\s*$/)
+            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*['"]?([^'"]*)['"]?\s*$/)
         ) {
             die "Unable to process filter $_\n";
         }
@@ -850,7 +850,7 @@ sub _resolve_from_filter_array {
         my $value;
     
         # process the operator
-        if ($fdata->[1] =~ /^(:|@|between|in)$/i) {
+        if ($fdata->[1] =~ /^!?(:|@|between|in)$/i) {
             
             my @list_parts;
             my @range_parts;
@@ -871,13 +871,13 @@ sub _resolve_from_filter_array {
             }
             
             if (@list_parts > 1) {
+                my $op = ($fdata->[1] =~ /^!/ ? 'not in' : 'in'); 
                 # rule component
                 if (substr($key, -3, 3) ne ' in') {
-                    $key = join(' ', $key, 'in');
+                    $key = join(' ', $key, $op);
                 }
                 $value = \@list_parts;
-        
-                $rule_filter = [$fdata->[0],"in",\@list_parts];
+                $rule_filter = [$fdata->[0],$op,\@list_parts];
             }
             elsif (@range_parts >= 2) {
                 if (@range_parts > 2) {
