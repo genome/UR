@@ -22,7 +22,6 @@ sub _init_subclass {
     *{$class_name ."\:\:live_class"}  = sub { "$live_class_name" };
 }
 
-
 sub create { Carp::croak('Cannot create() ghosts.') };
 
 sub delete { Carp::croak('Cannot delete() ghosts.') };
@@ -34,6 +33,10 @@ sub _load {
 
 sub unload {
     return;
+}
+
+sub __errors__ {
+    return;  # Ghosts are always valid, don't check their properties
 }
 
 sub edit_class { undef }
