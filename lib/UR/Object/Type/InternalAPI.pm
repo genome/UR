@@ -613,7 +613,6 @@ sub generate_support_class_for_extension {
             delete $_->{class_name};
             delete $_->{type_name};
             delete $_->{property_name};
-            $_->{is_optional} = !$id_property_names{$_};
         }
         
         %class_params = (
