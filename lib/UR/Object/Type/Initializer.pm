@@ -12,8 +12,6 @@ use Carp ();
 use Sub::Name ();
 use Sub::Install ();
 
-our @CARP_NOT = qw( UR::ModuleLoader Class::Autouse );
-
 # keys are class property names (like er_role, is_final, etc) and values are
 # the default value to use if it's not specified in the class definition
 #

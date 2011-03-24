@@ -7,7 +7,7 @@ use Lingua::EN::Inflect;
 use Class::AutoloadCAN;
 
 our $VERSION = "0.30"; # UR $VERSION;;
-our @CARP_NOT = qw( UR::DataSource::RDBMS );
+our @CARP_NOT = qw( UR::DataSource::RDBMS UR::Object::Type );
 
 # TODO: make these methods on UR::Value::Type metadata
 our %NUMERIC_TYPES = (

@@ -13,8 +13,6 @@ use Carp ();
 use Sub::Name ();
 use Sub::Install ();
 
-our @CARP_NOT = qw( UR::Object UR::Context );
-
 sub mk_rw_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;
     $property_name ||= $accessor_name;
