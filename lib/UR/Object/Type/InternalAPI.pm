@@ -742,11 +742,19 @@ sub _load {
     }
 
     # Check the filesystem.  The file may create its metadata object.
-    if ($class->class->use_module_with_namespace_constraints($class_name)) {
+    eval "use $class_name";
+    unless ($@) {
         # If the above module was loaded, and is an UR::Object,
         # this will find the object.  If not, it will return nothing.
         $class_obj = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
         return $class_obj if $class_obj;
+    }
+    if ($@) {
+        # We need to handle $@ here otherwise we'll see
+        # "Can't locate UR/Object/Type/Ghost.pm in @INC" error.
+        # We want to fall through "in the right circumstances".
+        die "Error in $class_name: $@" if ($@ =~ /syntax error/);
+        # FIXME: I think other conditions here will result in silent errors.
     }
 
     # Parse the specified class name to check for a suffix.
