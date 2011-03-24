@@ -1037,6 +1037,10 @@ sub _normalize_property_description1 {
             $new_property{data_length} = $length;
             $new_property{data_type} =~ s/\(\d+\)$//;
         }
+        if ($new_property{data_type} =~ m/[^\w:]/) {
+            Carp::croak("Can't initialize class $class_name: Property '" . $new_property{property_name}
+                        . "' has metadata for is/data_type that does not look like a class name ($new_property{data_type})");
+        }
     }
 
     if (%old_property) {
