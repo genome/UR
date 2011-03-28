@@ -12,8 +12,6 @@ use Carp ();
 use Sub::Name ();
 use Sub::Install ();
 
-our @CARP_NOT = qw( UR::ModuleLoader Class::Autouse );
-
 # keys are class property names (like er_role, is_final, etc) and values are
 # the default value to use if it's not specified in the class definition
 #
@@ -629,6 +627,7 @@ sub _normalize_class_description {
                     next if ($key eq 'is_specified_in_module_header' || $key eq 'position_in_module_header');
                     $properties->{$name}->{$key} = $params->{$key};
                 }
+                $params = $properties->{$name};
             } else {
                 $properties->{$name} = $params;
             }
@@ -808,7 +807,7 @@ sub _normalize_class_description {
             my $via = $property_data->{'via'};
             my $via_property_data = $instance_properties->{$via};
             unless ($via_property_data) {
-                Carp::croak "Property $class_name '$property_name' filters '$via', but there is no property '$via'.";
+                Carp::croak "Cannot initialize class $class_name: Property '$property_name' filters '$via', but there is no property '$via'.";
             }
             
             $property_data->{'data_type'} = $via_property_data->{'data_type'};
@@ -818,6 +817,24 @@ sub _normalize_class_description {
             }
         }
     }
+
+    # Catch a mistake in the class definition where a property is 'via'
+    # something, and its 'to' # is the same as the via's reverse_as.  This
+    # ends up being a circular definition and generates junk SQL
+    foreach my $property_name ( @property_names ) {
+        my $property_data = $instance_properties->{$property_name};
+        my $via = $property_data->{'via'};
+        my $to  = $property_data->{'to'};
+        if (defined($via) and defined($to)) {
+            my $via_property_data = $instance_properties->{$via};
+            next unless ($via_property_data and $via_property_data->{'reverse_as'});
+            if ($via_property_data->{'reverse_as'} eq $to) {
+                Carp::croak("Cannot initialize class $class_name: Property '$property_name' defines "
+                            . "an incompatible relationship.  Its 'to' is the same as reverse_as for property '$via'");
+            }
+        }
+    }
+
     
     unless ($bootstrapping) {        
         # cascade extra meta attributes from the parent downward
@@ -1017,6 +1034,10 @@ sub _normalize_property_description1 {
         if (my ($length) = ($new_property{data_type} =~ /\((\d+)\)$/)) {
             $new_property{data_length} = $length;
             $new_property{data_type} =~ s/\(\d+\)$//;
+        }
+        if ($new_property{data_type} =~ m/[^\w:]/) {
+            Carp::croak("Can't initialize class $class_name: Property '" . $new_property{property_name}
+                        . "' has metadata for is/data_type that does not look like a class name ($new_property{data_type})");
         }
     }
 
@@ -1467,7 +1488,6 @@ sub _complete_class_meta_object_definitions {
     if (my $extra = $self->{extra}) {
         # some class characteristics may be only present in subclasses of UR::Object
         # we handle these at this point, since the above is needed for boostrapping
-        $DB::single = 1 if keys %$extra;
         my %still_not_found;
         for my $key (sort keys %$extra) {
             if ($self->can($key)) {

@@ -10,7 +10,7 @@ ur list modules - a command which operates on classes/modules in a UR namespace 
 
 =head1 VERSION
 
-This document describes ur list modules version 0.28.
+This document describes ur list modules version 0.29.
 
 =head1 SYNOPSIS
 

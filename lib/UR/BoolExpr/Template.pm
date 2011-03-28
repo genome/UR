@@ -59,7 +59,7 @@ UR::Object::Type->define(
     ]
 );
 
-our $VERSION = "0.29"; # UR $VERSION;;
+our $VERSION = "0.30"; # UR $VERSION;;
 
 # Borrow from the util package.
 # This will go away with refactoring.
@@ -970,55 +970,6 @@ sub sorter {
     }
 
     return $sorter;
-}
-
-sub params_list_for_values {
-    # This is the reverse of the bulk of resolve.
-    # It returns the params in list form, directly coercable into a hash if necessary.
-    # $r = UR::BoolExpr->resolve($c1,@p1);
-    # ($c2, @p2) = ($r->subject_class_name, $r->params_list);
-    
-    my $rule_template = shift;
-    my @values_sorted = @_;
-    
-    my @keys_sorted = $rule_template->_underlying_keys;
-    my @constant_values_sorted = $rule_template->_constant_values;
-    
-    my @params;
-    my ($v,$c) = (0,0);
-    for (my $k=0; $k<@keys_sorted; $k++) {
-        my $key = $keys_sorted[$k];                        
-        #if (substr($key,0,1) eq "_") {
-        #    next;
-        #}
-        #elsif (substr($key,0,1) eq '-') {
-        if (substr($key,0,1) eq '-') {
-            my $value = $constant_values_sorted[$c];
-            push @params, $key, $value;        
-            $c++;
-        }
-        else {
-            my ($property, $op) = ($key =~ /^(\-*\w+)\s*(.*)$/);        
-            unless ($property) {
-                die;
-            }
-            my $value = $values_sorted[$v];
-            if ($op) {
-                if ($op ne "in") {
-                    if ($op =~ /^(.+)-(.+)$/) {
-                        $value = { operator => $1, value => $value, escape => $2 };
-                    }
-                    else {
-                        $value = { operator => $op, value => $value };
-                    }
-                }
-            }
-            push @params, $property, $value;
-            $v++;
-        }
-    }
-
-    return @params; 
 }
 
 

@@ -10,7 +10,7 @@ ur define namespace - create a new namespace tree and top-level module
 
 =head1 VERSION
 
-This document describes ur define namespace version 0.28.
+This document describes ur define namespace version 0.29.
 
 =head1 SYNOPSIS
 

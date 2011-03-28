@@ -1,5 +1,14 @@
 Revision history for UR
 
+0.30    2011-03-07
+        re-package 0.29 with versions correctly set
+
+0.29    2011-03-07
+        query/iteration engine now solves n+1 in the one-to-many case as well as many-to-one
+        query optimization where the join table is variable across rows in a single resultset 
+        automated manual page creation for commands
+        reduced deps (removed UR::Time)
+
 0.28    2011-01-23
         fix to the installer which caused a failure during docs generation
         improvements to man page generation

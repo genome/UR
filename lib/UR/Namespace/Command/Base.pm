@@ -4,11 +4,12 @@ use warnings;
 use UR;
 use Cwd;
 
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command::V1',
+    is_abstract => 1,
     has_transient => [ 
         lib_path            =>  {   type => "FilesystemPath", 
                                     is_optional => 1,

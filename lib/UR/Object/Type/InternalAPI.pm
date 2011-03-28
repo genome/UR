@@ -3,7 +3,7 @@ use warnings;
 use strict;
 
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 use Sys::Hostname;
 use Cwd;
@@ -613,7 +613,6 @@ sub generate_support_class_for_extension {
             delete $_->{class_name};
             delete $_->{type_name};
             delete $_->{property_name};
-            $_->{is_optional} = !$id_property_names{$_};
         }
         
         %class_params = (
@@ -742,11 +741,19 @@ sub _load {
     }
 
     # Check the filesystem.  The file may create its metadata object.
-    if ($class->class->use_module_with_namespace_constraints($class_name)) {
+    eval "use $class_name";
+    unless ($@) {
         # If the above module was loaded, and is an UR::Object,
         # this will find the object.  If not, it will return nothing.
         $class_obj = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
         return $class_obj if $class_obj;
+    }
+    if ($@) {
+        # We need to handle $@ here otherwise we'll see
+        # "Can't locate UR/Object/Type/Ghost.pm in @INC" error.
+        # We want to fall through "in the right circumstances".
+        Carp::croak("Error while autoloading with 'use $class_name': $@") unless ($@ =~ /Can't locate \S+ in \@INC/);
+        # FIXME: I think other conditions here will result in silent errors.
     }
 
     # Parse the specified class name to check for a suffix.
@@ -809,34 +816,36 @@ sub use_module_with_namespace_constraints {
     # in order to be dynamically loaded.
 
     my @words = split("::",$target_class);
-
-    my $namespace_name = shift @words;
-    my $namespace_expected_module = $namespace_name . ".pm";
-
     my $path;
-    if ($path = $INC{$namespace_expected_module}) {
-        #print "got mod $namespace_expected_module at $path for $target_class\n";
-        $path =~ s/\/*$namespace_expected_module//g;
-    }
-    else {
-        my $namespace_obj =  UR::Object::Type->is_loaded(class_name => $namespace_name);
-        unless ($namespace_obj) {
-            #print("Skipping autoload of module name: $target_class since namespace $namespace_name is not loaded.\n");
-            return;
-        }
+    while (@words > 1) {
+        my $namespace_name = join("::",@words[0..$#words-1]);
+        my $namespace_expected_module = join("/",@words[0..$#words-1]) . ".pm";
 
-        eval { $path = $namespace_obj->module_directory };
-        if ($@) {
-            # non-module class
-            # don't auto-use, but don't make a lot of noise about it either
-            return;
+
+        if ($path = $INC{$namespace_expected_module}) {
+            #print "got mod $namespace_expected_module at $path for $target_class\n";
+            $path =~ s/\/*$namespace_expected_module//g;
         }
-        unless ($path) {
-            #Carp::cluck("No module_directory found for namespace $namespace_name."
-            #    . "  Cannot dynamically load $target_class.");
-            return;
-        }
+        else {
+            my $namespace_obj =  UR::Object::Type->is_loaded(class_name => $namespace_name);
+            if ($namespace_obj) {
+                eval { $path = $namespace_obj->module_directory };
+                if ($@) {
+                    # non-module class
+                    # don't auto-use, but don't make a lot of noise about it either
+                }
+            }
+        }    
+        last if $path;
+        pop @words;
     }
+
+    unless ($path) {
+        #Carp::cluck("No module_directory found for namespace $namespace_name."
+        #    . "  Cannot dynamically load $target_class.");
+        return;
+    }
+
 
     $self->_use_safe($target_class,$path);
     my $meta = UR::Object::Type->is_loaded(class_name => $target_class);

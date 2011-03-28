@@ -3,7 +3,7 @@ package UR::DataSource::FileMux;
 use UR;
 use strict;
 use warnings;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 class UR::DataSource::FileMux {
     is => ['UR::DataSource'],
@@ -92,7 +92,7 @@ sub create_iterator_closure_for_rule {
         }
         $all_resolver_params[$i] = \@values;
     }
-    my @resolver_param_combinations = &_get_combinations_of_resolver_params(@all_resolver_params);
+    my @resolver_param_combinations = UR::Util::combinations_of_values(@all_resolver_params);
 
     # Each combination of params ends up being from a different data source.  Make an
     # iterator pulling from each of them
@@ -315,25 +315,6 @@ sub _generate_loading_templates_arrayref {
     my $function_name = $delegate_class . '::_generate_loading_templates_arrayref';
     no strict 'refs';
     return &$function_name($self,@_);
-}
-
-
-# Not a method!  Called from the create_iterator_closure_from_rule closures
-sub _get_combinations_of_resolver_params {
-    my(@resolver_params) = @_;
-
-    return [] unless @resolver_params;
-
-    my @sub_combinations = &_get_combinations_of_resolver_params(@resolver_params[1..$#resolver_params]);
-
-    my @retval;
-    foreach my $item ( @{$resolver_params[0]} ) {
-        foreach my $sub_combinations ( @sub_combinations ) {
-            push @retval, [ $item, @$sub_combinations ];
-        }
-    }
-
-    return @retval;
 }
 
 

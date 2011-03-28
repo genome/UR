@@ -6,14 +6,12 @@ package UR::Object::Type;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 #use warnings FATAL => 'all';
 
 use Carp ();
 use Sub::Name ();
 use Sub::Install ();
-
-our @CARP_NOT = qw( UR::Object UR::Context );
 
 sub mk_rw_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;

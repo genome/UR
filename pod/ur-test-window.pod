@@ -10,7 +10,7 @@ ur test window - repl tk window
 
 =head1 VERSION
 
-This document describes ur test window version 0.28.
+This document describes ur test window version 0.29.
 
 =head1 SYNOPSIS
 

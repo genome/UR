@@ -4,7 +4,7 @@ package UR::Util;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 use Cwd;
 use Data::Dumper;
 
@@ -81,7 +81,6 @@ sub deep_copy {
 sub value_positions_map {
     my ($array) = @_;
     my %value_pos;
-    my $a;
     for (my $pos = 0; $pos < @$array; $pos++) {
         my $value = $array->[$pos];
         if (exists $value_pos{$value}) {
@@ -111,6 +110,26 @@ sub positions_of_values {
     #        Carp::confess()
     #    }
     return @translated_positions;
+}
+
+
+# Get all combinations of values
+# input is a list of listrefs of values
+sub combinations_of_values {
+    return [] unless @_;
+
+    my $first_values = shift;
+
+    $first_values = [ $first_values ] unless (ref($first_values) and ref($first_values) eq 'ARRAY');
+
+    my @retval;
+    foreach my $sub_combination ( &combinations_of_values(@_) ) {
+        foreach my $value ( @$first_values ) {
+            push @retval, [$value, @$sub_combination];
+        }
+    }
+
+    return @retval;
 }
 
 # generate a method

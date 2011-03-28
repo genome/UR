@@ -6,7 +6,10 @@ use warnings;
 use Scalar::Util;
 use UR::Context;
 
-# A helper package for UR::Context to keep track about 
+our $VERSION = "0.30"; # UR $VERSION;
+
+# A helper package for UR::Context to keep track of the subrefs used
+# to create objects from database data
 # These are normal Perl objects, not UR objects, so they get 
 # regular refcounting and scoping
 
@@ -32,7 +35,7 @@ sub _create {
     $self->{'context'} = $params{'context'};
 
     $self->{'all_params_loaded'} = $params{'all_params_loaded'} || {};
-    $self->{'in_clause_values'} = $params{'in_clause_values'} || [];
+    $self->{'in_clause_values'} = $params{'in_clause_values'} || {};
 
     $all_object_fabricators{$self} = $self;
     Scalar::Util::weaken($all_object_fabricators{$self});
@@ -202,7 +205,12 @@ sub create_for_loading_template {
                     $join_has_all_id_props = 0;
                     last;
                 }
-                next JOIN if ( $join_has_all_id_props and ! scalar(keys %join_properties));
+                if ( $join_has_all_id_props and ! scalar(keys %join_properties)) {
+                    # we don't need to add additional info in all_params_loaded if these connections
+                    # are only via id properties, since get()s by all id properties are handled by
+                    # looking directly into the object cache
+                    next JOIN;
+                }
 
                 my @template_filter_names = @{$join->{'foreign_property_names'}};
                 my @where_values;

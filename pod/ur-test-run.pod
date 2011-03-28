@@ -10,7 +10,7 @@ ur test run - Run the test suite against the source tree.
 
 =head1 VERSION
 
-This document describes ur test run version 0.28.
+This document describes ur test run version 0.29.
 
 =head1 SYNOPSIS
 

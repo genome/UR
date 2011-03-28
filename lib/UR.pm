@@ -8,7 +8,7 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = "0.29"; # UR $VERSION
+our $VERSION = "0.30"; # UR $VERSION
 
 BEGIN {
     # unless otherwise specified, begin uncaching at 1 million objects 
@@ -83,6 +83,9 @@ BEGIN {
     }
 };
 
+# Regular deps
+use Date::Format;
+
 #
 # Because UR modules execute code when compiling to define their classes,
 # and require each other for that code to execute, there are bootstrapping 
@@ -98,7 +101,6 @@ BEGIN {
 
 require UR::Exit;
 require UR::Util;
-require UR::Time;
 
 require UR::Report;         # this is used by UR::DBI
 require UR::DBI;            # this needs a new name, and need only be used by UR::DataSource::RDBMS
@@ -458,7 +460,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.29
+This document describes UR version 0.30
 
 =head1 SYNOPSIS
 

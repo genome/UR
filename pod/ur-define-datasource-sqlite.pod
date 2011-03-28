@@ -10,7 +10,7 @@ ur define datasource sqlite - Add a SQLite data source to the current namespace.
 
 =head1 VERSION
 
-This document describes ur define datasource sqlite version 0.28.
+This document describes ur define datasource sqlite version 0.29.
 
 =head1 SYNOPSIS
 

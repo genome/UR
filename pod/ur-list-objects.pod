@@ -10,7 +10,7 @@ ur list objects - lists objects matching specified params
 
 =head1 VERSION
 
-This document describes ur list objects version 0.28.
+This document describes ur list objects version 0.29.
 
 =head1 SYNOPSIS
 

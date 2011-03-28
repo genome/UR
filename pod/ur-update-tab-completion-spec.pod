@@ -10,7 +10,7 @@ ur update tab-completion-spec - Creates a .opts file beside class/module passed 
 
 =head1 VERSION
 
-This document describes ur update tab-completion-spec version 0.28.
+This document describes ur update tab-completion-spec version 0.29.
 
 =head1 SYNOPSIS
 

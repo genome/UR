@@ -38,7 +38,6 @@ my $build = $subclass->new(
     'Sys::Hostname'       => '1.11',
     'File::Basename'      => '2.73',
     'Lingua::EN::Inflect' => '1.88',
-    'Date::Pcalc'         => '',
     'Date::Format'        => '',
     'Data::Compare'       => '0.13',
     'Text::Diff'          => '0.35',
@@ -62,6 +61,7 @@ my $build = $subclass->new(
     # possibly move to a web-specific 
     'Net::HTTPServer'     => '',
     'CGI::Application'    => '',
+    'URI::Escape'         => '',
     
     #'Getopt::Complete' => [
     # we may migrate some of the Command logic here and really depend on it

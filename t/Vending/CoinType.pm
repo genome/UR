@@ -11,7 +11,7 @@ class Vending::CoinType {
     ],
     has => [
         value_cents => { is => 'integer' },
-        item_type   => { is => 'Vending;:ItemType', where => [ name => \'name'] },
+        item_type   => { is => 'Vending::ItemType', where => [ name => \'name'] },
         type_id     => { via => 'item_type' },
     ],
     doc => 'kinds of coins the machine accepts, and their value',

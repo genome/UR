@@ -6,7 +6,7 @@ package UR::BoolExpr::Util;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 use Scalar::Util qw(blessed);
 use Data::Dumper;
@@ -16,7 +16,7 @@ use FreezeThaw;
 # Note that these are used for the common case, where FreezeThaw is for arbitrarily complicated rule identifiers.
 
 our $id_sep = chr(29);          # spearetes id property values instead of the old \t
-our $record_sep = chr(30);      # within an property value, delimits a distinct values
+our $record_sep = chr(30);      # within a value_id, delimits a distinct values
 our $unit_sep = chr(31);        # seperates items within a single value
 
 our $null_value = chr(21);      # used for undef/null

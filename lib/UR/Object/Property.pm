@@ -6,8 +6,8 @@ require UR;
 use Lingua::EN::Inflect;
 use Class::AutoloadCAN;
 
-our $VERSION = "0.29"; # UR $VERSION;;
-our @CARP_NOT = qw( UR::DataSource::RDBMS );
+our $VERSION = "0.30"; # UR $VERSION;;
+our @CARP_NOT = qw( UR::DataSource::RDBMS UR::Object::Type );
 
 # TODO: make these methods on UR::Value::Type metadata
 our %NUMERIC_TYPES = (
@@ -199,8 +199,9 @@ sub _get_direct_join_linkage {
     return @retval;
 }
 
-my @old = qw/source_class source_class_meta source_property_names foreign_class foreign_class_meta foreign_property_names/;
-my @new = qw/foreign_class foreign_class_meta foreign_property_names source_class source_class_meta source_property_names/;
+# These are used to reverse the relationship when we're dealing with reverse_as properites
+my @old = qw/source_class source_property_names foreign_class foreign_property_names/;
+my @new = qw/foreign_class foreign_property_names source_class source_property_names/;
 sub _get_joins {
     my $self = shift;
     unless ($self->{_get_joins}) {
@@ -241,7 +242,7 @@ sub _get_joins {
                 $id .= ' ' . $where_rule->id;
                 push @joins, { %$join, id => $id, where => $where };
             }
-            unless ($to eq 'self' or $to eq '-filter') {
+            unless ($to eq '__self__' or $to eq '-filter') {
                 my $to_class_meta = eval { $via_meta->data_type->__meta__ };
                 unless ($to_class_meta) {
                     Carp::croak("Can't get class metadata for " . $via_meta->data_type

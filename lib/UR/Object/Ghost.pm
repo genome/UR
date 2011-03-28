@@ -10,7 +10,7 @@ package UR::Object::Ghost;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 sub _init_subclass {
     my $class_name = pop;
@@ -21,7 +21,6 @@ sub _init_subclass {
     *{$class_name ."\:\:class"}  = sub { "$class_name" };
     *{$class_name ."\:\:live_class"}  = sub { "$live_class_name" };
 }
-
 
 sub create { Carp::croak('Cannot create() ghosts.') };
 
@@ -34,6 +33,10 @@ sub _load {
 
 sub unload {
     return;
+}
+
+sub __errors__ {
+    return;  # Ghosts are always valid, don't check their properties
 }
 
 sub edit_class { undef }

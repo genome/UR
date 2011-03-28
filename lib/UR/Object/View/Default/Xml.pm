@@ -3,7 +3,7 @@ package UR::Object::View::Default::Xml;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 use IO::File;
 
 class UR::Object::View::Default::Xml {

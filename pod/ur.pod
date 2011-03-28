@@ -10,19 +10,17 @@ ur - tools to create and maintain a ur class tree
 
 =head1 VERSION
 
-This document describes ur version 0.28.
+This document describes ur version 0.29.
 
 =head1 SUB-COMMANDS
 
- init      NAMESPACE [DB]        create a new ur app with default classes in place   
- define    ...                   define namespaces, data sources and classes         
- describe  CLASSES-OR-MODULES    show class properties, relationships, meta-data     
- update    ...                   update parts of the source tree of a UR namespace   
- list      ...                   list objects, classes, modules                      
- base      (no execute or su...  a command which operates on classes/modules in a UR 
-                                  namespace directory                                
- sys       ...                   service launchers                                   
- test      ...                   tools for testing and debugging                     
+ init      NAMESPACE [DB]      create a new ur app with default classes in place 
+ define    ...                 define namespaces, data sources and classes       
+ describe  CLASSES-OR-MODULES  show class properties, relationships, meta-data   
+ update    ...                 update parts of the source tree of a UR namespace 
+ list      ...                 list objects, classes, modules                    
+ sys       ...                 service launchers                                 
+ test      ...                 tools for testing and debugging                   
 
 
 

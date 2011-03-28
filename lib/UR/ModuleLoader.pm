@@ -4,7 +4,7 @@ package UR::ModuleLoader;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 Class::Autouse->autouse(\&dynamically_load_class);
 Class::Autouse->sugar(\&define_class);
@@ -82,30 +82,6 @@ sub dynamically_load_class {
     unless ($meta) {
         delete $loading{$class};
         return;
-    }
-
-    # Verify that the module came from a location which is safe.
-    # TODO: it's a little late, depending on the problem you're trying to prevent.
-    my $class_module_dir = $meta->module_directory;
-    if (defined $class_module_dir) {
-        # Ensures that classes autoloaded from module files are under the correct
-        # namespace.  Since there may be multiple namespaces under the same parent
-        # dir, a hole exists in the above which should only be encountered
-        # if someone is doing something odd with pkg/class mapping.
-        my $namespace = $meta->namespace;
-        unless ($namespace) {
-            Carp::confess("Failed to resolve a namespace for Class object ".$meta->class_name);
-        };
-        unless ($namespace eq 'UR') {
-            my $namespace_module_dir = $namespace->__meta__->module_directory;
-            unless ($class =~ /^UR::/ or index($class_module_dir,$namespace_module_dir) == 0) {
-                Carp::confess(
-                    "Attempt to load module $class from outside the namespace tree!\n"
-                    . "class path $class_module_dir is not under "
-                    . "namespace $namespace_module_dir!\n"
-                );
-            }
-        }
     }
 
     # Handle the case in which the class is not "generated".

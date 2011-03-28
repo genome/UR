@@ -5,7 +5,7 @@ use warnings;
 use UR;
 use File::Basename qw/basename/;
 
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 class Command::Tree {
     is => 'Command::V2',
@@ -143,7 +143,7 @@ sub resolve_option_completion_spec {
     return \@completion_spec
 }
 
-sub help_usage_complete_text {
+sub doc_help {
     my $self = shift;
 
     my $command_name = $self->command_name;
@@ -159,69 +159,34 @@ sub help_usage_complete_text {
     return $text;
 }
 
-sub help_usage_command_pod {
+
+sub doc_manual {
     my $self = shift;
-
-    my $command_name = $self->command_name;
-    my $pod;
-
-    # standard: update this to do the old --help format
-    my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
-    my $required_args = $self->help_options(is_optional => 0, format => "pod");
-    my $optional_args = $self->help_options(is_optional => 1, format => "pod");
-    my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
-    my $help_brief = $self->help_brief;
-    my $version = do { no strict; ${ $self->class . '::VERSION' } };
-
-    $pod =
-        "\n=pod"
-        . "\n\n=head1 NAME"
-        .  "\n\n"
-        .   $self->command_name 
-        . ($help_brief ? " - " . $self->help_brief : '') 
-        . "\n\n";
-
-    if ($version) {
-        $pod .=
-            "\n\n=head1 VERSION"
-            . "\n\n"
-            . "This document " # separated to trick the version updater 
-            . "describes " . $self->command_name . " version " . $version . '.'
-            . "\n\n";
-    }
-
-    if ($sub_commands) {
-        $pod .=
-                (
-                    $sub_commands
-                    ? "=head1 SUB-COMMANDS\n\n" . $sub_commands . "\n\n"
-                    : ''
-                )
-    }
-    else {
-        $pod .=
-                (
-                    $synopsis 
-                    ? "=head1 SYNOPSIS\n\n" . $synopsis . "\n\n"
-                    : ''
-                )
-            .   (
-                    $required_args
-                    ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
-                    : ''
-                )
-            .   (
-                    $optional_args
-                    ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
-                    : ''
-                )
-            . "=head1 DESCRIPTION:\n\n"
-            . join('', map { "  $_\n" } split ("\n",$self->help_detail))
-            . "\n";
-    }
+    my $pod = $self->_doc_name_version;
     
-    $pod .= "\n\n=cut\n\n";
+    my $manual = $self->_doc_manual_body;
+    my $help = $self->help_detail;
+    if ($manual or $help) {
+        $pod .= "=head1 DESCRIPTION:\n\n";
 
+        my $txt = $manual || $help;        
+        if ($txt =~ /^\=/) {
+            # pure POD
+            $pod .= $manual;
+        }
+        else {
+            $txt =~ s/\n/\n\n/g;
+            $pod .= $txt;
+            #$pod .= join('', map { "  $_\n" } split ("\n",$txt)) . "\n";
+        }
+    }
+
+    
+    my $sub_commands = $self->help_sub_commands(brief => 1);
+    $pod .= "=head1 SUB-COMMANDS\n\n" . $sub_commands . "\n\n";
+
+    $pod .= $self->_doc_footer();
+    $pod .= "\n\n=cut\n\n";
     return "\n$pod";
 }
 
@@ -311,7 +276,7 @@ sub help_sub_commands {
                 (
                     [
                         $_->$command_name_method,
-                        $_->_shell_args_usage_string_abbreviated,
+                        ($_->isa('Command::Tree') ? '...' : ''), #$_->_shell_args_usage_string_abbreviated,
                         $rows[0],
                     ],
                     map { 
@@ -403,30 +368,63 @@ sub _build_sub_command_mapping {
     };
     
     unless (ref($mapping) eq 'HASH') {
+        # for My::Foo::Command::* commands and sub-trees
         my $subdir = $class; 
         $subdir =~ s|::|\/|g;
 
+        # for My::Foo::*::Command sub-trees
+        my $class_above = $class;
+        $class_above =~ s/::Command//;
+        my $subdir2 = $class_above;
+        $subdir2 =~ s|::|/|;
+        
+        # check everywhere
         for my $lib (@INC) {
             my $subdir_full_path = $lib . '/' . $subdir;
-            next unless -d $subdir_full_path;
-            my @files = glob($subdir_full_path . '/*');
-            next unless @files;
-            for my $file (@files) {
-                my $basename = basename($file);
+            
+            # find My::Foo::Command::*
+            if (-d $subdir_full_path) {
+                my @files = glob($subdir_full_path . '/*');
+                for my $file (@files) {
+                    my $basename = basename($file);
+                    $basename =~ s/.pm$// or next;
+                    my $sub_command_class_name = $class . '::' . $basename;
+                    my $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
+                    unless ($sub_command_class_meta) {
+                        local $SIG{__DIE__};
+                        local $SIG{__WARN__};
+                        # until _use_safe is refactored to be permissive, use directly...
+                        print ">> $sub_command_class_name\n";
+                        eval "use $sub_command_class_name";
+                    }
+                    $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
+                    next unless $sub_command_class_name->isa("Command");
+                    next if $sub_command_class_meta->is_abstract;
+                    my $name = $class->_command_name_for_class_word($basename); 
+                    $mapping->{$name} = $sub_command_class_name;
+                }                
+            }
+            
+            # find My::Foo::*::Command
+            $subdir_full_path = $lib . '/' . $subdir2;
+            my $pattern = $subdir_full_path . '/*/Command.pm';
+            my @paths = glob($pattern);
+            for my $file (@paths) {
+                next unless defined $file;
+                next unless length $file;
+                next unless -f $file;
+                my $last_word = File::Basename::basename($file);
+                $last_word =~ s/.pm$// or next;
+                my $dir = File::Basename::dirname($file);
+                my $second_to_last_word = File::Basename::basename($dir);
+                my $sub_command_class_name = $class_above . '::' . $second_to_last_word . '::' . $last_word;
+                next unless $sub_command_class_name->isa('Command');
+                next unless $sub_command_class_name->is_sub_command_delegator;
+                next if $sub_command_class_name->is_abstract;
+                my $basename = $second_to_last_word;
                 $basename =~ s/.pm$//;
-                my $sub_command_class_name = $class . '::' . $basename;
-                my $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
-                unless ($sub_command_class_meta) {
-                    local $SIG{__DIE__};
-                    local $SIG{__WARN__};
-                    # until _use_safe is refactored to be permissive, use directly...
-                    eval "use $sub_command_class_name";
-                }
-                $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
-                next unless $sub_command_class_name->isa("Command");
-                next if $sub_command_class_meta->is_abstract;
                 my $name = $class->_command_name_for_class_word($basename); 
-                $mapping->{$name} = $sub_command_class_name;
+                $mapping->{$name} = $sub_command_class_name;                
             }
         }
     }

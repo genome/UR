@@ -10,7 +10,7 @@ use Getopt::Long;
 use Term::ANSIColor;
 require Text::Wrap;
 
-our $VERSION = "0.29"; # UR $VERSION;
+our $VERSION = "0.30"; # UR $VERSION;
 
 our $entry_point_class;
 our $entry_point_bin;
@@ -38,6 +38,61 @@ UR::Object::Type->define(
 
 # This is changed with "local" where used in some places
 $Text::Wrap::columns = 100;
+
+
+sub _doc_footer {
+    my $self = shift;
+    my $pod = '';
+
+    my @method_header_map = (
+        'LICENSE'   => '_doc_license',
+        'AUTHORS'   => '_doc_authors',
+        'CREDITS'   => '_doc_credits',
+        'BUGS'      => '_doc_bugs',
+        'SEE ALSO'  => '_doc_see_also'
+    );
+    
+    while (@method_header_map) {
+        my $header = shift @method_header_map;
+        my $method = shift @method_header_map;
+        my @txt = $self->$method;
+        next if (@txt == 0 or (@txt == 1 and not $txt[0]));
+        if (@txt == 1) { 
+            my @lines = split("\n",$txt[0]);
+            $pod .= "=head1 $header\n\n"
+                . join("  \n", @lines)
+                . "\n\n";        
+        }
+        else {
+            $pod .= "=head1 $header\n\n"
+                . join("\n  ",@txt);
+            $pod .= "\n\n";
+        }
+    }
+    
+    return $pod;
+}
+
+sub _doc_license {
+    return '';
+}
+
+sub _doc_authors {
+    return ();
+}
+
+sub _doc_credits {
+    return '';    
+}
+
+sub _doc_bugs {
+    return '';
+}
+
+sub _doc_see_also {
+    return ();
+}
+
 
 # Required for color output
 eval {
@@ -578,158 +633,149 @@ sub resolve_class_and_params_for_argv {
 # Methods which let the command auto-document itself.
 #
 
+# LEGACY: poorly named
+sub help_usage_command_pod {
+    return shift->doc_manual(@_);
+}
+
+# LEGACY: poorly named
 sub help_usage_complete_text {
+    shift->doc_help(@_)
+}
+
+sub doc_help {
     my $self = shift;
 
     my $command_name = $self->command_name;
     my $text;
     
-    if (not $self->is_executable) {
-        # no execute implemented
-        if ($self->is_sub_command_delegator) {
-            # show the list of sub-commands
-            $text = sprintf(
-                "Sub-commands for %s:\n%s",
-                Term::ANSIColor::colored($command_name, 'bold'),
-                $self->help_sub_commands,
-            );
-        }
-        else {
-            # developer error
-            my (@sub_command_dirs) = $self->sub_command_dirs;
-            if (grep { -d $_ } @sub_command_dirs) {
-                $text .= "No execute() implemented in $self, and no sub-commands found!"
-            }
-            else {
-                $text .= "No execute() implemented in $self, and no directory of sub-commands found!"
-            }
-        }
-    }
-    else {
-        # standard: update this to do the old --help format
-        my $synopsis = $self->help_synopsis;
-        my $required_args = $self->help_options(is_optional => 0);
-        my $optional_args = $self->help_options(is_optional => 1);
-        my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
-        $text = sprintf(
-            "\n%s\n%s\n\n%s%s%s%s%s\n",
-            Term::ANSIColor::colored('USAGE', 'underline'),
-            Text::Wrap::wrap(
-                ' ', 
-                '    ', 
-                Term::ANSIColor::colored($self->command_name, 'bold'),
-                $self->_shell_args_usage_string || '',
-            ),
-            ( $synopsis 
-                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
-                : ''
-            ),
-            ( $required_args 
-                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED ARGUMENTS", 'underline'), $required_args)
-                : ''
-            ),
-            ( $optional_args 
-                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL ARGUMENTS", 'underline'), $optional_args)
-                : ''
-            ),
-            sprintf(
-                "%s\n%s\n", 
-                Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
-                Text::Wrap::wrap(' ', ' ', $self->help_detail || '')
-            ),
-            ( $sub_commands 
-                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
-                : ''
-            ),
-        );
-    }
+    # standard: update this to do the old --help format
+    my $synopsis = $self->help_synopsis;
+    my $required_args = $self->help_options(is_optional => 0);
+    my $optional_args = $self->help_options(is_optional => 1);
+    my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
+    $text = sprintf(
+        "\n%s\n%s\n\n%s%s%s%s%s\n",
+        Term::ANSIColor::colored('USAGE', 'underline'),
+        Text::Wrap::wrap(
+            ' ', 
+            '    ', 
+            Term::ANSIColor::colored($self->command_name, 'bold'),
+            $self->_shell_args_usage_string || '',
+        ),
+        ( $synopsis 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
+            : ''
+        ),
+        ( $required_args 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED ARGUMENTS", 'underline'), $required_args)
+            : ''
+        ),
+        ( $optional_args 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL ARGUMENTS", 'underline'), $optional_args)
+            : ''
+        ),
+        sprintf(
+            "%s\n%s\n", 
+            Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
+            Text::Wrap::wrap(' ', ' ', $self->help_detail || '')
+        ),
+        ( $sub_commands 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
+            : ''
+        ),
+    );
 
     return $text;
 }
 
-sub help_usage_command_pod {
+
+sub doc_manual {
+    my $self = shift;
+    my $pod = $self->_doc_name_version;
+
+    my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
+    my $required_args = $self->help_options(is_optional => 0, format => "pod");
+    my $optional_args = $self->help_options(is_optional => 1, format => "pod");
+    $pod .=
+            (
+                $synopsis 
+                ? "=head1 SYNOPSIS\n\n" . $synopsis . "\n\n"
+                : ''
+            )
+        .   (
+                $required_args
+                ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
+                : ''
+            )
+        .   (
+                $optional_args
+                ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
+                : ''
+            );
+
+    my $manual = $self->_doc_manual_body;
+    my $help = $self->help_detail;
+    if ($manual or $help) {
+        $pod .= "=head1 DESCRIPTION:\n\n";
+
+        my $txt = $manual || $help;        
+        if ($txt =~ /^\=/) {
+            # pure POD
+            $pod .= $manual;
+        }
+        else {
+            $txt =~ s/\n/\n\n/g;
+            $pod .= $txt;
+            #$pod .= join('', map { "  $_\n" } split ("\n",$txt)) . "\n";
+        }
+    }
+
+    $pod .= $self->_doc_footer();    
+    $pod .= "\n\n=cut\n\n";
+    return "\n$pod";
+}
+
+
+sub _doc_name_version {
     my $self = shift;
 
     my $command_name = $self->command_name;
     my $pod;
 
-    if (0) { # (not $self->is_executable) {
-        # no execute implemented
-        if ($self->is_sub_command_delegator) {
-            # show the list of sub-commands
-            $pod = "Commands:\n" . $self->help_sub_commands;
-        }
-        else {
-            # developer error
-            my (@sub_command_dirs) = $self->sub_command_dirs;
-            if (grep { -d $_ } @sub_command_dirs) {
-                $pod .= "No execute() implemented in $self, and no sub-commands found!"
-            }
-            else {
-                $pod .= "No execute() implemented in $self, and no directory of sub-commands found!"
-            }
-        }
+    # standard: update this to do the old --help format
+    my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
+    my $help_brief = $self->help_brief;
+    my $version = do { no strict; ${ $self->class . '::VERSION' } };
+    my $datetime = $self->__context__->now;
+    my ($date,$time) = split(' ',$datetime);
+
+    $pod =
+        "\n=pod"
+        . "\n\n=head1 NAME"
+        .  "\n\n"
+        .   $self->command_name 
+        . ($help_brief ? " - " . $self->help_brief : '') 
+        . "\n\n";
+
+    $pod .=
+        "\n\n=head1 VERSION"
+        . "\n\n"
+        . "This document " # separated to trick the version updater 
+        . "describes " . $self->command_name;
+
+    if ($version) {
+        $pod .= " version " . $version . " ($date at $time).\n\n";
     }
     else {
-        # standard: update this to do the old --help format
-        my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
-        my $required_args = $self->help_options(is_optional => 0, format => "pod");
-        my $optional_args = $self->help_options(is_optional => 1, format => "pod");
-        my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
-        my $help_brief = $self->help_brief;
-        my $version = do { no strict; ${ $self->class . '::VERSION' } };
-
-        $pod =
-            "\n=pod"
-            . "\n\n=head1 NAME"
-            .  "\n\n"
-            .   $self->command_name 
-            . ($help_brief ? " - " . $self->help_brief : '') 
-            . "\n\n";
-
-        if ($version) {
-            $pod .=
-                "\n\n=head1 VERSION"
-                . "\n\n"
-                . "This document " # separated to trick the version updater 
-                . "describes " . $self->command_name . " version " . $version . '.'
-                . "\n\n";
-        }
-
-        if ($sub_commands) {
-            $pod .=
-                    (
-                        $sub_commands
-                        ? "=head1 SUB-COMMANDS\n\n" . $sub_commands . "\n\n"
-                        : ''
-                    )
-        }
-        else {
-            $pod .=
-                    (
-                        $synopsis 
-                        ? "=head1 SYNOPSIS\n\n" . $synopsis . "\n\n"
-                        : ''
-                    )
-                .   (
-                        $required_args
-                        ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
-                        : ''
-                    )
-                .   (
-                        $optional_args
-                        ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
-                        : ''
-                    )
-                . "=head1 DESCRIPTION:\n\n"
-                . join('', map { "  $_\n" } split ("\n",$self->help_detail))
-                . "\n";
-        }
-        
-        $pod .= "\n\n=cut\n\n";
-
+        $pod .= " ($date at $time)\n\n";
     }
-    return "\n$pod";
+
+    return $pod;
+}
+
+sub _doc_manual_body {
+    return '';
 }
 
 sub help_header {
