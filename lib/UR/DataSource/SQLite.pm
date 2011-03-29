@@ -361,7 +361,7 @@ sub _resolve_fk_name {
         # First, try as a table-wide constraint
         my $col = $column_list->[0];
         my $r_col = $r_column_list->[0];
-        if ($col_str =~ m/FOREIGN KEY \($col\) REFERENCES $r_table_name\s*\($r_col\)/i) {
+        if ($col_str =~ m/FOREIGN KEY\s*\($col\)\s*REFERENCES $r_table_name\s*\($r_col\)/i) {
             ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY \($col\)/i);
         } else {
             while ($col_str) {
