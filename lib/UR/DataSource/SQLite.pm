@@ -405,7 +405,7 @@ sub _resolve_fk_name {
 sub get_foreign_key_details_from_data_dictionary {
 my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # So we're all on the same page...
     # FIXME - looks like 'ur update classes' standarized on upper case :(
