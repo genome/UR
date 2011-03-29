@@ -3,7 +3,7 @@ use warnings;
 
 package UR::DataSource::RDBMS::Entity;
 
-use UR::Object::Type;
+use UR;
 our $VERSION = "0.30"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::Entity',
