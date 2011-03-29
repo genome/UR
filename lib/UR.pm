@@ -60,16 +60,22 @@ for my $e (keys %ENV) {
 # These two dump info about used modules and libraries at program exit.
 END {
     if ($ENV{UR_USED_LIBS}) {
-        print STDERR "Used libraries:\n";
+        print STDERR "Used library include paths (\@INC):\n";
         for my $lib (@INC) {
             print STDERR "$lib\n";
         }
+        print STDERR "\n";
     }
     if ($ENV{UR_USED_MODS}) {
-        print STDERR "Used modules:\n";
+        print STDERR "Used modules and paths (\%INC):\n";
         for my $mod (sort keys %INC) {
-            print STDERR "$mod\n";
+            if ($ENV{UR_USED_MODS} > 1) {
+                print STDERR "$mod => $INC{$mod}\n";
+            } else {
+                print STDERR "$mod\n";
+            }
         }
+        print STDERR "\n";
     }
 }
 
