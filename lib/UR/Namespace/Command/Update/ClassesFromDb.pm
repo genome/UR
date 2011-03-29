@@ -206,23 +206,22 @@ sub execute {
                 return;
             }
         }
-    
+
         #
         # Summarize the database changes by table.  We'll create/update/delete the class which goes with that table.
         #
-    
+
         #$DB::single = 1;
-   
+
         my $cx = UR::Context->current; 
         for my $dd_class (qw/UR::DataSource::RDBMS::Table UR::DataSource::RDBMS::FkConstraint UR::DataSource::RDBMS::TableColumn/) {
             push @data_dictionary_objects, 
-                grep { $force_rewrite_all_classes ? 1 : $_->__changes__ } 
+                grep { $force_rewrite_all_classes ? 1 : $_->__changes__ or exists($_->{'db_saved_uncommitted'}) } 
                 $cx->all_objects_loaded($dd_class);
-    
+
             my $ghost_class = $dd_class . "::Ghost";
             push @data_dictionary_objects, $cx->all_objects_loaded($ghost_class);
         }
-        
     }
     
     # The @data_dictionary_objects array has all dd meta which should be used to rewrite classes.
