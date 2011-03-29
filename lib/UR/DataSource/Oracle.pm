@@ -205,8 +205,6 @@ sub set_userenv {
         $action = getpwuid($>); # real UID
     }
 
-    die "Error setting userenv: module=$module action=$action" if (!$module or !$action);
-
     my $sql = q{BEGIN dbms_application_info.set_module(?, ?); END;};
 
     my $sth = $dbh->prepare($sql);
