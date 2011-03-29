@@ -882,13 +882,29 @@ sub refresh_database_metadata_for_table_name {
                                                                  owner       => $ur_owner,
                                                                  data_source => $data_source_id,
                                                                  column_name => $column_data->{'COLUMN_NAME'});
+        my($column_type_name,$column_size);
+        if (defined $column_data->{'COLUMN_SIZE'}) {
+            $column_type_name = $column_data->{TYPE_NAME};
+            $column_size      = $column_data->{'COLUMN_SIZE'};
+        } else {
+            # SQLite doesn't fill in column_size, but accepts type names like 'varchar(255)'
+            # try to parse out that into type_name => varchar, column_size => 255
+            if ($column_data->{'TYPE_NAME'} =~ m/(\S+)\s*\((\d+)\)/) {
+                $column_type_name = $1;
+                $column_size = $2;
+            } else {
+                $column_type_name = $column_data->{TYPE_NAME};
+                $column_size      = undef;
+            }
+        }
+
         if ($column_obj) {
             # Already exists, change the attributes
             $column_obj->owner($table_object->{owner});
             $column_obj->data_source($table_object->{data_source});
-            $column_obj->data_type($column_data->{TYPE_NAME});
+            $column_obj->data_type($column_type_name);
             $column_obj->nullable(substr($column_data->{IS_NULLABLE}, 0, 1));
-            $column_obj->data_length($column_data->{COLUMN_SIZE});
+            $column_obj->data_length($column_size);
             $column_obj->remarks($column_data->{REMARKS});
             if ($column_obj->__changes__()) {
                 $column_obj->last_object_revision($revision_time);
@@ -904,9 +920,9 @@ sub refresh_database_metadata_for_table_name {
                 owner       => $table_object->{owner},
                 data_source => $table_object->{data_source},
 
-                data_type   => $column_data->{TYPE_NAME},
+                data_type   => $column_type_name,
                 nullable    => substr($column_data->{IS_NULLABLE}, 0, 1),
-                data_length => $column_data->{COLUMN_SIZE},
+                data_length => $column_size,
                 remarks     => $column_data->{REMARKS},
                 last_object_revision => $revision_time,
             );
