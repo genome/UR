@@ -175,6 +175,34 @@ sub get_foreign_key_details_from_data_dictionary {
     return $self->SUPER::get_foreign_key_details_from_data_dictionary(@new_params);
 }
 
+my %ur_data_type_for_vendor_data_type = (
+     # DB type      UR Type
+    'TINYINT'    => ['Integer', undef],
+    'SMALLINT'   => ['Integer', undef],
+    'MEDIUMINT'  => ['Integer', undef],
+    'BIGINT'     => ['Integer', undef],
+
+    'BINARY'     => ['Text', undef],
+    'VARBINARY'  => ['Text', undef],
+    'TINYTEXT'   => ['Text', undef],
+    'MEDIUMTEXT' => ['Text', undef],
+    'LONGTEXT'   => ['Text', undef],
+
+    'TINYBLOB'   => ['Blob', undef],
+    'MEDIUMBLOB' => ['Blob', undef],
+    'LONGBLOB'   => ['Blob', undef],
+);
+sub ur_data_type_for_data_source_data_type {
+    my($class,$type) = @_;
+
+    my $urtype = $ur_data_type_for_vendor_data_type{uc($type)};
+    unless (defined $urtype) {
+        $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
+    }
+    return $urtype;
+}
+
+
 
 1;
 

@@ -127,6 +127,25 @@ my($self,$table_name) = @_;
     return $ret;
 }
 
+my %ur_data_type_for_vendor_data_type = (
+     # DB type      UR Type
+     'SMALLINT'  => ['Integer', undef],
+     'BIGINT'    => ['Integer', undef],
+     'SERIAL'    => ['Integer', undef],
+
+     'BYTEA'     => ['Blob', undef],
+
+     'DOUBLE PRECISION' => ['Number', undef],
+);
+sub ur_data_type_for_data_source_data_type {
+    my($class,$type) = @_;
+
+    my $urtype = $ur_data_type_for_vendor_data_type{uc($type)};
+    unless (defined $urtype) {
+        $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
+    }
+    return $urtype;
+}
 
 
 1;

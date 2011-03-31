@@ -3937,6 +3937,48 @@ sub _select_clause_columns_for_table_property_data {
 }
 
 
+# These seem to be standard for most RDBMSs
+my %ur_data_type_for_vendor_data_type = (
+     # DB type      UR Type
+    'VARCHAR'          => ['Text', undef],
+    'CHAR'             => ['Text', 1],
+    'CHARACTER'        => ['Text', 1],
+    'XML'              => ['Text', undef],
+
+    'INTEGER'          => ['Integer', undef],
+    'UNSIGNED INTEGER' => ['Integer', undef],
+    'SIGNED INTEGER'   => ['Integer', undef],
+    'INT'              => ['Integer', undef],
+    'LONG'             => ['Integer', undef],
+    'BIGINT'           => ['Integer', undef],
+    'SMALLINT'         => ['Integer', undef],
+
+    'FLOAT'            => ['Number', undef],
+    'NUMBER'           => ['Number', undef],
+    'DOUBLE'           => ['Number', undef],
+    'DECIMAL'          => ['Number', undef],
+    'REAL'             => ['Number', undef],
+
+    'BOOL'             => ['Boolean', undef],
+    'BOOLEAN'          => ['Boolean', undef],
+    'BIT'              => ['Boolean', undef],
+
+    'DATE'             => ['DateTime', undef],
+    'DATETIME'         => ['DateTime', undef],
+    'TIMESTAMP'        => ['DateTime', undef],
+    'TIME'             => ['DateTime', undef],
+);
+sub ur_data_type_for_data_source_data_type {
+    my($class,$type) = @_;
+
+    my $urtype = $ur_data_type_for_vendor_data_type{uc($type)};
+    unless (defined $urtype) {
+        $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
+    }
+    return $urtype;
+}
+
+
 1;
 
 =pod

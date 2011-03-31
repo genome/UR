@@ -1072,5 +1072,11 @@ sub create_from_inline_class_data {
     return $ds;
 }
 
+sub ur_data_type_for_data_source_data_type {
+    my($class,$type) = @_;
+
+    return [undef,undef];   # The default that should give reasonable behavior
+}
+
 
 1;
