@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS dd_fk_constraint (
 CREATE TABLE IF NOT EXISTS dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
-    owner varchar NOT NULL,
+    owner varchar,
     table_name varchar NOT NULL,
     r_table_name varchar NOT NULL,
     column_name varchar NOT NULL,
