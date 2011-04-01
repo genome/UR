@@ -13,21 +13,6 @@ class Command::Tree {
     doc => 'base class for commands which delegate to sub-commands',
 };
 
-
-sub _execute_with_shell_params_and_return_exit_code {
-    my $class = shift;
-    my @argv = @_;
-
-    # make --foo=bar equivalent to --foo bar
-    @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
-    my ($delegate_class, $params) = $class->resolve_class_and_params_for_argv(@argv);
-
-    my $rv = $class->_execute_delegate_class_with_params($delegate_class,$params);
-    
-    my $exit_code = $delegate_class->exit_code_for_return_value($rv);
-    return $exit_code;
-}
-
 sub resolve_class_and_params_for_argv {
     # This is used by execute_with_shell_params_and_exit, but might be used within an application.
     my $self = shift;
@@ -40,84 +25,16 @@ sub resolve_class_and_params_for_argv {
         return $class_for_sub_command->resolve_class_and_params_for_argv(@argv);
     }
     else {
+        # error
         return ($self,undef);
     }
-}
-
-sub _execute_delegate_class_with_params {
-    # this is called by both the shell dispatcher and http dispatcher for now
-    my ($class, $delegate_class, $params) = @_;
-
-    $delegate_class->dump_status_messages(1);
-    $delegate_class->dump_warning_messages(1);
-    $delegate_class->dump_error_messages(1);
-    $delegate_class->dump_debug_messages(0);
-
-    unless ($delegate_class) {
-        $class->usage_message($class->help_usage_complete_text);
-        return;
-    }
-
-    if ( $delegate_class->is_sub_command_delegator && !defined($params) ) {
-        my $command_name = $delegate_class->command_name;
-        $delegate_class->status_message($delegate_class->help_usage_complete_text);
-        $delegate_class->error_message("Please specify a valid sub-command for '$command_name'.");
-        return;
-    }
-    if ( $params->{help} ) {
-        $delegate_class->usage_message($delegate_class->help_usage_complete_text);
-        return;
-    }
-
-    my $command_object = $delegate_class->create(%$params);
-
-    unless ($command_object) {
-        # The delegate class should have emitted an error message.
-        # This is just in case the developer is sloppy, and the user will think the task did not fail.
-        print STDERR "Exiting.\n";
-        return;
-    }
-
-    $command_object->dump_status_messages(1);
-    $command_object->dump_warning_messages(1);
-    $command_object->dump_error_messages(1);
-    $command_object->dump_debug_messages(0);
-
-    my $rv = $command_object->execute($params);
-
-    if ($command_object->__errors__) {
-        $command_object->delete;
-    }
-
-    return $rv;
-}
-
-
-sub help_brief {
-    my $self = shift;
-    if (my $doc = $self->__meta__->doc) {
-        return $doc;
-    }
-    else {
-        my @parents = $self->__meta__->ancestry_class_metas;
-        for my $parent (@parents) {
-            if (my $doc = $parent->doc) {
-                return $doc;
-            }
-        }
-        return "";
-    }
-}
-
-sub is_sub_command_delegator {
-    return 1;
 }
 
 sub resolve_option_completion_spec {
     my $class = shift;
     my @completion_spec;
 
-    my @sub = eval { $class->sub_command_names};
+    my @sub = eval { $class->sub_command_names };
     if ($@) {
         $class->warning_message("Couldn't load class $class: $@\nSkipping $class...");
         return;
@@ -141,6 +58,22 @@ sub resolve_option_completion_spec {
     push @completion_spec, "help!" => undef;
 
     return \@completion_spec
+}
+
+sub help_brief {
+    my $self = shift;
+    if (my $doc = $self->__meta__->doc) {
+        return $doc;
+    }
+    else {
+        my @parents = $self->__meta__->ancestry_class_metas;
+        for my $parent (@parents) {
+            if (my $doc = $parent->doc) {
+                return $doc;
+            }
+        }
+        return "";
+    }
 }
 
 sub doc_help {
@@ -419,8 +352,7 @@ sub _build_sub_command_mapping {
                 my $second_to_last_word = File::Basename::basename($dir);
                 my $sub_command_class_name = $class_above . '::' . $second_to_last_word . '::' . $last_word;
                 next unless $sub_command_class_name->isa('Command');
-                next unless $sub_command_class_name->is_sub_command_delegator;
-                next if $sub_command_class_name->is_abstract;
+                next if $sub_command_class_name->__meta__->is_abstract;
                 my $basename = $second_to_last_word;
                 $basename =~ s/.pm$//;
                 my $name = $class->_command_name_for_class_word($basename); 
