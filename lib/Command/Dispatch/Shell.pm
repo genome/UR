@@ -4,7 +4,6 @@ use warnings;
 
 our $entry_point_class;
 our $entry_point_bin;
-our @error_tags;
 
 sub execute_with_shell_params_and_exit {
     # This automatically parses command-line options and "does the right thing":
@@ -47,7 +46,7 @@ sub _execute_with_shell_params_and_return_exit_code {
         $delegate_class->dump_warning_messages(1);
         $delegate_class->dump_error_messages(1);
         for my $error (@$errors) {
-            $delegate_class->error_message($error);
+            $delegate_class->error_message(join(' ', $error->property_names) . ": " . $error->desc);
         }        
         $exit_code = 1;
     }
@@ -127,6 +126,8 @@ sub resolve_class_and_params_for_argv {
     unless (grep { /^help\W/ } @spec) {
         push @spec, "help!";
     }
+
+    my @error_tags;
 
     # Thes nasty GetOptions modules insist on working on
     # the real @ARGV, while we like a little more flexibility.

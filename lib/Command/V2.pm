@@ -15,7 +15,6 @@ our $VERSION = "0.30"; # UR $VERSION;
 
 our $entry_point_class;
 our $entry_point_bin;
-our @error_tags;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
