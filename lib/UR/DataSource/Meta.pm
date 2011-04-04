@@ -14,6 +14,9 @@ UR::Object::Type->define(
     is => ['UR::DataSource::SQLite'],
 );
 
+# Do a DB dump at commit time
+sub dump_on_commit { 1; }
+
 sub _resolve_class_name_for_table_name_fixups {
     my $self = shift->_singleton_object;
 
@@ -24,8 +27,97 @@ sub _resolve_class_name_for_table_name_fixups {
     return @_;
 }
 
-# Do a DB dump at commit time
-sub dump_on_commit { 1; }
+# NOTE: When you change this, also change the value in $METADATA_DB_SQL below
+sub CURRENT_METADB_VERSION { 2 };
+
+sub _init_created_dbh {
+    my($self,$dbh) = @_;
+
+    my $ver = $self->_get_current_schema_version($dbh);
+    my $latest_ver = $self->CURRENT_METADB_VERSION;
+
+    my $class = $self->class;
+    if (! defined($ver) or $ver < $latest_ver) {
+        no warnings 'uninitialized';
+        Carp::croak("Your MetaDB for $class has an out of date schema.  It is version $ver, while the latest is version $latest_ver.\nPlease run the command 'ur update meta-db-schema $class` to update it");
+    } elsif ($ver > $latest_ver) {
+        Carp::croak("Your MetaDB for $class is newer than expected.  It is version $ver, while this UR understands version $latest_ver");
+    }
+
+    return $dbh;
+}
+
+
+sub _get_current_schema_version {
+    my($self,$dbh) = @_;
+
+    my $raiseerror = $dbh->{'RaiseError'};
+    my $printerror = $dbh->{'PrintError'};
+    my $handleerror = $dbh->{'HandleError'};
+
+    $dbh->{'RaiseError'} = 0;
+    $dbh->{'PrintError'} = 0;
+    $dbh->{'HandleError'} = undef;
+
+    my @row = eval { $dbh->selectrow_array("select value from dd_meta_settings where key = 'ur_metadb_version'") };
+
+    $dbh->{'RaiseError'} = $raiseerror;
+    $dbh->{'PrintError'} = $printerror;
+    $dbh->{'HandleError'} = $handleerror;
+
+    if (!@row) {
+        # There were actually 2 versions that don't have the settings table
+        if ($self->server =~ m/\.sqlite3n$/) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    return $row[0];
+}
+
+
+
+sub _update_schema_for_version_0 {
+    my($self,$dbh) = @_;
+
+    # Nothing really to do here...
+    # This is got DBD::SQLite earlier than 1.26_04
+    # which return NULL for the 'owner' field in schema introspection
+    return 1;
+}
+
+sub _update_schema_for_version_1 {
+    my($self,$dbh) = @_;
+
+    # DBD::SQLite after 1.26_04 starts reporting 'main' for the default database instead of
+    # the empty string or NULL.  We'll change the code in UR::DataSource::SQLite so it always
+    # returns main if you're on an old version
+    foreach my $table_name (qw( dd_table dd_table_column dd_fk_constraint dd_fk_constraint_column
+                                dd_bitmap_index dd_pk_constraint_column dd_unique_constraint_column ) )
+    {
+        unless ($dbh->do("update $table_name set owner = 'main' where owner is null")) {
+            Carp::croak("Can't update 'owner' column for table $table_name: ".$dbh->errstr);
+        }
+    }
+
+    # dd_fk_constraint has r_owner, too
+    unless ($dbh->do("update dd_fk_constraint set r_owner = 'main' where owner is null")) {
+        Carp::croak("Can't update 'r_owner' column for table dd_fk_constraint: ".$dbh->errstr);
+    }
+
+    # And now we actually track the version
+    unless ($dbh->do("CREATE TABLE dd_meta_settings (key varchar NOT NULL, value varchar NOT NULL, PRIMARY KEY (key,value))")) {
+        Carp::croak("Can't create table dd_meta_settings: ".$dbh->errstr);
+    }
+    unless ($dbh->do("INSERT INTO dd_meta_settings VALUES ('ur_metadb_version',2)")) {
+        Carp::croak("Can't insert into dd_meta_settings: ".$dbh->errstr);
+    }
+
+    return 2;
+}
+
 
 # This is the template for the schema:
 our $METADATA_DB_SQL =<<EOS;
@@ -96,6 +188,12 @@ CREATE TABLE IF NOT EXISTS dd_unique_constraint_column (
     column_name varchar NOT NULL,
     PRIMARY KEY (data_source,owner,table_name,constraint_name,column_name)
 );
+CREATE TABLE IF NOT EXISTS dd_meta_settings (
+    key varchar NOT NULL,
+    value varchar NOT NULL,
+    PRIMARY KEY (key,value)
+);
+INSERT INTO dd_meta_settings VALUES ('ur_metadb_version',2);
 EOS
 
 our $module_template=<<EOS;
