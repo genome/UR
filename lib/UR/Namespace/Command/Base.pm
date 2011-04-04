@@ -263,13 +263,27 @@ sub _init {
     # but any other -I/use-lib requests should still 
     # come ahead of it.  This requires a little munging.
 
-    #print "INC @INC\n"; 
-    my $lib_path        = $self->lib_path;
-    my @used_libs = UR::Util->used_libs;
-    for (@used_libs) {
-        shift @INC;
+    my $lib_path = $self->lib_path;
+
+    # Find the first thing in the compiled_inc list that exists
+    my $compiled;
+    for my $path ( UR::Util::compiled_inc() ) {
+        $compiled = Cwd::abs_path($path);
+        last if defined $compiled;
     }
-    @INC = (@used_libs, $lib_path, @INC);
+
+    my $i;
+    for ($i = 0; $i < @INC; $i++) {
+        # Find the index in @INC that's the first thing in
+        # compiled-in module paths
+        #
+        # since abs_path returns undef for non-existant dirs,
+        # skip the comparison if either is undef
+        my $inc = Cwd::abs_path($INC[$i]);
+        next unless defined $inc;
+        last if ($inc eq $compiled);
+    }
+    splice(@INC, $i, 0, $lib_path);
     #print "INC @INC\n"; 
 
     # Use the namespace.

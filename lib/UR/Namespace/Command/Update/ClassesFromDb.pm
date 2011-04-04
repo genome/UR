@@ -952,6 +952,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $table = $column->get_table;
         my $column_name = $column->column_name;
         my $data_source = $table->data_source;
+        my($ur_data_type,$default_length) = @{ $data_source->ur_data_type_for_data_source_data_type($column->data_type) };
+        my $ur_data_length = defined($column->data_length) ? $column->data_length : $default_length;
 
         #my $class = UR::Object::Type->get(
         #    data_source => $table->data_source,
@@ -975,7 +977,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 $property = $prop_object;
                 last;
             }
-       }
+        }
 
         # We care less whether the column is new/updated, than whether there is property metadata for it.
         if ($property) {
@@ -994,11 +996,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                     }
                 }
             }
-            $property->data_type($column->data_type);
+            $property->data_type($ur_data_type) if (! defined $property->data_type);
             # lengths for these data types are based on the number of bytes used internally in the
             # database.  The UR-based objects will store the text version, which will always be longer,
             # making $obj->__errors__() complain about the length being out of bounds
-            $property->data_length($column->is_time_data ? undef : $column->data_length);
+            $property->data_length($column->is_time_data ? undef : $ur_data_length) if (! defined $property->data_length);
 
             $property->is_optional($column->nullable eq "Y" ? 1 : 0);
             $property->doc($column->remarks);
@@ -1042,8 +1044,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 attribute_name => $attribute_name,
                 property_name  => $property_name,
                 column_name    => $column_name,
-                data_type      => $column->data_type,
-                data_length    => $column->is_time_data ? undef : $column->data_length,
+                data_type      => $ur_data_type,
+                data_length    => $ur_data_length,
                 is_optional    => $column->nullable eq "Y" ? 1 : 0,
                 is_volatile    => 0,
                 doc            => $column->remarks,

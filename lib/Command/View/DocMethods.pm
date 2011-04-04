@@ -1,0 +1,460 @@
+package Command::V2;  # additional methods to produce documentation
+use strict;
+use warnings;
+
+our $entry_point_class;
+our $entry_point_bin;
+
+use Term::ANSIColor;
+require Text::Wrap;
+
+# This is changed with "local" where used in some places
+$Text::Wrap::columns = 100;
+
+# Required for color output
+eval {
+    binmode STDOUT, ":utf8";
+    binmode STDERR, ":utf8";
+};
+
+sub help_brief {
+    my $self = shift;
+    if (my $doc = $self->__meta__->doc) {
+        return $doc;
+    }
+    else {
+        my @parents = $self->__meta__->ancestry_class_metas;
+        for my $parent (@parents) {
+            if (my $doc = $parent->doc) {
+                return $doc;
+            }
+        }
+        return "no description!!!: define 'doc' in the class definition for " 
+            . $self->class;
+    }
+}
+
+
+sub help_synopsis {
+    my $self = shift;
+    return '';
+}
+
+sub help_detail {
+    my $self = shift;
+    return "!!! define help_detail() in module " . ref($self) || $self . "!";
+}
+
+sub sub_command_category {
+    return;
+}
+
+sub sub_command_sort_position { 
+    # override to do something besides alpha sorting by name
+    return '9999999999 ' . $_[0]->command_name_brief;
+}
+
+# LEGACY: poorly named
+sub help_usage_command_pod {
+    return shift->doc_manual(@_);
+}
+
+# LEGACY: poorly named
+sub help_usage_complete_text {
+    shift->doc_help(@_)
+}
+
+sub doc_help {
+    my $self = shift;
+
+    my $command_name = $self->command_name;
+    my $text;
+    
+    # standard: update this to do the old --help format
+    my $synopsis = $self->help_synopsis;
+    my $required_args = $self->help_options(is_optional => 0);
+    my $optional_args = $self->help_options(is_optional => 1);
+    my $sub_commands = '';
+    $text = sprintf(
+        "\n%s\n%s\n\n%s%s%s%s%s\n",
+        Term::ANSIColor::colored('USAGE', 'underline'),
+        Text::Wrap::wrap(
+            ' ', 
+            '    ', 
+            Term::ANSIColor::colored($self->command_name, 'bold'),
+            $self->_shell_args_usage_string || '',
+        ),
+        ( $synopsis 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
+            : ''
+        ),
+        ( $required_args 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED ARGUMENTS", 'underline'), $required_args)
+            : ''
+        ),
+        ( $optional_args 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL ARGUMENTS", 'underline'), $optional_args)
+            : ''
+        ),
+        sprintf(
+            "%s\n%s\n", 
+            Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
+            Text::Wrap::wrap(' ', ' ', $self->help_detail || '')
+        ),
+        ( $sub_commands 
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
+            : ''
+        ),
+    );
+
+    return $text;
+}
+
+
+sub doc_manual {
+    my $self = shift;
+    my $pod = $self->_doc_name_version;
+
+    my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
+    my $required_args = $self->help_options(is_optional => 0, format => "pod");
+    my $optional_args = $self->help_options(is_optional => 1, format => "pod");
+    $pod .=
+            (
+                $synopsis 
+                ? "=head1 SYNOPSIS\n\n" . $synopsis . "\n\n"
+                : ''
+            )
+        .   (
+                $required_args
+                ? "=head1 REQUIRED ARGUMENTS\n\n=over\n\n" . $required_args . "\n\n=back\n\n"
+                : ''
+            )
+        .   (
+                $optional_args
+                ? "=head1 OPTIONAL ARGUMENTS\n\n=over\n\n" . $optional_args . "\n\n=back\n\n"
+                : ''
+            );
+
+    my $manual = $self->_doc_manual_body;
+    my $help = $self->help_detail;
+    if ($manual or $help) {
+        $pod .= "=head1 DESCRIPTION:\n\n";
+
+        my $txt = $manual || $help;        
+        if ($txt =~ /^\=/) {
+            # pure POD
+            $pod .= $manual;
+        }
+        else {
+            $txt =~ s/\n/\n\n/g;
+            $pod .= $txt;
+            #$pod .= join('', map { "  $_\n" } split ("\n",$txt)) . "\n";
+        }
+    }
+
+    $pod .= $self->_doc_footer();    
+    $pod .= "\n\n=cut\n\n";
+    return "\n$pod";
+}
+
+
+sub _doc_name_version {
+    my $self = shift;
+
+    my $command_name = $self->command_name;
+    my $pod;
+
+    # standard: update this to do the old --help format
+    my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
+    my $help_brief = $self->help_brief;
+    my $version = do { no strict; ${ $self->class . '::VERSION' } };
+    my $datetime = $self->__context__->now;
+    my ($date,$time) = split(' ',$datetime);
+
+    $pod =
+        "\n=pod"
+        . "\n\n=head1 NAME"
+        .  "\n\n"
+        .   $self->command_name 
+        . ($help_brief ? " - " . $self->help_brief : '') 
+        . "\n\n";
+
+    $pod .=
+        "\n\n=head1 VERSION"
+        . "\n\n"
+        . "This document " # separated to trick the version updater 
+        . "describes " . $self->command_name;
+
+    if ($version) {
+        $pod .= " version " . $version . " ($date at $time).\n\n";
+    }
+    else {
+        $pod .= " ($date at $time)\n\n";
+    }
+
+    return $pod;
+}
+
+sub _doc_manual_body {
+    return '';
+}
+
+sub help_header {
+    my $class = shift;
+    return sprintf("%s - %-80s\n",
+        $class->command_name
+        ,$class->help_brief
+    )
+}
+
+sub help_options {
+    my $self = shift;
+    my %params = @_;
+
+    my $format = delete $params{format};
+    my @property_meta = $self->_shell_args_property_meta(%params);
+
+    my @data;
+    my $max_name_length = 0;
+    for my $property_meta (@property_meta) {
+        my $param_name = $self->_shell_arg_name_from_property_meta($property_meta);
+        if ($property_meta->{shell_args_position}) {
+            $param_name = uc($param_name);
+        }
+
+        #$param_name = "--$param_name";
+        my $doc = $property_meta->doc;
+        my $valid_values = $property_meta->valid_values;
+        unless ($doc) {
+            # Maybe a parent class has documentation for this property
+            eval {
+                foreach my $ancestor_class_meta ( $property_meta->class_meta->ancestry_class_metas ) {
+                    my $ancestor_property_meta = $ancestor_class_meta->property_meta_for_name($property_meta->property_name);
+                    if ($ancestor_property_meta and $doc = $ancestor_property_meta->doc) {
+                        last;
+                    }
+                }
+            };
+        }
+
+        if (!$doc) {
+            if (!$valid_values) {
+                $doc = "(undocumented)";
+            }
+            else {
+                $doc = '';
+            }
+        }
+        if ($valid_values) {
+            $doc .= "\nvalid values:\n";
+            for my $v (@$valid_values) {
+                $doc .= " " . $v . "\n"; 
+                $max_name_length = length($v)+2 if $max_name_length < length($v)+2;
+            }
+            chomp $doc;
+        }
+        $max_name_length = length($param_name) if $max_name_length < length($param_name);
+
+        my $param_type = $property_meta->data_type || '';
+        if (defined($param_type) and $param_type !~ m/::/) {
+            $param_type = ucfirst(lc($param_type));
+        }
+
+        my $default_value = $property_meta->default_value;
+        if (defined $default_value) {
+            if ($param_type eq 'Boolean') {
+                $default_value = $default_value ? "'true'" : "'false' (--no$param_name)";
+            } elsif ($property_meta->is_many && ref($default_value) eq 'ARRAY') {
+                if (@$default_value) {
+                    $default_value = "('" . join("','",@$default_value) . "')";
+                } else {
+                    $default_value = "()";
+                }
+            } else {
+                $default_value = "'$default_value'";
+            }
+            $default_value = "\nDefault value $default_value if not specified";
+        }
+
+        push @data, [$param_name, $param_type, $doc, $default_value];
+        if ($param_type eq 'Boolean') {
+            push @data, ['no'.$param_name, $param_type, "Make $param_name 'false'" ];
+        }
+    }
+    my $text = '';
+    for my $row (@data) {
+        if (defined($format) and $format eq 'pod') {
+            $text .= "\n=item " . $row->[0] . ($row->[1]? '  I<' . $row->[1] . '>' : '') . "\n\n" . $row->[2] . "\n". ($row->[3]? $row->[3] . "\n" : '');
+        }
+        elsif (defined($format) and $format eq 'html') {
+            $text .= "\n\t<br>" . $row->[0] . ($row->[1]? ' <em>' . $row->[1] . '</em>' : '') . "<br> " . $row->[2] . ($row->[3]? "<br>" . $row->[3] : '') . "<br>\n";
+        }
+        else {
+            $text .= sprintf(
+                "  %s\n%s\n",
+                Term::ANSIColor::colored($row->[0], 'bold') . "   " . $row->[1],
+                Text::Wrap::wrap(
+                    "    ", # 1st line indent,
+                    "    ", # all other lines indent,
+                    $row->[2],
+                    $row->[3] || '',
+                ),
+            );
+        }
+    }
+
+    return $text;
+}
+
+
+sub _doc_footer {
+    my $self = shift;
+    my $pod = '';
+
+    my @method_header_map = (
+        'LICENSE'   => '_doc_license',
+        'AUTHORS'   => '_doc_authors',
+        'CREDITS'   => '_doc_credits',
+        'BUGS'      => '_doc_bugs',
+        'SEE ALSO'  => '_doc_see_also'
+    );
+    
+    while (@method_header_map) {
+        my $header = shift @method_header_map;
+        my $method = shift @method_header_map;
+        my @txt = $self->$method;
+        next if (@txt == 0 or (@txt == 1 and not $txt[0]));
+        if (@txt == 1) { 
+            my @lines = split("\n",$txt[0]);
+            $pod .= "=head1 $header\n\n"
+                . join("  \n", @lines)
+                . "\n\n";        
+        }
+        else {
+            $pod .= "=head1 $header\n\n"
+                . join("\n  ",@txt);
+            $pod .= "\n\n";
+        }
+    }
+    
+    return $pod;
+}
+
+sub _doc_license {
+    return '';
+}
+
+sub _doc_authors {
+    return ();
+}
+
+sub _doc_credits {
+    return '';    
+}
+
+sub _doc_bugs {
+    return '';
+}
+
+sub _doc_see_also {
+    return ();
+}
+
+
+sub _shell_args_usage_string {
+    my $self = shift;
+
+    my $is_executable = eval {
+        if ($self->can("_execute_body") eq __PACKAGE__->can("_execute_body")) {
+            return;
+        }
+        elsif ($self->__meta__->is_abstract) {
+            return;
+        }
+        else {
+            return 1;
+        }
+    };
+
+    if ($is_executable) {
+        return join(
+            " ", 
+            map { 
+                $self->_shell_arg_usage_string_from_property_meta($_) 
+            } $self->_shell_args_property_meta()
+            
+        );
+    }
+    else {
+        return "(no execute or sub commands implemented)"
+    }
+}
+
+sub _shell_args_usage_string_abbreviated {
+    my $self = shift;
+    my $detailed = $self->_shell_args_usage_string;
+    if (length($detailed) <= 20) {
+        return $detailed;
+    }
+    else {
+        return substr($detailed,0,17) . '...';
+    }
+}
+
+sub command_name {
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my $prepend = '';
+    if (defined($entry_point_class) and $class =~ /^($entry_point_class)(::.+|)$/) {
+        $prepend = $entry_point_bin;
+        $class = $2;
+        if ($class =~ s/^:://) {
+            $prepend .= ' ';
+        }
+    }
+    my @words = grep { $_ ne 'Command' } split(/::/,$class);
+    my $n = join(' ', map { $self->_command_name_for_class_word($_) }  @words);
+    return $prepend . $n;
+}
+
+sub command_name_brief {
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my @words = grep { $_ ne 'Command' } split(/::/,$class);
+    my $n = join(' ', map { $self->_command_name_for_class_word($_) } $words[-1]);
+    return $n;
+}
+
+sub color_command_name {
+    my $text = shift;
+    
+    my $colored_text = [];
+
+    my @COLOR_TEMPLATES = ('red', 'bold red', 'magenta', 'bold magenta');
+    my @parts = split(/\s+/, $text);
+    for(my $i = 0 ; $i < @parts ; $i++ ){
+        push @$colored_text, ($i < @COLOR_TEMPLATES) ? Term::ANSIColor::colored($parts[$i], $COLOR_TEMPLATES[$i]) : $parts[$i];
+    }
+    
+    return join(' ', @$colored_text);
+}
+
+sub _base_command_class_and_extension {
+    my $self = shift;
+    my $class = ref($self) || $self;
+    return ($class =~ /^(.*)::([^\:]+)$/); 
+}
+
+sub _command_name_for_class_word {
+    my $self = shift;
+    my $s = shift;
+    $s =~ s/_/-/g;
+    $s =~ s/^([A-Z])/\L$1/; # ignore first capital because that is assumed
+    $s =~ s/([A-Z])/-$1/g; # all other capitals prepend a dash
+    $s =~ s/([a-zA-Z])([0-9])/$1-$2/g; # treat number as begining word
+    $s = lc($s);
+    return $s;
+}
+
+1;
+

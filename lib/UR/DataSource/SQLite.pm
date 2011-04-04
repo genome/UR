@@ -176,7 +176,7 @@ sub _init_database {
         }
         elsif ($self->class ne __PACKAGE__) {
             # copy from the parent class (disabled)
-            Carp::confess("No schema or dump file found for $db_file!");
+            Carp::confess("No schema or dump file found for $db_file.\n  Tried schema path $schema_file\n  and dump path $dump_file");
 
             my $template_database_file = $self->SUPER::server();
             unless (-e $template_database_file) {

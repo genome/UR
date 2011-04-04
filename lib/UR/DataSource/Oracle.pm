@@ -205,8 +205,6 @@ sub set_userenv {
         $action = getpwuid($>); # real UID
     }
 
-    die "Error setting userenv: module=$module action=$action" if (!$module or !$action);
-
     my $sql = q{BEGIN dbms_application_info.set_module(?, ?); END;};
 
     my $sth = $dbh->prepare($sql);
@@ -250,7 +248,18 @@ sub get_userenv {
 }
 
 
+my %ur_data_type_for_vendor_data_type = (
+    'VARCHAR2'  => ['Text', undef],
+);
+sub ur_data_type_for_data_source_data_type {
+    my($class,$type) = @_;
 
+    my $urtype = $ur_data_type_for_vendor_data_type{uc($type)};
+    unless (defined $urtype) {
+        $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
+    }
+    return $urtype;
+}
 
 1;
 

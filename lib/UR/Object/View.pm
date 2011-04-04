@@ -6,9 +6,9 @@ our $VERSION = "0.30"; # UR $VERSION;;
 
 class UR::Object::View {
     has_abstract_constant => [
-        subject_class_name      => { is_abstract => 1, is_constant => 1 },#is_class_wide => 1, is_constant => 1, is_optional => 0 },           
-        perspective             => { is_abstract => 1, is_constant => 1 },#is_class_wide => 1, is_constant => 1, is_optional => 0 },   
-        toolkit                 => { is_abstract => 1, is_constant => 1 },#is_class_wide => 1, is_constant => 1, is_optional => 0 },
+        subject_class_name      => { is_abstract => 1, is_constant => 1 },#is_classwide => 1, is_constant => 1, is_optional => 0 },
+        perspective             => { is_abstract => 1, is_constant => 1 },#is_classwide => 1, is_constant => 1, is_optional => 0 },
+        toolkit                 => { is_abstract => 1, is_constant => 1 },#is_classwide => 1, is_constant => 1, is_optional => 0 },
     ],
     has_optional => [
         parent_view => {

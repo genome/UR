@@ -38,7 +38,7 @@ use Sub::Install ();
     is_transient     => 0,
     is_constant      => 0,
     is_volatile      => 0,
-    is_class_wide    => 0,
+    is_classwide    => 0,
     is_delegated     => 0,
     is_calculated    => 0,
     is_mutable       => undef,
@@ -59,7 +59,7 @@ use Sub::Install ();
         is_transient
         is_constant
         is_volatile
-        is_class_wide
+        is_classwide
         is_transactional
         is_abstract
         is_concrete
@@ -860,7 +860,7 @@ sub _normalize_class_description {
                             property_name => $subclassify_by,
                             default_value => $class_name,
                             is_constant => 1,
-                            is_class_wide => 1,
+                            is_classwide => 1,
                             is_specified_in_module_header => 0,
                             column_name => '',
                             implied_by => $parent_class_meta->class_name . '::subclassify_by',
@@ -966,7 +966,7 @@ sub _normalize_property_description1 {
         [ is_transient                    => qw//],
         [ is_volatile                     => qw//],
         [ is_constant                     => qw//], 
-        [ is_class_wide                   => qw//], 
+        [ is_classwide                    => qw/is_class_wide/],
         [ is_delegated                    => qw//],
         [ is_calculated                   => qw//],
         [ is_mutable                      => qw//],

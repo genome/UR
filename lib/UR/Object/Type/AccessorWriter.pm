@@ -1439,7 +1439,7 @@ sub initialize_direct_accessors {
             }
             $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where);
         }        
-        elsif ($property_data->{'is_class_wide'}) {
+        elsif ($property_data->{'is_classwide'}) {
             my $value = $property_data->{'default_value'};
             if ($property_data->{'is_constant'}) {
                 $self->mk_ro_class_accessor($class_name,$accessor_name,'',$value);
@@ -1598,7 +1598,7 @@ Creates a read-write accessor called $accessor_name which stores its value
 in a scalar captured by the accessor's closure.  Since the closure is
 inserted into the class's namespace, all instances of the class share the
 same closure (and therefore the same scalar), and the property effectively
-acts as a class-wide property.  
+acts as a class-wide property.
 
 =item mk_ro_class_accessor
 

@@ -844,7 +844,7 @@ sub refresh_database_metadata_for_table_name {
             last_object_revision => $revision_time,
         );
         unless ($table_object) {
-            Carp::confess("Failed to get/create table object for $db_table_name");
+            Carp::confess("Failed to $creation_method table object for $db_table_name");
         }
     }
 
@@ -2678,7 +2678,7 @@ sub _default_save_sql_for_object {
                          owner => $db_owner,
                          data_source => 'UR::DataSource::Meta');
             unless ($table) {
-                Carp::confess("No table $table_name found for data source $dsn!");
+                Carp::croak("No table $table_name found for data source $dsn and owner '$db_owner'");
             }
         }        
         my @table_class_obj = grep { $_->class_name !~ /::Ghost$/ } UR::Object::Type->is_loaded(table_name => $table_name);
@@ -2689,15 +2689,15 @@ sub _default_save_sql_for_object {
             $table_class = $table_class_obj->class_name; 
         }
         else {
-            Carp::confess("NO CLASS FOR $table_name: @table_class_obj!\n");
+            Carp::croak("NO CLASS FOR $table_name: @table_class_obj!\n");
         }        
 
 
         my $data_source = $UR::Context::current->resolve_data_source_for_object($object_to_save);
         unless ($data_source) {
-            Carp::confess("No data source on $object_to_save!");
+            Carp::croak("Couldn't resolve data source for object ".$object_to_save->__display_name__.":\n"
+                        . Data::Dumper::Dumper($object_to_save));
         }
-        #my($db_owner, $table_name_to_update) = $self->_resolve_owner_and_table_from_table_name($table_name);
 
         # The "action" now can vary on a per-table basis.
 
@@ -3950,6 +3950,48 @@ sub _select_clause_columns_for_table_property_data {
         }
     }
     return \@column_data;
+}
+
+
+# These seem to be standard for most RDBMSs
+my %ur_data_type_for_vendor_data_type = (
+     # DB type      UR Type
+    'VARCHAR'          => ['Text', undef],
+    'CHAR'             => ['Text', 1],
+    'CHARACTER'        => ['Text', 1],
+    'XML'              => ['Text', undef],
+
+    'INTEGER'          => ['Integer', undef],
+    'UNSIGNED INTEGER' => ['Integer', undef],
+    'SIGNED INTEGER'   => ['Integer', undef],
+    'INT'              => ['Integer', undef],
+    'LONG'             => ['Integer', undef],
+    'BIGINT'           => ['Integer', undef],
+    'SMALLINT'         => ['Integer', undef],
+
+    'FLOAT'            => ['Number', undef],
+    'NUMBER'           => ['Number', undef],
+    'DOUBLE'           => ['Number', undef],
+    'DECIMAL'          => ['Number', undef],
+    'REAL'             => ['Number', undef],
+
+    'BOOL'             => ['Boolean', undef],
+    'BOOLEAN'          => ['Boolean', undef],
+    'BIT'              => ['Boolean', undef],
+
+    'DATE'             => ['DateTime', undef],
+    'DATETIME'         => ['DateTime', undef],
+    'TIMESTAMP'        => ['DateTime', undef],
+    'TIME'             => ['DateTime', undef],
+);
+sub ur_data_type_for_data_source_data_type {
+    my($class,$type) = @_;
+
+    my $urtype = $ur_data_type_for_vendor_data_type{uc($type)};
+    unless (defined $urtype) {
+        $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
+    }
+    return $urtype;
 }
 
 

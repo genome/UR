@@ -19,8 +19,8 @@ UR::Object::Type->define(
     class_name => 'UR::BoolExpr',
     composite_id_separator => $UR::BoolExpr::Util::id_sep,
     id_by => [
-        template_id         => { type => 'BLOB' },
-        value_id            => { type => 'BLOB' },
+        template_id         => { type => 'Blob' },
+        value_id            => { type => 'Blob' },
     ],
     has => [
         template            => { is => 'UR::BoolExpr::Template', id_by => 'template_id' },

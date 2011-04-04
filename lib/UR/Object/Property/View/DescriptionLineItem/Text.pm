@@ -23,8 +23,8 @@ sub _update_view_from_subject {
     unless ($column_name) {
         if ($property_meta->via) {
             $column_name = $property_meta->via . '->' . $property_meta->to;
-        } elsif ($property_meta->is_class_wide) {
-            $column_name = '(class wide)';
+        } elsif ($property_meta->is_classwide) {
+            $column_name = '(classwide)';
             
         } elsif ($property_meta->is_delegated) {
             # delegated, but not via.  Must be an object accessor
