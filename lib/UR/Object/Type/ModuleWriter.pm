@@ -406,7 +406,7 @@ sub _get_display_fields_for_property {
     $section =~ m/^has_(.*)/;
     my @sections = split('_',$1 || '');
     
-    for my $std_field_name (qw/optional abstract transient constant class_wide many deprecated/) {
+    for my $std_field_name (qw/optional abstract transient constant classwide many deprecated/) {
         $seen{$property_name} = 1;
         next if (grep { $std_field_name eq $_ } @sections); # Don't print is_optional if we're in the has_optional section
         my $property_name = "is_" . $std_field_name;

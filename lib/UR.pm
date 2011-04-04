@@ -364,7 +364,7 @@ UR::Object::Type->define(
         is_constant                     => { is => 'Boolean' , default_value => 0},  # never changes
         is_mutable                      => { is => 'Boolean' , default_value => 1},  # can be changed explicitly via accessor (cannot be constant)
         is_volatile                     => { is => 'Boolean' , default_value => 0},  # changes w/o a signal: (cannot be constant or transactional)
-        is_class_wide                   => { is => 'Boolean' , default_value => 0},
+        is_classwide                    => { is => 'Boolean' , default_value => 0},
         is_delegated                    => { is => 'Boolean' , default_value => 0},
         is_calculated                   => { is => 'Boolean' , default_value => 0},
         is_transactional                => { is => 'Boolean' , default_value => 1},  # STM works on these, and the object can possibly save outside the app

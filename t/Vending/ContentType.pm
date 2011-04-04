@@ -12,7 +12,7 @@ class Vending::ContentType {
     has => [
         name => { is => 'varchar' },
 
-        machine_id => { value => 'Vending::Machine', is_constant => 1, is_class_wide => 1, column_name => '' },
+        machine_id => { value => 'Vending::Machine', is_constant => 1, is_classwide => 1, column_name => '' },
         machine    => { is => 'Vending::Machine', id_by => 'machine_id' },
 
         count       => { calculate_from => ['type_id'],

@@ -525,7 +525,7 @@ Indicates this property can be changed by a mechanism other than its normal
 accessor method.  Signals are not emmitted even when it does change via
 its normal accessor method.
 
-=item is_class_wide => Boolean
+=item is_classwide => Boolean
 
 Indicates this property's storage is shared among all instances of the class.
 When the value is changed for one instance, that change is effective for all
