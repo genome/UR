@@ -70,7 +70,7 @@ my($self,$sequence_name) = @_;
 
     # we may need to change how this db handle is gotten
     my $dbh = $self->get_default_dbh;
-    my($new_id) = $dbh->selectrow_array("SELECT nextval($sequence_name)");
+    my($new_id) = $dbh->selectrow_array("SELECT nextval('$sequence_name')");
 
     if ($dbh->err) {
         die "Failed to prepare SQL to generate a column id from sequence: $sequence_name.\n" . $dbh->errstr . "\n";
