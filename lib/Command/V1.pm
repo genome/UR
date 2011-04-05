@@ -1286,7 +1286,7 @@ sub sub_command_classes
     return unless @paths;
     my @classes =
         grep {
-            ($_->is_sub_command_delegator or !$_->is_abstract) 
+            ($_->is_sub_command_delegator or !$_->__meta__->is_abstract) 
         }
         grep { $_ and $_->isa('Command') }
         map { $class->class_for_sub_command($_) }
