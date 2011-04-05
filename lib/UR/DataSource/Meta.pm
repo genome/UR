@@ -251,9 +251,12 @@ sub generate_for_namespace {
 
     # Write the skeleton SQLite file
     my $meta_db_file = $meta_datasource->class_name->_data_dump_path;
-    IO::File->new(">$meta_db_file")->print($UR::DataSource::Meta::METADATA_DB_SQL);
+    IO::File->new($meta_db_file,'w')->print($UR::DataSource::Meta::METADATA_DB_SQL);
+
+    my $meta_schema_file = $meta_datasource->class_name->_schema_path;
+    IO::File->new($meta_schema_file,'w')->print($UR::DataSource::Meta::METADATA_DB_SQL);
     
-    return ($meta_datasource, $meta_db_file);
+    return ($meta_datasource, $meta_db_file, $meta_schema_file);
 }
 
 1;
