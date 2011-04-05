@@ -290,6 +290,11 @@ sub sub_command_classes {
     return values %$mapping;
 }
 
+# For compatability with Command::V1-based callers
+sub is_sub_command_delegator {
+    return scalar(shift->sub_command_classes);
+}
+
 sub _build_sub_command_mapping {
     my $class = shift;
     $class = ref($class) || $class;
