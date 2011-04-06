@@ -66,7 +66,9 @@ sub execute {
 
     # We need to temporarily replace _init_created_dbh because it's going to try and throw an
     # exception when it's out of date.  This one just returns the dbh right back
-    *UR::DataSource::Meta::_init_created_dbh = sub { return $_[1] };
+    { no warnings 'redefine';
+      *UR::DataSource::Meta::_init_created_dbh = sub { return $_[1] };
+    }
 
     my $ds_obj;
     if ($data_source_name->isa('UR::Singleton')) {
