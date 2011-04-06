@@ -302,7 +302,8 @@ sub _get_display_fields_for_property {
             die("no column for property on class with table: " . $property->property_name .
                 " class: " . $self->class_name . "?");
         }
-        if (uc($property->column_name) ne uc($property->property_name)) {
+        if ($property->column_name ne $property->property_name) {
+            # If the column name doesn't match the property name, write it out
             push @fields,  "column_name => '" . $property->column_name . "'";
         }
         $seen{'column_name'} = 1;

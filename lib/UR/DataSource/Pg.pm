@@ -22,7 +22,7 @@ sub driver { "Pg" }
 #    return $self->_database_file_path;
 #}
 
-sub owner { uc(shift->_singleton_object->login) }
+sub owner { shift->_singleton_object->login }
 
 #sub login {
 #    undef

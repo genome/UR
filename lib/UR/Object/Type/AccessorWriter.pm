@@ -43,26 +43,6 @@ sub mk_rw_accessor {
         code => $accessor,
     });
 
-    #$column_name = uc($column_name);
-
-    if ($column_name)
-    {
-        $column_name = uc($column_name);
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $column_name,
-            code => $accessor,
-        });
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        no strict 'refs';
-
-        ${$class_name . '::column_for_property'}
-            {$property_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$property_name} = $accessor_name;
-    }
 }
 
 
@@ -93,24 +73,6 @@ sub mk_ro_accessor {
         code => $accessor,
     });
 
-    if ($column_name)
-    {
-        $column_name = uc($column_name);
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $column_name,
-            code => $accessor,
-        });
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        no strict 'refs';
-
-        ${$class_name . '::column_for_property'}
-            {$property_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$property_name} = $accessor_name;
-    }
 }
 
 sub mk_id_based_object_accessor {
@@ -663,25 +625,6 @@ sub mk_calculation_accessor {
         as   => $accessor_name,
         code => $accessor,
     });
-
-    if ($column_name)
-    {
-        $column_name = uc($column_name);
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $column_name,
-            code => $accessor,
-        });
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        no strict 'refs';
-
-        ${$class_name . '::column_for_property'}
-            {$accessor_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$accessor_name} = $accessor_name;
-    }
 
     return $accessor;
 }

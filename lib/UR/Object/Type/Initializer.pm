@@ -448,7 +448,7 @@ sub _normalize_class_description {
         }
     }
 
-    $new_class{table_name} = uc($new_class{table_name}) if ($new_class{table_name} and $new_class{table_name} !~ /\s/);
+    $new_class{table_name} = $new_class{table_name} if ($new_class{table_name} and $new_class{table_name} !~ /\s/);
 
     unless ($new_class{'doc'}) {
         $new_class{'doc'} = undef;
@@ -1108,7 +1108,7 @@ sub _normalize_property_description2 {
     ) {
         $new_property{column_name} = $new_property{property_name};            
     }
-    $new_property{column_name} = uc($new_property{column_name}) if ($new_property{column_name});
+    $new_property{column_name} = $new_property{column_name} if ($new_property{column_name});
     
     unless ($new_property{attribute_name}) {
         $new_property{attribute_name} = $property_name;

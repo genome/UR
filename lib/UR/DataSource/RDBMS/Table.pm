@@ -80,7 +80,7 @@ my $self = shift;
 
 
 sub primary_key_constraint_column_names {
-    return map { uc($_->column_name) } shift->primary_key_constraint_columns;
+    return map { $_->column_name } shift->primary_key_constraint_columns;
 }
 
 

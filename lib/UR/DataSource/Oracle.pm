@@ -14,7 +14,7 @@ UR::Object::Type->define(
 
 sub driver { "Oracle" }
 
-sub owner { uc(shift->_singleton_object->login) }
+sub owner { shift->_singleton_object->login }
 
 sub can_savepoint { 1 }  # Oracle supports savepoints inside transactions
 

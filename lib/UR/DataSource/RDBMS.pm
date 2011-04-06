@@ -648,10 +648,10 @@ sub get_non_primary_key_nullable_foreign_key_columns_for_table{
     my $table = shift;
 
     my @nullable_fk_columns = $self->get_nullable_foreign_key_columns_for_table($table);
-    my %pk_columns = map {uc($_->column_name) => 1} $table->primary_key_constraint_columns;
+    my %pk_columns = map { $_->column_name => 1} $table->primary_key_constraint_columns;
     my @non_pk_nullable_fk_columns;
     for my $fk_column (@nullable_fk_columns){
-        push @non_pk_nullable_fk_columns, $fk_column unless grep { uc($fk_column) eq uc($_)} keys %pk_columns;
+        push @non_pk_nullable_fk_columns, $fk_column unless grep { $fk_column eq $_} keys %pk_columns;
     }
     return @non_pk_nullable_fk_columns;
 }
@@ -786,7 +786,7 @@ sub refresh_database_metadata_for_table_name {
 
     my $data_source = $self;
 
-    my $ur_table_name = uc($db_table_name);
+    my $ur_table_name = $db_table_name;
     my @column_objects;
     my @all_constraints;
 
@@ -874,7 +874,6 @@ sub refresh_database_metadata_for_table_name {
 
         #my $id = $table_name . '.' . $column_data->{COLUMN_NAME}
         $column_data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
-        $column_data->{'COLUMN_NAME'} = uc($column_data->{'COLUMN_NAME'});
 
         delete $columns_to_delete{$column_data->{'COLUMN_NAME'}};
 
@@ -899,7 +898,7 @@ sub refresh_database_metadata_for_table_name {
             # It's new, create it from scratch
 
             $column_obj = UR::DataSource::RDBMS::TableColumn->$creation_method(
-                column_name => uc($column_data->{COLUMN_NAME}),
+                column_name => $column_data->{COLUMN_NAME},
                 table_name  => $ur_table_name,
                 owner       => $table_object->{owner},
                 data_source => $table_object->{data_source},
@@ -934,10 +933,10 @@ sub refresh_database_metadata_for_table_name {
 
         my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($index->{'table_name'});
         my $column_object = UR::DataSource::RDBMS::TableColumn->is_loaded(
-            table_name  => uc($ds_table),
-            owner       => uc($ds_owner),
+            table_name  => $ds_table,
+            owner       => $ds_owner,
             data_source => $data_source_id,
-            column_name => uc($index->{'column_name'}),
+            column_name => $index->{'column_name'},
         );
     }
 
@@ -970,8 +969,6 @@ sub refresh_database_metadata_for_table_name {
 
             foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME ) ) {
                 next unless defined($data->{$_});
-                $data->{$_} = uc($data->{$_});
-
                 # Postgres puts quotes around things that look like keywords
                 $data->{$_} =~ s/"|'//g;
             }
@@ -1048,8 +1045,6 @@ sub refresh_database_metadata_for_table_name {
 
             foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME PKTABLE_SCHEM FKTABLE_SCHEM UK_TABLE_SCHEM FK_TABLE_SCHEM) ) {
                 next unless defined($data->{$_});
-                $data->{$_} = uc($data->{$_});
-
                 # Postgres puts quotes around things that look like keywords
                 $data->{$_} =~ s/"|'//g;
             }
@@ -1184,7 +1179,7 @@ sub refresh_database_metadata_for_table_name {
 
     # The above was moved into each data source's class
     if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($db_table_name)) {
-        my %uc = map { uc($_) => $uc->{$_} } keys(%$uc);  # make the constraint names upper-case
+        my %uc = %$uc;   # make a copy we can manipulate in case $uc is shared or read-only
 
         # check for redundant unique constraints
         # there may be both an index and a constraint
@@ -1250,7 +1245,6 @@ sub refresh_database_metadata_for_table_name {
                 );
 
             foreach my $col_name ( @{$uc{$uc_name}} ) {
-                $col_name = uc($col_name);
                 if ($constraint_objs{$col_name} ) {
                     delete $constraint_objs{$col_name};
                 } else {
@@ -1737,11 +1731,7 @@ sub _resolve_ids_from_class_name_and_sql {
     my @id_fetch_set;
 
     while ($data = $sth->fetchrow_hashref()) {
-        # ensure everything is uppercased. this is totally a hack right now but it makes sql queries work again.
-        foreach my $key (keys %$data) {
-            $data->{uc($key)} = delete $data->{$key};
-        }
-        my @id_vals = map {$data->{uc($_)}} @id_columns;
+        my @id_vals = map { $data->{$_} } @id_columns;
         my $cid = $class_name->__meta__->resolve_composite_id_from_ordered_values(@id_vals);
         push @id_fetch_set, $cid;       
     }
@@ -2534,9 +2524,14 @@ sub _id_values_for_primary_key {
     foreach my $possible_class_obj ($object_to_save->__meta__->all_class_metas) {
         next unless ($possible_class_obj->table_name);
         my($class_owner,$class_table) = $self->_resolve_owner_and_table_from_table_name($possible_class_obj->table_name);
-        if ( lc($class_owner) eq lc($table_obj->owner)
+        # Some data sources can (used to?) have NULL owner/schema
+        $class_owner = '' unless defined($class_owner);
+        my $table_obj_owner = $table_obj->owner;
+        $table_obj_owner = '' unless defined ($table_obj_owner);
+
+        if ( $class_owner eq $table_obj_owner
              and
-             lc($class_table) eq lc($table_obj->table_name)
+             $class_table eq $table_obj->table_name
            ) {
 
             $class_obj = $possible_class_obj;
@@ -2548,7 +2543,7 @@ sub _id_values_for_primary_key {
     }
 
     my @pk_cols = $table_obj->primary_key_constraint_column_names;
-    my %pk_cols = map { uc($_) => 1 } @pk_cols;
+    my %pk_cols = map { $_ => 1 } @pk_cols;
     # this previously went to $object_to_save->__meta__, which is nearly the same thing but not quite
     my @values = $class_obj->resolve_ordered_values_from_composite_id($object_to_save->id);
     my @columns = $class_obj->direct_id_column_names;
@@ -2626,7 +2621,6 @@ sub _default_save_sql_for_object {
     # Handle each table.  There is usually only one, unless,
     # there is inheritance within the schema.
     my @save_table_names = 
-        map  { uc }
         grep { not /[^\w\.]/ } # remove any views from the list
         $class_object->all_table_names;
 
@@ -2844,8 +2838,8 @@ sub _default_save_sql_for_object {
                 my @insert_values;
                 my %update_values;
                 for (my $i = 0; $i < @changed_cols; $i++){
-                    my $col = uc ($changed_cols[$i]);
-                    if (grep {$col eq uc($_)} @non_pk_nullable_fk_columns){
+                    my $col = $changed_cols[$i];
+                    if (grep {$col eq $_} @non_pk_nullable_fk_columns){
                         push @insert_values, undef;
                         $update_values{$col} = $values[$i];
                     }else{

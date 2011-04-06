@@ -13,22 +13,6 @@ use warnings;
 # for your new classes, because there's no conclusive way to pick
 # the right one - no unique constraints
 #
-# ur update classes internally converts all the table and column
-# names to upper case - I had to edit the meta DB dump file and
-# change them back to lower case
-#
-# And the deal breaker - UR::Object::Type::Initializer upper-cases
-# the table and column names as it's loading your class.  So the
-# editing you may have done above is for naught because the SQL that
-# gets generated has upper case stuff.  If you comment out those
-# two uc() in the initializer, then you can get() things just fine,
-# but then the update_classes test in URT fails, as does the 
-# Model/Command/Create/Model.t test
-#
-# A workaround for the case-sensitivity is to create files as all upper-case
-# names, and the columns as all upper-case.  Also, the file parser guts underneath
-# require dos-style newlines in the files, not unix-style
-#
 # _get_sequence_name_for_table_and_column() and _get_next_value_from_sequence()
 # aren't implemented yet, so creating new entities and sync_databases
 # won't work
@@ -147,14 +131,14 @@ sub _get_next_value_from_sequence {
 # so we need to figure out which file they're talking about
 sub _find_pathname_for_table {
     my $self = shift;
-    my $table = uc(shift);  # it's probably already uc'ec
+    my $table = shift;
 
     my $path = $self->path;
 
     my @all_files = glob("$path/*");
     # note: this only finds the first one
     foreach my $pathname ( @all_files ) {
-        if (uc(File::Basename::basename($pathname)) eq $table) {
+        if (File::Basename::basename($pathname) eq $table) {
             return $pathname;
         }
     }
@@ -269,7 +253,7 @@ sub get_table_details_from_data_dictionary {
     # back into another sth
     my @returned_details;
     while (my $row = $sth->fetchrow_arrayref()) {
-        next unless (uc($row->[2]) eq uc($table));
+        next unless ($row->[2] eq $table);
         push @returned_details, $row;
     }
         
