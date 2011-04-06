@@ -87,8 +87,8 @@ Carp::confess("not implemented yet?!");
 sub is_time_data {
     my $self = shift;
 
-    my $type = uc($self->data_type);
-    if ($type eq 'TIMESTAMP' or uc($type) eq 'DATE' or uc($type) eq 'INTERVAL') {
+    my $type = $self->data_type;
+    if ($type =~ m/TIMESTAMP|DATE|INTERVAL/i) {
         return 1;
     } else {
         return;
