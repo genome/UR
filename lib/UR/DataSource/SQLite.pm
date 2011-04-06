@@ -159,7 +159,7 @@ sub _init_database {
             $self->warning_message("Re-creating $db_file from $dump_file.");
             $self->_load_db_from_dump_internal($dump_file);
             unless (-e $db_file) {
-                Carp::confess("Failed to import $dump_file into $db_file!");
+                Carp::croak("Failed to import $dump_file into $db_file!");
             }
         }
         elsif ( (not -e $db_file) and (-e $schema_file) ) {
@@ -167,26 +167,26 @@ sub _init_database {
             $self->warning_message("Re-creating $db_file from $schema_file.");
             $self->_load_db_from_dump_internal($schema_file);
             unless (-e $db_file) {
-                Carp::confess("Failed to import $dump_file into $db_file!");
+                Carp::croak("Failed to import $dump_file into $db_file!");
             }
         }
         elsif ($self->class ne __PACKAGE__) {
             # copy from the parent class (disabled)
-            Carp::confess("No schema or dump file found for $db_file.\n  Tried schema path $schema_file\n  and dump path $dump_file");
+            Carp::croak("No schema or dump file found for $db_file.\n  Tried schema path $schema_file\n  and dump path $dump_file");
 
             my $template_database_file = $self->SUPER::server();
             unless (-e $template_database_file) {
-                Carp::confess("Missing template database file: $db_file!  Cannot initialize database for " . $self->class);
+                Carp::croak("Missing template database file: $db_file!  Cannot initialize database for " . $self->class);
             }
             unless(File::Copy::copy($template_database_file,$db_file)) {
-                Carp::confess("Error copying $db_file to $template_database_file to initialize database!");
+                Carp::croak("Error copying $db_file to $template_database_file to initialize database!");
             }
             unless(-e $db_file) {
-                Carp::confess("File $db_file not found after copy from $template_database_file. Cannot initialize database!");
+                Carp::croak("File $db_file not found after copy from $template_database_file. Cannot initialize database!");
             }
         }
         else {
-            Carp::confess("No db file found, and no dump or schema file found from which to re-construct a db file!");
+            Carp::croak("No db file found, and no dump or schema file found from which to re-construct a db file!");
         }
     }
     return 1;
@@ -695,7 +695,8 @@ sub _load_db_from_dump_internal {
         next unless ($sql =~ m/\S/);  # Skip blank lines
         next if ($sql =~ m/BEGIN TRANSACTION|COMMIT/i);  # We're probably already in a transaction
         unless ($dbh->do($sql)) {
-            Carp::croak("Error processing SQL statement $i from DB dump file:\n$sql\nDBI error was: $DBI::errstr\n");
+            my $line = $i+1;
+            Carp::croak("Error processing SQL statement $line from DB dump file:\n$sql\nDBI error was: $DBI::errstr\n");
         }
     }
 

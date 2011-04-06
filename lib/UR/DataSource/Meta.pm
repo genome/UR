@@ -246,7 +246,7 @@ sub generate_for_namespace {
     $meta_datasource_filepath .= '/DataSource';
     mkdir($meta_datasource_filepath);
     unless (-d $meta_datasource_filepath) {
-        die "Failed to create directory $meta_datasource_filepath: $!";
+        Carp::croak "Failed to create directory $meta_datasource_filepath: $!";
     } 
     $meta_datasource_filepath .= '/Meta.pm';
  
