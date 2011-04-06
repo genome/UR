@@ -37,8 +37,6 @@ UR::Object::Type->define(
     ],
 );
 
-sub is_sub_command_delegator { 0 };
-
 sub _is_hidden_in_docs { return; }
 
 sub _init_subclass {
@@ -86,6 +84,10 @@ sub __errors__ {
     return ($self->SUPER::__errors__);
 }
 
+# For compatability with Command::V1 callers
+sub is_sub_command_delegator {
+    return;
+}
 
 sub execute {
     # This is a wrapper for real execute() calls.
