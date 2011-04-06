@@ -10,13 +10,13 @@ CREATE TABLE dd_table (
      remarks varchar,
      PRIMARY KEY(data_source, owner, table_name)
 );
-INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','TABLE','entity',NULL,'2007-04-16 19:35:06',NULL);
-INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','TABLE','entity',NULL,'2007-04-16 19:35:06',NULL);
-INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','TABLE','entity',NULL,'2007-04-16 19:35:07',NULL);
-INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','TABLE','entity',NULL,'2007-04-16 19:35:07',NULL);
-INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','TABLE','entity',NULL,'2007-04-16 19:35:07',NULL);
-INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','TABLE','entity',NULL,'2007-04-16 19:35:07',NULL);
-INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','TABLE','entity',NULL,'2007-04-16 19:35:06',NULL);
+INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','TABLE','entity',NULL,'2007-04-16 19:35:06',NULL);
+INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','TABLE','entity',NULL,'2007-04-16 19:35:06',NULL);
+INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','TABLE','entity',NULL,'2007-04-16 19:35:07',NULL);
+INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','TABLE','entity',NULL,'2007-04-16 19:35:07',NULL);
+INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','TABLE','entity',NULL,'2007-04-16 19:35:07',NULL);
+INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'dd_table','TABLE','entity',NULL,'2007-04-16 19:35:07',NULL);
+INSERT INTO "dd_table" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','TABLE','entity',NULL,'2007-04-16 19:35:06',NULL);
 CREATE TABLE dd_bitmap_index (
     data_source varchar NOT NULL,
     owner varchar,
@@ -36,51 +36,51 @@ CREATE TABLE dd_table_column (
     remarks varchar,
     PRIMARY KEY(data_source, owner, table_name, column_name)
 );
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','LAST_OBJECT_REVISION','timestamp',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','DATA_SOURCE','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','OWNER','varchar',NULL,'Y','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','RANK','integer',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','OWNER','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','ER_TYPE','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','CONSTRAINT_NAME','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','DATA_LENGTH','varchar',NULL,'Y','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','COLUMN_NAME','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','LAST_OBJECT_REVISION','timestamp',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','BITMAP_INDEX_NAME','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','LAST_DDL_TIME','timestamp',NULL,'Y','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','FK_CONSTRAINT_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','NULLABLE','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','DATA_SOURCE','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','DATA_TYPE','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','OWNER','varchar',NULL,'Y','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','OWNER','varchar',NULL,'Y','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','DATA_SOURCE','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','R_TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','REMARKS','varchar',NULL,'Y','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','DATA_SOURCE','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','COLUMN_NAME','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','TABLE_TYPE','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','REMARKS','varchar',NULL,'Y','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','R_TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','OWNER','varchar',NULL,'Y','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','DATA_SOURCE','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','R_OWNER','varchar',NULL,'Y','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','DATA_SOURCE','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','R_COLUMN_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','COLUMN_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','FK_CONSTRAINT_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','COLUMN_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','OWNER','varchar',NULL,'Y','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','DATA_SOURCE','varchar',NULL,'N','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','OWNER','varchar',NULL,'Y','2007-04-16 19:35:06','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','LAST_OBJECT_REVISION','timestamp',NULL,'N','2007-04-16 19:35:07','');
-INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','TABLE_NAME','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','last_object_revision','timestamp',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','table_name','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','data_source','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','owner','varchar',NULL,'Y','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','rank','integer',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','owner','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','er_type','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','constraint_name','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','data_length','varchar',NULL,'Y','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','column_name','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','table_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','last_object_revision','timestamp',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','bitmap_index_name','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','table_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','last_ddl_time','timestamp',NULL,'Y','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','fk_constraint_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','nullable','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','data_source','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','data_type','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','table_name','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','owner','varchar',NULL,'Y','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','owner','varchar',NULL,'Y','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','data_source','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','r_table_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','remarks','varchar',NULL,'Y','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','data_source','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','column_name','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','table_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','table_type','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','remarks','varchar',NULL,'Y','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','r_table_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','owner','varchar',NULL,'Y','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','data_source','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','r_owner','varchar',NULL,'Y','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','table_name','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','data_source','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','r_column_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','column_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','fk_constraint_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','column_name','varchar',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','owner','varchar',NULL,'Y','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','data_source','varchar',NULL,'N','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','owner','varchar',NULL,'Y','2007-04-16 19:35:06','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','last_object_revision','timestamp',NULL,'N','2007-04-16 19:35:07','');
+INSERT INTO "dd_table_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','table_name','varchar',NULL,'N','2007-04-16 19:35:07','');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -89,38 +89,38 @@ CREATE TABLE dd_pk_constraint_column (
     rank integer NOT NULL,
     PRIMARY KEY (data_source,owner,table_name,column_name,rank)
 );
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','COLUMN_NAME',5);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','DATA_SOURCE',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','TABLE_NAME',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','OWNER',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','TABLE_NAME',4);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','TABLE_NAME',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','R_OWNER',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','TABLE_NAME',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','COLUMN_NAME',5);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','RANK',5);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','OWNER',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','DATA_SOURCE',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','COLUMN_NAME',4);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','DATA_SOURCE',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','OWNER',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','OWNER',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','DATA_SOURCE',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','CONSTRAINT_NAME',4);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','FK_CONSTRAINT_NAME',6);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','FK_CONSTRAINT_NAME',4);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','TABLE_NAME',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_UNIQUE_CONSTRAINT_COLUMN','OWNER',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_PK_CONSTRAINT_COLUMN','COLUMN_NAME',4);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','OWNER',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','DATA_SOURCE',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','DATA_SOURCE',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_BITMAP_INDEX','BITMAP_INDEX_NAME',4);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','TABLE_NAME',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE_COLUMN','DATA_SOURCE',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_TABLE','OWNER',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT','R_TABLE_NAME',5);
-INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'DD_FK_CONSTRAINT_COLUMN','TABLE_NAME',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','column_name',5);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','data_source',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','table_name',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','owner',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','table_name',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','table_name',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','r_owner',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','table_name',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','column_name',5);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','rank',5);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','owner',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','data_source',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','column_name',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','data_source',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','owner',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','owner',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','data_source',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','constraint_name',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','fk_constraint_name',6);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','fk_constraint_name',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','table_name',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_unique_constraint_column','owner',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_pk_constraint_column','column_name',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','owner',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','data_source',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','data_source',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_bitmap_index','bitmap_index_name',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','table_name',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_table_column','data_source',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_table','owner',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint','r_table_name',5);
+INSERT INTO "dd_pk_constraint_column" VALUES('UR::DataSource::Meta',NULL,'dd_fk_constraint_column','table_name',3);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
