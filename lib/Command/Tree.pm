@@ -13,6 +13,8 @@ class Command::Tree {
     doc => 'base class for commands which delegate to sub-commands',
 };
 
+sub is_sub_command_delegator { 1 };
+
 sub resolve_class_and_params_for_argv {
     # This is used by execute_with_shell_params_and_exit, but might be used within an application.
     my $self = shift;
@@ -288,11 +290,6 @@ sub sub_command_classes {
     my $class = shift;
     my $mapping = $class->_build_sub_command_mapping;
     return values %$mapping;
-}
-
-# For compatability with Command::V1-based callers
-sub is_sub_command_delegator {
-    return scalar(shift->sub_command_classes);
 }
 
 sub _build_sub_command_mapping {
