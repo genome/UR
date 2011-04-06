@@ -52,6 +52,7 @@ eval{
 };
 
 ok( !$@, 'no commit errors on deleting bridge entries w/ nullable foreign keys primary key' );
+diag($@) if $@;
 
 my @bridges_check = URT::Bridge->get();
 
@@ -72,6 +73,7 @@ eval{
 };
 
 ok( !$@, 'no commit errors on recreating bridge entries' );
+diag($@) if $@;
 
 
 my @chain = ( URT::Gamma->get(), URT::Beta->get(), URT::Alpha->get());
@@ -96,6 +98,7 @@ eval{
 };
 
 ok(!$@, "no error message on commit: $@");
+diag($@) if $@;
 
 my @chain2 = (URT::Alpha->get(), URT::Beta->get(), URT::Gamma->get());
 
@@ -118,6 +121,7 @@ eval {
 };
 
 ok(!$@, "no error message on commit of new alpha,beta,gamma, would fail due to fk constraints if we weren't using sqlite datasource");
+diag($@) if $@;
 
 my $check_alpha = URT::Alpha->get(id => 101);
 is ($check_alpha->beta_id, 201, 'initial null value updated correctly for chain object');
