@@ -150,4 +150,10 @@ CREATE TABLE dd_fk_constraint_column (
       
     PRIMARY KEY(data_source, owner, table_name, fk_constraint_name, column_name)
 );
+CREATE TABLE dd_meta_settings (
+    key varchar NOT NULL,
+    value varchar NOT NULL,
+    PRIMARY KEY (key,value)
+);
+INSERT INTO "dd_meta_settings" VALUES('ur_metadb_version','2');
 COMMIT;

@@ -51,6 +51,17 @@ sub _init_created_dbh {
 sub _get_current_schema_version {
     my($self,$dbh) = @_;
 
+    # there was a period of time when MetaDBs using DBD::SQLite earlier than 1.26_04 had extension
+    # .sqlite3 and newer used .sqlite3n.  Detect when both files exist, pick the newest one, and use it
+    #
+    # The new standard is to always use .sqlite3
+    my $server = $self->server;
+    my($file,$dir,$ext) = File::Basename::fileparse($server, '.sqlite3','.sqlite3n');
+    my $pathname_3n = $dir . '/' . $file . '.sqlite3n';
+    if (-e $pathname_3n) {
+        Carp::croak("The MetaDB ".$self->class. " at path $pathname_3n has extension .sqlite3n.  Please remove it or rename it to end with extension .sqlite3.  Additionally, if you have overridden methods in the MetaDBs Perl module ".$self->__meta__->module_path." to force the database path to use the .sqlite3n file, make dure it will use the .sqlite3 file in the future");
+    }
+
     my $raiseerror = $dbh->{'RaiseError'};
     my $printerror = $dbh->{'PrintError'};
     my $handleerror = $dbh->{'HandleError'};

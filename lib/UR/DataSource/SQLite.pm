@@ -38,10 +38,7 @@ UR::Object::Type->define(
 sub driver { "SQLite" }
 
 sub default_owner {
-    unless (defined $DBD::SQLite::VERSION) {
-        require DBD::SQLite;
-    }
-    $DBD::SQLite::VERSION < 1.26_04 ? undef : 'main' 
+    'main';
 }
 
 sub owner { default_owner() }
@@ -104,8 +101,7 @@ sub server {
 # and have slightly different dump text.  We'll give the new
 # ones a different extension.
 sub _extension_for_db {
-    my $self = shift;
-    $self->default_owner ? '.sqlite3n' : '.sqlite3';
+    '.sqlite3';
 }
 
 sub _journal_file_path {
@@ -252,6 +248,39 @@ sub _get_next_value_from_sequence {
     }
 
     return $new_id;
+}
+
+
+# Older versions of DBD::SQLite return undef for TABLE_SCHEM, where newer
+# versions return 'main'.  We'll override it so it'll turn undef's into the
+# data source's owner
+sub get_table_details_from_data_dictionary {
+    my $self = shift;
+    my($catalog,$schema,$table,$type) = @_;
+
+    my @table_infos;
+    my @returned_names;
+    my $table_sth = $self->SUPER::get_table_details_from_data_dictionary(@_);
+    while (my $table_info_row = $table_sth->fetchrow_hashref() ) {
+        my %node = %$table_info_row;
+        @returned_names = keys %node unless (@returned_names); # initialize the list of column names we're returning
+        if (! defined($node{'TABLE_SCHEM'})) {
+            $node{'TABLE_SCHEM'} = $self->default_owner;
+        }
+        push @table_infos, \%node;
+    }
+
+    my $dbh = $self->get_default_dbh();
+    my $sponge = DBI->connect("DBI:Sponge:", '','')
+        or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
+
+    my $returned_sth = $sponge->prepare("table_info $table", {
+        rows => [ map { [ @{$_}{@returned_names} ] } @table_infos ],
+        NUM_OF_FIELDS => scalar @returned_names,
+        NAME => \@returned_names,
+    }) or return $dbh->DBI::set_err($sponge->err(), $sponge->errstr());
+
+    return $returned_sth;
 }
 
 
