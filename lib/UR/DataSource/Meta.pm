@@ -103,7 +103,7 @@ sub _update_schema_for_version_1 {
     }
 
     # dd_fk_constraint has r_owner, too
-    unless ($dbh->do("update dd_fk_constraint set r_owner = 'main' where owner is null")) {
+    unless ($dbh->do("update dd_fk_constraint set r_owner = 'main' where r_owner is null")) {
         Carp::croak("Can't update 'r_owner' column for table dd_fk_constraint: ".$dbh->errstr);
     }
 
