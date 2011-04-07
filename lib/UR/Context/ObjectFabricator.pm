@@ -441,7 +441,13 @@ sub create_for_loading_template {
                 }
             }
 
-            unless ($subclass_name eq $class) {
+            if ($subclass_name eq $class) {
+                # This object doesn't need additional subclassing
+                # Signal that the object has been loaded
+                # NOTE: until this is done indexes cannot be used to look-up an object
+                $pending_db_object->__signal_change__('load');
+
+            } else {
                 # we did this above, but only checked the base class
                 my $subclass_ghost_class = $subclass_name->ghost_class;
                 if ($UR::Context::all_objects_loaded->{$subclass_ghost_class}{$pending_db_object_id}) {
@@ -492,7 +498,6 @@ sub create_for_loading_template {
                         }
 
                         # This will wipe the above data from the object and the contex...
-                        #$pending_db_object->unload;
                         delete $UR::Context::all_objects_loaded->{$class}->{$pending_db_object_id};
 
                         if ($loading_base_object) {
@@ -515,7 +520,7 @@ sub create_for_loading_template {
 
                         my $prev_class_name = $pending_db_object->class;
                         my $id = $pending_db_object->id;
-                        $pending_db_object->__signal_change__("unload");
+                        #$pending_db_object->__signal_change__("unload");
                         delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$id};
                         delete $UR::Context::all_objects_are_loaded->{$prev_class_name};
                         if ($merge_exception) {
@@ -573,10 +578,6 @@ sub create_for_loading_template {
                     return;
                 }
             } # end of sub-classification code
-
-            # Signal that the object has been loaded
-            # NOTE: until this is done indexes cannot be used to look-up an object
-            $pending_db_object->__signal_change__('load');
 
             #$DB::single = 1;
             if (
