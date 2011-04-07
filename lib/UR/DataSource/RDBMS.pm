@@ -2791,7 +2791,10 @@ sub _default_save_sql_for_object {
 
             if (@changed_cols)
             {
-                @values = ( (map { $object_to_save->$_ } @changed_cols) , $self->_id_values_for_primary_key($table,$object_to_save));
+                @values = ( ( map { $object_to_save->$_ }
+                              map { $class_object->property_for_column($_) }
+                                  @changed_cols
+                             ) , $self->_id_values_for_primary_key($table,$object_to_save));
                 my $where = $self->_matching_where_clause($table, \@values);
 
                 $sql = " UPDATE ";
@@ -2824,12 +2827,13 @@ sub _default_save_sql_for_object {
                     . join(',', split(//,'?' x scalar(@changed_cols))) . ")";
 
             @values = map { 
-                # when there is a column but no property, use NULL as the value
-                $object_to_save->can($_) 
-                ? $object_to_save->$_ 
-                : undef
-            } 
-            (@changed_cols);
+                           # when there is a column but no property, use NULL as the value
+                           $object_to_save->can($_)
+                           ? $object_to_save->$_
+                           : undef
+                       }
+                       map { $class_object->property_for_column($_) }
+                      (@changed_cols);
 
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
             my @non_pk_nullable_fk_columns = $self->get_non_primary_key_nullable_foreign_key_columns_for_table($table);

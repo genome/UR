@@ -1039,40 +1039,37 @@ sub column_for_property {
     my $self = _object(shift);
     Carp::croak('must pass a property_name to column_for_property') unless @_;
     my $property_name = shift;
-    my $class_name = $self->class_name;
-    my $column_name;
-    do { 
-    no strict 'refs';
-     $column_name = ${$class_name . "::column_for_property"}{ $property_name };
-    };
-    return $column_name if $column_name;
-    for my $class_object ( $self->ancestry_class_metas )
-    {
-        my $cn = $class_object->class_name;
-        do { 
-	no strict 'refs';
-        $column_name = ${$cn . "::column_for_property"}{ $property_name };
-	};
+
+    my($properties,$columns) = @{$self->{'_all_properties_columns'}};
+    for (my $i = 0; $i < @$properties; $i++) {
+        if ($properties->[$i] eq $property_name) {
+            return $columns->[$i];
+        }
+    }
+
+    for my $class_object ( $self->ancestry_class_metas ) {
+        my $column_name = $class_object->column_for_property($property_name);
         return $column_name if $column_name;
     }
-    $class_name = $self->class_name;
     return;
 }
 
 sub property_for_column {
     my $self = _object(shift);
-    die 'must pass a column_name to property_for_column' unless @_;
+    Carp::croak('must pass a column_name to property_for_column') unless @_;
     my $column_name = shift;
-    my $class_name = $self->class_name;
-    my $property_name = ${$class_name . "::property_for_column"}{ $column_name };
-    return $property_name if $property_name;
-    for my $class_object ( $self->ancestry_class_metas )
-    {
-        my $cn = $class_object->class_name;
-        $property_name = ${$cn . "::property_for_column"}{ $column_name };
+
+    my($properties,$columns) = @{$self->{'_all_properties_columns'}};
+    for (my $i = 0; $i < @$columns; $i++) {
+        if ($columns->[$i] eq $column_name) {
+            return $properties->[$i];
+        }
+    }
+
+    for my $class_object ( $self->ancestry_class_metas ) {
+        my $property_name = $class_object->property_for_column($column_name);
         return $property_name if $property_name;
     }
-    $class_name = $self->class_name;
     return;
 }
 

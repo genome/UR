@@ -763,17 +763,6 @@ sub mk_rw_class_accessor
         code => $accessor,
     });
 
-    if ($column_name)
-    {
-        *{$class_name ."::" . $column_name}  = $accessor;
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        ${$class_name . '::column_for_property'}
-            {$accessor_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$column_name} = $accessor_name;
-    }
 }
 
 sub mk_ro_class_accessor {
@@ -800,18 +789,6 @@ sub mk_ro_class_accessor {
         as   => $accessor_name,
         code => $accessor,
     });
-
-    if ($column_name)
-    {
-        *{$class_name ."::" . $column_name}  = $accessor;
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        ${$class_name . '::column_for_property'}
-            {$accessor_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$column_name} = $accessor_name;
-    }
 }
 
     
