@@ -37,6 +37,7 @@ eval{
 };
 
 ok(!$@, "circular deletion committed successfully!");
+diag($@) if $@;
 
 my @bridges = URT::Bridge->get();
 for (@bridges){
