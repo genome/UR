@@ -614,7 +614,7 @@ sub get_tables {
     return UR::DataSource::RDBMS::Table->get(data_source => $ds_id);
 }
 
-sub get_nullable_foreign_key_columns_for_table{
+sub get_nullable_foreign_key_columns_for_table {
     my $self = shift;
     my $table = shift;
 
@@ -643,7 +643,7 @@ sub get_nullable_foreign_key_columns_for_table{
     return @nullable_fk_columns;
 }
 
-sub get_non_primary_key_nullable_foreign_key_columns_for_table{
+sub get_non_primary_key_nullable_foreign_key_columns_for_table {
     my $self = shift;
     my $table = shift;
 
