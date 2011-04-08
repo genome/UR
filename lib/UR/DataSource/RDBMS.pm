@@ -2238,26 +2238,25 @@ sub _sync_database {
                 $table_objects_by_class_name{$class_name} = $tables;
             }
 
-            my @column_objects = 
-                map {
-                    my $column = $column_objects_by_class_and_column_name{$class_name}{$_};
-                    unless ($column) {
-                        print "looking at parent classes for $class_name\n";
-                        for my $ancestor_class_name ($class_object->ancestry_class_names) {
-                            $column = $column_objects_by_class_and_column_name{$ancestor_class_name}{$_};
-                            if ($column) {
-                                $column_objects_by_class_and_column_name{$class_name}{$_} = $column;
-                                last;
-                            }
+            my @column_objects;
+            foreach my $column_name ( @{ $cmd->{column_names} } ) {
+                my $column = $column_objects_by_class_and_column_name{$class_name}->{$column_name};
+                unless ($column) {
+                    #print "looking at parent classes for $class_name\n";
+                    FIND_IN_ANCESTRY:
+                    for my $ancestor_class_name ($class_object->ancestry_class_names) {
+                        $column = $column_objects_by_class_and_column_name{$ancestor_class_name}->{$column_name};
+                        if ($column) {
+                            $column_objects_by_class_and_column_name{$class_name}->{$column_name} = $column;
+                            last FIND_IN_ANCESTRY;
                         }
                         unless ($column) {
-                            #$DB::single = 1;
-                            die "Failed to find a column object column $_ for class $class_name";
+                            Carp::croak("Failed to find column metadata for column named '$column_name' for class $class_name");
                         }
                     }
-                    $column;
                 }
-                @{ $cmd->{column_names} };
+                push @column_objects, $column;
+            }
 
             # print "Column Types: @column_types\n";
 
