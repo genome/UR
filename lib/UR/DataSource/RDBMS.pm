@@ -2154,8 +2154,12 @@ sub _sync_database {
                 }
                 $adding{$cmd} = 1;
                 my $obj = $objs{$cmd->{id}};
+                my $class_meta = $obj->class->__meta__;
                 for my $rcol_set (@rcol_sets) {
-                    my $pid = $obj->class->__meta__->resolve_composite_id_from_ordered_values(map { $obj->$_ } @$rcol_set);
+                    my @ordered_values = map { $obj->$_ }
+                                         map { $class_meta->property_for_column($_) }
+                                         @$rcol_set;
+                    my $pid = $obj->class->__meta__->resolve_composite_id_from_ordered_values(@ordered_values);
                     if (defined $pid) {   # This recursive foreign key dep may have been optional
                         my $pcmd = delete $unsorted_cmds{$pid};
                         $add->($pcmd) if $pcmd;
