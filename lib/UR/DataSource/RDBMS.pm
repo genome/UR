@@ -2581,17 +2581,6 @@ sub _default_save_sql_for_object {
 
     my ($class,$id) = ($object_to_save->class, $object_to_save->id);
 
-    # This was in some of the UR::Object::* meta-data stuff.
-    # Reason unknown.
-    #my $self = shift;
-    #my $class_obj = UR::Object::Type->get(type_name => $self->type_name);
-    #if ($class_obj and $class_obj->table_name) {
-    #    return $self->SUPER::default_save_sql(@_);
-    #}
-    #else {
-    #    return;
-    #}
-
     my $class_object = $object_to_save->__meta__;
 
     # This object may have uncommitted changes already saved.  
