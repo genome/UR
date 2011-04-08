@@ -551,7 +551,7 @@ sub commit {
     return 1 unless $self->dump_on_commit or -e $dump_filename;
     
     # FIXME is there a way to do a dump from within DBI?    
-    chomp(my $sqlite3_in_path = !system("which sqlite3"));
+    chomp(my $sqlite3_in_path = !system("which sqlite3 > /dev/null"));
     if ($sqlite3_in_path) {
         my $retval = system("sqlite3 $db_filename .dump > $dump_filename; touch $db_filename");
         if ($retval == 0) {
