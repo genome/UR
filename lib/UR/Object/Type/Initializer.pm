@@ -1629,10 +1629,15 @@ sub generate {
         }
     }
     
+    my $data_source_obj = $self->data_source;
+    my $columns_are_upper_case;
+    if ($data_source_obj) {
+        $columns_are_upper_case = $data_source_obj->table_and_column_names_are_upper_case;
+    }
     for my $property_object (sort { $a->property_name cmp $b->property_name } @property_objects) {
         if ($property_object->column_name) {
             push @$props, $property_object->property_name;
-            push @$cols, $property_object->column_name;
+            push @$cols, $columns_are_upper_case ? uc($property_object->column_name) : $property_object->column_name;
         }    
     }
 
