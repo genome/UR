@@ -1100,13 +1100,16 @@ sub _normalize_property_description2 {
     # UR::DataSource::File-backed classes don't have table_names, but for querying/saving to
     # work property, their properties still have to have column_name filled in
     if (($new_class{table_name} or ($the_data_source and ($the_data_source->initializer_should_create_column_name_for_class_properties())))
-        and not exists($new_property{column_name})
+        and not exists($new_property{column_name})    # They didn't supply a column_name
         and not $new_property{is_transient}
         and not $new_property{is_delegated}
         and not $new_property{is_calculated}
         and not $new_property{is_legacy_eav}
     ) {
         $new_property{column_name} = $new_property{property_name};            
+        if ($the_data_source and $the_data_source->table_and_column_names_are_upper_case) {
+            $new_property{column_name} = uc($new_property{column_name});
+        }
     }
     
     unless ($new_property{attribute_name}) {
@@ -1627,7 +1630,6 @@ sub generate {
     }
     
     for my $property_object (sort { $a->property_name cmp $b->property_name } @property_objects) {
-        #if ($property_object->column_name or not $has_table) {
         if ($property_object->column_name) {
             push @$props, $property_object->property_name;
             push @$cols, $property_object->column_name;
