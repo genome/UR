@@ -1435,7 +1435,9 @@ sub _get_sequence_name_for_table_and_column {
 
     # The default is to take the column name (should be a primary key from a table) and
     # change the _ID at the end of the column name with _SEQ
-    $column_name =~ s/_ID/_SEQ/;
+    # if column_name is all uppercase, make the sequence name end in upper case _SEQ
+    my $replacement = $column_name eq uc($column_name) ? '_SEQ' : '_seq';
+    $column_name =~ s/_ID/$replacement/i;
     return $column_name;
 }
 
