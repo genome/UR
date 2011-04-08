@@ -2782,11 +2782,27 @@ sub _default_save_sql_for_object {
 
             if (@changed_cols)
             {
-                @values = ( ( map { $object_to_save->$_ }
-                              map { $class_object->property_for_column($_) }
-                                  @changed_cols
-                             ) , $self->_id_values_for_primary_key($table,$object_to_save));
-                my $where = $self->_matching_where_clause($table, \@values);
+                my @changed_values = map { defined ($_) && $object_to_save->can($_)
+                                           ? $object_to_save->$_
+                                           : undef }
+                                     map { $class_object->property_for_column($_) || undef }
+                                     @changed_cols;
+
+                my @id_values = $self->_id_values_for_primary_key($table,$object_to_save);
+
+                if (scalar(@changed_cols) != scalar(@changed_values)) {
+                   no warnings 'uninitialized';
+                   my $mapping = join("\n", map { "  $_ => ".$class_object->property_for_column($_) } @changed_cols);
+                   Carp::croak("Column count mismatch while updating table $table_name_to_update.  "
+                               . "The table metadata expects to see ".scalar(@changed_cols)
+                               . " columns, but ".scalar(@values)." were retrieved from the object of type "
+                               . $object_to_save->class . ".\nCurrent column => property mapping:\n$mapping\n"
+                               . "There is probably a mismatch between the database column metadata and the column_name "
+                               . "property metadata");
+                }
+
+                my @all_values = ( @changed_values, @id_values );
+                my $where = $self->_matching_where_clause($table, \@all_values);
 
                 $sql = " UPDATE ";
                 $sql .= "${db_owner}." if ($db_owner);
@@ -2796,7 +2812,7 @@ sub _default_save_sql_for_object {
                                   table_name   => $table_name,
                                   column_names => \@changed_cols,
                                   sql          => $sql,
-                                  params       => \@values,
+                                  params       => \@all_values,
                                   class        => $table_class,
                                   id           => $id,
                                   dbh          => $data_source->get_default_dbh
@@ -2819,12 +2835,23 @@ sub _default_save_sql_for_object {
 
             @values = map { 
                            # when there is a column but no property, use NULL as the value
-                           $object_to_save->can($_)
+                           defined($_) && $object_to_save->can($_)
                            ? $object_to_save->$_
                            : undef
                        }
-                       map { $class_object->property_for_column($_) }
+                       map { $class_object->property_for_column($_) || undef }
                       (@changed_cols);
+
+            if (scalar(@changed_cols) != scalar(@values)) {
+               no warnings 'uninitialized';
+               my $mapping = join("\n", map { "  $_ => ".$class_object->property_for_column($_) } @changed_cols);
+               Carp::croak("Column count mismatch while inserting into table $table_name_to_update.  "
+                           . "The table metadata expects to see ".scalar(@changed_cols)
+                           . " columns, but ".scalar(@values)." were retrieved from the object of type "
+                           . $object_to_save->class . ".\nCurrent column => property mapping:\n$mapping\n"
+                           . "There is probably a mismatch between the database column metadata and the column_name "
+                           . "property metadata");
+            }
 
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
             my @non_pk_nullable_fk_columns = $self->get_non_primary_key_nullable_foreign_key_columns_for_table($table);
