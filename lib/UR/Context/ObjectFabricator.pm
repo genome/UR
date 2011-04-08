@@ -441,7 +441,13 @@ sub create_for_loading_template {
                 }
             }
 
-            unless ($subclass_name eq $class) {
+            if ($subclass_name eq $class) {
+                # This object doesn't need additional subclassing
+                # Signal that the object has been loaded
+                # NOTE: until this is done indexes cannot be used to look-up an object
+                $pending_db_object->__signal_change__('load');
+
+            } else {
                 # we did this above, but only checked the base class
                 my $subclass_ghost_class = $subclass_name->ghost_class;
                 if ($UR::Context::all_objects_loaded->{$subclass_ghost_class}{$pending_db_object_id}) {
@@ -477,9 +483,9 @@ sub create_for_loading_template {
 
                     if ($already_loaded and !$different and !$merge_exception) {
                         if ($pending_db_object == $already_loaded) {
-                            print "ALREADY LOADED SAME OBJ?\n";
                             $DB::single = 1;
-                            die "The loaded object already exists in its target subclass?!";
+                            Carp::croak("An object of type ".$already_loaded->class." with ID '".$already_loaded->id
+                                        ."' was just loaded, but already exists in the object cache in the proper subclass");
                         }
                         if ($loading_base_object) {
                             # Get our records about loading this object
@@ -492,7 +498,6 @@ sub create_for_loading_template {
                         }
 
                         # This will wipe the above data from the object and the contex...
-                        #$pending_db_object->unload;
                         delete $UR::Context::all_objects_loaded->{$class}->{$pending_db_object_id};
 
                         if ($loading_base_object) {
@@ -515,13 +520,13 @@ sub create_for_loading_template {
 
                         my $prev_class_name = $pending_db_object->class;
                         my $id = $pending_db_object->id;
-                        $pending_db_object->__signal_change__("unload");
+                        #$pending_db_object->__signal_change__("unload");
                         delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$id};
                         delete $UR::Context::all_objects_are_loaded->{$prev_class_name};
                         if ($merge_exception) {
                             # Now that we've removed traces of the incorrectly-subclassed $pending_db_object,
                             # we can pass up any exception generated in __merge_db_data_with_existing_object
-                            die $merge_exception;
+                            Carp::croak($merge_exception);
                         }
                         if ($already_loaded) {
                             # The new object should replace the old object.  Since other parts of the user's program
@@ -573,10 +578,6 @@ sub create_for_loading_template {
                     return;
                 }
             } # end of sub-classification code
-
-            # Signal that the object has been loaded
-            # NOTE: until this is done indexes cannot be used to look-up an object
-            $pending_db_object->__signal_change__('load');
 
             #$DB::single = 1;
             if (
