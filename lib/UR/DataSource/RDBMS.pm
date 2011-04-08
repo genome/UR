@@ -2771,7 +2771,7 @@ sub _default_save_sql_for_object {
             for my $property (keys %$changes_for_this_table)
             {
                 my $column_name = $class_object->column_for_property($property); 
-                Carp::confess("No column in table $table_name for property $property?") unless $column_name;
+                Carp::croak("No column in table $table_name for property $property?") unless $column_name;
                 push @changed_cols, $column_name;
                 push @values, $changes_for_this_table->{$property};
             }
