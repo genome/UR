@@ -3912,11 +3912,18 @@ sub validate_subscription {
     my $retval = $self->SUPER::validate_subscription(@_);
     return $retval if $retval;
 
-    return 1 if ($subscription_property eq 'connect'
-                 or
-                 $subscription_property eq 'query');
+    unless ( defined($subscription_property)
+             and
+             ( $subscription_property eq 'connect'
+               or
+               $subscription_property eq 'query'
+             )
+    ) {
+        $subscription_property = '(undef)' unless defined ($subscription_property);
+        Carp::croak("Unrecognized subscription aspect '$subscription_property'");
+    }
 
-    return;
+    return 1;
 }
 
 sub _select_clause_for_table_property_data {

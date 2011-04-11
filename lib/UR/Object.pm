@@ -294,11 +294,20 @@ sub define_set {
 sub add_observer {
     my $self = shift;
     my %params = @_;
+
+    my $aspect = delete $params{aspect};
+    my $callback = delete $params{callback};
+    if (%params) {
+        Carp::croak("Unrecognized parameters for observer creation: "
+                     . Data::Dumper::Dumper(\%params)
+                     . "Expected 'aspect' and 'callback'");
+    }
+
     my $observer = UR::Observer->create(
         subject_class_name => $self->class,
         subject_id => (ref($self) ? $self->id : undef),
-        aspect => delete $params{aspect},
-        callback => delete $params{callback}
+        aspect => $aspect,
+        callback => $callback,
     );  
     unless ($observer) {
         $self->error_message(
@@ -306,11 +315,6 @@ sub add_observer {
             . UR::Observer->error_message
         );
         return;
-    }
-    if (%params) {
-        $observer->delete;
-        die "Bad params for observer creation!: "
-            . Data::Dumper::Dumper(\%params)
     }
     return $observer;
 }
