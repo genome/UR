@@ -11,17 +11,38 @@ UR::Object::Type->define(
     is => 'Command::V1',
     is_abstract => 1,
     has_transient => [ 
-        lib_path            =>  {   type => "FilesystemPath", 
+        namespace_name      =>  {   type => 'String',
                                     is_optional => 1,
-                                    doc => "The directory under which the namespace module resides.  Auto-detected normally."
-                                },  
-        namespace_subdir    =>  {   type => "FilesystemPath", 
-                                    is_optional => 1,
-                                    doc => "The sub-directory under the lib path for the namespace.  Auto-detected normally."
+                                    doc => 'Name of the Namespace to work in. Auto-detected if within a Namespace directory'
+                                },
+        lib_path            =>  {   type => "FilesystemPath",
+                                    doc => "The directory in which the namespace module resides.  Auto-detected normally.",
+                                    is_constant => 1,
+                                    calculate_from => ['namespace_name'],
+                                    calculate => q( # the namespace module should have gotten loaded in create()
+                                                    my $namespace_module = $namespace_name;
+                                                    $namespace_module =~ s#::#/#g;
+                                                    my $namespace_path = Cwd::abs_path($INC{$namespace_module . ".pm"});
+                                                    unless ($namespace_path) {
+                                                        Carp::croak("Namespace module $namespace_name has not been loaded yet");
+                                                    }
+                                                    $namespace_path =~ s/\/[^\/]+.pm$//;
+                                                    return $namespace_path;
+                                                  ),
                                 },
         working_subdir      =>  {   type => "FilesystemPath", 
-                                    is_optional => 1,
-                                    doc => "The sub-directory under the namespace subdir which is the pwd.  Auto-detected normally.",
+                                    doc => 'The current working directory relative to lib_path',
+                                    calculate => q( my $lib_path = $self->lib_path;
+                                                    return UR::Util::path_relative_to($lib_path, Cwd::abs_path(Cwd::getcwd));
+                                                  ),
+                                },
+        namespace_path      =>  { type => 'FilesystemPath',
+                                  doc  => "The directory under which all the namespace's modules reside",
+                                  is_constant => 1,
+                                  calculate_from => ['namespace_name'],
+                                  calculate => q(  my $lib_path = $self->lib_path;
+                                                   return $lib_path . '/' . $namespace_name;
+                                                ),
                                 },
         verbose             =>  { type => "Boolean", is_optional => 1,
                                     doc => "Causes the command to show more detailed output."
