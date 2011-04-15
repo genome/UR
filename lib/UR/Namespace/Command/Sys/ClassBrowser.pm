@@ -33,8 +33,6 @@ sub help_brief {
 sub execute {
     my $self = shift;
 
-    $self->_init or return;
-
     my $params = shift;
   
     my $namespace = $self->namespace_name;

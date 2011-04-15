@@ -52,13 +52,9 @@ sub execute
 {
     my $self = shift;
 
-    unless ($self->SUPER::_init(@_)) {
-        return;
-    }
-
     my $params = shift;
 
-    my $namespace = $self->namespace_subdir;
+    my $namespace = $self->namespace_name;
     unless ($namespace) {
         die "This command can only be run from a directory tree under a UR namespace module.\n";
     }

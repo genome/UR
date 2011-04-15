@@ -94,12 +94,10 @@ sub execute {
     my $err_setting = $self->dump_error_messages();
     $self->dump_error_messages(0);
     eval {
-        if ($self->SUPER::_init(@_)) {
             my $datasource_meta_class = $self->namespace_name . '::DataSource::Meta';
             my $datasource_meta = $datasource_meta_class->get();
             $datasource_meta->create_dbh();
             $self->status_message("Running tests within namespace ".$self->namespace_name);
-        }
     };
     $self->dump_error_messages($err_setting);
     if ($@) {

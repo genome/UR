@@ -45,8 +45,6 @@ sub execute {
         return;
     }
 
-    $self->_init or return;
-
     my $namespace = $self->namespace_name;
     my $is = $self->extends || 'UR::Object';
     my $parent_class_meta = UR::Object::Type->get($is);

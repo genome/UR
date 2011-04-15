@@ -42,9 +42,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    unless ($self->_init()) {
-        return; 
-    }
     for my $src ($self->bare_args) {
         eval "use Data::Dumper; use YAML; no strict; no warnings; \n" . $src;
         if ($@) {

@@ -44,8 +44,6 @@ $DB::single=1;
         return;
     }
 
-    #$self->_init;
-
     my $namespace = $self->namespace_name;
     unless ($namespace) {
         $self->error_message("This command must be run from a namespace directory.");

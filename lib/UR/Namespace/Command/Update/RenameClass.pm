@@ -32,10 +32,6 @@ sub execute {
     my $self = shift;
     $old = shift;
     $new = shift;
-    unless ($self->_init()) {
-        $self->error_message("Failed to initialize.  Exiting.");
-        return;
-    }
     $self->error_message("rename $old to $new not implemented");
     return;
 }

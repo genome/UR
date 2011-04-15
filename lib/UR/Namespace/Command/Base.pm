@@ -172,7 +172,6 @@ sub _modules_in_tree {
 
 sub _class_names_in_tree {
     my $self = shift;
-    $self->_init;
     my @modules = $self->_modules_in_tree(@_);
     my $lib_path = $self->lib_path;
     my @class_names;
@@ -188,7 +187,6 @@ sub _class_names_in_tree {
 
 sub _class_objects_in_tree {
     my $self = shift;
-    $self->_init;
     my @class_names = $self->_class_names_in_tree(@_);
     my @class_objects;
     for my $class_name (sort { uc($a) cmp uc($b) } @class_names) {
