@@ -13,7 +13,7 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command::V1',
     is_abstract => 1,
-    has_transient => [ 
+    has => [ 
         namespace_name      =>  {   type => 'String',
                                     is_optional => 1,
                                     doc => 'Name of the Namespace to work in. Auto-detected if within a Namespace directory'
