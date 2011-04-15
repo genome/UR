@@ -107,131 +107,78 @@ sub help_detail {
     return shift->help_brief
 }
 
-sub namespace_path {
-    my $self = shift;
-    my $lib_path = $self->lib_path;
-    my $namespace_subdir = $self->namespace_subdir;
-    return undef unless $namespace_subdir;
-    return $lib_path . "/" . $namespace_subdir;
-}
-
-sub working_path {
-    my $self = shift;
-    my $namespace_path = $self->namespace_path;
-    my $working_subdir = $self->working_subdir;
-    return $namespace_path unless $working_subdir;
-    return $namespace_path . "/" . $working_subdir;
-}
-
-sub namespace_name {
-    my $self = shift;
-    my $namespace_name = $self->namespace_subdir;
-    return undef unless $namespace_name;
-    $namespace_name =~ s/\//::/g;
-    return $namespace_name;
-}
-
-sub _test_cases_in_tree {
-    my $self = shift;
-    my @test_cases;
-    unless (@_) {
-        my $lib_path = $self->lib_path;
-        my $namespace_subdir = $self->namespace_subdir;
-        unless ($namespace_subdir) {
-            die 'This command must be run in the top level of a UR::Namespace directory.  Run "ur create MyNamespace".';
-        }
-        @test_cases =  (grep { /\.t$/ } `cd $lib_path; find $namespace_subdir/*`);
-        chomp @test_cases;
-    }
-    else {
-        # this method takes either module paths or class names as params
-        # normalize to module paths
-        my $working_path = $self->working_path;
-        my $lib_path = $self->lib_path;
-        my $subdir = join("/", grep { $_ } $self->namespace_subdir,$self->working_subdir);
-
-        for my $name (@_) {
-            my $full_name = join("/",$working_path,$name);
-            my $lib_relative_name = join("/", $subdir, $name);
-            if (-e $full_name) {
-                if ($name =~ /\.t$/) {
-                    push @test_cases, $lib_relative_name;
-                }
-                elsif (-d $name) {
-                    my @more = (grep { /\.t$/ } `cd $lib_path; find $lib_relative_name`);
-                    chomp @more;
-                    for (@more) { s/\/\.\//\//g; s/\/[^\/]+\/\..\//\//g; }
-                    push @test_cases, @more;
-                }
-                else {
-                    next;
-                }
-            }
-        }
-    }
-    return sort @test_cases;
-}
-
+# Return a list of module pathnames relative to lib_path
 sub _modules_in_tree {
     my $self = shift;
     my @modules;
+
+    my $lib_path = $self->lib_path;
+    my $namespace_path = $self->namespace_path;
+
+    my $wanted_closure = sub {
+                             if (-f $_ and m/\.pm/) {
+                                 push @modules, UR::Util::path_relative_to($lib_path, $_);
+                             }
+                        };
     unless (@_) {
-        my $lib_path = $self->lib_path;
-        my $namespace_subdir = $self->namespace_subdir;
-        unless ($namespace_subdir) {
-            die 'This command must be run in the top level of a UR::Namespace directory.  Run "ur create MyNamespace".';
-        }
-        @modules =  ($namespace_subdir . ".pm", grep { /\.pm$/ } `cd $lib_path; find $namespace_subdir/*`);
-        chomp @modules;
+        File::Find::find({ no_chdir => 1,
+                           wanted => $wanted_closure,
+                         },
+                         $namespace_path);
     }
     else {
         # this method takes either module paths or class names as params
         # normalize to module paths
-        my $working_path = $self->working_path;
-        my $lib_path = $self->lib_path;
-        my $subdir = join("/", grep { $_ } $self->namespace_subdir,$self->working_subdir);
 
-        for my $name (@_) {
-            my $full_name = join("/",$working_path,$name);
-            my $lib_relative_name = join("/", $subdir, $name);
-            if (-e $full_name) {
-                if ($name =~ /\.pm$/) {
-                    push @modules, $lib_relative_name;
+
+        NAME:
+        for (my $i = 0; $i < @_; $i++) {
+            my $name = $_[$i];
+
+            if ($name =~ m/::/) {
+                # It's a class name
+                my @name_parts = split(/::/, $name);
+                unless ($self->namespace_name eq $name_parts[0]) {
+                    $self->warning_message("Skipping class name $name: Not in namespace ".$self->namespace_name);
+                    next NAME;
                 }
-                elsif (-d $name) {
-                    my @more = (grep { /\.pm$/ } `cd $lib_path; find $lib_relative_name`);
-                    chomp @more;
-                    for (@more) { s/\/\.\//\//g; s/\/[^\/]+\/\..\//\//g; }
-                    push @modules, @more;
-                }
-                else {
-                    warn "$name: ignoring non-module...";
-                    next;
-                }
+                $name = join('/', @name_parts) . ".pm";
             }
-            else {
-                # see if we have a class name
-                my $file_name = $name;
-                $file_name =~ s/::/\//g;
-                $file_name .= ".pm";
-                unless (-e $lib_path . "/" . $file_name) {
-                    warn "$name: no module file found, and no class found!";
-                    next;
+
+            # First, check the pathname relative to the cwd
+            CHECK_LIB_PATH:
+            foreach my $check_name ( $name, $lib_path.'/'.$name, $namespace_path.'/'.$name) {
+                if (-e $check_name) {
+                    if (-f $check_name and $check_name =~ m/\.pm$/) {
+                        push @modules, UR::Util::path_relative_to($lib_path, $check_name);
+                        next NAME;  # found it, don't check the other $check_name
+
+                    } elsif (-d $check_name) {
+                        File::Find::find({ no_chdir => 1,
+                                           wanted => $wanted_closure,
+                                         },
+                                         $check_name);
+                    } elsif (-e $check_name) {
+                        $self->warning_message("Ignoring non-module $check_name");
+                        next CHECK_LIB_PATH;
+                    }
                 }
-                push @modules, $file_name;
+
             }
         }
     }
-    return sort @modules;
+    return @modules;
 }
 
 sub _class_names_in_tree {
     my $self = shift;
     $self->_init;
     my @modules = $self->_modules_in_tree(@_);
+    my $lib_path = $self->lib_path;
     my @class_names;
     for my $module (@modules) {
         my $class = $module;
+        $class =~ s/^$lib_path\///;
         $class =~ s/\//::/g;
         $class =~ s/\.pm$//;
         push @class_names, $class;
