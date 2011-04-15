@@ -2,7 +2,10 @@ package UR::Namespace::Command::Base;
 use strict;
 use warnings;
 use UR;
+
 use Cwd;
+use Carp;
+use File::Find;
 
 our $VERSION = "0.30"; # UR $VERSION;
 
@@ -54,23 +57,42 @@ UR::Object::Type->define(
 sub create {
     my $class = shift;
     
-    my ($lib_path,$namespace_subdir,$working_subdir) =
-        $class->resolve_lib_namespace_working_dirs();    
-    if (!$lib_path and -e "UR.pm") {
-        # TEMPORARY: For development of ur commands (bootstrapping...)
-        $lib_path = cwd();
-    }        
-    
-    #my ($rule,%extra) = $class->define_boolexpr(@_);    
-    my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);    
-    
-    return $class->SUPER::create(
-        lib_path => $lib_path,
-        namespace_subdir => $namespace_subdir,
-        working_subdir => $working_subdir,
-        $rule->params_list, 
-        %extra
-    );    
+    my ($rule,%extra) = $class->define_boolexpr(@_);
+    my $namespace_name;
+    if ($rule->specifies_value_for('namespace_name')) {
+        $namespace_name = $rule->value_for('namespace_name');
+
+    } else {
+        $namespace_name = $class->resolve_namespace_name_from_cwd();
+        unless ($namespace_name) {
+            $class->error_message("Could not determine namespace name.");
+            $class->error_message("Run this command from within a namespace subdirectory or use the --namespace-name command line option");
+            return;
+        }
+        $rule = $rule->add_filter(namespace_name => $namespace_name);
+    }
+
+    # Use the namespace.
+    $class->status_message("Loading namespace module $namespace_name") if ($rule->value_for('verbose'));
+    eval "use above '$namespace_name';";
+    if ($@) {
+        $class->error_message("Error using namespace module '$namespace_name': $@");
+        return;
+    }
+
+    my $self = $class->SUPER::create($rule);
+    return unless $self;
+
+    unless (eval { UR::Namespace->get($namespace_name) }) {
+        $self->error_message("Namespace '$namespace_name' was not found");
+        return;
+    }
+
+    if ($namespace_name->can("_set_context_for_schema_updates")) {
+        $namespace_name->_set_context_for_schema_updates();
+    }
+
+    return $self;
 }
 
 sub command_name {
@@ -240,133 +262,32 @@ sub _class_objects_in_tree {
     return @class_objects;
 }
 
-sub resolve_class_and_params_for_argv {
-    # This is used by execute_and_exit, but might be used within an application.
-    my $self = shift;
-    my ($delegate, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
-    
-    if ($params and ($self eq $delegate)) {
-        my ($lib_path,$namespace_subdir,$working_subdir) =
-            $delegate->resolve_lib_namespace_working_dirs();
-    
-        if (!$lib_path and -e "UR.pm") {
-            # TEMPORARY: For development of ur commands (bootstrapping...)
-            $lib_path = cwd();
-        }
-    
-        if ($lib_path) {
-            # new: params
-            $params->{lib_path}             = $lib_path;
-            $params->{namespace_subdir}     = $namespace_subdir;
-            $params->{working_subdir}       = $working_subdir;
-        }
-    }
-    
-    return $delegate, $params;
-}
-
-
-sub _init {
-    my $self = shift;
-    
-    return if $self->{_init};
-
-    my $namespace = $self->namespace_name;
-    unless ($namespace) {
-        $self->error_message("This command must be run from within a UR namespace directory.");
-        return;
-    }
-
-    # Ensure the right modules are visible to the command.
-    # Make the lib accessible.
-    
-    # We'd like to "use lib" this directory,
-    # but any other -I/use-lib requests should still 
-    # come ahead of it.  This requires a little munging.
-
-    my $lib_path = $self->lib_path;
-
-    # Find the first thing in the compiled_inc list that exists
-    my $compiled;
-    for my $path ( UR::Util::compiled_inc() ) {
-        $compiled = Cwd::abs_path($path);
-        last if defined $compiled;
-    }
-
-    my $i;
-    for ($i = 0; $i < @INC; $i++) {
-        # Find the index in @INC that's the first thing in
-        # compiled-in module paths
-        #
-        # since abs_path returns undef for non-existant dirs,
-        # skip the comparison if either is undef
-        my $inc = Cwd::abs_path($INC[$i]);
-        next unless defined $inc;
-        last if ($inc eq $compiled);
-    }
-    splice(@INC, $i, 0, $lib_path);
-    #print "INC @INC\n"; 
-
-    # Use the namespace.
-    eval "use $namespace;";
-    if ($@) {
-        $self->error_message("Error using namespace $namespace: $@");
-        return;
-    }
-
-    unless (eval { UR::Namespace->get($namespace) }) { 
-        $DB::single = 1;
-        $self->error_message("No namespace '$namespace' found!");
-        return;
-    }
-
-    if ($namespace->can("_set_context_for_schema_updates")) {
-        $namespace->_set_context_for_schema_updates();
-    }
-
-    $self->{_init} = 1;
-    return 1;
-}
-
-use Cwd;
-
-sub resolve_lib_namespace_working_dirs {
+sub resolve_namespace_name_from_cwd {
     my $class = shift;
     my $cwd = shift;
     $cwd ||= cwd();
 
-    my @path = grep { length($_) } split(/\//,$cwd);
-    
     my @lib = grep { length($_) } split(/\//,$cwd);
-    my @namespace_subdirs = pop @lib;
-    my @working_subdirs;
 
-    my $prefix = UR::Util->used_libs_perl5lib_prefix;
+    SUBDIR:
     while (@lib) {
+        my $namespace_name = pop @lib;
+
         my $lib_path = "/" . join("/",@lib);
-        my $namespace_subdir = join("/",@namespace_subdirs);
-        my $working_subdir = join("/",@working_subdirs);
-
-        my $namespace_path = join("/",$lib_path,$namespace_subdir);
-        my $working_path = join("/",$namespace_path,$working_subdir);
-
-        my $namespace_module_path = $namespace_path . ".pm";
+        my $namespace_module_path = $lib_path . '/' . $namespace_name . '.pm';
         if (-e $namespace_module_path) {
-            my $ns = $namespace_subdirs[-1];
             my $fh = IO::File->new($namespace_module_path);
-            my $found = 0;
+            next unless $fh;
             while (my $line = $fh->getline) {
-                if ($line =~ /package $ns\s*;/) {
-                    $fh->close;
-                    return ($lib_path, $namespace_subdir, $working_subdir);
+                if ($line =~ m/package\s+$namespace_name\s*;/) {
+                    # At this point $namespace_name should be a plain word with no ':'s
+                    # and if the file sets the package to a single word with no colons,
+                    # it's pretty likely that it's a # namespace module.
+                    return $namespace_name;
                 }
             }
-            $fh->close;
         }
-        unshift @working_subdirs, pop(@namespace_subdirs);
-        unshift @namespace_subdirs, pop(@lib);
     }
-
     return;
 }
 
