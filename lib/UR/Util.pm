@@ -195,11 +195,6 @@ sub _define_method {
     return 1;
 }
 
-# retuns the pathname to $target rewritten to be relative
-# to $start.  If $start and $target are the same pathname
-# then it returns '.'
-# If $target is in a subdirectory of $start, it returns 
-
 =over
 
 =item path_relative_to
