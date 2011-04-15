@@ -2952,7 +2952,8 @@ sub _get_objects_for_class_and_rule_from_cache {
             else {
                 # The $id is a normal scalar.
                 if (not defined $id) {
-                    Carp::cluck("Undefined id passed as params!");
+                    Carp::carp("Undefined id passed as params for query on $class");
+                    $id ||= '';
                 }
                 my $match;
                 # FIXME This is a performance optimization for class metadata to avoid the search through
