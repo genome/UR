@@ -59,17 +59,29 @@ sub get_material_class_names
     return map {$_->class_name} $_[0]->get_material_classes();
 }
 
-
+# Returns data source objects for all the data sources of the namespace
 sub get_data_sources
 {
     my $class = shift;
     if ($class eq 'UR' or (ref($class) and $class->id eq 'UR')) {
         return 'UR::DataSource::Meta';  # UR only has 1 "real" data source, the other stuff in that dir are base classes
+
     } else {
-        #return $class->_get_class_names_under_dir("DataSource");
-        my @ds_names = $class->_get_class_names_under_dir("DataSource");
-        my @ds_objs = map { $_->get() } @ds_names;
-        return @ds_objs;
+        my %found;
+        my $namespace_name = $class->class;
+
+        foreach my $inc ( @main::INC ) {
+            my $path = join('/', $inc,$namespace_name,'DataSource');
+            if (-d $path) {
+                foreach ( glob($path . '/*.pm') ) { 
+                    my($module_name) = m/DataSource\/([^\/]+)\.pm$/;
+                    my $ds_class_name = $namespace_name . '::DataSource::' . $module_name;
+                    $found{$ds_class_name} = 1;
+                }
+            }
+        }
+        my @data_sources = map { $_->get() } keys(%found);
+        return @data_sources;
     }
 }
 
