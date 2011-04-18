@@ -274,6 +274,9 @@ sub _run_tests {
     elsif ($self->cover_svk_changes) {
         push @cover_specific_modules, get_status_file_list('svk');
     }
+    elsif ($self->cover_git_changes) {
+        push @cover_specific_modules, get_status_file_list('git');
+    }
     elsif ($self->cover_cvs_changes) {
         push @cover_specific_modules, get_status_file_list('cvs');
     }
@@ -498,11 +501,13 @@ sub get_status_file_list {
             @lines = IO::File->new("cvs -q up |")->getlines;
         } 
         elsif ($tool eq "git") {
-            @lines = IO::File->new("git diff --name-status")->getlines;
+            @lines = IO::File->new("git diff --name-status |")->getlines;
         }
         else {
-            die "Unknown tool $tool.  Try svn, svk, or cvs.\n";
+            die "Unknown tool $tool.  Try svn, svk, cvs or git.\n";
         }
+        # All these tools have flags or other data with the filename as the last column
+        @lines = map { (split(/\s+/))[-1] } @lines;
 
         unless (chdir($orig_cwd)) {
             die "Error changing directory back to the original cwd after checking file status with $tool.";
