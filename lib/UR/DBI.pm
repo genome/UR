@@ -828,6 +828,7 @@ sub _mk_mutator {
         return if $global_destruction;
         my $sth = shift;
         if (@_) {
+            no warnings 'uninitialized';
             $sth->{$hash_key} = shift;
         }
         no warnings;
