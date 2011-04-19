@@ -14,7 +14,7 @@ sub used_libs {
     my @extra;
     my @compiled_inc = UR::Util::compiled_inc();
     my @perl5lib = split(':', $ENV{PERL5LIB});
-    map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);
+    map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);   # remove trailing slashes
     map { $_ = Cwd::abs_path($_) || $_ } (@compiled_inc, @perl5lib);
     for my $inc (@INC) {
         $inc =~ s/\/+$//;
@@ -24,7 +24,9 @@ sub used_libs {
         push @extra, $inc;
     }
     unshift @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
+    map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);   # remove trailing slashes again
     @extra = _unique_elements(@extra);
+
     return @extra;
 }
 
