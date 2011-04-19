@@ -29,6 +29,20 @@ sub help_brief {
     "Creates a .opts file beside class/module passed as argument, e.g. UR::Namespace::Command.";
 }
 
+sub create {
+    my $class = shift;
+
+    my $bx = $class->define_boolexpr(@_);
+    if($bx->specifies_value_for('classname') and !$bx->specifies_value_for('namespace_name')) {
+        my $classname = $bx->value_for('classname');
+        my($namespace) = ($classname =~ m/^(\w+)::/);
+        $bx = $bx->add_filter(namespace_name => $namespace) if $namespace;
+    }
+    return $class->SUPER::create($bx);
+}
+
+
+
 sub is_sub_command_delegator { 0; }
 
 sub execute {
