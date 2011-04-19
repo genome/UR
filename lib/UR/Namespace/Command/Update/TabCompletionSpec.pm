@@ -83,14 +83,14 @@ sub execute {
         $fh->print($src);
     }
     if (-s $cache_path) {
-        print "\nOPTS_SPEC file created at $cache_path\n";
+        $self->status_message("\nOPTS_SPEC file created at $cache_path");
         unlink("$cache_path.bak");
     } else {
         if (-s "$cache_path.bak") {
-            print "\nERROR: $cache_path is 0 bytes, reverting to previous\n";
+            $self->error_message("$cache_path is 0 bytes, reverting to previous");
             rename("$cache_path.bak", $cache_path);
         } else {
-            print "\nERROR: $cache_path is 0 bytes and no backup exists, removing file\n";
+            $self->error_message("$cache_path is 0 bytes and no backup exists, removing file");
             unlink($cache_path);
         }
     }
