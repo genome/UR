@@ -8,7 +8,7 @@ use URT;
 use Test::More tests => 3;
 
 
-my $cmd = UR::Namespace::Command::Describe->create(classes_or_modules => ['URT::Thingy']);
+my $cmd = UR::Namespace::Command::Describe->create(classes_or_modules => ['URT::Thingy'], namespace_name => 'URT');
 ok($cmd, 'Create UR::Namespace::Command::Describe');
 
 my $output = '';
