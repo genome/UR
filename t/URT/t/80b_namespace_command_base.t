@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 15;
+use Test::More tests => 17;
 use Cwd;
 use File::Temp;
 
@@ -26,6 +26,9 @@ URT::Command::TestBase->queue_error_messages(1);
 
 
 chdir ($temp_dir) || die "Can't chdir to $temp_dir: $!";
+my $namespace_name = URT::Command::TestBase->resolve_namespace_name_from_cwd();
+ok(!defined($namespace_name), 'resolve_namespace_name_from_cwd returns nothing when not in a namespace directory');
+
 my $cmd = URT::Command::TestBase->create();
 ok(!$cmd, 'Cannot create command when pwd is not inside a namespace dir');
 my $error_message = join("\n",URT::Command::TestBase->error_messages());
@@ -34,11 +37,16 @@ like($error_message,
      'Error message was correct');
 
 
+my $lib_path = URT::Command::TestBase->resolve_lib_path_for_namespace_name('URT');
+my($expected_lib_path) = ($test_directory =~ m/^(.*)\/URT\/t/);
+is($lib_path, $expected_lib_path, 'resolve_lib_path_for_namespace_name found the URT namespace');
+
+
 $cmd = URT::Command::TestBase->create(namespace_name => 'URT');
 ok($cmd, 'Created command in a temp dir with forced namespace_name');
 is($cmd->namespace_name, 'URT', 'namespace_name is correct');
 
-my $expected_lib_path = $INC{'URT.pm'};
+$expected_lib_path = $INC{'URT.pm'};
 $expected_lib_path =~ s/\/URT.pm$//;
 is($cmd->lib_path, $expected_lib_path, 'lib_path is correct');
 
@@ -46,7 +54,7 @@ chdir($test_directory) || die "Can't chdir to $test_directory: $!";
 $cmd = URT::Command::TestBase->create();
 ok($cmd, 'Created command in the URT test dir and did not force namespace_name');
 
-my $lib_path = $cmd->lib_path;
+$lib_path = $cmd->lib_path;
 is($lib_path, $expected_lib_path, 'lib_path is correct');
 
 

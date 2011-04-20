@@ -58,12 +58,13 @@ sub create {
     my $class = shift;
     
     my ($rule,%extra) = $class->define_boolexpr(@_);
-    my $namespace_name;
+    my($namespace_name, $lib_path);
     if ($rule->specifies_value_for('namespace_name')) {
         $namespace_name = $rule->value_for('namespace_name');
+        $lib_path = $class->resolve_lib_path_for_namespace_name($namespace_name);
 
     } else {
-        $namespace_name = $class->resolve_namespace_name_from_cwd();
+        ($namespace_name,$lib_path) = $class->resolve_namespace_name_from_cwd();
         unless ($namespace_name) {
             $class->error_message("Could not determine namespace name.");
             $class->error_message("Run this command from within a namespace subdirectory or use the --namespace-name command line option");
@@ -74,7 +75,32 @@ sub create {
 
     # Use the namespace.
     $class->status_message("Loading namespace module $namespace_name") if ($rule->value_for('verbose'));
-    eval "use above '$namespace_name';";
+
+    # Ensure the right modules are visible to the command.
+    # Make the module accessible.
+    # We'd like to "use lib" this directory, but any other -I/use-lib
+    # requests should still come ahead of it.  This requires a little munging.
+
+    # Find the first thing in the compiled_inc list that exists
+    my $compiled;
+    for my $path ( UR::Util::compiled_inc() ) {
+        $compiled = Cwd::abs_path($path);
+        last if defined $compiled;
+    }
+
+    my $i;
+    for ($i = 0; $i < @INC; $i++) {
+        # Find the index in @INC that's the first thing in
+        # compiled-in module paths
+        #
+        # since abs_path returns undef for non-existant dirs,
+        # skip the comparison if either is undef
+        my $inc = Cwd::abs_path($INC[$i]);
+        next unless defined $inc;
+        last if ($inc eq $compiled);
+    }
+    splice(@INC, $i, 0, $lib_path);
+    eval "use $namespace_name";
     if ($@) {
         $class->error_message("Error using namespace module '$namespace_name': $@");
         return;
@@ -207,10 +233,13 @@ sub _class_objects_in_tree {
     return @class_objects;
 }
 
+# Tries to guess what namespace you are in from your current working
+# directory.  When called in list context, it also returns the directroy
+# name the namespace module was found in
 sub resolve_namespace_name_from_cwd {
     my $class = shift;
     my $cwd = shift;
-    $cwd ||= cwd();
+    $cwd ||= Cwd::cwd();
 
     my @lib = grep { length($_) } split(/\//,$cwd);
 
@@ -221,13 +250,10 @@ sub resolve_namespace_name_from_cwd {
         my $lib_path = "/" . join("/",@lib);
         my $namespace_module_path = $lib_path . '/' . $namespace_name . '.pm';
         if (-e $namespace_module_path) {
-            my $fh = IO::File->new($namespace_module_path);
-            next unless $fh;
-            while (my $line = $fh->getline) {
-                if ($line =~ m/package\s+$namespace_name\s*;/) {
-                    # At this point $namespace_name should be a plain word with no ':'s
-                    # and if the file sets the package to a single word with no colons,
-                    # it's pretty likely that it's a # namespace module.
+            if ($class->_is_file_the_namespace_module($namespace_name, $namespace_module_path)) {
+                if (wantarray) {
+                    return ($namespace_name, $lib_path);
+                } else {
                     return $namespace_name;
                 }
             }
@@ -236,6 +262,47 @@ sub resolve_namespace_name_from_cwd {
     return;
 }
 
+# Returns true if the given file is the namespace module we're looking for.
+# The only certain way is to go ahead and load it, but this should be good
+# enough for ligitimate use cases.
+sub _is_file_the_namespace_module {
+    my($class,$namespace_name,$namespace_module_path) = @_;
+
+    my $fh = IO::File->new($namespace_module_path);
+    return unless $fh;
+    while (my $line = $fh->getline) {
+        if ($line =~ m/package\s+$namespace_name\s*;/) {
+            # At this point $namespace_name should be a plain word with no ':'s
+            # and if the file sets the package to a single word with no colons,
+            # it's pretty likely that it's a namespace module.
+            return 1;
+        }
+    }
+    return;
+}
+
+
+# Return the pathname that the specified namespace module can be found
+sub resolve_lib_path_for_namespace_name {
+    my($class,$namespace_name,$cwd) = @_;
+
+    unless ($namespace_name) {
+        Carp::croak('namespace name is a required argument for UR::Util::resolve_lib_path_for_namespace_name()');
+    }
+
+    # first, see if we're in a namespace dir
+    my($resolved_ns_name, $lib_path ) = $class->resolve_namespace_name_from_cwd($cwd);
+    return $lib_path if (defined($resolved_ns_name) and $resolved_ns_name eq $namespace_name);
+
+    foreach $lib_path ( @main::INC ) {
+        my $expected_namespace_module = $lib_path . '/' . $namespace_name . '.pm';
+        $expected_namespace_module =~ s/::/\//g;  # swap :: for /
+        if ( $class->_is_file_the_namespace_module($namespace_name, $expected_namespace_module)) {
+            return $lib_path;
+        }
+    }
+    return;
+}
 
 1;
 
