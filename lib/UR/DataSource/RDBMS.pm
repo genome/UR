@@ -3363,27 +3363,25 @@ sub _generate_template_data_for_loading {
         my $final_accessor_class_meta = $via_accessor_meta->data_type->__meta__;
 
         # Follow all the via/to indirectedness to where the data ultimately comes from
-        if (my $final_accessor_meta = $final_accessor_class_meta->property_meta_for_name($final_accessor)) {
+        if ($final_accessor) { # id_by or reverse_as object accessors may not have a 'to'
+            my $final_accessor_meta = $final_accessor_class_meta->property_meta_for_name($final_accessor);
+            if ($final_accessor_meta) {
 
-            if ($final_accessor_meta->id eq "UR::Object\tid") {
-                # This is the generic 'id' property that won't be in the database.  See if the class 
-                # has a single, alternate ID property we can swap in here
-                my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
-                if (@id_properties == 1) {
-                    $final_accessor_meta = $id_properties[0];
-                    $final_accessor_class_meta = $final_accessor_meta->class_meta;
+                if ($final_accessor_meta->id eq "UR::Object\tid") {
+                    # This is the generic 'id' property that won't be in the database.  See if the class 
+                    # has a single, alternate ID property we can swap in here
+                    my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
+                    if (@id_properties == 1) {
+                        $final_accessor_meta = $id_properties[0];
+                        $final_accessor_class_meta = $final_accessor_meta->class_meta;
+                    }
                 }
-            }
-            while($final_accessor_meta && $final_accessor_meta->via) {
-                $final_accessor_meta = $final_accessor_meta->to_property_meta();
-            }
-            $final_accessor = $final_accessor_meta->property_name;
+                while($final_accessor_meta && $final_accessor_meta->via) {
+                    $final_accessor_meta = $final_accessor_meta->to_property_meta();
+                }
+                $final_accessor = $final_accessor_meta->property_name;
+           }
         }
-
-        #print "$property_name needs join "
-        #    . " via $relationship_name "
-        #    . " to $final_accessor"
-        #    . " using joins ";
 
         my $last_class_object_excluding_inherited_joins;
 
@@ -3625,7 +3623,9 @@ sub _generate_template_data_for_loading {
 
                 if ($joins_for_object == 1) {
                     #$last_alias_for_this_delegate = $alias;
-                    $last_class_object_excluding_inherited_joins = $last_class_object if ($last_class_object->property_meta_for_name($final_accessor));
+                    if ($final_accessor and $last_class_object->property_meta_for_name($final_accessor)) {
+                        $last_class_object_excluding_inherited_joins = $last_class_object;
+                    }
                     # on the first iteration, we figure out the remaining inherited iterations
                     # TODO: get this into the join logic itself in the property meta
                     my @parents = grep { $_->table_name } $foreign_class_object->ancestry_class_metas;
@@ -3650,7 +3650,9 @@ sub _generate_template_data_for_loading {
                 }
 
                 if (!@joins and not $alias_for_property_value) {
-                    if (grep { $_->[1]->property_name eq $final_accessor } @{ $foreign_class_loading_data->{direct_table_properties} }) {
+                    if ($final_accessor and
+                        grep { $_->[1]->property_name eq $final_accessor } @{ $foreign_class_loading_data->{direct_table_properties} }
+                    ) {
                         $alias_for_property_value = $alias;
                         #print "found alias for $property_name on $foreign_class_name: $alias\n";
                     }
