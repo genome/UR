@@ -2,14 +2,17 @@ package URTAlternate::Person;
 
 use URTAlternate;
 
+use strict;
+use warnings;
 class URTAlternate::Person {
+    table_name => 'person',
     id_by => [
-        person_id => { is => 'Integer' },
+        person_id => { is => 'integer' },
     ],
     has => [
-        name => { is => 'String' },
+        name => { is => 'varchar' },
     ],
-    table_name => 'person',
+    schema_name => 'TheDB',
     data_source => 'URTAlternate::DataSource::TheDB',
 };
 
