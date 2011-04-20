@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 10;
+use Test::More tests => 14;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../lib";
@@ -23,12 +23,12 @@ push @INC,$tempdir; # so it can find the namespace modules it's creating
 my $cmd = UR::Namespace::Command::Define::Namespace->create(nsname => 'NewNamespace');
 ok($cmd, 'create UR::Namespace::Command::Define::Namespace');
 
-#$cmd->dump_status_messages(0);
-#$cmd->dump_error_messages(0);
-#$cmd->dump_warning_messages(0);
-#$cmd->queue_status_messages(1);
-#$cmd->queue_error_messages(1);
-#$cmd->queue_warning_messages(1);
+$cmd->dump_status_messages(0);
+$cmd->dump_error_messages(0);
+$cmd->dump_warning_messages(0);
+$cmd->queue_status_messages(1);
+$cmd->queue_error_messages(1);
+$cmd->queue_warning_messages(1);
 
 ok($cmd->execute, 'execute');
 
@@ -43,3 +43,10 @@ ok(-d 'NewNamespace', 'NewNamespace directory exists');
 ok(-d 'NewNamespace/DataSource', 'NewNamespace/DataSource directory exists');
 ok(-f 'NewNamespace/DataSource/Meta.pm', 'NewNamespace/DataSource/Meta.pm module exists');
 ok(-f 'NewNamespace/Vocabulary.pm', 'NewNamespace/Vocabulary.pm module exists');
+
+my @messages = $cmd->status_messages();
+is($messages[0], 'A   NewNamespace (UR::Namespace)', 'Message adding NewNamespace');
+is($messages[1], 'A   NewNamespace::Vocabulary (UR::Vocabulary)', 'Message adding vocabulary');
+is($messages[2], 'A   NewNamespace::DataSource::Meta (UR::DataSource::Meta)', 'Message adding meta datasource');
+is($messages[3], "A   ${tempdir}/NewNamespace/DataSource/Meta.sqlite3-dump (Metadata DB skeleton)",
+     'Message adding metaDB dump file');
