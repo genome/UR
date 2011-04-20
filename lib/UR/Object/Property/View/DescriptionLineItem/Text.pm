@@ -29,6 +29,13 @@ sub _update_view_from_subject {
         } elsif ($property_meta->is_delegated) {
             # delegated, but not via.  Must be an object accessor
             $column_name = ''
+        } elsif ($property_meta->is_calculated) {
+            my $calc_from = $property_meta->calculate_from;
+            if ($calc_from and @$calc_from) {
+                $column_name = '(calculated from ' . join(',',@$calc_from). ')';
+            } else {
+                $column_name = '(calculated)';
+            }
         } else {
             $column_name = '(no column)';
         }

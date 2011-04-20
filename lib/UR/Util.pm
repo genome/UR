@@ -239,8 +239,8 @@ sub path_relative_to {
 
   UR::Util->generate_readwrite_methods
   (
-      some_scalar_property = 1,
-      some_array_property = []
+      some_scalar_property => 1,
+      some_array_property => []
   );
 
 This method generates accessor/set methods named after the keys of its
@@ -285,8 +285,8 @@ sub generate_readwrite_methods
 
   UR::Util->generate_readwrite_methods_override
   (
-      some_scalar_property = 1,
-      some_array_property = []
+      some_scalar_property => 1,
+      some_array_property => []
   );
 
 Same as generate_readwrite_function except that we force the functions
@@ -323,8 +323,8 @@ sub generate_readwrite_methods_override
 
   UR::Util->generate_readonly_methods
   (
-      some_scalar_property = 1,
-      some_array_property = []
+      some_scalar_property => 1,
+      some_array_property => []
   );
 
 This method generates accessor methods named after the keys of its
