@@ -1279,8 +1279,10 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             }
         }
 
-        my $delegation_name = $r_class->type_name;
-        $delegation_name =~ s/ /_/g;
+        my @r_class_name_parts = split('::', $r_class->class_name);
+        shift @r_class_name_parts;  # drop the namespace name
+        my $delegation_name = lc(join('_', @r_class_name_parts));
+
         if ($matched) {
             $delegation_name = $delegation_name . "_" . $prefix if $prefix;
             $delegation_name .= ($suffix !~ /\D/ ? "" : "_") . $suffix if $suffix;
