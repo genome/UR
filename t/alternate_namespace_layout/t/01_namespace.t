@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 12;
+use Test::More tests=> 13;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../namespace';
@@ -21,7 +21,7 @@ is($class_meta->class_name, 'URTAlternate::Person', 'get_member_class returned t
 # only during that test, and so are not returned by get_material_classes()
 my @expected_class_names = sort 
                            map { 'URTAlternate::' . $_ }
-                           qw( Person DataSource::Meta DataSource::TheDB Vocabulary );
+                           qw( Person Car DataSource::Meta DataSource::TheDB Vocabulary );
 my @class_metas = sort URTAlternate->get_material_classes;
 is(scalar(@class_metas), scalar(@expected_class_names), 'get_material_classes returned expected number of items');
 foreach (@class_metas) {
