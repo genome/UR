@@ -73,7 +73,7 @@ sub params_list_for_values {
     my @values_sorted = @_;
     
     my @keys_sorted = $rule_template->_underlying_keys;
-    my @constant_values_sorted = $rule_template->_constant_values;
+    my $constant_values = $rule_template->_constant_values;
     
     my @params;
     my ($v,$c) = (0,0);
@@ -84,7 +84,7 @@ sub params_list_for_values {
         #}
         #elsif (substr($key,0,1) eq '-') {
         if (substr($key,0,1) eq '-') {
-            my $value = $constant_values_sorted[$c];
+            my $value = $constant_values->[$c];
             push @params, $key, $value;        
             $c++;
         }

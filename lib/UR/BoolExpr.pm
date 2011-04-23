@@ -473,7 +473,7 @@ sub resolve {
         $key = $keys[$kn++];
         if (substr($key,0,1) eq '-') {
             $cn++;
-            next;
+            redo;
         }
         else {
             $vn++;
