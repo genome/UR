@@ -3122,11 +3122,13 @@ sub _generate_template_data_for_loading {
     my $hints    = $rule_template->hints;
     my $order_by = $rule_template->order_by;
     my $group_by = $rule_template->group_by;
-    my $is_paged = $rule_template->is_paged;
+    my $page     = $rule_template->page;
+    my $limit    = $rule_template->limit;
+    my $aggregate = $rule_template->aggregate;
 
     my %group_by_property_names;
     if ($group_by) {
-        # we only pull back columns we're grouping by if there is grouping happening
+        # we only pull back columns we're grouping by or aggregating if there is grouping happening
         for my $name (@$group_by) {
             unless ($class_name->can($name)) {
                 Carp::croak("Cannot group by '$name': Class $class_name has no property/method by that name");
@@ -3841,6 +3843,7 @@ sub _generate_template_data_for_loading {
 
     my $parent_template_data = $self->SUPER::_generate_template_data_for_loading($rule_template);
 
+    $DB::single = 1;
     if ($group_by) {
         # when grouping, we're making set objects instead of regular objects
         # this means that we re-constitute the select clause and add a group_by clause
@@ -3852,9 +3855,14 @@ sub _generate_template_data_for_loading {
         # with the ones that already exist in $order_by_columns from the class data
         $order_by_columns = $self->_select_clause_columns_for_table_property_data(@all_table_properties);
 
-        # TODO: handle aggregates present in the class definition
         $select_clause .= ', ' if $select_clause;
         $select_clause .= 'count(*) count';
+
+        for my $ag (@$aggregate) {
+            next if $ag eq 'count';
+             # TODO: translate property names to column names, and skip non-column properties 
+            $select_clause .= ', ' . $ag;
+        }
 
         unless (@$group_by == @all_table_properties) {
             print "mismatch table properties vs group by!\n";

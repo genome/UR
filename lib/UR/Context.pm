@@ -2213,8 +2213,11 @@ sub _create_import_iterator_for_underlying_context {
     my ($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
     my $class_name = $template_data->{class_name};
 
-    my $group_by = $rule_template->group_by;
-    my $order_by = $rule_template->order_by;
+    my $group_by    = $rule_template->group_by;
+    my $order_by    = $rule_template->order_by;
+    my $aggregate   = $rule_template->aggregate;
+    my $limit       = $rule_template->limit;
+    my $page        = $rule_template->page;
 
     if (my $sub_typing_property) {
         # When the rule has a property specified which indicates a specific sub-type, catch this and re-call
@@ -2303,9 +2306,9 @@ sub _create_import_iterator_for_underlying_context {
         }
         
         my @non_aggregate_properties = @$group_by;
-        my @aggregate_properties = ('count'); # TODO: make non-hard-coded
+        my @aggregate_properties = ($aggregate ? @$aggregate : ());
+        unshift @aggregate_properties, 'count' unless $aggregate_properties[0] eq 'count';
         my $division_point = $#non_aggregate_properties;
-    
         my $template = UR::BoolExpr::Template->get_by_subject_class_name_logic_type_and_logic_detail(
             $class_name,
             'And',

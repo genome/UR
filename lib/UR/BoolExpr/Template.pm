@@ -53,9 +53,11 @@ UR::Object::Type->define(
     has_optional => [
         hints                           => { is => 'ARRAY' },
         recursion_desc                  => { is => 'ARRAY' },
-        is_paged                        => { is => "Boolean" },  # FIXME - this isn't set by anything below, shouldn't it be 'page'?
+        page                            => { is => "ARRAY" },  # FIXME - this isn't set by anything below, shouldn't it be 'page'?
         order_by                        => { is => 'ARRAY' },
         group_by                        => { is => 'ARRAY' },
+        aggregate                       => { is => 'ARRAY' },
+        limit                           => { is => 'Integer' },
     ]
 );
 
@@ -72,7 +74,7 @@ our $empty_string   = $UR::BoolExpr::Util::empty_string;
 our $empty_list     = $UR::BoolExpr::Util::empty_list;
 
 # Names of the optional flags you can add to a rule
-our @meta_param_names = qw(recursion_desc hints is_paged order_by group_by);
+our @meta_param_names = qw(recursion_desc hints page order_by group_by aggregate limit);
 
 # Wrappers for regular properties
 
@@ -663,6 +665,9 @@ sub _fast_construct_and {
     my $order_by = undef;
     my $group_by = undef;
     my $page = undef;
+    my $limit = undef;
+    my $aggregate = undef;
+
     for my $key (@keys_sorted) {
         my $pos_list = $key_positions{$key};
         my $pos = pop @$pos_list;
@@ -677,11 +682,17 @@ sub _fast_construct_and {
             elsif ($key eq '-order' or $key eq '-order_by') {
                 $order_by = shift @constant_values;
             }
-            elsif ($key eq '-group_by') {
+            elsif ($key eq '-group' or $key eq '-group_by') {
                 $group_by = shift @constant_values;
             }
             elsif ($key eq '-page') {
                 $page = shift @constant_values;
+            }
+            elsif ($key eq '-limit') {
+                $limit = shift @constant_values;
+            }
+            elsif ($key eq '-aggregate') {
+                $aggregate = shift @constant_values;
             }
             else {
                 Carp::croak("Unknown special param '$key'.  Expected one of: @meta_param_names");
@@ -739,6 +750,8 @@ sub _fast_construct_and {
         order_by                        => $order_by,
         page                            => $page,
         group_by                        => $group_by,
+        limit                           => $limit,
+        aggregate                       => $aggregate,
         
         is_normalized                   => ($id eq $normalized_id ? 1 : 0),
         normalized_positions_arrayref   => $normalized_positions_arrayref,
