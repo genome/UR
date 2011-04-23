@@ -72,7 +72,7 @@ UR::ModuleBuild - a Module::Build subclass with UR extensions
 
 =head1 VERSION
 
-This document describes UR::ModuleBuild version 0.30.
+This document describes UR::ModuleBuild version 0.31.
 
 =head1 SYNOPOSIS
 
@@ -86,7 +86,7 @@ my $build = UR::ModuleBuild->new(
   dist_version => '0.01',
   dist_abstract => 'my app rocks because I get to focus on the problem, not the crud',
   build_requires => {
-    'UR' => '0.29',
+    'UR' => '0.31',
   },
   requires => {
     'Text::CSV_XS' => '',
