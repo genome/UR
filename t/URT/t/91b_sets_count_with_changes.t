@@ -106,15 +106,15 @@ is($person_set->sum('age'), 110, 'determined the sum of all ages of the set');
 #print Data::Dumper::Dumper($person_set);
 is($query_count, 1, 'Made one query');
 
-
-=pod
- 
 $query_count = 0;
-my $age_set = $person_set->age_set;
+print URT::Person->can("car_set"),"\n";
+exit;
+my $age_set = $person_set->car_set;
 ok($age_set, "got a set of ages for the person set: object set -> value set");
 is($query_count, 0, "no queries done to produce the set");
 
-
+=pod
+ 
 my $max_age = $age_set->max;
 ok($max_age, "got the max age from a set of values");
 is($query_count, 1, "one query to produce the max age");
