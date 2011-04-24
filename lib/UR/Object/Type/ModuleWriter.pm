@@ -150,7 +150,8 @@ sub resolve_class_description_perl {
     }
 
     my %sections_seen;
-    my $data_source = UR::DataSource->get($self->data_source_id);
+    my $data_source_id = $self->data_source_id;
+    my ($data_source) = ($data_source_id ? UR::DataSource->get($data_source_id) : undef);
     foreach my $section ( ( 'id_by', 'has', 'has_many', 'has_optional', keys(%properties_by_section) ) ) {
         next unless ($properties_by_section{$section});
         next if ($sections_seen{$section});

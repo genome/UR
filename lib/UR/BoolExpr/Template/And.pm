@@ -14,7 +14,13 @@ UR::Object::Type->define(
 sub _variable_value_count {
     my $self = shift;
     my $k = $self->_underlying_keys;
-    my $v = $self->_constant_values || 0;
+    my $v = $self->_constant_values;
+    if ($v) {
+        $v = scalar(@$v);
+    }
+    else {
+        $v = 0;
+    }
     return $k-$v;
 }
 
