@@ -224,28 +224,70 @@ sub CAN {
     my $member_class_name = $class;
     $member_class_name =~ s/::Set$//g; 
     return unless $member_class_name; 
-    my $member_class_meta = $member_class_name->__meta__;
-    my $member_property_meta = $member_class_meta->property_meta_for_name($method);
-    if ($member_property_meta) {
-        # property
+    if ($member_class_name->can($method)) {
+        my $member_class_meta = $member_class_name->__meta__;
+        my $member_property_meta = $member_class_meta->property_meta_for_name($method);
+        if ($member_property_meta) {
+            # regular property access
+            return sub {
+                my $self = shift;
+                if (@_) {
+                    Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
+                }
+                my $rule = $self->rule;
+                if ($rule->specifies_value_for($method)) {
+                    return $rule->value_for($method);
+                } 
+                else {
+                    my @members = $self->members;
+                    my @values = map { $_->$method } @members;
+                    return @values if wantarray;
+                    return if not defined wantarray;
+                    Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+                    return $values[0];
+                }
+            }; 
+        }
+        if (my ($property_name) = ($method =~ /^(.*)_set$/)) {
+            my $member_property_meta = $member_class_meta->properties(singular_name => $property_name);
+            if ($member_property_meta) {
+                # property attribution set
+                return sub {
+                    my $self = shift;
+                    if (@_) {
+                        Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
+                    }
+                    # NOTE: "this method $method on $class is not properly lazy yet";
+                    my @members = $self->members;
+                    my @values = map { $_->$method } @members;
+                    return if not @values;
+                    if (my $r_class_name = ref($values[0])) {
+                        return $r_class_name->define_set(id => [map({ id => $_->id },@values)]);
+                    }
+                    else {
+                        return UR::Value->define_set(id => \@values);
+                    }
+                    return @values if wantarray;
+                    return if not defined wantarray;
+                    Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+                    return $values[0];
+                }; 
+            }
+        }
+        # other method
         return sub {
             my $self = shift;
             if (@_) {
                 Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
             }
-            my $rule = $self->rule;
-            if ($rule->specifies_value_for($method)) {
-                return $rule->value_for($method);
-            } 
-            else {
-                my @members = $self->members;
-                my @values = map { $_->$method } @members;
-                return @values if wantarray;
-                return if not defined wantarray;
-                Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
-                return $values[0];
-            }
+            my @members = $self->members;
+            my @values = map { $_->$method } @members;
+            return @values if wantarray;
+            return if not defined wantarray;
+            Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+            return $values[0];
         }; 
+
     }
     else {
         # a possible aggregation function
