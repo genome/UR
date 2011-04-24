@@ -689,13 +689,13 @@ sub _fast_construct_and {
             if ($key eq '-recurse') {
                 $recursion_desc = $constant_value;
             }
-            elsif ($key eq '-hints') {
+            elsif ($key eq '-hints' or $key eq '-hint') {
                 $hints = $constant_value; 
             }
-            elsif ($key eq '-order_by') {
+            elsif ($key eq '-order_by' or $key eq '-order') {
                 $order_by = $constant_value;
             }
-            elsif ($key eq '-group_by') {
+            elsif ($key eq '-group_by' or $key eq '-group') {
                 $group_by = $constant_value;
             }
             elsif ($key eq '-page') {
