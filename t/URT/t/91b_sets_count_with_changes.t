@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 34;
+use Test::More tests=> 35;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -106,14 +106,10 @@ is($person_set->sum('age'), 110, 'determined the sum of all ages of the set');
 #print Data::Dumper::Dumper($person_set);
 is($query_count, 1, 'Made one query');
 
-
 =pod
- 
-$query_count = 0;
+
 my $age_set = $person_set->age_set;
 ok($age_set, "got a set of ages for the person set: object set -> value set");
-is($query_count, 0, "no queries done to produce the set");
-
 
 my $max_age = $age_set->max;
 ok($max_age, "got the max age from a set of values");
@@ -134,6 +130,11 @@ ok($bubba, 'Create a new not-cool person');
 $query_count = 0;
 is($person_set->count, 3, 'still, 3 people are cool');
 is($query_count, 1, 'Made one query');  
+
+# Test set-relaying.
+note("set relaying is not sufficiently lazy yet");
+my $car_set = $person_set->car_set;
+ok($car_set, "got a set of cars for the person set: object set -> value set");
 
 # If objects have modifications, all aggregates occur directly on objects in memory.
 my $p = URT::Person->get(11);
