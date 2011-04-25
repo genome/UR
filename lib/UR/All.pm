@@ -3,7 +3,7 @@ package UR::All;
 use strict;
 use warnings;
 
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 BEGIN { require above; };
 use UR;

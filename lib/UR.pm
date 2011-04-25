@@ -8,7 +8,7 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = "0.30"; # UR $VERSION
+our $VERSION = "0.31"; # UR $VERSION
 
 BEGIN {
     # unless otherwise specified, begin uncaching at 1 million objects 
