@@ -506,6 +506,7 @@ sub create_for_loading_template {
                             $dsx->_record_that_loading_has_occurred($loading_info);
                         }
 
+                        bless($pending_db_object,'UR::DeletedRef');
                         $pending_db_object = $already_loaded;
                     }
                     else {
@@ -532,6 +533,7 @@ sub create_for_loading_template {
                             # The new object should replace the old object.  Since other parts of the user's program
                             # may have references to this object, we need to copy the values from the new object into
                             # the existing cached object
+                            bless($pending_db_object,'UR::DeletedRef');
                             $pending_db_object = $already_loaded;
                         } else {
                             # This is a completely new object
