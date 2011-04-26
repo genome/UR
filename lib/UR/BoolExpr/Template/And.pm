@@ -47,9 +47,12 @@ sub get_underlying_rule_templates {
 
 sub specifies_value_for {
     my ($self, $property_name) = @_;
-    Carp::confess() if not defined $property_name;
-    my @underlying_templates = $self->get_underlying_rule_templates();        
-    return grep { $property_name eq $_->property_name } @underlying_templates;
+    Carp::confess('Missing required parameter property_name for specifies_value_for()') if not defined $property_name;
+    my @underlying_templates = $self->get_underlying_rule_templates();
+    foreach ( @underlying_templates ) {
+        return 1 if $property_name eq $_->property_name;
+    }
+    return;
 }
 
 sub evaluate_subject_and_values {
