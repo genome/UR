@@ -448,13 +448,15 @@ sub _fast_construct_and {
         my $id_related = {};
         my $id_translations = [];
         my $id_pos = {};
+        my $id_prop_is_real;  # true if there's a property called 'id' that's a real property, not from UR::Object
         for my $iclass ($subject_class_name, $subject_class_meta->ancestry_class_names) {
             last if $iclass eq "UR::Object";
             next unless $iclass->isa("UR::Object");
             my $iclass_meta = $iclass->__meta__;
             my @id_props = $iclass_meta->id_property_names;
             next unless @id_props;
-            next if @id_props == 1 and $id_props[0] eq "id";
+            $id_prop_is_real = 1 if (grep { $_ eq 'id'} @id_props);
+            next if @id_props == 1 and $id_props[0] eq "id" and !$id_prop_is_real;
             push @$id_translations, \@id_props;
             @$id_related{@id_props} = @id_props;
             @$id_pos{@id_props} = (0..$#id_props);
