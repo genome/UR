@@ -671,7 +671,6 @@ sub _fast_construct_and {
     my @keys_sorted = map { $_ eq $last_key ? () : ($last_key = $_) } sort @keys;
 
 
-    my $matches_all = scalar(@keys_sorted) == 0 ? 1 : 0;
     my $normalized_positions_arrayref = [];
     my $constant_value_normalized_positions = [];
     my $recursion_desc = undef;
@@ -725,6 +724,7 @@ sub _fast_construct_and {
         Carp::croak('-hints of a rule must be an arrayref of property names');
     }
 
+    my $matches_all = scalar(@keys_sorted) == scalar(@constant_values);
     $id_only = 0 if ($matches_all);
 
     # these are used to rapidly turn a bx used for querying into one
