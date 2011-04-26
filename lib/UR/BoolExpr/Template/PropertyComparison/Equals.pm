@@ -16,7 +16,19 @@ sub evaluate_subject_and_values {
     my $subject = shift;
     my $comparison_value = shift;    
     my $property_name = $self->property_name;    
-    my @property_value = eval { $subject->$property_name; };
+    my @property_value;
+    eval { 
+        if (index($property_name,'.') == -1) {
+            @property_value = $subject->$property_name; 
+        }
+        else {
+            my @links = split(/\./,$property_name);
+            @property_value = ($subject);
+            for my $link (@links) {
+                @property_value = map { $_->$link } @property_value;
+            }
+        }
+    };
     if ($@) {
         $DB::single = 1;
     }

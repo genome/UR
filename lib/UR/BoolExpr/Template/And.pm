@@ -95,7 +95,7 @@ sub params_list_for_values {
             $c++;
         }
         else {
-            my ($property, $op) = ($key =~ /^(\-*\w+)\s*(.*)$/);        
+            my ($property, $op) = ($key =~ /^(\-*[\w\.]+)\s*(.*)$/);        
             unless ($property) {
                 die "bad key $key in @keys_sorted";
             }

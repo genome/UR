@@ -146,7 +146,7 @@ sub __errors__ {
 
         # Check data type
         # TODO: delegate to the data type module for this
-        my $generic_data_type = $property_metadata->generic_data_type || "";
+        my $generic_data_type = $property_metadata->data_type || "";
         my $data_length       = $property_metadata->data_length;
 
         if ($generic_data_type eq 'Float') {

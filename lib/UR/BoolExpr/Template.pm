@@ -471,8 +471,14 @@ sub _fast_construct_and {
     my %check_for_duplicate_rules;
     for (my $n=0; $n < @keys; $n++) {
         next if (substr($keys[$n],0,1) eq '-');
-        my ($property,$op) = ($keys[$n] =~ /^(\w+)\b(.*)$/);
-        $check_for_duplicate_rules{$property}++;
+        my $pos = index($keys[$n],' ');
+        if ($pos != -1) {
+            my $property = substr($keys[$n],0,$pos);
+            $check_for_duplicate_rules{$property}++;
+        }
+        else {
+            $check_for_duplicate_rules{$keys[$n]}++;
+        }
     }
 
     # each item in this list mutates the initial set of key-value pairs
@@ -499,7 +505,8 @@ sub _fast_construct_and {
             $const_pos++;
         }
         else {
-            my ($name, $op) = ($key =~ /^(.+?)\b\s*(.*)$/);
+            my ($name, $op) = ($key =~ /^(.+?)\s+(.*)$/);
+            $name ||= $key;
             if ($name eq 'id') {
                 $id_position = $var_pos;
             }                
@@ -532,7 +539,8 @@ sub _fast_construct_and {
         for ($key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
             $key = $keys[$key_pos];
 
-            ($property,$op) = ($key =~ /^(\w+)\b(.*)$/);  # /^(\w+)\b\S*(.*)$/
+            my ($property, $op) = ($key =~ /^(.+?)\s+(.*)$/);
+            $property ||= $key;
             $op ||= "";
             $op =~ s/\s+//;
             $key_op_hash->{$property} ||= {};
@@ -570,9 +578,10 @@ sub _fast_construct_and {
             $key = $keys[$key_pos];
             next if substr($key,0,1) eq '-';
 
-            ($property,$op) = ($key =~ /^(\w+)\b(.*)$/);  # /^(\w+)\b\S*(.*)$/
-            $op ||= "";
-            $op =~ s/\s+//;                
+            my ($property, $op) = ($key =~ /^(.+?)\s+(.*)$/);
+            $property ||= $key;
+            $op ||= '';
+            $op =~ s/^\s+// if $op;
             $key_op_hash->{$property} ||= {};
             $key_op_hash->{$property}{$op}++;
             
@@ -728,7 +737,10 @@ sub _fast_construct_and {
     my @ambiguous_property_names;
     for (my $n=0; $n < @keys; $n++) {
         next if substr($keys[$n],0,1) eq '-';
-        my ($property,$op) = ($keys[$n] =~ /^(\w+)\b(.*)$/);
+        my ($property, $op) = ($keys[$n] =~ /^(.+?)\s+(.*)$/);
+        $property ||= $keys[$n];
+        $op ||= '';
+        $op =~ s/^\s+// if $op;
         if ($op and $op ne 'eq' and $op ne '==') {
             push @ambiguous_keys, $keys[$n];
             push @ambiguous_property_names, $property;

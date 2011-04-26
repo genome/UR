@@ -1,61 +1,34 @@
 package UR::Object::Property;
-
 use warnings;
 use strict;
+
 require UR;
+
 use Lingua::EN::Inflect;
 use Class::AutoloadCAN;
 
 our $VERSION = "0.31"; # UR $VERSION;;
 our @CARP_NOT = qw( UR::DataSource::RDBMS UR::Object::Type );
 
-# TODO: make these methods on UR::Value::Type metadata
-our %NUMERIC_TYPES = (
-        'INTEGER' => 1,
-        'NUMBER'  => 1,
-        'FLOAT'   => 1,
-);
-
 sub is_numeric {
     my $self = shift;
-
     unless (defined($self->{'_is_numeric'})) {
         my $type = uc($self->data_type);
-        $self->{'_is_numeric'} = $NUMERIC_TYPES{$type} || 0;
+        my $class = $type;
+        unless ($class->isa("UR::Object")) {
+            $class = 'UR::Value::' . $type;
+            unless ($class->isa("UR::Object")) {
+                $class = 'UR::Value::' . ucfirst(lc($type));
+                unless ($class->isa("UR::Object")) {
+                    warn "unknown type $type for property " . $self->id;
+                    return;
+                }
+            }
+        }
+        $self->{'_is_numeric'} = $class->isa("UR::Value::Number");
     }
     return $self->{'_is_numeric'};
 }    
-
-# TODO: This is used by the code which maps RDBMS tables to 
-# UR types, and should really be in the RDBMS datasource and its subclasses.
-our %generic_data_type_for_vendor_data_type =
-(
-    'CHAR'        => 'Text',
-    'VARCHAR2'    => 'Text',
-    'NCHAR'       => 'Text',
-    'NVARCHAR2'   => 'Text',
-    'ROWID'       => 'Text',
-    'LONG'        => 'Text',
-    'LONGRAW'     => 'Text',
-    
-    'FLOAT'       => 'Float',
-    
-    'NUMBER'      => 'Float',  # not true, but sometimes true
-    
-    'DATE'        => 'DateTime',
-    'TIMESTAMP'   => 'DateTime',
- 
-    'BLOB'        => 'Ugly',
-    'CLOB'        => 'Ugly',
-    'NCLOB'       => 'Ugly',
-    'RAW'         => 'Ugly',
-    'UNDEFINED'   => 'Ugly',
-);
-
-sub generic_data_type {
-    no warnings;
-    return $generic_data_type_for_vendor_data_type{$_[0]->{data_type}};
-}
 
 # TODO: this is a method on the data source which takes a given property.
 # Returns the table and column for this property.

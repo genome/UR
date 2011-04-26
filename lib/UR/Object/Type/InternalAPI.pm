@@ -52,6 +52,23 @@ our $PROPERTY_META_FOR_NAME_TEMPLATE;
 sub property_meta_for_name {
     my ($self, $property_name) = @_;
 
+    if (index($property_name,'.') != -1) {
+        $DB::single = 1;
+        my @chain = split(/\./,$property_name);
+        my $last_class_meta = $self;
+        my @pmeta;
+        for my $link (@chain) {
+            my $property_meta = $last_class_meta->property_meta_for_name($link);
+            push @pmeta, $property_meta;
+            last if $link eq $chain[-1];
+            my @joins = $property_meta->_get_joins();
+            my $last_class_name = $joins[-1]{foreign_class};
+            $last_class_meta = $last_class_name->__meta__;
+        }
+        return @pmeta if wantarray;
+        return $pmeta[-1];
+    }
+
     if (exists($self->{'_property_meta_for_name'}) and $self->{'_property_meta_for_name'}->{$property_name}) {
        return $self->{'_property_meta_for_name'}->{$property_name};
     }
