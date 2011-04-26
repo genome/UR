@@ -613,7 +613,7 @@ sub _fast_construct_and {
                 ## print "non id multi property $property on class $subject_class\n";
                 $id_only = 0;
             }
-        }            
+        }
         
         if (my $parts = (scalar(keys(%id_parts)))) {
             # some parts are id-related                
