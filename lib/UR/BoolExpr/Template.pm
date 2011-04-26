@@ -598,7 +598,7 @@ sub _fast_construct_and {
                 }
             }    
             elsif ($id_related->{$property}) {
-                if ($op eq "" or $op eq "eq" or $op eq "=") {
+                if ($op eq "" or $op eq "eq" or $op eq "=" or $op eq 'in') {
                     $id_parts{$id_pos->{$property}} = $key_pos;                        
                 }
                 else {
@@ -613,7 +613,7 @@ sub _fast_construct_and {
                 ## print "non id multi property $property on class $subject_class\n";
                 $id_only = 0;
             }
-        }
+        }            
         
         if (my $parts = (scalar(keys(%id_parts)))) {
             # some parts are id-related                
@@ -641,9 +641,6 @@ sub _fast_construct_and {
                 $id_only = 0;
                 $partial_id = 1;
             }
-        } else {
-            $id_only = 0;
-            $partial_id = 0;
         }
     }
     
