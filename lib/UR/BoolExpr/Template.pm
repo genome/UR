@@ -557,7 +557,7 @@ sub _fast_construct_and {
                     $id_only = 0;
                 }
             }    
-            else {
+            elsif (substr($key,0,1) ne '-') {
                 $id_only = 0;
                 ## print "non id single property $property on $subject_class\n";
             }
