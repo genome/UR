@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 108;
+use Test::More tests => 150;
 use Data::Dumper;
 
 class URT::Item {
@@ -28,6 +28,9 @@ class URT::FancyItem {
 };
 
 class URT::UnrelatedItem {
+    id_by => [
+        ui_id => { is => 'Integer' },
+    ],
     has => [
         name    => { is => "String" },
         group   => { is => "String" },
@@ -45,26 +48,61 @@ foreach my $class_name ( qw( URT::Item URT::FancyItem ) ) {
         ok(! $bx->is_id_only, 'Rule with no filters is not is_id_only');
         ok(! $tmpl->is_id_only, 'Rule template with no filters is not is_id_only');
         ok(! $tmpl->is_partial_id, 'Rule template with no filters is not is_partial_id');
+        ok($tmpl->matches_all, 'Rule template with no filters is matches_all');
 
         $bx = $class_name->define_boolexpr(name => 'blah', @$meta_params);
         $tmpl = $bx->template;
         ok(! $bx->is_id_only, 'Rule with one ID property filter is not is_id_only');
         ok(! $tmpl->is_id_only, 'Rule template with one ID property filter is not is_id_only');
         ok($tmpl->is_partial_id, 'Rule template with one ID property filter is is_partial_id');
+        ok(!$tmpl->matches_all, 'Rule template with one ID property filter is not matches_all');
 
         $bx = $class_name->define_boolexpr(name => 'blah', group => 'foo', @$meta_params);
         $tmpl = $bx->template;
         ok($bx->is_id_only, 'Rule with both ID property filters is is_id_only');
         ok($tmpl->is_id_only, 'Rule template with both ID property filters is is_id_only');
         ok(! $tmpl->is_partial_id, 'Rule template with both ID property filter is not is_partial_id');
+        ok(! $tmpl->matches_all, 'Rule template with both ID property filter is not matches_all');
 
         $bx = $class_name->define_boolexpr(parent_name => '12345', @$meta_params);
         $tmpl = $bx->template;
         ok(! $bx->is_id_only, 'Rule with no ID filters is not is_id_only');
         ok(! $tmpl->is_id_only, 'Rule template with no ID filters is not is_id_only');
         ok(! $tmpl->is_partial_id, 'Rule template with no ID filters is not is_partial_id');
+        ok(! $tmpl->matches_all, 'Rule template with no ID filters is not matches_all');
     }
 }
+
+
+foreach my $meta_params ( [], [-group_by => ['group']] ) {
+    my $bx = URT::UnrelatedItem->define_boolexpr(@$meta_params);
+    my $tmpl = $bx->template;
+    ok(! $bx->is_id_only, 'Rule with no filters is not is_id_only');
+    ok(! $tmpl->is_id_only, 'Rule template with no filters is not is_id_only');
+    ok(! $tmpl->is_partial_id, 'Rule template with no filters is not is_partial_id');
+    ok($tmpl->matches_all, 'Rule template with no filters is matches_all');
+
+    $bx = URT::UnrelatedItem->define_boolexpr(ui_id => 1, @$meta_params);
+    $tmpl = $bx->template;
+    ok($tmpl->is_id_only, 'Rule with the single ID param is is_id_only');
+    ok(! $tmpl->is_partial_id, 'Rule with the single ID param is not is_partial_id');
+    ok(! $tmpl->matches_all, 'Rule with the single ID param is not matches_all');
+
+    $bx = URT::UnrelatedItem->define_boolexpr(ui_id => [2], @$meta_params);
+    $tmpl = $bx->template;
+    ok($tmpl->is_id_only, 'Rule with the single ID in-clause param is is_id_only');
+    ok(! $tmpl->is_partial_id, 'Rule with the single ID in-clause param is not is_partial_id');
+    ok(! $tmpl->matches_all, 'Rule with the single ID in-clause param is not matches_all');
+
+    $bx = URT::UnrelatedItem->define_boolexpr(name => 'foo', @$meta_params);
+    $tmpl = $bx->template;
+    ok(! $tmpl->is_id_only, 'Rule template with no ID filters is not is_id_only');
+    ok(! $tmpl->is_partial_id, 'Rule template with no ID filters is not is_partial_id');
+    ok(! $tmpl->matches_all, 'Rule template with no ID filters is not matches_all');
+}
+
+
+
 
 my @tests = (
         # get params                                            property  operator   expected val
