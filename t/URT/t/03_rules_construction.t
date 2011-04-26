@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 60;
+use Test::More tests => 108;
 use Data::Dumper;
 
 class URT::Item {
@@ -36,6 +36,35 @@ class URT::UnrelatedItem {
 
 my $test_obj = URT::Item->create(name => 'blah', group => 'cool', foo => 'foo', bar => 12345);
 
+
+foreach my $class_name ( qw( URT::Item URT::FancyItem ) ) {
+    foreach my $meta_params ( [], [-group_by => ['bar']] ) {
+
+        my $bx = $class_name->define_boolexpr(@$meta_params);
+        my $tmpl = $bx->template;
+        ok(! $bx->is_id_only, 'Rule with no filters is not is_id_only');
+        ok(! $tmpl->is_id_only, 'Rule template with no filters is not is_id_only');
+        ok(! $tmpl->is_partial_id, 'Rule template with no filters is not is_partial_id');
+
+        $bx = $class_name->define_boolexpr(name => 'blah', @$meta_params);
+        $tmpl = $bx->template;
+        ok(! $bx->is_id_only, 'Rule with one ID property filter is not is_id_only');
+        ok(! $tmpl->is_id_only, 'Rule template with one ID property filter is not is_id_only');
+        ok($tmpl->is_partial_id, 'Rule template with one ID property filter is is_partial_id');
+
+        $bx = $class_name->define_boolexpr(name => 'blah', group => 'foo', @$meta_params);
+        $tmpl = $bx->template;
+        ok($bx->is_id_only, 'Rule with both ID property filters is is_id_only');
+        ok($tmpl->is_id_only, 'Rule template with both ID property filters is is_id_only');
+        ok(! $tmpl->is_partial_id, 'Rule template with both ID property filter is not is_partial_id');
+
+        $bx = $class_name->define_boolexpr(parent_name => '12345', @$meta_params);
+        $tmpl = $bx->template;
+        ok(! $bx->is_id_only, 'Rule with no ID filters is not is_id_only');
+        ok(! $tmpl->is_id_only, 'Rule template with no ID filters is not is_id_only');
+        ok(! $tmpl->is_partial_id, 'Rule template with no ID filters is not is_partial_id');
+    }
+}
 
 my @tests = (
         # get params                                            property  operator   expected val
