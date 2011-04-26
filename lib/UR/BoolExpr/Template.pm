@@ -641,6 +641,9 @@ sub _fast_construct_and {
                 $id_only = 0;
                 $partial_id = 1;
             }
+        } else {
+            $id_only = 0;
+            $partial_id = 0;
         }
     }
     
