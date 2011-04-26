@@ -3843,7 +3843,6 @@ sub _generate_template_data_for_loading {
 
     my $parent_template_data = $self->SUPER::_generate_template_data_for_loading($rule_template);
 
-    $DB::single = 1;
     if ($group_by) {
         # when grouping, we're making set objects instead of regular objects
         # this means that we re-constitute the select clause and add a group_by clause
