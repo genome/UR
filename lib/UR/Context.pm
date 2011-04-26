@@ -2307,7 +2307,7 @@ sub _create_import_iterator_for_underlying_context {
         
         my @non_aggregate_properties = @$group_by;
         my @aggregate_properties = ($aggregate ? @$aggregate : ());
-        unshift @aggregate_properties, 'count' unless $aggregate_properties[0] eq 'count';
+        unshift(@aggregate_properties, 'count') unless (grep { $_ eq 'count' } @aggregate_properties);
         my $division_point = $#non_aggregate_properties;
         my $template = UR::BoolExpr::Template->get_by_subject_class_name_logic_type_and_logic_detail(
             $class_name,
