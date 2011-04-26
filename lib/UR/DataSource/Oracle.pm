@@ -41,7 +41,7 @@ sub _init_created_dbh {
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
     $dbh->do("alter session set NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'");
-    $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS'");
+    $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SSXFF'");
     return $dbh;
 }
 

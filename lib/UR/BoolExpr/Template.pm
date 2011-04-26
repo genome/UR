@@ -448,13 +448,15 @@ sub _fast_construct_and {
         my $id_related = {};
         my $id_translations = [];
         my $id_pos = {};
+        my $id_prop_is_real;  # true if there's a property called 'id' that's a real property, not from UR::Object
         for my $iclass ($subject_class_name, $subject_class_meta->ancestry_class_names) {
             last if $iclass eq "UR::Object";
             next unless $iclass->isa("UR::Object");
             my $iclass_meta = $iclass->__meta__;
             my @id_props = $iclass_meta->id_property_names;
             next unless @id_props;
-            next if @id_props == 1 and $id_props[0] eq "id";
+            $id_prop_is_real = 1 if (grep { $_ eq 'id'} @id_props);
+            next if @id_props == 1 and $id_props[0] eq "id" and !$id_prop_is_real;
             push @$id_translations, \@id_props;
             @$id_related{@id_props} = @id_props;
             @$id_pos{@id_props} = (0..$#id_props);
@@ -563,7 +565,7 @@ sub _fast_construct_and {
                     $id_only = 0;
                 }
             }    
-            else {
+            elsif (substr($key,0,1) ne '-') {
                 $id_only = 0;
                 ## print "non id single property $property on $subject_class\n";
             }
@@ -607,7 +609,7 @@ sub _fast_construct_and {
                 }
             }    
             elsif ($id_related->{$property}) {
-                if ($op eq "" or $op eq "eq" or $op eq "=") {
+                if ($op eq "" or $op eq "eq" or $op eq "=" or $op eq 'in') {
                     $id_parts{$id_pos->{$property}} = $key_pos;                        
                 }
                 else {
@@ -650,6 +652,9 @@ sub _fast_construct_and {
                 $id_only = 0;
                 $partial_id = 1;
             }
+        } else {
+            $id_only = 0;
+            $partial_id = 0;
         }
     }
     
@@ -675,7 +680,6 @@ sub _fast_construct_and {
     my @keys_sorted = map { $_ eq $last_key ? () : ($last_key = $_) } sort @keys;
 
 
-    my $matches_all = scalar(@keys_sorted) == 0 ? 1 : 0;
     my $normalized_positions_arrayref = [];
     my $constant_value_normalized_positions = [];
     my $recursion_desc = undef;
@@ -729,6 +733,7 @@ sub _fast_construct_and {
         Carp::croak('-hints of a rule must be an arrayref of property names');
     }
 
+    my $matches_all = scalar(@keys_sorted) == scalar(@constant_values);
     $id_only = 0 if ($matches_all);
 
     # these are used to rapidly turn a bx used for querying into one
