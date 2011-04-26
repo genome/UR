@@ -13,6 +13,7 @@ our $VERSION = "0.31"; # UR $VERSION;
 # These are normal Perl objects, not UR objects, so they get 
 # regular refcounting and scoping
 
+our @CARP_NOT = qw( UR::Context );
 
 my %all_object_fabricators;
 
