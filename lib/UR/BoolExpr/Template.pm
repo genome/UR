@@ -53,13 +53,15 @@ UR::Object::Type->define(
     has_optional => [
         hints                           => { is => 'ARRAY' },
         recursion_desc                  => { is => 'ARRAY' },
-        is_paged                        => { is => "Boolean" },  # FIXME - this isn't set by anything below, shouldn't it be 'page'?
+        page                            => { is => "ARRAY" },  # FIXME - this isn't set by anything below, shouldn't it be 'page'?
         order_by                        => { is => 'ARRAY' },
         group_by                        => { is => 'ARRAY' },
+        aggregate                       => { is => 'ARRAY' },
+        limit                           => { is => 'Integer' },
     ]
 );
 
-our $VERSION = "0.30"; # UR $VERSION;;
+our $VERSION = "0.31"; # UR $VERSION;;
 
 # Borrow from the util package.
 # This will go away with refactoring.
@@ -72,7 +74,7 @@ our $empty_string   = $UR::BoolExpr::Util::empty_string;
 our $empty_list     = $UR::BoolExpr::Util::empty_list;
 
 # Names of the optional flags you can add to a rule
-our @meta_param_names = qw(recursion_desc hints is_paged order_by group_by);
+our @meta_param_names = qw(recursion_desc hints page order_by group_by aggregate limit);
 
 # Wrappers for regular properties
 
@@ -434,7 +436,7 @@ sub _fast_construct_and {
     
     $logic_detail       ||= join(",",@$keys);
     $constant_value_id  ||= UR::BoolExpr::Util->values_to_value_id(@$constant_values);
-    
+   
     my $id = join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id);  
     my $self = $UR::Object::rule_templates->{$id};
     return $self if $self;  
@@ -446,13 +448,15 @@ sub _fast_construct_and {
         my $id_related = {};
         my $id_translations = [];
         my $id_pos = {};
+        my $id_prop_is_real;  # true if there's a property called 'id' that's a real property, not from UR::Object
         for my $iclass ($subject_class_name, $subject_class_meta->ancestry_class_names) {
             last if $iclass eq "UR::Object";
             next unless $iclass->isa("UR::Object");
             my $iclass_meta = $iclass->__meta__;
             my @id_props = $iclass_meta->id_property_names;
             next unless @id_props;
-            next if @id_props == 1 and $id_props[0] eq "id";
+            $id_prop_is_real = 1 if (grep { $_ eq 'id'} @id_props);
+            next if @id_props == 1 and $id_props[0] eq "id" and !$id_prop_is_real;
             push @$id_translations, \@id_props;
             @$id_related{@id_props} = @id_props;
             @$id_pos{@id_props} = (0..$#id_props);
@@ -468,6 +472,7 @@ sub _fast_construct_and {
     no warnings; 
     my %check_for_duplicate_rules;
     for (my $n=0; $n < @keys; $n++) {
+        next if (substr($keys[$n],0,1) eq '-');
         my ($property,$op) = ($keys[$n] =~ /^(\w+)\b(.*)$/);
         $check_for_duplicate_rules{$property}++;
     }
@@ -513,6 +518,7 @@ sub _fast_construct_and {
     # Note whether there are properties not involved in the ID
     # Add value extenders for any cases of id-related properties,
     # or aliases.
+    my $original_key_count = @keys;
     my $id_only = 1;
     my $partial_id = 0;        
     my $key_op_hash = {};
@@ -521,7 +527,6 @@ sub _fast_construct_and {
         ## use Data::Dumper;
         ## print "single property id\n". Dumper($id_translations);
         my ($key_pos,$key,$property,$op,$x);
-        my $original_key_count = @keys;
 
         # Presume we are only getting id properties until another is found.
         # If a multi-property is partially specified, we'll zero this out too.
@@ -552,7 +557,7 @@ sub _fast_construct_and {
                     $id_only = 0;
                 }
             }    
-            else {
+            elsif (substr($key,0,1) ne '-') {
                 $id_only = 0;
                 ## print "non id single property $property on $subject_class\n";
             }
@@ -562,10 +567,11 @@ sub _fast_construct_and {
         # multi-property ID
         ## print "multi property id\n". Dumper($id_translations);
         my ($key_pos,$key,$property,$op);
-        my $original_key_count = @keys;
         my %id_parts;
         for ($key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
-            $key = $keys[$key_pos];                
+            $key = $keys[$key_pos];
+            next if substr($key,0,1) eq '-';
+
             ($property,$op) = ($key =~ /^(\w+)\b(.*)$/);  # /^(\w+)\b\S*(.*)$/
             $op ||= "";
             $op =~ s/\s+//;                
@@ -594,7 +600,7 @@ sub _fast_construct_and {
                 }
             }    
             elsif ($id_related->{$property}) {
-                if ($op eq "" or $op eq "eq" or $op eq "=") {
+                if ($op eq "" or $op eq "eq" or $op eq "=" or $op eq 'in') {
                     $id_parts{$id_pos->{$property}} = $key_pos;                        
                 }
                 else {
@@ -637,16 +643,26 @@ sub _fast_construct_and {
                 $id_only = 0;
                 $partial_id = 1;
             }
+        } else {
+            $id_only = 0;
+            $partial_id = 0;
         }
     }
     
-    # Determine the positions of each key in the parameter list.                        
+    # Determine the positions of each key in the parameter list.
+    # In actuality, the position of the key's value in the @values or @constant_values array,
+    # depending on whether it is a -* key or not.
     my %key_positions;
-    my $pos = 0;
+    my $vpos = 0;
+    my $cpos = 0;
     for my $key (@keys) {
-        next if substr($key,0,1) eq '-';
         $key_positions{$key} ||= [];
-        push @{ $key_positions{$key} }, $pos++;    
+        if (substr($key,0,1) eq '-') {
+            push @{ $key_positions{$key} }, $cpos++;    
+        }
+        else {
+            push @{ $key_positions{$key} }, $vpos++;    
+        }
     }
 
     # Sort the keys, and make an arrayref which will 
@@ -655,7 +671,6 @@ sub _fast_construct_and {
     my @keys_sorted = map { $_ eq $last_key ? () : ($last_key = $_) } sort @keys;
 
 
-    my $matches_all = scalar(@keys_sorted) == 0 ? 1 : 0;
     my $normalized_positions_arrayref = [];
     my $constant_value_normalized_positions = [];
     my $recursion_desc = undef;
@@ -663,25 +678,38 @@ sub _fast_construct_and {
     my $order_by = undef;
     my $group_by = undef;
     my $page = undef;
+    my $limit = undef;
+    my $aggregate = undef;
+    my @constant_values_sorted;
+
     for my $key (@keys_sorted) {
         my $pos_list = $key_positions{$key};
         my $pos = pop @$pos_list;
         if (substr($key,0,1) eq '-') {
             push @$constant_value_normalized_positions, $pos;
+            my $constant_value = $constant_values[$pos];
+            push @constant_values_sorted, $constant_value;
+
             if ($key eq '-recurse') {
-                $recursion_desc = shift @constant_values;
+                $recursion_desc = $constant_value;
             }
-            elsif ($key eq '-hint' or $key eq '-hints') {
-                $hints = shift @constant_values; 
+            elsif ($key eq '-hints' or $key eq '-hint') {
+                $hints = $constant_value; 
             }
-            elsif ($key eq '-order' or $key eq '-order_by') {
-                $order_by = shift @constant_values;
+            elsif ($key eq '-order_by' or $key eq '-order') {
+                $order_by = $constant_value;
             }
-            elsif ($key eq '-group_by') {
-                $group_by = shift @constant_values;
+            elsif ($key eq '-group_by' or $key eq '-group') {
+                $group_by = $constant_value;
             }
             elsif ($key eq '-page') {
-                $page = shift @constant_values;
+                $page = $constant_value;
+            }
+            elsif ($key eq '-limit') {
+                $limit = $constant_value;
+            }
+            elsif ($key eq '-aggregate') {
+                $aggregate = $constant_value;
             }
             else {
                 Carp::croak("Unknown special param '$key'.  Expected one of: @meta_param_names");
@@ -696,6 +724,7 @@ sub _fast_construct_and {
         Carp::croak('-hints of a rule must be an arrayref of property names');
     }
 
+    my $matches_all = scalar(@keys_sorted) == scalar(@constant_values);
     $id_only = 0 if ($matches_all);
 
     # these are used to rapidly turn a bx used for querying into one
@@ -703,6 +732,7 @@ sub _fast_construct_and {
     my @ambiguous_keys;
     my @ambiguous_property_names;
     for (my $n=0; $n < @keys; $n++) {
+        next if substr($keys[$n],0,1) eq '-';
         my ($property,$op) = ($keys[$n] =~ /^(\w+)\b(.*)$/);
         if ($op and $op ne 'eq' and $op ne '==') {
             push @ambiguous_keys, $keys[$n];
@@ -713,8 +743,9 @@ sub _fast_construct_and {
     # Determine the rule template's ID.
     # The normalizer will store this.  Below, we'll
     # find or create the template for this ID.
-    my $normalized_id = UR::BoolExpr::Template->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, "And", join(",",@keys_sorted), $constant_value_id);
-    
+    my $normalized_constant_value_id = (scalar(@constant_values_sorted) ? UR::BoolExpr::Util->values_to_value_id(@constant_values_sorted) : $constant_value_id);
+    my $normalized_id = UR::BoolExpr::Template->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, "And", join(",",@keys_sorted), $normalized_constant_value_id);
+
     $self = bless {
         id                              => $id,
         subject_class_name              => $subject_class_name,
@@ -739,15 +770,18 @@ sub _fast_construct_and {
         order_by                        => $order_by,
         page                            => $page,
         group_by                        => $group_by,
+        limit                           => $limit,
+        aggregate                       => $aggregate,
         
         is_normalized                   => ($id eq $normalized_id ? 1 : 0),
         normalized_positions_arrayref   => $normalized_positions_arrayref,
+        constant_value_normalized_positions_arrayref => $constant_value_normalized_positions,
         normalization_extender_arrayref => $extenders,
         
         num_values                      => scalar(@$keys),
         
         _keys                           => \@keys,    
-        _constant_values                => $constant_values->[0],
+        _constant_values                => $constant_values,
 
         _ambiguous_keys                 => (@ambiguous_keys ? \@ambiguous_keys : undef),
         _ambiguous_property_names       => (@ambiguous_property_names ? \@ambiguous_property_names : undef),

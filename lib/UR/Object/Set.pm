@@ -3,7 +3,7 @@ package UR::Object::Set;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object::Type );
 
@@ -123,10 +123,11 @@ sub group_by {
     return $self->context_return(@groups);
 }
 
-sub count {
+sub __aggregate__ {
     my $self = shift;
+    my $f = shift;
 
-    Carp::croak("count() is a group operation, and is not writable") if @_;
+    Carp::croak("$f is a group operation, and is not writable") if @_;
 
     # If there are no member-class objects with changes, we can just interrogate the DB
     my $has_changes = 0;
@@ -138,50 +139,173 @@ sub count {
     }
 
     if ($has_changes) {
-        my @members = $self->members;
-        $self->{'count'} = scalar(@members);
-
-    } elsif (! exists $self->{'count'}) {
-        my $count_rule = $self->rule->add_filter(-group_by => []);
+        my $fname;
+        my @fargs;
+        if ($f =~ /^(\w+)\((.*)\)$/) {
+            $fname = $1;
+            @fargs = ($2 ? split(',',$2) : ());
+        }
+        else {
+            $fname = $f;
+            @fargs = ();
+        }
+        my $local_method = '__aggregate_' . $fname . '__';
+        $self->{$f} = $self->$local_method(@fargs);
+    } 
+    elsif (! exists $self->{$f}) {
+        $DB::single = 1;
+        my $rule = $self->rule->add_filter(-aggregate => [$f])->add_filter(-group_by => []);
         UR::Context->current->get_objects_for_class_and_rule(
               $self->member_class_name,
-              $count_rule,
+              $rule,
               1,    # load
               0,    # return_closure
          );
     }
-    return $self->{'count'};
+    return $self->{$f};
 }
 
-sub AUTOSUB {
-    my ($method,$class) = @_;
-    if (ref $class) {
-        $class = $class->class;
+sub __aggregate_count__ {
+    my $self = shift;
+    my @members = $self->members;
+    return scalar(@members);
+}
+
+sub __aggregate_min__ {
+    my $self = shift;
+    my $p = shift;
+    my $min = undef;
+    no warnings;
+    for my $member ($self->members) {
+        my $v = $member->$p;
+        next unless defined $v;
+        $min = $v if not defined $min or $v < $min;
     }
+    return $min;
+}
+
+sub __aggregate_max__ {
+    my $self = shift;
+    my $p = shift;
+    my $max = undef;
+    no warnings;
+    for my $member ($self->members) {
+        my $v = $member->$p;
+        next unless defined $v;
+        $max = $v if not defined $max or $v > $max;
+    }
+    return $max;
+}
+
+sub __aggregate_sum__ {
+    my $self = shift;
+    my $p = shift;
+    my $sum = undef;
+    no warnings;
+    for my $member ($self->members) {
+        my $v = $member->$p;
+        next unless defined $v;
+        $sum += $v;
+    }
+    return $sum;
+}
+
+require Class::AutoloadCAN;
+Class::AutoloadCAN->import();
+
+sub CAN {
+    my ($class,$method,$self) = @_;
+
+    if ($method =~ /^__aggregate_(.*)__/) {
+        # prevent circularity issues since this actually calls ->can();
+        return;
+    }
+
     my $member_class_name = $class;
     $member_class_name =~ s/::Set$//g; 
     return unless $member_class_name; 
-    my $member_class_meta = $member_class_name->__meta__;
-    my $member_property_meta = $member_class_meta->property_meta_for_name($method);
-    return unless $member_property_meta;
-    return sub {
-        my $self = shift;
-        if (@_) {
-            Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
+    if ($member_class_name->can($method)) {
+        my $member_class_meta = $member_class_name->__meta__;
+        my $member_property_meta = $member_class_meta->property_meta_for_name($method);
+        if ($member_property_meta) {
+            # regular property access
+            return sub {
+                my $self = shift;
+                if (@_) {
+                    Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
+                }
+                my $rule = $self->rule;
+                if ($rule->specifies_value_for($method)) {
+                    return $rule->value_for($method);
+                } 
+                else {
+                    my @members = $self->members;
+                    my @values = map { $_->$method } @members;
+                    return @values if wantarray;
+                    return if not defined wantarray;
+                    Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+                    return $values[0];
+                }
+            }; 
         }
-        my $rule = $self->rule;
-        if ($rule->specifies_value_for($method)) {
-            return $rule->value_for($method);
-        } 
-        else {
+        if (my ($property_name) = ($method =~ /^(.*)_set$/)) {
+            my $member_property_meta = $member_class_meta->properties(singular_name => $property_name);
+            if ($member_property_meta) {
+                # property attribution set
+                return sub {
+                    my $self = shift;
+                    if (@_) {
+                        Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
+                    }
+                    # NOTE: "this method $method on $class is not properly lazy yet";
+                    my @members = $self->members;
+                    my @values = map { $_->$method } @members;
+                    return if not @values;
+                    if (my $r_class_name = ref($values[0])) {
+                        return $r_class_name->define_set(id => [map({ id => $_->id },@values)]);
+                    }
+                    else {
+                        return UR::Value->define_set(id => \@values);
+                    }
+                    return @values if wantarray;
+                    return if not defined wantarray;
+                    Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+                    return $values[0];
+                }; 
+            }
+        }
+        # other method
+        return sub {
+            my $self = shift;
+            if (@_) {
+                Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
+            }
             my @members = $self->members;
             my @values = map { $_->$method } @members;
             return @values if wantarray;
             return if not defined wantarray;
             Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
             return $values[0];
+        }; 
+
+    }
+    else {
+        # a possible aggregation function
+        # see if the method ___aggregate__ uses exists, and if so, delegate to __aggregate__
+        # TODO: delegate these to aggregation function modules instead of having them in this module
+        my $aggregator = '__aggregate_' . $method . '__';
+        if ($self->can($aggregator)) {
+            return sub {
+                my $self = shift;
+                my $f = $method;
+                if (@_) {
+                    $f .= '(' . join(',',@_) . ')';
+                }
+                return $self->__aggregate__($f);
+            };
         }
-    }; 
+    }
+    return;
 }
 
 1;

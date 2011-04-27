@@ -1,7 +1,7 @@
 # Index for cached objects.
 
 package UR::Object::Index;
-our $VERSION = "0.30"; # UR $VERSION;;
+our $VERSION = "0.31"; # UR $VERSION;;
 use base qw(UR::Object);
 
 use strict;
@@ -308,7 +308,7 @@ sub _build_data_tree
     
     # _add_object in bulk.
     my ($object,@values,$hr,$value);
-    for my $object ($UR::Context::current->all_objects_loaded($self->indexed_class_name)) {            
+    for my $object ($UR::Context::current->all_objects_loaded($indexed_class_name)) {
         if (@indexed_property_names) {
             @values = map { my $val = $object->$_; defined $val ? $val : undef } @indexed_property_names;
             @values = (undef) unless(@values);
@@ -319,10 +319,13 @@ sub _build_data_tree
             no warnings 'uninitialized';  # in case $value is undef
             $hr->{$value} ||= {};
             $hr = $hr->{$value};
-        }            
-        $hr->{$object->id} = $object;
+        }
+        my $obj_id = $object->id;
+        $hr->{$obj_id} = $object;
+        if (Scalar::Util::isweak($UR::Context::all_objects_loaded->{$indexed_class_name}->{$obj_id})) {
+            Scalar::Util::weaken($hr->{$obj_id});
+        }
     }
-    
 }
 
 # FIXME maybe objects in an index should always be weakend?

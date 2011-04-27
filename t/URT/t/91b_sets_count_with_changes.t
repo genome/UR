@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 22;
+use Test::More tests=> 35;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -78,44 +78,88 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
                     callback => sub {$query_text = $_[0]; $query_count++}),
     'Created a subscription for query');
 
-
-
 # test creating/deleting/modifying objects that match extant sets
 $query_count = 0;
-my $set = URT::Person->define_set(is_cool => 1);
-ok($set, 'Defined set of poeple that are cool');
+my $person_set = URT::Person->define_set(is_cool => 1);
+ok($person_set, 'Defined set of poeple that are cool');
+is($person_set->is_cool, 1, "access to a defining property works");
 is($query_count, 0, 'Made no queries');
 
+
 $query_count = 0;
-is($set->count, 3, '3 people are cool');
+is($person_set->count, 3, '3 people are cool');
+#print Data::Dumper::Dumper($person_set);
 is($query_count, 1, 'Made one query');
 
-my $bubba = URT::Person->create(name => 'Bubba', is_cool => 0, age => 25);
-ok($bubba, 'Create a new not-cool person');
+$query_count = 0;
+is($person_set->max('age'), 45, 'determined max age');
+#print Data::Dumper::Dumper($person_set);
+is($query_count, 1, 'Made one query');
 
 $query_count = 0;
-is($set->count, 3, 'still, 3 people are cool');
+is($person_set->min('age'), 25, 'determined min age');
+#print Data::Dumper::Dumper($person_set);
+is($query_count, 1, 'Made one query');
+
+$query_count = 0;
+is($person_set->sum('age'), 110, 'determined the sum of all ages of the set');
+#print Data::Dumper::Dumper($person_set);
+is($query_count, 1, 'Made one query');
+
+=pod
+
+my $age_set = $person_set->age_set;
+ok($age_set, "got a set of ages for the person set: object set -> value set");
+
+my $max_age = $age_set->max;
+ok($max_age, "got the max age from a set of values");
+is($query_count, 1, "one query to produce the max age");
+
+my @distinct_ages = $age_set->distinct();
+my @all_ages = $age_set->value();
+
+my @distinct_colors = $person_set->car_set->color_set->distinct;
+
+=cut
+
 # Currently, if a class has changed objects, the Set must do a get() for all
 # members and manually count them, which requires a query in this case.  In the
 # future this may not be nevessary
+my $bubba = URT::Person->create(name => 'Bubba', is_cool => 0, age => 25);
+ok($bubba, 'Create a new not-cool person');
+$query_count = 0;
+is($person_set->count, 3, 'still, 3 people are cool');
 is($query_count, 1, 'Made one query');  
+
+# Test set-relaying.
+note("set relaying is not sufficiently lazy yet");
+my $car_set = $person_set->car_set;
+ok($car_set, "got a set of cars for the person set: object set -> value set");
+
+# If objects have modifications, all aggregates occur directly on objects in memory.
+my $p = URT::Person->get(11);
+ok($p->age($p->age+1), " changed the age of the youngest person to be +1 (26)");
+is($person_set->count, 3, "set membership count is still the same");
+is($person_set->min('age'), 26, "minimum age is now 26");
+is($person_set->max('age'), 45, "maximum age is still 45");
+is($person_set->sum('age'), 111, "the sum of all ages is now 111");
 
 my $jamesbond = URT::Person->create(name => 'James Bond', is_cool => 1, age => '35');
 ok($jamesbond, 'Create a new cool person');
 
 $query_count = 0;
-is($set->count, 4, 'now, 4 people are cool');
+is($person_set->count, 4, 'now, 4 people are cool');
 is($query_count, 0, 'Made no queries');
 
 $query_count = 0;
 ok($bubba->is_cool(1), 'Bubbba is now cool');
-is($set->count, 5, 'After making Bubba cool, 5 people are cool');
+is($person_set->count, 5, 'After making Bubba cool, 5 people are cool');
 is($query_count, 0, 'Made no queries');
 
 
 $query_count = 0;
 ok($jamesbond->delete, 'Delete James Bond');
-is($set->count, 4, 'Now 4 people are cool');
+is($person_set->count, 4, 'Now 4 people are cool');
 is($query_count, 0, 'Made no queries');
 
 

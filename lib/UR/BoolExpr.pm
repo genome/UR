@@ -8,7 +8,7 @@ use Carp;
 
 our @CARP_NOT = ('UR::Context');
 
-our $VERSION = "0.30"; # UR $VERSION;;
+our $VERSION = "0.31"; # UR $VERSION;;
 
 # readable stringification
 use overload ('""' => '__display_name__');
@@ -473,7 +473,7 @@ sub resolve {
         $key = $keys[$kn++];
         if (substr($key,0,1) eq '-') {
             $cn++;
-            next;
+            redo;
         }
         else {
             $vn++;
