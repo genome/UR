@@ -10,14 +10,10 @@ UR::Object::Type->define(
     is => ['UR::BoolExpr::Template::PropertyComparison'],
 );
 
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-    my $value = shift;
+sub _compare {
+    my ($self, $value, @property_value) = @_;
     my $lower_bound = $value->[0];
     my $upper_bound = $value->[1];
-    my $property_name = $self->property_name;    
-    my @property_value = $subject->$property_name;
 
     my $cv_is_number = Scalar::Util::looks_like_number($lower_bound)
                        and

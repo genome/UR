@@ -11,24 +11,16 @@ UR::Object::Type->define(
     is => ['UR::BoolExpr::Template::PropertyComparison'],
 );
 
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-    my $comparison_value = shift;    
-
+sub _compare {
+    my ($class,$comparison_value,@property_value) = @_;
     return '' unless defined ($comparison_value);  # property like NULL should always be false
-
-    my $escape = shift;    
-
-    my $regex = $self->
+    my $escape = '\\';    
+    my $regex = $class->
         comparison_value_and_escape_character_to_regex(
             $comparison_value,
             $escape
         );
-    my $property_name = $self->property_name;    
-
     no warnings 'uninitialized';
-    my @property_value = $subject->$property_name;
     foreach my $value ( @property_value ) {
         return 1 if $value =~ $regex;
     }

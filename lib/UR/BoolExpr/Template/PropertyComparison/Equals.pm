@@ -1,6 +1,4 @@
-
 package UR::BoolExpr::Template::PropertyComparison::Equals;
-
 use strict;
 use warnings;
 use UR;
@@ -11,38 +9,18 @@ UR::Object::Type->define(
     is => ['UR::BoolExpr::Template::PropertyComparison'],
 );
 
-sub _subject_property_values {
-    my ($self, $subject) = @_;
-    my $property_name = $self->property_name;    
-    my @property_values;
-    if (index($property_name,'.') == -1) {
-        @property_values = $subject->$property_name; 
-    }
-    else {
-        my @links = split(/\./,$property_name);
-        @property_values = ($subject);
-        for my $link (@links) {
-            @property_values = map { defined($_) ? $_->$link : undef } @property_values;
-        }
-    }
-    return @property_values;
-}
-
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-    my $comparison_value = shift;    
-    my @property_value = $self->_subject_property_values($subject);
+sub _compare {
+    my ($class,$comparison_value,@property_values) = @_;
     
     no warnings 'uninitialized';
-    if (@property_value == 0) {
+    if (@property_values == 0) {
         return ($comparison_value eq '' ? 1 : '');
     }
 
     no warnings 'numeric';
     my $cv_is_number = Scalar::Util::looks_like_number($comparison_value);
 
-    foreach my $property_value ( @property_value ) {
+    foreach my $property_value ( @property_values ) {
         my $pv_is_number = Scalar::Util::looks_like_number($property_value);
         if ($pv_is_number and $cv_is_number) {
             return 1 if $property_value == $comparison_value;

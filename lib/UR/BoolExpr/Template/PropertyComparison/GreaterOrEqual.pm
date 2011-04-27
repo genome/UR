@@ -11,13 +11,8 @@ UR::Object::Type->define(
     is => ['UR::BoolExpr::Template::PropertyComparison'],
 );
 
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-    my $comparison_value = shift;    
-    my $property_name = $self->property_name;    
-    my @property_value = $subject->$property_name;
-
+sub _compare {
+    my ($class,$comparison_value,@property_value) = @_;
     my $cv_is_number = Scalar::Util::looks_like_number($comparison_value);
 
     no warnings qw(numeric uninitialized);

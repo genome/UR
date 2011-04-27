@@ -1,6 +1,4 @@
-
 package UR::BoolExpr::Template::PropertyComparison::False;
-
 use strict;
 use warnings;
 use UR;
@@ -11,15 +9,8 @@ UR::Object::Type->define(
     is => ['UR::BoolExpr::Template::PropertyComparison'],
 );
 
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-
-    my $property_name = $self->property_name;
-    my @property_value = eval { $subject->$property_name; };
-    if ($@) {
-        $DB::single = 1;
-    }
+sub _compare {
+    my ($class,$comparison_value,@property_value) = @_;
     no warnings;
     if (@property_value == 0) {
         return 1;
