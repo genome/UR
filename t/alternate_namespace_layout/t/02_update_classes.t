@@ -36,6 +36,8 @@ use lib $tempdir.'/more_classes';
 
 use URTAlternate;
 
+UR::DBI->no_commit(0);   # UR's test harness defaults to no_commit = 1
+
 my $cmd = UR::Namespace::Command::Update::ClassesFromDb->create(namespace_name => 'URTAlternate');
 ok($cmd, 'Create update classes command');
 
@@ -72,19 +74,25 @@ ok($dbh->do('CREATE TABLE employee (employee_id integer NOT NULL PRIMARY KEY REF
 ok($dbh->do('ALTER TABLE car ADD COLUMN owner_id integer REFERENCES person(person_id)'),
     'Add owner_id column to car table');
 ok($dbh->commit, 'commit table changes');
+
+# SQLite seems to have an issue where "PRAGMA foreign_key_list()" doesn't return
+# the newly added foreign key info from the ALTER TABLE car.  Workaround is to disconnect
+# and re-connect
 URTAlternate::DataSource::TheDB->disconnect_default_handle();
-
-
-
-
 $dbh = URTAlternate::DataSource::TheDB->get_default_handle();
+
+
 my $sth = $dbh->prepare("PRAGMA foreign_key_list(car)");
 $sth->execute();
 my $data = $sth->fetchall_arrayref();
 
 
-$cmd = UR::Namespace::Command::Update::ClassesFromDb->create(namespace_name => 'URTAlternate');
+$cmd = UR::Namespace::Command::Update::ClassesFromDb->create(namespace_name => 'URTAlternate',
+                                                             _override_no_commit_for_filesystem_items => 1);
 ok($cmd, 'Create update classes command after adding table');
+$cmd->dump_status_messages(1);
+$cmd->dump_warning_messages(1);
+$cmd->dump_error_messages(1);
 
 ok($cmd->execute(), 'execute update classes after changes');
 
@@ -106,7 +114,7 @@ foreach my $class_props ( [ 'URTAlternate::Person'   => ['person_id', 'name'] ],
     my %expected_properties = map { $_ => 1 } @$expected_properties;
     my %got_properties = map { $_->property_name => 1 } UR::Object::Property->get(class_name => $class_name);
     foreach my $property ( keys %expected_properties ) {
-        ok(delete $got_properties{$property}, "Found property $property");
+        ok(delete $got_properties{$property}, "Found property $property for class $class_name");
     }
     ok(!scalar(keys %got_properties), 'no extra properties');
     if (keys %got_properties) {
