@@ -68,7 +68,7 @@ sub _initialize_for_current_process {
         $UR::Context::base = $UR::Context::root;
     }
 
-    $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base);
+    $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base->id);
 
     if (exists $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || exists $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'}) {
         $UR::Context::destroy_should_clean_up_all_objects_loaded = 1;
@@ -2561,7 +2561,7 @@ sub _create_import_iterator_for_underlying_context {
                 $obj->{'__get_serial'} = $this_get_serial;
             }
 
-            if ($this_object_was_already_cached and not $group_by) {
+            if ($this_object_was_already_cached) {
                 # Don't return objects that already exist in the current context
                 # FIXME - when we can stack contexts in the same application, and the 
                 # loaded context is recorded on the object, use that context as the
@@ -3015,14 +3015,23 @@ sub _get_objects_for_class_and_rule_from_cache {
             my %params = $rule->params_list;
             my $should_evaluate_later;
             for my $key (keys %params) {
-                delete $params{$key} if substr($key,0,1) eq '-' or substr($key,0,1) eq '_';
-                my $prop_meta = $class_meta->property_meta_for_name($key);
-                if ($prop_meta && $prop_meta->is_many) {
-                    # These indexes perform poorly in the general case if we try to index
-                    # the is_many properties.  Instead, strip them out from the basic param
-                    # list, and evaluate the superset of indexed objects through the rule
+                if (substr($key,0,1) eq '-' or substr($key,0,1) eq '_') {
+                    delete $params{$key};
+                }
+                elsif ($key =~ /^\w*\./) {
+                    # a chain of properties
                     $should_evaluate_later = 1;
                     delete $params{$key};
+                }
+                else { 
+                    my $prop_meta = $class_meta->property_meta_for_name($key);
+                    if ($prop_meta && $prop_meta->is_many) {
+                        # These indexes perform poorly in the general case if we try to index
+                        # the is_many properties.  Instead, strip them out from the basic param
+                        # list, and evaluate the superset of indexed objects through the rule
+                        $should_evaluate_later = 1;
+                        delete $params{$key};
+                    }
                 }
             }
             

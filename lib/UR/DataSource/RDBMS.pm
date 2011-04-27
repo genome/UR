@@ -3211,9 +3211,16 @@ sub _generate_template_data_for_loading {
         @delegated_properties,    
         %outer_joins,
         %filters_to_satisfy,
+        %chain_delegates,
     );
 
     %filters_to_satisfy = %filters;
+
+    for my $key (keys %filters_to_satisfy) {
+        if (index($key,'.') != -1) {
+            $chain_delegates{$key} = delete $filters_to_satisfy{$key};
+        }
+    }
 
     for my $co ( $class_meta, @parent_class_objects ) {
         my $type_name  = $co->type_name;
@@ -3255,7 +3262,6 @@ sub _generate_template_data_for_loading {
                                       ($order_by ? @$order_by : ()),
                                       ($group_by ? @$group_by : ());
         my @properties_to_query = sort keys(%properties_to_query);
-
 
         while (my $property_name = shift @properties_to_query) {
             my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);
@@ -3346,29 +3352,53 @@ sub _generate_template_data_for_loading {
     # It would better encapsulate what's going on and avoid bugs with complicated
     # get()s
     DELEGATED_PROPERTY:
-    for my $delegated_property (@delegated_properties) {
+    for my $delegated_property (@delegated_properties, keys %chain_delegates) {
         my $alias_for_property_value;
+        
+        my $property_name;
+        my $relationship_name;
+        my @joins;
+        my $is_optional;
+        my $delegate_class_meta;
+        my $via_accessor_meta;
+        my $final_accessor;
+        my $final_accessor_class_meta;
 
-        my $property_name = $delegated_property->property_name;
-        my @joins = $delegated_property->_get_joins;
-        my $relationship_name = $delegated_property->via;
-        unless ($relationship_name) {
-            $relationship_name = $property_name;
-            $needs_further_boolexpr_evaluation_after_loading = 1;
+        if (ref($delegated_property)) {
+            $property_name = $delegated_property->property_name;
+            @joins = $delegated_property->_get_joins;
+            $relationship_name = $delegated_property->via;
+            $is_optional = $delegated_property->is_optional or $delegated_property->is_many;
+            $delegate_class_meta = $delegated_property->class_meta;
+            $final_accessor = $delegated_property->to;
+            unless ($relationship_name) {
+                $relationship_name = $property_name;
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+            }
+            $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
+            $final_accessor_class_meta = $via_accessor_meta->data_type->__meta__;
+        }
+        else {
+            $DB::single = 1;
+            my @pmeta = $class_meta->property_meta_for_name($delegated_property);  
+            $is_optional = 0;
+            for my $pmeta (@pmeta) {
+                $property_name = $delegated_property;
+                push @joins, $pmeta->_get_joins();
+                $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
+            }
+            $relationship_name = $pmeta[0]->property_name;
+            $delegate_class_meta = $pmeta[0]->class_name->__meta__;
+            $via_accessor_meta = $pmeta[0];
+            $final_accessor = $pmeta[-1]->property_name;
+            $final_accessor_class_meta = $pmeta[-1]->class_name->__meta__;
         }
 
-        my $is_optional = $delegated_property->is_optional or $delegated_property->is_many;
-
-        my $delegate_class_meta = $delegated_property->class_meta;
-        my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
-        my $final_accessor = $delegated_property->to;
-        my $final_accessor_class_meta = $via_accessor_meta->data_type->__meta__;
 
         # Follow all the via/to indirectedness to where the data ultimately comes from
         if ($final_accessor) { # id_by or reverse_as object accessors may not have a 'to'
             my $final_accessor_meta = $final_accessor_class_meta->property_meta_for_name($final_accessor);
             if ($final_accessor_meta) {
-
                 if ($final_accessor_meta->id eq "UR::Object\tid") {
                     # This is the generic 'id' property that won't be in the database.  See if the class 
                     # has a single, alternate ID property we can swap in here
@@ -3669,7 +3699,7 @@ sub _generate_template_data_for_loading {
             } # next join for this object
         } # next object join
 
-        unless ($delegated_property->via) {
+        if (ref($delegated_property) and !$delegated_property->via) {
             next;
         }
 
