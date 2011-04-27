@@ -1,5 +1,4 @@
 package UR::Value::Set;
-
 use strict;
 use warnings;
 require UR;

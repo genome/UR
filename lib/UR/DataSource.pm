@@ -276,8 +276,14 @@ sub _generate_template_data_for_loading {
         $pk_used,
         @delegated_properties,    
         %outer_joins,
+        %chain_delegates,
     );
 
+    for my $key (keys %filters) {
+        if (index($key,'.') != -1) {
+            $chain_delegates{$key} = delete $filters{$key};
+        }
+    }
     for my $co ( $class_meta, @parent_class_objects ) {
 #        my $table_name = $co->table_name;
 #        next unless $table_name;

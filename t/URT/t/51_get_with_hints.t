@@ -18,7 +18,7 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
                                    method => 'query',
                                    callback => sub { $query_count++ }),
     'Created subscription to count queries');
-
+$DB::single = 1;
 $query_count = 0;
 my $thing = URT::Thing->get(name => 'Bob', -hints => [ 'attribs' ]);
 ok($thing, 'get() returned an object');

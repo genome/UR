@@ -1,15 +1,12 @@
-package UR::Value::Integer;
-
-
+package UR::Value::Timestamp;
 use strict;
 use warnings;
-
 require UR;
 our $VERSION = "0.31"; # UR $VERSION;
 
 UR::Object::Type->define(
-    class_name => 'UR::Value::Integer',
-    is => ['UR::Value::Number'],
+    class_name => 'UR::Value::Timestamp',
+    is => ['UR::Value::DateTime'],
 );
 
 1;
