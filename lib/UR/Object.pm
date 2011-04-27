@@ -28,6 +28,7 @@ sub delete {
     $UR::Context::current->delete_entity(@_);
 }
 
+
 # Meta API
 
 sub __context__ {
@@ -57,6 +58,28 @@ sub __meta__  {
 # to include the object as function args to calculated properties
 sub __self__ {
     return $_[0];
+}
+
+sub __get_attr__ {
+    my ($self, $property_name) = @_;
+    my @property_values;
+    if (index($property_name,'.') == -1) {
+        @property_values = $self->$property_name; 
+    }
+    else {
+        my @links = split(/\./,$property_name);
+        @property_values = ($self);
+        for my $link (@links) {
+            @property_values = map { defined($_) ? $_->$link : undef } @property_values;
+        }
+    }
+    return if not defined wantarray;
+    return @property_values if wantarray;
+    if (@property_values > 1) {
+        my $class_name = $self->__meta__->class_name; 
+        Carp::confess("Multiple values returned for $class_name $property_name in scalar context!");
+    }         
+    return $property_values[0];
 }
 
 sub __label_name__ {
@@ -146,7 +169,7 @@ sub __errors__ {
 
         # Check data type
         # TODO: delegate to the data type module for this
-        my $generic_data_type = $property_metadata->generic_data_type || "";
+        my $generic_data_type = $property_metadata->data_type || "";
         my $data_length       = $property_metadata->data_length;
 
         if ($generic_data_type eq 'Float') {
@@ -179,6 +202,10 @@ sub __errors__ {
         }
         elsif ($generic_data_type eq 'Integer') {
             $value =~ s/\s//g;
+            if ($value =~ /\D/) {
+                $DB::single = 1;
+                print "$self $property_name @values\n";
+            }
             $value = $value + 0;
             if ($value !~ /^(\+|\-)?[0-9]*$/)
             {
