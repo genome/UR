@@ -47,15 +47,9 @@ sub num_values {
 }
 
 sub evaluate_subject_and_values {
-    $DB::single = 1;
-    my $self = shift;
-    my $subject = shift;
-    Carp::confess(
-        "Failed to implement evaluate_subject_and_values() for '"
-        . $self->comparison_operator
-        . "' !\n"
-        . "Add the method to ". $self->class . ".\n"        
-    );
+    my ($self,$subject,$comparison_value) = @_;
+    my @property_values = $subject->__get_attr__($self->property_name);
+    return $self->_compare($comparison_value, @property_values);
 }
 
 our %subclass_suffix_for_builtin_symbolic_operator = (

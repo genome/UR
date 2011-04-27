@@ -11,13 +11,8 @@ UR::Object::Type->define(
     is => ['UR::BoolExpr::Template::PropertyComparison'],
 );
 
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-    my $comparison_value = shift;    
-    my $property_name = $self->property_name;    
-    my @property_value = $subject->$property_name;
-
+sub _compare {
+    my ($class,$comparison_value,@property_value) = @_;
     no warnings 'uninitialized';
     foreach my $property_value ( @property_value ) {
         return 1 if ( $property_value =~ m/$comparison_value/ );
