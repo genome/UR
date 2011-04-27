@@ -2561,7 +2561,7 @@ sub _create_import_iterator_for_underlying_context {
                 $obj->{'__get_serial'} = $this_get_serial;
             }
 
-            if ($this_object_was_already_cached) {
+            if ($this_object_was_already_cached and not $group_by) {
                 # Don't return objects that already exist in the current context
                 # FIXME - when we can stack contexts in the same application, and the 
                 # loaded context is recorded on the object, use that context as the
