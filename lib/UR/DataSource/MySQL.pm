@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::MySQL',
@@ -22,7 +22,7 @@ sub driver { "mysql" }
 #    return $self->_database_file_path;
 #}
 
-sub owner { uc(shift->_singleton_object->login) }
+sub owner { shift->_singleton_object->login }
 
 #sub login {
 #    undef
@@ -41,11 +41,6 @@ sub _init_created_dbh
 {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
-
-    my ($name, $value) = $dbh->selectrow_array("SHOW VARIABLES LIKE 'lower_case_table_names'");
-    unless ($value == 1) {
-        $self->warning_message("UR requires the mysqld server variable lower_case_table_names be set to 1 for case-insensitive table names in queries.  The current value is '$value'");
-    }
 
     $dbh->{LongTruncOk} = 0;
     return $dbh;

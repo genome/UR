@@ -3,7 +3,7 @@ package UR::Object::View::Default::Xsl;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 use IO::File;
 
 use XML::LibXML;
@@ -117,7 +117,7 @@ sub _generate_content {
     my $label_name = $self->subject->__label_name__;
 
     my $set_var = sub {
-        my $e = $doc->createElementNS($xslns, 'variable');
+        my $e = $doc->createElementNS($xslns, 'param');
         $e->setAttribute('name', $_[0]);
         $e->appendChild( $doc->createTextNode( $_[1] ) );
         $ss->appendChild($e)

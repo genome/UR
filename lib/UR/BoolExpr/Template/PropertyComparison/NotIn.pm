@@ -4,7 +4,7 @@ package UR::BoolExpr::Template::PropertyComparison::NotIn;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
@@ -12,12 +12,8 @@ UR::Object::Type->define(
     doc => "Returns false if any of the property's values appears in the comparison value list",
 );
 
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-    my $comparison_values = shift;    
-    my $property_name = $self->property_name;    
-    my @property_values = $subject->$property_name;
+sub _compare {
+    my ($class,$comparison_values,@property_values) = @_;
 
     if (@property_values == 1 and ref($property_values[0]) eq 'ARRAY') {
         @property_values = @{$property_values[0]};

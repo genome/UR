@@ -5,7 +5,7 @@ package UR::Object::Type; # hold methods for the class which cover Module Read/W
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 our %meta_classes;
 our $bootstrapping = 1;
@@ -150,6 +150,8 @@ sub resolve_class_description_perl {
     }
 
     my %sections_seen;
+    my $data_source_id = $self->data_source_id;
+    my ($data_source) = ($data_source_id ? UR::DataSource->get($data_source_id) : undef);
     foreach my $section ( ( 'id_by', 'has', 'has_many', 'has_optional', keys(%properties_by_section) ) ) {
         next unless ($properties_by_section{$section});
         next if ($sections_seen{$section});
@@ -181,6 +183,7 @@ sub resolve_class_description_perl {
                                         $property_meta,
                                         has_table => $has_table,
                                         section => $section,
+                                        data_source => $data_source,
                                         attributes_have => \@property_meta_property_names);
 
             foreach ( @fields ) {
@@ -302,7 +305,14 @@ sub _get_display_fields_for_property {
             die("no column for property on class with table: " . $property->property_name .
                 " class: " . $self->class_name . "?");
         }
-        if (uc($property->column_name) ne uc($property->property_name)) {
+        if ( ( $params{'data_source'}
+                and $params{'data_source'}->table_and_column_names_are_upper_case
+                and $property->column_name ne uc($property->property_name)
+             )
+             or
+             ( $property->column_name ne $property->property_name)
+        ) {
+            # If the column name doesn't match the property name, write it out
             push @fields,  "column_name => '" . $property->column_name . "'";
         }
         $seen{'column_name'} = 1;

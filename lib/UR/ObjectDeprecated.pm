@@ -5,7 +5,7 @@ package UR::Object;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 use Data::Dumper;
 use Scalar::Util qw(blessed);
@@ -227,14 +227,14 @@ sub create_subscription  {
     }
 
     if (my @unknown = keys %params) {
-        die "Unknown options @unknown passed to create_subscription!";
+        Carp::croak "Unknown options @unknown passed to create_subscription!";
     }
 
     # print STDOUT "Caught subscription class $class id $id property $property callback $callback $note\n";
 
     # validate
     if (my @bad_params = %params) {
-        die "Bad params passed to add_listener: @bad_params";
+        Carp::croak "Bad params passed to add_listener: @bad_params";
     }
 
     # Allow the class to know that it is getting a subscription.
@@ -243,7 +243,7 @@ sub create_subscription  {
     unless($class->validate_subscription($method,$id,$callback)) {
         $DB::single = 1;
         $class->validate_subscription($method,$id,$callback);
-        Carp::confess("Failed to validate requested subscription: @_\n");
+        Carp::croak("Failed to validate requested subscription: @_\n");
         return 0; # If/when the above is removed.
     }
 

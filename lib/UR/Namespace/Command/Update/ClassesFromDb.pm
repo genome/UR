@@ -4,7 +4,7 @@ package UR::Namespace::Command::Update::ClassesFromDb;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 use Text::Diff;
 
 UR::Object::Type->define(
@@ -440,7 +440,7 @@ sub _update_database_metadata_objects_for_schema_changes {
 
     # from the database now
     my @current_table_names = $data_source->_get_table_names_from_data_dictionary();
-    my %current_table_names = map { s/"|'//g; uc($_) => $_ } @current_table_names;
+    my %current_table_names = map { s/"|'//g; $_ => $_ } @current_table_names;
 
     my %all_table_names = (%current_table_names, %previous_table_names);
 
@@ -826,7 +826,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     #
     # TABLE
     for my $table (sort $sorter @{ $dd_changes_by_class{"UR::DataSource::RDBMS::Table"} }) {
-        my $table_name = uc $table->table_name;
+        my $table_name = $table->table_name;
         my $data_source = $table->data_source;
 
         my $class = $self->_get_class_meta_for_table_name(data_source => $data_source,
@@ -971,9 +971,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
         my $class_name = $class->class_name;
         my $property;
-        $column_name = uc($column_name);
         foreach my $prop_object ( $class->direct_property_metas ) {
-            if (uc($prop_object->column_name) eq $column_name) {
+            if ($prop_object->column_name eq $column_name) {
                 $property = $prop_object;
                 last;
             }
@@ -1121,7 +1120,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my %pk_cols;
         for my $pos (1 .. @pk_cols) {
             my $pk_col = $pk_cols[$pos-1];
-            my ($property) = grep { defined($_->column_name) and (uc($_->column_name) eq uc($pk_col)) } @properties;
+            my ($property) = grep { defined($_->column_name) and ($_->column_name eq $pk_col) } @properties;
             
             unless ($property) {
                 # the column has been removed

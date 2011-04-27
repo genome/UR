@@ -2,7 +2,7 @@ package UR::BoolExpr::Template::And;
 
 use warnings;
 use strict;
-our $VERSION = "0.30"; # UR $VERSION;;
+our $VERSION = "0.31"; # UR $VERSION;;
 
 require UR;
 
@@ -14,7 +14,13 @@ UR::Object::Type->define(
 sub _variable_value_count {
     my $self = shift;
     my $k = $self->_underlying_keys;
-    my $v = $self->_constant_values || 0;
+    my $v = $self->_constant_values;
+    if ($v) {
+        $v = scalar(@$v);
+    }
+    else {
+        $v = 0;
+    }
     return $k-$v;
 }
 
@@ -41,9 +47,12 @@ sub get_underlying_rule_templates {
 
 sub specifies_value_for {
     my ($self, $property_name) = @_;
-    Carp::confess() if not defined $property_name;
-    my @underlying_templates = $self->get_underlying_rule_templates();        
-    return grep { $property_name eq $_->property_name } @underlying_templates;
+    Carp::confess('Missing required parameter property_name for specifies_value_for()') if not defined $property_name;
+    my @underlying_templates = $self->get_underlying_rule_templates();
+    foreach ( @underlying_templates ) {
+        return 1 if $property_name eq $_->property_name;
+    }
+    return;
 }
 
 sub evaluate_subject_and_values {
@@ -73,7 +82,7 @@ sub params_list_for_values {
     my @values_sorted = @_;
     
     my @keys_sorted = $rule_template->_underlying_keys;
-    my @constant_values_sorted = $rule_template->_constant_values;
+    my $constant_values = $rule_template->_constant_values;
     
     my @params;
     my ($v,$c) = (0,0);
@@ -84,12 +93,12 @@ sub params_list_for_values {
         #}
         #elsif (substr($key,0,1) eq '-') {
         if (substr($key,0,1) eq '-') {
-            my $value = $constant_values_sorted[$c];
+            my $value = $constant_values->[$c];
             push @params, $key, $value;        
             $c++;
         }
         else {
-            my ($property, $op) = ($key =~ /^(\-*\w+)\s*(.*)$/);        
+            my ($property, $op) = ($key =~ /^(\-*[\w\.]+)\s*(.*)$/);        
             unless ($property) {
                 die "bad key $key in @keys_sorted";
             }

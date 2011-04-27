@@ -4,22 +4,15 @@ package UR::BoolExpr::Template::PropertyComparison::True;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
     is => ['UR::BoolExpr::Template::PropertyComparison'],
 );
 
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-
-    my $property_name = $self->property_name;
-    my @property_value = eval { $subject->$property_name; };
-    if ($@) {
-        $DB::single = 1;
-    }
+sub _compare {
+    my ($class,$comparison_value,@property_value) = @_;
     no warnings;
     if (@property_value == 0) {
         return '';

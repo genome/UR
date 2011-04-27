@@ -8,7 +8,7 @@ use Carp;
 
 our @CARP_NOT = ('UR::Context');
 
-our $VERSION = "0.30"; # UR $VERSION;;
+our $VERSION = "0.31"; # UR $VERSION;;
 
 # readable stringification
 use overload ('""' => '__display_name__');
@@ -59,7 +59,7 @@ sub template {
 # this is used in stringification overload
 sub __display_name__ {
     my $self = shift;
-    my %b = $self->params_list;
+    my %b = $self->_params_list;
     my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Dump;
     $s =~ s/\n/ /gs;
     $s =~ s/^\s*{//; 
@@ -473,7 +473,7 @@ sub resolve {
         $key = $keys[$kn++];
         if (substr($key,0,1) eq '-') {
             $cn++;
-            next;
+            redo;
         }
         else {
             $vn++;
@@ -496,7 +496,7 @@ sub resolve {
         
         # account for the case where this parameter does
         # not match an actual property 
-        if (!exists $subject_class_props->{$property_name}) {
+        if (!exists $subject_class_props->{$property_name} and index($property_name,'.') == -1) {
             if (substr($property_name,0,1) eq '_') {
                 warn "ignoring $property_name in $subject_class bx construction!"
             }
@@ -602,6 +602,8 @@ sub resolve {
                 }
                 elsif ($value->can($property_name)) {
                     # TODO: stop suporting foo_id => $foo, since you can do foo=>$foo, and foo_id=>$foo->id  
+                    $DB::single = 1;
+                    # Carp::cluck("using $property_name => \$obj to get $property_name => \$obj->$property_name is deprecated...");
                     $value = $value->$property_name;
                 }
                 else {

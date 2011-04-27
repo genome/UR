@@ -4,19 +4,15 @@ package UR::BoolExpr::Template::PropertyComparison::LessOrEqual;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
     is => ['UR::BoolExpr::Template::PropertyComparison'],
 );
 
-sub evaluate_subject_and_values {
-    my $self = shift;
-    my $subject = shift;
-    my $comparison_value = shift;    
-    my $property_name = $self->property_name;    
-    my @property_value = $subject->$property_name;
+sub _compare {
+    my ($class,$comparison_value,@property_value) = @_;
 
     my $cv_is_number = Scalar::Util::looks_like_number($comparison_value);
 

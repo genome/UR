@@ -34,8 +34,8 @@ UR::Object::Type->define(
         thing_id => { is => 'Integer' },
     ],
     has_optional => [
-        value => { is => 'Integer', column_name => 'THING_NAME' },
-        color => { is => 'String', column_name => 'THING_COLOR' },
+        value => { is => 'Integer', column_name => 'thing_name' },
+        color => { is => 'String', column_name => 'thing_color' },
     ],
     data_source => 'URT::DataSource::SomeFile',
     table_name => 'things',

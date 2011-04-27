@@ -68,7 +68,7 @@ sub _initialize_for_current_process {
         $UR::Context::base = $UR::Context::root;
     }
 
-    $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base);
+    $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base->id);
 
     if (exists $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || exists $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'}) {
         $UR::Context::destroy_should_clean_up_all_objects_loaded = 1;
@@ -2213,8 +2213,11 @@ sub _create_import_iterator_for_underlying_context {
     my ($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
     my $class_name = $template_data->{class_name};
 
-    my $group_by = $rule_template->group_by;
-    my $order_by = $rule_template->order_by;
+    my $group_by    = $rule_template->group_by;
+    my $order_by    = $rule_template->order_by;
+    my $aggregate   = $rule_template->aggregate;
+    my $limit       = $rule_template->limit;
+    my $page        = $rule_template->page;
 
     if (my $sub_typing_property) {
         # When the rule has a property specified which indicates a specific sub-type, catch this and re-call
@@ -2303,9 +2306,9 @@ sub _create_import_iterator_for_underlying_context {
         }
         
         my @non_aggregate_properties = @$group_by;
-        my @aggregate_properties = ('count'); # TODO: make non-hard-coded
+        my @aggregate_properties = ($aggregate ? @$aggregate : ());
+        unshift(@aggregate_properties, 'count') unless (grep { $_ eq 'count' } @aggregate_properties);
         my $division_point = $#non_aggregate_properties;
-    
         my $template = UR::BoolExpr::Template->get_by_subject_class_name_logic_type_and_logic_detail(
             $class_name,
             'And',
@@ -3012,14 +3015,23 @@ sub _get_objects_for_class_and_rule_from_cache {
             my %params = $rule->params_list;
             my $should_evaluate_later;
             for my $key (keys %params) {
-                delete $params{$key} if substr($key,0,1) eq '-' or substr($key,0,1) eq '_';
-                my $prop_meta = $class_meta->property_meta_for_name($key);
-                if ($prop_meta && $prop_meta->is_many) {
-                    # These indexes perform poorly in the general case if we try to index
-                    # the is_many properties.  Instead, strip them out from the basic param
-                    # list, and evaluate the superset of indexed objects through the rule
+                if (substr($key,0,1) eq '-' or substr($key,0,1) eq '_') {
+                    delete $params{$key};
+                }
+                elsif ($key =~ /^\w*\./) {
+                    # a chain of properties
                     $should_evaluate_later = 1;
                     delete $params{$key};
+                }
+                else { 
+                    my $prop_meta = $class_meta->property_meta_for_name($key);
+                    if ($prop_meta && $prop_meta->is_many) {
+                        # These indexes perform poorly in the general case if we try to index
+                        # the is_many properties.  Instead, strip them out from the basic param
+                        # list, and evaluate the superset of indexed objects through the rule
+                        $should_evaluate_later = 1;
+                        delete $params{$key};
+                    }
                 }
             }
             

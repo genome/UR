@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::Pg',
@@ -22,7 +22,7 @@ sub driver { "Pg" }
 #    return $self->_database_file_path;
 #}
 
-sub owner { uc(shift->_singleton_object->login) }
+sub owner { shift->_singleton_object->login }
 
 #sub login {
 #    undef

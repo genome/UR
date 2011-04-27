@@ -358,12 +358,12 @@ sub _resolve_fk_name {
     $col_str =~ s/^\s+|\s+$//g;  # Remove leading and trailing whitespace
     $col_str =~ s/\s{2,}/ /g;    # Remove multiple spaces
     if ($col_str =~ m/^CREATE TABLE (\w+)\s*?\((.*?)\)$/is) {
-        unless (uc($1) eq uc($table_name)) {
-            Carp::confess("SQL for $table_name is inconsistent");
+        unless ($1 eq $table_name) {
+            Carp::croak("Table creation SQL for $table_name is inconsistent.  Didn't find table name '$table_name' in string '$col_str'.  Found $1 instead.");
         }
         $col_str = $2;
     } else {
-        Carp::confess("Couldn't parse SQL for $table_name");
+        Carp::croak("Couldn't parse SQL for $table_name");
     }
 
 
@@ -435,11 +435,6 @@ sub get_foreign_key_details_from_data_dictionary {
 my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
 
     my $dbh = $self->get_default_handle();
-
-    # So we're all on the same page...
-    # FIXME - looks like 'ur update classes' standarized on upper case :(
-    $fk_table = lc($fk_table) if (defined $fk_table);
-    $pk_table = lc($pk_table) if (defined $pk_table);
 
     # first, build a data structure to collect columns of the same foreign key together
     my %fk_info;
@@ -585,7 +580,7 @@ sub commit {
     return 1 unless $self->dump_on_commit or -e $dump_filename;
     
     # FIXME is there a way to do a dump from within DBI?    
-    chomp(my $sqlite3_in_path = !system("which sqlite3"));
+    chomp(my $sqlite3_in_path = !system("which sqlite3 > /dev/null"));
     if ($sqlite3_in_path) {
         my $retval = system("sqlite3 $db_filename .dump > $dump_filename; touch $db_filename");
         if ($retval == 0) {
@@ -617,13 +612,10 @@ sub _get_info_from_sqlite_master {
 
     my(@where, @exec_values);
     if ($name) {
-        # lower case both of them so we'll find 'em
-        $name = lc($name); 
-        push @where, 'lower(name) = ?';
+        push @where, 'name = ?';
         push @exec_values, $name;
     }
     if ($type) {
-        $type = lc($type);  # object types are always lower case
         push @where, 'type = ?';
         push @exec_values, $type;
     }

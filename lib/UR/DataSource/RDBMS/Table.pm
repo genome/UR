@@ -4,7 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::Table;
 
 use UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::Table',
     is => ['UR::DataSource::RDBMS::Entity'],
@@ -28,7 +28,8 @@ UR::Object::Type->define(
 );
 
 sub _related_class_name {
-my($self,$subject) = @_;
+    my($self,$subject) = @_;
+
     my $class = ref($self);  
     
     # FIXME  This seems kinda braindead, but is probably faster than using s///
@@ -60,7 +61,7 @@ sub _bitmap_index_class {
 }
 
 sub columns {
-my $self = shift;
+    my $self = shift;
 
     my $col_class = $self->_table_column_class;
     return $col_class->get(data_source => $self->data_source, table_name => $self->table_name);
@@ -71,7 +72,7 @@ sub column_names {
 }
 
 sub primary_key_constraint_columns {
-my $self = shift;
+    my $self = shift;
 
     my $pk_class = $self->_pk_constraint_class;
     my @pks = $pk_class->get(data_source => $self->data_source, table_name  => $self->table_name);
@@ -80,12 +81,12 @@ my $self = shift;
 
 
 sub primary_key_constraint_column_names {
-    return map { uc($_->column_name) } shift->primary_key_constraint_columns;
+    return map { $_->column_name } shift->primary_key_constraint_columns;
 }
 
 
 sub fk_constraints {
-my $self = shift;
+    my $self = shift;
 
     my $fk_class = $self->_fk_constraint_class;
     my @fks = $fk_class->get(data_source => $self->data_source, table_name => $self->table_name, owner => $self->owner);
@@ -98,7 +99,7 @@ sub fk_constraint_names {
 
 
 sub ref_fk_constraints {
-my $self = shift;
+    my $self = shift;
 
     my $fk_class = $self->_fk_constraint_class;
     my @fks = $fk_class->get(data_source => $self->data_source, r_table_name => $self->table_name, r_owner => $self->owner);
@@ -111,7 +112,7 @@ sub ref_fk_constraint_names {
 
 
 sub unique_constraint_column_names {
-my($self,$constraint) = @_;
+    my($self,$constraint) = @_;
 
     my @c;
     if ($constraint) {
@@ -124,13 +125,15 @@ my($self,$constraint) = @_;
 }
 
 sub unique_constraint_names {
-my $self = shift;
+    my $self = shift;
+
     my %names = map { $_->constraint_name => 1 } $self->unique_constraints;
     return keys %names;
 }
 
 sub unique_constraints {
-my $self = shift;
+    my $self = shift;
+
     my $uc_class = $self->_unique_constraint_class;
     my @c = $uc_class->get( data_source => $self->data_source, table_name => $self->table_name, @_);
 
@@ -138,7 +141,7 @@ my $self = shift;
 }
 
 sub bitmap_indexes {
-my $self = shift;
+    my $self = shift;
 
     my $bi_class = $self->_bitmap_index_class;
     my @bi = $bi_class->get(data_source => $self->data_source, table_name => $self->table_name);
@@ -153,17 +156,19 @@ sub bitmap_index_names {
 # FIXME Due to a "bug" in getting class objects, you need to pass in namespace => 'name' as
 # arguments to get this to work.
 sub handler_class {
-my $self = shift;
+    my $self = shift;
+
     return UR::Object::Type->get(table_name => $self->table_name, @_);
 }
 
 sub handler_class_name {
     my $self = shift;
+
     return $self->handler_class(@_)->class_name;
 }
 
 sub delete {
-my $self = shift;
+    my $self = shift;
 
     my @deleteme = ( $self->fk_constraints,
                      $self->bitmap_indexes,

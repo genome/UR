@@ -6,7 +6,7 @@ use Scalar::Util;
 use File::Basename;
 
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS',
@@ -614,7 +614,7 @@ sub get_tables {
     return UR::DataSource::RDBMS::Table->get(data_source => $ds_id);
 }
 
-sub get_nullable_foreign_key_columns_for_table{
+sub get_nullable_foreign_key_columns_for_table {
     my $self = shift;
     my $table = shift;
 
@@ -643,15 +643,15 @@ sub get_nullable_foreign_key_columns_for_table{
     return @nullable_fk_columns;
 }
 
-sub get_non_primary_key_nullable_foreign_key_columns_for_table{
+sub get_non_primary_key_nullable_foreign_key_columns_for_table {
     my $self = shift;
     my $table = shift;
 
     my @nullable_fk_columns = $self->get_nullable_foreign_key_columns_for_table($table);
-    my %pk_columns = map {uc($_->column_name) => 1} $table->primary_key_constraint_columns;
+    my %pk_columns = map { $_->column_name => 1} $table->primary_key_constraint_columns;
     my @non_pk_nullable_fk_columns;
     for my $fk_column (@nullable_fk_columns){
-        push @non_pk_nullable_fk_columns, $fk_column unless grep { uc($fk_column) eq uc($_)} keys %pk_columns;
+        push @non_pk_nullable_fk_columns, $fk_column unless grep { $fk_column eq $_} keys %pk_columns;
     }
     return @non_pk_nullable_fk_columns;
 }
@@ -786,7 +786,7 @@ sub refresh_database_metadata_for_table_name {
 
     my $data_source = $self;
 
-    my $ur_table_name = uc($db_table_name);
+    my $ur_table_name = $db_table_name;
     my @column_objects;
     my @all_constraints;
 
@@ -874,7 +874,6 @@ sub refresh_database_metadata_for_table_name {
 
         #my $id = $table_name . '.' . $column_data->{COLUMN_NAME}
         $column_data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
-        $column_data->{'COLUMN_NAME'} = uc($column_data->{'COLUMN_NAME'});
 
         delete $columns_to_delete{$column_data->{'COLUMN_NAME'}};
 
@@ -915,7 +914,7 @@ sub refresh_database_metadata_for_table_name {
             # It's new, create it from scratch
 
             $column_obj = UR::DataSource::RDBMS::TableColumn->$creation_method(
-                column_name => uc($column_data->{COLUMN_NAME}),
+                column_name => $column_data->{COLUMN_NAME},
                 table_name  => $ur_table_name,
                 owner       => $table_object->{owner},
                 data_source => $table_object->{data_source},
@@ -950,10 +949,10 @@ sub refresh_database_metadata_for_table_name {
 
         my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($index->{'table_name'});
         my $column_object = UR::DataSource::RDBMS::TableColumn->is_loaded(
-            table_name  => uc($ds_table),
-            owner       => uc($ds_owner),
+            table_name  => $ds_table,
+            owner       => $ds_owner,
             data_source => $data_source_id,
-            column_name => uc($index->{'column_name'}),
+            column_name => $index->{'column_name'},
         );
     }
 
@@ -986,8 +985,6 @@ sub refresh_database_metadata_for_table_name {
 
             foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME ) ) {
                 next unless defined($data->{$_});
-                $data->{$_} = uc($data->{$_});
-
                 # Postgres puts quotes around things that look like keywords
                 $data->{$_} =~ s/"|'//g;
             }
@@ -1064,8 +1061,6 @@ sub refresh_database_metadata_for_table_name {
 
             foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME PKTABLE_SCHEM FKTABLE_SCHEM UK_TABLE_SCHEM FK_TABLE_SCHEM) ) {
                 next unless defined($data->{$_});
-                $data->{$_} = uc($data->{$_});
-
                 # Postgres puts quotes around things that look like keywords
                 $data->{$_} =~ s/"|'//g;
             }
@@ -1200,7 +1195,7 @@ sub refresh_database_metadata_for_table_name {
 
     # The above was moved into each data source's class
     if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($db_table_name)) {
-        my %uc = map { uc($_) => $uc->{$_} } keys(%$uc);  # make the constraint names upper-case
+        my %uc = %$uc;   # make a copy we can manipulate in case $uc is shared or read-only
 
         # check for redundant unique constraints
         # there may be both an index and a constraint
@@ -1266,7 +1261,6 @@ sub refresh_database_metadata_for_table_name {
                 );
 
             foreach my $col_name ( @{$uc{$uc_name}} ) {
-                $col_name = uc($col_name);
                 if ($constraint_objs{$col_name} ) {
                     delete $constraint_objs{$col_name};
                 } else {
@@ -1457,7 +1451,9 @@ sub _get_sequence_name_for_table_and_column {
 
     # The default is to take the column name (should be a primary key from a table) and
     # change the _ID at the end of the column name with _SEQ
-    $column_name =~ s/_ID/_SEQ/;
+    # if column_name is all uppercase, make the sequence name end in upper case _SEQ
+    my $replacement = $column_name eq uc($column_name) ? '_SEQ' : '_seq';
+    $column_name =~ s/_ID/$replacement/i;
     return $column_name;
 }
 
@@ -1753,11 +1749,7 @@ sub _resolve_ids_from_class_name_and_sql {
     my @id_fetch_set;
 
     while ($data = $sth->fetchrow_hashref()) {
-        # ensure everything is uppercased. this is totally a hack right now but it makes sql queries work again.
-        foreach my $key (keys %$data) {
-            $data->{uc($key)} = delete $data->{$key};
-        }
-        my @id_vals = map {$data->{uc($_)}} @id_columns;
+        my @id_vals = map { $data->{$_} } @id_columns;
         my $cid = $class_name->__meta__->resolve_composite_id_from_ordered_values(@id_vals);
         push @id_fetch_set, $cid;       
     }
@@ -2178,8 +2170,12 @@ sub _sync_database {
                 }
                 $adding{$cmd} = 1;
                 my $obj = $objs{$cmd->{id}};
+                my $class_meta = $obj->class->__meta__;
                 for my $rcol_set (@rcol_sets) {
-                    my $pid = $obj->class->__meta__->resolve_composite_id_from_ordered_values(map { $obj->$_ } @$rcol_set);
+                    my @ordered_values = map { $obj->$_ }
+                                         map { $class_meta->property_for_column($_) }
+                                         @$rcol_set;
+                    my $pid = $obj->class->__meta__->resolve_composite_id_from_ordered_values(@ordered_values);
                     if (defined $pid) {   # This recursive foreign key dep may have been optional
                         my $pcmd = delete $unsorted_cmds{$pid};
                         $add->($pcmd) if $pcmd;
@@ -2258,26 +2254,25 @@ sub _sync_database {
                 $table_objects_by_class_name{$class_name} = $tables;
             }
 
-            my @column_objects = 
-                map {
-                    my $column = $column_objects_by_class_and_column_name{$class_name}{$_};
-                    unless ($column) {
-                        print "looking at parent classes for $class_name\n";
-                        for my $ancestor_class_name ($class_object->ancestry_class_names) {
-                            $column = $column_objects_by_class_and_column_name{$ancestor_class_name}{$_};
-                            if ($column) {
-                                $column_objects_by_class_and_column_name{$class_name}{$_} = $column;
-                                last;
-                            }
+            my @column_objects;
+            foreach my $column_name ( @{ $cmd->{column_names} } ) {
+                my $column = $column_objects_by_class_and_column_name{$class_name}->{$column_name};
+                unless ($column) {
+                    #print "looking at parent classes for $class_name\n";
+                    FIND_IN_ANCESTRY:
+                    for my $ancestor_class_name ($class_object->ancestry_class_names) {
+                        $column = $column_objects_by_class_and_column_name{$ancestor_class_name}->{$column_name};
+                        if ($column) {
+                            $column_objects_by_class_and_column_name{$class_name}->{$column_name} = $column;
+                            last FIND_IN_ANCESTRY;
                         }
                         unless ($column) {
-                            #$DB::single = 1;
-                            die "Failed to find a column object column $_ for class $class_name";
+                            Carp::croak("Failed to find column metadata for column named '$column_name' for class $class_name");
                         }
                     }
-                    $column;
                 }
-                @{ $cmd->{column_names} };
+                push @column_objects, $column;
+            }
 
             # print "Column Types: @column_types\n";
 
@@ -2550,9 +2545,14 @@ sub _id_values_for_primary_key {
     foreach my $possible_class_obj ($object_to_save->__meta__->all_class_metas) {
         next unless ($possible_class_obj->table_name);
         my($class_owner,$class_table) = $self->_resolve_owner_and_table_from_table_name($possible_class_obj->table_name);
-        if ( lc($class_owner) eq lc($table_obj->owner)
+        # Some data sources can (used to?) have NULL owner/schema
+        $class_owner = '' unless defined($class_owner);
+        my $table_obj_owner = $table_obj->owner;
+        $table_obj_owner = '' unless defined ($table_obj_owner);
+
+        if ( $class_owner eq $table_obj_owner
              and
-             lc($class_table) eq lc($table_obj->table_name)
+             $class_table eq $table_obj->table_name
            ) {
 
             $class_obj = $possible_class_obj;
@@ -2564,7 +2564,7 @@ sub _id_values_for_primary_key {
     }
 
     my @pk_cols = $table_obj->primary_key_constraint_column_names;
-    my %pk_cols = map { uc($_) => 1 } @pk_cols;
+    my %pk_cols = map { $_ => 1 } @pk_cols;
     # this previously went to $object_to_save->__meta__, which is nearly the same thing but not quite
     my @values = $class_obj->resolve_ordered_values_from_composite_id($object_to_save->id);
     my @columns = $class_obj->direct_id_column_names;
@@ -2585,9 +2585,10 @@ sub _id_values_for_primary_key {
     my @bad_pk_cols = grep { ! exists($column_index{$_}) } @pk_cols;
     if (@bad_pk_cols) {
         my $table_name = $table_obj->table_name;
-        Carp::croak("Metadata for table $table_name is inconsistent.\n" .
-                    "Column(s) named " . join(',',@bad_pk_cols) . " appear as primary key constraint columns," .
-                    " but do not appear as column names.  Check the dd_pk_constraint_columns data in the MetaDB");
+        Carp::croak("Metadata for table $table_name is inconsistent with class ".$class_obj->class_name.".\n"
+                    . "Column(s) named " . join(',',@bad_pk_cols) . " appear as primary key constraint columns, "
+                    . "but do not appear as ID column names.  Check the dd_pk_constraint_columns data in the "
+                    . "MetaDB and the ID properties of the class definition");
     }
 
     my @id_values_in_pk_order = @values[@column_index{@pk_cols}];
@@ -2601,17 +2602,6 @@ sub _default_save_sql_for_object {
     my %params = @_;
 
     my ($class,$id) = ($object_to_save->class, $object_to_save->id);
-
-    # This was in some of the UR::Object::* meta-data stuff.
-    # Reason unknown.
-    #my $self = shift;
-    #my $class_obj = UR::Object::Type->get(type_name => $self->type_name);
-    #if ($class_obj and $class_obj->table_name) {
-    #    return $self->SUPER::default_save_sql(@_);
-    #}
-    #else {
-    #    return;
-    #}
 
     my $class_object = $object_to_save->__meta__;
 
@@ -2642,7 +2632,6 @@ sub _default_save_sql_for_object {
     # Handle each table.  There is usually only one, unless,
     # there is inheritance within the schema.
     my @save_table_names = 
-        map  { uc }
         grep { not /[^\w\.]/ } # remove any views from the list
         $class_object->all_table_names;
 
@@ -2804,7 +2793,7 @@ sub _default_save_sql_for_object {
             for my $property (keys %$changes_for_this_table)
             {
                 my $column_name = $class_object->column_for_property($property); 
-                Carp::confess("No column in table $table_name for property $property?") unless $column_name;
+                Carp::croak("No column in table $table_name for property $property?") unless $column_name;
                 push @changed_cols, $column_name;
                 push @values, $changes_for_this_table->{$property};
             }
@@ -2813,8 +2802,27 @@ sub _default_save_sql_for_object {
 
             if (@changed_cols)
             {
-                @values = ( (map { $object_to_save->$_ } @changed_cols) , $self->_id_values_for_primary_key($table,$object_to_save));
-                my $where = $self->_matching_where_clause($table, \@values);
+                my @changed_values = map { defined ($_) && $object_to_save->can($_)
+                                           ? $object_to_save->$_
+                                           : undef }
+                                     map { $class_object->property_for_column($_) || undef }
+                                     @changed_cols;
+
+                my @id_values = $self->_id_values_for_primary_key($table,$object_to_save);
+
+                if (scalar(@changed_cols) != scalar(@changed_values)) {
+                   no warnings 'uninitialized';
+                   my $mapping = join("\n", map { "  $_ => ".$class_object->property_for_column($_) } @changed_cols);
+                   Carp::croak("Column count mismatch while updating table $table_name_to_update.  "
+                               . "The table metadata expects to see ".scalar(@changed_cols)
+                               . " columns, but ".scalar(@values)." were retrieved from the object of type "
+                               . $object_to_save->class . ".\nCurrent column => property mapping:\n$mapping\n"
+                               . "There is probably a mismatch between the database column metadata and the column_name "
+                               . "property metadata");
+                }
+
+                my @all_values = ( @changed_values, @id_values );
+                my $where = $self->_matching_where_clause($table, \@all_values);
 
                 $sql = " UPDATE ";
                 $sql .= "${db_owner}." if ($db_owner);
@@ -2824,7 +2832,7 @@ sub _default_save_sql_for_object {
                                   table_name   => $table_name,
                                   column_names => \@changed_cols,
                                   sql          => $sql,
-                                  params       => \@values,
+                                  params       => \@all_values,
                                   class        => $table_class,
                                   id           => $id,
                                   dbh          => $data_source->get_default_dbh
@@ -2846,12 +2854,24 @@ sub _default_save_sql_for_object {
                     . join(',', split(//,'?' x scalar(@changed_cols))) . ")";
 
             @values = map { 
-                # when there is a column but no property, use NULL as the value
-                $object_to_save->can($_) 
-                ? $object_to_save->$_ 
-                : undef
-            } 
-            (@changed_cols);
+                           # when there is a column but no property, use NULL as the value
+                           defined($_) && $object_to_save->can($_)
+                           ? $object_to_save->$_
+                           : undef
+                       }
+                       map { $class_object->property_for_column($_) || undef }
+                      (@changed_cols);
+
+            if (scalar(@changed_cols) != scalar(@values)) {
+               no warnings 'uninitialized';
+               my $mapping = join("\n", map { "  $_ => ".$class_object->property_for_column($_) } @changed_cols);
+               Carp::croak("Column count mismatch while inserting into table $table_name_to_update.  "
+                           . "The table metadata expects to see ".scalar(@changed_cols)
+                           . " columns, but ".scalar(@values)." were retrieved from the object of type "
+                           . $object_to_save->class . ".\nCurrent column => property mapping:\n$mapping\n"
+                           . "There is probably a mismatch between the database column metadata and the column_name "
+                           . "property metadata");
+            }
 
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
             my @non_pk_nullable_fk_columns = $self->get_non_primary_key_nullable_foreign_key_columns_for_table($table);
@@ -2860,8 +2880,8 @@ sub _default_save_sql_for_object {
                 my @insert_values;
                 my %update_values;
                 for (my $i = 0; $i < @changed_cols; $i++){
-                    my $col = uc ($changed_cols[$i]);
-                    if (grep {$col eq uc($_)} @non_pk_nullable_fk_columns){
+                    my $col = $changed_cols[$i];
+                    if (grep {$col eq $_} @non_pk_nullable_fk_columns){
                         push @insert_values, undef;
                         $update_values{$col} = $values[$i];
                     }else{
@@ -3118,11 +3138,13 @@ sub _generate_template_data_for_loading {
     my $hints    = $rule_template->hints;
     my $order_by = $rule_template->order_by;
     my $group_by = $rule_template->group_by;
-    my $is_paged = $rule_template->is_paged;
+    my $page     = $rule_template->page;
+    my $limit    = $rule_template->limit;
+    my $aggregate = $rule_template->aggregate;
 
     my %group_by_property_names;
     if ($group_by) {
-        # we only pull back columns we're grouping by if there is grouping happening
+        # we only pull back columns we're grouping by or aggregating if there is grouping happening
         for my $name (@$group_by) {
             unless ($class_name->can($name)) {
                 Carp::croak("Cannot group by '$name': Class $class_name has no property/method by that name");
@@ -3205,9 +3227,16 @@ sub _generate_template_data_for_loading {
         @delegated_properties,    
         %outer_joins,
         %filters_to_satisfy,
+        %chain_delegates,
     );
 
     %filters_to_satisfy = %filters;
+
+    for my $key (keys %filters_to_satisfy) {
+        if (index($key,'.') != -1) {
+            $chain_delegates{$key} = delete $filters_to_satisfy{$key};
+        }
+    }
 
     for my $co ( $class_meta, @parent_class_objects ) {
         my $type_name  = $co->type_name;
@@ -3249,7 +3278,6 @@ sub _generate_template_data_for_loading {
                                       ($order_by ? @$order_by : ()),
                                       ($group_by ? @$group_by : ());
         my @properties_to_query = sort keys(%properties_to_query);
-
 
         while (my $property_name = shift @properties_to_query) {
             my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);
@@ -3340,46 +3368,68 @@ sub _generate_template_data_for_loading {
     # It would better encapsulate what's going on and avoid bugs with complicated
     # get()s
     DELEGATED_PROPERTY:
-    for my $delegated_property (@delegated_properties) {
+    for my $delegated_property (@delegated_properties, keys %chain_delegates) {
         my $alias_for_property_value;
+        
+        my $property_name;
+        my $relationship_name;
+        my @joins;
+        my $is_optional;
+        my $delegate_class_meta;
+        my $via_accessor_meta;
+        my $final_accessor;
+        my $final_accessor_class_meta;
 
-        my $property_name = $delegated_property->property_name;
-        my @joins = $delegated_property->_get_joins;
-        my $relationship_name = $delegated_property->via;
-        unless ($relationship_name) {
-            $relationship_name = $property_name;
-            $needs_further_boolexpr_evaluation_after_loading = 1;
+        if (ref($delegated_property)) {
+            $property_name = $delegated_property->property_name;
+            @joins = $delegated_property->_get_joins;
+            $relationship_name = $delegated_property->via;
+            $is_optional = $delegated_property->is_optional or $delegated_property->is_many;
+            $delegate_class_meta = $delegated_property->class_meta;
+            $final_accessor = $delegated_property->to;
+            unless ($relationship_name) {
+                $relationship_name = $property_name;
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+            }
+            $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
+            $final_accessor_class_meta = $via_accessor_meta->data_type->__meta__;
+        }
+        else {
+            $DB::single = 1;
+            my @pmeta = $class_meta->property_meta_for_name($delegated_property);  
+            $is_optional = 0;
+            for my $pmeta (@pmeta) {
+                $property_name = $delegated_property;
+                push @joins, $pmeta->_get_joins();
+                $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
+            }
+            $relationship_name = $pmeta[0]->property_name;
+            $delegate_class_meta = $pmeta[0]->class_name->__meta__;
+            $via_accessor_meta = $pmeta[0];
+            $final_accessor = $pmeta[-1]->property_name;
+            $final_accessor_class_meta = $pmeta[-1]->class_name->__meta__;
         }
 
-        my $is_optional = $delegated_property->is_optional or $delegated_property->is_many;
-
-        my $delegate_class_meta = $delegated_property->class_meta;
-        my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
-        my $final_accessor = $delegated_property->to;
-        my $final_accessor_class_meta = $via_accessor_meta->data_type->__meta__;
 
         # Follow all the via/to indirectedness to where the data ultimately comes from
-        if (my $final_accessor_meta = $final_accessor_class_meta->property_meta_for_name($final_accessor)) {
-
-            if ($final_accessor_meta->id eq "UR::Object\tid") {
-                # This is the generic 'id' property that won't be in the database.  See if the class 
-                # has a single, alternate ID property we can swap in here
-                my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
-                if (@id_properties == 1) {
-                    $final_accessor_meta = $id_properties[0];
-                    $final_accessor_class_meta = $final_accessor_meta->class_meta;
+        if ($final_accessor) { # id_by or reverse_as object accessors may not have a 'to'
+            my $final_accessor_meta = $final_accessor_class_meta->property_meta_for_name($final_accessor);
+            if ($final_accessor_meta) {
+                if ($final_accessor_meta->id eq "UR::Object\tid") {
+                    # This is the generic 'id' property that won't be in the database.  See if the class 
+                    # has a single, alternate ID property we can swap in here
+                    my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
+                    if (@id_properties == 1) {
+                        $final_accessor_meta = $id_properties[0];
+                        $final_accessor_class_meta = $final_accessor_meta->class_meta;
+                    }
                 }
-            }
-            while($final_accessor_meta && $final_accessor_meta->via) {
-                $final_accessor_meta = $final_accessor_meta->to_property_meta();
-            }
-            $final_accessor = $final_accessor_meta->property_name;
+                while($final_accessor_meta && $final_accessor_meta->via) {
+                    $final_accessor_meta = $final_accessor_meta->to_property_meta();
+                }
+                $final_accessor = $final_accessor_meta->property_name;
+           }
         }
-
-        #print "$property_name needs join "
-        #    . " via $relationship_name "
-        #    . " to $final_accessor"
-        #    . " using joins ";
 
         my $last_class_object_excluding_inherited_joins;
 
@@ -3621,7 +3671,9 @@ sub _generate_template_data_for_loading {
 
                 if ($joins_for_object == 1) {
                     #$last_alias_for_this_delegate = $alias;
-                    $last_class_object_excluding_inherited_joins = $last_class_object if ($last_class_object->property_meta_for_name($final_accessor));
+                    if ($final_accessor and $last_class_object->property_meta_for_name($final_accessor)) {
+                        $last_class_object_excluding_inherited_joins = $last_class_object;
+                    }
                     # on the first iteration, we figure out the remaining inherited iterations
                     # TODO: get this into the join logic itself in the property meta
                     my @parents = grep { $_->table_name } $foreign_class_object->ancestry_class_metas;
@@ -3646,7 +3698,9 @@ sub _generate_template_data_for_loading {
                 }
 
                 if (!@joins and not $alias_for_property_value) {
-                    if (grep { $_->[1]->property_name eq $final_accessor } @{ $foreign_class_loading_data->{direct_table_properties} }) {
+                    if ($final_accessor and
+                        grep { $_->[1]->property_name eq $final_accessor } @{ $foreign_class_loading_data->{direct_table_properties} }
+                    ) {
                         $alias_for_property_value = $alias;
                         #print "found alias for $property_name on $foreign_class_name: $alias\n";
                     }
@@ -3661,7 +3715,7 @@ sub _generate_template_data_for_loading {
             } # next join for this object
         } # next object join
 
-        unless ($delegated_property->via) {
+        if (ref($delegated_property) and !$delegated_property->via) {
             next;
         }
 
@@ -3846,9 +3900,14 @@ sub _generate_template_data_for_loading {
         # with the ones that already exist in $order_by_columns from the class data
         $order_by_columns = $self->_select_clause_columns_for_table_property_data(@all_table_properties);
 
-        # TODO: handle aggregates present in the class definition
         $select_clause .= ', ' if $select_clause;
         $select_clause .= 'count(*) count';
+
+        for my $ag (@$aggregate) {
+            next if $ag eq 'count';
+             # TODO: translate property names to column names, and skip non-column properties 
+            $select_clause .= ', ' . $ag;
+        }
 
         unless (@$group_by == @all_table_properties) {
             print "mismatch table properties vs group by!\n";
@@ -3909,11 +3968,18 @@ sub validate_subscription {
     my $retval = $self->SUPER::validate_subscription(@_);
     return $retval if $retval;
 
-    return 1 if ($subscription_property eq 'connect'
-                 or
-                 $subscription_property eq 'query');
+    unless ( defined($subscription_property)
+             and
+             ( $subscription_property eq 'connect'
+               or
+               $subscription_property eq 'query'
+             )
+    ) {
+        $subscription_property = '(undef)' unless defined ($subscription_property);
+        Carp::croak("Unrecognized subscription aspect '$subscription_property'");
+    }
 
-    return;
+    return 1;
 }
 
 sub _select_clause_for_table_property_data {

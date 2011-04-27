@@ -4,7 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::TableColumn;
 
 use UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::TableColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
@@ -87,8 +87,8 @@ Carp::confess("not implemented yet?!");
 sub is_time_data {
     my $self = shift;
 
-    my $type = uc($self->data_type);
-    if ($type eq 'TIMESTAMP' or uc($type) eq 'DATE' or uc($type) eq 'INTERVAL') {
+    my $type = $self->data_type;
+    if ($type =~ m/TIMESTAMP|DATE|INTERVAL/i) {
         return 1;
     } else {
         return;

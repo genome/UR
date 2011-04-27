@@ -6,7 +6,7 @@ package UR::Object::Type;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 #use warnings FATAL => 'all';
 
 use Carp ();
@@ -43,26 +43,6 @@ sub mk_rw_accessor {
         code => $accessor,
     });
 
-    #$column_name = uc($column_name);
-
-    if ($column_name)
-    {
-        $column_name = uc($column_name);
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $column_name,
-            code => $accessor,
-        });
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        no strict 'refs';
-
-        ${$class_name . '::column_for_property'}
-            {$property_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$property_name} = $accessor_name;
-    }
 }
 
 
@@ -93,24 +73,6 @@ sub mk_ro_accessor {
         code => $accessor,
     });
 
-    if ($column_name)
-    {
-        $column_name = uc($column_name);
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $column_name,
-            code => $accessor,
-        });
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        no strict 'refs';
-
-        ${$class_name . '::column_for_property'}
-            {$property_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$property_name} = $accessor_name;
-    }
 }
 
 sub mk_id_based_object_accessor {
@@ -196,8 +158,6 @@ sub mk_id_based_object_accessor {
 
 sub _resolve_bridge_logic_for_indirect_property {
     my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where) = @_;
-
-    $DB::single = 1 if $accessor_name eq 'car_parts_prices';
 
     my $bridge_collector = sub { my $self = shift; return $self->$via(@$where) };
     my $bridge_crosser = sub { return map { $_->$to} @_ };
@@ -664,25 +624,6 @@ sub mk_calculation_accessor {
         code => $accessor,
     });
 
-    if ($column_name)
-    {
-        $column_name = uc($column_name);
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $column_name,
-            code => $accessor,
-        });
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        no strict 'refs';
-
-        ${$class_name . '::column_for_property'}
-            {$accessor_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$accessor_name} = $accessor_name;
-    }
-
     return $accessor;
 }
 
@@ -822,17 +763,6 @@ sub mk_rw_class_accessor
         code => $accessor,
     });
 
-    if ($column_name)
-    {
-        *{$class_name ."::" . $column_name}  = $accessor;
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        ${$class_name . '::column_for_property'}
-            {$accessor_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$column_name} = $accessor_name;
-    }
 }
 
 sub mk_ro_class_accessor {
@@ -859,18 +789,6 @@ sub mk_ro_class_accessor {
         as   => $accessor_name,
         code => $accessor,
     });
-
-    if ($column_name)
-    {
-        *{$class_name ."::" . $column_name}  = $accessor;
-
-        # These are for backward-compatability with old modules.  Remove asap.
-        ${$class_name . '::column_for_property'}
-            {$accessor_name} = $column_name;
-
-        ${$class_name . '::property_for_column'}
-            {$column_name} = $accessor_name;
-    }
 }
 
     
@@ -912,8 +830,8 @@ sub mk_object_set_accessors {
             }
         }
         if ($r_class_meta and not $reverse_as) {
-            # we have a real class on the other end, and it did not specify how to link back to us
-            # try to infer how, otherwise fall back to the same logic we use with "primitives"
+            # We have a real class on the other end, and it did not specify know to link back to us.
+            # Try to infer how, otherwise fall back to the same logic we use with "primitives".
             my @possible_relationships = grep { $_->data_type eq $class_name }
                                          grep { defined $_->data_type }
                                          $r_class_meta->all_property_metas();
@@ -1004,12 +922,12 @@ sub mk_object_set_accessors {
             return $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values); 
         }
     };
+
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => "__$singular_name" . '_rule',
         code => $rule_accessor,
     });
-
 
     my $list_accessor = Sub::Name::subname $class_name ."::$plural_name" => sub {
         my $self = shift;
@@ -1057,6 +975,7 @@ sub mk_object_set_accessors {
     my $arrayref_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_arrayref' => sub {
         return [ $list_accessor->(@_) ];
     };
+
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $singular_name . '_arrayref',

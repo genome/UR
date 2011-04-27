@@ -28,7 +28,7 @@ This module subclasses DBI, and provides a few extra methods useful when using a
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.30"; # UR $VERSION;;
+our $VERSION = "0.31"; # UR $VERSION;;
 
 # set up module
 use base qw(Exporter DBI);
@@ -828,6 +828,7 @@ sub _mk_mutator {
         return if $global_destruction;
         my $sth = shift;
         if (@_) {
+            no warnings 'uninitialized';
             $sth->{$hash_key} = shift;
         }
         no warnings;

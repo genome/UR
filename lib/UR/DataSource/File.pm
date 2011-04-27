@@ -15,7 +15,7 @@ package UR::DataSource::File;
 use UR;
 use strict;
 use warnings;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 use Fcntl qw(:DEFAULT :flock);
 use Errno qw(EINTR EAGAIN);
@@ -228,7 +228,7 @@ sub _generate_loading_templates_arrayref {
     my $columns_in_file = $self->column_order;
     my %column_to_position_map;
     for (my $i = 0; $i < @$columns_in_file; $i++) {
-        $column_to_position_map{uc $columns_in_file->[$i]} = $i;
+        $column_to_position_map{$columns_in_file->[$i]} = $i;
     }
 
     # strip out columns that don't exist in the file
@@ -594,7 +594,7 @@ sub create_iterator_closure_for_rule {
 
     my(%property_meta_for_column_name);
     foreach my $column_name ( @$csv_column_order_names ) {
-        my $prop = UR::Object::Property->get(class_name => $class_name, column_name => uc($column_name));
+        my $prop = UR::Object::Property->get(class_name => $class_name, column_name => $column_name);
         our %WARNED_ABOUT_COLUMN;
         unless ( $prop or $WARNED_ABOUT_COLUMN{$class_name . '::' . $column_name}++) {
             $self->warning_message("Couldn't find a property in class $class_name that goes with column $column_name");
@@ -610,7 +610,11 @@ sub create_iterator_closure_for_rule {
 
     my $next_candidate_row;  # This will be filled in by the closure below
     foreach my $column_name ( @$sort_order_names, @non_sort_column_names ) {
-        my $property_name = $property_meta_for_column_name{$column_name}->property_name;
+        my $property_meta = $property_meta_for_column_name{$column_name};
+        unless ($property_meta) {
+            Carp::croak("Class $class_name has no property connected to column named '$column_name' in data source ".$self->id);
+        }
+        my $property_name = $property_meta->property_name;
         if (! $operators_for_properties->{$property_name}) {
             $looking_for_sort_columns = 0;
             next;
@@ -627,7 +631,7 @@ sub create_iterator_closure_for_rule {
         my $operator = $operators_for_properties->{$property_name};
         my $rule_value = $values_for_properties->{$property_name};
     
-        my $comparison_function = $self->_comparator_for_operator_and_property($property_meta_for_column_name{$column_name},
+        my $comparison_function = $self->_comparator_for_operator_and_property($property_meta,
                                                                                \$next_candidate_row,
                                                                                $column_name_to_index_map{$column_name},
                                                                                $operator,
@@ -989,7 +993,6 @@ sub _sync_database {
     $/ = $record_separator;
 
     my $csv_column_order_names = $self->column_order;
-    $_ = uc foreach @$csv_column_order_names;  # Force all column-namey things to upper-case
     my $csv_column_count = scalar(@$csv_column_order_names);
     my %column_name_to_index_map;
     for (my $i = 0; $i < @$csv_column_order_names; $i++) {
@@ -1002,7 +1005,7 @@ sub _sync_database {
     # We're going to assumme all the passed-in objects are of the same class *gulp*
     my $class_name = $changed_objects->[0]->class;
     my $class_meta = UR::Object::Type->get(class_name => $class_name);
-    my %column_name_to_property_meta = map { uc($_->column_name) => $_ }
+    my %column_name_to_property_meta = map { $_->column_name => $_ }
                                        grep { $_->column_name }
                                        $class_meta->all_property_metas;
     my @property_names_in_column_order;
@@ -1041,10 +1044,9 @@ sub _sync_database {
 
     my $sort_order_names = $self->sort_order;
     foreach my $sort_column_name ( @$sort_order_names ) {
-        unless (exists $column_name_to_index_map{uc $sort_column_name}) {
+        unless (exists $column_name_to_index_map{$sort_column_name}) {
             Carp::croak("Column name '$sort_column_name' appears in the sort_order list, but not in the column_order list for data source ".$self->id);
         }
-        $sort_column_name = uc $sort_column_name;  # Force all column-namey things to upper-case
     }
     my $file_is_sorted = scalar(@$sort_order_names);
     my %column_sorts_numerically = map { $_->column_name => $_->is_numeric }

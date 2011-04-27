@@ -196,13 +196,13 @@ ok($trans, "CREATED PERSON and began transaction");
         ok($personclass->module_source_lines, 'Person class module has at least one line');
         is($personclass->type_name, 'person', 'Person class type_name is correct');
         is($personclass->class_name, 'URT::Person', 'Person class class_name is correct');
-        is($personclass->table_name, 'PERSON', 'Person class table_name is correct');
+        is($personclass->table_name, 'person', 'Person class table_name is correct');
         is($UR::Context::current->resolve_data_sources_for_class_meta_and_rule($personclass)->id, $ds_class, 'Person class data_source is correct');
         is_deeply([sort $personclass->direct_column_names],
-                ['NAME','PERSON_ID'],
+                ['name','person_id'],
                 'Person object has all the right columns');
         is_deeply([$personclass->direct_id_column_names],
-                ['PERSON_ID'],
+                ['person_id'],
                 'Person object has all the right id column names');
 
         # Another test case should make sure the other class introspection methods like inherited_property_names,
@@ -239,7 +239,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
 
     my %got = map { $_ => 1} $personclass->direct_column_names;
     is_deeply(\%got,
-            { NAME => 1, PERSON_ID => 1, POSTAL_ADDRESS => 1 },
+            { name => 1, person_id => 1, postal_address => 1 },
             'Person object has all the right columns');
     %got = map { $_ => 1 } $personclass->all_property_names;
     is_deeply(\%got,
@@ -247,7 +247,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
             'Person object has all the right properties');
     %got = map { $_ => 1 } $personclass->direct_id_column_names;
     is_deeply(\%got,
-            { PERSON_ID => 1 },
+            { person_id => 1 },
             'Person object has all the right id column names');
 
     my $employeeclass = UR::Object::Type->get('URT::Employee');
@@ -265,7 +265,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
 
     %got = map { $_ => 1 } $employeeclass->direct_column_names;
     is_deeply(\%got,
-            { EMPLOYEE_ID => 1, RANK => 1 },
+            { employee_id => 1, rank => 1 },
             'Employee object has all the right columns');
     %got = map { $_ => 1 } $employeeclass->all_property_names;
     is_deeply(\%got,
@@ -273,9 +273,9 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
             'Employee object has all the right properties');
     %got = map { $_ => 1 } $employeeclass->direct_id_column_names;
     is_deeply(\%got,
-             { EMPLOYEE_ID => 1 },
+             { employee_id => 1 },
             'Employee object has all the right id column names');
-    ok($employeeclass->table_name eq 'EMPLOYEE', 'URT::Employee object comes from the employee table');
+    ok($employeeclass->table_name eq 'employee', 'URT::Employee object comes from the employee table');
 
 
     my $carclass = UR::Object::Type->get('URT::Car');
@@ -286,7 +286,7 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
 
     %got = map { $_ => 1 } $carclass->direct_column_names;
     is_deeply(\%got,
-            { CAR_ID => 1, COLOR => 1, COST => 1, MAKE => 1, MODEL => 1, OWNER_ID => 1 },
+            { car_id => 1, color => 1, cost => 1, make => 1, model => 1, owner_id => 1 },
             'Car object has all the right columns');
     %got = map { $_ => 1 } $carclass->all_property_names;
     is_deeply(\%got, 
@@ -294,9 +294,9 @@ ok($trans, "CREATED EMPLOYEE AND CAR AND UPDATED PERSON and began transaction");
             'Car object has all the right properties');
     %got = map { $_ => 1 } $carclass->direct_id_column_names;
     is_deeply(\%got,
-            { CAR_ID => 1 },
+            { car_id => 1 },
             'Car object has all the right id column names');
-        ok($carclass->table_name eq 'CAR', 'Car object comes from the car table');
+        ok($carclass->table_name eq 'car', 'Car object comes from the car table');
 
     $trans->rollback;
     ok($trans->isa("UR::DeletedRef"), "rolled-back transaction");
@@ -370,13 +370,13 @@ ok($command_obj->execute(), 'Updating schema anew.');
     $personclass->generate;
     ok($personclass, 'Person class loaded');
     is_deeply([sort $personclass->direct_column_names],
-            ['PERSON_ID','POSTAL_ADDRESS'],
+            ['person_id','postal_address'],
             'Person object has all the right columns');
     is_deeply([sort $personclass->class_name->__meta__->all_property_names],
             ['person_id','postal_address'],
             'Person object has all the right properties');
     is_deeply([$personclass->direct_id_column_names],
-            ['PERSON_ID'],
+            ['person_id'],
             'Person object has all the right id column names');
 
     $trans->rollback;
@@ -490,23 +490,23 @@ sub initialize_check_change_data_structures {
     my $sqlite_owner = UR::DataSource::SQLite->default_owner || '';
     $check_changes_1 = {
     'UR::DataSource::RDBMS::Table' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson" => {
             create => '',    # Meta DB object is created for the person table
             er_type => '',    # And ur update classes fills in an er_type
          },
     },
     'UR::DataSource::RDBMS::TableColumn' => {
         # The (new) person table has 2 (new) columns, person_id and name
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tPERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id" => {
             create => ''
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tNAME" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tname" => {
             create => ''
         },
     },
     'UR::DataSource::RDBMS::PkConstraintColumn' => {
         # person_id is the first and only primary column constraint
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tperson_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id\t1" => {
             create => ''
         },
     },
@@ -539,15 +539,15 @@ sub initialize_check_change_data_structures {
     $check_changes_2 = {
     'UR::DataSource::RDBMS::Table' => {
         # 3 tables: person, employee and car
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson" => {
             create => '',
             er_type => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee" => {
             create => '',
             er_type => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar" => {
             create => '',
             er_type => '',
         },
@@ -555,73 +555,73 @@ sub initialize_check_change_data_structures {
 
     'UR::DataSource::RDBMS::TableColumn' => {
         # Table person now has 3 columns: person_id, name and postal_address
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tPERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tNAME" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tname" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tPOSTAL_ADDRESS" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tpostal_address" => {
             create => '',
         },
         # table employee has 2 columns: employee_id and rank
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tEMPLOYEE_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\temployee_id" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tRANK" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\trank" => {
             create => '',
         },
         # table car has these columns: car_id, make, model, color and cost
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR\tCAR_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar\tcar_id" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR\tMAKE" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar\tmake" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR\tMODEL" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar\tmodel" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR\tCOLOR" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar\tcolor" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR\tCOST" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar\tcost" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR\tOWNER_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar\towner_id" => {
             create => '',
         },
     },
 
     'UR::DataSource::RDBMS::FkConstraint' => {
        # Both employee and car tables have foreign keys to person
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\temployee\tperson\tfk_person_id" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tCAR\tPERSON\tFK_PERSON_ID2" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tcar\tperson\tfk_person_id2" => {
             create => '',
         },
     },
 
     'UR::DataSource::RDBMS::FkConstraintColumn' => {
         # The employee table FK points from employee_id to person_id
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tFK_PERSON_ID\tEMPLOYEE_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\tfk_person_id\temployee_id" => {
             create => '',
         },
         # The car table FK points from owner_id to person_id
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR\tFK_PERSON_ID2\tOWNER_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar\tfk_person_id2\towner_id" => {
             create => '',
         }
     },
 
     'UR::DataSource::RDBMS::PkConstraintColumn' => {
         # All three tables have PK constraints for their ID columns
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tperson_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id\t1" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\temployee_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\temployee_id\t1" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tCAR\tcar_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tcar\tcar_id\t1" => {
             create => '',
         },
     },
@@ -712,20 +712,20 @@ sub initialize_check_change_data_structures {
     # objects became ghosts.  This is suboptimal and makes little sense
     # but there it is...
     'UR::DataSource::RDBMS::Table::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson" => {
             delete => 1,
         },
     },
     'UR::DataSource::RDBMS::TableColumn::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tPERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id" => {
             delete => 1,
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tNAME" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tname" => {
             delete => 1,
         },
     },
     'UR::DataSource::RDBMS::PkConstraintColumn::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tperson_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id\t1" => {
             delete => 1,
         },
     },
@@ -738,51 +738,51 @@ sub initialize_check_change_data_structures {
     # FIXME Why are there no ghost objects for the dropped car stuff?
 
     'UR::DataSource::RDBMS::Table' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee" => {
             create => '',
             er_type => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson" => {
             create => '',
             er_type => '',
         },
     },
 
     'UR::DataSource::RDBMS::TableColumn' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tEMPLOYEE_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\temployee_id" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tRANK" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\trank" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tPERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tNAME" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tname" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tPOSTAL_ADDRESS" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tpostal_address" => {
             create => '',
         },
     },
 
     'UR::DataSource::RDBMS::FkConstraint' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\temployee\tperson\tfk_person_id" => {
             create => '',
         },
     },
 
     'UR::DataSource::RDBMS::FkConstraintColumn' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tFK_PERSON_ID\tEMPLOYEE_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\tfk_person_id\temployee_id" => {
             create => '',
         },
     },
 
     'UR::DataSource::RDBMS::PkConstraintColumn' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\temployee_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\temployee_id\t1" => {
             create => '',
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tperson_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id\t1" => {
             create => '',
         },
     },
@@ -835,45 +835,45 @@ sub initialize_check_change_data_structures {
     },
 
     'UR::DataSource::RDBMS::Table::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson" => {
             delete => 1,
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee" => {
             delete => 1,
         },
     },
     'UR::DataSource::RDBMS::TableColumn::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tEMPLOYEE_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\temployee_id" => {
             delete => 1,
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tRANK" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\trank" => {
             delete => 1,
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tPERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id" => {
             delete => 1,
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tNAME" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tname" => {
             delete => 1,
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tPOSTAL_ADDRESS" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tpostal_address" => {
             delete => 1,
         },
     },
     'UR::DataSource::RDBMS::FkConstraint::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\tEMPLOYEE\tPERSON\tFK_PERSON_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\t$sqlite_owner\temployee\tperson\tfk_person_id" => {
             delete => 1,
         },
     },
     'UR::DataSource::RDBMS::FkConstraintColumn::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\tFK_PERSON_ID\tEMPLOYEE_ID" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\tfk_person_id\temployee_id" => {
             delete => 1,
         },
     },
     'UR::DataSource::RDBMS::PkConstraintColumn::Ghost' => {
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tEMPLOYEE\temployee_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\temployee\temployee_id\t1" => {
             delete => 1,
         },
-        "URT::DataSource::SomeSQLite\t$sqlite_owner\tPERSON\tperson_id\t1" => {
+        "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson\tperson_id\t1" => {
             delete => 1,
         },
     },

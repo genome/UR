@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 use Sys::Hostname;
 
 *namespace = \&get_namespace;
@@ -30,6 +30,15 @@ sub get_name {
     my $class = shift->class;
     return lc(substr($class,index($class,"::DataSource")+14));
 }
+
+# The default used to be to force table/column/constraint/etc names to
+# upper case when storing them in the MetaDB, and in the column_name
+# metadata for properties.  The new behavior is to just use whatever the
+# database supplies us when interrogating the data dictionary.
+# For datasources/clases that still need the old behavior, override this
+# to make the column_name metadata for properties forced to upper-case
+sub table_and_column_names_are_upper_case { 0; }
+
 
 # Basic, dumb data sources do not support joins within a single
 # query.  Instead the Context logic can perform a cross datasource
@@ -267,8 +276,14 @@ sub _generate_template_data_for_loading {
         $pk_used,
         @delegated_properties,    
         %outer_joins,
+        %chain_delegates,
     );
 
+    for my $key (keys %filters) {
+        if (index($key,'.') != -1) {
+            $chain_delegates{$key} = delete $filters{$key};
+        }
+    }
     for my $co ( $class_meta, @parent_class_objects ) {
 #        my $table_name = $co->table_name;
 #        next unless $table_name;

@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 require UR;
-our $VERSION = "0.30"; # UR $VERSION;
+our $VERSION = "0.31"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::Oracle',
@@ -14,7 +14,7 @@ UR::Object::Type->define(
 
 sub driver { "Oracle" }
 
-sub owner { uc(shift->_singleton_object->login) }
+sub owner { shift->_singleton_object->login }
 
 sub can_savepoint { 1 }  # Oracle supports savepoints inside transactions
 
@@ -41,7 +41,7 @@ sub _init_created_dbh {
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
     $dbh->do("alter session set NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'");
-    $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS'");
+    $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SSXFF'");
     return $dbh;
 }
 
