@@ -82,10 +82,18 @@ sub create {
     # requests should still come ahead of it.  This requires a little munging.
 
     # Find the first thing in the compiled_inc list that exists
-    my $compiled;
+    my $compiled = '';
     for my $path ( UR::Util::compiled_inc() ) {
+        next unless -d $path;
         $compiled = Cwd::abs_path($path);
         last if defined $compiled;
+    }
+
+    my $perl5lib = '';
+    foreach my $path ( split(':', $ENV{'PERL5LIB'}) ) {
+        next unless -d $path;
+        $perl5lib = Cwd::abs_path($path);
+        last if defined $perl5lib;
     }
 
     my $i;
@@ -97,7 +105,7 @@ sub create {
         # skip the comparison if either is undef
         my $inc = Cwd::abs_path($INC[$i]);
         next unless defined $inc;
-        last if ($inc eq $compiled);
+        last if ($inc eq $compiled or $inc eq $perl5lib);
     }
     splice(@INC, $i, 0, $lib_path);
     eval "use $namespace_name";
