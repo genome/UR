@@ -3,6 +3,7 @@ Revision history for UR
 0.31    2011-04-23
         updated handling for Pg and mysql table case sensitivity
         set operations normalized: min, max, sum, count
+        support for using a chain of properties in queries ('a.b.c like' => $v)
 
 0.30    2011-03-07
         re-package 0.29 with versions correctly set
