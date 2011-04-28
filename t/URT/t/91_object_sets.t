@@ -182,7 +182,7 @@ foreach my $color ( keys %colors ) {
 # To mix it up a bit, we'll unload the peole with yellow cars.
 # This will require that it not do the sets entirely from cached objects.
 for my $person (URT::Person->is_loaded(car_colors => 'yellow')) {
-#    $person->unload;
+    $person->unload;
 }
 
 # Now we'll delete the people with blue cars.  This means we should not get a set
