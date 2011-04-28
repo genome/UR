@@ -1409,11 +1409,14 @@ sub get_objects_for_class_and_rule {
     #print "GET: $class @params\n";
 
     my $rule_template = $rule->template;
-    if ($rule_template->group_by and $rule_template->order_by) {
+    
+    my $group_by = $rule_template->group_by;
+
+    if ($group_by and $rule_template->order_by) {
         my %group_by = map { $_ => 1 } @{ $rule->template->group_by };
-        foreach my $order_by ( @{ $rule->template->order_by } ) {
-            unless ($group_by{$order_by}) {
-                Carp::croak("Property '$order_by' in the -order_by list must appear in the -group_by list for BoolExpr $rule");
+        foreach my $order_by_property ( @{ $rule->template->order_by } ) {
+            unless ($group_by{$order_by_property}) {
+                Carp::croak("Property '$order_by_property' in the -order_by list must appear in the -group_by list for BoolExpr $rule");
             }
         }
     }
@@ -2294,32 +2297,18 @@ sub _create_import_iterator_for_underlying_context {
     # we then have our primary iterator use these to fabricate objects for each db row
     my @object_fabricators;
     if ($group_by) {
-        # returning sets instead of instance objects...
+        # returning sets for each sub-group instead of instance objects...
+       
+        my $division_point = scalar(@$group_by)-1; 
+        my $subset_template = $rule_template->_template_for_grouped_subsets();
         my $set_class = $class_name . '::Set';
-        my $logic_type = $rule_template->logic_type;
-        my @base_property_names = $rule_template->_property_names;
-        for (my $i = 0; $i < @base_property_names; $i++) {
-            my $operator = $rule_template->operator_for($base_property_names[$i]);
-            if ($operator ne '=') {
-                $base_property_names[$i] .= " $operator";
-            }
-        }
-        
-        my @non_aggregate_properties = @$group_by;
         my @aggregate_properties = ($aggregate ? @$aggregate : ());
         unshift(@aggregate_properties, 'count') unless (grep { $_ eq 'count' } @aggregate_properties);
-        my $division_point = $#non_aggregate_properties;
-        my $template = UR::BoolExpr::Template->get_by_subject_class_name_logic_type_and_logic_detail(
-            $class_name,
-            'And',
-            join(",", @base_property_names, @non_aggregate_properties),
-        );
+
         my $fab_subref = sub {
             my $row = $_[0];
-            # my $ss_rule = $template->get_rule_for_values(@values, @$row[0..$division_point]);
-            # not sure why the above gets an error but this doesn't...
-            my @a = @$row[0..$division_point];
-            my $ss_rule = $template->get_rule_for_values(@values, @a); 
+            my @group_values = @$row[0..$division_point];
+            my $ss_rule = $subset_template->get_rule_for_values(@values, @group_values); 
             my $set = $set_class->get($ss_rule->id);
             unless ($set) {
                 Carp::croak("Failed to fabricate $set_class for rule $ss_rule");
@@ -2327,6 +2316,7 @@ sub _create_import_iterator_for_underlying_context {
             @$set{@aggregate_properties} = @$row[$division_point+1..$#$row];
             return $set;
         };
+
         my $object_fabricator = UR::Context::ObjectFabricator->_create(
                                     fabricator => $fab_subref,
                                     context    => $self,
@@ -2905,17 +2895,17 @@ sub _get_objects_for_class_and_rule_from_cache {
     # the specified parameters.
     my ($self, $class, $rule) = @_;
     
-    my $group_by = $rule->template->group_by;
-    $rule = $rule->remove_filter('-group_by');
     my ($template,@values) = $rule->template_and_values;
 
     #my @param_list = $rule->params_list;
     #print "CACHE-GET: $class @param_list\n";
 
-
     my $strategy = $rule->{_context_query_strategy};    
     unless ($strategy) {
-        if ($rule->num_values == 0) {
+        if ($rule->template->group_by) {
+            $strategy = $rule->{_context_query_strategy} = "set intersection";
+        }
+        elsif ($rule->num_values == 0) {
             $strategy = $rule->{_context_query_strategy} = "all";
         }
         elsif ($rule->is_id_only) {
@@ -3083,6 +3073,60 @@ sub _get_objects_for_class_and_rule_from_cache {
                 return $index->get_objects_matching(@values);
             }
         }
+        elsif ($strategy eq 'set intersection') {
+            #print $rule->num_values, "  ", $rule->is_id_only, "\n";
+            #$DB::single = 1;
+            my $template = $rule->template;
+            my $group_by = $template->group_by;
+
+            # get the objects in memory, and make sets for them if they do not exist 
+            my $rule_no_group = $rule->remove_filter('-group_by');
+            $rule_no_group = $rule_no_group->remove_filter('-order_by');
+            my @objects_in_set = $self->_get_objects_for_class_and_rule_from_cache($class, $rule_no_group);
+            my @sets_from_grouped_objects = _group_objects($rule_no_group->template,\@values,$group_by,\@objects_in_set);
+
+            # determine the template that the grouped subsets will use
+            # find templates which are subsets of that template
+            # find sets with a 
+            my $set_class = $class . '::Set';
+            my $expected_template_id = $rule->template->_template_for_grouped_subsets->id;
+            my @matches = 
+                grep {
+                    # TODO: make the template something indexable so we can pull from index
+                    my $bx = UR::BoolExpr->get($_->id);
+                    my $bxt = $bx->template;
+                    if ($bxt->id ne $expected_template_id) {
+                        #print "TEMPLATE MISMATCH $expected_template_id does not match $bxt->{id}! set: $_ with bxid $bx->{id} cannot be under rule $rule_no_group" . Data::Dumper::Dumper($_);
+                        ();
+                    }
+                    elsif (not $bx->is_subset_of($rule_no_group) ) {
+                        #print "SUBSET MISMATCH: $rule_no_group is not a superset of $_ with bxid $bx->{id}" . Data::Dumper::Dumper($_);
+                        ();
+                    }
+                    else {
+                        #print "MATCH: $rule_no_group with $expected_template_id matches $bx $bx->{id}" . Data::Dumper::Dumper($_);
+                        ($_);
+                    }
+                }
+                $self->all_objects_loaded($set_class);
+           
+            # Code to check that newly fabricated set definitions are in the set we query back out:
+            # my @all = $self->all_objects_loaded($set_class);
+            # my %expected;
+            # @expected{@sets_from_grouped_objects} = @sets_from_grouped_objects;
+            # for my $match (@matches) {
+            #    delete $expected{$match};
+            # }
+            # if (keys %expected) {
+            #    $DB::single = 1;
+            #    print Data::Dumper::Dumper(\%expected);
+            # }
+
+            return @matches;
+        }
+        else {
+            die "unknown strategy $strategy";
+        }
     };
         
     # Handle passing-through any exceptions.
@@ -3100,11 +3144,11 @@ sub _get_objects_for_class_and_rule_from_cache {
         }
     }
 
-    if ($group_by) {
-        # return sets instead of the actual objects
-        @results = _group_objects($template,\@values,$group_by,\@results);
-    }
-
+    my $group_by = $template->group_by;
+    #if ($group_by) {
+    #    # return sets instead of the actual objects
+    #    @results = _group_objects($template,\@values,$group_by,\@results);
+    #}
 
     if (@results > 1) {
         my $sorter;

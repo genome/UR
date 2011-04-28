@@ -153,7 +153,6 @@ sub __aggregate__ {
         $self->{$f} = $self->$local_method(@fargs);
     } 
     elsif (! exists $self->{$f}) {
-        $DB::single = 1;
         my $rule = $self->rule->add_filter(-aggregate => [$f])->add_filter(-group_by => []);
         UR::Context->current->get_objects_for_class_and_rule(
               $self->member_class_name,
@@ -243,7 +242,7 @@ sub CAN {
                     my @values = map { $_->$method } @members;
                     return @values if wantarray;
                     return if not defined wantarray;
-                    Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+                    Carp::confess("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
                     return $values[0];
                 }
             }; 
@@ -269,7 +268,7 @@ sub CAN {
                     }
                     return @values if wantarray;
                     return if not defined wantarray;
-                    Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+                    Carp::confess("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
                     return $values[0];
                 }; 
             }
@@ -284,7 +283,7 @@ sub CAN {
             my @values = map { $_->$method } @members;
             return @values if wantarray;
             return if not defined wantarray;
-            Carp::croak("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
+            Carp::confess("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
             return $values[0];
         }; 
 

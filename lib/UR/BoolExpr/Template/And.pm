@@ -11,6 +11,29 @@ UR::Object::Type->define(
     is              => ['UR::BoolExpr::Template::Composite'],
 );
 
+sub _template_for_grouped_subsets {
+    my $self = shift;
+    my $group_by = $self->group_by;
+    die "rule template $self->{id} has no -group_by!?!?" unless $group_by;
+
+    my $logic_type = $self->logic_type;
+    my @base_property_names = $self->_property_names;
+    for (my $i = 0; $i < @base_property_names; $i++) {
+        my $operator = $self->operator_for($base_property_names[$i]);
+        if ($operator ne '=') {
+            $base_property_names[$i] .= " $operator";
+        }
+    }
+
+    my $template = UR::BoolExpr::Template->get_by_subject_class_name_logic_type_and_logic_detail(
+        $self->subject_class_name,
+        'And',
+        join(",", @base_property_names, @$group_by),
+    );
+
+    return $template;
+}
+
 sub _variable_value_count {
     my $self = shift;
     my $k = $self->_underlying_keys;

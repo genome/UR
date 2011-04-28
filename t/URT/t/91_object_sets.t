@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 64;
+use Test::More tests=> 68;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -128,7 +128,9 @@ my %people_by_car_color = ( 'red'    => ['Bob', 'Mike'],
                           );
 foreach my $subset ( @subsets ) {
     my $query_count = 0;
-    my $color = $subset->car_colors;
+    my @colors = $subset->car_colors;
+    is($#colors, 0, "one color returned") or diag "@colors";
+    my $color = shift @colors;
     is($query_count, 0, 'Getting car_colors from subset made no queries');
 
     $query_count = 0;
@@ -174,8 +176,21 @@ foreach my $color ( keys %colors ) {
 
 
 
-# test having an -order_by in addition to -group_by.  It should throw an exception if
-# all the order_by columns don't appear in -group_by
+# Test having an -order_by in addition to -group_by.  It should throw an exception if
+# all the order_by columns don't appear in -group_by.
+
+# To mix it up a bit, we'll unload the peole with yellow cars.
+# This will require that it not do the sets entirely from cached objects.
+for my $person (URT::Person->is_loaded(car_colors => 'yellow')) {
+#    $person->unload;
+}
+
+# Now we'll delete the people with blue cars.  This means we should not get a set
+# back even though the set is in the database.
+#for my $person (URT::Person->is_loaded(car_colors => 'blue')) {
+#    $person->delete;
+#}
+
 $query_count = 0;
 @subsets = URT::Person->get(-group_by => ['car_colors'], -order_by => ['car_colors']);
 is(scalar(@subsets), 4, 'Partitioning all people by car_colors yields 4 subsets, this time with order_by');
