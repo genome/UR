@@ -77,8 +77,6 @@ sub data_source_module_pathname {
 sub execute {
     my $self = shift;
 
-    $self->_init or return;
-
     my $namespace = $self->namespace_name;
     unless ($namespace) {
         $self->error_message("This command must be run from a namespace directory.");

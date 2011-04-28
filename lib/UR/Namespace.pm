@@ -34,7 +34,7 @@ sub get_material_classes
     }
     else {
         my @names;
-        for my $class_name ($self->_get_class_names_under_dir()) {
+        for my $class_name ($self->_get_class_names_under_namespace()) {
             my $class = eval { UR::Object::Type->get($class_name) };
             next unless $class;
             push @classes, $class;
@@ -59,23 +59,35 @@ sub get_material_class_names
     return map {$_->class_name} $_[0]->get_material_classes();
 }
 
-
+# Returns data source objects for all the data sources of the namespace
 sub get_data_sources
 {
     my $class = shift;
     if ($class eq 'UR' or (ref($class) and $class->id eq 'UR')) {
         return 'UR::DataSource::Meta';  # UR only has 1 "real" data source, the other stuff in that dir are base classes
+
     } else {
-        #return $class->_get_class_names_under_dir("DataSource");
-        my @ds_names = $class->_get_class_names_under_dir("DataSource");
-        my @ds_objs = map { $_->get() } @ds_names;
-        return @ds_objs;
+        my %found;
+        my $namespace_name = $class->class;
+
+        foreach my $inc ( @main::INC ) {
+            my $path = join('/', $inc,$namespace_name,'DataSource');
+            if (-d $path) {
+                foreach ( glob($path . '/*.pm') ) { 
+                    my($module_name) = m/DataSource\/([^\/]+)\.pm$/;
+                    my $ds_class_name = $namespace_name . '::DataSource::' . $module_name;
+                    $found{$ds_class_name} = 1;
+                }
+            }
+        }
+        my @data_sources = map { $_->get() } keys(%found);
+        return @data_sources;
     }
 }
 
 sub get_base_contexts
 {
-    return shift->_get_class_names_under_dir("Context");
+    return shift->_get_class_names_under_namespace("Context");
 }
 
 sub get_vocabulary
@@ -106,7 +118,7 @@ sub get_deleted_module_directory_name
 # It really returns all the package names under the specified directory
 # (assumming the packages defined in the found files are named like the
 # pathname of the file), not just those that implement classes
-sub _get_class_names_under_dir
+sub _get_class_names_under_namespace
 {
     my $class = shift->_singleton_class_name;
     my $subdir = shift;
@@ -115,40 +127,46 @@ sub _get_class_names_under_dir
 
     my $dir = $class->get_base_directory_name;
 
-    my $from;
+    my $namespace_dir;
     if (defined($subdir) and length($subdir)) {
-        $from = join("/",$dir, $subdir);
+        $namespace_dir = join("/",$dir, $subdir);
     }
     else {
-        $from = $dir;
+        $namespace_dir = $dir;
     }
 
     my $namespace = $class;
-    my @class_names;
+    my %class_names;
+
     my $preprocess = sub {
-        if ($File::Find::dir eq 't') {
-            return();
+        if ($File::Find::dir =~ m/\/t$/) {
+            return ();
+        } elsif (-e ($File::Find::dir . "/UR_IGNORE")) {
+            return ();
+        } else {
+            return @_;
         }
-        elsif (-e ($File::Find::dir . "/UR_IGNORE")) {
-            return();
-        }
-        else {
-            return @_
-        }
-    };  
-    my $wanted = sub {
-        return if -d $File::Find::name;
-        return if $File::Find::name =~ /\/\.deleted\//;
-        return if -d $File::Find::name and -e $File::Find::name . '/UR_IGNORE';
-        my $class = $File::Find::name;
-        return unless $class =~ s/\.pm$//;
-        $class =~ s/^$dir\//$namespace\//;
-        return if $class =~ m([^\w/]);  # Skip names that make for illegal package names.  Must be word chars or a /
-        $class =~ s/\//::/g;
-        push @class_names, $class if $class;
     };
-    find({ wanted => $wanted, preprocess => $preprocess },$from);
-    return sort @class_names;
+
+    my $wanted = sub {
+        return if -d $File::Find::name;                   # not interested in directories
+        return if $File::Find::name =~ /\/\.deleted\//;   # .deleted directories are created by ur update classes
+        return if -e $File::Find::name . '/UR_IGNORE';    # ignore a whole directory?
+        return unless $File::Find::name =~ m/\.pm$/;      # must be a perl module
+        return unless $File::Find::name =~ m/($namespace\/.*)\.pm/;
+
+        my $try_class = $1;
+        return if $try_class =~ m([^\w/]);  # Skip names that make for illegal package names.  Must be word chars or a /
+        $try_class =~ s/\//::/g;
+        $class_names{$try_class} = 1 if $try_class;
+    };
+
+    my @dirs_to_search = @INC;
+    unshift(@dirs_to_search, $namespace_dir) if (-d $namespace_dir);
+    @dirs_to_search = grep { $_ =~ m/\/$namespace/ or -d $_ . "/$namespace" }
+                      @dirs_to_search;  # only look in places with namespace_name as a subdir
+    find({ wanted => $wanted, preprocess => $preprocess },@dirs_to_search);
+    return sort keys %class_names;
 }
 
 1;

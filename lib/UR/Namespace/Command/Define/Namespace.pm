@@ -1,5 +1,3 @@
-
-
 package UR::Namespace::Command::Define::Namespace;
 
 use strict;
@@ -14,11 +12,13 @@ UR::Object::Type->define(
     has => [
         nsname => {
             shell_args_position => 1,
-            doc => 'the name of the namespace, and first "word" in all classes',
+            doc => 'The name of the namespace, and first "word" in all class names',
         },
     ],
     doc => 'create a new namespace tree and top-level module',
 );
+
+sub help_brief { "Used to define a new Namespace as part of starting a new project." }
 
 sub sub_command_sort_position { 1 }
 
@@ -58,7 +58,6 @@ sub execute {
                                                 is_abstract => 0);
     my $namespace_src = $namespace->resolve_module_header_source;
 
-
     # Step 2 - Make an empty Vocabulary
     my $vocab_name = $name->get_vocabulary();
     my $vocab = UR::Object::Type->define(
@@ -71,11 +70,11 @@ sub execute {
 
     # write the namespace module
     $self->status_message("A   $name (UR::Namespace)\n");
-    IO::File->new("> $name.pm")->printf($module_template, $name, $namespace_src);
+    IO::File->new("$name.pm", 'w')->printf($module_template, $name, $namespace_src);
 
     # Write the vocbaulary module
     mkdir($name);
-    IO::File->new("> $vocab_filename")->printf($module_template, $vocab_name, $vocab_src);
+    IO::File->new($vocab_filename,'w')->printf($module_template, $vocab_name, $vocab_src);
     $self->status_message("A   $vocab_name (UR::Vocabulary)\n");
 
     # Step 3 - Make and write a new Meta DataSource module 

@@ -14,7 +14,7 @@ sub used_libs {
     my @extra;
     my @compiled_inc = UR::Util::compiled_inc();
     my @perl5lib = split(':', $ENV{PERL5LIB});
-    map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);
+    map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);   # remove trailing slashes
     map { $_ = Cwd::abs_path($_) || $_ } (@compiled_inc, @perl5lib);
     for my $inc (@INC) {
         $inc =~ s/\/+$//;
@@ -24,7 +24,9 @@ sub used_libs {
         push @extra, $inc;
     }
     unshift @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
+    map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);   # remove trailing slashes again
     @extra = _unique_elements(@extra);
+
     return @extra;
 }
 
@@ -194,6 +196,42 @@ sub _define_method {
     }
     return 1;
 }
+
+=over
+
+=item path_relative_to
+
+  $rel_path = UR::Util::path_relative_to($base, $target);
+
+Returns the pathname to $target relative to $base.  If $base
+and $target are the same, then it returns '.'.  If $target is
+a subdirectory of of $base, then it returns the portion of $target
+that is unique compared to $base.  If $target is not a subdirectory
+of $base, then it returns a relative pathname starting with $base.
+
+=cut
+
+sub path_relative_to {
+    my($base,$target) = @_;
+
+    $base = Cwd::abs_path($base);
+    $target = Cwd::abs_path($target);
+
+    my @base_path_parts = split('/', $base);
+    my @target_path_parts = split('/', $target);
+    my $i;
+    for ($i = 0;
+         $i < @base_path_parts and $base_path_parts[$i] eq $target_path_parts[$i];
+         $i++
+    ) { ; }
+
+    my $rel_path = '../' x (scalar(@base_path_parts) - $i)
+                      .
+                      join('/', @target_path_parts[$i .. $#target_path_parts]);
+    $rel_path = '.' unless length($rel_path);
+    return $rel_path;
+}
+ 
 
 =over
 

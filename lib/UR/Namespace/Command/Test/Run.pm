@@ -23,30 +23,58 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => "UR::Namespace::Command::Base",
     has => [
-       bare_args => { is_optional => 1, is_many => 1, shell_args_position => 1, is_input => 1
-       },
-        recurse           => { is => 'Boolean', doc => 'Run all .t files in the current directory, and in recursive subdirectories.'                                                },
-        'time'            => { is => 'String',  doc => 'Write timelog sum to specified file',                                                is_optional => 1                       },
-        long              => { is => 'Boolean', doc => 'Run tests including those flagged as long',                                          is_optional => 1                       },
-        list              => { is => 'Boolean', doc => 'List the tests, but do not actually run them.'                                                                              },
-        noisy             => { is => 'Boolean', doc => "doesn't redirect stdout",is_optional => 1},
-
-        perl_opts         => { is => 'String',  doc => 'Override options to the Perl interpreter when running the tests (-d:Profile, etc.)', is_optional => 1, default_value => ''  }, 
-        cover             => { is => 'List',    doc => 'Cover only this(these) modules',                                                     is_optional => 1                       },
-        cover_svn_changes => { is => 'Boolean', doc => 'Cover modules modified in svn status',                                               is_optional => 1                       },
-        cover_svk_changes => { is => 'Boolean', doc => 'Cover modules modified in svk status',                                               is_optional => 1                       },
-        cover_cvs_changes => { is => 'Boolean', doc => 'Cover modules modified in cvs status',                                               is_optional => 1                       },
-        coverage          => { is => 'Boolean', doc => 'Invoke Devel::Cover',                                                                is_optional => 1                       },
-        script_opts       => { is => 'String',  doc => 'Override options to the test case when running the tests (--dump-sql --no-commit)',  is_optional=>  1, default_value => ''  },
-        callcount         => { is => 'Boolean', doc => 'Count the number of calls to each subroutine/method',                                is_optional => 1                       },
-        jobs              => { is => 'Number',  doc => 'How many tests to run in parallel',                                                  is_optional => 1, default_value => 1,  },
-        lsf               => { is => 'Boolean', doc => 'If true, tests will be submitted as jobs via bsub' },
-        lsf_params        => { is => 'String',  doc => 'Params passed to bsub while submitting jobs to lsf',        is_optional => 1, default_value => '-q short -R select[type==LINUX64]',},
-        run_as_lsf_helper => { is => 'String',  doc => 'Used internally by the test harness',                                                is_optional => 1, },
-        inc               => { is => 'String',  doc => 'Additional paths for @INC, alias for -I',                              is_many => 1, is_optional => 1, },
-        color             => { is => 'Boolean', doc => 'Use TAP::Harness::Color to generate color output', default_value => 0 },
-        junit             => { is => 'Boolean', doc => 'Run all tests with junit style XML output. (requires TAP::Formatter::JUnit)' },
-    ],
+        bare_args => { is_optional => 1, is_many => 1, shell_args_position => 1, is_input => 1 },
+        recurse           => { is => 'Boolean',
+                               doc => 'Run all .t files in the current directory, and in recursive subdirectories.' },
+        list              => { is => 'Boolean',
+                               doc => 'List the tests, but do not actually run them.' },
+        noisy             => { is => 'Boolean',
+                               doc => "doesn't redirect stdout",is_optional => 1 },
+        perl_opts         => { is => 'String',
+                               doc => 'Override options to the Perl interpreter when running the tests (-d:Profile, etc.)', is_optional => 1,
+                               default_value => '' },
+        lsf               => { is => 'Boolean',
+                               doc => 'If true, tests will be submitted as jobs via bsub' },
+        color             => { is => 'Boolean',
+                               doc => 'Use TAP::Harness::Color to generate color output',
+                               default_value => 0 },
+        junit             => { is => 'Boolean',
+                               doc => 'Run all tests with junit style XML output. (requires TAP::Formatter::JUnit)' },
+ ],
+    has_optional => [
+        'time'            => { is => 'String',
+                               doc => 'Write timelog sum to specified file', },
+        long              => { is => 'Boolean',
+                               doc => 'Run tests including those flagged as long', },
+        cover             => { is => 'List',
+                               doc => 'Cover only this(these) modules', },
+        cover_svn_changes => { is => 'Boolean',
+                               doc => 'Cover modules modified in svn status', },
+        cover_svk_changes => { is => 'Boolean',
+                               doc => 'Cover modules modified in svk status', },
+        cover_cvs_changes => { is => 'Boolean',
+                               doc => 'Cover modules modified in cvs status', },
+        cover_git_changes => { is => 'Boolean',
+                               doc => 'Cover modules modified in git status', },
+        coverage          => { is => 'Boolean',
+                               doc => 'Invoke Devel::Cover', },
+        script_opts       => { is => 'String',
+                               doc => 'Override options to the test case when running the tests (--dump-sql --no-commit)',
+                               default_value => ''  },
+        callcount         => { is => 'Boolean',
+                               doc => 'Count the number of calls to each subroutine/method', },
+        jobs              => { is => 'Number',
+                               doc => 'How many tests to run in parallel',
+                               default_value => 1, },
+        lsf_params        => { is => 'String',
+                               doc => 'Params passed to bsub while submitting jobs to lsf',
+                               default_value => '-q short -R select[type==LINUX64]' },
+        run_as_lsf_helper => { is => 'String',
+                               doc => 'Used internally by the test harness', },
+        inc               => { is => 'String',
+                               doc => 'Additional paths for @INC, alias for -I',
+                               is_many => 1, },
+     ],
 );
 
 sub help_brief { "Run the test suite against the source tree." }
@@ -54,7 +82,7 @@ sub help_brief { "Run the test suite against the source tree." }
 sub help_synopsis {
     return <<'EOS'
 cd MyNamespace
-ur test run --recurse                   # run all tests in the namespace
+ur test run --recurse                   # run all tests in the namespace or under the current directory
 ur test run                             # runs all tests in the t/ directory under pwd
 ur test run t/mytest1.t My/Class.t      # run specific tests
 ur test run -v -t --cover-svk-changes   # run tests to cover latest svk updates
@@ -67,6 +95,22 @@ sub help_detail {
     return <<EOS
 This command is like "prove" or "make test", running the test suite for the current namespace.
 EOS
+}
+
+
+# We're overriding create() so it'll run in a Namespace directory or
+# not.  If run within a namespace dir, then it'll run all the tests under
+# the namespace.  If not, it'll run all the tests in the current dir
+sub create {
+    my $class = shift;
+
+    my $bx = $class->define_boolexpr(@_);
+    unless ($bx->specifies_value_for('namespace_name')) {
+        my $namespace_name = $class->resolve_namespace_name_from_cwd();
+        $namespace_name ||= 'UR';    # Pretend we're running in the UR namespace
+        $bx = $bx->add_filter(namespace_name => $namespace_name);
+    }
+    return $class->SUPER::create($bx);
 }
 
 
@@ -90,32 +134,19 @@ sub execute {
 
     $DB::single = 1;
 
-    # calling _init() will produce an error if not run within a UR namespace dir
-    my $err_setting = $self->dump_error_messages();
-    $self->dump_error_messages(0);
-    eval {
-        if ($self->SUPER::_init(@_)) {
-            my $datasource_meta_class = $self->namespace_name . '::DataSource::Meta';
-            my $datasource_meta = $datasource_meta_class->get();
-            $datasource_meta->create_dbh();
-            $self->status_message("Running tests within namespace ".$self->namespace_name);
-        }
-    };
-    $self->dump_error_messages($err_setting);
-    if ($@) {
-        $self->error_message("There was an exception initializing the test harness:\n$@");
-        return;
+    my $working_path;
+    if ($self->namespace_name ne 'UR') {
+        $self->status_message("Running tests within namespace ".$self->namespace_name);
+        $working_path = $self->namespace_path;
+    } else {
+        $self->status_message("Running tests under the current directory");
+        $working_path = '.';
     }
 
     if ($self->run_as_lsf_helper) {
         $self->_lsf_test_worker($self->run_as_lsf_helper);
         exit(0);
     }
-
-    my $lib_path = $self->lib_path;
-    my $working_path = $self->working_path;
-
-    $working_path ||= ".";
 
     # nasty parsing of command line args
     # this may no longer be needed..
@@ -242,6 +273,9 @@ sub _run_tests {
     }
     elsif ($self->cover_svk_changes) {
         push @cover_specific_modules, get_status_file_list('svk');
+    }
+    elsif ($self->cover_git_changes) {
+        push @cover_specific_modules, get_status_file_list('git');
     }
     elsif ($self->cover_cvs_changes) {
         push @cover_specific_modules, get_status_file_list('cvs');
@@ -467,11 +501,13 @@ sub get_status_file_list {
             @lines = IO::File->new("cvs -q up |")->getlines;
         } 
         elsif ($tool eq "git") {
-            @lines = IO::File->new("git diff --name-status")->getlines;
+            @lines = IO::File->new("git diff --name-status |")->getlines;
         }
         else {
-            die "Unknown tool $tool.  Try svn, svk, or cvs.\n";
+            die "Unknown tool $tool.  Try svn, svk, cvs or git.\n";
         }
+        # All these tools have flags or other data with the filename as the last column
+        @lines = map { (split(/\s+/))[-1] } @lines;
 
         unless (chdir($orig_cwd)) {
             die "Error changing directory back to the original cwd after checking file status with $tool.";

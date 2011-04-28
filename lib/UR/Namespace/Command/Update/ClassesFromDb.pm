@@ -84,26 +84,10 @@ sub execute {
     # Command parameter checking
     #
     
-#$DB::single=1;
     my $force_check_all_tables = $self->force_check_all_tables;
     my $force_rewrite_all_classes = $self->force_rewrite_all_classes;
     
-    # Hack because some parts of the schema are only visible to the rw user.
-    #my $access_level_param = UR::Command::Param->get(command_id => 'main', name => 'access');
-    #if ($access_level_param) {
-    #    my $access_level = $access_level_param->value;
-    #    unless (defined $access_level and $access_level eq "rw") {
-    #        $access_level_param->value("rw");
-    #    }
-    #}
-
-    $self->_init;
-
     my $namespace = $self->namespace_name;
-    unless ($namespace) {
-        $self->error_message("This command must be run from a namespace directory.");
-        return;
-    }
     $self->status_message("Updating namespace: $namespace\n");
 
     my @namespace_data_sources = $namespace->get_data_sources;
@@ -1295,8 +1279,10 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             }
         }
 
-        my $delegation_name = $r_class->type_name;
-        $delegation_name =~ s/ /_/g;
+        my @r_class_name_parts = split('::', $r_class->class_name);
+        shift @r_class_name_parts;  # drop the namespace name
+        my $delegation_name = lc(join('_', @r_class_name_parts));
+
         if ($matched) {
             $delegation_name = $delegation_name . "_" . $prefix if $prefix;
             $delegation_name .= ($suffix !~ /\D/ ? "" : "_") . $suffix if $suffix;
