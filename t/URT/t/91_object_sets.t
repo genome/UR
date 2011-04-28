@@ -174,8 +174,6 @@ foreach my $color ( keys %colors ) {
     $first_time = 0;
 }
 
-
-
 # Test having an -order_by in addition to -group_by.  It should throw an exception if
 # all the order_by columns don't appear in -group_by.
 
@@ -186,7 +184,12 @@ for my $person (URT::Person->is_loaded(car_colors => 'yellow')) {
 }
 
 # Now we'll delete the people with blue cars.  This means we should not get a set
-# back even though the set is in the database.
+# back even though the set is in the database.  This will require that changes
+# check for intersecting sets and remove cached aggregate values.  Because 
+# we already track loaded object queries in a 2-tier hash (all_params_loaded),
+# we probably need a symmetrical structure for loaded sets to make this efficient.
+# This will ensure that, while creation and deletion must test all sets for membership,
+# updates will only need to look at sets with templates which involve the changed properties.
 #for my $person (URT::Person->is_loaded(car_colors => 'blue')) {
 #    $person->delete;
 #}
