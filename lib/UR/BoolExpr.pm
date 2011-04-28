@@ -799,6 +799,10 @@ sub legacy_params_hash {
     return $params;
 }
 
+sub filter_regex_for_string {
+    return '^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*[\'"]?([^\'"]*)[\'"]?\s*$';
+}
+
 sub resolve_for_string {
     my ($self, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
@@ -806,11 +810,9 @@ sub resolve_for_string {
 
     no warnings;
     
+    my $filter_regex = $self->filter_regex_for_string();
     my @filters = map {
-        unless (
-            ($property, $op, $value) =
-            ($_ =~ /^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*['"]?([^'"]*)['"]?\s*$/)
-        ) {
+        unless (($property, $op, $value) = ($_ =~ /$filter_regex/)) {
             die "Unable to process filter $_\n";
         }
         if ($op eq '~') {
