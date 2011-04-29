@@ -122,6 +122,7 @@ sub unload {
         my @unloaded;
 
         # unload all objects of this class
+        my @involved_classes = ( $class );
         for my $obj ($cx->all_objects_loaded_unsubclassed($class))
         {
             push @unloaded, $obj->unload;
@@ -130,6 +131,7 @@ sub unload {
         # unload any objects that belong to any subclasses
         for my $subclass ($cx->subclasses_loaded($class))
         {
+            push @involved_classes, $subclass;
             push @unloaded, $subclass->unload;
         }
 
@@ -139,6 +141,9 @@ sub unload {
                 delete $UR::Context::all_params_loaded->{$template_id};
             }
         }
+
+        # Turn off the all_objects_are_loaded flags
+        delete @$UR::Context::all_objects_are_loaded{@involved_classes};
 
         return @unloaded;
     }
