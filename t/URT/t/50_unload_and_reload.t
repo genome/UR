@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 64;
+use Test::More tests => 86;
 use URT::DataSource::SomeSQLite;
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
