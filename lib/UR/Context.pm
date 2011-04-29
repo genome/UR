@@ -1575,7 +1575,7 @@ sub get_objects_for_class_and_rule {
         # this returns objects from the underlying context after importing them into the current context,
         # but only if they did not exist in the current context already
         $self->_log_query_for_rule($class, $normalized_rule, "QUERY: importing from underlying context with rule $normalized_rule") if ($is_monitor_query);
-        my $underlying_context_iterator = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
+        my $underlying_context_iterator = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial, $cached);
 
         # Some thoughts about the loading iterator's behavior around changing objects....
         #
@@ -1800,7 +1800,7 @@ sub UR::Context::loading_iterator_tracker::DESTROY {
 # iterator is read, another get() or iterator is created that covers (some of) the same
 # objects which get pulled into the object cache, and the second request is run to
 # completion.  Since the underlying context iterator has been changed to never return
-# objects currently cached, the first iterator would have incorrectly skipped ome objects that
+# objects currently cached, the first iterator would have incorrectly skipped some objects that
 # were not loaded when the first iterator was created, but later got loaded by the second.
 sub _inject_object_into_other_loading_iterators {
     my($self, $new_object, $iterator_to_skip) = @_;
@@ -1810,7 +1810,8 @@ sub _inject_object_into_other_loading_iterators {
     for (my $i = 0; $i < $iterator_count; $i++) {
         my($loading_iterator, $rule, $object_sorter, $cached)
                                 = @{$UR::Context::loading_iterators->[$i]};
-        next if ($loading_iterator eq $iterator_to_skip);  # That's me!  Don't insert into our own @$cached this way
+        next if (defined($iterator_to_skip)
+                 and $loading_iterator eq $iterator_to_skip);  # That's me!  Don't insert into our own @$cached this way
         if ($rule->evaluate($new_object)) {
 
             my $cached_list_len = @$cached;
@@ -1833,9 +1834,45 @@ sub _inject_object_into_other_loading_iterators {
             # It must go at the end...
             push @$cached, $new_object;
         }
-    } # end for()           
+    } # end for()
 }
-    
+
+
+# Reverse of _inject_object_into_other_loading_iterators().  Used when one iterator detects that
+# a previously loaded object no longer exists in the underlying context/datasource
+sub _remove_object_from_other_loading_iterators {
+    my($self, $object, $iterator_to_skip) = @_;
+
+    my $iterator_count = @$UR::Context::loading_iterators;
+    ITERATOR:
+    for (my $i = 0; $i < $iterator_count; $i++) {
+        my($loading_iterator, $rule, $object_sorter, $cached)
+                                = @{$UR::Context::loading_iterators->[$i]};
+        next if (defined($iterator_to_skip)
+                  and $loading_iterator eq $iterator_to_skip);  # That's me!  Don't insert into our own @$cached this way
+        if ($rule->evaluate($object)) {
+
+            my $cached_list_len = @$cached;
+            for(my $i = 0; $i < $cached_list_len; $i++) {
+                my $cached_object = $cached->[$i];
+                next if $cached_object->isa('UR::DeletedRef');
+
+                my $comparison = $object_sorter->($object, $cached_object);
+
+                if ($comparison == 0) {
+                    # That's the one, remove it from the list
+print "removing obj id ".$object->id."\n";
+                    splice(@$cached, $i, 1);
+                    next ITERATOR;
+                } elsif ($comparison > 0) {
+                    # past the point where we expect to find this object
+                    next ITERATOR;
+                }
+            }
+        }
+    } # end for()
+}
+
 
 
 # A wrapper around the method of the same name in UR::DataSource::* to iterate over the
@@ -2195,16 +2232,27 @@ sub _create_secondary_loading_closures {
     return (\@secondary_object_importers, \@addl_join_comparators);
 }
 
+# True if the object was loaded from an underlying context and/or datasource, or if the
+# object has been committed to the underlying context
+sub object_exists_in_underlying_context {
+    my($self, $obj) = @_;
+
+    return (exists($obj->{'db_committed'}) || exists($obj->{'db_saved_uncommitted'}));
+}
 
 # This returns an iterator that is used to bring objects in from an underlying
 # context into this context.  It will not return any objects that already exist
 # in the current context, even if the $db_iterator returns a row that belongs
 # to an already-existing object
 sub _create_import_iterator_for_underlying_context {
-    my ($self, $rule, $dsx, $this_get_serial) = @_; 
+    my ($self, $rule, $dsx, $this_get_serial, $cached) = @_; 
 
     # TODO: instead of taking a data source, resolve this internally.
     # The underlying context itself should be responsible for its data sources.
+
+    # Objects that match the rule that were loaded from an underlying context/datasource by a previous get()
+    my @previously_loaded = grep { $self->object_exists_in_underlying_context($_) } @$cached;
+$DB::single=1;
 
     # Make an iterator for the primary data source.
     # Primary here meaning the one for the class we're explicitly requesting.
@@ -2242,7 +2290,8 @@ sub _create_import_iterator_for_underlying_context {
                 if ($subclass_name and $subclass_name ne $class_name) {
                     #$rule = $subclass_name->define_boolexpr($rule->params_list, $sub_typing_property => $value);
                     $rule = UR::BoolExpr->resolve_normalized($subclass_name, $rule->params_list, $sub_typing_property => $value);
-                    return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial);
+                    my @sub_cached = grep { $_->isa($subclass_name) } @previously_loaded;
+                    return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial, \@sub_cached);
                 }
             }
             else {
@@ -2258,12 +2307,12 @@ sub _create_import_iterator_for_underlying_context {
             #    $sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
             #);
             die "No longer supported!";
-            my $rule = UR::BoolExpr->resolve(
-                           $class_name,
-                           $rule_template->get_rule_for_values(@values)->params_list,
-                           #$sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
-                        );
-            return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial)
+            #my $rule = UR::BoolExpr->resolve(
+            #               $class_name,
+            #               $rule_template->get_rule_for_values(@values)->params_list,
+            #               #$sub_typing_property => (@type_names_under_class_with_no_table > 1 ? \@type_names_under_class_with_no_table : $type_names_under_class_with_no_table[0]),
+            #            );
+            #return $self->_create_import_iterator_for_underlying_context($rule,$dsx,$this_get_serial)
         }
         else {
             # continue normally
@@ -2365,6 +2414,8 @@ sub _create_import_iterator_for_underlying_context {
         $class_name->all_objects_are_loaded(undef);
     }
 
+    my $object_sorter = $rule_template->sorter();
+
     #my $is_monitor_query = $self->monitor_query();
 
     # Make the iterator we'll return.
@@ -2443,6 +2494,9 @@ sub _create_import_iterator_for_underlying_context {
                         while ($obj = $subordinate_iterator_for_class{$class}->()) {1;}
                     }
                 }
+
+                # anything left in this list does not exist in the database anymore
+                $self->__merge_db_data_with_existing_object($class_name, $_, undef, []) foreach @previously_loaded;
 
                 $db_iterator = undef;
                 my $retval = $next_object_to_return;
@@ -2541,6 +2595,18 @@ sub _create_import_iterator_for_underlying_context {
                                               && ref($primary_object_for_next_db_row)
                                               && exists($primary_object_for_next_db_row->{'__get_serial'});
 
+            if (ref $primary_object_for_next_db_row) {
+                while(@previously_loaded and (my $comparison = $object_sorter->($primary_object_for_next_db_row,  $previously_loaded[0])) >= 0 ) {
+                    my $previously_loaded = shift @previously_loaded;
+print "compared ".$primary_object_for_next_db_row->id." to prev loaded ".$previously_loaded->id." comparison was $comparison\n";
+                    if ($comparison) {  # must be greater than 0
+print "deleting object\n";
+                        # The DB didn't return something previously cached
+                        $self->__merge_db_data_with_existing_object($class_name, $previously_loaded, undef, []);
+                    }
+                }
+            }
+
             foreach my $obj (@imported) {
                 # The object importer will return undef for an object if no object
                 # got created for that $next_db_row, and will return a string if the object
@@ -2574,9 +2640,10 @@ sub _create_import_iterator_for_underlying_context {
                     #print "parallel iteration for loading $subclass_name under $class_name!\n";
                     my $sub_classified_rule_template = $rule_template->sub_classify($subclass_name);
                     my $sub_classified_rule = $sub_classified_rule_template->get_normalized_rule_for_values(@values);
+                    my @sub_loaded = grep { $sub_classified_rule->evaluate($_) } @previously_loaded;
                     $sub_iterator 
                         = $subordinate_iterator_for_class{$table_subclass} 
-                            = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx,$this_get_serial);
+                            = $self->_create_import_iterator_for_underlying_context($sub_classified_rule,$dsx,$this_get_serial, \@sub_loaded);
                 }
                 ($primary_object_for_next_db_row) = $sub_iterator->();
                 if (! defined $primary_object_for_next_db_row) {
@@ -2638,6 +2705,23 @@ sub _create_import_iterator_for_underlying_context {
 
 sub __merge_db_data_with_existing_object {
     my($self, $class_name, $existing_object, $pending_db_object_data, $property_names) = @_;
+
+    if (! defined $pending_db_object_data) {
+print "Detected that pending db object data is undef\n";
+        # this means a previously loaded and/or saved object has had its row removed from the database
+        if (defined($existing_object)
+            and $self->object_exists_in_underlying_context($existing_object)
+            and $existing_object->__changes__
+        ) {
+            my $id = $existing_object->id;
+            Carp::croak("$class_name ID '$id' previously existed in an underlying context/datasource, has since been deleted from that context/datasource, and the cached object now has unsavable changes.\nDump: ".Data::Dumper::Dumper($existing_object)."\n");
+        } else {
+            $self->_remove_object_from_other_loading_iterators($existing_object);
+            $existing_object->__signal_change__('delete');
+            $self->_abandon_object($existing_object);
+            return $existing_object;
+        }
+    }
 
     my $expected_db_data;
     if (exists $existing_object->{'db_saved_uncommitted'}) {
@@ -2708,6 +2792,8 @@ sub __merge_db_data_with_existing_object {
     }
  
     # No conflicts.  Update db_committed and db_saved_uncommitted based on the DB data
+if (!defined $expected_db_data) { print "expected db data is undef\n"}
+if (!defined $pending_db_object_data) { print "pending_db_object_data is undef\n"}
     %$expected_db_data = (%$expected_db_data, %$pending_db_object_data);
 
     if (! $different) {
@@ -4225,7 +4311,7 @@ code.
 =item _create_import_iterator_for_underlying_context
 
   $subref = $context->_create_import_iterator_for_underlying_context(
-                          $boolexpr, $data_source, $serial_number
+                          $boolexpr, $data_source, $serial_number, $cached_listref
                       );
   $next_obj = $subref->();
 
@@ -4242,6 +4328,10 @@ C<$data_source> is the L<UR::DataSource> that will be used to load data from.
 C<$serial_number> is used by the object cache pruner.  Each object loaded
 through this iterator will have $serial_number in its C<__get_serial> hashref
 key.
+
+C<$cached_listref> is a list of objects already in the object cache that match
+the BoolExpr.  It is used to detect objects previously loaded from the database
+that have now no longer have rows in the database.
 
 It works by first getting an iterator for the data source (the
 C<$db_iterator>).  It calls L</_get_template_data_for_loading> to find out

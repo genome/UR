@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 86;
+use Test::More tests => 85;
 use URT::DataSource::SomeSQLite;
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
@@ -169,9 +169,9 @@ is($query_count, 0, 'Made no queries');
 
 $query_count = 0;
 @things = $cx->reload('URT::Thing');
-is(scalar(@things), 3, 'reload still returns 3 things'); # ID 1 still exists in the program's context
+is(scalar(@things), 2, 'reload returns 2 things');
 is_deeply([sort map { $_->id } @things],
-          [1,2,3],
+          [2,3],
           'Object IDs were correct');
 is($query_count, 1, 'Made 1 query');
 
@@ -187,9 +187,9 @@ is($query_count, 1, 'Made 1 query');
 ok($dbh->do('delete from thing where thing_id = 2'), 'delete thing ID 2 from the database directly');
 $query_count = 0;
 @things = $cx->reload('URT::Thing');
-is(scalar(@things), 2, 'After delete, reload returns 2 things');  # ID 2 is still in memory
+is(scalar(@things), 1, 'After delete, reload returns 2 things');
 is_deeply([sort map { $_->id } @things],
-          [2,3],
+          [3],
           'Object IDs were correct');
 is($query_count, 1, 'Made 1 query');
 
@@ -242,10 +242,6 @@ is($query_count, 1, 'Made 1 query');
 
 
 ok($dbh->do('delete from thing'), 'again, delete all rows from the database directly');
-@things = $cx->reload('URT::Thing');
-is(scalar(@things), 1, 'reload returns 1 thing');   # ID 6 is still in memory
-
-URT::Thing->unload();
 @things = $cx->reload('URT::Thing');
 is(scalar(@things), 0, 'reload returns 0 things after unload');
 ok($dbh->do("insert into thing values (7,'brown')"), 'Insert a new row into the database directly');
