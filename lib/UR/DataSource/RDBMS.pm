@@ -3087,44 +3087,32 @@ sub _generate_template_data_for_loading {
     my ($self, $rule_template) = @_;
 
     # class-based values
-
     my $class_name = $rule_template->subject_class_name;
     my $class_meta = $class_name->__meta__;
     my $class_data = $self->_get_class_data_for_loading($class_meta);       
-
+    
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
     my @all_table_properties                = @{ $class_data->{all_table_properties} };
     my $first_table_name                    = $class_data->{first_table_name};
-
     my @all_id_property_names               = @{ $class_data->{all_id_property_names} };
     my @id_properties                       = @{ $class_data->{id_properties} };   
-    my $id_property_sorter                  = $class_data->{id_property_sorter};    
-
     my $order_by_columns                    = $class_data->{order_by_columns} || [];
+    
+    #my $id_property_sorter                  = $class_data->{id_property_sorter};    
+    #my @lob_column_names                    = @{ $class_data->{lob_column_names} };
+    #my @lob_column_positions                = @{ $class_data->{lob_column_positions} };
+    #my $query_config                        = $class_data->{query_config}; 
+    #my $post_process_results_callback       = $class_data->{post_process_results_callback};
+    #my $class_table_name                    = $class_data->{class_table_name};
 
-    my @lob_column_names                    = @{ $class_data->{lob_column_names} };
-    my @lob_column_positions                = @{ $class_data->{lob_column_positions} };
-
-    my $query_config                        = $class_data->{query_config}; 
-    my $post_process_results_callback       = $class_data->{post_process_results_callback};
-
-    my $class_table_name                    = $class_data->{class_table_name};
-
-    # individual query/boolexpr based
-
-    my $recursion_desc = $rule_template->recursion_desc;
-    my $recurse_property_on_this_row;
-    my $recurse_property_referencing_other_rows;
-    if ($recursion_desc) {
-        ($recurse_property_on_this_row,$recurse_property_referencing_other_rows) = @$recursion_desc;        
-    }
-
+    # individual template based
     my $hints    = $rule_template->hints;
     my $order_by = $rule_template->order_by;
     my $group_by = $rule_template->group_by;
     my $page     = $rule_template->page;
     my $limit    = $rule_template->limit;
     my $aggregate = $rule_template->aggregate;
+    my $recursion_desc = $rule_template->recursion_desc;
 
     my %group_by_property_names;
     if ($group_by) {
@@ -3161,17 +3149,15 @@ sub _generate_template_data_for_loading {
         }
     }
 
-    #my @group_table_debug = %group_by_property_names;
-    #print "GROUP STARTING WITH @group_table_debug\n" if $group_by;
-    #my @order_table_debug = %order_by_property_names;  
-    #print "ORDER STARTING WITH @order_table_debug\n" if $order_by;
-
-    # the following two sets of variables hold the net result of the logic
-    my $select_clause;
-    my $select_hint;
-    my $from_clause;
-    my $connect_by_clause;
-    my $group_by_clause;
+    #
+    # the initial examination of rule properties
+    # sets up:
+    #   joins for inheritance
+    #   filters on direct column
+    #   handles sql expressions in the property definition
+    #   if it finds calculated properties flips a flag so we know to do client side rechecking
+    #   identifies the list of indirect properties, chains, and hints to do more joins
+    #
 
     # _usually_ items freshly loaded from the DB don't need to be evaluated through the rule
     # because the SQL gets constructed in such a way that all the items returned would pass anyway.
@@ -3179,242 +3165,214 @@ sub _generate_template_data_for_loading {
     # in the caller's code from one point of view) or with calculated non-sql properties, then the
     # sql will return a superset of the items we're actually asking for, and the loader needs to
     # validate them through the rule
-    my $needs_further_boolexpr_evaluation_after_loading; 
+    my $needs_further_boolexpr_evaluation_after_loading;
 
-    my @sql_params;
-    my @filter_specs;         
-    my @property_names_in_resultset_order;
-    my $object_num = 0; # 0-based, usually zero unless there are joins
-
-    my @filters = $rule_template->_property_names;
-    my %filters =     
-        map { $_ => 0 }
-        grep { substr($_,0,1) ne '-' }
-        @filters;
-
-    #print Data::Dumper::Dumper($rule_template->constant_value_id, $rule_template->logic_type, $rule_template->logic_detail);
-
-    unless (@all_id_property_names == 1 && $all_id_property_names[0] eq "id") {
-        delete $filters{'id'};
-    }
-
-    my (
-        @sql_joins,
-        @sql_filters, 
-        $prev_table_name, 
-        $prev_id_column_name, 
-        $eav_class, 
-        @eav_properties,
-        $eav_cnt, 
-        %pcnt, 
-        $pk_used,
-        @delegated_properties,    
-        %outer_joins,
-        %filters_to_satisfy,
-        %chain_delegates,
-    );
-
-    %filters_to_satisfy = %filters;
-
-    for my $key (keys %filters_to_satisfy) {
-        if (index($key,'.') != -1) {
-            $chain_delegates{$key} = delete $filters_to_satisfy{$key};
+    my @sql_joins;
+    my @sql_filters; 
+    my @delegated_properties;    
+    my @chain_delegates;
+    
+    do { 
+        my @filters = $rule_template->_property_names;
+        
+        my %filters =     
+            map { $_ => 0 }
+            grep { substr($_,0,1) ne '-' }
+            @filters;
+        
+        unless (@all_id_property_names == 1 && $all_id_property_names[0] eq "id") {
+            delete $filters{'id'};
         }
-    }
 
-    for my $co ( $class_meta, @parent_class_objects ) {
-        my $type_name  = $co->type_name;
-        my $class_name = $co->class_name;
-        my @id_property_objects = $co->direct_id_property_metas;
-        my %id_properties = map { $_->property_name => 1 } @id_property_objects;
-        my @id_column_names =
-            map { $_->column_name }
-            @id_property_objects;
-        my $table_name = $co->table_name;
-        if ($table_name) {
-            $first_table_name ||= $table_name;
-            if ($prev_table_name) {
-                die "Database-level inheritance cannot be used with multi-value-id classes ($class_name)!" if @id_property_objects > 1;
-                my $prev_table_alias;
-                if ($prev_table_name =~ /.*\s+(\w+)\s*$/) {
-                    $prev_table_alias = $1;
+        my %filters_to_satisfy = %filters;
+        for my $key (keys %filters_to_satisfy) {
+            if (index($key,'.') != -1) {
+                push @chain_delegates, $key; 
+                delete $filters_to_satisfy{$key};
+            }
+        }
+        
+        my $prev_table_name; 
+        my $prev_id_column_name; 
+        my $pk_used;
+        
+        for my $co ( $class_meta, @parent_class_objects ) {
+            my $type_name  = $co->type_name;
+            my $class_name = $co->class_name;
+            my @id_property_objects = $co->direct_id_property_metas;
+            my %id_properties = map { $_->property_name => 1 } @id_property_objects;
+            my @id_column_names =
+                map { $_->column_name }
+                @id_property_objects;
+
+            my $table_name = $co->table_name;
+            if ($table_name) {
+                $first_table_name ||= $table_name;
+                if ($prev_table_name) {
+                    die "Database-level inheritance cannot be used with multi-value-id classes ($class_name)!" if @id_property_objects > 1;
+                    my $prev_table_alias;
+                    if ($prev_table_name =~ /.*\s+(\w+)\s*$/) {
+                        $prev_table_alias = $1;
+                    }
+                    else {
+                        $prev_table_alias = $prev_table_name;
+                    }
+                    push @sql_joins,
+                        $table_name =>
+                        {
+                            $id_property_objects[0]->column_name => { 
+                                link_table_name => $prev_table_alias, 
+                                link_column_name => $prev_id_column_name 
+                            },
+                            -is_required => 1,
+                        };
+                }
+                $prev_table_name = $table_name;
+                $prev_id_column_name = $id_property_objects[0]->column_name;
+            }
+
+            my %properties_to_query = map { $_ => 1 }
+                                        keys(%filters),
+                                        ($hints ? @$hints : ()),
+                                        ($order_by ? @$order_by : ()),
+                                        ($group_by ? @$group_by : ());
+        
+            my @properties_to_query = sort keys(%properties_to_query);
+
+            while (my $property_name = shift @properties_to_query) {
+                my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);
+                next unless $property;
+
+                my ($operator, $value_position); 
+                if (exists $filters{$property_name}) {
+                    $operator       = $rule_template->operator_for($property_name);
+                    $value_position = $rule_template->value_position_for_property_name($property_name);
+                    unless (defined $value_position) {
+                        die "No value position found in rule template for filter property $property_name?!"
+                            . Data::Dumper::Dumper($rule_template);
+                    }
+                    delete $filters_to_satisfy{$property_name};
+                }
+
+                $pk_used = 1 if $id_properties{ $property_name };
+
+                if ($property->can("expr_sql")) {
+                    unless ($table_name) {
+                        $self->warning_message("Property '$property_name' of class '$class_name' can 'expr_sql' but has no table!");
+                        next;
+                    }
+                    my $expr_sql = $property->expr_sql;
+                    if (defined $value_position) {
+                        push @sql_filters, 
+                            $table_name => { 
+                                # cheap hack of prefixing with a whitespace differentiates 
+                                # from a regular column below
+                                " " . $expr_sql => { operator => $operator, value_position => $value_position }
+                            };
+                        delete $filters_to_satisfy{$property_name};
+                    }
+                    next;
+                }
+
+                if (my $column_name = $property->column_name) {
+                    unless ($table_name) {
+                        $self->warning_message("Property '$property_name' of class '$class_name'  has column '$column_name' but has no table!");
+                        next;
+                    }
+                    # normal column: filter on it
+                    if (defined $value_position) {
+                        push @sql_filters, 
+                            $table_name => { 
+                                $column_name => { operator => $operator, value_position => $value_position } 
+                            };
+                        delete $filters_to_satisfy{$property_name};
+                    }
+                }
+                elsif ($property->is_transient) {
+                    die "Query by transient property $property_name on $class_name cannot be done!";
+                }
+                elsif ($property->is_delegated) {
+                    push @delegated_properties, $property;
+                    delete $filters_to_satisfy{$property_name};
+                }
+                elsif ($property->is_calculated || $property->is_constant) {
+                    $needs_further_boolexpr_evaluation_after_loading = 1;
+                    delete $filters_to_satisfy{$property_name};
                 }
                 else {
-                    $prev_table_alias = $prev_table_name;
-                }
-                push @sql_joins,
-                    $table_name =>
-                    {
-                        $id_property_objects[0]->column_name => { 
-                            link_table_name => $prev_table_alias, 
-                            link_column_name => $prev_id_column_name 
-                        },
-                        -is_required => 1,
-                    };
-            }
-            $prev_table_name = $table_name;
-            $prev_id_column_name = $id_property_objects[0]->column_name;
-        }
-
-        my %properties_to_query = map { $_ => 1 }
-                                      keys(%filters),
-                                      ($hints ? @$hints : ()),
-                                      ($order_by ? @$order_by : ()),
-                                      ($group_by ? @$group_by : ());
-        my @properties_to_query = sort keys(%properties_to_query);
-
-        while (my $property_name = shift @properties_to_query) {
-            my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);
-            next unless $property;
-
-            my ($operator, $value_position); 
-            if (exists $filters{$property_name}) {
-                $operator       = $rule_template->operator_for($property_name);
-                $value_position = $rule_template->value_position_for_property_name($property_name);
-                unless (defined $value_position) {
-                    die "No value position found in rule template for filter property $property_name?!"
-                        . Data::Dumper::Dumper($rule_template);
-                }
-                delete $filters_to_satisfy{$property_name};
-            }
-
-            $pk_used = 1 if $id_properties{ $property_name };
-
-            if ($property->can("expr_sql")) {
-                unless ($table_name) {
-                    $self->warning_message("Property '$property_name' of class '$class_name' can 'expr_sql' but has no table!");
                     next;
                 }
-                my $expr_sql = $property->expr_sql;
-                if (defined $value_position) {
-                    push @sql_filters, 
-                         $table_name => 
-                         { 
-                             # cheap hack of putting a whitespace differentiates 
-                             # from a regular column below
-                             " " . $expr_sql => { operator => $operator, value_position => $value_position }
-                         };
-                    delete $filters_to_satisfy{$property_name};
-                }
-                next;
             }
-
-            if (my $column_name = $property->column_name) {
-                unless ($table_name) {
-                    $self->warning_message("Property '$property_name' of class '$class_name'  has column '$column_name' but has no table!");
-                    next;
-                }
-                # normal column: filter on it
-                if (defined $value_position) {
-                    push @sql_filters, 
-                         $table_name => 
-                         { 
-                             $column_name => { operator => $operator, value_position => $value_position }
-                         };
-                    delete $filters_to_satisfy{$property_name};
-                }
-            }
-            elsif ($property->is_transient) {
-                die "Query by transient property $property_name on $class_name cannot be done!";
-            }
-            elsif ($property->is_delegated) {
-                push @delegated_properties, $property;
-                delete $filters_to_satisfy{$property_name};
-            }
-            elsif ($property->is_calculated || $property->is_constant) {
-                $needs_further_boolexpr_evaluation_after_loading = 1;
-                delete $filters_to_satisfy{$property_name};
-            }
-            else {
-                next;
-            }
+        } # end of inheritance loop
+        
+        if ( my @errors = keys(%filters_to_satisfy) ) { 
+            my $class_name = $class_meta->class_name;
+            $self->error_message("Unknown param(s) (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
+            print Data::Dumper::Dumper($rule_template);
+            Carp::confess();
         }
-    } # end of inheritance loop
-
-    if ( my @errors = keys(%filters_to_satisfy) ) { 
-        my $class_name = $class_meta->class_name;
-        $self->error_message("Unknown param(s) (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
-        print Data::Dumper::Dumper($rule_template);
-        Carp::confess();
-    }
-
-    my $last_class_name = $class_name;
-    my $last_class_object = $class_meta;        
-    my $last_object_num = 0;
-    my $alias_num = 1;
+    };
+    
+    my $object_num = 0; 
+    my $alias_num = 0;
+    
     my %alias_sql_join;
-
     my %joins_done;
-    my @joins_done;
 
     # FIXME - this needs to be broken out into delegated-property-join-resolver
     # and inheritance-join-resolver methods that can be called recursively.
     # It would better encapsulate what's going on and avoid bugs with complicated
     # get()s
+    #
+    @delegated_properties = map { $_->property_name } @delegated_properties;
     DELEGATED_PROPERTY:
-    for my $delegated_property (@delegated_properties, keys %chain_delegates) {
-        my $alias_for_property_value;
-        
+    for my $delegated_property (@delegated_properties, @chain_delegates) {
         my $property_name;
-        my $relationship_name;
         my @joins;
         my $is_optional;
-        my $delegate_class_meta;
-        my $via_accessor_meta;
         my $final_accessor;
-        my $final_accessor_class_meta;
-
-        if (ref($delegated_property)) {
-            $property_name = $delegated_property->property_name;
-            @joins = $delegated_property->_get_joins;
-            $relationship_name = $delegated_property->via;
-            $is_optional = $delegated_property->is_optional or $delegated_property->is_many;
-            $delegate_class_meta = $delegated_property->class_meta;
-            $final_accessor = $delegated_property->to;
-            unless ($relationship_name) {
-                $relationship_name = $property_name;
-                $needs_further_boolexpr_evaluation_after_loading = 1;
-            }
-            $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
-            $final_accessor_class_meta = $via_accessor_meta->data_type->__meta__;
-        }
-        else {
-            $DB::single = 1;
+        
+        do {
+            $property_name = $delegated_property;
             my @pmeta = $class_meta->property_meta_for_name($delegated_property);  
+        
             $is_optional = 0;
             for my $pmeta (@pmeta) {
-                $property_name = $delegated_property;
                 push @joins, $pmeta->_get_joins();
                 $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
             }
-            $relationship_name = $pmeta[0]->property_name;
-            $delegate_class_meta = $pmeta[0]->class_name->__meta__;
-            $via_accessor_meta = $pmeta[0];
-            $final_accessor = $pmeta[-1]->property_name;
-            $final_accessor_class_meta = $pmeta[-1]->class_name->__meta__;
-        }
 
+            my $final_accessor_meta = $pmeta[-1];
+            my $final_accessor_class_meta = $final_accessor_meta->class_name->__meta__;
+            $final_accessor = $final_accessor_meta->property_name;
 
-        # Follow all the via/to indirectedness to where the data ultimately comes from
-        if ($final_accessor) { # id_by or reverse_as object accessors may not have a 'to'
-            my $final_accessor_meta = $final_accessor_class_meta->property_meta_for_name($final_accessor);
-            if ($final_accessor_meta) {
-                if ($final_accessor_meta->id eq "UR::Object\tid") {
-                    # This is the generic 'id' property that won't be in the database.  See if the class 
-                    # has a single, alternate ID property we can swap in here
-                    my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
-                    if (@id_properties == 1) {
-                        $final_accessor_meta = $id_properties[0];
-                        $final_accessor_class_meta = $final_accessor_meta->class_meta;
-                    }
+            # Follow all the via/to indirectedness to where the data ultimately comes from
+            unless ($final_accessor) { # id_by or reverse_as object accessors may not have a 'to'
+                Carp::confess("No final accessor for $delegated_property???");
+            }
+
+            if ($final_accessor_meta->id eq "UR::Object\tid") {
+                # This is the generic 'id' property that won't be in the database.  See if the class 
+                # has a single, alternate ID property we can swap in here
+                my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
+                if (@id_properties == 1) {
+                    $final_accessor_meta = $id_properties[0];
                 }
-                while($final_accessor_meta && $final_accessor_meta->via) {
-                    $final_accessor_meta = $final_accessor_meta->to_property_meta();
-                }
-                $final_accessor = $final_accessor_meta->property_name;
-           }
-        }
+            }
 
+            while($final_accessor_meta && $final_accessor_meta->via) {
+                $final_accessor_meta = $final_accessor_meta->to_property_meta();
+            }
+            $final_accessor = $final_accessor_meta->property_name;
+            $final_accessor_class_meta = $final_accessor_meta->class_meta;
+
+            #if ($final_accessor ne $joins[-1]{final_accessor}) {
+            #    Carp::confess("$final_accessor ne $joins[-1]{final_accessor}");
+            #}
+        };
+
+        my $alias_for_property_value;
+        
         my $last_class_object_excluding_inherited_joins;
 
         my $final_join = $joins[-1];
@@ -3423,20 +3381,54 @@ sub _generate_template_data_for_loading {
         my $join_aliases_for_this_object;
 
         my @source_table_and_column_names;
-        while (my $object_join = shift @joins) {
+
+        while (my $object_join = shift @joins) { # one iteration per table between the start table and target
             #$DB::single = 1;
             #print "\tjoin $object_join\n";
             #        print Data::Dumper::Dumper($object_join);
 
-            $last_object_num = $object_num;
             $object_num++;
 
             my @joins_for_object = ($object_join);
 
             my $joins_for_object = 0;
 
-            while (my $join = shift @joins_for_object) {
+            # one iteration per layer of inheritance at this join
+            # or per case of a join having additional filtering
+            while (my $join = shift @joins_for_object) { 
 
+                my $where = $join->{where};
+                if (0) { #($where) {
+                    # a where clause might imply additional joins, requiring we pre-empt
+                    # continuing through the join chain until these are resolved
+                    $DB::single = 1;
+                    my $c = $join->{foreign_class};
+                    my $m = $c->__meta__;
+                    my $bx = UR::BoolExpr->resolve($c,@$where);
+                    my %p = $bx->params_list; # FIXME
+                    my @p = sort keys %p;
+                    my @added_joins;
+                    for my $pn (@p) {
+                        my $p = $m->property($pn);
+                        my @j = $p->_get_joins();
+                        my $j = pop @j;
+                        $j = { %$j };
+                        my $w = delete $j->{where};
+
+                        if (@j) {
+                            unshift @added_joins, @j;
+                        }
+                    }
+                    if (@added_joins) {
+                        $DB::single = 1;
+                        $join = { %$join };
+                        delete $join->{where};
+                        push @added_joins, $join;
+                        unshift @joins_for_object, @added_joins;
+                        next;
+                    }
+                }
+                
                 $joins_for_object++;
 
                 my $source_class_name = $join->{source_class};
@@ -3450,8 +3442,6 @@ sub _generate_template_data_for_loading {
                     $needs_further_boolexpr_evaluation_after_loading = 1;
                     next DELEGATED_PROPERTY;
                 }
-
-                my $where = $join->{where};
 
                 # This will get filled in during the first pass, and every time after we've successfully
                 # performed a join - ie. that the delegated property points directly to a class/property
@@ -3533,8 +3523,18 @@ sub _generate_template_data_for_loading {
                 my $alias = $joins_done{$join->{id}};
 
                 unless ($alias) {
-                    $alias = "${relationship_name}_${alias_num}";
                     $alias_num++;
+                    
+                    my $alias_length = length($property_name)+length($alias_num)+1;
+                    my $alias_max_length = 29;
+                    if ($alias_length > $alias_max_length) {
+                        $alias = substr($property_name,0,$alias_max_length-length($alias_num)-1); 
+                    }
+                    else {
+                        $alias = $property_name;
+                    }
+                    $alias =~ s/\./_/g;
+                    $alias .= '_' . $alias_num; 
 
                     if ($foreign_class_object->table_name) {
                         my @extra_filters;
@@ -3542,6 +3542,7 @@ sub _generate_template_data_for_loading {
                         # TODO This may not work correctly if the property we're joining on doesn't 
                         # have a table to get data from
                         if ($where) {
+                            $DB::single = 1;
                             # temp hack
                             # todo: switch to rule processing
                             for (my $n = 0; $n < @$where; $n += 2) {
@@ -3622,14 +3623,14 @@ sub _generate_template_data_for_loading {
                 if ($order_by) {
                     if ($order_by_property_names{$property_name}) {
                         my ($p) = 
-                        map {
-                            my $new = [@$_]; 
-                            $new->[2] = $alias;
-                            $new->[3] = 0; 
-                            $new 
-                        }
-                        grep { $_->[1]->property_name eq $final_accessor }
-                        @{ $foreign_class_loading_data->{direct_table_properties} };
+                            map {
+                                my $new = [@$_]; 
+                                $new->[2] = $alias;
+                                $new->[3] = 0; 
+                                $new 
+                            }
+                            grep { $_->[1]->property_name eq $final_accessor }
+                            @{ $foreign_class_loading_data->{direct_table_properties} };
                         $order_by_property_names{$property_name} = $p if $p;
                         #print "PROPERTY $property_name IS INVOLVED IN ORDERING: $p\n";
                     }
@@ -3647,11 +3648,10 @@ sub _generate_template_data_for_loading {
                 }
 
                 $joins_done{$join->{id}} = $alias;
-                push @joins_done, $join;
 
                 # Set these for after all of the joins are done
-                $last_class_name = $foreign_class_name;
-                $last_class_object = $foreign_class_object;
+                my $last_class_name = $foreign_class_name;
+                my $last_class_object = $foreign_class_object;
 
                 if ($joins_for_object == 1) {
                     #$last_alias_for_this_delegate = $alias;
@@ -3695,8 +3695,8 @@ sub _generate_template_data_for_loading {
                     }
                 }
 
-
             } # next join for this object
+
         } # next object join
 
         if (ref($delegated_property) and !$delegated_property->via) {
@@ -3749,19 +3749,25 @@ sub _generate_template_data_for_loading {
         }
     } # next delegated property
 
+    # the following two sets of variables hold the net result of the logic
+    my $select_clause;
+    my $select_hint;
+    my $from_clause;
+    my $connect_by_clause;
+    my $group_by_clause;
+
     # Build the SELECT clause explicitly.
     $select_clause = $self->_select_clause_for_table_property_data(@all_table_properties);
 
     # Oracle places group_by in a comment in the select 
     $select_hint = $class_meta->query_hint;
 
-    #print Data::Dumper::Dumper(\@sql_joins, \@sql_filters);
-
     # Build the FROM clause base.
     # Add joins to the from clause as necessary, then
     $from_clause = (defined $first_table_name ? "$first_table_name" : '');        
 
     my $cnt = 0;
+    my @sql_params;
     while (@sql_joins) {
         my $table_name = shift (@sql_joins);
         my $condition  = shift (@sql_joins);
@@ -3813,8 +3819,8 @@ sub _generate_template_data_for_loading {
 
     # build the WHERE clause by making a data structure which will be parsed outside of this module
     # special handling of different size lists, and NULLs, make a completely reusable SQL template very hard.
-    while (@sql_filters)
-    {
+    my @filter_specs;         
+    while (@sql_filters) {
         my $table_name = shift (@sql_filters);
         my $condition  = shift (@sql_filters);
         my ($table_alias) = ($table_name =~ /(\S+)\s*$/s);
@@ -3824,7 +3830,6 @@ sub _generate_template_data_for_loading {
             my $expr_sql = (substr($column_name,0,1) eq " " ? $column_name : "${table_alias}.${column_name}");                                
             my @keys = qw/operator value_position value link_table_name link_column_name/;
             my ($operator, $value_position, $value, $link_table_name, $link_column_name) = @$linkage_data{@keys};
-
 
             if ($link_table_name and $link_column_name) {
                 # the linkage data is a join specifier
@@ -3861,6 +3866,7 @@ sub _generate_template_data_for_loading {
         #$DB::single = 1;
     }    
 
+    my @property_names_in_resultset_order;
     for my $property_meta_array (@all_table_properties) {
         push @property_names_in_resultset_order, $property_meta_array->[1]->property_name; 
     }
@@ -3870,8 +3876,6 @@ sub _generate_template_data_for_loading {
     unless ($group_by) {
         $per_object_in_resultset_loading_detail = $self->_generate_loading_templates_arrayref(\@all_table_properties);
     }
-
-    my $parent_template_data = $self->SUPER::_generate_template_data_for_loading($rule_template);
 
     if ($group_by) {
         # when grouping, we're making set objects instead of regular objects
@@ -3919,10 +3923,12 @@ sub _generate_template_data_for_loading {
             $order_by_columns = [ @$additional_order_by_columns, @existing_order_by_columns ];
         }
     }
-
+   
+    my $parent_template_data = $self->SUPER::_generate_template_data_for_loading($rule_template);
+    
     my $template_data = $rule_template->{loading_data_cache} = {
         %$parent_template_data,
-
+        
         # custom for RDBMS
         select_clause                               => $select_clause,
         select_hint                                 => $select_hint,
