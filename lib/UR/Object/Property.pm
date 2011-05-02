@@ -180,42 +180,56 @@ sub _get_joins {
     unless ($self->{_get_joins}) {
         my $class_meta = UR::Object::Type->get(class_name => $self->class_name);
         my @joins;
+      
+        my $via = $self->via;
         
-        if (my $via = $self->via) {
-            my $via_meta = $class_meta->property_meta_for_name($via);
-            unless ($via_meta) {
-                my $property_name = $self->property_name;
-                my $class_name = $self->class_name;
-                Carp::croak "Can't resolve property '$property_name' of $class_name: No via meta for '$via'?";
+        my $to = $self->to;
+        if ($via and not $to) {
+            $to = $self->property_name;
+        }
+
+        if ($via or $to) {
+
+            my $via_meta;
+            if ($via) {
+                $via_meta = $class_meta->property_meta_for_name($via);
+                unless ($via_meta) {
+                    my $property_name = $self->property_name;
+                    my $class_name = $self->class_name;
+                    Carp::croak "Can't resolve property '$property_name' of $class_name: No via meta for '$via'?";
+                }
+
+                if ($via_meta->to and ($via_meta->to eq '-filter')) {
+                    return $via_meta->_get_joins;
+                }
+
+                unless ($via_meta->data_type) {
+                    my $property_name = $self->property_name;
+                    my $class_name = $self->class_name;
+                    Carp::croak "Can't resolve property '$property_name' of $class_name: No data type for '$via'?";
+                }
+                push @joins, $via_meta->_get_joins();
+                
+                if (my $where = $self->where) {
+                    if ($where->[1] eq 'name') {
+                        @$where = reverse @$where;
+                    }        
+                    my $join = pop @joins;
+                    #my $where_rule = $join->{foreign_class}->define_boolexpr(@$where);               
+                    unless ($join->{foreign_class}) {
+                        Carp::confess("No foreign class in " . Data::Dumper::Dumper($join, \@joins));
+                    }
+                    my $where_rule = UR::BoolExpr->resolve($join->{foreign_class}, @$where);                
+                    my $id = $join->{id};
+                    $id .= ' ' . $where_rule->id;
+                    push @joins, { %$join, id => $id, where => $where };
+                }
+            }
+            else {
+                $via_meta = $self;
             }
 
-            if ($via_meta->to and ($via_meta->to eq '-filter')) {
-                return $via_meta->_get_joins;
-            }
-
-            unless ($via_meta->data_type) {
-                my $property_name = $self->property_name;
-                my $class_name = $self->class_name;
-                Carp::croak "Can't resolve property '$property_name' of $class_name: No data type for '$via'?";
-            }
-            push @joins, $via_meta->_get_joins();
-            
-            my $to = $self->to;
-            unless ($to) {
-                $to = $self->property_name;
-            }
-            if (my $where = $self->where) {
-                if ($where->[1] eq 'name') {
-                    @$where = reverse @$where;
-                }            
-                my $join = pop @joins;
-                #my $where_rule = $join->{foreign_class}->define_boolexpr(@$where);                
-                my $where_rule = UR::BoolExpr->resolve($join->{foreign_class}, @$where);                
-                my $id = $join->{id};
-                $id .= ' ' . $where_rule->id;
-                push @joins, { %$join, id => $id, where => $where };
-            }
-            unless ($to eq '__self__' or $to eq '-filter') {
+            if ($to and $to ne '__self__' and $to ne '-filter') {
                 my $to_class_meta = eval { $via_meta->data_type->__meta__ };
                 unless ($to_class_meta) {
                     Carp::croak("Can't get class metadata for " . $via_meta->data_type
@@ -287,18 +301,45 @@ sub _get_joins {
                         Carp::confess("No property '$reverse_as' in class $foreign_class, needed to resolve property '" .
                                       $self->property_name . "' of class " . $self->class_name);
                     }
-                    @joins = reverse $foreign_property_via->_get_joins();
+                    @joins = map { { %$_ } } reverse $foreign_property_via->_get_joins();
                     for (@joins) { 
                         @$_{@new} = @$_{@old};
+                        $_->{final_accessor} = undef;
                     }
                     $joins[0]->{'where'} = $where if $where;
 
-                } else {
+                } 
+                else {
                     $self->error_message("Property $id has no 'id_by' or 'reverse_as' property metadata");
                 }
+
+
             }
             else {
                 #print "   value $foreign_class ..nojoin\n";
+            }
+
+            if (@joins and not $joins[-1]{final_accessor}) {
+                my $final_accessor_meta = $self;
+                my $final_accessor_class_meta = $final_accessor_meta->class_name->__meta__;
+                my $final_accessor = $final_accessor_meta->property_name;
+
+                if ($final_accessor_meta->id eq "UR::Object\tid") {
+                    # This is the generic 'id' property that won't be in the database.  See if the class 
+                    # has a single, alternate ID property we can swap in here
+                    my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
+                    if (@id_properties == 1) {
+                        $final_accessor_meta = $id_properties[0];
+                    }
+                }
+
+                $final_accessor = $final_accessor_meta->property_name;
+                while($final_accessor_meta && $final_accessor_meta->via) {
+                    $final_accessor = $final_accessor_meta->property_name;
+                    $final_accessor_meta = $final_accessor_meta->to_property_meta();
+                }
+
+                $joins[-1]{final_accesor} = $final_accessor;
             }
         }
         
