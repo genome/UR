@@ -98,6 +98,11 @@ sub is_subset_of {
 
     my $my_template = $self->template;
     my $other_template = $other_rule->template;
+
+    unless ($my_template->isa("UR::BoolExpr::Template::And")
+            and $other_template->isa("UR::BoolExpr::Template::And")) {
+        Carp::confess("This method currently works only on ::And expressions.  Update to handle ::Or, ::PropertyComparison, and templates of mismatched class!");
+    }
     return unless ($my_template->is_subset_of($other_template));
 
     my $values_match = 1;
@@ -297,7 +302,7 @@ sub resolve {
 
     my $class = shift;
     my $subject_class = shift;
-
+    Carp::confess("@_") if not $subject_class;
     # support for legacy passing of hashref instead of object or list
     # TODO: eliminate the need for this
     my @in_params;
