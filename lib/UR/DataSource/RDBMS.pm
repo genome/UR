@@ -3292,7 +3292,7 @@ sub _generate_template_data_for_loading {
                     die "Query by transient property $property_name on $class_name cannot be done!";
                 }
                 elsif ($property->is_delegated) {
-                    push @delegated_properties, $property;
+                    push @delegated_properties, $property->property_name;
                     delete $filters_to_satisfy{$property_name};
                 }
                 elsif ($property->is_calculated || $property->is_constant) {
@@ -3323,8 +3323,7 @@ sub _generate_template_data_for_loading {
     # and inheritance-join-resolver methods that can be called recursively.
     # It would better encapsulate what's going on and avoid bugs with complicated
     # get()s
-    #
-    @delegated_properties = map { $_->property_name } @delegated_properties;
+    
     DELEGATED_PROPERTY:
     for my $delegated_property (@delegated_properties, @chain_delegates) {
         my $property_name;
@@ -3372,14 +3371,8 @@ sub _generate_template_data_for_loading {
         };
 
         my $alias_for_property_value;
-        
         my $last_class_object_excluding_inherited_joins;
-
-        my $final_join = $joins[-1];
-
-        my $join_aliases_for_this_delegate;
         my $join_aliases_for_this_object;
-
         my @source_table_and_column_names;
 
         while (my $object_join = shift @joins) { # one iteration per table between the start table and target
