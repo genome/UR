@@ -8,6 +8,10 @@ our $VERSION = "0.31"; # UR $VERSION;
 use Cwd;
 use Data::Dumper;
 
+sub d {
+    Data::Dumper->new([@_])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+}
+
 sub null_sub { }
 
 sub used_libs {
