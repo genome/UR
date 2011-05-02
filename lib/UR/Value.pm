@@ -6,6 +6,8 @@ use warnings;
 require UR;
 our $VERSION = "0.31"; # UR $VERSION;
 
+our @CARP_NOT = qw( UR::Context );
+
 UR::Object::Type->define(
     class_name => 'UR::Value',
     is => 'UR::Object',
@@ -23,7 +25,7 @@ sub _load {
     my $id = $rule->value_for_id;
     unless (defined $id) {
         $DB::single = 1;
-        die "No id specified for loading members of an infinite set ($class)!"
+        Carp::croak "No id specified for loading members of an infinite set ($class)!"
     }
     my $class_meta = $class->__meta__;
     my @p = (id => $id);
