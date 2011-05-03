@@ -517,7 +517,7 @@ sub autogenerate_new_object_id_uuid {
     return $uuid;
 }
 
-our $autogenerate_id_base = join(" ",hostname(), $$, time);
+our $autogenerate_id_base_format = join(" ",Sys::Hostname::hostname(), "%s", time); # the %s gets $$ when needed
 our $autogenerate_id_iter = 10000;
 sub autogenerate_new_object_id_urinternal {
     my($self, $rule) = @_;
@@ -530,7 +530,7 @@ sub autogenerate_new_object_id_urinternal {
         $self->error_message("Can't autogenerate ID property values for multiple ID property class " . $self->class_name);
         return;
     }
-    return $autogenerate_id_base . " " . (++$autogenerate_id_iter);
+    return sprintf($autogenerate_id_base_format, $$) . " " . (++$autogenerate_id_iter);
 }
 
 sub autogenerate_new_object_id_datasource {
