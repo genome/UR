@@ -121,7 +121,6 @@ require UR::Object;
 require UR::Object::Type;
 
 require UR::Object::Ghost;
-require UR::Object::Type;
 require UR::Object::Property;
 
 
