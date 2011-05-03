@@ -558,7 +558,7 @@ sub autogenerate_new_object_id {
     if (ref($id_generator) eq 'CODE') {
         return $id_generator->($self,$rule);
 
-    } elsif ($id_generator =~ m/^\-(\S+)/) {
+    } elsif ($id_generator and $id_generator =~ m/^\-(\S+)/) {
         my $id_method = 'autogenerate_new_object_id_' . $1;
         unless ($self->can($id_method)) {
             Carp::croak("'$id_generator' is an invalid id_generator for class "
