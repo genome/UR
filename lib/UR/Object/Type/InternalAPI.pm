@@ -9,6 +9,7 @@ use Sys::Hostname;
 use Cwd;
 use Scalar::Util qw(blessed);
 use Sub::Name;
+use Data::UUID;
 
 our %meta_classes;
 our $bootstrapping = 1;
@@ -506,42 +507,75 @@ sub is_uncachable {
     return $uncachable_types{$class_name};
 }
 
-# Support the autogeneration of unique IDs for objects which require them.
-# We use the host, time, and pid.
+
+# Mechanisms for generating object IDs when none were specified at
+# creation time
+
+sub autogenerate_new_object_id_uuid {
+    my $uuid = Data::UUID->new->create_hex();
+    $uuid =~ s/^0x//;
+    return $uuid;
+}
+
 our $autogenerate_id_base = join(" ",hostname(), $$, time);
 our $autogenerate_id_iter = 10000;
-sub autogenerate_new_object_id {
-    my $self = shift;
-    my $rule = shift;
+sub autogenerate_new_object_id_urinternal {
+    my($self, $rule) = @_;
+
+    my @id_property_names = $self->id_property_names;
+    if (@id_property_names > 1) {
+        # we really could, but it seems like if you 
+        # asked to do it, it _has_ to be a mistake.  If there's a legitimate
+        # reason, this check should be removed
+        $self->error_message("Can't autogenerate ID property values for multiple ID property class " . $self->class_name);
+        return;
+    }
+    return $autogenerate_id_base . " " . (++$autogenerate_id_iter);
+}
+
+sub autogenerate_new_object_id_datasource {
+    my($self,$rule) = @_;
 
     my ($data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($self);
     if ($data_source) {
         return $data_source->autogenerate_new_object_id_for_class_name_and_rule(
             $self->class_name,
             $rule
-        )
+        );
+    } else {
+        Carp::croak("Class ".$self->class." has id_generator '-datasource', but the class has no data source to delegate to");
     }
-    else {
-        my @id_property_names = $self->id_property_names;
-        if (@id_property_names > 1) {
-            # we really could (as you can see below), but it seems like if you 
-            # asked to do it, it _has_ to be a mistake.  If there's a legitimate
-            # reason, this check should be removed
-            $self->error_message("Can't autogenerate ID property values for multiple ID property class " . $self->class_name);
-            return;
-        }
-        return $autogenerate_id_base . " " . (++$autogenerate_id_iter);
+}
 
-        #my @id_parts;
-        #my $supplied_params = $rule->legacy_params_hash;
-        #foreach my $prop ( $self->id_property_names ) {
-        #    if (exists $supplied_params->{$prop}) {
-        #        push(@id_parts,$supplied_params->{$prop});
-        #    } else {
-        #        push(@id_parts, $autogenerate_id_base . " " . (++$autogenerate_id_iter));
-        #    }
-        #}
-        #return join("\t",@id_parts);
+
+# Support the autogeneration of unique IDs for objects which require them.
+sub autogenerate_new_object_id {
+    my $self = shift;
+    my $rule = shift;
+
+    my $id_generator = $self->id_generator;
+
+    if (ref($id_generator) eq 'CODE') {
+        return $id_generator->($self,$rule);
+
+    } elsif ($id_generator =~ m/^\-(\S+)/) {
+        my $id_method = 'autogenerate_new_object_id_' . $1;
+        unless ($self->can($id_method)) {
+            Carp::croak("'$id_generator' is an invalid id_generator for class "
+                        . $self->class_name
+                        . ": Can't locate object method '$id_method' via package ".ref($self));
+        }
+        return $self->$id_method($rule);
+
+    } else {
+        # delegate to the data source
+        my ($data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($self);
+        if ($data_source) {
+            return $data_source->autogenerate_new_object_id_for_class_name_and_rule(
+                $self->class_name,
+                $rule
+            )
+        }
     }
 }
 

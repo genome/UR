@@ -719,7 +719,14 @@ sub _normalize_class_description {
         $s =~ s/^.*::DataSource:://;
         $new_class{schema_name} = $s;
     }
-     
+
+    # For classes with no data source, the default for id_generator is -urinternal
+    # For classes with a data source, autogenerate_new_object_id_for_class_name_and_rule gets called
+    # on that data source which can use id_generator as it sees fit
+    if (! defined($new_class{'id_generator'}) and ! $new_class{'data_source_id'}) {
+        $new_class{'id_generator'} = '-urinternal';
+    }
+
     if (%old_class) {
         # this should have all been deleted above
         # we actually process it later, since these may be related to parent classes extending
