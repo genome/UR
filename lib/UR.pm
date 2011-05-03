@@ -248,8 +248,8 @@ UR::Object::Type->define(
         query_hint                       => { is => 'Text', len => 1024 , is_optional => 1,
                                                 doc => 'used to optimize access to underlying storage (database specific)' },
                                             
-        id_sequence_generator_name       => { is => 'Text', len => 256, is_optional => 1,  
-                                                doc => 'override the default choice for sequence generator name' },
+        id_generator                     => { is => 'Text', len => 256, is_optional => 1,
+                                                doc => 'override the default choice for generating new object IDs' },
 
         # different ways of handling subclassing at object load time
         subclassify_by                      => { is => 'Text', len => 256, is_optional => 1,

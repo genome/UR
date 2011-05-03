@@ -1361,7 +1361,7 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
     }
 
     my $class_meta = UR::Object::Type->get(class_name => $class_name);
-    my $sequence = $class_meta->id_sequence_generator_name;
+    my $sequence = $class_meta->id_generator;
 
     # FIXME Child classes really should use the same sequence generator as its parent
     # if it doesn't specify its own.
@@ -1376,7 +1376,7 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
             my $parent_class = UR::Object::Type->get(class_name => $parent_class_name);
             # print "object $parent_class\n";
             next unless $parent_class;
-            #$sequence = $class_meta->id_sequence_generator_name;
+            #$sequence = $class_meta->id_generator;
             #last if $sequence;
             if ($table_name = $parent_class->table_name) {
                 # print "found table $table_name\n";

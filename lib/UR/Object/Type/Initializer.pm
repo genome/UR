@@ -374,10 +374,10 @@ sub _normalize_class_description {
         [ sub_classification_method_name        => qw//],
         [ first_sub_classification_method_name  => qw//],
         [ composite_id_separator                => qw//],
-        [ generate              => qw//],
-        [ generated             => qw//],
+        [ generate               => qw//],
+        [ generated              => qw//],
         [ subclass_description_preprocessor => qw//],        
-        [ id_sequence_generator_name => qw//],
+        [ id_generator           => qw/id_sequence_generator_name/],
         [ subclassify_by_version => qw//],        
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                

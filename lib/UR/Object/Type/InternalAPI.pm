@@ -620,7 +620,7 @@ sub generate_support_class_for_extension {
         delete $class_params{meta_class_name};
         delete $class_params{subclassify_by};
         delete $class_params{sub_classification_meta_class_name};
-        delete $class_params{id_sequence_generator_name};
+        delete $class_params{id_generator};
         delete $class_params{id};
         delete $class_params{is};
 
