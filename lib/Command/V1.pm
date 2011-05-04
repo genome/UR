@@ -178,15 +178,15 @@ sub _execute_with_shell_params_and_return_exit_code
 sub _execute_delegate_class_with_params {
     my ($class, $delegate_class, $params) = @_;
 
-    $delegate_class->dump_status_messages(1);
-    $delegate_class->dump_warning_messages(1);
-    $delegate_class->dump_error_messages(1);
-    $delegate_class->dump_debug_messages(0);
-
     unless ($delegate_class) {
         $class->usage_message($class->help_usage_complete_text);
         return;
     }
+
+    $delegate_class->dump_status_messages(1);
+    $delegate_class->dump_warning_messages(1);
+    $delegate_class->dump_error_messages(1);
+    $delegate_class->dump_debug_messages(0);
 
     if ( $delegate_class->is_sub_command_delegator && !defined($params) ) {
         my $command_name = $delegate_class->command_name;
@@ -528,10 +528,7 @@ sub resolve_class_and_params_for_argv
         local $SIG{__WARN__} = sub { push @errors, @_ };
         
         unless (GetOptions($params_hash,@spec)) {
-            for my $error (@errors) {
-                $self->error_message($error);
-            }
-            return($self, undef);
+            Carp::croak( join("\n", @errors) );
         }
     };
 
