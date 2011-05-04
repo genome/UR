@@ -48,7 +48,7 @@ UR::Object::Type::Initializer - Class definition syntax
           skip_first_line => 0,
           delimiter => ':'
       },
-      id_generator_name => '-uuid',
+      id_generator => '-uuid',
   );
 
 =head1 DESCRIPTION
@@ -146,7 +146,7 @@ to force the system to use some specific sequence, for example if many
 classes should use the same sequence generator, then put the name of this
 sequence in.
 
-If the id_generator_name begins with a dash (-), it indicates a method should
+If the id_generator begins with a dash (-), it indicates a method should
 be called to generate a new ID.  For example, if the name is "-uuid", then the
 system will call the internal method
 C<$class_meta->autogenerate_new_object_id_uuid>. nd will make object IDs as hex
