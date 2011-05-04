@@ -150,7 +150,7 @@ sub _modules_in_tree {
     my $namespace_path = $self->namespace_path;
 
     my $wanted_closure = sub {
-                             if (-f $_ and m/\.pm/) {
+                             if (-f $_ and m/\.pm$/) {
                                  push @modules, UR::Util::path_relative_to($lib_path, $_);
                              }
                         };
