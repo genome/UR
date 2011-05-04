@@ -12,7 +12,11 @@ UR::Object::Type->define(
     class_name => 'UR::Context',    
     is_abstract => 1,
     has => [
-        parent  => { is => 'UR::Context', id_by => 'parent_id', is_optional => 1 }
+        parent  => { is => 'UR::Context', id_by => 'parent_id', is_optional => 1 },
+        query_underlying_context => { is => 'Boolean',
+                                      is_optional => 1,
+                                      default_value => undef,
+                                      doc => 'Flag indicating whether the context must (1), must not (0) or may (undef) query underlying contexts when handling a query'  },
     ],
     doc => <<EOS
 The environment in which all data examination and change occurs in UR.  The current context represents the current 
@@ -392,7 +396,9 @@ sub query {
     my $self = shift;
 
     # Fast optimization for the default case.
-    unless (Scalar::Util::blessed($_[1])) {   # This happens when query() is called with a class name and boolexpr
+    if ( ( !ref($self) or ! $self->query_underlying_context) 
+         and ! Scalar::Util::blessed($_[1]) # This happens when query() is called with a class name and boolexpr
+    ) {
         no warnings;
         if (exists $UR::Context::all_objects_loaded->{$_[0]}) {
             my $is_monitor_query = $self->monitor_query;
@@ -1411,6 +1417,10 @@ sub get_objects_for_class_and_rule {
     my $rule_template = $rule->template;
     
     my $group_by = $rule_template->group_by;
+
+    if (ref($self) and !defined($load)) {
+        $load = $self->query_underlying_context;  # could still be undef...
+    }
 
     if ($group_by and $rule_template->order_by) {
         my %group_by = map { $_ => 1 } @{ $rule->template->group_by };
@@ -3259,6 +3269,17 @@ sub _get_all_subsets_of_params {
     return @rest, map { [$first, @$_ ] } @rest;
 }
 
+sub query_underlying_context {
+    my $self = shift;
+    unless (ref $self) {
+        $self = $self->current;
+    }
+    if (@_) {
+        $self->{'query_underlying_context'} = shift;
+    }
+    return $self->{'query_underlying_context'};
+}
+
 
 # all of these delegate to the current context...
 
@@ -4014,6 +4035,20 @@ context.
 Returns the UR::Context instance of whatever is the most currently created
 Context.  Can be called as a class or object method.
 
+=item query_underlying_context
+
+  my $should_load = $context->query_underlying_context();
+  $context->query_underlying_context(1);
+
+A property of the Context that sets the default value of the C<$should_load>
+flag inside C<get_objects_for_class_and_rule> as described below.  Initially,
+its value is undef, meaning that during a get(), the Context will query the
+underlying data sources only if this query has not been done before.  Setting
+this property to 0 will make the Context never query data sources, meaning
+that the only objects retrievable are those already in memory.  Setting the
+property to 1 means that every query will hit the data sources, even if the
+query has been done before.
+
 =item get_objects_for_class_and_rule
 
   @objs = $context->get_objects_for_class_and_rule(
@@ -4024,7 +4059,8 @@ Context.  Can be called as a class or object method.
                     );
 
 This is the method that serves as the main entry point to the Context behind
-the C<get()>, C<load()> and C<is_loaded()> methods of L<UR::Object>.  
+the C<get()>, and C<is_loaded()> methods of L<UR::Object>, and C<reload()> method
+of UR::Context.
 
 C<$class_name> and C<$boolexpr> are required arguments, and specify the 
 target class by name and the rule used to filter the objects the caller
@@ -4036,9 +4072,10 @@ always ask the relevent data sources, even if the Context believes the
 requested data is in the object cache,  A false but defined value means the
 Context should not ask the data sources for new data, but only return what
 is currently in the cache matching the rule.  The value C<undef> means the
-Context should use its own judgement about asking the data sources for new
-data, and will merge cached and external data as necessary to fulfill the
-request.
+Context should use the value of its query_underlying_context property.  If
+that is also undef, then it will use its own judgement about asking the
+data sources for new data, and will merge cached and external data as
+necessary to fulfill the request.
 
 C<$should_return_iterator> is a flag indicating whether this method should
 return the objects directly as a list, or iterator function instead.  If
