@@ -112,7 +112,7 @@ sub _generate_content_for_aspect {
         }
     }
 
-    if ($aspect_meta->is_many) {
+    if ($aspect_meta && $aspect_meta->is_many) {
         return $ref;
     } else {
         return shift @$ref;

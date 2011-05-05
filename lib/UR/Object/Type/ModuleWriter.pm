@@ -103,7 +103,7 @@ sub resolve_class_description_perl {
             
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->__meta__->all_property_type_names;
-    my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name/;
+    my @specified = qw/is class_name type_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name id_generator/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
         my $property_obj = $class_meta_meta->property_meta_for_name($property_name);
@@ -217,6 +217,18 @@ sub resolve_class_description_perl {
 
     $perl .= "    schema_name => '" . $self->schema_name . "',\n" if $self->schema_name;
     $perl .= "    data_source => '" . $self->data_source_id . "',\n" if $self->data_source_id;
+
+    my $print_id_generator;
+    if (my $id_generator = $self->id_generator) {
+        if ($self->data_source_id and $id_generator eq '-urinternal') {
+            $print_id_generator = 1;
+        } elsif (! $self->data_source_id and $id_generator eq '-urinternal') {
+            $print_id_generator = 0;
+        } else {
+            $print_id_generator = 1;
+        }
+        $perl .= "    id_generator => '$id_generator',\n" if ($print_id_generator);
+    }
 
     my $doc = $self->doc;
     if (defined($doc)) {

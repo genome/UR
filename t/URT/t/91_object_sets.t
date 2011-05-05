@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 68;
+use Test::More tests=> 71;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -32,6 +32,7 @@ ok(UR::Object::Type->define(
         is_cool           => { is => 'Boolean' },
         age               => { is => 'Integer' },
         cars              => { is => 'URT::Car', reverse_as => 'owner', is_many => 1, is_optional => 1 },
+        car_count         => { via => 'car_set', to => 'count' },
         primary_car       => { is => 'URT::Car', via => 'cars', to => '__self__', where => ['is_primary true' => 1] },
         car_colors        => { via => 'cars', to => 'color', is_many => 1 },
         primary_car_color => { via => 'primary_car', to => 'color' },
@@ -212,3 +213,14 @@ like($@,
    qr(^Property 'car_colors' in the -order_by list must appear in the -group_by list),
    'It threw the correct exception');
 
+
+
+my $bob = URT::Person->get(name => 'Bob');
+is($bob->car_count, 2, 'Bob has 2 cars using the set');
+
+my $fred = URT::Person->get(name =>'Fred');
+is($fred->car_count, 1, 'Fred has 1 car using the set');
+
+
+my $frank = URT::Person->get(name => 'Frank');
+is($frank->car_count, 0, 'Frank has 0 cars using the set');

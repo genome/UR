@@ -374,10 +374,10 @@ sub _normalize_class_description {
         [ sub_classification_method_name        => qw//],
         [ first_sub_classification_method_name  => qw//],
         [ composite_id_separator                => qw//],
-        [ generate              => qw//],
-        [ generated             => qw//],
+        [ generate               => qw//],
+        [ generated              => qw//],
         [ subclass_description_preprocessor => qw//],        
-        [ id_sequence_generator_name => qw//],
+        [ id_generator           => qw/id_sequence_generator_name/],
         [ subclassify_by_version => qw//],        
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                
@@ -719,7 +719,7 @@ sub _normalize_class_description {
         $s =~ s/^.*::DataSource:://;
         $new_class{schema_name} = $s;
     }
-     
+
     if (%old_class) {
         # this should have all been deleted above
         # we actually process it later, since these may be related to parent classes extending
@@ -1317,6 +1317,13 @@ sub _complete_class_meta_object_definitions {
             if (my $data_source_id = $parent_class->data_source_id) {
                 $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $data_source_id;
             }
+        }
+
+        # For classes with no data source, the default for id_generator is -urinternal
+        # For classes with a data source, autogenerate_new_object_id_for_class_name_and_rule gets called
+        # on that data source which can use id_generator as it sees fit
+        if (! defined($self->{'id_generator'}) and ! $self->{'data_source_id'}) {
+            $self->{'id_generator'} = '-urinternal';
         }
 
         # If a parent is declared as a singleton, we are too.

@@ -1008,11 +1008,7 @@ sub mk_object_set_accessors {
         $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) {
             my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values);
-            if (@_) {
-                return $r_class_name->define_set($rule->params_list,@_);
-            } else {
-                return $rule; 
-            }
+            return $r_class_name->define_set($rule->params_list,@_);
         }
         else {
             # this is a bit inside-out, but works for primitives
