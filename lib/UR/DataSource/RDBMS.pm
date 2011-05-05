@@ -3535,7 +3535,6 @@ sub _generate_template_data_for_loading {
                         # TODO This may not work correctly if the property we're joining on doesn't 
                         # have a table to get data from
                         if ($where) {
-                            $DB::single = 1;
                             # temp hack
                             # todo: switch to rule processing
                             for (my $n = 0; $n < @$where; $n += 2) {
