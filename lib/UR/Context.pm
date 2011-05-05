@@ -1406,6 +1406,15 @@ sub prune_object_cache {
     }
 }
 
+
+# True if the object was loaded from an underlying context and/or datasource, or if the
+# object has been committed to the underlying context
+sub object_exists_in_underlying_context {
+    my($self, $obj) = @_;
+
+    return (exists($obj->{'db_committed'}) || exists($obj->{'db_saved_uncommitted'}));
+}
+
    
 # this is the underlying method for get/load/is_loaded in ::Object
 
@@ -1649,6 +1658,7 @@ sub get_objects_for_class_and_rule {
                              . Data::Dumper::Dumper($obj_to_complain_about) );
             }
 
+$DB::single=1;
             # We're turning off warnings to avoid complaining in the elsif()
             no warnings 'uninitialized';
             if (!$next_obj_underlying_context) {
@@ -1690,8 +1700,30 @@ sub get_objects_for_class_and_rule {
                 $next_object = $next_obj_current_context;
                 $next_obj_current_context = undef;
                 $next_obj_underlying_context = undef;
-            }
-            elsif (                
+
+            } elsif ($next_obj_underlying_context and $next_obj_underlying_context->__changes__) {
+                # The DB object is something currently in memory that has changes
+                # It'll show up later (or has already shown up) as $next_obj_current_context,
+                # so just throw this one away and retry
+                $next_obj_underlying_context = undef;
+                goto PICK_NEXT_OBJECT_FOR_LOADING;
+
+            } elsif ($next_obj_current_context
+                     and $self->object_exists_in_underlying_context($next_obj_current_context)
+                     and ! $next_obj_current_context->__changes__
+                     and (! $next_obj_underlying_context 
+                          or (defined($comparison_result) and $comparison_result > 0)) )
+            {
+                # There appears to be a hole in the objects coming from the underlying context
+                # Something we expected to come from the underlying context (either because we
+                # previously loaded it, or it has been committed down) is missing, so it must have
+                # been deleted
+                $self->__merge_db_data_with_existing_object($class, $next_obj_current_context, undef, []);
+                $next_obj_current_context = undef;
+                goto PICK_NEXT_OBJECT_FOR_LOADING;
+
+
+            } elsif (                
                 $next_obj_underlying_context
                 and (
                     (!$next_obj_current_context)
@@ -1843,9 +1875,51 @@ sub _inject_object_into_other_loading_iterators {
             # It must go at the end...
             push @$cached, $new_object;
         }
-    } # end for()           
+    } # end for()
 }
-    
+
+
+
+# Reverse of _inject_object_into_other_loading_iterators().  Used when one iterator detects that
+# a previously loaded object no longer exists in the underlying context/datasource
+sub _remove_object_from_other_loading_iterators {
+    my($self, $disappearing_object, $iterator_to_skip) = @_;
+
+    my $iterator_count = @$UR::Context::loading_iterators;
+#print "In _remove_object_from_other_loading_iterators, count is $iterator_count\n";
+$DB::single=1;
+    ITERATOR:
+    for (my $i = 0; $i < $iterator_count; $i++) {
+        my($loading_iterator, $rule, $object_sorter, $cached)
+                                = @{$UR::Context::loading_iterators->[$i]};
+        next if (defined($iterator_to_skip)
+                  and $loading_iterator eq $iterator_to_skip);  # That's me!  Don't insert into our own @$cached this way
+#print "Evaluating rule $rule agains object ".Data::Dumper::Dumper($disappearing_object),"\n";
+        if ($rule->evaluate($disappearing_object)) {
+#print "object matches rule\n";
+
+            my $cached_list_len = @$cached;
+#print "there are $cached_list_len objects in the cached list: ",join(',',map { $_->id } @$cached),"\n";
+            for(my $i = 0; $i < $cached_list_len; $i++) {
+                my $cached_object = $cached->[$i];
+                next if $cached_object->isa('UR::DeletedRef');
+
+                my $comparison = $object_sorter->($disappearing_object, $cached_object);
+
+#print "cached obj id ".$cached_object->id." comparison $comparison\n";
+                if ($comparison == 0) {
+                    # That's the one, remove it from the list
+#print "removing obj id ".$disappearing_object->id." from loading iterator $loading_iterator cache\n";
+                    splice(@$cached, $i, 1);
+                    next ITERATOR;
+                } elsif ($comparison < 0) {
+                    # past the point where we expect to find this object
+                    next ITERATOR;
+                }
+            }
+        }
+    } # end for()
+}
 
 
 # A wrapper around the method of the same name in UR::DataSource::* to iterate over the
@@ -2207,9 +2281,7 @@ sub _create_secondary_loading_closures {
 
 
 # This returns an iterator that is used to bring objects in from an underlying
-# context into this context.  It will not return any objects that already exist
-# in the current context, even if the $db_iterator returns a row that belongs
-# to an already-existing object
+# context into this context.
 sub _create_import_iterator_for_underlying_context {
     my ($self, $rule, $dsx, $this_get_serial) = @_; 
 
@@ -2561,14 +2633,14 @@ sub _create_import_iterator_for_underlying_context {
                 $obj->{'__get_serial'} = $this_get_serial;
             }
 
-            if ($this_object_was_already_cached) {
-                # Don't return objects that already exist in the current context
-                # FIXME - when we can stack contexts in the same application, and the 
-                # loaded context is recorded on the object, use that context as the
-                # test above instead of the existence of a __get_serial
-                $primary_object_for_next_db_row = undef;
-                redo LOAD_AN_OBJECT;
-            }
+            #if ($this_object_was_already_cached) {
+            #    # Don't return objects that already exist in the current context
+            #    # FIXME - when we can stack contexts in the same application, and the 
+            #    # loaded context is recorded on the object, use that context as the
+            #    # test above instead of the existence of a __get_serial
+            #    $primary_object_for_next_db_row = undef;
+            #    redo LOAD_AN_OBJECT;
+            #}
             
             if ($re_iterate and $primary_object_for_next_db_row and ! ref($primary_object_for_next_db_row)) {
                 # It is possible that one or more objects go into subclasses which require more
@@ -2648,6 +2720,23 @@ sub _create_import_iterator_for_underlying_context {
 
 sub __merge_db_data_with_existing_object {
     my($self, $class_name, $existing_object, $pending_db_object_data, $property_names) = @_;
+
+    unless (defined $pending_db_object_data) {
+        # This means a row in the database is missing for an object we loaded before
+        if (defined($existing_object)
+            and $self->object_exists_in_underlying_context($existing_object)
+            and $existing_object->__changes__
+        ) {
+            my $id = $existing_object->id;
+            Carp::croak("$class_name ID '$id' previously existed in an underlying context/datasource, has since been deleted from that context/datasource, and the cached object now has unsavable changes.\nDump: ".Data::Dumper::Dumper($existing_object)."\n");
+        } else {
+#print "Removing object id ".$existing_object->id." because it has been removed from the database\n";
+            $self->_remove_object_from_other_loading_iterators($existing_object);
+            $existing_object->__signal_change__('delete');
+            $self->_abandon_object($existing_object);
+            return $existing_object;
+        }
+    }
 
     my $expected_db_data;
     if (exists $existing_object->{'db_saved_uncommitted'}) {
