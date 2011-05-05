@@ -37,6 +37,8 @@ sub _create {
 
     $self->{'all_params_loaded'} = $params{'all_params_loaded'} || {};
     $self->{'in_clause_values'} = $params{'in_clause_values'} || {};
+    $self->{'expected_db_objects'} = $params{'expected_db_objects'} || [];
+#print "initially there are ".scalar(@{$self->{'expected_db_objects'}})." expected db objects\n";
 
     $all_object_fabricators{$self} = $self;
     Scalar::Util::weaken($all_object_fabricators{$self});
@@ -253,6 +255,16 @@ sub create_for_loading_template {
         }
     }
 
+    # This is a list of the objects we're expecting to see loaded from the database
+    # They were loaded and/or saved previously.  If we don't see them, then they must
+    # have beem deleted by another transaction, and we should delete them too
+    my $object_sorter = $rule_template->sorter();
+    my @expected_db_objects = sort $object_sorter
+                              grep { $context->object_exists_in_underlying_context($_) }
+                              $context->_get_objects_for_class_and_rule_from_cache($load_class_name, $load_rule);
+#print "Expected DB object IDs are ",join(',',map { $_->id } @expected_db_objects),"\n";
+
+
     my $fabricator_obj;  # filled in after the closure definition
     my $object_fabricator = sub {
 
@@ -293,8 +305,10 @@ sub create_for_loading_template {
 
         # Handle the object based-on whether it is already loaded in the current context.
         if ($pending_db_object = $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id}) {
-            $context->__merge_db_data_with_existing_object($class, $pending_db_object, $pending_db_object_data, \@property_names);
-
+            $context->__merge_db_data_with_existing_object($class,
+                                                           $pending_db_object,
+                                                           $pending_db_object_data,
+                                                           \@property_names);
         }
         else {
             # Handle the case in which the object is completely new in the current context.
@@ -594,6 +608,29 @@ sub create_for_loading_template {
             }
         } # end handling newly loaded objects
 
+        while (@expected_db_objects) {
+#print scalar(@expected_db_objects)." expected db objects\n";
+            my $expected_db_object = $expected_db_objects[0];
+            if ($expected_db_object->isa('UR::DeletedRef')) {
+                shift @expected_db_objects;
+                next;
+            }
+        
+            if ( (my $comparison = $object_sorter->($pending_db_object, $expected_db_object)) >= 0) {
+#print "pending db object id ".$pending_db_object->id."\n";
+                shift @expected_db_objects;
+#print "  expected db object id ",$expected_db_object->id," comparison $comparison\n";
+                if ($comparison) {
+#print "  the expected object was missing\n";
+                    # comparson > 1: This object sorts later than one we expected to see by now
+                    $context->__merge_db_data_with_existing_object($class, $expected_db_object, undef, []);
+                } 
+            } else {
+                last;  # comparison was -1
+            }
+        }
+
+
         # If the rule had hints, mark that we loaded those things too, in all_params_loaded
         if (keys(%hints_or_delegation)) {
             #$DB::single=1;
@@ -701,6 +738,7 @@ sub create_for_loading_template {
     $fabricator_obj = $fab_class->_create(fabricator => $object_fabricator,
                                           context    => $context,
                                           all_params_loaded => $local_all_params_loaded,
+                                          expected_db_objects => \@expected_db_objects,
                                           in_clause_values  => \%in_clause_values);
 
     return $fabricator_obj;
@@ -770,6 +808,7 @@ sub delete_from_all_params_loaded {
 
 sub finalize {
     my $self = shift;
+#print "Finalizing object fabricator\n";
 
     $self->apply_all_params_loaded();
 
@@ -805,6 +844,12 @@ sub apply_all_params_loaded {
             $UR::Context::all_params_loaded->{$data->[0]}->{$data->[1]} = 0;
         }
     }
+
+    # anything left in here are objects that we expected to exist in the DB but 
+    # we didn't see,  They must have been deleted in another transaction
+    my $context = $self->{'context'};
+#print "There are ".scalar(@{$self->{'expected_db_objects'}})." expected DB objects left\n";
+    $context->__merge_db_data_with_existing_object($_->class, $_, undef, []) foreach @{$self->{'expected_db_objects'}};
 
     $self->{'all_params_loaded'} = {};
 }

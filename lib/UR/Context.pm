@@ -1623,6 +1623,7 @@ sub get_objects_for_class_and_rule {
             PICK_NEXT_OBJECT_FOR_LOADING:
             if ($underlying_context_iterator && ! $next_obj_underlying_context) {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
+#print "*** Loading Got next obj underlying context ".Data::Dumper::Dumper($next_obj_underlying_context);
  
                 if ($is_monitor_query and $next_obj_underlying_context) {
                     $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context") if ($return_closure);
@@ -1638,6 +1639,7 @@ sub get_objects_for_class_and_rule {
 
             unless ($next_obj_current_context) {
                 ($next_obj_current_context) = shift @$cached;
+#print "*** Loading Got next obj current context ".Data::Dumper::Dumper($next_obj_current_context);
                 $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
             }
 
@@ -1843,9 +1845,52 @@ sub _inject_object_into_other_loading_iterators {
             # It must go at the end...
             push @$cached, $new_object;
         }
-    } # end for()           
+    } # end for()
 }
-    
+
+
+
+# Reverse of _inject_object_into_other_loading_iterators().  Used when one iterator detects that
+# a previously loaded object no longer exists in the underlying context/datasource
+sub _remove_object_from_other_loading_iterators {
+    my($self, $disappearing_object, $iterator_to_skip) = @_;
+
+    my $iterator_count = @$UR::Context::loading_iterators;
+#print "In _remove_object_from_other_loading_iterators, count is $iterator_count\n";
+$DB::single=1;
+    ITERATOR:
+    for (my $i = 0; $i < $iterator_count; $i++) {
+        my($loading_iterator, $rule, $object_sorter, $cached)
+                                = @{$UR::Context::loading_iterators->[$i]};
+        next if (defined($iterator_to_skip)
+                  and $loading_iterator eq $iterator_to_skip);  # That's me!  Don't insert into our own @$cached this way
+#print "Evaluating rule $rule agains object ".Data::Dumper::Dumper($disappearing_object),"\n";
+        if ($rule->evaluate($disappearing_object)) {
+#print "object matches rule\n";
+
+            my $cached_list_len = @$cached;
+#print "there are $cached_list_len objects in the cached list: ",join(',',map { $_->id } @$cached),"\n";
+            for(my $i = 0; $i < $cached_list_len; $i++) {
+                my $cached_object = $cached->[$i];
+                next if $cached_object->isa('UR::DeletedRef');
+
+                my $comparison = $object_sorter->($disappearing_object, $cached_object);
+
+#print "cached obj id ".$cached_object->id." comparison $comparison\n";
+                if ($comparison == 0) {
+                    # That's the one, remove it from the list
+#print "removing obj id ".$disappearing_object->id." from loading iterator $loading_iterator cache\n";
+                    splice(@$cached, $i, 1);
+                    next ITERATOR;
+                } elsif ($comparison < 0) {
+                    # past the point where we expect to find this object
+                    next ITERATOR;
+                }
+            }
+        }
+    } # end for()
+}
+
 
 
 # A wrapper around the method of the same name in UR::DataSource::* to iterate over the
@@ -2206,6 +2251,16 @@ sub _create_secondary_loading_closures {
 }
 
 
+# True if the object was loaded from an underlying context and/or datasource, or if the
+# object has been committed to the underlying context
+sub object_exists_in_underlying_context {
+    my($self, $obj) = @_;
+
+    return (exists($obj->{'db_committed'}) || exists($obj->{'db_saved_uncommitted'}));
+}
+
+
+
 # This returns an iterator that is used to bring objects in from an underlying
 # context into this context.  It will not return any objects that already exist
 # in the current context, even if the $db_iterator returns a row that belongs
@@ -2392,6 +2447,7 @@ sub _create_import_iterator_for_underlying_context {
             ($next_db_row) = $db_iterator->() if ($db_iterator);
 
             unless ($next_db_row) {
+#print "*** no next row from DB\n";
                 if ($rows == 0) {
                     # if we got no data at all from the sql then we give a status
                     # message about it and we update all_params_loaded to indicate
@@ -2459,6 +2515,7 @@ sub _create_import_iterator_for_underlying_context {
                 $next_object_to_return = undef;
                 return $retval;
             }
+#print "Got db row: ",join(',',@$next_db_row)."\n";
             
             # we count rows processed mainly for more concise sanity checking
             $rows++;
@@ -2646,8 +2703,26 @@ sub _create_import_iterator_for_underlying_context {
 # Returns true if $existing_object has been changed since it was loaded.  This is used in one of the
 # branches of the object fabricator.
 
+# FIXME class name doesn't need to be passed in!
 sub __merge_db_data_with_existing_object {
     my($self, $class_name, $existing_object, $pending_db_object_data, $property_names) = @_;
+
+    unless (defined $pending_db_object_data) {
+        # This means a row in the database is missing for an object we loaded before
+        if (defined($existing_object)
+            and $self->object_exists_in_underlying_context($existing_object)
+            and $existing_object->__changes__
+        ) {
+            my $id = $existing_object->id;
+            Carp::croak("$class_name ID '$id' previously existed in an underlying context/datasource, has since been deleted from that context/datasource, and the cached object now has unsavable changes.\nDump: ".Data::Dumper::Dumper($existing_object)."\n");
+        } else {
+#print "Removing object id ".$existing_object->id." because it has been removed from the database\n";
+            $self->_remove_object_from_other_loading_iterators($existing_object);
+            $existing_object->__signal_change__('delete');
+            $self->_abandon_object($existing_object);
+            return $existing_object;
+        }
+    }
 
     my $expected_db_data;
     if (exists $existing_object->{'db_saved_uncommitted'}) {
