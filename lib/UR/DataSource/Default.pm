@@ -1,5 +1,7 @@
 package UR::DataSource::Default;
 
+# NOTE: UR::DataSource::QueryPlan currently has conditional logic for this class
+
 use strict;
 use warnings;
 use UR;
@@ -10,25 +12,6 @@ class UR::DataSource::Default {
     doc => 'allows the class to describe its own loading strategy'
 };
 
-sub _generate_template_data_for_loading {
-    my ($self, $bx_template) = @_;
-    my ($primary,@addl) = $self->SUPER::_generate_template_data_for_loading($bx_template);
-    $primary->{needs_further_boolexpr_evaluation_after_loading} = 1;
-    my $all_possible_headers = $primary->{loading_templates}[0]{property_names};
-    my $expected_headers;
-    my $class_meta = $bx_template->subject_class_name->__meta__;
-    for my $pname (@$all_possible_headers) {
-        my $pmeta = $class_meta->property($pname);
-        if ($pmeta->is_delegated) {
-            next;
-        }
-        push @$expected_headers, $pname;
-    }
-    $primary->{loading_templates}[0]{property_names} = $expected_headers;
-    return $primary unless wantarray;
-    return ($primary,@addl);
-}
-
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
@@ -38,9 +21,9 @@ sub create_iterator_closure_for_rule {
     }
 
     my $template = $rule->template;
-    my ($loading_info) = $self->_get_template_data_for_loading($template);
+    my ($query_plan) = $self->_resolve_query_plan($template);
     
-    my $expected_headers = $loading_info->{loading_templates}[0]{property_names};
+    my $expected_headers = $query_plan->{loading_templates}[0]{property_names};
     my ($headers, $content) = $subject_class_name->__load__($rule,$expected_headers);
 
     my $iterator;

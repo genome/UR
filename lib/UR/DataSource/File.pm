@@ -271,44 +271,6 @@ sub _generate_loading_templates_arrayref {
  
     return $templates;
 }
-    
-
-#sub _generate_class_data_for_loading {
-#    my($self,$class_meta) = @_;
-#
-#$DB::single=1;
-#    my $parent_class_data = $self->SUPER::_generate_class_data_for_loading($class_meta);
-#    
-#    my %columns = map { $_ => 1 }  $self->column_order;
-#
-#    my @all_file_properties;
-#    foreach my ( $property_data ) ( @{$parent_class_data->{'all_properties'}} ) {
-#        my $property = $property_data->[1];
-#        next unless ($columns{$property->column_name});
-#
-#        push @all_file_properties, $property_data;
-#    }
-#
-#    $parent_class_data->{'all_file_properties'} = \@all_file_properties;
-#
-#    return $parent_class_data;
-#}
-
-
-
-#sub _generate_template_data_for_loading {
-#    my($self, $rule_template) = @_;
-#
-#$DB::single=1;
-#    my $parent_template_data = $self->SUPER::_generate_template_data_for_loading($rule_template);
-#
-#    # Classes in this data source don't have a table_name attribute, or column_names in their 
-#    # properties.  Rewrite the loading_templates key of $parent_template_data
-#   
-#
-#    return $parent_template_data;
-#}
-
 
 sub _things_in_list_are_numeric {
     my $self = shift;

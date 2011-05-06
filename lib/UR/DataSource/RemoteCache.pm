@@ -178,64 +178,6 @@ sub _read_message {
     return($string,$cmd);
 }
     
-
-
-sub _get_template_data_for_loading {
-    my ($self, $rule_template) = @_;
-    my $template_data = $rule_template->{loading_data_cache};
-
-    unless ($template_data) {
-        my $class_name = $rule_template->subject_class_name;
-        my $class_meta = $class_name->__meta__;
-        my $class_data = $self->_get_class_data_for_loading($class_meta);
-    
-        my $recursion_desc = $rule_template->recursion_desc;
-        my $rule_template_without_recursion_desc = ($recursion_desc ? $rule_template->remove_filter('-recurse') : $rule_template);
-        my $rule_template_specifies_value_for_subtype;
-        my $sub_typing_property = $class_data->{'sub_typing_property'};
-        if ($sub_typing_property) {
-            $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for($sub_typing_property)
-        }
-
-        my @property_names = $class_name->__meta__->all_property_names;
-
-        $template_data = $rule_template->{loading_data_cache} = {
-            select_clause                               => '',
-            select_hint                                 => undef,
-            from_clause                                 => '',
-            where_clause                                => '',
-            connect_by_clause                           => '',
-            order_by_clause                             => '',
-
-            needs_further_boolexpr_evaluation_after_loading => undef,
-            loading_templates                           => [],
-
-            sql_params                                  => [],
-            filter_specs                                => [],
-            property_names_in_resultset_order           => \@property_names,
-            properties_for_params                       => [],
-
-            rule_template_id                            => $rule_template->id,
-            rule_template_without_recursion_desc        => $rule_template_without_recursion_desc,
-            rule_template_id_without_recursion_desc     => $rule_template_without_recursion_desc->id,
-            rule_matches_all                            => $rule_template->matches_all,
-            rule_specifies_id                           => ($rule_template->specifies_value_for('id') || undef),
-            rule_template_is_id_only                    => $rule_template->is_id_only,
-            rule_template_specifies_value_for_subtype   => $rule_template_specifies_value_for_subtype,
-
-            recursion_desc                              => undef,
-            recurse_property_on_this_row                => undef,
-            recurse_property_referencing_other_rows     => undef,
-
-            %$class_data,
-        };
-
-    }
-    return $template_data;
-}
-
-
-
 sub create_iterator_closure_for_rule {
     my ($self, $rule) = @_;
 
@@ -245,12 +187,11 @@ sub create_iterator_closure_for_rule {
 
     # TODO Also, this is getting objects back, but is now expected to return an array of values.
     # Switch to sending a list of properties, getting a list of value arrays.
-    my $loading_data = $self->_get_template_data_for_loading($rule->template);
-    my @names = @{ $loading_data->{property_names_in_resultset_order} };
+    my $query_plan = $self->_resolve_query_plan($rule->template);
+    my @names = @{ $query_plan->{property_names_in_resultset_order} };
 
     my $iterator = sub {
         return unless @results;
-$DB::single=1;
         my $items_to_return = $_[0] || 1;
         my @return = 
             map { [ @$_{@names} ] } 
@@ -260,7 +201,5 @@ $DB::single=1;
 
     return $iterator;
 }
-
-
 
 1;

@@ -174,7 +174,7 @@ it will not create a class.
 
 =item _generate_class_data_for_loading
 
-  $hashref = $datasource->_get_template_data_for_loading($class_meta);
+  $hashref = $datasource->_resolve_query_plan($class_meta);
 
 These two methods are called by L<UR::Context> as part of the object loading
 process.  C<_generate_class_data_for_loading> collects information about a
@@ -186,11 +186,11 @@ C<_get_class_data_for_loading> is the main entry point; it calls
 C<_generate_class_data_for_loading> if the data has not been generated and
 cached yet, and caches the data in the class metadata object.
 
-=item _get_template_data_for_loading
+=item _resolve_query_plan
 
 =item _generate_template_data_for_loading
 
-  $hashref = $datasource->_get_template_data_for_loading($boolexpr_tmpl);
+  $hashref = $datasource->_resolve_query_plan($boolexpr_tmpl);
 
 These two methods are called by L<UR::Context> as part of the object loading
 process.  C<_generate_template_data_for_loading> collects information from 
@@ -200,7 +200,7 @@ what classes will be involved in loading the resulting data, how those
 classes are joined together and how columns in the underlying query against
 the data source will map to properties of the class.
 
-C<_get_template_data_for_loading> is the main entry point; it calls
+C<_resolve_query_plan> is the main entry point; it calls
 C<_generate_template_data_for_loading> if the data has not been generated and
 cached yet, and caches the data in the rule template object.
 

@@ -46,7 +46,7 @@ sub _create {
 
 
 sub create_for_loading_template {
-    my($fab_class, $context, $loading_template, $template_data, $rule, $rule_template, $values, $dsx) = @_;
+    my($fab_class, $context, $loading_template, $query_plan, $rule, $rule_template, $values, $dsx) = @_;
 
     my @values = @$values;
 
@@ -68,25 +68,25 @@ sub create_for_loading_template {
 
     # FIXME, right now, we don't have a rule template for joined entities...
 
-    my $rule_template_id                            = $template_data->{rule_template_id};
-    my $rule_template_without_recursion_desc        = $template_data->{rule_template_without_recursion_desc};
-    my $rule_template_id_without_recursion_desc     = $template_data->{rule_template_id_without_recursion_desc};
-    my $rule_matches_all                            = $template_data->{rule_matches_all};
-    my $rule_template_is_id_only                    = $template_data->{rule_template_is_id_only};
-    my $rule_specifies_id                           = $template_data->{rule_specifies_id};
-    my $rule_template_specifies_value_for_subtype   = $template_data->{rule_template_specifies_value_for_subtype};
+    my $rule_template_id                            = $query_plan->{rule_template_id};
+    my $rule_template_without_recursion_desc        = $query_plan->{rule_template_without_recursion_desc};
+    my $rule_template_id_without_recursion_desc     = $query_plan->{rule_template_id_without_recursion_desc};
+    my $rule_matches_all                            = $query_plan->{rule_matches_all};
+    my $rule_template_is_id_only                    = $query_plan->{rule_template_is_id_only};
+    my $rule_specifies_id                           = $query_plan->{rule_specifies_id};
+    my $rule_template_specifies_value_for_subtype   = $query_plan->{rule_template_specifies_value_for_subtype};
 
-    my $recursion_desc                              = $template_data->{recursion_desc};
-    my $recurse_property_on_this_row                = $template_data->{recurse_property_on_this_row};
-    my $recurse_property_referencing_other_rows     = $template_data->{recurse_property_referencing_other_rows};
+    my $recursion_desc                              = $query_plan->{recursion_desc};
+    my $recurse_property_on_this_row                = $query_plan->{recurse_property_on_this_row};
+    my $recurse_property_referencing_other_rows     = $query_plan->{recurse_property_referencing_other_rows};
 
-    my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
+    my $needs_further_boolexpr_evaluation_after_loading = $query_plan->{'needs_further_boolexpr_evaluation_after_loading'};
 
     my $rule_id = $rule->id;
     my $rule_without_recursion_desc = $rule_template_without_recursion_desc->get_rule_for_values(@values);
 
     my $loading_base_object;
-    if ($loading_template == $template_data->{loading_templates}[0]) {
+    if ($loading_template == $query_plan->{loading_templates}[0]) {
         $loading_base_object = 1;
     }
     else {
@@ -179,7 +179,7 @@ sub create_for_loading_template {
             $hints{$_} = 1 foreach(@{ $rule_template->hints });
         }
         my %delegations;
-        if (@{ $template_data->{'joins'}} ) {
+        if (@{ $query_plan->{'joins'}} ) {
             foreach my $delegated_property_name ( $rule_template->_property_names ) {
                 my $delegated_property_meta = $query_class_meta->property_meta_for_name($delegated_property_name);
                 next unless ($delegated_property_meta and $delegated_property_meta->is_delegated);

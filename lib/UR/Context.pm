@@ -1855,19 +1855,19 @@ sub _inject_object_into_other_loading_iterators {
 # 1) The secondary data source name
 # 2) a listref of delegated properties joining the primary class to the secondary class
 # 3) a rule template applicable against the secondary data source
-sub _get_template_data_for_loading {
+sub _resolve_query_plan_for_ds_and_bxt {
     my($self,$primary_data_source,$rule_template) = @_;
 
-    my $primary_template = $primary_data_source->_get_template_data_for_loading($rule_template);
+    my $primary_query_plan = $primary_data_source->_resolve_query_plan($rule_template);
 
-    unless ($primary_template->{'joins_across_data_sources'}) {
+    unless ($primary_query_plan->{'joins_across_data_sources'}) {
         # Common, easy case
-        return $primary_template;
+        return $primary_query_plan;
     }
 
     my @addl_loading_info;
-    foreach my $secondary_data_source_id ( keys %{$primary_template->{'joins_across_data_sources'}} ) {
-        my $this_ds_delegations = $primary_template->{'joins_across_data_sources'}->{$secondary_data_source_id};
+    foreach my $secondary_data_source_id ( keys %{$primary_query_plan->{'joins_across_data_sources'}} ) {
+        my $this_ds_delegations = $primary_query_plan->{'joins_across_data_sources'}->{$secondary_data_source_id};
 
         my %seen_properties;
         foreach my $delegated_property ( @$this_ds_delegations ) {
@@ -1910,7 +1910,7 @@ sub _get_template_data_for_loading {
         }
     }
 
-    return ($primary_template, @addl_loading_info);
+    return ($primary_query_plan, @addl_loading_info);
 }
 
 
@@ -1921,7 +1921,7 @@ sub _create_secondary_rule_from_primary {
     my($self,$primary_rule, $delegated_properties, $secondary_rule_template) = @_;
 
     my @secondary_values;
-    my %seen_properties;  # FIXME - we've already been over this list in _get_template_data_for_loading()...
+    my %seen_properties;  # FIXME - we've already been over this list in _resolve_query_plan_for_ds_and_bxt()...
     # FIXME - is there ever a case where @$delegated_properties will be more than one item?
     foreach my $property ( @$delegated_properties ) {
         my $value = $primary_rule->value_for($property->property_name);
@@ -1991,7 +1991,7 @@ sub _fixup_secondary_loading_template_column_positions {
 # closures.  The first is a list of object fabricators, where the loading templates
 # have been given fixups to the column positions (see _fixup_secondary_loading_template_column_positions())
 # The second is a list of closures for each data source (the @addl_loading_info stuff
-# from _get_template_data_for_loading) that's able to compare the row loaded from the
+# from _resolve_query_plan_for_ds_and_bxt) that's able to compare the row loaded from the
 # primary data source and see if it joins to a row from this secondary datasource's database
 sub _create_secondary_loading_closures {
     my($self, $primary_template, $rule, @addl_loading_info) = @_;
@@ -2026,7 +2026,7 @@ sub _create_secondary_loading_closures {
                                               $secondary_rule_template,
                                        );
         $secondary_data_source = $secondary_data_source->resolve_data_sources_for_rule($secondary_rule);
-        my $secondary_template = $self->_get_template_data_for_loading($secondary_data_source,$secondary_rule_template);
+        my $secondary_template = $self->_resolve_query_plan_for_ds_and_bxt($secondary_data_source,$secondary_rule_template);
 
         # sets of triples where the first in the triple is the column index in the
         # $secondary_db_row (in the join_comparator closure below), the second is the
@@ -2223,7 +2223,7 @@ sub _create_import_iterator_for_underlying_context {
         = $dsx->create_iterator_closure_for_rule($rule);
 
     my ($rule_template, @values) = $rule->template_and_values();
-    my ($template_data,@addl_loading_info) = $self->_get_template_data_for_loading($dsx,$rule_template);
+    my ($template_data,@addl_loading_info) = $self->_resolve_query_plan_for_ds_and_bxt($dsx,$rule_template);
     my $class_name = $template_data->{class_name};
 
     my $group_by    = $rule_template->group_by;
@@ -2445,7 +2445,7 @@ sub _create_import_iterator_for_underlying_context {
                     if ($obj) {
                         # The last time this happened, it was because a get() was done on an abstract
                         # base class with only 'id' as a param.  When the subclassified rule was
-                        # turned into SQL in UR::DataSource::RDBMS::_generate_template_data_for_loading()
+                        # turned into SQL in UR::DataSource::QueryPlan()
                         # it removed that one 'id' filter, since it assummed any class with more than
                         # one ID property (usually classes have a named whatever_id property, and an alias 'id'
                         # property) will have a rule that covered both ID properties
@@ -4281,7 +4281,7 @@ through this iterator will have $serial_number in its C<__get_serial> hashref
 key.
 
 It works by first getting an iterator for the data source (the
-C<$db_iterator>).  It calls L</_get_template_data_for_loading> to find out
+C<$db_iterator>).  It calls L</_resolve_query_plan_for_ds_and_bxt> to find out
 how data is to be loaded and whether this request spans multiple data
 sources.  It calls L</__create_object_fabricator_for_loading_template> to get
 a list of closures to transform the primary data source's data into UR
@@ -4301,19 +4301,19 @@ subclassing, then additional importing iterators are created to handle that.
 Finally, the objects matching the rule are returned to the caller one at a
 time.
 
-=item _get_template_data_for_loading
+=item _resolve_query_plan_for_ds_and_bxt
 
-  my $template_data = $context->_get_template_data_for_loading(
+  my $template_data = $context->_resolve_query_plan_for_ds_and_bxt(
                                     $data_source,
                                     $boolexpr_tmpl
                                 );
-  my($template_data, @addl_info) = $context->_get_template_data_for_loading(
+  my($template_data, @addl_info) = $context->_resolve_query_plan_for_ds_and_bxt(
                                                  $data_source,
                                                  $boolexpr_tmpl
                                              );
 
 When a request is made that will hit one or more data sources,
-C<_get_template_data_for_loading> is used to call a method of the same name
+C<_resolve_query_plan_for_ds_and_bxt> is used to call a method of the same name
 on the data source.  It retuns a hashref used by many other parts of the 
 object loading system, and describes what data source to use, how to query
 that data source to get the objects, how to use the raw data returned by
@@ -4362,9 +4362,9 @@ this method is used to construct a rule against applicable against the
 secondary data source.  C<$primary_rule> is the L<UR::BoolExpr> rule used
 in the original query.  C<$delegated_properties> is a listref of
 L<UR::Object::Property> objects as returned by
-L</_get_template_data_for_loading()> linking the primary to the secondary data
+L</_resolve_query_plan_for_ds_and_bxt()> linking the primary to the secondary data
 source.  C<$secondary_rule_tmpl> is the rule template, also as returned by 
-L</_get_template_data_for_loading()>.
+L</_resolve_query_plan_for_ds_and_bxt()>.
 
 =item _create_secondary_loading_closures
 
@@ -4376,7 +4376,7 @@ When reolving a request that spans multiple data sources,
 this method is used to construct two lists of subrefs to aid in the request.
 C<$primary_rule_tmpl> is the L<UR::BoolExpr::Template> rule template made
 from the original rule.  C<@addl_info> is the same list returned by
-L</_get_template_data_for_loading>.  For each secondary data source, there
+L</_resolve_query_plan_for_ds_and_bxt>.  For each secondary data source, there
 will be one item in the two listrefs that are returned, and in the same
 order.
 
