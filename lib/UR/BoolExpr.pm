@@ -55,6 +55,33 @@ sub template {
     return $self->{template} ||= $self->__template;
 }
 
+sub _flatten {
+    my $self = shift;
+    my $template = $self->template;
+    my ($flattened_template, @extra_values) = $template->_flatten(@_);
+    my $flattened_bx;
+    if (not @extra_values) {
+        # optimized
+        my $flattened_bx_id = $flattened_template->id . $UR::BoolExpr::Util::id_sep . $self->value_id;
+        $flattened_bx = UR::BoolExpr->get($flattened_bx_id);
+        $flattened_bx->{'values'} = $self->{'values'} unless $flattened_bx->{'values'};
+    }
+    else {
+        $flattened_bx = $flattened_template->get_rule_for_values($self->values, @extra_values);    
+    }
+    return $flattened_bx;
+}
+
+sub reframe {
+    my $self = shift;
+    my $template = $self->template;
+    my $reframed_template = $template->reframe(@_);
+    my $reframed_bx_id = $reframed_template->id . $UR::BoolExpr::Util::id_sep . $self->value_id;
+    my $reframed_bx = UR::BoolExpr->get($reframed_bx_id);
+    $reframed_bx->{'values'} = $self->{'values'} unless $reframed_bx->{'values'};
+    return $reframed_bx;
+}
+
 # override the UR/system display name
 # this is used in stringification overload
 sub __display_name__ {
@@ -686,7 +713,7 @@ sub resolve {
 
     my $template;
     if (@constant_values) {
-        $template = UR::BoolExpr::Template::And->_fast_construct_and(
+        $template = UR::BoolExpr::Template::And->_fast_construct(
             $subject_class,
             \@keys,
             \@constant_values,
@@ -694,7 +721,7 @@ sub resolve {
     }
     else {
         $template = $subject_class_meta->{cache}{"UR::BoolExpr::resolve"}{"template for class and keys without constant values"}{"$subject_class @keys"} 
-            ||= UR::BoolExpr::Template::And->_fast_construct_and(
+            ||= UR::BoolExpr::Template::And->_fast_construct(
                 $subject_class,
                 \@keys,
                 \@constant_values,

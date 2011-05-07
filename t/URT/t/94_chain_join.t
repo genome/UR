@@ -102,6 +102,7 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
 
 $DB::single = 1;
 
+# chain property equiv
 my $bx1 = URT::Person->define_boolexpr('primary_car.color' => 'red');
 ok($bx1, "got bx with property chain");
 
@@ -112,6 +113,7 @@ my @p2 = URT::Person->get('primary_car_color' => 'red');
 is(scalar(@p2),1,"got one person with a primary car color of red using a custom accessor");
 
 is($p1[0], $p2[0], "result matches");
+
 
 
 
