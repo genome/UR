@@ -10,10 +10,11 @@ our $VERSION = "0.31"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::Namespace',
     is => ['UR::Singleton'],
-    english_name => 'universal reflective namespace',
     is_abstract => 1,
     properties => [
-        domain                           => { type => '', len => undef },
+        domain                  => { is => 'Text', len => undef },
+        allow_slopy_primitives  => { is => 'Boolean', default_value => 0,
+                                    doc => 'when true, unrecognized data types will function as UR::Value::SloppyPrimitive' },         
     ],
 );
 
@@ -21,7 +22,6 @@ sub get_member_class {
     my $self = shift;
     return UR::Object::Type->get(@_);
 }
-
 
 # FIXME  These should change to using the namespace metadata DB when
 # that's in place, rather than trolling through the directory tree
