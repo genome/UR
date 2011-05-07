@@ -285,8 +285,6 @@ sub _init_rdbms {
         }
     };
     
-    
-
     my $object_num = 0; 
     my $alias_num = 0;
     
@@ -308,6 +306,8 @@ sub _init_rdbms {
         my $last_class_object_excluding_inherited_joins;
         my $join_aliases_for_this_object;
         my @source_table_and_column_names;
+
+        my $flattened_value;
 
         while (my $object_join = shift @joins) { # one iteration per table between the start table and target
             #$DB::single = 1;
