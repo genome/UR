@@ -9,7 +9,6 @@ use Sys::Hostname;
 use Cwd;
 use Scalar::Util qw(blessed);
 use Sub::Name;
-use Data::UUID;
 
 our %meta_classes;
 our $bootstrapping = 1;
@@ -512,6 +511,7 @@ sub is_uncachable {
 # creation time
 
 sub autogenerate_new_object_id_uuid {
+    require Data::UUID;
     my $uuid = Data::UUID->new->create_hex();
     $uuid =~ s/^0x//;
     return $uuid;

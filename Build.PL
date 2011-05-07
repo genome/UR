@@ -57,7 +57,6 @@ my $build = $subclass->new(
     'DBD::SQLite'         => '1.14',
     'Sub::Name'           => '0.04',
     'Sub::Install'        => '0.924',
-    'Data::UUID'          => '',
     
     # possibly move to a web-specific 
     'Net::HTTPServer'     => '',
