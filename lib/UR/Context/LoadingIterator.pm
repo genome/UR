@@ -240,7 +240,6 @@ sub DESTROY {
 sub _inject_object_into_other_loading_iterators {
     my($self, $new_object, $iterator_to_skip) = @_;
 
-    #my $iterator_count = @$UR::Context::loading_iterators;
     ITERATOR:
     foreach my $iter_name ( keys %all_loading_iterators ) {
         next if $iter_name eq $iterator_to_skip;  # That's me!  Don't insert into our own @$cached this way
@@ -268,7 +267,49 @@ sub _inject_object_into_other_loading_iterators {
             # It must go at the end...
             push @$cached, $new_object;
         }
-    } # end for()           
+    } # end foreach
+}
+
+
+# Reverse of _inject_object_into_other_loading_iterators().  Used when one iterator detects that
+# a previously loaded object no longer exists in the underlying context/datasource
+sub _remove_object_from_other_loading_iterators {
+    my($self, $disappearing_object, $iterator_to_skip) = @_;
+
+#print "In _remove_object_from_other_loading_iterators, count is $iterator_count\n";
+$DB::single=1;
+    ITERATOR:
+    foreach my $iter_name ( keys %all_loading_iterators ) {
+        next if $iter_name eq $iterator_to_skip;  # That's me!  Don't remove into our own @$cached this way
+        my($loading_iterator, $rule, $object_sorter, $cached)
+                                = @{$all_loading_iterators{$iter_name}};
+        next if (defined($iterator_to_skip)
+                  and $loading_iterator eq $iterator_to_skip);  # That's me!  Don't insert into our own @$cached this way
+#print "Evaluating rule $rule against object ".Data::Dumper::Dumper($disappearing_object),"\n";
+        if ($rule->evaluate($disappearing_object)) {
+#print "object matches rule\n";
+
+            my $cached_list_len = @$cached;
+#print "there are $cached_list_len objects in the cached list: ",join(',',map { $_->id } @$cached),"\n";
+            for(my $i = 0; $i < $cached_list_len; $i++) {
+                my $cached_object = $cached->[$i];
+                next if $cached_object->isa('UR::DeletedRef');
+
+                my $comparison = $object_sorter->($disappearing_object, $cached_object);
+
+#print "cached obj id ".$cached_object->id." comparison $comparison\n";
+                if ($comparison == 0) {
+                    # That's the one, remove it from the list
+#print "removing obj id ".$disappearing_object->id." from loading iterator $loading_iterator cache\n";
+                    splice(@$cached, $i, 1);
+                    next ITERATOR;
+                } elsif ($comparison < 0) {
+                    # past the point where we expect to find this object
+                    next ITERATOR;
+                }
+            }
+        }
+    } # end foreach
 }
 
 1;
