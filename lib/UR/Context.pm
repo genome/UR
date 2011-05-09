@@ -7,6 +7,7 @@ use Sub::Name;
 require UR;
 
 use UR::Context::ObjectFabricator;
+use UR::Context::LoadingIterator;
 
 UR::Object::Type->define(
     class_name => 'UR::Context',    
@@ -41,9 +42,6 @@ our $cache_last_prune_serial ||= 0;           # serial number the last time we p
 our $cache_size_highwater;                    # high water mark for cache size.  Start pruning when $all_objects_cache_size goes over
 our $cache_size_lowwater;                     # low water mark for cache size
 our $GET_COUNTER = 1;                         # This is where the serial number for the __get_serial key comes from
-
-our $is_multiple_loading_iterators = 0; # A boolean flag used in the loading iterator to control whether we need to inject loaded objects into other loading iterators' cached lists
-our $loading_iterators = [];          # A list of active loading iterators
 
 # For bootstrapping.
 $UR::Context::current = __PACKAGE__;
@@ -1593,166 +1591,10 @@ sub get_objects_for_class_and_rule {
         # this returns objects from the underlying context after importing them into the current context,
         # but only if they did not exist in the current context already
         $self->_log_query_for_rule($class, $normalized_rule, "QUERY: importing from underlying context with rule $normalized_rule") if ($is_monitor_query);
-        my $underlying_context_iterator = $self->_create_import_iterator_for_underlying_context($normalized_rule, $ds, $this_get_serial);
 
-        # Some thoughts about the loading iterator's behavior around changing objects....
-        #
-        # The system attempts to return objects matching the rule at the time the iterator is
-        # created, even if they change between the time it's created and when next() returns 
-        # them.  There is a problem if the object in question is actually deleted (ie. isa
-        # UR::DeletedRef).  Since DeletedRef's die any time you try to use them, the object
-        # sorters can't sort them.  Instead, we'll just punt and throw an exception ourselves
-        # if we come across one.
-        # 
-        # This seems like the least suprising thing to do, but there are other solutions:
-        # 1) just plain don't return the deleted object
-        # 2) use signal_change to register a callback which will remove objects being deleted
-        #    from all the in-process iterator @$cached lists (accomplishes the same as #1).
-        #    For completeness, this may imply that other signal_change callbacks would remove
-        #    objects that no longer match rules for in-process iterators, and that means that 
-        #    next() returns things true at the time next() is called, not when the iterator
-        #    is created.
-        # 3) Put in some additional infrastructure so we can pull out the ID of a deleted
-        #    object.  That lets us call $next_object->id at the end of the closure, and return these
-        #    deleted objects back to the user.  Problem being that the user then can't really
-        #    do anything with them.  But it would be consistent about returning _all_ objects
-        #    that matched the rule at iterator creation time
-        # 4) Like #3, but just always return the deleted object before any underlying_context
-        #    object, and then don't try to get its ID at the end if the iterator if it's deleted
- 
-        # These are captured by the closure...
-        my($last_loaded_id, $next_obj_current_context, $next_obj_underlying_context,$underlying_context_objects_count,$cached_objects_count);
-        my $me_loading_iterator_as_string;  # See note below the closure definition
-
-        $underlying_context_objects_count = 0;
-        $cached_objects_count = 0;
-        # this will interleave the above with any data already present in the current context
-        $loading_iterator = sub {
-            PICK_NEXT_OBJECT_FOR_LOADING:
-            if ($underlying_context_iterator && ! $next_obj_underlying_context) {
-                ($next_obj_underlying_context) = $underlying_context_iterator->(1);
- 
-                if ($is_monitor_query and $next_obj_underlying_context) {
-                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loading 1 object from underlying context") if ($return_closure);
-                    $underlying_context_objects_count++;
-                }
-                # See if this newly loaded object needs to be inserted into any of the other
-                # loading iterators' cached list.  We only need to check this is there is more
-                # than one iterator running....
-                if ($next_obj_underlying_context and $UR::Context::is_multiple_loading_iterators) {
-                    $self->_inject_object_into_other_loading_iterators($next_obj_underlying_context, $me_loading_iterator_as_string);
-                }
-            }
-
-            unless ($next_obj_current_context) {
-                ($next_obj_current_context) = shift @$cached;
-                $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
-            }
-
-            if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
-                 my $obj_to_complain_about = $next_obj_current_context;
-                 # undef it in case the user traps the exception, next time we'll pull another off the list
-                 $next_obj_current_context = undef;
-                 Carp::croak("Attempt to fetch an object which matched $rule when the iterator was created, but was deleted in the meantime:\n"
-                             . Data::Dumper::Dumper($obj_to_complain_about) );
-            }
-
-            # We're turning off warnings to avoid complaining in the elsif()
-            no warnings 'uninitialized';
-            if (!$next_obj_underlying_context) {
-                if ($is_monitor_query) {
-                    $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loaded $underlying_context_objects_count object(s) total from underlying context.");
-                }
-                $underlying_context_iterator = undef;
-
-            } 
-            elsif ($last_loaded_id eq $next_obj_underlying_context->id) {
-                # during a get() with -hints or is_many+is_optional (ie. something with an
-                # outer join), it's possible that the join can produce the same main object
-                # as it's chewing through the (possibly) multiple objects joined to it.
-                # Since the objects will be returned sorted by their IDs, we only have to
-                # remember the last one we saw
-                # FIXME - is this still true now that the underlying context iterator will
-                # never return objects that already exist in the cache?
-                $next_obj_underlying_context = undef;
-                goto PICK_NEXT_OBJECT_FOR_LOADING;
-            }
-            use warnings 'uninitialized';
-            
-            # decide which pending object to return next
-            # both the cached list and the list from the database are sorted separately,
-            # we're merging these into one return stream here
-            my $comparison_result;
-            if ($next_obj_underlying_context && $next_obj_current_context) {
-                $comparison_result = $object_sorter->($next_obj_underlying_context, $next_obj_current_context);
-            }
-            
-            my $next_object;
-            if (
-                $next_obj_underlying_context 
-                and $next_obj_current_context 
-                and $comparison_result == 0 # $next_obj_underlying_context->id eq $next_obj_current_context->id
-            ) {
-                # the database and the cache have the same object "next"
-                $self->_log_query_for_rule($class, $normalized_rule, "QUERY: loaded object was already cached") if ($is_monitor_query);
-                $next_object = $next_obj_current_context;
-                $next_obj_current_context = undef;
-                $next_obj_underlying_context = undef;
-            }
-            elsif (                
-                $next_obj_underlying_context
-                and (
-                    (!$next_obj_current_context)
-                    or
-                    ($comparison_result < 0) # ($next_obj_underlying_context->id le $next_obj_current_context->id) 
-                )
-            ) {
-                # db object is next to be returned
-                $next_object = $next_obj_underlying_context;
-                $next_obj_underlying_context = undef;
-            }
-            elsif (                
-                $next_obj_current_context 
-                and (
-                    (!$next_obj_underlying_context)
-                    or 
-                    ($comparison_result > 0) # ($next_obj_underlying_context->id ge $next_obj_current_context->id) 
-                )
-            ) {
-                # cached object is next to be returned
-                $next_object = $next_obj_current_context;
-                $next_obj_current_context = undef;
-            }
-
-            return unless defined $next_object;
-
-            $last_loaded_id = $next_object->id;
-
-            return $next_object;
-        };
-
-        bless $loading_iterator, 'UR::Context::loading_iterator_tracker';
-        Sub::Name::subname('UR::Context::__loading_iterator(closure)__',$loading_iterator);
-
-        # Inside the closure, it needs to know its own address, but without holding a real reference
-        # to itself - otherwise the closure would never go out of scope, the destructor would never
-        # get called, and the list of outstanding loaders would never get pruned.  This way, the closure
-        # holds a reference to the string version of its address, which is the only thing it really
-        # needed anyway
-        $me_loading_iterator_as_string = $loading_iterator . '';
-
-        # Add ourselves to the list of outstanding loading iterators.  The underlying
-        # context iterator will need to know these
-        push @$UR::Context::loading_iterators, [ $loading_iterator . '',  # force to a string so the list doesn't hold a real ref
-                                                 $rule,
-                                                 $object_sorter,
-                                                 $cached,
-                                                 \$underlying_context_objects_count,
-                                                 \$cached_objects_count
-                                               ];
-        $UR::Context::is_multiple_loading_iterators = 1 if (@$UR::Context::loading_iterators > 1);
+        $loading_iterator = UR::Context::LoadingIterator->_create($cached, $self,$normalized_rule, $ds,$this_get_serial);
     }
-    
+
     if ($return_closure) {
         if ($load) {
             # return the iterator made above
@@ -1788,72 +1630,6 @@ sub get_objects_for_class_and_rule {
         return $results[0];
     }
 }
-
-sub UR::Context::loading_iterator_tracker::DESTROY {
-    # Items in the listref are: $loading_iterator_string, $rule, $object_sorter, $cached, \$underlying_context_objects_count, \$cached_objects_count
-
-    my $count = scalar(@$UR::Context::loading_iterators);
-    for (my $i = 0; $i < $count; $i++) {
-        if ($_[0] eq $UR::Context::loading_iterators->[$i]->[0]) {
-            # That's me!
-            if ($UR::Context::current->monitor_query) {
-                my $me_iter = $UR::Context::loading_iterators->[$i];
-                my $rule = $me_iter->[1];
-                my $count = ${$me_iter->[4]} + ${$me_iter->[5]};
-                $UR::Context::current->_log_query_for_rule($rule->subject_class_name, $rule, "QUERY: Query complete after returning $count object(s) for rule $rule.");
-                $UR::Context::current->_log_done_elapsed_time_for_rule($rule);
-            }
-
-            splice(@$UR::Context::loading_iterators, $i, 1);
-            $UR::Context::is_multiple_loading_iterators = 0 if ($count == 2);  # If count was 2 at the top, and we removed one, it's now 1 and it's not multiple
-            return;
-        }
-    }
-    Carp::carp('A loading iterator went out of scope, but could not be found in the loading_iterators list!?');
-}
-
-# Used by the object fabricator to inject a newly loaded object into another
-# loading iterator's @$cached list.  This is to handle the case where the user creates
-# an iterator which will load objects from the DB.  Before all the data from that
-# iterator is read, another get() or iterator is created that covers (some of) the same
-# objects which get pulled into the object cache, and the second request is run to
-# completion.  Since the underlying context iterator has been changed to never return
-# objects currently cached, the first iterator would have incorrectly skipped ome objects that
-# were not loaded when the first iterator was created, but later got loaded by the second.
-sub _inject_object_into_other_loading_iterators {
-    my($self, $new_object, $iterator_to_skip) = @_;
-
-    my $iterator_count = @$UR::Context::loading_iterators;
-    ITERATOR:
-    for (my $i = 0; $i < $iterator_count; $i++) {
-        my($loading_iterator, $rule, $object_sorter, $cached)
-                                = @{$UR::Context::loading_iterators->[$i]};
-        next if ($loading_iterator eq $iterator_to_skip);  # That's me!  Don't insert into our own @$cached this way
-        if ($rule->evaluate($new_object)) {
-
-            my $cached_list_len = @$cached;
-            for(my $i = 0; $i < $cached_list_len; $i++) {
-                my $cached_object = $cached->[$i];
-                next if $cached_object->isa('UR::DeletedRef');
-
-                my $comparison = $object_sorter->($new_object, $cached_object);
-        
-                if ($comparison < 0) {
-                    # The new object sorts sooner than this one.  Insert it into the list
-                    splice(@$cached, $i, 0, $new_object);
-                    next ITERATOR;
-                } elsif ($comparison == 0) {
-                    # This object is already in the list
-                    next ITERATOR;
-                }
-            }
-
-            # It must go at the end...
-            push @$cached, $new_object;
-        }
-    } # end for()           
-}
-    
 
 
 # A wrapper around the method of the same name in UR::DataSource::* to iterate over the

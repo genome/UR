@@ -41,6 +41,7 @@ lib/UR/Change.pm
 lib/UR/Context.pm
 lib/UR/Context/DefaultRoot.pm
 lib/UR/Context/ObjectFabricator.pm
+lib/UR/Context/LoadingIterator.pm
 lib/UR/Context/Process.pm
 lib/UR/Context/Root.pm
 lib/UR/Context/Transaction.pm
