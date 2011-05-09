@@ -1409,6 +1409,15 @@ sub prune_object_cache {
     }
 }
 
+
+# True if the object was loaded from an underlying context and/or datasource, or if the
+# object has been committed to the underlying context
+sub object_exists_in_underlying_context {
+    my($self, $obj) = @_;
+
+    return (exists($obj->{'db_committed'}) || exists($obj->{'db_saved_uncommitted'}));
+}
+
    
 # this is the underlying method for get/load/is_loaded in ::Object
 
