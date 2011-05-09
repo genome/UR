@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 12;
+use Test::More tests=> 13;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -34,7 +34,8 @@ ok(UR::Object::Type->define(
         is_cool             => { is => 'Boolean' },
         age                 => { is => 'Integer' },
         cars                => { is => 'URT::Car', reverse_as => 'owner', is_many => 1, is_optional => 1 },
-        primary_car         => { is => 'URT::Car', via => 'cars', to => '__self__', where => ['is_primary true' => 1] },
+        primary_car         => { is => 'URT::Car', via => 'cars', to => '__self__', where => ['is_primary true' => 1] },     # direct where
+        big_cars            => { is => 'URT::Car', via => 'cars', to => '__self__', where => [ 'engine_size >=' => 400 ], }, # indirect where
         car_colors          => { via => 'cars', to => 'color', is_many => 1 },
         primary_car_color   => { via => 'primary_car', to => 'color' },
     ],
@@ -53,6 +54,7 @@ ok(UR::Object::Type->define(
             is_primary      => { is => 'Boolean' },
             owner           => { is => 'URT::Person', id_by => 'owner_id' },
             engine          => { is => 'URT::Car::Engine', reverse_as => 'car', is_many => 1 },
+            engine_size     => { is => 'Number', via => 'engine', to => 'size' },
         ],
         data_source => 'URT::DataSource::SomeSQLite',
     ),
@@ -114,10 +116,20 @@ is(scalar(@p2),1,"got one person with a primary car color of red using a custom 
 
 is($p1[0], $p2[0], "result matches");
 
+my $bx4i = URT::Person->define_boolexpr('big_cars.color' => 'red');
+my $bx4f = $bx4i->flatten;
+print "$bx4i\n$bx4f\n";
 
-
+my @p4f = URT::Person->get($bx4f);
+ok("@p4f", "flat query works");
 
 __END__
+# we must flatten before query for this to work, and currently constant_values need support
+my @p4i = URT::Person->get($bx4i);
+ok("@p4i", "indirect query works");
+is("@p4i", "@p4f", "indirect and flat query results match");
+
+# the bx "operator" could be named "subquery" or we turn "matches" into "matches-bx" and "matches-regex"
 #my @p = URT::Person->get('primary_car.color' => 'red');
 my $rule1 = URT::Car->define_boolexpr(color => 'red');
 ok($rule1, "made a 'car has color red' rule");

@@ -1,11 +1,11 @@
 package UR::BoolExpr;
-
 use warnings;
 use strict;
+
 use Scalar::Util qw(blessed);
 require UR;
-use Carp;
 
+use Carp;
 our @CARP_NOT = ('UR::Context');
 
 our $VERSION = "0.31"; # UR $VERSION;;
@@ -55,32 +55,25 @@ sub template {
     return $self->{template} ||= $self->__template;
 }
 
-sub _flatten {
+sub flatten {
     my $self = shift;
-    my $template = $self->template;
-    my ($flattened_template, @extra_values) = $template->_flatten(@_);
-    my $flattened_bx;
-    if (not @extra_values) {
-        # optimized
-        my $flattened_bx_id = $flattened_template->id . $UR::BoolExpr::Util::id_sep . $self->value_id;
-        $flattened_bx = UR::BoolExpr->get($flattened_bx_id);
-        $flattened_bx->{'values'} = $self->{'values'} unless $flattened_bx->{'values'};
-    }
-    else {
-        $flattened_bx = $flattened_template->get_rule_for_values($self->values, @extra_values);    
-    }
-    return $flattened_bx;
+    return $self->{flatten} if exists $self->{flatten};
+    my $flat = $self->template->_flatten_bx($self);
+    $self->{flatten} = $flat;
+    Scalar::Util::weaken($self->{flatten}) if $self == $flat;
+    return $flat;
 }
 
 sub reframe {
     my $self = shift;
-    my $template = $self->template;
-    my $reframed_template = $template->reframe(@_);
-    my $reframed_bx_id = $reframed_template->id . $UR::BoolExpr::Util::id_sep . $self->value_id;
-    my $reframed_bx = UR::BoolExpr->get($reframed_bx_id);
-    $reframed_bx->{'values'} = $self->{'values'} unless $reframed_bx->{'values'};
-    return $reframed_bx;
+    my $in_terms_of = shift;
+    return $self->{reframe}{$in_terms_of} if $self->{reframe}{$in_terms_of};
+    my $reframe = $self->template->_reframe_bx($self, $in_terms_of);
+    $self->{reframe}{$in_terms_of} = $reframe;
+    Scalar::Util::weaken($self->{reframe}{$in_terms_of}) if $self == $reframe;
+    return $reframe;
 }
+
 
 # override the UR/system display name
 # this is used in stringification overload
@@ -96,7 +89,6 @@ sub __display_name__ {
 }
 
 # The primary function: evaluate a subject object as matching the rule or not.
-
 sub evaluate {
     my $self = shift;
     my $subject = shift;
@@ -106,13 +98,11 @@ sub evaluate {
 }
 
 # Behind the id properties:
-
 sub template_and_values {
     my $self = shift;
     my ($template_id, $value_id) = UR::BoolExpr::Type->resolve_ordered_values_from_composite_id($self->id);
     return (UR::BoolExpr::Template->get($template_id), UR::BoolExpr::Util->value_id_to_values($value_id));
 }
-
 
 # Returns true if the rule represents a subset of the things the other
 # rule would match.  It returns undef if the answer is not known, such as
@@ -150,7 +140,6 @@ sub is_subset_of {
     return $values_match;
 }
 
-
 sub values {
     my $self = shift;
     if ($self->{values}) {
@@ -158,16 +147,18 @@ sub values {
     }
     my $value_id = $self->value_id;    
     return unless defined($value_id) and length($value_id);
+    my @values;
     if (my $hard_refs = $self->{hard_refs}) {
-        my @values_sorted = UR::BoolExpr::Util->value_id_to_values($value_id);
+        @values = UR::BoolExpr::Util->value_id_to_values($value_id);
         for my $n (keys %$hard_refs) {
-            $values_sorted[$n] = $hard_refs->{$n};
+            $values[$n] = $hard_refs->{$n};
         }
-        return @values_sorted;
     }
     else {
-        UR::BoolExpr::Util->value_id_to_values($value_id);
+        @values = UR::BoolExpr::Util->value_id_to_values($value_id);
     }
+    $self->{values} = \@values;
+    return @values;
 }
 
 sub value_for_id {
@@ -231,7 +222,6 @@ sub underlying_rules {
 }
 
 # De-compose the rule back into its original form.
-
 sub params_list {
     # This is the reverse of the bulk of resolve.
     # It returns the params in list form, directly coercable into a hash if necessary.
@@ -243,15 +233,15 @@ sub params_list {
     return $template->params_list_for_values(@values_sorted);
 }
 
-# TODO: replace these with logical set operations
-
+# TODO: replace these with the logical set operations
+# FIXME: the name is confusing b/c it doesn't mutate the object, it returns a different object
 sub add_filter {
     my $self = shift;
     return __PACKAGE__->resolve($self->subject_class_name, $self->params_list, @_);
 }
 
-# FIXME this method seems misnamed.... it doesn't remove a filter on a rule, it returns 
-# a new rule with all the same filters as the original one, less the one you specified
+# TODO: replace these with the logical set operations
+# FIXME: the name is confusing b/c it doesn't mutate the object, it returns a different object
 sub remove_filter {
     my $self = shift;
     my $property_name = shift;
@@ -268,6 +258,7 @@ sub remove_filter {
     return __PACKAGE__->resolve($self->subject_class_name, @new_params_list);
 }
 
+# as above, doesn't mutate, just returns a different bx
 sub sub_classify {
     my ($self,$subclass_name) = @_;
     my ($t,@v) = $self->template_and_values();
@@ -275,7 +266,8 @@ sub sub_classify {
 }
 
 # flyweight constructor
-
+# like regular UR::Value objects, but kept separate from the cache but kept
+# out of the regular transaction cache so they alwasy vaporize when derefed
 sub get {
     my $rule_id = pop;
     unless (exists $UR::Object::rules->{$rule_id}) {
@@ -287,10 +279,10 @@ sub get {
         Scalar::Util::weaken($UR::Object::rules->{$rule_id});
         return $rule;
     }
-   
     return $UR::Object::rules->{$rule_id};
 }
 
+# because these are weakened
 sub DESTROY {
     delete $UR::Object::rules->{$_[0]->{id}};
 }
@@ -344,37 +336,11 @@ sub resolve {
         $DB::single = 1;
         shift @in_params;
         my @sub_queries = @{ shift @in_params };
-        my @expressions;
-        my @values;
-        while (@sub_queries) {
-            my $underlying_query;
-            if (ref($sub_queries[0]) eq 'ARRAY') {
-                $underlying_query = UR::BoolExpr->resolve($subject_class, @{$sub_queries[0]});
-                shift @sub_queries;
-            }
-            elsif (ref($sub_queries[0]) eq 'UR::BoolExpr::And') {
-                $underlying_query = shift @sub_queries;
-            }
-            else  {
-                $underlying_query = UR::BoolExpr->resolve($subject_class, @sub_queries[0,1]);
-                shift @sub_queries;
-                shift @sub_queries;
-            }
-
-            if ($underlying_query->{'_constant_values'}) {
-                Carp::confess("cannot use -* expressions in subordinate clauses of a logical <or>");
-            }
-            
-            unless ($underlying_query->template->isa("UR::BoolExpr::Template::And")) {
-                Carp::confess("$underlying_query is not an AND template");
-            }
-            push @expressions, $underlying_query->template->logic_detail;
-            push @values, $underlying_query->values;
-        }
-        my $bxt = UR::BoolExpr::Template::Or->get_by_subject_class_name_logic_type_and_logic_detail($subject_class,'Or',join('|',@expressions));
-        my $bx = $bxt->get_rule_for_values(@values);
+        my $bx = UR::BoolExpr::Template::Or->_compose(
+            $subject_class,
+            @sub_queries,
+        );
         return $bx;
-        return;
     }
 
     if (@in_params == 1) {
@@ -771,19 +737,36 @@ sub resolve {
 sub _params_list {
     my $list = $_[0]->{_params_list} ||= do {
         my $self = $_[0];
-        my $template = $self->template;
-        my ($k,$v,$c) = ($self->{_keys}, $template->{values}, $template->{_constant_values});
-        my $vn = 0;
-        my $cn = 0;
+        my $template = $self->template;        
+        $self->values unless $self->{values};
         my @list;
-        for my $key (@$k) {
-            push @list, $key;
-            if (substr($key,0,1) eq '-') {
-                push @list, $c->[$cn++];
+        # are method calls really too expensive here?
+        my $template_class = ref($template);
+        if ($template_class eq 'UR::BoolExpr::Template::And') {
+            my ($k,$v,$c) = ($template->{_keys}, $self->{values}, $template->{_constant_values});
+            my $vn = 0;
+            my $cn = 0;
+            for my $key (@$k) {
+                push @list, $key;
+                if (substr($key,0,1) eq '-') {
+                    push @list, $c->[$cn++];
+                }
+                else {
+                    push @list, $v->[$vn++];
+                }
             }
-            else {
-                push @list, $v->[$vn++];
+        }
+        elsif ($template_class eq 'UR::BoolExpr::Template::Or') {
+            my @sublist;
+            my @u = $self->underlying_rules();
+            for my $u (@u) {
+                my @p = $u->_params_list;
+                push @sublist, \@p;
             }
+            @list = (-or => \@sublist);
+        }
+        elsif ($template_class->isa("UR::BoolExpr::PropertyComparison")) {
+            @list = ($template->logic_detail => [@{$self->{values}}]);
         }
         \@list;
     };
@@ -792,7 +775,7 @@ sub _params_list {
 
 sub normalize {
     my $self = shift;
-    
+
     my $rule_template = $self->template;
     
     if ($rule_template->{is_normalized}) {
@@ -809,6 +792,7 @@ sub normalize {
     return $normalized;
 }
 
+# a handful of places still use this
 sub legacy_params_hash {
     my $self = shift;
         
@@ -831,10 +815,12 @@ sub legacy_params_hash {
     return $params;
 }
 
+# TODO: these methods need a better home, since they are a cmdline/UI standard
 sub filter_regex_for_string {
     return '^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*[\'"]?([^\'"]*)[\'"]?\s*$';
 }
 
+# TODO: these methods need a better home, since they are a cmdline/UI standard
 sub resolve_for_string {
     my ($self, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
@@ -964,7 +950,6 @@ sub _resolve_from_filter_array {
         push @keys, $key;
         push @values, $value;
     } 
-    #$DB::single = $DB::stopper;
     if ($usage_hints or $order or $page) {
         # todo: incorporate hints in a smarter way
         my %p;
@@ -1028,14 +1013,16 @@ UR::BoolExpr - a "where clause" for objects
         status => 'active', 
         start_date => UR::Context->current->now,
         payroll_category => 'hourly',
+        boss => $other_employee,
     );    
         
     my $bx = Acme::Employee->define_boolexpr(
-        payroll_category => 'hourly',
-        status => ['active','terminated'],
-        'name like' => '%Jones',
-        'ssn matches' => '\d{3}-\d{2}-\d{4}',
-        'start_date between' => ['2009-01-01','2009-02-01'],
+        'payroll_category'                  => 'hourly',
+        'status'                            => ['active','terminated'],
+        'name like'                         => '%Jones',
+        'ssn matches'                       => '\d{3}-\d{2}-\d{4}',
+        'start_date between'                => ['2009-01-01','2009-02-01'],
+        'boss.name in'                      => ['Cletus Titus', 'Mitzy Mayhem'],
     );
     
     $bx->evaluate($o); # true 
@@ -1052,6 +1039,19 @@ UR::BoolExpr - a "where clause" for objects
     my $set     = Acme::Employee->define_set($bx);  # same as listing all of the params
     my @matches = Acme::Employee->get($bx);         # same as above, but returns the members 
        
+    my $bx2 = $bx->reframe('boss');
+    #'employees.payroll_category'            => 'hourly',
+    #'employees.status'                      => ['active','terminated'],
+    #'employees.name like'                   => '%Jones',
+    #'employees.ssn matches'                 => '\d{3}-\d{2}-\d{4}',
+    #'employees.start_date between'          => ['2009-01-01','2009-02-01'],
+    #'name in'                               => ['Cletus Titus', 'Mitzy Mayhem'],
+
+    my $bx3 = $bx->flatten();
+    # any indirection in the params takes the form a.b.c at the lowest level
+    # also 'payroll_category' might become 'pay_history.category', and 'pay_history.is_current' => 1 is added to the list
+    # if this paramter has that as a custom filter
+
 
 =head1 DESCRIPTION
 
@@ -1068,7 +1068,7 @@ the matching object set.
 
 =head1 REFLECTION
 
-The data used to create the rule can be re-extracted:
+The data used to create the boolean expression can be re-extracted:
 
     my $c = $r->subject_class_name;
     # $c eq "GSC::Clone"
@@ -1079,27 +1079,13 @@ The data used to create the rule can be re-extracted:
     my %p = $r->params_list;
     # %p = two key value pairs
 
-=head1 SUBCLASSES
+=head1 TEMPLATE SUBCLASSES
 
- The ::Rule class is abstract, but the primary constructor (resolve_normalized_rule_for_class_and_params),
- automatically returns rules of the correct subclass for the specified parameters.  
- 
- Currently it always returns a ::Rule::And object, which is the composite of all key-value pairs passed-in.
+The template behind the expression can be of type ::Or, ::And or ::PropertyComparison.
+These classes handle all of the operating logic for the expressions.
 
-=item ::Rule::And
-
- Rules of this type contain a list of other rules, ALL of which must be true for the given rule to be true.
- Inherits from the intermediate class ::Rule::Composite.
- 
-=item ::Rule::Or
-
- Rules of this type contain a list of other rules, ANY of which must be true for the given rule to be true.
- Inherits from the intermediate class ::Rule::Composite.
-
-=item ::Rule::PropertyComparison
-
- Rules of this type compare a single property on the subject, using a specific comparison operator,
- against a specific value (or value set for certain operators).  This is the low-level non-composite rule.
+Each of those classes incapsulates 0..n of the next type in the list.  All templates
+simplify to this level.  See L<UR::BoolExpr::Template> for details.
 
 =head1 CONSTRUCTOR
 
@@ -1121,9 +1107,10 @@ using greater-than operator for property_1.
 
 =item evaluate
 
-    $bx->($object)
+    $bx->evaluate($object)
 
 Returns true if the given object satisfies the BoolExpr
+
 
 =item template_and_values
 
@@ -1178,11 +1165,68 @@ Return a string for the operator of the given property.  A value of '' (the
 empty string) means equality ("=").  Other possible values inclue '<', '>',
 '<=', '>=', 'between', 'true', 'false', 'in', 'not <', 'not >', etc.
 
+=item normalize
+
+    $bx2 = $bx->normalize;
+
+A boolen expression can be changed in incidental ways and still be equivalent.
+This method converts the expression into a normalized form so that it can be
+compared to other normalized expressions without incidental differences
+affecting the comparision.
+
+=item flatten
+
+    $bx2 = $bx->flatten();
+
+Transforms a boolean expression into a functional equivalent where
+indirect properties are turned into property chains.
+
+For instance, in a class with
+
+    a => { is => "A", id_by => "a_id" },
+    b => { via => "a", to => "bb" },
+    c => { via => "b", to => "cc" },
+
+An expression of:
+
+    c => 1234
+    
+Becomes:
+
+    a.bb.cc => 1234
+
+In cases where one of the indirect properties includes a "where" clause,
+the flattened expression would have an additional value for each element:
+
+    a => { is => "A", id_by => "a_id" },
+    b => { via => "a", to => "bb" },
+    c => { via => "b", where ["xx" => 5678], to => "cc" },
+
+An expression of:
+
+    c => 1234
+    
+Becomes:
+
+    a.bb.cc => 1234
+    a.bb.xx => 5678
+
+
+
+=item reframe
+
+    $bx  = Acme::Order->define_boolexpr(status => 'active');
+    $bx2 = $bx->reframe('customer');
+
+The above will turn a query for orders which are active into a query for
+customers with active orders, presuming an Acme::Order has a property called
+"customer" with a defined relationship to another class.
+
 =back
 
 =head1 INTERNAL STRUCTURE
 
-A rule has an "id", which completely describes the rule in stringified form,
+A boolean expression (or "rule") has an "id", which completely describes the rule in stringified form,
 and a method called evaluate($o) which tests the rule on a given object.
 
 The id is composed of two parts:

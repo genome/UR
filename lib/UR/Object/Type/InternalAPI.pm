@@ -53,7 +53,6 @@ sub property_meta_for_name {
     my ($self, $property_name) = @_;
 
     if (index($property_name,'.') != -1) {
-        $DB::single = 1;
         my @chain = split(/\./,$property_name);
         my $last_class_meta = $self;
         my @pmeta;
@@ -61,7 +60,7 @@ sub property_meta_for_name {
             my $property_meta = $last_class_meta->property_meta_for_name($link);
             push @pmeta, $property_meta;
             last if $link eq $chain[-1];
-            my @joins = $property_meta->_get_joins();
+            my @joins = $property_meta->_resolve_join_chain();
             my $last_class_name = $joins[-1]{foreign_class};
             $last_class_meta = $last_class_name->__meta__;
         }
@@ -85,9 +84,43 @@ sub property_meta_for_name {
     return;
 }
 
+
+sub _flatten_property_name {
+    my ($self, $name) = @_;
+    
+    my @meta = $self->property_meta_for_name($name);
+    my @joins = map { $_->_resolve_join_chain() } @meta;
+    
+    my $flattened_name = '';
+    my @add_keys;
+    my @add_values;
+    for my $join (@joins) {
+        if ($flattened_name) {
+            $flattened_name .= '.'; 
+        }
+        $flattened_name .= $join->{source_name_for_foreign};
+        if (my $where = $join->{where}) {
+            my $join_class = $join->{foreign_class};
+            my $bx2 = UR::BoolExpr->resolve($join_class,@$where);
+            my $bx2_flat = $bx2->flatten(); # recurses through this
+            my ($bx2_flat_template, @values) = $bx2_flat->template_and_values();
+            my @keys = @{ $bx2_flat_template->{_keys} };
+            for my $key (@keys) {
+                next if substr($key,0,1) eq '-';
+                my $flattened_name = $flattened_name . '.' . $key;
+                push @add_keys, $flattened_name;
+                push @add_values, shift @values;
+            }
+            if (@values) {
+                Carp:confess("Unexpected mismatch in count of keys and values!");
+            }
+        }
+    }
+    return ($flattened_name, \@add_keys, \@add_values);
+};
+
 our $DIRECT_ID_PROPERTY_METAS_TEMPLATE;
-sub direct_id_property_metas
-{
+sub direct_id_property_metas {
     my $self = _object(shift);
     $DIRECT_ID_PROPERTY_METAS_TEMPLATE ||= UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name', 'is_id true');
     my $class_name = $self->class_name;

@@ -148,7 +148,7 @@ UR::Object::Type->define(
     is_abstract => 1,
     composite_id_separator => "\t",
     id_by => [
-        id  => { is => 'Scalar' }
+        id  => { is => 'UR::Value' }
     ]
 );
 

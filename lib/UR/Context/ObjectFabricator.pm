@@ -191,8 +191,10 @@ sub create_for_loading_template {
         foreach my $delegation ( (keys %hints), (keys %delegations)) {
             my $delegated_property_meta = $query_class_meta->property_meta_for_name($delegation);
             next DELEGATION unless $delegated_property_meta;
+
+            my @joins = $delegated_property_meta->_resolve_join_chain();
             JOIN:
-            foreach my $join ( $delegated_property_meta->_get_joins ) {
+            foreach my $join ( @joins ) {
                 next unless ($join->{'foreign_class'} eq $loading_template->{'data_class_name'});
 
                 # Is this the equivalent of loading by the class' ID?

@@ -857,9 +857,14 @@ sub create_entity {
             }
         }
 
-        my @joins = $indirect_property_meta->_get_joins();
+        my @joins = $indirect_property_meta->_resolve_join_chain();
         my %local_properties_to_set;
         foreach my $join ( @joins ) {
+            if ($join->{foreign_class}->isa("UR::Value")) {
+                # this final "join" is to the set of values available to the raw primitive type
+                # ...not what we really mean by delegation
+                next;
+            }
             for (my $i = 0; $i < @{$join->{'source_property_names'}}; $i++) {
                 my $source_property_name = $join->{'source_property_names'}->[$i];
                 next unless (exists $direct_properties->{$source_property_name});
@@ -1514,8 +1519,11 @@ sub get_objects_for_class_and_rule {
     my $cached;
     
     # this is a no-op if the rule is already normalized
+    # we do not currently flatten b/c the bx constant_values do not flatten/reframe
+    #my $flat_rule = ( (1 or $rule->subject_class_name eq 'UR::Object::Property') ? $rule : $rule->flatten);
+    #my $normalized_rule = $flat_rule->normalize;
     my $normalized_rule = $rule->normalize;
-    
+
     # see if we need to load if load was not defined
     unless (defined $load) {
         # check to see if the cache is complete
@@ -2037,7 +2045,7 @@ sub _create_secondary_loading_closures {
         foreach my $property ( @$this_ds_delegations ) {
             # first, map column names in the joined class to column names in the primary class
             my %foreign_property_name_map;
-            my @this_property_joins = $property->_get_joins();
+            my @this_property_joins = $property->_resolve_join_chain();
             foreach my $join ( @this_property_joins ) {
                 my @source_names = @{$join->{'source_property_names'}};
                 my @foreign_names = @{$join->{'foreign_property_names'}};

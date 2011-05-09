@@ -7,7 +7,9 @@ use UR;
 
 class URT {
     is => ['UR::Namespace'],
-    type_name => 'urt',
+    has_constant => [
+        allow_sloppy_primitives => { value => 1 },
+    ],
     doc => 'A dummy namespace used by the UR test suite.',
 };
 

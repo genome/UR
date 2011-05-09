@@ -11,6 +11,69 @@ UR::Object::Type->define(
     is              => ['UR::BoolExpr::Template::Composite'],    
 );
 
+sub _flatten_bx {
+    my ($class, $bx) = @_;
+    my @old = $bx->underlying_rules;
+    my @new;
+    for my $old (@old) {
+        my $new = $old->flatten;
+        push @new, [ $new->_params_list ];
+    }
+    my $flattened_bx = $class->_compose($bx->subject_class_name,@new);
+    return $flattened_bx;
+}
+
+sub _reframe_bx {
+    my ($class, $bx, $in_terms_of) = @_;
+    my @old = $bx->underlying_rules;
+    my @new;
+    for my $old (@old) {
+        my $new = $old->reframe($in_terms_of);
+        push @new, [ $new->_params_list ];
+    }
+    my @meta = $bx->subject_class_name->__meta__->property_meta_for_name($in_terms_of);
+    my @joins = $meta[-1]->_resolve_join_chain();
+    my $reframed_bx = $class->_compose($joins[-1]{foreign_class},@new);
+    return $reframed_bx;
+}
+
+sub _compose {
+    my $self = shift;
+    my $subject_class = shift;
+    my @sub_queries  = @_;
+
+    my @expressions;
+    my @values;
+    while (@sub_queries) {
+        my $underlying_query;
+        if (ref($sub_queries[0]) eq 'ARRAY') {
+            $underlying_query = UR::BoolExpr->resolve($subject_class, @{$sub_queries[0]});
+            shift @sub_queries;
+        }
+        elsif (ref($sub_queries[0]) eq 'UR::BoolExpr::And') {
+            $underlying_query = shift @sub_queries;
+        }
+        else  {
+            $underlying_query = UR::BoolExpr->resolve($subject_class, @sub_queries[0,1]);
+            shift @sub_queries;
+            shift @sub_queries;
+        }
+
+        if ($underlying_query->{'_constant_values'}) {
+            Carp::confess("cannot use -* expressions in subordinate clauses of a logical <or>");
+        }
+        
+        unless ($underlying_query->template->isa("UR::BoolExpr::Template::And")) {
+            Carp::confess("$underlying_query is not an AND template");
+        }
+        push @expressions, $underlying_query->template->logic_detail;
+        push @values, $underlying_query->values;
+    }
+    my $bxt = UR::BoolExpr::Template::Or->get_by_subject_class_name_logic_type_and_logic_detail($subject_class,'Or',join('|',@expressions));
+    my $bx = $bxt->get_rule_for_values(@values);
+    return $bx;
+}
+
 sub _underlying_keys {
     my $self = shift;
     my $logic_detail = $self->logic_detail;
@@ -54,9 +117,7 @@ sub specifies_value_for {
 sub evaluate_subject_and_values {
     my $self = shift;
     my $subject = shift;
-$DB::single = 1;
     return unless (ref($subject) && $subject->isa($self->subject_class_name));
-
     my @underlying = $self->get_underlying_rule_templates;
     while (my $underlying = shift (@underlying)) {
         my $n = $underlying->_variable_value_count;

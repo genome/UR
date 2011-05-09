@@ -1,28 +1,162 @@
 package UR::BoolExpr::Template::And;
-
 use warnings;
 use strict;
-our $VERSION = "0.31"; # UR $VERSION;;
-
 require UR;
+our $VERSION = "0.31"; # UR $VERSION;;
 
 UR::Object::Type->define(
     class_name      => __PACKAGE__,
     is              => ['UR::BoolExpr::Template::Composite'],
 );
 
-sub _flatten {
-    my $self = $_[0];
-    my @property_names = $self->_property_names;
-
-
-    my ($flat, @extra_values);
-    $flat = $self;
-    return ($flat, @extra_values);
+sub _flatten_bx {
+    my ($class, $bx) = @_;
+    my $template = $bx->template;
+    my ($flattened_template, @extra_values) = $template->_flatten(@_);
+    my $flattened_bx;
+    if (not @extra_values) {
+        # optimized
+        my $flattened_bx_id = $flattened_template->id . $UR::BoolExpr::Util::id_sep . $bx->value_id;
+        $flattened_bx = UR::BoolExpr->get($flattened_bx_id);
+        $flattened_bx->{'values'} = $bx->{'values'} unless $flattened_bx->{'values'};
+    }
+    else {
+        $flattened_bx = $flattened_template->get_rule_for_values($bx->values, @extra_values);    
+    }
+    return $flattened_bx;
 }
 
-sub reframe {
+sub _reframe_bx {
+    my ($class, $bx, $in_terms_of_property_name) = @_;
+    my $template = $bx->template;
+    my ($reframed_template, @extra_values) = $template->_reframe($in_terms_of_property_name);
+    my $reframed_bx;
+    if (@extra_values == 0) {
+        my $reframed_bx_id = $reframed_template->id . $UR::BoolExpr::Util::id_sep . $bx->value_id;
+        $reframed_bx = UR::BoolExpr->get($reframed_bx_id);
+        $reframed_bx->{'values'} = $bx->{'values'} unless $reframed_bx->{'values'};
+    }
+    else {
+        my @values = ($bx->values, @extra_values);
+        $reframed_bx = $reframed_template->get_rule_for_values(@values);
+    }
+    return $reframed_bx;
+}
+
+sub _flatten {
     my $self = $_[0];
+    
+    if ($self->{flatten}) {
+        return @{ $self->{flatten} }
+    }
+
+    my @old_property_names = $self->_property_names;
+    my $old_property_meta_hash = $self->_property_meta_hash;
+
+    my @new_keys;
+    my @extra_keys;
+    my @extra_values;
+    
+    my $found_unflattened_params = 0;
+    while (my $name = shift @old_property_names) { 
+        my $mdata = $old_property_meta_hash->{$name};
+        my ($value_position, $operator) = @$mdata{'value_position','operator'};
+        
+        my $class_meta = $self->subject_class_name->__meta__;
+        my ($flat, $add_keys, $add_values) = $class_meta->_flatten_property_name($name); 
+        
+        $found_unflattened_params = 1 if $flat ne $name or @$add_keys or @$add_values;
+
+        $flat .= ' ' . $operator if $operator and $operator ne '=';
+        push @new_keys, $flat;
+        
+        push @extra_keys, @$add_keys;
+        push @extra_values, @$add_values;
+    }
+
+    if ($found_unflattened_params or @extra_keys) {
+        push @new_keys, @extra_keys;
+        my $flat = UR::BoolExpr::Template::And->_fast_construct(
+            $self->subject_class_name, 
+            \@new_keys, 
+            $self->_constant_values,     
+        );
+        $self->{flatten} = [$flat,@extra_values];
+        return ($flat, @extra_values);
+    }
+    else {
+        $self->{flatten} = [$self];
+        return $self
+    }
+}
+
+sub _reframe {
+    my $self = shift;
+    my $in_terms_of_property_name = shift;
+
+    # determine the from_class, to_class, and path_back
+    my $from_class = $self->subject_class_name;
+    my $cmeta = $self->subject_class_name->__meta__;
+    my @pmeta = $cmeta->property_meta_for_name($in_terms_of_property_name);
+    unless (@pmeta) {
+        Carp::confess("Failed to find property $in_terms_of_property_name on $from_class.  Cannot reframe $self!");  
+    }
+    my @joins = map { $_->_resolve_join_chain } @pmeta;
+    my $path_back    = join('.', map { $_->{foreign_name_for_source} } reverse @joins);
+    my $to_class = $joins[-1]{foreign_class};
+
+    # translate all of the old properties to use the path back to the original class
+    my ($flat,@extra_values) = $self->_flatten;
+    my @old_property_names = $flat->_property_names;
+    my $old_property_meta_hash = $flat->_property_meta_hash;
+    
+    my @new_keys;
+    while (@old_property_names) {
+        my $old_name = shift @old_property_names;
+        if (substr($old_name,0,1) eq '-') {
+            next;
+        }
+
+        my @old_path = split('\.',$old_name);
+        my $n = 0;
+        for ($n = 0; $n < @old_path and $n < @joins; $n++) {
+            unless ($old_path[$n] eq $joins[$n]->{source_name_for_foreign}) {
+                last;
+            }
+        }
+
+        my $new_key;
+        if ($n) {
+            my @path_back = reverse @joins;
+            for (1..$n) {
+                pop @path_back;
+            }
+            $new_key = join('.', map { $_->{foreign_name_for_source} } @path_back);
+            $new_key = join('.', ($new_key ? $new_key : ()), @old_path[$n..$#old_path]);
+        }
+        else {
+            # all things which DON'T start with part of the $in_terms_of_property_name
+            # go back through $self, so just prepend the path back
+            $new_key = $path_back . '.' . $old_name;
+        }
+        my $mdata = $old_property_meta_hash->{$old_name};
+        my ($value_position, $operator) = @$mdata{'value_position','operator'};
+        $new_key .= ' ' . $operator if $operator and $operator ne '=';
+        push @new_keys, $new_key;
+    }
+
+    my $constant_values = $flat->_constant_values;
+    if (@$constant_values) {
+        Carp::confess("re-framing of constant values is incomplete.  fix me");
+    }
+
+    my $reframed = UR::BoolExpr::Template::And->_fast_construct(
+        $to_class, 
+        \@new_keys, 
+        $constant_values,     
+    );
+
+    return $reframed, @extra_values;
 }
 
 sub _template_for_grouped_subsets {
@@ -30,7 +164,6 @@ sub _template_for_grouped_subsets {
     my $group_by = $self->group_by;
     die "rule template $self->{id} has no -group_by!?!?" unless $group_by;
 
-    my $logic_type = $self->logic_type;
     my @base_property_names = $self->_property_names;
     for (my $i = 0; $i < @base_property_names; $i++) {
         my $operator = $self->operator_for($base_property_names[$i]);

@@ -301,7 +301,13 @@ sub _init_rdbms {
         my $property_name = $delegated_property;
        
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
-        
+       
+        if ($joins[-1]{foreign_class}->isa("UR::Value")) {
+            # the final join in a chain is often the link between a primitive value
+            # and the UR::Value subclass into which it falls ...irrelevent for db joins
+            pop @joins;
+        }
+
         my $alias_for_property_value;
         my $last_class_object_excluding_inherited_joins;
         my $join_aliases_for_this_object;
@@ -337,7 +343,7 @@ sub _init_rdbms {
                     my @added_joins;
                     for my $pn (@p) {
                         my $p = $m->property($pn);
-                        my @j = $p->_get_joins();
+                        my @j = $p->_resolve_join_chain();
                         my $j = pop @j;
                         $j = { %$j };
                         my $w = delete $j->{where};
@@ -935,41 +941,22 @@ sub _resolve_object_join_data_for_property_chain {
 
     my @pmeta = $class_meta->property_meta_for_name($property_name);  
 
+    # we can't actually get this from the joins because 
+    # a bunch of optional things can be chained together to form
+    # something non-optional
     $is_optional = 0;
     for my $pmeta (@pmeta) {
-        push @joins, $pmeta->_get_joins();
+        push @joins, $pmeta->_resolve_join_chain();
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
-    my $final_accessor_meta = $pmeta[-1];
-    my $final_accessor_class_meta = $final_accessor_meta->class_name->__meta__;
-    $final_accessor = $final_accessor_meta->property_name;
-
-    # Follow all the via/to indirectedness to where the data ultimately comes from
-    unless ($final_accessor) { # id_by or reverse_as object accessors may not have a 'to'
-        Carp::confess("No final accessor for $property_name???");
+    if (0) { #($joins[-1]->{foreign_class}->isa("UR::Value")) {
+        my $j = pop @joins;
+        return ($j->{source_name_for_foreign}, $is_optional, @joins)
     }
-
-    if ($final_accessor_meta->id eq "UR::Object\tid") {
-        # This is the generic 'id' property that won't be in the database.  See if the class 
-        # has a single, alternate ID property we can swap in here
-        my @id_properties = grep { $_->class_name ne 'UR::Object' } $final_accessor_class_meta->all_id_property_metas();
-        if (@id_properties == 1) {
-            $final_accessor_meta = $id_properties[0];
-        }
+    else {
+        return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
     }
-
-    while($final_accessor_meta && $final_accessor_meta->via) {
-        $final_accessor_meta = $final_accessor_meta->to_property_meta();
-    }
-    $final_accessor = $final_accessor_meta->property_name;
-    $final_accessor_class_meta = $final_accessor_meta->class_meta;
-
-    #if ($final_accessor ne $joins[-1]{final_accessor}) {
-    #    Carp::confess("$final_accessor ne $joins[-1]{final_accessor}");
-    #}
-    
-    return ($final_accessor, $is_optional, @joins);
 };
 
 sub _init_core {
@@ -1175,7 +1162,8 @@ sub _init_core {
         my $last_alias_for_this_chain;
     
         my $property_name = $delegated_property->property_name;
-        my @joins = $delegated_property->_get_joins;
+        my @joins = $delegated_property->_resolve_join_chain;
+        #pop @joins if $joins[-1]->{foreign_class}->isa("UR::Value");
         my $relationship_name = $delegated_property->via;
         unless ($relationship_name) {
            $relationship_name = $property_name;

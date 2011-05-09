@@ -7,7 +7,9 @@ use UR;
 
 class Vending {
     is => [ 'UR::Namespace' ],
-    type_name => 'vending',
+    has_constant => [
+        allow_sloppy_primitives => { value => 1 },
+    ]
 };
 
 

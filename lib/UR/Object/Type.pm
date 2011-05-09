@@ -33,7 +33,7 @@ sub _properties {
         my @matches = grep { $bx->evaluate($_) } $self->property_metas;
         return if not defined wantarray;
         return @matches if wantarray;
-        die "Matched multiple meta-properties, but called in scalar context!" if @matches > 1;
+        die "Matched multiple meta-properties, but called in scalar context!" . Data::Dumper::Dumper(\@matches) if @matches > 1;
         return $matches[0];
     }
     else {

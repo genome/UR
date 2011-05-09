@@ -11,9 +11,9 @@ UR::Object::Type->define(
     class_name => 'UR::Namespace',
     is => ['UR::Singleton'],
     is_abstract => 1,
-    properties => [
+    has => [
         domain                  => { is => 'Text', len => undef },
-        allow_slopy_primitives  => { is => 'Boolean', default_value => 0,
+        allow_sloppy_primitives  => { is => 'Boolean', default_value => 1,
                                     doc => 'when true, unrecognized data types will function as UR::Value::SloppyPrimitive' },         
     ],
 );
@@ -25,8 +25,7 @@ sub get_member_class {
 
 # FIXME  These should change to using the namespace metadata DB when
 # that's in place, rather than trolling through the directory tree
-sub get_material_classes
-{
+sub get_material_classes {
     my $self = shift->_singleton_object;
     my @classes;
     if (my $cached = $self->{material_classes}) {
