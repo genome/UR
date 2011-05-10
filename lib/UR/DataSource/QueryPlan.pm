@@ -62,6 +62,7 @@ class UR::DataSource::QueryPlan {
 
 # these hash keys are probably removable
 # because they are not above, they will be deleted if _init sets them
+# this exists primarily as a cleanup target list
 my @extra = qw(
     id_properties
     direct_table_properties
@@ -120,9 +121,12 @@ sub _init_rdbms {
     my $class_name = $rule_template->subject_class_name;
     my $class_meta = $class_name->__meta__;
     my $class_data = $ds->_get_class_data_for_loading($class_meta);       
-    
+
+    # an array of arrays, containing $table_name, $column_name, $alias, $object_num
+    # as joins are done we extend this, and then condense it into object fabricators
+    my @all_table_properties                = @{ $class_data->{all_table_properties} };    
+
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
-    my @all_table_properties                = @{ $class_data->{all_table_properties} };
     my @all_id_property_names               = @{ $class_data->{all_id_property_names} };
     my @id_properties                       = @{ $class_data->{id_properties} };   
     my $order_by_columns                    = $class_data->{order_by_columns} || [];

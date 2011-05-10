@@ -131,7 +131,16 @@ ok($bx4, "got color reframe $bx4");
 
 my $bx7 = URT::Car::Engine->define_boolexpr('car.owner_id' => 1234);
 my $bx7r = $bx7->reframe('car.owner');
-print "$bx7r\n";
+
+$DB::single = 1;
+my $z1 = URT::Car->define_boolexpr("color" => "red");
+print "$z1\n";
+my $z2 = $z1->reframe("owner");
+print "$z2\n";
+my $z4 = $z1->reframe("engine");
+print "$z4\n";
+my $z3 = $z1->reframe("color");
+print "$z3\n";
 
 __END__
 my $s4 = $s2->color_set();

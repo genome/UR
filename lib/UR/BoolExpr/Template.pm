@@ -20,6 +20,11 @@ use UR;
 
 our @CARP_NOT = qw(UR::BoolExpr);
 
+# readable stringification
+use overload ('""' => 'id');
+use overload ('==' => sub { $_[0] . ''  eq $_[1] . '' } );
+use overload ('eq' => sub { $_[0] . ''  eq $_[1] . '' } );
+
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 
     is_transactional => 0,

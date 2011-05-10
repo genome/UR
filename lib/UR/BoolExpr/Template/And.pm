@@ -101,9 +101,9 @@ sub _reframe {
     unless (@pmeta) {
         Carp::confess("Failed to find property $in_terms_of_property_name on $from_class.  Cannot reframe $self!");  
     }
-    my @joins = map { $_->_resolve_join_chain } @pmeta;
-    my $path_back    = join('.', map { $_->{foreign_name_for_source} } reverse @joins);
-    my $to_class = $joins[-1]{foreign_class};
+    my @reframe_path_forward = map { $_->_resolve_join_chain } @pmeta;
+    my $path_back    = join('.', map { $_->{foreign_name_for_source} } reverse @reframe_path_forward);
+    my $to_class = $reframe_path_forward[-1]{foreign_class};
 
     # translate all of the old properties to use the path back to the original class
     my ($flat,@extra_values) = $self->_flatten;
@@ -117,28 +117,45 @@ sub _reframe {
             next;
         }
 
-        my @old_path = split('\.',$old_name);
-        my $n = 0;
-        for ($n = 0; $n < @old_path and $n < @joins; $n++) {
-            unless ($old_path[$n] eq $joins[$n]->{source_name_for_foreign}) {
+        # get back to the original object
+        my @reframe_path_back = reverse @reframe_path_forward;
+
+        # then forward to the property related to it
+        my @filter_path_forward = split('\.',$old_name);
+
+        # if the end of the path back matches the beginning of the path 
+        # to the property in the expression unneeded steps (beyond 1)
+        my $new_key;
+        while (1) {
+            unless (@reframe_path_back) {
                 last;
             }
-        }
-
-        my $new_key;
-        if ($n) {
-            my @path_back = reverse @joins;
-            for (1..$n) {
-                pop @path_back;
+            unless (@filter_path_forward) {
+                last;
             }
-            $new_key = join('.', map { $_->{foreign_name_for_source} } @path_back);
-            $new_key = join('.', ($new_key ? $new_key : ()), @old_path[$n..$#old_path]);
+            my $last_name_back = $reframe_path_back[-1]{source_name_for_foreign};
+            my $first_name_forward = $filter_path_forward[0];
+            if ($last_name_back ne $first_name_forward) {
+                # found a difference
+                last;
+            }
+            else {
+                # the last step back matches the first step to the property
+                if (@reframe_path_back == 1 and @filter_path_forward == 1) {
+                    # just keep one of the identical pair
+                    shift @filter_path_forward;
+                }
+                else {
+                    # remove both (if one is empty this is no problem)
+                    pop @reframe_path_back;
+                    shift @filter_path_forward;
+                }
+            }
         }
-        else {
-            # all things which DON'T start with part of the $in_terms_of_property_name
-            # go back through $self, so just prepend the path back
-            $new_key = $path_back . '.' . $old_name;
-        }
+        
+        $new_key = join('.', map { $_->{foreign_name_for_source} } @reframe_path_back);
+        $new_key = join('.', ($new_key ? $new_key : ()), @filter_path_forward);
+
         my $mdata = $old_property_meta_hash->{$old_name};
         my ($value_position, $operator) = @$mdata{'value_position','operator'};
         $new_key .= ' ' . $operator if $operator and $operator ne '=';
