@@ -128,6 +128,7 @@ sub undo {
         # regular property
         if ($changed_obj->can($changed_aspect)) {
             $changed_obj->$changed_aspect($undo_data);
+            $changed_obj->{'_change_count'} -= 2;  # 2 because the line above will actually increment the counter, too
         }
     }
 

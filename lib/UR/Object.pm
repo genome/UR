@@ -472,6 +472,10 @@ sub __changes__ {
     
     # performance optimization
     return unless $self->{_change_count};
+
+    unless (wantarray) {
+        return $self->{_change_count};  # scalar context only cares if there are any changes or not
+    }
     
     my $meta = $self->__meta__;
     if (ref($meta) eq 'UR::DeletedRef') {

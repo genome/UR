@@ -292,6 +292,8 @@ sub infer_property_value_from_rule {
 }
 
 our $sig_depth = 0;
+# These are things that use __signal_change__ to emit a message to callbacks, but aren't actually changes
+my %changes_not_counted = map { $_ => 1 } qw(load define unload query connect);
 my %subscription_classes;
 sub add_change_to_transaction_log {
     my ($self,$subject, $property, @data) = @_;
@@ -300,7 +302,7 @@ sub add_change_to_transaction_log {
     if (ref($subject)) {
         $class = ref($subject);
         $id = $subject->id;
-        unless ($property eq 'load' or $property eq 'define' or $property eq 'unload') {
+        unless ($changes_not_counted{$property} ) {
             $subject->{_change_count}++;
             #print "changing $subject $property @data\n";    
         }
@@ -2477,14 +2479,15 @@ sub __merge_db_data_with_existing_object {
     foreach my $property ( @$property_names ) {
         no warnings 'uninitialized';
 
-        next unless (exists $existing_object->{$property});   # All direct properties are stored in the same-named hash key, right?
+        # All direct properties are stored in the same-named hash key, right?
+        next unless (exists $existing_object->{$property});
 
         my $object_value      = $existing_object->{$property};
         my $db_value          = $pending_db_object_data->{$property};
         my $expected_db_value = $expected_db_data->{$property};
 
         if ($object_value ne $expected_db_value) {
-            $different = 1;
+            $different++;
         }
 
         
@@ -2539,6 +2542,10 @@ sub __merge_db_data_with_existing_object {
             $existing_object->$property($pending_db_object_data->{$property});
         }
     }
+
+    # re-figure how many changes are really there
+    my @change_count = $existing_object->__changes__;
+    $existing_object->{'_change_count'} = scalar(@change_count);
 
     return $different;
 }
@@ -3460,6 +3467,7 @@ sub _reverse_all_changes {
                                  $property_meta->is_constant);
                         $object->$property_name($saved->{$property_name});
                     }
+                    delete $object->{'_change_count'};
                 }
                 else {
                     # Object not in database, get rid of it.
