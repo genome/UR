@@ -7,6 +7,10 @@ our $VERSION = "0.31"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object::Type );
 
+use overload ('""' => '__display_name__');
+use overload ('==' => sub { $_[0] . ''  eq $_[1] . '' } );
+use overload ('eq' => sub { $_[0] . ''  eq $_[1] . '' } );
+
 class UR::Object::Set {
     is => 'UR::Value',
     is_abstract => 1,
@@ -18,6 +22,19 @@ class UR::Object::Set {
     ],
     doc => 'an unordered group of distinct UR::Objects'
 };
+
+# override the UR/system display name
+# this is used in stringification overload
+sub __display_name__ {
+    my $self = shift;
+    my %b = $self->rule->_params_list;
+    my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+    $s =~ s/\n/ /gs;
+    $s =~ s/^\s*{//; 
+    $s =~ s/\}\s*$//;
+    $s =~ s/\"(\w+)\" \=\> / $1 => /g;
+    return '(' . ref($self) . ' ' . $s . ')';
+}
 
 # I'll neave this in here commented out for the future
 # It's intended to keep 'count' for sets updated in real-time as objects are 
@@ -81,6 +98,7 @@ class UR::Object::Set {
     
 
 sub get_with_special_parameters {
+    warn "this method will be removed shortly";
     my $class = shift;
     my $bx = shift;
     my @params = @_;
@@ -209,12 +227,20 @@ sub __aggregate_sum__ {
     return $sum;
 }
 
+sub __related_set__ {
+    my $self = $_[0];
+    my $property_name = $_[1];
+    my $bx1 = $self->rule;
+    my $bx2 = $bx1->reframe($property_name);
+    return $bx2->subject_class_name->define_set($bx2);
+}
+
 require Class::AutoloadCAN;
 Class::AutoloadCAN->import();
 
 sub CAN {
     my ($class,$method,$self) = @_;
-
+    
     if ($method =~ /^__aggregate_(.*)__/) {
         # prevent circularity issues since this actually calls ->can();
         return;
@@ -226,8 +252,9 @@ sub CAN {
     if ($member_class_name->can($method)) {
         my $member_class_meta = $member_class_name->__meta__;
         my $member_property_meta = $member_class_meta->property_meta_for_name($method);
+        
+        # regular property access
         if ($member_property_meta) {
-            # regular property access
             return sub {
                 my $self = shift;
                 if (@_) {
@@ -247,32 +274,14 @@ sub CAN {
                 }
             }; 
         }
+
+        # set relaying with $s->foo_set->bar_set->baz_set;
         if (my ($property_name) = ($method =~ /^(.*)_set$/)) {
-            my $member_property_meta = $member_class_meta->properties(singular_name => $property_name);
-            if ($member_property_meta) {
-                # property attribution set
-                return sub {
-                    my $self = shift;
-                    if (@_) {
-                        Carp::croak("Cannot use method $method as a mutator: Set properties are not mutable");
-                    }
-                    # NOTE: "this method $method on $class is not properly lazy yet";
-                    my @members = $self->members;
-                    my @values = map { $_->$method } @members;
-                    return if not @values;
-                    if (my $r_class_name = ref($values[0])) {
-                        return $r_class_name->define_set(id => [map({ id => $_->id },@values)]);
-                    }
-                    else {
-                        return UR::Value->define_set(id => \@values);
-                    }
-                    return @values if wantarray;
-                    return if not defined wantarray;
-                    Carp::confess("Multiple matches for $class method '$method' called in scalar context.  The set has ".scalar(@values)." values to return") if @values > 1 and not wantarray;
-                    return $values[0];
-                }; 
+            return sub {
+                shift->__related_set__($property_name, @_)
             }
         }
+
         # other method
         return sub {
             my $self = shift;
@@ -303,7 +312,15 @@ sub CAN {
                 return $self->__aggregate__($f);
             };
         }
+        
+        # set relaying with $s->foo_set->bar_set->baz_set;
+        if (my ($property_name) = ($method =~ /^(.*)_set$/)) {
+            return sub {
+                shift->__related_set__($property_name, @_)
+            }
+        }
     }
+    print ">>> ck $method\n";
     return;
 }
 

@@ -24,6 +24,7 @@ sub _flatten_bx {
 }
 
 sub _reframe_bx {
+    $DB::single = 1;
     my ($class, $bx, $in_terms_of) = @_;
     my @old = $bx->underlying_rules;
     my @new;

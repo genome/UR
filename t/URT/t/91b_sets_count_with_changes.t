@@ -132,8 +132,7 @@ is($person_set->count, 3, 'still, 3 people are cool');
 is($query_count, 1, 'Made one query');  
 
 # Test set-relaying.
-note("set relaying is not sufficiently lazy yet");
-my $car_set = $person_set->car_set;
+my $car_set = $person_set->cars_set;
 ok($car_set, "got a set of cars for the person set: object set -> value set");
 
 # If objects have modifications, all aggregates occur directly on objects in memory.
