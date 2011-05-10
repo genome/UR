@@ -115,6 +115,7 @@ require UR::ModuleBase;     # this should be switched to a role
 require UR::ModuleConfig;   # used by ::Time, and also ::Lock ::Daemon
 
 require UR::Object::Iterator;
+require UR::Object::Join;
 require UR::DeletedRef;
 
 require UR::Object;         
