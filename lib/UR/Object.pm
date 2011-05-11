@@ -515,6 +515,19 @@ sub __changes__ {
     } @changed;
 }
 
+
+sub _changed_property_names {
+    my $self = shift;
+
+    my @changes = $self->__changes__;
+    my %changed_properties;
+    foreach my $change ( @changes ) {
+        next unless ($change->type eq 'changed');
+        $changed_properties{$_} = 1 foreach $change->properties;
+    }
+    return keys %changed_properties;
+}
+
 sub __signal_change__ {
     # all mutable property accessors ("setters") call this method to tell the 
     # current context about a state change.
