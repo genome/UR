@@ -1,9 +1,30 @@
-package UR::Object::Join;
+package UR::Attribution::Join;
 use strict;
 use warnings;
 
-my @old = qw/source_class source_property_names foreign_class foreign_property_names source_name_for_foreign foreign_name_for_source is_optional/;
-my @new = qw/foreign_class foreign_property_names source_class source_property_names foreign_name_for_source source_name_for_foreign is_optional/;
+# this logic needs to be turned into regular objects, but is divided
+# out here for now...
+
+# this class is used by UR.pm _after_ initializing the system
+# as such, complex queries using joins cannot be done during bootstrapping...
+
+class UR::Attribution::Join {
+    has => [
+        source_class                => { is => 'Text' },
+        foreign_class               => { is => 'Text' },
+
+        source_property_names       => { is => 'ARRAY' },
+        foreign_property_names      => { is => 'ARRAY' },
+
+        source_name_for_foreign     => { is => 'Text' },
+        foreign_name_for_source     => { is => 'Text' },
+
+        is_optional                 => { is => 'Boolean' },
+
+        where                       => { is => 'Array' },
+    ],
+};
+
 sub resolve_chain_for_property_meta {
     my ($class, $pmeta) = @_;  
     if ($pmeta->via or $pmeta->to) {
@@ -44,12 +65,14 @@ sub _resolve_indirect {
             my $class_name = $pmeta->class_name;
             Carp::croak "Can't resolve property '$property_name' of $class_name: No data type for '$via'?";
         }
-        push @joins, $via_meta->_resolve_join_chain();
+
+        # recurse
+        push @joins, $via_meta->_resolve_join_chain(); 
         
         if (my $where = $pmeta->where) {
-            if ($where->[1] eq 'name') {
-                @$where = reverse @$where;
-            }        
+            #if ($where->[1] eq 'name') {
+            #    @$where = reverse @$where;
+            #}        
             my $join = pop @joins;
             #my $where_rule = $join->{foreign_class}->define_boolexpr(@$where);               
             unless ($join->{foreign_class}) {
@@ -58,7 +81,7 @@ sub _resolve_indirect {
             my $where_rule = UR::BoolExpr->resolve($join->{foreign_class}, @$where);                
             my $id = $join->{id};
             $id .= ' ' . $where_rule->id;
-            push @joins, { %$join, id => $id, where => $where };
+            push @joins, __PACKAGE__->__define__(%$join, id => $id, where => $where);
         }
     }
     else {
@@ -80,11 +103,16 @@ sub _resolve_indirect {
             my $class_name = $pmeta->class_name;
             Carp::croak "Can't resolve property '$property_name' of $class_name: No '$to' property found on " . $via_meta->data_type;
         }
+
+        # recurse
         push @joins, $to_meta->_resolve_join_chain();
     }
     
     return @joins;
 }
+
+my @old = qw/source_class source_property_names foreign_class foreign_property_names source_name_for_foreign foreign_name_for_source is_optional/;
+my @new = qw/foreign_class foreign_property_names source_class source_property_names foreign_name_for_source source_name_for_foreign is_optional/;
 
 sub _resolve_direct {
     my ($class, $pmeta) = @_;
@@ -96,9 +124,10 @@ sub _resolve_direct {
     my $source_class = $class_meta->class_name;            
     my $foreign_class = $pmeta->data_type;
     my $where = $pmeta->where;
-    if (defined($where) and defined($where->[1]) and $where->[1] eq 'name') {
-        @$where = reverse @$where;
-    }
+    #if (defined($where) and defined($where->[1]) and $where->[1] eq 'name') {
+    #    Carp::confess("name swap on join?". Data::Dumper::Dumper($pmeta));
+    #    @$where = reverse @$where;
+    #}
     
     if (defined($foreign_class) and not $foreign_class->can('get')) {
         # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
@@ -129,123 +158,121 @@ sub _resolve_direct {
         }
     }
     
-    if (defined($foreign_class) and $foreign_class->can('get'))  {
-        # there is a class on the other side, either an entity or a value
-        my $foreign_class_meta = $foreign_class->__meta__;
-        my $property_name = $pmeta->property_name;
-
-        my $id = $source_class . '::' . $property_name;
-        if ($where) {
-            #my $where_rule = $foreign_class->define_boolexpr(@$where);
-            my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
-            $id .= ' ' . $where_rule->id;
-        }
-
-        if ($pmeta->id_by or $foreign_class->isa("UR::Value")) {
-            # direct reference (or primitive, which is a direct ref to a value obj)
-            my (@source_property_names, @foreign_property_names);
-            my ($source_name_for_foreign, $foreign_name_for_source);
-
-            if ($foreign_class->isa("UR::Value")) {
-                @source_property_names = ($property_name);
-                @foreign_property_names = ('id');
-
-                $source_name_for_foreign = ($property_name);
-            }
-            elsif (my $id_by = $pmeta->id_by) { 
-                my @pairs = $pmeta->get_property_name_pairs_for_join;
-                @source_property_names  = map { $_->[0] } @pairs;
-                @foreign_property_names = map { $_->[1] } @pairs;
-        
-                if (ref($id_by) eq 'ARRAY') {
-                    # satisfying the id_by requires joins of its own
-                    # sms: why is this only done on multi-value fks?
-                    foreach my $id_by_property_name ( @$id_by ) {
-                        my $id_by_property = $class_meta->property_meta_for_name($id_by_property_name);
-                        next unless ($id_by_property and $id_by_property->is_delegated);
-                    
-                        push @joins, $id_by_property->_resolve_join_chain();
-                        $source_class = $joins[-1]->{'foreign_class'};
-                        @source_property_names = @{$joins[-1]->{'foreign_property_names'}};
-                    }
-                }
-
-                $source_name_for_foreign = $pmeta->property_name;
-                my @reverse = $foreign_class_meta->properties(reverse_as => $source_name_for_foreign, data_type => $pmeta->class_name);
-                my $reverse;
-                if (@reverse > 1) {
-                    my @reduced = grep { not $_->where } @reverse;
-                    if (@reduced != 1) {
-                        Carp::confess("Ambiguous results finding reversal for $property_name!" . Data::Dumper::Dumper(\@reverse));
-                    }
-                    $reverse = $reduced[0];
-                }
-                else {
-                    $reverse = $reverse[0];
-                }
-                if ($reverse) {
-                    $foreign_name_for_source = $reverse->property_name;
-                }
-            }
-
-            # the foreign class might NOT have a reverse_as, but
-            # this records what to reverse in this case.
-            $foreign_name_for_source ||= '<' . $source_class . '::' . $source_name_for_foreign;
-
-            push @joins, {
-                           id => $id,
-
-                           source_class => $source_class,
-                           source_property_names => \@source_property_names,
-                           
-                           foreign_class => $foreign_class,
-                           foreign_property_names => \@foreign_property_names,
-                           
-                           source_name_for_foreign => $source_name_for_foreign,
-                           foreign_name_for_source => $foreign_name_for_source,
-                          
-                           is_optional => ($pmeta->is_optional or $pmeta->is_many),
-
-                           where => $where,
-                         };
-        }
-        elsif (my $reverse_as = $pmeta->reverse_as) { 
-            my $foreign_class = $pmeta->data_type;
-            my $foreign_class_meta = $foreign_class->__meta__;
-            my $foreign_property_via = $foreign_class_meta->property_meta_for_name($reverse_as);
-            unless ($foreign_property_via) {
-                Carp::confess("No property '$reverse_as' in class $foreign_class, needed to resolve property '" .
-                              $pmeta->property_name . "' of class " . $pmeta->class_name);
-            }
-            @joins = map { { %$_ } } reverse $foreign_property_via->_resolve_join_chain();
-            my $prev_where = $where;
-            for (@joins) { 
-                @$_{@new} = @$_{@old};
-
-                my $next_where = $_->{where};
-                $_->{where} = $prev_where;
-
-                my $id = $_->{source_class} . '::' . $_->{source_name_for_foreign};
-                if ($prev_where) {
-                    my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
-                    $id .= ' ' . $where_rule->id;
-                }
-                $_->{id} = $id; 
-        
-                $_->{is_optional} = ($pmeta->is_optional || $pmeta->is_many);
-                $prev_where = $next_where;
-            }
-            if ($prev_where) {
-                Carp::confess("final join needs placement! " . Data::Dumper::Dumper($prev_where));
-            }
-
-        } 
-        else {
-            $pmeta->error_message("Property $id has no 'id_by' or 'reverse_as' property metadata");
-        }
+    unless (defined($foreign_class) and $foreign_class->can('get'))  {
+        return;
     }
+
+    # there is a class on the other side, either an entity or a value
+    my $foreign_class_meta = $foreign_class->__meta__;
+    my $property_name = $pmeta->property_name;
+
+    my $id = $source_class . '::' . $property_name;
+    if ($where) {
+        #my $where_rule = $foreign_class->define_boolexpr(@$where);
+        my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
+        $id .= ' ' . $where_rule->id;
+    }
+
+    if ($pmeta->id_by or $foreign_class->isa("UR::Value")) {
+        # direct reference (or primitive, which is a direct ref to a value obj)
+        my (@source_property_names, @foreign_property_names);
+        my ($source_name_for_foreign, $foreign_name_for_source);
+
+        if ($foreign_class->isa("UR::Value")) {
+            @source_property_names = ($property_name);
+            @foreign_property_names = ('id');
+
+            $source_name_for_foreign = ($property_name);
+        }
+        elsif (my $id_by = $pmeta->id_by) { 
+            my @pairs = $pmeta->get_property_name_pairs_for_join;
+            @source_property_names  = map { $_->[0] } @pairs;
+            @foreign_property_names = map { $_->[1] } @pairs;
+    
+            if (ref($id_by) eq 'ARRAY') {
+                # satisfying the id_by requires joins of its own
+                # sms: why is this only done on multi-value fks?
+                foreach my $id_by_property_name ( @$id_by ) {
+                    my $id_by_property = $class_meta->property_meta_for_name($id_by_property_name);
+                    next unless ($id_by_property and $id_by_property->is_delegated);
+                
+                    push @joins, $id_by_property->_resolve_join_chain();
+                    $source_class = $joins[-1]->{'foreign_class'};
+                    @source_property_names = @{$joins[-1]->{'foreign_property_names'}};
+                }
+            }
+
+            $source_name_for_foreign = $pmeta->property_name;
+            my @reverse = $foreign_class_meta->properties(reverse_as => $source_name_for_foreign, data_type => $pmeta->class_name);
+            my $reverse;
+            if (@reverse > 1) {
+                my @reduced = grep { not $_->where } @reverse;
+                if (@reduced != 1) {
+                    Carp::confess("Ambiguous results finding reversal for $property_name!" . Data::Dumper::Dumper(\@reverse));
+                }
+                $reverse = $reduced[0];
+            }
+            else {
+                $reverse = $reverse[0];
+            }
+            if ($reverse) {
+                $foreign_name_for_source = $reverse->property_name;
+            }
+        }
+
+        # the foreign class might NOT have a reverse_as, but
+        # this records what to reverse in this case.
+        $foreign_name_for_source ||= '<' . $source_class . '::' . $source_name_for_foreign;
+
+        push @joins, {
+                       id => $id,
+
+                       source_class => $source_class,
+                       source_property_names => \@source_property_names,
+                       
+                       foreign_class => $foreign_class,
+                       foreign_property_names => \@foreign_property_names,
+                       
+                       source_name_for_foreign => $source_name_for_foreign,
+                       foreign_name_for_source => $foreign_name_for_source,
+                      
+                       is_optional => ($pmeta->is_optional or $pmeta->is_many),
+
+                       where => $where,
+                     };
+    }
+    elsif (my $reverse_as = $pmeta->reverse_as) { 
+        my $foreign_class = $pmeta->data_type;
+        my $foreign_class_meta = $foreign_class->__meta__;
+        my $foreign_property_via = $foreign_class_meta->property_meta_for_name($reverse_as);
+        unless ($foreign_property_via) {
+            Carp::confess("No property '$reverse_as' in class $foreign_class, needed to resolve property '" .
+                          $pmeta->property_name . "' of class " . $pmeta->class_name);
+        }
+        @joins = map { { %$_ } } reverse $foreign_property_via->_resolve_join_chain();
+        my $prev_where = $where;
+        for (@joins) { 
+            @$_{@new} = @$_{@old};
+
+            my $next_where = $_->{where};
+            $_->{where} = $prev_where;
+
+            my $id = $_->{source_class} . '::' . $_->{source_name_for_foreign};
+            if ($prev_where) {
+                my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
+                $id .= ' ' . $where_rule->id;
+            }
+            $_->{id} = $id; 
+    
+            $_->{is_optional} = ($pmeta->is_optional || $pmeta->is_many);
+            $prev_where = $next_where;
+        }
+        if ($prev_where) {
+            Carp::confess("final join needs placement! " . Data::Dumper::Dumper($prev_where));
+        }
+    } 
     else {
-        #Carp::cluck("No metadata!");
+        $pmeta->error_message("Property $id has no 'id_by' or 'reverse_as' property metadata");
     }
 
     return @joins;

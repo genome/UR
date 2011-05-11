@@ -115,7 +115,6 @@ require UR::ModuleBase;     # this should be switched to a role
 require UR::ModuleConfig;   # used by ::Time, and also ::Lock ::Daemon
 
 require UR::Object::Iterator;
-require UR::Object::Join;
 require UR::DeletedRef;
 
 require UR::Object;         
@@ -426,6 +425,7 @@ require Command;
 
 $UR::initialized = 1;
 
+
 require UR::Change;
 require UR::Context::Root;
 require UR::Context::Process;
@@ -438,6 +438,7 @@ do {
 require UR::ModuleLoader;   # signs us up with Class::Autouse
 require UR::Value::Iterator;
 require UR::Object::View;
+require UR::Attribution::Join;
 
 sub main::ur_core {
     print STDERR "Dumping rules and templates to ./ur_core.stor...\n";
