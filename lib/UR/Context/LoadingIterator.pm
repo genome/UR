@@ -72,106 +72,111 @@ sub _create {
 
     my $loading_iterator = sub {
 
-        PICK_NEXT_OBJECT_FOR_LOADING:
-        if ($underlying_context_iterator && ! $next_obj_underlying_context) {
-            ($next_obj_underlying_context) = $underlying_context_iterator->(1);
-
-            $underlying_context_objects_count++ if ($is_monitor_query and $next_obj_underlying_context);
-
-            # See if this newly loaded object needs to be inserted into any of the other
-            # loading iterators' cached list.  We only need to check this is there is more
-            # than one iterator running....
-            if ($next_obj_underlying_context and $is_multiple_loading_iterators) {
-                $class->_inject_object_into_other_loading_iterators($next_obj_underlying_context, $me_loading_iterator_as_string);
-            }
-        }
-
-        unless ($next_obj_current_context) {
-            ($next_obj_current_context) = shift @$cached;
-            $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
-        }
-
-        if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
-             my $obj_to_complain_about = $next_obj_current_context;
-             # undef it in case the user traps the exception, next time we'll pull another off the list
-             $next_obj_current_context = undef;
-             Carp::croak("Attempt to fetch an object which matched $normalized_rule when the iterator was created, "
-                         . "but was deleted in the meantime:\n"
-                         . Data::Dumper::Dumper($obj_to_complain_about) );
-        }
-
-        if (!$next_obj_underlying_context) {
-            if ($is_monitor_query) {
-                $context->_log_query_for_rule($normalized_rule->subject_class_name,
-                                              $normalized_rule,
-                                              "QUERY: loaded $underlying_context_objects_count object(s) total from underlying context.");
-            }
-            $underlying_context_iterator = undef;
-
-        }
-        elsif (defined($last_loaded_id)
-               and
-               $last_loaded_id eq $next_obj_underlying_context->id)
-        {
-            # during a get() with -hints or is_many+is_optional (ie. something with an
-            # outer join), it's possible that the join can produce the same main object
-            # as it's chewing through the (possibly) multiple objects joined to it.
-            # Since the objects will be returned sorted by their IDs, we only have to
-            # remember the last one we saw
-            # FIXME - is this still true now that the underlying context iterator and/or
-            # object fabricator hold off on returning any objects until all the related
-            # joined data bas been loaded?
-            $next_obj_underlying_context = undef;goto PICK_NEXT_OBJECT_FOR_LOADING;
-        }
-
-        # decide which pending object to return next
-        # both the cached list and the list from the database are sorted separately,
-        # we're merging these into one return stream here
-        my $comparison_result = undef;
-        if ($next_obj_underlying_context && $next_obj_current_context) {
-            $comparison_result = $object_sorter->($next_obj_underlying_context, $next_obj_current_context);
-        }
-
         my $next_object;
-        if (
-            $next_obj_underlying_context
-            and $next_obj_current_context
-            and $comparison_result == 0 # $next_obj_underlying_context->id eq $next_obj_current_context->id
-        ) {
-            # the database and the cache have the same object "next"
-            $context->_log_query_for_rule($class, $normalized_rule, "QUERY: loaded object was already cached") if ($is_monitor_query);
-            $next_object = $next_obj_current_context;
-            $next_obj_current_context = undef;
-            $next_obj_underlying_context = undef;
-        }
-        elsif (
-            $next_obj_underlying_context
-            and (
-                (!$next_obj_current_context)
-                or
-                ($comparison_result < 0) # ($next_obj_underlying_context->id le $next_obj_current_context->id) 
-            )
-        ) {
-            # db object is next to be returned
-            $next_object = $next_obj_underlying_context;
-            $next_obj_underlying_context = undef;
-        }
-        elsif (
-            $next_obj_current_context
-            and (
-                (!$next_obj_underlying_context)
-                or
-                ($comparison_result > 0) # ($next_obj_underlying_context->id ge $next_obj_current_context->id) 
-            )
-        ) {
-            # cached object is next to be returned
-            $next_object = $next_obj_current_context;
-            $next_obj_current_context = undef;
-        }
 
-        return unless defined $next_object;
+        PICK_NEXT_OBJECT_FOR_LOADING:
+        while (! $next_object) {
+            if ($underlying_context_iterator && ! $next_obj_underlying_context) {
+                ($next_obj_underlying_context) = $underlying_context_iterator->(1);
 
-        $last_loaded_id = $next_object->id;
+                $underlying_context_objects_count++ if ($is_monitor_query and $next_obj_underlying_context);
+
+                # See if this newly loaded object needs to be inserted into any of the other
+                # loading iterators' cached list.  We only need to check this is there is more
+                # than one iterator running....
+                if ($next_obj_underlying_context and $is_multiple_loading_iterators) {
+                    $class->_inject_object_into_other_loading_iterators($next_obj_underlying_context, $me_loading_iterator_as_string);
+                }
+            }
+
+            unless ($next_obj_current_context) {
+                ($next_obj_current_context) = shift @$cached;
+                $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
+            }
+
+            if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
+                 my $obj_to_complain_about = $next_obj_current_context;
+                 # undef it in case the user traps the exception, next time we'll pull another off the list
+                 $next_obj_current_context = undef;
+                 Carp::croak("Attempt to fetch an object which matched $normalized_rule when the iterator was created, "
+                             . "but was deleted in the meantime:\n"
+                             . Data::Dumper::Dumper($obj_to_complain_about) );
+            }
+
+            if (!$next_obj_underlying_context) {
+
+                if ($is_monitor_query) {
+                    $context->_log_query_for_rule($normalized_rule->subject_class_name,
+                                                  $normalized_rule,
+                                                  "QUERY: loaded $underlying_context_objects_count object(s) total from underlying context.");
+                }
+                $underlying_context_iterator = undef;
+
+            }
+            elsif (defined($last_loaded_id)
+                   and
+                   $last_loaded_id eq $next_obj_underlying_context->id)
+            {
+                # during a get() with -hints or is_many+is_optional (ie. something with an
+                # outer join), it's possible that the join can produce the same main object
+                # as it's chewing through the (possibly) multiple objects joined to it.
+                # Since the objects will be returned sorted by their IDs, we only have to
+                # remember the last one we saw
+                # FIXME - is this still true now that the underlying context iterator and/or
+                # object fabricator hold off on returning any objects until all the related
+                # joined data bas been loaded?
+                $next_obj_underlying_context = undef;
+                redo PICK_NEXT_OBJECT_FOR_LOADING;
+            }
+
+            # decide which pending object to return next
+            # both the cached list and the list from the database are sorted separately,
+            # we're merging these into one return stream here
+            my $comparison_result = undef;
+            if ($next_obj_underlying_context && $next_obj_current_context) {
+                $comparison_result = $object_sorter->($next_obj_underlying_context, $next_obj_current_context);
+            }
+
+            if (
+                $next_obj_underlying_context
+                and $next_obj_current_context
+                and $comparison_result == 0 # $next_obj_underlying_context->id eq $next_obj_current_context->id
+            ) {
+                # the database and the cache have the same object "next"
+                $context->_log_query_for_rule($class, $normalized_rule, "QUERY: loaded object was already cached") if ($is_monitor_query);
+                $next_object = $next_obj_current_context;
+                $next_obj_current_context = undef;
+                $next_obj_underlying_context = undef;
+            }
+            elsif (
+                $next_obj_underlying_context
+                and (
+                    (!$next_obj_current_context)
+                    or
+                    ($comparison_result < 0) # ($next_obj_underlying_context->id le $next_obj_current_context->id) 
+                )
+            ) {
+                # db object is next to be returned
+                $next_object = $next_obj_underlying_context;
+                $next_obj_underlying_context = undef;
+            }
+            elsif (
+                $next_obj_current_context
+                and (
+                    (!$next_obj_underlying_context)
+                    or
+                    ($comparison_result > 0) # ($next_obj_underlying_context->id ge $next_obj_current_context->id) 
+                )
+            ) {
+                # cached object is next to be returned
+                $next_object = $next_obj_current_context;
+                $next_obj_current_context = undef;
+            }
+
+            return unless defined $next_object;
+        } # end while ! $next_object
+
+        $last_loaded_id = $next_object->id if $next_object;
 
         return $next_object;
     };  # end of the closure
