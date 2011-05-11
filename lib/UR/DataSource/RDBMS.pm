@@ -28,7 +28,6 @@ UR::Object::Type->define(
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
-
 sub database_exists {
     my $self = shift;
     warn $self->class . " failed to implement the database_exists() method.  Testing connection as a surrogate.  FIXME here!\n";
@@ -41,7 +40,6 @@ sub database_exists {
     return 1;
 }
 
-
 sub create_database {
     my $self = shift;
     die $self->class . " failed to implement the create_database() method!"
@@ -49,14 +47,11 @@ sub create_database {
         . $self->__display_name__ . " FIXME here.\n";
 }
 
-
 sub _resolve_ddl_for_table {
     my ($self,$table) = @_;
 
     my $table_name = $table->table_name;
-
     my @ddl;
-
     if ($table->{db_committed}) {
         my @columns = $table->columns;
         for my $column (@columns) {
@@ -89,7 +84,6 @@ sub _resolve_ddl_for_table {
         $ddl .= "\n)" if defined $ddl;
         push(@ddl, $ddl) if $ddl;
     }
-
     return @ddl;
 }
 
@@ -102,13 +96,12 @@ sub generate_schema_for_class_meta {
     
     # We basically presume the schema is the one we would have generated 
     # given the current class definitions
-    # TODO: We still need to presume foreign keys are constrained.
-    my $method = ($temp ? '__define__' : 'create'); 
 
-    my @defined;
-    
+    # TODO: We still need to presume foreign keys are constrained.
+
+    my $method = ($temp ? '__define__' : 'create'); 
+    my @defined;    
     my $table_name = $class_meta->table_name;
-   
     my @fks_to_generate;
     for my $p ($class_meta->parent_class_metas) {
         next if ($p->class_name eq 'UR::Object' or $p->class_name eq 'UR::Entity');
@@ -425,14 +418,16 @@ sub get_default_handle {
     }    
     return $dbh;
 }
+
 *get_default_dbh = \&get_default_handle;
+*has_default_dbh = \&has_default_handle;
+*disconnect_default_dbh = \&disconnect_default_handle;
 
 sub has_default_handle {
     my $self = shift->_singleton_object;
     return 1 if $self->_default_dbh;
     return;
 }
-*has_default_dbh = \&has_default_handle;
 
 sub disconnect_default_handle {
     my $self = shift->_singleton_object;
@@ -445,7 +440,6 @@ sub disconnect_default_handle {
     $self->_default_dbh(undef);
     return $dbh;
 }
-*disconnect_default_dbh = \&disconnect_default_handle;
 
 sub set_all_dbh_to_inactive_destroy {
     my $self = shift->_singleton_object;
@@ -1281,18 +1275,14 @@ sub refresh_database_metadata_for_table_name {
     my $pk_column_count = scalar($table_object->primary_key_constraint_column_names) || 0;
     my $constraint_count = scalar($table_object->fk_constraint_names) || 0;
 
-    if ($column_count == 1 and $pk_column_count == 1)
-    {
+    if ($column_count == 1 and $pk_column_count == 1) {
         $table_object->er_type('validation item');
     }
-    else
-    {
-        if ($constraint_count == $column_count)
-        {
+    else {
+        if ($constraint_count == $column_count) {
             $table_object->er_type('bridge');
         }
-        else
-        {
+        else {
             $table_object->er_type('entity');
         }
     }
@@ -1319,7 +1309,8 @@ sub _resolve_owner_and_table_from_table_name {
 
     if ($table_name =~ m/(\w+)\.(\w+)/) {
         return($1,$2);
-    } else {
+    } 
+    else {
         return($self->owner, $table_name);
     }
 }
@@ -1431,7 +1422,6 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
     return $new_id;
 }
 
-
 sub _get_sequence_name_for_table_and_column {
     my($self,$table_name,$column_name) = @_;
 
@@ -1442,7 +1432,6 @@ sub _get_sequence_name_for_table_and_column {
     $column_name =~ s/_ID/$replacement/i;
     return $column_name;
 }
-
 
 sub create_iterator_closure_for_rule {
     my ($self, $rule) = @_; 
@@ -1742,7 +1731,6 @@ sub _resolve_ids_from_class_name_and_sql {
 
     return @id_fetch_set;
 }
-
 
 sub _sync_database {
     my $self = shift;
@@ -2487,7 +2475,6 @@ sub _reverse_sync_database {
     return $savepoint;
 }
 
-
 # Given a table object and a list of primary key values, return
 # a where clause to match a row.  Some values may be undef (NULL)
 # and it properly writes "column IS NULL".  As a side effect, the 
@@ -2932,8 +2919,6 @@ sub _default_save_sql_for_object {
     return @commands;
 }
 
-
-
 sub _do_on_default_dbh {
     my $self = shift;
     my $method = shift;
@@ -2963,7 +2948,6 @@ sub disconnect {
     my $self = shift;
     $self->_do_on_default_dbh('disconnect', @_);
 }
-
 
 sub _generate_class_data_for_loading {
     my ($self, $class_meta) = @_;
@@ -3171,6 +3155,7 @@ my %ur_data_type_for_vendor_data_type = (
     'TIMESTAMP'        => ['DateTime', undef],
     'TIME'             => ['DateTime', undef],
 );
+
 sub ur_data_type_for_data_source_data_type {
     my($class,$type) = @_;
 
