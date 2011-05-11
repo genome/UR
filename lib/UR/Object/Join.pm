@@ -1,4 +1,4 @@
-package UR::Attribution::Join;
+package UR::Object::Join;
 use strict;
 use warnings;
 
@@ -8,7 +8,7 @@ use warnings;
 # this class is used by UR.pm _after_ initializing the system
 # as such, complex queries using joins cannot be done during bootstrapping...
 
-class UR::Attribution::Join {
+class UR::Object::Join {
     has => [
         source_class                => { is => 'Text' },
         foreign_class               => { is => 'Text' },

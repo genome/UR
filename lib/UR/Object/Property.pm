@@ -175,7 +175,7 @@ sub _get_direct_join_linkage {
 sub _resolve_join_chain {
     my $self = shift;
     unless ($self->{_resolve_join_chain}) {
-        my @joins = UR::Attribution::Join->resolve_chain_for_property_meta($self);
+        my @joins = UR::Object::Join->resolve_chain_for_property_meta($self);
         $self->{_resolve_join_chain} = \@joins;
         return @joins;        
         
