@@ -376,7 +376,10 @@ sub valid_styles {
 
 sub _hint_string {
     my $self = shift;
-    return $self->show;
+
+    my @show_parts = grep { $self->_show_item_is_property_name($_) }
+                          split(',',$self->show);
+    return join(',',@show_parts);
 }
 
 
