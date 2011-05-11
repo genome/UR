@@ -78,6 +78,17 @@ sub create {
     ) 
         and return unless grep { $self->style eq $_ } valid_styles();
 
+#    my $show = $self->show;
+#    my @show = split(',',$show);
+#    my $subject_class_name = $self->subject_class_name;
+#    foreach my $item ( @show ) {
+#        next unless $self->_show_item_is_property_name($item);
+#        unless ($subject_class_name->can($item)) {
+#            $self->error_message("Parameter $item in the 'show' list is not supported by subject class $subject_class_name");
+#            return;
+#        }
+#    }
+
     unless ( ref $self->output ){
         my $ofh = IO::File->new("> ".$self->output);
         $self->error_message("Can't open file handle to output param ".$self->output) and die unless $ofh;
@@ -100,6 +111,16 @@ sub _resolve_boolexpr {
         and return if %extra;
 
     return $bool_expr;
+}
+
+
+# Used by create() and execute() to distinguish whether an item from the show list
+# is likely a property of the subject class or a more complicated expression that needs
+# to be eval-ed later
+sub _show_item_is_property_name {
+    my($self, $item) = @_;
+
+    return $item =~ m/^\w+$/;
 }
 
 sub execute {  
@@ -130,7 +151,7 @@ sub execute {
         my @show;
         my $expr;
         for my $item (split(/,/, $show)) {
-            if ($item =~ /^\w+$/ and not defined $expr) {
+            if ($self->_show_item_is_property_name($item) and not defined $expr) {
                 push @show, $item;
             }
             else {
@@ -355,7 +376,10 @@ sub valid_styles {
 
 sub _hint_string {
     my $self = shift;
-    return $self->show;
+
+    my @show_parts = grep { $self->_show_item_is_property_name($_) }
+                          split(',',$self->show);
+    return join(',',@show_parts);
 }
 
 
