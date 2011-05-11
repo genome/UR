@@ -5,7 +5,7 @@ use warnings;
 sub resolve_chain_for_property_meta {
     my ($class, $pmeta) = @_;  
     if ($pmeta->via or $pmeta->to) {
-        return $class->_resolve_indirect($pmeta);
+        return $class->_resolve_via_to($pmeta);
     }
     else {
         my $foreign_class = $pmeta->_data_type_as_class_name;
@@ -26,7 +26,7 @@ sub resolve_chain_for_property_meta {
     }
 }
 
-sub _resolve_indirect {
+sub _resolve_via_to {
     my ($class, $pmeta) = @_;
     my $class_meta = UR::Object::Type->get(class_name => $pmeta->class_name);
 
@@ -99,6 +99,7 @@ sub _resolve_indirect {
     return @joins;
 }
 
+# code below uses these to convert objects using hash slices
 my @old = qw/source_class source_property_names foreign_class foreign_property_names source_name_for_foreign foreign_name_for_source is_optional/;
 my @new = qw/foreign_class foreign_property_names source_class source_property_names foreign_name_for_source source_name_for_foreign is_optional/;
 
@@ -264,6 +265,5 @@ sub _resolve_reverse {
 
     return @joins;
 }
-
 
 1;
