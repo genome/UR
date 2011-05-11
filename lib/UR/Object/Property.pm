@@ -30,6 +30,46 @@ sub is_numeric {
     return $self->{'_is_numeric'};
 }    
 
+sub _data_type_as_class_name {
+    my $self = $_[0];
+    return $self->{_data_type_as_class_name} ||= do {
+        my $source_class = $self->class_name;
+        my $foreign_class = $self->data_type;
+
+        if (not $foreign_class) {
+            return;
+        }
+
+        # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
+        # We should have an is_primitive flag set on these so we do efficient work.
+        my $ur_value_class = 'UR::Value::' . $foreign_class;
+        
+        my ($ns) = ($source_class =~ /^([^:]+)/);
+        my $ns_value_class;
+        if ($ns and $ns->can("get")) {
+            $ns_value_class = $ns . '::Value::' . $foreign_class;
+            if ($ns_value_class->can('__meta__')) {
+                $foreign_class = $ns_value_class;
+            }
+        }
+
+        if (!$foreign_class->can('__meta__')) {
+            if ($ur_value_class->can('__meta__')) {
+                $foreign_class = $ur_value_class;
+            }
+            else {
+                if ($ns->get()->allow_sloppy_primitives) {
+                    $foreign_class = 'UR::Value::SloppyPrimitive';
+                }
+                else {
+                    Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
+                }
+            }
+        }
+        $foreign_class;
+    };
+}
+
 # TODO: this is a method on the data source which takes a given property.
 # Returns the table and column for this property.
 # If this particular property doesn't have a column_name, and it
