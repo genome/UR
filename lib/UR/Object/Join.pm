@@ -45,9 +45,9 @@ sub _resolve_indirect {
         push @joins, $via_meta->_resolve_join_chain();
         
         if (my $where = $pmeta->where) {
-            if ($where->[1] eq 'name') {
-                @$where = reverse @$where;
-            }        
+            #if ($where->[1] eq 'name') {
+            #    @$where = reverse @$where;
+            #}        
             my $join = pop @joins;
             #my $where_rule = $join->{foreign_class}->define_boolexpr(@$where);               
             unless ($join->{foreign_class}) {
@@ -87,39 +87,6 @@ sub _resolve_indirect {
 my @old = qw/source_class source_property_names foreign_class foreign_property_names source_name_for_foreign foreign_name_for_source is_optional/;
 my @new = qw/foreign_class foreign_property_names source_class source_property_names foreign_name_for_source source_name_for_foreign is_optional/;
 
-sub _translate_data_type_to_class_name {
-    my ($source_class, $foreign_class) = @_;
-
-    # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
-    # We should have an is_primitive flag set on these so we do efficient work.
-    my $ur_value_class = 'UR::Value::' . $foreign_class;
-    
-    my ($ns) = ($source_class =~ /^([^:]+)/);
-    my $ns_value_class;
-    if ($ns and $ns->can("get")) {
-        $ns_value_class = $ns . '::Value::' . $foreign_class;
-        if ($ns_value_class->can('__meta__')) {
-            $foreign_class = $ns_value_class;
-        }
-    }
-
-    if (!$foreign_class->can('__meta__')) {
-        if ($ur_value_class->can('__meta__')) {
-            $foreign_class = $ur_value_class;
-        }
-        else {
-            if ($ns->get()->allow_sloppy_primitives) {
-                $foreign_class = 'UR::Value::SloppyPrimitive';
-            }
-            else {
-                Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
-            }
-        }
-    }
-
-    return $foreign_class;
-}
-
 sub _resolve_direct {
     my ($class, $pmeta) = @_;
     my $class_meta = UR::Object::Type->get(class_name => $pmeta->class_name);
@@ -130,9 +97,9 @@ sub _resolve_direct {
     my $source_class = $class_meta->class_name;            
     my $foreign_class = $pmeta->data_type;
     my $where = $pmeta->where;
-    if (defined($where) and defined($where->[1]) and $where->[1] eq 'name') {
-        @$where = reverse @$where;
-    }
+    #if (defined($where) and defined($where->[1]) and $where->[1] eq 'name') {
+    #    @$where = reverse @$where;
+    #}
     
     if (defined($foreign_class) and not $foreign_class->can('get')) {
         $foreign_class = _translate_data_type_to_class_name($source_class,$foreign_class);
