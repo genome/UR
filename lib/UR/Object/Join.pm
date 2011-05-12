@@ -263,21 +263,16 @@ sub _resolve_reverse {
     my $class_meta = UR::Object::Type->get(class_name => $pmeta->class_name);
     my @joins;
     my $where = $pmeta->where;
-    #if (defined($where) and defined($where->[1]) and $where->[1] eq 'name') {
-    #    @$where = reverse @$where;
-    #}
-
-    # there is a class on the other side, either an entity or a value
     my $property_name = $pmeta->property_name;
 
     my $id = $source_class . '::' . $property_name;
     if ($where) {
-        #my $where_rule = $foreign_class->define_boolexpr(@$where);
         my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
         $id .= ' ' . $where_rule->id;
     }
 
     #####
+    
     my $reverse_as = $pmeta->reverse_as;
 
     my $foreign_class_meta = $foreign_class->__meta__;
@@ -286,9 +281,10 @@ sub _resolve_reverse {
         Carp::confess("No property '$reverse_as' in class $foreign_class, needed to resolve property '" .
                         $pmeta->property_name . "' of class " . $pmeta->class_name);
     }
-    @joins = map { { %$_ } } reverse $foreign_property_via->_resolve_join_chain();
+
+    my @join_data = map { { %$_ } } reverse $foreign_property_via->_resolve_join_chain();
     my $prev_where = $where;
-    for (@joins) { 
+    for (@join_data) { 
         @$_{@new} = @$_{@old};
 
         my $next_where = $_->{where};
@@ -306,6 +302,10 @@ sub _resolve_reverse {
     }
     if ($prev_where) {
         Carp::confess("final join needs placement! " . Data::Dumper::Dumper($prev_where));
+    }
+
+    for my $join_data (@join_data) {
+        push @joins, $class->_get_or_define(%$join_data);
     }
 
     return @joins;
