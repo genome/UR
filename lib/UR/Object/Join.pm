@@ -31,40 +31,62 @@ sub resolve_chain_for_property_meta {
         return $class->_resolve_via_to($pmeta);
     }
     else {
-        my $foreign_class = $pmeta->_data_type_as_class_name;
-        unless (defined($foreign_class) and $foreign_class->can('get'))  {
-            return;
-        }
-        if ($pmeta->id_by or $foreign_class->isa("UR::Value")) {
-            return $class->_resolve_forward($pmeta);
-        }
-        elsif (my $reverse_as = $pmeta->reverse_as) { 
-            return $class->_resolve_reverse($pmeta);
-        }
-        else {
-            # TODO: handle hard-references to objects here maybe?
-            $pmeta->error_message("Property " . $pmeta->id . " has no 'id_by' or 'reverse_as' property metadata");
-            return;
-        }
+        my @j = eval {
+            my $foreign_class = $pmeta->_data_type_as_class_name;
+            unless (defined($foreign_class) and $foreign_class->can('get'))  {
+                return;
+            }
+            if ($pmeta->id_by or $foreign_class->isa("UR::Value")) {
+                return $class->_resolve_forward($pmeta);
+            }
+            elsif (my $reverse_as = $pmeta->reverse_as) { 
+                return $class->_resolve_reverse($pmeta);
+            }
+            else {
+                # TODO: handle hard-references to objects here maybe?
+                $pmeta->error_message("Property " . $pmeta->id . " has no 'id_by' or 'reverse_as' property metadata");
+                return;
+            }
+        };
+        die $@ if $@;
+        if (grep { ref($_) ne __PACKAGE__ } @j) { 
+            $DB::single = 1;
+            #$class->resolve_chain_for_property_meta($pmeta);
+            Carp::confess(Data::Dumper::Dumper(\@j)) 
+        };
+        #print Data::Dumper::Dumper(\@j);
+        return @j;
     }
 }
 
 sub _get_or_define {
     my $class = shift;
     my %p = @_;
-    my $self = $class->get(id => $p{id});
+    delete $p{__get_serial};
+    delete $p{db_committed};
+    delete $p{_change_count};
+    my $id = delete $p{id};
+    #return { %p } ;
+    my $self = $class->get(id => $id);
     unless ($self) {
-        delete $p{__get_serial};
-        delete $p{db_committed};
-        delete $p{_change_count};
-        #print Data::Dumper::Dumper("params: ", \%p);
-        $self = $class->__define__(
-            @_, 
-        );
-        return { @_ }
+        $self = $class->__define__($id);
+        for my $k (keys %p) {
+            $self->$k($p{$k});
+            no warnings;
+            unless ($self->{$k} eq $p{$k}) {
+                Carp::confess(Data::Dumper::Dumper($self, \%p));
+            }   
+        }
     }
     unless ($self) {
         Carp::confess("Failed to create join???");
+    }
+    for my $k (keys %p) {
+        $self->$k($p{$k});
+        no warnings;
+        unless ($self->{$k} eq $p{$k}) {
+            Carp::confess(Data::Dumper::Dumper($self, \%p));
+        }   
     }
     return $self;
 }

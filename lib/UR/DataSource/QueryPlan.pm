@@ -479,6 +479,9 @@ sub _init_rdbms {
                                 unless ($meta) {
                                     print "no meta for $name in " . $foreign_class_object->id; 
                                 }
+                                else {
+                                    print "yes meta for $name in " . $foreign_class_object->id; 
+                                }
                                 my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
                                 my $value = $where->[$n+1];
                                 push @extra_filters, $column => { value => $value, ($op ? (operator => $op) : ()) };
