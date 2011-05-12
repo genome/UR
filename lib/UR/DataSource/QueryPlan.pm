@@ -307,17 +307,11 @@ sub _init_rdbms {
         my $join_aliases_for_this_object;
         my @source_table_and_column_names;
 
-        my $flattened_value;
+        my $flattened_value = $class_meta->_flatten_property_name($delegated_property);
 
         while (my $object_join = shift @joins) { # one iteration per table between the start table and target
-            #$DB::single = 1;
-            #print "\tjoin $object_join\n";
-            #        print Data::Dumper::Dumper($object_join);
-
             $object_num++;
-
             my @joins_for_object = ($object_join);
-
             my $joins_for_object = 0;
 
             # one iteration per layer of inheritance at this join
@@ -539,12 +533,7 @@ sub _init_rdbms {
                             grep { $_->[1]->property_name eq $final_accessor }
                             @{ $foreign_class_loading_data->{direct_table_properties} };
                         push @all_table_properties, $p;
-                        #print "PROPERTY $property_name IS INVOLVED IN GROUPING: $p\n";
                     }
-                    #else {
-                    #    $DB::single = 1;
-                    #    #print "PROPERTY $property_name IS NOT INVOLVDED IN GROUPING!\n";
-                    #}
                 }
 
                 if ($order_by) {
@@ -559,14 +548,7 @@ sub _init_rdbms {
                             grep { $_->[1]->property_name eq $final_accessor }
                             @{ $foreign_class_loading_data->{direct_table_properties} };
                         $order_by_property_names{$property_name} = $p if $p;
-                        #print "PROPERTY $property_name IS INVOLVED IN ORDERING: $p\n";
                     }
-                    #else {
-                    #    $DB::single = 1;
-                    #    #print "PROPERTY $property_name IS NOT INVOLVDED IN ORDERING!\n";
-                    #}
-                    #my @order_table_debug = %order_by_property_names;  
-                    #print "  ORDER HAS @order_table_debug\n" if $order_by;
                 }
 
                 unless ($is_optional) {
