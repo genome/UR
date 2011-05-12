@@ -479,9 +479,6 @@ sub _init_rdbms {
                                 unless ($meta) {
                                     print "no meta for $name in " . $foreign_class_object->id; 
                                 }
-                                else {
-                                    #print "yes meta for $name in " . $foreign_class_object->id; 
-                                }
                                 my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
                                 my $value = $where->[$n+1];
                                 push @extra_filters, $column => { value => $value, ($op ? (operator => $op) : ()) };
@@ -947,13 +944,7 @@ sub _resolve_object_join_data_for_property_chain {
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
-    if (0) { #($joins[-1]->{foreign_class}->isa("UR::Value")) {
-        my $j = pop @joins;
-        return ($j->{source_name_for_foreign}, $is_optional, @joins)
-    }
-    else {
-        return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
-    }
+    return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
 };
 
 sub _init_core {

@@ -62,11 +62,10 @@ sub resolve_chain_for_property_meta {
 sub _get_or_define {
     my $class = shift;
     my %p = @_;
+    my $id = delete $p{id};
     delete $p{__get_serial};
     delete $p{db_committed};
     delete $p{_change_count};
-    my $id = delete $p{id};
-    #return { %p } ;
     my $self = $class->get(id => $id);
     unless ($self) {
         $self = $class->__define__($id);
@@ -80,13 +79,6 @@ sub _get_or_define {
     }
     unless ($self) {
         Carp::confess("Failed to create join???");
-    }
-    for my $k (keys %p) {
-        $self->$k($p{$k});
-        no warnings;
-        unless ($self->{$k} eq $p{$k}) {
-            Carp::confess(Data::Dumper::Dumper($self, \%p));
-        }   
     }
     return $self;
 }
