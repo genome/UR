@@ -25,26 +25,6 @@ class UR::Object::Join {
     doc => "join metadata used internally by the ::QueryBuilder"
 };
 
-sub _get_or_define {
-    my $class = shift;
-    my %p = @_;
-    my $self = $class->get(id => $p{id});
-    unless ($self) {
-        delete $p{__get_serial};
-        delete $p{db_committed};
-        delete $p{_change_count};
-        #print Data::Dumper::Dumper("params: ", \%p);
-        $self = $class->__define__(
-            @_, 
-        );
-        return { @_ };
-    }
-    unless ($self) {
-        Carp::confess("Failed to create join???");
-    }
-    return $self;
-}
-
 sub resolve_chain_for_property_meta {
     my ($class, $pmeta) = @_;  
     if ($pmeta->via or $pmeta->to) {
@@ -67,6 +47,26 @@ sub resolve_chain_for_property_meta {
             return;
         }
     }
+}
+
+sub _get_or_define {
+    my $class = shift;
+    my %p = @_;
+    my $self = $class->get(id => $p{id});
+    unless ($self) {
+        delete $p{__get_serial};
+        delete $p{db_committed};
+        delete $p{_change_count};
+        #print Data::Dumper::Dumper("params: ", \%p);
+        $self = $class->__define__(
+            @_, 
+        );
+        return { @_ }
+    }
+    unless ($self) {
+        Carp::confess("Failed to create join???");
+    }
+    return $self;
 }
 
 sub _resolve_via_to {
