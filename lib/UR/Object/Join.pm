@@ -35,8 +35,9 @@ sub _get_or_define {
         delete $p{_change_count};
         #print Data::Dumper::Dumper("params: ", \%p);
         $self = $class->__define__(
-            %p, 
+            @_, 
         );
+        return { @_ };
     }
     unless ($self) {
         Carp::confess("Failed to create join???");
@@ -110,12 +111,7 @@ sub _resolve_via_to {
             $id .= ' ' . $where_rule->id;
             
             my %join_data = %$join;
-            my $jobj = $class->_get_or_define(
-                %join_data,
-                id => $id, 
-                where => $where 
-            );
-            push @joins, { %join_data, id => $id, where => $where };
+            push @joins, $class->_get_or_define(%join_data, id => $id, where => $where);
         }
     }
     else {
@@ -152,7 +148,6 @@ sub _resolve_forward {
     my ($class, $pmeta) = @_;
 
     my $foreign_class = $pmeta->_data_type_as_class_name;
-
     unless (defined($foreign_class) and $foreign_class->can('get'))  {
         #Carp::cluck("No metadata?!");
         return;
@@ -162,17 +157,11 @@ sub _resolve_forward {
     my $class_meta = UR::Object::Type->get(class_name => $pmeta->class_name);
     my @joins;
     my $where = $pmeta->where;
-    #if (defined($where) and defined($where->[1]) and $where->[1] eq 'name') {
-    #    @$where = reverse @$where;
-    #}
-
-    # there is a class on the other side, either an entity or a value
     my $foreign_class_meta = $foreign_class->__meta__;
     my $property_name = $pmeta->property_name;
 
     my $id = $source_class . '::' . $property_name;
     if ($where) {
-        #my $where_rule = $foreign_class->define_boolexpr(@$where);
         my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
         $id .= ' ' . $where_rule->id;
     }
