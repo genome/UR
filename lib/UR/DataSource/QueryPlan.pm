@@ -480,7 +480,7 @@ sub _init_rdbms {
                                     print "no meta for $name in " . $foreign_class_object->id; 
                                 }
                                 else {
-                                    print "yes meta for $name in " . $foreign_class_object->id; 
+                                    #print "yes meta for $name in " . $foreign_class_object->id; 
                                 }
                                 my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
                                 my $value = $where->[$n+1];
