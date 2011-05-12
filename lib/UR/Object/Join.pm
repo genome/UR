@@ -1,6 +1,48 @@
 package UR::Object::Join;
 use strict;
 use warnings;
+use UR;
+
+class UR::Object::Join {
+    #is => 'UR::Value',
+    id_by => [
+        id                      => { is => 'Text' },
+    ],
+    has_optional_transient => [
+        source_class            => { is => 'Text' },
+        source_property_names   => { is => 'Text' },
+        
+        foreign_class           => { is => 'Text' },
+        foreign_property_names  => { is => 'Text' },
+        
+        source_name_for_foreign => { is => 'Text' },
+        foreign_name_for_source => { is => 'Text' },
+        
+        is_optional             => { is => 'Text' }, 
+
+        where                   => { is => 'Text' },
+    ],
+    doc => "join metadata used internally by the ::QueryBuilder"
+};
+
+sub _get_or_define {
+    my $class = shift;
+    my %p = @_;
+    my $self = $class->get(id => $p{id});
+    unless ($self) {
+        delete $p{__get_serial};
+        delete $p{db_committed};
+        delete $p{_change_count};
+        #print Data::Dumper::Dumper("params: ", \%p);
+        $self = $class->__define__(
+            %p, 
+        );
+    }
+    unless ($self) {
+        Carp::confess("Failed to create join???");
+    }
+    return $self;
+}
 
 sub resolve_chain_for_property_meta {
     my ($class, $pmeta) = @_;  
@@ -59,18 +101,21 @@ sub _resolve_via_to {
         push @joins, $via_meta->_resolve_join_chain();
         
         if (my $where = $pmeta->where) {
-            #if ($where->[1] eq 'name') {
-            #    @$where = reverse @$where;
-            #}        
             my $join = pop @joins;
-            #my $where_rule = $join->{foreign_class}->define_boolexpr(@$where);               
             unless ($join->{foreign_class}) {
                 Carp::confess("No foreign class in " . Data::Dumper::Dumper($join, \@joins));
             }
             my $where_rule = UR::BoolExpr->resolve($join->{foreign_class}, @$where);                
             my $id = $join->{id};
             $id .= ' ' . $where_rule->id;
-            push @joins, { %$join, id => $id, where => $where };
+            
+            my %join_data = %$join;
+            my $jobj = $class->_get_or_define(
+                %join_data,
+                id => $id, 
+                where => $where 
+            );
+            push @joins, { %join_data, id => $id, where => $where };
         }
     }
     else {
@@ -184,7 +229,7 @@ sub _resolve_forward {
     # this records what to reverse in this case.
     $foreign_name_for_source ||= '<' . $source_class . '::' . $source_name_for_foreign;
 
-    push @joins, {
+    push @joins, $class->_get_or_define( 
                     id => $id,
 
                     source_class => $source_class,
@@ -199,7 +244,7 @@ sub _resolve_forward {
                     is_optional => ($pmeta->is_optional or $pmeta->is_many),
 
                     where => $where,
-                };
+                );
 
     return @joins;
 }
