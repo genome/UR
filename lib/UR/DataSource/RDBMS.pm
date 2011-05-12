@@ -1,6 +1,7 @@
 package UR::DataSource::RDBMS;
 
-# NOTE:: UR::DataSource::QueryPlan has conditional logic for this class
+# NOTE:: UR::DataSource::QueryPlan has conditional logic 
+# for this class/subclasses currently
 
 use strict;
 use warnings;
@@ -13,7 +14,6 @@ our $VERSION = "0.31"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS',
     is => ['UR::DataSource','UR::Singleton'],
-    english_name => 'ur datasource rdbms',
     is_abstract => 1,
     properties => [
         server       => { is => 'String', doc => 'the "server" part of the DBI connect string' },

@@ -185,22 +185,12 @@ sub _init_rdbms {
     }
 
 
-    # _usually_ items freshly loaded from the DB don't need to be evaluated through the rule
-    # because the SQL gets constructed in such a way that all the items returned would pass anyway.
-    # But in certain cases (a delegated property trying to match a non-object value (which is a bug
-    # in the caller's code from one point of view) or with calculated non-sql properties, then the
-    # sql will return a superset of the items we're actually asking for, and the loader needs to
-    # validate them through the rule
-    my $needs_further_boolexpr_evaluation_after_loading;
-
     my ($first_table_name, @sql_joins) =  _resolve_db_joins_for_inheritance($class_meta);
    
     my @sql_filters; 
-    my @delegated_properties;    
-
-    $DB::single = 1;
-    do { 
-        
+    my @delegated_properties;
+    my $needs_further_boolexpr_evaluation_after_loading;
+    do {         
         my %filters =     
             map { $_ => 0 }
             grep { substr($_,0,1) ne '-' }
