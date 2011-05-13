@@ -60,6 +60,11 @@ sub __self__ {
     return $_[0];
 }
 
+
+# Used to traverse n levels of indirect properties, even if the total
+# indirection is not defined on the primary ofhect this is called on.
+# For example: $obj->__get_attr__('a.b.c');
+# gets $obj's 'a' value, calls 'b' on that, and calls 'c' on the last thing
 sub __get_attr__ {
     my ($self, $property_name) = @_;
     my @property_values;
@@ -549,6 +554,7 @@ sub __define__ {
         };
         return unless $self;
         $self->{db_committed} = { %$self };
+        $self->{'__defined'} = 1;
         $self->__signal_change__("load");
         return $self;
     }

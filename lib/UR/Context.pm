@@ -1417,6 +1417,7 @@ sub prune_object_cache {
 sub object_exists_in_underlying_context {
     my($self, $obj) = @_;
 
+    return if ($obj->{'__defined'});
     return (exists($obj->{'db_committed'}) || exists($obj->{'db_saved_uncommitted'}));
 }
 
