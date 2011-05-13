@@ -309,12 +309,13 @@ sub _init_rdbms {
 
         my $alias_for_property_value;
         my $last_class_object_excluding_inherited_joins;
-        my $join_aliases_for_this_object;
+        my %join_alias_for_table_for_this_delgated_property;
         my @source_table_and_column_names;
 
         my $flattened_value = $class_meta->_flatten_property_name($delegated_property);
 
-        while (my $object_join = shift @joins) { # one iteration per table between the start table and target
+        # one iteration per table between the start table and target
+        while (my $object_join = shift @joins) { 
             $object_num++;
             my @joins_for_object = ($object_join);
             my $joins_for_object = 0;
@@ -491,7 +492,7 @@ sub _init_rdbms {
                                 (
                                     map {
                                         $foreign_column_names[$_] => { 
-                                            link_table_name     => $join_aliases_for_this_object->{$source_table_and_column_names[$_][0]} # join alias
+                                            link_table_name     => $join_alias_for_table_for_this_delgated_property{$source_table_and_column_names[$_][0]} # join alias
                                                                    || $source_table_and_column_names[$_][2]  # SQL inline view alias
                                                                    || $source_table_and_column_names[$_][0], # table_name
                                             link_column_name    => $source_table_and_column_names[$_][1] 
@@ -503,14 +504,14 @@ sub _init_rdbms {
                             };
                         
                         $alias_sql_join{$alias} = $sql_joins[-1];
-
+$DB::single = 1;
                         push @obj_joins,  
                             "$alias" => {
                                 (
                                     map {
                                         $foreign_property_names[$_] => {
                                             link_class_name     => $source_class_name,
-                                            link_alias          => $join_aliases_for_this_object->{$source_table_and_column_names[$_][0]} # join alias
+                                            link_alias          => $join_alias_for_table_for_this_delgated_property{$source_table_and_column_names[$_][0]} # join alias
                                                                    || $source_table_and_column_names[$_][2]  # SQL inline view alias
                                                                    || $source_table_and_column_names[$_][0], # table_name
                                             link_property_name    => $source_table_and_column_names[$_][1] 
@@ -543,7 +544,7 @@ sub _init_rdbms {
                 }
 
                 if ($foreign_class_object->table_name) {
-                    $join_aliases_for_this_object->{$foreign_table_name} = $alias;
+                    $join_alias_for_table_for_this_delgated_property{$foreign_table_name} = $alias;
                     @source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
                 }
 
@@ -580,6 +581,7 @@ sub _init_rdbms {
                 unless ($is_optional) {
                     # if _any_ part requires this, mark it required
                     $alias_sql_join{$alias}{-is_required} = 1;
+                    $alias_obj_join{$alias}{-is_required} = 1;
                 }
 
                 $joins_done{$join->{id}} = $alias;
@@ -630,9 +632,9 @@ sub _init_rdbms {
                     }
                 }
 
-            } # next join for this object
+            } # next join for the inheritance behind this object
 
-        } # next object join
+        } # next join to a different object in the chain behind this delegated property
 
         if (ref($delegated_property) and !$delegated_property->via) {
             next;
