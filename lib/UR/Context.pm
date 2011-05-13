@@ -2454,7 +2454,7 @@ sub __merge_db_data_with_existing_object {
             Carp::croak("$class_name ID '$id' previously existed in an underlying context, has since been deleted from that context, and the cached object now has unsavable changes.\nDump: ".Data::Dumper::Dumper($existing_object)."\n");
         } else {
 #print "Removing object id ".$existing_object->id." because it has been removed from the database\n";
-            $self->_remove_object_from_other_loading_iterators($existing_object);
+            UR::Context::LoadingIterator->_remove_object_from_other_loading_iterators($existing_object);
             $existing_object->__signal_change__('delete');
             $self->_abandon_object($existing_object);
             return $existing_object;
