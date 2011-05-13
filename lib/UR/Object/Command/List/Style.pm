@@ -39,7 +39,7 @@ sub _object_properties_to_string {
                 }
             }
             else {
-                @v = map { defined $_ ? $_ : '<NULL>' } $o->$_;
+                @v = map { defined $_ ? $_ : '<NULL>' } $o->__get_attr__($_);
             }
             if (@v > 1) {
                 no warnings;
