@@ -200,13 +200,29 @@ sub _generate_loading_templates_arrayref {
     
     my $class = shift;
     my $sql_cols = shift;
+    my $obj_joins = shift;
 
     use strict;
     use warnings;
 
+    $DB::single = 1;
+    my @obj_joins = @$obj_joins;
+    my %obj_joins_by_source_alias;
+    while (@obj_joins) {
+        my $foreign_alias = shift @obj_joins;
+        my $data = shift @obj_joins;
+        for my $foreign_property_name (sort keys %$data) {
+            my $source_alias = $data->{$key}{'link_alias'};
+            my $source_class_name = $data->{$key}{'link_class_name'};
+            my $source_property_name = $data->{$keY}{'link_property_name'};
+            $obj_joins_by_source_alias{$source_alias}{$foreign_alias}{$source_property_name}{$foreign_property_name} = 1;
+        }
+    }
+
     my %templates;
     my $pos = 0;
     my @templates;
+    my %alias_object_num;
     for my $col_data (@$sql_cols) {
         my ($class_obj, $prop, $table_alias, $object_num, $class_name) = @$col_data;
         unless (defined $object_num) {
@@ -226,6 +242,7 @@ sub _generate_loading_templates_arrayref {
                 id_resolver => undef, # subref
             };
             $templates[$object_num] = $template;
+            $alias_object_num{$table_alias} = $object_num;
         }
         push @{ $template->{property_names} }, $prop->property_name;
         push @{ $template->{column_positions} }, $pos;
@@ -274,6 +291,17 @@ sub _generate_loading_templates_arrayref {
                         . $template->{data_class_name} . ".  It's ID properties are (" . join(', ', @id_property_names)
                         . ") which do not appear in the class' property list (" . join(', ', @{$template->{'property_names'}}).")");
         }             
+
+        if (my $join_data = $obj_joins_by_source_alias{$template->{table_alias}}) {
+            for my $foreign_alias (keys %join_data) {
+                my @pairs;
+                for my $source_property_name (keys %{ $join_data->{$foreign_alias} }) {
+                    for my $foreign_property_name (keys %{ $join_data->{$foreign_alias}{$source_property_name} }) {
+                        
+                    }
+                }
+            }
+        }
     }        
 
     return \@templates;        

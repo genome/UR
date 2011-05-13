@@ -324,37 +324,6 @@ sub _init_rdbms {
             # or per case of a join having additional filtering
             while (my $join = shift @joins_for_object) { 
 
-                my $where = $join->{where};
-                if (0) { #($where) {
-                    # a where clause might imply additional joins, requiring we pre-empt
-                    # continuing through the join chain until these are resolved
-                    $DB::single = 1;
-                    my $c = $join->{foreign_class};
-                    my $m = $c->__meta__;
-                    my $bx = UR::BoolExpr->resolve($c,@$where);
-                    my %p = $bx->params_list; # FIXME
-                    my @p = sort keys %p;
-                    my @added_joins;
-                    for my $pn (@p) {
-                        my $p = $m->property($pn);
-                        my @j = $p->_resolve_join_chain();
-                        my $j = pop @j;
-                        $j = { %$j };
-                        my $w = delete $j->{where};
-
-                        if (@j) {
-                            unshift @added_joins, @j;
-                        }
-                    }
-                    if (@added_joins) {
-                        $DB::single = 1;
-                        $join = { %$join };
-                        delete $join->{where};
-                        push @added_joins, $join;
-                        unshift @joins_for_object, @added_joins;
-                        next;
-                    }
-                }
                 
                 $joins_for_object++;
 
@@ -373,8 +342,9 @@ sub _init_rdbms {
                 # This will get filled in during the first pass, and every time after we've successfully
                 # performed a join - ie. that the delegated property points directly to a class/property
                 # that is a real table/column, and not a tableless class or another delegated property
+                my @source_property_names;
                 unless (@source_table_and_column_names) {
-                    my @source_property_names = @{ $join->{source_property_names} };
+                    @source_property_names = @{ $join->{source_property_names} };
 
                     @source_table_and_column_names =
                         map {
@@ -469,8 +439,8 @@ sub _init_rdbms {
 
                         # TODO This may not work correctly if the property we're joining on doesn't 
                         # have a table to get data from
+                        my $where = $join->{where};
                         if ($where) {
-                            $DB::single = 1;
                             # temp hack
                             # todo: switch to rule processing
                             for (my $n = 0; $n < @$where; $n += 2) {
@@ -504,7 +474,7 @@ sub _init_rdbms {
                             };
                         
                         $alias_sql_join{$alias} = $sql_joins[-1];
-$DB::single = 1;
+
                         push @obj_joins,  
                             "$alias" => {
                                 (
@@ -514,7 +484,7 @@ $DB::single = 1;
                                             link_alias          => $join_alias_for_table_for_this_delgated_property{$source_table_and_column_names[$_][0]} # join alias
                                                                    || $source_table_and_column_names[$_][2]  # SQL inline view alias
                                                                    || $source_table_and_column_names[$_][0], # table_name
-                                            link_property_name    => $source_table_and_column_names[$_][1] 
+                                            link_property_name    => $source_property_names[$_] 
                                         }
                                     }
                                     (0..$#foreign_property_names)
@@ -811,7 +781,7 @@ $DB::single = 1;
     # this is only used when making a real instance object instead of a "set"
     my $per_object_in_resultset_loading_detail;
     unless ($group_by) {
-        $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_table_properties);
+        $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_table_properties, \@obj_joins);
     }
 
     if ($group_by) {
