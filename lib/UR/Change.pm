@@ -87,6 +87,7 @@ sub undo {
         for my $key (keys %stored) {
             $changed_obj->{$key} = $stored{$key};
         }
+        $changed_obj->{'_change_count'}--;  # it was incremented when delete() was called on the object
     }
     elsif ($changed_aspect eq "load") {
         UR::Object::unload($changed_obj);
