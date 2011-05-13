@@ -109,13 +109,10 @@ sub _reframe {
     my ($flat,@extra_values) = $self->_flatten;
     my @old_property_names = $flat->_property_names;
     my $old_property_meta_hash = $flat->_property_meta_hash;
-    
-    my @new_keys;
-    while (@old_property_names) {
-        my $old_name = shift @old_property_names;
-        if (substr($old_name,0,1) eq '-') {
-            next;
-        }
+
+    my $reframer = sub {
+        my $old_name = $_[0];
+        # uses: @reframe_path_forward from above in this closure
 
         # get back to the original object
         my @reframe_path_back = reverse @reframe_path_forward;
@@ -156,15 +153,52 @@ sub _reframe {
         $new_key = join('.', map { $_->{foreign_name_for_source} } @reframe_path_back);
         $new_key = join('.', ($new_key ? $new_key : ()), @filter_path_forward);
 
-        my $mdata = $old_property_meta_hash->{$old_name};
-        my ($value_position, $operator) = @$mdata{'value_position','operator'};
-        $new_key .= ' ' . $operator if $operator and $operator ne '=';
-        push @new_keys, $new_key;
+        return $new_key;
+    };
+
+    my $old_constant_values = $flat->_constant_values;
+
+    my @new_keys;
+    my @new_constant_values;    
+
+    while (@old_property_names) {
+        my $old_name = shift @old_property_names;
+        if (substr($old_name,0,1) ne '-') {
+            # a regular property
+            my $mdata = $old_property_meta_hash->{$old_name};
+            my ($value_position, $operator) = @$mdata{'value_position','operator'};
+            
+            my $new_key = $reframer->($old_name);
+
+            $new_key .= ' ' . $operator if $operator and $operator ne '=';
+            push @new_keys, $new_key;
+        }
+        else {
+            $DB:: single = 1;
+            # this key is not a property, it's a special key like -order_by or -group_by
+            unless ($old_name =~ /^-{order|group}_by/ or $old_name =~ /^-{hint|recurse}/) {
+                Carp::confess("no support yet for $old_name in bx reframe()!");
+            }
+
+            push @new_keys, $old_name;
+
+            my $old_value = $old_constant_values->[$n];
+            my $new_value = [];
+            for my $part (@$value) {
+                my $reframed_part = $reframer->($part);
+                push @$new_value, $reframed_part;
+            }
+            push @new_constant_values, $new_value;
+        }
     }
 
-    my $constant_values = $flat->_constant_values;
-    if (@$constant_values) {
-        Carp::confess("re-framing of constant values is incomplete.  fix me");
+
+    my $constant_values;    
+    if (@new_constant_values) {
+        $constant_values = \@new_constant_values;
+    }
+    else {
+        $constant_values = $old_constant_values; # re-use empty immutable arrayref
     }
 
     my $reframed = UR::BoolExpr::Template::And->_fast_construct(
