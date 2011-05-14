@@ -78,7 +78,7 @@ ok(UR::Object::Type->define(
 # Bob and Mike have red cars, Fred and Joe have blue cars.  Frank has no car.  Bob, Joe and Frank are cool
 # Bob also has a yellow car that's his primary car
 my $insert = $dbh->prepare('insert into person values (?,?,?)');
-foreach my $row ( [ 1, 'Bob',1 ], [2, 'Fred',0], [3, 'Mike',0],[4,'Joe',1], [5,'Frank', 1] ) {
+foreach my $row ( [ 1, 'Bob',1 ], [2, 'Fred',0], [3, 'Mike',0],[4,'Joe',1], [5,'Frank', 1], [6, 'Hobo Cliff', 0] ) {
     $insert->execute(@$row);
 }
 $insert->finish();
@@ -138,6 +138,15 @@ $query_count = 0;
 @cars = URT::Car->get(owner_id => $people[0]->id);
 is(scalar(@cars), 2, 'Bob has 2 cars');
 is($query_count, 1, 'Made 1 query');  # Needed to query since the first via URT::Person only loaded red cars
+
+$query_count = 0;
+@people = URT::Person->get(is_cool => 0, -hints => ['cars']);
+is(scalar(@people), 3, "got two people, with a hint to get their cars, when only one actually has cars");
+for my $person (@people) {
+    my @cars = $person->cars();
+    note("person $person has " . scalar(@cars) . " cars");
+}
+is($query_count, 1, 'Made 1 query');
 
 #$query_count = 0;
 #@people = URT::Person->get(
