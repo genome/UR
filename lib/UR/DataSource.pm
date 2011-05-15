@@ -201,6 +201,7 @@ sub _generate_loading_templates_arrayref {
     my $class = shift;
     my $db_cols = shift;
     my $obj_joins = shift;
+    my $bxt = shift;
 
     use strict;
     use warnings;
@@ -345,6 +346,7 @@ sub _generate_loading_templates_arrayref {
                 push @$next_joins, [ $bxt->id, \@values, \@value_position_source_property ];
             }
             print Data::Dumper::Dumper($next_joins);
+            $DB::single = 1;
         }
     }        
 

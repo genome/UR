@@ -313,7 +313,7 @@ sub _init_rdbms {
         my @source_table_and_column_names;
 
         my $flattened_value = $class_meta->_flatten_property_name($delegated_property);
-
+        
         # one iteration per table between the start table and target
         while (my $object_join = shift @joins) { 
             $object_num++;
@@ -323,8 +323,6 @@ sub _init_rdbms {
             # one iteration per layer of inheritance at this join
             # or per case of a join having additional filtering
             while (my $join = shift @joins_for_object) { 
-
-                
                 $joins_for_object++;
 
                 my $source_class_name = $join->{source_class};
