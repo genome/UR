@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 18;
+use Test::More tests=> 19;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -175,5 +175,24 @@ my $bx4re = URT::Car->define_boolexpr(
 ok($bx4re, "created expected reframe expression");
 is($bx4r->id, $bx4re->id, "reframed expression matches the expected expression");
 
+note("***** FLATTEN WITH ORDER/GROUP *****");
 
+my $bx5 = URT::Person->define_boolexpr(
+    'is_cool true' => 1,
+    'primary_car_color' => 'red',
+    '-group_by' => ['is_cool','primary_car_color','name'],
+    '-order_by' => ['is_cool','primary_car_color'],
+);
+
+my $bx5r = $bx5->reframe('primary_car');
+my $bx5re = URT::Car->define_boolexpr(
+    'owner.is_cool true' => 1,
+    'color' => 'red',
+    '-group_by' => ['owner.is_cool','color','owner.name'],
+    '-order_by' => ['owner.is_cool','color'],
+    'is_primary true' => 1,
+);
+
+is($bx5r->id, $bx5re->id, "reframe works on -order_by");
+note("$bx5re\n$bx5r\n");
 

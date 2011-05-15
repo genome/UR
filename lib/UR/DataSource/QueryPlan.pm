@@ -185,22 +185,12 @@ sub _init_rdbms {
     }
 
 
-    # _usually_ items freshly loaded from the DB don't need to be evaluated through the rule
-    # because the SQL gets constructed in such a way that all the items returned would pass anyway.
-    # But in certain cases (a delegated property trying to match a non-object value (which is a bug
-    # in the caller's code from one point of view) or with calculated non-sql properties, then the
-    # sql will return a superset of the items we're actually asking for, and the loader needs to
-    # validate them through the rule
-    my $needs_further_boolexpr_evaluation_after_loading;
-
     my ($first_table_name, @sql_joins) =  _resolve_db_joins_for_inheritance($class_meta);
    
     my @sql_filters; 
-    my @delegated_properties;    
-
-    $DB::single = 1;
-    do { 
-        
+    my @delegated_properties;
+    my $needs_further_boolexpr_evaluation_after_loading;
+    do {         
         my %filters =     
             map { $_ => 0 }
             grep { substr($_,0,1) ne '-' }
@@ -317,17 +307,11 @@ sub _init_rdbms {
         my $join_aliases_for_this_object;
         my @source_table_and_column_names;
 
-        my $flattened_value;
+        my $flattened_value = $class_meta->_flatten_property_name($delegated_property);
 
         while (my $object_join = shift @joins) { # one iteration per table between the start table and target
-            #$DB::single = 1;
-            #print "\tjoin $object_join\n";
-            #        print Data::Dumper::Dumper($object_join);
-
             $object_num++;
-
             my @joins_for_object = ($object_join);
-
             my $joins_for_object = 0;
 
             # one iteration per layer of inheritance at this join
@@ -549,12 +533,7 @@ sub _init_rdbms {
                             grep { $_->[1]->property_name eq $final_accessor }
                             @{ $foreign_class_loading_data->{direct_table_properties} };
                         push @all_table_properties, $p;
-                        #print "PROPERTY $property_name IS INVOLVED IN GROUPING: $p\n";
                     }
-                    #else {
-                    #    $DB::single = 1;
-                    #    #print "PROPERTY $property_name IS NOT INVOLVDED IN GROUPING!\n";
-                    #}
                 }
 
                 if ($order_by) {
@@ -569,14 +548,7 @@ sub _init_rdbms {
                             grep { $_->[1]->property_name eq $final_accessor }
                             @{ $foreign_class_loading_data->{direct_table_properties} };
                         $order_by_property_names{$property_name} = $p if $p;
-                        #print "PROPERTY $property_name IS INVOLVED IN ORDERING: $p\n";
                     }
-                    #else {
-                    #    $DB::single = 1;
-                    #    #print "PROPERTY $property_name IS NOT INVOLVDED IN ORDERING!\n";
-                    #}
-                    #my @order_table_debug = %order_by_property_names;  
-                    #print "  ORDER HAS @order_table_debug\n" if $order_by;
                 }
 
                 unless ($is_optional) {
@@ -954,13 +926,7 @@ sub _resolve_object_join_data_for_property_chain {
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
-    if (0) { #($joins[-1]->{foreign_class}->isa("UR::Value")) {
-        my $j = pop @joins;
-        return ($j->{source_name_for_foreign}, $is_optional, @joins)
-    }
-    else {
-        return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
-    }
+    return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
 };
 
 sub _init_core {
