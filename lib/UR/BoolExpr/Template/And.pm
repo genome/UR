@@ -152,7 +152,6 @@ sub _reframe {
         Carp::confess("Failed to find property $in_terms_of_property_name on $from_class.  Cannot reframe $self!");  
     }
     my @reframe_path_forward = map { $_->_resolve_join_chain } @pmeta;
-    my $path_back    = join('.', map { $_->{foreign_name_for_source} } reverse @reframe_path_forward);
     my $to_class = $reframe_path_forward[-1]{foreign_class};
 
     # translate all of the old properties to use the path back to the original class
@@ -160,6 +159,7 @@ sub _reframe {
     my @old_keys = @{ $flat->_keys };
     my $old_property_meta_hash = $flat->_property_meta_hash;
 
+    my %sub_group_label_used;
     my $reframer = sub {
         my $old_name = $_[0];
         # uses: @reframe_path_forward from above in this closure
@@ -182,8 +182,57 @@ sub _reframe {
             }
             my $last_name_back = $reframe_path_back[-1]{source_name_for_foreign};
             my $first_name_forward = $filter_path_forward[0];
-            if ($last_name_back ne $first_name_forward) {
-                # found a difference
+
+            
+            my $turnaround_match = 0; 
+            if ($last_name_back eq $first_name_forward) {
+                # complete overlap
+                $turnaround_match = 1; # safe
+            }
+            else {
+                # see if stripping off any labels makes them match
+                my $last_name_back_base = $last_name_back;
+                $last_name_back_base =~ s/-.*//;
+
+                my $first_name_forward_base = $first_name_forward;
+                $first_name_forward_base =~ s/-.*//;
+
+                if ($last_name_back_base eq $first_name_forward_base) {
+                    # removing the grouping label causes a match
+                    # possible overlap
+                    for my $pair (
+                        [$first_name_forward_base, $last_name_back],
+                        [$last_name_back_base, $first_name_forward],
+                    ) {
+                        my ($partial, $full) = @$pair;
+                        if (index($full, $partial) == 0) {
+                            #print "$partial is part of $full\n";
+                            if (my $prev_full = $sub_group_label_used{$partial}) {
+                                # we've tracked back through this $partially specified relationship once
+                                # see if we did it the same way
+                                if ($prev_full eq $full) {
+                                    $turnaround_match = 1;
+                                }
+                                else {
+                                    #print "previously used $prev_full for $partial: cannot use $full\n";
+                                    next;
+                                }
+                            }
+                            else {
+                                # this relationship has not been seen
+                                #print "using $full for $partial\n";
+                                $sub_group_label_used{$partial} = $full;
+                                $turnaround_match = 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($turnaround_match == 0) {
+                # found a difference: no shortcut
+                # we have to trek all the way back to the original subject before 
+                # moving forward to this property
                 last;
             }
             else {
@@ -231,7 +280,6 @@ sub _reframe {
         }
         else {
             # this key is not a property, it's a special key like -order_by or -group_by
-            $DB::single = 1;
             unless ($old_key eq '-order_by' 
                     or $old_key eq '-group_by'
                     or $old_key eq '-hints'
@@ -401,6 +449,7 @@ sub evaluate_subject_and_values {
             for my $sub_group (keys %$sub_group_filters) {
                 my $filters = $sub_group_filters->{$sub_group};
                 my $sub_filters = $sub_group_sub_filters->{$sub_group};
+
             }
         }
     }

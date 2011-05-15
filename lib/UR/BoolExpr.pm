@@ -333,7 +333,6 @@ sub resolve {
     }
     
     if (defined($in_params[0]) and $in_params[0] eq '-or') {
-        $DB::single = 1;
         shift @in_params;
         my @sub_queries = @{ shift @in_params };
         my $bx = UR::BoolExpr::Template::Or->_compose(

@@ -106,7 +106,7 @@ sub _flatten_property_name {
             }
             $flattened_name .= $join->{source_name_for_foreign};
             if (my $where = $join->{where}) {
-                $flattened_name .= '-' . $meta->property_name; 
+                $flattened_name .= '-' . $join->sub_group_label; 
                 my $join_class = $join->{foreign_class};
                 my $bx2 = UR::BoolExpr->resolve($join_class,@$where);
                 my $bx2_flat = $bx2->flatten(); # recurses through this

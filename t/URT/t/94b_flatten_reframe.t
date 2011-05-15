@@ -111,11 +111,9 @@ my $bx0 = URT::Person->define_boolexpr(
 my $bx0f = $bx0->flatten();
 my $bx1 = URT::Person->define_boolexpr(
     'is_cool' => 1,
-    #'primary_car.color' => 'red',
-    #'primary_car.engine.size' => 428,
-    'cars.color' => 'red',
-    'cars.engine.size' => 428,
-    'cars.is_primary true' => 1,
+    'cars-primary_car.color' => 'red',
+    'cars-primary_car.engine.size' => 428,
+    'cars-primary_car?.is_primary true' => 1,
 );
 is($bx0f->normalize, $bx1->normalize, "flattening works correctly");
 
@@ -138,6 +136,17 @@ my $bx3 = URT::Car::Engine->define_boolexpr(
 );
 is($bx1r2->normalize->id, $bx3->normalize->id, "reframe works on a two-step chain with the first embedding via/to/where");
 
+my $bx33 = URT::Person->define_boolexpr(
+    'primary_car.color' => 'red',
+    'is_cool true' => 1,
+);
+my $bx33r = $bx33->reframe('primary_car');
+my $bx33re = URT::Car->define_boolexpr(
+    'color' => 'red',
+    'owner.is_cool true' => 1,
+    'is_primary true' => 1,
+);
+
 note("***** FLATTEN OR *****");
 
 my $bx4 = URT::Person->define_boolexpr(
@@ -154,7 +163,7 @@ ok($bx4f, "flattened an OR bx");
 my $bx4fe = URT::Person->define_boolexpr(
     -or => [
         ['is_cool' => 1],
-        ['cars.color' => 'red', 'cars.is_primary true' => 1],
+        ['cars-primary_car.color' => 'red', 'cars-primary_car?.is_primary true' => 1],
     ]
 );
 ok($bx4fe, "defined what we expect for a flattned OR rule");
