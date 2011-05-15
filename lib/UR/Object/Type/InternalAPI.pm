@@ -55,13 +55,15 @@ sub property_meta_for_name {
     if (index($property_name,'.') != -1) {
         my @chain = split(/\./,$property_name);
         my $last_class_meta = $self;
+        my $last_class_name = $self->id;
         my @pmeta;
-        for my $link (@chain) {
+        for my $full_link (@chain) {
+            my ($link) = ($full_link =~ /^([^\-\?]+)/);
             my $property_meta = $last_class_meta->property_meta_for_name($link);
             push @pmeta, $property_meta;
             last if $link eq $chain[-1];
-            my @joins = $property_meta->_resolve_join_chain();
-            my $last_class_name = $joins[-1]{foreign_class};
+            my @joins = UR::Object::Join->resolve_chain($last_class_name, $link);
+            $last_class_name = $joins[-1]{foreign_class};
             $last_class_meta = $last_class_name->__meta__;
         }
         return @pmeta if wantarray;

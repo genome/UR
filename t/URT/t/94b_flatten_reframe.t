@@ -32,7 +32,7 @@ ok(UR::Object::Type->define(
         is_cool             => { is => 'Boolean' },
         age                 => { is => 'Integer' },
         cars                => { is => 'URT::Car', reverse_as => 'owner', is_many => 1, is_optional => 1 },
-        primary_car         => { is => 'URT::Car', via => 'cars', to => '__self__', where => ['is_primary true' => 1] },
+        primary_car         => { is => 'URT::Car', via => 'cars', to => '__self__', where => ['is_primary true' => 1], is_optional => 1 },
         car_colors          => { via => 'cars', to => 'color', is_many => 1 },
         primary_car_color   => { via => 'primary_car', to => 'color' },
     ],
@@ -196,3 +196,15 @@ my $bx5re = URT::Car->define_boolexpr(
 is($bx5r->id, $bx5re->id, "reframe works on -order_by");
 note("$bx5re\n$bx5r\n");
 
+note("***** FLATTEN AROUND JOIN TO OPTIONAL WITH ON CLAUSE *****");
+
+my $bx6 = URT::Person->define_boolexpr(
+    is_cool => 1,
+    -hints => ['primary_car']
+);
+my $bx6f = $bx6->flatten;
+#$ENV{UR_DBI_MONITOR_SQL} = 1;
+
+my @p6f = URT::Person->get($bx6f);
+my @p6 = URT::Person->get($bx6);
+is("@p6f", "@p6", "got the same objects back after flattening around an optional relationship");
