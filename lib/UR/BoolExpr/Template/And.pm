@@ -347,32 +347,60 @@ sub evaluate_subject_and_values {
     return unless (ref($subject) && $subject->isa($self->subject_class_name));
 
     if (my @underlying = $self->get_underlying_rule_templates) {
-        my %sub_groups;
-        my @primary;
-        for my $underlying (@underlying) {
-            # flattening expresions now requires that we re-group them :(
-            my $sub_group = $underlying->sub_group;
-            if ($sub_group) {
-                chop($sub_group) if substr($sub_group,-1) eq '?';
-                my $list = $sub_groups{$sub_group} ||= [];
-                push @$list, $underlying;
+        
+        # flattening expresions now requires that we re-group them :(
+        # these effectively are subqueries where they occur
+        my $filter_breakdown = $self->{evaluate_subject_and_values} ||= do {
+            my @primary;
+            my %sub_group_filters;
+            my %sub_group_sub_filters;
+            for (my $n = 0; $n < @underlying; $n++) {
+                my $underlying = $underlying[$n];
+                my $sub_group = $underlying->sub_group;
+                if ($sub_group) {
+                    if (substr($sub_group,-1) ne '?') {
+                        # control restruct the subject based on the sub-group properties
+                        my $list = $sub_group_filters{$sub_group} ||= [];
+                        push @$list, $underlying, $n;
+                    }
+                    else {
+                        # control what is IN a sub-group (effectively define it with these)
+                        chop($sub_group);
+                        my $list = $sub_group_sub_filters{$sub_group} ||= [];
+                        push @$list, $underlying, $n;
+                    }
+                }
+                else {
+                    push @primary, $underlying, $n;
+                }
             }
-            else {
-                push @primary, $underlying;
-            }
-        }
-        unless (@primary == @underlying) {
-            my @tmp = @primary;
-            @primary = ();
-            my @dependent;
-            for my $primary (@tmp) {
-                
-            }
-        }
-        while (my $underlying = shift (@primary)) {
-            my $value = shift @_;
+
+            { 
+                primary => \@primary, 
+                sub_group_filters => \%sub_group_filters,
+                sub_group_sub_filters => \%sub_group_sub_filters,
+            };
+        };
+
+        my ($primary,$sub_group_filters,$sub_group_sub_filters) 
+            = @$filter_breakdown{"primary","sub_group_filters","sub_group_sub_filters"};
+
+        # check the ungrouped comparisons first since they are simpler
+        for (my $n = 0; $n < @$primary; $n+=2) {
+            my $underlying = $primary->[$n];
+            my $pos = $primary->[$n+1];
+            my $value = $_[$pos];
             unless ($underlying->evaluate_subject_and_values($subject, $value)) {
                 return;
+            }
+        }
+
+        # only check the complicated rules if none of the above failed
+        if (%$sub_group_filters) {
+            $DB::single = 1;
+            for my $sub_group (keys %$sub_group_filters) {
+                my $filters = $sub_group_filters->{$sub_group};
+                my $sub_filters = $sub_group_sub_filters->{$sub_group};
             }
         }
     }
