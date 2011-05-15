@@ -175,5 +175,26 @@ my $bx4re = URT::Car->define_boolexpr(
 ok($bx4re, "created expected reframe expression");
 is($bx4r->id, $bx4re->id, "reframed expression matches the expected expression");
 
+note("***** FLATTEN WITH SPECIAL ATTRIBUTES *****");
+
+my $bx5 = URT::Person->define_boolexpr(
+    'is_cool true' => 1,
+    'primary_car_color' => 'red',
+    '-order_by' => ['is_cool','primary_car_color'],
+);
+
+my $bx5f = $bx5->flatten();
+note($bx5);
+note($bx5f);
+
+my $bx5r = $bx5->reframe('primary_car');
+my $bx5re = URT::Car->define_boolexpr(
+    'owner.is_cool true' => 1,
+    'color' => 'red',
+    'is_primary true' => 1,
+    '-order_by' => ['owner.is_cool','color'],
+);
+
+is($bx5r->id, $bx5re->id, "reframe works on -order_by");
 
 

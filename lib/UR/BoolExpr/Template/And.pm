@@ -45,47 +45,100 @@ sub _reframe_bx {
 
 sub _flatten {
     my $self = $_[0];
-    
+     
     if ($self->{flatten}) {
         return @{ $self->{flatten} }
     }
 
-    my @old_property_names = $self->_property_names;
+    $DB::single = 1;
+
+    my @old_keys = @{ $self->_keys };
     my $old_property_meta_hash = $self->_property_meta_hash;
 
+    my $class_meta = $self->subject_class_name->__meta__;
+    
     my @new_keys;
     my @extra_keys;
     my @extra_values;
     
-    my $found_unflattened_params = 0;
-    while (my $name = shift @old_property_names) { 
-        my $mdata = $old_property_meta_hash->{$name};
-        my ($value_position, $operator) = @$mdata{'value_position','operator'};
-        
-        my $class_meta = $self->subject_class_name->__meta__;
-        my ($flat, $add_keys, $add_values) = $class_meta->_flatten_property_name($name); 
-        
-        $found_unflattened_params = 1 if $flat ne $name or @$add_keys or @$add_values;
+    my $old_constant_values;
+    my @new_constant_values;
 
-        $flat .= ' ' . $operator if $operator and $operator ne '=';
-        push @new_keys, $flat;
-        
-        push @extra_keys, @$add_keys;
-        push @extra_values, @$add_values;
+    my $found_unflattened_params = 0;
+    while (my $key = shift @old_keys) {
+        my $name = $key;
+        $name =~ s/ .*//;
+        if (substr($name,0,1) ne '-') {
+            my $mdata = $old_property_meta_hash->{$name};
+            my ($value_position, $operator) = @$mdata{'value_position','operator'};
+            
+            my ($flat, $add_keys, $add_values) = $class_meta->_flatten_property_name($name); 
+            $found_unflattened_params = 1 if $flat ne $name or @$add_keys or @$add_values;
+
+            $flat .= ' ' . $operator if $operator and $operator ne '=';
+            push @new_keys, $flat;
+            
+            push @extra_keys, @$add_keys;
+            push @extra_values, @$add_values;
+        }
+        else {
+            $DB::single =1;
+            push @new_keys, $key;
+            $old_constant_values ||= [ @{ $self->_constant_values } ];
+            my $old_value = shift @$old_constant_values;
+            my $new_value = [];
+            for my $part (@$old_value) {
+                my ($flat, $add_keys, $add_values) = $class_meta->_flatten_property_name($part); 
+                $found_unflattened_params = 1 if $flat ne $name or @$add_keys or @$add_values;
+                push @$new_value, $flat;
+
+                push @extra_keys, @$add_keys;
+                push @extra_values, @$add_values;
+            }
+            push @new_constant_values, $new_value;
+        }
+    }
+
+    my $constant_values;
+    if ($old_constant_values) {
+        # some -* keys were found above, and we flattened the value internals
+        $constant_values = \@new_constant_values;
+    }
+    else {
+        # no -* keys, just re-use the empty arrayref
+        $constant_values = $self->_constant_values;
     }
 
     if ($found_unflattened_params or @extra_keys) {
-        push @new_keys, @extra_keys;
+        if (@extra_keys) {
+            # there may be duplication between these and the primary joins
+            # or each other
+            my %keys_seen = map { $_ => 1 } @new_keys;
+            my @nodup_extra_keys;
+            my @nodup_extra_values;
+            while (my $extra_key = shift @extra_keys) {
+                my $extra_value = shift @extra_values;
+                unless ($keys_seen{$extra_key}) {
+                    push @nodup_extra_keys, $extra_key;
+                    push @nodup_extra_values, $extra_value;
+                    $keys_seen{$extra_key} = 1;
+                }
+            }
+            push @new_keys, @nodup_extra_keys;
+            @extra_values = @nodup_extra_values
+        }
         my $flat = UR::BoolExpr::Template::And->_fast_construct(
             $self->subject_class_name, 
             \@new_keys, 
-            $self->_constant_values,     
+            $constant_values,     
         );
         $self->{flatten} = [$flat,@extra_values];
         return ($flat, @extra_values);
     }
     else {
+        # everything was already flat, just remember this so you DRY
         $self->{flatten} = [$self];
+        Scalar::Util::weaken($self->{flatten}[0]);
         return $self
     }
 }
@@ -93,7 +146,7 @@ sub _flatten {
 sub _reframe {
     my $self = shift;
     my $in_terms_of_property_name = shift;
-
+    $DB::single = 1;
     # determine the from_class, to_class, and path_back
     my $from_class = $self->subject_class_name;
     my $cmeta = $self->subject_class_name->__meta__;
@@ -156,7 +209,9 @@ sub _reframe {
         return $new_key;
     };
 
-    my $old_constant_values = $flat->_constant_values;
+    
+    # this is only set below if we find any -* keys
+    my $old_constant_values;
 
     my @new_keys;
     my @new_constant_values;    
@@ -174,7 +229,7 @@ sub _reframe {
             push @new_keys, $new_key;
         }
         else {
-            $DB:: single = 1;
+            $DB::single = 1;
             # this key is not a property, it's a special key like -order_by or -group_by
             unless ($old_name =~ /^-{order|group}_by/ or $old_name =~ /^-{hint|recurse}/) {
                 Carp::confess("no support yet for $old_name in bx reframe()!");
@@ -182,9 +237,13 @@ sub _reframe {
 
             push @new_keys, $old_name;
 
-            my $old_value = $old_constant_values->[$n];
+            unless ($old_constant_values) {
+                $old_constant_values = [ @{ $flat->_constant_values } ];
+            }
+
+            my $old_value = shift @$old_constant_values;
             my $new_value = [];
-            for my $part (@$value) {
+            for my $part (@$old_value) {
                 my $reframed_part = $reframer->($part);
                 push @$new_value, $reframed_part;
             }
@@ -198,7 +257,7 @@ sub _reframe {
         $constant_values = \@new_constant_values;
     }
     else {
-        $constant_values = $old_constant_values; # re-use empty immutable arrayref
+        $constant_values = $flat->_constant_values; # re-use empty immutable arrayref
     }
 
     my $reframed = UR::BoolExpr::Template::And->_fast_construct(
