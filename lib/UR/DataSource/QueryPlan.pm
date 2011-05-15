@@ -284,7 +284,6 @@ sub _init_rdbms {
     my %alias_sql_join;
     my %joins_done;
 
-    $DB::single = 1;
     # FIXME - this needs to be broken out into delegated-property-join-resolver
     # and inheritance-join-resolver methods that can be called recursively.
     # It would better encapsulate what's going on and avoid bugs with complicated
@@ -445,14 +444,19 @@ sub _init_rdbms {
 
                 unless ($alias) {
                     $alias_num++;
-                    
-                    my $alias_length = length($property_name)+length($alias_num)+1;
+                   
+                    my $alias_name = $join->sub_group_label || $property_name;
+                    if (substr($alias_name,-1) eq '?') {
+                        chop($alias_name) if substr($alias_name,-1) eq '?';
+                    }
+
+                    my $alias_length = length($alias_name)+length($alias_num)+1;
                     my $alias_max_length = 29;
                     if ($alias_length > $alias_max_length) {
-                        $alias = substr($property_name,0,$alias_max_length-length($alias_num)-1); 
+                        $alias = substr($alias_name,0,$alias_max_length-length($alias_num)-1); 
                     }
                     else {
-                        $alias = $property_name;
+                        $alias = $alias_name;
                     }
                     $alias =~ s/\./_/g;
                     $alias .= '_' . $alias_num; 
@@ -575,14 +579,15 @@ sub _init_rdbms {
                         for my $parent (@parents) {
                             my @parent_id_property_names = $parent->id_property_names;
                             die if @parent_id_property_names > 1;                    
-                            unshift @joins_for_object, {
+                            my $inheritance_join = UR::Object::Join->_get_or_define( 
                                 source_class => $last_class_name,
                                 source_property_names => [@last_id_property_names], # we change content below
                                 foreign_class => $parent->class_name,
                                 foreign_property_names => \@parent_id_property_names,
                                 is_optional => $is_optional,
                                 id => "${last_class_name}::" . join(',',@last_id_property_names),
-                            };
+                            );
+                            unshift @joins_for_object, $inheritance_join; 
                             @last_id_property_names = @parent_id_property_names;
                             $last_class_name = $foreign_class_name;
                         }
