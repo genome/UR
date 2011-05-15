@@ -18,44 +18,55 @@ class UR::Object::Join {
         source_name_for_foreign => { is => 'Text' },
         foreign_name_for_source => { is => 'Text' },
         
-        is_optional             => { is => 'Text' }, 
+        is_optional             => { is => 'Boolean' }, 
+
+        is_many                 => { is => 'Boolean' },
 
         where                   => { is => 'Text' },
     ],
     doc => "join metadata used internally by the ::QueryBuilder"
 };
 
-sub resolve_chain_for_property_meta {
+our %resolve_chain;
+sub resolve_chain {
+    my ($class, $class_name, $property_chain) = @_;
+
+    my $join_chain = 
+        $resolve_chain{$class_name}{$property_chain}
+            ||= do {
+                my $class_meta = $class_name->__meta__;
+                my @pmeta = $class_meta->property_meta_for_name($property_chain);
+                my @joins;
+                for my $pmeta (@pmeta) {
+                    push @joins, $class->_resolve_chain_for_property_meta($pmeta);
+                }
+                \@joins;
+            };
+
+    return @$join_chain;
+}
+
+sub _resolve_chain_for_property_meta {
     my ($class, $pmeta) = @_;  
     if ($pmeta->via or $pmeta->to) {
         return $class->_resolve_via_to($pmeta);
     }
     else {
-        my @j = eval {
-            my $foreign_class = $pmeta->_data_type_as_class_name;
-            unless (defined($foreign_class) and $foreign_class->can('get'))  {
-                return;
-            }
-            if ($pmeta->id_by or $foreign_class->isa("UR::Value")) {
-                return $class->_resolve_forward($pmeta);
-            }
-            elsif (my $reverse_as = $pmeta->reverse_as) { 
-                return $class->_resolve_reverse($pmeta);
-            }
-            else {
-                # TODO: handle hard-references to objects here maybe?
-                $pmeta->error_message("Property " . $pmeta->id . " has no 'id_by' or 'reverse_as' property metadata");
-                return;
-            }
-        };
-        die $@ if $@;
-        if (grep { ref($_) ne __PACKAGE__ } @j) { 
-            $DB::single = 1;
-            #$class->resolve_chain_for_property_meta($pmeta);
-            Carp::confess(Data::Dumper::Dumper(\@j)) 
-        };
-        #print Data::Dumper::Dumper(\@j);
-        return @j;
+        my $foreign_class = $pmeta->_data_type_as_class_name;
+        unless (defined($foreign_class) and $foreign_class->can('get'))  {
+            return;
+        }
+        if ($pmeta->id_by or $foreign_class->isa("UR::Value")) {
+            return $class->_resolve_forward($pmeta);
+        }
+        elsif (my $reverse_as = $pmeta->reverse_as) { 
+            return $class->_resolve_reverse($pmeta);
+        }
+        else {
+            # TODO: handle hard-references to objects here maybe?
+            $pmeta->error_message("Property " . $pmeta->id . " has no 'id_by' or 'reverse_as' property metadata");
+            return;
+        }
     }
 }
 
@@ -155,8 +166,8 @@ sub _resolve_via_to {
 }
 
 # code below uses these to convert objects using hash slices
-my @old = qw/source_class source_property_names foreign_class foreign_property_names source_name_for_foreign foreign_name_for_source is_optional/;
-my @new = qw/foreign_class foreign_property_names source_class source_property_names foreign_name_for_source source_name_for_foreign is_optional/;
+my @old = qw/source_class source_property_names foreign_class foreign_property_names source_name_for_foreign foreign_name_for_source is_optional is_many/;
+my @new = qw/foreign_class foreign_property_names source_class source_property_names foreign_name_for_source source_name_for_foreign is_optional is_many/;
 
 sub _resolve_forward {
     my ($class, $pmeta) = @_;
@@ -246,6 +257,8 @@ sub _resolve_forward {
                     
                     is_optional => ($pmeta->is_optional or $pmeta->is_many),
 
+                    is_many => $pmeta->is_many,
+
                     where => $where,
                 );
 
@@ -301,6 +314,9 @@ sub _resolve_reverse {
         $_->{id} = $id; 
 
         $_->{is_optional} = ($pmeta->is_optional || $pmeta->is_many);
+
+        $_->{is_many} = $pmeta->{is_many};
+
         $prev_where = $next_where;
     }
     if ($prev_where) {
