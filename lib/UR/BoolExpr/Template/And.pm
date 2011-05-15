@@ -50,8 +50,6 @@ sub _flatten {
         return @{ $self->{flatten} }
     }
 
-    $DB::single = 1;
-
     my @old_keys = @{ $self->_keys };
     my $old_property_meta_hash = $self->_property_meta_hash;
 
@@ -82,7 +80,6 @@ sub _flatten {
             push @extra_values, @$add_values;
         }
         else {
-            $DB::single =1;
             push @new_keys, $key;
             $old_constant_values ||= [ @{ $self->_constant_values } ];
             my $old_value = shift @$old_constant_values;
@@ -146,7 +143,7 @@ sub _flatten {
 sub _reframe {
     my $self = shift;
     my $in_terms_of_property_name = shift;
-    $DB::single = 1;
+    
     # determine the from_class, to_class, and path_back
     my $from_class = $self->subject_class_name;
     my $cmeta = $self->subject_class_name->__meta__;
@@ -160,7 +157,7 @@ sub _reframe {
 
     # translate all of the old properties to use the path back to the original class
     my ($flat,@extra_values) = $self->_flatten;
-    my @old_property_names = $flat->_property_names;
+    my @old_keys = @{ $flat->_keys };
     my $old_property_meta_hash = $flat->_property_meta_hash;
 
     my $reframer = sub {
@@ -216,10 +213,14 @@ sub _reframe {
     my @new_keys;
     my @new_constant_values;    
 
-    while (@old_property_names) {
-        my $old_name = shift @old_property_names;
-        if (substr($old_name,0,1) ne '-') {
+    while (@old_keys) {
+        my $old_key = shift @old_keys;
+
+        if (substr($old_key,0,1) ne '-') {
             # a regular property
+            my $old_name = $old_key;
+            $old_name =~ s/ .*//;
+            
             my $mdata = $old_property_meta_hash->{$old_name};
             my ($value_position, $operator) = @$mdata{'value_position','operator'};
             
@@ -229,13 +230,17 @@ sub _reframe {
             push @new_keys, $new_key;
         }
         else {
-            $DB::single = 1;
             # this key is not a property, it's a special key like -order_by or -group_by
-            unless ($old_name =~ /^-{order|group}_by/ or $old_name =~ /^-{hint|recurse}/) {
-                Carp::confess("no support yet for $old_name in bx reframe()!");
+            $DB::single = 1;
+            unless ($old_key eq '-order_by' 
+                    or $old_key eq '-group_by'
+                    or $old_key eq '-hints'
+                    or $old_key eq '-recurse'
+            ) {      
+                Carp::confess("no support yet for $old_key in bx reframe()!");
             }
 
-            push @new_keys, $old_name;
+            push @new_keys, $old_key;
 
             unless ($old_constant_values) {
                 $old_constant_values = [ @{ $flat->_constant_values } ];
