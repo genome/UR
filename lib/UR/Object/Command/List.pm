@@ -120,7 +120,7 @@ sub _resolve_boolexpr {
 sub _show_item_is_property_name {
     my($self, $item) = @_;
 
-    return $item =~ m/^\w+$/;
+    return $item =~ m/^[\w\.]+$/;
 }
 
 sub execute {  
