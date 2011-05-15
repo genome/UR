@@ -184,7 +184,6 @@ sub _init_rdbms {
         }
     }
 
-
     my ($first_table_name, @sql_joins) =  _resolve_db_joins_for_inheritance($class_meta);
    
     my @sql_filters; 
@@ -285,6 +284,7 @@ sub _init_rdbms {
     my %alias_sql_join;
     my %joins_done;
 
+    $DB::single = 1;
     # FIXME - this needs to be broken out into delegated-property-join-resolver
     # and inheritance-join-resolver methods that can be called recursively.
     # It would better encapsulate what's going on and avoid bugs with complicated

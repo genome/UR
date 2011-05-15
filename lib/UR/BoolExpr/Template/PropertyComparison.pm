@@ -29,8 +29,16 @@ use UR::BoolExpr::Template::PropertyComparison::LessThan;
 use UR::BoolExpr::Template::PropertyComparison::In;
 use UR::BoolExpr::Template::PropertyComparison::Like;
 
-sub property_name {
+sub property_spec {
     (split(' ',$_[0]->logic_detail))[0]
+}
+
+sub property_name {
+    (split('-',$_[0]->property_spec))[0]
+}
+
+sub sub_group {
+    (split('-',$_[0]->property_spec))[1]
 }
 
 sub comparison_operator {

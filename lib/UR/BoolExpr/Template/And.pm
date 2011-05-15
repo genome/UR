@@ -347,7 +347,29 @@ sub evaluate_subject_and_values {
     return unless (ref($subject) && $subject->isa($self->subject_class_name));
 
     if (my @underlying = $self->get_underlying_rule_templates) {
-        while (my $underlying = shift (@underlying)) {
+        my %sub_groups;
+        my @primary;
+        for my $underlying (@underlying) {
+            # flattening expresions now requires that we re-group them :(
+            my $sub_group = $underlying->sub_group;
+            if ($sub_group) {
+                chop($sub_group) if substr($sub_group,-1) eq '?';
+                my $list = $sub_groups{$sub_group} ||= [];
+                push @$list, $underlying;
+            }
+            else {
+                push @primary, $underlying;
+            }
+        }
+        unless (@primary == @underlying) {
+            my @tmp = @primary;
+            @primary = ();
+            my @dependent;
+            for my $primary (@tmp) {
+                
+            }
+        }
+        while (my $underlying = shift (@primary)) {
             my $value = shift @_;
             unless ($underlying->evaluate_subject_and_values($subject, $value)) {
                 return;

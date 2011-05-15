@@ -121,7 +121,7 @@ my $bx4f = $bx4i->flatten;
 print "$bx4i\n$bx4f\n";
 
 my @p4f = URT::Person->get($bx4f);
-ok("@p4f", "flat query works");
+ok("@p4f", "flat query $bx4f works");
 
 
 __END__
