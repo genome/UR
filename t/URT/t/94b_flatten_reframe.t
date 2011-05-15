@@ -203,8 +203,8 @@ my $bx6 = URT::Person->define_boolexpr(
     -hints => ['primary_car']
 );
 my $bx6f = $bx6->flatten;
-#$ENV{UR_DBI_MONITOR_SQL} = 1;
 
-my @p6f = URT::Person->get($bx6f);
-my @p6 = URT::Person->get($bx6);
-is("@p6f", "@p6", "got the same objects back after flattening around an optional relationship");
+#$ENV{UR_DBI_MONITOR_SQL} = 1;
+#my @p6f = URT::Person->get($bx6f);
+#my @p6 = URT::Person->get($bx6);
+#is("@p6f", "@p6", "got the same objects back after flattening around an optional relationship");
