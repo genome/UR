@@ -198,7 +198,6 @@ sub _init_rdbms {
     my @sql_filters; 
     my @delegated_properties;    
 
-    $DB::single = 1;
     do { 
         
         my %filters =     
@@ -320,7 +319,6 @@ sub _init_rdbms {
         my $flattened_value;
 
         while (my $object_join = shift @joins) { # one iteration per table between the start table and target
-            #$DB::single = 1;
             #print "\tjoin $object_join\n";
             #        print Data::Dumper::Dumper($object_join);
 
@@ -338,7 +336,6 @@ sub _init_rdbms {
                 if (0) { #($where) {
                     # a where clause might imply additional joins, requiring we pre-empt
                     # continuing through the join chain until these are resolved
-                    $DB::single = 1;
                     my $c = $join->{foreign_class};
                     my $m = $c->__meta__;
                     my $bx = UR::BoolExpr->resolve($c,@$where);
@@ -357,7 +354,6 @@ sub _init_rdbms {
                         }
                     }
                     if (@added_joins) {
-                        $DB::single = 1;
                         $join = { %$join };
                         delete $join->{where};
                         push @added_joins, $join;
@@ -479,7 +475,6 @@ sub _init_rdbms {
                         # TODO This may not work correctly if the property we're joining on doesn't 
                         # have a table to get data from
                         if ($where) {
-                            $DB::single = 1;
                             # temp hack
                             # todo: switch to rule processing
                             for (my $n = 0; $n < @$where; $n += 2) {
@@ -517,7 +512,6 @@ sub _init_rdbms {
                         # Note that we increment the object numbers.
                         # Note: we add grouping columns individually instead of in chunks
                         if ($group_by) {
-                            #$DB::single = 1;
                         }
                         else {
                             push @all_table_properties,
@@ -1071,7 +1065,6 @@ sub _init_core {
         if (@id_property_objects == 0) {
             @id_property_objects = $co->property_meta_for_name("id");
             if (@id_property_objects == 0) {
-                $DB::single = 1;
                 Carp::confess("Couldn't determine ID properties for $class_name\n");
             }
         }
