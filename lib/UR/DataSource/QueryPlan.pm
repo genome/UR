@@ -518,7 +518,7 @@ sub _init_rdbms {
                     ## TEST
                 
                     if ($foreign_class_object->table_name) {
-                        $join_aliases_for_this_object->{$foreign_table_name} = $alias;
+                        $join_alias_for_table_for_this_delgated_property{$foreign_table_name} = $alias;
                         @source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
                     }
 

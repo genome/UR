@@ -423,13 +423,11 @@ sub evaluate_subject_and_values {
                 }
             }
 
-            my $x = { 
+            { 
                 primary => \@primary, 
                 sub_group_filters => \%sub_group_filters,
                 sub_group_sub_filters => \%sub_group_sub_filters,
             };
-            print Data::Dumper::Dumper("FOR $self: ", $x);
-            $x;
         };
 
         my ($primary,$sub_group_filters,$sub_group_sub_filters) 

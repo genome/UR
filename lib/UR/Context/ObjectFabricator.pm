@@ -612,18 +612,21 @@ sub create_for_loading_template {
 
         # note all of the joins which follow this object as having been "done"
         if (my $next_joins = $loading_template->{next_joins}) {
-            for my $next_join (@$next_joins) {
-                my ($bxt_id, $values, $value_position_property_name) = @$next_join;
-                for (my $n = 0; $n < @$value_position_property_name; $n+=2) {
-                    my $pos = $value_position_property_name->[$n];
-                    my $name = $value_position_property_name->[$n+1];
-                    $values->[$pos] = $pending_db_object->$name;
-                }   
-                my $bxt = UR::BoolExpr::Template::And->get($bxt_id);
-                my $bx = $bxt->get_rule_for_values(@$values);
-                $UR::Context::all_params_loaded->{$bxt->{id}}->{$bx->{id}} = undef;
-                $local_all_params_loaded->{$bxt->{id}}->{$bx->{id}}++;
-                print "remembering $bx\n";
+            if (0) {
+                # disabled until a fully reframed query is the basis for these joins
+                for my $next_join (@$next_joins) {
+                    my ($bxt_id, $values, $value_position_property_name) = @$next_join;
+                    for (my $n = 0; $n < @$value_position_property_name; $n+=2) {
+                        my $pos = $value_position_property_name->[$n];
+                        my $name = $value_position_property_name->[$n+1];
+                        $values->[$pos] = $pending_db_object->$name;
+                    }   
+                    my $bxt = UR::BoolExpr::Template::And->get($bxt_id);
+                    my $bx = $bxt->get_rule_for_values(@$values);
+                    $UR::Context::all_params_loaded->{$bxt->{id}}->{$bx->{id}} = undef;
+                    $local_all_params_loaded->{$bxt->{id}}->{$bx->{id}}++;
+                    print "remembering $bx\n";
+                }
             }
         }
 

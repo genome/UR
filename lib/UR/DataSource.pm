@@ -312,7 +312,7 @@ sub _generate_loading_templates_arrayref {
         }             
 
         my $source_alias = $template->{table_alias};
-        if (my $join_data_for_source_table = $obj_joins_by_source_alias{$source_alias}) {
+        if (0 and my $join_data_for_source_table = $obj_joins_by_source_alias{$source_alias}) {
             # there are joins which come from this entity to other entities
             # as these entities are loaded, remember the individual queries covered by this object returning
             # NOTE: when we join a <> b, we remember that we've loaded all of the b for a when _a_ loads, not b,
@@ -322,7 +322,7 @@ sub _generate_loading_templates_arrayref {
             my $next_joins = $template->{next_joins} ||= [];
             for my $foreign_alias (keys %$join_data_for_source_table) {
                 my $foreign_object_num = $alias_object_num{$foreign_alias};
-                Carp::confess() if not defined $foreign_object_num;
+                Carp::confess("no alias for $foreign_alias?") if not defined $foreign_object_num;
                 my $foreign_template = $templates[$foreign_object_num];
                 my $foreign_class_name = $foreign_template->{data_class_name};
 
