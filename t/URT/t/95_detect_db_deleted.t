@@ -121,9 +121,6 @@ $trans = UR::Context::Transaction->begin;
                   \@expected_ids,
                   'Objects came back in the expected order');
 
-print "Object 3: ".Data::Dumper::Dumper(URT::Thing->get(3));
-exit;
-
     # Now delete the object
     ok(URT::Thing->get(3)->delete, 'Delete thing id 3 from memory');
     @things = UR::Context->reload('URT::Thing', -order => ['value']);
@@ -133,6 +130,7 @@ exit;
                   \@expected_ids,
                   'Objects came back in the expected order');
 $trans->rollback;
+
 
 # Change object 9's value from I to A in the DB.  In memory it will sort
 # last, but in the DB it will sort first.  Object 3 still has value 'ZZZ'
@@ -154,18 +152,22 @@ $trans = UR::Context::Transaction->begin;
     is_deeply([ map { $_->id } @things],
                   \@expected_ids,
                   'Objects came back in the expected order');
+# Hack required in UR::Context::__merge... to get object 9 to correctly have
+# value => 'A' instead of 'I'
 $trans->rollback;
 
 
 # Try changing an unrelated property and do a query
+#
+# Object 9 is back again with value 'A' because of the rollback.
 $trans = UR::Context::Transaction->begin;
     ok(URT::Thing->get(7)->other('blahblah'), 'Change thing id 7 "other" property');
     ok($dbh->do("update thing set other = 'foofoo' where thing_id = 8"),
        'Change thing id 8 "other" property in the database');
 
     @things = UR::Context->reload('URT::Thing', -order => ['value']);
-    is(scalar(@things), 5, 'Got 4 object back from reload');
-    @expected_ids = (12345,5,7,8,3);
+    is(scalar(@things), 6, 'Got 4 objects back from reload');
+    @expected_ids = (9,12345,5,7,8,3);
     is_deeply([ map { $_->id } @things],
                   \@expected_ids,
                   'Objects came back in the expected order');
@@ -178,9 +180,9 @@ $trans = UR::Context::Transaction->begin;
     ok($obj->other('blahblah'), 'Change object 7s other property to blahblah');
     ok($obj->value('A'), 'Change object 7s value to A');
 
-    @things = UR::Context->reload('URT::Thing', 'other !=' => 'blahblah', -order => ['value']);
-    is(scalar(@things), 4, 'Got back 3 things from reload() where other is not blahblah');
-    @expected_ids = (12345,5,8,3);
+    @things = UR::Context->reload('URT::Thing', 'other ne' => 'blahblah', -order => ['value']);
+    is(scalar(@things), 5, 'Got back 5 things from reload() where other is not blahblah');
+    @expected_ids = (9,12345,5,8,3);
     is_deeply([ map { $_->id } @things],
                   \@expected_ids,
                   'Objects came back in the expected order');
@@ -193,10 +195,9 @@ ok($dbh->do("update thing set other = 'blahblah' where thing_id = 7"),
    'Change thing id 7 "other" property in the database');
 ok($dbh->do("update thing set value = 'A' where thing_id = 7"),
    'Change thing id 7 value to "A" in the database');
-#@things = UR::Context->reload('URT::Thing', 'other ne' => 'blahblah', -order => ['value']);
-@things = UR::Context->reload('URT::Thing', 'other !=' => 'blahblah', -order => ['value']);
-is(scalar(@things), 4, 'Got back 3 things from reload() where other is not blahblah');
-@expected_ids = (12345,5,8,3);
+@things = UR::Context->reload('URT::Thing', 'other ne' => 'blahblah', -order => ['value']);
+is(scalar(@things), 5, 'Got back 5 things from reload() where other is not blahblah');
+@expected_ids = (9,12345,5,8,3);
 is_deeply([ map { $_->id } @things],
               \@expected_ids,
               'Objects came back in the expected order');
