@@ -39,7 +39,6 @@ sub comparison_operator {
 }
 
 sub sub_group {
-    $DB::single = 1;
     my $self = shift;
     my $spec = $self->property_name;
     if ($spec =~ /-/) {

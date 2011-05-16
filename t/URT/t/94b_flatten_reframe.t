@@ -214,7 +214,15 @@ my $bx6 = URT::Person->define_boolexpr(
 my $bx6f = $bx6->flatten;
 
 $DB::single = 1;
-$ENV{UR_DBI_MONITOR_SQL} = 1;
+#$ENV{UR_DBI_MONITOR_SQL} = 1;
 my @p6f = URT::Person->get($bx6f);
 my @p6 = URT::Person->get($bx6);
 is("@p6f", "@p6", "got the same objects back after flattening around an optional relationship");
+
+my @p6b = URT::Person->get($bx6f);
+is("@p6", "@p6b", "a repeate of the original query gets the same answer from the context");
+
+my @p6fb = URT::Person->get($bx6f);
+is("@p6f", "@p6fb", "a repeate of the flattened query gets the same answer from the context");
+
+

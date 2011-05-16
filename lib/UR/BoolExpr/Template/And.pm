@@ -405,7 +405,6 @@ sub evaluate_subject_and_values {
             for (my $n = 0; $n < @underlying; $n++) {
                 my $underlying = $underlying[$n];
                 my $sub_group = $underlying->sub_group;
-                print "sub group $sub_group for " . Data::Dumper::Dumper($underlying);
                 if ($sub_group) {
                     if (substr($sub_group,-1) ne '?') {
                         # control restruct the subject based on the sub-group properties
@@ -424,15 +423,19 @@ sub evaluate_subject_and_values {
                 }
             }
 
-            { 
+            my $x = { 
                 primary => \@primary, 
                 sub_group_filters => \%sub_group_filters,
                 sub_group_sub_filters => \%sub_group_sub_filters,
             };
+            print Data::Dumper::Dumper("FOR $self: ", $x);
+            $x;
         };
 
         my ($primary,$sub_group_filters,$sub_group_sub_filters) 
             = @$filter_breakdown{"primary","sub_group_filters","sub_group_sub_filters"};
+
+
 
         # check the ungrouped comparisons first since they are simpler
         for (my $n = 0; $n < @$primary; $n+=2) {
@@ -450,7 +453,7 @@ sub evaluate_subject_and_values {
             for my $sub_group (keys %$sub_group_filters) {
                 my $filters = $sub_group_filters->{$sub_group};
                 my $sub_filters = $sub_group_sub_filters->{$sub_group};
-                print "$sub_group: " . Data::Dumper::Dumper($filters, $sub_filters);
+                print "FILTERING $sub_group: " . Data::Dumper::Dumper($filters, $sub_filters);
             }
         }
     }
