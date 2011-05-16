@@ -29,20 +29,28 @@ use UR::BoolExpr::Template::PropertyComparison::LessThan;
 use UR::BoolExpr::Template::PropertyComparison::In;
 use UR::BoolExpr::Template::PropertyComparison::Like;
 
-sub property_spec {
+sub property_name {
     (split(' ',$_[0]->logic_detail))[0]
 }
 
-    sub property_name {
-        (split('-',$_[0]->property_spec))[0]
-    }
-
-    sub sub_group {
-        (split('-',$_[0]->property_spec))[1]
-    }
 
 sub comparison_operator {
     (split(' ',$_[0]->logic_detail))[1]
+}
+
+sub sub_group {
+    $DB::single = 1;
+    my $self = shift;
+    my $spec = $self->property_name;
+    if ($spec =~ /-/) {
+        $DB::single = 1;
+    }
+    if ($spec =~ /^(.*)+\-(\w+)(\?|)(\..+|)/) {
+        return $2 . $3; 
+    }
+    else {
+        return '';
+    }
 }
 
 sub get_underlying_rules_for_values {

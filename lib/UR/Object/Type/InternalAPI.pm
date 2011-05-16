@@ -73,6 +73,11 @@ sub property_meta_for_name {
         return $pmeta[-1];
     }
 
+    my $pos = index($property_name,'-'); 
+    if ($pos != -1) {
+        $property_name = substr($property_name,0,$pos);
+    }
+
     if (exists($self->{'_property_meta_for_name'}) and $self->{'_property_meta_for_name'}->{$property_name}) {
        return $self->{'_property_meta_for_name'}->{$property_name};
     }

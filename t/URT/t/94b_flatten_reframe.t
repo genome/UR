@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 19;
+use Test::More tests=> 20;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -213,7 +213,8 @@ my $bx6 = URT::Person->define_boolexpr(
 );
 my $bx6f = $bx6->flatten;
 
-#$ENV{UR_DBI_MONITOR_SQL} = 1;
-#my @p6f = URT::Person->get($bx6f);
-#my @p6 = URT::Person->get($bx6);
-#is("@p6f", "@p6", "got the same objects back after flattening around an optional relationship");
+$DB::single = 1;
+$ENV{UR_DBI_MONITOR_SQL} = 1;
+my @p6f = URT::Person->get($bx6f);
+my @p6 = URT::Person->get($bx6);
+is("@p6f", "@p6", "got the same objects back after flattening around an optional relationship");

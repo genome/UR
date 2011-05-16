@@ -210,8 +210,7 @@ sub _init_rdbms {
         while (my $property_name = shift @properties_involved) {
             my (@pmeta) = $class_meta->property_meta_for_name($property_name);
             unless (@pmeta) {
-                push @errors, "No value position found in rule template for filter property $property_name?!"
-                    . Data::Dumper::Dumper($rule_template);
+                push @errors, "No property meta found for: $property_name on class " . $class_meta->id;
                 next;
             }
             
@@ -272,7 +271,7 @@ sub _init_rdbms {
 
         if (@errors) { 
             my $class_name = $class_meta->class_name;
-            $ds->error_message("Unknown param(s) (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
+            $ds->error_message("ERRORS PROCESSING PARAMTERS: (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
             print Data::Dumper::Dumper($rule_template);
             Carp::confess();
         }
