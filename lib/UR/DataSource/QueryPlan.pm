@@ -185,7 +185,9 @@ sub _init_rdbms {
     }
 
     my ($first_table_name, @sql_joins) =  _resolve_db_joins_for_inheritance($class_meta);
-   
+  
+    my @obj_joins;
+
     my @sql_filters; 
     my @delegated_properties;
     my $needs_further_boolexpr_evaluation_after_loading;
@@ -281,7 +283,10 @@ sub _init_rdbms {
     my $alias_num = 0;
     
     my %alias_sql_join;
+    my %alias_obj_join;
+
     my %joins_done;
+    
 
     # FIXME - this needs to be broken out into delegated-property-join-resolver
     # and inheritance-join-resolver methods that can be called recursively.
@@ -305,11 +310,11 @@ sub _init_rdbms {
 
         my $alias_for_property_value;
         my $last_class_object_excluding_inherited_joins;
-        my $join_aliases_for_this_object;
+        my %join_alias_for_table_for_this_delgated_property;
         my @source_table_and_column_names;
 
         my $flattened_value = $class_meta->_flatten_property_name($delegated_property);
-
+        
         # one iteration per table between the start table and target
         while (my $object_join = shift @joins) { 
             $object_num++;
@@ -319,7 +324,6 @@ sub _init_rdbms {
             # or per case of a join having additional filtering
             my $current_inheritance_depth_for_this_target_join = 0;
             while (my $join = shift @joins_for_object) { 
-                
                 $current_inheritance_depth_for_this_target_join++;
 
                 my $source_class_name = $join->{source_class};
@@ -337,8 +341,9 @@ sub _init_rdbms {
                 # This will get filled in during the first pass, and every time after we've successfully
                 # performed a join - ie. that the delegated property points directly to a class/property
                 # that is a real table/column, and not a tableless class or another delegated property
+                my @source_property_names;
                 unless (@source_table_and_column_names) {
-                    my @source_property_names = @{ $join->{source_property_names} };
+                    @source_property_names = @{ $join->{source_property_names} };
 
                     @source_table_and_column_names =
                         map {
@@ -433,7 +438,8 @@ sub _init_rdbms {
                     $alias .= '_' . $alias_num; 
 
                     if ($foreign_class_object->table_name) {
-                        my @extra_filters;
+                        my @extra_db_filters;
+                        my @extra_obj_filters;
 
                         # TODO: when "flatten" correctly feeds the "ON" clause we can remove this
                         # This will crash if the "where" happens to use indirect things 
@@ -449,17 +455,17 @@ sub _init_rdbms {
                                 }
                                 my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
                                 my $value = $where->[$n+1];
-                                push @extra_filters, $column => { value => $value, ($op ? (operator => $op) : ()) };
+                                push @extra_db_filters, $column => { value => $value, ($op ? (operator => $op) : ()) };
+                                push @extra_obj_filters, $name  => { value => $value, ($op ? (operator => $op) : ()) };
                             }
                         }
 
                         push @sql_joins,
-                            "$foreign_table_name $alias" =>
-                            {
+                            "$foreign_table_name $alias" => {
                                 (
                                     map {
                                         $foreign_column_names[$_] => { 
-                                            link_table_name     => $join_aliases_for_this_object->{$source_table_and_column_names[$_][0]} # join alias
+                                            link_table_name     => $join_alias_for_table_for_this_delgated_property{$source_table_and_column_names[$_][0]} # join alias
                                                                    || $source_table_and_column_names[$_][2]  # SQL inline view alias
                                                                    || $source_table_and_column_names[$_][0], # table_name
                                             link_column_name    => $source_table_and_column_names[$_][1] 
@@ -467,9 +473,29 @@ sub _init_rdbms {
                                     }
                                     (0..$#foreign_column_names)
                                 ),
-                                @extra_filters,
+                                @extra_db_filters,
                             };
+                        
                         $alias_sql_join{$alias} = $sql_joins[-1];
+
+                        push @obj_joins,  
+                            "$alias" => {
+                                (
+                                    map {
+                                        $foreign_property_names[$_] => {
+                                            link_class_name     => $source_class_name,
+                                            link_alias          => $join_alias_for_table_for_this_delgated_property{$source_table_and_column_names[$_][0]} # join alias
+                                                                   || $source_table_and_column_names[$_][2]  # SQL inline view alias
+                                                                   || $source_table_and_column_names[$_][0], # table_name
+                                            link_property_name    => $source_property_names[$_] 
+                                        }
+                                    }
+                                    (0..$#foreign_property_names)
+                                ),
+                                @extra_obj_filters,
+                            };
+
+                        $alias_obj_join{$alias} = $obj_joins[-1];
 
                         # Add all of the columns in the join table to the return list
                         # Note that we increment the object numbers.
@@ -764,7 +790,7 @@ sub _init_rdbms {
     # this is only used when making a real instance object instead of a "set"
     my $per_object_in_resultset_loading_detail;
     unless ($group_by) {
-        $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_table_properties);
+        $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_table_properties, \@obj_joins);
     }
 
     if ($group_by) {
@@ -1101,11 +1127,9 @@ sub _init_core {
 
     my $last_class_name = $class_name;
     my $last_class_object = $class_meta;        
-#    my $last_table_alias = $last_class_object->table_name; 
     my $alias_num = 1;
 
     my %joins_done;
-    my @joins_done;
     my $joins_across_data_sources;
 
     DELEGATED_PROPERTY:
@@ -1240,7 +1264,6 @@ sub _init_core {
                     UR::Object::Property->get( type_name => $foreign_class_object->type_name );
               
                 $joins_done{$join->{id}} = $alias;
-                push @joins_done, $join;
                 
             }
             
@@ -1248,8 +1271,6 @@ sub _init_core {
             $last_class_name = $foreign_class_name;
             $last_class_object = $foreign_class_object;
             $last_alias_for_this_chain = $alias;
-            #$last_table_alias = $alias;
-            #$final_table_name_with_alias = "$foreign_table_name $alias";
             
         } # next join
 
