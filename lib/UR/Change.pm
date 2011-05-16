@@ -133,6 +133,8 @@ sub undo {
         }
     }
 
+    $changed_obj->{'_change_count'} = 0 if ($changed_obj->{'_change_count'} and $changed_obj->{'_change_count'} < 0);
+
     return 1;
 }
 
