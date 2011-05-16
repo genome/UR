@@ -34,7 +34,7 @@ ok(UR::Object::Type->define(
         is_cool             => { is => 'Boolean' },
         age                 => { is => 'Integer' },
         cars                => { is => 'URT::Car', reverse_as => 'owner', is_many => 1, is_optional => 1 },
-        primary_car         => { is => 'URT::Car', via => 'cars', to => '__self__', where => ['is_primary true' => 1] },     # direct where
+        primary_car         => { is => 'URT::Car', via => 'cars', to => '__self__', where => ['is_primary true' => 1], is_optional => 1 },     # direct where
         big_cars            => { is => 'URT::Car', via => 'cars', to => '__self__', where => [ 'engine_size >=' => 400 ], }, # indirect where
         car_colors          => { via => 'cars', to => 'color', is_many => 1 },
         primary_car_color   => { via => 'primary_car', to => 'color' },
@@ -121,7 +121,8 @@ my $bx4f = $bx4i->flatten;
 print "$bx4i\n$bx4f\n";
 
 my @p4f = URT::Person->get($bx4f);
-ok("@p4f", "flat query works");
+ok("@p4f", "flat query $bx4f works");
+
 
 __END__
 # we must flatten before query for this to work, and currently constant_values need support

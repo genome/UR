@@ -22,6 +22,8 @@ class UR::Object::Join {
 
         is_many                 => { is => 'Boolean' },
 
+        sub_group_label         => { is => 'Text' },
+
         where                   => { is => 'Text' },
     ],
     doc => "join metadata used internally by the ::QueryBuilder"
@@ -136,7 +138,7 @@ sub _resolve_via_to {
             $id .= ' ' . $where_rule->id;
             
             my %join_data = %$join;
-            push @joins, $class->_get_or_define(%join_data, id => $id, where => $where);
+            push @joins, $class->_get_or_define(%join_data, id => $id, where => $where, sub_group_label => $pmeta->property_name);
         }
     }
     else {
@@ -166,8 +168,8 @@ sub _resolve_via_to {
 }
 
 # code below uses these to convert objects using hash slices
-my @old = qw/source_class source_property_names foreign_class foreign_property_names source_name_for_foreign foreign_name_for_source is_optional is_many/;
-my @new = qw/foreign_class foreign_property_names source_class source_property_names foreign_name_for_source source_name_for_foreign is_optional is_many/;
+my @old = qw/source_class source_property_names foreign_class foreign_property_names source_name_for_foreign foreign_name_for_source is_optional is_many sub_group_label/;
+my @new = qw/foreign_class foreign_property_names source_class source_property_names foreign_name_for_source source_name_for_foreign is_optional is_many sub_group_label/;
 
 sub _resolve_forward {
     my ($class, $pmeta) = @_;
@@ -243,6 +245,8 @@ sub _resolve_forward {
     # this records what to reverse in this case.
     $foreign_name_for_source ||= '<' . $source_class . '::' . $source_name_for_foreign;
 
+    $DB::single = 1 if $where;
+
     push @joins, $class->_get_or_define( 
                     id => $id,
 
@@ -310,12 +314,15 @@ sub _resolve_reverse {
         if ($prev_where) {
             my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
             $id .= ' ' . $where_rule->id;
+
         }
         $_->{id} = $id; 
 
         $_->{is_optional} = ($pmeta->is_optional || $pmeta->is_many);
 
         $_->{is_many} = $pmeta->{is_many};
+
+        $_->{sub_group_label} = $pmeta->property_name;
 
         $prev_where = $next_where;
     }

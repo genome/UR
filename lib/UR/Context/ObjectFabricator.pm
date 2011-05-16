@@ -449,8 +449,8 @@ sub create_for_loading_template {
                 # Signal that the object has been loaded
                 # NOTE: until this is done indexes cannot be used to look-up an object
                 $pending_db_object->__signal_change__('load');
-
-            } else {
+            } 
+            else {
                 # we did this above, but only checked the base class
                 my $subclass_ghost_class = $subclass_name->ghost_class;
                 if ($UR::Context::all_objects_loaded->{$subclass_ghost_class}{$pending_db_object_id}) {
@@ -598,7 +598,7 @@ sub create_for_loading_template {
 
         # If the rule had hints, mark that we loaded those things too, in all_params_loaded
         if (keys(%hints_or_delegation)) {
-            #$DB::single=1;
+            $DB::single=1;
             foreach my $property ( keys(%hints_or_delegation) ) {
                 foreach my $hint_data ( @{ $hints_or_delegation{$property}} ) {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
@@ -607,6 +607,26 @@ sub create_for_loading_template {
                     $UR::Context::all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id} = undef;
                     $local_all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id}++;
                  }
+            }
+        }
+
+        # note all of the joins which follow this object as having been "done"
+        if (my $next_joins = $loading_template->{next_joins}) {
+            if (0) {
+                # disabled until a fully reframed query is the basis for these joins
+                for my $next_join (@$next_joins) {
+                    my ($bxt_id, $values, $value_position_property_name) = @$next_join;
+                    for (my $n = 0; $n < @$value_position_property_name; $n+=2) {
+                        my $pos = $value_position_property_name->[$n];
+                        my $name = $value_position_property_name->[$n+1];
+                        $values->[$pos] = $pending_db_object->$name;
+                    }   
+                    my $bxt = UR::BoolExpr::Template::And->get($bxt_id);
+                    my $bx = $bxt->get_rule_for_values(@$values);
+                    $UR::Context::all_params_loaded->{$bxt->{id}}->{$bx->{id}} = undef;
+                    $local_all_params_loaded->{$bxt->{id}}->{$bx->{id}}++;
+                    print "remembering $bx\n";
+                }
             }
         }
 
