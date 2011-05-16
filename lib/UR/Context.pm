@@ -2538,6 +2538,13 @@ sub __merge_db_data_with_existing_object {
     %$expected_db_data = (%$expected_db_data, %$pending_db_object_data);
 
     if (! $different) {
+        # FIXME HACK!  This is to handle the case when you get an object, start a software transaction,
+        # change something in the database for that object, reload the object (so __merge updates the value 
+        # found in the DB), then rollback the transaction.  The act of updating the value here in __merge makes
+        # a change record that gets undone when the transaction is rolled back.  After the rollback, the current
+        # value goes back to the originally loaded value, db_committed has the newly clhanged DB value, but
+        # _change_count is 0 turning off change tracking makes it so this internal change isn't undone by rollback
+        local $UR::Context::Transaction::log_all_changes = 0;  # HACK!
         # The object has no local changes.  Go ahead and update the current value, too
         foreach my $property ( @$property_names ) {
             no warnings 'uninitialized';
