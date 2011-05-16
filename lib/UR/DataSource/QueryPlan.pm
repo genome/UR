@@ -198,7 +198,6 @@ sub _init_rdbms {
     my @sql_filters; 
     my @delegated_properties;    
 
-    $DB::single = 1;
     do { 
         
         my %filters =     
