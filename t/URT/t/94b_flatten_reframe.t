@@ -213,6 +213,7 @@ my $bx6 = URT::Person->define_boolexpr(
 );
 my $bx6f = $bx6->flatten;
 
+__END__
 $DB::single = 1;
 #$ENV{UR_DBI_MONITOR_SQL} = 1;
 my @p6f = URT::Person->get($bx6f);
