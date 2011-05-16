@@ -181,7 +181,6 @@ print "*** cleaning up object id ".$problem_obj->id." after the fact\n";
 print "cached obj id ".(defined($next_obj_current_context) ? $next_obj_current_context->id : "undef");
 print "  DB obj id ".(defined($next_obj_underlying_context) ? $next_obj_underlying_context->id : "undef") ."\n";
 
-
             my $next_obj_underlying_context_id;
             $next_obj_underlying_context_id = $next_obj_underlying_context->id if ($next_obj_underlying_context);
             my $next_obj_current_context_id;
@@ -560,7 +559,6 @@ sub _remove_object_from_other_loading_iterators {
     my($self, $disappearing_object, $iterator_to_skip) = @_;
 
 #print "In _remove_object_from_other_loading_iterators, count is $iterator_count\n";
-$DB::single=1;
     ITERATOR:
     foreach my $iter_name ( keys %all_loading_iterators ) {
         next if(! defined $iterator_to_skip or ($iter_name eq $iterator_to_skip));  # That's me!  Don't remove into our own @$cached this way
