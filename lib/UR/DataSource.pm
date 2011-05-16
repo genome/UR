@@ -214,8 +214,12 @@ sub _generate_loading_templates_arrayref {
             my $foreign_alias = shift @obj_joins;
             my $data = shift @obj_joins;
             for my $foreign_property_name (sort keys %$data) {
+                next if $foreign_property_name eq '-is_required';
                 my $source_alias = $data->{$foreign_property_name}{'link_alias'};
-                
+                if (not defined $source_alias or not defined $foreign_alias) {
+                    $DB::single = 1;
+                    print Data::Dumper::Dumper($foreign_alias, $data);
+                }
                 my $detail = $obj_joins_by_source_alias{$source_alias}{$foreign_alias} ||= {};
                 my $source_property_name = $data->{$foreign_property_name}{'link_property_name'};
                 if ($source_property_name) {
@@ -247,6 +251,7 @@ sub _generate_loading_templates_arrayref {
         unless (defined $object_num) {
             die "No object num for loading template data?!";
         }
+        #Carp::confess() unless $table_alias;
         my $template = $templates[$object_num];
         unless ($template) {
             $template = {
