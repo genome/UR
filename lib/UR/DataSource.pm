@@ -214,8 +214,10 @@ sub _generate_loading_templates_arrayref {
             my $foreign_alias = shift @obj_joins;
             my $data = shift @obj_joins;
             for my $foreign_property_name (sort keys %$data) {
-                my $source_alias = $data->{$foreign_property_name}{'link_alias'};
-                
+                next if $foreign_property_name eq '-is_required';
+                my $source_alias = eval { $data->{$foreign_property_name}{'link_alias'} };
+                $DB::single = 1 if $@;
+
                 my $detail = $obj_joins_by_source_alias{$source_alias}{$foreign_alias} ||= {};
                 my $source_property_name = $data->{$foreign_property_name}{'link_property_name'};
                 if ($source_property_name) {
