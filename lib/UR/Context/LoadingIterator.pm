@@ -259,10 +259,7 @@ print "cached object sorts first\n";
                 # In addition, the change could have been to an order-by property, one of the
                 # properties in the BoolExpr, or both
 
-                if ($context->object_exists_in_underlying_context($next_obj_current_context)
-                    #and
-                    #!$next_obj_current_context->{'__defined'}
-                ) {
+                if ($context->object_exists_in_underlying_context($next_obj_current_context)) {
 print "    cached object exists in underlying context\n";
                     if ($next_obj_current_context->__changes__) {
 print "    cached object has changes\n";
