@@ -199,19 +199,59 @@ sub _generate_loading_templates_arrayref {
     # table.
     
     my $class = shift;
-    my $sql_cols = shift;
+    my $db_cols = shift;
+    my $obj_joins = shift;
+    my $bxt = shift;
 
     use strict;
     use warnings;
 
+    my %obj_joins_by_source_alias;
+    if ($obj_joins) {
+        $DB::single = 1;
+        my @obj_joins = @$obj_joins;
+        while (@obj_joins) {
+            my $foreign_alias = shift @obj_joins;
+            my $data = shift @obj_joins;
+            for my $foreign_property_name (sort keys %$data) {
+                next if $foreign_property_name eq '-is_required';
+                my $source_alias = $data->{$foreign_property_name}{'link_alias'};
+                if (not defined $source_alias or not defined $foreign_alias) {
+                    $DB::single = 1;
+                    print Data::Dumper::Dumper($foreign_alias, $data);
+                }
+                my $detail = $obj_joins_by_source_alias{$source_alias}{$foreign_alias} ||= {};
+                my $source_property_name = $data->{$foreign_property_name}{'link_property_name'};
+                if ($source_property_name) {
+                    my $links = $detail->{links} ||= [];
+                    push @$links, $foreign_property_name, $source_property_name;
+                }
+
+                if (exists $data->{value}) {
+                    my $operator = $data->{operator};
+                    my $value = $data->{value};
+                    my $filter = $detail->{filter} ||= [];
+                    my $key = $foreign_property_name;
+                    $key .= ' ' . $operator if $operator;
+                    push @$filter, $key, $value;
+                }
+            }
+        }
+    }
+    else {
+        #Carp::cluck("no obj joins???");
+    }
+
     my %templates;
     my $pos = 0;
     my @templates;
-    for my $col_data (@$sql_cols) {
+    my %alias_object_num;
+    for my $col_data (@$db_cols) {
         my ($class_obj, $prop, $table_alias, $object_num, $class_name) = @$col_data;
         unless (defined $object_num) {
             die "No object num for loading template data?!";
         }
+        #Carp::confess() unless $table_alias;
         my $template = $templates[$object_num];
         unless ($template) {
             $template = {
@@ -226,6 +266,7 @@ sub _generate_loading_templates_arrayref {
                 id_resolver => undef, # subref
             };
             $templates[$object_num] = $template;
+            $alias_object_num{$table_alias} = $object_num;
         }
         push @{ $template->{property_names} }, $prop->property_name;
         push @{ $template->{column_positions} }, $pos;
@@ -274,6 +315,44 @@ sub _generate_loading_templates_arrayref {
                         . $template->{data_class_name} . ".  It's ID properties are (" . join(', ', @id_property_names)
                         . ") which do not appear in the class' property list (" . join(', ', @{$template->{'property_names'}}).")");
         }             
+
+        my $source_alias = $template->{table_alias};
+        if (0 and my $join_data_for_source_table = $obj_joins_by_source_alias{$source_alias}) {
+            # there are joins which come from this entity to other entities
+            # as these entities are loaded, remember the individual queries covered by this object returning
+            # NOTE: when we join a <> b, we remember that we've loaded all of the b for a when _a_ loads, not b,
+            # since it's possible that there ar zero of b, and we don't want to perform the query for b 
+            my $source_object_num = $template->{object_num};
+            my $source_class_name = $template->{data_class_name};
+            my $next_joins = $template->{next_joins} ||= [];
+            for my $foreign_alias (keys %$join_data_for_source_table) {
+                my $foreign_object_num = $alias_object_num{$foreign_alias};
+                Carp::confess("no alias for $foreign_alias?") if not defined $foreign_object_num;
+                my $foreign_template = $templates[$foreign_object_num];
+                my $foreign_class_name = $foreign_template->{data_class_name};
+
+                my $join_data = $join_data_for_source_table->{$foreign_alias};
+                my %links = map { $_ ? @$_ : () } $join_data->{links};
+                my %filters = map { $_ ? @$_ : () } $join_data->{filters};
+                
+                my @keys = sort (keys %links, keys %filters);
+                my @value_position_source_property;
+                for (my $n = 0; $n < @keys; $n++) {
+                    my $key = $keys[$n];
+                    if ($links{$key} and $filters{$key}) {
+                        Carp::confess("unexpected same key $key in filters and joins");
+                    }
+                    my $source_property_name = $links{$key};
+                    next unless $source_property_name;
+                    push @value_position_source_property, $n, $source_property_name; 
+                }
+                my $bx = $foreign_class_name->define_boolexpr(map { $_ => $filters{$_} } @keys);
+                my ($bxt, @values) = $bx->template_and_values();
+                push @$next_joins, [ $bxt->id, \@values, \@value_position_source_property ];
+            }
+            print Data::Dumper::Dumper($next_joins);
+            $DB::single = 1;
+        }
     }        
 
     return \@templates;        

@@ -55,17 +55,27 @@ sub property_meta_for_name {
     if (index($property_name,'.') != -1) {
         my @chain = split(/\./,$property_name);
         my $last_class_meta = $self;
+        my $last_class_name = $self->id;
         my @pmeta;
-        for my $link (@chain) {
+        for my $full_link (@chain) {
+            my ($link) = ($full_link =~ /^([^\-\?]+)/);
             my $property_meta = $last_class_meta->property_meta_for_name($link);
             push @pmeta, $property_meta;
             last if $link eq $chain[-1];
-            my @joins = $property_meta->_resolve_join_chain();
-            my $last_class_name = $joins[-1]{foreign_class};
+            my @joins = UR::Object::Join->resolve_chain($last_class_name, $link);
+            unless (@joins) {
+                Carp::confess("No joins for $full_link?");
+            }
+            $last_class_name = $joins[-1]{foreign_class};
             $last_class_meta = $last_class_name->__meta__;
         }
         return @pmeta if wantarray;
         return $pmeta[-1];
+    }
+
+    my $pos = index($property_name,'-'); 
+    if ($pos != -1) {
+        $property_name = substr($property_name,0,$pos);
     }
 
     if (exists($self->{'_property_meta_for_name'}) and $self->{'_property_meta_for_name'}->{$property_name}) {
@@ -88,31 +98,34 @@ sub property_meta_for_name {
 sub _flatten_property_name {
     my ($self, $name) = @_;
     
-    my @meta = $self->property_meta_for_name($name);
-    my @joins = map { $_->_resolve_join_chain() } @meta;
-    
     my $flattened_name = '';
     my @add_keys;
     my @add_values;
-    for my $join (@joins) {
-        if ($flattened_name) {
-            $flattened_name .= '.'; 
-        }
-        $flattened_name .= $join->{source_name_for_foreign};
-        if (my $where = $join->{where}) {
-            my $join_class = $join->{foreign_class};
-            my $bx2 = UR::BoolExpr->resolve($join_class,@$where);
-            my $bx2_flat = $bx2->flatten(); # recurses through this
-            my ($bx2_flat_template, @values) = $bx2_flat->template_and_values();
-            my @keys = @{ $bx2_flat_template->{_keys} };
-            for my $key (@keys) {
-                next if substr($key,0,1) eq '-';
-                my $flattened_name = $flattened_name . '.' . $key;
-                push @add_keys, $flattened_name;
-                push @add_values, shift @values;
+
+    my @meta = $self->property_meta_for_name($name);
+    for my $meta (@meta) {
+        my @joins = $meta->_resolve_join_chain();
+        for my $join (@joins) {
+            if ($flattened_name) {
+                $flattened_name .= '.'; 
             }
-            if (@values) {
-                Carp:confess("Unexpected mismatch in count of keys and values!");
+            $flattened_name .= $join->{source_name_for_foreign};
+            if (my $where = $join->{where}) {
+                $flattened_name .= '-' . $join->sub_group_label; 
+                my $join_class = $join->{foreign_class};
+                my $bx2 = UR::BoolExpr->resolve($join_class,@$where);
+                my $bx2_flat = $bx2->flatten(); # recurses through this
+                my ($bx2_flat_template, @values) = $bx2_flat->template_and_values();
+                my @keys = @{ $bx2_flat_template->{_keys} };
+                for my $key (@keys) {
+                    next if substr($key,0,1) eq '-';
+                    my $full_key = $flattened_name . '?.' . $key;
+                    push @add_keys, $full_key;
+                    push @add_values, shift @values;
+                }
+                if (@values) {
+                    Carp:confess("Unexpected mismatch in count of keys and values!");
+                }
             }
         }
     }

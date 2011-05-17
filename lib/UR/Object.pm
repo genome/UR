@@ -74,7 +74,9 @@ sub __get_attr__ {
     else {
         my @links = split(/\./,$property_name);
         @property_values = ($self);
-        for my $link (@links) {
+        for my $full_link (@links) {
+            my $pos = index($full_link,'-');
+            my $link = ($pos == -1 ? $full_link : substr($full_link,0,$pos) );
             @property_values = map { defined($_) ? $_->$link : undef } @property_values;
         }
     }

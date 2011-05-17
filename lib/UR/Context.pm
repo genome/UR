@@ -2098,9 +2098,11 @@ sub _create_import_iterator_for_underlying_context {
     my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
     
     my %subordinate_iterator_for_class;
-    
+   
+    # TODO: move the creation of the fabricators into the query plan object initializer.
     # instead of making just one import iterator, we make one per loading template
     # we then have our primary iterator use these to fabricate objects for each db row
+    $DB::single = 1;
     my @object_fabricators;
     if ($group_by) {
         # returning sets for each sub-group instead of instance objects...

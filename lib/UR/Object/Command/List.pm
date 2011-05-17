@@ -78,16 +78,16 @@ sub create {
     ) 
         and return unless grep { $self->style eq $_ } valid_styles();
 
-    my $show = $self->show;
-    my @show = split(',',$show);
-    my $subject_class_name = $self->subject_class_name;
-    foreach my $item ( @show ) {
-        next unless $self->_show_item_is_property_name($item);
-        unless ($subject_class_name->can($item)) {
-            $self->error_message("Parameter $item in the 'show' list is not supported by subject class $subject_class_name");
-            return;
-        }
-    }
+#    my $show = $self->show;
+#    my @show = split(',',$show);
+#    my $subject_class_name = $self->subject_class_name;
+#    foreach my $item ( @show ) {
+#        next unless $self->_show_item_is_property_name($item);
+#        unless ($subject_class_name->can($item)) {
+#            $self->error_message("Parameter $item in the 'show' list is not supported by subject class $subject_class_name");
+#            return;
+#        }
+#    }
 
     unless ( ref $self->output ){
         my $ofh = IO::File->new("> ".$self->output);
@@ -120,7 +120,7 @@ sub _resolve_boolexpr {
 sub _show_item_is_property_name {
     my($self, $item) = @_;
 
-    return $item =~ m/^\w+$/;
+    return $item =~ m/^[\w\.]+$/;
 }
 
 sub execute {  

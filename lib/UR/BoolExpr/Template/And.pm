@@ -45,47 +45,97 @@ sub _reframe_bx {
 
 sub _flatten {
     my $self = $_[0];
-    
+     
     if ($self->{flatten}) {
         return @{ $self->{flatten} }
     }
 
-    my @old_property_names = $self->_property_names;
+    my @old_keys = @{ $self->_keys };
     my $old_property_meta_hash = $self->_property_meta_hash;
 
+    my $class_meta = $self->subject_class_name->__meta__;
+    
     my @new_keys;
     my @extra_keys;
     my @extra_values;
     
-    my $found_unflattened_params = 0;
-    while (my $name = shift @old_property_names) { 
-        my $mdata = $old_property_meta_hash->{$name};
-        my ($value_position, $operator) = @$mdata{'value_position','operator'};
-        
-        my $class_meta = $self->subject_class_name->__meta__;
-        my ($flat, $add_keys, $add_values) = $class_meta->_flatten_property_name($name); 
-        
-        $found_unflattened_params = 1 if $flat ne $name or @$add_keys or @$add_values;
+    my $old_constant_values;
+    my @new_constant_values;
 
-        $flat .= ' ' . $operator if $operator and $operator ne '=';
-        push @new_keys, $flat;
-        
-        push @extra_keys, @$add_keys;
-        push @extra_values, @$add_values;
+    my $found_unflattened_params = 0;
+    while (my $key = shift @old_keys) {
+        my $name = $key;
+        $name =~ s/ .*//;
+        if (substr($name,0,1) ne '-') {
+            my $mdata = $old_property_meta_hash->{$name};
+            my ($value_position, $operator) = @$mdata{'value_position','operator'};
+            
+            my ($flat, $add_keys, $add_values) = $class_meta->_flatten_property_name($name); 
+            $found_unflattened_params = 1 if $flat ne $name or @$add_keys or @$add_values;
+
+            $flat .= ' ' . $operator if $operator and $operator ne '=';
+            push @new_keys, $flat;
+            
+            push @extra_keys, @$add_keys;
+            push @extra_values, @$add_values;
+        }
+        else {
+            push @new_keys, $key;
+            $old_constant_values ||= [ @{ $self->_constant_values } ];
+            my $old_value = shift @$old_constant_values;
+            my $new_value = [];
+            for my $part (@$old_value) {
+                my ($flat, $add_keys, $add_values) = $class_meta->_flatten_property_name($part); 
+                $found_unflattened_params = 1 if $flat ne $name or @$add_keys or @$add_values;
+                push @$new_value, $flat;
+
+                push @extra_keys, @$add_keys;
+                push @extra_values, @$add_values;
+            }
+            push @new_constant_values, $new_value;
+        }
+    }
+
+    my $constant_values;
+    if ($old_constant_values) {
+        # some -* keys were found above, and we flattened the value internals
+        $constant_values = \@new_constant_values;
+    }
+    else {
+        # no -* keys, just re-use the empty arrayref
+        $constant_values = $self->_constant_values;
     }
 
     if ($found_unflattened_params or @extra_keys) {
-        push @new_keys, @extra_keys;
+        if (@extra_keys) {
+            # there may be duplication between these and the primary joins
+            # or each other
+            my %keys_seen = map { $_ => 1 } @new_keys;
+            my @nodup_extra_keys;
+            my @nodup_extra_values;
+            while (my $extra_key = shift @extra_keys) {
+                my $extra_value = shift @extra_values;
+                unless ($keys_seen{$extra_key}) {
+                    push @nodup_extra_keys, $extra_key;
+                    push @nodup_extra_values, $extra_value;
+                    $keys_seen{$extra_key} = 1;
+                }
+            }
+            push @new_keys, @nodup_extra_keys;
+            @extra_values = @nodup_extra_values
+        }
         my $flat = UR::BoolExpr::Template::And->_fast_construct(
             $self->subject_class_name, 
             \@new_keys, 
-            $self->_constant_values,     
+            $constant_values,     
         );
         $self->{flatten} = [$flat,@extra_values];
         return ($flat, @extra_values);
     }
     else {
+        # everything was already flat, just remember this so you DRY
         $self->{flatten} = [$self];
+        Scalar::Util::weaken($self->{flatten}[0]);
         return $self
     }
 }
@@ -93,7 +143,7 @@ sub _flatten {
 sub _reframe {
     my $self = shift;
     my $in_terms_of_property_name = shift;
-
+    
     # determine the from_class, to_class, and path_back
     my $from_class = $self->subject_class_name;
     my $cmeta = $self->subject_class_name->__meta__;
@@ -102,20 +152,17 @@ sub _reframe {
         Carp::confess("Failed to find property $in_terms_of_property_name on $from_class.  Cannot reframe $self!");  
     }
     my @reframe_path_forward = map { $_->_resolve_join_chain } @pmeta;
-    my $path_back    = join('.', map { $_->{foreign_name_for_source} } reverse @reframe_path_forward);
     my $to_class = $reframe_path_forward[-1]{foreign_class};
 
     # translate all of the old properties to use the path back to the original class
     my ($flat,@extra_values) = $self->_flatten;
-    my @old_property_names = $flat->_property_names;
+    my @old_keys = @{ $flat->_keys };
     my $old_property_meta_hash = $flat->_property_meta_hash;
-    
-    my @new_keys;
-    while (@old_property_names) {
-        my $old_name = shift @old_property_names;
-        if (substr($old_name,0,1) eq '-') {
-            next;
-        }
+
+    my %sub_group_label_used;
+    my $reframer = sub {
+        my $old_name = $_[0];
+        # uses: @reframe_path_forward from above in this closure
 
         # get back to the original object
         my @reframe_path_back = reverse @reframe_path_forward;
@@ -135,8 +182,57 @@ sub _reframe {
             }
             my $last_name_back = $reframe_path_back[-1]{source_name_for_foreign};
             my $first_name_forward = $filter_path_forward[0];
-            if ($last_name_back ne $first_name_forward) {
-                # found a difference
+
+            
+            my $turnaround_match = 0; 
+            if ($last_name_back eq $first_name_forward) {
+                # complete overlap
+                $turnaround_match = 1; # safe
+            }
+            else {
+                # see if stripping off any labels makes them match
+                my $last_name_back_base = $last_name_back;
+                $last_name_back_base =~ s/-.*//;
+
+                my $first_name_forward_base = $first_name_forward;
+                $first_name_forward_base =~ s/-.*//;
+
+                if ($last_name_back_base eq $first_name_forward_base) {
+                    # removing the grouping label causes a match
+                    # possible overlap
+                    for my $pair (
+                        [$first_name_forward_base, $last_name_back],
+                        [$last_name_back_base, $first_name_forward],
+                    ) {
+                        my ($partial, $full) = @$pair;
+                        if (index($full, $partial) == 0) {
+                            #print "$partial is part of $full\n";
+                            if (my $prev_full = $sub_group_label_used{$partial}) {
+                                # we've tracked back through this $partially specified relationship once
+                                # see if we did it the same way
+                                if ($prev_full eq $full) {
+                                    $turnaround_match = 1;
+                                }
+                                else {
+                                    #print "previously used $prev_full for $partial: cannot use $full\n";
+                                    next;
+                                }
+                            }
+                            else {
+                                # this relationship has not been seen
+                                #print "using $full for $partial\n";
+                                $sub_group_label_used{$partial} = $full;
+                                $turnaround_match = 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($turnaround_match == 0) {
+                # found a difference: no shortcut
+                # we have to trek all the way back to the original subject before 
+                # moving forward to this property
                 last;
             }
             else {
@@ -156,15 +252,65 @@ sub _reframe {
         $new_key = join('.', map { $_->{foreign_name_for_source} } @reframe_path_back);
         $new_key = join('.', ($new_key ? $new_key : ()), @filter_path_forward);
 
-        my $mdata = $old_property_meta_hash->{$old_name};
-        my ($value_position, $operator) = @$mdata{'value_position','operator'};
-        $new_key .= ' ' . $operator if $operator and $operator ne '=';
-        push @new_keys, $new_key;
+        return $new_key;
+    };
+
+    
+    # this is only set below if we find any -* keys
+    my $old_constant_values;
+
+    my @new_keys;
+    my @new_constant_values;    
+
+    while (@old_keys) {
+        my $old_key = shift @old_keys;
+
+        if (substr($old_key,0,1) ne '-') {
+            # a regular property
+            my $old_name = $old_key;
+            $old_name =~ s/ .*//;
+            
+            my $mdata = $old_property_meta_hash->{$old_name};
+            my ($value_position, $operator) = @$mdata{'value_position','operator'};
+            
+            my $new_key = $reframer->($old_name);
+
+            $new_key .= ' ' . $operator if $operator and $operator ne '=';
+            push @new_keys, $new_key;
+        }
+        else {
+            # this key is not a property, it's a special key like -order_by or -group_by
+            unless ($old_key eq '-order_by' 
+                    or $old_key eq '-group_by'
+                    or $old_key eq '-hints'
+                    or $old_key eq '-recurse'
+            ) {      
+                Carp::confess("no support yet for $old_key in bx reframe()!");
+            }
+
+            push @new_keys, $old_key;
+
+            unless ($old_constant_values) {
+                $old_constant_values = [ @{ $flat->_constant_values } ];
+            }
+
+            my $old_value = shift @$old_constant_values;
+            my $new_value = [];
+            for my $part (@$old_value) {
+                my $reframed_part = $reframer->($part);
+                push @$new_value, $reframed_part;
+            }
+            push @new_constant_values, $new_value;
+        }
     }
 
-    my $constant_values = $flat->_constant_values;
-    if (@$constant_values) {
-        Carp::confess("re-framing of constant values is incomplete.  fix me");
+
+    my $constant_values;    
+    if (@new_constant_values) {
+        $constant_values = \@new_constant_values;
+    }
+    else {
+        $constant_values = $flat->_constant_values; # re-use empty immutable arrayref
     }
 
     my $reframed = UR::BoolExpr::Template::And->_fast_construct(
@@ -249,10 +395,63 @@ sub evaluate_subject_and_values {
     return unless (ref($subject) && $subject->isa($self->subject_class_name));
 
     if (my @underlying = $self->get_underlying_rule_templates) {
-        while (my $underlying = shift (@underlying)) {
-            my $value = shift @_;
+        
+        # flattening expresions now requires that we re-group them :(
+        # these effectively are subqueries where they occur
+        my $filter_breakdown = $self->{evaluate_subject_and_values} ||= do {
+            my @primary;
+            my %sub_group_filters;
+            my %sub_group_sub_filters;
+            for (my $n = 0; $n < @underlying; $n++) {
+                my $underlying = $underlying[$n];
+                my $sub_group = $underlying->sub_group;
+                if ($sub_group) {
+                    if (substr($sub_group,-1) ne '?') {
+                        # control restruct the subject based on the sub-group properties
+                        my $list = $sub_group_filters{$sub_group} ||= [];
+                        push @$list, $underlying, $n;
+                    }
+                    else {
+                        # control what is IN a sub-group (effectively define it with these)
+                        chop($sub_group);
+                        my $list = $sub_group_sub_filters{$sub_group} ||= [];
+                        push @$list, $underlying, $n;
+                    }
+                }
+                else {
+                    push @primary, $underlying, $n;
+                }
+            }
+
+            { 
+                primary => \@primary, 
+                sub_group_filters => \%sub_group_filters,
+                sub_group_sub_filters => \%sub_group_sub_filters,
+            };
+        };
+
+        my ($primary,$sub_group_filters,$sub_group_sub_filters) 
+            = @$filter_breakdown{"primary","sub_group_filters","sub_group_sub_filters"};
+
+
+
+        # check the ungrouped comparisons first since they are simpler
+        for (my $n = 0; $n < @$primary; $n+=2) {
+            my $underlying = $primary->[$n];
+            my $pos = $primary->[$n+1];
+            my $value = $_[$pos];
             unless ($underlying->evaluate_subject_and_values($subject, $value)) {
                 return;
+            }
+        }
+
+        # only check the complicated rules if none of the above failed
+        if (%$sub_group_filters) {
+            $DB::single = 1;
+            for my $sub_group (keys %$sub_group_filters) {
+                my $filters = $sub_group_filters->{$sub_group};
+                my $sub_filters = $sub_group_sub_filters->{$sub_group};
+                print "FILTERING $sub_group: " . Data::Dumper::Dumper($filters, $sub_filters);
             }
         }
     }

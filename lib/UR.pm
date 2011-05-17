@@ -148,7 +148,7 @@ UR::Object::Type->define(
     is_abstract => 1,
     composite_id_separator => "\t",
     id_by => [
-        id  => { is => 'UR::Value' }
+        id  => { is => 'Scalar' }
     ]
 );
 
@@ -437,6 +437,7 @@ do {
 require UR::ModuleLoader;   # signs us up with Class::Autouse
 require UR::Value::Iterator;
 require UR::Object::View;
+require UR::Object::Join;
 
 sub main::ur_core {
     print STDERR "Dumping rules and templates to ./ur_core.stor...\n";
