@@ -445,7 +445,6 @@ sub _init_rdbms {
                         # This will crash if the "where" happens to use indirect things 
                         my $where = $join->{where};
                         if ($where) {
-                            $DB::single = 1;
                             for (my $n = 0; $n < @$where; $n += 2) {
                                 my $key =$where->[$n];
                                 my ($name,$op) = ($key =~ /^(\S+)\s*(.*)/);
@@ -501,7 +500,6 @@ sub _init_rdbms {
                         # Note that we increment the object numbers.
                         # Note: we add grouping columns individually instead of in chunks
                         if ($group_by) {
-                            #$DB::single = 1;
                         }
                         else {
                             push @all_table_properties,
@@ -779,7 +777,6 @@ sub _init_rdbms {
         my $prior_column_name = $prior_property_meta->column_name || $prior;
 
         $connect_by_clause = "connect by $this_table_name.$this_column_name = prior $prior_table_name.$prior_column_name\n";
-        #$DB::single = 1;
     }    
 
     my @property_names_in_resultset_order;
@@ -796,7 +793,6 @@ sub _init_rdbms {
     if ($group_by) {
         # when grouping, we're making set objects instead of regular objects
         # this means that we re-constitute the select clause and add a group_by clause
-        #$DB::single = 1;
         $group_by_clause = 'group by ' . $select_clause if (scalar(@$group_by));
 
         # FIXME - does it even make sense for the user to specify an order_by in the
@@ -1044,7 +1040,6 @@ sub _init_core {
         if (@id_property_objects == 0) {
             @id_property_objects = $co->property_meta_for_name("id");
             if (@id_property_objects == 0) {
-                $DB::single = 1;
                 Carp::confess("Couldn't determine ID properties for $class_name\n");
             }
         }

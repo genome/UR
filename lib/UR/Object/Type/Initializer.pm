@@ -783,7 +783,6 @@ sub _normalize_class_description_impl {
         %new_property = $class->_normalize_property_description2(\%new_property, \%new_class);
         $instance_properties->{$property_name} = \%new_property;
     }
-
     # allow parent classes to adjust the description in systematic ways 
     my $desc = \%new_class;
     my @additional_property_meta_attributes;
@@ -989,8 +988,10 @@ sub _normalize_property_description1 {
         my @values = grep { defined($_) } delete @old_property{@all_fields};
         if (@values > 1) {
             Carp::confess(
-                "Multiple values in class definition for $class_name for field "
+                "Multiple values in class definition for $class_name property $property_name.  Field "
                 . join("/", @all_fields)
+                . " has values "
+                . Data::Dumper::Dumper(\@values)
             );
         }
         elsif (@values == 1) {
