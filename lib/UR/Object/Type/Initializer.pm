@@ -43,9 +43,6 @@ use Sub::Install ();
     is_calculated    => 0,
     is_mutable       => undef,
     is_transactional => 1,
-    is_abstract      => 0,
-    is_concrete      => 1,
-    is_final         => 0,
     is_many          => 0,
     is_numeric       => 0,
     is_specified_in_module_header => 0,
@@ -239,6 +236,7 @@ sub _preprocess_subclass_description {
                 . $self->class_name . " package!";
         }
         $current_desc = $self->class_name->$preprocessor($current_desc);
+        $current_desc = $self->_normalize_class_description_impl(%$current_desc);
     }
 
     # only call it on the direct parent classes, let recursion walk the tree
@@ -337,6 +335,18 @@ sub initialize_bootstrap_classes
 
 sub _normalize_class_description {
     my $class = shift;
+    my $desc = $class->_normalize_class_description_impl(@_);
+    unless ($bootstrapping) {
+        for my $parent_class_name (@{ $desc->{is} }) {
+            my $parent_class = $parent_class_name->__meta__;
+            $desc = $parent_class->_preprocess_subclass_description($desc);
+        }
+    }
+    return $desc;
+}
+
+sub _normalize_class_description_impl {
+    my $class = shift;
     my %old_class = @_;
 
     my $class_name = delete $old_class{class_name};    
@@ -379,6 +389,7 @@ sub _normalize_class_description {
         [ subclass_description_preprocessor => qw//],        
         [ id_generator           => qw/id_sequence_generator_name/],
         [ subclassify_by_version => qw//],        
+        [ meta_class_name        => qw//],
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                
         my @all_fields = ($primary_field_name, @alternate_field_names);
@@ -543,7 +554,6 @@ sub _normalize_class_description {
     # NOTE: we normalize the details at the end of normalizing the class description.
     my @keys = grep { /has|attributes_have/ } keys %old_class;
     unshift @keys, qw(id_implied); # we want to hit this first to preserve position_ and is_specified_ keys
-    my @properties_in_class_definition_order;
     foreach my $key ( @keys ) {
         # parse the key to see if we're looking at instance or meta attributes,
         # and take the extra words as additional attribute meta-data. 
@@ -631,7 +641,6 @@ sub _normalize_class_description {
             } else {
                 $properties->{$name} = $params;
             }
-            push @properties_in_class_definition_order, $name;
 
             # a single calculate_from can be a simple string, convert to a listref
             if (my $calculate_from = $params->{'calculate_from'}) {
@@ -708,8 +717,6 @@ sub _normalize_class_description {
         }
     }
 
-    $new_class{'__properties_in_class_definition_order'} = \@properties_in_class_definition_order;
-    
     unless ($new_class{type_name}) {
         $new_class{type_name} = $new_class{class_name};
     }
@@ -773,6 +780,7 @@ sub _normalize_class_description {
     for my $property_name (@property_names) {
         my %old_property = %{ $instance_properties->{$property_name} };        
         my %new_property = $class->_normalize_property_description1($property_name, \%old_property, \%new_class);
+        %new_property = $class->_normalize_property_description2(\%new_property, \%new_class);
         $instance_properties->{$property_name} = \%new_property;
     }
 
@@ -782,19 +790,10 @@ sub _normalize_class_description {
     unless ($bootstrapping) {
         for my $parent_class_name (@{ $new_class{is} }) {
             my $parent_class = $parent_class_name->__meta__;
-            $desc = $parent_class->_preprocess_subclass_description($desc);
             if (my $parent_meta_properties = $parent_class->{attributes_have}) {
                 push @additional_property_meta_attributes, %$parent_meta_properties;
             }
         }
-    }
-
-    # normalize the data behind the property descriptions    
-    @property_names = keys %$instance_properties;
-    for my $property_name (@property_names) {
-        my %old_property = %{ $instance_properties->{$property_name} };        
-        my %new_property = $class->_normalize_property_description2(\%old_property, \%new_class);
-        $instance_properties->{$property_name} = \%new_property;
     }
 
     # Find 'via' properties where the to is '-filter' and rewrite them to 
@@ -899,23 +898,6 @@ sub _normalize_class_description {
     return $desc;
 }
 
-sub _recursive_attributes_have {
-    my $self = shift;
-    unless ($self->{_recursive_attributes_have}) {
-        my %recursive_collection_of_added_meta_attributes = ( $self->{attributes_have} ? %{ $self->{attributes_have} } : () );
-        unless ($bootstrapping) {
-            for my $parent_class_name (@{ $self->{is} }) {
-                my $parent_class = $parent_class_name->__meta__;
-                if (my $parent_ma = $parent_class->{_recursive_attributes_have}) {
-                    %recursive_collection_of_added_meta_attributes = (%recursive_collection_of_added_meta_attributes, %$parent_ma);
-                }
-            }
-        }
-        $self->{_recursive_attributes_have} = \%recursive_collection_of_added_meta_attributes;
-    }
-    return $self->{_recursive_attributes_have};
-}
-
 sub _normalize_property_description1 {
     my $class = shift;
     my $property_name = shift;
@@ -933,14 +915,17 @@ sub _normalize_property_description1 {
     }        
 
     # Only 1 of is_abstract, is_concrete or is_final may be set
-    { no warnings 'uninitialized';
-      if (  $old_property{is_abstract} 
-          + $old_property{is_concrete}
-          + $old_property{is_final}
-          > 1
-      ) {
-          Carp::confess("abstract/concrete/final are mutually exclusive.  Error in class definition for $class_name property $property_name!");
-      }
+    {
+        no warnings 'uninitialized';
+        my $modifier_sum = $old_property{is_abstract} 
+            + $old_property{is_concrete}
+            + $old_property{is_final};
+
+        if ($modifier_sum > 1) {
+            Carp::confess("abstract/concrete/final are mutually exclusive.  Error in class definition for $class_name property $property_name!");
+        } elsif ($modifier_sum == 0) {
+            $old_property{is_concrete} = 1;
+        }
     }
     
     my %new_property = (

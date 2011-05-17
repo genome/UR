@@ -23,7 +23,7 @@ use File::Temp;
 use File::Basename;
 use IO::File qw();
 
-our @CARP_NOT = qw( UR::Context UR::DataSource::FileMux);
+our @CARP_NOT = qw( UR::Context UR::DataSource::FileMux UR::Object::Type );
 
 class UR::DataSource::File {
     is => ['UR::DataSource'],
@@ -863,13 +863,7 @@ sub create_from_inline_class_data {
 
     # User didn't specify columns in the file.  Assumme every property is a column, and in the same order
     unless (exists $ds_data->{'column_order'}) {
-        $ds_data->{'column_order'} = [];
-        foreach my $prop_name ( @{$class_data->{'__properties_in_class_definition_order'}} ) {
-            my $prop_data = $class_data->{'has'}->{$prop_name};
-            next unless ($prop_data->{'column_name'});  # only interested in concrete properties
-             
-            push @{$ds_data->{'column_order'}}, $prop_name;
-        }
+        Carp::croak "data_source has no column_order specified";
     }
 
     $ds_data->{'server'} ||= $ds_data->{'path'} || $ds_data->{'file'};
