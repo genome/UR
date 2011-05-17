@@ -32,13 +32,13 @@ sub _compare {
             my $pv_is_number = Scalar::Util::looks_like_number($property_value);
 
             if ($cv_is_number and $pv_is_number) {
-                return 1 if ($property_value != $comparison_value);
+                return '' if ($property_value == $comparison_value);
             } else {
-                return 1 if ($property_value ne $comparison_value);
+                return '' if ($property_value eq $comparison_value);
             }
         }
     }
-    return;
+    return 1;
 }
 
 
