@@ -83,8 +83,6 @@ sub _create {
     # is exhausted, then the ID-ed object is really deleted, and should be an exception
     my %changed_objects_that_might_be_db_deleted;
 
-    my $me_loading_iterator_as_string;  # See note below the closure definition
-
     my $underlying_context_objects_count = 0;
     my $cached_objects_count = 0;
 
@@ -101,12 +99,15 @@ sub _create {
         return;
     };
 
+    my $me_loading_iterator_as_string;  # See note below the closure definition
+$DB::single=1;
     my $loading_iterator = sub {
 
         my $next_object;
 
         PICK_NEXT_OBJECT_FOR_LOADING:
         while (! $next_object) {
+print "\n*** loader $me_loading_iterator_as_string at the top of the pick loop\n";
             if ($underlying_context_iterator && ! $next_obj_underlying_context) {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
 
@@ -118,6 +119,15 @@ sub _create {
                 #if ($next_obj_underlying_context and $is_multiple_loading_iterators) {
                 #    $class->_inject_object_into_other_loading_iterators($next_obj_underlying_context, $me_loading_iterator_as_string);
                 #}
+
+                if ($next_obj_underlying_context and $next_obj_underlying_context->__changes__ and $change_is_order_by_property->($next_obj_underlying_context)) {
+                    unless (delete $changed_objects_that_might_be_db_deleted{$next_obj_underlying_context->id}) {
+                        $db_seen_ids_that_are_not_deleted{$next_obj_underlying_context->id} = 1;
+                    }
+print "Next DB object id ".$next_obj_underlying_context->id." has changes, discarding and picking again\n";
+                    $next_obj_underlying_context = undef;
+                    redo PICK_NEXT_OBJECT_FOR_LOADING;
+                }
             }
 
             unless ($next_obj_current_context) {
