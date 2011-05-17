@@ -178,10 +178,6 @@ sub resolve_data_sources_for_class_meta_and_rule {
     # any kind of underlying datasource, this code can move from here 
     # and into the base class for Meta datasources
     if ($class_name->isa('UR::DataSource::RDBMS::Entity')) {
-        if (!defined $boolexpr) {
-            $DB::single=1;
-        }
-
         my $params = $boolexpr->legacy_params_hash;
         my $namespace;
         if ($params->{'namespace'}) {
@@ -784,9 +780,6 @@ sub create_entity {
             return;
         }
         $rule = UR::BoolExpr->resolve_normalized($class, %$params, id => $id);
-        unless ($rule->value_for_id) {
-            $DB::single = 1;
-        }
         $params = { $rule->params_list }; ;
     }
 
@@ -2086,7 +2079,8 @@ sub _create_import_iterator_for_underlying_context {
     my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
     
     my %subordinate_iterator_for_class;
-    
+   
+    # TODO: move the creation of the fabricators into the query plan object initializer.
     # instead of making just one import iterator, we make one per loading template
     # we then have our primary iterator use these to fabricate objects for each db row
     my @object_fabricators;
@@ -2719,7 +2713,6 @@ sub _get_objects_for_class_and_rule_from_cache {
             my $id = $rule->value_for_id();
             
             unless (defined $id) {
-                $DB::single = 1;
                 $id = $rule->value_for_id();
             }
             

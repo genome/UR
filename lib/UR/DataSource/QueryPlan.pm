@@ -86,17 +86,21 @@ sub _init {
   
     Carp::confess("already initialized???") if $self->_is_initialized;
 
-    # Once all callers are using the API for this we won't need "_init".
-    $self->_init_core();
-
     # We could have this sub-classify by data source type, but right
     # now it's conditional logic because we'll likely remove the distinctions.
     # This will work because we'll separate out the ds-specific portion
     # and call methods on the DS to get that part.
     my $ds = $self->data_source;
-    $self->_init_rdbms() if $ds->isa("UR::DataSource::RDBMS");
-    $self->_init_default() if $ds->isa("UR::DataSource::Default");
-    $self->_init_remote_cache() if $ds->isa("UR::DataSource::RemoteCache");
+    if ($ds->isa("UR::DataSource::RDBMS")) {
+        $self->_init_light();
+        $self->_init_rdbms();
+    }
+    else {
+        # Once all callers are using the API for this we won't need "_init".
+        $self->_init_core();
+        $self->_init_default() if $ds->isa("UR::DataSource::Default");
+        $self->_init_remote_cache() if $ds->isa("UR::DataSource::RemoteCache");
+    }
 
     # This object is currently still used as a hashref, but the properties
     # are a declaration of the part of the hashref data we are still dependent upon.
@@ -184,23 +188,14 @@ sub _init_rdbms {
         }
     }
 
-
-    # _usually_ items freshly loaded from the DB don't need to be evaluated through the rule
-    # because the SQL gets constructed in such a way that all the items returned would pass anyway.
-    # But in certain cases (a delegated property trying to match a non-object value (which is a bug
-    # in the caller's code from one point of view) or with calculated non-sql properties, then the
-    # sql will return a superset of the items we're actually asking for, and the loader needs to
-    # validate them through the rule
-    my $needs_further_boolexpr_evaluation_after_loading;
-
     my ($first_table_name, @sql_joins) =  _resolve_db_joins_for_inheritance($class_meta);
-   
-    my @sql_filters; 
-    my @delegated_properties;    
+  
+    my @obj_joins;
 
-    $DB::single = 1;
-    do { 
-        
+    my @sql_filters; 
+    my @delegated_properties;
+    my $needs_further_boolexpr_evaluation_after_loading;
+    do {         
         my %filters =     
             map { $_ => 0 }
             grep { substr($_,0,1) ne '-' }
@@ -221,8 +216,7 @@ sub _init_rdbms {
         while (my $property_name = shift @properties_involved) {
             my (@pmeta) = $class_meta->property_meta_for_name($property_name);
             unless (@pmeta) {
-                push @errors, "No value position found in rule template for filter property $property_name?!"
-                    . Data::Dumper::Dumper($rule_template);
+                push @errors, "No property meta found for: $property_name on class " . $class_meta->id;
                 next;
             }
             
@@ -283,7 +277,7 @@ sub _init_rdbms {
 
         if (@errors) { 
             my $class_name = $class_meta->class_name;
-            $ds->error_message("Unknown param(s) (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
+            $ds->error_message("ERRORS PROCESSING PARAMTERS: (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
             print Data::Dumper::Dumper($rule_template);
             Carp::confess();
         }
@@ -293,15 +287,21 @@ sub _init_rdbms {
     my $alias_num = 0;
     
     my %alias_sql_join;
+    my %alias_obj_join;
+
     my %joins_done;
+    
 
     # FIXME - this needs to be broken out into delegated-property-join-resolver
     # and inheritance-join-resolver methods that can be called recursively.
     # It would better encapsulate what's going on and avoid bugs with complicated
     # get()s
-    
+   
+    # one iteration per target value involved in the query,
+    # including values needed for filtering, ordering, grouping, and hints (selecting more)
+    # these "properties" may be a single property name or an ad-hoc "chain"
     DELEGATED_PROPERTY:
-    for my $delegated_property (@delegated_properties) {
+    for my $delegated_property (sort @delegated_properties) {
         my $property_name = $delegated_property;
        
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
@@ -314,31 +314,25 @@ sub _init_rdbms {
 
         my $alias_for_property_value;
         my $last_class_object_excluding_inherited_joins;
-        my $join_aliases_for_this_object;
+        my %join_alias_for_table_for_this_delgated_property;
         my @source_table_and_column_names;
 
-        my $flattened_value;
-
-        while (my $object_join = shift @joins) { # one iteration per table between the start table and target
-            #$DB::single = 1;
-            #print "\tjoin $object_join\n";
-            #        print Data::Dumper::Dumper($object_join);
-
+        my $flattened_value = $class_meta->_flatten_property_name($delegated_property);
+        
+        # one iteration per table between the start table and target
+        while (my $object_join = shift @joins) { 
             $object_num++;
-
             my @joins_for_object = ($object_join);
 
-            my $joins_for_object = 0;
-
-            # one iteration per layer of inheritance at this join
+            # one iteration per layer of inheritance for this object 
             # or per case of a join having additional filtering
+            my $current_inheritance_depth_for_this_target_join = 0;
             while (my $join = shift @joins_for_object) { 
 
                 my $where = $join->{where};
                 if (0) { #($where) {
                     # a where clause might imply additional joins, requiring we pre-empt
                     # continuing through the join chain until these are resolved
-                    $DB::single = 1;
                     my $c = $join->{foreign_class};
                     my $m = $c->__meta__;
                     my $bx = UR::BoolExpr->resolve($c,@$where);
@@ -357,7 +351,6 @@ sub _init_rdbms {
                         }
                     }
                     if (@added_joins) {
-                        $DB::single = 1;
                         $join = { %$join };
                         delete $join->{where};
                         push @added_joins, $join;
@@ -366,7 +359,7 @@ sub _init_rdbms {
                     }
                 }
                 
-                $joins_for_object++;
+                $current_inheritance_depth_for_this_target_join++;
 
                 my $source_class_name = $join->{source_class};
                 my $source_class_object = $join->{'source_class_meta'} || $source_class_name->__meta__;                    
@@ -383,8 +376,9 @@ sub _init_rdbms {
                 # This will get filled in during the first pass, and every time after we've successfully
                 # performed a join - ie. that the delegated property points directly to a class/property
                 # that is a real table/column, and not a tableless class or another delegated property
+                my @source_property_names;
                 unless (@source_table_and_column_names) {
-                    my @source_property_names = @{ $join->{source_property_names} };
+                    @source_property_names = @{ $join->{source_property_names} };
 
                     @source_table_and_column_names =
                         map {
@@ -461,27 +455,31 @@ sub _init_rdbms {
 
                 unless ($alias) {
                     $alias_num++;
-                    
-                    my $alias_length = length($property_name)+length($alias_num)+1;
+                   
+                    my $alias_name = $join->sub_group_label || $property_name;
+                    if (substr($alias_name,-1) eq '?') {
+                        chop($alias_name) if substr($alias_name,-1) eq '?';
+                    }
+
+                    my $alias_length = length($alias_name)+length($alias_num)+1;
                     my $alias_max_length = 29;
                     if ($alias_length > $alias_max_length) {
-                        $alias = substr($property_name,0,$alias_max_length-length($alias_num)-1); 
+                        $alias = substr($alias_name,0,$alias_max_length-length($alias_num)-1); 
                     }
                     else {
-                        $alias = $property_name;
+                        $alias = $alias_name;
                     }
                     $alias =~ s/\./_/g;
                     $alias .= '_' . $alias_num; 
 
                     if ($foreign_class_object->table_name) {
-                        my @extra_filters;
+                        my @extra_db_filters;
+                        my @extra_obj_filters;
 
-                        # TODO This may not work correctly if the property we're joining on doesn't 
-                        # have a table to get data from
+                        # TODO: when "flatten" correctly feeds the "ON" clause we can remove this
+                        # This will crash if the "where" happens to use indirect things 
+                        my $where = $join->{where};
                         if ($where) {
-                            $DB::single = 1;
-                            # temp hack
-                            # todo: switch to rule processing
                             for (my $n = 0; $n < @$where; $n += 2) {
                                 my $key =$where->[$n];
                                 my ($name,$op) = ($key =~ /^(\S+)\s*(.*)/);
@@ -491,17 +489,17 @@ sub _init_rdbms {
                                 }
                                 my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
                                 my $value = $where->[$n+1];
-                                push @extra_filters, $column => { value => $value, ($op ? (operator => $op) : ()) };
+                                push @extra_db_filters, $column => { value => $value, ($op ? (operator => $op) : ()) };
+                                push @extra_obj_filters, $name  => { value => $value, ($op ? (operator => $op) : ()) };
                             }
                         }
 
                         push @sql_joins,
-                            "$foreign_table_name $alias" =>
-                            {
+                            "$foreign_table_name $alias" => {
                                 (
                                     map {
                                         $foreign_column_names[$_] => { 
-                                            link_table_name     => $join_aliases_for_this_object->{$source_table_and_column_names[$_][0]} # join alias
+                                            link_table_name     => $join_alias_for_table_for_this_delgated_property{$source_table_and_column_names[$_][0]} # join alias
                                                                    || $source_table_and_column_names[$_][2]  # SQL inline view alias
                                                                    || $source_table_and_column_names[$_][0], # table_name
                                             link_column_name    => $source_table_and_column_names[$_][1] 
@@ -509,15 +507,34 @@ sub _init_rdbms {
                                     }
                                     (0..$#foreign_column_names)
                                 ),
-                                @extra_filters,
+                                @extra_db_filters,
                             };
+                        
                         $alias_sql_join{$alias} = $sql_joins[-1];
+
+                        push @obj_joins,  
+                            "$alias" => {
+                                (
+                                    map {
+                                        $foreign_property_names[$_] => {
+                                            link_class_name     => $source_class_name,
+                                            link_alias          => $join_alias_for_table_for_this_delgated_property{$source_table_and_column_names[$_][0]} # join alias
+                                                                   || $source_table_and_column_names[$_][2]  # SQL inline view alias
+                                                                   || $source_table_and_column_names[$_][0], # table_name
+                                            link_property_name    => $source_property_names[$_] 
+                                        }
+                                    }
+                                    (0..$#foreign_property_names)
+                                ),
+                                @extra_obj_filters,
+                            };
+
+                        $alias_obj_join{$alias} = $obj_joins[-1];
 
                         # Add all of the columns in the join table to the return list
                         # Note that we increment the object numbers.
                         # Note: we add grouping columns individually instead of in chunks
                         if ($group_by) {
-                            #$DB::single = 1;
                         }
                         else {
                             push @all_table_properties,
@@ -530,87 +547,78 @@ sub _init_rdbms {
                                  @{ $foreign_class_loading_data->{direct_table_properties} };                
                         }
                     }
-                }
 
-                if ($foreign_class_object->table_name) {
-                    $join_aliases_for_this_object->{$foreign_table_name} = $alias;
-                    @source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
-                }
-
-                if ($group_by) {
-                    if ($group_by_property_names{$property_name}) {
-                        my ($p) = 
-                            map {
-                                my $new = [@$_]; 
-                                $new->[2] = $alias;
-                                $new->[3] = 0; 
-                                $new 
-                            }
-                            grep { $_->[1]->property_name eq $final_accessor }
-                            @{ $foreign_class_loading_data->{direct_table_properties} };
-                        push @all_table_properties, $p;
-                        #print "PROPERTY $property_name IS INVOLVED IN GROUPING: $p\n";
+                    ## TEST
+                
+                    if ($foreign_class_object->table_name) {
+                        $join_alias_for_table_for_this_delgated_property{$foreign_table_name} = $alias;
+                        @source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
                     }
-                    #else {
-                    #    $DB::single = 1;
-                    #    #print "PROPERTY $property_name IS NOT INVOLVDED IN GROUPING!\n";
-                    #}
-                }
 
-                if ($order_by) {
-                    if ($order_by_property_names{$property_name}) {
-                        my ($p) = 
-                            map {
-                                my $new = [@$_]; 
-                                $new->[2] = $alias;
-                                $new->[3] = 0; 
-                                $new 
-                            }
-                            grep { $_->[1]->property_name eq $final_accessor }
-                            @{ $foreign_class_loading_data->{direct_table_properties} };
-                        $order_by_property_names{$property_name} = $p if $p;
-                        #print "PROPERTY $property_name IS INVOLVED IN ORDERING: $p\n";
+                    if ($group_by) {
+                        if ($group_by_property_names{$property_name}) {
+                            my ($p) = 
+                                map {
+                                    my $new = [@$_]; 
+                                    $new->[2] = $alias;
+                                    $new->[3] = 0; 
+                                    $new 
+                                }
+                                grep { $_->[1]->property_name eq $final_accessor }
+                                @{ $foreign_class_loading_data->{direct_table_properties} };
+                            push @all_table_properties, $p;
+                        }
                     }
-                    #else {
-                    #    $DB::single = 1;
-                    #    #print "PROPERTY $property_name IS NOT INVOLVDED IN ORDERING!\n";
-                    #}
-                    #my @order_table_debug = %order_by_property_names;  
-                    #print "  ORDER HAS @order_table_debug\n" if $order_by;
-                }
 
-                unless ($is_optional) {
-                    # if _any_ part requires this, mark it required
-                    $alias_sql_join{$alias}{-is_required} = 1;
-                }
+                    if ($order_by) {
+                        if ($order_by_property_names{$property_name}) {
+                            my ($p) = 
+                                map {
+                                    my $new = [@$_]; 
+                                    $new->[2] = $alias;
+                                    $new->[3] = 0; 
+                                    $new 
+                                }
+                                grep { $_->[1]->property_name eq $final_accessor }
+                                @{ $foreign_class_loading_data->{direct_table_properties} };
+                            $order_by_property_names{$property_name} = $p if $p;
+                        }
+                    }
 
-                $joins_done{$join->{id}} = $alias;
+                    unless ($is_optional) {
+                        # if _any_ part requires this, mark it required
+                        $alias_sql_join{$alias}{-is_required} = 1;
+                    }
 
-                # Set these for after all of the joins are done
+                    $joins_done{$join->{id}} = $alias;
+
+                } # done adding a new join alias for a join which has not yet been done
+
+                # set these for after all of the joins are done
                 my $last_class_name = $foreign_class_name;
                 my $last_class_object = $foreign_class_object;
 
-                if ($joins_for_object == 1) {
-                    #$last_alias_for_this_delegate = $alias;
+                # on the first iteration, we figure out the remaining inherited iterations
+                # if there is inheritance to do, unshift those onto the stack ahead of other things
+                if ($current_inheritance_depth_for_this_target_join == 1) {
                     if ($final_accessor and $last_class_object->property_meta_for_name($final_accessor)) {
                         $last_class_object_excluding_inherited_joins = $last_class_object;
                     }
-                    # on the first iteration, we figure out the remaining inherited iterations
-                    # TODO: get this into the join logic itds in the property meta
                     my @parents = grep { $_->table_name } $foreign_class_object->ancestry_class_metas;
                     if (@parents) {
                         my @last_id_property_names = $foreign_class_object->id_property_names;
                         for my $parent (@parents) {
                             my @parent_id_property_names = $parent->id_property_names;
                             die if @parent_id_property_names > 1;                    
-                            unshift @joins_for_object, {
+                            my $inheritance_join = UR::Object::Join->_get_or_define( 
                                 source_class => $last_class_name,
                                 source_property_names => [@last_id_property_names], # we change content below
                                 foreign_class => $parent->class_name,
                                 foreign_property_names => \@parent_id_property_names,
                                 is_optional => $is_optional,
                                 id => "${last_class_name}::" . join(',',@last_id_property_names),
-                            };
+                            );
+                            unshift @joins_for_object, $inheritance_join; 
                             @last_id_property_names = @parent_id_property_names;
                             $last_class_name = $foreign_class_name;
                         }
@@ -619,6 +627,8 @@ sub _init_rdbms {
                 }
 
                 if (!@joins and not $alias_for_property_value) {
+                    # we are out of joins for this delegated property
+                    # setting $alias_for_property_value helps map to exactly where we do real filter/order/etc.
                     if ($final_accessor and
                         grep { $_->[1]->property_name eq $final_accessor } @{ $foreign_class_loading_data->{direct_table_properties} }
                     ) {
@@ -632,9 +642,11 @@ sub _init_rdbms {
                     }
                 }
 
-            } # next join for this object
+            } # next join in the inheritance for this object
 
-        } # next object join
+        } # next join across objects from the query subject to the delegated property target
+
+        # done adding any new joins for this delegated property/property-chain
 
         if (ref($delegated_property) and !$delegated_property->via) {
             next;
@@ -811,7 +823,7 @@ sub _init_rdbms {
     # this is only used when making a real instance object instead of a "set"
     my $per_object_in_resultset_loading_detail;
     unless ($group_by) {
-        $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_table_properties);
+        $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_table_properties, \@obj_joins);
     }
 
     if ($group_by) {
@@ -954,14 +966,323 @@ sub _resolve_object_join_data_for_property_chain {
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
-    if (0) { #($joins[-1]->{foreign_class}->isa("UR::Value")) {
-        my $j = pop @joins;
-        return ($j->{source_name_for_foreign}, $is_optional, @joins)
-    }
-    else {
-        return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
-    }
+    return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
 };
+
+sub _init_light {
+    my $self = shift;
+    my $rule_template = $self->rule_template;
+    my $ds = $self->data_source;
+
+    my $class_name = $rule_template->subject_class_name;
+    my $class_meta = $class_name->__meta__;
+    my $class_data = $ds->_get_class_data_for_loading($class_meta);       
+
+    my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
+    my @all_properties                      = @{ $class_data->{all_properties} };
+    my $sub_classification_meta_class_name  = $class_data->{sub_classification_meta_class_name};
+    my $subclassify_by    = $class_data->{subclassify_by};
+    
+    my @all_id_property_names               = @{ $class_data->{all_id_property_names} };
+    my @id_properties                       = @{ $class_data->{id_properties} };   
+    my $id_property_sorter                  = $class_data->{id_property_sorter};    
+    my $sub_typing_property                 = $class_data->{sub_typing_property};
+    my $class_table_name                    = $class_data->{class_table_name};
+    
+    my $recursion_desc = $rule_template->recursion_desc;
+    my $recurse_property_on_this_row;
+    my $recurse_property_referencing_other_rows;
+    if ($recursion_desc) {
+        ($recurse_property_on_this_row,$recurse_property_referencing_other_rows) = @$recursion_desc;        
+    }        
+    
+    my $needs_further_boolexpr_evaluation_after_loading; 
+    
+    my $is_join_across_data_source;
+
+    my @sql_params;
+    my @filter_specs;         
+    my @property_names_in_resultset_order;
+    my $object_num = 0; # 0-based, usually zero unless there are joins
+    
+    my @filters = $rule_template->_property_names;
+    my %filters =     
+        map { $_ => 0 }
+        grep { substr($_,0,1) ne '-' }
+        @filters;
+    
+    unless (@all_id_property_names == 1 && $all_id_property_names[0] eq "id") {
+        delete $filters{'id'};
+    }
+    
+    my (
+        @sql_joins,
+        @sql_filters, 
+        $prev_table_name, 
+        $prev_id_column_name, 
+        $eav_class, 
+        @eav_properties,
+        $eav_cnt, 
+        %pcnt, 
+        $pk_used,
+        @delegated_properties,    
+        %outer_joins,
+        %chain_delegates,
+    );
+
+    for my $key (keys %filters) {
+        if (index($key,'.') != -1) {
+            $chain_delegates{$key} = delete $filters{$key};
+        }
+    }
+
+    for my $co ( $class_meta, @parent_class_objects ) {
+        my $type_name  = $co->type_name;
+        my $class_name = $co->class_name;
+        last if ( ($class_name eq 'UR::Object') or (not $class_name->isa("UR::Object")) );
+        my @id_property_objects = $co->direct_id_property_metas;
+        if (@id_property_objects == 0) {
+            @id_property_objects = $co->property_meta_for_name("id");
+            if (@id_property_objects == 0) {
+                Carp::confess("Couldn't determine ID properties for $class_name\n");
+            }
+        }
+        my %id_properties = map { $_->property_name => 1 } @id_property_objects;
+        my @id_column_names =
+            map { $_->column_name }
+            @id_property_objects;
+        for my $property_name (sort keys %filters) {                
+            my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);                
+            next unless $property;
+            my $operator       = $rule_template->operator_for($property_name);
+            my $value_position = $rule_template->value_position_for_property_name($property_name);
+            delete $filters{$property_name};
+            $pk_used = 1 if $id_properties{ $property_name };
+            if ($property->is_legacy_eav) {
+                die "Old GSC EAV can be handled with a via/to/where/is_mutable=1";
+            }
+            elsif ($property->is_transient) {
+                die "Query by transient property $property_name on $class_name cannot be done!";
+            }
+            elsif ($property->is_delegated) {
+                push @delegated_properties, $property;
+            }
+            elsif ($property->is_calculated) {
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+            }
+            else {
+                push @sql_filters, 
+                    $class_name => 
+                        { 
+                            $property_name => { operator => $operator, value_position => $value_position }
+                        };
+            }
+        }
+        $prev_id_column_name = $id_property_objects[0]->column_name;
+    } # end of inheritance loop
+        
+    if ( my @errors = keys(%filters) ) { 
+        my $class_name = $class_meta->class_name;
+        $ds->error_message('Unknown param(s) (' . join(',',@errors) . ") used to generate SQL for $class_name!");
+        Carp::confess();
+    }
+
+    my $last_class_name = $class_name;
+    my $last_class_object = $class_meta;        
+    my $alias_num = 1;
+    my %joins_done;
+    my $joins_across_data_sources;
+
+    DELEGATED_PROPERTY:
+    for my $delegated_property (@delegated_properties) {
+        my $last_alias_for_this_chain;
+        my $property_name = $delegated_property->property_name;
+        my @joins = $delegated_property->_resolve_join_chain;
+        my $relationship_name = $delegated_property->via;
+        unless ($relationship_name) {
+           $relationship_name = $property_name;
+           $needs_further_boolexpr_evaluation_after_loading = 1;
+        }
+
+        my $delegate_class_meta = $delegated_property->class_meta;
+        my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
+        my $final_accessor = $delegated_property->to;            
+        my $final_accessor_meta = $via_accessor_meta->data_type->__meta__->property_meta_for_name($final_accessor);
+        unless ($final_accessor_meta) {
+            Carp::croak("No property '$final_accessor' on class " . $via_accessor_meta->data_type .
+                          " while resolving property $property_name on class $class_name");
+        }
+        while($final_accessor_meta->is_delegated) {
+            $final_accessor_meta = $final_accessor_meta->to_property_meta();
+            unless ($final_accessor_meta) {
+                Carp::croak("No property '$final_accessor' on class " . $via_accessor_meta->data_type .
+                              " while resolving property $property_name on class $class_name");
+            }
+        }
+        $final_accessor = $final_accessor_meta->property_name;
+        for my $join (@joins) {
+            my $source_class_name = $join->{source_class};
+            my $source_class_object = $join->{'source_class_meta'} || $source_class_name->__meta__;
+
+            my $foreign_class_name = $join->{foreign_class};
+            my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
+            my($foreign_data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
+            if (! $foreign_data_source) {
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+                next DELEGATED_PROPERTY;
+
+            } elsif ($foreign_data_source ne $ds or
+                    ! $ds->does_support_joins or
+                    ! $foreign_data_source->does_support_joins
+                )
+            {
+                push(@{$joins_across_data_sources->{$foreign_data_source->id}}, $delegated_property);
+                next DELEGATED_PROPERTY;
+            }
+            my @source_property_names = @{ $join->{source_property_names} };
+            my @source_table_and_column_names = 
+                map {
+                    my $p = $source_class_object->property_meta_for_name($_);
+                    unless ($p) {
+                        Carp::confess("No property $_ for class $source_class_object->{class_name}\n");
+                    }
+                    [$p->class_name->__meta__->class_name, $p->property_name];
+                }
+                @source_property_names;
+            my $foreign_table_name = $foreign_class_name;
+            unless ($foreign_table_name) {
+                # If we can't make the join because there is no datasource representation
+                # for this class, we're done following the joins for this property
+                # and will NOT try to filter on it at the datasource level
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+                next DELEGATED_PROPERTY;
+            }
+            my @foreign_property_names = @{ $join->{foreign_property_names} };
+            my @foreign_property_meta = 
+                map {
+                    $foreign_class_object->property_meta_for_name($_)
+                }
+                @foreign_property_names;
+            
+            my @foreign_column_names = 
+                map {
+                    # TODO: encapsulate
+                    $_->is_calculated ? (defined($_->calculate_sql) ? ($_->calculate_sql) : () ) : ($_->property_name)
+                }
+                @foreign_property_meta;
+                
+            unless (@foreign_column_names) {
+                # all calculated properties: don't try to join any further
+                last;
+            }
+            unless (@foreign_column_names == @foreign_property_meta) {
+                # some calculated properties, be sure to re-check for a match after loading the object
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+            }
+            my $alias = $joins_done{$join->{id}};
+            unless ($alias) {            
+                $alias = "${relationship_name}_${alias_num}";
+                $alias_num++;
+                $object_num++;
+                
+                push @sql_joins,
+                    "$foreign_table_name $alias" =>
+                        {
+                            map {
+                                $foreign_property_names[$_] => { 
+                                    link_table_name     => $last_alias_for_this_chain || $source_table_and_column_names[$_][0],
+                                    link_column_name    => $source_table_and_column_names[$_][1] 
+                                }
+                            }
+                            (0..$#foreign_property_names)
+                        };
+                    
+                # Add all of the columns in the join table to the return list.                
+                push @all_properties, 
+                    map { [$foreign_class_object, $_, $alias, $object_num] }
+                    sort { $a->property_name cmp $b->property_name }
+                    grep { defined($_->column_name) && $_->column_name ne '' }
+                    UR::Object::Property->get( type_name => $foreign_class_object->type_name );
+              
+                $joins_done{$join->{id}} = $alias;
+                
+            }
+            # Set these for after all of the joins are done
+            $last_class_name = $foreign_class_name;
+            $last_class_object = $foreign_class_object;
+            $last_alias_for_this_chain = $alias;
+        } # next join
+        unless ($delegated_property->via) {
+            next;
+        }
+        my $final_accessor_property_meta = $last_class_object->property_meta_for_name($final_accessor);
+        if ($final_accessor_property_meta
+            and $final_accessor_property_meta->class_name eq 'UR::Object'
+            and $final_accessor_property_meta->property_name eq 'id')
+        {
+            # This is the 'fake' id property.  Remap it to the class' real ID property name
+            my @id_properties = $last_class_object->id_property_names;
+            if (@id_properties != 1) {
+                # TODO - we could add further joins and not have to evaluate later
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+                next;
+
+            } else {
+                $final_accessor_property_meta = $last_class_object->property_meta_for_name($id_properties[0]);
+            }
+        }
+        unless ($final_accessor_property_meta) {
+            Carp::croak("No property metadata for property named '$final_accessor' in class " . $last_class_object->class_name
+                        . " while resolving joins for property '" .$delegated_property->property_name . "' in class "
+                        . $delegated_property->class_name);
+        }
+        my $sql_lvalue;
+        if ($final_accessor_property_meta->is_calculated) {
+            $sql_lvalue = $final_accessor_property_meta->calculate_sql;
+            unless (defined($sql_lvalue)) {
+                $needs_further_boolexpr_evaluation_after_loading = 1;
+                next;
+            }
+        }
+        else {
+            $sql_lvalue = $final_accessor_property_meta->column_name;
+            unless (defined($sql_lvalue)) {
+                Carp::confess("No column name set for non-delegated/calculated property $property_name of $class_name");
+            }
+        }
+        my $operator       = $rule_template->operator_for($property_name);
+        my $value_position = $rule_template->value_position_for_property_name($property_name);                
+    } # next delegated property
+    for my $property_meta_array (@all_properties) {
+        push @property_names_in_resultset_order, $property_meta_array->[1]->property_name; 
+    }
+    my $rule_template_without_recursion_desc = ($recursion_desc ? $rule_template->remove_filter('-recurse') : $rule_template);
+    my $rule_template_specifies_value_for_subtype;
+    if ($sub_typing_property) {
+        $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for($sub_typing_property)
+    }
+    #my $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_properties);
+    %$self = (
+        %$self,
+        %$class_data,
+        properties_for_params                       => \@all_properties,  
+        property_names_in_resultset_order           => \@property_names_in_resultset_order,
+        joins                                       => \@sql_joins,
+        rule_template_id                            => $rule_template->id,
+        rule_template_without_recursion_desc        => $rule_template_without_recursion_desc,
+        rule_template_id_without_recursion_desc     => $rule_template_without_recursion_desc->id,
+        rule_matches_all                            => $rule_template->matches_all,
+        rule_specifies_id                           => ($rule_template->specifies_value_for('id') || undef),
+        rule_template_is_id_only                    => $rule_template->is_id_only,
+        rule_template_specifies_value_for_subtype   => $rule_template_specifies_value_for_subtype,
+        recursion_desc                              => $rule_template->recursion_desc,
+        recurse_property_on_this_row                => $recurse_property_on_this_row,
+        recurse_property_referencing_other_rows     => $recurse_property_referencing_other_rows,
+        #loading_templates                           => $per_object_in_resultset_loading_detail,
+        joins_across_data_sources                   => $joins_across_data_sources,
+    );
+    return $self;
+}
 
 sub _init_core {
     my $self = shift;
@@ -1071,7 +1392,6 @@ sub _init_core {
         if (@id_property_objects == 0) {
             @id_property_objects = $co->property_meta_for_name("id");
             if (@id_property_objects == 0) {
-                $DB::single = 1;
                 Carp::confess("Couldn't determine ID properties for $class_name\n");
             }
         }
@@ -1154,11 +1474,9 @@ sub _init_core {
 
     my $last_class_name = $class_name;
     my $last_class_object = $class_meta;        
-#    my $last_table_alias = $last_class_object->table_name; 
     my $alias_num = 1;
 
     my %joins_done;
-    my @joins_done;
     my $joins_across_data_sources;
 
     DELEGATED_PROPERTY:
@@ -1293,7 +1611,6 @@ sub _init_core {
                     UR::Object::Property->get( type_name => $foreign_class_object->type_name );
               
                 $joins_done{$join->{id}} = $alias;
-                push @joins_done, $join;
                 
             }
             
@@ -1301,8 +1618,6 @@ sub _init_core {
             $last_class_name = $foreign_class_name;
             $last_class_object = $foreign_class_object;
             $last_alias_for_this_chain = $alias;
-            #$last_table_alias = $alias;
-            #$final_table_name_with_alias = "$foreign_table_name $alias";
             
         } # next join
 
