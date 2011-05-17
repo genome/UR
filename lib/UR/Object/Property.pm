@@ -10,6 +10,14 @@ use Class::AutoloadCAN;
 our $VERSION = "0.31"; # UR $VERSION;;
 our @CARP_NOT = qw( UR::DataSource::RDBMS UR::Object::Type );
 
+sub is_direct {
+    my $self = shift;
+    if ($self->is_calculated or $self->is_constant or $self->is_many or $self->via) {
+        return 0;
+    }
+    return 1;
+}
+
 sub is_numeric {
     my $self = shift;
     unless (defined($self->{'_is_numeric'})) {
