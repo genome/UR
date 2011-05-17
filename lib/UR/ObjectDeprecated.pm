@@ -246,7 +246,7 @@ sub create_subscription  {
     # It may choose to turn on/off optimizations depending on whether anyone is watching it.
     # It may also reject all subscriptions because it knows it is too busy to signal changes.
     unless($class->validate_subscription($method,$id,$callback)) {
-        $DB::single = 1;
+        #$DB::single = 1;
         $class->validate_subscription($method,$id,$callback);
         Carp::croak("Failed to validate requested subscription: @_\n");
         return 0; # If/when the above is removed.

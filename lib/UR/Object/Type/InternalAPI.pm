@@ -1379,12 +1379,12 @@ sub _id_property_change_callback {
                 return;
             }
         }
-        $DB::single = 1;
+        #$DB::single = 1;
         Carp::confess("Internal data consistancy problem: could not find property named $property_name in id_by list for class meta " . $class->class_name);
 
     } else {
         # Shouldn't get here since ID properties can't be changed, right?
-        $DB::single = 1;
+        #$DB::single = 1;
         Carp::confess("Shouldn't be here as ID properties can't change");
         1;
     }

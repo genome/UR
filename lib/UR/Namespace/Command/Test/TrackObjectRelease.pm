@@ -31,7 +31,7 @@ usually because of a reference being held."
 sub execute {
     my $self = shift;
 
-$DB::single=1;
+#$DB::single = 1;
     my $file = $self->file;
     my $fh = IO::File->new($file,'r');
 

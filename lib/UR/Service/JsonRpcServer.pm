@@ -163,7 +163,7 @@ sub _api_entry_classes {
 
     my $response = $request->Response();
 
-    $DB::single = 1;
+    #$DB::single = 1;
     my $data = $self->_get_post_data_from_request($request);
     #my $struct = decode_json($data);
     my $struct = jsonToObj($data);
@@ -235,7 +235,7 @@ sub _api_entry_obj {
 
     my $response = $request->Response();
 
-    $DB::single = 1;
+    #$DB::single = 1;
     my $data = $self->_get_post_data_from_request($request);
     #my $struct = decode_json($data);
     my $struct = jsonToObj($data);
@@ -289,7 +289,7 @@ sub _api_entry_obj {
 #
 #    my $response = $request->Response();
 #
-#$DB::single=1;
+##$DB::single = 1;
 #    my $data = $self->_get_post_data_from_request($request);
 #    my $struct = decode_json($data);
 #

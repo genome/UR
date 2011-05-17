@@ -143,7 +143,7 @@ sub help_sub_commands {
         }
         $text .= "\n";
     }
-    $DB::single = 1;        
+    #$DB::single = 1;        
     return $text;
 }
 

@@ -23,7 +23,7 @@ my($self) = @_;
 sub show_schema_page {
 my($self) = @_;
 
-$DB::single=1;
+#$DB::single = 1;
     my @namespace_names = $self->GetNamespaceNames();
     my $namespace_name = $self->namespace_name;
 
