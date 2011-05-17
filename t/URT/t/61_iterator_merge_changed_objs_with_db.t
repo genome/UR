@@ -38,6 +38,7 @@ is_deeply(\@objs_iter, \@objs, 'Iterator and get() returned the same things');
 # is delete.  The iterator should return all 3 objects even though 2 no
 # longer match
 
+# Right now objects 6,8 and 10 are named Joe
 $iter = URT::Thing->create_iterator(name => 'Joe');
 ok($iter, 'Created iterator for Things named Joe');
 
