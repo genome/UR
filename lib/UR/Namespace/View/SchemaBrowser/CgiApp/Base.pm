@@ -15,7 +15,7 @@ our $VERSION = "0.31"; # UR $VERSION;
 sub new {
 my $class = shift;
 my %params = @_;
-$DB::single=1;
+#$DB::single = 1;
 
     my $ur_namespace = delete $params{'ur_namespace'};
 
@@ -69,7 +69,7 @@ my $self = shift;
 sub _default_render {
 my $self = shift;
 
-$DB::single=1;
+#$DB::single = 1;
     $self->tmpl->output();
 }
 

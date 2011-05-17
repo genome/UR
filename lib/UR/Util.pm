@@ -386,7 +386,7 @@ be tested, and should return a true of false value.
 sub mapreduce_grep($&@) {
     my $class = shift;
     my $subref = shift;
-$DB::single=1;
+#$DB::single = 1;
 
 
     # First check fast... should we do parallel at all?

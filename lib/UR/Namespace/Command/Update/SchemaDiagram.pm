@@ -54,7 +54,7 @@ sub execute {
 
     my $params = shift;
     
-$DB::single=1;
+#$DB::single = 1;
     my $namespace = $self->namespace_name;
     eval "use $namespace";
     if ($@) {
@@ -100,7 +100,7 @@ $DB::single=1;
     #    push @involved_tables, UR::DataSource::RDBMS::Table->get(namespace => $namespace, table_name => $table_name);
     #}
 
-$DB::single=1;
+#$DB::single = 1;
     push @involved_tables ,$self->_get_related_items( names => \@initial_name_list,
                                                       depth => $params->{'depth'},
                                                       namespace => $namespace,

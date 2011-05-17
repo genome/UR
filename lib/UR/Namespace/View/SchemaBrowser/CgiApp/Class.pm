@@ -11,7 +11,7 @@ use Class::Inspector;
 
 sub setup {
 my($self) = @_;
-$DB::single=1;
+#$DB::single = 1;
     $self->start_mode('show_class_page');
     $self->mode_param('rm');
     $self->run_modes(
@@ -21,7 +21,7 @@ $DB::single=1;
 
 sub show_class_page {
 my $self = shift;
-$DB::single=1;
+#$DB::single = 1;
 
     my @namespace_names = $self->GetNamespaceNames();
     my $namespace_name = $self->namespace_name;

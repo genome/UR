@@ -208,7 +208,7 @@ sub _generate_loading_templates_arrayref {
 
     my %obj_joins_by_source_alias;
     if ($obj_joins) {
-        $DB::single = 1;
+        #$DB::single = 1;
         my @obj_joins = @$obj_joins;
         while (@obj_joins) {
             my $foreign_alias = shift @obj_joins;
@@ -217,7 +217,7 @@ sub _generate_loading_templates_arrayref {
                 next if $foreign_property_name eq '-is_required';
                 my $source_alias = $data->{$foreign_property_name}{'link_alias'};
                 if (not defined $source_alias or not defined $foreign_alias) {
-                    $DB::single = 1;
+                    #$DB::single = 1;
                     print Data::Dumper::Dumper($foreign_alias, $data);
                 }
                 my $detail = $obj_joins_by_source_alias{$source_alias}{$foreign_alias} ||= {};
@@ -278,7 +278,7 @@ sub _generate_loading_templates_arrayref {
         next unless $template;  # This join may have resulted in no template?!
         my @id_property_names;
         unless (defined $template->{data_class_name}) {
-            $DB::single=1;
+            #$DB::single = 1;
             print "No data class name in template: ", Data::Dumper::Dumper($template); 
         }
         for my $id_class_name ($template->{data_class_name}, $template->{data_class_name}->inheritance) {
@@ -351,7 +351,7 @@ sub _generate_loading_templates_arrayref {
                 push @$next_joins, [ $bxt->id, \@values, \@value_position_source_property ];
             }
             print Data::Dumper::Dumper($next_joins);
-            $DB::single = 1;
+            #$DB::single = 1;
         }
     }        
 
@@ -433,7 +433,7 @@ sub _first_class_in_inheritance_with_a_table {
 
 
     unless ($class) {
-        $DB::single = 1;
+        #$DB::single = 1;
         Carp::confess("No class?");
     }
     my $class_object = $class->__meta__;

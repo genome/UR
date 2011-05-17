@@ -134,7 +134,7 @@ sub _generate_content_for_aspect {
     }
     
     my $aspect_name = $aspect->name;
-$DB::single=1 if $aspect_name eq 'inputs';
+#$DB::single = 1 if $aspect_name eq 'inputs';
 
     my @value;
     eval {

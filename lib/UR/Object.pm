@@ -205,7 +205,7 @@ sub __errors__ {
         elsif ($generic_data_type eq 'Integer') {
             $value =~ s/\s//g;
             if ($value =~ /\D/) {
-                $DB::single = 1;
+                #$DB::single = 1;
                 print "$self $property_name @values\n";
             }
             $value = $value + 0;

@@ -447,7 +447,7 @@ sub evaluate_subject_and_values {
 
         # only check the complicated rules if none of the above failed
         if (%$sub_group_filters) {
-            $DB::single = 1;
+            #$DB::single = 1;
             for my $sub_group (keys %$sub_group_filters) {
                 my $filters = $sub_group_filters->{$sub_group};
                 my $sub_filters = $sub_group_sub_filters->{$sub_group};

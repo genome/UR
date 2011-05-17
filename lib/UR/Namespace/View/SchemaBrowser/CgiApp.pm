@@ -26,7 +26,7 @@ use Class::Autouse \&dynamically_load_page_class;
 
 sub create {
 my($class, %params) = @_;
-#$DB::single=1;
+##$DB::single = 1;
     my $port = delete $params{'port'};
     my $data_dir = delete $params{'data_dir'};
     my $sessions = delete $params{'sessions'};
@@ -74,7 +74,7 @@ my($class, %params) = @_;
 sub show {
 my $self = shift;
     
-$DB::single=1;
+#$DB::single = 1;
     my $server = $self->http_server;
     my $timeout = $self->timeout;
 
@@ -92,7 +92,7 @@ $DB::single=1;
 sub render_page {
 my $self = shift;
 my $req = shift;
-$DB::single=1;
+#$DB::single = 1;
     my $resp = $req->Response;
 
     our $LAST_PAGE_TIME = time;
@@ -126,7 +126,7 @@ $DB::single=1;
 # here
 sub dynamically_load_page_class {
 my($class_name, $method_name) = @_;
-$DB::single=1;
+#$DB::single = 1;
 
     my @parts = split(/::/, $class_name);
 

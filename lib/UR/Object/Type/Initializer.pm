@@ -137,7 +137,7 @@ sub __define__ {
     
     $self = $UR::Context::all_objects_loaded->{$meta_class_name}{$class_name};
     if ($self) {
-        $DB::single = 1;
+        #$DB::single = 1;
         #Carp::cluck("Re-defining class $class_name?  Found $meta_class_name with id '$class_name'");
         return $self;
     }
@@ -164,7 +164,7 @@ sub __define__ {
             );            
         }
         unless ($self->_complete_class_meta_object_definitions()) {
-            $DB::single = 1;
+            #$DB::single = 1;
             $self->_complete_class_meta_object_definitions();
             Carp::confess(
                 "Failed to complete definition of class $class_name!"
@@ -1295,7 +1295,7 @@ sub _complete_class_meta_object_definitions {
     for my $parent_class_name (@$inheritance) {
         my $parent_class = $parent_class_name->__meta__;
         unless ($parent_class) {
-            $DB::single = 1;
+            #$DB::single = 1;
             $parent_class = $parent_class_name->__meta__;
             $self->error_message("Failed to find parent class $parent_class_name\n");
             return;
@@ -1303,7 +1303,7 @@ sub _complete_class_meta_object_definitions {
         
         unless(ref($parent_class) and $parent_class->can('type_name')) {            
             print Data::Dumper::Dumper($parent_class);
-            $DB::single = 1;
+            #$DB::single = 1;
             redo;
         }
         
@@ -1351,7 +1351,7 @@ sub _complete_class_meta_object_definitions {
             my $id_property_name = $id_properties->[$n];
             my $id_property_detail = $properties->{$id_property_name};
             unless ($id_property_detail) {
-                $DB::single = 1;
+                #$DB::single = 1;
                 1;
             }
             unless ($id_property_detail->{data_type}) {
@@ -1372,7 +1372,7 @@ sub _complete_class_meta_object_definitions {
                     }
                     ($r_class_name, $r_class_name->__meta__->ancestry_class_names);
                 unless ($r_property) {
-                    $DB::single = 1;
+                    #$DB::single = 1;
                     my $property_name = $pinfo->{'property_name'};
                     if (@$id_properties != @r_id_properties) {
                         Carp::croak("Can't resolve relationship for class $class property '$property_name': "
@@ -1518,7 +1518,7 @@ sub _complete_class_meta_object_definitions {
     my @i = $class_name->inheritance;
     if (grep { $_ eq '' } @i) {
         print "$class_name! @{ $self->{is} }";
-        $DB::single = 1;
+        #$DB::single = 1;
         $class_name->inheritance;
     }
     Carp::confess("Odd inheritance @i for $class_name") unless $class_name->isa('UR::Object');
@@ -1588,7 +1588,7 @@ sub generate {
         my $parent_class_meta = UR::Object::Type->get(class_name => $parent_class_name);
         
         unless ($parent_class_meta) {
-            $DB::single = 1;
+            #$DB::single = 1;
             $parent_class_meta = UR::Object::Type->get(class_name => $parent_class_name);
             Carp::confess("Cannot generate $class_name: Failed to find class meta-data for base class $parent_class_name.");
         }

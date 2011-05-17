@@ -114,7 +114,7 @@ sub generate_schema_for_class_meta {
             my @id_by = $class_meta->id_property_names;            
             my @column_names = map { $class_meta->property($_)->column_name } @id_by;
             my $r_table_name = $parent_table->table_name;
-            #$DB::single = 1; # get pk columns
+            ##$DB::single = 1; # get pk columns
             my @r_id_by = $p->id_property_names;
             my @r_column_names = map { $class_meta->property($_)->column_name } @r_id_by;
             push @fks_to_generate, [$class_meta->class_name, $table_name, $r_table_name, \@column_names, \@r_column_names];
@@ -149,7 +149,7 @@ sub generate_schema_for_class_meta {
 
     if ($table_name =~ /[^\w\.]/) {
         # pass back anything from parent classes, but do nothing for special "view" tables
-        $DB::single = 1;
+        #$DB::single = 1;
         return @defined;   
     }
  
@@ -384,7 +384,7 @@ sub get_class_meta_for_table_name {
     
     unless (@class_meta) {
         # This will load every class in the namespace on the first execution :(
-        #$DB::single = 1;
+        ##$DB::single = 1;
         @class_meta =
             grep { not $_->class_name->isa("UR::Object::Ghost") }
             UR::Object::Type->get(
@@ -1083,7 +1083,7 @@ sub refresh_database_metadata_for_table_name {
                     last_object_revision => $revision_time,
                 );
                 unless ($fk) {
-                    #$DB::single=1;
+                    ##$DB::single = 1;
                     1;
                 }
                 $fk{$fk->fk_constraint_name} = $fk;
@@ -1532,7 +1532,7 @@ sub create_iterator_closure_for_rule {
 
     my $iterator = sub {
         unless ($sth) {
-            #$DB::single = 1;
+            ##$DB::single = 1;
             return;
         }
 
@@ -1576,7 +1576,7 @@ sub _extend_sql_for_column_operator_and_value {
 
     $op ||= '';
     if ($op eq 'in' and not ref($val) eq 'ARRAY') {
-        #$DB::single = 1;
+        ##$DB::single = 1;
         $val = [];
     }    
 
@@ -2139,7 +2139,7 @@ sub _sync_database {
             $add = sub {
                 my ($cmd) = @_;
                 if ($adding{$cmd}) {
-                    #$DB::single = 1;
+                    ##$DB::single = 1;
                     Carp::confess("Circular foreign key!") unless $main::skip_croak;
                 }
                 $adding{$cmd} = 1;
@@ -2872,7 +2872,7 @@ sub _default_save_sql_for_object {
                                   dbh          => $data_source->get_default_dbh
                                 };
 
-                #$DB::single = 1;
+                ##$DB::single = 1;
                 my @pk_values = $self->_id_values_for_primary_key($table, $object_to_save);
                 my $where = $self->_matching_where_clause($table, \@pk_values);
                 
