@@ -442,6 +442,7 @@ $DB::single = 1 if $joins[-1]->id eq 'URT::Car::Engine::size';
 
         } # next join across objects from the query subject to the delegated property target
 
+        $DB::single = 1;
         # done adding any new joins for this delegated property/property-chain
 
         if (ref($delegated_property) and !$delegated_property->via) {
@@ -718,7 +719,13 @@ sub _add_join {
     ) = @_;
 
     my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
-    my $table_alias                     = $delegation_chain_data->{$property_name}{table_alias} ||= {};
+    my $table_alias                     = $delegation_chain_data->{$property_name}{table_alias};
+    unless ($table_alias) {
+        warn "NO ALIASES FOR $property_name\n";
+        $table_alias                     = $delegation_chain_data->{$property_name}{table_alias} = {};
+        $DB::single = 1;
+    }
+    #my $table_alias                     = $delegation_chain_data->{"__all__"}{table_alias} ||= {};
     my $source_table_and_column_names   = $delegation_chain_data->{$property_name}{latest_source_table_and_column_names} ||= [];
 
     my $source_class_name = $join->{source_class};
@@ -745,6 +752,7 @@ sub _add_join {
     # that is a real table/column, and not a tableless class or another delegated property
     my @source_property_names;
     unless (@$source_table_and_column_names) {
+        $DB::single =1;
         @source_property_names = @{ $join->{source_property_names} };
 
         @$source_table_and_column_names =
@@ -763,6 +771,7 @@ sub _add_join {
                     Carp::confess("No property $_ for class ".$source_class_object->class_name);
                 }
                 my($table_name,$column_name) = $p->table_and_column_name_for_property();
+                print "TABCOL $table_name $column_name for $_\n";
                 if ($table_name && $column_name) {
                     [$table_name, $column_name];
                 } else {
@@ -774,28 +783,16 @@ sub _add_join {
             @source_property_names;
     }
 
-    my @foreign_property_names = @{ $join->{foreign_property_names} };
-    my @foreign_property_meta = 
-        map { $foreign_class_object->property_meta_for_name($_) }
-        @foreign_property_names;
-    my $foreign_table_name;
-    my @foreign_column_names = 
-        map {
-            # TODO: encapsulate
-            if ($_->is_calculated) {
-                if ($_->calculate_sql) {
-                    $_->calculate_sql;
-                } else {
-                    ();
-                }
-            } else {
-                my $foreign_column_name;
-                ($foreign_table_name, $foreign_column_name) = $_->table_and_column_name_for_property();
-                $foreign_column_name;
-            }
-        }
-        @foreign_property_meta;
+    #my @source_property_names = @{ $join->{source_property_names} };
+    #my ($source_table_name, $fcols, $fprops) = $self->_resolve_table_and_column_data($source_class_object, @source_property_names);
+    #my @source_column_names = @$fcols;
+    #my @source_property_meta = @$fprops;
 
+    my @foreign_property_names = @{ $join->{foreign_property_names} };
+    my ($foreign_table_name, $fcols, $fprops) = $self->_resolve_table_and_column_data($foreign_class_object, @foreign_property_names);
+    my @foreign_column_names = @$fcols;
+    my @foreign_property_meta = @$fprops;
+    
     unless (@foreign_column_names) {
         # all calculated properties: don't try to join any further
         last;
@@ -803,9 +800,6 @@ sub _add_join {
     unless (@foreign_column_names == @foreign_property_meta) {
         # some calculated properties, be sure to re-check for a match after loading the object
         $self->needs_further_boolexpr_evaluation_after_loading(1);
-    }
-    if ($foreign_table_name and $foreign_table_name =~ /^(.*)\s+(\w+)\s*$/s) {
-        $foreign_table_name = $1;
     }
 
     unless ($foreign_table_name) {
@@ -857,13 +851,21 @@ sub _add_join {
                     unless ($meta) {
                         print "no meta for $name in " . $foreign_class_object->id; 
                     }
-                    my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
+                    
+                    #my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
+                    my ($table_name, $column_names, $property_metas) = $self->_resolve_table_and_column_data($foreign_class_object, $name);
+                    my $column = $column_names->[0];
+
+                    if (not $column) {
+                        Carp::confess("No column for $foreign_class_object->{id} $name?  Indirect property flattening must be enabled to use indirect filters in where with via/to.");
+                    }
+
                     my $value = $where->[$n+1];
                     push @extra_db_filters, $column => { value => $value, ($op ? (operator => $op) : ()) };
                     push @extra_obj_filters, $name  => { value => $value, ($op ? (operator => $op) : ()) };
                 }
             }
-
+$DB::single = 1;
             $self->_add_db_join(
                 "$foreign_table_name $alias" => {
                     (
@@ -922,6 +924,7 @@ sub _add_join {
         ## it passes tests in here, but I am not absolutely clear on how it functions -ss
     
         if ($foreign_class_object->table_name) {
+            $DB::single = 1;
             $table_alias->{$foreign_table_name} = $alias;
             @$source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
         }
@@ -962,6 +965,36 @@ sub _add_join {
     return $alias;
 }
 
+sub _resolve_table_and_column_data {
+    my ($class, $class_meta, @property_names) = @_;
+    my @property_meta = 
+        map { $class_meta->property_meta_for_name($_) }
+        @property_names;
+    my $table_name;
+    my @column_names = 
+        map {
+            # TODO: encapsulate
+            if ($_->is_calculated) {
+                if ($_->calculate_sql) {
+                    $_->calculate_sql;
+                } else {
+                    ();
+                }
+            } else {
+                my $column_name;
+                ($table_name, $column_name) = $_->table_and_column_name_for_property();
+                $column_name;
+            }
+        }
+        @property_meta;
+
+    if ($table_name and $table_name =~ /^(.*)\s+(\w+)\s*$/s) {
+        $table_name = $1;
+    }
+
+    return ($table_name, \@column_names, \@property_meta);
+}
+
 sub _set_join_alias {
     my ($self, $join, $alias) = @_;
     $self->_join_data->{$join->id}{alias} = $alias;
@@ -983,7 +1016,12 @@ sub _get_alias_join {
 
 sub _add_db_join {
     my ($self, $key, $data) = @_;
-    
+
+    if (grep { $_ eq '' } keys %$data) {
+        Carp::cluck(Data::Dumper::Dumper($key, $data));
+        $DB::single = 1;
+    }
+
     my ($alias) = ($key =~/\w+$/);
     my $alias_data = $self->_alias_data || $self->_alias_data({});
     $alias_data->{$alias}{db_join} = $data;

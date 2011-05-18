@@ -119,9 +119,13 @@ is($p1[0], $p2[0], "result matches");
 my $bx4i = URT::Person->define_boolexpr('big_cars.color' => 'red');
 my $bx4f = $bx4i->flatten;
 print "$bx4i\n$bx4f\n";
-
 my @p4f = URT::Person->get($bx4f);
 ok("@p4f", "flat query $bx4f works");
+
+#my $bx5 = URT::Person->define_boolexpr('primary_car.color' => 'blue', 'primary_car.engine.size' => '400');
+#print "$bx5";
+#$DB::single = 1;
+#my @p5 = URT::Person->get($bx5);
 
 
 __END__
