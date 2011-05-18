@@ -330,31 +330,21 @@ sub _create {
                             redo PICK_NEXT_OBJECT_FOR_LOADING;
 
                         } else {
-                            if ($next_obj_underlying_context and $next_obj_underlying_context->__changes__) {
-                                # If the next DB object has changes, then it'll appear in the cached list
-                                # at the appripriate time.  Discard this DB object and pick again
-                                unless (delete $changed_objects_that_might_be_db_deleted{$next_obj_underlying_context_id}) {
-                                    $db_seen_ids_that_are_not_deleted{$next_obj_underlying_context_id} = 1;
-                                }
-                                $next_obj_underlying_context = undef;
+                            # Force an ID-only query to the underying context
+                            my $requery_obj = $context->reload($bx_subject_class, id => $next_obj_current_context_id);
+                            if ($requery_obj) {
+                                # In any case, the DB iterator will pull it up at the appropriate time,
+                                # and since the object has no changes, it will be returned to the caller then.
+                                # Discard this in-memory object and pick again
+                                $next_obj_current_context = undef;
                                 redo PICK_NEXT_OBJECT_FOR_LOADING;
                             } else {
-                                # Force an ID-only query to the underying context
-                                my $requery_obj = $context->reload($bx_subject_class, id => $next_obj_current_context_id);
-                                if ($requery_obj) {
-                                    # In any case, the DB iterator will pull it up at the appropriate time,
-                                    # and since the object has no changes, it will be returned to the caller then.
-                                    # Discard this in-memory object and pick again
-                                    $next_obj_current_context = undef;
-                                    redo PICK_NEXT_OBJECT_FOR_LOADING;
-                                } else {
-                                    # We've now confirmed that the object in the DB is really gone
-                                    # NOTE: the reload() has already performed the __merge (implying deletion)
-                                    # in the above branch "elsif ($normalized_rule->is_id_only)" so we don't need
-                                    # to __merge/delete it here
-                                    $next_obj_current_context = undef;
-                                    redo PICK_NEXT_OBJECT_FOR_LOADING;
-                                }
+                                # We've now confirmed that the object in the DB is really gone
+                                # NOTE: the reload() has already performed the __merge (implying deletion)
+                                # in the above branch "elsif ($normalized_rule->is_id_only)" so we don't need
+                                # to __merge/delete it here
+                                $next_obj_current_context = undef;
+                                redo PICK_NEXT_OBJECT_FOR_LOADING;
                             }
                         }
                     }
