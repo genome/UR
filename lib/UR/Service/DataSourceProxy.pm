@@ -196,7 +196,7 @@ sub _merge_object_changes {
 
     my $return_value = 0;
 
-$DB::single=1;
+#$DB::single = 1;
     eval {
         # FIXME this would be way cooler if we could lean on UR::Context::Transaction.  Before that could
         # work, we'd need some way to ask a prior transaction what an object's state is.  And while we're

@@ -6,11 +6,8 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
-
 use URT; 
-
 class URT::Foo { has => [qw/a b c/]}; 
-$DB::single = 1; 
 
 my @p1a = (-order_by => [qw/b/], -group_by => [qw/b a/]); 
 my $bx1 = URT::Foo->define_boolexpr(@p1a);

@@ -747,7 +747,7 @@ sub create_entity {
         if (defined($sub_class_name) and ($sub_class_name ne $class)) {
             # delegate to the sub-class to create the object
             unless ($sub_class_name->can($construction_method)) {
-                $DB::single = 1;
+                #$DB::single = 1;
                 Carp::croak("Can't locate object method '$construction_method' via package '$sub_class_name' "
                             . "while resolving proper subclass for $class during $construction_method");
 
@@ -1078,7 +1078,7 @@ sub delete_entity {
             # create ghost object
             my $ghost = $self->_construct_object($entity->ghost_class, id => $entity->id, %ghost_params);
             unless ($ghost) {
-                $DB::single = 1;
+                #$DB::single = 1;
                 Carp::confess("Failed to constructe a deletion record for an unsync'd delete.");
             }
             $ghost->__signal_change__("create");
@@ -1293,7 +1293,7 @@ sub prune_object_cache {
 
     return if ($is_pruning);  # Don't recurse into here
 
-    #$DB::single=1;
+    ##$DB::single = 1;
     return unless ($all_objects_cache_size > $cache_size_highwater);
 
     $is_pruning = 1;
@@ -1397,7 +1397,7 @@ sub prune_object_cache {
         printf("MEM PRUNE complete, $deleted_count objects marked after $pass passes in %.4f sec\n\n\n",$t2-$t1);
     }
     if ($all_objects_cache_size > $cache_size_lowwater) {
-        #$DB::single=1;
+        ##$DB::single = 1;
         warn "After several passes of pruning the object cache, there are still $all_objects_cache_size objects";
     }
 }
@@ -2020,7 +2020,7 @@ sub _create_import_iterator_for_underlying_context {
         warn "Implement me carefully";
         
         if ($rule_template_specifies_value_for_subtype) {
-            #$DB::single = 1;
+            ##$DB::single = 1;
             my $sub_classification_meta_class_name          = $template_data->{sub_classification_meta_class_name};
             my $value = $rule->value_for($sub_typing_property);
             my $type_obj = $sub_classification_meta_class_name->get($value);
@@ -2037,7 +2037,7 @@ sub _create_import_iterator_for_underlying_context {
             }
         }
         elsif (not $class_table_name) {
-            #$DB::single = 1;
+            ##$DB::single = 1;
             # we're in a sub-class, and don't have the type specified
             # check to make sure we have a table, and if not add to the filter
             #my $rule = $class_name->define_boolexpr(
@@ -2846,7 +2846,7 @@ sub _get_objects_for_class_and_rule_from_cache {
                 unless ("@matches" eq "@matches2") {
                     print "@matches\n";
                     print "@matches2\n";
-                    $DB::single = 1;
+                    #$DB::single = 1;
                     #Carp::cluck("Mismatch!");
                     my @matches3 = $index->get_objects_matching(@values);
                     my @matches4 = $index->get_objects_matching(@values);                
@@ -2863,7 +2863,7 @@ sub _get_objects_for_class_and_rule_from_cache {
         }
         elsif ($strategy eq 'set intersection') {
             #print $rule->num_values, "  ", $rule->is_id_only, "\n";
-            #$DB::single = 1;
+            ##$DB::single = 1;
             my $template = $rule->template;
             my $group_by = $template->group_by;
 
@@ -2906,7 +2906,7 @@ sub _get_objects_for_class_and_rule_from_cache {
             #    delete $expected{$match};
             # }
             # if (keys %expected) {
-            #    $DB::single = 1;
+            #    #$DB::single = 1;
             #    print Data::Dumper::Dumper(\%expected);
             # }
 

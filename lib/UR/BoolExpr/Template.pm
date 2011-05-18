@@ -114,9 +114,9 @@ sub _resolve_indexing_params {
     for my $name (@all_names) {
         my $m = $class_meta->property($name);
         unless ($m) {
-            $DB::single = 1;
+            #$DB::single = 1;
             $class_meta->property($name);
-            $DB::single = 1;
+            #$DB::single = 1;
             $class_meta->property($name);
         }
     }
@@ -597,12 +597,12 @@ sub legacy_params_hash {
 
     if ($self->is_unique and not $legacy_params_hash->{_unique}) {
         Carp::carp "is_unique IS set but legacy params hash is NO for $self->{id}";
-        $DB::single = 1;
+        #$DB::single = 1;
         $self->is_unique; 
     }
     if (!$self->is_unique and $legacy_params_hash->{_unique}) {        
         Carp::carp "is_unique NOT set but legacy params hash IS for $self->{id}";
-        $DB::single = 1;
+        #$DB::single = 1;
         $self->is_unique; 
     }       
 

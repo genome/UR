@@ -24,7 +24,7 @@ sub _load {
     # Auto generate the object on the fly.
     my $id = $rule->value_for_id;
     unless (defined $id) {
-        $DB::single = 1;
+        #$DB::single = 1;
         Carp::croak "No id specified for loading members of an infinite set ($class)!"
     }
     my $class_meta = $class->__meta__;

@@ -65,7 +65,7 @@ sub _get_sequence_name_for_table_and_column {
     
     # See if the sequence generator "table" is already there
     my $seq_table = sprintf('URMETA_%s_%s_SEQ', $table_name, $column_name);
-    $DB::single = 1;
+    #$DB::single = 1;
     unless ($self->{'_has_sequence_generator'}->{$seq_table} or
             grep {$_ eq $seq_table} $self->get_table_names() ) {
         unless ($dbh->do("CREATE TABLE IF NOT EXISTS $seq_table (next_value integer PRIMARY KEY AUTO_INCREMENT)")) {

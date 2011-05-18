@@ -53,7 +53,7 @@ sub execute {
 
     my $params = shift;
     
-$DB::single=1;
+#$DB::single = 1;
     my $namespace = $self->namespace_name;
     eval "use $namespace";
     if ($@) {

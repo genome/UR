@@ -11,7 +11,7 @@ use IO::File;
 
 sub setup {
 my($self) = @_;
-$DB::single=1;
+#$DB::single = 1;
     $self->start_mode('show_file');
     $self->mode_param('rm');
     $self->run_modes(

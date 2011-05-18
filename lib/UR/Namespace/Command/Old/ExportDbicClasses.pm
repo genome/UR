@@ -37,7 +37,7 @@ sub x_execute {
     my $self = shift;
     my $params = shift;
     
-$DB::single=1;
+#$DB::single = 1;
     unless ($self->bare_args) {
         $self->error_message("No class names were specified on the command line");
         $self->status_message($self->help_usage_complete_text,"\n");

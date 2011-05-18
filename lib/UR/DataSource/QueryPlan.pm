@@ -812,7 +812,7 @@ sub _init_rdbms {
         my $prior_column_name = $prior_property_meta->column_name || $prior;
 
         $connect_by_clause = "connect by $this_table_name.$this_column_name = prior $prior_table_name.$prior_column_name\n";
-        #$DB::single = 1;
+        ##$DB::single = 1;
     }    
 
     my @property_names_in_resultset_order;
@@ -829,7 +829,7 @@ sub _init_rdbms {
     if ($group_by) {
         # when grouping, we're making set objects instead of regular objects
         # this means that we re-constitute the select clause and add a group_by clause
-        #$DB::single = 1;
+        ##$DB::single = 1;
         $group_by_clause = 'group by ' . $select_clause if (scalar(@$group_by));
 
         # FIXME - does it even make sense for the user to specify an order_by in the

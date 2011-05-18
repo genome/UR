@@ -599,7 +599,7 @@ sub resolve {
                 }
                 elsif ($value->can($property_name)) {
                     # TODO: stop suporting foo_id => $foo, since you can do foo=>$foo, and foo_id=>$foo->id  
-                    $DB::single = 1;
+                    #$DB::single = 1;
                     # Carp::cluck("using $property_name => \$obj to get $property_name => \$obj->$property_name is deprecated...");
                     $value = $value->$property_name;
                 }
