@@ -598,7 +598,6 @@ sub create_for_loading_template {
 
         # If the rule had hints, mark that we loaded those things too, in all_params_loaded
         if (keys(%hints_or_delegation)) {
-            #$DB::single = 1;
             foreach my $property ( keys(%hints_or_delegation) ) {
                 foreach my $hint_data ( @{ $hints_or_delegation{$property}} ) {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
