@@ -100,14 +100,12 @@ sub _create {
     };
 
     my $me_loading_iterator_as_string;  # See note below the closure definition
-$DB::single=1;
     my $loading_iterator = sub {
 
         my $next_object;
 
         PICK_NEXT_OBJECT_FOR_LOADING:
         while (! $next_object) {
-print "\n*** loader $me_loading_iterator_as_string at the top of the pick loop\n";
             if ($underlying_context_iterator && ! $next_obj_underlying_context) {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
 
@@ -124,7 +122,6 @@ print "\n*** loader $me_loading_iterator_as_string at the top of the pick loop\n
                     unless (delete $changed_objects_that_might_be_db_deleted{$next_obj_underlying_context->id}) {
                         $db_seen_ids_that_are_not_deleted{$next_obj_underlying_context->id} = 1;
                     }
-print "Next DB object id ".$next_obj_underlying_context->id." has changes, discarding and picking again\n";
                     $next_obj_underlying_context = undef;
                     redo PICK_NEXT_OBJECT_FOR_LOADING;
                 }
@@ -157,7 +154,6 @@ print "Next DB object id ".$next_obj_underlying_context->id." has changes, disca
                 # see by now and must be deleted.  If any of these object have changes then
                 # the __merge below will throw an exception
                 foreach my $problem_obj (values(%changed_objects_that_might_be_db_deleted)) {
-print "*** cleaning up object id ".$problem_obj->id." after the fact\n";
                     $context->__merge_db_data_with_existing_object($bx_subject_class, $problem_obj, undef, []);
                 }
 
@@ -188,8 +184,6 @@ print "*** cleaning up object id ".$problem_obj->id." after the fact\n";
             if ($next_obj_underlying_context && $next_obj_current_context) {
                 $comparison_result = $object_sorter->($next_obj_underlying_context, $next_obj_current_context);
             }
-print "cached obj id ".(defined($next_obj_current_context) ? $next_obj_current_context->id : "undef");
-print "  DB obj id ".(defined($next_obj_underlying_context) ? $next_obj_underlying_context->id : "undef") ."\n";
 
             my $next_obj_underlying_context_id;
             $next_obj_underlying_context_id = $next_obj_underlying_context->id if ($next_obj_underlying_context);
@@ -220,7 +214,6 @@ print "  DB obj id ".(defined($next_obj_underlying_context) ? $next_obj_underlyi
                     ($comparison_result < 0) # ($next_obj_underlying_context->id le $next_obj_current_context->id) 
                 )
             ) {
-print "DB object sorts first\n";
                 # db object sorts first
                 # If we deleted it from memorym the DB would not have given it back.
                 # So it either failed to match the BX now, or one of the order-by parameters changed
@@ -262,18 +255,14 @@ print "DB object sorts first\n";
                     ($comparison_result > 0) # ($next_obj_underlying_context->id ge $next_obj_current_context->id) 
                 )
             ) {
-print "cached object sorts first\n";
                 # The cached object sorts first
                 # Either it was changed in memory, in the DB or both
                 # In addition, the change could have been to an order-by property, one of the
                 # properties in the BoolExpr, or both
 
                 if ($context->object_exists_in_underlying_context($next_obj_current_context)) {
-print "    cached object exists in underlying context\n";
                     if ($next_obj_current_context->__changes__) {
-print "    cached object has changes\n";
                         if ($change_is_order_by_property->($next_obj_current_context)) {
-print "    change is an order-by property\n";
 
                             # This object is expected to exist in the underlying context, has changes, and at
                             # least one of those changes is to an order-by property
@@ -298,7 +287,6 @@ print "    change is an order-by property\n";
                             last PICK_NEXT_OBJECT_FOR_LOADING;
                         }
                         else {
-print "    change is NOT an order-by property\n";
                             # The change is not an order-by property.  This object must have been deleted
                             # from the DB.  The call to __merge below will throw an exception
                             $context->__merge_db_data_with_existing_object($bx_subject_class, $next_obj_current_context, undef, []);
@@ -307,12 +295,10 @@ print "    change is NOT an order-by property\n";
                         }
 
                     } else {
-print "    cached object has NO changes\n";
                         # This cached object has no changes, so the database must have changed.
                         # It could be deleted, no longer match the BoolExpr, or have changes in an order-by property
 
                         if (delete $db_seen_ids_that_are_not_deleted{$next_obj_current_context_id}) {
-print "    was already seen in the DB iterator\n";
                             # We saw this already on the DB iterator.  It's not deleted. Go ahead and return it
                             $next_object = $next_obj_current_context;
                             $next_obj_current_context = undef;
@@ -320,7 +306,6 @@ print "    was already seen in the DB iterator\n";
 
                         }
                         elsif ($normalized_rule->is_id_only) {
-print "    normalized rule is id-only\n";
                             # If the query is id-only, and we didn't see the DB object at the same time, then
                             # the DB row must have been deleted.  Changing the PK columns in the DB are logically
                             # the same as deleting the old object and creating/defineing a new one in UR.
@@ -331,30 +316,9 @@ print "    normalized rule is id-only\n";
                             redo PICK_NEXT_OBJECT_FOR_LOADING;
 
                         } else {
-# For the case where a single row in the result set is deleted in the DB, but the UR object has no changes...
-
-
-
-## *** This one gets it wrong in the case where the object exists, but no longer matches the BX in the DB
-#print "    it must be deleted, picking another\n";
-#                            $context->__merge_db_data_with_existing_object($bx_subject_class, $next_obj_current_context, undef, []);
-#                            $next_obj_current_context = undef;
-#                            redo PICK_NEXT_OBJECT_FOR_LOADING;
-
-
-# *** This one deletes it eventually, but after the caller gets a copy of the object
-#print "    Flagging it for later inspection\n";
-#                            $changed_objects_that_might_be_db_deleted{$next_obj_current_context_id} = $next_obj_current_context;
-#                            $next_object = $next_obj_current_context;
-#                            $next_obj_current_context = undef;
-#                            last PICK_NEXT_OBJECT_FOR_LOADING;
-
-
-# *** For the case where you change something in memory to sort last, but in the DB it sorts first
                             if ($next_obj_underlying_context and $next_obj_underlying_context->__changes__) {
                                 # If the next DB object has changes, then it'll appear in the cached list
                                 # at the appripriate time.  Discard this DB object and pick again
-print "    underlying cx object id $next_obj_underlying_context_id has changes, discarding and picking again\n";
                                 unless (delete $changed_objects_that_might_be_db_deleted{$next_obj_underlying_context_id}) {
                                     $db_seen_ids_that_are_not_deleted{$next_obj_underlying_context_id} = 1;
                                 }
@@ -362,19 +326,14 @@ print "    underlying cx object id $next_obj_underlying_context_id has changes, 
                                 redo PICK_NEXT_OBJECT_FOR_LOADING;
                             } else {
                                 # Force an ID-only query to the underying context
-print "    underlying cx object has no changes, trying id-only query to the DB for $next_obj_current_context_id\n";
-print "VVVVVVVVV\n";
                                 my $requery_obj = $context->reload($bx_subject_class, id => $next_obj_current_context_id);
-print "^^^^^^^^^\n";
                                 if ($requery_obj) {
-print "    that object still exists, discarding it and picking again\n";
                                     # In any case, the DB iterator will pull it up at the appropriate time,
                                     # and since the object has no changes, it will be returned to the caller then.
                                     # Discard this in-memory object and pick again
                                     $next_obj_current_context = undef;
                                     redo PICK_NEXT_OBJECT_FOR_LOADING;
                                 } else {
-print "    that object is deleted.  Deleting the memory copy and picking another\n";
                                     # We've now confirmed that the object in the DB is really gone
                                     # NOTE: wouldn't the reload() have performed the __merge (implying deletion)
                                     # in the above branch "elsif ($normalized_rule->is_id_only)" ??
@@ -383,47 +342,9 @@ print "    that object is deleted.  Deleting the memory copy and picking another
                                     redo PICK_NEXT_OBJECT_FOR_LOADING;
                                 }
                             }
-                                
-
-
-# *** This deletes the right object, but ends up doing one-off queries for every object in the case where you change
-# a value to sort last in memory, but sorts first in the DB.  It also returns items in the wrong order
-#                            # Force an ID-only query to the underying context
-#print "    trying id-only query to the DB for id ".$next_obj_current_context_id."\n";
-#print "VVVVVVVVV\n";
-#                            my $requery_obj = $context->reload($bx_subject_class, id => $next_obj_current_context_id);
-#print "^^^^^^^^^\n";
-#                            if ($requery_obj) {
-#print "    That object still exists, discarding it for now\n\n";
-#                                # An object will that ID really does exist in the DB
-#                                # It has had the DB changes merged with the in-memory state.  See if the object
-#                                # still matches the BoolExpr
-#                                # NOTE: I don't think it matters now whether it matches the bx or not.
-#                                # 
-#                                #if ($normalized_rule->evaluate($requery_obj)) {
-#                                #    # This object must have had changes to the DB on an order-by column causing
-#                                #    # it to sort later.  Put it in the list of things to watch for later
-#                                #    $changed_objects_that_might_be_db_deleted{$next_obj_current_context_id} = $next_obj_current_context;
-#                                #}
-#                                # In any case, the DB iterator will pull it up at the appropriate time,
-#                                # and since the object has no changes, it will be returned to the caller then.
-#                                # Discard this in-memory object and pick again
-#                                $next_obj_current_context = undef;
-#                                redo PICK_NEXT_OBJECT_FOR_LOADING;
-#
-#                            } else {
-#print "    that object is not in the DB - it is deleted, picking another\n\n";
-#                                # We've now confirmed that the object in the DB is really gone
-#                                # NOTE: wouldn't the reload() have performed the __merge (implying deletion)
-#                                # in the above branch "elsif ($normalized_rule->is_id_only)" ??
-#                                #$context->__merge_db_data_with_existing_object($bx_subject_class, $next_obj_current_context, undef, []);
-#                                $next_obj_current_context = undef;
-#                                redo PICK_NEXT_OBJECT_FOR_LOADING;
-#                            }
                         }
                     }
                 } else {
-print "    It is a newly created object\n";
                     # The object does not exist in the underlying context.  It must be
                     # a newly created object.
                     $next_object = $next_obj_current_context;
@@ -436,7 +357,6 @@ print "    It is a newly created object\n";
                      !defined($next_obj_underlying_context)
             ) {
                 # Both iterators are exhausted.  Bail out
-print "Both iterators are done\n";
                 $next_object = undef;
                 $last_loaded_id = undef;
                 last PICK_NEXT_OBJECT_FOR_LOADING;
@@ -461,7 +381,6 @@ print "Both iterators are done\n";
         } # end while ! $next_object
 
         $last_loaded_id = $next_object->id if $next_object;
-print "Returning obj id $last_loaded_id\n" if(defined $last_loaded_id);
 
         return $next_object;
     };  # end of the closure
@@ -475,7 +394,6 @@ print "Returning obj id $last_loaded_id\n" if(defined $last_loaded_id);
     # holds a reference to the string version of its address, which is the only thing it really
     # needed anyway
     $me_loading_iterator_as_string = $loading_iterator . '';
-print "Starting a new loading iterator for $normalized_rule $me_loading_iterator_as_string\n";
 
     $all_loading_iterators{$me_loading_iterator_as_string} = 
         [ $me_loading_iterator_as_string,
@@ -497,7 +415,6 @@ print "Starting a new loading iterator for $normalized_rule $me_loading_iterator
 sub DESTROY {
     my $self = shift;
 
-print "Loading iterator $self is going out of scope\n";
     my $iter_data = $all_loading_iterators{$self};
     if ($iter_data->[0] eq $self) {
         # that's me!
@@ -568,7 +485,6 @@ sub _inject_object_into_other_loading_iterators {
 sub _remove_object_from_other_loading_iterators {
     my($self, $disappearing_object, $iterator_to_skip) = @_;
 
-#print "In _remove_object_from_other_loading_iterators, count is $iterator_count\n";
     ITERATOR:
     foreach my $iter_name ( keys %all_loading_iterators ) {
         next if(! defined $iterator_to_skip or ($iter_name eq $iterator_to_skip));  # That's me!  Don't remove into our own @$cached this way
@@ -576,22 +492,17 @@ sub _remove_object_from_other_loading_iterators {
                                 = @{$all_loading_iterators{$iter_name}};
         next if (defined($iterator_to_skip)
                   and $loading_iterator eq $iterator_to_skip);  # That's me!  Don't insert into our own @$cached this way
-#print "Evaluating rule $rule against object ".Data::Dumper::Dumper($disappearing_object),"\n";
         if ($rule->evaluate($disappearing_object)) {
-#print "object matches rule\n";
 
             my $cached_list_len = @$cached;
-#print "there are $cached_list_len objects in the cached list: ",join(',',map { $_->id } @$cached),"\n";
             for(my $i = 0; $i < $cached_list_len; $i++) {
                 my $cached_object = $cached->[$i];
                 next if $cached_object->isa('UR::DeletedRef');
 
                 my $comparison = $object_sorter->($disappearing_object, $cached_object);
 
-#print "cached obj id ".$cached_object->id." comparison $comparison\n";
                 if ($comparison == 0) {
                     # That's the one, remove it from the list
-#print "removing obj id ".$disappearing_object->id." from loading iterator $loading_iterator cache\n";
                     splice(@$cached, $i, 1);
                     next ITERATOR;
                 } elsif ($comparison < 0) {
