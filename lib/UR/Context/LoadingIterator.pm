@@ -111,12 +111,22 @@ sub _create {
 
                 $underlying_context_objects_count++ if ($is_monitor_query and $next_obj_underlying_context);
 
-                if ($next_obj_underlying_context and $next_obj_underlying_context->__changes__ and $change_is_order_by_property->($next_obj_underlying_context)) {
-                    unless (delete $changed_objects_that_might_be_db_deleted{$next_obj_underlying_context->id}) {
-                        $db_seen_ids_that_are_not_deleted{$next_obj_underlying_context->id} = 1;
+                if ($next_obj_underlying_context) {
+                     if ($next_obj_underlying_context->isa('UR::DeletedRef')) {
+                         # This object is deleted in the current context and not yet committed
+                         # skip it and pick again
+                         $next_obj_underlying_context = undef;
+                         redo PICK_NEXT_OBJECT_FOR_LOADING;
+                     } elsif ($next_obj_underlying_context->__changes__
+                              and
+                              $change_is_order_by_property->($next_obj_underlying_context)
+                     ) {
+                        unless (delete $changed_objects_that_might_be_db_deleted{$next_obj_underlying_context->id}) {
+                            $db_seen_ids_that_are_not_deleted{$next_obj_underlying_context->id} = 1;
+                        }
+                        $next_obj_underlying_context = undef;
+                        redo PICK_NEXT_OBJECT_FOR_LOADING;
                     }
-                    $next_obj_underlying_context = undef;
-                    redo PICK_NEXT_OBJECT_FOR_LOADING;
                 }
             }
 
