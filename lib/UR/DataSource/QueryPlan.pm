@@ -168,7 +168,11 @@ sub _init_rdbms {
                 $group_by_property_names{$name} = $data;
             }
         }
-        @all_table_properties = grep { ref($_) } values %group_by_property_names; 
+        @all_table_properties = grep { ref($_) } values %group_by_property_names;
+        unless (@all_table_properties == @$group_by) {
+            Carp::cluck(Data::Dumper::Dumper($group_by, \@all_table_properties));
+            $DB::single = 1;
+        }
     }
 
     my %order_by_property_names;
