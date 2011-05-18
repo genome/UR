@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 13;
+use Test::More tests=> 12;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -116,15 +116,21 @@ is(scalar(@p2),1,"got one person with a primary car color of red using a custom 
 
 is($p1[0], $p2[0], "result matches");
 
+
+__END__
+
+my $bx5 = URT::Person->define_boolexpr('cars.color' => 'red', 'cars.engine.size' => '400');
+print "$bx5";
+$DB::single = 1;
+my @p5 = URT::Person->get($bx5);
+ok("@p5", "regular query works for " . scalar(@p5) . " objects");
+
 my $bx4i = URT::Person->define_boolexpr('big_cars.color' => 'red');
 my $bx4f = $bx4i->flatten;
 print "$bx4i\n$bx4f\n";
-
 my @p4f = URT::Person->get($bx4f);
-ok("@p4f", "flat query $bx4f works");
+ok("@p4f", "flat query $bx4f works for " . scalar(@p4f) . " objects");
 
-
-__END__
 # we must flatten before query for this to work, and currently constant_values need support
 my @p4i = URT::Person->get($bx4i);
 ok("@p4i", "indirect query works");
