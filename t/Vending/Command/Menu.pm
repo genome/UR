@@ -16,7 +16,7 @@ sub execute {
     my $super = $self->super_can('_execute_body');
     $super->($self,@_);
 
-$DB::single=1;
+#$DB::single=1;
     my $machine = $self->machine;
     my $inserted = $machine->coin_box->content_value();
     if ($inserted) {

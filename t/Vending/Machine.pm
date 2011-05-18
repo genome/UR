@@ -180,7 +180,7 @@ sub _complete_purchase_and_make_change_for_selections {
     }
 
     if ($change_value) {
-        $DB::single=1;
+        #$DB::single=1;
         die "Not enough change\n";
     }
 

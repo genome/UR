@@ -132,7 +132,7 @@ sub _shell_args_getopt_specification {
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
+    #$DB::single = 1;
 
     my $working_path;
     if ($self->namespace_name ne 'UR') {
@@ -420,7 +420,7 @@ sub _run_tests {
         local %SIG = %SIG; 
         delete $SIG{__DIE__}; 
         $ENV{UR_DBI_NO_COMMIT} = 1;
-        $DB::single=1;
+        #$DB::single = 1;
 
         $SIG{'INT'} = sub {
                               print "\n\nInterrupt.\nWaiting for running tests to finish...\n\n";
@@ -868,7 +868,7 @@ sub next_raw {
     My::TAP::Parser::IteratorFactory::LSF->process_events();
 
     if ($SHOULD_EXIT) {
-        $DB::single=1;
+        #$DB::single = 1;
         if  ($self->{'sel'}) {
             foreach my $h ( $self->{'sel'}->handles ) {
                 $h->close;

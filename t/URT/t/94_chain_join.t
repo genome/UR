@@ -102,7 +102,7 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
                     callback => sub {$query_text = $_[0]; $query_count++}),
     'Created a subscription for query');
 
-$DB::single = 1;
+#$DB::single = 1;
 
 # chain property equiv
 my $bx1 = URT::Person->define_boolexpr('primary_car.color' => 'red');
@@ -136,7 +136,7 @@ my $rule1 = URT::Car->define_boolexpr(color => 'red');
 ok($rule1, "made a 'car has color red' rule");
 note("$rule1");
 
-$DB::single = 1;
+#$DB::single = 1;
 my $rule2 = URT::Person->define_boolexpr('cars bx' => $rule1->id);
 ok($rule2, "made a 'person has primary_car with color is red'");
 note("$rule2");

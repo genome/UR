@@ -139,7 +139,7 @@ sub execute
                 exit 0;
             }
         }
-        $DB::single = 1;
+        #$DB::single = 1;
         while (keys %child_processes) {
             my $child_pid = wait();
             if ($child_pid == -1) {

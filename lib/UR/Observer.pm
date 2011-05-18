@@ -84,7 +84,7 @@ sub subscription {
 
 sub delete {
     my $self = shift;
-    $DB::single = 1;
+    #$DB::single = 1;
     $self->subject_class_name->cancel_change_subscription(
         $self->subject_id,
         $self->aspect,

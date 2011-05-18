@@ -43,7 +43,7 @@ sub _object_properties_to_string {
             }
             if (@v > 1) {
                 no warnings;
-                join(',',@v)
+                join(' ',@v)
             }
             else {
                 $v[0]

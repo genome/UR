@@ -42,7 +42,7 @@ sub sub_group {
     my $self = shift;
     my $spec = $self->property_name;
     if ($spec =~ /-/) {
-        $DB::single = 1;
+        #$DB::single = 1;
     }
     if ($spec =~ /^(.*)+\-(\w+)(\?|)(\..+|)/) {
         return $2 . $3; 

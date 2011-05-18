@@ -246,7 +246,7 @@ sub _resolve_forward {
     # this records what to reverse in this case.
     $foreign_name_for_source ||= '<' . $source_class . '::' . $source_name_for_foreign;
 
-    $DB::single = 1 if $where;
+    #$DB::single = 1 if $where;
 
     push @joins, $class->_get_or_define( 
                     id => $id,

@@ -33,7 +33,7 @@ sub resolve_class_description_perl {
         my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
                     
         unless (@i and @i == @parent_class_objects) {
-            $DB::single=1;
+            #$DB::single = 1;
             Carp::confess("No inheritance meta-data found for ( @i / @parent_class_objects)" . $self->class_name)
         }
         
