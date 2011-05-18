@@ -24,14 +24,26 @@ my $is_multiple_loading_iterators = 0;
 my %all_loading_iterators;
 
 
-# Some thoughts about the loading iterator's behavior around changing objects....
+# The set of objects returned by an iterator is initially determined when the
+# iterator is created, but the final determination of membership happens when
+# the object is about to be returned from the iterator's next() method.
+# In practice, this means that an object matches the BoolExpr at iterator
+# creation, and no longer matches when that object is about to be returned,
+# it will not be returned.
 #
-# The system attempts to return objects matching the rule at the time the iterator is
-# created, even if they change between the time it's created and when next() returns 
-# them.  There is a problem if the object in question is actually deleted (ie. isa
-# UR::DeletedRef).  Since DeletedRef's die any time you try to use them, the object
-# sorters can't sort them.  Instead, we'll just punt and throw an exception ourselves
-# if we come across one.
+# If an object does not match the bx when the iterator is created, it will
+# not be returned even if it later changes to match before the iterator is
+# exhausted.
+#
+# If an object changes so that it's sort order changes after the iterator is
+# created but before it is returned by the iterator, the object will be
+# returned in the order it had at iterator creation time.
+
+# Finally, the LoadingIterator will throw an exception if an object matches
+# the BoolExpr at iterator creation time, but is deleted when next() is about
+# to return it (ie. isa UR::DeletedRef).  Since DeletedRef's die any time you
+# try to use them, the object sorters can't sort them.  Instead, we'll just
+# punt and throw an exception ourselves if we come across one.
 # 
 # This seems like the least suprising thing to do, but there are other solutions:
 # 1) just plain don't return the deleted object
@@ -134,7 +146,6 @@ sub _create {
                 ($next_obj_current_context) = shift @$cached;
                 $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
             }
-
             if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
                  my $obj_to_complain_about = $next_obj_current_context;
                  # undef it in case the user traps the exception, next time we'll pull another off the list
@@ -338,9 +349,9 @@ sub _create {
                                     redo PICK_NEXT_OBJECT_FOR_LOADING;
                                 } else {
                                     # We've now confirmed that the object in the DB is really gone
-                                    # NOTE: wouldn't the reload() have performed the __merge (implying deletion)
-                                    # in the above branch "elsif ($normalized_rule->is_id_only)" ??
-                                    #$context->__merge_db_data_with_existing_object($bx_subject_class, $next_obj_current_context, undef, []);
+                                    # NOTE: the reload() has already performed the __merge (implying deletion)
+                                    # in the above branch "elsif ($normalized_rule->is_id_only)" so we don't need
+                                    # to __merge/delete it here
                                     $next_obj_current_context = undef;
                                     redo PICK_NEXT_OBJECT_FOR_LOADING;
                                 }
