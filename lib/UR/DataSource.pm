@@ -207,7 +207,7 @@ sub _generate_loading_templates_arrayref {
     use warnings;
 
     my %obj_joins_by_source_alias;
-    if ($obj_joins) {
+    if (0) { # ($obj_joins) {
         my @obj_joins = @$obj_joins;
         while (@obj_joins) {
             my $foreign_alias = shift @obj_joins;
@@ -215,19 +215,19 @@ sub _generate_loading_templates_arrayref {
             for my $foreign_property_name (sort keys %$data) {
                 next if $foreign_property_name eq '-is_required';
                 
-                # FIXME Gets rid of warnings that are cluttering up some commands, a refactor that'll remove
-                # the need for this is in the works.
                 my $source_alias = $data->{$foreign_property_name}{'link_alias'};
                 my $detail = $obj_joins_by_source_alias{$source_alias}{$foreign_alias} ||= {};
+                # warnings come from the above because we don't have 'link_alias' in filters.
+
                 my $source_property_name = $data->{$foreign_property_name}{'link_property_name'};
-                #Carp::cluck(Data::Dumper::Dumper($obj_joins)); # if !$foreign_property_name or !$source_alias or !$foreign_alias;
-                
                 if ($source_property_name) {
+                    # join
                     my $links = $detail->{links} ||= [];
                     push @$links, $foreign_property_name, $source_property_name;
                 }
 
                 if (exists $data->{value}) {
+                    # filter
                     my $operator = $data->{operator};
                     my $value = $data->{value};
                     my $filter = $detail->{filter} ||= [];

@@ -324,9 +324,6 @@ sub _init_rdbms {
        
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
 
-print "INITIAL JOINS: " . Data::Dumper::Dumper(\@joins);      
-$DB::single = 1 if $joins[-1]->id eq 'URT::Car::Engine::size';
-
         if ($joins[-1]{foreign_class}->isa("UR::Value")) {
             # the final join in a chain is often the link between a primitive value
             # and the UR::Value subclass into which it falls ...irrelevent for db joins
@@ -442,7 +439,6 @@ $DB::single = 1 if $joins[-1]->id eq 'URT::Car::Engine::size';
 
         } # next join across objects from the query subject to the delegated property target
 
-        $DB::single = 1;
         # done adding any new joins for this delegated property/property-chain
 
         if (ref($delegated_property) and !$delegated_property->via) {
@@ -606,7 +602,6 @@ $DB::single = 1 if $joins[-1]->id eq 'URT::Car::Engine::size';
         my $prior_column_name = $prior_property_meta->column_name || $prior;
 
         $connect_by_clause = "connect by $this_table_name.$this_column_name = prior $prior_table_name.$prior_column_name\n";
-        ##$DB::single = 1;
     }    
 
     my @property_names_in_resultset_order;
@@ -616,7 +611,6 @@ $DB::single = 1 if $joins[-1]->id eq 'URT::Car::Engine::size';
 
     # this is only used when making a real instance object instead of a "set"
     my $per_object_in_resultset_loading_detail;
-    print Data::Dumper::Dumper($self->_obj_joins, $self->_db_joins);
     unless ($group_by) {
         $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@$db_property_data, $self->_obj_joins);
     }
@@ -624,7 +618,6 @@ $DB::single = 1 if $joins[-1]->id eq 'URT::Car::Engine::size';
     if ($group_by) {
         # when grouping, we're making set objects instead of regular objects
         # this means that we re-constitute the select clause and add a group_by clause
-        ##$DB::single = 1;
         $group_by_clause = 'group by ' . $select_clause if (scalar(@$group_by));
 
         # FIXME - does it even make sense for the user to specify an order_by in the
@@ -719,13 +712,7 @@ sub _add_join {
     ) = @_;
 
     my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
-    my $table_alias                     = $delegation_chain_data->{$property_name}{table_alias};
-    unless ($table_alias) {
-        warn "NO ALIASES FOR $property_name\n";
-        $table_alias                     = $delegation_chain_data->{$property_name}{table_alias} = {};
-        $DB::single = 1;
-    }
-    #my $table_alias                     = $delegation_chain_data->{"__all__"}{table_alias} ||= {};
+    my $table_alias                     = $delegation_chain_data->{"__all__"}{table_alias} ||= {};
     my $source_table_and_column_names   = $delegation_chain_data->{$property_name}{latest_source_table_and_column_names} ||= [];
 
     my $source_class_name = $join->{source_class};
@@ -752,7 +739,6 @@ sub _add_join {
     # that is a real table/column, and not a tableless class or another delegated property
     my @source_property_names;
     unless (@$source_table_and_column_names) {
-        $DB::single =1;
         @source_property_names = @{ $join->{source_property_names} };
 
         @$source_table_and_column_names =
@@ -771,7 +757,6 @@ sub _add_join {
                     Carp::confess("No property $_ for class ".$source_class_object->class_name);
                 }
                 my($table_name,$column_name) = $p->table_and_column_name_for_property();
-                print "TABCOL $table_name $column_name for $_\n";
                 if ($table_name && $column_name) {
                     [$table_name, $column_name];
                 } else {
@@ -847,11 +832,8 @@ sub _add_join {
                 for (my $n = 0; $n < @$where; $n += 2) {
                     my $key =$where->[$n];
                     my ($name,$op) = ($key =~ /^(\S+)\s*(.*)/);
-                    my $meta = $foreign_class_object->property_meta_for_name($name);
-                    unless ($meta) {
-                        print "no meta for $name in " . $foreign_class_object->id; 
-                    }
                     
+                    #my $meta = $foreign_class_object->property_meta_for_name($name);
                     #my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
                     my ($table_name, $column_names, $property_metas) = $self->_resolve_table_and_column_data($foreign_class_object, $name);
                     my $column = $column_names->[0];
@@ -865,7 +847,7 @@ sub _add_join {
                     push @extra_obj_filters, $name  => { value => $value, ($op ? (operator => $op) : ()) };
                 }
             }
-$DB::single = 1;
+            
             $self->_add_db_join(
                 "$foreign_table_name $alias" => {
                     (
@@ -904,10 +886,7 @@ $DB::single = 1;
             # Add all of the columns in the join table to the return list
             # Note that we increment the object numbers.
             # Note: we add grouping columns individually instead of in chunks
-            if ($group_by) {
-                #$DB::single = 1;
-            }
-            else {
+            unless ($group_by) {
                 $self->_add_columns( 
                         map {
                             my $new = [@$_]; 
@@ -924,7 +903,6 @@ $DB::single = 1;
         ## it passes tests in here, but I am not absolutely clear on how it functions -ss
     
         if ($foreign_class_object->table_name) {
-            $DB::single = 1;
             $table_alias->{$foreign_table_name} = $alias;
             @$source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
         }
@@ -1016,12 +994,7 @@ sub _get_alias_join {
 
 sub _add_db_join {
     my ($self, $key, $data) = @_;
-
-    if (grep { $_ eq '' } keys %$data) {
-        Carp::cluck(Data::Dumper::Dumper($key, $data));
-        $DB::single = 1;
-    }
-
+    
     my ($alias) = ($key =~/\w+$/);
     my $alias_data = $self->_alias_data || $self->_alias_data({});
     $alias_data->{$alias}{db_join} = $data;
@@ -1675,16 +1648,8 @@ sub _init_core {
             }
         }
         $final_accessor = $final_accessor_meta->property_name;
-
-        #print "$property_name needs join "
-        #    . " via $relationship_name "
-        #    . " to $final_accessor"
-        #    . " using joins ";
-        
-        #my $final_table_name_with_alias = $first_table_name; 
         
         for my $join (@joins) {
-            #print "\tjoin $join\n";
 
             my $source_class_name = $join->{source_class};
             my $source_class_object = $join->{'source_class_meta'} || $source_class_name->__meta__;
@@ -1717,7 +1682,6 @@ sub _init_core {
                 }
                 @source_property_names;
 
-            #print "source column names are @source_table_and_column_names for $property_name\n";            
 
             my $foreign_table_name = $foreign_class_name;
 
