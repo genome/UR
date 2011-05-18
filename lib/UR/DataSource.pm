@@ -217,11 +217,10 @@ sub _generate_loading_templates_arrayref {
                 
                 # FIXME Gets rid of warnings that are cluttering up some commands, a refactor that'll remove
                 # the need for this is in the works.
-                no warnings;
                 my $source_alias = $data->{$foreign_property_name}{'link_alias'};
                 my $detail = $obj_joins_by_source_alias{$source_alias}{$foreign_alias} ||= {};
                 my $source_property_name = $data->{$foreign_property_name}{'link_property_name'};
-                use warnings;
+                #Carp::cluck(Data::Dumper::Dumper($obj_joins)); # if !$foreign_property_name or !$source_alias or !$foreign_alias;
                 
                 if ($source_property_name) {
                     my $links = $detail->{links} ||= [];

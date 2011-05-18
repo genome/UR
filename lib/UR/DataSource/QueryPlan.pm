@@ -323,7 +323,10 @@ sub _init_rdbms {
         my $property_name = $delegated_property;
        
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
-       
+
+print "INITIAL JOINS: " . Data::Dumper::Dumper(\@joins);      
+$DB::single = 1 if $joins[-1]->id eq 'URT::Car::Engine::size';
+
         if ($joins[-1]{foreign_class}->isa("UR::Value")) {
             # the final join in a chain is often the link between a primitive value
             # and the UR::Value subclass into which it falls ...irrelevent for db joins
@@ -332,7 +335,6 @@ sub _init_rdbms {
 
         my $last_class_object_excluding_inherited_joins;
         my $alias_for_property_value;
-        
 
         # one iteration per table between the start table and target
         while (my $object_join = shift @joins) { 
@@ -613,6 +615,7 @@ sub _init_rdbms {
 
     # this is only used when making a real instance object instead of a "set"
     my $per_object_in_resultset_loading_detail;
+    print Data::Dumper::Dumper($self->_obj_joins, $self->_db_joins);
     unless ($group_by) {
         $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@$db_property_data, $self->_obj_joins);
     }
@@ -847,7 +850,6 @@ sub _add_join {
             # This will crash if the "where" happens to use indirect things 
             my $where = $join->{where};
             if ($where) {
-                $DB::single = 1;
                 for (my $n = 0; $n < @$where; $n += 2) {
                     my $key =$where->[$n];
                     my ($name,$op) = ($key =~ /^(\S+)\s*(.*)/);
@@ -983,7 +985,6 @@ sub _add_db_join {
     my ($self, $key, $data) = @_;
     
     my ($alias) = ($key =~/\w+$/);
-    $DB::single = 1;
     my $alias_data = $self->_alias_data || $self->_alias_data({});
     $alias_data->{$alias}{db_join} = $data;
     
