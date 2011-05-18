@@ -2337,9 +2337,6 @@ sub _create_import_iterator_for_underlying_context {
             }
 
             $primary_object_for_next_db_row = $imported[-1];
-            my $this_object_was_already_cached = defined($primary_object_for_next_db_row)
-                                              && ref($primary_object_for_next_db_row)
-                                              && exists($primary_object_for_next_db_row->{'__get_serial'});
 
             foreach my $obj (@imported) {
                 # The object importer will return undef for an object if no object
@@ -2351,18 +2348,6 @@ sub _create_import_iterator_for_underlying_context {
                 $obj->{'__get_serial'} = $this_get_serial;
             }
 
-            # NOTE: The policy on returning already cached objects has changed.  The LoadingIterator
-            # now expects to see alredy cached objects from the DB so it can do more complete detection
-            # of rows that are deleted or changed in the database 
-            #if ($this_object_was_already_cached) {
-            #    # Don't return objects that already exist in the current context
-            #    # FIXME - when we can stack contexts in the same application, and the 
-            #    # loaded context is recorded on the object, use that context as the
-            #    # test above instead of the existence of a __get_serial
-            #    $primary_object_for_next_db_row = undef;
-            #    redo LOAD_AN_OBJECT;
-            #}
-            
             if ($re_iterate and $primary_object_for_next_db_row and ! ref($primary_object_for_next_db_row)) {
                 # It is possible that one or more objects go into subclasses which require more
                 # data than is on the results row.  For each subclass (or set of subclasses),

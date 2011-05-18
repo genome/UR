@@ -111,13 +111,6 @@ sub _create {
 
                 $underlying_context_objects_count++ if ($is_monitor_query and $next_obj_underlying_context);
 
-                ## See if this newly loaded object needs to be inserted into any of the other
-                ## loading iterators' cached list.  We only need to check this is there is more
-                ## than one iterator running....
-                #if ($next_obj_underlying_context and $is_multiple_loading_iterators) {
-                #    $class->_inject_object_into_other_loading_iterators($next_obj_underlying_context, $me_loading_iterator_as_string);
-                #}
-
                 if ($next_obj_underlying_context and $next_obj_underlying_context->__changes__ and $change_is_order_by_property->($next_obj_underlying_context)) {
                     unless (delete $changed_objects_that_might_be_db_deleted{$next_obj_underlying_context->id}) {
                         $db_seen_ids_that_are_not_deleted{$next_obj_underlying_context->id} = 1;
