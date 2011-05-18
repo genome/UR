@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 14;
+use Test::More tests => 11;
 
 &setup_classes_and_db();
 
@@ -32,11 +32,12 @@ is(scalar(@objs_iter), 2, 'The iterator returned 2 objects');
 is_deeply(\@objs_iter, \@objs, 'Iterator and get() returned the same things');
 
 
-# Iterators should return things that matched at the time the iterator was
-# created.  First the iterator asks for things named Joe.  Later, one of those
-# objects has its name changed so it no longer matches, and another object
-# is delete.  The iterator should return all 3 objects even though 2 no
-# longer match
+# Iterator behavior is undefined when the caller manipulates the objects
+# matching the iterator's BoolExpr after the iterator's creation, but before
+# they come off of the iterator.
+#
+# In this case, the iterator will only return the one object still matching
+# the bx when it's next() method is called
 
 # Right now objects 6,8 and 10 are named Joe
 $iter = URT::Thing->create_iterator(name => 'Joe');
@@ -51,14 +52,14 @@ $o->delete();      # Delete this one
 @objs = URT::Thing->get(name => 'Joe');
 is(scalar(@objs), 1, 'get() returned 1 thing named Joe after changing the other');
 
-$o = $iter->next();
-is($o->id, 6, 'The first object from iterator is id 6');
-is($o->name, 'Fred', 'First object name is Fred');
-
-$o = eval { $iter->next() };
-like($@, 
-     qr(Attempt to fetch an object which matched.*'thing_id' => '?10'?)s,
-     'Caught exception about deleted object');
+#$o = $iter->next();
+#is($o->id, 6, 'The first object from iterator is id 6');
+#is($o->name, 'Fred', 'First object name is Fred');
+#
+#$o = eval { $iter->next() };
+#like($@, 
+#     qr(Attempt to fetch an object which matched.*'thing_id' => '?10'?)s,
+#     'Caught exception about deleted object');
 
 $o = $iter->next();
 is($o->id, 8, 'Second object from iterator is id 8');
