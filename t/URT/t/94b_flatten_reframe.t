@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 20;
+use Test::More tests=> 19;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -98,7 +98,7 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
                     callback => sub {$query_text = $_[0]; $query_count++}),
     'created a subscription for query');
 
-$DB::single = 1;
+#$DB::single = 1;
 
 note("***** FLATTEN AND *****");
 
@@ -214,7 +214,7 @@ my $bx6 = URT::Person->define_boolexpr(
 my $bx6f = $bx6->flatten;
 
 __END__
-$DB::single = 1;
+#$DB::single = 1;
 #$ENV{UR_DBI_MONITOR_SQL} = 1;
 my @p6f = URT::Person->get($bx6f);
 my @p6 = URT::Person->get($bx6);

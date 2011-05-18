@@ -175,7 +175,7 @@ sub execute {
         # Get updates to it first.
         #
         
-        #$DB::single=1;
+        ##$DB::single = 1;
         
         for my $data_source (@target_data_sources) {
             # ensure the class has been lazy-loaded until UNIVERSAL::can is smarter...
@@ -195,7 +195,7 @@ sub execute {
         # Summarize the database changes by table.  We'll create/update/delete the class which goes with that table.
         #
 
-        #$DB::single = 1;
+        ##$DB::single = 1;
 
         my $cx = UR::Context->current; 
         for my $dd_class (qw/UR::DataSource::RDBMS::Table UR::DataSource::RDBMS::FkConstraint UR::DataSource::RDBMS::TableColumn/) {
@@ -245,7 +245,7 @@ sub execute {
     # Update the classes based-on changes to the database schemas
     #
 
-    #$DB::single = 1;
+    ##$DB::single = 1;
 
     if (@data_dictionary_objects) {
         $self->status_message("Found " . keys(%changed_tables) . " tables with changes.") unless $force_rewrite_all_classes;
@@ -285,7 +285,7 @@ sub execute {
     $self->status_message("Saving metadata changes...");
     my $sync_success = UR::Context->_sync_databases();
     unless ($sync_success) {
-        #$DB::single=1;
+        ##$DB::single = 1;
         $self->error_message("Metadata sync_database failed");
         UR::Context->_rollback_databases();
         return;
@@ -298,7 +298,7 @@ sub execute {
     # Right now, it's done with a _load() override, no data_source, and this block of code. :(
     #
 
-    #$DB::single = 1;
+    ##$DB::single = 1;
 
     my $cx = UR::Context->current;
     my @changed_class_meta_objects;
@@ -355,7 +355,7 @@ sub execute {
     $self->status_message("Committing changes to data sources...");
 
     unless (UR::Context->_commit_databases()) {
-        #$DB::single=1;
+        ##$DB::single = 1;
         $self->error_message("Metadata commit failed");
         return;
     }
@@ -479,7 +479,7 @@ sub _update_database_metadata_objects_for_schema_changes {
                 my $this_update = $last_ddl_time_for_table_name->{$table_name} || "<unknown date>";
                 my $table_object = $data_source->refresh_database_metadata_for_table_name($db_table_name);
                 unless ($table_object) {
-                    #$DB::single = 1;
+                    ##$DB::single = 1;
                     print;
                 }
                 my @changes =
@@ -673,7 +673,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             );
 
         unless ($class) {
-            #$DB::single = 1;
+            ##$DB::single = 1;
             $self->status_message(sprintf("~ No class found for deleted foreign key constraint %-32s %-32s\n",$table->table_name, $fk->id));
             next;
         }
@@ -755,7 +755,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         if (not defined UR::Context->_get_committed_property_value($table,'table_name')) {
             print Data::Dumper::Dumper($table);
-            #$DB::single = 1;
+            ##$DB::single = 1;
         }
         # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
         my $committed_data_source_id = UR::Context->_get_committed_property_value($table,'data_source');
@@ -803,7 +803,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     # but rolls back transactions between those calls.
     $self->{'_class_meta_cache'} = {};
 
-    #$DB::single = 1;
+    ##$DB::single = 1;
 
     #
     # EXISTING DD OBJECTS
@@ -948,7 +948,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                                                           table_name => $table->table_name);
 
         unless ($class) {
-            #$DB::single = 1;
+            ##$DB::single = 1;
             $class = $self->_get_class_meta_for_table_name(data_source => $data_source,
                                                           table_name => $table->table_name);
             Carp::confess("Class object missing for table " . $table->table_name) unless $class;
@@ -1080,7 +1080,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         unless (@properties) {
             $self->warning_message("no properties on class $class_name?");
-            #$DB::single = 1;
+            ##$DB::single = 1;
         }
 
         my @expected_pk_cols = grep { defined }
@@ -1147,7 +1147,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
     $self->status_message("Updating class unique constraints...\n");
 
-    #$DB::single = 1;
+    ##$DB::single = 1;
 
     # UNIQUE CONSTRAINT / UNIQUE INDEX -> UNIQUE GROUP (loop table objecs since we have no PK DD objects)
     for my $table (sort $sorter @{ $dd_changes_by_class{'UR::DataSource::RDBMS::Table'} }) {
@@ -1183,7 +1183,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 my ($property) = grep { defined($_->column_name) and ($_->column_name eq $uc_col) } @properties;
                 unless ($property) {
                     $self->warning_message("No property found for column $uc_col for unique constraint $uc_name");
-                    $DB::single=1;
+                    #$DB::single = 1;
                     next;
                 }
                 push @uc_property_names, $property->property_name;
@@ -1261,7 +1261,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                             );
             unless ($r_property) {
                 Carp::cluck("Failed to find a property for column $r_column_name on class $r_class_name");
-                $DB::single = 1;
+                #$DB::single = 1;
                 next FK;
             }
             push @r_properties,$r_property;

@@ -98,7 +98,7 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
                     callback => sub {$query_text = $_[0]; $query_count++}),
     'created a subscription for query');
 
-$DB::single = 1;
+#$DB::single = 1;
 
 my $bx1 = URT::Person->define_boolexpr(
     'is_cool' => 1,
@@ -125,14 +125,14 @@ my $s6 = $s5->car_set->owner_set;
 ok($s6, "went back from the engine set to the car to the owner");
 is($s6->id, $s1->id, "the owner set from the engine matches the original");
 
-$DB::single = 1;
+#$DB::single = 1;
 my $bx4 = $s2->rule->reframe("color");
 ok($bx4, "got color reframe $bx4");
 
 my $bx7 = URT::Car::Engine->define_boolexpr('car.owner_id' => 1234);
 my $bx7r = $bx7->reframe('car.owner');
 
-$DB::single = 1;
+#$DB::single = 1;
 my $z1 = URT::Car->define_boolexpr("color" => "red");
 print "$z1\n";
 my $z2 = $z1->reframe("owner");

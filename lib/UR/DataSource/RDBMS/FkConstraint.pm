@@ -48,7 +48,7 @@ sub _table_classes {
 sub get_with_special_params {
     my($class,$rule,%args) = @_;
 
-$DB::single=1;
+#$DB::single = 1;
     my $column_name = delete $args{'column_name'};
     my $r_column_name = delete $args{'r_column_name'};
 

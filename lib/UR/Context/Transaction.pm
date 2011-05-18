@@ -24,7 +24,7 @@ our $last_transaction_id = 0;
 
 sub delete {
     my $self = shift;
-    $DB::single = 1;
+    #$DB::single = 1;
     $self->rollback;
 }
 
@@ -96,7 +96,7 @@ sub log_change
     );
 
     unless (ref($change)) {
-        $DB::single = 1;
+        #$DB::single = 1;
     }
 
     push @change_log, $change;
@@ -169,7 +169,7 @@ sub rollback
             );
         for my $later_transaction (@later_transactions) {
             if ($later_transaction->isa("UR::DeletedRef")) {
-                $DB::single = 1;
+                #$DB::single = 1;
             }
             $later_transaction->rollback;
         }
@@ -215,7 +215,7 @@ sub rollback
     $#change_log = $begin_point-1;
 
     unless($self->isa("UR::DeletedRef")) {
-        $DB::single = 1;
+        #$DB::single = 1;
         Carp::confess("Failed to remove transaction during rollback.");
     }
 

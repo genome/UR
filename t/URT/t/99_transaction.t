@@ -52,7 +52,7 @@ use UR::DataSource;
 sub dump_states {
     my ($before,$after);
     use YAML;
-    $DB::single = 1;
+    #$DB::single = 1;
     IO::File->new(">before.yml")->print(YAML::Dump($before));
     IO::File->new(">after.yml")->print(YAML::Dump($after));    
 }
@@ -242,7 +242,7 @@ sub rollback_and_verify {
     my $state_then = $transaction_prior_states[$n];
     is_deeply($state_then, $state_now, "application state now matches pre-transaction state for $n " . $msg);
 
-    $DB::single = 1;
+    #$DB::single = 1;
     print "";
 }
 
@@ -269,7 +269,7 @@ for my $spec (@test_input) {
 # ensure that the logic in clear() really takes us back to the starting point
 
 my $state_at_test_start = take_state_snapshot();
-$DB::single = 1;
+#$DB::single = 1;
 clear();
 my $state_after_initial_clear = take_state_snapshot();
 is_deeply($state_at_test_start, $state_after_initial_clear, "clear returns restores state with no changes");
@@ -286,7 +286,7 @@ for my $test_class_data (@test_input) {
     init($test_class_name, @test_property_names);
     clear();
     my $state_after_first_init_and_clear_for_class = take_state_snapshot();
-$DB::single=1;
+#$DB::single=1;
     is_deeply(	$state_after_first_init_and_clear_for_class,
         $state_after_initial_clear,
         "clear returns restores state after init"

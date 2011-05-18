@@ -134,7 +134,6 @@ require UR::BoolExpr::Template::Or;                    # has meta
 
 require UR::Object::Index;
 
-
 #
 # Define core metadata.
 #

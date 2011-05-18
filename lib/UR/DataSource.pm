@@ -208,18 +208,21 @@ sub _generate_loading_templates_arrayref {
 
     my %obj_joins_by_source_alias;
     if ($obj_joins) {
-        $DB::single = 1;
         my @obj_joins = @$obj_joins;
         while (@obj_joins) {
             my $foreign_alias = shift @obj_joins;
             my $data = shift @obj_joins;
             for my $foreign_property_name (sort keys %$data) {
                 next if $foreign_property_name eq '-is_required';
-                my $source_alias = eval { $data->{$foreign_property_name}{'link_alias'} };
-                $DB::single = 1 if $@;
-
+                
+                # FIXME Gets rid of warnings that are cluttering up some commands, a refactor that'll remove
+                # the need for this is in the works.
+                no warnings;
+                my $source_alias = $data->{$foreign_property_name}{'link_alias'};
                 my $detail = $obj_joins_by_source_alias{$source_alias}{$foreign_alias} ||= {};
                 my $source_property_name = $data->{$foreign_property_name}{'link_property_name'};
+                use warnings;
+                
                 if ($source_property_name) {
                     my $links = $detail->{links} ||= [];
                     push @$links, $foreign_property_name, $source_property_name;
@@ -249,6 +252,7 @@ sub _generate_loading_templates_arrayref {
         unless (defined $object_num) {
             die "No object num for loading template data?!";
         }
+        #Carp::confess() unless $table_alias;
         my $template = $templates[$object_num];
         unless ($template) {
             $template = {
@@ -274,10 +278,6 @@ sub _generate_loading_templates_arrayref {
     for my $template (@templates) {
         next unless $template;  # This join may have resulted in no template?!
         my @id_property_names;
-        unless (defined $template->{data_class_name}) {
-            $DB::single=1;
-            print "No data class name in template: ", Data::Dumper::Dumper($template); 
-        }
         for my $id_class_name ($template->{data_class_name}, $template->{data_class_name}->inheritance) {
             my $id_class_obj = UR::Object::Type->get(class_name => $id_class_name);
             last if @id_property_names = $id_class_obj->id_property_names;
@@ -347,8 +347,6 @@ sub _generate_loading_templates_arrayref {
                 my ($bxt, @values) = $bx->template_and_values();
                 push @$next_joins, [ $bxt->id, \@values, \@value_position_source_property ];
             }
-            print Data::Dumper::Dumper($next_joins);
-            $DB::single = 1;
         }
     }        
 
@@ -430,7 +428,7 @@ sub _first_class_in_inheritance_with_a_table {
 
 
     unless ($class) {
-        $DB::single = 1;
+        #$DB::single = 1;
         Carp::confess("No class?");
     }
     my $class_object = $class->__meta__;

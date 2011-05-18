@@ -71,7 +71,7 @@ ok($v3, "made a test value 3");
 ok("URT::Param"->can("value_id"), "created a property for value_id implicitly");
 ok("URT::Param"->can("value_class_name"), "created a property for value_class_name implicitly");
 
-$DB::single = 1;
+#$DB::single = 1;
 #my $o1 = URT::Thing->create(thing_id => 2, param_values => [$v2,$v3]);
 my $o1 = URT::Thing->create(thing_id => 1);
 ok($o1, "created a test object which has-many of a test property");
@@ -82,7 +82,7 @@ my $p = URT::Param->create(thing_id => 1, name => 'uninteresting', value => $v1)
 ok($p, "made an object with a value as a paramter");
 is($p->value_class_name, ref($v1), "class name is set on the new object as expected");
 is($p->value_id, $v1->id, "id is set on the new object as expected");
-$DB::single = 1;
+#$DB::single = 1;
 is($p->value,$v1,"got the value back");
 
 my @p = $o1->params();
@@ -110,7 +110,7 @@ is($pv[1],$v2,"got expected value 2");
 
 #<>#
 note('test "remove_param"');
-$DB::single = 1;
+#$DB::single = 1;
 ok($o1->remove_param($p2), "removed param 2");
 @p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),1,"got one param after removing param 2");
@@ -122,7 +122,7 @@ is($pv[0],$v1,"got expected value 1");
 
 #<>#
 note('test "add_param_value"');
-$DB::single = 1;
+#$DB::single = 1;
 $p2 = $o1->add_param_value(name => 'interesting', value => $v2);
 ok($p2, "added another param");
 
@@ -138,7 +138,7 @@ is($pv[1],$v2,"got expected value 2");
 
 #<>#
 note('test "remove_param_value"');
-$DB::single = 1;
+#$DB::single = 1;
 ok($o1->remove_param_value($v2), "removed param value 2");
 @p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),1,"got one param after removing param 2");
@@ -150,7 +150,7 @@ is($pv[0],$v1,"got expected value 1");
 
 #<>#
 note('test "add_interesting_param_value" with a key-value pair');
-$DB::single = 1;
+#$DB::single = 1;
 $p2 = $o1->add_interesting_param_value(value => $v2);
 ok($p2, "added an intereting param");
 is($p2->name,'interesting', "the param name was set automatically during addition");
@@ -167,7 +167,7 @@ is($pv[1],$v2,"got expected value 2");
 
 #<>#
 note('test "remove_interesting_param_value"');
-$DB::single = 1;
+#$DB::single = 1;
 ok($o1->remove_interesting_param_value($v2), "removed param value 2");
 @p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),1,"got one param after removing param 2");
@@ -179,7 +179,7 @@ is($pv[0],$v1,"got expected value 1");
 
 #<>#
 note('test "add_interesting_param_value" without a key-value pair');
-$DB::single = 1;
+#$DB::single = 1;
 $p2 = $o1->add_interesting_param_value($v2);
 ok($p2, "added an intereting param");
 is($p2->name,'interesting', "the param name was set automatically during addition");
@@ -196,7 +196,7 @@ is($pv[1],$v2,"got expected value 2");
 
 #<>#
 note('test "remove_interesting_param_value" again');
-$DB::single = 1;
+#$DB::single = 1;
 ok($o1->remove_interesting_param_value($v2), "removed param value 2");
 @p = sort { $a->value_id <=> $b->value_id } $o1->params();
 is(scalar(@p),1,"got one param after removing param 2");
@@ -216,7 +216,7 @@ is($pv[0],$v1,"got expected value 1");
 #is("@v", "$v1 $v2 $v3", "correctly re-set the value list");
 
 #<>#
-$DB::single = 1;
+#$DB::single = 1;
 my $thing2 = URT::Thing->create(thing_id => 2, interesting_param_values => [$v1,$v2,$v3]);
 ok($thing2, 'Created another Thing');
 my @params = $thing2->params();;

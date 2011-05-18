@@ -54,7 +54,7 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
+    #$DB::single = 1;
 
     local $ENV{ANSI_COLORS_DISABLED}    = 1;
     my $entry_point_bin     = $self->executable_name;

@@ -66,7 +66,7 @@ sub sub_command_sort_position { .2 };
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-	$DB::single=1;
+	#$DB::single = 1;
 
     # validate style
     $self->error_message( 

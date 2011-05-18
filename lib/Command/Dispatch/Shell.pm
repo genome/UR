@@ -757,7 +757,7 @@ sub _resolve_param_value_via_related_class_method {
             my $from_class  = shift @from_classes;
             my @methods = @{$ALTERNATE_FROM_CLASS{$via_class}{$from_class}};
             my $method;
-            if (@methods > 1 && !$via_method && !$ENV{SYSTEM_NO_REQUIRE_USER_VERIFY}) {
+            if (@methods > 1 && !$via_method && !$ENV{UR_NO_REQUIRE_USER_VERIFY}) {
                 $self->status_message("Trying to find $via_class via $from_class...\n");
                 my $method_choices;
                 for (my $i = 0; $i < @methods; $i++) {
@@ -845,7 +845,7 @@ sub _get_user_verification_for_param_value {
     my ($self, $param_name, @list) = @_;
 
     my $n_list = scalar(@list);
-    if ($n_list > 200 && !$ENV{SYSTEM_NO_REQUIRE_USER_VERIFY}) {
+    if ($n_list > 200 && !$ENV{UR_NO_REQUIRE_USER_VERIFY}) {
         my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s) for '$param_name', (p)roceed, or e(x)it?", 0, '[v]|p|x', 'v');
         if(!$response || $response eq 'x') {
             $self->status_message("Exiting...");
@@ -870,7 +870,7 @@ sub _get_user_verification_for_param_value_drilldown {
     my $pad = length($n_results);
 
     # Allow an environment variable to be set to disable the require_user_verify attribute
-    return @results if ($ENV{SYSTEM_NO_REQUIRE_USER_VERIFY});
+    return @results if ($ENV{UR_NO_REQUIRE_USER_VERIFY});
     return if (@results == 0);
 
     my @dnames = map {$_->__display_name__} grep { $_->can('__display_name__') } @results;
