@@ -46,7 +46,7 @@ ok(!$employee, 'Correctly could not URT::Employee->get() with no params');
 like($@, qr/Can't resolve data source: no division specified in rule/, "Error message mentions 'division' property");
 
 my $error_message;
-UR::Context->message_callback('error', sub { $DB::single=1; $error_message = $_[0]->text });
+UR::Context->message_callback('error', sub { #$DB::single=1; $error_message = $_[0]->text });
 $employee = eval { URT::Employee->get(division => 'NorthAmerica') };
 ok(!$employee, 'Correctly could not URT::Employee->get() with only division');
 like($@, qr/Can't resolve data source: no department specified in rule/, "Error message mentions 'department' property");

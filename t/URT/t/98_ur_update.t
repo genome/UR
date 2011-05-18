@@ -43,7 +43,7 @@ cleanup_files();
 
 sub cleanup_files {
     #unlink $sqlite_file;
-    $DB::single = 1;
+    #$DB::single = 1;
     my $namespace_dir = URT->get_base_directory_name;
 
     for my $filename (
@@ -363,10 +363,10 @@ ok($command_obj->execute(), 'Updating schema anew.');
 
     $personclass = UR::Object::Type->get('URT::Person');
     unless ($personclass) {
-        $DB::single = 1;
+        #$DB::single = 1;
     }
     $personclass->ungenerate;
-    $DB::single = 1;
+    #$DB::single = 1;
     $personclass->generate;
     ok($personclass, 'Person class loaded');
     is_deeply([sort $personclass->direct_column_names],

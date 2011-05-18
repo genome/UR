@@ -231,7 +231,7 @@ is(scalar(@things), 0, 'After DB delete and class unload, get() returns 0 things
 is($query_count, 1, 'Made 1 query');
 
 
-$DB::single=1;
+#$DB::single=1;
 ok($dbh->do("insert into thing values (6,'black')"), 'Insert a new row into the database directly');
 $query_count = 0;
 URT::Thing->unload();

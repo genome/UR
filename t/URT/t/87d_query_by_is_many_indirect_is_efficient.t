@@ -138,7 +138,7 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
 my $thing;
 
 $query_count = 0;
-$DB::single=1;
+#$DB::single=1;
 $thing = URT::Main->get(related_4_values => 'related4');
 ok($thing, 'Got one object for a 5-table join');
 is($query_count, 1, 'Made 1 query');
