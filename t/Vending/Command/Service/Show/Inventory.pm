@@ -22,7 +22,7 @@ sub filter {
     my $self = shift;
     my $slot_names = [$self->bare_args];
 
-$DB::single=1;
+#$DB::single=1;
     my $filter = 'machine_id='.$self->machine_id;
 
     if (@$slot_names == 1) {
@@ -34,7 +34,7 @@ $DB::single=1;
 }
 
 sub execute {
-    $DB::single = 1;
+    #$DB::single = 1;
     shift->SUPER::_execute_body(@_)
 }
 

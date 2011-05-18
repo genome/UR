@@ -154,7 +154,7 @@ sub server_process {
 
     my $waiting_for_change = 1;
     my $callback = sub {
-        $DB::single = 1;
+        #$DB::single = 1;
         my $f = IO::File->new(">$flag_file");
         $f->print($test_obj->name,"\n");
         $f->close();
