@@ -276,13 +276,6 @@ sub _generate_loading_templates_arrayref {
     for my $template (@templates) {
         next unless $template;  # This join may have resulted in no template?!
         my @id_property_names;
-<<<<<<< HEAD
-        unless (defined $template->{data_class_name}) {
-            #$DB::single = 1;
-            print "No data class name in template: ", Data::Dumper::Dumper($template); 
-        }
-=======
->>>>>>> master
         for my $id_class_name ($template->{data_class_name}, $template->{data_class_name}->inheritance) {
             my $id_class_obj = UR::Object::Type->get(class_name => $id_class_name);
             last if @id_property_names = $id_class_obj->id_property_names;
@@ -352,11 +345,6 @@ sub _generate_loading_templates_arrayref {
                 my ($bxt, @values) = $bx->template_and_values();
                 push @$next_joins, [ $bxt->id, \@values, \@value_position_source_property ];
             }
-<<<<<<< HEAD
-            print Data::Dumper::Dumper($next_joins);
-            #$DB::single = 1;
-=======
->>>>>>> master
         }
     }        
 
