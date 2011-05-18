@@ -342,12 +342,39 @@ sub _normalize_class_description {
             $desc = $parent_class->_preprocess_subclass_description($desc);
         }
     }
+
+    # we previously handled property meta extensions when normalizing the property
+    # now we merely save unrecognized things
+    # this is now done afterward so that parent classes can preprocess their subclasses descriptions before extending
+    # normalize the data behind the property descriptions
+    my @property_names = keys %{$desc->{has}};
+    for my $property_name (@property_names) {
+        my $pdesc = $desc->{has}->{$property_name};
+        my $unknown_ma = delete $pdesc->{unrecognized_meta_attributes};
+        next unless $unknown_ma;
+        for my $name (keys %$unknown_ma) {
+            if (exists $desc->{attributes_have}->{$name}) {
+                $pdesc->{$name} = delete $unknown_ma->{$name};
+            }
+        }
+        if (%$unknown_ma) {
+            my $class_name = $desc->{class_name};
+            my @unknown_ma = sort keys %$unknown_ma;
+            Carp::confess("unknown meta-attributes present for $class_name $property_name: @unknown_ma\n");
+        }
+    }
+
     return $desc;
 }
 
 sub _normalize_class_description_impl {
     my $class = shift;
     my %old_class = @_;
+
+    if (exists $old_class{extra}) {
+        $DB::single=1;
+        %old_class = (%{delete $old_class{extra}}, %old_class);
+    }
 
     my $class_name = delete $old_class{class_name};    
 
@@ -873,25 +900,6 @@ sub _normalize_class_description_impl {
         }
     }
 
-    # we previously handled property meta extensions when normalizing the property
-    # now we merely save unrecognized things
-    # this is now done afterward so that parent classes can preprocess their subclasses descriptions before extending
-    # normalize the data behind the property descriptions    
-    for my $property_name (@property_names) {
-        my $pdesc = $instance_properties->{$property_name};
-        my $unknown_ma = delete $pdesc->{unrecognized_meta_attributes};
-        next unless $unknown_ma;
-        for my $name (keys %$unknown_ma) {
-            if (exists $meta_properties->{$name}) {
-                $pdesc->{$name} = delete $unknown_ma->{$name};
-            }
-        }
-        if (%$unknown_ma) {
-            my @unknown_ma = sort keys %$unknown_ma;
-            Carp::confess("unknown meta-attributes present for $class_name $property_name: @unknown_ma\n");
-        }
-    }
-
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $desc->{meta_class_name} ||= $meta_class_name;
     return $desc;
@@ -906,6 +914,10 @@ sub _normalize_property_description1 {
     my %old_property = %$property_data;
     my %new_class = %$class_data;
     
+    if (exists $old_property{unrecognized_meta_attributes}) {
+        %old_property = (%{delete $old_property{unrecognized_meta_attributes}}, %old_property);
+    }
+
     delete $old_property{source};
 
     if ($old_property{implied_by} and $old_property{implied_by} eq $property_name) {
@@ -1493,6 +1505,7 @@ sub _complete_class_meta_object_definitions {
             }
         }
         if (%still_not_found) {
+            $DB::single = 1;
             Carp::confess("BAD CLASS DEFINITION for $class_name.  Unrecognized properties: " . Data::Dumper::Dumper(%still_not_found));
         }
     }
