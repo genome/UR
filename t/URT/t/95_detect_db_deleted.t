@@ -212,6 +212,8 @@ ok($dbh->do('delete from thing'),
 is(scalar(@things), 1, 'reload() returned one thing');
 is($things[0]->id, $defined_thing->id, 'It was the thing we defined at the beginning of the test');
 
+
+
 ok($defined_thing->delete, "Delete the defined object");
 @things = UR::Context->reload('URT::Thing');
 is(scalar(@things), 0, 'reload() returned no objects');
