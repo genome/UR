@@ -15,7 +15,7 @@ UR::Object::Type->define(
         subject         => { is => 'UR::Object', 
                                 calculate_from => ['subject_class_name','subject_id'],
                                 calculate => '$subject_class_name->get($subject_id)' },
-        aspect          => { is => 'String' },
+        aspect          => { is => 'String', is_optional => 1 },
     ],
     is_transactional => 1,
 );
@@ -93,15 +93,6 @@ sub delete {
     );
     $self->SUPER::delete();
 }
-
-=pod
-
-=head1
-
-
-
-
-=cut
 
 1;
 

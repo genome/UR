@@ -1523,7 +1523,7 @@ sub create_iterator_closure_for_rule {
     die unless $sth;   # FIXME - this has no effect, right?  
 
     $self->__signal_change__('query',$sql);
-
+    
     # buffers for the iterator
     my $next_db_row;
     my $pending_db_object_data;
