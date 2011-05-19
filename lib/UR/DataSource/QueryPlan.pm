@@ -333,10 +333,15 @@ sub _init_rdbms {
         my $last_class_object_excluding_inherited_joins;
         my $alias_for_property_value;
 
+        my $reverse_path = '';
+
         # one iteration per table between the start table and target
         while (my $object_join = shift @joins) { 
             $object_num++;
             my @joins_for_object = ($object_join);
+
+            $reverse_path .= '.' if $reverse_path;
+            $reverse_path .= $join->foreign_name_for_source;
 
             # one iteration per layer of inheritance for this object 
             # or per case of a join having additional filtering
@@ -385,6 +390,10 @@ sub _init_rdbms {
                     $is_optional,
                     $final_accessor,
                 ); 
+
+                unless ($alias) {
+                    next DELEGATED_PROPERTY;
+                }
 
                 # set these for after all of the joins are done
                 my $last_class_name = $foreign_class_name;
@@ -731,7 +740,7 @@ sub _add_join {
     if (!$foreign_data_source or ($foreign_data_source ne $ds)) {
         # FIXME - do something smarter in the future where it can do a join-y thing in memory
         $self->needs_further_boolexpr_evaluation_after_loading(1);
-        next DELEGATED_PROPERTY;
+        return; 
     }
 
     # This will get filled in during the first pass, and every time after we've successfully
@@ -780,11 +789,7 @@ sub _add_join {
     
     unless (@foreign_column_names) {
         # all calculated properties: don't try to join any further
-        last;
-    }
-    unless (@foreign_column_names == @foreign_property_meta) {
-        # some calculated properties, be sure to re-check for a match after loading the object
-        $self->needs_further_boolexpr_evaluation_after_loading(1);
+        return;
     }
 
     unless ($foreign_table_name) {
@@ -792,9 +797,14 @@ sub _add_join {
         # for this class, we're done following the joins for this property
         # and will NOT try to filter on it at the datasource level
         $self->needs_further_boolexpr_evaluation_after_loading(1);
-        next DELEGATED_PROPERTY;
+        return; 
     }
     
+    unless (@foreign_column_names == @foreign_property_meta) {
+        # some calculated properties, be sure to re-check for a match after loading the object
+        $self->needs_further_boolexpr_evaluation_after_loading(1);
+    }
+
     my $foreign_class_loading_data = $ds->_get_class_data_for_loading($foreign_class_object);
 
     my $alias = $self->_get_join_alias($join);
