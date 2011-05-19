@@ -335,6 +335,8 @@ sub _init_rdbms {
 
         my $reverse_path = '';
 
+        my @on;
+
         # one iteration per table between the start table and target
         while (my $object_join = shift @joins) { 
             $object_num++;
@@ -349,33 +351,14 @@ sub _init_rdbms {
             while (my $join = shift @joins_for_object) { 
 
                 my $where = $join->{where};
-                if (0) { #($where) {
+                if ($where) {
                     # a where clause might imply additional joins, requiring we pre-empt
                     # continuing through the join chain until these are resolved
                     my $c = $join->{foreign_class};
                     my $m = $c->__meta__;
                     my $bx = UR::BoolExpr->resolve($c,@$where);
-                    my %p = $bx->params_list; # FIXME
-                    my @p = sort keys %p;
-                    my @added_joins;
-                    for my $pn (@p) {
-                        my $p = $m->property($pn);
-                        my @j = $p->_resolve_join_chain();
-                        my $j = pop @j;
-                        $j = { %$j };
-                        my $w = delete $j->{where};
+                    
 
-                        if (@j) {
-                            unshift @added_joins, @j;
-                        }
-                    }
-                    if (@added_joins) {
-                        $join = { %$join };
-                        delete $join->{where};
-                        push @added_joins, $join;
-                        unshift @joins_for_object, @added_joins;
-                        next;
-                    }
                 }
                 
                 $current_inheritance_depth_for_this_target_join++;
