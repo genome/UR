@@ -343,7 +343,7 @@ sub _init_rdbms {
             my @joins_for_object = ($object_join);
 
             $reverse_path .= '.' if $reverse_path;
-            $reverse_path .= $join->foreign_name_for_source;
+            $reverse_path .= $object_join->foreign_name_for_source;
 
             # one iteration per layer of inheritance for this object 
             # or per case of a join having additional filtering
