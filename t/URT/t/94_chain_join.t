@@ -116,14 +116,16 @@ is(scalar(@p2),1,"got one person with a primary car color of red using a custom 
 
 is($p1[0], $p2[0], "result matches");
 
-
-__END__
+$ENV{UR_DBI_MONITOR_SQL} = 1;
 
 my $bx5 = URT::Person->define_boolexpr('cars.color' => 'red', 'cars.engine.size' => '400');
 print "$bx5";
 $DB::single = 1;
 my @p5 = URT::Person->get($bx5);
 ok("@p5", "regular query works for " . scalar(@p5) . " objects");
+
+__END__
+
 
 my $bx4i = URT::Person->define_boolexpr('big_cars.color' => 'red');
 my $bx4f = $bx4i->flatten;

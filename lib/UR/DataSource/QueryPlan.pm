@@ -738,7 +738,7 @@ sub _add_join {
     # performed a join - ie. that the delegated property points directly to a class/property
     # that is a real table/column, and not a tableless class or another delegated property
     my @source_property_names;
-    unless (@$source_table_and_column_names) {
+    if (1) { #unless (@$source_table_and_column_names) {
         @source_property_names = @{ $join->{source_property_names} };
 
         @$source_table_and_column_names =
@@ -799,7 +799,6 @@ sub _add_join {
 
     my $alias = $self->_get_join_alias($join);
 
-
     unless ($alias) {
         my $alias_num = $self->_alias_count($self->_alias_count+1);
         
@@ -847,12 +846,34 @@ sub _add_join {
                     push @extra_obj_filters, $name  => { value => $value, ($op ? (operator => $op) : ()) };
                 }
             }
-            
+            $DB::single = 1; 
+            my @db_join_data;
+            for (my $n = 0; $n < @foreign_column_names; $n++) {
+                
+                my $link_table_name = $table_alias->{$source_table_and_column_names->[$n][0]};
+                $link_table_name ||= $source_table_and_column_names->[$n][2];
+                $link_table_name ||= $source_table_and_column_names->[$n][0];
+
+                my $link_column_name = $source_table_and_column_names->[$n][1];
+                
+                my $foreign_column_name = $foreign_column_names[$n];
+
+                push @db_join_data, $foreign_column_name => { link_table_name => $link_table_name, link_column_name => $link_column_name }; 
+            }
+
             $self->_add_db_join(
                 "$foreign_table_name $alias" => {
+                    @db_join_data,
+                    @extra_db_filters,
+                }
+            );
+
+=cut
+
                     (
                         map {
-                            $foreign_column_names[$_] => { 
+                            $foreign_column_names[$_] => 
+                            { 
                                 link_table_name     => $table_alias->{$source_table_and_column_names->[$_][0]} # join alias
                                                         || $source_table_and_column_names->[$_][2]  # SQL inline view alias
                                                         || $source_table_and_column_names->[$_][0], # table_name
@@ -861,9 +882,9 @@ sub _add_join {
                         }
                         (0..$#foreign_column_names)
                     ),
-                    @extra_db_filters,
-                }
-            );
+
+=cut
+
             
             $self->_add_obj_join( 
                 "$alias" => {
