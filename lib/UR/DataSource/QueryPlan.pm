@@ -122,8 +122,8 @@ sub _init {
         $self->_init_remote_cache() if $ds->isa("UR::DataSource::RemoteCache");
     }
 
-    # This object is currently still used as a hashref, but the properties
-    # are a declaration of the part of the hashref data we are still dependent upon.
+    # This object is currently still used as a hashref in many places, but the 
+    # properties are a declaration of the part of the hashref data we are still dependent upon.
     # This removes the other properties to ensure this is the case.
     # Next steps are to clean up the code below to not produce the data,
     # then this loop can throw an exception if extra untracked data is found.
@@ -300,6 +300,7 @@ sub _init_rdbms {
         } # end of properties in the expression which control the query content 
 
         if (@errors) { 
+            # we should never get here, since the bxt is checked for errors 
             my $class_name = $class_meta->class_name;
             $ds->error_message("ERRORS PROCESSING PARAMTERS: (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
             print Data::Dumper::Dumper($rule_template);
@@ -333,6 +334,7 @@ sub _init_rdbms {
         my $last_class_object_excluding_inherited_joins;
         my $alias_for_property_value;
 
+        my $forward_path = '';
         my $reverse_path = '';
         my @on;
 
@@ -341,25 +343,16 @@ sub _init_rdbms {
             $object_num++;
             my @joins_for_object = ($object_join);
 
+            $forward_path .= '.' if $forward_path;
             $reverse_path .= '.' if $reverse_path;
+
+            $forward_path .= $object_join->source_name_for_foreign;
             $reverse_path .= $object_join->foreign_name_for_source;
 
             # one iteration per layer of inheritance for this object 
             # or per case of a join having additional filtering
             my $current_inheritance_depth_for_this_target_join = 0;
             while (my $join = shift @joins_for_object) { 
-
-                my $where = $join->{where};
-                if ($where) {
-                    # a where clause might imply additional joins, requiring we pre-empt
-                    # continuing through the join chain until these are resolved
-                    my $c = $join->{foreign_class};
-                    my $m = $c->__meta__;
-                    my $bx = UR::BoolExpr->resolve($c,@$where);
-                    
-
-                }
-                
                 $current_inheritance_depth_for_this_target_join++;
 
                 my $foreign_class_name = $join->{foreign_class};
@@ -432,10 +425,13 @@ sub _init_rdbms {
 
         # done adding any new joins for this delegated property/property-chain
 
+
+        # this is probably legacy code, since we never pass in a reference, just text
         if (ref($delegated_property) and !$delegated_property->via) {
-            next;
+            Carp::confess(); 
         }
 
+        # TODO: how does this work on a hint, or other case w/o a final_accessor??
         my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
         unless ($final_accessor_property_meta) {
             Carp::croak("No property metadata for property named '$final_accessor' in class "
@@ -444,6 +440,7 @@ sub _init_rdbms {
                         . $delegated_property->class_name);
         }
 
+        # TODO: move these down into the block where we're actually filtering
         my $sql_lvalue;
         if ($final_accessor_property_meta->is_calculated) {
             $sql_lvalue = $final_accessor_property_meta->calculate_sql;
@@ -459,6 +456,7 @@ sub _init_rdbms {
             }
         }
 
+        # this handles the case where we're joining to filter, not just a join for hinting, ordering, grouping, etc.   
         my $value_position = $rule_template->value_position_for_property_name($property_name);
         if (defined $value_position) {
             my $operator       = $rule_template->operator_for($property_name);
@@ -472,6 +470,7 @@ sub _init_rdbms {
                     $sql_lvalue => { operator => $operator, value_position => $value_position } 
                 };
         }
+
     } # next delegated property
 
 
