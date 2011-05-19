@@ -330,6 +330,35 @@ sub _init_rdbms {
             pop @joins;
         }
 
+        # If a property is id_by something that is, itself, delegated, then there is a fork in
+        # the join chain, and one or more joins to UR::Value classes end up in the middle of
+        # @joins.  This commented-out code was able to remove the wacky UR::Value join in the simple
+        # case of one level of indirection, but was probably wrong in the general case.
+        #my ($final_accessor, $is_optional, @full_list_of_joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
+        #my @joins;
+        #while (@full_list_of_joins) {
+        #    my $join = shift @full_list_of_joins;
+        #    if ($join->{'foreign_class'}->isa('UR::Value')) {
+        #        my $next_join = shift @full_list_of_joins;
+        #        last unless $next_join;
+        #        my $new_join = UR::Object::Join->_get_or_define(
+        #                           id => $join->id . '_fixed',
+        #                           source_class => $join->{'source_class'},
+        #                           source_name_for_foreign => $join->{'source_name_for_foreign'},
+        #                           source_property_names => [ @{ $join->{'source_property_names'} } ],
+        #                           foreign_class => $next_join->{'foreign_class'},
+        #                           foreign_name_for_source => $next_join->{'foreign_name_for_source'},
+        #                           foreign_property_names => [ @{ $next_join->{'foreign_property_names'} } ],
+        #                           is_optional => $join->{'is_optional'},
+        #                           is_many                 => $join->{'is_many'},
+        #                           where                   => $join->{'where'},
+        #                       );
+        #                       push @joins, $new_join;
+        #    } else {
+        #        push @joins, $join;
+        #    }
+        #}
+
         my $last_class_object_excluding_inherited_joins;
         my $alias_for_property_value;
 
