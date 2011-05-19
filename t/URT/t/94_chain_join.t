@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 12;
+use Test::More tests=> 13;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -116,10 +116,9 @@ is(scalar(@p2),1,"got one person with a primary car color of red using a custom 
 
 is($p1[0], $p2[0], "result matches");
 
-$ENV{UR_DBI_MONITOR_SQL} = 1;
-
-my $bx5 = URT::Person->define_boolexpr('cars.color' => 'red', 'cars.engine.size' => '400');
-print "$bx5";
+my $bx5 = URT::Person->define_boolexpr('cars.color' => 'blue', 'cars.engine.size' => '400');
+#print "$bx5";
+#$ENV{UR_DBI_MONITOR_SQL} = 1;
 $DB::single = 1;
 my @p5 = URT::Person->get($bx5);
 ok("@p5", "regular query works for " . scalar(@p5) . " objects");
