@@ -846,7 +846,7 @@ sub _add_join {
                     push @extra_obj_filters, $name  => { value => $value, ($op ? (operator => $op) : ()) };
                 }
             }
-            $DB::single = 1; 
+
             my @db_join_data;
             for (my $n = 0; $n < @foreign_column_names; $n++) {
                 
@@ -867,24 +867,6 @@ sub _add_join {
                     @extra_db_filters,
                 }
             );
-
-=cut
-
-                    (
-                        map {
-                            $foreign_column_names[$_] => 
-                            { 
-                                link_table_name     => $table_alias->{$source_table_and_column_names->[$_][0]} # join alias
-                                                        || $source_table_and_column_names->[$_][2]  # SQL inline view alias
-                                                        || $source_table_and_column_names->[$_][0], # table_name
-                                link_column_name    => $source_table_and_column_names->[$_][1] 
-                            }
-                        }
-                        (0..$#foreign_column_names)
-                    ),
-
-=cut
-
             
             $self->_add_obj_join( 
                 "$alias" => {
