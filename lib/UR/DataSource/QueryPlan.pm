@@ -738,7 +738,7 @@ sub _add_join {
     # performed a join - ie. that the delegated property points directly to a class/property
     # that is a real table/column, and not a tableless class or another delegated property
     my @source_property_names;
-    if (1) { #unless (@$source_table_and_column_names) {
+    unless (@$source_table_and_column_names) {
         @source_property_names = @{ $join->{source_property_names} };
 
         @$source_table_and_column_names =
@@ -902,14 +902,6 @@ sub _add_join {
             }
         }
 
-        ## this code was previously outside the block which only runs on a new alias
-        ## it passes tests in here, but I am not absolutely clear on how it functions -ss
-    
-        if ($foreign_class_object->table_name) {
-            $table_alias->{$foreign_table_name} = $alias;
-            @$source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
-        }
-
 
         if ($group_by) {
             if ($self->_groups_by_property($property_name)) {
@@ -946,6 +938,11 @@ sub _add_join {
         }
 
     } # done adding a new join alias for a join which has not yet been done
+
+    if ($foreign_class_object->table_name) {
+        $table_alias->{$foreign_table_name} = $alias;
+        @$source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
+    }
 
     return $alias;
 }
