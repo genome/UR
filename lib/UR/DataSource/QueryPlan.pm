@@ -334,7 +334,6 @@ sub _init_rdbms {
         my $alias_for_property_value;
 
         my $reverse_path = '';
-
         my @on;
 
         # one iteration per table between the start table and target
