@@ -238,10 +238,40 @@ sub create_for_loading_template {
                     }
                 }
 
+                # For missing objects,
+                my @missing_prop_names;
+                my @missing_values;
+$DB::single=1;
+                for (my $i = 0; $i < @{ $join->{'foreign_property_names'}}; $i++) {
+                    push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
+                    my $db_column_data = $query_plan->{'_db_column_data'};
+                    my $source_class = $join->{'source_class'};
+                    my $source_prop_name = $join->{'source_property_names'}->[$i];
+                    for (my $resultset_col = 0; $resultset_col < @$db_column_data; $resultset_col++) {
+                        if ($db_column_data->[$resultset_col]->[1]->class_name eq $source_class
+                            and
+                            $db_column_data->[$resultset_col]->[1]->property_name eq $source_prop_name
+                        ) {
+                            my $column_num = $resultset_col;
+                            push @missing_values, \$column_num;
+                            last;
+                        }
+                        #Carp::croak("Can't determine resultset column for $source_class property $source_prop_name for rule $rule");
+                    }
+                }
+                for (my $i = 0; $i < @{$join->{'where'}}; $i+=2 ) {
+                    my $where_prop = $join->{'where'}->[$i];
+                    my $value = $join->{'where'}->[$i+1];
+                    push @missing_prop_names, $where_prop;
+                    push @missing_values, $value;
+                }
+                my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names);
+
+
                 $hints_or_delegation{$delegation} ||= [];
                 my $related_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
                                                                         @template_filter_names);
-                push @{$hints_or_delegation{$delegation}}, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl];
+                push @{$hints_or_delegation{$delegation}}, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl, \@missing_values, $missing_rule_tmpl];
 
                 if ($hints{$delegation}) {
                     # Make notes in all_params_loaded about these things we're hinting on.
@@ -259,6 +289,38 @@ sub create_for_loading_template {
     my $object_fabricator = sub {
 
         my $next_db_row = $_[0];
+
+        # If all the columns for this object are undef, then this doesn't encode an actual
+        # object, it's a result of a left join that matched nothing
+        my $values_exist;
+        foreach my $column ( @column_positions ) {
+            if (defined($next_db_row->[$column])) {
+                $values_exist = 1;
+                last;
+            }
+        }
+        if (!$loading_base_object and !$values_exist) {
+$DB::single=1;
+            foreach my $delegation ( keys %hints_or_delegation )  {
+                foreach my $delegation_data ( @{ $hints_or_delegation{$delegation}}) {
+                    my $missing_values = $delegation_data->[2];
+                    my $missing_rule_tmpl  = $delegation_data->[3];
+                    my @values;
+                    foreach my $value ( @$missing_values ) {
+                        if (ref($value)) {
+                            push @values, $next_db_row->[$$value];
+                        } else {
+                            push @values, $value;
+                        }
+                    }
+                    my $missing_rule = $missing_rule_tmpl->get_rule_for_values(@values);
+                    $local_all_params_loaded->{$missing_rule_tmpl->id}->{$missing_rule->id} = 0;
+                    $UR::Context::all_params_loaded->{$missing_rule_tmpl->id}->{$missing_rule->id} = 0;
+                }
+            }
+            return;
+        }
+            
 
         my $pending_db_object_data = { %initial_object_data };
         @$pending_db_object_data{@property_names} = @$next_db_row[@column_positions];
