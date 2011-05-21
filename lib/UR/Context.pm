@@ -1523,9 +1523,17 @@ sub get_objects_for_class_and_rule {
     
     # this is a no-op if the rule is already normalized
     # we do not currently flatten b/c the bx constant_values do not flatten/reframe
-    #my $flat_rule = ( (1 or $rule->subject_class_name eq 'UR::Object::Property') ? $rule : $rule->flatten);
-    #my $normalized_rule = $flat_rule->normalize;
-    my $normalized_rule = $rule->normalize;
+    my $normalized_rule;
+    if (0) { # $UR::initialized) {
+        my $flat_rule = $rule->flatten;
+        if ($flat_rule->id ne $rule->id) {
+                #$DB::single = 1;
+        }
+        $normalized_rule = $flat_rule->normalize;
+    }
+    else {
+        $normalized_rule = $rule->normalize;
+    }
 
     # see if we need to load if load was not defined
     unless (defined $load) {
@@ -1561,7 +1569,7 @@ sub get_objects_for_class_and_rule {
 
         return @c if wantarray;           # array context
         return unless defined wantarray;  # null context
-        Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
+        Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__ . "Data::Dumper::Dumper(@c)")  if @c > 1;
         return $c[0];                     # scalar context
     }
 

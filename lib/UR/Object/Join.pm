@@ -29,23 +29,21 @@ class UR::Object::Join {
     doc => "join metadata used internally by the ::QueryBuilder"
 };
 
-our %resolve_tree;
-sub resolve_tree {
-    my ($class, $class_name, $property_chain) = @_;
-
-    my $join_tree = 
-        $resolve_tree{$class_name}{$property_chain}
-            ||= do {
-                my $class_meta = $class_name->__meta__;
-                my @pmeta = $class_meta->property_meta_for_name($property_chain);
-                my @joins;
-                for my $pmeta (@pmeta) {
-                    push @joins, $class->_resolve_tree_for_property_meta($pmeta);
-                }
-                \@joins;
-            };
-
-    return @$join_tree;
+sub _parse_chain {
+    # static method to decompose a chain string
+    my ($class, $property_name) = @_;
+    my @links = split(/\./,$property_name);
+    my @parsed;
+    for my $full_link (@links) {
+        my ($name, $label) = ($full_link =~ /^([^\-\?]+)(.*)/);
+        my $opt = '';
+        if (substr($label,-1) eq '?') {
+            $opt = '?';
+            chop $label
+        }
+        push @parsed, [$name, $label, $opt];
+    }
+    return @parsed;
 }
 
 our %resolve_chain;
