@@ -29,6 +29,22 @@ class UR::Object::Join {
     doc => "join metadata used internally by the ::QueryBuilder"
 };
 
+sub _parse_chain {
+    # static method to decompose a chain string
+    my ($class, $property_name) = @_:
+    my @chain = split(/\./,$property_name);
+    for my $full_link (@chain) {
+        my ($name, $label) = ($full_link =~ /^([^\-\?]+)(.*)/);
+        my $opt = '';
+        if (substr($label,-1) eq '?') {
+            $opt = '?';
+            chop $label
+        }
+        push @parsed, [$name, $label, $opt];
+    }
+    return @parsed;
+}
+
 our %resolve_chain;
 sub resolve_chain {
     my ($class, $class_name, $property_chain) = @_;
