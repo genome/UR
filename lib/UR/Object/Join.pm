@@ -31,9 +31,10 @@ class UR::Object::Join {
 
 sub _parse_chain {
     # static method to decompose a chain string
-    my ($class, $property_name) = @_:
-    my @chain = split(/\./,$property_name);
-    for my $full_link (@chain) {
+    my ($class, $property_name) = @_;
+    my @links = split(/\./,$property_name);
+    my @parsed;
+    for my $full_link (@links) {
         my ($name, $label) = ($full_link =~ /^([^\-\?]+)(.*)/);
         my $opt = '';
         if (substr($label,-1) eq '?') {
