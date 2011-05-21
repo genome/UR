@@ -8,6 +8,9 @@ Revision history for UR
         support for using a chain of properties in queries ('a.b.c like' => $v)
         set operations normalized: min, max, sum, count
         set-to-set relaying is now correctly lazy 
+        Objects previously loaded from the database, and later deleted from the
+            database, are now detected as deleted and handled as another type of
+            change to be merged with in-memory changes.
 
 0.30    2011-03-07
         re-package 0.29 with versions correctly set

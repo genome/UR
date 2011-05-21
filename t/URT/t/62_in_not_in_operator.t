@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 43;
+use Test::More tests => 44;
 use URT::DataSource::SomeSQLite;
 
 &setup_classes_and_db();
@@ -78,11 +78,14 @@ is(scalar(@things), 8, 'Got 8 things from the DB with related_values IN [-1, -2,
 is(scalar(@things), 8, 'Got 8 things from the DB with related_values not in [-10,-9,9,99]');
 
 @things = URT::Thing->get('related_values not in' => [4,5]);
-is(scalar(@things), 0, 'Got 0 things with related_values not in [4,5]');
+is(scalar(@things), 8, 'Got 0 things with related_values not in [4,5]');
 
 # all of them have value 7
 @things = URT::Thing->get('related_values not in' => [7,100,101]);
-is(scalar(@things), 0, 'Got 0 things with related_values not in [7,100,101]');
+is(scalar(@things), 8, 'Got 0 things with related_values not in [7,100,101]');
+
+@things = URT::Thing->get('related_values not in' => [1,2,3,4,5,6,7,8]);
+is(scalar(@things), 0, 'Got 0 things with related_values not in [1,2,3,4,5,6,7,8]');
 
 
 # Only things 1 and 2 have optional values set
@@ -99,14 +102,17 @@ is(scalar(@things), 0, 'Got 0 things with related_optional_values in [-2,25,26]'
 @things = URT::Thing->get('related_optional_values in' => [19, undef, 5]);
 is(scalar(@things), 8, 'All 8 things with related_optional_values in [undef, 5,19]');
 
+# objs 1 and 2 will match the "related values is not null" part
 @things = URT::Thing->get('related_optional_values not in' => [undef, 6, 22]);
-is(scalar(@things), 0, 'Got 0 things with related_optional_values not in [undef, 6, 22]');
+is(scalar(@things), 2, 'Got 2 things with related_optional_values not in [undef, 6, 22]');
 
+# 1 and 2 have related values not in 7,8 (1-6, for example).  The others (objs 3-8) are NULL and don't match
 @things = URT::Thing->get('related_optional_values not in' => [7,8]);
-is(scalar(@things), 6, 'Got 6 things with related_optional_values not in [7,8]');
+is(scalar(@things), 2, 'Got 2 things with related_optional_values not in [7,8]');
 
+# Same here, 1 and 2 have related values not in the list.  Others are NULL
 @things = URT::Thing->get('related_optional_values not in' => [500,501, -22]);
-is(scalar(@things), 8, 'All 8 things with related_optional_values not in [500,501, -22]');
+is(scalar(@things), 2, 'Got 2 things with related_optional_values not in [500,501, -22]');
 
 
 sub setup_classes_and_db {
