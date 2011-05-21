@@ -786,32 +786,38 @@ sub _fast_construct {
         if (substr($key,0,1) eq '-') {
             push @$constant_value_normalized_positions, $pos;
             my $constant_value = $constant_values[$pos];
-            push @constant_values_sorted, $constant_value;
 
             if ($key eq '-recurse') {
+                $constant_value = [$constant_value] if (!ref $constant_value);
                 $recursion_desc = $constant_value;
             }
             elsif ($key eq '-hints' or $key eq '-hint') {
+                $constant_value = [$constant_value] if (!ref $constant_value);
                 $hints = $constant_value; 
             }
             elsif ($key eq '-order_by' or $key eq '-order') {
+                $constant_value = [$constant_value] if (!ref $constant_value);
                 $order_by = $constant_value;
             }
             elsif ($key eq '-group_by' or $key eq '-group') {
+                $constant_value = [$constant_value] if (!ref $constant_value);
                 $group_by = $constant_value;
             }
             elsif ($key eq '-page') {
+                $constant_value = [$constant_value] if (!ref $constant_value);
                 $page = $constant_value;
             }
             elsif ($key eq '-limit') {
                 $limit = $constant_value;
             }
             elsif ($key eq '-aggregate') {
+                $constant_value = [$constant_value] if (!ref $constant_value);
                 $aggregate = $constant_value;
             }
             else {
                 Carp::croak("Unknown special param '$key'.  Expected one of: @UR::BoolExpr::Template::meta_param_names");
             }
+            push @constant_values_sorted, $constant_value;
         }
         else {
             push @$normalized_positions_arrayref, $pos;

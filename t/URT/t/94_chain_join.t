@@ -125,7 +125,6 @@ ok("@p5", "regular query works for " . scalar(@p5) . " objects");
 
 __END__
 
-
 my $bx4i = URT::Person->define_boolexpr('big_cars.color' => 'red');
 my $bx4f = $bx4i->flatten;
 print "$bx4i\n$bx4f\n";

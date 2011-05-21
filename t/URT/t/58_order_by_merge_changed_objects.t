@@ -42,6 +42,7 @@ $o->data('zzz');
 
 $new_obj = URT::Thing->create(name => 'Joeseph', data => 'mmm');
 
+# Should find Joey (data => ccc), Joeseph (data mmm) and Joe (data zzz, originally aaa)
 @o = URT::Thing->get('name like' => 'Joe%', -order => ['data']);
 is(scalar(@o), 3, 'Got three things with name like Joe%');
 

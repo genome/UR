@@ -79,6 +79,7 @@ sub _get_or_define {
     delete $p{__get_serial};
     delete $p{db_committed};
     delete $p{_change_count};
+    delete $p{__defined};
     my $self = $class->get(id => $id);
     unless ($self) {
         $self = $class->__define__($id);

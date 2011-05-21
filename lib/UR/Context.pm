@@ -288,6 +288,8 @@ sub infer_property_value_from_rule {
 }
 
 our $sig_depth = 0;
+# These are things that use __signal_change__ to emit a message to callbacks, but aren't actually changes
+my %changes_not_counted = map { $_ => 1 } qw(load define unload query connect);
 my %subscription_classes;
 sub add_change_to_transaction_log {
     my ($self,$subject, $property, @data) = @_;
@@ -296,7 +298,7 @@ sub add_change_to_transaction_log {
     if (ref($subject)) {
         $class = ref($subject);
         $id = $subject->id;
-        unless ($property eq 'load' or $property eq 'define' or $property eq 'unload') {
+        unless ($changes_not_counted{$property} ) {
             $subject->{_change_count}++;
             #print "changing $subject $property @data\n";    
         }
@@ -1402,6 +1404,16 @@ sub prune_object_cache {
     }
 }
 
+
+# True if the object was loaded from an underlying context and/or datasource, or if the
+# object has been committed to the underlying context
+sub object_exists_in_underlying_context {
+    my($self, $obj) = @_;
+
+    return if ($obj->{'__defined'});
+    return (exists($obj->{'db_committed'}) || exists($obj->{'db_saved_uncommitted'}));
+}
+
    
 # this is the underlying method for get/load/is_loaded in ::Object
 
@@ -2325,9 +2337,6 @@ sub _create_import_iterator_for_underlying_context {
             }
 
             $primary_object_for_next_db_row = $imported[-1];
-            my $this_object_was_already_cached = defined($primary_object_for_next_db_row)
-                                              && ref($primary_object_for_next_db_row)
-                                              && exists($primary_object_for_next_db_row->{'__get_serial'});
 
             foreach my $obj (@imported) {
                 # The object importer will return undef for an object if no object
@@ -2339,15 +2348,6 @@ sub _create_import_iterator_for_underlying_context {
                 $obj->{'__get_serial'} = $this_get_serial;
             }
 
-            if ($this_object_was_already_cached) {
-                # Don't return objects that already exist in the current context
-                # FIXME - when we can stack contexts in the same application, and the 
-                # loaded context is recorded on the object, use that context as the
-                # test above instead of the existence of a __get_serial
-                $primary_object_for_next_db_row = undef;
-                redo LOAD_AN_OBJECT;
-            }
-            
             if ($re_iterate and $primary_object_for_next_db_row and ! ref($primary_object_for_next_db_row)) {
                 # It is possible that one or more objects go into subclasses which require more
                 # data than is on the results row.  For each subclass (or set of subclasses),
@@ -2427,6 +2427,23 @@ sub _create_import_iterator_for_underlying_context {
 sub __merge_db_data_with_existing_object {
     my($self, $class_name, $existing_object, $pending_db_object_data, $property_names) = @_;
 
+    unless (defined $pending_db_object_data) {
+        # This means a row in the database is missing for an object we loaded before
+        if (defined($existing_object)
+            and $self->object_exists_in_underlying_context($existing_object)
+            and $existing_object->__changes__
+        ) {
+            my $id = $existing_object->id;
+            Carp::croak("$class_name ID '$id' previously existed in an underlying context, has since been deleted from that context, and the cached object now has unsavable changes.\nDump: ".Data::Dumper::Dumper($existing_object)."\n");
+        } else {
+#print "Removing object id ".$existing_object->id." because it has been removed from the database\n";
+            UR::Context::LoadingIterator->_remove_object_from_other_loading_iterators($existing_object);
+            $existing_object->__signal_change__('delete');
+            $self->_abandon_object($existing_object);
+            return $existing_object;
+        }
+    }
+
     my $expected_db_data;
     if (exists $existing_object->{'db_saved_uncommitted'}) {
         $expected_db_data = $existing_object->{'db_saved_uncommitted'};
@@ -2445,14 +2462,15 @@ sub __merge_db_data_with_existing_object {
     foreach my $property ( @$property_names ) {
         no warnings 'uninitialized';
 
-        next unless (exists $existing_object->{$property});   # All direct properties are stored in the same-named hash key, right?
+        # All direct properties are stored in the same-named hash key, right?
+        next unless (exists $existing_object->{$property});
 
         my $object_value      = $existing_object->{$property};
         my $db_value          = $pending_db_object_data->{$property};
         my $expected_db_value = $expected_db_data->{$property};
 
         if ($object_value ne $expected_db_value) {
-            $different = 1;
+            $different++;
         }
 
         
@@ -2499,6 +2517,13 @@ sub __merge_db_data_with_existing_object {
     %$expected_db_data = (%$expected_db_data, %$pending_db_object_data);
 
     if (! $different) {
+        # FIXME HACK!  This is to handle the case when you get an object, start a software transaction,
+        # change something in the database for that object, reload the object (so __merge updates the value 
+        # found in the DB), then rollback the transaction.  The act of updating the value here in __merge makes
+        # a change record that gets undone when the transaction is rolled back.  After the rollback, the current
+        # value goes back to the originally loaded value, db_committed has the newly clhanged DB value, but
+        # _change_count is 0 turning off change tracking makes it so this internal change isn't undone by rollback
+        local $UR::Context::Transaction::log_all_changes = 0;  # HACK!
         # The object has no local changes.  Go ahead and update the current value, too
         foreach my $property ( @$property_names ) {
             no warnings 'uninitialized';
@@ -2507,6 +2532,10 @@ sub __merge_db_data_with_existing_object {
             $existing_object->$property($pending_db_object_data->{$property});
         }
     }
+
+    # re-figure how many changes are really there
+    my @change_count = $existing_object->__changes__;
+    $existing_object->{'_change_count'} = scalar(@change_count);
 
     return $different;
 }
@@ -3427,6 +3456,7 @@ sub _reverse_all_changes {
                                  $property_meta->is_constant);
                         $object->$property_name($saved->{$property_name});
                     }
+                    delete $object->{'_change_count'};
                 }
                 else {
                     # Object not in database, get rid of it.

@@ -331,6 +331,35 @@ sub _init_rdbms {
             pop @joins;
         }
 
+        # If a property is id_by something that is, itself, delegated, then there is a fork in
+        # the join chain, and one or more joins to UR::Value classes end up in the middle of
+        # @joins.  This commented-out code was able to remove the wacky UR::Value join in the simple
+        # case of one level of indirection, but was probably wrong in the general case.
+        #my ($final_accessor, $is_optional, @full_list_of_joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
+        #my @joins;
+        #while (@full_list_of_joins) {
+        #    my $join = shift @full_list_of_joins;
+        #    if ($join->{'foreign_class'}->isa('UR::Value')) {
+        #        my $next_join = shift @full_list_of_joins;
+        #        last unless $next_join;
+        #        my $new_join = UR::Object::Join->_get_or_define(
+        #                           id => $join->id . '_fixed',
+        #                           source_class => $join->{'source_class'},
+        #                           source_name_for_foreign => $join->{'source_name_for_foreign'},
+        #                           source_property_names => [ @{ $join->{'source_property_names'} } ],
+        #                           foreign_class => $next_join->{'foreign_class'},
+        #                           foreign_name_for_source => $next_join->{'foreign_name_for_source'},
+        #                           foreign_property_names => [ @{ $next_join->{'foreign_property_names'} } ],
+        #                           is_optional => $join->{'is_optional'},
+        #                           is_many                 => $join->{'is_many'},
+        #                           where                   => $join->{'where'},
+        #                       );
+        #                       push @joins, $new_join;
+        #    } else {
+        #        push @joins, $join;
+        #    }
+        #}
+
         my $last_class_object_excluding_inherited_joins;
         my $alias_for_property_value;
 
@@ -359,12 +388,12 @@ sub _init_rdbms {
                 my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
                 
                 my $alias = $self->_add_join(
-                    $delegated_property,
-                    $join,
-                    $object_num,
-                    $is_optional,
-                    $final_accessor,
-                ); 
+                        $delegated_property,
+                        $join,
+                        $object_num,
+                        $is_optional,
+                        $final_accessor,
+                    );
 
                 unless ($alias) {
                     next DELEGATED_PROPERTY;
@@ -742,9 +771,9 @@ sub _add_join {
                 $_;
             }
             map {
-                my $p = $source_class_object->property_meta_for_name($_);
+                my $p = $self->_concrete_property_meta_for_class_and_name($source_class_object,$_);
                 unless ($p) {
-                    Carp::confess("No property $_ for class ".$source_class_object->class_name);
+                    Carp::croak("No property $_ for class ".$source_class_object->class_name);
                 }
                 my($table_name,$column_name) = $p->table_and_column_name_for_property();
                 if ($table_name && $column_name) {
@@ -941,7 +970,7 @@ sub _add_join {
 sub _resolve_table_and_column_data {
     my ($class, $class_meta, @property_names) = @_;
     my @property_meta = 
-        map { $class_meta->property_meta_for_name($_) }
+        map { $class->_concrete_property_meta_for_class_and_name($class_meta,$_) }
         @property_names;
     my $table_name;
     my @column_names = 
@@ -1090,7 +1119,7 @@ sub _resolve_object_join_data_for_property_chain {
     my $is_optional;
     my $final_accessor;
 
-    my @pmeta = $class_meta->property_meta_for_name($property_name);  
+    my @pmeta = $class_meta->property_meta_for_name($property_name);
 
     # we can't actually get this from the joins because 
     # a bunch of optional things can be chained together to form
@@ -1240,9 +1269,15 @@ sub _init_light {
         }
 
         my $delegate_class_meta = $delegated_property->class_meta;
-        my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
+        my $via_accessor_meta = $self->_concrete_property_meta_for_class_and_name(
+                                           $delegate_class_meta,
+                                           $relationship_name
+                                       );
         my $final_accessor = $delegated_property->to;            
-        my $final_accessor_meta = $via_accessor_meta->data_type->__meta__->property_meta_for_name($final_accessor);
+        my $final_accessor_meta = $self->_concrete_property_meta_for_class_and_name(
+                                             $via_accessor_meta->data_type->__meta__,
+                                             $final_accessor
+                                         );
         unless ($final_accessor_meta) {
             Carp::croak("No property '$final_accessor' on class " . $via_accessor_meta->data_type .
                           " while resolving property $property_name on class $class_name");
@@ -1277,7 +1312,7 @@ sub _init_light {
             my @source_property_names = @{ $join->{source_property_names} };
             my @source_table_and_column_names = 
                 map {
-                    my $p = $source_class_object->property_meta_for_name($_);
+                    my $p = $self->_concrete_property_meta_for_class_and_name($source_class_object,$_);
                     unless ($p) {
                         Carp::confess("No property $_ for class $source_class_object->{class_name}\n");
                     }
@@ -1295,7 +1330,7 @@ sub _init_light {
             my @foreign_property_names = @{ $join->{foreign_property_names} };
             my @foreign_property_meta = 
                 map {
-                    $foreign_class_object->property_meta_for_name($_)
+                    $self->_concrete_property_meta_for_class_and_name($foreign_class_object,$_)
                 }
                 @foreign_property_names;
             
@@ -1350,22 +1385,7 @@ sub _init_light {
         unless ($delegated_property->via) {
             next;
         }
-        my $final_accessor_property_meta = $last_class_object->property_meta_for_name($final_accessor);
-        if ($final_accessor_property_meta
-            and $final_accessor_property_meta->class_name eq 'UR::Object'
-            and $final_accessor_property_meta->property_name eq 'id')
-        {
-            # This is the 'fake' id property.  Remap it to the class' real ID property name
-            my @id_properties = $last_class_object->id_property_names;
-            if (@id_properties != 1) {
-                # TODO - we could add further joins and not have to evaluate later
-                $needs_further_boolexpr_evaluation_after_loading = 1;
-                next;
-
-            } else {
-                $final_accessor_property_meta = $last_class_object->property_meta_for_name($id_properties[0]);
-            }
-        }
+        my $final_accessor_property_meta = $self->_concrete_property_meta_for_class_and_name($last_class_object,$final_accessor);
         unless ($final_accessor_property_meta) {
             Carp::croak("No property metadata for property named '$final_accessor' in class " . $last_class_object->class_name
                         . " while resolving joins for property '" .$delegated_property->property_name . "' in class "
@@ -1628,9 +1648,15 @@ sub _init_core {
         }
 
         my $delegate_class_meta = $delegated_property->class_meta;
-        my $via_accessor_meta = $delegate_class_meta->property_meta_for_name($relationship_name);
+        my $via_accessor_meta = $self->_concrete_property_meta_for_class_and_name(
+                                           $delegate_class_meta,
+                                           $relationship_name
+                                        );
         my $final_accessor = $delegated_property->to;            
-        my $final_accessor_meta = $via_accessor_meta->data_type->__meta__->property_meta_for_name($final_accessor);
+        my $final_accessor_meta = $self->_concrete_property_meta_for_class_and_name(
+                                             $via_accessor_meta->data_type->__meta__,
+                                             $final_accessor
+                                         );
         unless ($final_accessor_meta) {
             Carp::croak("No property '$final_accessor' on class " . $via_accessor_meta->data_type .
                           " while resolving property $property_name on class $class_name");
@@ -1669,7 +1695,7 @@ sub _init_core {
 
             my @source_table_and_column_names = 
                 map {
-                    my $p = $source_class_object->property_meta_for_name($_);
+                    my $p = $self->_concrete_property_meta_for_class_and_name($source_class_object, $_);
                     unless ($p) {
                         Carp::confess("No property $_ for class $source_class_object->{class_name}\n");
                     }
@@ -1691,7 +1717,7 @@ sub _init_core {
             my @foreign_property_names = @{ $join->{foreign_property_names} };
             my @foreign_property_meta = 
                 map {
-                    $foreign_class_object->property_meta_for_name($_)
+                    $self->_concrete_property_meta_for_class_and_name($foreign_class_object, $_);
                 }
                 @foreign_property_names;
             
@@ -1751,24 +1777,7 @@ sub _init_core {
             next;
         }
 
-        my $final_accessor_property_meta = $last_class_object->property_meta_for_name($final_accessor);
-        if ($final_accessor_property_meta
-            and $final_accessor_property_meta->class_name eq 'UR::Object'
-            and $final_accessor_property_meta->property_name eq 'id')
-        {
-            # This is the 'fake' id property.  Remap it to the class' real ID property name
-            my @id_properties = $last_class_object->id_property_names;
-            if (@id_properties != 1) {
-                # TODO - we could add further joins and not have to evaluate later
-                $needs_further_boolexpr_evaluation_after_loading = 1;
-                next;
-
-            } else {
-                $final_accessor_property_meta = $last_class_object->property_meta_for_name($id_properties[0]);
-            }
-            
-        }
-
+        my $final_accessor_property_meta = $self->_concrete_property_meta_for_class_and_name($last_class_object,$id_properties[0]);
         unless ($final_accessor_property_meta) {
             Carp::croak("No property metadata for property named '$final_accessor' in class " . $last_class_object->class_name
                         . " while resolving joins for property '" .$delegated_property->property_name . "' in class "
@@ -1859,6 +1868,29 @@ sub _init_default {
 
     return $self;
 }
+
+# A front-end for UR::Object::Type::property_meta_for_name, but
+# will translate the generic 'id' property into the class' real ID property,
+# if it's not called 'id'
+sub _concrete_property_meta_for_class_and_name {
+    my($self,$class_meta, $property_name)  = @_;
+
+    my $property_meta = $class_meta->property_meta_for_name($property_name);
+
+    if ($property_meta
+        and $property_meta->class_name eq 'UR::Object'
+        and $property_meta->property_name eq 'id')
+    {
+        # This is the generic id property.  Remap it to the class' real ID property name
+        my @id_properties = $class_meta->id_property_names;
+        if (@id_properties == 1 and $id_properties[0] eq 'id') {
+            return $property_meta;
+        }
+        return map { $self->_concrete_property_meta_for_class_and_name($class_meta,$_) } @id_properties;
+    }
+    return $property_meta;
+}
+
 
 sub _init_remote_cache {
     my $self = shift;
