@@ -29,6 +29,25 @@ class UR::Object::Join {
     doc => "join metadata used internally by the ::QueryBuilder"
 };
 
+our %resolve_tree;
+sub resolve_tree {
+    my ($class, $class_name, $property_chain) = @_;
+
+    my $join_tree = 
+        $resolve_tree{$class_name}{$property_chain}
+            ||= do {
+                my $class_meta = $class_name->__meta__;
+                my @pmeta = $class_meta->property_meta_for_name($property_chain);
+                my @joins;
+                for my $pmeta (@pmeta) {
+                    push @joins, $class->_resolve_tree_for_property_meta($pmeta);
+                }
+                \@joins;
+            };
+
+    return @$join_tree;
+}
+
 our %resolve_chain;
 sub resolve_chain {
     my ($class, $class_name, $property_chain) = @_;
