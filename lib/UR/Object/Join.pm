@@ -227,21 +227,56 @@ sub _resolve_forward {
         my @pairs = $pmeta->get_property_name_pairs_for_join;
         @source_property_names  = map { $_->[0] } @pairs;
         @foreign_property_names = map { $_->[1] } @pairs;
-
+        $source_name_for_foreign = $pmeta->property_name;
+        
         if (ref($id_by) eq 'ARRAY') {
             # satisfying the id_by requires joins of its own
             # sms: why is this only done on multi-value fks?
             foreach my $id_by_property_name ( @$id_by ) {
                 my $id_by_property = $class_meta->property_meta_for_name($id_by_property_name);
                 next unless ($id_by_property and $id_by_property->is_delegated);
-            
                 push @joins, $id_by_property->_resolve_join_chain();
-                $source_class = $joins[-1]->{'foreign_class'};
-                @source_property_names = @{$joins[-1]->{'foreign_property_names'}};
+                my $extra = pop @joins if $joins[-1]->{'foreign_class'}->isa("UR::Value");
+                if ($extra) {
+                    $source_class = $extra->{'source_class'};
+                    @source_property_names = @{$extra->{'source_property_names'}};
+                    my @p = $source_class->__meta__->properties();
+                    my $final_link;
+                    for my $p (@p) {
+                        my $id_by = $p->id_by;
+                        unless ($id_by) {
+                            print "no id_by on $p->{id}\n";
+                            next;
+                        }
+                        unless (@$id_by = @source_property_names) {
+                            print "bad count on $p->{id} @$id_by\n";
+                            next;
+                        }
+                        my $match = 1;
+                        for (my $n = 0; $n <@$id_by; $n++) {
+                            if ($id_by->[$n] ne $source_property_names[$n]) {
+                                $match = 0;
+                                last;
+                            }
+                        }
+                        if ($match) {
+                            $final_link = $p;
+                            last;
+                        }
+                    }
+                    unless ($final_link) {
+                        Carp::confess("failed to find linkage for $source_class @source_property_names?");
+                    }
+                    $source_name_for_foreign = $final_link->property_name;
+                }
+                else {
+                    #Carp::confess("An identity which is not a value???");
+                    $source_class = $joins[-1]->{'foreign_class'};
+                    @source_property_names = @{$joins[-1]->{'foreign_property_names'}};
+                }
             }
         }
 
-        $source_name_for_foreign = $pmeta->property_name;
         my @reverse = $foreign_class_meta->properties(reverse_as => $source_name_for_foreign, data_type => $pmeta->class_name);
         my $reverse;
         if (@reverse > 1) {

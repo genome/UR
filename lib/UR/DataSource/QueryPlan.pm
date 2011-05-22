@@ -339,6 +339,9 @@ sub _init_rdbms {
             push @new_ops, $op;
         }
         my @new_values = @$new_values;
+        print "> decompose $name into $flat_name, @new_names\n";
+        $DB::single = 1 if $name eq 'work_phone';
+        $class_meta->_flatten_property_name($name);
         for my $flat ($flat_name, @new_names) {
             my @parts = UR::Object::Join->_parse_chain($flat);
             my $cname = $class_name;
@@ -347,7 +350,7 @@ sub _init_rdbms {
             my $next_detail;
             while (my $part = shift @parts) {
                 my ($key,$label,$opt) = @$part;
-                #print "> parts for $key ($flat): @$part\n";
+                print ">> parts for $name flat element $flat : @$part\n";
                 #$DB::single = 1 if @parts;
                 $next_detail = $next_branch->{$key}{$label} ||= { 'opt' => '', 'join' => undef, 'next_joins' => {} };
                 $next_detail->{'opt'} .= $opt; 
