@@ -315,10 +315,84 @@ sub _init_rdbms {
     # and inheritance-join-resolver methods that can be called recursively.
     # It would better encapsulate what's going on and avoid bugs with complicated
     # get()s
-   
+  
+    @delegated_properties = sort (@delegated_properties);
+
+    my %join_tree;
+    #   {name}{label}{opt} = '?'
+    #                {join} = $obj
+    #                {next_joins}{name}{label}{opt}
+    #                                         {join} = $jobj
+    #                                         {next_joins}
+    #                {value} = $
+    my %final_detail_for_name;
+    for my $name (@delegated_properties) {
+        # flattening can turn one property description into multiple
+        my ($flat_name, $new_keys, $new_values) = $class_meta->_flatten_property_name($name);
+        #print "> name $name has flat $flat_name k @$new_keys v @$new_values\n";
+
+        my @new_names;
+        my @new_ops;
+        for my $new_key (@$new_keys) {
+            my ($name, $op) = ($new_key =~ /^(\S+)\s*(\S*)/);
+            push @new_names, $name;
+            push @new_ops, $op;
+        }
+        my @new_values = @$new_values;
+        for my $flat ($flat_name, @new_names) {
+            my @parts = UR::Object::Join->_parse_chain($flat);
+            my $cname = $class_name;
+            my $cmeta = $cname->__meta__;
+            my $next_branch = \%join_tree;
+            my $next_detail;
+            while (my $part = shift @parts) {
+                my ($key,$label,$opt) = @$part;
+                #print "> parts for $key ($flat): @$part\n";
+                #$DB::single = 1 if @parts;
+                $next_detail = $next_branch->{$key}{$label} ||= { 'opt' => '', 'join' => undef, 'next_joins' => {} };
+                $next_detail->{'opt'} .= $opt; 
+                my $next_join = $next_detail->{'join'} ||= 
+                    do {
+                        my ($name) = ($key =~ /^(\w+)/);
+                        my @pmeta = $cmeta->property_meta_for_name($name);
+                        if (@pmeta > 1) {
+                            Carp::confess("Flattening $key to $flat yields part $key which has multiple meta?");
+                        }
+                        if (@pmeta == 0) {
+                            Carp::confess("Flattening $key to $flat yields part $key which has NO meta?");
+                        }
+                        my @joins = UR::Object::Join->_resolve_chain_for_property_meta($pmeta[0]);
+                        if (@joins > 1) {
+                            Carp::confess("Flattening $key to $flat yields part $key which has one meta multiple joins?");
+                        }
+                        $next_detail->{'join'} = $joins[0];
+                    };
+                $cname = $next_join->foreign_class;
+                $cmeta = $cname->__meta__;
+                $next_branch = $next_detail->{'next_joins'};
+            }
+            if ($flat eq $flat_name) {
+                $final_detail_for_name{$name} = $next_detail;
+            }
+            else {
+                my $op = shift @new_ops;
+                my $value = shift @new_values;
+                
+                my $op_list = $next_detail->{'op'} ||= [];
+                my $value_list = $next_detail->{'value'} ||= [];
+                
+                push @$op_list, $op;
+                push @$value_list, $value;
+            }
+        }
+    }
+    #print Data::Dumper::Dumper([\%join_tree,\@delegated_properties, \%final_detail_for_name]);
+
     # one iteration per target value involved in the query,
     # including values needed for filtering, ordering, grouping, and hints (selecting more)
     # these "properties" may be a single property name or an ad-hoc "chain"
+
+    $DB::single = $main::xxx;
     DELEGATED_PROPERTY:
     for my $delegated_property (sort @delegated_properties) {
         my $property_name = $delegated_property;
@@ -330,35 +404,6 @@ sub _init_rdbms {
             # and the UR::Value subclass into which it falls ...irrelevent for db joins
             pop @joins;
         }
-
-        # If a property is id_by something that is, itself, delegated, then there is a fork in
-        # the join chain, and one or more joins to UR::Value classes end up in the middle of
-        # @joins.  This commented-out code was able to remove the wacky UR::Value join in the simple
-        # case of one level of indirection, but was probably wrong in the general case.
-        #my ($final_accessor, $is_optional, @full_list_of_joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
-        #my @joins;
-        #while (@full_list_of_joins) {
-        #    my $join = shift @full_list_of_joins;
-        #    if ($join->{'foreign_class'}->isa('UR::Value')) {
-        #        my $next_join = shift @full_list_of_joins;
-        #        last unless $next_join;
-        #        my $new_join = UR::Object::Join->_get_or_define(
-        #                           id => $join->id . '_fixed',
-        #                           source_class => $join->{'source_class'},
-        #                           source_name_for_foreign => $join->{'source_name_for_foreign'},
-        #                           source_property_names => [ @{ $join->{'source_property_names'} } ],
-        #                           foreign_class => $next_join->{'foreign_class'},
-        #                           foreign_name_for_source => $next_join->{'foreign_name_for_source'},
-        #                           foreign_property_names => [ @{ $next_join->{'foreign_property_names'} } ],
-        #                           is_optional => $join->{'is_optional'},
-        #                           is_many                 => $join->{'is_many'},
-        #                           where                   => $join->{'where'},
-        #                       );
-        #                       push @joins, $new_join;
-        #    } else {
-        #        push @joins, $join;
-        #    }
-        #}
 
         my $last_class_object_excluding_inherited_joins;
         my $alias_for_property_value;
@@ -454,44 +499,36 @@ sub _init_rdbms {
 
         # done adding any new joins for this delegated property/property-chain
 
-
-        # this is probably legacy code, since we never pass in a reference, just text
-        if (ref($delegated_property) and !$delegated_property->via) {
-            Carp::confess(); 
-        }
-
-        # TODO: how does this work on a hint, or other case w/o a final_accessor??
-        my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
-        unless ($final_accessor_property_meta) {
-            Carp::croak("No property metadata for property named '$final_accessor' in class "
-                        . $last_class_object_excluding_inherited_joins->class_name
-                        . " while resolving joins for property '" . $delegated_property->property_name . "' in class "
-                        . $delegated_property->class_name);
-        }
-
-        # TODO: move these down into the block where we're actually filtering
-        my $sql_lvalue;
-        if ($final_accessor_property_meta->is_calculated) {
-            $sql_lvalue = $final_accessor_property_meta->calculate_sql;
-            unless (defined($sql_lvalue)) {
-                $self->needs_further_boolexpr_evaluation_after_loading(1);
-                next;
-            }
-        }
-        else {
-            $sql_lvalue = $final_accessor_property_meta->column_name;
-            unless (defined($sql_lvalue)) {
-                Carp::confess("No column name set for non-delegated/calculated property $property_name of $class_name");
-            }
-        }
-
-        # this handles the case where we're joining to filter, not just a join for hinting, ordering, grouping, etc.   
+        # if we're joining to filter, not just a join for hinting, ordering, grouping, etc.   
         my $value_position = $rule_template->value_position_for_property_name($property_name);
         if (defined $value_position) {
-            my $operator       = $rule_template->operator_for($property_name);
+            my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
+            unless ($final_accessor_property_meta) {
+                Carp::croak("No property metadata for property named '$final_accessor' in class "
+                            . $last_class_object_excluding_inherited_joins->class_name
+                            . " while resolving joins for property '" . $delegated_property->property_name . "' in class "
+                            . $delegated_property->class_name);
+            }
+
+            my $sql_lvalue;
+            if ($final_accessor_property_meta->is_calculated) {
+                $sql_lvalue = $final_accessor_property_meta->calculate_sql;
+                unless (defined($sql_lvalue)) {
+                    $self->needs_further_boolexpr_evaluation_after_loading(1);
+                    next;
+                }
+            }
+            else {
+                $sql_lvalue = $final_accessor_property_meta->column_name;
+                unless (defined($sql_lvalue)) {
+                    Carp::confess("No column name set for non-delegated/calculated property $property_name of $class_name");
+                }
+            }
+
+            my $operator = $rule_template->operator_for($property_name);
 
             unless ($alias_for_property_value) {
-                die "No alias found for $property_name?!";
+                Carp::confess("No alias found for $property_name?!");
             }
 
             push @sql_filters, 
