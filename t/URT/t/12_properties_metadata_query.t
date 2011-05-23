@@ -47,7 +47,7 @@ my @p;
 my $p;
 
 @p = $m->_properties();
-is(scalar(@p), 8, "got 8 properties, as expected");
+is(scalar(@p), 9, "got 8 properties, as expected");
 
 @p = $m->_properties("doc like" => '%x4%');
 is(scalar(@p), 1, "got 1 x4 property");
