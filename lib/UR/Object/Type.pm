@@ -29,13 +29,6 @@ sub define { shift->__define__(@_) }
 # These go in this array, and are cleared when property metadata is mutated
 our @cache_keys;
 
-#
-# NOTE TO UR DEVELOPERS:
-# 
-# This API is for developers _using_ UR.  
-# Internally, for bootstrapping reasons UR uses a humbler API.
-#
-
 # This is the function behind $class_meta->properties(...)
 # It mimics the has-many object accessor, but handles inheritance
 # Once we have "isa" and "is-parent-of" operator we can do this with regular operators.
