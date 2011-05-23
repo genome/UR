@@ -103,10 +103,10 @@ is_deeply(\@names,\@expected, 'Property names check out');
 
 # properties() only returns properties with storage, not object accessors or the property named 'id'
 @props = $child_meta->properties();
-is(scalar(@props), 7, 'Child class has 7 properties through properties()');
+is(scalar(@props), 9, 'Child class has 9 properties through properties()') or diag join(", ",$child_meta->property_names);
 @names = sort map { $_->property_name } @props;
-@expected = qw(child_id child_value parent_id parent_value rel_id_a rel_id_b related_value),
-is_deeply(\@names,\@expected, 'Property names check out');
+@expected = qw(child_id child_value id parent_id parent_value rel_id_a rel_id_b related_object related_value),
+is_deeply(\@names,\@expected, 'Property names check out') or diag "@names\n@expected\n";
 
 $prop = $child_meta->direct_property_meta(property_name => 'related_value');
 ok(! $prop, "getting a property defined on parent class through child's direct_property_meta finds nothing");
@@ -118,10 +118,10 @@ ok(UR::Object::Property->create( class_name => 'URT::Child', property_name => 'e
    'Created an extra property on Child class');
 
 @props = $child_meta->properties();
-is(scalar(@props), 8, 'Child class now has 8 properties()');
+is(scalar(@props), 10, 'Child class now has 8 properties()');
 @names = map { $_->property_name } @props;
-@expected = qw(child_id child_value extra_property parent_id parent_value rel_id_a rel_id_b related_value),
-is_deeply(\@names, \@expected, 'Property names check out');
+@expected = qw(child_id child_value extra_property id parent_id parent_value rel_id_a rel_id_b related_object related_value),
+is_deeply(\@names, \@expected, 'Property names check out') or diag ("@names\n@expected\n");
 
 @props = $child_meta->direct_property_metas();
 is(scalar(@props), 3, 'Child class now has 3 direct_property_metas()');
@@ -146,10 +146,10 @@ is_deeply(\@names, \@expected, 'Property names check out');
 is_deeply(\@names, \@expected, 'Property names from direct_property_names are correct');
 
 @props = $child_meta->properties();
-is(scalar(@props), 9, 'Child class now has 9 properties()');
+is(scalar(@props), 11, 'Child class now has 11 properties()');
 @names = map { $_->property_name } @props;
-@expected = qw(child_id child_value extra_property parent_extra parent_id parent_value rel_id_a rel_id_b related_value),
-is_deeply(\@names, \@expected, 'Property names check out');
+@expected = qw(child_id child_value extra_property id parent_extra parent_id parent_value rel_id_a rel_id_b related_object related_value),
+is_deeply(\@names, \@expected, 'Property names check out') or diag "@names\n@expected\n";
 
 @props = $child_meta->all_property_metas();
 is(scalar(@props), 11, 'Child class now has 11 properties through all_property_names()');

@@ -15,6 +15,10 @@ our $bootstrapping = 1;
 our @partially_defined_classes;
 our $pwd_at_compile_time = cwd();
 
+# each method which caches data on the class for properties stores its hash key here
+# when properties mutate this is cleared
+our @cache_keys;
+
 sub property_metas {
     my $self = $_[0];
     my @a = map { $self->property_meta_for_name($_) } $self->all_property_names();    
@@ -49,6 +53,7 @@ sub ancestry_class_metas {
 }
 
 our $PROPERTY_META_FOR_NAME_TEMPLATE;
+push @cache_keys, '_property_meta_for_name';
 sub property_meta_for_name {
     my ($self, $property_name) = @_;
 
@@ -93,7 +98,6 @@ sub property_meta_for_name {
     }
     return;
 }
-
 
 sub _flatten_property_name {
     my ($self, $name) = @_;
@@ -240,6 +244,7 @@ sub ancestry_class_names {
     return @$ordered_inherited_class_names;
 }
 
+push @cache_keys, '_all_property_names';
 sub all_property_names {
     my $self = shift;
     
@@ -264,7 +269,6 @@ sub all_property_names {
         }
     }
     return @$all_property_names;
-    
 }
 
 
@@ -1094,6 +1098,7 @@ sub _object {
 }
 
 # new version gets everything, including "id" itself and object ref properties
+push @cache_keys, '_all_property_type_names';
 sub all_property_type_names {
     my $self = shift;
     
@@ -1322,10 +1327,11 @@ sub _property_change_callback {
     } 
 
     # Invalidate the cache used by all_property_names()
-    $class_obj->_invalidate_cached_data_for_subclasses('_all_property_names');
-    $class_obj->_invalidate_cached_data_for_subclasses('_property_meta_for_name');
-    $class_obj->_invalidate_cached_data_for_subclasses('_all_property_type_names');
+    for my $key (@cache_keys) {
+        $class_obj->_invalidate_cached_data_for_subclasses($key);
+    }
 }
+
 
 # Some expensive-to-calculate data gets stored in the class meta hashref
 # and needs to be removed for all the existing subclasses

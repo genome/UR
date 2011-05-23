@@ -119,5 +119,14 @@ sub setup_classes_and_db {
         data_source => 'URT::DataSource::SomeSQLite',
         table_name => 'persons',
     );
+
+    #$DB::single = 1;
+    my $class_meta = URT::Person->__meta__;
+    my $pmeta = $class_meta->property('work_phone');
+    my @j = UR::Object::Join->_resolve_chain_for_property_meta($pmeta); 
+    print Data::Dumper::Dumper(\@j);
+    #my (@flat) = $class_meta->_flatten_property_name('work_phone');
+    #print Data::Dumper::Dumper(\@flat);
+    #exit;
 }
 
