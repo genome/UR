@@ -116,6 +116,21 @@ sub _property_name_class_map {
     return $map;
 }
 
+sub _legacy_properties {
+    my $self = shift;
+    if (@_) {
+        my $bx = UR::Object::Property->define_boolexpr(@_);
+        my @matches = grep { $bx->evaluate($_) } $self->property_metas;
+        return if not defined wantarray;
+        return @matches if wantarray;
+        die "Matched multiple meta-properties, but called in scalar context!" . Data::Dumper::Dumper(\@matches) if @matches > 1;
+        return $matches[0];
+    }
+    else {
+        $self->property_metas;
+    }
+}
+
 1;
 
 =pod
