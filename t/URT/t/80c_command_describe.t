@@ -31,6 +31,7 @@ URT Thingy Type URT::Thingy
   sub classification method name: 
   Properties: 
                                 enz_id (no column)                                              NUMBER(10)  
+     ID                             id (no column)                                                  Scalar  
      ID                         pcr_id (no column)                                              NUMBER(15)  
                               pcr_name (no column)                                            VARCHAR2(64)  
                               pri_id_1 (no column)                                              NUMBER(10)  

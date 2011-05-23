@@ -234,7 +234,9 @@ sub generate_schema_for_class_meta {
         }
     }
 
-    for my $property ($class_meta->properties) {
+    # this "property_metas" method filers out things which have an id_by.
+    # it used to call ->properties, which used that method internally ...but seems like it never could have done anything?
+    for my $property ($class_meta->property_metas) {
         my $id_by = $property->id_by;
         next unless $id_by;
         my $r_class_name = $property->data_type;
