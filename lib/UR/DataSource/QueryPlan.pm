@@ -300,7 +300,8 @@ sub _init_rdbms {
                 }
             }
             elsif ($property->is_transient) {
-                die "Query by transient property $property_name on $class_name cannot be done!";
+                push @errors, "Can't query by transient property '$property_name' on $class_name";
+                next;
             }
             elsif ($property->is_delegated) {
                 push @delegated_properties, $property->property_name;
@@ -318,7 +319,7 @@ sub _init_rdbms {
             my $class_name = $class_meta->class_name;
             $ds->error_message("ERRORS PROCESSING PARAMTERS: (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
             print Data::Dumper::Dumper($rule_template);
-            Carp::confess();
+            Carp::croak("Can't continue");
         }
     };
     
