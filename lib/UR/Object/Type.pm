@@ -71,6 +71,7 @@ sub property {
         my $class_names = $self->_property_name_class_map->{$property_name};
         my $id = $class_names->[0] . "\t" . $property_name;
         return UR::Object::Property->get($id); 
+<<<<<<< HEAD
     }
     else {
         # this forces scalar context, raising an exception if
@@ -107,6 +108,59 @@ sub _property_name_class_map {
         \%map;
     };
     return $map;
+=======
+    }
+    else {
+        # this forces scalar context, raising an exception if
+        # the params used result in more than one match
+        my $one = shift->properties(@_);
+        return $one;
+    }
+}
+
+push @cache_keys, '_property_names';
+sub property_names {
+    my $self = $_[0];
+    my $names = $self->{_property_names} ||= do {
+        my @names = sort keys %{ shift->_property_name_class_map };
+        \@names;
+    };
+    return @$names;
+}
+
+push @cache_keys, '_property_name_class_map';
+sub _property_name_class_map {
+    my $self = shift;
+    my $map = $self->{_property_name_class_map} ||= do {
+        my %map = ();  
+        for my $class_name ($self->class_name, $self->ancestry_class_names) {
+            my $class_meta = UR::Object::Type->get($class_name);
+            if (my $has = $class_meta->{has}) {
+                for my $key (sort keys %$has) {
+                    my $classes = $map{$key} ||= [];
+                    push @$classes, $class_name;
+                }
+            }
+        }
+        \%map;
+    };
+    return $map;
+}
+
+sub _legacy_properties {
+    my $self = shift;
+    if (@_) {
+        my $bx = UR::Object::Property->define_boolexpr(@_);
+        my @matches = grep { $bx->evaluate($_) } $self->property_metas;
+        return if not defined wantarray;
+        return @matches if wantarray;
+        die "Matched multiple meta-properties, but called in scalar context!" . Data::Dumper::Dumper(\@matches) if @matches > 1;
+        return $matches[0];
+    }
+    else {
+        $self->property_metas;
+    }
+>>>>>>> master
 }
 
 1;
