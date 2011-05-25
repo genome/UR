@@ -248,7 +248,22 @@ sub _init_rdbms {
                 push @delegated_properties, $property_name;
                 next;
             }
-            
+
+            # For each property in this list, go up the inheritance and find the right property
+            # to query on.  Give priority to properties that actually have columns
+            FIND_PROPERTY_WITH_COLUMN:
+            foreach my $pmeta ( @pmeta ) {
+                foreach my $candidate_class ( $class_meta->all_class_metas ) {
+                    my $candidate_prop_meta = UR::Object::Property->get(class_name => $candidate_class->class_name,
+                                                                        property_name => $property_name);
+                    next unless $candidate_prop_meta;
+                    if ($candidate_prop_meta->column_name) {
+                        $pmeta = $candidate_prop_meta;
+                        next FIND_PROPERTY_WITH_COLUMN;
+                    }
+                }
+            }
+
             my $property = $pmeta[0];
             my $table_name = $property->class_meta->table_name;
             my $operator       = $rule_template->operator_for($property_name);
