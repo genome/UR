@@ -10,6 +10,7 @@ class UR::Value::View::Default::Text {
 sub _generate_content {
     my $self = shift;
     my $subject = $self->subject;
+    return unless ($subject);
     my $name = $subject->__display_name__;
     return $name;
 }

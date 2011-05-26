@@ -150,7 +150,11 @@ no warnings;
 
     my $retval;
     if ($property_meta) {
+
         my $aspect_type = $property_meta->_data_type_as_class_name;
+        unless ($aspect_type) {
+            Carp::confess("Undefined aspect type. Set 'is' for $name in class " . $property_meta->class_name);
+        }
 
         unless ($aspect_type) {
             if (my $delegated_to_meta = $property_meta->final_property_meta) {
