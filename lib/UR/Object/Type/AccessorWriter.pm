@@ -133,7 +133,16 @@ sub mk_id_based_object_accessor {
                 return unless $concrete_r_class_name;
             }
             $id_resolver ||= $concrete_r_class_name->__meta__->get_composite_id_resolver;
-            @id = map { $self->$_ } @$id_by;
+            
+            # eliminate the old map{} because of side effects with $_
+            # when the id_by property happens to be calculated
+            #@id = map { $self->$_ } @$id_by;
+            @id=();
+            for my $property_name (@$id_by) {      # no implicit topic
+                my $value = $self->$property_name; # scalar context
+                push @id, $value;
+            }
+
             $id = $id_resolver->(@id);
             return if not defined $id;
             if ($concrete_r_class_name eq 'UR::Object') {
