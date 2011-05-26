@@ -1527,6 +1527,9 @@ sub get_objects_for_class_and_rule {
     #my $normalized_rule = $flat_rule->normalize;
     my $normalized_rule = $rule->normalize;
 
+    my $is_monitor_query = $self->monitor_query;
+    $self->_log_query_for_rule($class,$normalized_rule,Carp::shortmess("QUERY: Query start for rule $normalized_rule")) if ($is_monitor_query);
+
     # see if we need to load if load was not defined
     unless (defined $load) {
         # check to see if the cache is complete
@@ -1534,9 +1537,6 @@ sub get_objects_for_class_and_rule {
         my ($cache_is_complete, $cached) = $self->_cache_is_complete_for_class_and_normalized_rule($class, $normalized_rule);
         $load = ($cache_is_complete ? 0 : 1);
     }
-
-    my $is_monitor_query = $self->monitor_query;
-    $self->_log_query_for_rule($class,$normalized_rule,Carp::shortmess("QUERY: Query start for rule $normalized_rule")) if ($is_monitor_query);
 
     # optimization for the common case
     if (!$load and !$return_closure) {
