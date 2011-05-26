@@ -13,6 +13,11 @@ UR::Object::Type->define(
     is => 'UR::Object',
 );
 
+sub __display_name__ {
+    my $self = $_[0];
+    return $self->id;
+}
+
 sub _load {
     my $class = shift;    
     my $rule = shift;
