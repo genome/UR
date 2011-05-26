@@ -150,7 +150,7 @@ no warnings;
 
     my $retval;
     if ($property_meta) {
-        my $aspect_type = $property_meta->data_type;
+        my $aspect_type = $property_meta->_data_type_as_class_name;
 
         unless ($aspect_type) {
             if (my $delegated_to_meta = $property_meta->final_property_meta) {
@@ -163,6 +163,7 @@ no warnings;
         }
 
         if ($aspect_type->can("__meta__")) {
+            # This should always be true since the _data_type_as_class_meta should return a real class for primitives
             my $aspect_meta = $aspect_type->__meta__;
             
             my $delegate_view ||= $aspect_type->create_view(
