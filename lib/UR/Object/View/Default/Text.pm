@@ -92,7 +92,7 @@ sub _generate_content {
         $subject_id_txt = "'$subject_id_txt'" if $subject_id_txt =~ /\s/;
         $text .= " $subject_id_txt";
     }
-    
+
     # Don't recurse back into something we're already in the process of showing
     if ($self->_subject_is_used_in_an_encompassing_view()) {
         $text .= " (REUSED ADDR)\n";
@@ -106,7 +106,7 @@ sub _generate_content {
             $text .= $aspect_text;
         }
     }
-    
+
     return $text;
 }
 
@@ -125,58 +125,52 @@ sub _generate_content_for_aspect {
 
     my $subject = $self->subject;  
     my $indent_text = $self->indent_text;
-    
+
     my $aspect_text = $indent_text . $aspect->label . ": ";
-       
+
     if (!$subject) {
         $aspect_text .= "-\n";
         return $aspect_text;
     }
-    
+
     my $aspect_name = $aspect->name;
-#$DB::single = 1 if $aspect_name eq 'inputs';
 
     my @value;
     eval {
         @value = $subject->$aspect_name;
     };
- 
+
     if (@value == 0) {
         $aspect_text .= "-\n";
         return $aspect_text;
     }
-    
+
     if (@value == 1 and ref($value[0]) eq 'ARRAY') {
         @value = @{$value[0]};
     }
-    
-    if (Scalar::Util::blessed($value[0])) {
-        unless ($aspect->delegate_view) {
-            $aspect->generate_delegate_view;
-        }
 
+    unless ($aspect->delegate_view) {
+        $aspect->generate_delegate_view;
     }
-    
+
     # Delegate to a subordinate view if needed.
     # This means we replace the value(s) with their
     # subordinate widget content.
     if (my $delegate_view = $aspect->delegate_view) {
-#        if (@value == 1) {
-#            $delegate_view->subject($value[0]);
-#            $delegate_view->_update_view_from_subject();
-#            $value[0] = $delegate_view->content();
-#        }
-#        else {
-            # TODO: it is bad to recycle a view here??
-            # Switch to a set view, which is the standard lister.
-            foreach my $value ( @value ) {
+        # TODO: it is bad to recycle a view here??
+        # Switch to a set view, which is the standard lister.
+        foreach my $value ( @value ) {
+            if (Scalar::Util::blessed($value)) {
                 $delegate_view->subject($value);
-                $delegate_view->_update_view_from_subject();
-                $value = $delegate_view->content();
             }
-#        }
+            else {
+                $delegate_view->subject_id($value);
+            }
+            $delegate_view->_update_view_from_subject();
+            $value = $delegate_view->content();
+        }
     }
-    
+
     if (@value == 1 and defined($value[0]) and index($value[0],"\n") == -1) {
         # one item, one row in the value or sub-view of the item:
         $aspect_text .= $value[0] . "\n";
