@@ -382,7 +382,6 @@ sub create_iterator {
 sub create_view {
     my $self = shift;
     my $class = $self->class;
-
     # this will auto-subclass into ${class}::View::${perspective}::${toolkit},
     # using $class or some parent class of $class
     my $view = UR::Object::View->create(

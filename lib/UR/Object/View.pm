@@ -55,10 +55,10 @@ class UR::Object::View {
 
 
 sub create {
-    my $class = shift;    
+    my $class = shift;
 
     my ($params,@extra) = $class->define_boolexpr(@_);
-    
+
     # set values not specified in the params which can be inferred from the class name
     my ($expected_class,$expected_perspective,$expected_toolkit) = ($class =~ /^(.*)::View::(.*?)::([^\:]+)$/);
     unless ($params->specifies_value_for('subject_class_name')) {
@@ -86,7 +86,6 @@ sub create {
     }
 
     $params->add_filter(_observer_data => {});
-
     my $self = $expected_class->SUPER::create($params);
     return unless $self;
 
@@ -130,21 +129,21 @@ sub _resolve_view_class_for_params {
     # The subject must be explicitly of class "SubjectClassName" or some subclass of it.
     my $class = shift;
     my $bx = $class->define_boolexpr(@_);
-    
+
     if (exists $view_class_cache{$bx->id}) {
         if (!defined $view_class_cache{$bx->id}) {
             return;
         }
         return $view_class_cache{$bx->id};
     }
-    
+
     my %params = $bx->params_list;
 
     my $subject_class_name = delete $params{subject_class_name};
     my $perspective = delete $params{perspective};
     my $toolkit = delete $params{toolkit};
     my $aspects = delete $params{aspects};
-   
+
     unless($subject_class_name and $perspective and $toolkit) {
         Carp::confess("Bad params @_.  Expected subject_class_name, perspective, toolkit.");
     }
@@ -158,7 +157,7 @@ sub _resolve_view_class_for_params {
 
     my $subject_class_object = $subject_class_name->__meta__;
     my @possible_subject_class_names = ($subject_class_name,$subject_class_name->inheritance);
-    
+
     my $subclass_name;
     for my $possible_subject_class_name (@possible_subject_class_names) {
 
@@ -178,12 +177,12 @@ sub _resolve_view_class_for_params {
                 )
             )
         );
-    
+
         my $subclass_meta = UR::Object::Type->get($subclass_name);
         unless ($subclass_meta) {
             next;
         }
-        
+
         unless($subclass_name->isa(__PACKAGE__)) {
             Carp::carp("Subclass $subclass_name exists but is not a view?!");
             next;

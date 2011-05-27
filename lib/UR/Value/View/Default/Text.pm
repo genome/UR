@@ -16,5 +16,3 @@ sub _generate_content {
 }
 
 1;
-
-

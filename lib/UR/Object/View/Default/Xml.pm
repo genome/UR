@@ -134,15 +134,8 @@ sub _generate_content_for_aspect {
         return;
     }
 
-    if (Scalar::Util::blessed($value[0])) {
-        unless ($aspect->delegate_view) {
-            eval {
-                $aspect->generate_delegate_view;
-            };
-            if ($@) {
-                warn $@;
-            }
-        }
+    unless ($aspect->delegate_view) {
+        $aspect->generate_delegate_view;
     }
 
     # Delegate to a subordinate view if needed.
@@ -150,7 +143,11 @@ sub _generate_content_for_aspect {
     # subordinate widget content.
     if (my $delegate_view = $aspect->delegate_view) {
         foreach my $value ( @value ) {
-            $delegate_view->subject($value);
+            if (Scalar::Util::blessed($value)) {
+                $delegate_view->subject($value);
+            } else {
+                $delegate_view->subject_id($value);
+            }
             $delegate_view->_update_view_from_subject();
 
             if ($delegate_view->can('_xml_doc') and $delegate_view->_xml_doc) {
