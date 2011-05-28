@@ -10,7 +10,7 @@ class UR::Value::View::Default::Xml {
 sub _generate_content {
     my $self = shift;
     my $content = $self->UR::Value::View::Default::Text::_generate_content(@_);
-    return '<value>' . $content . '</value>'
+    return $content; 
 }
 
 1;

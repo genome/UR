@@ -180,7 +180,7 @@ sub _generate_content_for_aspect {
             unless(defined $value) {
                 $value = '';
             }
-            $value_node->addChild( $xml_doc->createTextNode($value) );
+            $value_node->addChild( $xml_doc->createTextNode($delegate_view->content) );
             
             ## old logic for delegate views with no xml doc (unused now) 
             ## the delegate view may not be XML at all--wrap it in our aspect tag so that it parses
