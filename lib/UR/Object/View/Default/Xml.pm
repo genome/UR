@@ -141,54 +141,57 @@ sub _generate_content_for_aspect {
     # Delegate to a subordinate view if needed.
     # This means we replace the value(s) with their
     # subordinate widget content.
-    if (my $delegate_view = $aspect->delegate_view) {
-        foreach my $value ( @value ) {
-            if (Scalar::Util::blessed($value)) {
-                $delegate_view->subject($value);
-            } else {
-                $delegate_view->subject_id($value);
-            }
-            $delegate_view->_update_view_from_subject();
-
-            if ($delegate_view->can('_xml_doc') and $delegate_view->_xml_doc) {
-                my $delegate_xml_doc = $delegate_view->_xml_doc;
-                my $delegate_root = $delegate_xml_doc->documentElement;
-                #cloneNode($deep = 1)
-                $aspect_node->addChild( $delegate_root->cloneNode(1) );
-            } else {
-                my $delegate_text = $delegate_view->content() ? $delegate_view->content() : '';
-
-                #The delegate view may not be XML at all--wrap it in our aspect tag so that it parses
-                #(assuming that whatever delegate was selected properly escapes anything that needs escaping)
-                my $aspect_text = "<aspect name=\"$aspect_name\">\n$delegate_text\n</aspect>";
-                my $parser = XML::LibXML->new;
-                my $delegate_xml_doc = $parser->parse_string($aspect_text);
-                $aspect_node = $delegate_xml_doc->documentElement;
-                $xml_doc->adoptNode( $aspect_node );
-            }
-        }
+    my $delegate_view = $aspect->delegate_view;
+    unless ($delegate_view) {
+        Carp::confess("No delegate view???");
     }
-    else {
-        for my $value (@value) {
 
-            if (ref($value)) {
-                my $d = XML::Dumper->new;
-                my $xmlrep = $d->pl2xml($value);
+    foreach my $value ( @value ) {
+        if (Scalar::Util::blessed($value)) {
+            $delegate_view->subject($value);
+        } else {
+            $delegate_view->subject_id($value);
+        }
+        $delegate_view->_update_view_from_subject();
+        
+        # merge the delegate view's XML into this one
+        if ($delegate_view->can('_xml_doc') and $delegate_view->_xml_doc) {
+            # the delegate has XML
+            my $delegate_xml_doc = $delegate_view->_xml_doc;
+            my $delegate_root = $delegate_xml_doc->documentElement;
+            #cloneNode($deep = 1)
+            $aspect_node->addChild( $delegate_root->cloneNode(1) );
+        } 
+        elsif (ref($value)) {
+            # the delegate view has no XML object, and the value is a reference
+            my $d = XML::Dumper->new;
+            my $xmlrep = $d->pl2xml($value);
 
-                my $parser = XML::LibXML->new;
-                my $ref_xml_doc = $parser->parse_string($xmlrep);
-                my $ref_root = $ref_xml_doc->documentElement;
-                $xml_doc->adoptNode( $ref_root );
-                $aspect_node->addChild( $ref_root );
-            } else {
-                my $value_node = $aspect_node->addChild( $xml_doc->createElement('value') );
-
-                unless(defined $value) {
-                    $value = '';
-                }
-
-                $value_node->addChild( $xml_doc->createTextNode($value) );
+            my $parser = XML::LibXML->new;
+            my $ref_xml_doc = $parser->parse_string($xmlrep);
+            my $ref_root = $ref_xml_doc->documentElement;
+            $xml_doc->adoptNode( $ref_root );
+            $aspect_node->addChild( $ref_root );
+        }
+        else {
+            # no delegate view has no XML object, and the value is a non-reference
+            # (this is the old logic for non-delegate views when we didn't have delegate views for primitives)
+            my $value_node = $aspect_node->addChild( $xml_doc->createElement('value') );
+            unless(defined $value) {
+                $value = '';
             }
+            $value_node->addChild( $xml_doc->createTextNode($value) );
+            
+            ## old logic for delegate views with no xml doc (unused now) 
+            ## the delegate view may not be XML at all--wrap it in our aspect tag so that it parses
+            ## (assuming that whatever delegate was selected properly escapes anything that needs escaping)
+
+            # my $delegate_text = $delegate_view->content() ? $delegate_view->content() : '';
+            # my $aspect_text = "<aspect name=\"$aspect_name\">\n$delegate_text\n</aspect>";
+            # my $parser = XML::LibXML->new;
+            # my $delegate_xml_doc = $parser->parse_string($aspect_text);
+            # $aspect_node = $delegate_xml_doc->documentElement;
+            # $xml_doc->adoptNode( $aspect_node );
         }
     }
 

@@ -57,6 +57,8 @@ sub _generate_content {
         );
     };
     if ($@) {
+        # try again, for debugging, don't hate me for this $DB::single you're about to crash..
+        $DB::single = 1; 
         $xml_view = UR::Object::View->create(
             subject_class_name => $self->subject_class_name,
             perspective => $self->perspective,
