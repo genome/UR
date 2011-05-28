@@ -6,17 +6,17 @@
          },
          "fluf" : "11",
          "name" : "fluffy",
-         "age" : "2"
+         "age" : "2 yrs"
       },
       {
          "owner" : {
             "id" : "111"
          },
-         "fluf" : "22",
+         "fluf" : "22 yrs",
          "name" : "nestor",
-         "age" : "8"
+         "age" : "8 yrs"
       }
    ],
    "name" : "Fester",
-   "age" : "99"
+   "age" : "99 yrs"
 }
