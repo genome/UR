@@ -156,7 +156,7 @@ sub _generate_content_for_aspect {
                 #cloneNode($deep = 1)
                 $aspect_node->addChild( $delegate_root->cloneNode(1) );
             } else {
-                my $delegate_text = $delegate_view->content();
+                my $delegate_text = $delegate_view->content() ? $delegate_view->content() : '';
 
                 #The delegate view may not be XML at all--wrap it in our aspect tag so that it parses
                 #(assuming that whatever delegate was selected properly escapes anything that needs escaping)
