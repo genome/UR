@@ -52,7 +52,7 @@ sub _generate_content_for_aspect {
     my $aspect_name = $aspect->name;
 
     my $aspect_meta = $self->subject_class_name->__meta__->property($aspect_name);
-    warn $aspect_name if ref($subject) =~ /Set/;
+    #warn $aspect_name if ref($subject) =~ /Set/;
 
     my @value;
     eval {
