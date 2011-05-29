@@ -50,6 +50,7 @@ use Sub::Install ();
     is_numeric       => 0,
     is_specified_in_module_header => 0,
     is_deprecated    => 0,
+    is_distinct      => 0,
     position_in_module_header => -1,
 );
 
@@ -975,6 +976,7 @@ sub _normalize_property_description1 {
         [ is_concrete                     => qw//], 
         [ is_final                        => qw//], 
         [ is_many                         => qw//],
+        [ is_distinct                     => qw//],
         [ is_deprecated                   => qw//],
         [ is_numeric                      => qw//],
         [ is_id                           => qw//],
@@ -1117,12 +1119,10 @@ sub _normalize_property_description2 {
         $new_property{attribute_name} =~ s/_/ /g;
     }
 
-    if ($new_property{order_by} and not $new_property{is_many}) {
-        die "Cannot use order_by except on is_many properties!";
-    }
-
-    if ($new_property{specify_by} and not $new_property{is_many}) {
-        die "Cannot use specify_by except on is_many properties!";
+    for my $name (qw/order_by specify_by is_distinct/) {
+        if ($new_property{$name} and not $new_property{is_many}) {
+            die "Cannot use $name except on is_many properties!";
+        }
     }
 
     if ($new_property{implied_by} and $new_property{implied_by} eq $property_name) {

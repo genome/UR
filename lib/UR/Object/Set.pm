@@ -98,7 +98,7 @@ sub __display_name__ {
     
 
 sub get_with_special_parameters {
-    warn "this method will be removed shortly";
+    warn "the ability to get sets with member params is deprecated: $class $bx @params";
     my $class = shift;
     my $bx = shift;
     my @params = @_;
