@@ -165,45 +165,65 @@ no warnings;
             Carp::confess("Property meta for class ".$property_meta->class_name." property ".$property_meta->property_name." has no data_type");
         }
 
-        if ($aspect_type->can("__meta__")) {
-            # This should always be true since the _data_type_as_class_meta should return a real class for primitives
-            my $aspect_meta = $aspect_type->__meta__;
-            
-            my $delegate_view ||= $aspect_type->create_view(
+        unless ($aspect_type->can("__meta__")) {
+            Carp::croak("$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!"); 
+        }
+
+        my $aspect_meta = $aspect_type->__meta__;
+       
+        my $delegate_view;
+        eval {
+            $delegate_view = $aspect_type->create_view(
                 subject_class_name => $aspect_type,
                 perspective => $parent_view->perspective,
                 toolkit => $parent_view->toolkit,
                 parent_view => $parent_view,
                 aspects => [],
             );
+        };
+
+        unless ($delegate_view) {
+            # try again using the "default" perspective
+            my $err1 = $@; 
+            eval {
+                $delegate_view = $aspect_type->create_view(
+                    subject_class_name => $aspect_type,
+                    perspective => 'default', 
+                    toolkit => $parent_view->toolkit,
+                    parent_view => $parent_view,
+                    aspects => [],
+                );
+            };
+            my $err2 = $@; 
+
             unless ($delegate_view) {
-                $self->error_message("Error creating delegate view for $name ($aspect_type)!");
-                $self->delete;
-                #return;
+                $self->error_message(
+                    "Error creating delegate view for $name ($aspect_type)! $err1\n"
+                    . "Also failed to fall back to the default perspective for $name ($aspect_type)! $err2"
+                );
+                return;
             }
-            my @default_aspects_params = $delegate_view->_resolve_default_aspects();
-           
-            # add aspects which do not "go backward"
-            # no one wants to see an order, with a list of line items, which re-reprsent thier order on each
-            for my $aspect_params (@default_aspects_params) {
-                my $aspect_param_name = (ref($aspect_params) ?  $aspect_params->{name} : $aspect_params);
-                my $aspect_property_meta = $aspect_meta->property($aspect_param_name);
-                no strict; no warnings;
-                if ($aspect_property_meta->reverse_as() eq $name) {
-                    
-                }
-                elsif ($property_meta->reverse_as eq $aspect_param_name) {
-                }
-                else {
-                    $delegate_view->add_aspect(ref($aspect_params) ? %$aspect_params : $aspect_params);
-                }
+        }
+
+        my @default_aspects_params = $delegate_view->_resolve_default_aspects();
+        
+        # add aspects which do not "go backward"
+        # no one wants to see an order, with a list of line items, which re-reprsent thier order on each
+        for my $aspect_params (@default_aspects_params) {
+            my $aspect_param_name = (ref($aspect_params) ?  $aspect_params->{name} : $aspect_params);
+            my $aspect_property_meta = $aspect_meta->property($aspect_param_name);
+            no strict; no warnings;
+            if ($aspect_property_meta->reverse_as() eq $name) {
+                
             }
-            $self->delegate_view($delegate_view);
-            $retval = $delegate_view;
+            elsif ($property_meta->reverse_as eq $aspect_param_name) {
+            }
+            else {
+                $delegate_view->add_aspect(ref($aspect_params) ? %$aspect_params : $aspect_params);
+            }
         }
-        else {
-            Carp::croak("$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!"); 
-        }
+        $self->delegate_view($delegate_view);
+        $retval = $delegate_view;
     }
     else {
         unless ($subject_class_name->can($name)) {
