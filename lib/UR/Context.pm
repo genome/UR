@@ -3389,7 +3389,8 @@ sub _reverse_all_changes {
     my @all_subclasses_loaded = sort UR::Object->subclasses_loaded;
     for my $class_name (@all_subclasses_loaded) { 
         next unless $class_name->can('__meta__');
-        
+        next if $class_name->isa("UR::Value");
+
         my @objects_this_class = $self->all_objects_loaded_unsubclassed($class_name);
         next unless @objects_this_class;
         
@@ -3421,7 +3422,7 @@ sub _reverse_all_changes {
                 }
                 next;
             }
-        }       
+        }
         else {
             # non-ghost regular entity
             for my $object (@$objects_this_class) {
@@ -3468,6 +3469,7 @@ sub _reverse_all_changes {
             } # next non-ghost object
         } 
     } # next class
+
     return 1;
 }
 
