@@ -351,6 +351,11 @@ sub _bind_subject {
     return unless defined $subject;
 
     my $observer_data = $self->_observer_data;
+    unless ($observer_data) {
+        $self->_observer_data({});
+        $observer_data = $self->_observer_data;
+    }
+    Carp::confess unless $self->_observer_data == $observer_data;
 
     # See if we've already done this.    
     return 1 if $observer_data->{$subject};
@@ -374,7 +379,7 @@ sub _bind_subject {
     
     # Set the view to show initial data.
     $self->_update_view_from_subject;
-    
+   
     return 1;
 }
 
