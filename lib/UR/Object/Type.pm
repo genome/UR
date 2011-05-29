@@ -29,13 +29,6 @@ sub define { shift->__define__(@_) }
 # These go in this array, and are cleared when property metadata is mutated
 our @cache_keys;
 
-#
-# NOTE TO UR DEVELOPERS:
-# 
-# This API is for developers _using_ UR.  
-# Internally, for bootstrapping reasons UR uses a humbler API.
-#
-
 # This is the function behind $class_meta->properties(...)
 # It mimics the has-many object accessor, but handles inheritance
 # Once we have "isa" and "is-parent-of" operator we can do this with regular operators.
@@ -116,6 +109,10 @@ sub _property_name_class_map {
     return $map;
 }
 
+# The prior implementation of _properties() (behind ->properties())
+# filtered out certain property meta.  This is the old version.
+# The new version above will return one object per property name in
+# the meta ancestry.
 sub _legacy_properties {
     my $self = shift;
     if (@_) {
