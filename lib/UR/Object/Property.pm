@@ -45,7 +45,16 @@ sub _data_type_as_class_name {
         my $foreign_class = $self->data_type;
 
         if (not $foreign_class) {
-            return;
+            if ($self->via or $self->to) {
+                my @joins = UR::Object::Join->resolve_chain(
+                    $self->class_name,
+                    $self->property_name,
+                );
+                $foreign_class = $joins[-1]->foreign_class;
+            }
+            else {
+                return;
+            }
         }
 
         # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
