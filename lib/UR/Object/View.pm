@@ -75,17 +75,10 @@ sub create {
     # now go the other way, and use both to infer a final class name
     $expected_class = $class->_resolve_view_class_for_params($params);
     unless ($expected_class) {
-        if ($params->specifies_value_for('perspective') and $params->value_for('perspective') ne 'default') {
-            # Try again with default perspective.
-            $params = $params->remove_filter('perspective');
-            $params = $params->add_filter(perspective => 'default');
-            $expected_class = $class->_resolve_view_class_for_params($params);
-        } else {
-            my $subject_class_name = $params->value_for('subject_class_name');
-            Carp::croak("Failed to resolve a subclass of " . __PACKAGE__ 
-                    . " for $subject_class_name from parameters.  "
-                    . "Received $params.");
-        }
+        my $subject_class_name = $params->value_for('subject_class_name');
+        Carp::croak("Failed to resolve a subclass of " . __PACKAGE__ 
+                . " for $subject_class_name from parameters.  "
+                . "Received $params.");
     }
 
     unless ($class->isa($expected_class)) {
@@ -351,6 +344,11 @@ sub _bind_subject {
     return unless defined $subject;
 
     my $observer_data = $self->_observer_data;
+    unless ($observer_data) {
+        $self->_observer_data({});
+        $observer_data = $self->_observer_data;
+    }
+    Carp::confess unless $self->_observer_data == $observer_data;
 
     # See if we've already done this.    
     return 1 if $observer_data->{$subject};
@@ -374,7 +372,7 @@ sub _bind_subject {
     
     # Set the view to show initial data.
     $self->_update_view_from_subject;
-    
+   
     return 1;
 }
 

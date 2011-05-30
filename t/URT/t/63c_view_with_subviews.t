@@ -143,10 +143,12 @@ for my $obj_aspects_pair ( [$p,\@person_aspects], [$cat_set,\@cat_set_aspects] )
             next;
         };
         my $expected_content = join('', IO::File->new($expected_content_path)->getlines());
-        is($actual_content, $expected_content, "content matches!")
-            or IO::File->new(">foo")->print(Data::Dumper::Dumper(\$actual_content,\$expected_content))
-            #and note("WORKS ON:\n$actual_content")
-            ; 
+        is($actual_content, $expected_content, "content matches!") 
+            or eval {
+                # stage a file for debugging, or to upgrade the test
+                IO::File->new(">$expected_content_path.new")->print($actual_content)
+            };
+            #and note("WORKS ON:\n$actual_content");
     }
 }
 
