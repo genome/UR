@@ -170,121 +170,9 @@ sub create_for_loading_template {
     # finalized
     my $local_all_params_loaded = {};
 
-    my %hints_or_delegation;
+    my $hints_or_delegation;
     if (!$loading_base_object) {
-        my $query_class_meta = $rule_template->subject_class_name->__meta__;
-
-        my %hints;
-        if ($rule_template->hints) {
-            $hints{$_} = 1 foreach(@{ $rule_template->hints });
-        }
-        my %delegations;
-        if (@{ $query_plan->{'joins'}} ) {
-            foreach my $delegated_property_name ( $rule_template->_property_names ) {
-                my $delegated_property_meta = $query_class_meta->property_meta_for_name($delegated_property_name);
-                next unless ($delegated_property_meta and $delegated_property_meta->is_delegated);
-                $delegations{$delegated_property_name} = 1;
-            }
-        }
-
-        DELEGATION:
-        foreach my $delegation ( (keys %hints), (keys %delegations)) {
-            my $delegated_property_meta = $query_class_meta->property_meta_for_name($delegation);
-            next DELEGATION unless $delegated_property_meta;
-
-            my @joins = $delegated_property_meta->_resolve_join_chain();
-            JOIN:
-            foreach my $join ( @joins ) {
-                next unless ($join->{'foreign_class'} eq $loading_template->{'data_class_name'});
-
-                # Is this the equivalent of loading by the class' ID?
-                my $foreign_class_meta = $join->{'foreign_class'}->__meta__;
-                my %join_properties = map { $_ => 1 } @{$join->{'foreign_property_names'}};
-                my $join_has_all_id_props = 1;
-                foreach my $foreign_id_prop ( $foreign_class_meta->all_id_property_metas ) {
-                    next if ($foreign_id_prop->class_name eq 'UR::Object');  # Skip the manufactured property called id
-                    next if (delete $join_properties{ $foreign_id_prop->property_name });
-                    # If we get here, there's an ID property that isn't mentioned in the join properties
-                    $join_has_all_id_props = 0;
-                    last;
-                }
-                if ( $join_has_all_id_props and ! scalar(keys %join_properties)) {
-                    # we don't need to add additional info in all_params_loaded if these connections
-                    # are only via id properties, since get()s by all id properties are handled by
-                    # looking directly into the object cache
-                    next JOIN;
-                }
-
-                my @template_filter_names = @{$join->{'foreign_property_names'}};
-                my @where_values;
-                if ($join->{'where'}) {
-                    for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
-                        push @template_filter_names, $join->{'where'}->[$i];
-                        push @where_values, $join->{'where'}->[$i+1];
-                    }
-                }
-
-                if ($delegations{$delegation}) {
-                    my $delegation_final_property_meta = $delegated_property_meta->final_property_meta;
-                    if ($delegation_final_property_meta
-                        and
-                        $delegation_final_property_meta->class_name eq $join->{'foreign_class'}
-                    ) {
-                        # This delegation points to (or at least through) this join's foreign class
-                        # We'll note that these related objects were loaded as a result of being
-                        # connected to the primary object by this value, and filtered by the
-                        # delegation property's value
-                        push @template_filter_names, $delegation_final_property_meta->property_name;
-                    }
-                }
-
-                # For missing objects,
-                my @missing_prop_names;
-                my @missing_values;
-$DB::single=1;
-                for (my $i = 0; $i < @{ $join->{'foreign_property_names'}}; $i++) {
-                    push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
-                    my $db_column_data = $query_plan->{'_db_column_data'};
-                    my $source_class = $join->{'source_class'};
-                    my $source_prop_name = $join->{'source_property_names'}->[$i];
-                    for (my $resultset_col = 0; $resultset_col < @$db_column_data; $resultset_col++) {
-                        if ($db_column_data->[$resultset_col]->[1]->class_name eq $source_class
-                            and
-                            $db_column_data->[$resultset_col]->[1]->property_name eq $source_prop_name
-                        ) {
-                            my $column_num = $resultset_col;
-                            push @missing_values, \$column_num;
-                            last;
-                        }
-                        #Carp::croak("Can't determine resultset column for $source_class property $source_prop_name for rule $rule");
-                    }
-                }
-                if ($join->{'where'}) {
-                    for (my $i = 0; $i < @{$join->{'where'}}; $i+=2 ) {
-                        my $where_prop = $join->{'where'}->[$i];
-                        my $value = $join->{'where'}->[$i+1];
-                        push @missing_prop_names, $where_prop;
-                        push @missing_values, $value;
-                    }
-                }
-                my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names);
-
-
-                $hints_or_delegation{$delegation} ||= [];
-                my $related_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
-                                                                        @template_filter_names);
-                push @{$hints_or_delegation{$delegation}}, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl, \@missing_values, $missing_rule_tmpl];
-
-                if ($hints{$delegation}) {
-                    # Make notes in all_params_loaded about these things we're hinting on.
-                    # This way, if they return no matches, then we'll remember that for later queries
-                    my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
-                    my $related_obj_rule = $related_rule_tmpl->get_rule_for_values(@related_obj_values, @where_values);
-                    $UR::Context::all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = undef;
-                    $local_all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = 0;
-                }
-            }
-        }
+        $hints_or_delegation = $fab_class->_resolve_delegation_data($rule,$loading_template,$query_plan,$local_all_params_loaded);
     }
 
     my $fabricator_obj;  # filled in after the closure definition
@@ -303,8 +191,8 @@ $DB::single=1;
         }
         if (!$loading_base_object and !$values_exist) {
 $DB::single=1;
-            foreach my $delegation ( keys %hints_or_delegation )  {
-                foreach my $delegation_data ( @{ $hints_or_delegation{$delegation}}) {
+            foreach my $delegation ( keys %$hints_or_delegation )  {
+                foreach my $delegation_data ( @{ $hints_or_delegation->{$delegation}}) {
                     my $missing_values = $delegation_data->[2];
                     my $missing_rule_tmpl  = $delegation_data->[3];
                     my @values;
@@ -661,9 +549,9 @@ $DB::single=1;
         } # end handling newly loaded objects
 
         # If the rule had hints, mark that we loaded those things too, in all_params_loaded
-        if (keys(%hints_or_delegation)) {
-            foreach my $property ( keys(%hints_or_delegation) ) {
-                foreach my $hint_data ( @{ $hints_or_delegation{$property}} ) {
+        if (keys(%$hints_or_delegation)) {
+            foreach my $property ( keys(%$hints_or_delegation) ) {
+                foreach my $hint_data ( @{ $hints_or_delegation->{$property}} ) {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
                     my $rule_tmpl = $hint_data->[1];
                     my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
@@ -792,6 +680,127 @@ $DB::single=1;
 }
 
 
+sub _resolve_delegation_data {
+    my($fab_class,$rule,$loading_template,$query_plan,$local_all_params_loaded) = @_;
+
+    my $rule_template = $rule->template;
+    my %hints_or_delegation;
+
+    my $query_class_meta = $rule_template->subject_class_name->__meta__;
+
+    my %hints;
+    if ($rule_template->hints) {
+        $hints{$_} = 1 foreach(@{ $rule_template->hints });
+    }
+    my %delegations;
+    if (@{ $query_plan->{'joins'}} ) {
+        foreach my $delegated_property_name ( $rule_template->_property_names ) {
+            my $delegated_property_meta = $query_class_meta->property_meta_for_name($delegated_property_name);
+            next unless ($delegated_property_meta and $delegated_property_meta->is_delegated);
+            $delegations{$delegated_property_name} = 1;
+        }
+    }
+
+    DELEGATION:
+    foreach my $delegation ( (keys %hints), (keys %delegations)) {
+        my $delegated_property_meta = $query_class_meta->property_meta_for_name($delegation);
+        next DELEGATION unless $delegated_property_meta;
+
+        my @joins = $delegated_property_meta->_resolve_join_chain();
+        JOIN:
+        foreach my $join ( @joins ) {
+            next unless ($join->{'foreign_class'} eq $loading_template->{'data_class_name'});
+
+            # Is this the equivalent of loading by the class' ID?
+            my $foreign_class_meta = $join->{'foreign_class'}->__meta__;
+            my %join_properties = map { $_ => 1 } @{$join->{'foreign_property_names'}};
+            my $join_has_all_id_props = 1;
+            foreach my $foreign_id_prop ( $foreign_class_meta->all_id_property_metas ) {
+                next if ($foreign_id_prop->class_name eq 'UR::Object');  # Skip the manufactured property called id
+                next if (delete $join_properties{ $foreign_id_prop->property_name });
+                # If we get here, there's an ID property that isn't mentioned in the join properties
+                $join_has_all_id_props = 0;
+                last;
+            }
+            if ( $join_has_all_id_props and ! scalar(keys %join_properties)) {
+                # we don't need to add additional info in all_params_loaded if these connections
+                # are only via id properties, since get()s by all id properties are handled by
+                # looking directly into the object cache
+                next JOIN;
+            }
+
+            my @template_filter_names = @{$join->{'foreign_property_names'}};
+            my @where_values;
+            if ($join->{'where'}) {
+                for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
+                    push @template_filter_names, $join->{'where'}->[$i];
+                    push @where_values, $join->{'where'}->[$i+1];
+                }
+            }
+
+            if ($delegations{$delegation}) {
+                my $delegation_final_property_meta = $delegated_property_meta->final_property_meta;
+                if ($delegation_final_property_meta
+                    and
+                    $delegation_final_property_meta->class_name eq $join->{'foreign_class'}
+                ) {
+                    # This delegation points to (or at least through) this join's foreign class
+                    # We'll note that these related objects were loaded as a result of being
+                    # connected to the primary object by this value, and filtered by the
+                    # delegation property's value
+                    push @template_filter_names, $delegation_final_property_meta->property_name;
+                }
+            }
+
+            # For missing objects,
+            my @missing_prop_names;
+            my @missing_values;
+$DB::single=1;
+            for (my $i = 0; $i < @{ $join->{'foreign_property_names'}}; $i++) {
+                push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
+                my $db_column_data = $query_plan->{'_db_column_data'};
+                my $source_class = $join->{'source_class'};
+                my $source_prop_name = $join->{'source_property_names'}->[$i];
+                for (my $resultset_col = 0; $resultset_col < @$db_column_data; $resultset_col++) {
+                    if ($db_column_data->[$resultset_col]->[1]->class_name eq $source_class
+                        and
+                        $db_column_data->[$resultset_col]->[1]->property_name eq $source_prop_name
+                    ) {
+                        my $column_num = $resultset_col;
+                        push @missing_values, \$column_num;
+                        last;
+                    }
+                    #Carp::croak("Can't determine resultset column for $source_class property $source_prop_name for rule $rule");
+                }
+            }
+            if ($join->{'where'}) {
+                for (my $i = 0; $i < @{$join->{'where'}}; $i+=2 ) {
+                    my $where_prop = $join->{'where'}->[$i];
+                    my $value = $join->{'where'}->[$i+1];
+                    push @missing_prop_names, $where_prop;
+                    push @missing_values, $value;
+                }
+            }
+            my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names);
+
+
+            $hints_or_delegation{$delegation} ||= [];
+            my $related_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
+                                                                    @template_filter_names);
+            push @{$hints_or_delegation{$delegation}}, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl, \@missing_values, $missing_rule_tmpl];
+
+            if ($hints{$delegation}) {
+                # Make notes in all_params_loaded about these things we're hinting on.
+                # This way, if they return no matches, then we'll remember that for later queries
+                my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
+                my $related_obj_rule = $related_rule_tmpl->get_rule_for_values(@related_obj_values, @where_values);
+                $UR::Context::all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = undef;
+                $local_all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = 0;
+            }
+        }
+    }
+    return \%hints_or_delegation;
+}
 
 sub all_object_fabricators {
     return values %all_object_fabricators;
