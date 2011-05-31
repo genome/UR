@@ -259,11 +259,13 @@ $DB::single=1;
                         #Carp::croak("Can't determine resultset column for $source_class property $source_prop_name for rule $rule");
                     }
                 }
-                for (my $i = 0; $i < @{$join->{'where'}}; $i+=2 ) {
-                    my $where_prop = $join->{'where'}->[$i];
-                    my $value = $join->{'where'}->[$i+1];
-                    push @missing_prop_names, $where_prop;
-                    push @missing_values, $value;
+                if ($join->{'where'}) {
+                    for (my $i = 0; $i < @{$join->{'where'}}; $i+=2 ) {
+                        my $where_prop = $join->{'where'}->[$i];
+                        my $value = $join->{'where'}->[$i+1];
+                        push @missing_prop_names, $where_prop;
+                        push @missing_values, $value;
+                    }
                 }
                 my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names);
 
