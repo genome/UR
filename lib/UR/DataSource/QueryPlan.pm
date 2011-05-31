@@ -1087,6 +1087,20 @@ sub _add_columns {
     push @$db_column_data, @_;
 }
 
+sub column_index_for_class_and_property {
+    my($self, $class_name, $property_name) = @_;
+
+    my $db_column_data = $self->_db_column_data;
+    for (my $resultset_col= 0; $resultset_col < @$db_column_data; $resultset_col++) {
+        if ($db_column_data->[$resultset_col]->[1]->class_name eq $class_name
+            and $db_column_data->[$resultset_col]->[1]->property_name eq $property_name
+        ) {
+            return $resultset_col;
+        }
+    }
+    return undef;
+}
+
 sub _groups_by_property {
     my ($self, $property_name) = @_;
     return $self->_group_by_property_names->{$property_name};

@@ -758,19 +758,13 @@ sub _resolve_delegation_data {
 $DB::single=1;
             for (my $i = 0; $i < @{ $join->{'foreign_property_names'}}; $i++) {
                 push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
-                my $db_column_data = $query_plan->{'_db_column_data'};
                 my $source_class = $join->{'source_class'};
                 my $source_prop_name = $join->{'source_property_names'}->[$i];
-                for (my $resultset_col = 0; $resultset_col < @$db_column_data; $resultset_col++) {
-                    if ($db_column_data->[$resultset_col]->[1]->class_name eq $source_class
-                        and
-                        $db_column_data->[$resultset_col]->[1]->property_name eq $source_prop_name
-                    ) {
-                        my $column_num = $resultset_col;
-                        push @missing_values, \$column_num;
-                        last;
-                    }
-                    #Carp::croak("Can't determine resultset column for $source_class property $source_prop_name for rule $rule");
+                my $column_num = $query_plan->column_index_for_class_and_property($source_class, $source_prop_name);
+                if (defined $column_num) {
+                    push @missing_values, \$column_num;
+                } else {
+                    Carp::croak("Can't determine resultset column for $source_class property $source_prop_name for rule $rule");
                 }
             }
             if ($join->{'where'}) {
