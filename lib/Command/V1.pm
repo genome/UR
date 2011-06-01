@@ -669,6 +669,76 @@ sub help_usage_complete_text {
     return $text;
 }
 
+sub doc_sections {
+    my $self = shift;
+    my @sections;
+
+    my $command_name = $self->command_name;
+    my $version = do { no strict; ${ $self->class . '::VERSION' } };
+    my $help_brief = $self->help_brief;
+    my $datetime = $self->__context__->now;
+    my $sub_commands = $self->help_sub_commands(brief => 1) if $self->is_sub_command_delegator;
+    my ($date,$time) = split(' ',$datetime);
+
+    push(@sections, UR::Doc::Section->create(
+        title => "NAME",
+        content => "$command_name" . ($help_brief ? " - $help_brief" : ""),
+        format => "pod",
+    ));
+
+    push(@sections, UR::Doc::Section->create(
+        title => "VERSION",
+        content =>  "This document " # separated to trick the version updater 
+            . "describes $command_name "
+            . ($version ? "version $version " : "")
+            . "($date at $time)",
+        format => "pod",
+    ));
+
+    if ($sub_commands) {
+        push(@sections, UR::Doc::Section->create(
+            title => "SUB-COMMANDS",
+            content => $sub_commands,
+            format => 'pod',
+        ));
+    } else {
+        my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
+        if ($synopsis) {
+            push(@sections, UR::Doc::Section->create(
+                title => "SYNOPSIS",
+                content => $synopsis,
+                format => 'pod'
+            ));
+        }
+
+        my $required_args = $self->help_options(is_optional => 0, format => "pod");
+        if ($required_args) {
+            push(@sections, UR::Doc::Section->create(
+                title => "REQUIRED ARGUMENTS",
+                content => "=over\n\n$required_args\n\n=back\n\n",
+                format => 'pod'
+            ));
+        }
+
+        my $optional_args = $self->help_options(is_optional => 1, format => "pod");
+        if ($optional_args) {
+            push(@sections, UR::Doc::Section->create(
+                title => "OPTIONAL ARGUMENTS",
+                content => "=over\n\n$optional_args\n\n=back\n\n",
+                format => 'pod'
+            ));
+        }
+
+        push(@sections, UR::Doc::Section->create(
+            title => "DESCRIPTION",
+            content => join('', map { "  $_\n" } split ("\n",$self->help_detail)),
+            format => 'pod',
+        ));
+    }
+
+    return @sections;
+}
+
 sub help_usage_command_pod
 {
     my $self = shift;
@@ -1489,7 +1559,6 @@ sub system_inhibit_std_out_err {
 
     return $ec;
 }
-
 
 1;
 
