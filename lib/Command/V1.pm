@@ -1560,6 +1560,17 @@ sub system_inhibit_std_out_err {
     return $ec;
 }
 
+sub parent_command_class {
+    my $class = shift;
+    $class = ref($class) if ref($class);
+    my @components = split("::", $class);
+    return if @components == 1;
+    my $parent = join("::", @components[0..$#components-1]);
+    return $parent if $parent->can("command_name");
+    return;
+}
+
+
 1;
 
 __END__
