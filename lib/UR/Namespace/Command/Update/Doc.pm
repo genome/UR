@@ -51,7 +51,10 @@ class UR::Namespace::Command::Update::Doc {
         },
     ],
     has_transient_optional => [
-        writer_class => {
+        _writer_class => {
+            is => 'Text',
+        },
+        _index_filename => {
             is => 'Text',
         }
     ],
@@ -82,8 +85,8 @@ sub execute {
         $self->output_path($output_path);
     }
 
-    $self->writer_class("UR::Doc::Writer::" . ucfirst($self->output_format));
-    die "Unable to create a writer for output format '" . $self->output_format . "'" unless($self->writer_class->can("create"));
+    $self->_writer_class("UR::Doc::Writer::" . ucfirst($self->output_format));
+    die "Unable to create a writer for output format '" . $self->output_format . "'" unless($self->_writer_class->can("create"));
 
     local $ENV{ANSI_COLORS_DISABLED}    = 1;
     my $entry_point_bin     = $self->executable_name;
@@ -133,25 +136,32 @@ sub execute {
     local $Command::V2::entry_point_class = $entry_point_class;
 
     my @command_trees = map( $self->_get_command_tree($_), @targets);
-
+    $self->_generate_index(@command_trees);
     for my $tree (@command_trees) {
         $self->_process_command_tree($tree);
     }
 
+    return 1;
+}
+
+sub _generate_index {
+    my ($self, @command_trees) = @_;
+
     if ($self->generate_index) {
-        my $index = $self->writer_class->generate_index(@command_trees);
+        my $index = $self->_writer_class->generate_index(@command_trees);
         if ($index and $index ne '') {
-            my $index_path = $self->output_path . "/" . $self->_make_filename("index");
+            my $index_filename = $self->_make_filename("index");
+            my $index_path = join("/", $self->output_path, $index_filename);
             if (-e $index_path) {
                 $self->warning_message("Index generation overwriting existing file at $index_path");
             }
-            write_file($index_path, $index);
+            write_file($index_path, \$index);
+            $self->_index_filename($index_filename) if -e $index_path;
         } else {
             $self->warning_message("Unable to generate index");
         }
     }
-
-    return 1;
+    return;
 }
 
 sub _process_command_tree {
@@ -162,7 +172,7 @@ sub _process_command_tree {
     eval {
         my @sections = $command->doc_sections;
         my @navigation_info = $self->_navigation_info($command);
-        my $writer = $self->writer_class->create(
+        my $writer = $self->_writer_class->create(
             sections => \@sections,
             title => $command->command_name,
             navigation => \@navigation_info,
@@ -212,24 +222,30 @@ sub _get_output_dir {
 sub _navigation_info {
     my ($self, $cmd_class) = @_;
 
-    return [$cmd_class->command_name, undef] if $cmd_class eq $self->class_name;
-
-    my $parent_class = $cmd_class->parent_command_class;
     my @navigation_info;
-    while ($parent_class) {
-        if ($parent_class eq $self->class_name) {
-            my $uri = $self->_make_filename($self->executable_name);
-            my $name = $self->executable_name;
-            unshift(@navigation_info, [$name, $uri]);
-            last;
-        } else {
-            my $uri = $self->_make_filename($parent_class->command_name);
-            my $name = $parent_class->command_name_brief;
-            unshift(@navigation_info, [$name, $uri]);
+    if ($cmd_class eq $self->class_name) {
+        push(@navigation_info, [$self->executable_name, undef]);
+    } else {
+        push(@navigation_info, [$cmd_class->command_name_brief, undef]);
+        my $parent_class = $cmd_class->parent_command_class;
+        while ($parent_class) {
+            if ($parent_class eq $self->class_name) {
+                my $uri = $self->_make_filename($self->executable_name);
+                my $name = $self->executable_name;
+                unshift(@navigation_info, [$name, $uri]);
+                last;
+            } else {
+                my $uri = $self->_make_filename($parent_class->command_name);
+                my $name = $parent_class->command_name_brief;
+                unshift(@navigation_info, [$name, $uri]);
+            }
+            $parent_class = $parent_class->parent_command_class;
         }
-        $parent_class = $parent_class->parent_command_class;
     }
-    push(@navigation_info, [$cmd_class->command_name_brief, undef]);
+
+    if ($self->_index_filename) {
+        unshift(@navigation_info, ["(Top)", $self->_index_filename]);
+    }
 
     return @navigation_info;
 }

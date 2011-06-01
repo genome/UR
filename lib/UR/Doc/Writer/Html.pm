@@ -88,12 +88,21 @@ sub generate_index {
     my ($self, @command_trees) = @_;
     return '' unless @command_trees;
 
+    my $html = "<h1>Command Index</h1><hr/>\n";
+    $html .= $self->_generate_index_body(@command_trees);
+    return $html;
+}
+
+sub _generate_index_body {
+    my ($self, @command_trees) = @_;
+    return '' unless @command_trees;
+
     my $html = "<ul>\n";
     for my $tree (@command_trees) {
         my $name = $tree->{command_name_brief};
         my $uri = $tree->{uri};
         $html .= "<li><a href=\"$uri\">$name</a>\n";
-        $html .= $self->generate_index(@{$tree->{sub_commands}});
+        $html .= $self->_generate_index_body(@{$tree->{sub_commands}});
         $html .= "</li>\n";
     }
     $html .= "</ul>\n";
