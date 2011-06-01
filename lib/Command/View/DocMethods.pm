@@ -110,6 +110,16 @@ sub doc_help {
     return $text;
 }
 
+sub parent_command_class {
+    my $class = shift;
+    $class = ref($class) if ref($class);
+    my @components = split("::", $class);
+    return if @components == 1;
+    my $parent = join("::", @components[0..$#components-1]);
+    return $parent if $parent->can("command_name");
+    return;
+}
+
 sub doc_sections {
     my $self = shift;
     my @sections;

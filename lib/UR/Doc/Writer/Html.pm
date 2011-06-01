@@ -10,13 +10,6 @@ use Carp qw/croak/;
 
 class UR::Doc::Writer::Html {
     is => 'UR::Doc::Writer',
-    has => [
-        title => { is => 'Text', },
-        sections => {
-            is => 'UR::Doc::Section',
-            is_many => 1,
-        },
-    ]
 };
 
 sub render {
@@ -34,7 +27,25 @@ sub render {
 sub _render_header {
     my $self = shift;
 
-    $self->_append("<h1><a name=\"___top\">" . $self->title . "</a></h1><hr/>\n");
+    if ($self->navigation) {
+        my @nav_html;
+        for my $item (@{$self->navigation}) {
+            my ($name, $uri) = @$item;
+            if ($uri) {
+                push(@nav_html, "<a href=\"$uri.html\">$name</a>");
+            } else {
+                push(@nav_html, $name);
+            }
+        }
+        $self->_append(join(" :: ", @nav_html) . "<hr/>\n");
+    }
+
+    my $translator = new UR::Doc::Pod2Html;
+    my $title;
+    $translator->output_string($title);
+    $translator->parse_string_document("=pod\n\n".$self->title."\n\n=cut\n\n");
+    $self->_append("<h1><a name=\"___top\"/>$title</h1>\n");
+
 }
 
 sub _render_index {

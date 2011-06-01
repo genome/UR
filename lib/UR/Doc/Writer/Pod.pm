@@ -9,13 +9,6 @@ use Carp qw/croak/;
 
 class UR::Doc::Writer::Pod {
     is => 'UR::Doc::Writer',
-    has => [
-        title => { is => 'Text', },
-        sections => {
-            is => 'UR::Doc::Section',
-            is_many => 1,
-        },
-    ]
 };
 
 sub render {

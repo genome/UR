@@ -117,9 +117,11 @@ sub execute {
         my $doc;
         eval {
             my @sections = $command->doc_sections;
+            my @navigation_info = $self->_navigation_info($command);
             my $writer = $writer_class->create(
                 sections => \@sections,
                 title => $command->command_name,
+                navigation => \@navigation_info,
             );
             $doc = $writer->render;
         };
@@ -137,8 +139,7 @@ sub execute {
         my $doc_path;
         my $extension = '.'.$self->output_format;
         if (defined $self->output_path) {
-          my $filename = $command->command_name . $extension;
-          $filename =~ s/ /-/g;
+          my $filename = $self->_make_filename($command->command_name) . $extension;
           my $output_path = $self->output_path;
           $output_path =~ s|/+$||m;          
           $doc_path = join('/', $output_path, $filename);
@@ -156,6 +157,37 @@ sub execute {
     }
 
     return 1;
+}
+
+sub _make_filename {
+    my ($self, $class_name) = @_;
+    $class_name =~ s/ /-/g;
+    return $class_name;
+}
+
+sub _navigation_info {
+    my ($self, $cmd_class) = @_;
+
+    return [$cmd_class->command_name, undef] if $cmd_class eq $self->class_name;
+
+    my $parent_class = $cmd_class->parent_command_class;
+    my @navigation_info;
+    while ($parent_class) {
+        if ($parent_class eq $self->class_name) {
+            my $uri = $self->_make_filename($self->executable_name);
+            my $name = $self->executable_name;
+            unshift(@navigation_info, [$name, $uri]);
+            last;
+        } else {
+            my $uri = $self->_make_filename($parent_class->command_name);
+            my $name = $parent_class->command_name_brief;
+            unshift(@navigation_info, [$name, $uri]);
+        }
+        $parent_class = $parent_class->parent_command_class;
+    }
+    push(@navigation_info, [$cmd_class->command_name_brief, undef]);
+
+    return @navigation_info;
 }
 
 sub get_all_subcommands {
