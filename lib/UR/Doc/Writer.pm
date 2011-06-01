@@ -32,3 +32,8 @@ sub _append {
     my ($self, $data) = @_;
     $self->content($self->content . $data);
 }
+
+sub generate_index {
+    my ($self, @command_trees) = @_;
+    return '';
+}

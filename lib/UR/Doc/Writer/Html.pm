@@ -32,7 +32,7 @@ sub _render_header {
         for my $item (@{$self->navigation}) {
             my ($name, $uri) = @$item;
             if ($uri) {
-                push(@nav_html, "<a href=\"$uri.html\">$name</a>");
+                push(@nav_html, "<a href=\"$uri\">$name</a>");
             } else {
                 push(@nav_html, $name);
             }
@@ -73,7 +73,7 @@ sub _render_section {
         $translator->output_string($new_content);
         $translator->parse_string_document($content);
         $self->_append($new_content);
-    } else{
+    } else {
         croak "Unknown section type " . $section->type;
     }
     $self->_append("<br/>\n");
@@ -82,6 +82,22 @@ sub _render_section {
 sub _render_footer {
     my $self = shift;
     $self->_append("</body></html>");
+}
+
+sub generate_index {
+    my ($self, @command_trees) = @_;
+    return '' unless @command_trees;
+
+    my $html = "<ul>\n";
+    for my $tree (@command_trees) {
+        my $name = $tree->{command_name_brief};
+        my $uri = $tree->{uri};
+        $html .= "<li><a href=\"$uri\">$name</a>\n";
+        $html .= $self->generate_index(@{$tree->{sub_commands}});
+        $html .= "</li>\n";
+    }
+    $html .= "</ul>\n";
+    return $html;
 }
 
 1;

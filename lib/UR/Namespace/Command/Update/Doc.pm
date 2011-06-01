@@ -5,6 +5,8 @@ use warnings;
 
 use UR;
 use IO::File;
+use File::Slurp     qw/write_file/;
+use File::Basename  qw/dirname/;
 
 class UR::Namespace::Command::Update::Doc {
     is => 'Command::V2',
@@ -42,6 +44,16 @@ class UR::Namespace::Command::Update::Doc {
             valid_values => ['pod', 'html'],
             doc => 'the output format to write'
         },
+        generate_index => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => "when true, an 'index' of all files generated is written (currently works for html only)",
+        },
+    ],
+    has_transient_optional => [
+        writer_class => {
+            is => 'Text',
+        }
     ],
     doc => "generate documentation for commands"
 };
@@ -60,6 +72,18 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+
+    die "--generate-index requires --output-dir to be specified" if $self->generate_index and !$self->output_path;
+
+    # scrub any trailing / from output_path
+    if ($self->output_path) {
+        my $output_path = $self->output_path;
+        $output_path =~ s/\/+$//m;
+        $self->output_path($output_path);
+    }
+
+    $self->writer_class("UR::Doc::Writer::" . ucfirst($self->output_format));
+    die "Unable to create a writer for output format '" . $self->output_format . "'" unless($self->writer_class->can("create"));
 
     local $ENV{ANSI_COLORS_DISABLED}    = 1;
     my $entry_point_bin     = $self->executable_name;
@@ -86,9 +110,6 @@ sub execute {
     }
     return if $errors;
 
-    my @commands = map( $self->get_all_subcommands($_), @targets);
-    push @commands, @targets;
-
     if ($self->output_path) {
         unless (-d $self->output_path) {
             if (-e $self->output_path) {
@@ -111,58 +132,81 @@ sub execute {
     local $Command::V1::entry_point_class = $entry_point_class;
     local $Command::V2::entry_point_class = $entry_point_class;
 
-    my $writer_class = "UR::Doc::Writer::" . ucfirst($self->output_format);
+    my @command_trees = map( $self->_get_command_tree($_), @targets);
 
-    for my $command (@commands) {
-        my $doc;
-        eval {
-            my @sections = $command->doc_sections;
-            my @navigation_info = $self->_navigation_info($command);
-            my $writer = $writer_class->create(
-                sections => \@sections,
-                title => $command->command_name,
-                navigation => \@navigation_info,
-            );
-            $doc = $writer->render;
-        };
+    for my $tree (@command_trees) {
+        $self->_process_command_tree($tree);
+    }
 
-        if($@) {
-            $self->warning_message('Could not generate docs for ' . $command . '. ' . $@);
-            next;
-        }
-
-        unless($doc) {
-            $self->warning_message('No docs generated for ' . $command);
-            next;
-        }
-
-        my $doc_path;
-        my $extension = '.'.$self->output_format;
-        if (defined $self->output_path) {
-          my $filename = $self->_make_filename($command->command_name) . $extension;
-          my $output_path = $self->output_path;
-          $output_path =~ s|/+$||m;          
-          $doc_path = join('/', $output_path, $filename);
+    if ($self->generate_index) {
+        my $index = $self->writer_class->generate_index(@command_trees);
+        if ($index and $index ne '') {
+            my $index_path = $self->output_path . "/" . $self->_make_filename("index");
+            if (-e $index_path) {
+                $self->warning_message("Index generation overwriting existing file at $index_path");
+            }
+            write_file($index_path, $index);
         } else {
-          $doc_path = $command->__meta__->module_path;
-          $doc_path =~ s/.pm/$extension/;
+            $self->warning_message("Unable to generate index");
         }
-
-        $self->status_message("Writing $doc_path");
-
-        my $fh;
-        $fh = IO::File->new('>' . $doc_path) || die "Cannot create file at " . $doc_path . "\n";
-        print $fh $doc;
-        close($fh);
     }
 
     return 1;
 }
 
+sub _process_command_tree {
+    my ($self, $tree) = @_;
+
+    my $command = $tree->{command};
+    my $doc;
+    eval {
+        my @sections = $command->doc_sections;
+        my @navigation_info = $self->_navigation_info($command);
+        my $writer = $self->writer_class->create(
+            sections => \@sections,
+            title => $command->command_name,
+            navigation => \@navigation_info,
+        );
+        $doc = $writer->render;
+    };
+
+    if($@) {
+        $self->warning_message('Could not generate docs for ' . $command . '. ' . $@);
+        return;
+    }
+
+    unless($doc) {
+        $self->warning_message('No docs generated for ' . $command);
+        return;
+    }
+
+    my $command_name = $command->command_name;
+    my $filename = $self->_make_filename($command_name);
+    my $dir = $self->_get_output_dir($command_name);
+    my $doc_path = join("/", $dir, $filename);
+    $self->status_message("Writing $doc_path");
+
+    my $fh;
+    $fh = IO::File->new('>' . $doc_path) || die "Cannot create file at " . $doc_path . "\n";
+    print $fh $doc;
+    close($fh);
+
+    for my $subtree (@{$tree->{sub_commands}}) {
+        $self->_process_command_tree($subtree);
+    }
+}
+
 sub _make_filename {
     my ($self, $class_name) = @_;
     $class_name =~ s/ /-/g;
-    return $class_name;
+    return $class_name . "." . $self->output_format;
+}
+
+sub _get_output_dir {
+    my ($self, $class_name) = @_;
+
+    return $self->output_path if defined $self->output_path;
+    return dirname($class_name->__meta__->module_path);
 }
 
 sub _navigation_info {
@@ -190,35 +234,41 @@ sub _navigation_info {
     return @navigation_info;
 }
 
-sub get_all_subcommands {
-    my $self = shift;
-    my $command = shift;
+sub _get_command_tree {
+    my ($self, $command) = @_;
     my $src = "use $command";
     eval $src;
-
     if ($@) {
         $self->error_message("Failed to load class $command: $@");
-    }
-    else {
+        return;
+    } else {
         my $module_name = $command;
         $module_name =~ s|::|/|g;
         $module_name .= '.pm';
         $self->status_message("Loaded $command from $module_name at $INC{$module_name}\n");
     }
 
-    return unless $command->can("sub_command_classes");
-    my @subcommands;
-    eval {
-        @subcommands = $command->sub_command_classes;
+    my $tree = {
+        command => $command,
+        sub_commands => []
     };
 
-    if($@) {
-        $self->warning_message("Error getting subclasses for module $command: " . $@);
+    if ($command eq $self->class_name) {
+        $tree->{command_name} = $tree->{command_name_brief} = $self->executable_name;
+    } else {
+        $tree->{command_name} = $command->command_name;
+        $tree->{command_name_brief} = $command->command_name_brief;
     }
 
-    return unless @subcommands and $subcommands[0]; #Sometimes sub_command_classes returns 0 instead of the empty list
+    $tree->{uri} = $self->_make_filename($tree->{command_name});
 
-    return map($self->get_all_subcommands($_), @subcommands), @subcommands;
+    if ($command->can("sub_command_classes")) {
+        for my $cmd ($command->sub_command_classes) {
+            my $subtree = $self->_get_command_tree($cmd);
+            push(@{$tree->{sub_commands}}, $subtree) if $subtree;
+        }
+    }
+    return $tree;
 }
 
 1;
