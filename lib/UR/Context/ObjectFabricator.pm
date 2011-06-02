@@ -37,6 +37,7 @@ sub _create {
 
     $self->{'all_params_loaded'} = $params{'all_params_loaded'} || {};
     $self->{'in_clause_values'} = $params{'in_clause_values'} || {};
+    $self->{'delegation_data'} = $params{'delegation_data'} || {};
 
     $all_object_fabricators{$self} = $self;
     Scalar::Util::weaken($all_object_fabricators{$self});
@@ -674,6 +675,7 @@ $DB::single=1;
     $fabricator_obj = $fab_class->_create(fabricator => $object_fabricator,
                                           context    => $context,
                                           all_params_loaded => $local_all_params_loaded,
+                                          delegation_data => $hints_or_delegation,
                                           in_clause_values  => \%in_clause_values);
 
     return $fabricator_obj;
@@ -828,6 +830,11 @@ sub fabricate {
 
     &{$self->{'fabricator'}};
 }
+
+sub delegation_data {
+    return shift->{'delegation_data'};
+}
+
 
 # Returns true if this fabricator has loaded an object matching this boolexpr
 sub is_loading_in_progress_for_boolexpr {
