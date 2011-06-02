@@ -42,7 +42,8 @@ ok($circle->radius == 1, 'default radius is 1');
         return ($tag);
     };
 
-    $transaction->commit;
+    is($transaction->commit, undef, 'commit failed');
+    is($transaction->rollback, 1, 'rollback succeeded');
     is($circle->radius, $old_radius, 'circle radius was rolled back due to forced __errors__');
 }
 

@@ -248,8 +248,6 @@ sub commit
     $self->__signal_change__('precommit');
 
     unless ($self->changes_can_be_saved) {
-        $self->warning_message('Forcing rollback within transaction because it has invalid data for save.');
-        $self->rollback or die "Failed to rollback during failed commit!!!\n";
         return;
     }
 
