@@ -247,6 +247,12 @@ sub commit
     }
     $self->__signal_change__('precommit');
 
+    unless ($self->changes_can_be_saved) {
+        $self->warning_message('Forcing rollback within transaction because it has invalid data for save.');
+        $self->rollback or die "Failed to rollback during failed commit!!!\n";
+        return;
+    }
+
     $self->state("committed");
     if ($self->state eq 'committed') {
         $self->__signal_change__('commit',1);
@@ -255,9 +261,32 @@ sub commit
         $self->__signal_change__('commit',0);
     }
     pop @open_transaction_stack;
-    #$self->delete();
 
     $UR::Context::current = $self->parent;
+    return 1;
+}
+
+sub changes_can_be_saved {
+    my $self = shift;
+
+    # This is very similar to behavior in UR::Context::_sync_databases. The only
+    # reason it isn't re-used from UR::Context is the desire to limit changed
+    # objects to those changed within the transaction.
+    # TODO: limit to objects that changed within transaction as to not duplicate
+    # error checking unnecessarily.
+
+    my @changed_objects = (
+        $self->all_objects_loaded('UR::Object::Ghost'),
+        grep { $_->__changes__ } $self->all_objects_loaded('UR::Object')
+    );
+
+    # This is primarily to catch custom validity logic in class overrides.
+    my @invalid = grep { $_->__errors__ } @changed_objects;
+    if (@invalid) {
+        $self->display_invalid_data_for_save(\@invalid);
+        return;
+    }
+
     return 1;
 }
 
