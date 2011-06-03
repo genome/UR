@@ -12,7 +12,7 @@ class Vending::Content {
     ],
     has => [
         machine             => { is => 'Vending::Machine', id_by => 'machine_id', constraint_name => 'CONTENT_MACHINE_ID_MACHINE_MACHINE_ID_FK' },
-        machine_id          => {  },
+        machine_id          => { value => '1', is_constant => 1, is_classwide => 1, column_name => '' },
         machine_location_id => { is => 'integer' },
         subtype_name        => { is => 'varchar', is_optional => 1 },
         machine_location           => { is => 'Vending::MachineLocation', id_by => 'machine_location_id', constraint_name => 'CONTENT_MACHINE_LOCATION_ID_MACHINE_LOCATION_MACHINE_LOCATION_ID_FK' },
