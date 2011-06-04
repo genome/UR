@@ -22,7 +22,6 @@ my @nn;
 sub is_numeric {
     my $self = shift;
     push @nn, $self->id;
-    print "is numeric on @nn\n";
     if (@nn > 1) {
         Carp::confess("is numeric on @nn");
     }
@@ -57,7 +56,7 @@ sub _data_type_as_class_name {
         # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
         # We should have an is_primitive flag set on these so we do efficient work.
        
-        my ($ns) = ($source_class =~ /^([^:]+)/);
+        my ($ns) = ($source_class =~ /^([^:]+)::/);
         
         my $final_class;
         if ($foreign_class) {

@@ -514,8 +514,11 @@ sub sorter {
                 my $is_numeric = $pmeta->is_numeric;
                 push @is_numeric, $is_numeric;
             }
+            elsif ($UR::initialized) {
+                Carp::cluck("Failed to find property meta for $property on $self?  Cannot produce a sorter for @properties");
+                push @is_numeric, 0;
+            }
             else {
-                #Carp::cluck("Failed to find property meta for $property on $self?  Cannot produce a sorter for @properties");
                 push @is_numeric, 0;
             }
         }
