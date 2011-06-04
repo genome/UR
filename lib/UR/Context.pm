@@ -1561,7 +1561,7 @@ sub get_objects_for_class_and_rule {
 
         return @c if wantarray;           # array context
         return unless defined wantarray;  # null context
-        Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
+        Carp::confess("multiple objects found for a call in scalar context!" . Data::Dumper::Dumper(\@c)) if @c > 1;
         return $c[0];                     # scalar context
     }
 

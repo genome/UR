@@ -534,6 +534,9 @@ sub resolve {
                     no warnings;
                     
                     # sort and replace
+                    # note that in perl5.10 and above strings like "inf*" have a numeric value
+                    # causing this kind of sorting to do surprising things, but the only 
+                    # goal here is to normalize results ...so this is fine
                     $value = [ 
                         sort { $a <=> $b or $a cmp $b } 
                         @$value

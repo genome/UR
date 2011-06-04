@@ -77,8 +77,11 @@ sub take_state_snapshot {
         next if $class_name =~ /UR::BoolExpr.*/;
         next if $class_name eq 'UR::Context::Transaction';
         next if $class_name eq 'UR::Change';
+        next if $class_name->isa("UR::Value");
         $state->{$class_name} = {};
         for my $object (@objects) {
+            next if $class_name->isa("UR::Object::Type") and $object->class_name->isa("UR::Value");
+            next if $class_name->isa("UR::Value::Type");
             my $copy = UR::Util::deep_copy($object);
             delete $copy->{_change_count};
             delete $copy->{_request_count};
@@ -97,8 +100,14 @@ sub take_state_snapshot {
                 delete $copy->{db_committed}{_property_meta_for_name};
                 delete $copy->{db_committed}{_sorter};
                 delete $copy->{get_composite_id_resolver};
+                delete $copy->{_property_name_class_map};
                 delete $copy->{cache};
             }
+            if ($class_name->isa('UR::Object::Property')) {
+                delete $copy->{_is_numeric};
+                delete $copy->{_data_type_as_class_name};
+            }
+
             for my $key (keys %$copy) {
                 if (! defined $copy->{$key}) {
                     delete $copy->{$key};
@@ -335,7 +344,7 @@ for my $test_class_data (@test_input) {
         my $actual = $transaction_prior_states[$n];
         #my $match = Compare($expected,$actual);
         #print "match is $match\n";
-        is_deeply($expected, $actual, "states match for snapshot $n");
+        is_deeply($expected, $actual, "states match for snapshot $n") or diag(compare_snapshots($expected,$actual));
     }
 
     # test rollback, finally
@@ -354,4 +363,11 @@ for my $test_class_data (@test_input) {
     }
 }
 
-#$Id$
+sub compare_snapshots {
+    my ($s1, $s2) = @_;
+    my $f1 = "/tmp/t99-$$.f1";
+    my $f2 = "/tmp/t99-$$.f2";
+    IO::File->new(">$f1")->print(Data::Dumper::Dumper($s1));
+    IO::File->new(">$f2")->print(Data::Dumper::Dumper($s2));
+    my $sdiff = `sdiff $f1 $f2`;
+}

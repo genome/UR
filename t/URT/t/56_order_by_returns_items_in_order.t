@@ -14,24 +14,27 @@ use Test::More tests => 7;
 &setup_classes_and_db();
 
 my @o = URT::Thing->get('name like' => 'Bob%', -order => ['data']);
-is(scalar(@o), 4, 'Got 2 things with name like Bob% ordered by data');
+is(scalar(@o), 5, 'Got 2 things with name like Bob% ordered by data');
 
 my @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 
 my @expected = ( { id => 5, name => 'Bobs',   data => 'aaa' },
                  { id => 2, name => 'Bob',    data => 'abc' },
                  { id => 4, name => 'Bobby',  data => 'abc' },
+                 { id => 6, name => 'Bobert', data => 'infinity' },
                  { id => 1, name => 'Bobert', data => 'zzz' },
                );
 
-is_deeply(\@got, \@expected, 'Returned data is as expected');
+is_deeply(\@got, \@expected, 'Returned data is as expected')
+    or diag(Data::Dumper::Dumper(@got));
 
 # Now try it again, cached
 @o = URT::Thing->get('name like' => 'Bob%', -order => ['data']);
-is(scalar(@o), 4, 'Got 2 things with name like Bob% ordered by data');
+is(scalar(@o), 5, 'Got 2 things with name like Bob% ordered by data');
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
-is_deeply(\@got, \@expected, 'Returned cached data is as expected');
+is_deeply(\@got, \@expected, 'Returned cached data is as expected')
+    or diag(Data::Dumper::Dumper(\@got,\@expected));
 
 
 
@@ -54,6 +57,7 @@ sub setup_classes_and_db {
                         [4, 'Bobby', 'abc'],
                         [2, 'Bob', 'abc'],
                         [1, 'Bobert', 'zzz'],
+                        [6, 'Bobert', 'infinity'],
                         [5, 'Bobs', 'aaa'],
                     )) {
         unless ($insert->execute(@$row)) {

@@ -21,17 +21,9 @@ sub is_direct {
 sub is_numeric {
     my $self = shift;
     unless (defined($self->{'_is_numeric'})) {
-        my $type = uc($self->data_type);
-        my $class = $type;
-        unless ($class->isa("UR::Object")) {
-            $class = 'UR::Value::' . $type;
-            unless ($class->isa("UR::Object")) {
-                $class = 'UR::Value::' . ucfirst(lc($type));
-                unless ($class->isa("UR::Object")) {
-                    warn "unknown type $type for property " . $self->id;
-                    return;
-                }
-            }
+        my $class = $self->_data_type_as_class_name;
+        unless ($class) {
+            return;
         }
         $self->{'_is_numeric'} = $class->isa("UR::Value::Number");
     }
@@ -57,8 +49,11 @@ sub _data_type_as_class_name {
         # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
         # We should have an is_primitive flag set on these so we do efficient work.
        
-        my ($ns) = ($source_class =~ /^([^:]+)/);
-        
+        my ($ns) = ($source_class =~ /^([^:]+)::/);
+        if ($ns and not $ns->isa("UR::Namespace")) {
+            $ns = undef;
+        }
+
         my $final_class;
         if ($foreign_class) {
             if ($foreign_class->can('__meta__')) {   
