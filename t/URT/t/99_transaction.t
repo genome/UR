@@ -77,6 +77,7 @@ sub take_state_snapshot {
         next if $class_name =~ /UR::BoolExpr.*/;
         next if $class_name eq 'UR::Context::Transaction';
         next if $class_name eq 'UR::Change';
+        next if $class_name->isa("UR::Value");
         $state->{$class_name} = {};
         for my $object (@objects) {
             my $copy = UR::Util::deep_copy($object);
