@@ -80,6 +80,7 @@ sub take_state_snapshot {
         next if $class_name->isa("UR::Value");
         $state->{$class_name} = {};
         for my $object (@objects) {
+            next if $class_name->isa("UR::Object::Type") and $object->class_name->isa("UR::Value");
             my $copy = UR::Util::deep_copy($object);
             delete $copy->{_change_count};
             delete $copy->{_request_count};
