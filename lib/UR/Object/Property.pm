@@ -22,7 +22,7 @@ my @nn;
 sub is_numeric {
     my $self = shift;
     push @nn, $self->id;
-    if (@nn > 1) {
+    if (@nn > 5) {
         Carp::confess("is numeric on @nn");
     }
     unless (defined($self->{'_is_numeric'})) {
@@ -57,7 +57,10 @@ sub _data_type_as_class_name {
         # We should have an is_primitive flag set on these so we do efficient work.
        
         my ($ns) = ($source_class =~ /^([^:]+)::/);
-        
+        if ($ns and not $ns->isa("UR::Namespace")) {
+            $ns = undef;
+        }
+
         my $final_class;
         if ($foreign_class) {
             if ($foreign_class->can('__meta__')) {   
