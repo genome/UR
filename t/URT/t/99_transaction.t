@@ -97,8 +97,14 @@ sub take_state_snapshot {
                 delete $copy->{db_committed}{_property_meta_for_name};
                 delete $copy->{db_committed}{_sorter};
                 delete $copy->{get_composite_id_resolver};
+                delete $copy->{_property_name_class_map};
                 delete $copy->{cache};
             }
+            if ($class_name->isa('UR::Object::Property')) {
+                delete $copy->{_is_numeric};
+                delete $copy->{_data_type_as_class_name};
+            }
+
             for my $key (keys %$copy) {
                 if (! defined $copy->{$key}) {
                     delete $copy->{$key};
