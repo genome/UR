@@ -27,8 +27,16 @@ sub execute_with_shell_params_and_exit {
 
     my @argv = @ARGV;
     @ARGV = ();
-    my $exit_code = $class->_execute_with_shell_params_and_return_exit_code(@argv);
-    UR::Context->commit;
+    my $exit_code;
+    eval {
+        $exit_code = $class->_execute_with_shell_params_and_return_exit_code(@argv);
+        UR::Context->commit or die "Failed to commit!: " . UR::Context->error_message();
+    };
+    if ($@) {
+        $class->error_message($@);
+        UR::Context->rollback or die "Failed to rollback changes after failed commit!!!\n";
+        $exit_code = 255 unless ($exit_code);
+    }
     exit $exit_code;
 }
 

@@ -18,23 +18,23 @@ sub is_direct {
     return 1;
 }
 
+my @nn;
 sub is_numeric {
     my $self = shift;
+    push @nn, $self->id;
+    print "is numeric on @nn\n";
+    if (@nn > 1) {
+        Carp::confess("is numeric on @nn");
+    }
     unless (defined($self->{'_is_numeric'})) {
-        my $type = uc($self->data_type);
-        my $class = $type;
-        unless ($class->isa("UR::Object")) {
-            $class = 'UR::Value::' . $type;
-            unless ($class->isa("UR::Object")) {
-                $class = 'UR::Value::' . ucfirst(lc($type));
-                unless ($class->isa("UR::Object")) {
-                    warn "unknown type $type for property " . $self->id;
-                    return;
-                }
-            }
+        my $class = $self->_data_type_as_class_name;
+        unless ($class) {
+            pop @nn;
+            return;
         }
         $self->{'_is_numeric'} = $class->isa("UR::Value::Number");
     }
+    pop @nn;
     return $self->{'_is_numeric'};
 }    
 
