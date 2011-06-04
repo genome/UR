@@ -21,18 +21,8 @@ sub is_direct {
 sub is_numeric {
     my $self = shift;
     unless (defined($self->{'_is_numeric'})) {
-        my $type = uc($self->data_type);
-        my $class = $type;
-        unless ($class->isa("UR::Object")) {
-            $class = 'UR::Value::' . $type;
-            unless ($class->isa("UR::Object")) {
-                $class = 'UR::Value::' . ucfirst(lc($type));
-                unless ($class->isa("UR::Object")) {
-                    warn "unknown type $type for property " . $self->id;
-                    return;
-                }
-            }
-        }
+        my $class = $self->_data_type_as_class_name;
+        return unless $class;
         $self->{'_is_numeric'} = $class->isa("UR::Value::Number");
     }
     return $self->{'_is_numeric'};
