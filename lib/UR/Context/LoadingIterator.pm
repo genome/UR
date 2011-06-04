@@ -110,6 +110,13 @@ sub _create {
         }
         return;
     };
+    my %bx_filter_properties = map { $_ => 1 } $normalized_rule->template->_property_names;
+    my $change_is_bx_filter_property = sub {
+        foreach my $prop_name ( shift->_changed_property_names ) {
+            return 1 if exists($bx_filter_properties{$prop_name});
+        }
+        return;
+    };
 
     my $me_loading_iterator_as_string;  # See note below the closure definition
     my $loading_iterator = sub {
@@ -244,14 +251,19 @@ sub _create {
                         unless (delete $changed_objects_that_might_be_db_deleted{$next_obj_underlying_context_id}) {
                             $db_seen_ids_that_are_not_deleted{$next_obj_underlying_context_id} = 1;
                         }
-                    }
-                    # If the object has any changes, then it will appear in the cached object list in
-                    # $next_object_current_context at the appropriate time.  For the case where the
-                    # object no longer matches the BoolExpr, then the appropriate time is never.
-                    # Discard this object from the DB and pick again
-                    $next_obj_underlying_context = undef;
-                    redo PICK_NEXT_OBJECT_FOR_LOADING;
-
+                    } elsif ($change_is_bx_filter_property->($next_obj_underlying_context)) {
+                        # If the object has any changes, then it will appear in the cached object list in
+                        # $next_object_current_context at the appropriate time.  For the case where the
+                        # object no longer matches the BoolExpr, then the appropriate time is never.
+                        # Discard this object from the DB and pick again
+                        $next_obj_underlying_context = undef;
+                        redo PICK_NEXT_OBJECT_FOR_LOADING;
+                    } else {
+                         # some other kind of change?
+                         $next_object = $next_obj_underlying_context;
+                         $next_obj_underlying_context = undef;
+                         last PICK_NEXT_OBJECT_FOR_LOADING;
+                     }
                 } else {
                     # If the object has no changes, it must be something newly brought into the system.
                     $next_object = $next_obj_underlying_context;

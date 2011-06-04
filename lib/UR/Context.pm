@@ -3279,35 +3279,7 @@ sub _sync_databases {
     my @invalid = grep { $_->__errors__ } @changed_objects;
     #my @invalid = UR::Util->mapreduce_grep(sub { $_[0]->__errors__}, @changed_objects);
     if (@invalid) {
-        # Create a helpful error message for the developer.
-        $self->error_message('Invalid data for save!');
-        my @msg;
-        for my $obj (@invalid)
-        {
-            no warnings;
-            my $msg = $obj->class . " identified by " . $obj->__display_name__ . " has problems on\n";
-            my @problems = $obj->__errors__;
-            foreach my $error ( @problems ) {
-                my @property_names = $error->properties;
-                my $desc = $error->desc;
-                my $prop_noun = scalar(@property_names) > 1 ? 'properties' : 'property';
-                $msg .= "    $prop_noun " . join(', ', map { "'$_'" } @property_names) . ": $desc\n";
-            }
-
-            $msg .= "    Current state:\n";
-            my $datadumper = Data::Dumper::Dumper($obj);
-            my $nr_of_lines = $datadumper =~ tr/\n//;
-            if ($nr_of_lines > 40) {
-                # trim it down to the first and last 15 lines
-                $datadumper =~ m/^((?:.*\n){15})/;
-                $msg .= $1;
-                $datadumper =~ m/((?:.*\n?){3})$/;
-                $msg .= "[...]\n$1\n";
-            } else {
-                $msg .= $datadumper;
-            }
-            $self->error_message($msg);
-        }
+        $self->display_invalid_data_for_save(\@invalid);
         goto PROBLEM_SAVING;
         #return;
     }
@@ -3365,6 +3337,43 @@ sub _sync_databases {
     }
     return;
 }
+
+
+sub display_invalid_data_for_save {
+    my $self = shift;
+    my @objects_with_errors = @{shift @_};
+
+    $self->error_message('Invalid data for save!');
+
+    for my $obj (@objects_with_errors) {
+        no warnings;
+        my $msg = $obj->class . " identified by " . $obj->__display_name__ . " has problems on\n";
+        my @problems = $obj->__errors__;
+        foreach my $error ( @problems ) {
+            my @property_names = $error->properties;
+            my $desc = $error->desc;
+            my $prop_noun = scalar(@property_names) > 1 ? 'properties' : 'property';
+            $msg .= "    $prop_noun " . join(', ', map { "'$_'" } @property_names) . ": $desc\n";
+        }
+
+        $msg .= "    Current state:\n";
+        my $datadumper = Data::Dumper::Dumper($obj);
+        my $nr_of_lines = $datadumper =~ tr/\n//;
+        if ($nr_of_lines > 40) {
+            # trim it down to the first and last 15 lines
+            $datadumper =~ m/^((?:.*\n){15})/;
+            $msg .= $1;
+            $datadumper =~ m/((?:.*\n?){3})$/;
+            $msg .= "[...]\n$1\n";
+        } else {
+            $msg .= $datadumper;
+        }
+        $self->error_message($msg);
+    }
+
+    return 1;
+}
+
 
 sub _reverse_all_changes {
     my $self = shift;
