@@ -1047,6 +1047,8 @@ sub _get_join_alias {
 
 sub _get_alias_join {
     my ($self,$alias) = @_;
+    my $alias_data = $self->_alias_data;
+    return if (! $alias_data or ! exists($alias_data->{$alias}));
     my $join_id = $self->_alias_data->{$alias}{join_id};
     UR::Object::Join->get($join_id);
 }
