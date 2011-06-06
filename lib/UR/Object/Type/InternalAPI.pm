@@ -504,16 +504,41 @@ sub sorter {
     #TODO: there are possibilities of it sorting different than a DB on mixed numbers and alpha data
     my ($self,@properties) = @_;
     push @properties, $self->id_property_names;
-    my $key = join(",",@properties);
-    my $sorter = $self->{_sorter}{$key} ||= sub($$) {
-        no warnings;   # don't print a warning about non-numeric comparison with <=> on the next line
+    my $key = join("__",@properties);
+    my $sorter = $self->{_sorter}{$key};
+    unless ($sorter) {
+        my @is_numeric;
         for my $property (@properties) {
-            my $cmp = ($_[0]->$property <=> $_[1]->$property || $_[0]->$property cmp $_[1]->$property);
-            return $cmp if $cmp;
+            my $pmeta = $self->property($property);
+            if ($pmeta) {
+                my $is_numeric = $pmeta->is_numeric;
+                push @is_numeric, $is_numeric;
+            }
+            elsif ($UR::initialized) {
+                Carp::cluck("Failed to find property meta for $property on $self?  Cannot produce a sorter for @properties");
+                push @is_numeric, 0;
+            }
+            else {
+                push @is_numeric, 0;
+            }
         }
-        return 0;
-    };
-    Sub::Name::subname("UR::Object::Type::sorter__class_".$self->class_name, $sorter);
+        no warnings;   # don't print a warning about undef values ...alow them to be treated as 0 or '' 
+        $sorter = $self->{_sorter}{$key} ||= sub($$) {
+            for (my $n = 0; $n < @properties; $n++) {
+                my $property = $properties[$n];
+                my $cmp;
+                if ($is_numeric[$n]) {
+                    $cmp = ($_[0]->$property <=> $_[1]->$property);
+                }
+                else {
+                    $cmp = ($_[0]->$property cmp $_[1]->$property);
+                }                    
+                return $cmp if $cmp;
+            }
+            return 0;
+        };
+    }
+    Sub::Name::subname("UR::Object::Type::sorter__" . $self->class_name . '__' . $key, $sorter);
     return $sorter;
 }
 
