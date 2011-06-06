@@ -703,6 +703,8 @@ sub _resolve_delegation_data {
         }
     }
 
+    my $this_object_num = $loading_template->{'object_num'};
+
     DELEGATION:
     foreach my $delegation ( (keys %hints), (keys %delegations)) {
         my $delegated_property_meta = $query_class_meta->property_meta_for_name($delegation);
@@ -762,7 +764,9 @@ $DB::single=1;
                 push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
                 my $source_class = $join->{'source_class'};
                 my $source_prop_name = $join->{'source_property_names'}->[$i];
-                my $column_num = $query_plan->column_index_for_class_and_property($source_class, $source_prop_name);
+                my $column_num = $query_plan->column_index_for_class_and_property_before_object_num($source_class,
+                                                                                                    $source_prop_name,
+                                                                                                    $this_object_num);
                 if (defined $column_num) {
                     push @missing_values, \$column_num;
                 } else {
