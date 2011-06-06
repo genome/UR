@@ -1106,6 +1106,27 @@ sub column_index_for_class_property_and_object_num {
     return undef;
 }
 
+# used by the object fabricator to determine the resultset column
+# the source property of a join is stored.
+sub column_index_for_class_and_property_before_object_num {
+    my($self, $class_name, $property_name, $object_num) = @_;
+    return unless $object_num;
+
+    my $db_column_data = $self->_db_column_data;
+    my $index;
+    for (my $resultset_col = 0; $resultset_col < @$db_column_data; $resultset_col++) {
+        last if ($db_column_data->[$resultset_col]->[3] >= $object_num);
+        if ($db_column_data->[$resultset_col]->[1]->class_name eq $class_name
+            and
+            $db_column_data->[$resultset_col]->[1]->property_name eq $property_name
+        ) {
+            $index = $resultset_col;
+        }
+    }
+    return $index;
+}
+
+
 sub _groups_by_property {
     my ($self, $property_name) = @_;
     return $self->_group_by_property_names->{$property_name};
