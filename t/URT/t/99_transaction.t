@@ -11,6 +11,8 @@ use URT;
 use DBI;
 use IO::Pipe;
 use Test::More;
+use UR::Value::SloppyPrimitive;
+use UR::Value::SCALAR;
 
 our @test_input = (
     ["URT::Foo" => "f1","f2"],
@@ -78,10 +80,10 @@ sub take_state_snapshot {
         next if $class_name eq 'UR::Context::Transaction';
         next if $class_name eq 'UR::Change';
         next if $class_name->isa("UR::Value");
-        $state->{$class_name} = {};
         for my $object (@objects) {
             next if $class_name->isa("UR::Object::Type") and $object->class_name->isa("UR::Value");
             next if $class_name->isa("UR::Value::Type");
+            $state->{$class_name} ||= {};
             my $copy = UR::Util::deep_copy($object);
             delete $copy->{_change_count};
             delete $copy->{_request_count};
@@ -249,7 +251,8 @@ sub rollback_and_verify {
 
     my $state_now = take_state_snapshot();
     my $state_then = $transaction_prior_states[$n];
-    is_deeply($state_then, $state_now, "application state now matches pre-transaction state for $n " . $msg);
+    is_deeply($state_now, $state_then, "application state now matches pre-transaction state for $n " . $msg)
+        or diag(compare_snapshots($state_then,$state_now)); 
 
     #$DB::single = 1;
     print "";
@@ -281,7 +284,7 @@ my $state_at_test_start = take_state_snapshot();
 #$DB::single = 1;
 clear();
 my $state_after_initial_clear = take_state_snapshot();
-is_deeply($state_at_test_start, $state_after_initial_clear, "clear returns restores state with no changes");
+is_deeply($state_after_initial_clear, $state_at_test_start, "clear returns restores state with no changes");
 #dump_states($state_at_test_start,$state_after_initial_clear);
 
 # test each specified class
@@ -367,7 +370,8 @@ sub compare_snapshots {
     my ($s1, $s2) = @_;
     my $f1 = "/tmp/t99-$$.f1";
     my $f2 = "/tmp/t99-$$.f2";
-    IO::File->new(">$f1")->print(Data::Dumper::Dumper($s1));
-    IO::File->new(">$f2")->print(Data::Dumper::Dumper($s2));
-    my $sdiff = `sdiff $f1 $f2`;
+    IO::File->new(">$f1")->print(YAML::Dump($s1));
+    IO::File->new(">$f2")->print(YAML::Dump($s2));
+    #system "opendiff $f1 $f2";
+    return `sdiff -s $f1 $f2`;
 }
