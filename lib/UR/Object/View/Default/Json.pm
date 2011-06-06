@@ -63,10 +63,6 @@ sub _generate_content_for_aspect {
         return;
     }
 
-    if (@value == 0) {
-        return;
-    }
-
     # Always look for a delegate view.
     # This means we replace the value(s) with their
     # subordinate widget content.

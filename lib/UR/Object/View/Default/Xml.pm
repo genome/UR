@@ -130,10 +130,6 @@ sub _generate_content_for_aspect {
         return $aspect_node;
     }
 
-    if (@value == 0) {
-        return;
-    }
-
     unless ($aspect->delegate_view) {
         $aspect->generate_delegate_view;
     }
