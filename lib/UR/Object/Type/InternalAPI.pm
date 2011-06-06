@@ -509,7 +509,15 @@ sub sorter {
     unless ($sorter) {
         my @is_numeric;
         for my $property (@properties) {
-            my $pmeta = $self->property($property);
+            my $pmeta;
+            if ($self->isa("UR::Object::Set::Type")) {
+                # If we're a set, we want to examine the property of our members.
+                my $subject_class = $self->class_name;
+                $subject_class =~ s/::Set$//g;
+                $pmeta = $subject_class->__meta__->property($property);
+            } else {
+                $pmeta = $self->property($property);
+            }
             if ($pmeta) {
                 my $is_numeric = $pmeta->is_numeric;
                 push @is_numeric, $is_numeric;
