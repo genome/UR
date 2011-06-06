@@ -190,7 +190,7 @@ sub create_for_loading_template {
                 last;
             }
         }
-        if (!$loading_base_object and !$values_exist) {
+        if (!$loading_base_object and !$values_exist and $hints_or_delegation) {
 $DB::single=1;
             foreach my $delegation ( keys %$hints_or_delegation )  {
                 foreach my $delegation_data ( @{ $hints_or_delegation->{$delegation}}) {
@@ -550,7 +550,7 @@ $DB::single=1;
         } # end handling newly loaded objects
 
         # If the rule had hints, mark that we loaded those things too, in all_params_loaded
-        if (keys(%$hints_or_delegation)) {
+        if ($hints_or_delegation) {
             foreach my $property ( keys(%$hints_or_delegation) ) {
                 foreach my $hint_data ( @{ $hints_or_delegation->{$property}} ) {
                     my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
