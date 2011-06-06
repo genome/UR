@@ -1087,13 +1087,18 @@ sub _add_columns {
     push @$db_column_data, @_;
 }
 
-sub column_index_for_class_and_property {
-    my($self, $class_name, $property_name) = @_;
+# Used by the object fabricator to find out which resultset column a
+# property's data is stored
+sub column_index_for_class_property_and_object_num {
+    my($self, $class_name, $property_name, $object_num) = @_;
+
+   $object_num ||= 0;
 
     my $db_column_data = $self->_db_column_data;
-    for (my $resultset_col= 0; $resultset_col < @$db_column_data; $resultset_col++) {
+    for (my $resultset_col = 0; $resultset_col < @$db_column_data; $resultset_col++) {
         if ($db_column_data->[$resultset_col]->[1]->class_name eq $class_name
             and $db_column_data->[$resultset_col]->[1]->property_name eq $property_name
+            and $db_column_data->[$resultset_col]->[3] == $object_num
         ) {
             return $resultset_col;
         }
