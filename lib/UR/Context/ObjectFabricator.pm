@@ -192,22 +192,20 @@ sub create_for_loading_template {
         }
         if (!$loading_base_object and !$values_exist and $hints_or_delegation) {
 $DB::single=1;
-            foreach my $delegation ( keys %$hints_or_delegation )  {
-                foreach my $delegation_data ( @{ $hints_or_delegation->{$delegation}}) {
-                    my $missing_values = $delegation_data->[2];
-                    my $missing_rule_tmpl  = $delegation_data->[3];
-                    my @values;
-                    foreach my $value ( @$missing_values ) {
-                        if (ref($value)) {
-                            push @values, $next_db_row->[$$value];
-                        } else {
-                            push @values, $value;
-                        }
+            foreach my $delegation_data ( @$hints_or_delegation ) {
+                my $missing_values = $delegation_data->[2];
+                my $missing_rule_tmpl  = $delegation_data->[3];
+                my @values;
+                foreach my $value ( @$missing_values ) {
+                    if (ref($value)) {
+                        push @values, $next_db_row->[$$value];
+                    } else {
+                        push @values, $value;
                     }
-                    my $missing_rule = $missing_rule_tmpl->get_rule_for_values(@values);
-                    $local_all_params_loaded->{$missing_rule_tmpl->id}->{$missing_rule->id} = 0;
-                    $UR::Context::all_params_loaded->{$missing_rule_tmpl->id}->{$missing_rule->id} = 0;
                 }
+                my $missing_rule = $missing_rule_tmpl->get_rule_for_values(@values);
+                $local_all_params_loaded->{$missing_rule_tmpl->id}->{$missing_rule->id} = 0;
+                $UR::Context::all_params_loaded->{$missing_rule_tmpl->id}->{$missing_rule->id} = 0;
             }
             return;
         }
@@ -551,15 +549,13 @@ $DB::single=1;
 
         # If the rule had hints, mark that we loaded those things too, in all_params_loaded
         if ($hints_or_delegation) {
-            foreach my $property ( keys(%$hints_or_delegation) ) {
-                foreach my $hint_data ( @{ $hints_or_delegation->{$property}} ) {
-                    my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
-                    my $rule_tmpl = $hint_data->[1];
-                    my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
-                    $UR::Context::all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id} = undef;
-                    $local_all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id}++;
-                 }
-            }
+            foreach my $hint_data ( @$hints_or_delegation ) {
+                my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
+                my $rule_tmpl = $hint_data->[1];
+                my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
+                $UR::Context::all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id} = undef;
+                $local_all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id}++;
+             }
         }
 
         # note all of the joins which follow this object as having been "done"
@@ -685,7 +681,7 @@ sub _resolve_delegation_data {
     my($fab_class,$rule,$loading_template,$query_plan,$local_all_params_loaded) = @_;
 
     my $rule_template = $rule->template;
-    my %hints_or_delegation;
+    my @hints_or_delegation;
 
     my $query_class_meta = $rule_template->subject_class_name->__meta__;
 
@@ -779,10 +775,9 @@ $DB::single=1;
     my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names);
 
 
-    $hints_or_delegation{$delegated_property_name} ||= [];
     my $related_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
                                                             @template_filter_names);
-    push @{$hints_or_delegation{$delegated_property_name}}, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl, \@missing_values, $missing_rule_tmpl];
+    push @hints_or_delegation, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl, \@missing_values, $missing_rule_tmpl];
 
     if ($hints{$delegated_property_name}) {
         # Make notes in all_params_loaded about these things we're hinting on.
@@ -792,7 +787,7 @@ $DB::single=1;
         $UR::Context::all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = undef;
         $local_all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = 0;
     }
-    return \%hints_or_delegation;
+    return \@hints_or_delegation;
 }
 
 
