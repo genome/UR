@@ -697,6 +697,12 @@ sub _lapl_data_for_delegation_data {
     return \%tmpl_and_rules;
 }
 
+
+# This is used by fabricators created as a result of filters or hints on delegated properties
+# of the primary object to pre-calculate rule templates and value sources that can be combined
+# with these templates to make rules.  The resulting template and rule IDs are then plugged into
+# all_params_loaded to indicate these related objects are loaded so that subsequent queries
+# will not hit the data sources.
 sub _resolve_delegation_data {
     my($fab_class,$rule,$loading_template,$query_plan,$local_all_params_loaded) = @_;
 
