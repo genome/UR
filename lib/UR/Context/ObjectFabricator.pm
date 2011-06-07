@@ -837,14 +837,6 @@ sub _resolve_delegation_data {
     push @hints_or_delegation, [ \@template_filter_values, $related_rule_tmpl];
     push @delegations_with_no_objects, [\@missing_values, $missing_rule_tmpl];
 
-    if ($hints{$delegated_property_name}) {
-        # Make notes in all_params_loaded about these things we're hinting on.
-        # This way, if they return no matches, then we'll remember that for later queries
-        my @related_obj_values = map { $rule->value_for($_) } @{$join->{'source_property_names'}};
-        my $related_obj_rule = $related_rule_tmpl->get_rule_for_values(@related_obj_values, @where_values);
-        $UR::Context::all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = undef;
-        $local_all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = 0;
-    }
     return (\@hints_or_delegation, \@delegations_with_no_objects);
 }
 
