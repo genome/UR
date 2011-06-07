@@ -88,7 +88,7 @@ ok(URT::Thing->get(4)->delete, 'Delete thing id 4 before the iterator returns it
 
 $o = eval { $iter->next() };
 like($@,
-     qr/Attempt to fetch an object which matched.*'thing_id' => '4'/s,
+     qr/Attempt to fetch an object which matched.*'thing_id' => ('|)4('|)/s,
      'caught exception about deleted thing id 4');
 
 # completely-consistent iterator behaviour would make this one come next

@@ -346,35 +346,6 @@ sub _init_rdbms {
             pop @joins;
         }
 
-        # If a property is id_by something that is, itself, delegated, then there is a fork in
-        # the join chain, and one or more joins to UR::Value classes end up in the middle of
-        # @joins.  This commented-out code was able to remove the wacky UR::Value join in the simple
-        # case of one level of indirection, but was probably wrong in the general case.
-        #my ($final_accessor, $is_optional, @full_list_of_joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
-        #my @joins;
-        #while (@full_list_of_joins) {
-        #    my $join = shift @full_list_of_joins;
-        #    if ($join->{'foreign_class'}->isa('UR::Value')) {
-        #        my $next_join = shift @full_list_of_joins;
-        #        last unless $next_join;
-        #        my $new_join = UR::Object::Join->_get_or_define(
-        #                           id => $join->id . '_fixed',
-        #                           source_class => $join->{'source_class'},
-        #                           source_name_for_foreign => $join->{'source_name_for_foreign'},
-        #                           source_property_names => [ @{ $join->{'source_property_names'} } ],
-        #                           foreign_class => $next_join->{'foreign_class'},
-        #                           foreign_name_for_source => $next_join->{'foreign_name_for_source'},
-        #                           foreign_property_names => [ @{ $next_join->{'foreign_property_names'} } ],
-        #                           is_optional => $join->{'is_optional'},
-        #                           is_many                 => $join->{'is_many'},
-        #                           where                   => $join->{'where'},
-        #                       );
-        #                       push @joins, $new_join;
-        #    } else {
-        #        push @joins, $join;
-        #    }
-        #}
-
         my $last_class_object_excluding_inherited_joins;
         my $alias_for_property_value;
 
@@ -394,34 +365,6 @@ sub _init_rdbms {
             while (my $join = shift @joins_for_object) { 
 
                 my $where = $join->{where};
-                if (0) { #($where) {
-                    # a where clause might imply additional joins, requiring we pre-empt
-                    # continuing through the join chain until these are resolved
-                    my $c = $join->{foreign_class};
-                    my $m = $c->__meta__;
-                    my $bx = UR::BoolExpr->resolve($c,@$where);
-                    my %p = $bx->params_list; # FIXME
-                    my @p = sort keys %p;
-                    my @added_joins;
-                    for my $pn (@p) {
-                        my $p = $m->property($pn);
-                        my @j = $p->_resolve_join_chain();
-                        my $j = pop @j;
-                        $j = { %$j };
-                        my $w = delete $j->{where};
-
-                        if (@j) {
-                            unshift @added_joins, @j;
-                        }
-                    }
-                    if (@added_joins) {
-                        $join = { %$join };
-                        delete $join->{where};
-                        push @added_joins, $join;
-                        unshift @joins_for_object, @added_joins;
-                        next;
-                    }
-                }
                 
                 $current_inheritance_depth_for_this_target_join++;
 
@@ -496,10 +439,6 @@ sub _init_rdbms {
 
         # done adding any new joins for this delegated property/property-chain
 
-        if (ref($delegated_property) and !$delegated_property->via) {
-            next;
-        }
-
         my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
         unless ($final_accessor_property_meta) {
             Carp::croak("No property metadata for property named '$final_accessor' in class "
@@ -537,7 +476,6 @@ sub _init_rdbms {
                 };
         }
     } # next delegated property
-
 
     # the columns to query
     my $db_property_data = $self->_db_column_data;
@@ -609,7 +547,7 @@ sub _init_rdbms {
                 }
             }
         } # next column                
-    } # next join
+    } # next db join
 
     # build the WHERE clause by making a data structure which will be parsed outside of this module
     # special handling of different size lists, and NULLs, make a completely reusable SQL template very hard.
@@ -638,7 +576,7 @@ sub _init_rdbms {
                 push @filter_specs, [$expr_sql, $operator, $value_position];
             }
         } # next column                
-    } # next join/filter
+    } # next db filter
 
     $connect_by_clause = ''; 
     if ($recursion_desc) {
@@ -675,20 +613,19 @@ sub _init_rdbms {
         # this means that we re-constitute the select clause and add a group_by clause
         $group_by_clause = 'group by ' . $select_clause if (scalar(@$group_by));
 
-        # FIXME - does it even make sense for the user to specify an order_by in the
-        # get() request for Set objects?  If so, then we need to concatonate these order_by_columns
-        # with the ones that already exist in $order_by_columns from the class data
+        # Q: - does it even make sense for the user to specify an order_by in the
+        #    get() request for Set objects?  If so, then we need to concatonate these order_by_columns
+        #    with the ones that already exist in $order_by_columns from the class data
+	# A: - yes, because group by means "return a list of subsets", and this lets you sort the subsets
         $order_by_columns = $ds->_select_clause_columns_for_table_property_data(@$db_property_data);
 
         $select_clause .= ', ' if $select_clause;
         $select_clause .= 'count(*) count';
-
         for my $ag (@$aggregate) {
             next if $ag eq 'count';
              # TODO: translate property names to column names, and skip non-column properties 
             $select_clause .= ', ' . $ag;
         }
-
         unless (@$group_by == @$db_property_data) {
             print "mismatch table properties vs group by!\n";
         }
@@ -736,7 +673,6 @@ sub _init_rdbms {
     %$self = (
         %$self,
 
-        
         # custom for RDBMS
         select_clause                               => $select_clause,
         select_hint                                 => $select_hint,
