@@ -171,9 +171,10 @@ sub create_for_loading_template {
     # finalized
     my $local_all_params_loaded = {};
 
-    my $hints_or_delegation;
+    my($hints_or_delegation,$delegations_with_no_objects);
     if (!$loading_base_object) {
-        $hints_or_delegation = $fab_class->_resolve_delegation_data($rule,$loading_template,$query_plan,$local_all_params_loaded);
+        ($hints_or_delegation,$delegations_with_no_objects)
+             = $fab_class->_resolve_delegation_data($rule,$loading_template,$query_plan,$local_all_params_loaded);
     }
 
     my $fabricator_obj;  # filled in after the closure definition
@@ -190,11 +191,11 @@ sub create_for_loading_template {
                 last;
             }
         }
-        if (!$loading_base_object and !$values_exist and $hints_or_delegation) {
+        if (!$loading_base_object and !$values_exist and $delegations_with_no_objects) {
 $DB::single=1;
-            foreach my $delegation_data ( @$hints_or_delegation ) {
-                my $missing_values = $delegation_data->[2];
-                my $missing_rule_tmpl  = $delegation_data->[3];
+            foreach my $delegation_data ( @$delegations_with_no_objects ) {
+                my $missing_values = $delegation_data->[0];
+                my $missing_rule_tmpl  = $delegation_data->[1];
                 my @values;
                 foreach my $value ( @$missing_values ) {
                     if (ref($value)) {
@@ -681,7 +682,6 @@ sub _resolve_delegation_data {
     my($fab_class,$rule,$loading_template,$query_plan,$local_all_params_loaded) = @_;
 
     my $rule_template = $rule->template;
-    my @hints_or_delegation;
 
     my $query_class_meta = $rule_template->subject_class_name->__meta__;
 
@@ -750,7 +750,6 @@ sub _resolve_delegation_data {
     # For missing objects,
     my @missing_prop_names;
     my @missing_values;
-$DB::single=1;
     for (my $i = 0; $i < @{ $join->{'foreign_property_names'}}; $i++) {
         push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
         my $source_class = $join->{'source_class'};
@@ -777,7 +776,9 @@ $DB::single=1;
 
     my $related_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
                                                             @template_filter_names);
-    push @hints_or_delegation, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl, \@missing_values, $missing_rule_tmpl];
+    my(@hints_or_delegation, @delegations_with_no_objects);
+    push @hints_or_delegation, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl];
+    push @delegations_with_no_objects, [\@missing_values, $missing_rule_tmpl];
 
     if ($hints{$delegated_property_name}) {
         # Make notes in all_params_loaded about these things we're hinting on.
@@ -787,7 +788,7 @@ $DB::single=1;
         $UR::Context::all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = undef;
         $local_all_params_loaded->{$related_rule_tmpl->id}->{$related_obj_rule->id} = 0;
     }
-    return \@hints_or_delegation;
+    return (\@hints_or_delegation, \@delegations_with_no_objects);
 }
 
 
