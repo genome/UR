@@ -240,7 +240,7 @@ sub _init_rdbms {
         while (my $property_name = shift @properties_involved) {
             my (@pmeta) = $class_meta->property_meta_for_name($property_name);
             unless (@pmeta) {
-                push @errors, "No property meta found for: $property_name on class " . $class_meta->id;
+                push @errors, "No property metadata found for '$property_name' on class " . $class_meta->id;
                 next;
             }
             
