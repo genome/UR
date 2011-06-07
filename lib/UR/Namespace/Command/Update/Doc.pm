@@ -7,6 +7,7 @@ use UR;
 use IO::File;
 use File::Slurp     qw/write_file/;
 use File::Basename  qw/dirname/;
+use File::Path      qw/make_path/;
 
 class UR::Namespace::Command::Update::Doc {
     is => 'Command::V2',
@@ -119,7 +120,7 @@ sub execute {
                 $self->status_message("output path is not a directory!: " . $self->output_path);
             }
             else {
-                mkdir $self->output_path;
+                make_path($self->output_path);
                 if (-d $self->output_path) {
                     $self->status_message("using output directory " . $self->output_path);
                 }
