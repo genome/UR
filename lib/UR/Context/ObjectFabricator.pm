@@ -191,21 +191,10 @@ sub create_for_loading_template {
             }
         }
         if (!$loading_base_object and !$values_exist and $delegations_with_no_objects) {
-$DB::single=1;
-            foreach my $delegation_data ( @$delegations_with_no_objects ) {
-                my $missing_values = $delegation_data->[0];
-                my $missing_rule_tmpl  = $delegation_data->[1];
-                my @values;
-                foreach my $value ( @$missing_values ) {
-                    if (ref($value)) {
-                        push @values, $next_db_row->[$$value];
-                    } else {
-                        push @values, $value;
-                    }
-                }
-                my $missing_rule = $missing_rule_tmpl->get_rule_for_values(@values);
-                $local_all_params_loaded->{$missing_rule_tmpl->id}->{$missing_rule->id} = 0;
-                $UR::Context::all_params_loaded->{$missing_rule_tmpl->id}->{$missing_rule->id} = 0;
+            my $templates_and_rules = $fab_class->_lapl_data_for_delegation_data($delegations_with_no_objects, $next_db_row);
+            while ( my($template_id, $rule_id) = each %$templates_and_rules) {
+                $local_all_params_loaded->{$template_id}->{$rule_id} = 0;
+                $UR::Context::all_params_loaded->{$template_id}->{$rule_id} = 0;
             }
             return;
         }
@@ -549,13 +538,13 @@ $DB::single=1;
 
         # If the rule had hints, mark that we loaded those things too, in all_params_loaded
         if ($hints_or_delegation) {
-            foreach my $hint_data ( @$hints_or_delegation ) {
-                my @values = map { $pending_db_object->$_ } @{$hint_data->[0]}; # source property names
-                my $rule_tmpl = $hint_data->[1];
-                my $related_obj_rule = $rule_tmpl->get_rule_for_values(@values);
-                $UR::Context::all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id} = undef;
-                $local_all_params_loaded->{$rule_tmpl->id}->{$related_obj_rule->id}++;
-             }
+            my $templates_and_rules = $fab_class->_lapl_data_for_delegation_data($hints_or_delegation,
+                                                                                 $next_db_row,
+                                                                                 $pending_db_object);
+            while ( my($template_id, $rule_id) = each %$templates_and_rules) {
+                $local_all_params_loaded->{$template_id}->{$rule_id}++;
+                $UR::Context::all_params_loaded->{$template_id}->{$rule_id} = undef;
+            }
         }
 
         # note all of the joins which follow this object as having been "done"
@@ -676,6 +665,38 @@ $DB::single=1;
     return $fabricator_obj;
 }
 
+
+# Given the data created in _resolve_delegation_data (rule templates and values/valuerefs)
+# return a hash of template IDs => rule IDs that need to be manipulated in local_all_params_loaded
+sub _lapl_data_for_delegation_data {
+    my($fab_class, $delegation_data_list, $next_db_row, $pending_db_object) = @_;
+
+    my %tmpl_and_rules;
+
+#$DB::single=1;
+    foreach my $delegation_data ( @$delegation_data_list ) {
+        my $value_sources = $delegation_data->[0];
+        my $rule_tmpl  = $delegation_data->[1];
+        my @values;
+        foreach my $value_source ( @$value_sources ) {
+            if (! ref($value_source)) {
+                push @values, $value_source;
+            } elsif (Scalar::Util::looks_like_number($$value_source)) {
+                push @values, $next_db_row->[$$value_source];
+            } elsif ($pending_db_object) {
+                my $method_name = $$value_source;
+                my $result = eval { $pending_db_object->$method_name };
+                push @values, $result;
+            } else {
+                Carp::croak("Can't resolve value for '".$$value_source."' in delegation data when there is no object involved");
+            }
+        }
+        my $rule = $rule_tmpl->get_rule_for_values(@values);
+        $tmpl_and_rules{$rule_tmpl->id} = $rule->id;
+    }
+    return \%tmpl_and_rules;
+}
+
 sub _resolve_delegation_data {
     my($fab_class,$rule,$loading_template,$query_plan,$local_all_params_loaded) = @_;
 
@@ -723,11 +744,24 @@ sub _resolve_delegation_data {
     return if $join->destination_is_all_id_properties();
 
     my @template_filter_names = @{$join->{'foreign_property_names'}};
-    my @where_values;
+    my @template_filter_values;
+    foreach my $name ( @template_filter_names ) {
+        my $column_num = $query_plan->column_index_for_class_property_and_object_num(
+                                          $join->{'foreign_class'},
+                                          $name,
+                                          $this_object_num);
+        if (defined $column_num) {
+             push @template_filter_values, \$column_num;
+        } else {
+             my $prop_name = $name;
+             push @template_filter_values, \$prop_name;
+        }
+    }
+
     if ($join->{'where'}) {
         for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
             push @template_filter_names, $join->{'where'}->[$i];
-            push @where_values, $join->{'where'}->[$i+1];
+            push @template_filter_values, $join->{'where'}->[$i+1];
         }
     }
 
@@ -741,7 +775,24 @@ sub _resolve_delegation_data {
             # We'll note that these related objects were loaded as a result of being
             # connected to the primary object by this value, and filtered by the
             # delegation property's value
-            push @template_filter_names, $delegation_final_property_meta->property_name;
+            my $delegation_final_property_name = $delegation_final_property_meta->property_name;
+            my $column_num = $query_plan->column_index_for_class_property_and_object_num(
+                                              $join->{'foreign_class'},
+                                              $delegation_final_property_name,
+                                              $this_object_num);
+            push @template_filter_names, $delegation_final_property_name;
+            if ($delegation_final_property_meta->column_name and ! defined ($column_num)) {
+                # sanity check
+                Carp::carp("Could not determine column offset in result set for property "
+                           . "$delegation_final_property_name of class " . $join->{'foreign_class'}
+                           . " even though it has column_name " . $delegation_final_property_meta->column_name);
+                $column_num = undef;
+            }
+            if (defined $column_num) {
+                push @template_filter_values, \$column_num;
+            } else {
+                push @template_filter_values, \$delegation_final_property_name;
+            }
         }
     }
 
@@ -749,6 +800,8 @@ sub _resolve_delegation_data {
     my @missing_prop_names;
     my @missing_values;
     for (my $i = 0; $i < @{ $join->{'foreign_property_names'}}; $i++) {
+        # we're using the source class/property here because we're going to denote that a value
+        # of the source class of the join matched nothing
         push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
         my $source_class = $join->{'source_class'};
         my $source_prop_name = $join->{'source_property_names'}->[$i];
@@ -769,13 +822,19 @@ sub _resolve_delegation_data {
             push @missing_values, $value;
         }
     }
-    my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names);
 
+    my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names);
 
     my $related_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
                                                             @template_filter_names);
+
     my(@hints_or_delegation, @delegations_with_no_objects);
-    push @hints_or_delegation, [ [ $related_rule_tmpl->_property_names ], $related_rule_tmpl];
+    # Items in the first listref can be one of three things:
+    # 1) a reference to an integer - meaning retrieve the value from this column in the result set
+    # 2) a reference to a string   - meaning retrieve the value from the object usign this as a property name
+    # 3) a string - meaning this is a literal value to fill in directly
+    # The second item is a rule template we'll be feeding these values in to
+    push @hints_or_delegation, [ \@template_filter_values, $related_rule_tmpl];
     push @delegations_with_no_objects, [\@missing_values, $missing_rule_tmpl];
 
     if ($hints{$delegated_property_name}) {
