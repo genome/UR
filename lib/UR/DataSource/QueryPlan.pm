@@ -437,6 +437,7 @@ sub _init_rdbms {
                     );
 
                 unless ($alias) {
+                    $self->needs_further_boolexpr_evaluation_after_loading(1);
                     next DELEGATED_PROPERTY;
                 }
 
@@ -821,6 +822,7 @@ sub _add_join {
             }
             @source_property_names;
     }
+    return unless @$source_table_and_column_names;
 
     #my @source_property_names = @{ $join->{source_property_names} };
     #my ($source_table_name, $fcols, $fprops) = $self->_resolve_table_and_column_data($source_class_object, @source_property_names);
