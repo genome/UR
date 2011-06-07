@@ -50,7 +50,7 @@ sub _render_header {
 
 sub _render_index {
     my $self = shift;
-    my @titles = grep { /./ } map { $_->title } $self->sections;
+    my @titles = grep { $_ and /./ } map { $_->title } $self->sections;
     my $i = 0;
     if (@titles) {
         $self->_append("\n<ul>\n".
