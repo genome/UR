@@ -796,7 +796,7 @@ sub _resolve_delegation_data {
         }
     }
 
-    # For missing objects,
+    # For missing objects, ie. a left join was done and it matched nothing
     my @missing_prop_names;
     my @missing_values;
     for (my $i = 0; $i < @{ $join->{'foreign_property_names'}}; $i++) {
