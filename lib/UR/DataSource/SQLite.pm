@@ -217,7 +217,7 @@ sub _get_sequence_name_for_table_and_column {
     my $self = shift->_singleton_object;
     my ($table_name,$column_name) = @_;
     
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     
     # See if the sequence generator "table" is already there
     my $seq_table = sprintf('URMETA_%s_%s_seq', $table_name, $column_name);
@@ -235,7 +235,7 @@ sub _get_sequence_name_for_table_and_column {
 sub _get_next_value_from_sequence {
     my($self,$sequence_name) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # FIXME can we use a statement handle with a wildcard as the table name here?
     unless ($dbh->do("INSERT into $sequence_name values(null)")) {
@@ -259,7 +259,7 @@ sub _get_next_value_from_sequence {
 sub get_column_details_from_data_dictionary {
     my($self,$catalog,$schema,$table,$column) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # Convert the SQL wildcards to regex wildcards
     $column = '' unless defined $column;
@@ -421,7 +421,7 @@ sub _resolve_fk_name {
 sub get_foreign_key_details_from_data_dictionary {
 my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # first, build a data structure to collect columns of the same foreign key together
     my %fk_info;
@@ -516,7 +516,7 @@ sub get_bitmap_index_details_from_data_dictionary {
 sub get_unique_index_details_from_data_dictionary {
 my($self,$table_name) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     return undef unless $dbh;
 
     # First, do a pass looking for unique indexes
@@ -611,7 +611,7 @@ sub _get_info_from_sqlite_master {
         $sql .= ' where '.join(' and ', @where);
     }
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     my $sth = $dbh->prepare($sql);
     unless ($sth) {
         no warnings;

@@ -61,7 +61,7 @@ sub _get_sequence_name_for_table_and_column {
     my $self = shift->_singleton_object;
     my ($table_name,$column_name) = @_;
     
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     
     # See if the sequence generator "table" is already there
     my $seq_table = sprintf('URMETA_%s_%s_SEQ', $table_name, $column_name);
@@ -80,7 +80,7 @@ sub _get_sequence_name_for_table_and_column {
 sub _get_next_value_from_sequence {
     my($self,$sequence_name) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # FIXME can we use a statement handle with a wildcard as the table name here?
     unless ($dbh->do("INSERT into $sequence_name values(null)")) {
@@ -109,7 +109,7 @@ sub get_bitmap_index_details_from_data_dictionary {
 sub set_savepoint {
 my($self,$sp_name) = @_;
 
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     my $sp = $dbh->quote($sp_name);
     $dbh->do("savepoint $sp_name");
 }
@@ -118,7 +118,7 @@ my($self,$sp_name) = @_;
 sub rollback_to_savepoint {
 my($self,$sp_name) = @_;
 
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     my $sp = $dbh->quote($sp_name);
     $dbh->do("rollback to savepoint $sp_name");
 }
@@ -128,7 +128,7 @@ my($self,$sp_name) = @_;
 sub get_unique_index_details_from_data_dictionary {
 my($self,$table_name) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     return undef unless $dbh;
 
     #$table_name = $dbh->quote($table_name);

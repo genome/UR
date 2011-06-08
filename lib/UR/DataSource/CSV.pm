@@ -85,7 +85,7 @@ sub _get_sequence_name_for_table_and_column {
     my $self = shift->_singleton_object;
     my ($table_name,$column_name) = @_;
     
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     
     # See if the sequence generator "table" is already there
     my $seq_table = sprintf('URMETA_%s_%s_seq', $table_name, $column_name);
@@ -105,7 +105,7 @@ sub _get_next_value_from_sequence {
 
     my($self,$sequence_name) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # FIXME can we use a statement handle with a wildcard as the table name here?
     unless ($dbh->do("INSERT into $sequence_name values(null)")) {
@@ -171,7 +171,7 @@ sub get_column_details_from_data_dictionary {
         my $header = $fh->getline();
         $header =~ s/\r|\n//g;  # Remove newline/CR
         
-        my @columns = split($self->get_default_dbh->{'csv_sep_char'} ||',' , $header);
+        my @columns = split($self->get_default_handle->{'csv_sep_char'} ||',' , $header);
         my $column_order = 0;
         foreach my $column_name ( @columns ) {
             $column_order++;
@@ -196,7 +196,7 @@ sub get_column_details_from_data_dictionary {
     }
 
     my $sponge = DBI->connect("DBI:Sponge:", '','')
-        or return $self->get_default_dbh->set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
+        or return $self->get_default_handle->set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
 
     my @returned_names = qw( TABLE_CAT TABLE_SCHEM TABLE_NAME COLUMN_NAME DATA_TYPE TYPE_NAME COLUMN_SIZE
                              BUFFER_LENGTH DECIMAL_DIGITS NUM_PREC_RADIX NULLABLE REMARKS COLUMN_DEF
@@ -205,7 +205,7 @@ sub get_column_details_from_data_dictionary {
         rows => [ map { [ @{$_}{@returned_names} ] } @found_columns ],
         NUM_OF_FIELDS => scalar @returned_names,
         NAME => \@returned_names,
-    }) or return $self->get_default_dbh->set_err($sponge->err(), $sponge->errstr());
+    }) or return $self->get_default_handle->set_err($sponge->err(), $sponge->errstr());
 
     return $returned_sth;
 }
@@ -217,7 +217,7 @@ sub get_foreign_key_details_from_data_dictionary {
 my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
 
     my $sponge = DBI->connect("DBI:Sponge:", '','')
-        or return $self->get_default_dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
+        or return $self->get_default_handle->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
 
     my @returned_names = qw( FK_NAME UK_TABLE_NAME UK_COLUMN_NAME FK_TABLE_NAME FK_COLUMN_NAME );
     my $table = $pk_table || $fk_table;
@@ -225,7 +225,7 @@ my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_
         rows => [],
         NUM_OF_FIELDS => scalar @returned_names,
         NAME => \@returned_names,
-    }) or return $self->get_default_dbh->DBI::set_err($sponge->err(), $sponge->errstr());
+    }) or return $self->get_default_handle->DBI::set_err($sponge->err(), $sponge->errstr());
 
     return $returned_sth;
 }
@@ -258,14 +258,14 @@ sub get_table_details_from_data_dictionary {
     }
         
     my $sponge = DBI->connect("DBI:Sponge:", '','')
-        or return $self->get_default_dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
+        or return $self->get_default_handle->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
 
     my @returned_names = qw( TABLE_CAT TABLE_SCHEM TABLE_NAME TABLE_TYPE REMARKS );
     my $returned_sth = $sponge->prepare("table_info $table", {
         rows => \@returned_details,
         NUM_OF_FIELDS => scalar @returned_names,
         NAME => \@returned_names,
-    }) or return $self->get_default_dbh->DBI::set_err($sponge->err(), $sponge->errstr());
+    }) or return $self->get_default_handle->DBI::set_err($sponge->err(), $sponge->errstr());
 
     $returned_sth;
 }

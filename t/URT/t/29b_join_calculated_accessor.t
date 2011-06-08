@@ -25,7 +25,7 @@ is(scalar(@emp), 2, 'Got 2 employees of CoolCo');
 # define the data source, create a table and classes for it
 sub setup {
 
-    my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+    my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
     ok($dbh, 'Got DB handle');
     ok($dbh->do('create table BOSS (boss_id int, first_name varchar, last_name varchar, company varchar)'),
        'create table BOSS');

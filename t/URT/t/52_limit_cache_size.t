@@ -91,7 +91,7 @@ is(scalar(@things), 99,'re-got all URT::Things after they were purged from the c
 
 
 sub setup_classes_and_db {
-    my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+    my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 
     ok($dbh, 'Got DB handle');
 

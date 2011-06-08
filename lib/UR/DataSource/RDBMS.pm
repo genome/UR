@@ -541,7 +541,7 @@ sub _get_table_names_from_data_dictionary {
     if (@_) {
         Carp::confess("get_tables does not currently take filters!  FIXME.");
     }    
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     my $owner = $self->owner;    
 
     # FIXME  This will fix the immediate problem of getting classes to be created out of 
@@ -571,7 +571,7 @@ sub _get_whatever_details_from_data_dictionary {
     my $self = shift;
     my $method = shift;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     return unless $dbh;
 
     return $dbh->$method(@_);
@@ -1511,7 +1511,7 @@ sub create_iterator_closure_for_rule {
     $sql .= "\n$group_by_clause" if $group_by_clause;
     $sql .= "\n$order_by_clause" if $order_by_clause;
 
-    my $dbh = $self->get_default_dbh;    
+    my $dbh = $self->get_default_handle;
     my $sth = $dbh->prepare($sql,$query_config);
     unless ($sth) {
         $class->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
@@ -1713,7 +1713,7 @@ sub _resolve_ids_from_class_name_and_sql {
 
     # query for the ids
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     my $sth = $dbh->prepare($query);
 
@@ -1755,7 +1755,7 @@ sub _sync_database {
         push @{ $objects_by_class_name{$class_name} }, $obj;
     }
 
-    my $dbh = $self->get_default_dbh;    
+    my $dbh = $self->get_default_handle;
 
     #
     # Determine what commands need to be executed on the database
@@ -2369,7 +2369,7 @@ sub _sync_database {
             unless ($sth{$cmd->{sql}}->execute(@{$cmd->{params}}))
             {
                 #my $dbh = $cmd->{class}->dbh;
-                # my $dbh = UR::Context->resolve_data_source_for_object($cmd->{class})->get_default_dbh;
+                # my $dbh = UR::Context->resolve_data_source_for_object($cmd->{class})->get_default_handle;
                 push @failures, {cmd => $cmd, error_message => $sth{$cmd->{sql}}->errstr};
                 last if $skip_fault_tolerance_check;
             }
@@ -2458,7 +2458,7 @@ sub _reverse_sync_database {
     unless ($self->can_savepoint) {
         # This will not respect manual DML
         # Developers must not use this back door on non-savepoint databases.
-        $self->get_default_dbh->rollback;
+        $self->get_default_handle->rollback;
         return "NONE";
     }
 
@@ -2469,7 +2469,7 @@ sub _reverse_sync_database {
 
     my $sp_name = "sp".$savepoint;
     unless ($self->rollback_to_savepoint($sp_name)) {
-        $self->error_message("Error removing savepoint $savepoint " . $self->get_default_dbh->errstr);
+        $self->error_message("Error removing savepoint $savepoint " . $self->get_default_handle->errstr);
         return 1;
     }
 
@@ -2722,7 +2722,7 @@ sub _default_save_sql_for_object {
                                        params       => \@update_values,
                                        class        => $table_class,
                                        id           => $id,
-                                       dbh          => $data_source->get_default_dbh
+                                       dbh          => $data_source->get_default_handle
                                      };
                 push @commands, $update_command;
             }
@@ -2739,7 +2739,7 @@ sub _default_save_sql_for_object {
                               params       => \@values,
                               class        => $table_class,
                               id           => $id,
-                              dbh          => $data_source->get_default_dbh
+                              dbh          => $data_source->get_default_handle
                            };
 
             #print Data::Dumper::Dumper \@commands;
@@ -2810,7 +2810,7 @@ sub _default_save_sql_for_object {
                                   params       => \@all_values,
                                   class        => $table_class,
                                   id           => $id,
-                                  dbh          => $data_source->get_default_dbh
+                                  dbh          => $data_source->get_default_handle
                                 };
             }
         }
@@ -2871,7 +2871,7 @@ sub _default_save_sql_for_object {
                                   params       => \@insert_values,
                                   class        => $table_class,
                                   id           => $id,
-                                  dbh          => $data_source->get_default_dbh
+                                  dbh          => $data_source->get_default_handle
                                 };
 
                 ##$DB::single = 1;
@@ -2894,7 +2894,7 @@ sub _default_save_sql_for_object {
                                   params       => \@update_values,
                                   class        => $table_class,
                                   id           => $id,
-                                  dbh          => $data_source->get_default_dbh
+                                  dbh          => $data_source->get_default_handle
                                 };
             }
             else 
@@ -2906,7 +2906,7 @@ sub _default_save_sql_for_object {
                                   params       => \@values,
                                   class        => $table_class,
                                   id           => $id,
-                                  dbh          => $data_source->get_default_dbh
+                                  dbh          => $data_source->get_default_handle
                                 };
             }
 
@@ -2927,7 +2927,7 @@ sub _do_on_default_dbh {
 
     return 1 unless $self->has_default_dbh();
 
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     unless ($dbh->$method(@_)) {
         $self->error_message("DataSource ",$self->get_name," failed to $method: ",$dbh->errstr);
         return undef;
@@ -3033,7 +3033,7 @@ sub _generate_class_data_for_loading {
     if (@lob_column_names) {
         $query_config = $self->_prepare_for_lob;
         if ($query_config) {
-            my $dbh = $self->get_default_dbh;
+            my $dbh = $self->get_default_handle;
             my $results_row_arrayref;
             my @lob_ids;
             my @lob_values;

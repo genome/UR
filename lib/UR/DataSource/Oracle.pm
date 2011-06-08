@@ -21,7 +21,7 @@ sub can_savepoint { 1 }  # Oracle supports savepoints inside transactions
 sub set_savepoint {
 my($self,$sp_name) = @_;
 
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     my $sp = $dbh->quote($sp_name);
     $dbh->do("savepoint $sp_name");
 }
@@ -30,7 +30,7 @@ my($self,$sp_name) = @_;
 sub rollback_to_savepoint {
 my($self,$sp_name) = @_;
 
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     my $sp = $dbh->quote($sp_name);
     $dbh->do("rollback to $sp_name");
 }
@@ -94,7 +94,7 @@ sub get_table_last_ddl_times_by_table_name {
         where o.owner = ?
         and (o.object_type = 'TABLE' or o.object_type = 'VIEW')
     |;
-    my $data = $self->get_default_dbh->selectall_arrayref(
+    my $data = $self->get_default_handle->selectall_arrayref(
         $sql, 
         undef, 
         $self->owner
@@ -106,7 +106,7 @@ sub _get_next_value_from_sequence {
 my($self,$sequence_name) = @_;
 
     # we may need to change how this db handle is gotten
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     my $new_id = $dbh->selectrow_array("SELECT " . $sequence_name . ".nextval from DUAL");
 
     if ($dbh->err) {
@@ -131,7 +131,7 @@ my($self,$table_name) = @_;
         $sql .= " and i.table_owner = ? and i.table_name = ?";
     }
 
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     my $rows = $dbh->selectall_arrayref($sql, undef, @select_params);
     return undef unless $rows;
     
@@ -165,7 +165,7 @@ sub get_unique_index_details_from_data_dictionary {
         and aic.index_owner = ?
     );
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     return undef unless $dbh;
 
     my $sth = $dbh->prepare($sql);
@@ -194,7 +194,7 @@ sub set_userenv {
 
     my ($self, %p) = @_;
 
-    my $dbh = $p{'dbh'} || $self->get_default_dbh();
+    my $dbh = $p{'dbh'} || $self->get_default_handle();
 
     # module is application name
     my $module = $p{'module'} || $0;
@@ -224,7 +224,7 @@ sub get_userenv {
     my ($self, $dbh) = @_;
 
     if (!$dbh) {
-        $dbh = $self->get_default_dbh();
+        $dbh = $self->get_default_handle();
     }
 
     if (!$dbh) {
