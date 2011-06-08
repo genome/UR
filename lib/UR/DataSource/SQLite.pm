@@ -341,16 +341,16 @@ sub _resolve_fk_name {
     my $fk_name;
     if (@$column_list > 1) {
         # Multiple column FKs must be specified as a table-wide constraint, and has a well-known format
-        my $fk_list = join('\s*,\s*', @$column_list);
-        my $uk_list = join('\s*,\s*', @$r_column_list);
-        my $expected_to_find = sprintf('FOREIGN KEY \(%s\) REFERENCES %s\s*\(%s\)',
+        my $fk_list = '\s*' . join('\s*,\s*', @$column_list) . '\s*';
+        my $uk_list = '\s*' . join('\s*,\s*', @$r_column_list) . '\s*';
+        my $expected_to_find = sprintf('FOREIGN KEY\s*\(%s\) REFERENCES %s\s*\(%s\)',
                                $fk_list,
                                $r_table_name,
                                $uk_list);
         my $regex = qr($expected_to_find)i;
 
         if ($col_str =~ m/$regex/) {
-            ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY \($fk_list\)/i);
+            ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY\s*\($fk_list\)/i);
         } else {
             # Didn't find anything...
             return;
@@ -361,8 +361,8 @@ sub _resolve_fk_name {
         # First, try as a table-wide constraint
         my $col = $column_list->[0];
         my $r_col = $r_column_list->[0];
-        if ($col_str =~ m/FOREIGN KEY \($col\) REFERENCES $r_table_name\s*\($r_col\)/i) {
-            ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY \($col\)/i);
+        if ($col_str =~ m/FOREIGN KEY\s*\($col\)\s*REFERENCES $r_table_name\s*\($r_col\)/i) {
+            ($fk_name) = ($col_str =~ m/CONSTRAINT\s+(\w+)\s+FOREIGN KEY\s*\($col\)/i);
         } else {
             while ($col_str) {
                 # Try parsing each of the column definitions
