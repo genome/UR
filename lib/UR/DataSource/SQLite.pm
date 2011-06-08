@@ -262,7 +262,10 @@ sub get_column_details_from_data_dictionary {
     my $dbh = $self->get_default_dbh();
 
     # Convert the SQL wildcards to regex wildcards
-    $column =~ tr/%_/*./;
+    $column = '' unless defined $column;
+    $column =~ s/%/.*/;
+    $column =~ s/_/./;
+    my $column_regex = qr(^$column$);
 
     my $sth_tables = $dbh->table_info($catalog, $schema, $table, '');
     my @table_names = map { $_->{'TABLE_NAME'} } @{ $sth_tables->fetchall_arrayref({}) };
@@ -275,6 +278,9 @@ sub get_column_details_from_data_dictionary {
         $sth->execute() or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
 
         while (my $info = $sth->fetchrow_hashref()) {
+
+            next unless $info->{'name'} =~ m/$column_regex/;
+
             my $node = {};
             $node->{'TABLE_CAT'} = $catalog;
             $node->{'TABLE_SCHEM'} = $schema;
