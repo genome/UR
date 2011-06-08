@@ -3096,10 +3096,9 @@ sub has_changes {
 sub commit {
     my $self = shift;
 
-    unless ($self) {
-        warn 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context';
-        $self = UR::Context->current();
-    }
+    warn 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless $self;
+    $self = UR::Context->current() if (not $self || not ref $self);
+
     $self->__signal_change__('precommit');
 
     unless ($self->_sync_databases) {
