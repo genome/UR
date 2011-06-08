@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 44;
+use Test::More tests => 80;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -16,6 +16,45 @@ isa_ok($dbh, 'UR::DBI::db', 'Returned handle is the proper class');
 &setup_schema($dbh);
 
 &test_foreign_key_handling();
+
+&test_column_details();
+
+
+
+sub test_column_details {
+    my $sth = URT::DataSource::SomeSQLite->get_column_details_from_data_dictionary('','','inline','%');
+
+    my @results;
+    while (my $row = $sth->fetchrow_hashref) {
+        my $saved_row;
+        foreach my $key ( qw( TABLE_NAME COLUMN_NAME DATA_TYPE COLUMN_SIZE NULLABLE COLUMN_DEF ) ) {
+            $saved_row->{$key} = $row->{$key};
+        }
+        push @results, $saved_row;
+    }
+    @results = sort { $a->{'COLUMN_NAME'} cmp $b->{'COLUMN_NAME'} } @results;
+
+    my @expected = ( { TABLE_NAME  => 'inline',
+                       COLUMN_NAME => 'id',
+                       DATA_TYPE   => 'integer',
+                       COLUMN_SIZE => undef,
+                       NULLABLE    => 1,
+                       COLUMN_DEF  => undef,
+                     },
+                     { TABLE_NAME  => 'inline',
+                       COLUMN_NAME => 'name',
+                       DATA_TYPE   => 'varchar',
+                       COLUMN_SIZE => 255,
+                       NULLABLE    => 1,
+                       COLUMN_DEF  => 'some name',
+                     },
+                  );
+    is_deeply(\@results,
+              \@expected,
+               'column details for table inline are correct');
+}
+
+    
 
 
 sub test_foreign_key_handling {
@@ -57,7 +96,7 @@ sub setup_schema {
     ok( $dbh->do('CREATE TABLE foo (id1 integer, id2 integer, PRIMARY KEY (id1, id2))'),
         'create table (foo) with 2 primary keys');
 
-    ok($dbh->do('CREATE TABLE inline (id integer PRIMARY KEY REFERENCES foo(id1), name varchar)'),
+    ok($dbh->do("CREATE TABLE inline (id integer PRIMARY KEY REFERENCES foo(id1), name varchar(255) default 'some name')"),
        'create table with one inline foreign key to foo');
 
     ok($dbh->do('CREATE TABLE inline_s (id integer PRIMARY KEY REFERENCES foo (id1) , name varchar)'),

@@ -281,22 +281,32 @@ sub get_column_details_from_data_dictionary {
 
             next unless $info->{'name'} =~ m/$column_regex/;
 
+            # SQLite doesn't parse our that type varchar(255) actually means type varchar size 255
+            my $data_type = $info->{'type'};
+            my $column_size;
+            if ($data_type =~ m/(\S+)\s*\((\S+)\)/) {
+                $data_type = $1;
+                $column_size = $2;
+            }
+
             my $node = {};
             $node->{'TABLE_CAT'} = $catalog;
             $node->{'TABLE_SCHEM'} = $schema;
             $node->{'TABLE_NAME'} = $table_name;
             $node->{'COLUMN_NAME'} = $info->{'name'};
-            $node->{'DATA_TYPE'} = $info->{'type'};  # FIXME shouldn't this be converted to some cannonical list?
-            $node->{'TYPE_NAME'} = $info->{'type'};
-            $node->{'COLUMN_SIZE'} = undef;    # FIXME parse the type field to figure it out
+            $node->{'DATA_TYPE'} = $data_type;
+            $node->{'TYPE_NAME'} = $data_type;
+            $node->{'COLUMN_SIZE'} = $column_size;
             $node->{'NULLABLE'} = ! $info->{'notnull'};
             $node->{'IS_NULLABLE'} = ($node->{'NULLABLE'} ? 'YES' : 'NO');
             $node->{'REMARKS'} = "";
-            $node->{'COLUMN_DEF'} = $info->{'dflt_value'};
             $node->{'SQL_DATA_TYPE'} = "";  # FIXME shouldn't this be something related to DATA_TYPE
             $node->{'SQL_DATETIME_SUB'} = "";
             $node->{'CHAR_OCTET_LENGTH'} = undef;  # FIXME this should be the same as column_size, right?
             $node->{'ORDINAL_POSITION'} = $info->{'cid'};
+            $node->{'COLUMN_DEF'} = $info->{'dflt_value'};
+            # Remove starting and ending 's that appear erroneously with string default values
+            $node->{'COLUMN_DEF'} =~ s/^'|'$//g if defined ( $node->{'COLUMN_DEF'});
 
             push @columns, $node;
         }
