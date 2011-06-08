@@ -3094,10 +3094,11 @@ sub has_changes {
 }
 
 sub commit {
-    my $self = shift;
 
-    warn 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless $self;
-    $self = UR::Context->current() unless ($self and ref $self);
+    Carp::carp 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless @_;
+
+    my $self = shift;
+    $self = UR::Context->current() unless ref $self;
 
     $self->__signal_change__('precommit');
 
