@@ -3097,7 +3097,7 @@ sub commit {
     my $self = shift;
 
     warn 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless $self;
-    $self = UR::Context->current() if (not $self || not ref $self);
+    $self = UR::Context->current() unless ($self and ref $self);
 
     $self->__signal_change__('precommit');
 
