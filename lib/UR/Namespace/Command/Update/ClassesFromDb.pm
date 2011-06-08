@@ -1085,7 +1085,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         my @expected_pk_cols = grep { defined }
                                map { $_->column_name }
-                               $class->direct_id_property_metas;
+                               grep { defined $_->is_id }
+                               @properties;
         
         my @pk_cols = $table->primary_key_constraint_column_names;
         
@@ -1138,7 +1139,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         if ($property_meta && $property_meta->column_name && scalar($class_meta->direct_id_property_metas) > 1) {
             $self->warning_message("Class $class_name cannot have multiple ID properties when one concrete ID property is named 'id'. It will likely not function correctly unless it is renamed");
         }
-        unless ($property_meta->is_id) {
+        unless (defined $property_meta->is_id) {
             $self->warning_message("Class $class_name has a property named 'id' that is not an ID property.  It will likely not function correctly unless it is renamed");
         }
     }
