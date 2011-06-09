@@ -163,12 +163,12 @@ sub filter
 }
 
 sub __display_name__ {
-    my $self = $_[0];
-    my $msg = uc($self->type) . ": " . $self->desc;
-    my @properties = $self->properties;
-    if (@properties) {
-        $msg .= " on " . join(",",@properties);
-    }
+    my $self = shift;
+    my $desc = $self->desc;
+    my $prefix = uc($self->type);
+    my @properties = map { "'$_'" } $self->properties;
+    my $prop_noun = scalar(@properties) > 1 ? 'properties' : 'property';
+    my $msg = "$prefix: $prop_noun " . join(', ', @properties) . ": $desc";
     return $msg;
 }
 
