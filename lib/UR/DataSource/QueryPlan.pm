@@ -240,7 +240,7 @@ sub _init_rdbms {
         while (my $property_name = shift @properties_involved) {
             my (@pmeta) = $class_meta->property_meta_for_name($property_name);
             unless (@pmeta) {
-                push @errors, "No property metadata found for '$property_name' on class " . $class_meta->id;
+                push @errors, "Class ".$class_meta->id." has no property named '$property_name'";
                 next;
             }
             
@@ -317,8 +317,8 @@ sub _init_rdbms {
 
         if (@errors) { 
             my $class_name = $class_meta->class_name;
-            $ds->error_message("ERRORS PROCESSING PARAMTERS: (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
-            print Data::Dumper::Dumper($rule_template);
+            $ds->error_message("ERRORS PROCESSING PARAMTERS: (" . join("\n", @errors) . ") used to generate SQL for $class_name!");
+            #print Data::Dumper::Dumper($rule_template);
             Carp::croak("Can't continue");
         }
     };
