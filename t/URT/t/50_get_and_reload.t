@@ -9,7 +9,7 @@ use URT;
 use Test::More tests => 64;
 use URT::DataSource::SomeSQLite;
 
-my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 &setup_classes_and_db($dbh);
 
 foreach my $class ( 'URT::Thing', 'URT::SubclassedThing' ) {

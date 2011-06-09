@@ -141,7 +141,7 @@ foreach my $test_class ( 'URT::Thing', 'URT::Fruit', 'URT::Apple', 'URT::Vehicle
 
 
 sub setup_classes_and_db {
-    my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+    my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 
     ok($dbh, 'Got DB handle');
 

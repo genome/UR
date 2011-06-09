@@ -309,6 +309,18 @@ the properties of any parent classes which are inherited by this class.
 
 See L<UR::Object::Property> for details.
 
+=item id_properties
+
+  @all_id = $class_obj->id_properties();
+
+  @some = $class_obj->properties(
+      'is                    => ['Text','Number']
+      'doc like'             => '%important%',
+      'property_name like'   => 'someprefix_%',
+  );
+
+Like properties(), but only returns ID property metadata.
+
 =item property
 
   $property_meta = $class_obj->property('someproperty');

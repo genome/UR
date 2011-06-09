@@ -101,7 +101,10 @@ sub mk_id_based_object_accessor {
                     $id_decomposer = undef;
                     $id_resolver = undef;
                     $self->$id_class_by($concrete_r_class_name);
-                }
+                } elsif (! Scalar::Util::blessed($object_value) and ! $object_value->can('id')) {
+                    Carp::croak("Can't call method \"id\" without a package or object reference.  Expected an object as parameter to $accessor_name, not '$object_value'");
+                 }
+
                 $id_decomposer ||= $concrete_r_class_name->__meta__->get_composite_id_decomposer;
                 @id = $id_decomposer->($object_value->id);
                 if (@$id_by == 1) {

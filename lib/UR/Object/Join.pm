@@ -338,4 +338,23 @@ sub _resolve_reverse {
     return @joins;
 }
 
+
+# Return true if the foreign-end of the join includes all the ID properties of
+# the foreign class.  Used by the ObjectFabricator when it is determining whether or
+# not to include more rules in the all_params_loaded hash for delegations
+sub destination_is_all_id_properties {
+    my $self = shift;
+
+    my $foreign_class_meta = $self->{'foreign_class'}->__meta__;
+    my %join_properties = map { $_ => 1 } @{$self->{'foreign_property_names'}};
+    my $join_has_all_id_props = 1;
+    foreach my $foreign_id_meta (  $foreign_class_meta->all_id_property_metas ) {
+        next if $foreign_id_meta->class_name eq 'UR::Object';  # Skip the manufactured 'id' property
+        next if (delete $join_properties{ $foreign_id_meta->property_name });
+        $join_has_all_id_props = 0;
+    }
+    return $join_has_all_id_props;
+}
+
+
 1;

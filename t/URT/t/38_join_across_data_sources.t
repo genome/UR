@@ -205,7 +205,7 @@ UR::Object::Type->define(
 
 
 sub populate_databases {
-    my $dbh = URT::DataSource::SomeSQLite1->get_default_dbh();
+    my $dbh = URT::DataSource::SomeSQLite1->get_default_handle();
     ok($dbh, 'Got db handle for URT::DataSource::SomeSQLite1');
 
     ok($dbh->do("create table primary_table (primary_id integer PRIMARY KEY, primary_value varchar, rel_id integer)"),
@@ -225,7 +225,7 @@ sub populate_databases {
 
     ok($dbh->commit(), "Commit SomeSQLite1 DB");
 
-    $dbh = URT::DataSource::SomeSQLite2->get_default_dbh();
+    $dbh = URT::DataSource::SomeSQLite2->get_default_handle();
     ok($dbh, 'Got db handle for URT::DataSource::SomeSQLite2');
 
     ok($dbh->do("create table related (related_id integer PRIMARY KEY, related_value varchar)"),
@@ -244,9 +244,9 @@ sub populate_databases {
 sub clean_tmp_dir {
     my $tmp_dir = shift;
 
-    my $dbh = URT::DataSource::SomeSQLite1->get_default_dbh();
+    my $dbh = URT::DataSource::SomeSQLite1->get_default_handle();
     $dbh->disconnect();
-    $dbh = URT::DataSource::SomeSQLite2->get_default_dbh();
+    $dbh = URT::DataSource::SomeSQLite2->get_default_handle();
     $dbh->disconnect();
 
     #diag("Cleanup tmp dir");

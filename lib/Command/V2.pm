@@ -299,7 +299,6 @@ for my $type (qw/error warning status debug usage/) {
 }
 
 
-
 1;
 
 __END__

@@ -41,7 +41,7 @@ ok(cleanup(), 'Removed schema');
 # define the data source, create a table and classes for it
 sub setup {
 
-    my $dbh = URT::DataSource::SomeSQLite->get_default_dbh || return;
+    my $dbh = URT::DataSource::SomeSQLite->get_default_handle || return;
     $dbh->do('create table if not exists BOSS (boss_id int, first_name varchar, last_name varchar, company varchar)') || return;
     $dbh->do('create table if not exists EMPLOYEE (emp_id int, name varchar, is_secret boolean, boss_id int CONSTRAINT boss_fk references BOSS(BOSS_ID))') || return;
 
@@ -104,7 +104,7 @@ sub setup {
 
 
 sub cleanup {
-    my $dbh = URT::DataSource::SomeSQLite->get_default_dbh || return;
+    my $dbh = URT::DataSource::SomeSQLite->get_default_handle || return;
     $dbh->do('drop table BOSS') || return;
     $dbh->do('drop table EMPLOYEE') || return;
    

@@ -37,7 +37,7 @@ sub can_savepoint { 1;}
 sub set_savepoint {
 my($self,$sp_name) = @_;
 
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     $dbh->pg_savepoint($sp_name);
 }
 
@@ -45,7 +45,7 @@ my($self,$sp_name) = @_;
 sub rollback_to_savepoint {
 my($self,$sp_name) = @_;
 
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     $dbh->pg_rollback_to($sp_name);
 }
 
@@ -69,7 +69,7 @@ sub _get_next_value_from_sequence {
 my($self,$sequence_name) = @_;
 
     # we may need to change how this db handle is gotten
-    my $dbh = $self->get_default_dbh;
+    my $dbh = $self->get_default_handle;
     my($new_id) = $dbh->selectrow_array("SELECT nextval('$sequence_name')");
 
     if ($dbh->err) {
@@ -109,7 +109,7 @@ my($self,$table_name) = @_;
           and i.indisvalid = 't'
     );
     
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     return undef unless $dbh;
 
     my $sth = $dbh->prepare($sql);

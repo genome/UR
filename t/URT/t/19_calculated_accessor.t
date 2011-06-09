@@ -95,7 +95,7 @@ is($line->sub_total,10, "got the correct sub-total");
 # Make a cached+calculated property that is also saved in the database
 use URT::DataSource::SomeSQLite;
 
-my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 $dbh->do('create table thing (thing_id integer, name varchar, munged_name varchar)');
 $dbh->do("insert into thing values (1234,'Bob', 'munged Bob')");
 $dbh->do("Insert into thing values (2345,'Fred', null)");

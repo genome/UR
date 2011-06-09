@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 21;
+use Test::More tests => 23;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -41,6 +41,12 @@ is(scalar(keys %props), 4, 'Parent class property count correct');
 is($props{'id_prop_a'}->is_id, '0 but true', 'id_prop_a is an ID property and has the correct rank');
 is($props{'id_prop_b'}->is_id, '1', 'id_prop_b is an ID property and has the correct rank');
 is($props{'prop_c'}->is_id, undef, 'prop_c is not an ID property');
+
+my %id_props = map { $_->property_name => 1 } $c3_parent->id_properties;
+is(scalar(keys %id_props), 3, 'Parent class id property count correct');
+is_deeply(\%id_props,
+          { id_prop_a => 1, id_prop_b => 1, id => 1 },
+          'all ID properties are there');
         
 my $c3 = UR::Object::Type->define(
              class_name => 'URT::Baz',

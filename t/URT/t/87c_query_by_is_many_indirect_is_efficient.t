@@ -141,12 +141,10 @@ is($query_count, 1, 'Made 1 query');  # Needed to query since the first via URT:
 
 $query_count = 0;
 @people = URT::Person->get(is_cool => 0, -hints => ['cars']);
-is(scalar(@people), 3, "got three people, with a hint to get their cars, when only one actually has cars");
+is(scalar(@people), 3, "got three people, with a hint to get their cars, when one has no cars");
 for my $person (@people) {
     my @cars = $person->cars();
     note("person $person has " . scalar(@cars) . " cars");
 }
-is($query_count, 2, 'Made 2 queries because we have to (sadly) re-query for the one person with zero cars');
+is($query_count, 1, 'Made 1 query. The hints loaded all the related cars');
 
-#$query_count = 0;
-#@people = URT::Person->get(

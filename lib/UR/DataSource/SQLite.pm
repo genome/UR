@@ -217,7 +217,7 @@ sub _get_sequence_name_for_table_and_column {
     my $self = shift->_singleton_object;
     my ($table_name,$column_name) = @_;
     
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     
     # See if the sequence generator "table" is already there
     my $seq_table = sprintf('URMETA_%s_%s_seq', $table_name, $column_name);
@@ -235,7 +235,7 @@ sub _get_sequence_name_for_table_and_column {
 sub _get_next_value_from_sequence {
     my($self,$sequence_name) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # FIXME can we use a statement handle with a wildcard as the table name here?
     unless ($dbh->do("INSERT into $sequence_name values(null)")) {
@@ -259,10 +259,13 @@ sub _get_next_value_from_sequence {
 sub get_column_details_from_data_dictionary {
     my($self,$catalog,$schema,$table,$column) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # Convert the SQL wildcards to regex wildcards
-    $column =~ tr/%_/*./;
+    $column = '' unless defined $column;
+    $column =~ s/%/.*/;
+    $column =~ s/_/./;
+    my $column_regex = qr(^$column$);
 
     my $sth_tables = $dbh->table_info($catalog, $schema, $table, '');
     my @table_names = map { $_->{'TABLE_NAME'} } @{ $sth_tables->fetchall_arrayref({}) };
@@ -275,22 +278,35 @@ sub get_column_details_from_data_dictionary {
         $sth->execute() or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
 
         while (my $info = $sth->fetchrow_hashref()) {
+
+            next unless $info->{'name'} =~ m/$column_regex/;
+
+            # SQLite doesn't parse our that type varchar(255) actually means type varchar size 255
+            my $data_type = $info->{'type'};
+            my $column_size;
+            if ($data_type =~ m/(\S+)\s*\((\S+)\)/) {
+                $data_type = $1;
+                $column_size = $2;
+            }
+
             my $node = {};
             $node->{'TABLE_CAT'} = $catalog;
             $node->{'TABLE_SCHEM'} = $schema;
             $node->{'TABLE_NAME'} = $table_name;
             $node->{'COLUMN_NAME'} = $info->{'name'};
-            $node->{'DATA_TYPE'} = $info->{'type'};  # FIXME shouldn't this be converted to some cannonical list?
-            $node->{'TYPE_NAME'} = $info->{'type'};
-            $node->{'COLUMN_SIZE'} = undef;    # FIXME parse the type field to figure it out
+            $node->{'DATA_TYPE'} = $data_type;
+            $node->{'TYPE_NAME'} = $data_type;
+            $node->{'COLUMN_SIZE'} = $column_size;
             $node->{'NULLABLE'} = ! $info->{'notnull'};
             $node->{'IS_NULLABLE'} = ($node->{'NULLABLE'} ? 'YES' : 'NO');
             $node->{'REMARKS'} = "";
-            $node->{'COLUMN_DEF'} = $info->{'dflt_value'};
             $node->{'SQL_DATA_TYPE'} = "";  # FIXME shouldn't this be something related to DATA_TYPE
             $node->{'SQL_DATETIME_SUB'} = "";
             $node->{'CHAR_OCTET_LENGTH'} = undef;  # FIXME this should be the same as column_size, right?
             $node->{'ORDINAL_POSITION'} = $info->{'cid'};
+            $node->{'COLUMN_DEF'} = $info->{'dflt_value'};
+            # Remove starting and ending 's that appear erroneously with string default values
+            $node->{'COLUMN_DEF'} =~ s/^'|'$//g if defined ( $node->{'COLUMN_DEF'});
 
             push @columns, $node;
         }
@@ -341,16 +357,16 @@ sub _resolve_fk_name {
     my $fk_name;
     if (@$column_list > 1) {
         # Multiple column FKs must be specified as a table-wide constraint, and has a well-known format
-        my $fk_list = join('\s*,\s*', @$column_list);
-        my $uk_list = join('\s*,\s*', @$r_column_list);
-        my $expected_to_find = sprintf('FOREIGN KEY \(%s\) REFERENCES %s\s*\(%s\)',
+        my $fk_list = '\s*' . join('\s*,\s*', @$column_list) . '\s*';
+        my $uk_list = '\s*' . join('\s*,\s*', @$r_column_list) . '\s*';
+        my $expected_to_find = sprintf('FOREIGN KEY\s*\(%s\) REFERENCES %s\s*\(%s\)',
                                $fk_list,
                                $r_table_name,
                                $uk_list);
         my $regex = qr($expected_to_find)i;
 
         if ($col_str =~ m/$regex/) {
-            ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY \($fk_list\)/i);
+            ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY\s*\($fk_list\)/i);
         } else {
             # Didn't find anything...
             return;
@@ -361,8 +377,8 @@ sub _resolve_fk_name {
         # First, try as a table-wide constraint
         my $col = $column_list->[0];
         my $r_col = $r_column_list->[0];
-        if ($col_str =~ m/FOREIGN KEY \($col\) REFERENCES $r_table_name\s*\($r_col\)/i) {
-            ($fk_name) = ($col_str =~ m/CONSTRAINT (\w+) FOREIGN KEY \($col\)/i);
+        if ($col_str =~ m/FOREIGN KEY\s*\($col\)\s*REFERENCES $r_table_name\s*\($r_col\)/i) {
+            ($fk_name) = ($col_str =~ m/CONSTRAINT\s+(\w+)\s+FOREIGN KEY\s*\($col\)/i);
         } else {
             while ($col_str) {
                 # Try parsing each of the column definitions
@@ -405,7 +421,7 @@ sub _resolve_fk_name {
 sub get_foreign_key_details_from_data_dictionary {
 my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
 
     # first, build a data structure to collect columns of the same foreign key together
     my %fk_info;
@@ -500,7 +516,7 @@ sub get_bitmap_index_details_from_data_dictionary {
 sub get_unique_index_details_from_data_dictionary {
 my($self,$table_name) = @_;
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     return undef unless $dbh;
 
     # First, do a pass looking for unique indexes
@@ -595,7 +611,7 @@ sub _get_info_from_sqlite_master {
         $sql .= ' where '.join(' and ', @where);
     }
 
-    my $dbh = $self->get_default_dbh();
+    my $dbh = $self->get_default_handle();
     my $sth = $dbh->prepare($sql);
     unless ($sth) {
         no warnings;
