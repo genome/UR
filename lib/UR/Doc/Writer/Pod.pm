@@ -18,6 +18,7 @@ sub render {
     $self->_render_index;
     map { $self->_render_section($_) } $self->sections;
     $self->_render_footer;
+    return $self->content;
 }
 
 sub _render_header {
@@ -49,7 +50,6 @@ sub _render_section {
 
 sub _render_footer {
     my $self = shift;
-    $self->_append("=cut\n\n");
 }
 
 1;

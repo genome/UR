@@ -6,6 +6,7 @@ our $entry_point_class;
 our $entry_point_bin;
 
 use Term::ANSIColor;
+use Pod::Simple::Text;
 require Text::Wrap;
 
 # This is changed with "local" where used in some places
@@ -74,7 +75,6 @@ sub doc_help {
     my $synopsis = $self->help_synopsis;
     my $required_args = $self->help_options(is_optional => 0);
     my $optional_args = $self->help_options(is_optional => 1);
-    my $sub_commands = '';
     $text = sprintf(
         "\n%s\n%s\n\n%s%s%s%s%s\n",
         Term::ANSIColor::colored('USAGE', 'underline'),
@@ -99,11 +99,7 @@ sub doc_help {
         sprintf(
             "%s\n%s\n", 
             Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
-            Text::Wrap::wrap(' ', ' ', $self->help_detail || '')
-        ),
-        ( $sub_commands 
-            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
-            : ''
+            _pod2txt($self->help_detail || '')
         ),
     );
 
@@ -173,26 +169,12 @@ sub doc_sections {
         ));
     }
 
-    my $manual = $self->_doc_manual_body;
-    my $help = $self->help_detail;
-    if ($manual or $help) {
-        my $content = '';
-        my $txt = $manual || $help;        
-        if ($txt =~ /^\=/) {
-            # pure POD
-            $content = $manual;
-        }
-        else {
-            $txt =~ s/\n/\n\n/g;
-            $content = $txt;
-        }
-
-        push(@sections, UR::Doc::Section->create(
-            title => "DESCRIPTION",
-            content => $content,
-            format => 'pod',
-        ));
-    }
+    my $manual = $self->_doc_manual_body || $self->help_detail;
+    push(@sections, UR::Doc::Section->create(
+        title => "DESCRIPTION",
+        content => $manual,
+        format => 'pod',
+    ));
 
     if ($self->can("doc_sub_commands")) {
         my $sub_commands = $self->doc_sub_commands(brief => 1);
@@ -220,10 +202,9 @@ sub doc_sections {
         next if (@txt == 0 or (@txt == 1 and not $txt[0]));
         my $content;
         if (@txt == 1) { 
-            my @lines = split("\n",$txt[0]);
-            $content = join("  \n", @lines);
+            $content = $txt[0];
         } else {
-            $content = join("\n  ",@txt);
+            $content = join("\n", @txt);
         }
 
         push(@sections, UR::Doc::Section->create(
@@ -586,5 +567,15 @@ sub _command_name_for_class_word {
     return $s;
 }
 
-1;
+sub _pod2txt {
+    my $txt = shift;
+    my $output = '';
+    my $parser = Pod::Simple::Text->new;
+    $parser->no_errata_section(1);
+    $parser->output_string($output);
+    $parser->parse_string_document("=pod\n\n$txt");
+    return $output;
+}
 
+
+1;

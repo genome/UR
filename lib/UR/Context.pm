@@ -3350,10 +3350,7 @@ sub display_invalid_data_for_save {
         my $msg = $obj->class . " identified by " . $obj->__display_name__ . " has problems on\n";
         my @problems = $obj->__errors__;
         foreach my $error ( @problems ) {
-            my @property_names = $error->properties;
-            my $desc = $error->desc;
-            my $prop_noun = scalar(@property_names) > 1 ? 'properties' : 'property';
-            $msg .= "    $prop_noun " . join(', ', map { "'$_'" } @property_names) . ": $desc\n";
+            my $msg .= $error->__display_name__ . "\n";
         }
 
         $msg .= "    Current state:\n";
