@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 16;
+use Test::More tests => 19;
 
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
@@ -17,8 +17,8 @@ $dbh->do("insert into workplace values (2, 'CoolCo')");
 
 $dbh->do('create table person (person_id integer PRIMARY KEY NOT NULL, name varchar NOT NULL, workplace_id integer REFERENCES workplace(workplace_id))');
 $dbh->do("insert into person values (1, 'Bob',1)");
-$dbh->do("insert into person values (2, 'Fred',1)");
-$dbh->do("insert into person values (3, 'Mike',2)");
+$dbh->do("insert into person values (2, 'Fred',2)");
+$dbh->do("insert into person values (3, 'Mike',1)");
 $dbh->do("insert into person values (4, 'Joe',2)");
 
 UR::Object::Type->define(
@@ -102,7 +102,7 @@ $expected_output = <<EOS;
 UC_NAME   WORKPLACE_UC_NAME
 -------   -----------------
 BOB       ACME
-FRED      ACME
+MIKE      ACME
 EOS
 
 is($output, $expected_output, 'Output is as expected');
@@ -148,3 +148,25 @@ Joe    1
 EOS
 
 is($output, $expected_output, 'Output is as expected');
+
+
+$output = '';
+open($fh, '>', \$output);
+$cmd = UR::Object::Command::List->create(subject_class_name => 'URT::Person',
+                                         show     => 'id,name,workplace_name',
+                                         order_by => 'workplace_name',
+                                         output   => $fh);
+ok($cmd, 'Create a lister command for Person with a custom order-by');
+ok($cmd->execute(), 'execute');
+
+$expected_output = <<'EOS';
+ID   NAME   WORKPLACE_NAME
+--   ----   --------------
+1    Bob    Acme
+3    Mike   Acme
+2    Fred   CoolCo
+4    Joe    CoolCo
+EOS
+
+is($output, $expected_output, 'Output is as expected');
+
