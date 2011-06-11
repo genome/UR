@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 use Test::More;
-use Data::Dump qw(dump);
 
 __PACKAGE__->main('UR');
 
