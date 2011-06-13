@@ -34,6 +34,11 @@ class UR::Namespace::Command::Update::Doc {
             is_optional => 1,
             doc => 'optional location of the modules to document',
         },
+        restrict_to_input_path => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'when set, only modules found under the input-path will be processed',
+        },
         output_path => {
             is => 'Text',
             is_optional => 1,
@@ -49,6 +54,11 @@ class UR::Namespace::Command::Update::Doc {
             is => 'Boolean',
             default_value => 1,
             doc => "when true, an 'index' of all files generated is written (currently works for html only)",
+        },
+        suppress_errors => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'when set, warnings about unloadable modules will not be printed',
         },
     ],
     has_transient_optional => [
@@ -256,13 +266,18 @@ sub _get_command_tree {
     my $src = "use $command";
     eval $src;
     if ($@) {
-        $self->error_message("Failed to load class $command: $@");
+        $self->error_message("Failed to load class $command: $@") unless $self->suppress_errors;
         return;
     } else {
         my $module_name = $command;
         $module_name =~ s|::|/|g;
         $module_name .= '.pm';
-        $self->status_message("Loaded $command from $module_name at $INC{$module_name}\n");
+        my $input_path = $self->input_path;
+        my $module_path = $INC{$module_name};
+        if ($self->restrict_to_input_path && $module_path !~ /^$input_path/) {
+            $self->status_message("Skipping $command from $module_path as it is not in $input_path");
+        }
+        $self->status_message("Loaded $command from $module_name at $module_path");
     }
 
     return if $command->_is_hidden_in_docs;
