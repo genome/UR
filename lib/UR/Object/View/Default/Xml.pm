@@ -142,7 +142,6 @@ sub _generate_content_for_aspect {
         Carp::confess("No delegate view???");
     }
 
-#$DB::single = 1;
     foreach my $value ( @value ) {
         if (Scalar::Util::blessed($value)) {
             $delegate_view->subject($value);
@@ -170,6 +169,17 @@ sub _generate_content_for_aspect {
             my $ref_root = $ref_xml_doc->documentElement;
             $xml_doc->adoptNode( $ref_root );
             $aspect_node->addChild( $ref_root );
+        }
+        elsif (ref($value) and $value->isa("UR::Value")) {
+            # For a UR::Value return both a formatted value and a raw value.
+            my $display_value_node = $aspect_node->addChild( $xml_doc->createElement('display_value') );
+            my $content = $delegate_view->content;
+            $content = '' if not defined $content;
+            $display_value_node->addChild( $xml_doc->createTextNode($content) );
+
+            my $value_node = $aspect_node->addChild( $xml_doc->createElement('value') );
+            $content = $value->id;
+            $value_node->addChild( $xml_doc->createTextNode($content) );
         }
         else {
             # no delegate view has no XML object, and the value is a non-reference
