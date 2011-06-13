@@ -240,7 +240,7 @@ sub _init_rdbms {
         while (my $property_name = shift @properties_involved) {
             my (@pmeta) = $class_meta->property_meta_for_name($property_name);
             unless (@pmeta) {
-                push @errors, "No property meta found for: $property_name on class " . $class_meta->id;
+                push @errors, "Class ".$class_meta->id." has no property named '$property_name'";
                 next;
             }
             
@@ -317,8 +317,8 @@ sub _init_rdbms {
 
         if (@errors) { 
             my $class_name = $class_meta->class_name;
-            $ds->error_message("ERRORS PROCESSING PARAMTERS: (" . join(',', map { "'$_'" } @errors) . ") used to generate SQL for $class_name!");
-            print Data::Dumper::Dumper($rule_template);
+            $ds->error_message("ERRORS PROCESSING PARAMTERS: (" . join("\n", @errors) . ") used to generate SQL for $class_name!");
+            #print Data::Dumper::Dumper($rule_template);
             Carp::croak("Can't continue");
         }
     };
@@ -380,6 +380,7 @@ sub _init_rdbms {
                     );
 
                 unless ($alias) {
+                    $self->needs_further_boolexpr_evaluation_after_loading(1);
                     next DELEGATED_PROPERTY;
                 }
 
@@ -757,6 +758,7 @@ sub _add_join {
             }
             @source_property_names;
     }
+    return unless @$source_table_and_column_names;
 
     #my @source_property_names = @{ $join->{source_property_names} };
     #my ($source_table_name, $fcols, $fprops) = $self->_resolve_table_and_column_data($source_class_object, @source_property_names);
@@ -983,6 +985,8 @@ sub _get_join_alias {
 
 sub _get_alias_join {
     my ($self,$alias) = @_;
+    my $alias_data = $self->_alias_data;
+    return if (! $alias_data or ! exists($alias_data->{$alias}));
     my $join_id = $self->_alias_data->{$alias}{join_id};
     UR::Object::Join->get($join_id);
 }
@@ -1022,6 +1026,46 @@ sub _add_columns {
     my $db_column_data = $self->_db_column_data;
     push @$db_column_data, @_;
 }
+
+# Used by the object fabricator to find out which resultset column a
+# property's data is stored
+sub column_index_for_class_property_and_object_num {
+    my($self, $class_name, $property_name, $object_num) = @_;
+
+   $object_num ||= 0;
+
+    my $db_column_data = $self->_db_column_data;
+    for (my $resultset_col = 0; $resultset_col < @$db_column_data; $resultset_col++) {
+        if ($db_column_data->[$resultset_col]->[1]->class_name eq $class_name
+            and $db_column_data->[$resultset_col]->[1]->property_name eq $property_name
+            and $db_column_data->[$resultset_col]->[3] == $object_num
+        ) {
+            return $resultset_col;
+        }
+    }
+    return undef;
+}
+
+# used by the object fabricator to determine the resultset column
+# the source property of a join is stored.
+sub column_index_for_class_and_property_before_object_num {
+    my($self, $class_name, $property_name, $object_num) = @_;
+    return unless $object_num;
+
+    my $db_column_data = $self->_db_column_data;
+    my $index;
+    for (my $resultset_col = 0; $resultset_col < @$db_column_data; $resultset_col++) {
+        last if ($db_column_data->[$resultset_col]->[3] >= $object_num);
+        if ($db_column_data->[$resultset_col]->[1]->class_name eq $class_name
+            and
+            $db_column_data->[$resultset_col]->[1]->property_name eq $property_name
+        ) {
+            $index = $resultset_col;
+        }
+    }
+    return $index;
+}
+
 
 sub _groups_by_property {
     my ($self, $property_name) = @_;

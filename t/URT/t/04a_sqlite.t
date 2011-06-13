@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 44;
+use Test::More tests => 80;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -17,11 +17,51 @@ isa_ok($dbh, 'UR::DBI::db', 'Returned handle is the proper class');
 
 &test_foreign_key_handling();
 
+&test_column_details();
+
+
+
+sub test_column_details {
+    my $sth = URT::DataSource::SomeSQLite->get_column_details_from_data_dictionary('','','inline','%');
+
+    my @results;
+    while (my $row = $sth->fetchrow_hashref) {
+        my $saved_row;
+        foreach my $key ( qw( TABLE_NAME COLUMN_NAME DATA_TYPE COLUMN_SIZE NULLABLE COLUMN_DEF ) ) {
+            $saved_row->{$key} = $row->{$key};
+        }
+        push @results, $saved_row;
+    }
+    @results = sort { $a->{'COLUMN_NAME'} cmp $b->{'COLUMN_NAME'} } @results;
+
+    my @expected = ( { TABLE_NAME  => 'inline',
+                       COLUMN_NAME => 'id',
+                       DATA_TYPE   => 'integer',
+                       COLUMN_SIZE => undef,
+                       NULLABLE    => 1,
+                       COLUMN_DEF  => undef,
+                     },
+                     { TABLE_NAME  => 'inline',
+                       COLUMN_NAME => 'name',
+                       DATA_TYPE   => 'varchar',
+                       COLUMN_SIZE => 255,
+                       NULLABLE    => 1,
+                       COLUMN_DEF  => 'some name',
+                     },
+                  );
+    is_deeply(\@results,
+              \@expected,
+               'column details for table inline are correct');
+}
+
+    
+
 
 sub test_foreign_key_handling {
     my $expected_fk_data = &make_expected_fk_data();
 
-    foreach my $table ( qw( foo bar baz baz2 blah blah2 ) ) {
+    my @table_names = qw( foo inline inline_s named named_s unnamed unnamed_s named_2 named_2_s unnamed_2 unnamed_2_s);
+    foreach my $table ( @table_names ) {
         my $found = &get_fk_info_from_dd('','',$table);
         my $found_count = scalar(@$found);
 
@@ -32,7 +72,7 @@ sub test_foreign_key_handling {
         is_deeply($found, $expected, 'FK data is correct');
     }
 
-    foreach my $table ( qw( foo bar baz baz2 blah blah2 ) ) {
+    foreach my $table ( @table_names ) {
         my $found = &get_fk_info_from_dd('','','','','',$table);
         my $found_count = scalar(@$found);
 
@@ -53,79 +93,146 @@ unlink URT::DataSource::SomeSQLite->server;
 sub setup_schema {
     my $dbh = shift;
 
-    ok( $dbh->do('CREATE TABLE foo (foo_id_1 integer, foo_id_2 integer, PRIMARY KEY (foo_id_1, foo_id_2))'),
+    ok( $dbh->do('CREATE TABLE foo (id1 integer, id2 integer, PRIMARY KEY (id1, id2))'),
         'create table (foo) with 2 primary keys');
 
-    ok($dbh->do('CREATE TABLE bar (bar_id integer PRIMARY KEY REFERENCES foo(foo_id_1), bar_name varchar)'),
-       'create table (bar) with one inline foreign key to foo');
+    ok($dbh->do("CREATE TABLE inline (id integer PRIMARY KEY REFERENCES foo(id1), name varchar(255) default 'some name')"),
+       'create table with one inline foreign key to foo');
 
-    ok($dbh->do('CREATE TABLE baz (baz_id integer PRIMARY KEY, baz_name varchar, CONSTRAINT baz_fk FOREIGN KEY (baz_id) REFERENCES foo (foo_id_1))'),
-       'create table (baz) with one named table constraint foreign key to foo');
+    ok($dbh->do('CREATE TABLE inline_s (id integer PRIMARY KEY REFERENCES foo (id1) , name varchar)'),
+      'create table with one inline foreign key to foo, with different whitespace');
 
-    ok($dbh->do('CREATE TABLE baz2 (baz_id integer PRIMARY KEY, baz_name varchar, FOREIGN KEY (baz_id) REFERENCES foo (foo_id_1))'),
-       'create table (baz2) with one unnamed table constraint foreign key to foo');
+    ok($dbh->do('CREATE TABLE named (id integer PRIMARY KEY, name varchar, CONSTRAINT named_fk FOREIGN KEY (id) REFERENCES foo (id1))'),
+       'create table with one named table constraint foreign key to foo');
 
-    ok($dbh->do('CREATE TABLE blah (blah_id_1 integer, blah_id_2 integer, blah_name varchar, PRIMARY KEY (blah_id_1, blah_id_2), CONSTRAINT blah_fk FOREIGN KEY (blah_id_1, blah_id_2) REFERENCES foo (foo_id_1,foo_id_2))'),
-       'create table (blah) with a dual column named foreign key to foo');
+    ok($dbh->do('CREATE TABLE named_s (id integer PRIMARY KEY, name varchar, CONSTRAINT named_s_fk FOREIGN KEY(id) REFERENCES foo (id1))'),
+       'create table with one named table constraint foreign key to foo, with different whitespace');
 
-    ok($dbh->do('CREATE TABLE blah2 (blah_id_1 integer, blah_id_2 integer, blah_name varchar, PRIMARY KEY (blah_id_1, blah_id_2), FOREIGN KEY (blah_id_1, blah_id_2) REFERENCES foo (foo_id_1,foo_id_2))'),
-       'create table (blah2) with a dual column unnamed foreign key to foo');
+    ok($dbh->do('CREATE TABLE unnamed (id integer PRIMARY KEY, name varchar, FOREIGN KEY (id) REFERENCES foo (id1))'),
+       'create table with one unnamed table constraint foreign key to foo');
+
+    ok($dbh->do('CREATE TABLE unnamed_s (id integer PRIMARY KEY, name varchar, FOREIGN KEY(id) REFERENCES foo(id1))'),
+        'create table with one unnamed table constraint foreign key to foo, with different whitespace');
+
+    ok($dbh->do('CREATE TABLE named_2 (id1 integer, id2 integer, name varchar, PRIMARY KEY (id1, id2), CONSTRAINT named_2_fk FOREIGN KEY (id1, id2) REFERENCES foo (id1,id2))'),
+       'create table with a dual column named foreign key to foo');
+
+    ok($dbh->do('CREATE TABLE named_2_s (id1 integer, id2 integer, name varchar, PRIMARY KEY ( id1 , id2 ) , CONSTRAINT named_2_s_fk FOREIGN KEY( id1 , id2 ) REFERENCES foo( id1 , id2 ) )'),
+      'create table with a dual column named foreign key to foo, with different whitespace');
+
+    ok($dbh->do('CREATE TABLE unnamed_2 (id1 integer, id2 integer, name varchar, PRIMARY KEY (id1, id2), FOREIGN KEY (id1, id2) REFERENCES foo (id1,id2))'),
+       'create table with a dual column unnamed foreign key to foo');
+
+    ok($dbh->do('CREATE TABLE unnamed_2_s (id1 integer, id2 integer, name varchar, PRIMARY KEY( id2 , id2 ) , FOREIGN KEY( id1 , id2 ) REFERENCES foo( id1 , id2 ) )'),
+        'create table with a dual column unnamed foreign key to foo, with different whitespace');
 }
     
 
 sub make_expected_fk_data {
      my $from = {
              foo => [],
-             bar => [
-                      { FK_NAME => 'bar_bar_id_foo_foo_id_1_fk',
-                        FK_TABLE_NAME => 'bar',
-                        FK_COLUMN_NAME => 'bar_id',
+             inline => [
+                      { FK_NAME => 'inline_id_foo_id1_fk',
+                        FK_TABLE_NAME => 'inline',
+                        FK_COLUMN_NAME => 'id',
                         UK_TABLE_NAME => 'foo',
-                        UK_COLUMN_NAME => 'foo_id_1'
+                        UK_COLUMN_NAME => 'id1'
                       },
                     ],
-             baz => [ 
-                      { FK_NAME => 'baz_fk',
-                        FK_TABLE_NAME => 'baz',
-                        FK_COLUMN_NAME => 'baz_id',
+             inline_s => [
+                     { FK_NAME => 'inline_s_id_foo_id1_fk',
+                        FK_TABLE_NAME => 'inline_s',
+                        FK_COLUMN_NAME => 'id',
                         UK_TABLE_NAME => 'foo',
-                        UK_COLUMN_NAME => 'foo_id_1'
+                        UK_COLUMN_NAME => 'id1'
+                      },
+                    ],
+             named => [ 
+                      { FK_NAME => 'named_fk',
+                        FK_TABLE_NAME => 'named',
+                        FK_COLUMN_NAME => 'id',
+                        UK_TABLE_NAME => 'foo',
+                        UK_COLUMN_NAME => 'id1'
                        },
                     ],
-             baz2 => [
-                      { FK_NAME => 'baz2_baz_id_foo_foo_id_1_fk',
-                        FK_TABLE_NAME => 'baz2',
-                        FK_COLUMN_NAME => 'baz_id',
+             named_s => [
+                      { FK_NAME => 'named_s_fk',
+                        FK_TABLE_NAME => 'named_s',
+                        FK_COLUMN_NAME => 'id',
                         UK_TABLE_NAME => 'foo',
-                        UK_COLUMN_NAME => 'foo_id_1'
+                        UK_COLUMN_NAME => 'id1'
                        },
                     ],
-             blah => [
-                      { FK_NAME => 'blah_fk',
-                        FK_TABLE_NAME => 'blah',
-                        FK_COLUMN_NAME => 'blah_id_1',
+             unnamed => [
+                      { FK_NAME => 'unnamed_id_foo_id1_fk',
+                        FK_TABLE_NAME => 'unnamed',
+                        FK_COLUMN_NAME => 'id',
                         UK_TABLE_NAME => 'foo',
-                        UK_COLUMN_NAME => 'foo_id_1'
+                        UK_COLUMN_NAME => 'id1'
                        },
-                      { FK_NAME => 'blah_fk',
-                        FK_TABLE_NAME => 'blah',
-                        FK_COLUMN_NAME => 'blah_id_2',
+                    ],
+             unnamed_s => [
+                      { FK_NAME => 'unnamed_s_id_foo_id1_fk',
+                        FK_TABLE_NAME => 'unnamed_s',
+                        FK_COLUMN_NAME => 'id',
                         UK_TABLE_NAME => 'foo',
-                        UK_COLUMN_NAME => 'foo_id_2'
+                        UK_COLUMN_NAME => 'id1'
+                       },
+                    ],
+             named_2 => [
+                      { FK_NAME => 'named_2_fk',
+                        FK_TABLE_NAME => 'named_2',
+                        FK_COLUMN_NAME => 'id1',
+                        UK_TABLE_NAME => 'foo',
+                        UK_COLUMN_NAME => 'id1'
+                       },
+                      { FK_NAME => 'named_2_fk',
+                        FK_TABLE_NAME => 'named_2',
+                        FK_COLUMN_NAME => 'id2',
+                        UK_TABLE_NAME => 'foo',
+                        UK_COLUMN_NAME => 'id2'
                        },
                      ],
-             blah2 => [
-                       { FK_NAME => 'blah2_blah_id_1_blah_id_2_foo_foo_id_1_foo_id_2_fk',
-                         FK_TABLE_NAME => 'blah2',
-                         FK_COLUMN_NAME => 'blah_id_1',
+             named_2_s => [
+                      { FK_NAME => 'named_2_s_fk',
+                        FK_TABLE_NAME => 'named_2_s',
+                        FK_COLUMN_NAME => 'id1',
+                        UK_TABLE_NAME => 'foo',
+                        UK_COLUMN_NAME => 'id1'
+                       },
+                      { FK_NAME => 'named_2_s_fk',
+                        FK_TABLE_NAME => 'named_2_s',
+                        FK_COLUMN_NAME => 'id2',
+                        UK_TABLE_NAME => 'foo',
+                        UK_COLUMN_NAME => 'id2'
+                       },
+                     ],
+             unnamed_2 => [
+                       { FK_NAME => 'unnamed_2_id1_id2_foo_id1_id2_fk',
+                         FK_TABLE_NAME => 'unnamed_2',
+                         FK_COLUMN_NAME => 'id1',
                          UK_TABLE_NAME => 'foo',
-                         UK_COLUMN_NAME => 'foo_id_1'
+                         UK_COLUMN_NAME => 'id1'
                         },
-                       { FK_NAME => 'blah2_blah_id_1_blah_id_2_foo_foo_id_1_foo_id_2_fk',
-                         FK_TABLE_NAME => 'blah2',
-                         FK_COLUMN_NAME => 'blah_id_2',
+                       { FK_NAME => 'unnamed_2_id1_id2_foo_id1_id2_fk',
+                         FK_TABLE_NAME => 'unnamed_2',
+                         FK_COLUMN_NAME => 'id2',
                          UK_TABLE_NAME => 'foo',
-                         UK_COLUMN_NAME => 'foo_id_2'
+                         UK_COLUMN_NAME => 'id2'
+                        },
+                      ],
+             unnamed_2_s => [
+                       { FK_NAME => 'unnamed_2_s_id1_id2_foo_id1_id2_fk',
+                         FK_TABLE_NAME => 'unnamed_2_s',
+                         FK_COLUMN_NAME => 'id1',
+                         UK_TABLE_NAME => 'foo',
+                         UK_COLUMN_NAME => 'id1'
+                        },
+                       { FK_NAME => 'unnamed_2_s_id1_id2_foo_id1_id2_fk',
+                         FK_TABLE_NAME => 'unnamed_2_s',
+                         FK_COLUMN_NAME => 'id2',
+                         UK_TABLE_NAME => 'foo',
+                         UK_COLUMN_NAME => 'id2'
                         },
                       ],
           };

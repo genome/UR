@@ -735,14 +735,14 @@ sub _normalize_class_description {
             no warnings;
             unless ($parent_class_name->can("__meta__")) {
                 __PACKAGE__->use_module_with_namespace_constraints($parent_class_name);
-                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@" if $@; 
+                Carp::croak("Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@") if $@;
             }
             unless ($parent_class_name->can("__meta__")) {
-                die "Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name!"; 
+                Carp::croak("Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name.  Does class $parent_class_name exist, and is it loaded?");
             }
             my $parent_class = $parent_class_name->__meta__;
             unless ($parent_class) {
-                warn "no class metadata object for $parent_class_name!";
+                Carp::carp("No class metadata object for $parent_class_name");
                 next;
             }
 
@@ -760,7 +760,7 @@ sub _normalize_class_description {
                     }
                     $parent_class_name = $parent_class_name . '::V' . $version;
                     eval "use $parent_class_name";
-                    Carp::confess("Error using versiond module $parent_class_name!:\n$@") if $@;
+                    Carp::confess("Error using versioned module $parent_class_name!:\n$@") if $@;
                     redo;
                 }
             }

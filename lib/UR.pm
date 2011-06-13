@@ -204,6 +204,9 @@ UR::Object::Type->define(
                                                 
                                                 doc => 'property meta-objects for the class'
                                             },
+        id_properties                    => { is_many => 1,
+                                              calculate => q( grep { defined $_->is_id } shift->_properties(@_) ),
+                                              doc => 'meta-objects for the ID properties of the class' },
 
         doc                              => { is => 'Text', len => 1024, is_optional => 1, 
                                                 doc => 'a one-line description of the class/type' },

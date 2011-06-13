@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 3;
+use Test::More tests => 7;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -45,6 +45,17 @@ is(scalar(@obj), 6, "got the expected objects");
 
 is(Acme::Product->get(name => "jet pack")->manufacturer->name, "Lockheed Martin", "object accessor works");
 is(Acme::Product->get(name => "dynamite")->manufacturer->name, "Explosives R US", "object accessor works");
+
+my $jetpack = Acme::Product->get(name => "jet pack");
+ok($jetpack->manufacturer($m2), 'Change manufacturer on jet pack');
+is($jetpack->manufacturer->name, 'Boeing', 'Change was successful');
+
+eval { $jetpack->manufacturer('Boeing') };
+ok($@, 'Setting the object accessor to a string throws an exception');
+like($@,
+     qr(Can't call method "id" without a package or object reference.  Expected an object as parameter to manufacturer, not 'Boeing'),
+    'The exception was correct');
+
 
 #is(Acme::Product->get(name => "jet pack")->manufacturer_name, "Lockheed Martin", "delegated accessor works");
 #is(Acme::Product->get(name => "dynamite")->manufacturer_name, "Explosives R US", "delegated accessor works");

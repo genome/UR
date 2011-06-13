@@ -36,7 +36,7 @@ ok($delobj, 'thing_id 1 ghost object does exist');
 
 
 sub setup_files_and_classes {
-    my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+    my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 
     ok( $dbh->do('create table things (thing_id integer, thing_value varchar)'),
        'created table things');

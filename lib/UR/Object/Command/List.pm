@@ -27,6 +27,11 @@ class UR::Object::Command::List {
             is_optional => 1,
             doc => 'Specify which columns to show, in order.' 
         },
+        order_by => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Output rows are listed sorted by these named columns in increasing order',
+        },
         style => { 
             is => 'Text',
             is_optional => 1,
@@ -104,7 +109,8 @@ sub _resolve_boolexpr {
     my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
         $self->subject_class_name, 
         $self->_complete_filter, 
-        $self->_hint_string
+        $self->_hint_string,
+        $self->order_by,
     );
 
     $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
@@ -225,7 +231,7 @@ EOS
         $doc .= " $help_synopsis\n";
     } else {
         $doc .= <<EOS
- lister-command --filter name=Bob --show id,name,address
+ lister-command --filter name=Bob --show id,name,address --order name
  lister-command --filter name='something with space',employees\>200,job~%manager
  lister-command --filter cost:20000-90000
  lister-command --filter answer:yes/maybe

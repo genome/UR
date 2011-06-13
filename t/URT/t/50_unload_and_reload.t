@@ -9,7 +9,7 @@ use URT;
 use Test::More tests => 86;
 use URT::DataSource::SomeSQLite;
 
-my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 $dbh->do('create table thing (thing_id integer PRIMARY KEY, color varchar)');
 $dbh->do("insert into thing values (1,'blue')");
 $dbh->do("insert into thing values (2,'red')");

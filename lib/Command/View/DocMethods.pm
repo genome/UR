@@ -6,6 +6,7 @@ our $entry_point_class;
 our $entry_point_bin;
 
 use Term::ANSIColor;
+use Pod::Simple::Text;
 require Text::Wrap;
 
 # This is changed with "local" where used in some places
@@ -74,7 +75,6 @@ sub doc_help {
     my $synopsis = $self->help_synopsis;
     my $required_args = $self->help_options(is_optional => 0);
     my $optional_args = $self->help_options(is_optional => 1);
-    my $sub_commands = '';
     $text = sprintf(
         "\n%s\n%s\n\n%s%s%s%s%s\n",
         Term::ANSIColor::colored('USAGE', 'underline'),
@@ -99,17 +99,128 @@ sub doc_help {
         sprintf(
             "%s\n%s\n", 
             Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
-            Text::Wrap::wrap(' ', ' ', $self->help_detail || '')
-        ),
-        ( $sub_commands 
-            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
-            : ''
+            _pod2txt($self->help_detail || '')
         ),
     );
 
     return $text;
 }
 
+sub parent_command_class {
+    my $class = shift;
+    $class = ref($class) if ref($class);
+    my @components = split("::", $class);
+    return if @components == 1;
+    my $parent = join("::", @components[0..$#components-1]);
+    return $parent if $parent->can("command_name");
+    return;
+}
+
+sub doc_sections {
+    my $self = shift;
+    my @sections;
+
+    my $command_name = $self->command_name;
+
+    my $version = do { no strict; ${ $self->class . '::VERSION' } };
+    my $help_brief = $self->help_brief;
+    my $datetime = $self->__context__->now;
+    my ($date,$time) = split(' ',$datetime);
+
+    push(@sections, UR::Doc::Section->create(
+        title => "NAME",
+        content => "$command_name" . ($help_brief ? " - $help_brief" : ""),
+        format => "pod",
+    ));
+
+    push(@sections, UR::Doc::Section->create(
+        title => "VERSION",
+        content =>  "This document " # separated to trick the version updater 
+            . "describes $command_name "
+            . ($version ? "version $version " : "")
+            . "($date at $time)",
+        format => "pod",
+    ));
+
+    my $synopsis = $self->command_name . ' ' . $self->_shell_args_usage_string . "\n\n" . $self->help_synopsis;
+    if ($synopsis) {
+        push(@sections, UR::Doc::Section->create(
+            title => "SYNOPSIS",
+            content => $synopsis,
+            format => 'pod'
+        ));
+    }
+
+    my $required_args = $self->help_options(is_optional => 0, format => "pod");
+    if ($required_args) {
+        push(@sections, UR::Doc::Section->create(
+            title => "REQUIRED ARGUMENTS",
+            content => "=over\n\n$required_args\n\n=back\n\n",
+            format => 'pod'
+        ));
+    }
+
+    my $optional_args = $self->help_options(is_optional => 1, format => "pod");
+    if ($optional_args) {
+        push(@sections, UR::Doc::Section->create(
+            title => "OPTIONAL ARGUMENTS",
+            content => "=over\n\n$optional_args\n\n=back\n\n",
+            format => 'pod'
+        ));
+    }
+
+    my $manual = $self->_doc_manual_body || $self->help_detail;
+    push(@sections, UR::Doc::Section->create(
+        title => "DESCRIPTION",
+        content => $manual,
+        format => 'pod',
+    ));
+
+    if ($self->can("doc_sub_commands")) {
+        my $sub_commands = $self->doc_sub_commands(brief => 1);
+        if ($sub_commands) {
+            push(@sections, UR::Doc::Section->create(
+                title => "SUB-COMMANDS",
+                content => $sub_commands,
+                format => "pod",
+            ));
+        }
+    }
+
+    my @footer_section_methods = (
+        'LICENSE'   => '_doc_license',
+        'AUTHORS'   => '_doc_authors',
+        'CREDITS'   => '_doc_credits',
+        'BUGS'      => '_doc_bugs',
+        'SEE ALSO'  => '_doc_see_also'
+    );
+    
+    while (@footer_section_methods) {
+        my $header = shift @footer_section_methods;
+        my $method = shift @footer_section_methods;
+        my @txt = $self->$method;
+        next if (@txt == 0 or (@txt == 1 and not $txt[0]));
+        my $content;
+        if (@txt == 1) { 
+            $content = $txt[0];
+        } else {
+            $content = join("\n", @txt);
+        }
+
+        push(@sections, UR::Doc::Section->create(
+            title => $header,
+            content => $content,
+            format => "pod",
+        ));
+    }
+
+    return @sections;
+}
+
+sub doc_sub_commands {
+    my $self = shift;
+    return;
+}
 
 sub doc_manual {
     my $self = shift;
@@ -456,5 +567,15 @@ sub _command_name_for_class_word {
     return $s;
 }
 
-1;
+sub _pod2txt {
+    my $txt = shift;
+    my $output = '';
+    my $parser = Pod::Simple::Text->new;
+    $parser->no_errata_section(1);
+    $parser->output_string($output);
+    $parser->parse_string_document("=pod\n\n$txt");
+    return $output;
+}
 
+
+1;

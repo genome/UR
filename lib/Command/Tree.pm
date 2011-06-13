@@ -169,40 +169,40 @@ sub sub_commands_table {
     return $tb;
 }
 
-sub help_sub_commands {
+sub _categorize_sub_commands {
     my $class = shift;
-    my %params = @_;
-    my $command_name_method = 'command_name_brief';
-    #my $command_name_method = ($params{brief} ? 'command_name_brief' : 'command_name');
     
     my @sub_command_classes = $class->sorted_sub_command_classes;
-
     my %categories;
-    my @categories;
+    my @order;
     for my $sub_command_class (@sub_command_classes) {
-        my $category = $sub_command_class->sub_command_category;
-        $category = '' if not defined $category;
         next if $sub_command_class->_is_hidden_in_docs();
-        my $sub_commands_within_category = $categories{$category};
-        unless ($sub_commands_within_category) {
-            if (defined $category and length $category) {
-                push @categories, $category;
+        my $category = $sub_command_class->sub_command_category || '';
+        unless (exists $categories{$category}) {
+            if ($category) {
+                push(@order, $category) 
+            } else {
+                unshift(@order, '');
             }
-            else {
-                unshift @categories,''; 
-            }
-            $sub_commands_within_category = $categories{$category} = [];
+            $categories{$category} = [];
         }
-        push @$sub_commands_within_category,$sub_command_class;
+        push(@{$categories{$category}}, $sub_command_class);
     }
 
-    no warnings;
-    local  $Text::Wrap::columns = 60;
+    return (\@order, \%categories);
+}
     
-    my $full_text = '';
+sub help_sub_commands {
+    my ($self, %params) = @_;
+    my ($order, $categories) = $self->_categorize_sub_commands(@_);
+    my $command_name_method = 'command_name_brief';
+
+    no warnings;
+    local $Text::Wrap::columns = 60;
+    
     my @full_data;
-    for my $category (@categories) {
-        my $sub_commands_within_this_category = $categories{$category};
+    for my $category (@$order) {
+        my $sub_commands_within_this_category = $categories->{$category};
         my @data = map {
                 my @rows = split("\n",Text::Wrap::wrap('', ' ', $_->help_brief));
                 chomp @rows;
@@ -258,13 +258,34 @@ sub help_sub_commands {
     for my $row (@full_data) {
         for my $c (0..2) {
             $text .= ' ';
-            $text .= Term::ANSIColor::colored($row->[$c], $colors[$c]),
+            $text .= Term::ANSIColor::colored($row->[$c], $colors[$c]);
             $text .= ' ';
             $text .= ' ' x ($max_width_found[$c]-length($row->[$c]));
         }
         $text .= "\n";
     }
-    #$DB::single = 1;        
+    return $text;
+}
+
+sub doc_sub_commands {
+    my $self = shift;
+    my ($order, $categories) = $self->_categorize_sub_commands(@_);
+    my $text = "";
+    my $indent_lvl = 4;
+    for my $category (@$order) {
+        my $category_name = ($category ? uc $category : "GENERAL");
+        $text .= "=head2 $category_name\n\n";
+        for my $cmd (@{$categories->{$category}}) {
+            $text .= "=over $indent_lvl\n\n";
+            my $name = $cmd->command_name_brief;
+            my $link = $cmd->command_name;
+            $link =~ s/ /-/g;
+            my $description = $cmd->help_brief;
+            $text .= "=item B<L<$name|$link>>\n\n=over 2\n\n=item $description\n\n=back\n\n";
+            $text .= "=back\n\nE<10>\n\n";
+        }
+    }
+
     return $text;
 }
 

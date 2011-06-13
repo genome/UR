@@ -11,7 +11,7 @@ use URT; # dummy namespace
 # Turn this on for debugging
 #$ENV{UR_DBI_MONITOR_SQL}=1;
 
-my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 ok($dbh, "got a db handle");
 &create_db_tables($dbh);
 

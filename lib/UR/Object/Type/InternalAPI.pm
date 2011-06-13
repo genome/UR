@@ -139,11 +139,11 @@ sub _flatten_property_name {
 our $DIRECT_ID_PROPERTY_METAS_TEMPLATE;
 sub direct_id_property_metas {
     my $self = _object(shift);
-    $DIRECT_ID_PROPERTY_METAS_TEMPLATE ||= UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name', 'is_id true');
+    $DIRECT_ID_PROPERTY_METAS_TEMPLATE ||= UR::BoolExpr::Template->resolve('UR::Object::Property', 'class_name', 'property_name', 'is_id >=');
     my $class_name = $self->class_name;
     my @id_property_objects =
         map { $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Property', $_) }
-        map { $DIRECT_ID_PROPERTY_METAS_TEMPLATE->get_rule_for_values($class_name, $_, 1) }
+        map { $DIRECT_ID_PROPERTY_METAS_TEMPLATE->get_rule_for_values($class_name, $_, 0) }
         @{$self->{'id_by'}};
 
     @id_property_objects = sort { $a->is_id <=> $b->is_id } @id_property_objects;
@@ -255,13 +255,14 @@ sub all_property_names {
     my %seen = ();   
     my $all_property_names = $self->{_all_property_names} = [];
     for my $class_name ($self->class_name, $self->ancestry_class_names) {
+        next if $class_name eq 'UR::Object';
         my $class_meta = UR::Object::Type->get($class_name);
         if (my $has = $class_meta->{has}) {
             push @$all_property_names, 
                 grep { 
                     not exists $has->{$_}{id_by}
                 }
-                grep { $_ ne "id" && !exists $seen{$_} } 
+                grep { !exists $seen{$_} } 
                 sort keys %$has;
             foreach (@$all_property_names) {
                 $seen{$_} = 1;
@@ -1339,12 +1340,12 @@ sub _property_change_callback {
             }
             $class_obj->{'has'}->{$property_name} = \%new_property;
         }
-        if ($property_obj->is_id) {
+        if (defined $property_obj->is_id) {
             &_id_property_change_callback($property_obj, 'create');
         }
 
     } elsif ($method eq 'delete') {
-        if ($property_obj->is_id) {
+        if (defined $property_obj->is_id) {
             &_id_property_change_callback($property_obj, 'delete');
         }
         delete $class_obj->{'has'}->{$property_name};

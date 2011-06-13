@@ -69,6 +69,7 @@ sub property {
         # optimize for the common case
         my ($self, $property_name) = @_;
         my $class_names = $self->_property_name_class_map->{$property_name};
+        return unless $class_names and @$class_names;
         my $id = $class_names->[0] . "\t" . $property_name;
         return UR::Object::Property->get($id); 
     }
@@ -308,6 +309,18 @@ Access the related property meta-objects for all properties of this class.  It i
 the properties of any parent classes which are inherited by this class.
 
 See L<UR::Object::Property> for details.
+
+=item id_properties
+
+  @all_id = $class_obj->id_properties();
+
+  @some = $class_obj->properties(
+      'is                    => ['Text','Number']
+      'doc like'             => '%important%',
+      'property_name like'   => 'someprefix_%',
+  );
+
+Like properties(), but only returns ID property metadata.
 
 =item property
 

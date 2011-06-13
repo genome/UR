@@ -246,7 +246,7 @@ like($@, qr/Conflicting values for property 'rank_id'/, 'Exception is correct');
 diag('Tests for calculated subclassing');
 
 # First, setup a table we'll use in the next section of tests...
-my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 $dbh->do(q(create table vehicle (vehicle_id integer NOT NULL PRIMARY KEY, color varchar NOT NULL, wheels integer NOT NULL)));
 
 $calculate_called = 0;

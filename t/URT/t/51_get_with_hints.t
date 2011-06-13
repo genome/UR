@@ -78,7 +78,7 @@ is($query_count, 0, 'Correctly made no queries');
 
 
 sub setup_classes_and_db {
-    my $dbh = URT::DataSource::SomeSQLite->get_default_dbh;
+    my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 
     ok($dbh, 'Got DB handle');
 
