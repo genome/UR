@@ -265,6 +265,8 @@ sub _get_command_tree {
         $self->status_message("Loaded $command from $module_name at $INC{$module_name}\n");
     }
 
+    return if $command->_is_hidden_in_docs;
+
     my $tree = {
         command => $command,
         sub_commands => []
