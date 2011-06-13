@@ -1561,7 +1561,7 @@ sub get_objects_for_class_and_rule {
 
         return @c if wantarray;           # array context
         return unless defined wantarray;  # null context
-        Carp::confess("multiple objects found for a call in scalar context!  Using " . __PACKAGE__) if @c > 1;
+        Carp::confess("multiple objects found for a call in scalar context!" . Data::Dumper::Dumper(\@c)) if @c > 1;
         return $c[0];                     # scalar context
     }
 
@@ -3395,7 +3395,8 @@ sub _reverse_all_changes {
     my @all_subclasses_loaded = sort UR::Object->subclasses_loaded;
     for my $class_name (@all_subclasses_loaded) { 
         next unless $class_name->can('__meta__');
-        
+        next if $class_name->isa("UR::Value");
+
         my @objects_this_class = $self->all_objects_loaded_unsubclassed($class_name);
         next unless @objects_this_class;
         
@@ -3427,7 +3428,7 @@ sub _reverse_all_changes {
                 }
                 next;
             }
-        }       
+        }
         else {
             # non-ghost regular entity
             for my $object (@$objects_this_class) {
@@ -3474,6 +3475,7 @@ sub _reverse_all_changes {
             } # next non-ghost object
         } 
     } # next class
+
     return 1;
 }
 
