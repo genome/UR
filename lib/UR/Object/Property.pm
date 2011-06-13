@@ -21,17 +21,9 @@ sub is_direct {
 sub is_numeric {
     my $self = shift;
     unless (defined($self->{'_is_numeric'})) {
-        my $type = uc($self->data_type);
-        my $class = $type;
-        unless ($class->isa("UR::Object")) {
-            $class = 'UR::Value::' . $type;
-            unless ($class->isa("UR::Object")) {
-                $class = 'UR::Value::' . ucfirst(lc($type));
-                unless ($class->isa("UR::Object")) {
-                    warn "unknown type $type for property " . $self->id;
-                    return;
-                }
-            }
+        my $class = $self->_data_type_as_class_name;
+        unless ($class) {
+            return;
         }
         $self->{'_is_numeric'} = $class->isa("UR::Value::Number");
     }
@@ -45,36 +37,57 @@ sub _data_type_as_class_name {
         my $foreign_class = $self->data_type;
 
         if (not $foreign_class) {
-            return;
+            if ($self->via or $self->to) {
+                my @joins = UR::Object::Join->resolve_chain(
+                    $self->class_name,
+                    $self->property_name,
+                );
+                $foreign_class = $joins[-1]->foreign_class;
+            }
         }
 
         # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
         # We should have an is_primitive flag set on these so we do efficient work.
-        my $ur_value_class = 'UR::Value::' . $foreign_class;
-        
-        my ($ns) = ($source_class =~ /^([^:]+)/);
-        my $ns_value_class;
-        if ($ns and $ns->can("get")) {
-            $ns_value_class = $ns . '::Value::' . $foreign_class;
-            if ($ns_value_class->can('__meta__')) {
-                $foreign_class = $ns_value_class;
+       
+        my ($ns) = ($source_class =~ /^([^:]+)::/);
+        if ($ns and not $ns->isa("UR::Namespace")) {
+            $ns = undef;
+        }
+
+        my $final_class;
+        if ($foreign_class) {
+            if ($foreign_class->can('__meta__')) {   
+                $final_class = $foreign_class;
+            }
+            else {
+                my ($ns_value_class, $ur_value_class);
+
+                if ($ns and $ns->can("get")) {
+                    $ns_value_class = $ns . '::Value::' . $foreign_class;
+                    if ($ns_value_class->can('__meta__')) {
+                        $final_class = $ns_value_class; 
+                    }
+                }
+                
+                unless ($final_class) {
+                    $ur_value_class = 'UR::Value::' . $foreign_class;
+                    if ($ur_value_class->can('__meta__')) {
+                        $final_class = $ur_value_class; 
+                    }
+                }
             }
         }
 
-        if (!$foreign_class->can('__meta__')) {
-            if ($ur_value_class->can('__meta__')) {
-                $foreign_class = $ur_value_class;
+        if (!$final_class) {
+            if (!$ns or $ns->get()->allow_sloppy_primitives) {
+                $final_class = 'UR::Value::SloppyPrimitive';
             }
             else {
-                if ($ns->get()->allow_sloppy_primitives) {
-                    $foreign_class = 'UR::Value::SloppyPrimitive';
-                }
-                else {
-                    Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
-                }
+                Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
             }
         }
-        $foreign_class;
+        
+        $final_class;
     };
 }
 
