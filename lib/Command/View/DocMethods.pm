@@ -70,13 +70,25 @@ sub doc_help {
 
     my $command_name = $self->command_name;
     my $text;
-    
+
+    my $extra_help = '';
+    my @extra_help = $self->_additional_help_sections;
+    while (@extra_help) {
+        my $title = shift @extra_help || '';
+        my $content = shift @extra_help || '';
+        $extra_help .= sprintf(
+            "%s\n\n%s\n",
+            Term::ANSIColor::colored($title, 'underline'),
+            _pod2txt($content)
+        ),
+    }
+
     # standard: update this to do the old --help format
     my $synopsis = $self->help_synopsis;
     my $required_args = $self->help_options(is_optional => 0);
     my $optional_args = $self->help_options(is_optional => 1);
     $text = sprintf(
-        "\n%s\n%s\n\n%s%s%s%s%s\n",
+        "\n%s\n%s\n\n%s%s%s%s%s%s\n",
         Term::ANSIColor::colored('USAGE', 'underline'),
         Text::Wrap::wrap(
             ' ', 
@@ -97,10 +109,11 @@ sub doc_help {
             : ''
         ),
         sprintf(
-            "%s\n%s\n", 
-            Term::ANSIColor::colored("DESCRIPTION", 'underline'), 
+            "%s\n%s\n",
+            Term::ANSIColor::colored("DESCRIPTION", 'underline'),
             _pod2txt($self->help_detail || '')
         ),
+        ( $extra_help ? $extra_help : '' ),
     );
 
     return $text;
@@ -175,6 +188,17 @@ sub doc_sections {
         content => $manual,
         format => 'pod',
     ));
+
+    my @extra_help = $self->_additional_help_sections;
+    while (@extra_help) {
+        my $title = shift @extra_help || '';
+        my $content = shift @extra_help || '';
+        push (@sections, UR::Doc::Section->create(
+            title => $title,
+            content => $content,
+            format => 'pod'
+        ));
+    }
 
     if ($self->can("doc_sub_commands")) {
         my $sub_commands = $self->doc_sub_commands(brief => 1);
@@ -577,5 +601,8 @@ sub _pod2txt {
     return $output;
 }
 
+sub _additional_help_sections {
+    return;
+}
 
 1;
