@@ -142,6 +142,7 @@ sub _generate_content_for_aspect {
         Carp::confess("No delegate view???");
     }
 
+#$DB::single = 1;
     foreach my $value ( @value ) {
         if (Scalar::Util::blessed($value)) {
             $delegate_view->subject($value);
@@ -149,7 +150,7 @@ sub _generate_content_for_aspect {
             $delegate_view->subject_id($value);
         }
         $delegate_view->_update_view_from_subject();
-        
+
         # merge the delegate view's XML into this one
         if ($delegate_view->can('_xml_doc') and $delegate_view->_xml_doc) {
             # the delegate has XML
@@ -157,9 +158,10 @@ sub _generate_content_for_aspect {
             my $delegate_root = $delegate_xml_doc->documentElement;
             #cloneNode($deep = 1)
             $aspect_node->addChild( $delegate_root->cloneNode(1) );
-        } 
-        elsif (ref($value)) {
-            # the delegate view has no XML object, and the value is a reference
+        }
+        elsif (ref($value) and not $value->isa("UR::Value")) {
+            # Note: Let UR::Values display content below
+            # Otherwise, the delegate view has no XML object, and the value is a reference
             my $d = XML::Dumper->new;
             my $xmlrep = $d->pl2xml($value);
 
