@@ -43,9 +43,6 @@ use Sub::Install ();
     is_calculated    => 0,
     is_mutable       => undef,
     is_transactional => 1,
-    is_abstract      => 0,
-    is_concrete      => 1,
-    is_final         => 0,
     is_many          => 0,
     is_numeric       => 0,
     is_specified_in_module_header => 0,
@@ -239,6 +236,7 @@ sub _preprocess_subclass_description {
                 . $self->class_name . " package!";
         }
         $current_desc = $self->class_name->$preprocessor($current_desc);
+        $current_desc = $self->_normalize_class_description_impl(%$current_desc);
     }
 
     # only call it on the direct parent classes, let recursion walk the tree
@@ -337,7 +335,46 @@ sub initialize_bootstrap_classes
 
 sub _normalize_class_description {
     my $class = shift;
+    my $desc = $class->_normalize_class_description_impl(@_);
+    unless ($bootstrapping) {
+        for my $parent_class_name (@{ $desc->{is} }) {
+            my $parent_class = $parent_class_name->__meta__;
+            $desc = $parent_class->_preprocess_subclass_description($desc);
+        }
+    }
+
+    # we previously handled property meta extensions when normalizing the property
+    # now we merely save unrecognized things
+    # this is now done afterward so that parent classes can preprocess their subclasses descriptions before extending
+    # normalize the data behind the property descriptions
+    my @property_names = keys %{$desc->{has}};
+    for my $property_name (@property_names) {
+        my $pdesc = $desc->{has}->{$property_name};
+        my $unknown_ma = delete $pdesc->{unrecognized_meta_attributes};
+        next unless $unknown_ma;
+        for my $name (keys %$unknown_ma) {
+            if (exists $desc->{attributes_have}->{$name}) {
+                $pdesc->{$name} = delete $unknown_ma->{$name};
+            }
+        }
+        if (%$unknown_ma) {
+            my $class_name = $desc->{class_name};
+            my @unknown_ma = sort keys %$unknown_ma;
+            Carp::confess("unknown meta-attributes present for $class_name $property_name: @unknown_ma\n");
+        }
+    }
+
+    return $desc;
+}
+
+sub _normalize_class_description_impl {
+    my $class = shift;
     my %old_class = @_;
+
+    if (exists $old_class{extra}) {
+        $DB::single=1;
+        %old_class = (%{delete $old_class{extra}}, %old_class);
+    }
 
     my $class_name = delete $old_class{class_name};    
 
@@ -379,6 +416,7 @@ sub _normalize_class_description {
         [ subclass_description_preprocessor => qw//],        
         [ id_generator           => qw/id_sequence_generator_name/],
         [ subclassify_by_version => qw//],        
+        [ meta_class_name        => qw//],
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                
         my @all_fields = ($primary_field_name, @alternate_field_names);
@@ -543,7 +581,6 @@ sub _normalize_class_description {
     # NOTE: we normalize the details at the end of normalizing the class description.
     my @keys = grep { /has|attributes_have/ } keys %old_class;
     unshift @keys, qw(id_implied); # we want to hit this first to preserve position_ and is_specified_ keys
-    my @properties_in_class_definition_order;
     foreach my $key ( @keys ) {
         # parse the key to see if we're looking at instance or meta attributes,
         # and take the extra words as additional attribute meta-data. 
@@ -631,7 +668,6 @@ sub _normalize_class_description {
             } else {
                 $properties->{$name} = $params;
             }
-            push @properties_in_class_definition_order, $name;
 
             # a single calculate_from can be a simple string, convert to a listref
             if (my $calculate_from = $params->{'calculate_from'}) {
@@ -708,8 +744,6 @@ sub _normalize_class_description {
         }
     }
 
-    $new_class{'__properties_in_class_definition_order'} = \@properties_in_class_definition_order;
-    
     unless ($new_class{type_name}) {
         $new_class{type_name} = $new_class{class_name};
     }
@@ -773,28 +807,19 @@ sub _normalize_class_description {
     for my $property_name (@property_names) {
         my %old_property = %{ $instance_properties->{$property_name} };        
         my %new_property = $class->_normalize_property_description1($property_name, \%old_property, \%new_class);
+        %new_property = $class->_normalize_property_description2(\%new_property, \%new_class);
         $instance_properties->{$property_name} = \%new_property;
     }
-
     # allow parent classes to adjust the description in systematic ways 
     my $desc = \%new_class;
     my @additional_property_meta_attributes;
     unless ($bootstrapping) {
         for my $parent_class_name (@{ $new_class{is} }) {
             my $parent_class = $parent_class_name->__meta__;
-            $desc = $parent_class->_preprocess_subclass_description($desc);
             if (my $parent_meta_properties = $parent_class->{attributes_have}) {
                 push @additional_property_meta_attributes, %$parent_meta_properties;
             }
         }
-    }
-
-    # normalize the data behind the property descriptions    
-    @property_names = keys %$instance_properties;
-    for my $property_name (@property_names) {
-        my %old_property = %{ $instance_properties->{$property_name} };        
-        my %new_property = $class->_normalize_property_description2(\%old_property, \%new_class);
-        $instance_properties->{$property_name} = \%new_property;
     }
 
     # Find 'via' properties where the to is '-filter' and rewrite them to 
@@ -875,45 +900,9 @@ sub _normalize_class_description {
         }
     }
 
-    # we previously handled property meta extensions when normalizing the property
-    # now we merely save unrecognized things
-    # this is now done afterward so that parent classes can preprocess their subclasses descriptions before extending
-    # normalize the data behind the property descriptions    
-    for my $property_name (@property_names) {
-        my $pdesc = $instance_properties->{$property_name};
-        my $unknown_ma = delete $pdesc->{unrecognized_meta_attributes};
-        next unless $unknown_ma;
-        for my $name (keys %$unknown_ma) {
-            if (exists $meta_properties->{$name}) {
-                $pdesc->{$name} = delete $unknown_ma->{$name};
-            }
-        }
-        if (%$unknown_ma) {
-            my @unknown_ma = sort keys %$unknown_ma;
-            Carp::confess("unknown meta-attributes present for $class_name $property_name: @unknown_ma\n");
-        }
-    }
-
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $desc->{meta_class_name} ||= $meta_class_name;
     return $desc;
-}
-
-sub _recursive_attributes_have {
-    my $self = shift;
-    unless ($self->{_recursive_attributes_have}) {
-        my %recursive_collection_of_added_meta_attributes = ( $self->{attributes_have} ? %{ $self->{attributes_have} } : () );
-        unless ($bootstrapping) {
-            for my $parent_class_name (@{ $self->{is} }) {
-                my $parent_class = $parent_class_name->__meta__;
-                if (my $parent_ma = $parent_class->{_recursive_attributes_have}) {
-                    %recursive_collection_of_added_meta_attributes = (%recursive_collection_of_added_meta_attributes, %$parent_ma);
-                }
-            }
-        }
-        $self->{_recursive_attributes_have} = \%recursive_collection_of_added_meta_attributes;
-    }
-    return $self->{_recursive_attributes_have};
 }
 
 sub _normalize_property_description1 {
@@ -925,6 +914,10 @@ sub _normalize_property_description1 {
     my %old_property = %$property_data;
     my %new_class = %$class_data;
     
+    if (exists $old_property{unrecognized_meta_attributes}) {
+        %old_property = (%{delete $old_property{unrecognized_meta_attributes}}, %old_property);
+    }
+
     delete $old_property{source};
 
     if ($old_property{implied_by} and $old_property{implied_by} eq $property_name) {
@@ -933,14 +926,17 @@ sub _normalize_property_description1 {
     }        
 
     # Only 1 of is_abstract, is_concrete or is_final may be set
-    { no warnings 'uninitialized';
-      if (  $old_property{is_abstract} 
-          + $old_property{is_concrete}
-          + $old_property{is_final}
-          > 1
-      ) {
-          Carp::confess("abstract/concrete/final are mutually exclusive.  Error in class definition for $class_name property $property_name!");
-      }
+    {
+        no warnings 'uninitialized';
+        my $modifier_sum = $old_property{is_abstract} 
+            + $old_property{is_concrete}
+            + $old_property{is_final};
+
+        if ($modifier_sum > 1) {
+            Carp::confess("abstract/concrete/final are mutually exclusive.  Error in class definition for $class_name property $property_name!");
+        } elsif ($modifier_sum == 0) {
+            $old_property{is_concrete} = 1;
+        }
     }
     
     my %new_property = (
@@ -1004,8 +1000,10 @@ sub _normalize_property_description1 {
         my @values = grep { defined($_) } delete @old_property{@all_fields};
         if (@values > 1) {
             Carp::confess(
-                "Multiple values in class definition for $class_name for field "
+                "Multiple values in class definition for $class_name property $property_name.  Field "
                 . join("/", @all_fields)
+                . " has values "
+                . Data::Dumper::Dumper(\@values)
             );
         }
         elsif (@values == 1) {
@@ -1507,6 +1505,7 @@ sub _complete_class_meta_object_definitions {
             }
         }
         if (%still_not_found) {
+            $DB::single = 1;
             Carp::confess("BAD CLASS DEFINITION for $class_name.  Unrecognized properties: " . Data::Dumper::Dumper(%still_not_found));
         }
     }

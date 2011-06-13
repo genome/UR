@@ -213,7 +213,6 @@ sub create_for_loading_template {
         }
 
         unless (defined $pending_db_object_id) {
-            ##$DB::single = $DB::stopper;
             return undef;
             Carp::confess(
                 "no id found in object data for $class_name?\n"
@@ -267,7 +266,6 @@ sub create_for_loading_template {
                     }
                 }
                 elsif ($sub_classification_meta_class_name) {
-                    ##$DB::single = 1;
                     # Group objects requiring reclassification by type, 
                     # and catch anything which doesn't need reclassification.
 
@@ -426,7 +424,6 @@ sub create_for_loading_template {
 
                     if ($already_loaded and !$different and !$merge_exception) {
                         if ($pending_db_object == $already_loaded) {
-                            #$DB::single = 1;
                             Carp::croak("An object of type ".$already_loaded->class." with ID '".$already_loaded->id
                                         ."' was just loaded, but already exists in the object cache in the proper subclass");
                         }
@@ -518,13 +515,11 @@ sub create_for_loading_template {
                 # the object may no longer match the rule after subclassifying...
                 if ($loading_base_object and not $rule->evaluate($pending_db_object)) {
                     #print "Object does not match rule!" . Dumper($pending_db_object,[$rule->params_list]) . "\n";
-                    ##$DB::single = 1;
                     #$rule->evaluate($pending_db_object);
                     return;
                 }
             } # end of sub-classification code
 
-            ##$DB::single = 1;
             if (
                 $loading_base_object
                 and

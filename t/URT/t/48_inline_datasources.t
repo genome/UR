@@ -5,7 +5,7 @@ use UR;
 
 use Data::Dumper;
 use Test::More;
-plan tests => 42;
+plan tests => 43;
 
 use File::Temp;
 
@@ -59,6 +59,22 @@ is($@, '', 'Correctly, no error message was generated');
 @employees = eval { URT::Employee->get(division => 'NorthAmerica', department => 'finance') };
 is(scalar(@employees), 3, 'Loaded 3 employees from NorthAmerica/finance');
 
+eval {
+    UR::Object::Type->define(
+        class_name => 'URT::MissingColumnOrder',
+        id_by => [
+            office_id => { is => 'Integer' },
+        ],
+        has => [
+            address => { is => 'String' },
+        ],
+        data_source => {
+            is => 'UR::DataSource::File',
+            file_list => \@office_data_files,
+        },
+    );
+};
+ok($@, "missing column_order throws an exception");
 
 
 
@@ -114,6 +130,7 @@ sub setup_files_and_classes {
         ],
         data_source => {
             is => 'UR::DataSource::File',
+            column_order => ['office_id', 'address'],
             file_list => \@office_data_files,   
         },
     );

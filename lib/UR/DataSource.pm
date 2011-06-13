@@ -427,7 +427,6 @@ sub _first_class_in_inheritance_with_a_table {
 
 
     unless ($class) {
-        #$DB::single = 1;
         Carp::confess("No class?");
     }
     my $class_object = $class->__meta__;
