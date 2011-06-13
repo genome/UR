@@ -55,10 +55,10 @@ class UR::Object::View {
 
 
 sub create {
-    my $class = shift;    
+    my $class = shift;
 
     my ($params,@extra) = $class->define_boolexpr(@_);
-    
+
     # set values not specified in the params which can be inferred from the class name
     my ($expected_class,$expected_perspective,$expected_toolkit) = ($class =~ /^(.*)::View::(.*?)::([^\:]+)$/);
     unless ($params->specifies_value_for('subject_class_name')) {
@@ -77,8 +77,8 @@ sub create {
     unless ($expected_class) {
         my $subject_class_name = $params->value_for('subject_class_name');
         Carp::croak("Failed to resolve a subclass of " . __PACKAGE__ 
-                    . " for $subject_class_name from parameters.  "
-                    . "Received $params.");
+                . " for $subject_class_name from parameters.  "
+                . "Received $params.");
     }
 
     unless ($class->isa($expected_class)) {
@@ -86,7 +86,6 @@ sub create {
     }
 
     $params->add_filter(_observer_data => {});
-
     my $self = $expected_class->SUPER::create($params);
     return unless $self;
 
@@ -130,21 +129,21 @@ sub _resolve_view_class_for_params {
     # The subject must be explicitly of class "SubjectClassName" or some subclass of it.
     my $class = shift;
     my $bx = $class->define_boolexpr(@_);
-    
+
     if (exists $view_class_cache{$bx->id}) {
         if (!defined $view_class_cache{$bx->id}) {
             return;
         }
         return $view_class_cache{$bx->id};
     }
-    
+
     my %params = $bx->params_list;
 
     my $subject_class_name = delete $params{subject_class_name};
     my $perspective = delete $params{perspective};
     my $toolkit = delete $params{toolkit};
     my $aspects = delete $params{aspects};
-   
+
     unless($subject_class_name and $perspective and $toolkit) {
         Carp::confess("Bad params @_.  Expected subject_class_name, perspective, toolkit.");
     }
@@ -158,7 +157,7 @@ sub _resolve_view_class_for_params {
 
     my $subject_class_object = $subject_class_name->__meta__;
     my @possible_subject_class_names = ($subject_class_name,$subject_class_name->inheritance);
-    
+
     my $subclass_name;
     for my $possible_subject_class_name (@possible_subject_class_names) {
 
@@ -178,12 +177,12 @@ sub _resolve_view_class_for_params {
                 )
             )
         );
-    
+
         my $subclass_meta = UR::Object::Type->get($subclass_name);
         unless ($subclass_meta) {
             next;
         }
-        
+
         unless($subclass_name->isa(__PACKAGE__)) {
             Carp::carp("Subclass $subclass_name exists but is not a view?!");
             next;
@@ -271,7 +270,6 @@ sub _subject_is_used_in_an_encompassing_view {
 
 sub all_subject_classes {
     my $self = shift;
-
     my @classes = ();
     my $old_cb = UR::ModuleBase->message_callback('error');
     UR::ModuleBase->message_callback('error', sub {});
@@ -346,6 +344,11 @@ sub _bind_subject {
     return unless defined $subject;
 
     my $observer_data = $self->_observer_data;
+    unless ($observer_data) {
+        $self->_observer_data({});
+        $observer_data = $self->_observer_data;
+    }
+    Carp::confess unless $self->_observer_data == $observer_data;
 
     # See if we've already done this.    
     return 1 if $observer_data->{$subject};
@@ -369,7 +372,7 @@ sub _bind_subject {
     
     # Set the view to show initial data.
     $self->_update_view_from_subject;
-    
+   
     return 1;
 }
 
