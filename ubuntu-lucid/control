@@ -10,7 +10,7 @@ Homepage: http://search.cpan.org/dist/UR/
 Package: libur-perl
 Provides: ur
 Architecture: all
-Depends: ${perl:Depends}, ${misc:Depends}, perl (>= 5.8.0),liblingua-en-inflect-perl,libfreezethaw-perl,libdate-pcalc-perl,libyaml-perl,libdata-compare-perl,libtext-diff-perl,libdbi-perl,libsub-name-perl,libsub-install-perl,libpath-class-perl,libxml-dumper-perl,libxml-generator-perl,libxml-libxml-perl,libtimedate-perl,libdbd-sqlite3-perl,libclone-pp-perl (>= 1.02),libclass-autoloadcan-perl,libclass-autouse-perl (>= 2.00),libnet-httpserver-perl,libcgi-application-perl,libjson-perl,libossp-uuid-perl
+Depends: ${perl:Depends}, ${misc:Depends}, perl (>= 5.8.0),liblingua-en-inflect-perl,libfreezethaw-perl,libdate-pcalc-perl,libyaml-perl,libdata-compare-perl,libtext-diff-perl,libdbi-perl,libsub-name-perl,libsub-install-perl,libpath-class-perl,libxml-dumper-perl,libxml-generator-perl,libxml-libxml-perl,libtimedate-perl,libdbd-sqlite3-perl,libclone-pp-perl (>= 1.02),libclass-autoloadcan-perl,libclass-autouse-perl (>= 2.00),libnet-httpserver-perl,libcgi-application-perl,libjson-perl,libossp-uuid-perl,libpod-simple-perl (>= 3.13),libfile-slurp-perl
 Suggests: libgetopt-complete-perl (>= 0.20),libxml-xslt-perl
 Description: Rich declarative transactional objects
  UR is a class framework and object/relational mapper for Perl.  It starts
