@@ -28,13 +28,15 @@ sub is_numeric {
         $self->{'_is_numeric'} = $class->isa("UR::Value::Number");
     }
     return $self->{'_is_numeric'};
-}    
+}
 
 sub _data_type_as_class_name {
+    $DB::single=1;
     my $self = $_[0];
     return $self->{_data_type_as_class_name} ||= do {
         my $source_class = $self->class_name;
-        my $foreign_class = $self->data_type;
+        #this is so NUMBER -> Number
+        my $foreign_class = ucfirst(lc($self->data_type));
 
         if (not $foreign_class) {
             if ($self->via or $self->to) {
@@ -48,7 +50,7 @@ sub _data_type_as_class_name {
 
         # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
         # We should have an is_primitive flag set on these so we do efficient work.
-       
+
         my ($ns) = ($source_class =~ /^([^:]+)::/);
         if ($ns and not $ns->isa("UR::Namespace")) {
             $ns = undef;
@@ -56,7 +58,7 @@ sub _data_type_as_class_name {
 
         my $final_class;
         if ($foreign_class) {
-            if ($foreign_class->can('__meta__')) {   
+            if ($foreign_class->can('__meta__')) {
                 $final_class = $foreign_class;
             }
             else {
@@ -68,7 +70,7 @@ sub _data_type_as_class_name {
                         $final_class = $ns_value_class; 
                     }
                 }
-                
+
                 unless ($final_class) {
                     $ur_value_class = 'UR::Value::' . $foreign_class;
                     if ($ur_value_class->can('__meta__')) {
@@ -86,7 +88,7 @@ sub _data_type_as_class_name {
                 Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
             }
         }
-        
+
         $final_class;
     };
 }
