@@ -31,12 +31,11 @@ sub is_numeric {
 }
 
 sub _data_type_as_class_name {
-    $DB::single=1;
     my $self = $_[0];
     return $self->{_data_type_as_class_name} ||= do {
         my $source_class = $self->class_name;
         #this is so NUMBER -> Number
-        my $foreign_class = ucfirst(lc($self->data_type));
+        my $foreign_class = $self->data_type;
 
         if (not $foreign_class) {
             if ($self->via or $self->to) {
@@ -67,14 +66,20 @@ sub _data_type_as_class_name {
                 if ($ns and $ns->can("get")) {
                     $ns_value_class = $ns . '::Value::' . $foreign_class;
                     if ($ns_value_class->can('__meta__')) {
-                        $final_class = $ns_value_class; 
+                        $final_class = $ns_value_class;
                     }
                 }
 
-                unless ($final_class) {
+                if (!$final_class) {
                     $ur_value_class = 'UR::Value::' . $foreign_class;
                     if ($ur_value_class->can('__meta__')) {
-                        $final_class = $ur_value_class; 
+                        $final_class = $ur_value_class;
+                    }
+                }
+                if (!$final_class) {
+                    $ur_value_class = 'UR::Value::' . ucfirst(lc($foreign_class));
+                    if ($ur_value_class->can('__meta__')) {
+                        $final_class = $ur_value_class;
                     }
                 }
             }
