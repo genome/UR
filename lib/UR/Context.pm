@@ -96,6 +96,10 @@ sub current {
     return $UR::Context::current;
 }
 
+sub process {
+    return $UR::Context::process;
+}
+
 sub now {
     return Date::Format::time2str(q|%Y-%m-%d %H:%M:%S|,time());
 }
