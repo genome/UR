@@ -8,6 +8,7 @@ use IO::File;
 use File::Slurp     qw/write_file/;
 use File::Basename  qw/dirname/;
 use File::Path      qw/make_path/;
+use YAML;
 
 class UR::Namespace::Command::Update::Doc {
     is => 'Command::V2',
@@ -28,6 +29,12 @@ class UR::Namespace::Command::Update::Doc {
             shell_args_position => 3,
             is_many => 1,
             doc => 'specific classes to document (documents all unless specified)',
+        },
+        exclude_sections => {
+            is => 'Text',
+            is_many => 1,
+            is_optional => 1,
+            doc => 'if specified, sections matching these names will be omitted',
         },
         input_path => {
             is => 'Path',
@@ -89,11 +96,18 @@ sub execute {
 
     die "--generate-index requires --output-dir to be specified" if $self->generate_index and !$self->output_path;
 
-    # scrub any trailing / from output_path
+
+    # scrub any trailing / from input/output_path
     if ($self->output_path) {
         my $output_path = $self->output_path;
         $output_path =~ s/\/+$//m;
         $self->output_path($output_path);
+    }
+
+    if ($self->input_path) {
+        my $input_path = $self->input_path;
+        $input_path =~ s/\/+$//m;
+        $self->input_path($input_path);
     }
 
     $self->_writer_class("UR::Doc::Writer::" . ucfirst($self->output_format));
@@ -159,9 +173,9 @@ sub _generate_index {
     my ($self, @command_trees) = @_;
 
     if ($self->generate_index) {
-        my $index = $self->_writer_class->generate_index(@command_trees);
+        my $index = Dump({ command_tree => \@command_trees });
         if ($index and $index ne '') {
-            my $index_filename = $self->_make_filename("index");
+            my $index_filename = "index.yml";
             my $index_path = join("/", $self->output_path, $index_filename);
             if (-e $index_path) {
                 $self->warning_message("Index generation overwriting existing file at $index_path");
@@ -175,18 +189,20 @@ sub _generate_index {
     return;
 }
 
-sub _process_command_tree {
-    my ($self, $tree) = @_;
+sub _generate_content {
+    my ($self, $command) = @_;
 
-    my $command = $tree->{command};
     my $doc;
     eval {
-        my @sections = $command->doc_sections;
-        my @navigation_info = $self->_navigation_info($command);
+        my @all_sections = $command->doc_sections;
+        my @sections;
+        for my $s (@all_sections) {
+            push(@sections, $s) unless grep { $s->title =~ /$_/ } $self->exclude_sections;
+        }
+
         my $writer = $self->_writer_class->create(
             sections => \@sections,
             title => $command->command_name,
-            navigation => \@navigation_info,
         );
         $doc = $writer->render;
     };
@@ -211,6 +227,12 @@ sub _process_command_tree {
     $fh = IO::File->new('>' . $doc_path) || die "Cannot create file at " . $doc_path . "\n";
     print $fh $doc;
     close($fh);
+}
+
+sub _process_command_tree {
+    my ($self, $tree) = @_;
+
+    $self->_generate_content($tree->{command}) unless $tree->{external};
 
     for my $subtree (@{$tree->{sub_commands}}) {
         $self->_process_command_tree($subtree);
@@ -220,7 +242,7 @@ sub _process_command_tree {
 sub _make_filename {
     my ($self, $class_name) = @_;
     $class_name =~ s/ /-/g;
-    return $class_name . "." . $self->output_format;
+    return "$class_name." . $self->output_format;
 }
 
 sub _get_output_dir {
@@ -268,23 +290,25 @@ sub _get_command_tree {
     if ($@) {
         $self->error_message("Failed to load class $command: $@") unless $self->suppress_errors;
         return;
-    } else {
-        my $module_name = $command;
-        $module_name =~ s|::|/|g;
-        $module_name .= '.pm';
-        my $input_path = $self->input_path;
-        my $module_path = $INC{$module_name};
-        if ($self->restrict_to_input_path && $module_path !~ /^$input_path/) {
-            $self->status_message("Skipping $command from $module_path as it is not in $input_path");
-        }
-        $self->status_message("Loaded $command from $module_name at $module_path");
     }
 
     return if $command->_is_hidden_in_docs;
 
+    my $module_name = $command;
+    $module_name =~ s|::|/|g;
+    $module_name .= '.pm';
+    my $input_path = $self->input_path;
+    my $module_path = $INC{$module_name};
+    $self->status_message("Loaded $command from $module_name at $module_path");
+
+    my $external = $module_path !~ /^$input_path\// ? 1 : 0;
     my $tree = {
         command => $command,
-        sub_commands => []
+        sub_commands => [],
+        module_path => $module_path,
+        external => $external,
+        parent_class => $command->parent_command_class,
+        description => $command->help_brief,
     };
 
     if ($command eq $self->class_name) {
