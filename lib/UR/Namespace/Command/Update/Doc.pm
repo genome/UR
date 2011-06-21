@@ -307,7 +307,7 @@ sub _get_command_tree {
         sub_commands => [],
         module_path => $module_path,
         external => $external,
-        parent_class => $command->parent_command_class,
+        parent_class => $command->parent_command_class || undef,
         description => $command->help_brief,
     };
 
