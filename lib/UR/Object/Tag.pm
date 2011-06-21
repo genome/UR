@@ -142,7 +142,11 @@ UR::Util->generate_readwrite_methods(%default_values);
 sub create($@)
 {
     my ($class, @initial_prop) = @_;
-    return bless({%default_values,@initial_prop},$class);
+    my $self = bless({%default_values,@initial_prop},$class);
+    if (not ref($self->{properties}) eq 'ARRAY') {
+        $self->{properties} = [ $self->{properties} ];
+    }
+    return $self;
 }
 
 sub delete($)
