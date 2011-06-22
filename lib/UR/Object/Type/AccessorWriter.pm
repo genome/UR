@@ -30,7 +30,7 @@ sub mk_rw_accessor {
             if ($different or $@ =~ m/has no overloaded magic/)
             {
                 $_[0]->{ $property_name } = $new;
-                $_[0]->__signal_change__( $accessor_name, $old, $new ) unless $is_transient; # FIXME is $is_transient right here?  Maybe is_volitile instead (if at all)?
+                $_[0]->__signal_change__( $property_name, $old, $new ) unless $is_transient; # FIXME is $is_transient right here?  Maybe is_volatile instead (if at all)?
             }
             return $new;
         }

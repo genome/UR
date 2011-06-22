@@ -49,6 +49,9 @@ my $build = $subclass->new(
     'version'             => '',
     'JSON'                => '',
     'Test::Fork'          => '',
+    'Pod::Simple::Text'   => '2.02',
+    'Pod::Simple::HTML'   => '3.03',
+    'File::Slurp'         => '',
 
     # C
     'FreezeThaw'          => '0.43',

@@ -312,6 +312,12 @@ sub _create {
                             $next_obj_current_context = undef;
                             last PICK_NEXT_OBJECT_FOR_LOADING;
                         }
+                        elsif ($change_is_bx_filter_property->($next_obj_current_context)) {
+                            delete $db_seen_ids_that_are_not_deleted{$next_obj_current_context_id};
+                            $next_object = $next_obj_current_context;
+                            $next_obj_current_context = undef;
+                            last PICK_NEXT_OBJECT_FOR_LOADING;
+                        }
                         else {
                             # The change is not an order-by property.  This object must have been deleted
                             # from the DB.  The call to __merge below will throw an exception

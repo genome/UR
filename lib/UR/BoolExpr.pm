@@ -534,6 +534,9 @@ sub resolve {
                     no warnings;
                     
                     # sort and replace
+                    # note that in perl5.10 and above strings like "inf*" have a numeric value
+                    # causing this kind of sorting to do surprising things, but the only 
+                    # goal here is to normalize results ...so this is fine
                     $value = [ 
                         sort { $a <=> $b or $a cmp $b } 
                         @$value
@@ -816,7 +819,7 @@ sub legacy_params_hash {
 
 # TODO: these methods need a better home, since they are a cmdline/UI standard
 sub filter_regex_for_string {
-    return '^\s*(\w+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*[\'"]?([^\'"]*)[\'"]?\s*$';
+    return '^\s*([\w\.\-]+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*[\'"]?([^\'"]*)[\'"]?\s*$';
 }
 
 # TODO: these methods need a better home, since they are a cmdline/UI standard
