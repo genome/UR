@@ -210,6 +210,33 @@ sub _post_module_written_sqlite {
     return 1;
 }
 
+sub _post_module_written_pg {
+    my ($self, $pathname, $server) = @_;
+    return 1;
+}
+
+
+sub _post_module_written_oracle {
+    my ($self, $pathname, $server) = @_;
+    return 1;
+}
+
+sub _post_module_written_mysql {
+    my ($self, $pathname, $server) = @_;
+    return 1;
+}
+
+sub _post_module_written_file {
+    my ($self, $pathname, $server) = @_;
+    return 1;
+}
+
+sub _post_module_written_filemux {
+    my ($self, $pathname, $server) = @_;
+    return 1;
+}
+
+
 
 sub _try_connect {
     my $self = shift;
