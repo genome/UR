@@ -662,6 +662,12 @@ sub _normalize_class_description_impl {
                 # extend the existing definition
                 foreach my $key ( keys %$params ) {
                     next if ($key eq 'is_specified_in_module_header' || $key eq 'position_in_module_header');
+                    # once a property gets set to is_optional => 0, it stays there, even if it's later set to 1
+                    next if ($key eq 'is_optional'
+                             and
+                             exists($properties->{$name}->{'is_optional'})
+                             and
+                             $properties->{$name}->{'is_optional'} == 0);
                     $properties->{$name}->{$key} = $params->{$key};
                 }
                 $params = $properties->{$name};
@@ -673,7 +679,7 @@ sub _normalize_class_description_impl {
             if (my $calculate_from = $params->{'calculate_from'}) {
                 $params->{'calculate_from'} = [ $calculate_from ] unless (ref($calculate_from) eq 'ARRAY');
             }
-            
+
             if (my $id_by = $params->{id_by}) {
                 $id_by = [ $id_by ] unless ref($id_by) eq 'ARRAY';
                 my @id_by_names;
@@ -690,9 +696,12 @@ sub _normalize_class_description_impl {
                         if (exists $params->{$p}) {
                             $params2->{$p} = $params->{$p};
                         }
-                    }                    
+                    }
                     $params2->{implied_by} = $name;
-                    $params2->{is_specified_in_module_header} = 0;                    
+                    $params2->{is_specified_in_module_header} = 0;
+                    # if the invoking property is not is_optional (ie. required), then the implied property is required
+                    $params2->{is_optional} = 0 if (! exists($params->{'is_optional'}) or $params->{'is_optional'} == 0);
+ 
                     push @id_by_names, $id_name;
                     push @tmp, $id_name, $params2;
                 }
