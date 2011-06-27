@@ -3567,7 +3567,7 @@ sub _dump_change_snapshot {
     my $class = shift;
     my %params = @_;
 
-    my @c = grep { $_->__changes__ } $UR::Context::current->all_objects_loadedi('UR::Object');
+    my @c = grep { $_->__changes__ } $UR::Context::current->all_objects_loaded('UR::Object');
 
     my $fh;
     if (my $filename = $params{filename})
