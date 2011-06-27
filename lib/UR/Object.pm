@@ -160,14 +160,12 @@ sub __errors__ {
 
         my $value = $values[0];
 
-        unless ($property_metadata->is_optional) {
-            if (!defined $value) {
-                push @tags, UR::Object::Tag->create(
-                    type => 'invalid',
-                    properties => [$property_name],
-                    desc => "No value specified for required property",
-                );                
-            }
+        if (! $property_metadata->is_optional and !defined($value)) {
+            push @tags, UR::Object::Tag->create(
+                            type => 'invalid',
+                            properties => [$property_name],
+                            desc => "No value specified for required property",
+                         );
         }
         
         # The tests below don't apply do undefined values.
