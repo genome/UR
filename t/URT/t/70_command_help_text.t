@@ -44,7 +44,7 @@ Acme::ChildCommand->usage_messages_callback($callback);
 
 $usage_string = '';
 my $rv = Acme::ParentCommand->_execute_with_shell_params_and_return_exit_code('--help');
-is($rv,1, 'Parent command executed');
+is($rv, 0, 'Parent command executed');
 like($usage_string, qr(USAGE\s+acme parent-command --param-b=\?\s+--param-c=\?\s+\[--param-a=\?\]), 'Parent help text usage is correct');
 like($usage_string, qr(REQUIRED ARGUMENTS\s+param-b\s+String), 'Parent help text lists param-b as required');
 like($usage_string, qr(OPTIONAL ARGUMENTS\s+param-a\s+String\s+Some documentation for param a), 'Parent help text lists param-a as optional');
@@ -54,7 +54,7 @@ unlike($usage_string, qr(OPTIONAL ARGUMENTS\s+param-b\s+String), 'Parent help te
 
 $usage_string = '';
 $rv = Acme::ChildCommand->_execute_with_shell_params_and_return_exit_code('--help');
-is($rv,1, 'Child command executed');
+is($rv, 0, 'Child command executed');
 like($usage_string, qr(USAGE\s+acme child-command --param-a=\?\s+--param-b=\?\s+--param-c=\?), 'Child help text usage is correct');
 like($usage_string, qr(param-a\s+String\s+Some documentation for param a), 'Child help text mentions param-a with parent documentation');
 like($usage_string, qr(param-b\s+String), 'Child help text mentions param-b');

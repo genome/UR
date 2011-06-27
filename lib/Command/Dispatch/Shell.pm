@@ -94,7 +94,7 @@ sub _execute_delegate_class_with_params {
 
     if ( $params->{help} ) {
         $delegate_class->usage_message($delegate_class->help_usage_complete_text);
-        return;
+        return 1;
     }
 
     my $command_object = $delegate_class->create(%$params);
