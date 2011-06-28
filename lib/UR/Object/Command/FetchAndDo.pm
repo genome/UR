@@ -46,7 +46,7 @@ Filtering:
  Create filter equations by combining filterable properties with operators and
      values.
  Combine and separate these 'equations' by commas.  
- Use single quotes (') to contain values with spaces: name='genome center'
+ Use single quotes (') to contain values with spaces: name='genome institute'
  Use percent signs (%) as wild cards in like (~).
  Use backslash or single quotes to escape characters which have special meaning
      to the shell such as < > and &
