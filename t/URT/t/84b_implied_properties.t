@@ -51,7 +51,7 @@ is($ok_order->__meta__->property('sandwich')->is_optional, 0, 'sandwich is not o
 my $order = BuggedOrder->create(sandwich => $sandwich, drink => $drink);
 isa_ok($order, 'BuggedOrder', 'order');
 my $order_meta = $order->__meta__;
-is($order_meta->property('sandwich_id')->is_optional, 0, 'sandwitch_id is not optional');
+is($order_meta->property('sandwich_id')->is_optional, 0, 'sandwich_id is not optional');
 is($order_meta->property('sandwich')->is_optional, 0, 'sandwich is not optional');
 is($order_meta->property('drink')->is_optional, 0, 'drink is not optional');
 # because drink_id isn't mentioned in the definition of drink, but is for combo
