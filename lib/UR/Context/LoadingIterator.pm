@@ -313,6 +313,9 @@ sub _create {
                             last PICK_NEXT_OBJECT_FOR_LOADING;
                         }
                         elsif ($change_is_bx_filter_property->($next_obj_current_context)) {
+                            # The change was that the object originally did not the filter, but since being
+                            # loaded it's been changed so it now matches the filter.  The DB iterator isn't
+                            # returning the object since the DB's copy doesn't match the filter.
                             delete $db_seen_ids_that_are_not_deleted{$next_obj_current_context_id};
                             $next_object = $next_obj_current_context;
                             $next_obj_current_context = undef;
