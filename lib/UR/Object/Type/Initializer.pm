@@ -1018,6 +1018,8 @@ sub _normalize_property_description1 {
         elsif (@values == 1) {
             $new_property{$primary_field_name} = $values[0];
         }
+
+        # Fill in default values for metadata that is missing
         if (
             (not exists $new_property{$primary_field_name}) 
             and 
