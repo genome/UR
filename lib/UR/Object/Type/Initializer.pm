@@ -699,8 +699,6 @@ sub _normalize_class_description_impl {
                     }
                     $params2->{implied_by} = $name;
                     $params2->{is_specified_in_module_header} = 0;
-                    # if the invoking property is not is_optional (ie. required), then the implied property is required
-                    $params2->{is_optional} = 0 if (! exists($params->{'is_optional'}) or $params->{'is_optional'} == 0);
  
                     push @id_by_names, $id_name;
                     push @tmp, $id_name, $params2;
@@ -718,17 +716,23 @@ sub _normalize_class_description_impl {
                 
         } # next property in group
 
+        # id-by properties' metadata can influence the id-ed-by property metadata
         for my $pdata (values %$properties) {
             next unless $pdata->{id_by};
             for my $id_property (@{ $pdata->{id_by} }) {
                 my $id_pdata = $properties->{$id_property};
                 for my $p (@UR::Object::Type::meta_id_ref_shared_properties) {
-                    if (exists $id_pdata->{$p}) {
-                        $pdata->{$p} = $id_pdata->{$p};
+                    if (exists $id_pdata->{$p} xor exists $pdata->{$p}) {
+                        # if one or the other specifies a value, copy it to the one that's missing
+                        $id_pdata->{$p} = $pdata->{$p} = $id_pdata->{$p} || $pdata->{$p};
+                    } elsif (!exists $id_pdata->{$p} and !exists $pdata->{$p} and exists $UR::Object::Property::defaults{$p}) {
+                        # if neither has a value, use the default for both
+                        $id_pdata->{$p} = $pdata->{$p} = $UR::Object::Property::defaults{$p};
                     }
                 }                    
             }
         }
+
     } # next group of properties
    
     # NOT ENABLED YET
