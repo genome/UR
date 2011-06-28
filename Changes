@@ -1,5 +1,13 @@
 Revision history for UR
 
+0.32    2011-06-29
+        Query engine remembers cases where a left join matches nothing, and skips
+            asking the datasource on subsequent similar queries
+        Committing a software transaction now performs the same data consistancy
+            checking as the top-level transaction.
+        Improved document auto-generation for Command classes
+        Improved SQLite Data Source schema introspection
+        
 0.31    2011-05-28
         updated database handling for Pg and mysql table case sensitivity
         UR's developer tools (ur command-line tool) can operate on non-standard
