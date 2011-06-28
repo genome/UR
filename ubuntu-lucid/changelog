@@ -1,3 +1,23 @@
+libur-perl (0.32-1) unstable; urgency=low
+
+  * Query engine remembers cases where a left join matches nothing, and skips asking the datasource on subsequent similar queries
+  * Committing a software transaction now performs the same data consistancy checking as the top-level transaction.
+  * Improved document auto-generation for Command classes
+  * Improved SQLite Data Source schema introspection
+
+ -- Anthony Brummett <brummett@cpan.org>  Wed, 29 Jun 2011 12:00:00 -0500
+
+libur-perl (0.31-1) unstable; urgency=low
+
+  * updated database handling for Pg and mysql table case sensitivity
+  * UR's developer tools (ur command-line tool) can operate on non-standard source tree layouts, and can be forced to operate on a namespace with a command-line option
+  * support for using a chain of properties in queries ('a.b.c like' => $v)
+  * set operations normalized: min, max, sum, count
+  * set-to-set relaying is now correctly lazy
+  * Objects previously loaded from the database, and later deleted from the database, are now detected as deleted and handled as another type of change to be merged with in-memory changes.
+
+ -- Anthony Brummett <brummett@cpan.org>  Sat, 28 May 2011 09:26:41 -0500
+
 libur-perl (0.30-1) unstable; urgency=low
 
   * Latest build
