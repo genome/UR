@@ -120,8 +120,12 @@ provides:
     version: 0.32
   UR::Context:
     file: lib/UR/Context.pm
+    version: 0.32
   UR::Context::DefaultRoot:
     file: lib/UR/Context/DefaultRoot.pm
+    version: 0.32
+  UR::Context::LoadingIterator:
+    file: lib/UR/Context/LoadingIterator.pm
     version: 0.32
   UR::Context::ObjectFabricator:
     file: lib/UR/Context/ObjectFabricator.pm
@@ -172,6 +176,9 @@ provides:
   UR::DataSource::Pg:
     file: lib/UR/DataSource/Pg.pm
     version: 0.32
+  UR::DataSource::QueryPlan:
+    file: lib/UR/DataSource/QueryPlan.pm
+    version: 0.32
   UR::DataSource::RDBMS:
     file: lib/UR/DataSource/RDBMS.pm
     version: 0.32
@@ -210,6 +217,7 @@ provides:
     version: 0.32
   UR::DataSource::SQLite:
     file: lib/UR/DataSource/SQLite.pm
+    version: 0.32
   UR::DataSource::ValueDomain:
     file: lib/UR/DataSource/ValueDomain.pm
     version: 0.32
@@ -218,6 +226,21 @@ provides:
     version: 0.32
   UR::DeletedRef:
     file: lib/UR/DeletedRef.pm
+    version: 0.32
+  UR::Doc::Pod2Html:
+    file: lib/UR/Doc/Pod2Html.pm
+    version: 0.32
+  UR::Doc::Section:
+    file: lib/UR/Doc/Section.pm
+    version: 0.32
+  UR::Doc::Writer:
+    file: lib/UR/Doc/Writer.pm
+    version: 0.32
+  UR::Doc::Writer::Html:
+    file: lib/UR/Doc/Writer/Html.pm
+    version: 0.32
+  UR::Doc::Writer::Pod:
+    file: lib/UR/Doc/Writer/Pod.pm
     version: 0.32
   UR::Env::UR_COMMAND_DUMP_STATUS_MESSAGES:
     file: lib/UR/Env/UR_COMMAND_DUMP_STATUS_MESSAGES.pm
@@ -275,6 +298,9 @@ provides:
     version: 0.32
   UR::Env::UR_IGNORE:
     file: lib/UR/Env/UR_IGNORE.pm
+    version: 0.32
+  UR::Env::UR_NO_REQUIRE_USER_VERIFY:
+    file: lib/UR/Env/UR_NO_REQUIRE_USER_VERIFY.pm
     version: 0.32
   UR::Env::UR_NR_CPU:
     file: lib/UR/Env/UR_NR_CPU.pm
@@ -444,6 +470,9 @@ provides:
   UR::Namespace::Command::Update::ClassesFromDb:
     file: lib/UR/Namespace/Command/Update/ClassesFromDb.pm
     version: 0.32
+  UR::Namespace::Command::Update::Doc:
+    file: lib/UR/Namespace/Command/Update/Doc.pm
+    version: 0.32
   UR::Namespace::Command::Update::Pod:
     file: lib/UR/Namespace/Command/Update/Pod.pm
     version: 0.32
@@ -512,6 +541,9 @@ provides:
     version: 0.32
   UR::Object::Iterator:
     file: lib/UR/Object/Iterator.pm
+    version: 0.32
+  UR::Object::Join:
+    file: lib/UR/Object/Join.pm
     version: 0.32
   UR::Object::Property:
     file: lib/UR/Object/Property.pm
@@ -639,6 +671,9 @@ provides:
   UR::Value::Blob:
     file: lib/UR/Value/Blob.pm
     version: 0.32
+  UR::Value::Boolean:
+    file: lib/UR/Value/Boolean.pm
+    version: 0.32
   UR::Value::CSV:
     file: lib/UR/Value/CSV.pm
     version: 0.32
@@ -659,6 +694,9 @@ provides:
     version: 0.32
   UR::Value::FilesystemPath:
     file: lib/UR/Value/FilesystemPath.pm
+    version: 0.32
+  UR::Value::Float:
+    file: lib/UR/Value/Float.pm
     version: 0.32
   UR::Value::HASH:
     file: lib/UR/Value/HASH.pm
@@ -681,8 +719,17 @@ provides:
   UR::Value::Set:
     file: lib/UR/Value/Set.pm
     version: 0.32
+  UR::Value::SloppyPrimitive:
+    file: lib/UR/Value/SloppyPrimitive.pm
+    version: 0.32
+  UR::Value::String:
+    file: lib/UR/Value/String.pm
+    version: 0.32
   UR::Value::Text:
     file: lib/UR/Value/Text.pm
+    version: 0.32
+  UR::Value::Timestamp:
+    file: lib/UR/Value/Timestamp.pm
     version: 0.32
   UR::Value::URL:
     file: lib/UR/Value/URL.pm
@@ -705,14 +752,18 @@ requires:
   DBD::SQLite: 1.14
   DBI: 1.601
   Data::Compare: 0.13
+  Data::UUID: 0.148
   Date::Format: ''
   File::Basename: 2.73
+  File::Slurp: ''
   FreezeThaw: 0.43
   Getopt::Complete: v0.20
   JSON: ''
   Lingua::EN::Inflect: 1.88
   Net::HTTPServer: ''
   Path::Class: ''
+  Pod::Simple::HTML: 3.03
+  Pod::Simple::Text: 2.02
   Sub::Install: 0.924
   Sub::Name: 0.04
   Sys::Hostname: 1.11
