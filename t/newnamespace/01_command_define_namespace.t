@@ -48,5 +48,6 @@ my @messages = $cmd->status_messages();
 is($messages[0], 'A   NewNamespace (UR::Namespace)', 'Message adding NewNamespace');
 is($messages[1], 'A   NewNamespace::Vocabulary (UR::Vocabulary)', 'Message adding vocabulary');
 is($messages[2], 'A   NewNamespace::DataSource::Meta (UR::DataSource::Meta)', 'Message adding meta datasource');
-is($messages[3], "A   ${tempdir}/NewNamespace/DataSource/Meta.sqlite3-dump (Metadata DB skeleton)",
+like($messages[3],
+     qr(A   /.+/NewNamespace/DataSource/Meta\.sqlite3-dump [(]Metadata DB skeleton[)]),
      'Message adding metaDB dump file');
