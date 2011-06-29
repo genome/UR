@@ -98,7 +98,7 @@ sub __display_name__ {
     
 
 sub get_with_special_parameters {
-    warn "this method will be removed shortly";
+    Carp::cluck("Getting sets by directly properties of their members method will be removed shortly because of ambiguity on the meaning of 'id'.  Please update the code which calls this.");
     my $class = shift;
     my $bx = shift;
     my @params = @_;

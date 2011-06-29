@@ -2,7 +2,7 @@ package UR::Object::Command::List::Style;
 
 our $VERSION = "0.32"; # UR $VERSION;
 
-sub new{
+sub new {
     my ($class, %args) = @_;
     foreach (qw/iterator show noheaders output/){
         die "no value for $_!" unless defined $args{$_};
@@ -23,15 +23,14 @@ sub _get_next_object_from_iterator {
     }
     return $obj;
 }
-        
 
 sub _object_properties_to_string {
     my ($self, $o, $char) = @_;
     my @v;
     return join(
-        $char, 
-        map { defined $_ ? $_ : '<NULL>' } 
-        map { 
+        $char,
+        map { defined $_ ? $_ : '<NULL>' }
+        map {
             if (substr($_,0,1) eq '(') {
                 @v = eval $_;
                 if ($@) {
@@ -39,7 +38,18 @@ sub _object_properties_to_string {
                 }
             }
             else {
-                @v = map { defined $_ ? $_ : '<NULL>' } $o->__get_attr__($_);
+                @v = ();
+                foreach my $i ($o->__get_attr__($_)) {
+                    if (! defined $i) {
+                        push @v, "<NULL>";
+                    } elsif (Scalar::Util::blessed($i) and $i->isa('UR::Value') and $i->can('create_view')) {
+                        # Here we allow any UR::Values that have their own views to present themselves.
+                        my $v = $i->create_view( perspective => 'default', toolkit => 'text' );
+                        push @v, $v->content();
+                    } else {
+                        push @v, $i;
+                    }
+                }
             }
             if (@v > 1) {
                 no warnings;

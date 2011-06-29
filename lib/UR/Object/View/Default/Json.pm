@@ -25,7 +25,6 @@ sub _json {
 
 sub _generate_content {
     my $self = shift;
-
     return $self->_json->encode($self->_jsobj);
 }
 
@@ -36,15 +35,11 @@ sub _jsobj {
     return '' unless $subject;
 
     my %jsobj = ();
-    
-#    unless ($self->_subject_is_used_in_an_encompassing_view()) {
-        # the content for any given aspect is handled separately
-        for my $aspect ($self->aspects) { 
-                
-            my $val = $self->_generate_content_for_aspect($aspect);
-            $jsobj{$aspect->name} = $val if defined $val;
-        }
-#    }
+
+    for my $aspect ($self->aspects) { 
+        my $val = $self->_generate_content_for_aspect($aspect);
+        $jsobj{$aspect->name} = $val if defined $val;
+    }
 
     return \%jsobj;
 }
@@ -67,39 +62,31 @@ sub _generate_content_for_aspect {
         warn $@;
         return;
     }
-    
-    if (@value == 0) {
-        return; 
-    }
-        
-    if (Scalar::Util::blessed($value[0])) {
-        unless ($aspect->delegate_view) {
-            eval {
-                $aspect->generate_delegate_view;
-            };
-            if ($@) {
-                warn $@;
-            }
-        }
+
+    # Always look for a delegate view.
+    # This means we replace the value(s) with their
+    # subordinate widget content.
+    unless ($aspect->delegate_view) {
+        $aspect->generate_delegate_view;
     }
 
     my $ref = [];
- 
-    # Delegate to a subordinate view if needed.
-    # This means we replace the value(s) with their
-    # subordinate widget content.
+
     if (my $delegate_view = $aspect->delegate_view) {
         foreach my $value ( @value ) {
-            $delegate_view->subject($value);
+            if (Scalar::Util::blessed($value)) {
+                $delegate_view->subject($value);
+            } else {
+                $delegate_view->subject_id($value);
+            }
             $delegate_view->_update_view_from_subject();
-            
+
             if ($delegate_view->can('_jsobj')) {
                 push @$ref, $delegate_view->_jsobj;
             } else {
                 my $delegate_text = $delegate_view->content();
-
                 push @$ref, $delegate_text;
-            }            
+            }
         }
     }
     else {
