@@ -3,7 +3,7 @@ package UR::Object::Set;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.31"; # UR $VERSION;
+our $VERSION = "0.32"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object::Type );
 

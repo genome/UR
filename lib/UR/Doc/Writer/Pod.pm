@@ -4,6 +4,8 @@ use strict;
 use warnings;
 
 use UR;
+our $VERSION = "0.32"; # UR $VERSION;
+
 use UR::Doc::Section;
 use Carp qw/croak/;
 

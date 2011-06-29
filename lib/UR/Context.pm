@@ -5,6 +5,7 @@ use warnings;
 use Sub::Name;
 
 require UR;
+our $VERSION = "0.32"; # UR $VERSION;
 
 use UR::Context::ObjectFabricator;
 use UR::Context::LoadingIterator;

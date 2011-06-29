@@ -4,6 +4,8 @@ use strict;
 use warnings;
 
 use UR;
+our $VERSION = "0.32"; # UR $VERSION;
+
 use IO::File;
 use File::Slurp     qw/write_file/;
 use File::Basename  qw/dirname/;

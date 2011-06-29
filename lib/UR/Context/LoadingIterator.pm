@@ -5,7 +5,7 @@ use warnings;
 
 use UR::Context;
 
-our $VERSION = "0.31"; # UR $VERSION;
+our $VERSION = "0.32"; # UR $VERSION;
 
 # A helper package for UR::Context to handling queries which require loading
 # data from outside the current context.  It is responsible for collating 

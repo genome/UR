@@ -3,7 +3,7 @@ package UR::Namespace::View::SchemaBrowser::CgiApp;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.31"; # UR $VERSION;
+our $VERSION = "0.32"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::Namespace::View::SchemaBrowser::CgiApp',

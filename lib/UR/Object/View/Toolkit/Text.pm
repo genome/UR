@@ -4,6 +4,8 @@ use warnings;
 use strict;
 require UR;
 
+our $VERSION = "0.32"; # UR $VERSION;;
+
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object::View::Toolkit',
@@ -12,8 +14,6 @@ UR::Object::Type->define(
         toolkit_module  => { is_constant => 1, value => "(none)" },  # is this used anywhere?
     ]
 );
-
-our $VERSION = "0.31"; # UR $VERSION;;
 
 sub show_view {
     my $class = shift;

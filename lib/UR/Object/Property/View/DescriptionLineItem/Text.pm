@@ -3,7 +3,7 @@ package UR::Object::Property::View::DescriptionLineItem::Text;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.31"; # UR $VERSION;
+our $VERSION = "0.32"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

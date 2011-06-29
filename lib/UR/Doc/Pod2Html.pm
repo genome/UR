@@ -3,6 +3,8 @@ package UR::Doc::Pod2Html;
 use strict;
 use warnings;
 
+our $VERSION = "0.32"; # UR $VERSION;
+
 use Data::Dumper;
 
 use parent 'Pod::Simple::HTML';
