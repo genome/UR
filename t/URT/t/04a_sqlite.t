@@ -22,7 +22,8 @@ isa_ok($dbh, 'UR::DBI::db', 'Returned handle is the proper class');
 
 
 sub test_column_details {
-    my $sth = URT::DataSource::SomeSQLite->get_column_details_from_data_dictionary('','','inline','%');
+    my $schema = URT::DataSource::SomeSQLite->default_owner;
+    my $sth = URT::DataSource::SomeSQLite->get_column_details_from_data_dictionary('',$schema,'inline','%');
 
     my @results;
     while (my $row = $sth->fetchrow_hashref) {

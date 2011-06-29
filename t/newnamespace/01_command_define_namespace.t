@@ -49,5 +49,5 @@ is($messages[0], 'A   NewNamespace (UR::Namespace)', 'Message adding NewNamespac
 is($messages[1], 'A   NewNamespace::Vocabulary (UR::Vocabulary)', 'Message adding vocabulary');
 is($messages[2], 'A   NewNamespace::DataSource::Meta (UR::DataSource::Meta)', 'Message adding meta datasource');
 like($messages[3],
-     qr(A   /.+/NewNamespace/DataSource/Meta\.sqlite3-dump [(]Metadata DB skeleton[)]),
+     qr(A   /.+/NewNamespace/DataSource/Meta\.sqlite3n?-dump [(]Metadata DB skeleton[)]),
      'Message adding metaDB dump file');
