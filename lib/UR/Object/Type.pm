@@ -69,6 +69,7 @@ sub property {
         # optimize for the common case
         my ($self, $property_name) = @_;
         my $class_names = $self->_property_name_class_map->{$property_name};
+        return unless $class_names and @$class_names;
         my $id = $class_names->[0] . "\t" . $property_name;
         return UR::Object::Property->get($id); 
     }
