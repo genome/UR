@@ -329,6 +329,7 @@ t/alternate_namespace_layout/more_classes/URTAlternate/Car.pm
 t/alternate_namespace_layout/namespace/URTAlternate.pm
 t/alternate_namespace_layout/t/01_namespace.t
 t/alternate_namespace_layout/t/02_update_classes.t
+t/alternate_namespace_layout/t/02_update_classes.tar.gz
 t/CdExample.pm
 t/CdExample/Artist.pm
 t/CdExample/Cd.pm
