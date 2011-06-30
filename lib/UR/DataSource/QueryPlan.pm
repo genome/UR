@@ -744,7 +744,7 @@ sub _add_join {
                 $_;
             }
             map {
-                my $p = $self->_concrete_property_meta_for_class_and_name($source_class_object,$_);
+                my($p) = $self->_concrete_property_meta_for_class_and_name($source_class_object,$_);
                 unless ($p) {
                     Carp::croak("No property $_ for class ".$source_class_object->class_name);
                 }
@@ -1285,12 +1285,12 @@ sub _init_light {
         }
 
         my $delegate_class_meta = $delegated_property->class_meta;
-        my $via_accessor_meta = $self->_concrete_property_meta_for_class_and_name(
+        my($via_accessor_meta) = $self->_concrete_property_meta_for_class_and_name(
                                            $delegate_class_meta,
                                            $relationship_name
                                        );
         my $final_accessor = $delegated_property->to;            
-        my $final_accessor_meta = $self->_concrete_property_meta_for_class_and_name(
+        my($final_accessor_meta) = $self->_concrete_property_meta_for_class_and_name(
                                              $via_accessor_meta->data_type->__meta__,
                                              $final_accessor
                                          );
@@ -1328,7 +1328,7 @@ sub _init_light {
             my @source_property_names = @{ $join->{source_property_names} };
             my @source_table_and_column_names = 
                 map {
-                    my $p = $self->_concrete_property_meta_for_class_and_name($source_class_object,$_);
+                    my($p) = $self->_concrete_property_meta_for_class_and_name($source_class_object,$_);
                     unless ($p) {
                         Carp::confess("No property $_ for class $source_class_object->{class_name}\n");
                     }
@@ -1401,7 +1401,7 @@ sub _init_light {
         unless ($delegated_property->via) {
             next;
         }
-        my $final_accessor_property_meta = $self->_concrete_property_meta_for_class_and_name($last_class_object,$final_accessor);
+        my($final_accessor_property_meta) = $self->_concrete_property_meta_for_class_and_name($last_class_object,$final_accessor);
         unless ($final_accessor_property_meta) {
             Carp::croak("No property metadata for property named '$final_accessor' in class " . $last_class_object->class_name
                         . " while resolving joins for property '" .$delegated_property->property_name . "' in class "
@@ -1664,12 +1664,12 @@ sub _init_core {
         }
 
         my $delegate_class_meta = $delegated_property->class_meta;
-        my $via_accessor_meta = $self->_concrete_property_meta_for_class_and_name(
+        my($via_accessor_meta) = $self->_concrete_property_meta_for_class_and_name(
                                            $delegate_class_meta,
                                            $relationship_name
                                         );
         my $final_accessor = $delegated_property->to;            
-        my $final_accessor_meta = $self->_concrete_property_meta_for_class_and_name(
+        my($final_accessor_meta) = $self->_concrete_property_meta_for_class_and_name(
                                              $via_accessor_meta->data_type->__meta__,
                                              $final_accessor
                                          );
@@ -1711,7 +1711,7 @@ sub _init_core {
 
             my @source_table_and_column_names = 
                 map {
-                    my $p = $self->_concrete_property_meta_for_class_and_name($source_class_object, $_);
+                    my($p) = $self->_concrete_property_meta_for_class_and_name($source_class_object, $_);
                     unless ($p) {
                         Carp::confess("No property $_ for class $source_class_object->{class_name}\n");
                     }
@@ -1793,7 +1793,7 @@ sub _init_core {
             next;
         }
 
-        my $final_accessor_property_meta = $self->_concrete_property_meta_for_class_and_name($last_class_object,$id_properties[0]);
+        my($final_accessor_property_meta) = $self->_concrete_property_meta_for_class_and_name($last_class_object,$id_properties[0]);
         unless ($final_accessor_property_meta) {
             Carp::croak("No property metadata for property named '$final_accessor' in class " . $last_class_object->class_name
                         . " while resolving joins for property '" .$delegated_property->property_name . "' in class "
