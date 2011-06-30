@@ -8,7 +8,7 @@ require Term::ANSIColor;
 use UR;
 use UR::Object::Command::List::Style;
 
-our $VERSION = "0.32"; # UR $VERSION;
+our $VERSION = "0.33"; # UR $VERSION;
 
 class UR::Object::Command::List {
     is => 'Command',

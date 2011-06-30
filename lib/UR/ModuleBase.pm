@@ -89,7 +89,7 @@ These methods create and change message handlers.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.32"; # UR $VERSION;;
+our $VERSION = "0.33"; # UR $VERSION;;
 
 # set up module
 use Carp;

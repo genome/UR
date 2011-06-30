@@ -2,7 +2,7 @@ package UR::Object::Join;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.32"; # UR $VERSION;
+our $VERSION = "0.33"; # UR $VERSION;
 
 class UR::Object::Join {
     #is => 'UR::Value',

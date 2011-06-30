@@ -3,7 +3,7 @@ package UR::Value::Iterator;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.32"; # UR $VERSION;
+our $VERSION = "0.33"; # UR $VERSION;
 
 sub create {
     my $class = shift;

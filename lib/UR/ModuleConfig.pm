@@ -30,7 +30,7 @@ require 5.006_000;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.32"; # UR $VERSION;;
+our $VERSION = "0.33"; # UR $VERSION;;
 use base qw(UR::ModuleBase);
 use IO::File;
 
