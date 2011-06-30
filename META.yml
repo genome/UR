@@ -563,9 +563,15 @@ provides:
   UR::Object::Set:
     file: lib/UR/Object/Set.pm
     version: 0.33
+  UR::Object::Set::View::Default::Html:
+    file: lib/UR/Object/Set/View/Default/Html.pm
+    version: 0.31
   UR::Object::Set::View::Default::Json:
     file: lib/UR/Object/Set/View/Default/Json.pm
     version: 0.33
+  UR::Object::Set::View::Default::Text:
+    file: lib/UR/Object/Set/View/Default/Text.pm
+    version: 0.31
   UR::Object::Set::View::Default::Xml:
     file: lib/UR/Object/Set/View/Default/Xml.pm
     version: 0.33
@@ -737,6 +743,14 @@ provides:
   UR::Value::URL:
     file: lib/UR/Value/URL.pm
     version: 0.33
+  UR::Value::View::Default::Html:
+    file: lib/UR/Value/View/Default/Html.pm
+  UR::Value::View::Default::Json:
+    file: lib/UR/Value/View/Default/Json.pm
+  UR::Value::View::Default::Text:
+    file: lib/UR/Value/View/Default/Text.pm
+  UR::Value::View::Default::Xml:
+    file: lib/UR/Value/View/Default/Xml.pm
   UR::Vocabulary:
     file: lib/UR/Vocabulary.pm
     version: 0.33
