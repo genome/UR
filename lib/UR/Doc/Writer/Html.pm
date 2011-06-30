@@ -46,7 +46,7 @@ sub _render_header {
     my $title;
     $translator->output_string($title);
     $translator->parse_string_document("=pod\n\n".$self->title."\n\n=cut\n\n");
-    $self->_append("<h1><a name=\"___top\"/>$title</h1>\n");
+    $self->_append("<h1><a name=\"___top\"></a>$title</h1>\n");
 
 }
 
