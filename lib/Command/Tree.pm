@@ -319,13 +319,13 @@ sub is_sub_command_delegator {
 sub _build_sub_command_mapping {
     my $class = shift;
     $class = ref($class) || $class;
-    
+
     my $mapping;
     do {
         no strict 'refs';
         $mapping = ${ $class . '::SUB_COMMAND_MAPPING'};
     };
-    
+
     unless (ref($mapping) eq 'HASH') {
         # for My::Foo::Command::* commands and sub-trees
         my $subdir = $class; 
@@ -335,12 +335,12 @@ sub _build_sub_command_mapping {
         my $class_above = $class;
         $class_above =~ s/::Command//;
         my $subdir2 = $class_above;
-        $subdir2 =~ s|::|/|;
-        
+        $subdir2 =~ s|::|/|g;
+
         # check everywhere
         for my $lib (@INC) {
             my $subdir_full_path = $lib . '/' . $subdir;
-            
+
             # find My::Foo::Command::*
             if (-d $subdir_full_path) {
                 my @files = glob($subdir_full_path . '/*');
@@ -361,9 +361,9 @@ sub _build_sub_command_mapping {
                     next if $sub_command_class_meta->is_abstract;
                     my $name = $class->_command_name_for_class_word($basename); 
                     $mapping->{$name} = $sub_command_class_name;
-                }                
+                }
             }
-            
+
             # find My::Foo::*::Command
             $subdir_full_path = $lib . '/' . $subdir2;
             my $pattern = $subdir_full_path . '/*/Command.pm';
