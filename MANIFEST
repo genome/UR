@@ -107,6 +107,7 @@ lib/UR/Env/UR_DBI_MONITOR_DML.pm
 lib/UR/Env/UR_DBI_MONITOR_EVERY_FETCH.pm
 lib/UR/Env/UR_DBI_MONITOR_SQL.pm
 lib/UR/Env/UR_DBI_NO_COMMIT.pm
+lib/UR/Env/UR_DBI_SUMMARIZE_SQL.pm
 lib/UR/Env/UR_DEBUG_OBJECT_PRUNING.pm
 lib/UR/Env/UR_DEBUG_OBJECT_RELEASE.pm
 lib/UR/Env/UR_IGNORE.pm
@@ -203,7 +204,9 @@ lib/UR/Object/Property/View/Default/Text.pm
 lib/UR/Object/Property/View/DescriptionLineItem/Text.pm
 lib/UR/Object/Property/View/ReferenceDescription/Text.pm
 lib/UR/Object/Set.pm
+lib/UR/Object/Set/View/Default/Html.pm
 lib/UR/Object/Set/View/Default/Json.pm
+lib/UR/Object/Set/View/Default/Text.pm
 lib/UR/Object/Set/View/Default/Xml.pm
 lib/UR/Object/Tag.pm
 lib/UR/Object/Type.pm
@@ -270,6 +273,10 @@ lib/UR/Value/String.pm
 lib/UR/Value/Text.pm
 lib/UR/Value/Timestamp.pm
 lib/UR/Value/URL.pm
+lib/UR/Value/View/Default/Html.pm
+lib/UR/Value/View/Default/Json.pm
+lib/UR/Value/View/Default/Text.pm
+lib/UR/Value/View/Default/Xml.pm
 lib/UR/Vocabulary.pm
 LICENSE
 MANIFEST			This list of files
