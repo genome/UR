@@ -806,9 +806,12 @@ sub _resolve_delegation_data {
         push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
         my $source_class = $join->{'source_class'};
         my $source_prop_name = $join->{'source_property_names'}->[$i];
-        my $column_num = $query_plan->column_index_for_class_and_property_before_object_num($source_class,
-                                                                                            $source_prop_name,
-                                                                                            $this_object_num);
+        my $column_num;
+        if( my($actual_prop_meta) = $source_class->__meta__->_concrete_property_meta_for_class_and_name($source_prop_name) ) {
+            $column_num = $query_plan->column_index_for_class_and_property_before_object_num($actual_prop_meta->class_name,
+                                                                                             $actual_prop_meta->property_name,
+                                                                                             $this_object_num);
+        }
         if (defined $column_num) {
             push @missing_values, \$column_num;
         } else {
