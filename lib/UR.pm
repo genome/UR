@@ -77,6 +77,9 @@ END {
         }
         print STDERR "\n";
     }
+    if ($ENV{UR_DBI_SUMMARIZE_SQL}) {
+        UR::DBI::print_sql_summary();
+    }
 }
 
 use Class::Autouse;

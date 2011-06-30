@@ -446,11 +446,27 @@ sub after_all_fetches_no_sth {
 }
 
 
+my $__SQL_SUMMARY__ = {};
+sub log_sql_for_summary {
+    my ($sql) = @_;
+    $__SQL_SUMMARY__->{$sql}++; 
+}
+
+sub print_sql_summary {
+    for my $sql (sort {$__SQL_SUMMARY__->{$b} <=> $__SQL_SUMMARY__->{$a}} keys %$__SQL_SUMMARY__) {
+        print STDERR join('',"********************\n", $__SQL_SUMMARY__->{$sql}, " instances of query: $sql\n");
+    }
+}
+
 # These methods are called by the above.
 
 sub _generate_sql_and_params_log_entry 
 {
+
     my $sql = shift;
+
+    UR::DBI::log_sql_for_summary($sql);    # $ENV{UR_DBI_SUMMARIZE_SQL}
+
     no warnings;
     my $sql_log_str =  "\nSQL: $sql\n"; 
     if (@_) {
