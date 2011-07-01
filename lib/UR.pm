@@ -82,6 +82,8 @@ END {
     }
 }
 
+#Class::AutoloadCAN must be used before Class::Autouse, or the can methods will break in confusing ways.
+use Class::AutoloadCAN;
 use Class::Autouse;
 BEGIN {
     my $v = $Class::Autouse::VERSION;
