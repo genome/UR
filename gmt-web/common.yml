@@ -1,0 +1,16 @@
+---
+layout: sub
+menu: 
+    - text: Overview
+      href: index.html
+    - text: Install 
+      href: install.html
+
+module_details:
+    name: 'UR'
+    pkg_name: UR
+    icon: res/images/genome_default_48.jpg
+
+download_link: install.html
+github_url: https://github.com/genome/UR
+
