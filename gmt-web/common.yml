@@ -9,7 +9,7 @@ menu:
 module_details:
     name: 'UR'
     pkg_name: UR
-    icon: res/images/genome_default_48.jpg
+    icon: res/images/genome_default_48.png
 
 download_link: install.html
 github_url: https://github.com/genome/UR
