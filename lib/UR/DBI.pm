@@ -322,6 +322,9 @@ sub before_execute
 	$monitor_dml=2;
     }
     no warnings;            
+    
+    UR::DBI::log_sql_for_summary($sql);    # $ENV{UR_DBI_SUMMARIZE_SQL}
+
     my $log_sql_str = _generate_sql_and_params_log_entry($sql, @_);
     UR::DBI::log_sql($log_sql_str);
     return $start_time;
@@ -464,8 +467,6 @@ sub _generate_sql_and_params_log_entry
 {
 
     my $sql = shift;
-
-    UR::DBI::log_sql_for_summary($sql);    # $ENV{UR_DBI_SUMMARIZE_SQL}
 
     no warnings;
     my $sql_log_str =  "\nSQL: $sql\n"; 
