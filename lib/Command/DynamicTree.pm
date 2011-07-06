@@ -11,7 +11,6 @@ class Command::DynamicTree {
 };
 
 sub _init_subclass {
-    $DB::single = 1;
     my $subclass = shift;
     my $meta = $subclass->__meta__;
     if (grep { $_ eq __PACKAGE__ } $meta->parent_class_names) {
@@ -22,14 +21,7 @@ sub _init_subclass {
     return 1;
 }
 
-sub sub_command_dirs {
-    $DB::single = 1;
-    my $class = ref($_[0]) || $_[0];
-    return ( $class eq $class->_delegating_class_name ? 1 : 0 );
-}
-
 sub _build_sub_command_mapping {
-    $DB::single = 1;
     my ($class) = @_;
 
     unless ($class->can('_sub_commands_from')) {
@@ -63,45 +55,32 @@ sub _build_sub_command_mapping {
     my @target_paths = glob("$full_ref_path/*.pm");
 
     my @target_class_names;
-    # All modules found under the reference class (Genome::ProcessingProfile)
     for my $target_path (@target_paths) { 
         my $target = $target_path;
-        # Getting the last level of the package (ie, AmpliconAssembly)
         $target =~ s#$base_path\/$ref_path/##; 
         $target =~ s/\.pm//;
 
-        # Full package name of reference package (ie, Genome::ProcessingProfile::AmpliconAssembly)
         my $target_class_name = $ref_class . '::' . $target;  
 
-        # Skip the class if it doesn't exist or if it isn't a subclass of the given reference class
-        # So, if it doesn't exist under Genome::ProcessingProfile or isn't a subclass of Genome::ProcessingProfile
         my $target_meta = UR::Object::Type->get($target_class_name);
         next unless $target_meta; 
         next unless $target_class_name->isa($ref_class); 
 
-        # Mapping last level of package name to full path name
-        # ie, AmpliconAssembly => Genome::ProcessingProfile::AmpliconAssembly
         push @target_class_names, $target => $target_class_name; 
     }
     my %target_classes = @target_class_names;
 
-    # Needs to map the command name (amplicon-assembly) with the full class name we want (ie, Genome::Model::AmpliconAssembly)
     my $mapping;
     for my $target (sort keys %target_classes) {
         my $target_class_name = $target_classes{$target};
 
-        # Full package name of class we need to find or create (ie, Genome::Model::AmpliconAssembly)
         my $class_name = $delegating_class_name . '::' . $target; 
 
-        # Create file path pointing to module (ie, Genome/Model/AmpliconAssembly.pm)
         my $module_name = $class_name;
         $module_name =~ s|::|/|g;
         $module_name .= '.pm';
 
-        $DB::single = 1;
-        # If the module already exists...
         if (my @matches = grep { -e $_ . '/' . $module_name } @INC) {
-            # Load the class
             my $c = UR::Object::Type->get($class_name);
             no warnings 'redefine';
             eval "sub ${class_name}::_target_class_name { '$target_class_name' }";
@@ -136,6 +115,48 @@ sub _build_sub_command {
 }
 
 sub _target_class_name { undef }
+
+# Sub commands that are themselves trees should use Command::Tree methods,
+# otherwise should use Command::V2 methods
+for my $method (
+    qw/
+        resolve_class_and_params_for_argv
+        help_brief
+        doc_help
+        doc_manual
+        resolve_option_completion_spec
+        sorted_sub_command_classes
+        sorted_sub_command_names
+        sub_commands_table
+        _categorize_sub_commands
+        help_sub_commands
+        doc_sub_commands
+        sub_command_classes
+        is_sub_command_delegator
+        sub_command_names
+        class_for_sub_command
+        sub_command_dirs
+    /
+) {
+
+    my $code = sub {
+        my $self = shift;
+        if ($self->_target_class_name) {
+            # sub-command
+            my $method1 = 'Command::V2::' . $method;
+            return $self->$method1(@_);
+        }
+        else {
+            # tree 
+            my $method2 = 'SUPER::' . $method;
+            return $self->$method2(@_)
+        }
+    };
+
+    no strict;
+    no warnings;
+    *{$method} = $code;
+}
 
 1;
 
