@@ -320,7 +320,6 @@ sub CAN {
             }
         }
     }
-    print ">>> ck $method\n";
     return;
 }
 
