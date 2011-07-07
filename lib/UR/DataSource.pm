@@ -144,7 +144,7 @@ sub _generate_class_data_for_loading {
     my @all_properties;
     my $first_table_name;
     for my $co ( $class_meta, @parent_class_objects ) {
-        my $table_name = $co->table_name;
+        my $table_name = $co->table_name || '__default__';
         
         $first_table_name ||= $table_name;
         $sub_classification_method_name ||= $co->sub_classification_method_name;
