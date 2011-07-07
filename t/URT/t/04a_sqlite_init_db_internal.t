@@ -26,6 +26,9 @@ my @db_creation_text = (
 my $dump_file = URT::DataSource::SomeSQLite->_data_dump_path();
 my $fh = IO::File->new($dump_file, 'w');
 ok($fh, "Opened dump file for writing");
+unless ($fh) {
+    diag "Can't open $dump_file for writing: $!";
+}
 $fh->print(join("\n", @db_creation_text), "\n");
 $fh->close();
 

@@ -13,6 +13,8 @@ BEGIN {
     our $FILE = $fh->filename();
     $fh->close();
     # The DB file now exists with 0 size
+
+    our $DUMP_FILE = File::Temp::tmpnam();
 }
 
 use UR::Object::Type;
@@ -32,6 +34,11 @@ END {
 sub server {
     our $FILE;
     return $FILE;
+}
+
+sub _data_dump_path {
+    our $DUMP_FILE;
+    return $DUMP_FILE;
 }
 
 1;
