@@ -477,7 +477,7 @@ sub _normalize_class_description_impl {
             $new_class{is} = \@isa;
         }
     }
-    
+
     unless ($new_class{is}) {
         if ($new_class{table_name}) {
             $new_class{is} = ['UR::Entity']
@@ -486,8 +486,6 @@ sub _normalize_class_description_impl {
             $new_class{is} = ['UR::Object']
         }
     }
-
-    $new_class{table_name} = $new_class{table_name} if ($new_class{table_name} and $new_class{table_name} !~ /\s/);
 
     unless ($new_class{'doc'}) {
         $new_class{'doc'} = undef;
