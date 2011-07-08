@@ -23,39 +23,26 @@
 <!-- INDEX END -->
 
 <hr />
-<p>
-</p>
-<hr />
 <h1><a name="name">NAME</a></h1>
 <p>UR::Manual::Overview - UR from Ten Thousand Feet</p>
-<p>
-</p>
 <hr />
+
 <h1><a name="perspective_on_objects">Perspective on Objects</a></h1>
 <p>Standard software languages provide a facility for making objects. Those
 objects have certain characteristics which are different with UR objects.</p>
+
 <p>A standard object in most languages:</p>
 <ul>
-<li></li>
-exists only as long as the program which created it has a reference to it
-<p></p>
-<li></li>
-requires that the developer manage organizing the <code>object(s)</code> into a structure
-to support any searching required
-<p></p>
-<li></li>
-handles persistence between processes explicitly, by saving or loading the
-object to external storage
-<p></p>
-<li></li>
-references other objects only if explicitly linked to those objects
-<p></p>
-<li></li>
-acts as a functional software device, but any meaning associated with the
-object is implied by how it is used
-<p></p></ul>
-<p>Regular objects like those described above are the building blocks of most
-software.</p>
+  <li>exists only as long as the program which created it has a reference to it</li>
+  <li>requires that the developer manage organizing the <code>object(s)</code> into a structure
+  to support any searching required</li>
+  <li>handles persistence between processes explicitly, by saving or loading the object to external storage</li>
+  <li>references other objects only if explicitly linked to those objects</li>
+  <li>acts as a functional software device, but any meaning associated with the object is implied by how it is used</li>
+</ul>
+
+<p>Regular objects like those described above are the building blocks of most software.</p>
+
 <p>In many cases, however, they are often used for a second, higher-level
 purpose: defining entities in the domain model of the problem area the
 software addresses. UR objects are tailored to represent domain model
@@ -64,27 +51,13 @@ present in relational databases, and as such mapping to a database for UR
 objects is trivial, and can be done in complex ways.</p>
 <p>UR objects differ from a standard object in the following key ways:</p>
 <ul>
-<li></li>
-the object exists after creation until explicitly deleted, or the transaction
-it is in rolled-back
-<p></p>
-<li></li>
-managing loaded objects is done automatically by a Context object, which
-handles queries, saving, lazy-loading and caching
-<p></p>
-<li></li>
-it is possible to query for an object by specifying the class and the
-matching characteristics
-<p></p>
-<li></li>
-the object can reference other objects which are not loaded in the current
-process, and be referenced by objects not in the current process
-<p></p>
-<li></li>
-the object is a particular truth-assertion in the context in which it exists
-<p></p></ul>
-<p>
-</p>
+  <li>the object exists after creation until explicitly deleted, or the transaction it is in rolled-back</li>
+  <li>managing loaded objects is done automatically by a Context object, which handles queries, saving, lazy-loading and caching</li>
+  <li>it is possible to query for an object by specifying the class and the matching characteristics</li>
+  <li>the object can reference other objects which are not loaded in the current process, and be referenced by objects not in the current process</li>
+  <li>the object is a particular truth-assertion in the context in which it exists</li>
+</ul>
+
 <hr />
 <h1><a name="objectrelational_mapping">Object-Relational Mapping</a></h1>
 <p>UR's primary reason for existing is to function as an ORM. That is, managing
@@ -94,34 +67,19 @@ handles the common cases where each table is implemented by a class their
 columns are properties of the classes; retrieving objects by arbitrary
 properties; creating, updating and deleting objects with enforced database
 constraints; and named relationships between classes.</p>
+
 <p>It can also handle more complicated things like:</p>
 <ul>
-<li></li>
-classes for things which are not database entities at all
-<p></p>
-<li></li>
-derived classes where the data spans multiple tables between the parent
-and child classes
-<p></p>
-<li></li>
-loading an object through a parent class and having it automatically
-reblessed into the appropriate subclass
-<p></p>
-<li></li>
-properties with no DB column behind them
-<p></p>
-<li></li>
-calculated properties with a formula behind them
-<p></p>
-<li></li>
-inheritance hierarchies that may have tables missing at some or all stages
-<p></p>
-<li></li>
-meta-data about Properties, Classes and the relationships between them
-<p></p></ul>
-<p>
-</p>
+  <li>classes for things which are not database entities at all</li>
+  <li>derived classes where the data spans multiple tables between the parent and child classes</li>
+  <li>loading an object through a parent class and having it automatically reblessed into the appropriate subclass</li>
+  <li>properties with no DB column behind them</li>
+  <li>calculated properties with a formula behind them</li>
+  <li>inheritance hierarchies that may have tables missing at some or all stages</li>
+  <li>meta-data about Properties, Classes and the relationships between them</li>
+</ul>
 <hr />
+
 <h1><a name="object_context">Object Context</a></h1>
 <p>With UR, every object you create is made a part of the current ``Context''.
 Conceptually, the Context is the lens by which your application views the
@@ -151,42 +109,22 @@ object creation, deletion, and change is occurring directly to that database.
 For objects configured to have external persistence, this database manages
 itself as a ``diff'' vs. the external database, allowing it to simulate
 representing all UR data everywhere, while only actually tracking what is needed.</p>
-<p>
-</p>
+
 <h2><a name="benefits">Benefits</a></h2>
 <ul>
-<li></li>
-database queries don't repeat themselves again and again
-<p></p>
-<li></li>
-you never write insert/update/delete statements, or work out constraint
-order yourself
-<p></p>
-<li></li>
-allows you to write methods which address an object individually, with some
-ways to avoid tons of individual database queries
-<p></p>
-<li></li>
-explicitly clearing the cache is less complex than explicitly managing the
-caching of data
-<p></p></ul>
-<p>
-</p>
+  <li>database queries don't repeat themselves again and again</li>
+  <li>you never write insert/update/delete statements, or work out constraint order yourself</li>
+  <li>allows you to write methods which address an object individually, with some ways to avoid tons of individual database queries</li>
+  <li>explicitly clearing the cache is less complex than explicitly managing the caching of data</li>
+</ul>
+
 <h2><a name="issues">Issues</a></h2>
 <ul>
-<li></li>
-the cache grows until you explicitly clear it, or allow the Context to prune
-the cache by setting object count limits explicitly
-<p></p>
-<li></li>
-there is CPU overhead checking the cache if you really are always going
-directly to the database
-<p></p>
-<li></li>
-Joins must be pre-declared through the class definition system
-<p></p></ul>
-<p>
-</p>
+  <li>the cache grows until you explicitly clear it, or allow the Context to prune the cache by setting object count limits explicitly</li>
+  <li>there is CPU overhead checking the cache if you really are always going directly to the database</li>
+  <li>Joins must be pre-declared through the class definition system</li>
+</ul>
+
 <hr />
 <h1><a name="class_definitions">Class Definitions</a></h1>
 <p>At the top of every module implementing a UR class is a block of code that
@@ -194,8 +132,7 @@ defines the class to explicitly spell out its inheritance, properties and
 types, constraints, relationships to other classes and where the persistent
 storage is located. It's meant to be easy to read and edit, if necessary. If
 the class is backed by a database table, then it can also maintain itself.</p>
-<p>
-</p>
+
 <hr />
 <h1><a name="metadata">Metadata</a></h1>
 <p>Besides the object instances representing data used by the program, the UR
@@ -208,8 +145,7 @@ data.</p>
 or columns, altering types or constraints), a command-line tool can
 automatically detect the change and alter the class definition in the Perl
 module to keep the metadata in sync with the database.</p>
-<p>
-</p>
+
 <hr />
 <h1><a name="documentation_system">Documentation System</a></h1>
 <p>At the simplest level, most entities have a 'doc' metadata attribute to
@@ -217,16 +153,14 @@ attach some kind of documentation to. There's also a set of tools that can
 be run from the command line or a web browser to view the documentation. It
 can also be used to browse through the class and database metadata, and
 generate diagrams about the metadata.</p>
-<p>
-</p>
+
 <hr />
 <h1><a name="iterators">Iterators</a></h1>
 <p>If a retrieval from the database is likely to result in the generation of
 tons of objects, you can choose to get them back in a list and keep them all
 in memory, or get back a special Iterator object that the program can use to
 get back objects in batches.</p>
-<p>
-</p>
+
 <hr />
 <h1><a name="command_line_tools">Command Line Tools</a></h1>
 <p>UR has a central command-line tool that cam be used to manipulate the
@@ -235,8 +169,7 @@ syncing classes with schemas, accessing documentation, etc.</p>
 <p>There is also a framework for creating classes that represent command line
 tools, their parameters and results, and makes it easy to create tools
 through the Command Pattern.</p>
-<p>
-</p>
+
 <hr />
 <h1><a name="example">Example</a></h1>
 <p>Given these classes:</p>
