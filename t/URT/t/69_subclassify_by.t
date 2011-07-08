@@ -14,7 +14,7 @@ UR::Object::Type->define(
     is => ['UR::Namespace'],
 );
 
-diag('Tests for subclassing by regular property');
+note('Tests for subclassing by regular property');
 
 our $calculate_called = 0;
 UR::Object::Type->define(
@@ -99,7 +99,7 @@ like($@,
 
 
 
-diag('Tests for default value subclassing');
+note('Tests for default value subclassing');
 
 UR::Object::Type->define(
     class_name => 'Acme::Tool',
@@ -176,7 +176,7 @@ like($@,
      'Exception was correct');
 
 
-diag('Tests for indirect property subclassing');
+note('Tests for indirect property subclassing');
 UR::Object::Type->define(
     class_name => 'Acme::Rank',
     has => [
@@ -243,7 +243,7 @@ ok(! $s, 'Unable to create an object from a child class when its rank indicates 
 like($@, qr/Conflicting values for property 'rank_id'/, 'Exception is correct');
 
 
-diag('Tests for calculated subclassing');
+note('Tests for calculated subclassing');
 
 # First, setup a table we'll use in the next section of tests...
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
@@ -323,7 +323,7 @@ is($v->subclass_name, 'Acme::Car', "It's subclass_name property is filled in");
 ok(! $calculate_called, "Reading the subclass_name property didn't call the calculation sub");
 
 
-diag('Tests for loading with calculated subclassing');
+note('Tests for loading with calculated subclassing');
 $dbh->do(q(insert into vehicle(vehicle_id, color, wheels) values (99, 'blue', 2)));
 $dbh->do(q(insert into vehicle(vehicle_id, color, wheels) values (98, 'green', 3)));
 $dbh->do(q(insert into vehicle(vehicle_id, color, wheels) values (97, 'red', 4)));
