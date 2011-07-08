@@ -9,7 +9,8 @@ use lib File::Basename::dirname(__FILE__).'/../..';
 
 use Test::More tests => 774;
 
-use above "URT";
+use URT;
+
 my $c = "UR::Namespace::Command::Foo";
 class UR::Namespace::Command::Foo {
     is => 'Command::V2'

@@ -4,7 +4,7 @@ use warnings;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
-use above "URT";
+use URT;
 use Test::More tests => 31;
 
 class URT::Note {

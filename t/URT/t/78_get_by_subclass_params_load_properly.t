@@ -7,8 +7,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 
-use above 'UR';
-use above 'URT';
+use URT;
 
 use Test::More;
 if ($INC{"UR.pm"} =~ /blib/) {
