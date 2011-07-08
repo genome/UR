@@ -39,10 +39,10 @@ $fh->close();
     my $db_file = URT::DataSource::SomeSQLite->server;
     unlink($db_file);
     URT::DataSource::SomeSQLite->disconnect;
-    diag("initializing DB");
+    note("initializing DB");
     URT::DataSource::SomeSQLite->_init_database();
 
-    diag("db file is $db_file");
+    note("db file is $db_file");
     my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
     ok($dbh, "got a handle");
     isa_ok($dbh, 'UR::DBI::db', 'Returned handle is the proper class');
