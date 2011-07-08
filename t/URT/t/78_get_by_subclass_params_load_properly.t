@@ -9,15 +9,7 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 
 use URT;
 
-use Test::More;
-if ($INC{"UR.pm"} =~ /blib/) {
-    plan skip_all => 'cannot run in the install test harness';
-}
-else {
-    plan tests => 21;
-}    
-
-use_ok('URT::DataSource::SomeSQLite');
+use Test::More tests => 20;
 
 # This tests a get() by subclass specific parameters on a subclass with no table of its own.
 # The idea is to make sure that queries run with any subclass specific parameters (which can
