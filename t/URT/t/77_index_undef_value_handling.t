@@ -34,7 +34,7 @@ UR::Object::Type->define(
         thing_id => { is => 'Integer' },
     ],
     has_optional => [
-        name   => { is => 'Integer' },
+        name   => { is => 'String' },
         params => { is => 'URT::ThingParam', is_many => 1, reverse_as => 'thing' },
         color  => { is => 'String', via => 'params', to => 'value', where => [ name => 'color' ] },
         tracking_number  => { is => 'String', via => 'params', to => 'value', where => [ name => 'tracking_number' ] },
