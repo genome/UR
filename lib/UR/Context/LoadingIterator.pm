@@ -448,7 +448,7 @@ sub DESTROY {
         # \$underlying_context_objects_count, \$cached_objects_count, $context
 
         my $context = $iter_data->[6];
-        if ($context->monitor_query) {
+        if ($context and $context->monitor_query) {
             my $rule = $iter_data->[1];
             my $count = ${$iter_data->[4]} + ${$iter_data->[5]};
             $context->_log_query_for_rule($rule->subject_class_name, $rule, "QUERY: Query complete after returning $count object(s) for rule $rule.");
