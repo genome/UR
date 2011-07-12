@@ -8,7 +8,8 @@ menu:
 
 module_details:
     name: 'UR'
-    pkg_name: UR
+    gmt_pkg_name: UR
+    debian_pkg_name: libur-perl
     icon: res/images/icon_48.png
     icon_16: res/images/icon_16.png
 

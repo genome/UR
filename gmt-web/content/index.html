@@ -177,16 +177,12 @@ through the Command Pattern.</p>
 <dt><strong><a name="item_paththing_2fpath_2epm">PathThing/Path.pm</a></strong><br />
 </dt>
 <dd>
-<pre>
+<pre class="terminal">
   use strict;
-  use warnings;</pre>
-</dd>
-<dd>
-<pre>
-  use PathThing;  # The application's UR::Namespace module</pre>
-</dd>
-<dd>
-<pre>
+  use warnings;
+
+  use PathThing;  # The application's UR::Namespace module
+
   class PathThing::Path {
       id_by =&gt; 'path_id',
       has =&gt; [
@@ -195,45 +191,41 @@ through the Command Pattern.</p>
       ],
       data_source =&gt; 'PathThing::DataSource::TheDB',
       table_name =&gt; 'PATHS',
-  };</pre>
-</dd>
+  };
+</pre>
 <dt><strong><a name="item_paththing_2fnode_2epm">PathThing/Node.pm</a></strong><br />
 </dt>
 <dd>
-<pre>
+<pre class="terminal">
   class PathThing::Node {
       id_by =&gt; 'node_id',
       has =&gt; [
           left_path =&gt; { is =&gt; 'PathThing::Path', id_by =&gt; 'left_path_id' },
           left_path_desc =&gt; { via =&gt; 'left_path', to =&gt; 'desc' },
-          left_path_length =&gt; { via =&gt; 'left_path', to =&gt; 'length' },</pre>
-</dd>
-<dd>
-<pre>
+          left_path_length =&gt; { via =&gt; 'left_path', to =&gt; 'length' },
           right_path =&gt; { is =&gt; 'PathThing::Path', id_by =&gt; 'right_path_id' },
           right_path_desc =&gt; { via =&gt; 'right_path', to =&gt; 'desc' },
-          right_path_length =&gt; { via =&gt; 'right_path', to =&gt; 'length' },</pre>
-</dd>
-<dd>
-<pre>
+          right_path_length =&gt; { via =&gt; 'right_path', to =&gt; 'length' },
           map_coord_x =&gt; { is =&gt; 'Integer' },
           map_coord_y =&gt; { is =&gt; 'String' },
       ],
       data_source =&gt; 'PathThing::DataSource::TheDB',
       table_name =&gt; 'NODES',
-  };</pre>
+  };
+</pre>
 </dd>
 </dl>
 <p>For a script like this one:</p>
-<pre>
+<pre class="terminal">
   use PathThing::Node;
   my @results = PathThing::Node-&gt;get(
                     right_path_desc =&gt; 'over the river',
                     left_path_desc =&gt; 'through the woods',
                     right_path_length =&gt; 10,
-                );</pre>
+                );
+</pre>
 <p>It will generate SQL like this:</p>
-<pre>
+<pre class="terminal">
   select NODES.NODE_ID, NODES.LEFT_PATH_ID, NODES.RIGHT_PATH_ID,
          NODES.MAP_COORD_X, NODES.MAP_COORD_Y,
          left_path_1.PATH_ID, left_path_1.DESC, left_path_1.LENGTH
@@ -243,7 +235,8 @@ through the Command Pattern.</p>
   join PATHS right_path_1 on NODES.RIGHT_PATH_ID = right_path1.PATH_ID
   where left_path_1.DESC = 'through the woods'
     and right_path_1.DESC = 'over the river',
-    and right_path_1.LENGTH = 10</pre>
+    and right_path_1.LENGTH = 10
+</pre>
 <p>And for every row returned by the query, a PathThing::Node and two
 PathThing::Path objects will be instantiated and stored in the Context's
 cache.  <code>@results</code> will contain a list of matching PathThing::Node objects.</p>

@@ -1,5 +1,5 @@
 Installation Instructions
-=========================
+-------------------------
 
 * * *
 
@@ -14,7 +14,7 @@ sudo apt-get update<br/>
 And install UR:
 
 <p class='terminal' markdown='1'>
-sudo apt-get install libur-perl
+sudo apt-get install {{ debian_pkg_name }}
 </p>
 
 It is also availabe from [CPAN](http://search.cpan.org/search?mode=all&query=UR).
