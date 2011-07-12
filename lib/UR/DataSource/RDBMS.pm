@@ -1610,7 +1610,7 @@ sub _extend_sql_for_column_operator_and_value {
             # an empty list was passed-in.
             # since "in ()", like "where 1=0", is self-contradictory,
             # there is no data to return, and no SQL required
-            Carp::carp("Null in-clause passed to default_load_sql");
+            $self->warning_message(Carp::shortmess("Null in-clause passed to default_load_sql"));
             return;
         }
 
