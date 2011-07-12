@@ -26,7 +26,10 @@ use URT::DataSource::SomeSQLite;
 our($tmp_file1, $tmp_file2);
 $tmp_file1 = File::Temp::tmpnam() . "_ur_testsuite_83_db1.sqlite3";
 $tmp_file2 = File::Temp::tmpnam() . "_ur_testsuite_83_db2.sqlite3";
-END { unlink($tmp_file1, $tmp_file2); }
+END {
+    unlink $tmp_file1 if defined $tmp_file1;
+    unlink $tmp_file2 if defined $tmp_file2;
+}
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 
