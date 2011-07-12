@@ -134,6 +134,18 @@ foreach my $operator ( 'like', 'not like' ) {
     }
 }
 
+# Supress messages about null in-clauses.
+# Chain to the existing callback supressing warnings about loading up the DB
+my $orig_cb = URT::DataSource::SomeSQLite->message_callback('warning');
+URT::DataSource::SomeSQLite->message_callback('warning',
+    sub {
+        my $msgobj = $_[0];
+        if ($msgobj->text !~ m/Null in-clause passed/) {
+            $orig_cb->(@_);
+        }
+    }
+);
+
 # 'in' operator
 # value => [undef] does SQL to include NULL items
 operator_returns_object_count('in', [undef], 2);
