@@ -18,7 +18,6 @@ sub server {
                                               UNKINK => 0,
                                               TMPDIR => 1,
                                               SUFFIX => '.sqlite3');
-        print STDERR "Using DB file $FILE\n";
     }
     return $FILE;
 }
