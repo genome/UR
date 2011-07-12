@@ -95,6 +95,7 @@ my $line5 = $o->add_line(5);
 ok($line5, "added a line with a partial identity");
 my @r7 = sort { $a->line_num <=> $b->line_num } $o->lines();
 is(scalar(@r7),5,"line count is correct");
+$line5->product('fish');  # Sets the property's value, since it's not is_optional
 
 my $removed = $o->remove_line(3);
 ok($removed, "removed a line with a partial identity");
