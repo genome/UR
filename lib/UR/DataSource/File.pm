@@ -18,7 +18,7 @@ use warnings;
 our $VERSION = "0.33"; # UR $VERSION;
 
 use Fcntl qw(:DEFAULT :flock);
-use Errno qw(EINTR EAGAIN);
+use Errno qw(EINTR EAGAIN EOPNOTSUPP);
 use File::Temp;
 use File::Basename;
 use IO::File qw();
@@ -1050,7 +1050,9 @@ sub _sync_database {
     }
 
     unless (flock($read_fh,LOCK_EX)) {
-        Carp::croak($self->class(). ": Can't get exclusive lock for its file: $!");
+        unless ($! == EOPNOTSUPP ) {
+            Carp::croak($self->class(). ": Can't get exclusive lock for its file: $!");
+        }
     }
 
     # write headers to the new file
