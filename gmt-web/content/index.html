@@ -173,10 +173,8 @@ through the Command Pattern.</p>
 <hr />
 <h1><a name="example">Example</a></h1>
 <p>Given these classes:</p>
-<dl>
-<dt><strong><a name="item_paththing_2fpath_2epm">PathThing/Path.pm</a></strong><br />
-</dt>
-<dd>
+
+<p><strong><a name="item_paththing_2fpath_2epm">PathThing/Path.pm</a></strong></p>
 <pre class="terminal">
   use strict;
   use warnings;
@@ -193,9 +191,8 @@ through the Command Pattern.</p>
       table_name =&gt; 'PATHS',
   };
 </pre>
-<dt><strong><a name="item_paththing_2fnode_2epm">PathThing/Node.pm</a></strong><br />
-</dt>
-<dd>
+
+<p><strong><a name="item_paththing_2fnode_2epm">PathThing/Node.pm</a></strong></p>
 <pre class="terminal">
   class PathThing::Node {
       id_by =&gt; 'node_id',
@@ -213,8 +210,7 @@ through the Command Pattern.</p>
       table_name =&gt; 'NODES',
   };
 </pre>
-</dd>
-</dl>
+
 <p>For a script like this one:</p>
 <pre class="terminal">
   use PathThing::Node;
