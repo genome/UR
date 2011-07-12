@@ -44,6 +44,9 @@ ok($cmd, 'Create update classes command');
 $cmd->queue_status_messages(1);
 $cmd->queue_warning_messages(1);
 $cmd->queue_error_messages(1);
+$cmd->dump_status_messages(0);
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
 
 ok($cmd->execute, 'execute update classes with no changes');
 
@@ -93,6 +96,9 @@ ok($cmd, 'Create update classes command after adding table');
 $cmd->dump_status_messages(1);
 $cmd->dump_warning_messages(1);
 $cmd->dump_error_messages(1);
+$cmd->dump_status_messages(0);
+$cmd->dump_warning_messages(0);
+$cmd->dump_error_messages(0);
 
 ok($cmd->execute(), 'execute update classes after changes');
 
