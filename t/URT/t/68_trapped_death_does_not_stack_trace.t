@@ -21,7 +21,7 @@ eval {
 };
 
 if ($@) {
-    diag $@;
+    note $@;
     if ($@ =~ /main::b\(\) called/g) {
         fail('got a stack trace in eval');
     } else {
