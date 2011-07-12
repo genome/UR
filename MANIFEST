@@ -80,7 +80,6 @@ lib/UR/DataSource/RDBMS/Table/View/Default/Text.pm
 lib/UR/DataSource/RDBMS/TableColumn.pm
 lib/UR/DataSource/RDBMS/TableColumn/View/Default/Text.pm
 lib/UR/DataSource/RDBMS/UniqueConstraintColumn.pm
-lib/UR/DataSource/RemoteCache.pm
 lib/UR/DataSource/SQLite.pm
 lib/UR/DataSource/ValueDomain.pm
 lib/UR/DBI.pm
@@ -413,15 +412,12 @@ t/URT/t/21b_load_observer_autosubclass.t
 t/URT/t/21c_load_observer_abstract_parent.t
 t/URT/t/21d_db_entity_observers.t
 t/URT/t/22_cached_get_with_subclasses.t
-t/URT/t/23_data_source_proxy.t
-t/URT/t/24_data_source_proxy_sigio.t
 t/URT/t/29_indirect_calculated_accessor.t
 t/URT/t/29b_join_calculated_accessor.t
 t/URT/t/29c_join_indirect_accessor.t
 t/URT/t/30_default_values.t
 t/URT/t/31_ref_as_value.t
 t/URT/t/32_ur_object_id.t
-t/URT/t/33_data_source_proxy_read_write.t
 t/URT/t/34_autouse_with_circular_ur_classdef.t
 t/URT/t/35_all_objects_are_loaded_subclass.t
 t/URT/t/36_superclass_already_loaded.t
