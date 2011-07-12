@@ -6,6 +6,10 @@ use File::Temp;
 use Test::More tests => 4;
 use IO::File;
 
+BEGIN {
+    $ENV{'PERL_ABOVE_QUIET'} = 1 if $ENV{'HARNESS_ACTIVE'};
+}
+
 my $d = File::Temp::tempdir(CLEANUP => 1);
 ok($d, "created working directory $d");
 
