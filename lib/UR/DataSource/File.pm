@@ -927,6 +927,9 @@ sub _sync_database {
     }
 
     my $read_fh = $self->get_default_handle();
+    unless ($read_fh) {
+        Carp::croak($self->class . ": Can't _sync_database(): Can't open file " . $self->server . " for reading: $!");
+    }
 
     my $original_data_file = $self->server;
     my $original_data_dir  = File::Basename::dirname($original_data_file);
@@ -1051,7 +1054,7 @@ sub _sync_database {
 
     unless (flock($read_fh,LOCK_EX)) {
         unless ($! == EOPNOTSUPP ) {
-            Carp::croak($self->class(). ": Can't get exclusive lock for its file: $!");
+            Carp::croak($self->class(). ": Can't get exclusive lock for file ".$self->server.": $!");
         }
     }
 
