@@ -201,7 +201,6 @@ use UR::ObjectV001removed;
 use UR::ObjectV04removed;
 use UR::Observer;
 use UR::Report;
-use UR::Service::DataSourceProxy;
 use UR::Service::JsonRpcServer;
 use UR::Service::RPC::Executer;
 use UR::Service::RPC::Message;

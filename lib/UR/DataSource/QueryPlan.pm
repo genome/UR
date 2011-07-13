@@ -120,7 +120,7 @@ sub _init {
         # Once all callers are using the API for this we won't need "_init".
         $self->_init_core();
         $self->_init_default() if $ds->isa("UR::DataSource::Default");
-        $self->_init_remote_cache() if $ds->isa("UR::DataSource::RemoteCache");
+        #$self->_init_remote_cache() if $ds->isa("UR::DataSource::RemoteCache");
     }
 
     # This object is currently still used as a hashref, but the properties

@@ -212,9 +212,6 @@ provides:
   UR::DataSource::RDBMS::UniqueConstraintColumn:
     file: lib/UR/DataSource/RDBMS/UniqueConstraintColumn.pm
     version: 0.33
-  UR::DataSource::RemoteCache:
-    file: lib/UR/DataSource/RemoteCache.pm
-    version: 0.33
   UR::DataSource::SQLite:
     file: lib/UR/DataSource/SQLite.pm
     version: 0.33
@@ -643,9 +640,6 @@ provides:
     version: 0.33
   UR::Report:
     file: lib/UR/Report.pm
-    version: 0.33
-  UR::Service::DataSourceProxy:
-    file: lib/UR/Service/DataSourceProxy.pm
     version: 0.33
   UR::Service::JsonRpcServer:
     file: lib/UR/Service/JsonRpcServer.pm
