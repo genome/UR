@@ -81,7 +81,7 @@ the object is a particular truth-assertion in the context in which it exists
 =head1 Object-Relational Mapping
 
 UR's primary reason for existing is to function as an ORM. That is, managing
-how to store instances of objects in menory of a running program with more
+how to store instances of objects in memory of a running program with more
 persistant storage in a relational database, and retrieve them later.  It
 handles the common cases where each table is implemented by a class their
 columns are properties of the classes; retrieving objects by arbitrary
