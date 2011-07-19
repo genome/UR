@@ -88,7 +88,7 @@ sub doc_help {
     my $required_args = $self->help_options(is_optional => 0);
     my $optional_args = $self->help_options(is_optional => 1);
     $text = sprintf(
-        "\n%s\n%s\n\n%s%s%s%s%s%s\n",
+        "\n%s\n%s\n\n%s%s%s%s%s\n",
         Term::ANSIColor::colored('USAGE', 'underline'),
         Text::Wrap::wrap(
             ' ', 
