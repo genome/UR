@@ -951,6 +951,44 @@ sub _get_user_verification_for_param_value_drilldown {
     }
 }
 
+sub _ask_user_question {
+    my $self = shift;
+    my $question = shift;
+    my $timeout = shift;
+    my $valid_values = shift || "yes|no";
+    my $default_value = shift || undef;
+    my $pretty_valid_values = shift || $valid_values;
+    $valid_values = lc($valid_values);
+    my $input;
+    $timeout = 60 unless(defined($timeout));
+
+    local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
+    print STDERR "\n$question\n";
+    print STDERR "Reply with $pretty_valid_values: ";
+
+    unless ($self->_can_interact_with_user) {
+        print STDERR "\n";
+        die $self->error_message("Attempting to ask user question but cannot interact with user!");
+    }
+
+    alarm($timeout) if ($timeout);
+    chomp($input = <STDIN>);
+    alarm(0) if ($timeout);
+
+    print STDERR "\n";
+
+    if(lc($input) =~ /^$valid_values$/) {
+        return lc($input);
+    }
+    elsif ($default_value) {
+        return $default_value;
+    }
+    else {
+        $self->error_message("'$input' is an invalid answer to question '$question'\n\n");
+        return;
+    }
+}
+
 sub _validate_user_response_for_param_value_verification {
     my ($self, $response_text) = @_;
     $response_text = substr($response_text, 1) if ($response_text =~ /^[+-]/);
