@@ -2,9 +2,6 @@ package Command::V2;  # additional methods to dispatch from a command-line
 use strict;
 use warnings;
 
-our $entry_point_class;
-our $entry_point_bin;
-
 sub execute_with_shell_params_and_exit {
     # This automatically parses command-line options and "does the right thing":
     # TODO: abstract out all dispatchers for commands into a given API
@@ -14,8 +11,8 @@ sub execute_with_shell_params_and_exit {
         die "No params expected for execute_with_shell_params_and_exit()!";
     }
 
-    $entry_point_class ||= $class;
-    $entry_point_bin ||= File::Basename::basename($0);
+    $Command::entry_point_class ||= $class;
+    $Command::entry_point_bin ||= File::Basename::basename($0);
 
     if ($ENV{COMP_LINE}) {
         require Getopt::Complete;

@@ -1,9 +1,6 @@
-package Command::V2;  # additional methods to produce documentation
+package Command::V2;  # additional methods to produce documentation, TODO: turn into a real view
 use strict;
 use warnings;
-
-our $entry_point_class;
-our $entry_point_bin;
 
 use Term::ANSIColor;
 use Pod::Simple::Text;
@@ -34,7 +31,6 @@ sub help_brief {
             . $self->class;
     }
 }
-
 
 sub help_synopsis {
     my $self = shift;
@@ -540,8 +536,9 @@ sub command_name {
     my $self = shift;
     my $class = ref($self) || $self;
     my $prepend = '';
-    if (defined($entry_point_class) and $class =~ /^($entry_point_class)(::.+|)$/) {
-        $prepend = $entry_point_bin;
+    $DB::single = 1;
+    if (defined($Command::entry_point_class) and $class =~ /^($Command::entry_point_class)(::.+|)$/) {
+        $prepend = $Command::entry_point_bin;
         $class = $2;
         if ($class =~ s/^:://) {
             $prepend .= ' ';
@@ -586,7 +583,7 @@ sub _command_name_for_class_word {
     $s =~ s/_/-/g;
     $s =~ s/^([A-Z])/\L$1/; # ignore first capital because that is assumed
     $s =~ s/([A-Z])/-$1/g; # all other capitals prepend a dash
-    $s =~ s/([a-zA-Z])([0-9])/$1-$2/g; # treat number as begining word
+    $s =~ s/([a-zA-Z])([0-9])/$1$2/g; # treat number as begining word
     $s = lc($s);
     return $s;
 }

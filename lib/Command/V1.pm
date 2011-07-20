@@ -12,9 +12,6 @@ require Text::Wrap;
 
 our $VERSION = "0.33"; # UR $VERSION;
 
-our $entry_point_class;
-our $entry_point_bin;
-
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
@@ -141,8 +138,8 @@ My::Command->execute_with_shell_params_and_exit;
 |;
     }
 
-    $entry_point_class ||= $class;
-    $entry_point_bin ||= File::Basename::basename($0);
+    $Command::entry_point_class ||= $class;
+    $Command::entry_point_bin ||= File::Basename::basename($0);
 
     if ($ENV{COMP_LINE}) {
         require Getopt::Complete;
@@ -412,7 +409,7 @@ sub _command_name_for_class_word
     $s =~ s/_/-/g;
     $s =~ s/^([A-Z])/\L$1/; # ignore first capital because that is assumed
     $s =~ s/([A-Z])/-$1/g; # all other capitals prepend a dash
-    $s =~ s/([a-zA-Z])([0-9])/$1-$2/g; # treat number as begining word
+    $s =~ s/([a-zA-Z])([0-9])/$1$2/g; # treat number as begining word
     $s = lc($s);
     return $s;
 }
@@ -422,8 +419,9 @@ sub command_name
     my $self = shift;
     my $class = ref($self) || $self;
     my $prepend = '';
-    if (defined($entry_point_class) and $class =~ /^($entry_point_class)(::.+|)$/) {
-        $prepend = $entry_point_bin;
+    $DB::single = 1;
+    if (defined($Command::entry_point_class) and $class =~ /^($Command::entry_point_class)(::.+|)$/) {
+        $prepend = $Command::entry_point_bin;
         $class = $2;
         if ($class =~ s/^:://) {
             $prepend .= ' ';
