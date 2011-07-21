@@ -253,6 +253,15 @@ sub _get_next_value_from_sequence {
 
 
 # Overriding this so we can force the schema to 'main' for older versions of SQLite
+#
+# NOTE: table_info (called by SUPER::get_table_details_from_data_dictionary) in older
+# versions of DBD::SQLite does not return data for tables in other attached databases.
+#
+# This probably isn't an issue... Due to the limited number of people using older DBD::SQLite
+# (of particular note is that OSX 10.5 and earlier use such an old version), interseted with
+# the limited number of people using attached databases, it's probably not a problem.
+# The commit_between_schemas test does do this.  If it turns out it is a problem, we could
+# appropriate the code from recent DBD::SQLite::table_info
 sub get_table_details_from_data_dictionary {
     my $self = shift;
 
