@@ -35,8 +35,8 @@ CREATE TABLE dd_pk_constraint_column (
     rank integer NOT NULL,
     PRIMARY KEY (data_source,owner,table_name,column_name,rank)
 );
-INSERT INTO "dd_pk_constraint_column" VALUES('URTAlternate::DataSource::TheDB',NULL,'car','car_id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('URTAlternate::DataSource::TheDB',NULL,'person','person_id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('URTAlternate::DataSource::TheDB','main','car','car_id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('URTAlternate::DataSource::TheDB','main','person','person_id',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -48,8 +48,8 @@ CREATE TABLE dd_table (
      remarks varchar,
      PRIMARY KEY(data_source, owner, table_name)
 );
-INSERT INTO "dd_table" VALUES('URTAlternate::DataSource::TheDB',NULL,'car','TABLE','entity',NULL,'2011-04-20 17:07:18',NULL);
-INSERT INTO "dd_table" VALUES('URTAlternate::DataSource::TheDB',NULL,'person','TABLE','entity',NULL,'2011-04-20 17:07:18',NULL);
+INSERT INTO "dd_table" VALUES('URTAlternate::DataSource::TheDB','main','car','TABLE','entity',NULL,'2011-04-20 17:07:18',NULL);
+INSERT INTO "dd_table" VALUES('URTAlternate::DataSource::TheDB','main','person','TABLE','entity',NULL,'2011-04-20 17:07:18',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -62,11 +62,11 @@ CREATE TABLE dd_table_column (
     remarks varchar,
     PRIMARY KEY(data_source, owner, table_name, column_name)
 );
-INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB',NULL,'car','model','varchar',NULL,'N','2011-04-20 17:07:18','');
-INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB',NULL,'person','name','varchar',NULL,'N','2011-04-20 17:07:18','');
-INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB',NULL,'car','car_id','integer',NULL,'N','2011-04-20 17:07:18','');
-INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB',NULL,'person','person_id','integer',NULL,'N','2011-04-20 17:07:18','');
-INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB',NULL,'car','make','varchar',NULL,'N','2011-04-20 17:07:18','');
+INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB','main','car','model','varchar',NULL,'N','2011-04-20 17:07:18','');
+INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB','main','person','name','varchar',NULL,'N','2011-04-20 17:07:18','');
+INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB','main','car','car_id','integer',NULL,'N','2011-04-20 17:07:18','');
+INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB','main','person','person_id','integer',NULL,'N','2011-04-20 17:07:18','');
+INSERT INTO "dd_table_column" VALUES('URTAlternate::DataSource::TheDB','main','car','make','varchar',NULL,'N','2011-04-20 17:07:18','');
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
