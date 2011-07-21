@@ -39,10 +39,7 @@ UR::Object::Type->define(
 sub driver { "SQLite" }
 
 sub default_owner {
-    unless (defined $DBD::SQLite::VERSION) {
-        require DBD::SQLite;
-    }
-    $DBD::SQLite::VERSION < 1.26_04 ? undef : 'main' 
+    return 'main';
 }
 
 sub owner { default_owner() }
@@ -105,8 +102,7 @@ sub server {
 # and have slightly different dump text.  We'll give the new
 # ones a different extension.
 sub _extension_for_db {
-    my $self = shift;
-    $self->default_owner ? '.sqlite3n' : '.sqlite3';
+    '.sqlite3';
 }
 
 sub _journal_file_path {
@@ -256,6 +252,45 @@ sub _get_next_value_from_sequence {
 }
 
 
+# Overriding this so we can force the schema to 'main' for older versions of SQLite
+sub get_table_details_from_data_dictionary {
+    my $self = shift;
+
+    my $sth = $self->SUPER::get_table_details_from_data_dictionary(@_);
+    if ($DBD::SQLite::VERSION >= 1.26_04 || !$sth) {
+        return $sth;
+    }
+
+    my($catalog,$schema,$table_name) = @_;
+
+    my @tables;
+    my @returned_names;
+    while (my $info = $sth->fetchrow_hashref()) {
+        #@returned_names ||= (keys %$info);
+        unless (@returned_names) {
+            @returned_names = keys(%$info);
+        }
+        $info->{'TABLE_SCHEM'} ||= 'main';
+        push @tables, $info;
+    }
+
+    my $dbh = $self->get_default_handle();
+    my $sponge = DBI->connect("DBI:Sponge:", '','')
+        or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
+
+    unless (@returned_names) {
+        @returned_names = qw( TABLE_CAT TABLE_SCHEM TABLE_NAME TABLE_TYPE REMARKS );
+    }
+    my $returned_sth = $sponge->prepare("table_info $table_name", {
+        rows => [ map { [ @{$_}{@returned_names} ] } @tables ],
+        NUM_OF_FIELDS => scalar @returned_names,
+        NAME => \@returned_names,
+    }) or return $dbh->DBI::set_err($sponge->err(), $sponge->errstr());
+
+    return $returned_sth;
+}
+
+
 # DBD::SQLite doesn't implement column_info.  This is the UR::DataSource version of the same thing
 sub get_column_details_from_data_dictionary {
     my($self,$catalog,$schema,$table,$column) = @_;
@@ -270,6 +305,11 @@ sub get_column_details_from_data_dictionary {
 
     my $sth_tables = $dbh->table_info($catalog, $schema, $table, '');
     my @table_names = map { $_->{'TABLE_NAME'} } @{ $sth_tables->fetchall_arrayref({}) };
+
+    my $override_owner;
+    if ($DBD::SQLite::VERSION < 1.26_04) {
+        $override_owner = 'main';
+    }
 
     my @columns;
     foreach my $table_name ( @table_names ) {
@@ -292,7 +332,7 @@ sub get_column_details_from_data_dictionary {
 
             my $node = {};
             $node->{'TABLE_CAT'} = $catalog;
-            $node->{'TABLE_SCHEM'} = $schema;
+            $node->{'TABLE_SCHEM'} = $schema || $override_owner;
             $node->{'TABLE_NAME'} = $table_name;
             $node->{'COLUMN_NAME'} = $info->{'name'};
             $node->{'DATA_TYPE'} = $data_type;
