@@ -309,7 +309,7 @@ sub get_column_details_from_data_dictionary {
     $column =~ s/_/./;
     my $column_regex = qr(^$column$);
 
-    my $sth_tables = $dbh->table_info($catalog, $schema, $table, '');
+    my $sth_tables = $dbh->table_info($catalog, $schema, $table, 'TABLE');
     my @table_names = map { $_->{'TABLE_NAME'} } @{ $sth_tables->fetchall_arrayref({}) };
 
     my $override_owner;
