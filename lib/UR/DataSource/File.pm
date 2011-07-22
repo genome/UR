@@ -80,6 +80,7 @@ sub get_default_handle {
         }
 
         $self->{'_fh'} = $fh;
+        $self->is_connected(1);
     }
     return $self->{'_fh'};
 }
@@ -91,6 +92,7 @@ sub disconnect_default_handle {
         flock($fh,LOCK_UN);
         $fh->close();
         $self->{'_fh'} = undef;
+        $self->is_connected(0);
     }
 }
 

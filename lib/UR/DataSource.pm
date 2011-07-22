@@ -14,6 +14,7 @@ UR::Object::Type->define(
     doc => 'A logical database, independent of prod/dev/testing considerations or login details.',
     has => [
         namespace => { calculate_from => ['id'] },
+        is_connected => { is => 'Boolean', default_value => 0, is_optional => 1 },
     ],
 );
 
