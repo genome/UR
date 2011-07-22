@@ -720,6 +720,24 @@ sub _load_db_from_dump_internal {
         my $sql = $sql[$i];
         next unless ($sql =~ m/\S/);  # Skip blank lines
         next if ($sql =~ m/BEGIN TRANSACTION|COMMIT/i);  # We're probably already in a transaction
+
+        # Is it restoring the foreign_keys setting?
+        if ($sql =~ m/PRAGMA foreign_keys\s*=\s*(\w+)/) {
+            my $value = $1;
+            my $fk_setting = $self->_get_foreign_key_setting();
+            if (! defined($fk_setting)) {
+                # This version of SQLite cannot enforce foreign keys.
+                # Print a warning message if they're trying to turn it on.
+                # also, remember the setting so we can preserve its value
+                # in _dump_db_to_file_internal()
+                $self->_cache_foreign_key_setting_from_file($value);
+                if ($value ne 'OFF') {
+                    $self->warning_message("Data source ".$self->id." does not support foreign key enforcement, but the dump file $db_file attempts to turn it on");
+                }
+                next;
+            }
+        }
+
         unless ($dbh->do($sql)) {
             Carp::croak("Error processing SQL statement $i from DB dump file:\n$sql\nDBI error was: $DBI::errstr\n");
         }
@@ -729,6 +747,34 @@ sub _load_db_from_dump_internal {
     $dbh->disconnect();
 
     return 1;
+}
+
+
+sub _cache_foreign_key_setting_from_file {
+    my $self = shift;
+
+    our %foreign_key_setting_from_file;
+    my $id = $self->id;
+
+    if (@_) {
+        $foreign_key_setting_from_file{$id} = shift;
+    }
+    return $foreign_key_setting_from_file{$id};
+}
+
+# Is foreign key enforcement on or off?
+# returns undef if this version of SQLite cannot enforce foreign keys
+sub _get_foreign_key_setting {
+    my $self = shift;
+    my $id = $self->id;
+
+    our %foreign_key_setting;
+    unless (exists $foreign_key_setting{$id}) {
+        my $dbh = $self->get_default_handle;
+        my @row = $dbh->selectrow_array('PRAGMA foreign_keys');
+        $foreign_key_setting{$id} = $row[0];
+    }
+    return $foreign_key_setting{$id};
 }
 
 sub _dump_db_to_file_internal {
@@ -744,6 +790,18 @@ sub _dump_db_to_file_internal {
     my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file",'','',{ AutoCommit => 0, RaiseError => 0 });
     unless ($dbh) {
         Carp::croak("Can't create DB handle for file $db_file: $DBI::errstr");
+    }
+
+    my $fk_setting = $self->_get_foreign_key_setting();
+    if (defined $fk_setting) {
+        # Save the value of the foreign_keys setting, if it's supported
+        $fh->print('PRAGMA foreign_keys = ' . ( $fk_setting ? 'ON' : 'OFF' ) .";\n");
+    } else {
+        # If not supported, but if _load_db_from_dump_internal came across the value, preserve it
+        my $fk_setting = $self->_cache_foreign_key_setting_from_file;
+        if (defined $fk_setting) {
+            $fh->print("PRAGMA foreign_keys = $fk_setting;\n");
+        }
     }
 
     $fh->print("BEGIN TRANSACTION;\n");
