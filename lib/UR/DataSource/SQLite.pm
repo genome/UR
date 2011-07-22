@@ -98,9 +98,6 @@ sub server {
 *_database_file_path = \&server;
 
 
-# More recent versions of SQLite support enforced foreign keys
-# and have slightly different dump text.  We'll give the new
-# ones a different extension.
 sub _extension_for_db {
     '.sqlite3';
 }
