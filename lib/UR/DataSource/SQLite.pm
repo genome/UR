@@ -613,23 +613,7 @@ sub commit {
     
     return 1 unless $self->dump_on_commit or -e $dump_filename;
     
-    # FIXME is there a way to do a dump from within DBI?    
-    chomp(my $sqlite3_in_path = !system("which sqlite3 > /dev/null"));
-    if ($sqlite3_in_path) {
-        my $retval = system("sqlite3 $db_filename .dump > $dump_filename; touch $db_filename");
-        if ($retval == 0) {
-            return 1;
-        } else {
-            $retval >>= 8;
-            $self->error_message("Dumping the SQLite database $db_filename from DataSource ".$self->get_name." to $dump_filename failed\nThe sqlite3 return code was $retval, errno $!");
-            return;
-        }
-    } else {
-        return $self->_dump_db_to_file_internal();
-    }
-
-    # Shouldn't get here...
-    return;
+    return $self->_dump_db_to_file_internal();
 }
 
 
@@ -798,7 +782,7 @@ sub _dump_db_to_file_internal {
         $fh->print('PRAGMA foreign_keys = ' . ( $fk_setting ? 'ON' : 'OFF' ) .";\n");
     } else {
         # If not supported, but if _load_db_from_dump_internal came across the value, preserve it
-        my $fk_setting = $self->_cache_foreign_key_setting_from_file;
+        $fk_setting = $self->_cache_foreign_key_setting_from_file;
         if (defined $fk_setting) {
             $fh->print("PRAGMA foreign_keys = $fk_setting;\n");
         }
