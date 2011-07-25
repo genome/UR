@@ -2952,10 +2952,10 @@ sub rollback {
 
 sub disconnect {
     my $self = shift;
-    my $rv = $self->_do_on_default_dbh('disconnect', @_);
     if (! ref($self) and $self->isa('UR::Singleton')) {
         $self = $self->_singleton_object;
     }
+    my $rv = $self->_do_on_default_dbh('disconnect', @_);
     $self->is_connected(0);
     return $rv;
 }
