@@ -621,7 +621,7 @@ sub commit {
             return 1;
         } else {
             $retval >>= 8;
-            $self->error_message("Dumping the SQLite database $db_filename from DataSource ",$self->get_name," to $dump_filename failed\nThe sqlite3 return code was $retval, errno $!");
+            $self->error_message("Dumping the SQLite database $db_filename from DataSource ".$self->get_name." to $dump_filename failed\nThe sqlite3 return code was $retval, errno $!");
             return;
         }
     } else {
