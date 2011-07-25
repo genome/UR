@@ -2933,7 +2933,7 @@ sub _do_on_default_dbh {
 
     my $dbh = $self->get_default_handle;
     unless ($dbh->$method(@_)) {
-        $self->error_message("DataSource ",$self->get_name," failed to $method: ",$dbh->errstr);
+        $self->error_message("DataSource ".$self->get_name." failed to $method: ".$dbh->errstr);
         return undef;
     }
 
