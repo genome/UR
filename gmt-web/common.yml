@@ -10,6 +10,7 @@ menu:
 
 module_details:
     name: 'UR'
+    exe_name: ur
     gmt_pkg_name: ur
     debian_pkg_name: libur-perl
     icon: res/images/icon_48.png
