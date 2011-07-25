@@ -3,7 +3,9 @@ layout: sub
 menu: 
     - text: Overview
       href: index.html
-    - text: Install 
+    - text: Documentation
+      href: documentation.html
+    - text: Install
       href: install.html
 
 module_details:
