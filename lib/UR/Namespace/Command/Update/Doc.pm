@@ -157,10 +157,8 @@ sub execute {
         }
     }
 
-    local $Command::V1::entry_point_bin = $entry_point_bin;
-    local $Command::V2::entry_point_bin = $entry_point_bin;
-    local $Command::V1::entry_point_class = $entry_point_class;
-    local $Command::V2::entry_point_class = $entry_point_class;
+    local $Command::entry_point_bin = $entry_point_bin;
+    local $Command::entry_point_class = $entry_point_class;
 
     my @command_trees = map( $self->_get_command_tree($_), @targets);
     $self->_generate_index(@command_trees);
@@ -319,7 +317,6 @@ sub _get_command_tree {
         $tree->{command_name} = $command->command_name;
         $tree->{command_name_brief} = $command->command_name_brief;
     }
-
     $tree->{uri} = $self->_make_filename($tree->{command_name});
 
     if ($command->can("sub_command_classes")) {
