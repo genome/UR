@@ -135,7 +135,14 @@ sub mk_id_based_object_accessor {
                 $id_resolver = undef;
                 return unless $concrete_r_class_name;
             }
-            $id_resolver ||= $concrete_r_class_name->__meta__->get_composite_id_resolver;
+            unless ($id_resolver) {
+                my $concrete_r_class_meta = UR::Object::Type->get($concrete_r_class_name);
+                unless ($concrete_r_class_meta) {
+                    Carp::croak("Can't resolve value for '$accessor_name' on class $class_name id '".$self->id
+                                . "': No class metadata for value '$concrete_r_class_name' referenced as property '$id_class_by'");
+                }
+                $id_resolver = $concrete_r_class_meta->get_composite_id_resolver;
+            }
             
             # eliminate the old map{} because of side effects with $_
             # when the id_by property happens to be calculated
