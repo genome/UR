@@ -152,12 +152,6 @@ use UR::Namespace::Command::Update::RenameClass;
 use UR::Namespace::Command::Update::RewriteClassHeader;
 use UR::Namespace::Command::Update::SchemaDiagram;
 use UR::Namespace::Command::Update::TabCompletionSpec;
-use UR::Namespace::View::SchemaBrowser::CgiApp;
-use UR::Namespace::View::SchemaBrowser::CgiApp::Base;
-use UR::Namespace::View::SchemaBrowser::CgiApp::Class;
-use UR::Namespace::View::SchemaBrowser::CgiApp::File;
-use UR::Namespace::View::SchemaBrowser::CgiApp::Index;
-use UR::Namespace::View::SchemaBrowser::CgiApp::Schema;
 use UR::Object;
 use UR::Object::Accessorized;
 use UR::Object::Command::FetchAndDo;
@@ -188,11 +182,9 @@ use UR::Object::View;
 use UR::Object::View::Aspect;
 use UR::Object::View::Default::Gtk;
 use UR::Object::View::Default::Gtk2;
-use UR::Object::View::Default::Html;
 use UR::Object::View::Default::Json;
 use UR::Object::View::Default::Text;
 use UR::Object::View::Default::Xml;
-use UR::Object::View::Default::Xsl;
 use UR::Object::View::Lister::Text;
 use UR::Object::View::Toolkit;
 use UR::Object::View::Toolkit::Text;
@@ -201,7 +193,6 @@ use UR::ObjectV001removed;
 use UR::ObjectV04removed;
 use UR::Observer;
 use UR::Report;
-use UR::Service::JsonRpcServer;
 use UR::Service::RPC::Executer;
 use UR::Service::RPC::Message;
 use UR::Service::RPC::Server;
@@ -229,6 +220,30 @@ use UR::Value::Set;
 use UR::Value::Text;
 use UR::Value::URL;
 use UR::Vocabulary;
+
+# optional elements
+if (eval "use Net::HTTPServer") {
+    my $rv = eval "UR::Namespace::View::SchemaBrowser::CgiApp;"
+             && eval "use UR::Namespace::View::SchemaBrowser::CgiApp::Base;"
+             && eval "use UR::Namespace::View::SchemaBrowser::CgiApp::Class;"
+             && eval "use UR::Namespace::View::SchemaBrowser::CgiApp::File;"
+             && eval "use UR::Namespace::View::SchemaBrowser::CgiApp::Index;"
+             && eval "use UR::Namespace::View::SchemaBrowser::CgiApp::Schema;"
+             && eval "use UR::Service::JsonRpcServer;";
+    die $@ unless ($rv);
+}
+
+
+if (eval "use Xml::LibXSLT") {
+print STDERR "Yep!\n";
+    my $rv = eval "use UR::Object::View::Default::Html;"
+             && eval "use UR::Object::View::Default::Xsl;";
+print STDERR "rv is $rv exception is $@\n";
+    die $@ unless ($rv);
+}
+ 
+
+1;
 
 __END__
 
