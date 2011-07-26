@@ -337,6 +337,7 @@ t/CdExample.pm
 t/CdExample/Artist.pm
 t/CdExample/Cd.pm
 t/newnamespace/01_command_define_namespace.t
+t/Slimspace.pm
 t/ur-cachetest.pl
 t/urbenchmark.pl
 t/URT.pm
