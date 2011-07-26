@@ -6,6 +6,7 @@ lib/above.pm
 lib/Command.pm
 lib/Command/Dispatch/Shell.pm
 lib/Command/DynamicSubCommands.pm
+lib/Command/DynamicTree.pm
 lib/Command/Test.pm
 lib/Command/Test/Echo.pm
 lib/Command/Test/Tree1.pm
@@ -62,9 +63,6 @@ lib/UR/DataSource/Meta.sqlite3
 lib/UR/DataSource/Meta.sqlite3-dump
 lib/UR/DataSource/Meta.sqlite3-dump-boostrap
 lib/UR/DataSource/Meta.sqlite3-schema
-lib/UR/DataSource/Meta.sqlite3n
-lib/UR/DataSource/Meta.sqlite3n-dump
-lib/UR/DataSource/Meta.sqlite3n-schema
 lib/UR/DataSource/MySQL.pm
 lib/UR/DataSource/Oracle.pm
 lib/UR/DataSource/Pg.pm
@@ -237,7 +235,6 @@ lib/UR/ObjectV001removed.pm
 lib/UR/ObjectV04removed.pm
 lib/UR/Observer.pm
 lib/UR/Report.pm
-lib/UR/Service/DataSourceProxy.pm
 lib/UR/Service/json.js
 lib/UR/Service/JsonRpcServer.pm
 lib/UR/Service/RPC/Executer.pm
@@ -340,8 +337,7 @@ t/CdExample.pm
 t/CdExample/Artist.pm
 t/CdExample/Cd.pm
 t/newnamespace/01_command_define_namespace.t
-t/Slimspace.pm
-t/Slimspace/t/50-inc_resolved_for_namespace_module.t
+t/ur-cachetest.pl
 t/urbenchmark.pl
 t/URT.pm
 t/URT/34Baseclass.pm
@@ -356,9 +352,6 @@ t/URT/DataSource/Meta.pm
 t/URT/DataSource/Meta.sqlite3
 t/URT/DataSource/Meta.sqlite3-dump
 t/URT/DataSource/Meta.sqlite3-schema
-t/URT/DataSource/Meta.sqlite3n
-t/URT/DataSource/Meta.sqlite3n-dump
-t/URT/DataSource/Meta.sqlite3n-schema
 t/URT/DataSource/SomeFile.pm
 t/URT/DataSource/SomeFileMux.pm
 t/URT/DataSource/SomeMySQL.pm
@@ -513,6 +506,7 @@ t/URT/t/91b_sets_count_with_changes.t
 t/URT/t/91c_set_relay.t
 t/URT/t/92_save_object_with_propertyless_column.t
 t/URT/t/93_namespace.t
+t/URT/t/93b_namespace_loaded_from_symlink.t
 t/URT/t/94_chain_join.t
 t/URT/t/94b_flatten_reframe.t
 t/URT/t/95_detect_db_deleted.t
@@ -562,12 +556,8 @@ t/Vending/DataSource/coin_types.tsv
 t/Vending/DataSource/CoinType.pm
 t/Vending/DataSource/Machine.pm
 t/Vending/DataSource/Machine.sqlite3-dump
-t/Vending/DataSource/Machine.sqlite3n-dump
 t/Vending/DataSource/Meta.pm
 t/Vending/DataSource/Meta.sqlite3-dump
-t/Vending/DataSource/Meta.sqlite3n
-t/Vending/DataSource/Meta.sqlite3n-dump
-t/Vending/DataSource/Meta.sqlite3n-schema
 t/Vending/get_coin_by_value.pl
 t/Vending/Machine.pm
 t/Vending/machine_classes_1.uxf
