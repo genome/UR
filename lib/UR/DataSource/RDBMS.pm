@@ -20,7 +20,9 @@ UR::Object::Type->define(
         login        => { is => 'String', doc => 'user name to connect as', is_optional => 1 },
         auth         => { is => 'String', doc => 'authentication for the given user', is_optional => 1 },
         owner        => { is => 'String', doc => 'Schema/owner name to connect to', is_optional => 1  },
+    ],
 
+    has_optional => [
         _all_dbh_hashref                 => { type => 'HASH',       len => undef, is_transient => 1 },
         _default_dbh                     => { type => 'DBI::db',    len => undef, is_transient => 1 },
         _last_savepoint                  => { type => 'String',     len => undef, is_transient => 1 },
@@ -452,8 +454,7 @@ sub set_all_dbh_to_inactive_destroy {
     }
     my $dbh = $self->_default_dbh;
     if ($dbh) {
-        $dbh->disconnect;
-        $self->_default_dbh(undef);
+        $dbh->disconnect_default_dbh;;
     }
     return 1;
 }
@@ -487,7 +488,10 @@ sub _dbi_connect_args {
 }
 
 sub create_dbh {
-    my $self = shift->_singleton_object;
+    my $self = shift;
+    if (! ref($self) and $self->isa('UR::Singleton')) {
+        $self = $self->_singleton_object;
+    }
     
     # get connection information
     my @connection = $self->_dbi_connect_args();
@@ -519,7 +523,7 @@ sub create_dbh {
     $all_dbh_hashref->{$dbh} = $dbh;
     Scalar::Util::weaken($all_dbh_hashref->{$dbh});
 
-    $self->__signal_change__("connect");
+    $self->is_connected(1);
     
     return $dbh;
 }
@@ -2929,7 +2933,7 @@ sub _do_on_default_dbh {
 
     my $dbh = $self->get_default_handle;
     unless ($dbh->$method(@_)) {
-        $self->error_message("DataSource ",$self->get_name," failed to $method: ",$dbh->errstr);
+        $self->error_message("DataSource ".$self->get_name." failed to $method: ".$dbh->errstr);
         return undef;
     }
 
@@ -2948,7 +2952,12 @@ sub rollback {
 
 sub disconnect {
     my $self = shift;
-    $self->_do_on_default_dbh('disconnect', @_);
+    if (! ref($self) and $self->isa('UR::Singleton')) {
+        $self = $self->_singleton_object;
+    }
+    my $rv = $self->_do_on_default_dbh('disconnect', @_);
+    $self->is_connected(0);
+    return $rv;
 }
 
 sub _generate_class_data_for_loading {
@@ -3081,8 +3090,8 @@ sub validate_subscription {
 
     unless ( defined($subscription_property)
              and
-             ( $subscription_property eq 'connect'
-               or
+             ( #$subscription_property eq 'connect'
+               #or
                $subscription_property eq 'query'
              )
     ) {

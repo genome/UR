@@ -1340,8 +1340,8 @@ sub prune_object_cache {
     # Make a guess about that the target serial number should be
     # This one goes 10% between the last time we pruned, and the last get serial
     # and increases by another 10% each attempt
-    #my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * $cache_size_lowwater / $cache_size_highwater );
-    my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * 0.1);
+    my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * $cache_size_lowwater / $cache_size_highwater );
+    #my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * 0.1);
     $target_serial_increment = 1 if ($target_serial_increment < 1);
     my $target_serial = $cache_last_prune_serial;
     CACHE_IS_TOO_BIG:

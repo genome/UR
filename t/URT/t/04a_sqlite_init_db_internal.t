@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 20;
+use Test::More;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -22,6 +22,13 @@ my @db_creation_text = (
     q(INSERT INTO "foo" VALUES (4,5);),
     q(COMMIT;),
 );
+if (defined URT::DataSource::SomeSQLite->_singleton_object->_get_foreign_key_setting) {
+    # If DBD::SQLite supports foreign keys, then the dump file will have this line
+    unshift @db_creation_text, q(PRAGMA foreign_keys = OFF;);
+    plan tests => 21;
+} else {
+    plan tests => 20;
+}
 
 my $dump_file = URT::DataSource::SomeSQLite->_data_dump_path();
 my $fh = IO::File->new($dump_file, 'w');
@@ -65,7 +72,7 @@ $fh->close();
         $fh->close();
     }
 
-    ok(URT::DataSource::SomeSQLite->_dump_db_to_file_internal(), 'Call force re-creation of the dump file');
+    ok(URT::DataSource::SomeSQLite->_singleton_object->_dump_db_to_file_internal(), 'Call force re-creation of the dump file');
 
     ok((-r $dump_file and -s $dump_file), 'Re-created dump file');
     $fh = IO::File->new($dump_file);

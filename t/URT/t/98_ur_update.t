@@ -168,8 +168,7 @@ ok($trans, "began transaction");
     my @changes = get_changes();
     is(scalar(@changes),1, "one change for an empty schema");
     is($changes[0]->changed_class_name, 'URT::DataSource::Meta', 'Single change was to URT::DataSource::Meta');
-    is($changes[0]->changed_aspect, 'connect', 'Single change was a DB connect');
-    
+    is($changes[0]->changed_aspect, 'is_connected', 'Single change was a DB connect');
 
     # note this for comparison in future tests.
     my $expected_dd_object_count = cached_dd_object_count();
@@ -487,7 +486,7 @@ sub convert_change_list_for_checking {
 # Changes after creating the person table and running ur update classes
 
 sub initialize_check_change_data_structures {
-    my $sqlite_owner = UR::DataSource::SQLite->default_owner || '';
+    my $sqlite_owner = 'main';
     $check_changes_1 = {
     'UR::DataSource::RDBMS::Table' => {
         "URT::DataSource::SomeSQLite\t$sqlite_owner\tperson" => {

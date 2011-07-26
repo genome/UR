@@ -39,10 +39,7 @@ UR::Object::Type->define(
 sub driver { "SQLite" }
 
 sub default_owner {
-    unless (defined $DBD::SQLite::VERSION) {
-        require DBD::SQLite;
-    }
-    $DBD::SQLite::VERSION < 1.26_04 ? undef : 'main' 
+    return 'main';
 }
 
 sub owner { default_owner() }
@@ -93,7 +90,7 @@ sub server {
     my $self = shift->_singleton_object();
     my $path = $self->__meta__->module_path;
     my $ext = $self->_extension_for_db;
-    $path =~ s/\.pm$/$ext/ or Carp::confess("Odd module path $path");
+    $path =~ s/\.pm$/$ext/ or Carp::croak("Odd module path $path.  Expected something endining in '.pm'");
 
     my $dir = File::Basename::dirname($path);
     return $path; 
@@ -101,12 +98,8 @@ sub server {
 *_database_file_path = \&server;
 
 
-# More recent versions of SQLite support enforced foreign keys
-# and have slightly different dump text.  We'll give the new
-# ones a different extension.
 sub _extension_for_db {
-    my $self = shift;
-    $self->default_owner ? '.sqlite3n' : '.sqlite3';
+    '.sqlite3';
 }
 
 sub _journal_file_path {
@@ -164,7 +157,7 @@ sub _init_database {
             $self->warning_message("Re-creating $db_file from $dump_file.");
             $self->_load_db_from_dump_internal($dump_file);
             unless (-e $db_file) {
-                Carp::confess("Failed to import $dump_file into $db_file!");
+                Carp::croak("Failed to import $dump_file into $db_file!");
             }
         }
         elsif ( (not -e $db_file) and (-e $schema_file) ) {
@@ -172,26 +165,26 @@ sub _init_database {
             $self->warning_message("Re-creating $db_file from $schema_file.");
             $self->_load_db_from_dump_internal($schema_file);
             unless (-e $db_file) {
-                Carp::confess("Failed to import $dump_file into $db_file!");
+                Carp::croak("Failed to import $dump_file into $db_file!");
             }
         }
         elsif ($self->class ne __PACKAGE__) {
             # copy from the parent class (disabled)
-            Carp::confess("No schema or dump file found for $db_file.\n  Tried schema path $schema_file\n  and dump path $dump_file");
+            Carp::croak("No schema or dump file found for $db_file.\n  Tried schema path $schema_file\n  and dump path $dump_file\nIf you still have *sqlite3n* SQLite database files please rename them to *sqlite3*, without the 'n'");
 
             my $template_database_file = $self->SUPER::server();
             unless (-e $template_database_file) {
-                Carp::confess("Missing template database file: $db_file!  Cannot initialize database for " . $self->class);
+                Carp::croak("Missing template database file: $db_file!  Cannot initialize database for " . $self->class);
             }
             unless(File::Copy::copy($template_database_file,$db_file)) {
-                Carp::confess("Error copying $db_file to $template_database_file to initialize database!");
+                Carp::croak("Error copying $db_file to $template_database_file to initialize database!");
             }
             unless(-e $db_file) {
-                Carp::confess("File $db_file not found after copy from $template_database_file. Cannot initialize database!");
+                Carp::croak("File $db_file not found after copy from $template_database_file. Cannot initialize database!");
             }
         }
         else {
-            Carp::confess("No db file found, and no dump or schema file found from which to re-construct a db file!");
+            Carp::croak("No db file found, and no dump or schema file found from which to re-construct a db file!");
         }
     }
     return 1;
@@ -256,6 +249,54 @@ sub _get_next_value_from_sequence {
 }
 
 
+# Overriding this so we can force the schema to 'main' for older versions of SQLite
+#
+# NOTE: table_info (called by SUPER::get_table_details_from_data_dictionary) in older
+# versions of DBD::SQLite does not return data for tables in other attached databases.
+#
+# This probably isn't an issue... Due to the limited number of people using older DBD::SQLite
+# (of particular note is that OSX 10.5 and earlier use such an old version), interseted with
+# the limited number of people using attached databases, it's probably not a problem.
+# The commit_between_schemas test does do this.  If it turns out it is a problem, we could
+# appropriate the code from recent DBD::SQLite::table_info
+sub get_table_details_from_data_dictionary {
+    my $self = shift;
+
+    my $sth = $self->SUPER::get_table_details_from_data_dictionary(@_);
+    if ($DBD::SQLite::VERSION >= 1.26_04 || !$sth) {
+        return $sth;
+    }
+
+    my($catalog,$schema,$table_name) = @_;
+
+    my @tables;
+    my @returned_names;
+    while (my $info = $sth->fetchrow_hashref()) {
+        #@returned_names ||= (keys %$info);
+        unless (@returned_names) {
+            @returned_names = keys(%$info);
+        }
+        $info->{'TABLE_SCHEM'} ||= 'main';
+        push @tables, $info;
+    }
+
+    my $dbh = $self->get_default_handle();
+    my $sponge = DBI->connect("DBI:Sponge:", '','')
+        or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
+
+    unless (@returned_names) {
+        @returned_names = qw( TABLE_CAT TABLE_SCHEM TABLE_NAME TABLE_TYPE REMARKS );
+    }
+    my $returned_sth = $sponge->prepare("table_info $table_name", {
+        rows => [ map { [ @{$_}{@returned_names} ] } @tables ],
+        NUM_OF_FIELDS => scalar @returned_names,
+        NAME => \@returned_names,
+    }) or return $dbh->DBI::set_err($sponge->err(), $sponge->errstr());
+
+    return $returned_sth;
+}
+
+
 # DBD::SQLite doesn't implement column_info.  This is the UR::DataSource version of the same thing
 sub get_column_details_from_data_dictionary {
     my($self,$catalog,$schema,$table,$column) = @_;
@@ -268,8 +309,13 @@ sub get_column_details_from_data_dictionary {
     $column =~ s/_/./;
     my $column_regex = qr(^$column$);
 
-    my $sth_tables = $dbh->table_info($catalog, $schema, $table, '');
+    my $sth_tables = $dbh->table_info($catalog, $schema, $table, 'TABLE');
     my @table_names = map { $_->{'TABLE_NAME'} } @{ $sth_tables->fetchall_arrayref({}) };
+
+    my $override_owner;
+    if ($DBD::SQLite::VERSION < 1.26_04) {
+        $override_owner = 'main';
+    }
 
     my @columns;
     foreach my $table_name ( @table_names ) {
@@ -292,7 +338,7 @@ sub get_column_details_from_data_dictionary {
 
             my $node = {};
             $node->{'TABLE_CAT'} = $catalog;
-            $node->{'TABLE_SCHEM'} = $schema;
+            $node->{'TABLE_SCHEM'} = $schema || $override_owner;
             $node->{'TABLE_NAME'} = $table_name;
             $node->{'COLUMN_NAME'} = $info->{'name'};
             $node->{'DATA_TYPE'} = $data_type;
@@ -470,7 +516,7 @@ my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_
             }
         }
     } else {
-        Carp::confess("either $pk_table or $fk_table are required");
+        Carp::croak("Can't get_foreign_key_details_from_data_dictionary(): either pk_table ($pk_table) or fk_table ($fk_table) are required");
     }
 
     # next, format it to get returned as a sth
@@ -567,23 +613,7 @@ sub commit {
     
     return 1 unless $self->dump_on_commit or -e $dump_filename;
     
-    # FIXME is there a way to do a dump from within DBI?    
-    chomp(my $sqlite3_in_path = !system("which sqlite3 > /dev/null"));
-    if ($sqlite3_in_path) {
-        my $retval = system("sqlite3 $db_filename .dump > $dump_filename; touch $db_filename");
-        if ($retval == 0) {
-            return 1;
-        } else {
-            $retval >>= 8;
-            $self->error_message("Dumping the SQLite database $db_filename from DataSource ",$self->get_name," to $dump_filename failed\nThe sqlite3 return code was $retval, errno $!");
-            return;
-        }
-    } else {
-        return $self->_dump_db_to_file_internal();
-    }
-
-    # Shouldn't get here...
-    return;
+    return $self->_dump_db_to_file_internal();
 }
 
 
@@ -674,6 +704,24 @@ sub _load_db_from_dump_internal {
         my $sql = $sql[$i];
         next unless ($sql =~ m/\S/);  # Skip blank lines
         next if ($sql =~ m/BEGIN TRANSACTION|COMMIT/i);  # We're probably already in a transaction
+
+        # Is it restoring the foreign_keys setting?
+        if ($sql =~ m/PRAGMA foreign_keys\s*=\s*(\w+)/) {
+            my $value = $1;
+            my $fk_setting = $self->_get_foreign_key_setting();
+            if (! defined($fk_setting)) {
+                # This version of SQLite cannot enforce foreign keys.
+                # Print a warning message if they're trying to turn it on.
+                # also, remember the setting so we can preserve its value
+                # in _dump_db_to_file_internal()
+                $self->_cache_foreign_key_setting_from_file($value);
+                if ($value ne 'OFF') {
+                    $self->warning_message("Data source ".$self->id." does not support foreign key enforcement, but the dump file $db_file attempts to turn it on");
+                }
+                next;
+            }
+        }
+
         unless ($dbh->do($sql)) {
             Carp::croak("Error processing SQL statement $i from DB dump file:\n$sql\nDBI error was: $DBI::errstr\n");
         }
@@ -683,6 +731,34 @@ sub _load_db_from_dump_internal {
     $dbh->disconnect();
 
     return 1;
+}
+
+
+sub _cache_foreign_key_setting_from_file {
+    my $self = shift;
+
+    our %foreign_key_setting_from_file;
+    my $id = $self->id;
+
+    if (@_) {
+        $foreign_key_setting_from_file{$id} = shift;
+    }
+    return $foreign_key_setting_from_file{$id};
+}
+
+# Is foreign key enforcement on or off?
+# returns undef if this version of SQLite cannot enforce foreign keys
+sub _get_foreign_key_setting {
+    my $self = shift;
+    my $id = $self->id;
+
+    our %foreign_key_setting;
+    unless (exists $foreign_key_setting{$id}) {
+        my $dbh = $self->get_default_handle;
+        my @row = $dbh->selectrow_array('PRAGMA foreign_keys');
+        $foreign_key_setting{$id} = $row[0];
+    }
+    return $foreign_key_setting{$id};
 }
 
 sub _dump_db_to_file_internal {
@@ -698,6 +774,18 @@ sub _dump_db_to_file_internal {
     my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file",'','',{ AutoCommit => 0, RaiseError => 0 });
     unless ($dbh) {
         Carp::croak("Can't create DB handle for file $db_file: $DBI::errstr");
+    }
+
+    my $fk_setting = $self->_get_foreign_key_setting();
+    if (defined $fk_setting) {
+        # Save the value of the foreign_keys setting, if it's supported
+        $fh->print('PRAGMA foreign_keys = ' . ( $fk_setting ? 'ON' : 'OFF' ) .";\n");
+    } else {
+        # If not supported, but if _load_db_from_dump_internal came across the value, preserve it
+        $fk_setting = $self->_cache_foreign_key_setting_from_file;
+        if (defined $fk_setting) {
+            $fh->print("PRAGMA foreign_keys = $fk_setting;\n");
+        }
     }
 
     $fh->print("BEGIN TRANSACTION;\n");

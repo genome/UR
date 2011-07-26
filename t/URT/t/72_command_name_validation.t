@@ -11,10 +11,10 @@ use Test::More;
 
 my %tests = (
     'WordWord' => 'word-word',
-    'Word456Word' => 'word-456-word',
-    'Word456aWord' => 'word-456a-word',
+    'Word456Word' => 'word456-word',
+    'Word456aWord' => 'word456a-word',
     '456Word' => '456-word',
-    'Word456' => 'word-456',
+    'Word456' => 'word456',
     'WWWord' => 'w-w-word',
     '456' => '456',
 );          

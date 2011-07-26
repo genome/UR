@@ -679,7 +679,7 @@ sub disconnect
     
     # Msg and disconnect.
     UR::DBI::before_execute("disconnecting");
-    $self->SUPER::disconnect(@_);
+    my $rv = $self->SUPER::disconnect(@_);
     UR::DBI::after_execute();
     
     # There doesn't seem to be anything less which
@@ -694,6 +694,7 @@ sub disconnect
         $UR::DBI::common_dbh = undef;
         UR::DBI::after_execute("common dbh removed");
     }
+    return $rv;
 }
 
 sub prepare
