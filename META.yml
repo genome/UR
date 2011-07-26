@@ -768,7 +768,6 @@ requires:
   Data::UUID: 0.148
   Date::Format: ''
   File::Basename: 2.73
-  File::Slurp: ''
   FreezeThaw: 0.43
   Getopt::Complete: v0.20
   JSON: ''

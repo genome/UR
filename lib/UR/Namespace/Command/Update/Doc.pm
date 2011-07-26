@@ -7,7 +7,6 @@ use UR;
 our $VERSION = "0.34"; # UR $VERSION;
 
 use IO::File;
-use File::Slurp     qw/write_file/;
 use File::Basename  qw/dirname/;
 use File::Path      qw/make_path/;
 use YAML;
@@ -180,7 +179,14 @@ sub _generate_index {
             if (-e $index_path) {
                 $self->warning_message("Index generation overwriting existing file at $index_path");
             }
-            write_file($index_path, \$index);
+
+            my $fh = IO::File->new($index_path, 'w');
+            unless ($fh) {
+                Carp::croak("Can't open file $index_path for writing: $!");
+            }
+            $fh->print($index);
+            $fh->close();
+
             $self->_index_filename($index_filename) if -e $index_path;
         } else {
             $self->warning_message("Unable to generate index");
