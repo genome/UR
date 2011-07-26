@@ -575,11 +575,12 @@ sub resolve {
                     }
                 }
 
-                if ($property_meta->is_delegated) {
+                if ($property_meta->id_by or $property_meta->reverse_as) {
                     my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
                     unless ($property_meta) {
                         Carp::croak("No property metadata for $subject_class property '$property_name'");
                     }
+
                     my @joins = $property_meta->get_property_name_pairs_for_join();
                     for my $join (@joins) {
                         # does this really work for >1 joins?
