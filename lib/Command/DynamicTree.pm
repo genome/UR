@@ -31,7 +31,13 @@ sub _build_sub_command_mapping {
     }
     my $ref_class = $class->_sub_commands_from;
 
-    my $delegating_class_name = $class;
+    my @inheritance;
+    if ($class->can('_sub_commands_inherit_from') and defined $class->_sub_commands_inherit_from) {
+        @inheritance = $class->_sub_commands_inherit_from();
+    }
+    else {
+        @inheritance = $class;
+    }
 
     my $module = $ref_class;
     $module =~ s/::/\//g;
@@ -74,7 +80,7 @@ sub _build_sub_command_mapping {
     for my $target (sort keys %target_classes) {
         my $target_class_name = $target_classes{$target};
 
-        my $class_name = $delegating_class_name . '::' . $target; 
+        my $class_name = $class . '::' . $target; 
 
         my $module_name = $class_name;
         $module_name =~ s|::|/|g;
@@ -91,7 +97,8 @@ sub _build_sub_command_mapping {
             next;
         }
 
-        my @new_class_names = $class->_build_sub_command($class_name,$delegating_class_name,$target_class_name);
+
+        my @new_class_names = $class->_build_sub_command($class_name, @inheritance);
         for my $new_class_name (@new_class_names) {
             no warnings 'redefine';
             eval "sub ${new_class_name}::_target_class_name { '$target_class_name' }";
@@ -106,9 +113,9 @@ sub _build_sub_command_mapping {
 }
 
 sub _build_sub_command {
-    my ($self,$class_name,$delegating_class_name,$reference_class_name) = @_;
+    my ($self, $class_name, @inheritance) = @_;
     class {$class_name} { 
-        is => $delegating_class_name, 
+        is => \@inheritance, 
         doc => '',
     };
     return $class_name;
@@ -116,47 +123,7 @@ sub _build_sub_command {
 
 sub _target_class_name { undef }
 
-# Sub commands that are themselves trees should use Command::Tree methods,
-# otherwise should use Command::V2 methods
-for my $method (
-    qw/
-        resolve_class_and_params_for_argv
-        help_brief
-        doc_help
-        doc_manual
-        resolve_option_completion_spec
-        sorted_sub_command_classes
-        sorted_sub_command_names
-        sub_commands_table
-        _categorize_sub_commands
-        help_sub_commands
-        doc_sub_commands
-        sub_command_classes
-        is_sub_command_delegator
-        sub_command_names
-        class_for_sub_command
-        sub_command_dirs
-    /
-) {
-
-    my $code = sub {
-        my $self = shift;
-        if ($self->_target_class_name) {
-            # sub-command
-            my $method1 = 'Command::V2::' . $method;
-            return $self->$method1(@_);
-        }
-        else {
-            # tree 
-            my $method2 = 'SUPER::' . $method;
-            return $self->$method2(@_)
-        }
-    };
-
-    no strict;
-    no warnings;
-    *{$method} = $code;
-}
+sub _sub_commands_inherit_from { undef }
 
 1;
 
