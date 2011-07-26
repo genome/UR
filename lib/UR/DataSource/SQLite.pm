@@ -765,6 +765,11 @@ sub _dump_db_to_file_internal {
     my $self = shift;
 
     my $file_name = $self->_data_dump_path();
+    unless (-w $file_name) {
+        # dump file isn't writable...
+        return 1;
+    }
+
     my $fh = IO::File->new($file_name, '>');
     unless ($fh) {
         Carp::croak("Can't open DB dump file $file_name for writing: $!");
