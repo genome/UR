@@ -1,10 +1,10 @@
-package Command::DynamicTree;
+package Command::SubCommandFactory;
 
 use strict;
 use warnings;
 use UR;
 
-class Command::DynamicTree {
+class Command::SubCommandFactory {
     is => 'Command::Tree',
     is_abstract => 1,
     doc => 'Base class for commands that delegate to sub-commands that may need to be dynamically created',
