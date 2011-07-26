@@ -1,3 +1,10 @@
+libur-perl (0.34-1) unstable; urgency=low
+
+  * Remove the distinction between older and newer versions of DBD::SQLite installed on the system.  If you have SQLite databases (including MetaDBs) with names like "*sqlite3n*", they will need to be renamed to "*sqlite3*".
+  * Make the tests emit fewer messages to the terminal when run in the harness; improve coverage on non-Intel/Linux systems.
+
+ -- Anthony Brummett <brummett@cpan.org>  Thu, 26 Jul 2011 10:25:00 -0500
+
 libur-perl (0.33-1) unstable; urgency=low
 
   * New environment variable (UR_DBI_SUMMARIZE_SQL) to help find query optimization targets
