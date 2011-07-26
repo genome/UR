@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = "0.33"; # UR $VERSION;
+our $VERSION = "0.34"; # UR $VERSION;
 use Carp qw/croak/;
 
 class UR::Doc::Writer {

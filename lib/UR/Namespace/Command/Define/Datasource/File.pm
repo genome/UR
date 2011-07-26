@@ -3,7 +3,7 @@ package UR::Namespace::Command::Define::Datasource::File;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.33"; # UR $VERSION;
+our $VERSION = "0.34"; # UR $VERSION;
 
 use IO::File;
 

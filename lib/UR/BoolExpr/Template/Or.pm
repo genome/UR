@@ -2,7 +2,7 @@ package UR::BoolExpr::Template::Or;
 
 use warnings;
 use strict;
-our $VERSION = "0.33"; # UR $VERSION;;
+our $VERSION = "0.34"; # UR $VERSION;;
 
 require UR;
 
