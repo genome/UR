@@ -15,8 +15,8 @@ provides:
     version: 0.34
   Command::DynamicSubCommands:
     file: lib/Command/DynamicSubCommands.pm
-  Command::DynamicTree:
-    file: lib/Command/DynamicTree.pm
+  Command::SubCommandFactory:
+    file: lib/Command/SubCommandFactory.pm
   Command::Test:
     file: lib/Command/Test.pm
   Command::Test::Echo:

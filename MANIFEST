@@ -6,7 +6,7 @@ lib/above.pm
 lib/Command.pm
 lib/Command/Dispatch/Shell.pm
 lib/Command/DynamicSubCommands.pm
-lib/Command/DynamicTree.pm
+lib/Command/SubCommandFactory.pm
 lib/Command/Test.pm
 lib/Command/Test/Echo.pm
 lib/Command/Test/Tree1.pm

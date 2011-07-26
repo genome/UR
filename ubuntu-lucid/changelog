@@ -1,6 +1,6 @@
 libur-perl (0.34-1) unstable; urgency=low
 
-  * New class (Command::DynamicTree) which can act as a factory for a tree of sub-commands
+  * New class (Command::SubCommandFactory) which can act as a factory for a tree of sub-commands
   * Remove the distinction between older and newer versions of DBD::SQLite installed on the system.  If you have SQLite databases (including MetaDBs) with names like "*sqlite3n*", they will need to be renamed to "*sqlite3*".
   * Make the tests emit fewer messages to the terminal when run in the harness; improve coverage on non-Intel/Linux systems.
 

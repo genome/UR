@@ -1,7 +1,7 @@
 Revision history for UR
 
 0.34    2011-07-26
-        New class (Command::DynamicTree) which can act as a factory for a
+        New class (Command::SubCommandFactory) which can act as a factory for a
             tree of sub-commands
         Remove the distinction between older and newer versions of DBD::SQLite
             installed on the system.  If you have SQLite databases (including
