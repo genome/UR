@@ -607,7 +607,8 @@ sub resolve {
                     $value = $value->$property_name;
                 }
                 else {
-                    Carp::croak("Incorrect data type in rule " . ref($value) . " for $subject_class property '$property_name' with op $operator!");    
+                    $operator = 'eq' unless $operator;
+                    Carp::croak("Invalid data type in rule.  A value of type " . ref($value) . " cannot be used in class $subject_class property '$property_name' with operator $operator!");
                 }
                 # end of handling a value which is an arrayref
             }
