@@ -7,8 +7,8 @@ use UR;
 our $VERSION = "0.34"; # UR $VERSION;
 
 use IO::File;
-use File::Basename  qw/dirname/;
-use File::Path      qw/make_path/;
+use File::Basename;
+use File::Path;
 use YAML;
 
 class UR::Namespace::Command::Update::Doc {
@@ -145,7 +145,7 @@ sub execute {
                 $self->status_message("output path is not a directory!: " . $self->output_path);
             }
             else {
-                make_path($self->output_path);
+                File::Path::make_path($self->output_path);
                 if (-d $self->output_path) {
                     $self->status_message("using output directory " . $self->output_path);
                 }
@@ -255,7 +255,7 @@ sub _get_output_dir {
     my ($self, $class_name) = @_;
 
     return $self->output_path if defined $self->output_path;
-    return dirname($class_name->__meta__->module_path);
+    return File::Basename::dirname($class_name->__meta__->module_path);
 }
 
 sub _navigation_info {
