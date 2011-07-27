@@ -454,7 +454,9 @@ sub _first_class_in_inheritance_with_a_table {
 sub _class_is_safe_to_rebless_from_parent_class {
     my ($self, $class, $was_loaded_as_this_parent_class) = @_;
     my $fcwt = $self->_first_class_in_inheritance_with_a_table($class);
-    die "No parent class with a table found for $class?!" unless $fcwt;
+    unless ($fcwt) {
+        Carp::croak("Can't call _class_is_safe_to_rebless_from_parent_class(): Class $class has no parent classes with a table");
+    }
     return ($was_loaded_as_this_parent_class->isa($fcwt));
 }
 
