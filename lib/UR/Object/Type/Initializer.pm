@@ -666,6 +666,8 @@ sub _normalize_class_description_impl {
                              and
                              exists($properties->{$name}->{'is_optional'})
                              and
+                             defined($properties->{$name}->{'is_optional'})
+                             and
                              $properties->{$name}->{'is_optional'} == 0);
                     $properties->{$name}->{$key} = $params->{$key};
                 }
@@ -1009,16 +1011,15 @@ sub _normalize_property_description1 {
     ) {
         my ($primary_field_name, @alternate_field_names) = @$mapping;
         my @all_fields = ($primary_field_name, @alternate_field_names);
-        my @values = grep { defined($_) } delete @old_property{@all_fields};
-        if (@values > 1) {
-            Carp::confess(
-                "Multiple values in class definition for $class_name property $property_name.  Field "
-                . join("/", @all_fields)
-                . " has values "
-                . Data::Dumper::Dumper(\@values)
-            );
+
+        my @keys = grep { exists $old_property{$_} } @all_fields;
+        if (@keys > 1) {
+            Carp::croak("Invalid class definition for $class_name in property '$property_name'.  The keys "
+                        . join(', ',@keys) . " are all synonyms for $primary_field_name");
+
         }
-        elsif (@values == 1) {
+        my @values = grep { defined } delete @old_property{@all_fields};
+        if (@keys == 1) {
             $new_property{$primary_field_name} = $values[0];
         }
 
@@ -1107,7 +1108,10 @@ sub _normalize_property_description2 {
         $the_data_source = $new_class{'data_source_id'}->{'is'};
     } elsif ($new_class{'data_source_id'}) {
         $the_data_source = $new_class{'data_source_id'};
-        $the_data_source = UR::DataSource->get($the_data_source) || $the_data_source->get();
+        $the_data_source = UR::DataSource->get($the_data_source) || eval { $the_data_source->get() };
+        unless ($the_data_source) {
+            Carp::croak("Can't resolve data source from value '".$new_class{'data_source_id'}."' in class definition for $class_name");
+        }
     }
     # UR::DataSource::File-backed classes don't have table_names, but for querying/saving to
     # work property, their properties still have to have column_name filled in
