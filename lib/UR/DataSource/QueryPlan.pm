@@ -1290,7 +1290,18 @@ sub _init_light {
         my $delegate_class_meta = $delegated_property->class_meta;
         my($via_accessor_meta) = $delegate_class_meta->_concrete_property_meta_for_class_and_name($relationship_name);
         my $final_accessor = $delegated_property->to;            
-        my($final_accessor_meta) = $via_accessor_meta->data_type->__meta__->_concrete_property_meta_for_class_and_name(
+
+        my $data_type = $via_accessor_meta->data_type;
+        unless ($data_type) {
+            Carp::croak "Can't resolve delegation for $property_name on class $class_name: via property $relationship_name has no data type";
+        }
+
+        my $data_type_meta = UR::Object::Type->get($via_accessor_meta->data_type);
+        unless ($data_type_meta) {
+            Carp::croak "No class meta data for " . $via_accessor_meta->data_type . 
+                " while resolving property $property_name on class $class_name";
+        }
+        my($final_accessor_meta) = $data_type_meta->_concrete_property_meta_for_class_and_name(
                                              $final_accessor
                                          );
         unless ($final_accessor_meta) {
