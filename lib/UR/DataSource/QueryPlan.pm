@@ -300,14 +300,10 @@ sub _init_rdbms {
                         };
                 }
             }
-            elsif ($property->is_transient) {
-                push @errors, "Can't query by transient property '$property_name' on $class_name";
-                next;
-            }
             elsif ($property->is_delegated) {
                 push @delegated_properties, $property->property_name;
             }
-            elsif ($property->is_calculated || $property->is_constant) {
+            elsif ($property->is_calculated || $property->is_constant || $property->is_transient) {
                 $self->needs_further_boolexpr_evaluation_after_loading(1);
             }
             else {
@@ -1244,13 +1240,10 @@ sub _init_light {
             if ($property->is_legacy_eav) {
                 die "Old GSC EAV can be handled with a via/to/where/is_mutable=1";
             }
-            elsif ($property->is_transient) {
-                die "Query by transient property $property_name on $class_name cannot be done!";
-            }
             elsif ($property->is_delegated) {
                 push @delegated_properties, $property;
             }
-            elsif ($property->is_calculated) {
+            elsif ($property->is_calculated || $property->is_transient) {
                 $needs_further_boolexpr_evaluation_after_loading = 1;
             }
             else {
