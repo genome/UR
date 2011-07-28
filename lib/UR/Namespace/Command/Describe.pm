@@ -29,13 +29,13 @@ ur describe Acme::Order Acme::Product Acme::Order::LineItem
 EOS
 }
 
-# The class metadata has lots of properties that we're not interested in
-our @CLASS_PROPERTIES_NOT_TO_PRINT = qw(
-    generated
-    short_name
-    is
-    all_class_metas
-);
+## The class metadata has lots of properties that we're not interested in
+#our @CLASS_PROPERTIES_NOT_TO_PRINT = qw(
+#    generated
+#    short_name
+#    is
+#    all_class_metas
+#);
     
 sub for_each_class_object {
     my $self = shift;
@@ -47,7 +47,11 @@ sub for_each_class_object {
                     aspects => [
                         'namespace', 'table_name', 'data_source_id', 'is_abstract', 'is_final',
                         'is_singleton', 'is_transactional', 'schema_name', 'meta_class_name',
-                        'first_sub_classification_method_name', 'sub_classification_method_name',
+                        {
+                            label => 'Inherits from',
+                            name  => 'ancestry_class_names',
+                        },
+                            
                         {
                             label => 'Properties',
                             name => 'properties',

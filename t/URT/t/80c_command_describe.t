@@ -27,8 +27,7 @@ URT Thingy Type URT::Thingy
   is transactional: 1
   schema name: 
   meta class name: URT::Thingy::Type
-  first sub classification method name: 
-  sub classification method name: 
+  Inherits from: UR::Object
   Properties: 
                                 enz_id (no column)                                              NUMBER(10)  
      ID                             id (no column)                                                  Scalar  
