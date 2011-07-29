@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 8;
+use Test::More tests=> 6;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
