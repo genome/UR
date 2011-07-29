@@ -8,7 +8,6 @@ our $VERSION = "0.34"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::Pg',
     is => ['UR::DataSource::RDBMS'],
-    english_name => 'ur datasource pg',
     is_abstract => 1,
 );
 

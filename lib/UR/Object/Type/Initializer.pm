@@ -758,10 +758,6 @@ sub _normalize_class_description_impl {
         }
     }
 
-    unless ($new_class{type_name}) {
-        $new_class{type_name} = $new_class{class_name};
-    }
-    
     if (($new_class{data_source_id} and not ref($new_class{data_source_id})) and not $new_class{schema_name}) {
         my $s = $new_class{data_source_id};
         $s =~ s/^.*::DataSource:://;
@@ -956,14 +952,12 @@ sub _normalize_property_description1 {
     my %new_property = (
         class_name => $class_name,
         property_name => $property_name,
-        type_name => $new_class{type_name},
     );
     
     for my $mapping (
         [ property_type                   => qw/resolution/],
         [ class_name                      => qw//],
         [ property_name                   => qw//],
-        [ type_name                       => qw//],
         [ attribute_name                  => qw//],
         [ column_name                     => qw/sql/],
         [ constraint_name                 => qw//],
@@ -1258,7 +1252,6 @@ sub _complete_class_meta_object_definitions {
 
     # grab some data from the object
     my $class_name = $self->{class_name};
-    my $type_name = $self->{type_name};
     my $table_name = $self->{table_name};    
     
     # decompose the embedded complex data structures into normalized objects
@@ -1316,13 +1309,7 @@ sub _complete_class_meta_object_definitions {
             $self->error_message("Failed to find parent class $parent_class_name\n");
             return;
         }
-        
-        unless(ref($parent_class) and $parent_class->can('type_name')) {            
-            print Data::Dumper::Dumper($parent_class);
-            #$DB::single = 1;
-            redo;
-        }
-        
+
         if (not defined $self->schema_name) {
             if (my $schema_name = $parent_class->schema_name) {
                 $self->{'schema_name'} = $self->{'db_committed'}->{'schema_name'} = $schema_name;
@@ -1408,7 +1395,6 @@ sub _complete_class_meta_object_definitions {
     }
     
     # make old-style (bc4nf) property objects in the default way
-    $type_name = $self->{type_name};
     my @property_objects;
     
     for my $pinfo (values %$properties) {                        
@@ -1481,7 +1467,7 @@ sub _complete_class_meta_object_definitions {
             }
             else {
                 $properties = @$unique_set;
-                $name = $type_name . "_$n";
+                $name = '(unnamed)';
                 $n++;
             }
             for my $property_name (sort @$properties) {

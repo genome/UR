@@ -51,7 +51,6 @@ ok($c, 'Defined URT::Remote class');
 # FIXME - I'm not sure how the attributes_have and id_implied stuff is meant to work
 my $test_class_definition =
     q(    is => [ 'URT::Parent' ],
-    type_name => 'urt testclass',
     table_name => 'PARENT_TABLE',
     attributes_have => [
         meta_prop_a => { is => 'Boolean', is_optional => 1 },

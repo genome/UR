@@ -1236,7 +1236,6 @@ use Data::Dumper;
 sub initialize_direct_accessors {
     my $self = shift;
     my $class_name = $self->{class_name};    
-    my $type_name = $self->{type_name};
 
     my %id_property_names;
     for my $property_name (@{ $self->{id_by} }) {

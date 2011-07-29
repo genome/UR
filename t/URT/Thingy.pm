@@ -7,7 +7,6 @@ use UR::Object::Type;
 
 use URT;
 class URT::Thingy {
-    type_name => 'urt thingy',
     id_by => [
         pcr_id => { is => 'NUMBER', len => 15 },
     ],

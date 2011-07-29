@@ -155,16 +155,12 @@ sub _generate_class_data_for_loading {
         push @all_properties, 
             map { [$co, $_, $table_name, 0] }
             sort { $a->property_name cmp $b->property_name }
-            UR::Object::Property->get( type_name => $co->type_name );
+            UR::Object::Property->get( class_name => $co->class_name );
     }
 
     my $sub_typing_property = $class_meta->subclassify_by;
 
     my $class_table_name = $class_meta->table_name;
-    #my @type_names_under_class_with_no_table;
-    #unless($class_table_name) {
-    #    my @type_names_under_class_with_no_table = ($class_meta->type_name, $class_meta->all_derived_type_names);
-    #}
 
     my $class_data = {
         class_name                          => $class_name,
@@ -186,7 +182,6 @@ sub _generate_class_data_for_loading {
         # "table" concept is stretched to mean any valid structure identifier 
         # within the datasource.
         first_table_name                    => $first_table_name,
-        #type_names_under_class_with_no_table => \@type_names_under_class_with_no_table,
         class_table_name                    => $class_table_name,
     };
     

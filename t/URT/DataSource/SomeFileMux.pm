@@ -10,7 +10,6 @@ use File::Temp qw();
 
 class URT::DataSource::SomeFileMux {
     is => ['UR::DataSource::FileMux', 'UR::Singleton'],
-    type_name => 'urt datasource somefilemux',
 };
 
 sub constant_values { [ 'thing_type' ] }

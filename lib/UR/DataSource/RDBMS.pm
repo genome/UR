@@ -3019,7 +3019,7 @@ sub _generate_class_data_for_loading {
             sort { $a->property_name cmp $b->property_name }
             grep { (defined $_->column_name && $_->column_name ne '') or
                 (defined $_->calculate_sql && $_->calculate_sql ne '') }
-            UR::Object::Property->get( type_name => $co->type_name );
+            UR::Object::Property->get( class_name => $co->class_name );
 
         @direct_table_properties = @all_table_properties if $class_meta eq $co;
     }

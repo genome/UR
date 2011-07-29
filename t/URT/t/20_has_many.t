@@ -15,7 +15,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'Acme::Order',
-    english_name => 'order',
     table_name => 'order_',
     id_by => [
         order_id    => { is => 'integer', is_optional => 1, column_name => 'order_id' },
@@ -28,7 +27,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'Acme::OrderBuddy',
-    english_name => 'order buddy',
     id_by => [
         order    => { is => 'Acme::Order', id_by => 'order_id', constraint_name => 'order_line' },
         line_num => { is => 'Integer', is_optional => 1, column_name => 'line_num' },
@@ -37,7 +35,6 @@ UR::Object::Type->define(
 
 UR::Object::Type->define(
     class_name => 'Acme::OrderLine',
-    english_name => 'order line',
     table_name => 'order_line',
     id_by => [
         order    => { is => 'Acme::Order', id_by => 'order_id', constraint_name => 'order_line' },

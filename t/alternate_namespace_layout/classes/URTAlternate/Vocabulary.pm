@@ -8,7 +8,6 @@ use UR::Object::Type;
 use URTAlternate;
 class URTAlternate::Vocabulary {
     is => ['UR::Vocabulary'],
-    type_name => 'urt vocabulary',
     doc => 'A set of words for a given namespace.',
 };
 

@@ -10,8 +10,6 @@ END { unlink $FILE };
 
 class URT::DataSource::SomeFile {
     is => ['UR::Singleton', 'UR::DataSource::File'],
-    type_name => 'urt datasource somefile',
-        
 };
 
 sub server { $FILE }

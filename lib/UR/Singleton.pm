@@ -9,7 +9,6 @@ our $VERSION = "0.34"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::Singleton',
     is => ['UR::Object'],
-    english_name => 'ur singleton',
     is_abstract => 1,
 );
 

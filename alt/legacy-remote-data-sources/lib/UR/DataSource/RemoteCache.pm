@@ -9,7 +9,6 @@ our $VERSION = "0.33"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RemoteCache',
     is => ['UR::DataSource'],
-    english_name => 'ur datasource remotecache',
     properties => [
         host => {type => 'String', is_transient => 1},
         port => {type => 'String', is_transient => 1, default_value => 10293},
