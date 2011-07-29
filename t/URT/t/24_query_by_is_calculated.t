@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 8;
+use Test::More tests=> 9;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -42,3 +42,5 @@ is($p[0]->product_name, 'race car', 'name is correct');
 is(scalar(@p), 1, 'Got one product that is not is_cool');
 is($p[0]->product_name, 'pencil', 'name is correct');
 
+@p = URT::Product->get(-hints => ['is_cool']);
+is(scalar(@p), 2, 'Getting products with -hints => is_cool got 2 items');
