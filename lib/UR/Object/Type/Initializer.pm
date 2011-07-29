@@ -454,7 +454,7 @@ sub _normalize_class_description_impl {
         $new_class{er_role} = $UR::Object::Type::defaults{'er_role'};
     }   
  
-    my @crap = qw/source short_name/;
+    my @crap = qw/source/;
     delete @old_class{@crap};
     
     if ($class_name =~ /^(.*?)::/) {

@@ -274,7 +274,6 @@ UR::Object::Type->define(
         # obsolete/internal
         type_name                               => { is => 'Text', len => 256,  },
         er_role                                 => { is => 'Text', len => 256, is_optional => 1,  default_value => 'entity' },
-        short_name                              => { is => 'Text', len => 16, is_optional => 1,  },
         source                                  => { is => 'Text', len => 256 , default_value => 'data dictionary', is_optional => 1 }, # This is obsolete and should be removed later
         sub_classification_meta_class_name      => { is => 'Text', len => 1024 , is_optional => 1, 
                                                     doc => 'obsolete' },
