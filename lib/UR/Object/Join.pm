@@ -4,6 +4,8 @@ use warnings;
 use UR;
 our $VERSION = "0.34"; # UR $VERSION;
 
+our @CARP_NOT = qw( UR::Object::Property );
+
 class UR::Object::Join {
     #is => 'UR::Value',
     id_by => [
@@ -120,7 +122,7 @@ sub _resolve_via_to {
 
             my $property_name = $pmeta->property_name;
             my $class_name = $pmeta->class_name;
-            Carp::croak "Can't resolve property '$property_name' of $class_name: No via meta for '$via'?";
+            Carp::croak "Can't resolve joins for property '$property_name' of $class_name: No property metadata for via property '$via'";
         }
 
         if ($via_meta->to and ($via_meta->to eq '-filter')) {
@@ -130,14 +132,17 @@ sub _resolve_via_to {
         unless ($via_meta->data_type) {
             my $property_name = $pmeta->property_name;
             my $class_name = $pmeta->class_name;
-            Carp::croak "Can't resolve property '$property_name' of $class_name: No data type for '$via'?";
+            Carp::croak "Can't resolve joins for property '$property_name' of $class_name: No data type for via property '$via'";
         }
         push @joins, $via_meta->_resolve_join_chain();
         
         if (my $where = $pmeta->where) {
             my $join = pop @joins;
-            unless ($join->{foreign_class}) {
-                Carp::confess("No foreign class in " . Data::Dumper::Dumper($join, \@joins));
+            unless ($join and $join->{foreign_class}) {
+                my $property_name = $pmeta->property_name;
+                my $class_name = $pmeta->class_name;
+                Carp::croak("Can't resolve joins for property '$property_name' of $class_name: Couldn't determine foreign class for via property '$via'\n"
+                            . "join data so far: ".  Data::Dumper::Dumper($join, \@joins));
             }
             my $where_rule = UR::BoolExpr->resolve($join->{foreign_class}, @$where);                
             my $id = $join->{id};
