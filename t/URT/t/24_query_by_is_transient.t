@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 12;
+use Test::More tests=> 13;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -59,8 +59,7 @@ UR::Object::Type->define(
 
 
 
-#my @p = URT::Product->get('coolness >' => 0);
-my @p = URT::Product->get(coolness => 10);
+my @p = URT::Product->get('coolness >' => 0);
 is(scalar(@p), 1, 'Got one product with positive coolness');
 isa_ok($p[0], 'URT::Product::Cool');
 is($p[0]->product_name, 'race car', 'name is correct');
@@ -69,6 +68,9 @@ is($p[0]->product_name, 'race car', 'name is correct');
 is(scalar(@p), 1, 'Got one product with zero coolness');
 isa_ok($p[0], 'URT::Product::NotCool');
 is($p[0]->product_name, 'pencil', 'name is correct');
+
+@p = URT::Product->get('product_name true' => 1, -hints => ['coolness']);
+is(scalar(@p), 2, 'Getting products with -hints => coolness got 2 items');
 
 
 
