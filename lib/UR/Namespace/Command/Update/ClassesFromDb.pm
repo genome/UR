@@ -999,17 +999,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 );
             }
 
-            my $attribute_name = $data_source->resolve_attribute_name_for_column_name($column->column_name);
-            unless ($attribute_name) {
-                Carp::confess(
-                    "Failed to resolve a attribute name for new column "
-                    . $column->column_name
-                );
-            }
-
             $property = UR::Object::Property->create(
                 class_name     => $class_name,
-                attribute_name => $attribute_name,
                 property_name  => $property_name,
                 column_name    => $column_name,
                 data_type      => $ur_data_type,
@@ -1275,12 +1266,10 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         {
             my $column_name = $column_names[$i];
             my $property = $properties[$i];
-            my $attribute_name = $property->attribute_name;
             my $property_name = $property_names[$i];
 
             my $r_column_name = $r_column_names[$i];
             my $r_property = $r_properties[$i];
-            my $r_attribute_name = $r_property->attribute_name;
             my $r_property_name = $r_property_names[$i];
         }
 

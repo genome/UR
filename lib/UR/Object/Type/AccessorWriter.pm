@@ -1279,11 +1279,8 @@ sub initialize_direct_accessors {
         
         my $accessor_name = $property_name;
         my $column_name = $property_data->{column_name};
-        my $attribute_name = $property_data->{attribute_name};
         my $is_transient = $property_data->{is_transient};
         my $where = $property_data->{where};
-        
-        #my ($props, $cols) = $class_name->_all_properties_columns;
         
         do {
             # Handle the case where the software module has an explicit

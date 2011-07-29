@@ -958,7 +958,6 @@ sub _normalize_property_description1 {
         [ property_type                   => qw/resolution/],
         [ class_name                      => qw//],
         [ property_name                   => qw//],
-        [ attribute_name                  => qw//],
         [ column_name                     => qw/sql/],
         [ constraint_name                 => qw//],
         [ data_length                     => qw/len/],
@@ -1122,11 +1121,6 @@ sub _normalize_property_description2 {
         }
     }
     
-    unless ($new_property{attribute_name}) {
-        $new_property{attribute_name} = $property_name;
-        $new_property{attribute_name} =~ s/_/ /g;
-    }
-
     if ($new_property{order_by} and not $new_property{is_many}) {
         die "Cannot use order_by except on is_many properties!";
     }

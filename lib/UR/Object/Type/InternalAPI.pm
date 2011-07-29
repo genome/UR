@@ -1354,7 +1354,7 @@ sub _property_change_callback {
 
     if ($method eq 'create') {
         unless ($class_obj->{'has'}->{$property_name}) {
-            my @attr = qw( class_name attribute_name data_length data_type is_delegated is_optional property_name );
+            my @attr = qw( class_name data_length data_type is_delegated is_optional property_name );
 
             my %new_property;
             foreach my $attr_name (@attr ) {

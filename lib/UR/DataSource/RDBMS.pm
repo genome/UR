@@ -769,18 +769,6 @@ sub resolve_property_name_for_column_name {
     return $type_name;
 }
 
-sub resolve_attribute_name_for_column_name {
-    my $self = shift->_singleton_class_name;
-    my $column_name = shift;
-
-    my @words =                 
-        map { lc($_) }
-        split("_",$column_name);
-
-    my $type_name =  join(" ",@words);
-    return $type_name;
-}
-
 sub refresh_database_metadata_for_table_name {
     my ($self,$db_table_name, $creation_method) = @_;
 

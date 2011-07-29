@@ -350,7 +350,6 @@ UR::Object::Type->define(
     ],
     has_optional => [
         property_type                   => { is => 'Text', len => 256 , is_optional => 1},
-        attribute_name                  => { is => 'Text', len => 256 },
         column_name                     => { is => 'Text', len => 256, is_optional => 1 },        
         data_length                     => { is => 'Text', len => 32, is_optional => 1 },
         data_type                       => { is => 'Text', len => 256, is_optional => 1 },

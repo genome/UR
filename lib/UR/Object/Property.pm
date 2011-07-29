@@ -251,8 +251,8 @@ sub _resolve_join_chain {
 sub label_text {
     # The name of the property in friendly terms.
     my ($self,$obj) = @_;
-    my $attribute_name = $self->attribute_name;
-    my @words = App::Vocabulary->filter_vocabulary(map { ucfirst(lc($_)) } split(/\s+/,$attribute_name));
+    my $property_name = $self->property_name;
+    my @words = App::Vocabulary->filter_vocabulary(map { ucfirst(lc($_)) } split(/\s+/,$property_name));
     my $label = join(" ", @words);
     return $label;
 }
