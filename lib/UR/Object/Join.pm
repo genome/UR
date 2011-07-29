@@ -100,7 +100,9 @@ sub _get_or_define {
 
 sub _resolve_via_to {
     my ($class, $pmeta) = @_;
-    my $class_meta = UR::Object::Type->get(class_name => $pmeta->class_name);
+
+    my $class_name = $pmeta->class_name;
+    my $class_meta = UR::Object::Type->get(class_name => $class_name);
 
     my @joins;
     my $via = $pmeta->via;
@@ -114,6 +116,8 @@ sub _resolve_via_to {
     if ($via) {
         $via_meta = $class_meta->property_meta_for_name($via);
         unless ($via_meta) {
+            return if $class_name->can($via);  # It's via a method, not an actual property
+
             my $property_name = $pmeta->property_name;
             my $class_name = $pmeta->class_name;
             Carp::croak "Can't resolve property '$property_name' of $class_name: No via meta for '$via'?";

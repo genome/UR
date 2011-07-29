@@ -336,6 +336,10 @@ sub _init_rdbms {
         my $property_name = $delegated_property;
        
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
+        unless ($final_accessor) {
+            $self->needs_further_boolexpr_evaluation_after_loading(1);
+            next;
+        }
 
         if ($joins[-1]{foreign_class}->isa("UR::Value")) {
             # the final join in a chain is often the link between a primitive value
@@ -1145,6 +1149,7 @@ sub _resolve_object_join_data_for_property_chain {
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
+    return unless @joins;
     return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
 };
 
@@ -1282,6 +1287,7 @@ sub _init_light {
 
         my $delegate_class_meta = $delegated_property->class_meta;
         my($via_accessor_meta) = $delegate_class_meta->_concrete_property_meta_for_class_and_name($relationship_name);
+        next unless $via_accessor_meta;
         my $final_accessor = $delegated_property->to;            
 
         my $data_type = $via_accessor_meta->data_type;
