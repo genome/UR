@@ -166,7 +166,6 @@ use UR::Object::Property::View::DescriptionLineItem::Text;
 use UR::Object::Property::View::ReferenceDescription::Text;
 use UR::Object::Set;
 use UR::Object::Set::View::Default::Json;
-use UR::Object::Set::View::Default::Xml;
 use UR::Object::Tag;
 use UR::Object::Type;
 use UR::Object::Type::AccessorWriter;
@@ -235,10 +234,9 @@ if (eval "use Net::HTTPServer") {
 
 
 if (eval "use Xml::LibXSLT") {
-print STDERR "Yep!\n";
     my $rv = eval "use UR::Object::View::Default::Html;"
-             && eval "use UR::Object::View::Default::Xsl;";
-print STDERR "rv is $rv exception is $@\n";
+             && eval "use UR::Object::View::Default::Xsl;"
+             && eval "use UR::Object::Set::View::Default::Xml;";
     die $@ unless ($rv);
 }
  
