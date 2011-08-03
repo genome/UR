@@ -102,17 +102,24 @@ sub mk_id_based_object_accessor {
                     $id_resolver = undef;
                     $self->$id_class_by($concrete_r_class_name);
                 } elsif (! Scalar::Util::blessed($object_value) and ! $object_value->can('id')) {
-                    Carp::croak("Can't call method \"id\" without a package or object reference.  Expected an object as parameter to $accessor_name, not '$object_value'");
-                 }
+                    Carp::croak("Can't call method \"id\" without a package or object reference.  Expected an object as parameter to '$accessor_name', not the value '$object_value'");
+                }
 
-                $id_decomposer ||= $concrete_r_class_name->__meta__->get_composite_id_decomposer;
+                my $r_class_meta = eval { $concrete_r_class_name->__meta__ };
+                unless ($r_class_meta) {
+                    Carp::croak("Can't get metadata for class $concrete_r_class_name.  Is it a UR class?");
+                }
+
+                $id_decomposer ||= $r_class_meta->get_composite_id_decomposer;
                 @id = $id_decomposer->($object_value->id);
                 if (@$id_by == 1) {
                     my $id_property_name = $id_by->[0];
                     $self->$id_property_name($object_value->id);
                 } else {
                     @id = $id_decomposer->($object_value->id);
-                    Carp::croak('cannot match id columns') unless (@id == @$id_by);
+                    Carp::croak("Cannot alter value for '$accessor_name' on $class_name: The passed-in object of type "
+                                . $object_value->class . " has " . scalar(@id) . " id properties, but the accessor '$accessor_name' has "
+                                . scalar(@$id_by) . " id_by properties");
                     for my $id_property_name (@$id_by) {
                         $self->$id_property_name(shift @id);
                     }
@@ -404,18 +411,25 @@ sub mk_indirect_rw_accessor {
         
             my $my_property_meta = $class_name->__meta__->property_meta_for_name($accessor_name);
             unless ($my_property_meta) {
-                Carp::confess("Failed to find property meta for $accessor_name on $class_name!");
+                Carp::croak("Failed to find property meta for '$accessor_name' on class $class_name");
             }
             $is_many = $my_property_meta->is_many;
 
             $via_property_meta ||= $class_name->__meta__->property_meta_for_name($via);
             unless ($via_property_meta) {
-                $via_property_meta = $class_name->__meta__->property_meta_for_name($via);
-                die "no meta for $via in $class_name!?" unless $via_property_meta;
+                Carp::croak("Failed to find property metadata for via property '$via' while resolving property '$accessor_name' on class $class_name");
             }
-            $adder = "add_" . $via_property_meta->singular_name;
+
             $r_class_name ||= $via_property_meta->data_type;
-            my @r_id_property_names = $r_class_name->__meta__->id_property_names;
+            unless ($r_class_name) {
+                Carp::croak("Cannot resolve property '$accessor_name' on class $class_name: It is via property '$via' which has no data_type");
+            }
+            my $r_class_meta = $r_class_name->__meta__;
+            unless ($r_class_meta) {
+                Carp::croak("Cannot resolve property '$accessor_name' on class $class_name: It is via property '$via' with data_type $r_class_name which is not a valid class name");
+            }
+            my @r_id_property_names = $r_class_meta->id_property_names;
+            $adder = "add_" . $via_property_meta->singular_name;
             if (grep { $_ eq $to } @r_id_property_names) {
                 $update_strategy = 'delete-create'
             }
@@ -437,7 +451,6 @@ sub mk_indirect_rw_accessor {
 
         my @bridges = $bridge_collector->($self);
 
-	# TODO: we should throw an exception if >1 bridges are found, b/c this cannot be is_many and also rw.
         if (@_) {            
             $resolve_update_strategy->() unless (defined $update_strategy);
 
@@ -453,20 +466,20 @@ sub mk_indirect_rw_accessor {
                             die $@;
                         } else {
                             Carp::croak("Couldn't create a new object through indirect property "
-                                        . "'$accessor_name' on $class_name.  'to' is $to and is not a property on $r_class_name.");
+                                        . "'$accessor_name' on $class_name.  'to' is $to which is not a property on $r_class_name.");
                         }
                     }
                     #WAS > Carp::confess("Cannot set $accessor_name on $class_name $self->{id}: property is via $via which is not set!");
                 }
                 elsif (@bridges > 1) {
-                    Carp::croak("Cannot set $accessor_name on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set!");
+                    Carp::croak("Cannot set '$accessor_name' on $class_name id '$self->{id}': multiple instances of '$via' found, via which the property is set");
                 }
                 #print "updating $bridges[0] $to to @_\n";
                 return $bridges[0]->$to(@_);
             }
             elsif ($update_strategy eq 'delete-create') {
                 if (@bridges > 1) {
-                    Carp::croak("Cannot set $accessor_name on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set!");
+                    Carp::croak("Cannot set '$accessor_name' on $class_name $self->{id}: multiple instances of '$via' found, via which the property is set");
                 }
                 else {
                     if (@bridges) {
@@ -476,7 +489,7 @@ sub mk_indirect_rw_accessor {
                     #print "adding via $adder @where :::> $to @_\n";
                     @bridges = $self->$adder(@where, $to => $_[0]);
                     unless (@bridges) {
-                        Carp::croak("Failed to add bridge for $accessor_name on $class_name $self->{id}: property is via $via!");
+                        Carp::croak("Failed to add bridge for '$accessor_name' on $class_name if '$self->{id}': method $adder returned false");
                     }
                 }
             }
