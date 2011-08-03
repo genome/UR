@@ -1158,6 +1158,9 @@ sub _shell_arg_getopt_qualifier_from_property_meta
     if (defined($property_meta->data_type) and $property_meta->data_type =~ /Boolean/) {
         return '!' . $many;
     }
+    elsif ($property_meta->is_optional) {
+        return ':s' . $many;
+    }
     else {
         return '=s' . $many;
     }
