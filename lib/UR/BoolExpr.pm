@@ -368,8 +368,8 @@ sub resolve {
             next;
         }
 
-        if ($key eq '_id_only' or $key eq '_param_key' or $key eq '_unique' or $key eq '__get_serial' or $key eq '_change_count') {
-            # skip the pair: legacy cruft
+        if ($key =~ m/^_id_only|_param_key|_unique|__get_serial|_change_count$/) {
+            # skip the pair: legacy/internal cruft
             next;
         } 
         
