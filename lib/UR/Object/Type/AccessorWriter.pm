@@ -428,9 +428,10 @@ sub mk_indirect_rw_accessor {
             unless ($r_class_meta) {
                 Carp::croak("Cannot resolve property '$accessor_name' on class $class_name: It is via property '$via' with data_type $r_class_name which is not a valid class name");
             }
-            my @r_id_property_names = $r_class_meta->id_property_names;
+
             $adder = "add_" . $via_property_meta->singular_name;
-            if (grep { $_ eq $to } @r_id_property_names) {
+
+            if ($my_property_meta->_involves_id_property) {
                 $update_strategy = 'delete-create'
             }
             else {
