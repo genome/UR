@@ -53,7 +53,7 @@ is($jetpack->manufacturer->name, 'Boeing', 'Change was successful');
 eval { $jetpack->manufacturer('Boeing') };
 ok($@, 'Setting the object accessor to a string throws an exception');
 like($@,
-     qr(Can't call method "id" without a package or object reference.  Expected an object as parameter to manufacturer, not 'Boeing'),
+     qr(Can't call method "id" without a package or object reference.  Expected an object as parameter to 'manufacturer', not the value 'Boeing'),
     'The exception was correct');
 
 
