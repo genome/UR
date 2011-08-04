@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 150;
+use Test::More tests => 162;
 use Data::Dumper;
 
 class URT::Item {
@@ -17,6 +17,12 @@ class URT::Item {
         parent  => { is => "URT::Item", is_optional => 1, id_by => ['parent_name','parent_group'] },
         foo     => { is => "String", is_optional => 1 },
         bar     => { is => "Number", is_optional => 1 },
+        # These are designed to be similar to things stripped out of BoolExpr keys during resolve()
+        is_id_only                 => { is => 'Boolean' },
+        some_param_key             => { is => 'Text' },
+        a_unique_string            => { is => 'Text' },
+        clobber__get_serial_number => { is => 'Number'},
+        the_change_count           => { is => 'Number' },
     ]
 };
 
@@ -130,8 +136,12 @@ my @tests = (
 
     [ [ parent => $test_obj ],                                  'parent_name', '=',   'blah' ],
     [ [ parent => $test_obj ],                                  'parent_group','=',   'cool' ],
-);
 
+    [ [ is_id_only => 1 ],                                      'is_id_only', '=', 1 ],
+    [ [ a_unique_string => 'hithere'],                          'a_unique_string', '=', 'hithere' ],
+    [ [ clobber__get_serial_number => 123],                     'clobber__get_serial_number','=', 123],
+    [ [ the_change_count => 456],                               'the_change_count', '=', 456],
+);
 
 for( my $i = 0; $i < @tests; $i++) {
     my $test = $tests[$i];
