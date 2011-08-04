@@ -66,6 +66,7 @@ class UR::DataSource::QueryPlan {
 
         joins                                       => {},
         recursion_desc                              => {},
+        recurse_property_on_this_row                => {},
         recurse_property_referencing_other_rows     => {},
         
         joins_across_data_sources                   => {}, # context _resolve_query_plan_for_ds_and_bxt
@@ -93,7 +94,6 @@ my @extra = qw(
     properties_meta_in_resultset_order
     all_properties
     rule_specifies_id
-    recurse_property_on_this_row
     all_id_property_names
     id_property_sorter
     properties_for_params
