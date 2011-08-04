@@ -68,6 +68,7 @@ class UR::DataSource::QueryPlan {
         recursion_desc                              => {},
         recurse_property_on_this_row                => {},
         recurse_property_referencing_other_rows     => {},
+        recurse_resolution_by_iteration             => {},  # For data sources that don't support recursive queries
         
         joins_across_data_sources                   => {}, # context _resolve_query_plan_for_ds_and_bxt
         loading_templates                           => {},
@@ -580,22 +581,27 @@ sub _init_rdbms {
     } # next db filter
 
     $connect_by_clause = ''; 
+    my $recurse_resolution_by_iteration = 0;
     if ($recursion_desc) {
-        my ($this,$prior) = @{ $recursion_desc };
+        if ($ds->does_support_recursive_queries eq 'connect by') {
+            my ($this,$prior) = @{ $recursion_desc };
 
-        my $this_property_meta = $class_meta->property_meta_for_name($this);
-        my $prior_property_meta = $class_meta->property_meta_for_name($prior);
+            my $this_property_meta = $class_meta->property_meta_for_name($this);
+            my $prior_property_meta = $class_meta->property_meta_for_name($prior);
 
-        my $this_class_meta = $this_property_meta->class_meta;
-        my $prior_class_meta = $prior_property_meta->class_meta;
+            my $this_class_meta = $this_property_meta->class_meta;
+            my $prior_class_meta = $prior_property_meta->class_meta;
 
-        my $this_table_name = $this_class_meta->table_name;
-        my $prior_table_name = $prior_class_meta->table_name;
+            my $this_table_name = $this_class_meta->table_name;
+            my $prior_table_name = $prior_class_meta->table_name;
 
-        my $this_column_name = $this_property_meta->column_name || $this;
-        my $prior_column_name = $prior_property_meta->column_name || $prior;
+            my $this_column_name = $this_property_meta->column_name || $this;
+            my $prior_column_name = $prior_property_meta->column_name || $prior;
 
-        $connect_by_clause = "connect by $this_table_name.$this_column_name = prior $prior_table_name.$prior_column_name\n";
+            $connect_by_clause = "connect by $this_table_name.$this_column_name = prior $prior_table_name.$prior_column_name\n";
+        } else {
+            $recurse_resolution_by_iteration = 1;
+        }
     }    
 
     my @property_names_in_resultset_order;
@@ -683,6 +689,7 @@ sub _init_rdbms {
         order_by_columns                            => $order_by_columns,        
         filter_specs                                => \@filter_specs,
         sql_params                                  => \@sql_params,
+        recurse_resolution_by_iteration             => $recurse_resolution_by_iteration,
 
         # override defaults in the regular datasource $parent_template_data
         property_names_in_resultset_order           => \@property_names_in_resultset_order,
@@ -1176,8 +1183,10 @@ sub _init_light {
     my $recursion_desc = $rule_template->recursion_desc;
     my $recurse_property_on_this_row;
     my $recurse_property_referencing_other_rows;
+    my $recurse_resolution_by_iteration;
     if ($recursion_desc) {
         ($recurse_property_on_this_row,$recurse_property_referencing_other_rows) = @$recursion_desc;        
+        $recurse_resolution_by_iteration = ! $ds->does_support_recursive_queries;
     }        
     
     my $needs_further_boolexpr_evaluation_after_loading; 
@@ -1461,6 +1470,7 @@ sub _init_light {
         recursion_desc                              => $rule_template->recursion_desc,
         recurse_property_on_this_row                => $recurse_property_on_this_row,
         recurse_property_referencing_other_rows     => $recurse_property_referencing_other_rows,
+        recurse_resolution_by_iteration             => $recurse_resolution_by_iteration
         #loading_templates                           => $per_object_in_resultset_loading_detail,
         joins_across_data_sources                   => $joins_across_data_sources,
     );

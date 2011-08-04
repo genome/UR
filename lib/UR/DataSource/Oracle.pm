@@ -18,6 +18,8 @@ sub owner { shift->_singleton_object->login }
 
 sub can_savepoint { 1 }  # Oracle supports savepoints inside transactions
 
+sub does_support_recursive_queries { 'connect by' };
+
 sub set_savepoint {
 my($self,$sp_name) = @_;
 
