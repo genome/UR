@@ -569,7 +569,7 @@ sub create_for_loading_template {
             # a db_committed or db_saved_committed                                
             my $dbc = $pending_db_object->{db_committed} || $pending_db_object->{db_saved_uncommitted};
             Carp::croak("Loaded database data has no save data for $class id ".$pending_db_object->id
-                        .". Something bad happened.".Data::Dumper::Dumper($pending_db_object));
+                        .". Something bad happened.".Data::Dumper::Dumper($pending_db_object)) unless $dbc;
 
             my $value_by_which_this_object_is_loaded_via_recursion = $dbc->{$recurse_property_on_this_row};
             my $value_referencing_other_object = $dbc->{$recurse_property_referencing_other_rows};
