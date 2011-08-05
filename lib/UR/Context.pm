@@ -2289,7 +2289,6 @@ sub _create_import_iterator_for_underlying_context {
             # get one or more objects from this row of results
             my $re_iterate = 0;
             my @imported;
-            #for my $object_fabricator (@object_fabricators) {
             for (my $i = 0; $i < @object_fabricators; $i++) {
                 my $object_fabricator = $object_fabricators[$i];
 
