@@ -321,7 +321,7 @@ sub resolve {
 
     my $class = shift;
     my $subject_class = shift;
-    Carp::confess("@_") if not $subject_class;
+    Carp::confess("Can't resolve BoolExpr: expected subject class as arg 2, got '$subject_class'") if not $subject_class;
     # support for legacy passing of hashref instead of object or list
     # TODO: eliminate the need for this
     my @in_params;
@@ -357,6 +357,10 @@ sub resolve {
         $key = $in_params[$n++];
         $value = $in_params[$n++];
 
+        unless (defined $key) {
+            Carp::croak("Can't resolve BoolExpr: undef is an invalid key/property name.  Args were: ".join(', ',@in_params));
+        }
+
         if (substr($key,0,1) eq '-') {
             # these are keys whose values live in the rule template
             push @keys, $key;
@@ -364,8 +368,8 @@ sub resolve {
             next;
         }
 
-        if ($key eq '_id_only' or $key eq '_param_key' or $key eq '_unique' or $key eq '__get_serial' or $key eq '_change_count') {
-            # skip the pair: legacy cruft
+        if ($key =~ m/^(_id_only|_param_key|_unique|__get_serial|_change_count)$/) {
+            # skip the pair: legacy/internal cruft
             next;
         } 
         

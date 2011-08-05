@@ -19,7 +19,7 @@ elsif ($INC{"UR.pm"} =~ /blib/) {
     plan skip_all => 'skip running during install',
 }
 else {
-    plan tests => 90;
+    plan tests => 89;
 }
 
 use UR::Namespace::Command::Update::ClassesFromDb;
@@ -193,7 +193,6 @@ ok($trans, "CREATED PERSON and began transaction");
         my $personclass = UR::Object::Type->get('URT::Person');
         isa_ok($personclass, 'UR::Object::Type');  # FIXME why isn't this a UR::Object::Type
         ok($personclass->module_source_lines, 'Person class module has at least one line');
-        is($personclass->type_name, 'person', 'Person class type_name is correct');
         is($personclass->class_name, 'URT::Person', 'Person class class_name is correct');
         is($personclass->table_name, 'person', 'Person class table_name is correct');
         is($UR::Context::current->resolve_data_sources_for_class_meta_and_rule($personclass)->id, $ds_class, 'Person class data_source is correct');

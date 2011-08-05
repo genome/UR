@@ -68,12 +68,12 @@ sub property_meta_for_name {
             push @pmeta, $property_meta;
             last if $link eq $chain[-1];
             my @joins = UR::Object::Join->resolve_chain($last_class_name, $link);
-            unless (@joins) {
-                Carp::confess("No joins for $full_link?");
-            }
+            return unless @joins;
+
             $last_class_name = $joins[-1]{foreign_class};
             $last_class_meta = $last_class_name->__meta__;
         }
+        return unless (@pmeta and $pmeta[-1]);
         return @pmeta if wantarray;
         return $pmeta[-1];
     }

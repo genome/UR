@@ -8,7 +8,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-plan tests => 44;
+plan tests => 56;
 
 ok( UR::Object::Type->define(
         class_name => 'URT::Related',
@@ -157,6 +157,29 @@ is(scalar(@props), 11, 'Child class now has 11 properties through all_property_n
 @expected = qw(child_id child_value extra_property id parent_extra parent_id parent_value rel_id_a rel_id_b related_object related_value),
 is_deeply(\@names, \@expected, 'Property names check out');
 
+
+@props = $parent_meta->property_meta_for_name('related_object');
+is(scalar(@props), 1, 'Parent class has a property called related_object');
+is($props[0]->property_name, 'related_object', 'Got the right property');
+
+@props = $child_meta->property_meta_for_name('related_object');
+is(scalar(@props), 1, 'Child class also has a property called related_object');
+is($props[0]->property_name, 'related_object', 'Got the right property');
+
+@props = $child_meta->property_meta_for_name('related_object.related_value');
+is(scalar(@props), 2, 'Got 2 properties involved for related_object.related_value on the child class');
+is($props[0]->class_name, 'URT::Parent', 'First property meta\'s class_name is correct');
+is($props[0]->property_name, 'related_object', 'First property meta\'s property_name is correct');
+is($props[1]->class_name, 'URT::Related', 'second class_name for that property is correct');
+is($props[1]->property_name, 'related_value', 'second property_name is correct');
+
+
+@props = $child_meta->property_meta_for_name('non_existent');
+is(scalar(@props), 0, 'No property found for name \'non_existent\'');
+@props = $child_meta->property_meta_for_name('non_existent.also_non_existent');
+is(scalar(@props), 0, 'No property found for name \'non_existent.also_non_existent\'');
+@props = $child_meta->property_meta_for_name('related_object.also_non_existent');
+is(scalar(@props), 0, 'No property found for name \'related_object.also_non_existent\'');
 
 
 

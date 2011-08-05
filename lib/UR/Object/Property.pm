@@ -135,6 +135,45 @@ sub table_and_column_name_for_property {
 }
 
 
+# Return true if resolution of this property involves an ID property of
+# any class.
+sub _involves_id_property {
+    my $self = shift;
+
+    my $is_id = $self->is_id;
+    return 1 if defined($is_id);
+
+    if ($self->id_by) {
+        my $class_meta = $self->class_meta;
+        my $id_by_list = $self->id_by;
+        foreach my $id_by ( @$id_by_list ) {
+            my $id_by_meta = $class_meta->property_meta_for_name($id_by);
+            return 1 if ($id_by_meta and $id_by_meta->_involves_id_property);
+        }
+    }
+
+    if ($self->via) {
+        my $via_meta = $self->via_property_meta;
+        return 1 if ($via_meta and $via_meta->_involves_id_property);
+
+        if ($self->to) {
+            my $to_meta = $self->to_property_meta;
+            return 1 if ($to_meta and $to_meta->_involves_id_property);
+
+            if ($self->where) {
+                my $other_class_meta = $to_meta->class_meta;
+                my $where = $self->where;
+                for (my $i = 0; $i < @$where; $i += 2) {
+                    my $where_meta = $other_class_meta->property_meta_for_name($where->[$i]);
+                    return 1 if ($where_meta and $where_meta->_involves_id_property);
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+
 # For via/to delegated properties, return the property meta in the same
 # class this property delegates through
 sub via_property_meta {
