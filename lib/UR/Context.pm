@@ -2013,8 +2013,8 @@ sub _create_import_iterator_for_underlying_context {
         = $dsx->create_iterator_closure_for_rule($rule);
 
     my ($rule_template, @values) = $rule->template_and_values();
-    my ($template_data,@addl_loading_info) = $self->_resolve_query_plan_for_ds_and_bxt($dsx,$rule_template);
-    my $class_name = $template_data->{class_name};
+    my ($query_plan,@addl_loading_info) = $self->_resolve_query_plan_for_ds_and_bxt($dsx,$rule_template);
+    my $class_name = $query_plan->{class_name};
 
     my $group_by    = $rule_template->group_by;
     my $order_by    = $rule_template->order_by;
@@ -2026,14 +2026,14 @@ sub _create_import_iterator_for_underlying_context {
         # When the rule has a property specified which indicates a specific sub-type, catch this and re-call
         # this method recursively with the specific subclass name.
         my ($rule_template, @values) = $rule->template_and_values();
-        my $rule_template_specifies_value_for_subtype   = $template_data->{rule_template_specifies_value_for_subtype};
-        my $class_table_name                            = $template_data->{class_table_name};
-        #my @type_names_under_class_with_no_table        = @{ $template_data->{type_names_under_class_with_no_table} };
+        my $rule_template_specifies_value_for_subtype   = $query_plan->{rule_template_specifies_value_for_subtype};
+        my $class_table_name                            = $query_plan->{class_table_name};
+        #my @type_names_under_class_with_no_table        = @{ $query_plan->{type_names_under_class_with_no_table} };
    
         warn "Implement me carefully";
         
         if ($rule_template_specifies_value_for_subtype) {
-            my $sub_classification_meta_class_name          = $template_data->{sub_classification_meta_class_name};
+            my $sub_classification_meta_class_name          = $query_plan->{sub_classification_meta_class_name};
             my $value = $rule->value_for($sub_typing_property);
             my $type_obj = $sub_classification_meta_class_name->get($value);
             if ($type_obj) {
@@ -2070,16 +2070,16 @@ sub _create_import_iterator_for_underlying_context {
     }
     
     
-    my $loading_templates                           = $template_data->{loading_templates};
-    my $sub_typing_property                         = $template_data->{sub_typing_property};
+    my $loading_templates                           = $query_plan->{loading_templates};
+    my $sub_typing_property                         = $query_plan->{sub_typing_property};
     my $next_db_row;
     my $rows = 0;                                   # number of rows the query returned
     
-    my $recursion_desc                              = $template_data->{recursion_desc};
+    my $recursion_desc                              = $query_plan->{recursion_desc};
     my($rule_template_without_recursion_desc, $rule_template_id_without_recursion);
     my($rule_without_recursion_desc, $rule_id_without_recursion);
     if ($recursion_desc) {
-        $rule_template_without_recursion_desc        = $template_data->{rule_template_without_recursion_desc};
+        $rule_template_without_recursion_desc        = $query_plan->{rule_template_without_recursion_desc};
         $rule_template_id_without_recursion          = $rule_template_without_recursion_desc->id;
         $rule_without_recursion_desc                 = $rule_template_without_recursion_desc->get_rule_for_values(@values);    
         $rule_id_without_recursion                   = $rule_without_recursion_desc->id;
@@ -2087,7 +2087,7 @@ sub _create_import_iterator_for_underlying_context {
     my $rule_id = $rule->id;
     my $rule_template_id = $rule_template->id;
     
-    my $needs_further_boolexpr_evaluation_after_loading = $template_data->{'needs_further_boolexpr_evaluation_after_loading'};
+    my $needs_further_boolexpr_evaluation_after_loading = $query_plan->{'needs_further_boolexpr_evaluation_after_loading'};
     
     my %subordinate_iterator_for_class;
    
@@ -2129,7 +2129,7 @@ sub _create_import_iterator_for_underlying_context {
                 UR::Context::ObjectFabricator->create_for_loading_template(
                     $self,
                     $loading_template, 
-                    $template_data,
+                    $query_plan,
                     $rule,
                     $rule_template,
                     \@values,
@@ -2149,7 +2149,7 @@ sub _create_import_iterator_for_underlying_context {
             Carp::croak("cross-datasource group-by is not supported yet");
         }
         my($addl_object_fabricators, $addl_join_comparators) =
-                $self->_create_secondary_loading_closures( $template_data,
+                $self->_create_secondary_loading_closures( $query_plan,
                                                            $rule,
                                                            @addl_loading_info
                                                       );
@@ -2160,7 +2160,7 @@ sub _create_import_iterator_for_underlying_context {
 
     # Insert the key into all_objects_are_loaded to indicate that when we're done loading, we'll
     # have everything
-    if ($template_data->{'rule_matches_all'} and not $group_by) {
+    if ($query_plan->{'rule_matches_all'} and not $group_by) {
         $class_name->all_objects_are_loaded(undef);
     }
 
@@ -2186,7 +2186,7 @@ sub _create_import_iterator_for_underlying_context {
                     # message about it and we update all_params_loaded to indicate
                     # that this set of parameters yielded 0 objects
                     
-                    my $rule_template_is_id_only = $template_data->{rule_template_is_id_only};
+                    my $rule_template_is_id_only = $query_plan->{rule_template_is_id_only};
                     if ($rule_template_is_id_only) {
                         my $id = $rule->value_for_id;
                         $UR::Context::all_objects_loaded->{$class_name}->{$id} = undef;
@@ -2196,7 +2196,7 @@ sub _create_import_iterator_for_underlying_context {
                     }
                 }
                 
-                if ( $template_data->{rule_matches_all} ) {
+                if ( $query_plan->{rule_matches_all} ) {
                     # No parameters.  We loaded the whole class.
                     # Doing a load w/o a specific ID w/o custom SQL loads the whole class.
                     # Set a flag so that certain optimizations can be made, such as 
@@ -4115,11 +4115,11 @@ time.
 
 =item _resolve_query_plan_for_ds_and_bxt
 
-  my $template_data = $context->_resolve_query_plan_for_ds_and_bxt(
+  my $query_plan = $context->_resolve_query_plan_for_ds_and_bxt(
                                     $data_source,
                                     $boolexpr_tmpl
                                 );
-  my($template_data, @addl_info) = $context->_resolve_query_plan_for_ds_and_bxt(
+  my($query_plan, @addl_info) = $context->_resolve_query_plan_for_ds_and_bxt(
                                                  $data_source,
                                                  $boolexpr_tmpl
                                              );
