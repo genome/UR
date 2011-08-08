@@ -2078,12 +2078,30 @@ sub _create_import_iterator_for_underlying_context {
     my $recursion_desc                              = $query_plan->{recursion_desc};
     my($rule_template_without_recursion_desc, $rule_template_id_without_recursion);
     my($rule_without_recursion_desc, $rule_id_without_recursion);
+    # These get set if you're doing a -recurse query, and the underlying data source doesn't support recursion
+    my($by_hand_recursive_rule_template,$by_hand_recursive_source_property,@by_hand_recursive_source_values,$by_hand_recursing_iterator);
     if ($recursion_desc) {
         $rule_template_without_recursion_desc        = $query_plan->{rule_template_without_recursion_desc};
         $rule_template_id_without_recursion          = $rule_template_without_recursion_desc->id;
         $rule_without_recursion_desc                 = $rule_template_without_recursion_desc->get_rule_for_values(@values);    
         $rule_id_without_recursion                   = $rule_without_recursion_desc->id;
+
+        if ($query_plan->{'recurse_resolution_by_iteration'}) {
+            # The data source does not support a recursive query.  Accomplish the same thing by
+            # recursing back into _create_import_iterator_for_underlying_context for each level
+            my $this;
+            ($this,$by_hand_recursive_source_property) = @$recursion_desc;
+
+            my @extra;
+            $by_hand_recursive_rule_template = UR::BoolExpr::Template->resolve($class_name, "$this in");
+            $by_hand_recursive_rule_template->recursion_desc($recursion_desc);
+            if (!$by_hand_recursive_rule_template or @extra) {
+                Carp::croak("Can't resolve recursive query: Class $class_name cannot filter by one or more properties: "
+                            . join(', ', @extra));
+            }
+        }
     }
+
     my $rule_id = $rule->id;
     my $rule_template_id = $rule_template->id;
     
@@ -2180,7 +2198,26 @@ sub _create_import_iterator_for_underlying_context {
             my ($next_db_row);
             ($next_db_row) = $db_iterator->() if ($db_iterator);
 
+            if (! $next_db_row and $by_hand_recursive_rule_template and @by_hand_recursive_source_values) {
+                # DB is out of results for this query, we need to handle recursion here in the context
+                # and there are values to recurse on
+                unless ($by_hand_recursing_iterator) {
+                    # Do a new get() on the data source to recursively get more data
+                    my $recurse_rule = $by_hand_recursive_rule_template->get_rule_for_values(\@by_hand_recursive_source_values);
+                    $by_hand_recursing_iterator = $self->_create_import_iterator_for_underlying_context($recurse_rule,$dsx,$this_get_serial);
+                }
+                my $retval = $next_object_to_return;
+                $next_object_to_return = $by_hand_recursing_iterator->();
+                unless ($next_object_to_return) {
+                    $by_hand_recursing_iterator = undef;
+                    $by_hand_recursive_rule_template = undef;
+                }
+                return $retval;
+            }
+
             unless ($next_db_row) {
+                $db_iterator = undef;
+
                 if ($rows == 0) {
                     # if we got no data at all from the sql then we give a status
                     # message about it and we update all_params_loaded to indicate
@@ -2243,7 +2280,6 @@ sub _create_import_iterator_for_underlying_context {
                     }
                 }
 
-                $db_iterator = undef;
                 my $retval = $next_object_to_return;
                 $next_object_to_return = undef;
                 return $retval;
@@ -2386,11 +2422,16 @@ sub _create_import_iterator_for_underlying_context {
                 redo LOAD_AN_OBJECT;
             }
 
+            if ($by_hand_recursive_source_property) {
+                my @values = grep { defined } $primary_object_for_next_db_row->$by_hand_recursive_source_property;
+                push @by_hand_recursive_source_values, @values;
+            }
+
             if (! $next_object_to_return or $next_object_to_return eq $primary_object_for_next_db_row) {
                 # The first time through the iterator, we need to buffer the object until
                 # $primary_object_for_next_db_row is something different.
                 $next_object_to_return = $primary_object_for_next_db_row;
-                $primary_object_for_next_db_row= undef;
+                $primary_object_for_next_db_row = undef;
                 redo LOAD_AN_OBJECT;
             }
             
@@ -2947,7 +2988,10 @@ sub _get_objects_for_class_and_rule_from_cache {
 
     if (my $recurse = $template->recursion_desc) {        
         my ($this,$prior) = @$recurse;
-        my @values = map { $_->$prior } @results;
+        # remove undef items.  undef/NULL in the recursion linkage means it doesn't link to anything
+        my @values = grep { defined }
+                     map { $_->$prior }
+                     @results;
         if (@values) {
             # We do get here, so that adjustments to intermediate foreign keys
             # in the cache will result in a new query at the correct point,
