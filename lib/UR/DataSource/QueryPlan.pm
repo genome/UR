@@ -583,17 +583,38 @@ sub _init_rdbms {
     $connect_by_clause = ''; 
     my $recurse_resolution_by_iteration = 0;
     if ($recursion_desc) {
+        unless (ref($recursion_desc) eq 'ARRAY') {
+            Carp::croak("Recursion description must be an arrayref with exactly 2 items");
+        }
+        if (@$recursion_desc != 2) {
+            Carp::croak("Recursion description must contain exactly 2 items; got ".scalar(@$recursion_desc)
+                        . ': ' . join(', ',@$recursion_desc));
+        }
+
+        # Oracle supports connect by queries.
         if ($ds->does_support_recursive_queries eq 'connect by') {
             my ($this,$prior) = @{ $recursion_desc };
 
             my $this_property_meta = $class_meta->property_meta_for_name($this);
+            unless ($this_property_meta) {
+                Carp::croak("Class ".$class_meta->class_name." has no property named '$this', named in the recursion description");
+            }
             my $prior_property_meta = $class_meta->property_meta_for_name($prior);
+            unless ($prior_property_meta) {
+                Carp::croak("Class ".$class_meta->class_name." has no property named '$prior', named in the recursion description");
+            }
 
             my $this_class_meta = $this_property_meta->class_meta;
             my $prior_class_meta = $prior_property_meta->class_meta;
 
             my $this_table_name = $this_class_meta->table_name;
+            unless ($this_table_name) {
+                Carp::croak("Cannot resolve table name from class ".$class_meta->class_name." and property '$this', named in the recursion description");
+            }
             my $prior_table_name = $prior_class_meta->table_name;
+            unless ($prior_table_name) {
+                Carp::croak("Cannot resolve table name from class ".$class_meta->class_name." and property '$prior', named in the recursion description");
+            }
 
             my $this_column_name = $this_property_meta->column_name || $this;
             my $prior_column_name = $prior_property_meta->column_name || $prior;
@@ -1470,7 +1491,7 @@ sub _init_light {
         recursion_desc                              => $rule_template->recursion_desc,
         recurse_property_on_this_row                => $recurse_property_on_this_row,
         recurse_property_referencing_other_rows     => $recurse_property_referencing_other_rows,
-        recurse_resolution_by_iteration             => $recurse_resolution_by_iteration
+        recurse_resolution_by_iteration             => $recurse_resolution_by_iteration,
         #loading_templates                           => $per_object_in_resultset_loading_detail,
         joins_across_data_sources                   => $joins_across_data_sources,
     );
