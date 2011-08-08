@@ -135,7 +135,6 @@ sub __errors__ {
     my ($self,@property_names) = @_;
 
     my $class_object = $self->__meta__;
-    my $type_name = $class_object->type_name;
 
     unless (scalar @property_names) {
         @property_names = $class_object->all_property_names;    

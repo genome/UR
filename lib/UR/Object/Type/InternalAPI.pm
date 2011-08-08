@@ -770,7 +770,6 @@ sub generate_support_class_for_extension {
         my $class_props = UR::Util::deep_copy($subject_class_obj->{has});    
         for (values %$class_props) {
             delete $_->{class_name};
-            delete $_->{type_name};
             delete $_->{property_name};
         }
         
@@ -779,7 +778,6 @@ sub generate_support_class_for_extension {
                 class_name => $new_class_name,
                 is => \@parent_class_names, 
                 is_abstract => 0,
-                type_name => $subject_class_obj->type_name . " ghost",
                 has => [%$class_props],
                 attributes_have => $attributes_have,
                 id_properties => \@id_property_names,
@@ -1356,7 +1354,7 @@ sub _property_change_callback {
 
     if ($method eq 'create') {
         unless ($class_obj->{'has'}->{$property_name}) {
-            my @attr = qw( class_name attribute_name data_length data_type is_delegated is_optional property_name type_name );
+            my @attr = qw( class_name data_length data_type is_delegated is_optional property_name );
 
             my %new_property;
             foreach my $attr_name (@attr ) {

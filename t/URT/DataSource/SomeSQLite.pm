@@ -21,7 +21,6 @@ use UR::Object::Type;
 use URT;
 class URT::DataSource::SomeSQLite {
     is => ['UR::DataSource::SQLite','UR::Singleton'],
-    type_name => 'urt datasource somesqlite',
 };
 
 

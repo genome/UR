@@ -32,7 +32,6 @@ use File::Basename;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::CSV',
     is => ['UR::DataSource::RDBMS'],
-    english_name => 'ur datasource csv',
     is_abstract => 1,
 );
 

@@ -21,7 +21,6 @@ sub _preprocess {
         is => 'Number',
         data_type => 'Number',
         property_name => 'extra_property',
-        type_name => $count_prop->{type_name},
         class_name => $count_prop->{class_name},
     };
     return $desc;

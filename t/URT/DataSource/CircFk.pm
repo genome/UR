@@ -7,7 +7,6 @@ use UR::Object::Type;
 use URT;
 class URT::DataSource::CircFk {
     is => ['UR::DataSource::SQLite'],
-    type_name => 'urt datasource somesqlite',
 };
 
 our $FILE = "/tmp/ur_testsuite_db_$$.sqlite";

@@ -8,7 +8,6 @@ package URT::DataSource::SomeOracle;
 use URT;
 class URT::DataSource::SomeOracle {
     is => ['UR::DataSource::Oracle'],
-    type_name => 'urt datasource someoracle',
 };
 
     

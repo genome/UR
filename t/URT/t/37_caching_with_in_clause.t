@@ -135,7 +135,6 @@ sub create_db_tables {
 
     ok(UR::Object::Type->define( 
             class_name => 'URT::Parent',
-            type_name => 'parent',
             table_name => 'PARENT_TABLE',
             id_by => [
                 'parent_id' =>     { is => 'NUMBER' },

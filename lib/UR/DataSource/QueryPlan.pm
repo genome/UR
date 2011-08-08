@@ -1251,7 +1251,6 @@ sub _init_light {
     }
 
     for my $co ( $class_meta, @parent_class_objects ) {
-        my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
         last if ( ($class_name eq 'UR::Object') or (not $class_name->isa("UR::Object")) );
         my @id_property_objects = $co->direct_id_property_metas;
@@ -1265,8 +1264,8 @@ sub _init_light {
         my @id_column_names =
             map { $_->column_name }
             @id_property_objects;
-        for my $property_name (sort keys %filters) {                
-            my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);                
+        for my $property_name (sort keys %filters) {
+            my $property = UR::Object::Property->get(class_name => $class_name, property_name => $property_name);
             next unless $property;
             my $operator       = $rule_template->operator_for($property_name);
             my $value_position = $rule_template->value_position_for_property_name($property_name);
@@ -1430,7 +1429,7 @@ sub _init_light {
                     map { [$foreign_class_object, $_, $alias, $object_num] }
                     sort { $a->property_name cmp $b->property_name }
                     grep { defined($_->column_name) && $_->column_name ne '' }
-                    UR::Object::Property->get( type_name => $foreign_class_object->type_name );
+                    UR::Object::Property->get( class_name => $foreign_class_name );
               
                 $joins_done{$join->{id}} = $alias;
                 
@@ -1533,7 +1532,6 @@ sub _init_core {
 
     my $sub_typing_property                 = $class_data->{sub_typing_property};
     my $class_table_name                    = $class_data->{class_table_name};
-    #my @type_names_under_class_with_no_table= @{ $class_data->{type_names_under_class_with_no_table} };
     
     # individual query/boolexpr based
     
@@ -1596,7 +1594,6 @@ sub _init_core {
 
 #        $first_table_name ||= $table_name;
 
-        my $type_name  = $co->type_name;
         my $class_name = $co->class_name;
         
         last if ( ($class_name eq 'UR::Object') or (not $class_name->isa("UR::Object")) );
@@ -1631,16 +1628,16 @@ sub _init_core {
 #        }
 
         for my $property_name (sort keys %filters)
-        {                
-            my $property = UR::Object::Property->get(type_name => $type_name, property_name => $property_name);                
+        {
+            my $property = UR::Object::Property->get(class_name => $class_name, property_name => $property_name);
             next unless $property;
-            
+
             my $operator       = $rule_template->operator_for($property_name);
             my $value_position = $rule_template->value_position_for_property_name($property_name);
-            
+
             delete $filters{$property_name};
             $pk_used = 1 if $id_properties{ $property_name };
-            
+
 #            if ($property->can("expr_sql")) {
 #                my $expr_sql = $property->expr_sql;
 #                push @sql_filters, 
@@ -1652,7 +1649,7 @@ sub _init_core {
 #                        };
 #                next;
 #            }
-            
+
             if ($property->is_legacy_eav) {
                 die "Old GSC EAV can be handled with a via/to/where/is_mutable=1";
             }
@@ -1815,7 +1812,7 @@ sub _init_core {
                     map { [$foreign_class_object, $_, $alias, $object_num] }
                     sort { $a->property_name cmp $b->property_name }
                     grep { defined($_->column_name) && $_->column_name ne '' }
-                    UR::Object::Property->get( type_name => $foreign_class_object->type_name );
+                    UR::Object::Property->get( class_name => $foreign_class_name );
               
                 $joins_done{$join->{id}} = $alias;
                 

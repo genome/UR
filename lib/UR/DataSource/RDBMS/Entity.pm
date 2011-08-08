@@ -9,7 +9,6 @@ UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::Entity',
     is => ['UR::Entity'],
     is_abstract => 1,
-    english_name => 'rdbms entity',
     data_source => 'UR::DataSource::Meta',
 );
 

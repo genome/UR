@@ -874,26 +874,14 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                              $table_name)
                      );
 
-            my $type_name = $data_source->resolve_type_name_for_table_name($table_name);
-            $type_name .= ' view' if ($table->table_type =~ m/view/i);
-            unless ($type_name) {
-                Carp::confess(
-                    "Failed to resolve a type name for new table "
-                    . $table_name
-                );
-            }
-
             if ($class) {
-                $class->type_name($type_name);
                 $class->doc($table->remarks ? $table->remarks: undef);
                 $class->data_source($data_source);
                 $class->table_name($table_name);
-                # FIXME we should pick one of these names to standarize on
                 $class->er_role($table->er_type);
             } else {
                 $class = UR::Object::Type->create(
                             class_name => $class_name,
-                            type_name => $type_name,
                             doc => ($table->remarks ? $table->remarks: undef),
                             data_source_id => $data_source,
                             table_name => $table_name,
@@ -1011,20 +999,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 );
             }
 
-            my $attribute_name = $data_source->resolve_attribute_name_for_column_name($column->column_name);
-            unless ($attribute_name) {
-                Carp::confess(
-                    "Failed to resolve a attribute name for new column "
-                    . $column->column_name
-                );
-            }
-
-            my $type_name = $class->type_name;
-
             $property = UR::Object::Property->create(
                 class_name     => $class_name,
-                type_name      => $type_name,
-                attribute_name => $attribute_name,
                 property_name  => $property_name,
                 column_name    => $column_name,
                 data_type      => $ur_data_type,
@@ -1053,15 +1029,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 );
             }
         }
-        
-        # FIXME Moved the creating/setting of these properties up a bit, since the
-        # create() invovles a call into the class object containing the property, which handles
-        # updating the class' flat-format data.  Changing the 
-        #$property->data_type($column->data_type);
-        #$property->data_length($column->data_length);
-        #$property->is_optional($column->nullable eq "Y" ? 1 : 0);
-        #$property->doc($column->remarks);
-
     } # next column
 
     $self->status_message("Updating class ID properties...\n");
@@ -1075,7 +1042,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table_name);
         my $class_name = $class->class_name;
-        my $type_name = $class->type_name;
         my @properties = UR::Object::Property->get(class_name => $class_name);
 
         unless (@properties) {
@@ -1163,7 +1129,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table->table_name);
         my $class_name = $class->class_name;
-        my $type_name = $class->type_name;
 
         my @properties = UR::Object::Property->get(class_name => $class_name);
 
@@ -1230,10 +1195,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         my $class_name = $class->class_name;
         my $r_class_name = $r_class->class_name;
-
-        my $type_name = $class->type_name;
-        my $r_type_name = $r_class->type_name;
-
 
         # Create an object-accessor property to go with this FK
         # First we have to figure out a proper delegation name
@@ -1305,12 +1266,10 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         {
             my $column_name = $column_names[$i];
             my $property = $properties[$i];
-            my $attribute_name = $property->attribute_name;
             my $property_name = $property_names[$i];
 
             my $r_column_name = $r_column_names[$i];
             my $r_property = $r_properties[$i];
-            my $r_attribute_name = $r_property->attribute_name;
             my $r_property_name = $r_property_names[$i];
         }
 

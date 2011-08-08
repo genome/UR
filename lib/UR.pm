@@ -272,9 +272,8 @@ UR::Object::Type->define(
                                                 doc => 'inheriting from the is class will redirect to a ::V? module implemeting a specific version' },
         
         # obsolete/internal
-        type_name                               => { is => 'Text', len => 256,  },
+        type_name                               => { is => 'Text', len => 256, is_deprecated => 1, is_optional => 1 },
         er_role                                 => { is => 'Text', len => 256, is_optional => 1,  default_value => 'entity' },
-        short_name                              => { is => 'Text', len => 16, is_optional => 1,  },
         source                                  => { is => 'Text', len => 256 , default_value => 'data dictionary', is_optional => 1 }, # This is obsolete and should be removed later
         sub_classification_meta_class_name      => { is => 'Text', len => 1024 , is_optional => 1, 
                                                     doc => 'obsolete' },
@@ -341,11 +340,6 @@ UR::Object::Type->define(
         all_columnless_property_metas    => { via => 'all_class_metas', to => 'direct_columnless_property_metas', is_many => 1 },
         all_columnless_property_names    => { via => 'all_class_metas', to => 'direct_columnless_property_names', is_many => 1 },
     ],    
-    unique_constraints => [
-        # TODO: remove deps on this
-        { properties => [qw/type_name/], sql => 'SUPER_FAKE_O2' },
-        #{ properties => [qw/data_source table_name/], sql => 'SUPER_FAKE_05' },
-    ],
 );
 
 UR::Object::Type->define(
@@ -356,8 +350,6 @@ UR::Object::Type->define(
     ],
     has_optional => [
         property_type                   => { is => 'Text', len => 256 , is_optional => 1},
-        type_name                       => { is => 'Text', len => 256 },        
-        attribute_name                  => { is => 'Text', len => 256 },
         column_name                     => { is => 'Text', len => 256, is_optional => 1 },        
         data_length                     => { is => 'Text', len => 32, is_optional => 1 },
         data_type                       => { is => 'Text', len => 256, is_optional => 1 },
@@ -407,7 +399,7 @@ UR::Object::Type->define(
         r_class_meta                    => { is => 'UR::Object::Type', id_by => 'data_type' },
     ],
     unique_constraints => [
-        { properties => [qw/property_name type_name/], sql => 'SUPER_FAKE_O4' },
+        { properties => [qw/property_name class_name/], sql => 'SUPER_FAKE_O4' },
     ],
 );
 

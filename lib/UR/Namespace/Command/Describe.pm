@@ -29,14 +29,6 @@ ur describe Acme::Order Acme::Product Acme::Order::LineItem
 EOS
 }
 
-## The class metadata has lots of properties that we're not interested in
-#our @CLASS_PROPERTIES_NOT_TO_PRINT = qw(
-#    generated
-#    short_name
-#    is
-#    all_class_metas
-#);
-    
 sub for_each_class_object {
     my $self = shift;
     my $class_meta = shift;

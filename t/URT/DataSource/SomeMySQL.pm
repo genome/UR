@@ -8,7 +8,6 @@ package URT::DataSource::SomeMySQL;
 use URT;
 class URT::DataSource::SomeMySQL {
     is => ['UR::DataSource::MySQL'],
-    type_name => 'urt datasource somemysql',
 };
 
     

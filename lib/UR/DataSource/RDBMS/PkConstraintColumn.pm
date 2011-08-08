@@ -9,7 +9,6 @@ our $VERSION = "0.34"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::PkConstraintColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
-    english_name => 'dd pk constraint column',
     dsmap => 'dd_pk_constraint_column',
     er_role => '',
     id_properties => [qw/data_source owner table_name column_name rank/],

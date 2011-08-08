@@ -9,7 +9,6 @@ our $VERSION = "0.34"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::UniqueConstraintColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
-    english_name => 'dd_unique_constraint_column',
     dsmap => 'dd_unique_constraint_column',
     id_properties => [qw/data_source owner table_name constraint_name column_name/],
     properties => [

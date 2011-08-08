@@ -7,7 +7,6 @@ use File::Temp;
 use URTAlternate;
 class URTAlternate::DataSource::TheDB {
     is => ['UR::DataSource::SQLite'],
-    type_name => 'urtalterate datasource thedb',
 };
 
 sub server {

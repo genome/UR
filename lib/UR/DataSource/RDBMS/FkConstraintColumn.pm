@@ -9,7 +9,6 @@ our $VERSION = "0.34"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::FkConstraintColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
-    english_name => 'dd fk constraint column',
     dsmap => 'dd_fk_constraint_column',
     er_role => 'bridge',
     id_properties => [qw/data_source owner table_name fk_constraint_name column_name/],

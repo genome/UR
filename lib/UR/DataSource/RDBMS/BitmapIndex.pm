@@ -9,7 +9,6 @@ our $VERSION = "0.34"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::BitmapIndex',
     is => ['UR::DataSource::RDBMS::Entity'],
-    english_name => 'dd bitmap index',
     dsmap => 'dd_bitmap_index',
     er_role => '',
     id_properties => [qw/data_source owner table_name bitmap_index_name/],

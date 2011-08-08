@@ -769,18 +769,6 @@ sub resolve_property_name_for_column_name {
     return $type_name;
 }
 
-sub resolve_attribute_name_for_column_name {
-    my $self = shift->_singleton_class_name;
-    my $column_name = shift;
-
-    my @words =                 
-        map { lc($_) }
-        split("_",$column_name);
-
-    my $type_name =  join(" ",@words);
-    return $type_name;
-}
-
 sub refresh_database_metadata_for_table_name {
     my ($self,$db_table_name, $creation_method) = @_;
 
@@ -3019,7 +3007,7 @@ sub _generate_class_data_for_loading {
             sort { $a->property_name cmp $b->property_name }
             grep { (defined $_->column_name && $_->column_name ne '') or
                 (defined $_->calculate_sql && $_->calculate_sql ne '') }
-            UR::Object::Property->get( type_name => $co->type_name );
+            UR::Object::Property->get( class_name => $co->class_name );
 
         @direct_table_properties = @all_table_properties if $class_meta eq $co;
     }

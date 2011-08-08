@@ -11,7 +11,6 @@ our $VERSION = "0.34"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::Vocabulary',
     is => ['UR::Singleton'],
-    english_name => 'ur vocabulary',
     doc => 'A word in the vocabulary of a given namespace.',
 );
 

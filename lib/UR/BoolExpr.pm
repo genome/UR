@@ -368,7 +368,7 @@ sub resolve {
             next;
         }
 
-        if ($key =~ m/^_id_only|_param_key|_unique|__get_serial|_change_count$/) {
+        if ($key =~ m/^(_id_only|_param_key|_unique|__get_serial|_change_count)$/) {
             # skip the pair: legacy/internal cruft
             next;
         } 
