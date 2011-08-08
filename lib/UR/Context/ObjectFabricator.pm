@@ -573,6 +573,7 @@ sub create_for_loading_template {
 
             my $value_by_which_this_object_is_loaded_via_recursion = $dbc->{$recurse_property_on_this_row};
             my $value_referencing_other_object = $dbc->{$recurse_property_referencing_other_rows};
+            $value_referencing_other_object = '' unless (defined $value_referencing_other_object);
             unless ($recurse_property_value_found{$value_referencing_other_object}) {
                 # This row points to another row which will be grabbed because the query is hierarchical.
                 # Log the smaller query which would get the hierarchically linked data directly as though it happened directly.
