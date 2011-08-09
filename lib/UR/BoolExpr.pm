@@ -839,12 +839,16 @@ sub resolve_for_string {
     my $filter_regex = $self->filter_regex_for_string();
     my @filters = map {
         unless (($property, $op, $value) = ($_ =~ /$filter_regex/)) {
-            die "Unable to process filter $_\n";
+            Carp::croak "Unable to process filter $_\n";
         }
         if ($op eq '~') {
             $op = "like";
+            # If the user asked for 'like', but didn't put in a wildcard, then put wildcards
+            # on each side of the value
+            $value = '%'.$value.'%' if (length($value) and $value !~ m/\%|_/);
         } elsif ($op eq '!~') {
             $op = 'not like';
+            $value = '%'.$value.'%' if (length($value) and $value !~ m/\%|_/);
         }
 
         [$property, $op, $value]
