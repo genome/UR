@@ -1402,7 +1402,67 @@ sub prune_object_cache {
     }
     if ($all_objects_cache_size > $cache_size_lowwater) {
         warn "After several passes of pruning the object cache, there are still $all_objects_cache_size objects";
+        if ($ENV{'UR_DEBUG_OBJECT_PRUNING'}) {
+            my @sorted_counts = sort { $a->[1] <=> $b->[1] }
+                                map { [ $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) ] }
+                                keys %$UR::Context::all_objects_loaded;
+            warn "Top 10 classes by object count:\n" . $self->_object_cache_pruning_report;
+        }
     }
+    return 1;
+}
+
+
+sub _object_cache_pruning_report {
+    my $self = shift;
+    my $max_show = shift;
+
+    $max_show = 10 unless defined ($max_show);
+
+    my @sorted_counts = sort { $b->[1] <=> $a->[1] }
+                        map { [ $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) ] }
+                        keys %$UR::Context::all_objects_loaded;
+    my $message = '';
+    for (my $i = 0; $i < 10 and $i < @sorted_counts; $i++) {
+        my $class_name = $sorted_counts[$i]->[0];
+        my $count      = $sorted_counts[$i]->[1];
+        $message .= "$class_name: $count\n";
+
+        if ($ENV{'UR_DEBUG_OBJECT_PRUNING'} > 1) {
+            # more detailed info
+            my $no_data_source = 0;
+            my $other_references = 0;
+            my $strengthened = 0;
+            my $has_changes = 0;
+            my $prunable = 0;
+            my $class_data_source = eval { $class_name->__meta__->data_source_id; };
+            foreach my $obj ( values %{$UR::Context::all_objects_loaded->{$class_name}} ) {
+                my $is_prunable = 1;
+                if (! $class_data_source ) {
+                    $no_data_source++;
+                    $is_prunable = 0;
+                }
+                if (! exists $obj->{'__get_serial'}) {
+                    $other_references++;
+                    $is_prunable = 0;
+                }
+                if (exists $obj->{'__strengthened'}) {
+                    $strengthened++;
+                    $is_prunable = 0;
+                }
+                if ($obj->__changes__) {
+                    $has_changes++;
+                    $is_prunable = 0;
+                }
+                if ($is_prunable) {
+                    $prunable++;
+                }
+            }
+            $message .= sprintf("\tNo data source: %d  other refs: %d  strengthend: %d  has changes: %d  prunable: %d\n",
+                                $no_data_source, $other_references, $strengthened, $has_changes, $prunable);
+        }
+    }
+    return $message;
 }
 
 
