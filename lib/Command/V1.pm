@@ -533,12 +533,12 @@ sub resolve_class_and_params_for_argv
         my @errors;
         local $SIG{__WARN__} = sub { push @errors, @_ };
         
-        # Change the pattern to be '--', '-' followed by a non-digit, or '+'.
-        # This s the effect of treating a negative number as a value of an option.
-        # This means that we won't be allowed to have an option named, say, -1.
-        # But since command modules' properties have to be allowable function names,
-        # and "1" is not a valid function name, it's not really a problem
-        Getopt::Long::Configure('prefix_pattern=--|-(?!\D)|\+');
+        ## Change the pattern to be '--', '-' followed by a non-digit, or '+'.
+        ## This s the effect of treating a negative number as a value of an option.
+        ## This means that we won't be allowed to have an option named, say, -1.
+        ## But since command modules' properties have to be allowable function names,
+        ## and "1" is not a valid function name, it's not really a problem
+        #Getopt::Long::Configure('prefix_pattern=--|-(?!\D)|\+');
         unless (GetOptions($params_hash,@spec)) {
             Carp::croak( join("\n", @errors) );
         }
@@ -587,6 +587,10 @@ sub resolve_class_and_params_for_argv
                 push @new_value, @parts;
             }
             @$value = @new_value;
+
+        } elsif ($value eq q('') or $value eq q("")) {
+            # Handle the special values '' and "" to mean undef/NULL
+            $params_hash->{$key} = '';
         }
 
         # turn dashes into underscores
@@ -1164,9 +1168,9 @@ sub _shell_arg_getopt_qualifier_from_property_meta
     if (defined($property_meta->data_type) and $property_meta->data_type =~ /Boolean/) {
         return '!' . $many;
     }
-    elsif ($property_meta->is_optional) {
-        return ':s' . $many;
-    }
+    #elsif ($property_meta->is_optional) {
+    #    return ':s' . $many;
+    #}
     else {
         return '=s' . $many;
     }

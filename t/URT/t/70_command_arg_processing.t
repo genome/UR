@@ -7,7 +7,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 
 use UR;
-use Test::More tests => 72;
+use Test::More tests => 76;
 
 # tests parsing of command-line options
 
@@ -107,21 +107,27 @@ foreach my $the_class ( qw( Cmd::Module::V1 Cmd::Module::V2 )) {
                 opt_string => 'foo' },
               'Params are correct');
     
-    ($class,$params) = $the_class->resolve_class_and_params_for_argv(qw(--opt-string --opt-number));
+    ($class,$params) = $the_class->resolve_class_and_params_for_argv('--opt-string', '', '--opt-number', '');
     is($class,$the_class, 'Parse args got correct class with two optional items with no value');
     is_deeply($params,
               { opt_number => '',
                 opt_string => '' },
               'Params are correct');
     
-    ($class,$params) = $the_class->resolve_class_and_params_for_argv(qw(--opt-string= --opt-number=));
+    ($class,$params) = $the_class->resolve_class_and_params_for_argv(qw(--opt-string='' --opt-number=''));
     is($class,$the_class, 'Parse args got correct class with = and two optional items with no value');
     is_deeply($params,
               { opt_number => '',
                 opt_string => '' },
               'Params are correct');
     
-    
+    ($class,$params) = $the_class->resolve_class_and_params_for_argv(qw(--opt-string="" --opt-number=""));
+    is($class,$the_class, 'Parse args got correct class with = and two optional items with no value');
+    is_deeply($params,
+              { opt_number => '',
+                opt_string => '' },
+              'Params are correct');
+     
     ($class,$params) = $the_class->resolve_class_and_params_for_argv(qw(--opt-number 4));
     is($class,$the_class, 'Parse args got correct class with one optional number');
     is_deeply($params,
