@@ -3529,15 +3529,15 @@ sub _reverse_all_changes {
         }
         else {
             # non-ghost regular entity
-            for my $object (@$objects_this_class) {
-                # find property_names (that have columns)
-                # todo: switch to check persist
-                my %property_names =
-                    map { $_->property_name => $_ }
-                    grep { defined $_->column_name }
-                    $co->all_property_metas
-                ;
-        
+
+            # find property_names (that have columns)
+            # todo: switch to check persist
+            my %property_names = map { $_->property_name => $_ }
+                                 grep { defined $_->column_name }
+                                 map { $co->property_meta_for_name($_) }
+                                 $co->all_property_names;
+
+             for my $object (@$objects_this_class) {
                 # find columns which make up the primary key
                 # convert to a hash where property => 1
                 my @id_property_names = $co->all_id_property_names;
