@@ -19,7 +19,7 @@ elsif ($INC{"UR.pm"} =~ /blib/) {
     plan skip_all => 'skip running during install',
 }
 else {
-    plan tests => 89;
+    plan tests => 87;
 }
 
 use UR::Namespace::Command::Update::ClassesFromDb;
@@ -166,9 +166,7 @@ ok($trans, "began transaction");
     ok($command_obj->execute(),'Executing update on an empty schema');
 
     my @changes = get_changes();
-    is(scalar(@changes),1, "one change for an empty schema");
-    is($changes[0]->changed_class_name, 'URT::DataSource::Meta', 'Single change was to URT::DataSource::Meta');
-    is($changes[0]->changed_aspect, 'is_connected', 'Single change was a DB connect');
+    is(scalar(@changes),0, "zero changes for an empty schema");
 
     # note this for comparison in future tests.
     my $expected_dd_object_count = cached_dd_object_count();
