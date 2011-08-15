@@ -616,8 +616,8 @@ sub DESTROY {
     # the cache_size_highwater mark is a valid value
     if ($UR::Context::destroy_should_clean_up_all_objects_loaded) {
         my $class = ref($obj);
-        if ($obj->__meta__->is_meta_meta or $obj->__changes__) {
-            my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$obj->{id}};
+        my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$obj->{id}};
+        if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
             die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$obj->{id}!" unless $obj eq $obj_from_cache;
             $UR::Context::all_objects_loaded->{$class}{$obj->{id}} = $obj;
             print "KEEPING $obj.  Found $obj .\n";
