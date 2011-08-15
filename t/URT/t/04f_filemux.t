@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 31;
+use Test::More tests => 37;
 
 use IO::File;
 
@@ -38,7 +38,7 @@ is($objs[0]->thing_color, 'purple', 'Color is correct');
 
 
 my $error_message;
-UR::Context->message_callback('error', sub { $DB::single=1; $error_message = $_[0]->text });
+UR::Context->message_callback('error', sub { $error_message = $_[0]->text });
 $obj = eval { URT::Thing->get(thing_id => 2) };
 ok(!$obj, "Correctly couldn't retrieve a Thing without a thing_type");
 like($error_message, qr(Recursive entry.*URT::Thing), 'Error message did mention recursive call trapped');
@@ -50,6 +50,36 @@ while (my $obj = $iter->next()) {
     ok($obj, 'Got an object from the iterator');
     is($obj->id, $expected_id++, 'Its ID was the expected value');
 }
+
+
+# Try the object pruner to unload the File data sources
+my @file_data_sources = UR::DataSource::File->is_loaded();
+is(scalar(@file_data_sources), 2, 'Two file data sources were defined');
+@file_data_sources = ();
+my @warnings;
+{
+    my @warnings = ();
+    local $SIG{'__WARN__'} = sub { push @warnings, @_ };
+    UR::Context->object_cache_size_lowwater(1);
+    UR::Context->object_cache_size_highwater(2);
+    ok(UR::Context->current->prune_object_cache(), 'Force object cache pruning');
+}
+@warnings = grep { $_ !~ m/After seceral passes of pruning the object cache, there are still \d+ objects/ } @warnings;
+is(scalar(@warnings), 0, 'No unexpected warnings from pruning');
+
+UR::Context->object_cache_size_lowwater(undef);
+UR::Context->object_cache_size_highwater(undef);
+@file_data_sources = UR::DataSource::File->is_loaded();
+is(scalar(@file_data_sources), 0, 'After cache pruning, no file data sources are defined');
+
+# try getting something again, should re-create the data source object
+$obj = UR::Context->current->reload('URT::Thing', thing_type => 'person', thing_id => 1);
+ok($obj, 'Reloading URT::Thing id 3');
+@file_data_sources = UR::DataSource::File->is_loaded();
+is(scalar(@file_data_sources), 1, 'The File data source was re-created');
+
+
+
 
 
 sub setup_files_and_classes {
