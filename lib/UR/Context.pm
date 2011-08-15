@@ -3,6 +3,7 @@ package UR::Context;
 use strict;
 use warnings;
 use Sub::Name;
+use Scalar::Util;
 
 require UR;
 our $VERSION = "0.34"; # UR $VERSION;
@@ -1282,7 +1283,7 @@ sub object_cache_size_lowwater {
         my $value = shift;
         $cache_size_lowwater = $value;
 
-        if ($cache_size_highwater and $value >= $cache_size_highwater) {
+        if (defined($value) and $cache_size_highwater and $value >= $cache_size_highwater) {
             Carp::confess("Can't set the lowwater mark greater than or equal to the highwater mark");
             return;
         }
@@ -1298,6 +1299,7 @@ sub prune_object_cache {
 
     return if ($is_pruning);  # Don't recurse into here
 
+    return if (!defined($cache_size_highwater) or !defined($cache_size_lowwater));
     return unless ($all_objects_cache_size > $cache_size_highwater);
 
     $is_pruning = 1;
@@ -1340,6 +1342,8 @@ sub prune_object_cache {
     # Make a guess about that the target serial number should be
     # This one goes 10% between the last time we pruned, and the last get serial
     # and increases by another 10% each attempt
+    $cache_size_highwater = 1 if ($cache_size_highwater < 1);
+    $cache_size_lowwater = 1 if ($cache_size_lowwater < 1);
     my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * $cache_size_lowwater / $cache_size_highwater );
     #my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * 0.1);
     $target_serial_increment = 1 if ($target_serial_increment < 1);
@@ -1372,7 +1376,7 @@ sub prune_object_cache {
                      ( exists $obj->{'__get_serial'}
                        and $obj->{'__get_serial'} <= $target_serial
                        and ($data_source_for_class{$class} or exists $obj->{'__weakened'})
-                       and ! $obj->__changes__
+                       and ( ! $obj->__changes__ or ! @{[$obj->__changes__]} )
                      )
                    )
                 {
@@ -1401,7 +1405,7 @@ sub prune_object_cache {
         printf("MEM PRUNE complete, $deleted_count objects marked after $pass passes in %.4f sec\n\n\n",$t2-$t1);
     }
     if ($all_objects_cache_size > $cache_size_lowwater) {
-        warn "After several passes of pruning the object cache, there are still $all_objects_cache_size objects";
+        Carp::carp "After several passes of pruning the object cache, there are still $all_objects_cache_size objects";
         if ($ENV{'UR_DEBUG_OBJECT_PRUNING'}) {
             my @sorted_counts = sort { $a->[1] <=> $b->[1] }
                                 map { [ $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) ] }
@@ -1437,6 +1441,8 @@ sub _object_cache_pruning_report {
             my $prunable = 0;
             my $class_data_source = eval { $class_name->__meta__->data_source_id; };
             foreach my $obj ( values %{$UR::Context::all_objects_loaded->{$class_name}} ) {
+                next unless $obj;
+
                 my $is_prunable = 1;
                 if (! $class_data_source ) {
                     $no_data_source++;
