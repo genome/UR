@@ -3,9 +3,14 @@ use strict;
 use warnings;
 
 BEGIN {
-    if ($ENV{COMP_LINE}) {
+    if ($ENV{COMP_CWORD}) {
         eval "use Getopt::Complete::Cache class => 'UR::Namespace::Command', above => 1;";
         exit if ($@);
+    }
+    if ($ENV{COMP_LINE}) {
+        #for transitioning from older version of completion
+        #just return no result
+        exit;
     }
 };
 

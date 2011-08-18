@@ -141,7 +141,7 @@ My::Command->execute_with_shell_params_and_exit;
     $Command::entry_point_class ||= $class;
     $Command::entry_point_bin ||= File::Basename::basename($0);
 
-    if ($ENV{COMP_LINE}) {
+    if ($ENV{COMP_CWORD}) {
         require Getopt::Complete;
         my @spec = $class->resolve_option_completion_spec();
         my $options = Getopt::Complete::Options->new(@spec);
