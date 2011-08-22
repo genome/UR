@@ -175,7 +175,6 @@ use UR::Object::Type::Initializer;
 use UR::Object::Type::InternalAPI;
 use UR::Object::Type::ModuleWriter;
 use UR::Object::Type::View::Default::Text;
-use UR::Object::Type::View::Default::Xml;
 use UR::Object::Value;
 use UR::Object::View;
 use UR::Object::View::Aspect;
@@ -183,7 +182,6 @@ use UR::Object::View::Default::Gtk;
 use UR::Object::View::Default::Gtk2;
 use UR::Object::View::Default::Json;
 use UR::Object::View::Default::Text;
-use UR::Object::View::Default::Xml;
 use UR::Object::View::Lister::Text;
 use UR::Object::View::Toolkit;
 use UR::Object::View::Toolkit::Text;
@@ -236,7 +234,10 @@ if (eval "use Net::HTTPServer") {
 if (eval "use Xml::LibXSLT") {
     my $rv = eval "use UR::Object::View::Default::Html;"
              && eval "use UR::Object::View::Default::Xsl;"
-             && eval "use UR::Object::Set::View::Default::Xml;";
+             && eval "use UR::Object::Set::View::Default::Xml;"
+             && eval "use UR::Object::View::Default::Xml;"
+             && eval "use UR::Object::Type::View::Default::Xml;"
+             ;
     die $@ unless ($rv);
 }
  
