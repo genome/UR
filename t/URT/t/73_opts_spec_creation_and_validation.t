@@ -68,4 +68,4 @@ for (my $i = 0; $i < @$spec; $i++) {
 ok($found, 'Found define namespace command data');
 
 # Try importing the file
-is(Getopt::Complete::Cache->import(file => $fname, above => 1, comp_line => 1), 1, 'importing ur spec from tmp');
+is(Getopt::Complete::Cache->import(file => $fname, above => 1, comp_cword => 1), 1, 'importing ur spec from tmp');
