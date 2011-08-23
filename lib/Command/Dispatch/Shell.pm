@@ -635,8 +635,7 @@ sub resolve_param_value_from_cmdline_text {
 
     my $pmeta = $self->__meta__->property($param_name);
 
-
-    print STDERR "Resolving parameter '$param_name' from command argument '$param_str'...";
+    my $param_resolve_message = "Resolving parameter '$param_name' from command argument '$param_str'...";
     my @results;
     my $require_user_verify = $pmeta->{'require_user_verify'};
     for (my $i = 0; $i < @param_args; $i++) {
@@ -661,10 +660,10 @@ sub resolve_param_value_from_cmdline_text {
         }
     }
     if (@results) {
-        print STDERR " found " . @results . ".\n";
+        $self->status_message($param_resolve_message . " found " . @results);
     }
     else {
-        print STDERR " none found.\n";
+        $self->status_message($param_resolve_message . " none found.");
     }
 
     return unless (@results);
