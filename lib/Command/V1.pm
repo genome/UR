@@ -171,9 +171,17 @@ sub _execute_with_shell_params_and_return_exit_code
 
     # make --foo=bar equivalent to --foo bar
     @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
-    my ($delegate_class, $params) = $class->resolve_class_and_params_for_argv(@argv);
-
-    my $rv = $class->_execute_delegate_class_with_params($delegate_class,$params);
+    my ($delegate_class, $params,$error_tag_list) = $class->resolve_class_and_params_for_argv(@argv);
+    my $rv;
+    if ($error_tag_list and @$error_tag_list) {
+        $class->error_message("There were problems resolving some command-line parameters:\n\t"
+                             . join("\n\t",
+                                    map { my($props,$type,$desc) = @$_{'properties','type','desc'};
+                                          "Property '" . join("','",@$props) . "' ($type): $desc" }
+                                    @$error_tag_list));
+    } else {
+        $rv = $class->_execute_delegate_class_with_params($delegate_class,$params);
+    }
     
     my $exit_code = $delegate_class->exit_code_for_return_value($rv);
     return $exit_code;
