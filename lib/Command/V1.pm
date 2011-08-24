@@ -1538,8 +1538,15 @@ for my $type (qw/error warning status debug usage/) {
                 push @$a, $msg;
             }
             $msgdata->{ $type . "_message" } = $msg;
+
+            my ($package, $file, $line) = caller;
+            $msgdata->{ $type . "_message_package" } = $package;
+            $msgdata->{ $type . "_message_file" } = $file;
+            $msgdata->{ $type . "_message_line" } = $line;
         }
-        $msgdata->{ $type . "_message" };
+
+        return ($msgdata->{ $type . "_message" },$msgdata->{ $type . "_message_package" },$msgdata->{ $type . "_message_file" },$msgdata->{ $type . "_message_line" }) if wantarray;
+        return $msgdata->{ $type . "_message" };
     };
 
 
