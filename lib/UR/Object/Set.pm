@@ -156,7 +156,14 @@ sub __aggregate__ {
         }
     }
 
-    if ($has_changes) {
+    my $subject_class_meta = $self->rule->subject_class_name->__meta__;
+
+    my $not_ds_expressable = grep { $_->is_calculated or $_->is_transient or $_->is_constant }
+                             map { $_->final_property_meta or $_ }
+                             map { $subject_class_meta->property_meta_for_name($_) || () }
+                             $self->rule->template->_property_names;
+
+    if ($has_changes or $not_ds_expressable) {
         my $fname;
         my @fargs;
         if ($f =~ /^(\w+)\((.*)\)$/) {

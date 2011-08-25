@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 71;
+use Test::More tests=> 79;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -36,6 +36,7 @@ ok(UR::Object::Type->define(
         primary_car       => { is => 'URT::Car', via => 'cars', to => '__self__', where => ['is_primary true' => 1] },
         car_colors        => { via => 'cars', to => 'color', is_many => 1 },
         primary_car_color => { via => 'primary_car', to => 'color' },
+        primary_car_uc_color => { via => 'primary_car', to => 'uc_color' },
     ],
     data_source => 'URT::DataSource::SomeSQLite',
 ),
@@ -49,6 +50,8 @@ ok(UR::Object::Type->define(
         ],
         has => [
             color   => { is => 'String' },
+            uc_color => { calculate_from => ['color'],
+                             calculate => q( return uc($color) ) },
             is_primary => { is => 'Boolean' },
             owner   => { is => 'URT::Person', id_by => 'owner_id' },
         ],
@@ -174,6 +177,23 @@ foreach my $color ( keys %colors ) {
     is($query_count, $first_time ? 3 : 1, 'query count is correct');
     $first_time = 0;
 }
+
+# Make a set that includes a filtered calculated property
+$query_count = 0;
+$set = URT::Car->define_set(uc_color => 'nomatches');
+ok($set, 'Defined set of cars filtered by uc color that will not match anything');
+is($query_count, 0, 'Made no queries');
+is($set->count, 0, 'That set is empty');
+ok($query_count, 'Made a query');
+
+
+
+$query_count = 0;
+$set = URT::Person->define_set(primary_car_uc_color => 'wontmatch');
+ok($set, 'Defined set of people filtered by uc color that will not match anything');
+is($query_count, 0, 'Made no queries');
+is($set->count, 0, 'That set is empty');
+ok($query_count, 'Made a query');
 
 # Test having an -order_by in addition to -group_by.  It should throw an exception if
 # all the order_by columns don't appear in -group_by.
