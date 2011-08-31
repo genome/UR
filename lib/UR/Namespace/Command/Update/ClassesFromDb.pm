@@ -944,7 +944,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $class_name = $class->class_name;
         my $property;
         foreach my $prop_object ( $class->direct_property_metas ) {
-            if ($prop_object->column_name eq $column_name) {
+            if (defined $prop_object->column_name and $prop_object->column_name eq $column_name) {
                 $property = $prop_object;
                 last;
             }
