@@ -1539,13 +1539,22 @@ for my $type (qw/error warning status debug usage/) {
             }
             $msgdata->{ $type . "_message" } = $msg;
 
-            my ($package, $file, $line) = caller;
+            my ($package, $file, $line, $subroutine) = caller;
             $msgdata->{ $type . "_message_package" } = $package;
             $msgdata->{ $type . "_message_file" } = $file;
             $msgdata->{ $type . "_message_line" } = $line;
+            $msgdata->{ $type . "_message_subroutine" } = $subroutine;
         }
 
-        return ($msgdata->{ $type . "_message" },$msgdata->{ $type . "_message_package" },$msgdata->{ $type . "_message_file" },$msgdata->{ $type . "_message_line" }) if wantarray;
+        if (wantarray) {
+            return (
+                $msgdata->{ $type . "_message" },
+                $msgdata->{ $type . "_message_package" },
+                $msgdata->{ $type . "_message_file" },
+                $msgdata->{ $type . "_message_line" },
+                $msgdata->{ $type . "_message_subroutine"},
+            );
+        }
         return $msgdata->{ $type . "_message" };
     };
 
