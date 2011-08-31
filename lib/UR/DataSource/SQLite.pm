@@ -764,6 +764,8 @@ sub _get_foreign_key_setting {
 sub _dump_db_to_file_internal {
     my $self = shift;
 
+    my $fk_setting = $self->_get_foreign_key_setting();
+
     my $file_name = $self->_data_dump_path();
     unless (-w $file_name) {
         # dump file isn't writable...
@@ -781,7 +783,6 @@ sub _dump_db_to_file_internal {
         Carp::croak("Can't create DB handle for file $db_file: $DBI::errstr");
     }
 
-    my $fk_setting = $self->_get_foreign_key_setting();
     if (defined $fk_setting) {
         # Save the value of the foreign_keys setting, if it's supported
         $fh->print('PRAGMA foreign_keys = ' . ( $fk_setting ? 'ON' : 'OFF' ) .";\n");
@@ -821,7 +822,7 @@ sub _dump_db_to_file_internal {
                         $col = "'" . $col . "'";  # Put quotes around non-numeric stuff
                     }
                 }
-                $fh->printf("INSERT INTO \"%s\" VALUES (%s);\n",
+                $fh->printf("INSERT INTO \"%s\" VALUES(%s);\n",
                             $table,
                             join(',', @row));
             }
