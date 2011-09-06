@@ -423,6 +423,39 @@ sub real_user_name
     return $real_user_name;
 }
 
+=pod 
+
+=item fork
+    $pid = UR::Context::Process->fork;
+
+Safe fork() wrapper.
+
+Handles properly disconnecting database handles if necessary so that data sources in children
+are still valid.  Also ensures that the active UR::Context::process has the child's PID 
+recorded within.
+=cut
+
+sub fork 
+{
+    my $class = shift;
+
+    my %data_source_for_class = $class->get_data_sources_for_loaded_classes;
+    my @ds = values %data_source_for_class;
+
+    for (grep {defined $_} @ds) {
+        $_->set_all_dbh_to_inactive_destroy if ($_->can('set_all_dbh_to_inactive_destroy'));
+    }
+
+    my $pid = fork();
+    if (!$pid) {
+        $UR::Context::process = undef;
+        $UR::Context::process = $class->_create_for_current_process
+    }
+
+    return $pid;
+}
+
+
 =pod
 
 =item effective_user_name

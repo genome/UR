@@ -454,7 +454,7 @@ sub set_all_dbh_to_inactive_destroy {
     }
     my $dbh = $self->_default_dbh;
     if ($dbh) {
-        $dbh->disconnect_default_dbh;;
+        $self->disconnect_default_dbh;;
     }
     return 1;
 }

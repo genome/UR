@@ -1292,6 +1292,23 @@ sub object_cache_size_lowwater {
 }
 
 
+sub get_data_sources_for_loaded_classes {
+    my $class = shift;
+
+    my %data_source_for_class;
+    foreach my $class ( keys %$UR::Context::all_objects_loaded ) {
+        next if (substr($class,0,-6) eq '::Type'); # skip class objects
+
+        next unless exists $UR::Context::all_objects_loaded->{$class . '::Type'};
+        my $class_meta = $UR::Context::all_objects_loaded->{$class . '::Type'}->{$class};
+        next unless $class_meta;
+        next unless ($class_meta->is_uncachable());
+        $data_source_for_class{$class} = $class_meta->data_source_id;
+    }
+
+    return %data_source_for_class;
+}
+
 
 our $is_pruning = 0;
 sub prune_object_cache {
@@ -1314,16 +1331,8 @@ sub prune_object_cache {
     my $index_id_sep = UR::Object::Index->__meta__->composite_id_separator() || "\t";
 
     my %classes_to_prune;
-    my %data_source_for_class;
-    foreach my $class ( keys %$UR::Context::all_objects_loaded ) {
-        next if (substr($class,0,-6) eq '::Type'); # skip class objects
-
-        next unless exists $UR::Context::all_objects_loaded->{$class . '::Type'};
-        my $class_meta = $UR::Context::all_objects_loaded->{$class . '::Type'}->{$class};
-        next unless $class_meta;
-        next unless ($class_meta->is_uncachable());
-        $data_source_for_class{$class} = $class_meta->data_source_id;
-        #next unless $class_meta->{'data_source_id'};  # Can't unload objects with no data source
+    my %data_source_for_class = $self->get_data_sources_for_loaded_classes;
+    foreach my $class ( keys %data_source_for_class) {
         $classes_to_prune{$class} = 0;
     }
 
