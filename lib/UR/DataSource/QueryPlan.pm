@@ -342,6 +342,31 @@ sub _init_rdbms {
             next;
         }
 
+        #remove UR::Values from the join chain, because those aren't pulled from the database
+        my @fixed_joins;
+        for my $join (@joins)
+        {
+            #if the last join is a UR::Value, we need to cut it out and join its source to our new foreign
+            if(scalar @fixed_joins and $fixed_joins[-1]{foreign_class}->isa("UR::Value"))
+            {
+                my $last_join = $fixed_joins[-1];
+                my $fixed_join = UR::Object::Join->_get_or_define( 
+                    source_class => $last_join->{source_class},
+                    source_property_names => $last_join->{source_property_names},
+                    foreign_class => $join->{foreign_class},
+                    foreign_property_names => $join->{foreign_property_names},
+                    is_optional => $last_join->{is_optional},
+                    id => $last_join->{id} . "->" . $join->{id},
+                );
+                $fixed_joins[-1] = $fixed_join;
+            }
+            else
+            {
+                push @fixed_joins, $join;
+            }
+        }
+        @joins = @fixed_joins;
+
         if ($joins[-1]{foreign_class}->isa("UR::Value")) {
             # the final join in a chain is often the link between a primitive value
             # and the UR::Value subclass into which it falls ...irrelevent for db joins
@@ -372,7 +397,6 @@ sub _init_rdbms {
 
                 my $foreign_class_name = $join->{foreign_class};
                 my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
-                
                 my $alias = $self->_add_join(
                         $delegated_property,
                         $join,
