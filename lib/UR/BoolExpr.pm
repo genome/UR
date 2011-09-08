@@ -27,7 +27,7 @@ UR::Object::Type->define(
         subject_class_name  => { via => 'template' },
         logic_type          => { via => 'template' },
         logic_detail        => { via => 'template' },
-        
+
         num_values          => { via => 'template' },
         is_normalized       => { via => 'template' },
         is_id_only          => { via => 'template' },
@@ -82,7 +82,7 @@ sub __display_name__ {
     my %b = $self->_params_list;
     my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Dump;
     $s =~ s/\n/ /gs;
-    $s =~ s/^\s*{//; 
+    $s =~ s/^\s*{//;
     $s =~ s/\}\s*$//;
     $s =~ s/\"(\w+)\" \=\> / $1 => /g;
     return __PACKAGE__ . '=(' . $self->subject_class_name . ':' . $s . ')';
@@ -106,7 +106,7 @@ sub template_and_values {
 
 # Returns true if the rule represents a subset of the things the other
 # rule would match.  It returns undef if the answer is not known, such as
-# when one of the values is a list and we didn't go to the trouble of 
+# when one of the values is a list and we didn't go to the trouble of
 # searching the list for a matching value
 sub is_subset_of {
     my($self, $other_rule) = @_;
@@ -145,7 +145,7 @@ sub values {
     if ($self->{values}) {
         return @{ $self->{values}}
     }
-    my $value_id = $self->value_id;    
+    my $value_id = $self->value_id;
     return unless defined($value_id) and length($value_id);
     my @values;
     if (my $hard_refs = $self->{hard_refs}) {
@@ -178,19 +178,19 @@ sub specifies_value_for {
 sub value_for {
     my $self = shift;
     my $property_name = shift;
-    
+
     # TODO: refactor to be more efficient
     my $h = $self->legacy_params_hash;
     my $v;
     if (exists $h->{$property_name}) {
         $v = $h->{$property_name};
     } else {
-        # No value found under that name... try decomposing the id 
+        # No value found under that name... try decomposing the id
         return if $property_name eq 'id';
         my $id_value = $self->value_for('id');
         my $class_meta = $self->subject_class_name->__meta__();
         my @id_property_values = $class_meta->get_composite_id_decomposer->($id_value);
-        
+
         my @id_property_names = $class_meta->id_property_names;
         for (my $i = 0; $i < @id_property_names; $i++) {
             if ($id_property_names[$i] eq $property_name) {
@@ -206,7 +206,7 @@ sub value_for {
 
 sub value_for_position {
     my ($self, $pos) = @_;
-    return ($self->values)[$pos];    
+    return ($self->values)[$pos];
 }
 
 sub operator_for {
@@ -215,9 +215,9 @@ sub operator_for {
     return $t->operator_for(@_);
 }
 
-sub underlying_rules { 
-    my $self = shift;    
-    my @values = $self->values;    
+sub underlying_rules {
+    my $self = shift;
+    my @values = $self->values;
     return $self->template->get_underlying_rules_for_values(@values);
 }
 
@@ -273,7 +273,7 @@ sub get {
     unless (exists $UR::Object::rules->{$rule_id}) {
         my $pos = index($rule_id,$UR::BoolExpr::Util::id_sep);
         my ($template_id,$value_id) = (substr($rule_id,0,$pos), substr($rule_id,$pos+1));
-        my $rule = { id => $rule_id, template_id => $template_id, value_id => $value_id };    
+        my $rule = { id => $rule_id, template_id => $template_id, value_id => $value_id };
         bless ($rule, "UR::BoolExpr");
         $UR::Object::rules->{$rule_id} = $rule;
         Scalar::Util::weaken($UR::Object::rules->{$rule_id});
@@ -326,12 +326,12 @@ sub resolve {
     # TODO: eliminate the need for this
     my @in_params;
     if (ref($_[0]) eq "HASH") {
-	   @in_params = %{$_[0]};
-    } 
-    else {
-	   @in_params = @_;
+       @in_params = %{$_[0]};
     }
-    
+    else {
+       @in_params = @_;
+    }
+
     if (defined($in_params[0]) and $in_params[0] eq '-or') {
         shift @in_params;
         my @sub_queries = @{ shift @in_params };
@@ -371,15 +371,15 @@ sub resolve {
         if ($key =~ m/^(_id_only|_param_key|_unique|__get_serial|_change_count)$/) {
             # skip the pair: legacy/internal cruft
             next;
-        } 
-        
+        }
+
         my $pos = index($key,' ');
         if ($pos != -1) {
             # the key is "propname op"
             $property_name = substr($key,0,$pos);
             $operator = substr($key,$pos+1);
             if (substr($operator,0,1) eq ' ') {
-               $operator =~ s/^\s+//; 
+               $operator =~ s/^\s+//;
             }
         }
         else {
@@ -387,7 +387,7 @@ sub resolve {
             $property_name = $key;
             $operator = '';
         }
-        
+
         if (my $ref = ref($value)) {
             if ( (not $operator) and ($ref eq "HASH")) {
                 if (
@@ -400,16 +400,16 @@ sub resolve {
                     if (exists $value->{escape}) {
                         $operator .= "-" . $value->{escape}
                     }
-                    $key .= " " . $operator;                    
+                    $key .= " " . $operator;
                     $value = $value->{value};
                     $ref = ref($value);
                 }
                 else {
-                    # the HASH is a value for the specified param 
+                    # the HASH is a value for the specified param
                     push @hard_refs, scalar(@values), $value;
                 }
             }
-            
+
             if ($ref eq "ARRAY") {
                 if (not $operator) {
                     # key => [] is the same as "key in" => []
@@ -417,7 +417,7 @@ sub resolve {
                     $key .= ' in';
                 }
                 elsif ($operator eq 'not') {
-                    # "key not" => [] is the same as "key not in" 
+                    # "key not" => [] is the same as "key not in"
                     $operator .= ' in';
                     $key .= ' in';
                 }
@@ -432,16 +432,16 @@ sub resolve {
                     }
                 }
 
-            } # done handling ARRAY value 
-        
+            } # done handling ARRAY value
+
         } # done handling ref values
 
         push @keys, $key;
         push @values, $value;
     }
-    
+
     # the above uses no class metadata
-    
+
     # this next section uses class metadata
     # it should be moved into the normalization layer
 
@@ -453,9 +453,9 @@ sub resolve {
     my $subject_class_props =
         $subject_class_meta->{'cache'}{'UR::BoolExpr::resolve'} ||=
         { map {$_, 1}  ( $subject_class_meta->all_property_type_names) };
-    
+
     my ($op,@extra);
-    
+
     my $kn = 0;
     my $vn = 0;
     my $cn = 0;
@@ -469,7 +469,7 @@ sub resolve {
     my @swap_key_pos;
     my @swap_key_value;
     my $complex_values = 0;
-    
+
     for my $value (@values) {
         $key = $keys[$kn++];
         if (substr($key,0,1) eq '-') {
@@ -479,14 +479,14 @@ sub resolve {
         else {
             $vn++;
         }
-        
+
         my $pos = index($key,' ');
         if ($pos != -1) {
-            # "propname op" 
+            # "propname op"
             $property_name = substr($key,0,$pos);
             $operator = substr($key,$pos+1);
             if (substr($operator,0,1) eq ' ') {
-               $operator =~ s/^\s+//; 
+               $operator =~ s/^\s+//;
             }
         }
         else {
@@ -494,9 +494,9 @@ sub resolve {
             $property_name = $key;
             $operator = '';
         }
-        
+
         # account for the case where this parameter does
-        # not match an actual property 
+        # not match an actual property
         if (!exists $subject_class_props->{$property_name} and index($property_name,'.') == -1) {
             if (substr($property_name,0,1) eq '_') {
                 warn "ignoring $property_name in $subject_class bx construction!"
@@ -504,10 +504,10 @@ sub resolve {
             else {
                 push @extra_key_pos, $kn-1;
                 push @extra_value_pos, $vn-1;
-                next;                
+                next;
             }
         }
-        
+
         my $ref = ref($value);
         if($ref) {
             $complex_values = 1;
@@ -522,14 +522,14 @@ sub resolve {
                         next;
                     }
                     $data_type = $property_meta->data_type;
-                    $is_many = $property_meta->is_many;                    
+                    $is_many = $property_meta->is_many;
                 }
                 else {
                     $data_type = $subject_class_meta->{has}{$property_name}{data_type};
-                    $is_many = $subject_class_meta->{has}{$property_name}{is_many};        
+                    $is_many = $subject_class_meta->{has}{$property_name}{is_many};
                 }
                 $data_type ||= '';
-                
+
                 if ($data_type eq 'ARRAY') {
                     # ensure we re-constitute the original array not a copy
                     push @hard_refs, $vn-1, $value;
@@ -538,16 +538,16 @@ sub resolve {
                 }
                 elsif (not $is_many) {
                     no warnings;
-                    
+
                     # sort and replace
                     # note that in perl5.10 and above strings like "inf*" have a numeric value
-                    # causing this kind of sorting to do surprising things, but the only 
+                    # causing this kind of sorting to do surprising things, but the only
                     # goal here is to normalize results ...so this is fine
-                    $value = [ 
-                        sort { $a <=> $b or $a cmp $b } 
+                    $value = [
+                        sort { $a <=> $b or $a cmp $b }
                         @$value
-                    ];         
-                    
+                    ];
+
                     if ($operator ne 'between' and $operator ne 'not between') {
                         my $last = $value;
                         for (my $i = 0; $i < @$value;) {
@@ -608,7 +608,7 @@ sub resolve {
                     push @hard_refs, $vn-1, $value;
                 }
                 elsif ($value->can($property_name)) {
-                    # TODO: stop suporting foo_id => $foo, since you can do foo=>$foo, and foo_id=>$foo->id  
+                    # TODO: stop suporting foo_id => $foo, since you can do foo=>$foo, and foo_id=>$foo->id
                     #$DB::single = 1;
                     # Carp::cluck("using $property_name => \$obj to get $property_name => \$obj->$property_name is deprecated...");
                     $value = $value->$property_name;
@@ -639,7 +639,7 @@ sub resolve {
             push @extra, $keys[$extra_key_pos[$n]], $values[$extra_value_pos[$n]];
         }
     }
-    
+
     if (@xremove_keys) {
         my @new;
         my $next_pos_to_remove = $xremove_keys[0];
@@ -649,9 +649,9 @@ sub resolve {
                 $next_pos_to_remove = $xremove_keys[0];
                 next;
             }
-            push @new, $keys[$n];            
+            push @new, $keys[$n];
         }
-        @keys = @new;        
+        @keys = @new;
     }
 
     if (@xremove_values) {
@@ -672,8 +672,8 @@ sub resolve {
                 }
             }
         }
-        
-        
+
+
         my @new;
         my $next_pos_to_remove = $xremove_values[0];
         for (my $n = 0; $n < @values; $n++) {
@@ -682,10 +682,10 @@ sub resolve {
                 $next_pos_to_remove = $xremove_values[0];
                 next;
             }
-            push @new, $values[$n];            
+            push @new, $values[$n];
         }
-        @values = @new;        
-    }    
+        @values = @new;
+    }
 
     my $template;
     if (@constant_values) {
@@ -696,7 +696,7 @@ sub resolve {
         );
     }
     else {
-        $template = $subject_class_meta->{cache}{"UR::BoolExpr::resolve"}{"template for class and keys without constant values"}{"$subject_class @keys"} 
+        $template = $subject_class_meta->{cache}{"UR::BoolExpr::resolve"}{"template for class and keys without constant values"}{"$subject_class @keys"}
             ||= UR::BoolExpr::Template::And->_fast_construct(
                 $subject_class,
                 \@keys,
@@ -705,14 +705,14 @@ sub resolve {
     }
 
     my $value_id = ($complex_values ? UR::BoolExpr::Util->values_to_value_id(@values) : UR::BoolExpr::Util->values_to_value_id_simple(@values) );
-    
+
     my $rule_id = join($UR::BoolExpr::Util::id_sep,$template->{id},$value_id);
 
     my $rule = __PACKAGE__->get($rule_id); # flyweight constructor
 
     $rule->{template} = $template;
     $rule->{values} = \@values;
-    
+
     $vn = 0;
     $cn = 0;
     my @list;
@@ -735,7 +735,7 @@ sub resolve {
     $resolve_depth--;
     if (wantarray) {
         return ($rule, @extra);
-    } 
+    }
     elsif (@extra && defined wantarray) {
         Carp::confess("Unknown parameters in rule for $subject_class: " . join(",", map { defined($_) ? "'$_'" : "(undef)" } @extra));
     }
@@ -747,7 +747,7 @@ sub resolve {
 sub _params_list {
     my $list = $_[0]->{_params_list} ||= do {
         my $self = $_[0];
-        my $template = $self->template;        
+        my $template = $self->template;
         $self->values unless $self->{values};
         my @list;
         # are method calls really too expensive here?
@@ -787,12 +787,12 @@ sub normalize {
     my $self = shift;
 
     my $rule_template = $self->template;
-    
+
     if ($rule_template->{is_normalized}) {
         return $self;
     }
     my @unnormalized_values = $self->values();
-    
+
     my $normalized = $rule_template->get_normalized_rule_for_values(@unnormalized_values);
     return unless defined $normalized;
 
@@ -805,20 +805,20 @@ sub normalize {
 # a handful of places still use this
 sub legacy_params_hash {
     my $self = shift;
-        
+
     # See if we have one already.
     my $params_array = $self->{legacy_params_array};
     return { @$params_array } if $params_array;
-    
+
     # Make one by starting with the one on the rule template
     my $rule_template = $self->template;
     my $params = { %{$rule_template->legacy_params_hash}, $self->params_list };
-    
+
     # If the template has a _param_key, fill it in.
     if (exists $params->{_param_key}) {
         $params->{_param_key} = $self->id;
     }
-    
+
     # This was cached above and will return immediately on the next call.
     # Note: the caller should copy this reference before making changes.
     $self->{legacy_params_array} = [ %$params ];
@@ -837,7 +837,7 @@ sub resolve_for_string {
     my ($property, $op, $value);
 
     no warnings;
-    
+
     my $filter_regex = $self->filter_regex_for_string();
     my @filters = map {
         unless (($property, $op, $value) = ($_ =~ /$filter_regex/)) {
@@ -866,7 +866,7 @@ sub resolve_for_string {
 
 sub _resolve_from_filter_array {
     my $class = shift;
-    
+
     my $subject_class_name = shift;
     my $filters = shift;
     my $usage_hints = shift;
@@ -874,23 +874,23 @@ sub _resolve_from_filter_array {
     my $page = shift;
 
     my @rule_filters;
-    
+
     my @keys;
     my @values;
 
     for my $fdata (@$filters) {
         my $rule_filter;
-    
+
         # rule component
         my $key = $fdata->[0];
         my $value;
-    
+
         # process the operator
         if ($fdata->[1] =~ /^!?(:|@|between|in)$/i) {
-            
+
             my @list_parts;
             my @range_parts;
-            
+
             if ($fdata->[1] eq "@") {
                 # file path
                 my $fh = IO::File->new($fdata->[2]);
@@ -905,9 +905,9 @@ sub _resolve_from_filter_array {
                 @list_parts = split(/\//,$fdata->[2]);
                 @range_parts = split(/-/,$fdata->[2]);
             }
-            
+
             if (@list_parts > 1) {
-                my $op = ($fdata->[1] =~ /^!/ ? 'not in' : 'in'); 
+                my $op = ($fdata->[1] =~ /^!/ ? 'not in' : 'in');
                 # rule component
                 if (substr($key, -3, 3) ne ' in') {
                     $key = join(' ', $key, $op);
@@ -932,7 +932,7 @@ sub _resolve_from_filter_array {
                 else {
                     die 'The ":" operator expects a range sparated by a dash.' . "\n";
                 }
-                
+
                 $key = $fdata->[0] . " between";
                 $value = [$a, $b];
                 $rule_filter = [$fdata->[0], "between", [$a, $b] ];
@@ -940,7 +940,7 @@ sub _resolve_from_filter_array {
             else {
                 die 'The ":" operator expects a range sparated by a dash, or a slash-separated list.' . "\n";
             }
-            
+
         }
         # this accounts for cases where value is null
         elsif (length($fdata->[2])==0) {
@@ -960,10 +960,10 @@ sub _resolve_from_filter_array {
             $value = $fdata->[2];
             $rule_filter = [ @$fdata ];
         }
-        
+
         push @keys, $key;
         push @values, $value;
-    } 
+    }
     if ($usage_hints or $order or $page) {
         # todo: incorporate hints in a smarter way
         my %p;
@@ -971,26 +971,26 @@ sub _resolve_from_filter_array {
             $p{$key} = shift @values;
         }
         return $class->resolve(
-            $subject_class_name, 
-            %p, 
+            $subject_class_name,
+            %p,
             ($usage_hints   ? (-hints   => $usage_hints) : () ),
             ($order         ? (-order   => $order) : () ),
             ($page          ? (-page    => $page) : () ),
-        ); 
+        );
     }
     else {
         return UR::BoolExpr->_resolve_from_subject_class_name_keys_and_values(
             subject_class_name => $subject_class_name,
             keys => \@keys,
             values=> \@values,
-        );    
+        );
     }
-    
+
 }
 
 sub _resolve_from_subject_class_name_keys_and_values {
     my $class = shift;
-    
+
     my %params = @_;
     my $subject_class_name = $params{subject_class_name};
     my @values          = @{ $params{values} || [] };
@@ -1000,7 +1000,7 @@ sub _resolve_from_subject_class_name_keys_and_values {
 
     my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
     my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);
-    
+
     my $template_id = $subject_class_name . '/And/' . join(",",@keys) . "/" . $constant_value_id;
     my $rule_id = join($UR::BoolExpr::Util::id_sep,$template_id,$value_id);
 
@@ -1017,19 +1017,19 @@ sub _resolve_from_subject_class_name_keys_and_values {
 
 =head1 NAME
 
-UR::BoolExpr - a "where clause" for objects 
+UR::BoolExpr - a "where clause" for objects
 
 =head1 SYNOPSIS
-    
+
     my $o = Acme::Employee->create(
         ssn => '123-45-6789',
         name => 'Pat Jones',
-        status => 'active', 
+        status => 'active',
         start_date => UR::Context->current->now,
         payroll_category => 'hourly',
         boss => $other_employee,
-    );    
-        
+    );
+
     my $bx = Acme::Employee->define_boolexpr(
         'payroll_category'                  => 'hourly',
         'status'                            => ['active','terminated'],
@@ -1038,21 +1038,21 @@ UR::BoolExpr - a "where clause" for objects
         'start_date between'                => ['2009-01-01','2009-02-01'],
         'boss.name in'                      => ['Cletus Titus', 'Mitzy Mayhem'],
     );
-    
-    $bx->evaluate($o); # true 
-    
-    $bx->specifies_value_for('payroll_category') # true 
-    
+
+    $bx->evaluate($o); # true
+
+    $bx->specifies_value_for('payroll_category') # true
+
     $bx->value_for('payroll_cagtegory') # 'hourly'
-        
+
     $o->payroll_category('salary');
     $bx->evaluate($o); # false
 
     # these could take either a boolean expression, or a list of params
     # from which it will generate one on-the-fly
     my $set     = Acme::Employee->define_set($bx);  # same as listing all of the params
-    my @matches = Acme::Employee->get($bx);         # same as above, but returns the members 
-       
+    my @matches = Acme::Employee->get($bx);         # same as above, but returns the members
+
     my $bx2 = $bx->reframe('boss');
     #'employees.payroll_category'            => 'hourly',
     #'employees.status'                      => ['active','terminated'],
@@ -1089,7 +1089,7 @@ The data used to create the boolean expression can be re-extracted:
 
     my @p = $r->params_list;
     # @p = four items
-    
+
     my %p = $r->params_list;
     # %p = two key value pairs
 
@@ -1154,7 +1154,7 @@ the BoolExpr was created from
 
   $id = $bx->value_for_id
 
-If $bx's properties include all the ID properties of its subject class, 
+If $bx's properties include all the ID properties of its subject class,
 C<value_for_id> returns that value.  Otherwise, it returns the empty list.
 If the subject class has more than one ID property, this returns the value
 of the composite ID.
@@ -1204,7 +1204,7 @@ For instance, in a class with
 An expression of:
 
     c => 1234
-    
+
 Becomes:
 
     a.bb.cc => 1234
@@ -1219,7 +1219,7 @@ the flattened expression would have an additional value for each element:
 An expression of:
 
     c => 1234
-    
+
 Becomes:
 
     a.bb.cc => 1234
@@ -1244,8 +1244,8 @@ A boolean expression (or "rule") has an "id", which completely describes the rul
 and a method called evaluate($o) which tests the rule on a given object.
 
 The id is composed of two parts:
-- A template_id. 
-- A value_id.  
+- A template_id.
+- A value_id.
 
 Nearly all real work delegates to the template to avoid duplication of cached details.
 
