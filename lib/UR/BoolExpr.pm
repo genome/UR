@@ -517,7 +517,9 @@ sub resolve {
                 if ($UR::initialized) {
                     my $property_meta = $subject_class_meta->property_meta_for_name($property_name);
                     unless (defined $property_meta) {
-                        Carp::croak("No property metadata for $subject_class property '$property_name' for rule parameters ($key => $value)\n" . Data::Dumper::Dumper({ @_ }));
+                        push @extra_key_pos, $kn-1;
+                        push @extra_value_pos, $vn-1;
+                        next;
                     }
                     $data_type = $property_meta->data_type;
                     $is_many = $property_meta->is_many;                    
