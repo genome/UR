@@ -32,6 +32,7 @@ class UR::Object::Join {
     doc => "join metadata used internally by the ::QueryBuilder"
 };
 
+our $join_counter;
 our %resolve_chain;
 sub resolve_chain {
     my ($class, $class_name, $property_chain) = @_;
@@ -147,7 +148,7 @@ sub _resolve_via_to {
             my $where_rule = UR::BoolExpr->resolve($join->{foreign_class}, @$where);                
             my $id = $join->{id};
             $id .= ' ' . $where_rule->id;
-            
+            $id .= ' ' . $join_counter++;
             my %join_data = %$join;
             push @joins, $class->_get_or_define(%join_data, id => $id, where => $where, sub_group_label => $pmeta->property_name);
         }
@@ -257,6 +258,7 @@ sub _resolve_forward {
     $foreign_name_for_source ||= '<' . $source_class . '::' . $source_name_for_foreign;
 
     #$DB::single = 1 if $where;
+    $id .= ' ' . $join_counter++;
 
     push @joins, $class->_get_or_define( 
                     id => $id,
@@ -327,6 +329,7 @@ sub _resolve_reverse {
             $id .= ' ' . $where_rule->id;
 
         }
+        $id .= ' ' . $join_counter++;
         $_->{id} = $id; 
 
         $_->{is_optional} = ($pmeta->is_optional || $pmeta->is_many);
