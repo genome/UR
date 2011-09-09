@@ -18,7 +18,7 @@ UR::Object::Type->define(
     ],
 );
 
-our @CARP_NOT = qw(UR::Context);
+our @CARP_NOT = qw(UR::Context UR::DataSource::QueryPlan);
 
 sub define { shift->__define__(@_) }
 
