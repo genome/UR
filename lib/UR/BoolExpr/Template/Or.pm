@@ -32,7 +32,7 @@ sub _reframe_bx {
         push @new, [ $new->_params_list ];
     }
     my @meta = $bx->subject_class_name->__meta__->property_meta_for_name($in_terms_of);
-    my @joins = $meta[-1]->_resolve_join_chain();
+    my @joins = $meta[-1]->_resolve_join_chain($in_terms_of);
     my $reframed_bx = $class->_compose($joins[-1]{foreign_class},@new);
     return $reframed_bx;
 }

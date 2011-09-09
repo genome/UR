@@ -336,7 +336,7 @@ sub _init_rdbms {
     for my $delegated_property (sort @delegated_properties) {
         my $property_name = $delegated_property;
        
-        my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name);
+        my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name,$property_name);
         unless ($final_accessor) {
             $self->needs_further_boolexpr_evaluation_after_loading(1);
             next;
@@ -1180,7 +1180,7 @@ sub _resolve_db_joins_for_inheritance {
 }
 
 sub _resolve_object_join_data_for_property_chain {
-    my ($rule_template, $property_name) = @_;
+    my ($rule_template, $property_name,$join_label) = @_;
     my $class_meta = $rule_template->subject_class_name->__meta__;
     
     my @joins;
@@ -1197,7 +1197,7 @@ sub _resolve_object_join_data_for_property_chain {
         if (!$pmeta) {
             Carp::croak "Can't resolve joins for ".$rule_template->subject_class_name . " property '$property_name': No property metadata found for that class and property_name";
         }
-        push @joins, $pmeta->_resolve_join_chain();
+        push @joins, $pmeta->_resolve_join_chain($join_label);
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
@@ -1331,7 +1331,7 @@ sub _init_light {
     for my $delegated_property (@delegated_properties) {
         my $last_alias_for_this_chain;
         my $property_name = $delegated_property->property_name;
-        my @joins = $delegated_property->_resolve_join_chain;
+        my @joins = $delegated_property->_resolve_join_chain($property_name);
         my $relationship_name = $delegated_property->via;
         unless ($relationship_name) {
            $relationship_name = $property_name;
@@ -1719,7 +1719,7 @@ sub _init_core {
         my $last_alias_for_this_chain;
     
         my $property_name = $delegated_property->property_name;
-        my @joins = $delegated_property->_resolve_join_chain;
+        my @joins = $delegated_property->_resolve_join_chain($property_name);
         #pop @joins if $joins[-1]->{foreign_class}->isa("UR::Value");
         my $relationship_name = $delegated_property->via;
         unless ($relationship_name) {

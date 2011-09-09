@@ -42,6 +42,7 @@ sub _data_type_as_class_name {
                 my @joins = UR::Object::Join->resolve_chain(
                     $self->class_name,
                     $self->property_name,
+                    $self->property_name,
                 );
                 $foreign_class = $joins[-1]->foreign_class;
             }
@@ -281,9 +282,14 @@ sub _get_direct_join_linkage {
 
 sub _resolve_join_chain {
     my $self = shift;
+    my $join_label = shift;
+
+    $join_label ||= $self->property_name;
+
     return UR::Object::Join->resolve_chain(
         $self->class_name,
         $self->property_name,
+        $join_label,
     );
 }
 

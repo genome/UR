@@ -151,7 +151,7 @@ sub _reframe {
     unless (@pmeta) {
         Carp::confess("Failed to find property $in_terms_of_property_name on $from_class.  Cannot reframe $self!");  
     }
-    my @reframe_path_forward = map { $_->_resolve_join_chain } @pmeta;
+    my @reframe_path_forward = map { $_->_resolve_join_chain($in_terms_of_property_name) } @pmeta;
     my $to_class = $reframe_path_forward[-1]{foreign_class};
 
     # translate all of the old properties to use the path back to the original class
