@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 13;
+use Test::More tests=> 14;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -115,6 +115,9 @@ my @p2 = URT::Person->get('primary_car_color' => 'red');
 is(scalar(@p2),1,"got one person with a primary car color of red using a custom accessor");
 
 is($p1[0], $p2[0], "result matches");
+
+my @p3 = URT::Person->get('primary_car.color' => ['red']);
+is(scalar(@p3), 1, "got one person with a primary car color of red using a property chain and the \"in\" operator");
 
 my $bx5 = URT::Person->define_boolexpr('cars.color' => 'blue', 'cars.engine.size' => '400');
 #print "$bx5";
