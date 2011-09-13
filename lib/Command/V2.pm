@@ -34,6 +34,13 @@ UR::Object::Type->define(
     has_optional => [
         is_executed => { is => 'Boolean' },
         result      => { is => 'Scalar', is_output => 1 },
+        _total_command_count => { is => 'Integer', default => 0, is_transient => 1 },
+        _command_errors => { 
+            is => 'HASH',
+            doc => 'Values can be an array ref is multiple errors occur during a command\'s execution',
+            default => {},
+            is_transient => 1,
+        },
     ],
 );
 
@@ -168,6 +175,59 @@ sub exit_code_for_return_value {
     return $return_value;
 }
 
+
+sub display_command_summary_report {
+    my $self = shift;
+    my $total_count = $self->_total_command_count;
+    my %command_errors = %{$self->_command_errors};
+
+    if (keys %command_errors) {
+        $self->status_message("\n\nErrors Summary:");
+        for my $key (keys %command_errors) {
+            my $errors = $command_errors{$key};
+            $errors = [$errors] unless (ref($errors) and ref($errors) eq 'ARRAY');
+            my @errors = @{$errors};
+            print "$key: \n";
+            for my $error (@errors) {
+                $error = $self->truncate_error_message($error);
+                print "\t- $error\n";
+            }
+        }
+    }
+
+    if ($total_count > 1) {
+        my $error_count = scalar(keys %command_errors);
+        $self->status_message("\n\nCommand Summary:");
+        $self->status_message(" Successful: " . ($total_count - $error_count));
+        $self->status_message("     Errors: " . $error_count);
+        $self->status_message("      Total: " . $total_count);
+    }
+}
+
+sub append_error {
+    my $self = shift;
+    my $key = shift || die;
+    my $error = shift || die;
+
+    my $command_errors = $self->_command_errors;
+    push @{$command_errors->{$key}}, $error;
+    $self->_command_errors($command_errors);
+
+    return 1;
+}
+
+sub truncate_error_message {
+    my $self = shift;
+    my $error = shift || die;
+
+    # truncate errors so they are actually a summary
+    ($error) = split("\n", $error);
+
+    # meant to truncate a callstack as this is meant for user/high-level
+    $error =~ s/\ at\ \/.*//;
+
+    return $error;
+}
 
 #
 # Implement error_mesage/warning_message/status_message in a way
