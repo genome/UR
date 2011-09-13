@@ -1189,6 +1189,21 @@ sub _resolve_object_join_data_for_property_chain {
 
     my @pmeta = $class_meta->property_meta_for_name($property_name);
 
+    my $last_class_meta = $class_meta;
+    for my $meta (@pmeta) {
+        #id is a special property that we want to look up, but isn't necessarily on a table
+        #so if it aliases another property, we look at that instead
+        if($meta->property_name eq 'id' and $meta->class_name eq 'UR::Object') {
+            my @id_properties = grep {$_->class_name ne 'UR::Object'} $last_class_meta->id_properties;
+            if(@id_properties == 1) {
+                $meta = $id_properties[0];
+                $last_class_meta = $meta->class_name->__meta__;
+                next;
+            }
+            Carp::croak "can't join to class " . $last_class_meta->class_name . " with multiple id properties";
+        }
+        $last_class_meta = $meta->class_name->__meta__;
+    }
     # we can't actually get this from the joins because 
     # a bunch of optional things can be chained together to form
     # something non-optional
