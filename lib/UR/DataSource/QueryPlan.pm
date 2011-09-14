@@ -336,7 +336,7 @@ sub _init_rdbms {
     for my $delegated_property (sort @delegated_properties) {
         my $property_name = $delegated_property;
         my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
-        #my $table_alias                     = $delegation_chain_data->{"__all__"}{table_alias} = {};
+        $delegation_chain_data->{"__all__"}{table_alias} = {};
        
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name,$property_name);
         unless ($final_accessor) {
