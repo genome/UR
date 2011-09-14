@@ -335,6 +335,8 @@ sub _init_rdbms {
     DELEGATED_PROPERTY:
     for my $delegated_property (sort @delegated_properties) {
         my $property_name = $delegated_property;
+        my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
+        #my $table_alias                     = $delegation_chain_data->{"__all__"}{table_alias} = {};
        
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name,$property_name);
         unless ($final_accessor) {
@@ -392,7 +394,7 @@ sub _init_rdbms {
             while (my $join = shift @joins_for_object) { 
 
                 my $where = $join->{where};
-                
+
                 $current_inheritance_depth_for_this_target_join++;
 
                 my $foreign_class_name = $join->{foreign_class};
@@ -548,7 +550,7 @@ sub _init_rdbms {
             next if substr($column_name,0,1) eq '-';
 
             my $linkage_data = $condition->{$column_name};
-            my $expr_sql = (substr($column_name,0,1) eq " " ? $column_name : "${table_alias}.${column_name}");                                
+            my $expr_sql = (substr($column_name,0,1) eq " " ? $column_name : "${table_alias}.${column_name}");
             my @keys = qw/operator value_position value link_table_name link_column_name/;
             my ($operator, $value_position, $value, $link_table_name, $link_column_name) = @$linkage_data{@keys};
 
@@ -572,12 +574,12 @@ sub _init_rdbms {
                     return;
                 }
             }
-        } # next column                
+        } # next column
     } # next db join
 
     # build the WHERE clause by making a data structure which will be parsed outside of this module
     # special handling of different size lists, and NULLs, make a completely reusable SQL template very hard.
-    my @filter_specs;         
+    my @filter_specs;
     while (@sql_filters) {
         my $table_name = shift (@sql_filters);
         my $condition  = shift (@sql_filters);
@@ -668,7 +670,7 @@ sub _init_rdbms {
         # Q: - does it even make sense for the user to specify an order_by in the
         #    get() request for Set objects?  If so, then we need to concatonate these order_by_columns
         #    with the ones that already exist in $order_by_columns from the class data
-	# A: - yes, because group by means "return a list of subsets", and this lets you sort the subsets
+        # A: - yes, because group by means "return a list of subsets", and this lets you sort the subsets
         $order_by_columns = $ds->_select_clause_columns_for_table_property_data(@$db_property_data);
 
         $select_clause .= ', ' if $select_clause;
@@ -1202,7 +1204,12 @@ sub _resolve_object_join_data_for_property_chain {
             }
             Carp::croak "can't join to class " . $last_class_meta->class_name . " with multiple id properties";
         }
-        $last_class_meta = $meta->class_name->__meta__;
+        if($meta->data_type and $meta->data_type =~ /::/) {
+            $last_class_meta = UR::Object::Type->get($meta->data_type);
+        } else {
+            $last_class_meta = UR::Object::Type->get($meta->class_name);
+        }
+        last unless $last_class_meta;
     }
     # we can't actually get this from the joins because 
     # a bunch of optional things can be chained together to form

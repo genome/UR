@@ -66,7 +66,6 @@ my %all_loading_iterators;
 sub _create {
     my($class, $cached, $context, $normalized_rule, $data_source, $this_get_serial ) = @_;
 
-
     my $underlying_context_iterator = $context->_create_import_iterator_for_underlying_context(
               $normalized_rule, $data_source, $this_get_serial);
 

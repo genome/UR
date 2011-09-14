@@ -1495,6 +1495,7 @@ sub object_exists_in_underlying_context {
 
 sub get_objects_for_class_and_rule {
     my ($self, $class, $rule, $load, $return_closure) = @_;
+    my $initial_load = $load;
     #my @params = $rule->params_list;
     #print "GET: $class @params\n";
 
