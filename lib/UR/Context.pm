@@ -1615,6 +1615,8 @@ sub get_objects_for_class_and_rule {
         $load = ($cache_is_complete ? 0 : 1);
     }
 
+    my $normalized_rule_template = $normalized_rule->template;
+
     # optimization for the common case
     if (!$load and !$return_closure) {
         my @c = $self->_get_objects_for_class_and_rule_from_cache($class,$normalized_rule);
@@ -1636,13 +1638,16 @@ sub get_objects_for_class_and_rule {
             $self->_log_done_elapsed_time_for_rule($normalized_rule);
         }
 
+        if (defined($normalized_rule_template->limit) || defined($normalized_rule_template->page)) {
+            $self->_prune_obj_list_for_limit_and_offset(\@c,$normalized_rule_template);
+        }
+
         return @c if wantarray;           # array context
         return unless defined wantarray;  # null context
         Carp::confess("multiple objects found for a call in scalar context!" . Data::Dumper::Dumper(\@c)) if @c > 1;
         return $c[0];                     # scalar context
     }
 
-    my $normalized_rule_template = $normalized_rule->template;
     my $object_sorter = $normalized_rule_template->sorter();
 
     # the above process might have found all of the cached data required as a side-effect in which case
@@ -1684,6 +1689,9 @@ sub get_objects_for_class_and_rule {
         }
         else {
             # make a quick iterator for the cached data
+            if(defined($normalized_rule_template->limit) || defined($normalized_rule_template->page)) {
+                $self->_prune_obj_list_for_limit_and_offset($cached,$normalized_rule_template);
+            }
             return sub { return shift @$cached };
         }
     }
@@ -1698,6 +1706,9 @@ sub get_objects_for_class_and_rule {
         }
         else {
             # just get the cached data
+            if(defined($normalized_rule_template->limit) || defined($normalized_rule_template->page)) {
+                $self->_prune_obj_list_for_limit_and_offset($cached,$normalized_rule_template);
+            }
             @results = @$cached;
         }
         return unless defined wantarray;
@@ -1710,6 +1721,22 @@ sub get_objects_for_class_and_rule {
                         Data::Dumper::Dumper(\@results));
         }
         return $results[0];
+    }
+}
+
+
+sub _prune_obj_list_for_limit_and_offset {
+    my($self, $obj_list, $tmpl) = @_;
+
+    my $limit = $tmpl->limit;
+    if ($limit) {
+        my $offset = 0;
+        my $page = $tmpl->page;
+        if ($page) {
+            $offset = ($page->[0] - 1) * $limit;
+        }
+        splice(@$obj_list, 0, $offset);
+        $#$obj_list = ($limit-1);
     }
 }
 

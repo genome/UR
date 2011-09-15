@@ -824,6 +824,10 @@ sub _fast_construct {
         }
     }
 
+    if (defined $page and !defined $limit) {
+        Carp::croak("Can't define a BoolExpr with a -page without also providing -limit ");
+    }
+
     if (defined($hints) and ref($hints) ne 'ARRAY') {
         Carp::croak('-hints of a rule must be an arrayref of property names');
     }
