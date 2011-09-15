@@ -1492,7 +1492,7 @@ sub _get_msgdata {
 
 for my $type (qw/error warning status debug usage/) {
 
-    for my $method_base (qw/_messages_callback queue_ dump_/) {
+    for my $method_base (qw/_messages_callback queue_ dump_ _package _file _line _subroutine/) {
         my $method = (substr($method_base,0,1) eq "_"
             ? $type . $method_base
             : $method_base . $type . "_messages"
@@ -1540,19 +1540,19 @@ for my $type (qw/error warning status debug usage/) {
             $msgdata->{ $type . "_message" } = $msg;
 
             my ($package, $file, $line, $subroutine) = caller;
-            $msgdata->{ $type . "_message_package" } = $package;
-            $msgdata->{ $type . "_message_file" } = $file;
-            $msgdata->{ $type . "_message_line" } = $line;
-            $msgdata->{ $type . "_message_subroutine" } = $subroutine;
+            $msgdata->{ $type . "_package" } = $package;
+            $msgdata->{ $type . "_file" } = $file;
+            $msgdata->{ $type . "_line" } = $line;
+            $msgdata->{ $type . "_subroutine" } = $subroutine;
         }
 
         if (wantarray) {
             return (
                 $msgdata->{ $type . "_message" },
-                $msgdata->{ $type . "_message_package" },
-                $msgdata->{ $type . "_message_file" },
-                $msgdata->{ $type . "_message_line" },
-                $msgdata->{ $type . "_message_subroutine"},
+                $msgdata->{ $type . "_package" },
+                $msgdata->{ $type . "_file" },
+                $msgdata->{ $type . "_line" },
+                $msgdata->{ $type . "_subroutine"},
             );
         }
         return $msgdata->{ $type . "_message" };
