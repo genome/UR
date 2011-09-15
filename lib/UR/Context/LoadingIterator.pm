@@ -118,15 +118,7 @@ sub _create {
     };
 
     my $limit = $normalized_rule->template->limit;
-    my $page = $normalized_rule->template->page;
-    my $offset;
-    if (defined $limit) {
-        if (defined $page) {
-            $offset = ($page->[0] -1 )* $limit;
-        } else {
-            $offset = 0;
-        }
-    }
+    my $offset = $normalized_rule->template->offset;
 
     my $me_loading_iterator_as_string;  # See note below the closure definition
     my $loading_iterator = sub {

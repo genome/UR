@@ -777,6 +777,7 @@ sub _fast_construct {
     my $group_by = undef;
     my $page = undef;
     my $limit = undef;
+    my $offset = undef;
     my $aggregate = undef;
     my @constant_values_sorted;
 
@@ -810,6 +811,9 @@ sub _fast_construct {
             elsif ($key eq '-limit') {
                 $limit = $constant_value;
             }
+            elsif ($key eq '-offset') {
+                $offset = $constant_value;
+            }
             elsif ($key eq '-aggregate') {
                 $constant_value = [$constant_value] if (!ref $constant_value);
                 $aggregate = $constant_value;
@@ -824,12 +828,28 @@ sub _fast_construct {
         }
     }
 
-    if (defined $page and !defined $limit) {
-        Carp::croak("Can't define a BoolExpr with a -page without also providing -limit ");
+    if ($page) {
+        if (defined($limit) || defined($offset)) {
+            Carp::croak("-page and -limit/-offset are mutually exclusive when defining a BoolExpr");
+        }
+        if (ref($page) and ref($page) eq 'ARRAY') {
+            if (@$page == 2) {
+                $limit = $page->[1];
+                $offset = ($page->[0] - 1) * $limit;
+            } elsif (@$page) {
+                Carp::croak('-page must be an arrayref of two integers: -page => [$page_number, $page_size]');
+            }
+        } else {
+            Carp::croak('-page must be an arrayref of two integers: -page => [$page_number, $page_size]');
+        }
     }
 
     if (defined($hints) and ref($hints) ne 'ARRAY') {
-        Carp::croak('-hints of a rule must be an arrayref of property names');
+        if (! ref($hints)) {
+            $hints = [$hints];  # convert it to a list of one item
+        } else {
+            Carp::croak('-hints of a rule must be an arrayref of property names');
+        }
     }
 
     my $matches_all = scalar(@keys_sorted) == scalar(@constant_values);
@@ -879,9 +899,9 @@ sub _fast_construct {
         recursion_desc                  => $recursion_desc,
         hints                           => $hints,
         order_by                        => $order_by,
-        page                            => $page,
         group_by                        => $group_by,
         limit                           => $limit,
+        offset                          => $offset,
         aggregate                       => $aggregate,
         
         is_normalized                   => ($id eq $normalized_id ? 1 : 0),

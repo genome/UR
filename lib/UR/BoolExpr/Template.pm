@@ -58,11 +58,11 @@ UR::Object::Type->define(
     has_optional => [
         hints                           => { is => 'ARRAY' },
         recursion_desc                  => { is => 'ARRAY' },
-        page                            => { is => "ARRAY" },  # FIXME - this isn't set by anything below, shouldn't it be 'page'?
         order_by                        => { is => 'ARRAY' },
         group_by                        => { is => 'ARRAY' },
         aggregate                       => { is => 'ARRAY' },
         limit                           => { is => 'Integer' },
+        offset                          => { is => 'Integer' },
     ]
 );
 
@@ -79,7 +79,7 @@ our $empty_string   = $UR::BoolExpr::Util::empty_string;
 our $empty_list     = $UR::BoolExpr::Util::empty_list;
 
 # Names of the optional flags you can add to a rule
-our @meta_param_names = qw(recursion_desc hints page order_by group_by aggregate limit);
+our @meta_param_names = qw(recursion_desc hints order_by group_by aggregate limit offset);
 
 # Wrappers for regular properties
 

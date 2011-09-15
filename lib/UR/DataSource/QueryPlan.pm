@@ -166,7 +166,6 @@ sub _init_rdbms {
     my $hints    = $rule_template->hints;
     my $order_by = $rule_template->order_by;
     my $group_by = $rule_template->group_by;
-    my $page     = $rule_template->page;
     my $limit    = $rule_template->limit;
     my $aggregate = $rule_template->aggregate;
     my $recursion_desc = $rule_template->recursion_desc;

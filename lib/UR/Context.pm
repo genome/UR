@@ -1638,7 +1638,7 @@ sub get_objects_for_class_and_rule {
             $self->_log_done_elapsed_time_for_rule($normalized_rule);
         }
 
-        if (defined($normalized_rule_template->limit) || defined($normalized_rule_template->page)) {
+        if (defined($normalized_rule_template->limit) || defined($normalized_rule_template->offset)) {
             $self->_prune_obj_list_for_limit_and_offset(\@c,$normalized_rule_template);
         }
 
@@ -1689,7 +1689,7 @@ sub get_objects_for_class_and_rule {
         }
         else {
             # make a quick iterator for the cached data
-            if(defined($normalized_rule_template->limit) || defined($normalized_rule_template->page)) {
+            if(defined($normalized_rule_template->limit) || defined($normalized_rule_template->offset)) {
                 $self->_prune_obj_list_for_limit_and_offset($cached,$normalized_rule_template);
             }
             return sub { return shift @$cached };
@@ -1706,7 +1706,7 @@ sub get_objects_for_class_and_rule {
         }
         else {
             # just get the cached data
-            if(defined($normalized_rule_template->limit) || defined($normalized_rule_template->page)) {
+            if(defined($normalized_rule_template->limit) || defined($normalized_rule_template->offset)) {
                 $self->_prune_obj_list_for_limit_and_offset($cached,$normalized_rule_template);
             }
             @results = @$cached;
@@ -1729,15 +1729,9 @@ sub _prune_obj_list_for_limit_and_offset {
     my($self, $obj_list, $tmpl) = @_;
 
     my $limit = $tmpl->limit;
-    if ($limit) {
-        my $offset = 0;
-        my $page = $tmpl->page;
-        if ($page) {
-            $offset = ($page->[0] - 1) * $limit;
-        }
-        splice(@$obj_list, 0, $offset);
-        $#$obj_list = ($limit-1);
-    }
+    my $offset = $tmpl->offset || 0;
+    splice(@$obj_list, 0, $offset);
+    $#$obj_list = ($limit-1);
 }
 
 
@@ -2123,7 +2117,6 @@ sub _create_import_iterator_for_underlying_context {
     my $order_by    = $rule_template->order_by;
     my $aggregate   = $rule_template->aggregate;
     my $limit       = $rule_template->limit;
-    my $page        = $rule_template->page;
 
     if (my $sub_typing_property) {
         # When the rule has a property specified which indicates a specific sub-type, catch this and re-call
