@@ -343,30 +343,25 @@ sub _init_rdbms {
             next;
         }
 
-        #remove UR::Values from the join chain, because those aren't pulled from the database
-        my @fixed_joins;
-        for my $join (@joins)
-        {
-            #if the last join is a UR::Value, we need to cut it out and join its source to our new foreign
-            if(scalar @fixed_joins and $fixed_joins[-1]{foreign_class}->isa("UR::Value"))
+        # Splice out joins that go through a UR::Value class and back out to the DB, since UR::Value-types
+        # don't get stored in the DB
+        for (my $i = 0; $i < @joins; $i++) {
+            if ($joins[$i]->{'foreign_class'}->isa('UR::Value')
+                and $i < $#joins
+                and $joins[$i+1]->{'source_class'}->isa('UR::Value')
+                and $joins[$i]->{'foreign_class'}->isa($joins[$i+1]->{'source_class'}->isa('UR::Value')) )
+
             {
-                my $last_join = $fixed_joins[-1];
-                my $fixed_join = UR::Object::Join->_get_or_define( 
-                    source_class => $last_join->{source_class},
-                    source_property_names => $last_join->{source_property_names},
-                    foreign_class => $join->{foreign_class},
-                    foreign_property_names => $join->{foreign_property_names},
-                    is_optional => $last_join->{is_optional},
-                    id => $last_join->{id} . "->" . $join->{id},
-                );
-                $fixed_joins[-1] = $fixed_join;
-            }
-            else
-            {
-                push @fixed_joins, $join;
+                my $fixed_join = UR::Object::Join->_get_or_define(
+                                      source_class => $joins[$i]->{'source_class'},
+                                      source_property_names => $joins[$i]->{'source_property_names'},
+                                      foreign_class => $joins[$i+1]->{'foreign_class'},
+                                      foreign_property_names => $joins[$i+1]->{'foreign_property_names'},
+                                      is_optional => $joins[$i]->{'is_optional'},
+                                      id => $joins[$i]->{id} . "->" . $joins[$i+1]->{id});
+                splice(@joins, $i, 2, $fixed_join);
             }
         }
-        @joins = @fixed_joins;
 
         if ($joins[-1]{foreign_class}->isa("UR::Value")) {
             # the final join in a chain is often the link between a primitive value
