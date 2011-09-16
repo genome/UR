@@ -349,7 +349,7 @@ sub _init_rdbms {
             if ($joins[$i]->{'foreign_class'}->isa('UR::Value')
                 and $i < $#joins
                 and $joins[$i+1]->{'source_class'}->isa('UR::Value')
-                and $joins[$i]->{'foreign_class'}->isa($joins[$i+1]->{'source_class'}->isa('UR::Value')) )
+                and $joins[$i]->{'foreign_class'}->isa($joins[$i+1]->{'source_class'}) )
 
             {
                 my $fixed_join = UR::Object::Join->_get_or_define(
