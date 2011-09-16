@@ -372,15 +372,10 @@ sub _init_rdbms {
         my $last_class_object_excluding_inherited_joins;
         my $alias_for_property_value;
 
-        my $reverse_path = '';
-
         # one iteration per table between the start table and target
         while (my $object_join = shift @joins) { 
             $object_num++;
             my @joins_for_object = ($object_join);
-
-            $reverse_path .= '.' if $reverse_path;
-            $reverse_path .= $object_join->foreign_name_for_source;
 
             # one iteration per layer of inheritance for this object 
             # or per case of a join having additional filtering
