@@ -39,7 +39,7 @@ sub resolve_chain {
     $join_label ||= $property_chain;
 
     my $join_chain = 
-        $resolve_chain{$class_name}{$property_chain}
+        $resolve_chain{$class_name}{$join_label}{$property_chain}
             ||= do {
                 my $class_meta = $class_name->__meta__;
                 my @pmeta = $class_meta->property_meta_for_name($property_chain);
