@@ -533,6 +533,9 @@ sub _create_import_iterator_for_underlying_context {
         push @addl_join_comparators, @$addl_join_comparators;
     }
 
+    # To avoid calling the useless method 'fabricate' on a fabricator object for each object of each resultset row
+    my @object_fabricator_closures = map { $_->fabricator } @object_fabricators;
+
     # Insert the key into all_objects_are_loaded to indicate that when we're done loading, we'll
     # have everything
     if ($query_plan->{'rule_matches_all'} and not $group_by) {
@@ -681,8 +684,8 @@ sub _create_import_iterator_for_underlying_context {
             # get one or more objects from this row of results
             my $re_iterate = 0;
             my @imported;
-            for (my $i = 0; $i < @object_fabricators; $i++) {
-                my $object_fabricator = $object_fabricators[$i];
+            for (my $i = 0; $i < @object_fabricator_closures; $i++) {
+                my $object_fabricator = $object_fabricator_closures[$i];
 
                 # The usual case is that the query is just against one data source, and so the importer
                 # callback is just given the row returned from the DB query.  For multiple data sources,
@@ -695,9 +698,9 @@ sub _create_import_iterator_for_underlying_context {
                 #}
 
                 if (@secondary_data) {
-                    $imported_object = $object_fabricator->fabricate([@$next_db_row, @secondary_data]);
+                    $imported_object = $object_fabricator->([@$next_db_row, @secondary_data]);
                 } else {
-                    $imported_object = $object_fabricator->fabricate($next_db_row);
+                    $imported_object = $object_fabricator->($next_db_row);
                 }
 
                 #if ($is_monitor_query) {
