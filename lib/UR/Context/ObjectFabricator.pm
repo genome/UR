@@ -409,84 +409,8 @@ sub create_for_loading_template {
                 }
 
                 my $loading_info;
-                if ($re_bless) {
-                    # Performance shortcut.
-                    # These need to be subclassed, but there is no added data to load.
-                    # Just remove and re-add from the core data structure.
-                    my $already_loaded = $subclass_name->is_loaded($pending_db_object->id);
 
-                    my $different;
-                    my $merge_exception;
-                    if ($already_loaded) {
-                        eval { $different = $context->__merge_db_data_with_existing_object($class, $already_loaded, $pending_db_object_data, \@property_names) };
-                        $merge_exception = $@;
-                    }
-
-                    if ($already_loaded and !$different and !$merge_exception) {
-                        if ($pending_db_object == $already_loaded) {
-                            Carp::croak("An object of type ".$already_loaded->class." with ID '".$already_loaded->id
-                                        ."' was just loaded, but already exists in the object cache in the proper subclass");
-                        }
-                        if ($loading_base_object) {
-                            # Get our records about loading this object
-                            $loading_info = $dsx->_get_object_loading_info($pending_db_object);
-
-                            # Transfer the load info for the load we _just_ did to the subclass too.
-                            my $subclassified_template = $rule_template->sub_classify($subclass_name);
-                            $loading_info->{$subclassified_template->id} = $loading_info->{$template_id};
-                            $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
-                        }
-
-                        # This will wipe the above data from the object and the contex...
-                        delete $UR::Context::all_objects_loaded->{$class}->{$pending_db_object_id};
-
-                        if ($loading_base_object) {
-                            # ...now we put it back for both.
-                            $dsx->_add_object_loading_info($already_loaded, $loading_info);
-                            $dsx->_record_that_loading_has_occurred($loading_info);
-                        }
-
-                        bless($pending_db_object,'UR::DeletedRef');
-                        $pending_db_object = $already_loaded;
-                    }
-                    else {
-                        if ($loading_base_object) {
-                            my $subclassified_template = $rule_template->sub_classify($subclass_name);
-
-                            $loading_info = $dsx->_get_object_loading_info($pending_db_object);
-                            $dsx->_record_that_loading_has_occurred($loading_info);
-                            $loading_info->{$subclassified_template->id} = delete $loading_info->{$template_id};
-                            $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
-                        }
-
-                        my $prev_class_name = $pending_db_object->class;
-                        my $id = $pending_db_object->id;
-                        #$pending_db_object->__signal_change__("unload");
-                        delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$id};
-                        delete $UR::Context::all_objects_are_loaded->{$prev_class_name};
-                        if ($merge_exception) {
-                            # Now that we've removed traces of the incorrectly-subclassed $pending_db_object,
-                            # we can pass up any exception generated in __merge_db_data_with_existing_object
-                            Carp::croak($merge_exception);
-                        }
-                        if ($already_loaded) {
-                            # The new object should replace the old object.  Since other parts of the user's program
-                            # may have references to this object, we need to copy the values from the new object into
-                            # the existing cached object
-                            bless($pending_db_object,'UR::DeletedRef');
-                            $pending_db_object = $already_loaded;
-                        } else {
-                            # This is a completely new object
-                            $UR::Context::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
-                        }
-                        bless $pending_db_object, $subclass_name;
-                        $pending_db_object->__signal_change__("load");
-
-                        $dsx->_add_object_loading_info($pending_db_object, $loading_info);
-                        $dsx->_record_that_loading_has_occurred($loading_info);
-                    }
-                }
-                else {
+                if (!$re_bless) {
                     # This object cannot just be re-classified into a subclass because the subclass joins to additional tables.
                     # We'll make a parallel iterator for each subclass we encounter.
 
@@ -510,6 +434,83 @@ sub create_for_loading_template {
                     # this tells the caller to re-do the entire row using a subclass to get the real data.
                     # Hack?  Probably so...
                     return $subclass_name;
+                }
+
+                # Performance shortcut.
+                # These need to be subclassed, but there is no additional data to load.
+                # Just remove from the object cache, rebless to the proper subclass, and
+                # re-add to the object cache
+                my $already_loaded = $subclass_name->is_loaded($pending_db_object->id);
+
+                my $different;
+                my $merge_exception;
+                if ($already_loaded) {
+                    eval { $different = $context->__merge_db_data_with_existing_object($class, $already_loaded, $pending_db_object_data, \@property_names) };
+                    $merge_exception = $@;
+                }
+
+                if ($already_loaded and !$different and !$merge_exception) {
+                    if ($pending_db_object == $already_loaded) {
+                        Carp::croak("An object of type ".$already_loaded->class." with ID '".$already_loaded->id
+                                    ."' was just loaded, but already exists in the object cache in the proper subclass");
+                    }
+                    if ($loading_base_object) {
+                        # Get our records about loading this object
+                        $loading_info = $dsx->_get_object_loading_info($pending_db_object);
+
+                        # Transfer the load info for the load we _just_ did to the subclass too.
+                        my $subclassified_template = $rule_template->sub_classify($subclass_name);
+                        $loading_info->{$subclassified_template->id} = $loading_info->{$template_id};
+                        $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
+                    }
+
+                    # This will wipe the above data from the object and the contex...
+                    delete $UR::Context::all_objects_loaded->{$class}->{$pending_db_object_id};
+
+                    if ($loading_base_object) {
+                        # ...now we put it back for both.
+                        $dsx->_add_object_loading_info($already_loaded, $loading_info);
+                        $dsx->_record_that_loading_has_occurred($loading_info);
+                    }
+
+                    bless($pending_db_object,'UR::DeletedRef');
+                    $pending_db_object = $already_loaded;
+                }
+                else {
+                    if ($loading_base_object) {
+                        my $subclassified_template = $rule_template->sub_classify($subclass_name);
+
+                        $loading_info = $dsx->_get_object_loading_info($pending_db_object);
+                        $dsx->_record_that_loading_has_occurred($loading_info);
+                        $loading_info->{$subclassified_template->id} = delete $loading_info->{$template_id};
+                        $loading_info = $dsx->_reclassify_object_loading_info_for_new_class($loading_info,$subclass_name);
+                    }
+
+                    my $prev_class_name = $pending_db_object->class;
+                    my $id = $pending_db_object->id;
+                    #$pending_db_object->__signal_change__("unload");
+                    delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$id};
+                    delete $UR::Context::all_objects_are_loaded->{$prev_class_name};
+                    if ($merge_exception) {
+                        # Now that we've removed traces of the incorrectly-subclassed $pending_db_object,
+                        # we can pass up any exception generated in __merge_db_data_with_existing_object
+                        Carp::croak($merge_exception);
+                    }
+                    if ($already_loaded) {
+                        # The new object should replace the old object.  Since other parts of the user's program
+                        # may have references to this object, we need to copy the values from the new object into
+                        # the existing cached object
+                        bless($pending_db_object,'UR::DeletedRef');
+                        $pending_db_object = $already_loaded;
+                    } else {
+                        # This is a completely new object
+                        $UR::Context::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
+                    }
+                    bless $pending_db_object, $subclass_name;
+                    $pending_db_object->__signal_change__("load");
+
+                    $dsx->_add_object_loading_info($pending_db_object, $loading_info);
+                    $dsx->_record_that_loading_has_occurred($loading_info);
                 }
 
                 # the object may no longer match the rule after subclassifying...
