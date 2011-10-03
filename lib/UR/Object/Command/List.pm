@@ -20,12 +20,12 @@ class UR::Object::Command::List {
         filter => {
             is => 'Text',  
             is_optional => 1,
-            doc => 'Filter results based on the parameters.  See below for how to.'
+            doc => 'Filter results based on the parameters.  See below for how to.',
         },
         show => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Specify which columns to show, in order.' 
+            doc => 'Specify which columns to show, in order.',
         },
         order_by => {
             is => 'Text',
@@ -60,10 +60,10 @@ class UR::Object::Command::List {
         _fields => {
             is_many => 1,
             is_optional => 1,
-            doc => 'Methods which the caller intends to use on the fetched objects.  May lead to pre-fetching the data.'
+            doc => 'Methods which the caller intends to use on the fetched objects.  May lead to pre-fetching the data.',
         },
     ], 
-    doc => 'lists objects matching specified params'
+    doc => 'lists objects matching specified params',
 };
 
 sub sub_command_sort_position { .2 };
