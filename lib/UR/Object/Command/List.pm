@@ -21,6 +21,7 @@ class UR::Object::Command::List {
             is => 'Text',  
             is_optional => 1,
             doc => 'Filter results based on the parameters.  See below for how to.',
+            shell_args_position => 1,
         },
         show => {
             is => 'Text',
