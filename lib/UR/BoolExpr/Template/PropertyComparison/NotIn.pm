@@ -29,13 +29,10 @@ sub _compare {
     # use a numeric sorter.  If any one of them are strings, then use string sorting.
 
     my $compare_strings;
-    foreach my $v ( @$comparison_values ) {
-        if ($looking_for_undef and ! defined ($v)) {
-            return '';
-        } elsif (! $compare_strings and ! Scalar::Util::looks_like_number($v)) {
-            $compare_strings = 1;
-            last unless ($looking_for_undef);
-        }
+    if (Scalar::Util::blessed($comparison_values) and ref($comparison_values) eq 'ARRAYofAllNumbers') {
+        $compare_strings = 0;
+    } else {
+        $compare_strings = 1;
     }
     if (! $compare_strings) {
         foreach my $v ( @property_values ) {

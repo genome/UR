@@ -410,7 +410,7 @@ sub resolve {
                 }
             }
 
-            if ($ref eq "ARRAY") {
+            if ($ref eq "ARRAY" or $ref eq 'ARRAYofAllNumbers') {
                 if (not $operator) {
                     # key => [] is the same as "key in" => []
                     $operator = 'in';
@@ -512,7 +512,7 @@ sub resolve {
         my $ref = ref($value);
         if($ref) {
             $complex_values = 1;
-            if ($ref eq "ARRAY" and $operator ne 'between' and $operator ne 'not between') {
+            if (($ref eq 'ARRAYofAllNumbers' or $ref eq "ARRAY") and $operator ne 'between' and $operator ne 'not between') {
                 my $data_type;
                 my $is_many;
                 if ($UR::initialized) {
@@ -565,10 +565,9 @@ sub resolve {
                                       if (! defined($b)) { return -1}
                                       return $a <=> $b };
                     $value = [ sort $sorter @$value ];
-                    #$value = [
-                    #    sort { $a <=> $b or $a cmp $b }
-                    #    @$value
-                    #];
+                    if ($is_numbers) {
+                        bless $value, 'ARRAYofAllNumbers';
+                    }
 
                     # Remove duplicates from the list
                     if ($operator ne 'between' and $operator ne 'not between') {
