@@ -59,13 +59,15 @@ sub _compare {
     for ( $pv_idx = 0; $pv_idx < @property_values; $pv_idx++ ) {
         do {
             $cv_idx = ($cv_min + $cv_max) >> 1;
-            if (&$sorter > 0) {
+            my $result = &$sorter;
+            if (!$result) {
+                return '';
+            } elsif ($result > 0) {
                 $cv_min = $cv_idx + 1;
             } else {
                 $cv_max = $cv_idx - 1;
             }
-        } until (&$sorter == 0 or $cv_min > $cv_max);
-        return '' if (&$sorter == 0);
+        } until ($cv_min > $cv_max);
     }
     return 1;
 }
