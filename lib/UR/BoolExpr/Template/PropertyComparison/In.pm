@@ -19,10 +19,10 @@ sub _compare {
         @property_values = @{$property_values[0]};
     }
 
-    my $looking_for_undef;
-    if (! @property_values) {
-        # undef should match missing values
-        $looking_for_undef = 1;
+    # undef should match missing values, which will be sorted at the end - the sorter in
+    # UR::BoolExpr::resolve() takes care of the sorting for us
+    if (! @property_values and !defined($comparison_values->[-1])) {
+        return 1;
     }
 
     # If _all_ the comparison_values and property_values are numbers, then we can

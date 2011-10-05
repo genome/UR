@@ -542,16 +542,28 @@ sub resolve {
 
                     # sort and replace
                     # note that in perl5.10 and above strings like "inf*" have a numeric value
-                    # causing this kind of sorting to do surprising things, but the only
-                    # goal here is to normalize results ...so this is fine
+                    # causing this kind of sorting to do surprising things.  Hopefully looks_like_number()
+                    # does the right thing with these.
+                    #
+                    # This is slightly inefficient in that it has to go through the whole
+                    # list to find out which sort function to use, then actually sort it.
+                    # The alternative is to just start sorting numerically.  If that sorter
+                    # notices a non-number value, then bail out and re-sort stringly
                     my $sorter;
+                    my $is_numbers = 1;
                     foreach ( @$value ) {
+                        # undef/null sorts at the end
                         if (! Scalar::Util::looks_like_number($_) ) {
-                            $sorter = sub { $a cmp $b };
+                            $sorter = sub { if (! defined($a)) { return 1 }
+                                            if (! defined($b)) { return -1}
+                                            return $a cmp $b; };
+                            $is_numbers = 0;
                             last;
                         }
                     }
-                    $sorter ||= sub { $a <=> $b };
+                    $sorter ||= sub { if (! defined($a)) { return 1 }
+                                      if (! defined($b)) { return -1}
+                                      return $a <=> $b };
                     $value = [ sort $sorter @$value ];
                     #$value = [
                     #    sort { $a <=> $b or $a cmp $b }
