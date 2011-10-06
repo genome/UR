@@ -410,7 +410,7 @@ sub resolve {
                 }
             }
 
-            if ($ref eq "ARRAY" or $ref eq 'ARRAYofAllNumbers') {
+            if ($ref eq "ARRAY") {
                 if (not $operator) {
                     # key => [] is the same as "key in" => []
                     $operator = 'in';
@@ -512,7 +512,7 @@ sub resolve {
         my $ref = ref($value);
         if($ref) {
             $complex_values = 1;
-            if (($ref eq 'ARRAYofAllNumbers' or $ref eq "ARRAY") and $operator ne 'between' and $operator ne 'not between') {
+            if ($ref eq "ARRAY" and $operator ne 'between' and $operator ne 'not between') {
                 my $data_type;
                 my $is_many;
                 if ($UR::initialized) {
@@ -545,29 +545,11 @@ sub resolve {
                     # causing this kind of sorting to do surprising things.  Hopefully looks_like_number()
                     # does the right thing with these.
                     #
-                    # This is slightly inefficient in that it has to go through the whole
-                    # list to find out which sort function to use, then actually sort it.
-                    # The alternative is to just start sorting numerically.  If that sorter
-                    # notices a non-number value, then bail out and re-sort stringly
-                    my $sorter;
-                    my $is_numbers = 1;
-                    foreach ( @$value ) {
-                        # undef/null sorts at the end
-                        if (! Scalar::Util::looks_like_number($_) ) {
-                            $sorter = sub { if (! defined($a)) { return 1 }
-                                            if (! defined($b)) { return -1}
-                                            return $a cmp $b; };
-                            $is_numbers = 0;
-                            last;
-                        }
-                    }
-                    $sorter ||= sub { if (! defined($a)) { return 1 }
-                                      if (! defined($b)) { return -1}
-                                      return $a <=> $b };
+                    # undef/null sorts at the end
+                    my $sorter = sub { if (! defined($a)) { return 1 }
+                                       if (! defined($b)) { return -1}
+                                       return $a cmp $b; };
                     $value = [ sort $sorter @$value ];
-                    if ($is_numbers) {
-                        bless $value, 'ARRAYofAllNumbers';
-                    }
 
                     # Remove duplicates from the list
                     if ($operator ne 'between' and $operator ne 'not between') {

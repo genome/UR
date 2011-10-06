@@ -25,28 +25,8 @@ sub _compare {
         return 1;
     }
 
-    # If _all_ the comparison_values and property_values are numbers, then we can
-    # use a numeric sorter.  If any one of them are strings, then use string sorting.
-    my $compare_strings;
-    if (Scalar::Util::blessed($comparison_values) and ref($comparison_values) eq 'ARRAYofAllNumbers') {
-        $compare_strings = 0;
-    } else {
-        $compare_strings = 1;
-    }
-    if (! $compare_strings) {
-        foreach my $v ( @property_values ) {
-            if (! Scalar::Util::looks_like_number($v) ) {
-                $compare_strings = 1;
-                last;
-            }
-        }
-    }
-    my($sorter, $pv_idx, $cv_idx);
-    if ($compare_strings) {
-        $sorter = sub { return $property_values[$pv_idx] cmp $comparison_values->[$cv_idx] };
-    } else {
-        $sorter = sub { return $property_values[$pv_idx] <=> $comparison_values->[$cv_idx] };
-    }
+    my($pv_idx, $cv_idx);
+    my $sorter = sub { return $property_values[$pv_idx] cmp $comparison_values->[$cv_idx] };
 
     # Binary search within @$comparison_values
     my $cv_min = 0;
