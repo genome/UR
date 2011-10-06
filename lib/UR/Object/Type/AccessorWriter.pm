@@ -294,7 +294,7 @@ sub _resolve_bridge_logic_for_indirect_property {
 
                 my @results;
                 foreach my $result_class ( keys %result_class_names_and_ids ) {
-                    if($result_class eq 'UR::Value') { #can't group queries together for UR::Values
+                    if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
                         push @results, map { $result_class->get($_) } @{$result_class_names_and_ids{$result_class}};
                     } else {
                         push @results, $result_class->get($result_class_names_and_ids{$result_class});
