@@ -469,6 +469,7 @@ sub resolve {
     my @swap_key_pos;
     my @swap_key_value;
     my $complex_values = 0;
+    my %in_clause_values_are_strings;
 
     for my $value (@values) {
         $key = $keys[$kn++];
@@ -541,13 +542,16 @@ sub resolve {
 
                     # sort and replace
                     # note that in perl5.10 and above strings like "inf*" have a numeric value
-                    # causing this kind of sorting to do surprising things, but the only
-                    # goal here is to normalize results ...so this is fine
-                    $value = [
-                        sort { $a <=> $b or $a cmp $b }
-                        @$value
-                    ];
+                    # causing this kind of sorting to do surprising things.  Hopefully looks_like_number()
+                    # does the right thing with these.
+                    #
+                    # undef/null sorts at the end
+                    my $sorter = sub { if (! defined($a)) { return 1 }
+                                       if (! defined($b)) { return -1}
+                                       return $a cmp $b; };
+                    $value = [ sort $sorter @$value ];
 
+                    # Remove duplicates from the list
                     if ($operator ne 'between' and $operator ne 'not between') {
                         my $last = $value;
                         for (my $i = 0; $i < @$value;) {
@@ -712,6 +716,7 @@ sub resolve {
 
     $rule->{template} = $template;
     $rule->{values} = \@values;
+    $rule->{_in_clause_values_are_strings} = \%in_clause_values_are_strings if (keys %in_clause_values_are_strings);
 
     $vn = 0;
     $cn = 0;

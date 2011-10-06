@@ -440,7 +440,7 @@ sub create_for_loading_template {
                 # These need to be subclassed, but there is no additional data to load.
                 # Just remove from the object cache, rebless to the proper subclass, and
                 # re-add to the object cache
-                my $already_loaded = $subclass_name->is_loaded($pending_db_object->id);
+                my $already_loaded = $subclass_name->is_loaded($pending_db_object_id);
 
                 my $different;
                 my $merge_exception;
@@ -487,9 +487,9 @@ sub create_for_loading_template {
                     }
 
                     my $prev_class_name = $pending_db_object->class;
-                    my $id = $pending_db_object->id;
+                    #my $id = $pending_db_object->id;
                     #$pending_db_object->__signal_change__("unload");
-                    delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$id};
+                    delete $UR::Context::all_objects_loaded->{$prev_class_name}->{$pending_db_object_id};
                     delete $UR::Context::all_objects_are_loaded->{$prev_class_name};
                     if ($merge_exception) {
                         # Now that we've removed traces of the incorrectly-subclassed $pending_db_object,
@@ -504,7 +504,7 @@ sub create_for_loading_template {
                         $pending_db_object = $already_loaded;
                     } else {
                         # This is a completely new object
-                        $UR::Context::all_objects_loaded->{$subclass_name}->{$id} = $pending_db_object;
+                        $UR::Context::all_objects_loaded->{$subclass_name}->{$pending_db_object_id} = $pending_db_object;
                     }
                     bless $pending_db_object, $subclass_name;
                     $pending_db_object->__signal_change__("load");

@@ -127,7 +127,7 @@ my @tests = (
     [ [ name => [ undef ] ],                                    'name',    'in',      [undef] ],
     [ [ name => { operator => 'in', value => [ undef ] } ],     'name',    'in',      [undef] ],
     [ [ 'name in' => [undef] ],                                 'name',    'in',       [undef] ],
-    [ [ 'name in' => [ 1, undef]],                              'name',    'in',      [ undef, 1] ],
+    [ [ 'name in' => [ 1, undef]],                              'name',    'in',      [1, undef] ],
 
     [ [ bar => { operator => 'between', value => [0,3] } ],     'bar',     'between', [0,3] ],
     [ [ bar => { operator => 'not between', value => [0,3] } ], 'bar',     'not between', [0,3] ],
