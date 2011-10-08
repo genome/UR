@@ -2144,7 +2144,7 @@ sub _get_objects_for_class_and_rule_from_cache {
                 }
                 else { 
                     my $prop_meta = $class_meta->property_meta_for_name($key);
-                    if ($prop_meta && $prop_meta->is_many) {
+                    if ($prop_meta && ($prop_meta->is_many or $prop_meta->is_delegated)) {
                         # These indexes perform poorly in the general case if we try to index
                         # the is_many properties.  Instead, strip them out from the basic param
                         # list, and evaluate the superset of indexed objects through the rule
