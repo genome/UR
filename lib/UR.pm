@@ -113,7 +113,7 @@ use Date::Format;
 require UR::Exit;
 require UR::Util;
 
-require UR::Report;         # this is used by UR::DBI
+require UR::DBI::Report;         # this is used by UR::DBI
 require UR::DBI;            # this needs a new name, and need only be used by UR::DataSource::RDBMS
 
 require UR::ModuleBase;     # this should be switched to a role

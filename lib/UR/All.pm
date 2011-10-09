@@ -189,7 +189,7 @@ use UR::ObjectDeprecated;
 use UR::ObjectV001removed;
 use UR::ObjectV04removed;
 use UR::Observer;
-use UR::Report;
+use UR::DBI::Report;
 use UR::Service::RPC::Executer;
 use UR::Service::RPC::Message;
 use UR::Service::RPC::Server;
