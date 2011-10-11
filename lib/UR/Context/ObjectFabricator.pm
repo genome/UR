@@ -176,6 +176,40 @@ sub create_for_loading_template {
              = $fab_class->_resolve_delegation_data($rule,$loading_template,$query_plan,$local_all_params_loaded);
     }
 
+    my $update_apl_for_loaded_object = sub {
+        my $pending_db_object = shift;
+
+        # Make a note in all_params_loaded (essentially, the query cache) that we've made a
+        # match on this rule, and some equivalent rules
+        if ($loading_base_object and not $rule_specifies_id) {
+            if ($rule_class_name ne $load_class_name and scalar(@extra_params) == 0) {
+                $pending_db_object->{__load}->{$load_template_id}{$load_rule_id}++;
+                $UR::Context::all_params_loaded->{$load_template_id}{$load_rule_id} = undef;
+                $local_all_params_loaded->{$load_template_id}{$load_rule_id}++;
+            }
+            $pending_db_object->{__load}->{$template_id}{$rule_id}++;
+            $UR::Context::all_params_loaded->{$template_id}{$rule_id} = undef;
+            $local_all_params_loaded->{$template_id}{$rule_id}++;
+
+            if (@rule_properties_with_in_clauses) {
+                # FIXME - confirm that all the object properties are filled in at this point, right?
+                my @values = @$pending_db_object{@rule_properties_with_in_clauses};
+                my $r = $rule_template_without_in_clause->get_normalized_rule_for_values(@values);
+                my $r_id = $r->id;
+
+                $UR::Context::all_params_loaded->{$rule_template_id_without_in_clause}{$r_id} = undef;
+                $local_all_params_loaded->{$rule_template_id_without_in_clause}{$r_id}++;
+                # remove the notes about these in-clause values since they matched something
+                no warnings; # undef treated as an empty string below
+                foreach my $property (@rule_properties_with_in_clauses) {
+                    my $value = $pending_db_object->{$property};
+                    delete $in_clause_values{$property}->{$value};
+                }
+            }
+        }
+    };
+
+
     my $fabricator_obj;  # filled in after the closure definition
     my $object_fabricator = sub {
 
@@ -235,7 +269,7 @@ sub create_for_loading_template {
         # Handle the object based-on whether it is already loaded in the current context.
         if ($pending_db_object = $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id}) {
             $context->__merge_db_data_with_existing_object($class, $pending_db_object, $pending_db_object_data, \@property_names);
-
+            $update_apl_for_loaded_object->($pending_db_object);
         }
         else {
             # Handle the case in which the object is completely new in the current context.
@@ -352,35 +386,7 @@ sub create_for_loading_template {
                 Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class_name}->{$pending_db_object_id});
             }
 
-            # Make a note in all_params_loaded (essentially, the query cache) that we've made a
-            # match on this rule, and some equivalent rules
-            if ($loading_base_object and not $rule_specifies_id) {
-                if ($rule_class_name ne $load_class_name and scalar(@extra_params) == 0) {
-                    $pending_db_object->{__load}->{$load_template_id}{$load_rule_id}++;
-                    $UR::Context::all_params_loaded->{$load_template_id}{$load_rule_id} = undef;
-                    $local_all_params_loaded->{$load_template_id}{$load_rule_id}++;
-                }
-                $pending_db_object->{__load}->{$template_id}{$rule_id}++;
-                $UR::Context::all_params_loaded->{$template_id}{$rule_id} = undef;
-                $local_all_params_loaded->{$template_id}{$rule_id}++;
-
-                if (@rule_properties_with_in_clauses) {
-                    # FIXME - confirm that all the object properties are filled in at this point, right?
-                    my @values = @$pending_db_object{@rule_properties_with_in_clauses};
-                    my $r = $rule_template_without_in_clause->get_normalized_rule_for_values(@values);
-                    my $r_id = $r->id;
-
-                    $UR::Context::all_params_loaded->{$rule_template_id_without_in_clause}{$r_id} = undef;
-                    $local_all_params_loaded->{$rule_template_id_without_in_clause}{$r_id}++;
-                    # remove the notes about these in-clause values since they matched something
-                    no warnings; # undef treated as an empty string below
-                    foreach my $property (@rule_properties_with_in_clauses) {
-                        my $value = $pending_db_object->{$property};
-                        delete $in_clause_values{$property}->{$value};
-                    }
-
-                }
-            }
+            $update_apl_for_loaded_object->($pending_db_object);
 
             if ($subclass_name eq $class) {
                 # This object doesn't need additional subclassing

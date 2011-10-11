@@ -83,6 +83,9 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
     'Created a subscription for query');
 
 
+my @c = URT::Car->get(owner_id => 13, "is_primary true" => 1);
+
+
 $query_count = 0;
 my $set = URT::Person->define_set('age <' => 20);
 ok($set, 'Defined set of people younger than 20');
@@ -172,9 +175,7 @@ foreach my $color ( keys %colors ) {
     my $expected_names = $colors{$color};
     is(scalar(@names), scalar(@$expected_names), "Calling 'name' on the $color subset has the right number of names");
     is_deeply(\@names, $expected_names, 'The names are correct');
-    # First time through the loop, it indexes 2 car colors for primary cars
-    # plus 1 query each time for getting owners for each car color
-    is($query_count, $first_time ? 3 : 1, 'query count is correct');
+    is($query_count, 1, 'query count is correct');
     $first_time = 0;
 }
 
@@ -224,7 +225,7 @@ foreach (@subsets) {
 is_deeply([ map { $_->car_colors } @subsets ],
           [undef, 'blue', 'red', 'yellow'],
           'The color subsets were returned in the correct order');
-is($query_count, 3, 'query count is correct'); # there's 2 queries for car color indexing, one more for aggregating the car colors
+is($query_count, 1, 'query count is correct');
 
 
 @subsets = eval { URT::Person->get(-group_by => ['is_cool'], -order_by => ['car_colors'])};
