@@ -4,7 +4,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 UR::Object::Type->define(
     class_name => 'Person',
@@ -42,5 +42,4 @@ ok($fred_addr->value('789 elm st'), 'Change address for Fred');
 @people = Person->get(address => '456 oak st');
 is(scalar(@people), 0, 'Got 0 people at Fred\' old address');
 
-
-
+is($fred->address, '789 elm st', 'Address for Fred is correct through delegated property');
