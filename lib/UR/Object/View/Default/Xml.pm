@@ -39,11 +39,11 @@ sub xsl_template_files {
     return @found_xsl_names;
 }
 
-sub _generate_content {
+sub _generate_xml_doc {
     my $self = shift;
 
     my $subject = $self->subject();
-    return '' unless $subject;
+    return unless $subject;
 
     my $xml_doc = XML::LibXML->createDocument();
     $self->_xml_doc($xml_doc);
@@ -82,9 +82,18 @@ sub _generate_content {
         }
     }
 
-#From the XML::LibXML documentation:
-#If $format is 1, libxml2 will add ignorable white spaces, so the nodes content is easier to read. Existing text nodes will not be altered
-#If $format is 2 (or higher), libxml2 will act as $format == 1 but it add a leading and a trailing line break to each text node.
+    #From the XML::LibXML documentation:
+    #If $format is 1, libxml2 will add ignorable white spaces, so the nodes content is easier to read. Existing text nodes will not be altered
+    #If $format is 2 (or higher), libxml2 will act as $format == 1 but it add a leading and a trailing line break to each text node.
+
+    return $xml_doc;
+}
+
+sub _generate_content {
+    my $self = shift;
+
+    my $xml_doc = $self->_generate_xml_doc;
+    return '' unless $xml_doc;
 
     my $doc_string = $xml_doc->toString(1);
 
