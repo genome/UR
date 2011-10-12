@@ -269,6 +269,14 @@ sub create_for_loading_template {
         # Handle the object based-on whether it is already loaded in the current context.
         if ($pending_db_object = $UR::Context::all_objects_loaded->{$class}{$pending_db_object_id}) {
             $context->__merge_db_data_with_existing_object($class, $pending_db_object, $pending_db_object_data, \@property_names);
+            if ($loading_base_object
+                and
+                $needs_further_boolexpr_evaluation_after_loading
+                and
+                not $rule->evaluate($pending_db_object)
+            ) {
+                return;
+            }
             $update_apl_for_loaded_object->($pending_db_object);
         }
         else {
@@ -388,6 +396,7 @@ sub create_for_loading_template {
 
             $update_apl_for_loaded_object->($pending_db_object);
 
+            my $boolexpr_evaluated_ok;
             if ($subclass_name eq $class) {
                 # This object doesn't need additional subclassing
                 # Signal that the object has been loaded
@@ -524,6 +533,8 @@ sub create_for_loading_template {
                     #print "Object does not match rule!" . Dumper($pending_db_object,[$rule->params_list]) . "\n";
                     #$rule->evaluate($pending_db_object);
                     return;
+                } else {
+                    $boolexpr_evaluated_ok = 1;
                 }
             } # end of sub-classification code
 
@@ -532,7 +543,9 @@ sub create_for_loading_template {
                 and
                 $needs_further_boolexpr_evaluation_after_loading
                 and
-                not $rule->evaluate($pending_db_object)
+                ( ! $boolexpr_evaluated_ok )
+                and
+                ( ! $rule->evaluate($pending_db_object) )
             ) {
                 return;
             }

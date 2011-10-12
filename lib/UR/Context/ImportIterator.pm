@@ -776,10 +776,6 @@ sub _create_import_iterator_for_underlying_context {
                 $primary_object_for_next_db_row = undef;
                 redo LOAD_AN_OBJECT;
             }
-            if ($needs_further_boolexpr_evaluation_after_loading and not $rule->evaluate($primary_object_for_next_db_row)) {
-                $primary_object_for_next_db_row = undef;
-                redo LOAD_AN_OBJECT;
-            }
 
             if ($by_hand_recursive_source_property) {
                 my @values = grep { defined } $primary_object_for_next_db_row->$by_hand_recursive_source_property;
