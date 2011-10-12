@@ -8,7 +8,7 @@ our $VERSION = "0.34"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::Value::SCALAR',
-    is => ['UR::Value'],
+    is => ['UR::Value::PerlReference'],
 );
 
 1;
