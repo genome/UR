@@ -289,6 +289,15 @@ sub _init_rdbms {
                 next;
             }
 
+            # If the property is calculate and has a calculate_from list, add the
+            # calculate_from things to the internal hints list, but not the template
+            if ($property->is_calculated and $property->calculate_from) {
+                my $calculate_from = $property->calculate_from;
+                push @properties_involved, @$calculate_from;
+                push @$hints, @$calculate_from;
+                $hints{$_} = 1 foreach @$calculate_from;
+            }
+
             if (my $column_name = $property->column_name) {
                 # normal column: filter on it
                 unless ($table_name) {
