@@ -54,6 +54,7 @@ class UR::DataSource::QueryPlan {
         connect_by_clause                           => {},
         group_by_clause                             => {},
         order_by_columns                            => {},
+        order_by_non_column_data                    => {}, # flag that's true if asked to order_by something not in the data source
        
         sql_params                                  => {},
         filter_specs                                => {},
@@ -678,6 +679,7 @@ sub _init_rdbms {
         }
     }
 
+    my $order_by_non_column_data;
     if ($order_by = $rule_template->order_by) {
         # this is duplicated in _add_join
         my %order_by_property_names;
@@ -701,6 +703,7 @@ sub _init_rdbms {
         for my $name (@$order_by) {
             my $data = $order_by_property_names{$name};
             unless (ref($data)) {
+                $order_by_non_column_data = 1;
                 next;
             }
             push @data, $data;
@@ -727,6 +730,7 @@ sub _init_rdbms {
         connect_by_clause                           => $connect_by_clause,
         group_by_clause                             => $group_by_clause,
         order_by_columns                            => $order_by_columns,        
+        order_by_non_column_data                    => $order_by_non_column_data,
         filter_specs                                => \@filter_specs,
         sql_params                                  => \@sql_params,
         recurse_resolution_by_iteration             => $recurse_resolution_by_iteration,

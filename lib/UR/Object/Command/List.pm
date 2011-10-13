@@ -139,10 +139,9 @@ sub execute {
     my $bool_expr = $self->_resolve_boolexpr();
     return unless (defined $bool_expr);
   
-    # preloading the data ensures that the iterator doesn't trigger requery
-    my @results = $self->subject_class_name->get($bool_expr);
-
-    # TODO: remove the iterator entirely from the lister since all of the data is above--ss
+    # TODO: instead of using an iterator, get all the results back in a list and
+    # have the styler use the list, since it needs all the results to space the columns
+    # out properly anyway
     my $iterator;
     unless ($iterator = $self->subject_class_name->create_iterator(where => $bool_expr)) {
         $self->error_message($self->subject_class_name->error_message);

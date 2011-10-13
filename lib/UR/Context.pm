@@ -1616,6 +1616,18 @@ sub get_objects_for_class_and_rule {
         $load = ($cache_is_complete ? 0 : 1);
     }
 
+    if ($ds and $load and $rule_template->order_by) {
+        # if any of the order_by is calculated, then we need to do an unordered query against the
+        # data source, then we can do it as a non-load query and do the sorting on all the in-memory
+        # objects
+        my $qp = $ds->_resolve_query_plan($rule_template);
+        if ($qp->order_by_non_column_data) {
+            $self->_log_query_for_rule($class,$normalized_rule,"QUERY: Doing an unordered query on the datasource because one of the order_by properties of the rule is not expressable by the data source") if ($is_monitor_query);
+            $self->get_objects_for_class_and_rule($class, $rule->remove_filter('-order')->remove_filter('-order_by'), 1);
+            $load = 0;
+        }
+    }
+
     my $normalized_rule_template = $normalized_rule->template;
 
     # optimization for the common case
@@ -2023,6 +2035,7 @@ sub _get_objects_for_class_and_rule_from_cache {
     # Get all objects which are loaded in the application which match
     # the specified parameters.
     my ($self, $class, $rule) = @_;
+$DB::single=1 if ($class =~ m/Genome::/);
     
     my ($template,@values) = $rule->template_and_values;
 
@@ -2144,6 +2157,8 @@ sub _get_objects_for_class_and_rule_from_cache {
                 }
                 else { 
                     my $prop_meta = $class_meta->property_meta_for_name($key);
+                    # NOTE: We _could_ remove the is_delegated check if we knew we were operating on
+                    # a read-only context.
                     if ($prop_meta && ($prop_meta->is_many or $prop_meta->is_delegated)) {
                         # These indexes perform poorly in the general case if we try to index
                         # the is_many properties.  Instead, strip them out from the basic param
