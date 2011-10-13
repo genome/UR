@@ -164,6 +164,7 @@ sub _init_rdbms {
 
     # individual template based
     my $hints    = $rule_template->hints;
+    my %hints    = map { $_ => 1 } @$hints;
     my $order_by = $rule_template->order_by;
     my $group_by = $rule_template->group_by;
     my $limit    = $rule_template->limit;
@@ -303,7 +304,10 @@ sub _init_rdbms {
             elsif ($property->is_delegated) {
                 push @delegated_properties, $property->property_name;
             }
-            elsif ($property->is_calculated || $property->is_constant || $property->is_transient) {
+            elsif (($property->is_calculated || $property->is_constant || $property->is_transient)
+                   and
+                   ( ! exists($hints{$property_name}) or exists($filters{$property_name}) )
+            ) {
                 $self->needs_further_boolexpr_evaluation_after_loading(1);
             }
             else {
@@ -1384,6 +1388,7 @@ sub _init_light {
             my $source_class_object = $join->{'source_class_meta'} || $source_class_name->__meta__;
 
             my $foreign_class_name = $join->{foreign_class};
+            next DELEGATED_PROPERTY if ($foreign_class_name->isa('UR::Value'));
             my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
             my($foreign_data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
             if (! $foreign_data_source) {
