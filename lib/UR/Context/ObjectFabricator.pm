@@ -529,7 +529,12 @@ sub create_for_loading_template {
                 }
 
                 # the object may no longer match the rule after subclassifying...
-                if ($loading_base_object and not $rule->evaluate($pending_db_object)) {
+                if ($needs_further_boolexpr_evaluation_after_loading
+                    and
+                    $loading_base_object
+                    and
+                    not $rule->evaluate($pending_db_object)
+                ) {
                     #print "Object does not match rule!" . Dumper($pending_db_object,[$rule->params_list]) . "\n";
                     #$rule->evaluate($pending_db_object);
                     return;
