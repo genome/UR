@@ -123,10 +123,7 @@ sub generate_schema_for_class_meta {
         }
     }
 
-    my %properties_with_expected_columns = 
-        map { $_->column_name => $_ } 
-        grep { $_->column_name }
-        $class_meta->direct_property_metas;    
+    my %properties_with_expected_columns = $self->map_column_name_to_column_meta($class_meta->direct_property_metas);
 
     #my %expected_constraints =
     #    map { $_->column_name => $_ }
@@ -162,10 +159,7 @@ sub generate_schema_for_class_meta {
     my %existing_columns;
     if ($table) {
         ## print "found table $table_name\n";
-        %existing_columns = 
-            map { $_->column_name => $_ } 
-            grep { $_->column_name }
-            $table->columns;
+        %existing_columns = $self->map_column_name_to_column_meta($table->columns);
         push @defined, ($table,$table->columns);
     }
     else {
@@ -3163,6 +3157,12 @@ sub ur_data_type_for_data_source_data_type {
         $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
     }
     return $urtype;
+}
+
+sub map_column_name_to_column_meta {
+    my ($self, @properties) = @_;
+    my %hash = map { $_->column_name => $_ } grep { $_->column_name } @properties;
+    return %hash;
 }
 
 
