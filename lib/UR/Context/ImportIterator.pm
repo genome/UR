@@ -364,9 +364,7 @@ sub _create_secondary_loading_closures {
 
 
 # This returns an iterator that is used to bring objects in from an underlying
-# context into this context.  It will not return any objects that already exist
-# in the current context, even if the $db_iterator returns a row that belongs
-# to an already-existing object
+# context into this context.
 sub _create_import_iterator_for_underlying_context {
     my ($self, $rule, $dsx, $this_get_serial) = @_;
 
