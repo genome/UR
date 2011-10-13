@@ -325,7 +325,10 @@ sub resolve {
     # support for legacy passing of hashref instead of object or list
     # TODO: eliminate the need for this
     my @in_params;
-    if (ref($_[0]) eq "HASH") {
+    if ($subject_class->isa('UR::Value::PerlReference') and $subject_class eq 'UR::Value::' . ref($_[0])) {
+        @in_params = @_;
+    }
+    elsif (ref($_[0]) eq "HASH") {
        @in_params = %{$_[0]};
     }
     else {

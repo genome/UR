@@ -262,6 +262,19 @@ sub ur_data_type_for_data_source_data_type {
     return $urtype;
 }
 
+
+sub map_column_name_to_column_meta {
+    my ($self, @properties) = @_;
+    # Same as SUPER::map_column_name_to_column_meta except since Oracle is
+    # case-insensitive we upper case the column names.
+    # This helps allow a column name in a class definition to in a different case
+    # than what the database returns.
+    # Tested with both lc and uc to confirm it was case-insensitive.
+    my %hash = map { lc($_->column_name) => $_ } grep { $_->column_name } @properties;
+    return %hash;
+}
+
+
 1;
 
 =pod
