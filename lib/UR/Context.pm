@@ -2035,7 +2035,6 @@ sub _get_objects_for_class_and_rule_from_cache {
     # Get all objects which are loaded in the application which match
     # the specified parameters.
     my ($self, $class, $rule) = @_;
-$DB::single=1 if ($class =~ m/Genome::/);
     
     my ($template,@values) = $rule->template_and_values;
 
