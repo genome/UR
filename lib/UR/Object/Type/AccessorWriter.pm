@@ -294,7 +294,7 @@ sub _resolve_bridge_logic_for_indirect_property {
 
                 my @results;
                 foreach my $result_class ( keys %result_class_names_and_ids ) {
-                    if($result_class eq 'UR::Value') { #can't group queries together for UR::Values
+                    if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
                         push @results, map { $result_class->get($_) } @{$result_class_names_and_ids{$result_class}};
                     } else {
                         push @results, $result_class->get($result_class_names_and_ids{$result_class});
@@ -302,6 +302,23 @@ sub _resolve_bridge_logic_for_indirect_property {
                 }
                 return @results;
             };
+        } elsif ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value')) {
+            my $result_class = $to_property_meta->data_type;
+            my $bridging_identifiers = $to_property_meta->id_by;
+
+            $bridge_crosser = sub {
+                my @ids;
+                foreach my $bridge ( @_ ) {
+                    my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
+                    my @id = map { $bridge->$_ } @$bridging_identifiers;
+                    my $id = $id_resolver->(@id);
+
+                    push @ids, $id;
+                }
+
+                my @results = $result_class->get(\@ids);
+                return @results;
+            }
         }
 
     }

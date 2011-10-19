@@ -54,6 +54,7 @@ class UR::DataSource::QueryPlan {
         connect_by_clause                           => {},
         group_by_clause                             => {},
         order_by_columns                            => {},
+        order_by_non_column_data                    => {}, # flag that's true if asked to order_by something not in the data source
        
         sql_params                                  => {},
         filter_specs                                => {},
@@ -164,6 +165,7 @@ sub _init_rdbms {
 
     # individual template based
     my $hints    = $rule_template->hints;
+    my %hints    = map { $_ => 1 } @$hints;
     my $order_by = $rule_template->order_by;
     my $group_by = $rule_template->group_by;
     my $limit    = $rule_template->limit;
@@ -287,6 +289,15 @@ sub _init_rdbms {
                 next;
             }
 
+            # If the property is calculate and has a calculate_from list, add the
+            # calculate_from things to the internal hints list, but not the template
+            if ($property->is_calculated and $property->calculate_from) {
+                my $calculate_from = $property->calculate_from;
+                push @properties_involved, @$calculate_from;
+                push @$hints, @$calculate_from;
+                $hints{$_} = 1 foreach @$calculate_from;
+            }
+
             if (my $column_name = $property->column_name) {
                 # normal column: filter on it
                 unless ($table_name) {
@@ -303,7 +314,10 @@ sub _init_rdbms {
             elsif ($property->is_delegated) {
                 push @delegated_properties, $property->property_name;
             }
-            elsif ($property->is_calculated || $property->is_constant || $property->is_transient) {
+            elsif (($property->is_calculated || $property->is_constant || $property->is_transient)
+                   and
+                   ( ! exists($hints{$property_name}) or exists($filters{$property_name}) )
+            ) {
                 $self->needs_further_boolexpr_evaluation_after_loading(1);
             }
             else {
@@ -674,6 +688,7 @@ sub _init_rdbms {
         }
     }
 
+    my $order_by_non_column_data;
     if ($order_by = $rule_template->order_by) {
         # this is duplicated in _add_join
         my %order_by_property_names;
@@ -697,6 +712,7 @@ sub _init_rdbms {
         for my $name (@$order_by) {
             my $data = $order_by_property_names{$name};
             unless (ref($data)) {
+                $order_by_non_column_data = 1;
                 next;
             }
             push @data, $data;
@@ -723,6 +739,7 @@ sub _init_rdbms {
         connect_by_clause                           => $connect_by_clause,
         group_by_clause                             => $group_by_clause,
         order_by_columns                            => $order_by_columns,        
+        order_by_non_column_data                    => $order_by_non_column_data,
         filter_specs                                => \@filter_specs,
         sql_params                                  => \@sql_params,
         recurse_resolution_by_iteration             => $recurse_resolution_by_iteration,
@@ -1384,6 +1401,7 @@ sub _init_light {
             my $source_class_object = $join->{'source_class_meta'} || $source_class_name->__meta__;
 
             my $foreign_class_name = $join->{foreign_class};
+            next DELEGATED_PROPERTY if ($foreign_class_name->isa('UR::Value'));
             my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
             my($foreign_data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
             if (! $foreign_data_source) {

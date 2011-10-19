@@ -4,13 +4,13 @@
 
 =head1 NAME
 
-UR::Report - a database report interface
+UR::DBI::Report - a database report interface
 
 =head1 SYNOPSIS
 
-  ##- use UR::Report;  
-  UR::Report->use_standard_cmdline_options();
-  UR::Report->generate(sql => \@ARGV);
+  ##- use UR::DBI::Report;  
+  UR::DBI::Report->use_standard_cmdline_options();
+  UR::DBI::Report->generate(sql => \@ARGV);
   
 
 =head1 DESCRIPTION
@@ -24,7 +24,7 @@ and prints their results with formatting options.
 use strict;
 use warnings;
 
-package UR::Report;
+package UR::DBI::Report;
 use base 'UR::ModuleBase';
 require UR;
 our $VERSION = "0.34"; # UR $VERSION;
@@ -38,7 +38,7 @@ sub import
 {
     my $class = shift;
     my %params = @_;
-    UR::Report->extend_command_line() if delete $params{extend_command_line};
+    UR::DBI::Report->extend_command_line() if delete $params{extend_command_line};
     die "Unknown options passed-to " . __PACKAGE__ . join(", ", keys %params) if keys %params;
 }
 
@@ -195,7 +195,7 @@ sub generate
     
     my $dbh = delete $params{dbh};
     unless ($dbh) {
-        Carp::confess("No dbh sent to UR::Report, and no default available anymore!");
+        Carp::confess("No dbh sent to UR::DBI::Report, and no default available anymore!");
     }
 
     $dbh->{LongTruncOk} = 1;
@@ -361,7 +361,7 @@ sub generate
             # This flag may not be set until we try to get the first result.
             unless ($statement_is_not_a_query)
             {
-                $rowcnt = UR::Report->print_formatted(
+                $rowcnt = UR::DBI::Report->print_formatted(
                     sth => $sth,
                     outfh => $outfh,
                     (

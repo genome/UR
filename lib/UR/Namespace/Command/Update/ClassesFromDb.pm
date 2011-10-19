@@ -117,12 +117,17 @@ sub execute {
                 UR::Object::Type->get(data_source => $item->[0], table_name => $item->[1]);
             }
         }
-        
+
         for my $item (@$ds_table_list) {
             my ($data_source, $table_name) = @$item;
+            $self->_update_database_metadata_objects_for_schema_changes(
+                data_source => $data_source,
+                force_check_all_tables => $force_check_all_tables,
+                table_name => $table_name,
+            );
             for my $dd_class (qw/UR::DataSource::RDBMS::Table UR::DataSource::RDBMS::FkConstraint UR::DataSource::RDBMS::TableColumn/) {
                 push @data_dictionary_objects,
-                    $dd_class->get(data_source => $data_source, table_name => $table_name);
+                    $dd_class->get(data_source_obj => $data_source, table_name => $table_name);
             }
         }
     }
@@ -406,6 +411,7 @@ sub _update_database_metadata_objects_for_schema_changes {
     my ($self, %params) = @_;
     my $data_source = delete $params{data_source};
     my $force_check_all_tables = delete $params{force_check_all_tables};
+    my $table_name = delete $params{table_name};
     die "unknown params " . Dumper(\%params) if keys %params;
 
     #$data_source = $data_source->class;
@@ -427,6 +433,8 @@ sub _update_database_metadata_objects_for_schema_changes {
     my %current_table_names = map { s/"|'//g; $_ => $_ } @current_table_names;
 
     my %all_table_names = (%current_table_names, %previous_table_names);
+
+    if($table_name) { %all_table_names = ($table_name => 1) }
 
     my $new_object_revision = $UR::Context::current->now();
 

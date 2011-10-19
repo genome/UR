@@ -19,28 +19,33 @@ sub _compare {
         @property_values = @{$property_values[0]};
     }
 
-    no warnings qw(uninitialized);
-    foreach my $comparison_value (@$comparison_values) {
-        my $cv_is_number = Scalar::Util::looks_like_number($comparison_value);
+    # undef should match missing values, which will be sorted at the end - the sorter in
+    # UR::BoolExpr::resolve() takes care of the sorting for us
+    if (! @property_values and !defined($comparison_values->[-1])) {
+        return 1;
+    }
 
-        # undef should match missing values
-        if (! defined($comparison_value) and ! scalar(@property_values)) {
-            return 1;
-        }
+    my($pv_idx, $cv_idx);
+    my $sorter = sub { return $property_values[$pv_idx] cmp $comparison_values->[$cv_idx] };
 
-        foreach my $property_value ( @property_values ) {
-            my $pv_is_number = Scalar::Util::looks_like_number($property_value);
-
-            if ($cv_is_number and $pv_is_number) {
-                return 1 if ($property_value == $comparison_value);
+    # Binary search within @$comparison_values
+    my $cv_min = 0;
+    my $cv_max = $#$comparison_values;
+    for ( $pv_idx = 0; $pv_idx < @property_values; $pv_idx++ ) {
+        do {
+            $cv_idx = ($cv_min + $cv_max) >> 1;
+            my $result = &$sorter;
+            if (!$result) {
+                return 1;
+            } elsif ($result > 0) {
+                $cv_min = $cv_idx + 1;
             } else {
-                return 1 if ($property_value eq $comparison_value);
+                $cv_max = $cv_idx - 1;
             }
-        }
+        } until ($cv_min > $cv_max);
     }
     return '';
 }
-
 
 1;
 

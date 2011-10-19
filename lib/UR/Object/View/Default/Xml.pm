@@ -39,11 +39,11 @@ sub xsl_template_files {
     return @found_xsl_names;
 }
 
-sub _generate_content {
+sub _generate_xml_doc {
     my $self = shift;
 
     my $subject = $self->subject();
-    return '' unless $subject;
+    return unless $subject;
 
     my $xml_doc = XML::LibXML->createDocument();
     $self->_xml_doc($xml_doc);
@@ -82,9 +82,18 @@ sub _generate_content {
         }
     }
 
-#From the XML::LibXML documentation:
-#If $format is 1, libxml2 will add ignorable white spaces, so the nodes content is easier to read. Existing text nodes will not be altered
-#If $format is 2 (or higher), libxml2 will act as $format == 1 but it add a leading and a trailing line break to each text node.
+    #From the XML::LibXML documentation:
+    #If $format is 1, libxml2 will add ignorable white spaces, so the nodes content is easier to read. Existing text nodes will not be altered
+    #If $format is 2 (or higher), libxml2 will act as $format == 1 but it add a leading and a trailing line break to each text node.
+
+    return $xml_doc;
+}
+
+sub _generate_content {
+    my $self = shift;
+
+    my $xml_doc = $self->_generate_xml_doc;
+    return '' unless $xml_doc;
 
     my $doc_string = $xml_doc->toString(1);
 
@@ -92,7 +101,26 @@ sub _generate_content {
     $doc_string =~ s/[^\x09\x0A\x0D\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]//go;
 
     return $doc_string;
+}
 
+sub _add_perl_data_to_node {
+    my $self = shift;
+    my $perlref = shift;
+    my $node = shift;
+
+    my $xml_doc = $self->_xml_doc;
+    $node ||= $xml_doc->documentElement;
+
+    my $d = XML::Dumper->new;
+    my $perldata = $d->pl2xml($perlref);
+
+    my $parser = XML::LibXML->new;
+    my $ref_xml_doc = $parser->parse_string($perldata);
+    my $ref_root = $ref_xml_doc->documentElement;
+    $xml_doc->adoptNode( $ref_root );
+    $node->addChild( $ref_root );
+
+    return 1;
 }
 
 sub _generate_content_for_aspect {
@@ -161,14 +189,7 @@ sub _generate_content_for_aspect {
         elsif (ref($value) and not $value->isa("UR::Value")) {
             # Note: Let UR::Values display content below
             # Otherwise, the delegate view has no XML object, and the value is a reference
-            my $d = XML::Dumper->new;
-            my $xmlrep = $d->pl2xml($value);
-
-            my $parser = XML::LibXML->new;
-            my $ref_xml_doc = $parser->parse_string($xmlrep);
-            my $ref_root = $ref_xml_doc->documentElement;
-            $xml_doc->adoptNode( $ref_root );
-            $aspect_node->addChild( $ref_root );
+            $self->_add_perl_data_to_node($value, $aspect_node);
         }
         elsif (ref($value) and $value->isa("UR::Value")) {
             # For a UR::Value return both a formatted value and a raw value.
