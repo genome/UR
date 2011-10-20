@@ -55,7 +55,25 @@ sub _init_subclass {
     else {
         #print "no execute in $subclass_name\n";
     }
+
+    if($subclass_name->can('shortcut')) {
+        my $new_symbol = "${subclass_name}::_shortcut_body";
+        my $old_symbol = "${subclass_name}::shortcut";
+        *$new_symbol = *$old_symbol;
+        undef *$old_symbol;
+    }
+
     return 1;
+}
+
+sub shortcut {
+    my $self = shift;
+    return unless $self->can('_shortcut_body');
+
+    my $result = $self->_shortcut_body;
+    $self->result($result);
+
+    return $result;
 }
 
 sub execute {
