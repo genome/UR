@@ -185,14 +185,20 @@ sub mk_id_based_object_accessor {
 sub _resolve_bridge_logic_for_indirect_property {
     my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where) = @_;
 
-    my $bridge_collector = sub { my $self = shift; return $self->$via(@$where) };
+    my $bridge_collector = sub {
+        my $self = shift;
+        my @results = $self->$via(@$where);
+        # Indirect has one properties must return a single undef value for an empty result, even in list context.
+        return if @results == 1 and not defined $results[0];
+        return @results;
+    };
     my $bridge_crosser = sub { return map { $_->$to} @_ };
 
     return($bridge_collector, $bridge_crosser) if ($UR::Object::Type::bootstrapping);
 
     # bail out and use the default subs if any of these fail
     my ($my_class_meta, $my_property_meta, $via_property_meta, $to_property_meta);
-    
+
     $my_class_meta = $class_name->__meta__;
     $my_property_meta = $my_class_meta->property_meta_for_name($accessor_name) if ($my_class_meta);
     $via_property_meta = $my_class_meta->property_meta_for_name($via) if ($my_class_meta);
