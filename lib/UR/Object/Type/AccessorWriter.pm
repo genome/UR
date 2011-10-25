@@ -991,10 +991,10 @@ sub mk_object_set_accessors {
         if ($rule_template) { 
             my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
             if (@_) {
-                return $r_class_name->get($rule->params_list,@_);
+                return $UR::Context::current->query($r_class_name, $rule->params_list,@_);
             }
             else {
-                return $r_class_name->get($rule);
+                return $UR::Context::current->query($r_class_name, $rule);
             }
         }
         else {
