@@ -713,7 +713,7 @@ sub _lapl_data_for_delegation_data {
                 Carp::croak("Can't resolve value for '".$$value_source."' in delegation data when there is no object involved");
             }
         }
-        my $rule = $rule_tmpl->get_rule_for_values(@values);
+        my $rule = $rule_tmpl->get_normalized_rule_for_values(@values);
         $tmpl_and_rules{$rule_tmpl->id} = $rule->id;
     }
     return \%tmpl_and_rules;
@@ -772,24 +772,17 @@ sub _resolve_delegation_data {
     return if $join->destination_is_all_id_properties();
 
     my @template_filter_names = @{$join->{'foreign_property_names'}};
-    my @template_filter_values;
+    my %template_filter_values;
     foreach my $name ( @template_filter_names ) {
         my $column_num = $query_plan->column_index_for_class_property_and_object_num(
                                           $join->{'foreign_class'},
                                           $name,
                                           $this_object_num);
         if (defined $column_num) {
-             push @template_filter_values, \$column_num;
+             $template_filter_values{$name} = \$column_num;
         } else {
              my $prop_name = $name;
-             push @template_filter_values, \$prop_name;
-        }
-    }
-
-    if ($join->{'where'}) {
-        for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
-            push @template_filter_names, $join->{'where'}->[$i];
-            push @template_filter_values, $join->{'where'}->[$i+1];
+             $template_filter_values{$name} = \$prop_name;
         }
     }
 
@@ -817,20 +810,21 @@ sub _resolve_delegation_data {
                 $column_num = undef;
             }
             if (defined $column_num) {
-                push @template_filter_values, \$column_num;
+                $template_filter_values{$delegation_final_property_name} = \$column_num;
             } else {
-                push @template_filter_values, \$delegation_final_property_name;
+                $template_filter_values{$delegation_final_property_name} = \$delegation_final_property_name;
             }
         }
     }
 
     # For missing objects, ie. a left join was done and it matched nothing
     my @missing_prop_names;
-    my @missing_values;
+    my %missing_values;
     for (my $i = 0; $i < @{ $join->{'foreign_property_names'}}; $i++) {
         # we're using the source class/property here because we're going to denote that a value
         # of the source class of the join matched nothing
-        push @missing_prop_names, $join->{'foreign_property_names'}->[$i];
+        my $prop_name = $join->{'foreign_property_names'}->[$i];
+        push @missing_prop_names, $prop_name;
         my $source_class = $join->{'source_class'};
         my $source_prop_name = $join->{'source_property_names'}->[$i];
         my $column_num;
@@ -840,24 +834,32 @@ sub _resolve_delegation_data {
                                                                                              $this_object_num);
         }
         if (defined $column_num) {
-            push @missing_values, \$column_num;
+            $missing_values{$prop_name} = \$column_num;
         } else {
             Carp::croak("Can't determine resultset column for $source_class property $source_prop_name for rule $rule");
         }
     }
     if ($join->{'where'}) {
-        for (my $i = 0; $i < @{$join->{'where'}}; $i+=2 ) {
+        for (my $i = 0; $i < @{$join->{'where'}}; $i += 2) {
             my $where_prop = $join->{'where'}->[$i];
-            my $value = $join->{'where'}->[$i+1];
+            push @template_filter_names, $where_prop;
             push @missing_prop_names, $where_prop;
-            push @missing_values, $value;
+
+            my $pos = index($where_prop, ' ');
+            if ($pos != -1) {
+                # the key is "propname op"
+                $where_prop = substr($where_prop,0,$pos);
+            }
+            my $where_value = $join->{'where'}->[$i+1];
+            $template_filter_values{$where_prop} = $where_value;
+            $missing_values{$where_prop} = $where_value;
         }
     }
 
-    my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names);
+    my $missing_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'}, @missing_prop_names)->get_normalized_template_equivalent;
 
     my $related_rule_tmpl = UR::BoolExpr::Template->resolve($join->{'foreign_class'},
-                                                            @template_filter_names);
+                                                            @template_filter_names)->get_normalized_template_equivalent;
 
     my(@hints_or_delegation, @delegations_with_no_objects);
     # Items in the first listref can be one of three things:
@@ -865,7 +867,10 @@ sub _resolve_delegation_data {
     # 2) a reference to a string   - meaning retrieve the value from the object usign this as a property name
     # 3) a string - meaning this is a literal value to fill in directly
     # The second item is a rule template we'll be feeding these values in to
+    my @template_filter_values = @template_filter_values{$related_rule_tmpl->_property_names};
     push @hints_or_delegation, [ \@template_filter_values, $related_rule_tmpl];
+
+    my @missing_values = @missing_values{$missing_rule_tmpl->_property_names};
     push @delegations_with_no_objects, [\@missing_values, $missing_rule_tmpl];
 
     return (\@hints_or_delegation, \@delegations_with_no_objects);
