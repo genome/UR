@@ -20,6 +20,7 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     is_abstract => 1,
+    subclass_description_preprocessor => 'Command::V2::_preprocess_subclass_description',
     attributes_have => [
         is_param            => { is => 'Boolean', is_optional => 1 },        
         is_input            => { is => 'Boolean', is_optional => 1 },
@@ -46,6 +47,22 @@ UR::Object::Type->define(
 
 sub _is_hidden_in_docs { return; }
 
+sub _preprocess_subclass_description {
+    my ($class, $desc) = @_;
+    while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
+        unless (
+            $prop_desc->{'is_param'} 
+            or $prop_desc->{'is_input'} 
+            or $prop_desc->{'is_transient'}
+            or $prop_desc->{'is_calculated'},
+            or $prop_desc->{'is_output'} 
+        ) {
+            $prop_desc->{'is_param'} = 1;
+        }
+    }
+    return $desc;
+}
+
 sub _init_subclass {
     # Each Command subclass has an automatic wrapper around execute().
     # This ensures it can be called as a class or instance method, 
@@ -69,6 +86,25 @@ sub _init_subclass {
         my $old_symbol = "${subclass_name}::shortcut";
         *$new_symbol = *$old_symbol;
         undef *$old_symbol;
+    }
+
+    my @p = $subclass_name->__meta__->properties();
+    my @e;
+    for my $p (@p) {
+        next if $p->property_name eq 'id';
+        next if $p->class_name eq __PACKAGE__;
+        unless ($p->is_input or $p->is_output or $p->is_param or $p->is_transient or $p->is_calculated) {
+            my $modname = $subclass_name;
+            $modname =~ s|::|/|g;
+            $modname .= '.pm';
+            push @e, $modname . " property " . $p->property_name . " must be input, output, param, transient, or calculated!";  
+        }
+    }
+    if (@e) {
+        for (@e) {
+            $subclass_name->error_message($_); 
+        }
+        die "command classes like $subclass_name  have properties without is_input/output/param/transient/calculated set!";
     }
 
     return 1;
@@ -96,7 +132,29 @@ sub create {
 
 sub __errors__ {
     my ($self,@property_names) = @_;
-    return ($self->SUPER::__errors__);
+    my @errors1 =($self->SUPER::__errors__);
+
+    if ($self->is_executed) {
+        return @errors1;
+    }
+
+    # for Commands which have not yet been executed, 
+    # only consider errors on inputs or params
+
+    my $meta = $self->__meta__;
+    my @errors2;
+    ERROR:
+    for my $e (@errors1) {
+        for my $p ($e->properties) {
+            my $pm = $meta->property($p);
+            if ($pm->is_input or $pm->is_param) {
+                push @errors2, $e;
+                next ERROR;
+            }
+        }
+    }
+
+    return @errors2;
 }
 
 # For compatability with Command::V1 callers

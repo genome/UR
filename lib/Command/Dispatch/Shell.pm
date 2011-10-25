@@ -186,7 +186,9 @@ sub resolve_class_and_params_for_argv {
                 $params_hash->{$name} = $value;
             }
         }
-    } elsif (@ARGV) {
+    } 
+    
+    if (@ARGV and not $self->_bare_shell_argument_names) {
         ## argv but no names
         $self->error_message("Unexpected bare arguments: @ARGV!");
         return($self, undef);
@@ -222,14 +224,29 @@ sub resolve_class_and_params_for_argv {
         $params_hash->{$new_key} = delete $params_hash->{$key};
     }
 
+    # futher work is looking for errors, and may display them
+    # if help is set, return now
+    # we might have returned sooner, but having full info available
+    # allows for dynamic help
+    if ($params_hash->{help}) {
+        return ($self, $params_hash);
+    }
+
     ##
     my $params = $params_hash;
     my $class = $self->class;
+    
+    if (my @errors = $self->_errors_from_missing_parameters($params)) {
+        return ($class, undef, \@errors);
+    }
 
-    unless (@_ && scalar($self->_missing_parameters($params)) == 0) {
+    unless (@_) {
         return ($class, $params);
     }
 
+    # should this be moved up into the methods which are only called
+    # directly from the shell, or is it okay everywhere in this module to
+    # presume we're a direct cmdline call? -ssmith
     local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
     my @params_to_resolve = $self->_params_to_resolve($params);
@@ -263,7 +280,6 @@ sub resolve_class_and_params_for_argv {
                 properties => [$p->{name}],
                 desc => "Problem resolving from $param_arg_str.",
             );
-            $self->error_message();
         }
     }
 
@@ -285,7 +301,7 @@ sub resolve_option_completion_spec {
     return \@completion_spec
 }
 
-sub _missing_parameters {
+sub _errors_from_missing_parameters {
     my ($self, $params) = @_;
 
     my $class_meta = $self->__meta__;
@@ -296,7 +312,7 @@ sub _missing_parameters {
     }
     my @property_metas = map { $class_meta->property_meta_for_name($_); } @property_names;
 
-    my @missing_property_values;
+    my @error_tags;
     for my $property_meta (@property_metas) {
         my $pn = $property_meta->property_name;
 
@@ -305,15 +321,35 @@ sub _missing_parameters {
         next if defined $property_meta->default_value;
         next if defined $params->{$pn};
 
-        push @missing_property_values, $pn;
+        my $arg = $pn;
+        $arg =~ s/_/-/g;
+        $arg = "--$arg";
+
+        if ($property_meta->is_output and not $property_meta->is_input and not $property_meta->is_param) {
+            if ($property_meta->_data_type_as_class_name->__meta__->data_source) {
+                # outputs with a data source do not need a specification 
+                # on the cmdline to "store" them after execution
+                next;
+            }
+            else {
+                push @error_tags, UR::Object::Tag->create(
+                    type => 'invalid',
+                    properties => [$pn],
+                    desc => "Output requires specified destination: " . $arg . "."
+                );
+            }
+        }
+        else {
+            $DB::single = 1;
+            push @error_tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [$pn],
+                desc => "Missing required parameter: " . $arg . "."
+            );
+        }
     }
 
-    @missing_property_values = map { $_ =~ s/_/-/g; "--$_" } @missing_property_values;
-    if (@missing_property_values) {
-        $self->status_message('');
-        $self->error_message("Missing required parameter(s): " . join(', ', @missing_property_values) . ".");
-    }
-    return @missing_property_values;
+    return @error_tags;
 }
 
 sub _params_to_resolve {
@@ -406,7 +442,16 @@ sub _shell_args_property_meta {
     my $rule = UR::Object::Property->define_boolexpr(@_);
     my %seen;
     my (@positional,@required,@optional);
-    foreach my $property_meta ( $class_meta->get_all_property_metas() ) {
+    my @property_meta1 = sort { $a->id cmp $b->id } $class_meta->get_all_property_metas();
+    my @property_meta2 = sort { $a->id cmp $b->id } $class_meta->properties();
+    unless ("@property_meta1" eq "@property_meta2") {
+        my @pm1 = map { $_->id } @property_meta1;
+        my @pm2 = map { $_->id } @property_meta2;
+        print STDERR "property lists on command do not match:\nOLD: @pm1\nNEW: @pm2\n";
+        die if $ENV{SSMITH_TEST_DIE};
+    }
+
+    foreach my $property_meta (@property_meta1) {
         my $property_name = $property_meta->property_name;
 
         next if $seen{$property_name}++;
