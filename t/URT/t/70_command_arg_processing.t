@@ -7,7 +7,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 
 use UR;
-use Test::More tests => 76;
+use Test::More tests => 78;
 
 # tests parsing of command-line options
 
@@ -54,13 +54,16 @@ foreach my $the_class ( qw( Cmd::Module::V1 Cmd::Module::V2 )) {
               { a_string => 'blah',
                 a_number => 123 },
               'Params are correct');
-    
-    ($class,$params) = $the_class->resolve_class_and_params_for_argv(qw(--a-string blah));
+   
+    my $errors;
+    ($class,$params,$errors) = $the_class->resolve_class_and_params_for_argv(qw(--a-string blah));
     is($class,$the_class, 'Parse args got correct class using = in cmdline');
     is_deeply($params,
               { a_string => 'blah'},
               'Params are correct');
-    
+    my $r = $class->execute(%$params);
+    ok(!$r, "result works");
+
     ($class,$params) = $the_class->resolve_class_and_params_for_argv(qw(--a-string something=with=equals-signs));
     is($class,$the_class, 'Parse args got correct class where value contains =');
     is_deeply($params,

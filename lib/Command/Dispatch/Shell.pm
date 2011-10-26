@@ -237,7 +237,7 @@ sub resolve_class_and_params_for_argv {
     my $class = $self->class;
     
     if (my @errors = $self->_errors_from_missing_parameters($params)) {
-        return ($class, undef, \@errors);
+        return ($class, $params, \@errors);
     }
 
     unless (@_) {
