@@ -24,7 +24,7 @@ sub resolve_class_and_params_for_argv {
         shift @argv;
         return $class_for_sub_command->resolve_class_and_params_for_argv(@argv);
     }
-    elsif ( @argv == 1 and $argv[0] =~ /^\-h(elp)?$/ ) { # HELP ME!
+    elsif ( @argv == 1 and $argv[0] =~ /^(\-)?\-h(elp)?$/ ) { # HELP ME!
         return ($self, { help => 1 });
     }
     else {
