@@ -620,7 +620,7 @@ sub _init_rdbms {
                         . ': ' . join(', ',@$recursion_desc));
         }
 
-        # Oracle supports connect by queries.
+        # Oracle supports "connect by" queries.
         if ($ds->does_support_recursive_queries eq 'connect by') {
             my ($this,$prior) = @{ $recursion_desc };
 
