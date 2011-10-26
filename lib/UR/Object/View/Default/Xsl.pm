@@ -83,6 +83,8 @@ sub _get_xml_view {
             %params
         );
     }
+
+    return $xml_view;
 }
 
 sub _generate_xsl_doc {
