@@ -46,6 +46,23 @@ sub _generate_content {
         die 'xsl_root does not exist:' . $self->xsl_root;
     }
 
+    my $xml_view = $self->_get_xml_view(%params);
+
+#    my $xml_content = $xml_view->_generate_content();
+
+    my $doc = $self->_generate_xsl_doc($xml_view);
+
+    if ($self->transform) {
+        return $self->transform_xml($xml_view,$doc); #$xsl_template);
+    } else {
+        return $doc->toString(1); # $xsl_template;
+    }
+}
+
+sub _get_xml_view {
+    my $self = shift;
+    my %params = @_;
+
     # get the xml for the equivalent perspective
     my $xml_view;
     eval {
@@ -66,8 +83,11 @@ sub _generate_content {
             %params
         );
     }
+}
 
-#    my $xml_content = $xml_view->_generate_content();
+sub _generate_xsl_doc {
+    my $self = shift;
+    my $xml_view = shift;
 
     # subclasses typically have this as a constant value
     # it turns out we don't need it, since the file will be HTML.pm.xsl for xml->html conversion
@@ -76,9 +96,16 @@ sub _generate_content {
     my $output_format = $self->output_format;
     my $xsl_path = $self->xsl_root;
 
+    unless ($self->transform) {
+        # when not transforming we'll return a relative path
+        # suitable for urls
+        $xsl_path = $self->xsl_path;
+    }
+
     my $perspective = $self->desired_perspective;
 
-    my @include_files = $xml_view->xsl_template_files(
+    my @include_files = $self->_resolve_xsl_template_files(
+        $xml_view,
         $output_format,
         $xsl_path,
         $perspective
@@ -92,12 +119,6 @@ sub _generate_content {
     my $commonxsl = "/$output_format/common.xsl";
     if (-e $xsl_path . $commonxsl) {
         push(@include_files, $commonxsl);
-    }
-
-    unless ($self->transform) {
-        # when not transforming we'll return a relative path
-        # suitable for urls
-        $xsl_path = $self->xsl_path;
     }
 
     no warnings;
@@ -154,11 +175,17 @@ sub _generate_content {
         $ss->appendChild($e)
     }
 
-    if ($self->transform) {
-        return $self->transform_xml($xml_view,$doc); #$xsl_template);
-    } else {
-        return $doc->toString(1); # $xsl_template;
-    }
+    return $doc;
+}
+
+sub _resolve_xsl_template_files {
+    my ($self, $xml_view, $output_format, $xsl_path, $perspective) = @_;
+
+    return $xml_view->xsl_template_files(
+        $output_format,
+        $xsl_path,
+        $perspective,
+    );
 }
 
 sub transform_xml {
