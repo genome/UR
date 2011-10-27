@@ -442,20 +442,18 @@ sub _shell_args_property_meta {
     my $rule = UR::Object::Property->define_boolexpr(@_);
     my %seen;
     my (@positional,@required,@optional);
-    my @property_meta1 = sort { $a->id cmp $b->id } $class_meta->get_all_property_metas();
-    my @property_meta2 = sort { $a->id cmp $b->id } $class_meta->properties();
-    unless ("@property_meta1" eq "@property_meta2") {
-        my @pm1 = map { $_->id } @property_meta1;
-        my @pm2 = map { $_->id } @property_meta2;
-        print STDERR "property lists on command do not match:\nOLD: @pm1\nNEW: @pm2\n";
-        die if $ENV{SSMITH_TEST_DIE};
-    }
-
-    foreach my $property_meta (@property_meta1) {
+    my @property_meta = 
+        sort { 
+            $a->position_in_module_header <=> $b->position_in_module_header
+        } 
+        $class_meta->properties();
+    foreach my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
 
         next if $seen{$property_name}++;
         next unless $rule->evaluate($property_meta);
+
+        next unless $property_meta->can("is_param") and ($property_meta->is_param or $property_meta->is_input);
 
         next if $property_name eq 'id';
         next if $property_name eq 'result';
@@ -488,8 +486,8 @@ sub _shell_args_property_meta {
 
     my @result;
     @result = ( 
-        (sort { $a->property_name cmp $b->property_name } @required),
-        (sort { $a->property_name cmp $b->property_name } @optional),
+        (sort { $a->position_in_module_header cmp $b->position_in_module_header } @required),
+        (sort { $a->position_in_module_header cmp $b->position_in_module_header } @optional),
         (sort { $a->{shell_args_position} <=> $b->{shell_args_position} } @positional),
     );
 

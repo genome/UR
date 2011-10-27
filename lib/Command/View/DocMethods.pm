@@ -423,7 +423,7 @@ sub help_options {
         else {
             $text .= sprintf(
                 "  %s\n%s\n",
-                Term::ANSIColor::colored($row->[0], 'bold') . "   " . $row->[1],
+                Term::ANSIColor::colored($row->[0], 'bold'), # . "   " . $row->[1],
                 Text::Wrap::wrap(
                     "    ", # 1st line indent,
                     "    ", # all other lines indent,
