@@ -1557,14 +1557,7 @@ sub get_objects_for_class_and_rule {
         return unless defined wantarray;
         return @results if wantarray;
         if (@results > 1) {
-            Carp::confess 
-                sprintf(
-                    "Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results:\n%s\n",
-                    $rule->subject_class_name,
-                    join(',', $rule->params_list),
-                    scalar(@results),
-                    Data::Dumper::Dumper(\@results)
-                );
+            $self->_exception_for_multi_objects_in_scalar_context($rule,\@results);
         }
         return $results[0];
     }
@@ -1733,16 +1726,27 @@ sub get_objects_for_class_and_rule {
         return unless defined wantarray;
         return @results if wantarray;
         if (@results > 1) {
-            Carp::confess sprintf("Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results:\n%s\n",
-                        $rule->subject_class_name,
-                        join(',', $rule->params_list),
-                        scalar(@results),
-                        Data::Dumper::Dumper(\@results));
+            $self->_exception_for_multi_objects_in_scalar_context($rule,\@results);
         }
         return $results[0];
     }
 }
 
+
+sub _exception_for_multi_objects_in_scalar_context {
+    my($self,$rule,$resultsref) = @_;
+
+    my $message = sprintf("Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results",
+                          $rule->subject_class_name,
+                          join(',', $rule->params_list),
+                          scalar(@$resultsref));
+    my $lastidx = $#$resultsref;
+    if (@$resultsref > 10) {
+        $message .= "; the first 10 are";
+        $lastidx = 9;
+    }
+    Carp::confess($message . ":\n" . Data::Dumper::Dumper([@$resultsref[0..$lastidx]]));
+}
 
 sub _prune_obj_list_for_limit_and_offset {
     my($self, $obj_list, $tmpl) = @_;
