@@ -26,7 +26,9 @@ sub _compare {
     }
 
     my($pv_idx, $cv_idx);
+    no warnings;
     my $sorter = sub { return $property_values[$pv_idx] cmp $comparison_values->[$cv_idx] };
+    use warnings;
 
     # Binary search within @$comparison_values
     my $cv_min = 0;
