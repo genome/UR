@@ -162,6 +162,9 @@ sub _involves_id_property {
             return 1 if ($to_meta and $to_meta->_involves_id_property);
 
             if ($self->where) {
+                unless ($to_meta) {
+                    Carp::confess("No to_meta for $self->{id}");
+                }
                 my $other_class_meta = $to_meta->class_meta;
                 my $where = $self->where;
                 for (my $i = 0; $i < @$where; $i += 2) {

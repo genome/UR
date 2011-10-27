@@ -42,11 +42,16 @@ sub _object_properties_to_string {
                 foreach my $i ($o->__get_attr__($_)) {
                     if (! defined $i) {
                         push @v, "<NULL>";
-                    } elsif (Scalar::Util::blessed($i) and $i->isa('UR::Value') and $i->can('create_view')) {
+                    } 
+                    elsif (Scalar::Util::blessed($i) and $i->isa('UR::Value') and $i->can('create_view')) {
                         # Here we allow any UR::Values that have their own views to present themselves.
                         my $v = $i->create_view( perspective => 'default', toolkit => 'text' );
                         push @v, $v->content();
-                    } else {
+                    }
+                    elsif (Scalar::Util::blessed($i) and $i->can('__display_name__')) {
+                        push @v, $i->__display_name__;
+                    } 
+                    else {
                         push @v, $i;
                     }
                 }
