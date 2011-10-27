@@ -8,8 +8,8 @@ our $VERSION = "0.34"; # UR $VERSION;
 class UR::Object::View::Default::Gtk2 {
     is => 'UR::Object::View',
     has_constant => [
-        perspective => 'default',
-        toolkit => 'gtk2'
+        perspective => { value => 'default'},
+        toolkit => { value => 'gtk2'},
     ],
 };
 

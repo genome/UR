@@ -10,7 +10,11 @@ class UR::Object::View::Static::Html {
     has => {
         output_format => { value => 'html' },
         html_root     => { doc => 'path to plain-old html files' }
-    }
+    },
+    has_constant => [
+        perspective => { value => 'static' },
+        toolkit => { value => 'html' },
+    ],
 };
 
 sub content {

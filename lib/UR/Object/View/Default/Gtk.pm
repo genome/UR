@@ -8,6 +8,10 @@ our $VERSION = "0.34"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object::View',
+    has_constant => [
+        perspective => { value => 'default' },
+        toolkit => { value => 'gtk' },
+    ]
 );
 
 sub _create_widget {
