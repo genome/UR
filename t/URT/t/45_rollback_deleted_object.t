@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 62;
+use Test::More tests => 60;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -18,17 +18,16 @@ ok($dbh, "got a db handle");
 
 my $init_db = sub {
     $dbh->do('create table IF NOT EXISTS person ( person_id int NOT NULL PRIMARY KEY, name varchar)');
+    $dbh->do(q(delete from person));
     $dbh->do(q(insert into person (person_id, name) values (1, 'Bob')));
 };
 $init_db->();
 
-if (UR::DBI->no_commit) {
-    # SQLite's rollback un-does the table creation, too, so we
-    # have to re-create the table and object when no-commit is on
-    UR::Context->create_subscription(
-                    method => 'rollback',
-                    callback => $init_db);
-};
+# SQLite's rollback un-does the table creation, too, so we
+# have to re-create the table and object when no-commit is on
+UR::Context->create_subscription(
+                method => 'rollback',
+                callback => $init_db);
 
 ok(UR::Object::Type->define( 
         class_name => 'URT::Person',
@@ -105,7 +104,6 @@ ok($o, 'Got an object');
 
     ok($o->delete,'Delete the object');
     isa_ok($o, 'UR::DeletedRef');
-print "YOOY!\n\n";
     ok(! URT::Person->get(person_id => 1), 'get() does not return the deleted object');
 
     ok($trans2->rollback, 'Rollback inner transaction');
