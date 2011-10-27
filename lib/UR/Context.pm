@@ -1013,7 +1013,13 @@ sub _construct_object {
         return;
     }
 
-    my $object = bless $params, $class;
+    my $object;
+    if ($object = $UR::DeletedRef::all_objects_deleted->{$class}->{$id}) {
+        UR::DeletedRef->resurrect($object);
+        %$object = %$params;
+    } else {
+        $object = bless $params, $class;
+    }
     
     if (my $ghost = $UR::Context::all_objects_loaded->{$class . "::Ghost"}->{$id}) {    
         # we're making something which was previously deleted and is pending save.
@@ -1551,14 +1557,7 @@ sub get_objects_for_class_and_rule {
         return unless defined wantarray;
         return @results if wantarray;
         if (@results > 1) {
-            Carp::confess 
-                sprintf(
-                    "Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results:\n%s\n",
-                    $rule->subject_class_name,
-                    join(',', $rule->params_list),
-                    scalar(@results),
-                    Data::Dumper::Dumper(\@results)
-                );
+            $self->_exception_for_multi_objects_in_scalar_context($rule,\@results);
         }
         return $results[0];
     }
@@ -1727,16 +1726,27 @@ sub get_objects_for_class_and_rule {
         return unless defined wantarray;
         return @results if wantarray;
         if (@results > 1) {
-            Carp::confess sprintf("Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results:\n%s\n",
-                        $rule->subject_class_name,
-                        join(',', $rule->params_list),
-                        scalar(@results),
-                        Data::Dumper::Dumper(\@results));
+            $self->_exception_for_multi_objects_in_scalar_context($rule,\@results);
         }
         return $results[0];
     }
 }
 
+
+sub _exception_for_multi_objects_in_scalar_context {
+    my($self,$rule,$resultsref) = @_;
+
+    my $message = sprintf("Multiple results unexpected for query.\n\tClass %s\n\trule params: %s\n\tGot %d results",
+                          $rule->subject_class_name,
+                          join(',', $rule->params_list),
+                          scalar(@$resultsref));
+    my $lastidx = $#$resultsref;
+    if (@$resultsref > 10) {
+        $message .= "; the first 10 are";
+        $lastidx = 9;
+    }
+    Carp::confess($message . ":\n" . Data::Dumper::Dumper([@$resultsref[0..$lastidx]]));
+}
 
 sub _prune_obj_list_for_limit_and_offset {
     my($self, $obj_list, $tmpl) = @_;
@@ -2746,10 +2756,20 @@ sub _reverse_all_changes {
                 if ($@) {
                     Carp::confess("Error re-constituting ghost object: $@");
                 }
+                my($saved_data, $saved_key);
+                if (exists $ghost_copy->{'db_saved_uncommitted'} ) {
+                    $saved_data = $ghost_copy->{'db_saved_uncommitted'};
+                } elsif (exists $ghost_copy->{'db_committed'} ) {
+                    $saved_data = $ghost_copy->{'db_committed'};
+                } else {
+                    next; # This shouldn't happen?!
+                }
+
                 my $new_object = $object->live_class->UR::Object::create(
-                    %{ $ghost_copy->{db_committed} },                    
+                    %$saved_data
                 );
-                $new_object->{db_committed} = $ghost_copy->{db_committed};
+                $new_object->{db_committed} = $ghost_copy->{db_committed} if (exists $ghost_copy->{'db_committed'});
+                $new_object->{db_saved_uncommitted} = $ghost_copy->{db_saved_uncommitted} if (exists $ghost_copy->{'db_saved_uncommitted'});
                 unless ($new_object) {
                     Carp::confess("Failed to re-constitute $object!");
                 }

@@ -6,7 +6,6 @@ require UR;
 our $VERSION = "0.34"; # UR $VERSION;
 
 our $all_objects_deleted = {};
-our %burried;
 
 sub bury {
     my $class = shift;
@@ -15,11 +14,14 @@ sub bury {
         if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
             print STDERR "MEM BURY object $object class ",$object->class," id ",$object->id,"\n";
         }
+        my $original_class = ref($object);
+        my $original_id = $object->id;
+
         %$object = (original_class => ref($object), original_data => {%$object});
         bless $object, 'UR::DeletedRef';
-        my $stringified = $object;
-        $all_objects_deleted->{$stringified} = $object;
-        Scalar::Util::weaken($all_objects_deleted->{$stringified});
+
+        $all_objects_deleted->{$original_class}->{$original_id} = $object;
+        Scalar::Util::weaken($all_objects_deleted->{$original_class}->{$original_id});
     }
 
     return 1;
@@ -29,9 +31,11 @@ sub resurrect {
     shift unless (ref($_[0]));
 
     foreach my $object (@_) {
-        delete $all_objects_deleted->{"$object"};
-        bless $object, $object->{original_class};
+        my $original_class = $object->{'original_class'};
+        bless $object, $original_class;
         %$object = (%{$object->{original_data}});
+        my $id = $object->id;
+        delete $all_objects_deleted->{$original_class}->{$id};
         $object->resurrect_object if ($object->can('resurrect_object'));
     }
 
