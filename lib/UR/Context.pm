@@ -1013,7 +1013,13 @@ sub _construct_object {
         return;
     }
 
-    my $object = bless $params, $class;
+    my $object;
+    if ($object = $UR::DeletedRef::all_objects_deleted->{$class}->{$id}) {
+        UR::DeletedRef->resurrect($object);
+        %$object = %$params;
+    } else {
+        $object = bless $params, $class;
+    }
     
     if (my $ghost = $UR::Context::all_objects_loaded->{$class . "::Ghost"}->{$id}) {    
         # we're making something which was previously deleted and is pending save.
@@ -2746,10 +2752,20 @@ sub _reverse_all_changes {
                 if ($@) {
                     Carp::confess("Error re-constituting ghost object: $@");
                 }
+                my($saved_data, $saved_key);
+                if (exists $ghost_copy->{'db_saved_uncommitted'} ) {
+                    $saved_data = $ghost_copy->{'db_saved_uncommitted'};
+                } elsif (exists $ghost_copy->{'db_committed'} ) {
+                    $saved_data = $ghost_copy->{'db_committed'};
+                } else {
+                    next; # This shouldn't happen?!
+                }
+
                 my $new_object = $object->live_class->UR::Object::create(
-                    %{ $ghost_copy->{db_committed} },                    
+                    %$saved_data
                 );
-                $new_object->{db_committed} = $ghost_copy->{db_committed};
+                $new_object->{db_committed} = $ghost_copy->{db_committed} if (exists $ghost_copy->{'db_committed'});
+                $new_object->{db_saved_uncommitted} = $ghost_copy->{db_saved_uncommitted} if (exists $ghost_copy->{'db_saved_uncommitted'});
                 unless ($new_object) {
                     Carp::confess("Failed to re-constitute $object!");
                 }
