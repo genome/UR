@@ -161,10 +161,16 @@ sub _get_class_names_under_namespace
     };
 
     my @dirs_to_search = @INC;
+    my $path_to_check = $namespace;
+    $path_to_check .= "/$subdir" if $subdir;
+
+    @dirs_to_search = map($_ . $path_to_check, @dirs_to_search) if $subdir; # only look in places with namespace_name as a subdir
     unshift(@dirs_to_search, $namespace_dir) if (-d $namespace_dir);
-    @dirs_to_search = grep { $_ =~ m/\/$namespace/ or -d $_ . "/$namespace" }
-                      @dirs_to_search;  # only look in places with namespace_name as a subdir
-    find({ wanted => $wanted, preprocess => $preprocess },@dirs_to_search);
+
+    @dirs_to_search = grep { $_ =~ m/\/$path_to_check/ and -d $_ }
+                      @dirs_to_search;
+    return unless @dirs_to_search;
+    find({ wanted => $wanted, preprocess => $preprocess }, @dirs_to_search);
     return sort keys %class_names;
 }
 
