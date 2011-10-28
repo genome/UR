@@ -14,6 +14,7 @@ lib/Command/Test/Tree1/Echo1.pm
 lib/Command/Test/Tree1/Echo2.pm
 lib/Command/Tree.pm
 lib/Command/V1.pm
+lib/Command/V1.t
 lib/Command/V2.pm
 lib/Command/V2Deprecated.pm
 lib/Command/View/DocMethods.pm
@@ -44,6 +45,7 @@ lib/UR/BoolExpr/Util.pm
 lib/UR/Change.pm
 lib/UR/Context.pm
 lib/UR/Context/DefaultRoot.pm
+lib/UR/Context/ImportIterator.pm
 lib/UR/Context/LoadingIterator.pm
 lib/UR/Context/ObjectFabricator.pm
 lib/UR/Context/Process.pm
@@ -81,6 +83,7 @@ lib/UR/DataSource/RDBMS/UniqueConstraintColumn.pm
 lib/UR/DataSource/SQLite.pm
 lib/UR/DataSource/ValueDomain.pm
 lib/UR/DBI.pm
+lib/UR/DBI/Report.pm
 lib/UR/Debug.pm
 lib/UR/DeletedRef.pm
 lib/UR/Doc/Pod2Html.pm
@@ -215,6 +218,7 @@ lib/UR/Object/Type/Initializer.pm
 lib/UR/Object/Type/Initializer.pod
 lib/UR/Object/Type/InternalAPI.pm
 lib/UR/Object/Type/ModuleWriter.pm
+lib/UR/Object/Type/View/AvailableViews/Xml.pm
 lib/UR/Object/Type/View/Default/Text.pm
 lib/UR/Object/Type/View/Default/Xml.pm
 lib/UR/Object/Value.pm
@@ -228,13 +232,13 @@ lib/UR/Object/View/Default/Text.pm
 lib/UR/Object/View/Default/Xml.pm
 lib/UR/Object/View/Default/Xsl.pm
 lib/UR/Object/View/Lister/Text.pm
+lib/UR/Object/View/Static/Html.pm
 lib/UR/Object/View/Toolkit.pm
 lib/UR/Object/View/Toolkit/Text.pm
 lib/UR/ObjectDeprecated.pm
 lib/UR/ObjectV001removed.pm
 lib/UR/ObjectV04removed.pm
 lib/UR/Observer.pm
-lib/UR/Report.pm
 lib/UR/Service/json.js
 lib/UR/Service/JsonRpcServer.pm
 lib/UR/Service/RPC/Executer.pm
@@ -273,6 +277,7 @@ lib/UR/Value/View/Default/Html.pm
 lib/UR/Value/View/Default/Json.pm
 lib/UR/Value/View/Default/Text.pm
 lib/UR/Value/View/Default/Xml.pm
+lib/UR/Value/View/Default/Xml.t
 lib/UR/Vocabulary.pm
 LICENSE
 MANIFEST			This list of files
@@ -389,6 +394,8 @@ t/URT/t/09_create_get_complex2.t
 t/URT/t/10_accessor_object.t
 t/URT/t/11_create_with_delegated_property.t
 t/URT/t/11b_via_to_without_type.t
+t/URT/t/11c_create_with_via_property.t
+t/URT/t/11d_create_with_single_delegated_property_via_is_many_property.t
 t/URT/t/12_properties_metadata_query.t
 t/URT/t/13a_command_message_v1.t
 t/URT/t/13b_command_message_v2.t
@@ -406,6 +413,14 @@ t/URT/t/21b_load_observer_autosubclass.t
 t/URT/t/21c_load_observer_abstract_parent.t
 t/URT/t/21d_db_entity_observers.t
 t/URT/t/22_cached_get_with_subclasses.t
+t/URT/t/23_id_class_by_with_bad_data.t
+t/URT/t/24_query_by_is_calculated.t
+t/URT/t/24_query_by_is_transient.t
+t/URT/t/24_query_via_method_call.t
+t/URT/t/25_recurse_get.t
+t/URT/t/26_indirect_mutator_with_where_via_is_many.t
+t/URT/t/27_get_with_limit_offset.t
+t/URT/t/28_dont_index_delegated_props.t
 t/URT/t/29_indirect_calculated_accessor.t
 t/URT/t/29b_join_calculated_accessor.t
 t/URT/t/29c_join_indirect_accessor.t
@@ -424,6 +439,7 @@ t/URT/t/42_rpc_between_processes.t
 t/URT/t/43_infer_values_from_rule.t
 t/URT/t/44_modulewriter.t
 t/URT/t/45_deleted_subclassed_objects_stay_deleted.t
+t/URT/t/45_rollback_deleted_object.t
 t/URT/t/46_meta_property_relationships.t
 t/URT/t/47_indirect_is_many_accessor.t
 t/URT/t/47b_indirect_is_many_accessor_mutable_with_id_class_by.t
@@ -435,6 +451,10 @@ t/URT/t/49c_complicated_get_3.t
 t/URT/t/49d_complicated_get_joining_through_view.t
 t/URT/t/49e_complicated_get_joining_through_view2.t
 t/URT/t/49f_complicated_get_indirect_id_by.t
+t/URT/t/49g_complicated_get_double_join.t
+t/URT/t/49h_complicated_get_double_join.t
+t/URT/t/49i_complicated_get_join_through_value_class.t
+t/URT/t/49k_complicated_get_joins_with_hangoff_filter.t
 t/URT/t/50_force_always_reload.t
 t/URT/t/50_get_and_reload.t
 t/URT/t/50_unload_and_reload.t
@@ -445,6 +465,7 @@ t/URT/t/53_abandoned_iterator.t
 t/URT/t/54_valid_values.t
 t/URT/t/55_on_the_fly_metadb.t
 t/URT/t/56_order_by_returns_items_in_order.t
+t/URT/t/56b_order_by_calculated_property.t
 t/URT/t/57_order_by_merge_new_objects.t
 t/URT/t/58_order_by_merge_changed_objects.t
 t/URT/t/59_get_merge_new_objs_with_db.t
@@ -461,6 +482,7 @@ t/URT/t/63c_view_with_subviews.t.expected.person.json
 t/URT/t/63c_view_with_subviews.t.expected.person.text
 t/URT/t/63c_view_with_subviews.t.expected.person.xml
 t/URT/t/63d_delete_view.t
+t/URT/t/63e_enumerate_available_views.t
 t/URT/t/64_nullable_foreign_key_handling_on_insert_and_delete.t
 t/URT/t/65_reload_with_changing_db_data.t
 t/URT/t/66_nullable_hangoff_data.t
@@ -468,6 +490,7 @@ t/URT/t/67_composite_id_with_id_class_by_rt55121.t
 t/URT/t/68_trapped_death_does_not_stack_trace.t
 t/URT/t/69_subclassify_by.t
 t/URT/t/69_subclassify_by_db.t
+t/URT/t/70_command_arg_processing.t
 t/URT/t/70_command_help_text.t
 t/URT/t/71_ur_value.t
 t/URT/t/72_command_name_validation.t
@@ -495,11 +518,14 @@ t/URT/t/85b_avoid_loading_using_hints.t
 t/URT/t/86_custom_load.t
 t/URT/t/86b-custom-load-join.t
 t/URT/t/87_attributes_have.t
+t/URT/t/87_get_by_different_params_updates_query_cache.t
 t/URT/t/87_is_many_indirect_is_efficient.t
+t/URT/t/87a_many_to_many_query_is_efficient.t
 t/URT/t/87b_is_many_id_class_by_is_efficient.t
 t/URT/t/87c_query_by_is_many_indirect_is_efficient.t
 t/URT/t/87d_query_by_is_many_indirect_is_efficient.t
 t/URT/t/87e_missing_hangoff_data_is_efficient.t
+t/URT/t/87f_via_property_joins_to_itself.t
 t/URT/t/89_loading_with_boolexpr_evaluate.t
 t/URT/t/90_comparison_value_and_escape_character_to_regex.t
 t/URT/t/91_object_sets.t
