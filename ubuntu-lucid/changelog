@@ -1,5 +1,19 @@
 libur-perl (0.34-1) unstable; urgency=low
 
+  * Queries with the -recurse option are suppored for all datasources, not just those that support recursive queries directly
+  * Make the object listers more user-friendly by implicitly putting '%' wildcards on either side of the user-supplied 'like' filter
+  * Update to the latest version of Getopt::Complete for command-line completion
+  * Object Set fixes (non-datasource expressable filters)
+  * Bugfixes for queries involving multiple joins to the same table with different join conditions
+  * Queries with -offset/-limit and -page are now supported.
+  * Query efficiency improvements
+  * Command module fixes
+  * Deleted objects hanging around as UR::DeletedRefs are recycled if the original object gets re-created
+
+ -- Anthony Brummett <brummett@cpan.org> Fri, 28 Oct 2011 12:40:00 -0500
+
+libur-perl (0.34-1) unstable; urgency=low
+
   * New class (Command::SubCommandFactory) which can act as a factory for a tree of sub-commands
   * Remove the distinction between older and newer versions of DBD::SQLite installed on the system.  If you have SQLite databases (including MetaDBs) with names like "*sqlite3n*", they will need to be renamed to "*sqlite3*".
   * Make the tests emit fewer messages to the terminal when run in the harness; improve coverage on non-Intel/Linux systems.

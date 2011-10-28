@@ -1,5 +1,34 @@
 Revision history for UR
 
+0.35    2011-10-28
+        Queries with the -recurse option are suppored for all datasources, not
+            just those that support recursive queries directly
+        Make the object listers more user-friendly by implicitly putting '%'
+            wildcards on either side of the user-supplied 'like' filter
+        Update to the latest version of Getopt::Complete for command-line completion
+        Object Set fixes (non-datasource expressable filters)
+        Bugfixes for queries involving multiple joins to the same table with
+            different join conditions
+        Queries with -offset/-limit and -page are now supported.
+        Query efficiency improvements:
+            * id_by properties with a know data_type have special code in
+                the bridging logic to handle them more efficiently
+            * large in-clause testing uses a binary search instead of linear
+                for cached objects
+            * no longer indexing delegated properties results in fewer unnecessary
+                queries during loading
+            * remove unnecessary rule evaluations against loaded objects
+            * When a query includes a filter or -hints for a calculated property,
+                implicitly add its calculate_from properties to the -hints list
+            * Rules in the query cache are always normalized, which makes
+                many lookups faster
+        Command module fixes:
+            * running with --help no longer emits error messages about other
+                missing params
+            * Help output only lists properties that are is_input or is_param
+        Deleted objects hanging around as UR::DeletedRefs are recycled if the
+            original object gets re-created
+        
 0.34    2011-07-26
         New class (Command::SubCommandFactory) which can act as a factory for a
             tree of sub-commands
