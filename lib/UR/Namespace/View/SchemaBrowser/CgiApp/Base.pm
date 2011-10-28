@@ -10,7 +10,7 @@ use base 'CGI::Application';
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.34"; # UR $VERSION;
+our $VERSION = "0.35"; # UR $VERSION;
 
 sub new {
 my $class = shift;

@@ -117,7 +117,7 @@ object.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.34"; # UR $VERSION; 
+our $VERSION = "0.35"; # UR $VERSION; 
 
 # set up module
 use base qw(UR::ModuleBase);
