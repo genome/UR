@@ -131,7 +131,7 @@ sub create_for_loading_template {
         grep { $rule_template_without_recursion_desc->operator_for($_) eq 'in' }
              $rule_template_without_recursion_desc->_property_names;
 
-    my($rule_template_without_in_clause,$rule_template_id_without_in_clause,%in_clause_values);
+    my($rule_template_without_in_clause,$rule_template_id_without_in_clause,%in_clause_values,@all_rule_property_names);
     if (@rule_properties_with_in_clauses) {
         $rule_template_id_without_in_clause = $rule_template_without_recursion_desc->id;
         foreach my $property_name ( @rule_properties_with_in_clauses ) {
@@ -147,6 +147,7 @@ sub create_for_loading_template {
         # finalized must be values that matched nothing.  Then, finalize can put data in
         # all_params_loaded showing it matches nothing
         my %rule_properties_with_in_clauses = map { $_ => 1 } @rule_properties_with_in_clauses;
+        @all_rule_property_names = $rule_template_without_in_clause->_property_names;
         foreach my $property ( @rule_properties_with_in_clauses ) {
             my @other_values = map { exists $rule_properties_with_in_clauses{$_}
                                      ? undef   # placeholder filled in below
@@ -193,7 +194,8 @@ sub create_for_loading_template {
 
             if (@rule_properties_with_in_clauses) {
                 # FIXME - confirm that all the object properties are filled in at this point, right?
-                my @values = @$pending_db_object{@rule_properties_with_in_clauses};
+                #my @values = @$pending_db_object{@rule_properties_with_in_clauses};
+                my @values = @$pending_db_object{@all_rule_property_names};
                 my $r = $rule_template_without_in_clause->get_normalized_rule_for_values(@values);
                 my $r_id = $r->id;
 
