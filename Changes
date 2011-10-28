@@ -22,6 +22,8 @@ Revision history for UR
                 implicitly add its calculate_from properties to the -hints list
             * Rules in the query cache are always normalized, which makes
                 many lookups faster
+            * Fix a bug where rules in the query cache related to in-clause
+                queries were malformed, resulting in fewer queries to the data source
         Command module fixes:
             * running with --help no longer emits error messages about other
                 missing params

@@ -431,6 +431,7 @@ t/URT/t/34_autouse_with_circular_ur_classdef.t
 t/URT/t/35_all_objects_are_loaded_subclass.t
 t/URT/t/36_superclass_already_loaded.t
 t/URT/t/37_caching_with_in_clause.t
+t/URT/t/37b_caching_with_in_clause.t
 t/URT/t/38_join_across_data_sources.t
 t/URT/t/39_has_many.t
 t/URT/t/40_has_many_direct.t
