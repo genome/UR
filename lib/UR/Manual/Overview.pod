@@ -174,8 +174,8 @@ order yourself
 
 =item *
 
-allows you to write methods which address an object individually, with some
-ways to avoid tons of individual database queries
+allows you to write methods which address an object individually, with
+ways to avoid many individual database queries
 
 =item *
 
@@ -197,10 +197,6 @@ the cache by setting object count limits explicitly
 
 there is CPU overhead checking the cache if you really are always going
 directly to the database
-
-=item *
-
-Joins must be pre-declared through the class definition system
 
 =back
 

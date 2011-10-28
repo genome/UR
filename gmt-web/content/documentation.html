@@ -120,7 +120,7 @@ representing all UR data everywhere, while only actually tracking what is needed
 <ul>
   <li>database queries don't repeat themselves again and again</li>
   <li>you never write insert/update/delete statements, or work out constraint order yourself</li>
-  <li>allows you to write methods which address an object individually, with some ways to avoid tons of individual database queries</li>
+  <li>allows you to write methods which address an object individually, with ways to avoid many individual database queries</li>
   <li>explicitly clearing the cache is less complex than explicitly managing the caching of data</li>
 </ul>
 
@@ -128,7 +128,6 @@ representing all UR data everywhere, while only actually tracking what is needed
 <ul>
   <li>the cache grows until you explicitly clear it, or allow the Context to prune the cache by setting object count limits explicitly</li>
   <li>there is CPU overhead checking the cache if you really are always going directly to the database</li>
-  <li>Joins must be pre-declared through the class definition system</li>
 </ul>
 
 <hr />
