@@ -3,12 +3,14 @@ use strict;
 use warnings;
 use Test::More;
 
-eval "use XML::LibXML";
-if ($INC{"XML/LibXML.pm"}) {
-    plan tests => 4;
-}
-else {
-    plan skip_all => 'works only with systems which have XML::LibXML';
+BEGIN {
+    eval "use XML::LibXSLT";
+    if ($@ =~ qr(Can't locate XML/LibXSLT.pm in \@INC)) {
+        plan skip_all => 'XML::LibXSLT does not exist on the system';
+    } else {
+        plan tests => 5;
+        use_ok('UR::Object::View::Default::Xsl',  qw/url_to_type type_to_url/);
+    }
 }
 
 use File::Basename;
