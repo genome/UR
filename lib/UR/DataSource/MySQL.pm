@@ -32,7 +32,7 @@ sub owner { shift->_singleton_object->login }
 #}
 
  
-sub _sql_like_escape_string { undef };  # can't do an 'escape' clause with the 'like' operator
+sub _default_sql_like_escape_string { undef };  # can't do an 'escape' clause with the 'like' operator
 
 sub can_savepoint { 1;} 
 

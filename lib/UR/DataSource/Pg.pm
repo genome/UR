@@ -31,7 +31,12 @@ sub owner { shift->_singleton_object->login }
 #    undef
 #}
 
-sub _sql_like_escape_string { return q(E'\\\\') };
+sub _default_sql_like_escape_string { return '\\\\' };
+
+sub _format_sql_like_escape_string {
+    my $class = shift;
+    return "E'" . shift . "'";
+}
 
 sub can_savepoint { 1;}
 
