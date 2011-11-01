@@ -1002,26 +1002,23 @@ sub _normalize_property_description1 {
         [ singular_name                   => qw//],
         [ plural_name                     => qw//],
     ) {
-        my ($primary_field_name, @alternate_field_names) = @$mapping;
-        my @all_fields = ($primary_field_name, @alternate_field_names);
+        my $primary_field_name = $mapping->[0];
 
-        my @keys = grep { exists $old_property{$_} } @all_fields;
-        if (@keys > 1) {
-            Carp::croak("Invalid class definition for $class_name in property '$property_name'.  The keys "
-                        . join(', ',@keys) . " are all synonyms for $primary_field_name");
-
+        my $found_key;
+        foreach my $key ( @$mapping ) {
+            if (exists $old_property{$key}) {
+                if ($found_key) {
+                    my @keys = grep { exists $old_property{$_} }  @$mapping;
+                    Carp::croak("Invalid class definition for $class_name in property '$property_name'.  The keys "
+                                . join(', ',$found_key,@keys) . " are all synonyms for $primary_field_name");
+                }
+                $found_key = $key;
+            }
         }
-        my @values = grep { defined } delete @old_property{@all_fields};
-        if (@keys == 1) {
-            $new_property{$primary_field_name} = $values[0];
-        }
 
-        # Fill in default values for metadata that is missing
-        if (
-            (not exists $new_property{$primary_field_name}) 
-            and 
-            (exists $UR::Object::Property::defaults{$primary_field_name}) 
-        ) {
+        if ($found_key) {
+            $new_property{$primary_field_name} = delete $old_property{$found_key};
+        } elsif (exists $UR::Object::Property::defaults{$primary_field_name}) {
             $new_property{$primary_field_name} = $UR::Object::Property::defaults{$primary_field_name};
         }
     }
