@@ -31,6 +31,8 @@ sub owner { shift->_singleton_object->login }
 #    undef
 #}
 
+sub _sql_like_escape_string { return q(E'\\\\') };
+
 sub can_savepoint { 1;}
 
 sub set_savepoint {
@@ -39,7 +41,6 @@ my($self,$sp_name) = @_;
     my $dbh = $self->get_default_handle;
     $dbh->pg_savepoint($sp_name);
 }
-
 
 sub rollback_to_savepoint {
 my($self,$sp_name) = @_;
