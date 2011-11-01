@@ -1386,7 +1386,7 @@ sub _complete_class_meta_object_definitions {
     }
     
     # make old-style (bc4nf) property objects in the default way
-    my @property_objects;
+    my %property_objects;
     
     for my $pinfo (values %$properties) {                        
         my $property_name       = $pinfo->{property_name};
@@ -1440,7 +1440,7 @@ sub _complete_class_meta_object_definitions {
             return;
         }
         
-        push @property_objects, $property_object;
+        $property_objects{$property_name} =  $property_object;
         push @subordinate_objects, $property_object;
     }
 
@@ -1520,6 +1520,8 @@ sub _complete_class_meta_object_definitions {
     my $src2 = qq|sub ${class_name}::inheritance { $src1 }|;
     eval $src2  unless $class_name eq 'UR::Object';
     die $@ if $@;
+
+    $self->{'_property_meta_for_name'} = \%property_objects;
 
     # return the new class object
     return $self;
