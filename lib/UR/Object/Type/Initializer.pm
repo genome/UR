@@ -752,8 +752,8 @@ sub _normalize_class_description_impl {
                     $inherited_copy = UR::Util::deep_copy($parent_property_data);
                 }
                 $inherited_copy->{class_name} = $class_name;
-                my $a = $inherited_copy->{overrides_class_names} ||= [];
-                push @$a, $parent_property_data->{class_name};
+                my $override = $inherited_copy->{overrides_class_names} ||= [];
+                push @$override, $parent_property_data->{class_name};
             }
         }
     }
@@ -1637,7 +1637,10 @@ sub generate {
     if ($data_source_obj) {
         $columns_are_upper_case = $data_source_obj->table_and_column_names_are_upper_case;
     }
-    for my $property_object (sort { $a->property_name cmp $b->property_name } @property_objects) {
+
+    my @sort_list = map { [$_->property_name, $_] } @property_objects;
+    for my $sorted_item ( sort { $a->[0] cmp $b->[0] } @sort_list ) {
+        my $property_object = $sorted_item->[1];
         if ($property_object->column_name) {
             push @$props, $property_object->property_name;
             push @$cols, $columns_are_upper_case ? uc($property_object->column_name) : $property_object->column_name;
