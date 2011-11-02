@@ -35,7 +35,8 @@ sub _default_sql_like_escape_string { return '\\\\' };
 
 sub _format_sql_like_escape_string {
     my $class = shift;
-    return "E'" . shift . "'";
+    my $escape = shift;
+    return "E'$escape'";
 }
 
 sub can_savepoint { 1;}
