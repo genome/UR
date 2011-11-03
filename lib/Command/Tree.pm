@@ -128,11 +128,12 @@ sub doc_manual {
 
 sub sorted_sub_command_classes {
     no warnings;
-    my @c = shift->sub_command_classes;
-    return sort {
-            ($a->sub_command_sort_position <=> $b->sub_command_sort_position)
+    my @c = map { [ $_->sub_command_sort_position, $_ ] } shift->sub_command_classes;
+    return map { $_->[1] }
+           sort {
+            ($a->[0] <=> $b->[0])
             ||
-            ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
+            ($a->[0] cmp $b->[0])
         } 
         @c;
 }

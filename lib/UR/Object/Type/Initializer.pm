@@ -752,8 +752,8 @@ sub _normalize_class_description_impl {
                     $inherited_copy = UR::Util::deep_copy($parent_property_data);
                 }
                 $inherited_copy->{class_name} = $class_name;
-                my $a = $inherited_copy->{overrides_class_names} ||= [];
-                push @$a, $parent_property_data->{class_name};
+                my $override = $inherited_copy->{overrides_class_names} ||= [];
+                push @$override, $parent_property_data->{class_name};
             }
         }
     }
@@ -1002,26 +1002,23 @@ sub _normalize_property_description1 {
         [ singular_name                   => qw//],
         [ plural_name                     => qw//],
     ) {
-        my ($primary_field_name, @alternate_field_names) = @$mapping;
-        my @all_fields = ($primary_field_name, @alternate_field_names);
+        my $primary_field_name = $mapping->[0];
 
-        my @keys = grep { exists $old_property{$_} } @all_fields;
-        if (@keys > 1) {
-            Carp::croak("Invalid class definition for $class_name in property '$property_name'.  The keys "
-                        . join(', ',@keys) . " are all synonyms for $primary_field_name");
-
+        my $found_key;
+        foreach my $key ( @$mapping ) {
+            if (exists $old_property{$key}) {
+                if ($found_key) {
+                    my @keys = grep { exists $old_property{$_} }  @$mapping;
+                    Carp::croak("Invalid class definition for $class_name in property '$property_name'.  The keys "
+                                . join(', ',$found_key,@keys) . " are all synonyms for $primary_field_name");
+                }
+                $found_key = $key;
+            }
         }
-        my @values = grep { defined } delete @old_property{@all_fields};
-        if (@keys == 1) {
-            $new_property{$primary_field_name} = $values[0];
-        }
 
-        # Fill in default values for metadata that is missing
-        if (
-            (not exists $new_property{$primary_field_name}) 
-            and 
-            (exists $UR::Object::Property::defaults{$primary_field_name}) 
-        ) {
+        if ($found_key) {
+            $new_property{$primary_field_name} = delete $old_property{$found_key};
+        } elsif (exists $UR::Object::Property::defaults{$primary_field_name}) {
             $new_property{$primary_field_name} = $UR::Object::Property::defaults{$primary_field_name};
         }
     }
@@ -1389,7 +1386,7 @@ sub _complete_class_meta_object_definitions {
     }
     
     # make old-style (bc4nf) property objects in the default way
-    my @property_objects;
+    my %property_objects;
     
     for my $pinfo (values %$properties) {                        
         my $property_name       = $pinfo->{property_name};
@@ -1443,7 +1440,7 @@ sub _complete_class_meta_object_definitions {
             return;
         }
         
-        push @property_objects, $property_object;
+        $property_objects{$property_name} =  $property_object;
         push @subordinate_objects, $property_object;
     }
 
@@ -1523,6 +1520,8 @@ sub _complete_class_meta_object_definitions {
     my $src2 = qq|sub ${class_name}::inheritance { $src1 }|;
     eval $src2  unless $class_name eq 'UR::Object';
     die $@ if $@;
+
+    $self->{'_property_meta_for_name'} = \%property_objects;
 
     # return the new class object
     return $self;
@@ -1638,7 +1637,10 @@ sub generate {
     if ($data_source_obj) {
         $columns_are_upper_case = $data_source_obj->table_and_column_names_are_upper_case;
     }
-    for my $property_object (sort { $a->property_name cmp $b->property_name } @property_objects) {
+
+    my @sort_list = map { [$_->property_name, $_] } @property_objects;
+    for my $sorted_item ( sort { $a->[0] cmp $b->[0] } @sort_list ) {
+        my $property_object = $sorted_item->[1];
         if ($property_object->column_name) {
             push @$props, $property_object->property_name;
             push @$cols, $columns_are_upper_case ? uc($property_object->column_name) : $property_object->column_name;
