@@ -824,7 +824,7 @@ sub help_usage_command_pod {
     my $command_name = $self->command_name;
     my $pod;
 
-    if (0) { # (not $self->is_executable) {
+    if (0) { # (not $self->is_executable)
         # no execute implemented
         if ($self->is_sub_command_delegator) {
             # show the list of sub-commands
