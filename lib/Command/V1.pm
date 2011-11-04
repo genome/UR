@@ -40,9 +40,10 @@ eval {
 
 # Override method in UR::Object to support error_die and error_rv_false
 sub validate_subscription {
-    my ($self,$subscription_property) = @_;
+    my $self = shift;
+    my $subscription_property = shift;
 
-    my $retval = $self->SUPER::validate_subscription(@_);
+    my $retval = $self->SUPER::validate_subscription($subscription_property, @_);
     return $retval if $retval;
 
     unless ( defined($subscription_property)
