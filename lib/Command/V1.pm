@@ -141,8 +141,8 @@ sub execute {
     if ($@) {
         my %error_data;
 
-        #parse bjobs -l for a numerical build id
-        $error_data{build_id} = $1 if $ENV{LSB_JOBID} && `bjobs -l $ENV{LSB_JOBID}` =~ /build(\d+)\D/;
+        #parse bjobs -l for a 9 digit build id
+        $error_data{build_id} = $1 if $ENV{LSB_JOBID} && `bjobs -l $ENV{LSB_JOBID}` =~ /build(\d{9})\D/;
 
         #The die message is parsed with a regex to glean extra information
         if ($@ =~ m{(.+?) at /.+?/Genome/(.+?) line (\d+)}) {
