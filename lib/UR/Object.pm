@@ -329,7 +329,7 @@ sub add_observer {
     my $aspect = delete $params{aspect};
     my $callback = delete $params{callback};
     if (%params) {
-        Carp::croak("Unrecognized parameters for observer creation: "
+        Carp::croak('Unrecognized parameters for observer addition: '
                      . Data::Dumper::Dumper(\%params)
                      . "Expected 'aspect' and 'callback'");
     }
