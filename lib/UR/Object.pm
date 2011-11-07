@@ -350,6 +350,28 @@ sub add_observer {
     return $observer;
 }
 
+sub remove_observers {
+    my $self = shift;
+    my %params = @_;
+
+    my $aspect = delete $params{'aspect'};
+    my $callback = delete $params{'callback'};
+    if (%params) {
+        Carp::croak('Unrecognized parameters for observer removal: '
+                    . Data::Dumper::Dumper(\%params)
+                     . "Expected 'aspect' and 'callback'");
+    }
+
+    my %args = ( subject_class_name => $self->class );
+    $args{'subject_id'} = $self->id if (ref $self);
+    $args{'aspect'} = $aspect if (defined $aspect);
+    $args{'callback'} = $callback if (defined $callback);
+    my @observers = UR::Observer->get(%args);
+
+    $_->delete foreach @observers;
+    return @observers;
+}
+
 sub create_iterator {
     my $class = shift;
     my %params = @_;
