@@ -10,7 +10,7 @@ use Scalar::Util;
 our @ISA = ('UR::ModuleBase');
 our $VERSION = "0.35"; # UR $VERSION;;
 
-# Base object API 
+# Base object API
 
 sub class { ref($_[0]) || $_[0] }
 
@@ -40,7 +40,7 @@ sub __context__ {
     # We will ultimately need to support objects recording their context explicitly
     # for things such as data maintenance operations.  This shouldn't happen
     # during "business logic".
-    
+
     return $UR::Context::current;
 }
 
@@ -69,7 +69,7 @@ sub __get_attr__ {
     my ($self, $property_name) = @_;
     my @property_values;
     if (index($property_name,'.') == -1) {
-        @property_values = $self->$property_name; 
+        @property_values = $self->$property_name;
     }
     else {
         my @links = split(/\./,$property_name);
@@ -83,9 +83,9 @@ sub __get_attr__ {
     return if not defined wantarray;
     return @property_values if wantarray;
     if (@property_values > 1) {
-        my $class_name = $self->__meta__->class_name; 
+        my $class_name = $self->__meta__->class_name;
         Carp::confess("Multiple values returned for $class_name $property_name in scalar context!");
-    }         
+    }
     return $property_values[0];
 }
 
@@ -104,7 +104,7 @@ sub __display_name__ {
     # default stringification (does override "" unless you specifically choose to)
     my $self = shift;
     my $in_context_of_related_object = shift;
-    
+
     my $name = $self->id;
     $name =~ s/\t/ /g;
     return $name;
@@ -137,7 +137,7 @@ sub __errors__ {
     my $class_object = $self->__meta__;
 
     unless (scalar @property_names) {
-        @property_names = $class_object->all_property_names;    
+        @property_names = $class_object->all_property_names;
     }
 
     my @properties = map {
@@ -150,9 +150,9 @@ sub __errors__ {
         # Ultimately, we should delegate to the property metadata object for value validation.
         next if $property_metadata->is_delegated;
         next if $property_metadata->is_calculated;
-        
+
         my $property_name = $property_metadata->property_name;
-        
+
         # TODO: is this making commits slow by calling lots of indirect accessors?
         my @values = $self->$property_name;
         next if @values > 1;
@@ -166,7 +166,7 @@ sub __errors__ {
                             desc => "No value specified for required property",
                          );
         }
-        
+
         # The tests below don't apply do undefined values.
         # Save the trouble and move on.
         next unless defined $value;
@@ -245,7 +245,7 @@ sub __errors__ {
         # Check size
         if ($generic_data_type ne 'DateTime') {
             if ( defined($data_length) and ($data_length < length($value)) ) {
-                push @tags, 
+                push @tags,
                     UR::Object::Tag->create(
                         type => 'invalid',
                         properties => [$property_name],
@@ -319,7 +319,7 @@ sub define_set {
     $class = ref($class) || $class;
     my $rule = UR::BoolExpr->resolve($class,@_);
     my $set_class = $class . "::Set";
-    return $set_class->get($rule->id);    
+    return $set_class->get($rule->id);
 }
 
 sub add_observer {
@@ -339,7 +339,7 @@ sub add_observer {
         subject_id => (ref($self) ? $self->id : undef),
         aspect => $aspect,
         callback => $callback,
-    );  
+    );
     unless ($observer) {
         $self->error_message(
             "Failed to create observer: "
@@ -353,7 +353,7 @@ sub add_observer {
 sub create_iterator {
     my $class = shift;
     my %params = @_;
-    
+
     my $filter;
     if ($params{'where'}) {
         # old syntax
@@ -362,18 +362,18 @@ sub create_iterator {
         # new syntax takes key => value params just like get()
         $filter = \@_;
     }
-  
+
     unless (Scalar::Util::blessed($filter)) {
         $filter = UR::BoolExpr->resolve($class,@$filter)
     }
-    
+
     my $iterator = UR::Object::Iterator->create_for_filter_rule($filter);
     unless ($iterator) {
         $class->error_message(UR::Object::Iterator->error_message);
         return;
     }
-    
-    return $iterator;    
+
+    return $iterator;
 }
 
 sub create_view {
@@ -469,17 +469,17 @@ sub create_mock {
 sub __changes__ {
     # Return a list of changes present on the object _directly_.
     # This is really only useful internally because the boundary of the object
-    # is internal/subjective. 
- 
+    # is internal/subjective.
+
     my ($self,$optional_property) = @_;
-    
+
     # performance optimization
     return unless $self->{_change_count};
 
     unless (wantarray) {
         return $self->{_change_count};  # scalar context only cares if there are any changes or not
     }
-    
+
     my $meta = $self->__meta__;
     if (ref($meta) eq 'UR::DeletedRef') {
         print Data::Dumper::Dumper($self,$meta);
@@ -532,7 +532,7 @@ sub _changed_property_names {
 }
 
 sub __signal_change__ {
-    # all mutable property accessors ("setters") call this method to tell the 
+    # all mutable property accessors ("setters") call this method to tell the
     # current context about a state change.
     $UR::Context::current->add_change_to_transaction_log(@_);
 }
@@ -543,7 +543,7 @@ sub __define__ {
     # Simply assert they already existed externally, and act as though they were just loaded...
     # It is used for classes defined in the source code (which is the default) by the "class {}" magic
     # instead of in some database, as we'd do for regular objects.  It is also used by some test cases.
-    if ($UR::initialized and $_[0] ne 'UR::Object::Property') { 
+    if ($UR::initialized and $_[0] ne 'UR::Object::Property') {
         # the nornal implementation has all create() features
         my $self;
         do {
@@ -578,7 +578,7 @@ sub __define__ {
 }
 
 sub __extend_namespace__ {
-    # A class Foo can implement this method to have a chance to auto-define Foo::Bar 
+    # A class Foo can implement this method to have a chance to auto-define Foo::Bar
     # TODO: make a Class::Autouse::ExtendNamespace Foo => sub { } to handle this.
     # Right now, UR::ModuleLoader will try it after "use".
     my $class  = shift;
@@ -693,22 +693,22 @@ Query the current context to find objects:
   @existing_objs = Acme::Puppet->get(
     favorite_color => ['red','yellow'],
   );
-  # this will not get elmo because his favorite color is now blue  
+  # this will not get elmo because his favorite color is now blue
 
   @existing_objs = Acme::Puppet->get(job => $snore);
-  # this will return $elmo along with other puppets that snore, 
+  # this will return $elmo along with other puppets that snore,
   # though we haven't saved the change yet..
 
 Save our changes:
-  
+
   UR::Context->current->commit;
 
 Too many puppets...:
 
   $elmo->delete;
- 
+
   $elmo->play; # this will throw an exception now
- 
+
   $elmo = Acme::Puppet->get(name => 'Elmo'); # this returns nothing now
 
 Just kidding:
@@ -721,25 +721,25 @@ All is well:
 
 =head1 DESCRIPTION
 
-UR::Objects are transactional, queryable, representations of entities, built to maintain 
-separation between the physical reference in a program, and the logical entity the 
+UR::Objects are transactional, queryable, representations of entities, built to maintain
+separation between the physical reference in a program, and the logical entity the
 reference represents, using a well-defined interface.
 
-UR uses that separation to automatically handle I/O.  It provides a query API, 
-and manages the difference between the state of entities in the application, 
-and their state in external persistance systems.  It aims to do so transparently, 
+UR uses that separation to automatically handle I/O.  It provides a query API,
+and manages the difference between the state of entities in the application,
+and their state in external persistance systems.  It aims to do so transparently,
 keeping I/O logic orthogonally to "business logic", and hopefully making code
 around I/O unnecessary to write at all for most programs.
 
-Rather than explicitly constructing and serializing/deserializing objects, the 
-application layer just requests objects from the current "context", according to 
-their characteristics.  The context manages database connections, object state 
-changes, references, relationships, in-memory transactions, queries and caching in 
+Rather than explicitly constructing and serializing/deserializing objects, the
+application layer just requests objects from the current "context", according to
+their characteristics.  The context manages database connections, object state
+changes, references, relationships, in-memory transactions, queries and caching in
 tunable ways.
 
-Accessors dynamically fabricate references lazily, as needed through the same 
-query API, so objects work as the developer would traditionally expect in 
-most cases.  The goal of UR::Object is that your application doesn't have to do 
+Accessors dynamically fabricate references lazily, as needed through the same
+query API, so objects work as the developer would traditionally expect in
+most cases.  The goal of UR::Object is that your application doesn't have to do
 data management.  Just ask for what you want, use it, and let it go.
 
 UR::Objects support full reflection and meta-programming.  Its meta-object
@@ -795,14 +795,14 @@ context for all object construction.
 The create() method will always create something new or will return undef if
 the identity is already known to be in use.
 
-The get() method lets the context internally decide whether to return a cached 
-reference for the specified logical entities or to construct new objects 
+The get() method lets the context internally decide whether to return a cached
+reference for the specified logical entities or to construct new objects
 by loading data from the outside.
 
 =head1 METHODS
 
 The examples below use $obj where an actual object reference is required,
-and SomeClass where the class name can be used.  In some cases the 
+and SomeClass where the class name can be used.  In some cases the
 example in the synopsisis is continued for deeper illustration.
 
 =head2 Base API
@@ -821,19 +821,19 @@ Query the current context for objects.
 It turns the passed-in parameters into a L<UR::BoolExpr> and returns all
 objects of the given class which match.  The current context determines
 whether the request can be fulfilled without external queries.  Data
-is loaded from underlying database(s) lazliy as needed to fulfuill the 
-request. 
+is loaded from underlying database(s) lazliy as needed to fulfuill the
+request.
 
 In the simplest case of requesting an object by id which is cached, the
-call to get() is an immediate hash lookup, and is very fast. 
+call to get() is an immediate hash lookup, and is very fast.
 
-See L<UR::Manual::Queries>, or look at L<UR::Object::Set>, L<UR::BoolExpr>, 
+See L<UR::Manual::Queries>, or look at L<UR::Object::Set>, L<UR::BoolExpr>,
 and L<UR::Context> for details.
 
-If called in scalar context and more than one object matches the given 
+If called in scalar context and more than one object matches the given
 parameters, get() will raise an exception through C<die>.
 
-=item create 
+=item create
 
   $obj = SomeClass->create(
     property1 => $value1,
@@ -844,23 +844,23 @@ Create a new entity in the current context, and return a reference to it.
 
 The only required property to create an object is the "id",
 and that is only required for objects which do not autogenerate their
-own ids.  This requirement may be overridden in subclasses to be 
+own ids.  This requirement may be overridden in subclasses to be
 more restrictive.
- 
+
 If entities of this type persist in an underlying context, the entity will
 not appear there until commit.  (i.e. no insert is done until just before
-a real database commit)  The object in question does not need to pass its own 
+a real database commit)  The object in question does not need to pass its own
 constraints when initially created, but must be fully valid before the
-transaction which created it commits. 
+transaction which created it commits.
 
 =item delete
 
   $obj->delete
 
-Deletes an object in the current context.  
+Deletes an object in the current context.
 
-The $obj reference will be garbage collected at the discretion of the Perl interpreter as soon as possible.  
-Any attempt to use the reference after delete() is called will result in an exception.  
+The $obj reference will be garbage collected at the discretion of the Perl interpreter as soon as possible.
+Any attempt to use the reference after delete() is called will result in an exception.
 
 If the represented entity was loaded from the parent context (i.e. persistent database objects),
 it will not be deleted from that context (the database) until commit is called.  The commit call
@@ -880,21 +880,21 @@ deleted objects are re-constructed on STM rollback.
 Returns the name of the class of the object in question.  See __meta__ below
 for the class meta-object.
 
-=item id 
+=item id
 
  $id = $obj->id;
 
-The unique identifier of the object within its class.  
+The unique identifier of the object within its class.
 
 For database-tracked entities this is the primary key value, or a composite
 blob containing the primary key values for multi-column primary keys.
 
 For regular objects private to the process, the default id embeds the
-hostname, process ID, and a timestamp to uniquely identify the 
+hostname, process ID, and a timestamp to uniquely identify the
 UR::Context::Process object which is its final home.
 
-When inheritance is involved beneath UR::Object, the 'id' may identify the object 
-within the super-class as well.  It is also possible for an object to have a 
+When inheritance is involved beneath UR::Object, the 'id' may identify the object
+within the super-class as well.  It is also possible for an object to have a
 different id upon sub-classification.
 
 
@@ -903,7 +903,7 @@ different id upon sub-classification.
 =head2 Accessors
 
 Every relationship declared in the class definition results in at least one
-accesor being generated for the class in question. 
+accesor being generated for the class in question.
 
 Identity properties are read-only, while non-identity properties are read-write
 unless is_mutable is explicitly set to false.
@@ -917,7 +917,7 @@ the value of the property after the mutation has occurred.
 
 =head3 Single-value property accessors:
 
-By default, properties are expected to return a single value.  
+By default, properties are expected to return a single value.
 
 =over 4
 
@@ -929,7 +929,7 @@ as mutators as is commonly expected:
   $value = $obj->property_name;
   $obj->property_name($new_value);
 
-When the property is declared with id_by instead of recording the refereince, it 
+When the property is declared with id_by instead of recording the refereince, it
 records the id of the object automatically, such that both will return different
 values after either changes.
 
@@ -937,7 +937,7 @@ values after either changes.
 
 =head3 Muli-value property accessors:
 
-When a property is declared with the "is_many" flag, a variety of accessors are made 
+When a property is declared with the "is_many" flag, a variety of accessors are made
 available on the object.  See C<UR::Manual::WritingClasses> for more details
 on the ways to declare relationships between objects when writing classes.
 
@@ -947,7 +947,7 @@ Using the example from the synopsis:
 
 =item NAMEs (the property name pluralized)
 
-A "has_many" relationship is declared using the plural form of the relationship name.  
+A "has_many" relationship is declared using the plural form of the relationship name.
 An accessor returning the list of property values is generated for the class.  It
 is usable with or without additional filters:
 
@@ -962,10 +962,10 @@ Returns one item from the group, which must be specified in parameters.  If more
 than one item is matched, an exception is thrown via die():
 
  $job = $elmo->job(name => 'Sing');
- 
+
  $job = $elmo->job(is_fun => 1);
  # die: too many things are fun for Elmo
- 
+
 =item NAME_list
 
 The default accessor is available as *_list.  Usable with or without additional filters:
@@ -1003,7 +1003,7 @@ automatically.
 
   @lines = $order->lines;
   # 2 lines, for instance
-  
+
   $line = $order->add_line(
      product => $p,
      quantity => $q,
@@ -1023,7 +1023,7 @@ Items can be removed from the assigned group in a way symetrical with how they a
 
 These methods are available on any class defined by UR.  They
 are convenience methods around L<UR::Context>, L<UR::Object::Set>,
-L<UR::BoolExpr>, L<UR::Object::View>, L<UR::Observer> 
+L<UR::BoolExpr>, L<UR::Object::View>, L<UR::Observer>
 and L<Mock::Object>.
 
 =over 4
@@ -1034,9 +1034,9 @@ and L<Mock::Object>.
     property1 => $explicit_value,
     property2 => \@my_in_clause,
     'property3 like' => 'some_pattern_with_%_as_wildcard',
-    'property4 between' => [$low,$high],   
+    'property4 between' => [$low,$high],
   );
-  
+
   while (my $obj = $iter->next) {
     ...
   }
@@ -1044,10 +1044,10 @@ and L<Mock::Object>.
 Takes the same sort of parameters as get(), but returns a L<UR::Object::Iterator>
 for the matching objects.
 
-The next() method will return one object from the resulting set each time it is 
+The next() method will return one object from the resulting set each time it is
 called, and undef when the results have been exhausted.
 
-C<UR::Object::Iterator> instances are normal object references in the current 
+C<UR::Object::Iterator> instances are normal object references in the current
 process, not context-oriented UR::Objects.  They vanish upon dereference,
 and cannot be retrieved by querying the context.
 
@@ -1071,27 +1071,27 @@ even though its job is no longer 'cleaner'.  However, if an object matching the
 iterator's params is deleted between the time the iterator is created and the time
 next() would return that object, then next() will throw an exception.
 
-=item define_set 
+=item define_set
 
  $set = SomeClass->define_set(
     property1 => $explicit_value,
     property2 => \@my_in_clause,
     'property3 like' => 'some_pattern_with_%_as_wildcard',
-    'property4 between' => [$low,$high], 
+    'property4 between' => [$low,$high],
  );
- 
+
  @subsets = $set->group_by('property3','property4');
- 
+
  @some_members = $subsets[0]->members;
 
 Takes the same sort of parameters as get(), but returns a set object.
 
-Sets are lazy, and only query underlying databases as much as necessary.  At any point 
+Sets are lazy, and only query underlying databases as much as necessary.  At any point
 in time the members() method returns all matches to the specified parameters.
 
 See L<UR::Object::Set> for details.
 
-=item define_boolexpr 
+=item define_boolexpr
 
  $bx = SomeClass->define_boolexpr(
     property1 => $explicit_value,
@@ -1101,7 +1101,7 @@ See L<UR::Object::Set> for details.
  );
 
  $bx->evaluate($obj1); # true or false?
- 
+
 Takes the same sort of parameters as get(), but returns a L<UR::BoolExpr> object.
 
 The boolean expression can be used to evaluate other objects to see if they match
@@ -1109,40 +1109,40 @@ the given condition.  The "id" of the object embeds the complete "where clause",
 and as a semi-human-readable blob, such is reconstitutable from it.
 
 See L<UR::BoolExpr> for details on how to use this to do advanced work on
-defining sets, comparing objects, creating query templates, adding 
+defining sets, comparing objects, creating query templates, adding
 object constraints, etc.
 
-=item add_observer 
+=item add_observer
 
  $o = $obj1->add_observer(
     aspect => 'someproperty'
     callback => sub { print "change!\n" },
  );
- 
+
  $obj1->property1('new value');
- 
+
  # observer callback fires....
- 
+
  $o->delete;
 
 Adds an observer to an object, monitoring one or more of its properties for changes.
 
 The specified callback is fired upon property changes which match the observation request.
 
-=item create_mock 
+=item create_mock
 
  $mock = SomeClass->create_mock(
     property1 => $value,
     method1 => $return_value,
  );
- 
+
 Creates a mock object using using the class meta-data for "SomeClass" via L<Mock::Object>.
 
 Useful for test cases.
 
 =back
 
-=head2 Meta API 
+=head2 Meta API
 
 The folowing methods allow the application to interrogate UR for information
 about the object in question.
@@ -1150,17 +1150,17 @@ about the object in question.
 =over 4
 
 =item __meta__
-  
+
   $class_obj = $obj->__meta__();
 
 Returns the class metadata object for the given object's class.  Class objects
-are from the class L<UR::Object::Type>, and hold information about the class' 
+are from the class L<UR::Object::Type>, and hold information about the class'
 properties, data source, relationships to other classes, etc.
 
 =item __extend_namespace__
- 
+
   package Foo::Bar;
- 
+
   class Foo::Bar { has => ['stuff','things'] };
 
   sub __extend_namespace__ {
@@ -1173,18 +1173,18 @@ Dynamically generate new classes under a given namespace.
 This is called automatically by UR::ModuleLoader when an unidentified class name is used.
 
 If Foo::Bar::Baz is not a UR class, and this occurs:
-  
+
   Foo::Bar::Baz->some_method()
 
 This is called:
-  
+
   Foo::Bar->__extend_namespace__("Baz")
 
 If it returns a new class meta, the code will proceed on as though the class
 had always existed.
 
 If Foo::Bar does not exist, the above will be called recursively:
-  
+
   Foo->__extend_namespace__("Bar")
 
 If Foo::Bar, whether loaded or generated, cannot extend itself for "Baz",
@@ -1198,38 +1198,38 @@ under it:
 
   @tags = $obj->__errors__()
 
-Return a list of L<UR::Object::Tag> values describing the issues which would 
+Return a list of L<UR::Object::Tag> values describing the issues which would
 prevent a commit in the current transaction.
 
-The base implementation check the validity of an object by applying any constraints 
-layed out in the class such as making sure any non-optional properties contain values, 
+The base implementation check the validity of an object by applying any constraints
+layed out in the class such as making sure any non-optional properties contain values,
 numeric properties contain numeric data, and properties with enumerated values only
 contain valid values.
 
 Sub-classes can override this method to add additional validity checking.
 
-=item __display_name__ 
+=item __display_name__
 
  $text = $obj->__display_name__;
  # the class and id of $obj, by default
 
  $text = $line_item->__display_name__($order);
- 
+
 Stringifies an object.  Some classes may choose to actually overload the stringification operator
 with this method.  Even if they do not, this method will still attempt to identify this object in
 text form.  The default returns the class name and id value of the object within a string.
 
 It can be overridden to do a more nuanced job.  The class might also choose to overload the
-stringification operator itself with this method, but even if it doesn not the system will 
+stringification operator itself with this method, but even if it doesn not the system will
 presume this method can be called directly on an object for reasonable stringificaiton.
 
-=item __context__ 
+=item __context__
 
  $c = $self->__context__;
 
 Return the L<UR::Context> for the object reference in question.
 
-In UR, a "context" handles connextions between objects, instead of relying 
+In UR, a "context" handles connextions between objects, instead of relying
 on having objects directly reference each other.  This allows an object
 to have a relationship with a large number of other logical entities,
 without having a "physical" reference present within the process in question.
@@ -1246,31 +1246,31 @@ They are likely to change before the 1.0 release.
 
 =over 4
 
-=item __signal_change__ 
+=item __signal_change__
 
 Called by all mutators to tell the current context about a state change.
 
-=item __changes__ 
+=item __changes__
 
   @tags = $obj->__changes__()
 
-Return a list of changes present on the object _directly_.  This is really only 
-useful internally because the boundary of the object is internal/subjective. 
+Return a list of changes present on the object _directly_.  This is really only
+useful internally because the boundary of the object is internal/subjective.
 
-Changes to objects' properties are tracked by the system.  If an object has been 
-changed since it was defined or loaded from its external data source, then changed() 
-will return a list of L<UR::Object::Tag> objects describing which properties have been 
+Changes to objects' properties are tracked by the system.  If an object has been
+changed since it was defined or loaded from its external data source, then changed()
+will return a list of L<UR::Object::Tag> objects describing which properties have been
 changed.
 
-Work is in-progress on an API to request the portion of the changes in effect in the 
-current transaction which would impact the return value of a given list of properties.  
+Work is in-progress on an API to request the portion of the changes in effect in the
+current transaction which would impact the return value of a given list of properties.
 This would be directly usable by a view/observer.
 
-=item __define__ 
+=item __define__
 
-This is used internally to "virtually load" things.  Simply assert they already existed 
-externally, and act as though they were just loaded...  It is used for classes defined in 
-the source code (which is the default) by the "class {}" magic instead of in some database, 
+This is used internally to "virtually load" things.  Simply assert they already existed
+externally, and act as though they were just loaded...  It is used for classes defined in
+the source code (which is the default) by the "class {}" magic instead of in some database,
 as we'd do for regular objects.
 
 =item __strengthen__
@@ -1280,7 +1280,7 @@ as we'd do for regular objects.
 Mark this object as unloadable by the object cache pruner.
 
 UR objects are normally tracked by the current Context for the life of the
-application, but the programmer can specify a limit to cache size, in 
+application, but the programmer can specify a limit to cache size, in
 which case old, unchanged objects are periodically pruned from the cache.
 If strengthen() is called on an object, it will effectively be locked in
 the cache, and will not be considered for pruning.
@@ -1291,13 +1291,13 @@ See L<UR::Context> for more information about the pruning mechanism.
 
   $obj->__weaken__();
 
-Give a hint to the object cache pruner that this instance is not going to be used 
+Give a hint to the object cache pruner that this instance is not going to be used
 in the application in the future, and should be removed with preference when
 pruning the cache.
 
-=item DESTROY 
+=item DESTROY
 
-Perl calls this method on any object before garbage collecting it.  It 
+Perl calls this method on any object before garbage collecting it.  It
 should never by called by your application explicitly.
 
 The DESTROY handler is overridden in UR::Object.  If you override it in
@@ -1311,17 +1311,17 @@ override, or errors will occur.
 When an error occurs which is "exceptional" the API will throw an exception via die().
 
 In some cases, when the possibility of failure is "not-exceptional", the method will simply
-return false.  In scalar context this will be undef.  In list context an empty list.  
+return false.  In scalar context this will be undef.  In list context an empty list.
 
-When there is ambiguity as to whether this is an error or not (get() for instance, might 
+When there is ambiguity as to whether this is an error or not (get() for instance, might
 simply match zero items, ...or fail to understand your parameters), an exception is used.
 
 =over 4
 
 =item error_message
 
-The standard way to convey the error which has occurred is to set ->error_message() on 
-the object.  This will propagate to the class, and through its inheritance.  This is 
+The standard way to convey the error which has occurred is to set ->error_message() on
+the object.  This will propagate to the class, and through its inheritance.  This is
 much like DBI's errstr method, which affects the handle on which it was called, its source
 handle, and the DBI package itself.
 
@@ -1333,8 +1333,8 @@ They also emit a standard Perl warn(), which will invoke $SIG{__WARN__};
 
 =item status_message
 
-Calls to status_message are also recorded on the object in question.  They can be 
-monitored through hooks, as can the other messages.  
+Calls to status_message are also recorded on the object in question.  They can be
+monitored through hooks, as can the other messages.
 
 =back
 
