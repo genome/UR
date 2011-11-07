@@ -27,8 +27,10 @@ sub used_libs {
         next if (grep { $_ =~ /^$abs_inc$/ } @perl5lib);
         push @extra, $inc;
     }
+
     unshift @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
-    map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);   # remove trailing slashes again
+
+    map { $_ =~ s/\/+$// } @extra;   # remove trailing slashes again
     @extra = _unique_elements(@extra);
 
     return @extra;
