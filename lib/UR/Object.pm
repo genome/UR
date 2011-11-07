@@ -557,6 +557,12 @@ sub __signal_change__ {
     # all mutable property accessors ("setters") call this method to tell the 
     # current context about a state change.
     $UR::Context::current->add_change_to_transaction_log(@_);
+    $UR::Context::current->send_notification_to_observers(@_);
+}
+
+# send notifications that aren't state changes to observers
+sub __signal_observers__ {
+    $UR::Context::current->send_notification_to_observers(@_);
 }
 
 sub __define__ {

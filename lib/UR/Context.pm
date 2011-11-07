@@ -294,10 +294,9 @@ sub infer_property_value_from_rule {
     }
 }
 
-our $sig_depth = 0;
-# These are things that use __signal_change__ to emit a message to callbacks, but aren't actually changes
+# These are things that are changes to the program state, but not changes to the object instance
+# so they shouldn't be counted in the object's change_count
 my %changes_not_counted = map { $_ => 1 } qw(load define unload query connect);
-my %subscription_classes;
 sub add_change_to_transaction_log {
     my ($self,$subject, $property, @data) = @_;
 
@@ -337,9 +336,22 @@ sub add_change_to_transaction_log {
             }
         }
     }
+}
 
-    # Before firing signals, we must update indexes to reflect the change.
-    # This is currently a standard callback.
+our $sig_depth = 0;
+my %subscription_classes;
+sub send_notification_to_observers {
+    my ($self,$subject, $property, @data) = @_;
+
+    my ($class,$id);
+    if (ref($subject)) {
+        $class = ref($subject);
+        $id = $subject->id;
+    } else {
+        $class = $subject;
+        $subject = undef;
+        $id = undef;
+    }
 
     my $check_classes = $subscription_classes{$class};
     unless ($check_classes) {
@@ -363,7 +375,7 @@ sub add_change_to_transaction_log {
 
     my @matches =
         map { @$_ }
-        grep { defined $_ } map { @$_{@check_ids} }
+        grep { defined $_ } map { defined($id) ? @$_{@check_ids} : values(%$_) }
         grep { defined $_ } map { @$_{@check_properties} }
         grep { defined $_ } @$UR::Context::all_change_subscriptions{@$check_classes};
 

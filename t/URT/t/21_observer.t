@@ -6,8 +6,9 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 22;
+use Test::More tests => 35;
 
+package URT::Person;
 UR::Object::Type->define(
     class_name => 'URT::Person',
     has => [
@@ -21,57 +22,128 @@ UR::Object::Type->define(
     ]
 );
 
+sub validate_subscription {
+    my($self,$message) = @_;
+    return 1 if (defined($message) and $message eq 'something_else');
+    return $self->SUPER::validate_subscription($message);
+}
+
+package main;
+
 my $p1 = URT::Person->create(
-    first_name => "John", last_name => "Doe"
+    id => 1, first_name => "John", last_name => "Doe"
 );
 ok($p1, "Made a person");
 
 my $p2 = URT::Person->create(
-    first_name => "Jane", last_name => "Doe"
+    id => 2, first_name => "Jane", last_name => "Doe"
 );
 ok($p2, "Made another person");
 
-my $callback_count1 = 0;
-my $callback_count2 = 0;
-my $callback_count3 = 0;
 
+my $change_count = get_change_count();
+
+my $observations = {};
 $p1->last_name("DoDo");
-is($callback_count1+$callback_count2+$callback_count3, 0, "no callback count change with no observer");
+is_deeply($observations, {}, "no callback count change with no observers defined");
+is(get_change_count(), $change_count + 1, '1 change recorded even with no observers');
 
-my $o1 = $p1->add_observer(callback => sub { $callback_count1++});
-ok($o1, "made an observer on person 1");
+foreach my $thing ( $p1,$p2,'URT::Person') {
+    foreach my $aspect ( '','last_name','something_else' ) {
+        my $id = ref($thing) ? $thing->id : $thing;
+        my %args = ( callback => sub { no warnings 'uninitialized'; $observations->{$id}->{$aspect}++ } );
+        if ($aspect) {
+            $args{'aspect'} = $aspect;
+        }
+        ok($thing->add_observer(%args), "Made an observer on $thing for aspect $aspect");
+    }
+}
 
-my $o2 = $p2->add_observer(callback => sub { $callback_count2++ });
-ok($o2, "made an observer on person 2");
 
-my $o3 = URT::Person->add_observer(callback => sub { $callback_count3++ });
-ok($o2, "made an observer on for the class");
 
+$change_count = get_change_count();
 is($p1->last_name("Doh!"),"Doh!", "changed person 1");
-is($callback_count1, 1, "callback registered for person 1");
-is($callback_count2, 0, "no callback registered for person 2");
-is($callback_count3, 1, "callback registered for class");
-$callback_count1 = $callback_count2 = $callback_count3 = 0;
+is_deeply($observations,
+          { 1             => { '' => 1, 'last_name' => 1 },
+            'URT::Person' => { '' => 1, 'last_name' => 1 },
+          },
+          'Callbacks were fired');
+is(get_change_count(), $change_count + 1, '1 change recorded');
 
+
+$change_count = get_change_count();
+$observations = {};
 is($p2->last_name("Do"),"Do", "changed person 2");
-is($callback_count1, 0, "callback registered for person 1");
-is($callback_count2, 1, "no callback registered for person 2");
-is($callback_count3, 1, "callback registered for class");
-$callback_count1 = $callback_count2 = $callback_count3 = 0;
+is_deeply($observations,
+          { 2             => { '' => 1, 'last_name' => 1 },
+            'URT::Person' => { '' => 1, 'last_name' => 1 },
+          },
+          'Callbacks were fired');
+is(get_change_count(), $change_count + 1, '1 change recorded');
 
-$o1->delete;
 
+$change_count = get_change_count();
+$observations = {};
+ok($p2->__signal_observers__('something_else'),'send the "something_else" signal to person 2');
+is_deeply($observations,
+          { 2             => { '' => 1, 'something_else' => 1},
+            'URT::Person' => { '' => 1, 'something_else' => 1},
+          },
+          'Callbacks were fired');
+is(get_change_count(), $change_count, 'no changes recorded for non-change signal');
+
+
+$change_count = get_change_count();
+$observations = {};
+ok(URT::Person->__signal_observers__('something_else'), 'Send the "something_else" signal to the URT::Person class');
+is_deeply($observations,
+          { 1             => { '' => 1, 'something_else' => 1},
+            2             => { '' => 1, 'something_else' => 1},
+            'URT::Person' => { '' => 1, 'something_else' => 1},
+          },
+          'Callbacks were fired');
+is(get_change_count(), $change_count, 'no changes recorded for non-change signal');
+
+
+$change_count = get_change_count();
+$observations = {};
+ok(URT::Person->__signal_observers__('blablah'), 'Send the "blahblah" signal to the URT::Person class');
+is_deeply($observations,
+          { 1             => { '' => 1,},
+            2             => { '' => 1,},
+            'URT::Person' => { '' => 1,},
+          },
+          'Callbacks were fired');
+is(get_change_count(), $change_count, 'no changes recorded for non-change signal');
+
+
+ok(scalar($p1->remove_observers()), 'Remove observers for Person 1');
+
+
+$change_count = get_change_count();
+$observations = {};
 is($p1->last_name("Doooo"),"Doooo", "changed person 1");
-is($callback_count1, 0, "no callback registered for person 1");
-is($callback_count2, 0, "no callback registered for person 2");
-is($callback_count3, 1, "callback registered for class");
-$callback_count1 = $callback_count2 = $callback_count3 = 0;
+is_deeply($observations,
+          { 'URT::Person' => { '' => 1, 'last_name' => 1 } },
+          'Callbacks were fired');
+is(get_change_count(), $change_count + 1, '1 change recorded');
 
 
+$change_count = get_change_count();
+$observations = {};
 is($p2->last_name("Boo"),"Boo", "changed person 2");
-is($callback_count1, 0, "callback registered for person 1");
-is($callback_count2, 1, "no callback registered for person 2");
-is($callback_count3, 1, "callback registered for class");
-$callback_count1 = $callback_count2 = $callback_count3 = 0;
+is_deeply($observations,
+          { 'URT::Person' => { '' => 1, 'last_name' => 1 },
+            2             => { '' => 1, 'last_name' => 1 },
+          },
+          'Callbacks were fired');
+is(get_change_count(), $change_count + 1, '1 change recorded');
 
+
+sub get_change_count {
+    my @c = map { scalar($_->__changes__) } URT::Person->get;
+    my $sum = 0;
+    do {$sum += $_ } foreach (@c);
+    return $sum;
+}
 
