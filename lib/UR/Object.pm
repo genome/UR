@@ -352,19 +352,22 @@ sub add_observer {
 
 sub create_iterator {
     my $class = shift;
-    my %params = @_;
 
-    my $filter;
-    if ($params{'where'}) {
-        # old syntax
-        $filter = delete $params{'where'};
-    } else {
-        # new syntax takes key => value params just like get()
-        $filter = \@_;
+    # old syntax = create_iterator(where => [param_a => A, param_b => B])
+    if (@_ > 1) {
+        my %params = @_;
+        if (exists $params{'where'}) {
+            Carp::carp('create_iterator called with old syntax create_iterator(where => \@params) should be called as create_iterator(@params)');
+            @_ = $params{'where'};
+        }
     }
 
-    unless (Scalar::Util::blessed($filter)) {
-        $filter = UR::BoolExpr->resolve($class,@$filter)
+    # new syntax, same as get() = create_iterator($bx) or create_iterator(param_a => A, param_b => B)
+    my $filter;
+    if (Scalar::Util::blessed($_[0]) && $_[0]->isa('UR::BoolExpr')) {
+        $filter = $_[0];
+    } else {
+        $filter = UR::BoolExpr->resolve($class, @_)
     }
 
     my $iterator = UR::Object::Iterator->create_for_filter_rule($filter);
