@@ -27,8 +27,10 @@ sub used_libs {
         next if (grep { $_ =~ /^$abs_inc$/ } @perl5lib);
         push @extra, $inc;
     }
+
     unshift @extra, ($ENV{PERL_USED_ABOVE} ? split(":", $ENV{PERL_USED_ABOVE}) : ());
-    map { $_ =~ s/\/+$// } (@compiled_inc, @perl5lib);   # remove trailing slashes again
+
+    map { $_ =~ s/\/+$// } @extra;   # remove trailing slashes again
     @extra = _unique_elements(@extra);
 
     return @extra;
@@ -70,7 +72,8 @@ BEGIN {
         }
     }
 
-    push @compiled_inc, '.' if (${^TAINT} == 0);
+    # UR locks in relative paths when loaded so instead of adding '.' we add cwd
+    push @compiled_inc, Cwd::cwd() if (${^TAINT} == 0);
 
     map { $_ =~ s/\/+/\//g } @compiled_inc;
     map { $_ =~ s/\/+$// } @compiled_inc;
