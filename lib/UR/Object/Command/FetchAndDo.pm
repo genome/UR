@@ -222,7 +222,7 @@ sub _fetch
     $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
         and return if %extra;
     
-    if (my $i = $self->subject_class_name->create_iterator(where => $bool_expr)) {
+    if (my $i = $self->subject_class_name->create_iterator($bool_expr)) {
         return $i;
     }
     else {

@@ -11,7 +11,7 @@ use URT::DataSource::SomeSQLite;
 
 &setup_classes_and_db();
 
-my $iter = URT::Thing->create_iterator(where => [ thing_value => { operator => '<', value => 15} ] );
+my $iter = URT::Thing->create_iterator(thing_value => { operator => '<', value => 15});
 my @objects;
 for (my $i = 1; $i < 10; $i++) {
     push @objects, $iter->next();

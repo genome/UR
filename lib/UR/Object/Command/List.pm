@@ -143,7 +143,7 @@ sub execute {
     # have the styler use the list, since it needs all the results to space the columns
     # out properly anyway
     my $iterator;
-    unless ($iterator = $self->subject_class_name->create_iterator(where => $bool_expr)) {
+    unless ($iterator = $self->subject_class_name->create_iterator($bool_expr)) {
         $self->error_message($self->subject_class_name->error_message);
         return;
     }
