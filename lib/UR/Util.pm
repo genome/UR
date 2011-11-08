@@ -72,7 +72,8 @@ BEGIN {
         }
     }
 
-    push @compiled_inc, '.' if (${^TAINT} == 0);
+    # UR locks in relative paths when loaded so instead of adding '.' we add cwd
+    push @compiled_inc, Cwd::cwd() if (${^TAINT} == 0);
 
     map { $_ =~ s/\/+/\//g } @compiled_inc;
     map { $_ =~ s/\/+$// } @compiled_inc;
