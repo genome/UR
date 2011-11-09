@@ -141,7 +141,7 @@ sub execute {
         $error_data{error_subroutine} = defined($self->error_subroutine) ? $self->error_subroutine:'';
         $error_data{error_line} = defined($self->error_line) ? $self->error_line:'';
         $self->__signal_observers__('error_die', %error_data);
-        die $@;
+        die $@ if $@;
     }
 
     $self->is_executed(1);
