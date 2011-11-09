@@ -46,14 +46,7 @@ sub validate_subscription {
     my $retval = $self->SUPER::validate_subscription($subscription_property, @_);
     return $retval if $retval;
 
-    unless ( defined($subscription_property)
-             and
-             (
-               $subscription_property eq 'error_die'
-                   or
-               $subscription_property eq 'error_rv_false'
-             )
-    ) {
+    unless ( defined($subscription_property) and $subscription_property eq 'error_die') {
         $subscription_property = '(undef)' unless defined ($subscription_property);
         Carp::croak("Unrecognized subscription aspect '$subscription_property'");
     }
