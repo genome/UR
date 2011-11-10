@@ -399,21 +399,12 @@ sub sub_command_names {
     return keys %$mapping;
 }
 
-sub class_for_sub_command {
+
+
+sub _try_command_class_named {
     my $self = shift;
-    my $class = ref($self) || $self;
-    my $sub_command = shift;
 
-    return if $sub_command =~ /^\-/;
-
-    my $mapping = $class->_build_sub_command_mapping;
-    if (my $sub_command_class = $mapping->{$sub_command}) {
-        return $sub_command_class;
-    }
-
-
-    my $sub_class = join("", map { ucfirst($_) } split(/-/, $sub_command));
-    $sub_class = $class . "::" . $sub_class;
+    my $sub_class = join('::', @_);
 
     my $meta = UR::Object::Type->get($sub_class); # allow in memory classes
     unless ( $meta ) {
@@ -445,6 +436,40 @@ sub class_for_sub_command {
         return $sub_class;
     }
     else {
+        return;
+    }
+}
+
+
+sub class_for_sub_command {
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my $sub_command = shift;
+
+    return if $sub_command =~ /^\-/;  # If it starts with a "-", then it's a command-line option
+
+    # First attempt is to convert $sub_command into a camel-case module name
+    # and just try loading it
+
+    my $name_for_sub_command = join("", map { ucfirst($_) } split(/-/, $sub_command));
+    my @class_name_parts = (split(/::/,$class), $name_for_sub_command);
+    my $sub_command_class = $self->_try_command_class_named(@class_name_parts);
+    return $sub_command_class if $sub_command_class;
+
+    # Remove "Command" if it's embedded in the middle and try inserting it in other places, starting at the end
+    @class_name_parts = ( ( map { $_ eq 'Command' ? () : $_ } @class_name_parts) , 'Command');
+    for(my $i = $#class_name_parts; $i > 0; $i--) {
+        $sub_command_class = $self->_try_command_class_named(@class_name_parts);
+        return $sub_command_class if $sub_command_class;
+        $class_name_parts[$i] = $class_name_parts[$i-1];
+        $class_name_parts[$i-1] = 'Command';
+    }
+
+    # Didn't find it yet.  Try exhaustively loading all the command modules under $class
+    my $mapping = $class->_build_sub_command_mapping;
+    if (my $sub_command_class = $mapping->{$sub_command}) {
+        return $sub_command_class;
+    } else {
         return;
     }
 }
