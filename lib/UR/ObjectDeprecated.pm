@@ -282,6 +282,8 @@ sub validate_subscription
         return 1 if $property eq $subscription_property;
     }
 
+    return 1 if ($class_object->_is_valid_signal($subscription_property));
+
     # Bad subscription request.
     return;
 }

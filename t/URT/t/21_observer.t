@@ -8,7 +8,6 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use Test::More tests => 35;
 
-package URT::Person;
 UR::Object::Type->define(
     class_name => 'URT::Person',
     has => [
@@ -19,16 +18,9 @@ UR::Object::Type->define(
             calculate_from => ['first_name','last_name'],
             calculate => '$first_name . " " . $last_name',
         }
-    ]
+    ],
+    valid_signals => ['something_else'],
 );
-
-sub validate_subscription {
-    my($self,$message) = @_;
-    return 1 if (defined($message) and $message eq 'something_else');
-    return $self->SUPER::validate_subscription($message);
-}
-
-package main;
 
 my $p1 = URT::Person->create(
     id => 1, first_name => "John", last_name => "Doe"

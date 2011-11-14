@@ -27,6 +27,7 @@ UR::Object::Type->define(
         _default_dbh                     => { type => 'DBI::db',    len => undef, is_transient => 1 },
         _last_savepoint                  => { type => 'String',     len => undef, is_transient => 1 },
     ],
+    valid_signals => ['query'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 

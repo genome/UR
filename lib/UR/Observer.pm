@@ -20,16 +20,25 @@ UR::Object::Type->define(
     is_transactional => 1,
 );
 
+
 sub create {
     my $class = shift;
     my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);
     my $callback = delete $extra{callback};
+    unless ($callback) {
+        Carp::croak("'callback' is a required parameter for creating UR::Observer objects");
+    }
     if (%extra) {
         Carp::croak("Cannot create observer.  Class $class has no property ".join(',',keys %extra));
     }
-    unless ($callback) {
-        Carp::croak("'callback' argument is required for create()");
+
+    my $subject_class_name = $rule->value_for('subject_class_name');
+    my $aspect = $rule->value_for('aspect');
+    unless ($subject_class_name->__meta__->_is_valid_signal($aspect)) {
+        $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
+        return;
     }
+
     my $self = $class->SUPER::create($rule);
     $self->{callback} = $callback;
 

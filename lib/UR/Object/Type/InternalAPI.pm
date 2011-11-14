@@ -1483,6 +1483,43 @@ sub __signal_change__ {
     return @rv;
 }
 
+our %STANDARD_VALID_SIGNALS = ( create        => 1,
+                                'delete'      => 1,
+                                commit        => 1,
+                                rollback      => 1,
+                                load          => 1,
+                                unload        => 1,
+                                load_external => 1 );
+sub _is_valid_signal {
+    my $self = shift;
+    my $aspect = shift;
+
+    # Undefined attributes indicate that the subscriber wants any changes at all to generate a callback.
+    return 1 if (! defined $aspect);
+
+    # All standard creation and destruction methods emit a signal.
+    return 1 if ($STANDARD_VALID_SIGNALS{$aspect});
+
+    for my $property ($self->all_property_names)
+    {
+        return 1 if $property eq $aspect;
+    }
+
+    if (!exists $self->{'_is_valid_signal'}) {
+        $self->{'_is_valid_signal'} = { map { $_ => 1 } @{$self->{'valid_signals'}} };
+    }
+
+    return 1 if ($self->{'_is_valid_signal'}->{$aspect});
+
+    foreach my $parent_meta ( $self->parent_class_metas ) {
+        if ($parent_meta->_is_valid_signal($aspect)) {
+            $self->{'_is_valid_signal'}->{$aspect} = 1;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 
 sub generated {
     my $self = shift;
