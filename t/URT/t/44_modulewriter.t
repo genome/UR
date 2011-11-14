@@ -90,6 +90,7 @@ my $test_class_definition =
     schema_name => 'SomeFile',
     data_source => 'URT::DataSource::SomeFile',
     id_generator => 'the_sequence_seq',
+    valid_signals => ['nonstandard1', 'something_else', 'third_thing'],
     doc => 'Hi there',
 );
 my $orig_test_class = $test_class_definition;
