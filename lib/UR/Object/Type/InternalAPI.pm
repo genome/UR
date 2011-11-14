@@ -1517,6 +1517,7 @@ sub _is_valid_signal {
             return 1;
         }
     }
+
     return 0;
 }
 

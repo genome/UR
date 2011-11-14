@@ -16,6 +16,8 @@ UR::Object::Type->define(
                                 calculate_from => ['subject_class_name','subject_id'],
                                 calculate => '$subject_class_name->get($subject_id)' },
         aspect          => { is => 'String', is_optional => 1 },
+        priority        => { is => 'Number', is_optional => 1, default_value => 1 },
+        note            => { is => 'String', is_optional => 1 },
     ],
     is_transactional => 1,
 );
@@ -26,16 +28,28 @@ sub create {
     my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);
     my $callback = delete $extra{callback};
     unless ($callback) {
-        Carp::croak("'callback' is a required parameter for creating UR::Observer objects");
+        $class->error_message("'callback' is a required parameter for creating UR::Observer objects");
+        return;
     }
     if (%extra) {
-        Carp::croak("Cannot create observer.  Class $class has no property ".join(',',keys %extra));
+        $class->error_message("Cannot create observer.  Class $class has no property ".join(',',keys %extra));
+        return;
     }
 
     my $subject_class_name = $rule->value_for('subject_class_name');
     my $aspect = $rule->value_for('aspect');
+    my $subject_id = $rule->value_for('subject_id');
     unless ($subject_class_name->__meta__->_is_valid_signal($aspect)) {
         $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
+        return;
+    }
+
+    if (!defined($subject_class_name) or $subject_class_name eq 'UR::Object') { $subject_class_name = '' }; # This was part of the old API, not sure why it's still here?!
+    if (!defined ($aspect)) { $aspect = '' };
+    if (!defined ($subject_id)) { $subject_id = '' };
+    # old validation API
+    unless ($subject_class_name->validate_subscription($aspect, $subject_id, $callback)) {
+        $class->error_message("Failed to validate requested subscription fot '$aspect' on class $subject_class_name");
         return;
     }
 
@@ -44,12 +58,15 @@ sub create {
 
     my %params = $rule->params_list;
     my ($subscription, $delete_subscription);
-    $subscription = $self->subject_class_name->create_subscription(
-        id => $self->subject_id,
-        method => $self->aspect,
-        callback => $callback,
-        note => "$self",
-    );
+
+#    $subscription = $self->subject_class_name->create_subscription(
+#        id => $self->subject_id,
+#        method => $self->aspect,
+#        callback => $callback,
+#        note => "$self",
+#    );
+
+    push @{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$self->subject_id} }, [$callback,$self->note,$self->priority, $self->id];
 
     # because subscription is low level it is not deleted by the low level _abandon_object
     # but the delete signal is fired so we can cleanup with a subscription on delete
@@ -57,28 +74,28 @@ sub create {
     my $delete_callback;
     $delete_callback = sub {
         # cancel original subscription
-        $self->subject_class_name->cancel_change_subscription(
-            $self->subject_id,
-            $self->aspect,
-            $self->callback,
-            "$self",
-        );
+#        $self->subject_class_name->cancel_change_subscription(
+#            $self->subject_id,
+#            $self->aspect,
+#            $self->callback,
+#            "$self",
+#        );
         # cancel our delete subscription
-        $self->class->cancel_change_subscription(
-            $self->id,
-            'delete',
-            $delete_callback,
-            "$self",
-        ); 
+#        $self->class->cancel_change_subscription(
+#            $self->id,
+#            'delete',
+#            $delete_callback,
+#            "$self",
+#        ); 
     };
     # create our delete subscription to cleanup if the observer gets deleted
-    $delete_subscription = $self->class->create_subscription(
-        id => $self->id,
-        method => 'delete',
-        callback => $delete_callback,
-        note => "$self",
-        priority => 1000, # "last"
-    );
+#    $delete_subscription = $self->class->create_subscription(
+#        id => $self->id,
+#        method => 'delete',
+#        callback => $delete_callback,
+#        note => "$self",
+#        priority => 1000, # "last"
+#    );
 
     return $self;
 }
@@ -94,13 +111,67 @@ sub subscription {
 sub delete {
     my $self = shift;
     #$DB::single = 1;
-    $self->subject_class_name->cancel_change_subscription(
-        $self->subject_id,
-        $self->aspect,
-        $self->callback,
-        "$self",
-    );
+
+    my $subject_class_name = $self->subject_class_name;
+    my $subject_id         = $self->subject_id;
+    my $aspect             = $self->aspect;
+
+    $subject_class_name = '' if (! $subject_class_name or $subject_class_name eq 'UR::Object');
+    $subject_id         = '' unless (defined $subject_id);
+    $aspect             = '' unless (defined $aspect);
+
+    my $arrayref = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
+    if ($arrayref) {
+        my $index = 0;
+        while ($index < @$arrayref) {
+            if ($arrayref->[$index]->[3] eq $self->id) {
+                my $found = splice(@$arrayref,$index,1);
+
+                if (@$arrayref == 0)
+                {
+                    $arrayref = undef;
+
+                    delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
+                    if (keys(%{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect} }) == 0)
+                    {
+                        delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect};
+                    }
+                }
+
+                # old API
+                unless ($subject_class_name eq '' || $subject_class_name->inform_subscription_cancellation($aspect,$subject_id,$self->{'callback'})) {
+                    Carp::confess("Failed to validate requested subscription cancellation for aspect '$aspect' on class $subject_class_name");
+                }
+
+                # Return a ref to the callback removed.  This is "true", but better than true.
+                #return $found;
+                last;
+
+            } else {
+                # Increment only if we did not splice-out a value.
+                $index++;
+            }
+        }
+    }
+    
+    #$self->subject_class_name->cancel_change_subscription(
+    #    $self->subject_id,
+    #    $self->aspect,
+    #    $self->callback,
+    #    "$self",
+    #);
     $self->SUPER::delete();
+}
+
+sub get_with_special_parameters {
+    my($class,$rule,%extra) = @_;
+
+    my $callback = delete $extra{'callback'};
+    if (keys %extra) {
+        Carp::croak("Unrecognized parameters in get(): " . join(', ', keys(%extra)));
+    }
+    my @matches = $class->get($rule);
+    return grep { $_->callback eq $callback } @matches;
 }
 
 1;

@@ -128,6 +128,7 @@ require UR::Object::Type;
 require UR::Object::Ghost;
 require UR::Object::Property;
 
+require UR::Observer;
 
 require UR::BoolExpr::Util;
 require UR::BoolExpr;                                  # has meta 
