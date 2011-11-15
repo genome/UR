@@ -16,8 +16,7 @@ UR::Object::Type->define(
 );
 
 sub __display_name__ {
-    my $self = $_[0];
-    return $self->id;
+    return shift->id;
 }
 
 sub __load__ {
