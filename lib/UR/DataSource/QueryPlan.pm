@@ -1969,9 +1969,13 @@ sub _init_core {
         $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for($sub_typing_property)
     }
 
-    my $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_properties);
+    my @this_ds_properties = grep { ! $_->[1]->is_delegated
+                                    and (! $_->[1]->is_calculated or $_->[1]->calculate_sql)
+                                  }
+                             @all_properties;
 
-    
+    my $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@this_ds_properties);
+
     %$self = (
         %$self,
 
