@@ -11,6 +11,8 @@ our @CARP_NOT = qw( UR::Context );
 UR::Object::Type->define(
     class_name => 'UR::Value',
     is => 'UR::Object',
+    has => ['id'],
+    data_source => 'UR::DataSource::Default',
 );
 
 sub __display_name__ {
@@ -18,49 +20,45 @@ sub __display_name__ {
     return $self->id;
 }
 
-sub _load {
-    my $class = shift;    
+sub __load__ {
+    my $class = shift;
     my $rule = shift;
-
-    # See if the requested object is loaded.
-    my @loaded = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
-    return $class->context_return(@loaded) if @loaded;
+    my $expected_headers = shift;
 
     # Auto generate the object on the fly.
-    my $id = $rule->value_for_id;
-    unless (defined $id) {
+    my $id_list = $rule->value_for_id;
+    unless (defined $id_list) {
         #$DB::single = 1;
         Carp::croak "No id specified for loading members of an infinite set ($class)!"
     }
+
     my $class_meta = $class->__meta__;
-    my @p = (id => $id);
-    if (my $alt_ids = $class_meta->{id_by}) {
-        if (@$alt_ids == 1) {
-            push @p, $alt_ids->[0] => $id;
-        }
-        else {
-            my ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
-            push @p, $rule->params_list;
-        }
+
+    my(@headers,@values);
+    if (ref($id_list) ne 'ARRAY') {
+        $id_list = [ $id_list ];
     }
 
-    my $obj = $UR::Context::current->_construct_object($class, @p);
-    
-    if (my $method_name = $class_meta->sub_classification_method_name) {
-        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
-        my $sub_class_name = $obj->$method_name;
-        if ($sub_class_name ne $class) {
-            # delegate to the sub-class to create the object
-            $UR::Context::current->_abandon_object($obj);
-            $obj = $UR::Context::current->_construct_object($sub_class_name,$rule);
-            $obj->__signal_change__("load");
-            return $obj;
+    foreach my $id ( @$id_list ) {
+        my @p = (id => $id);
+        my %p;
+        if (my $alt_ids = $class_meta->{id_by}) {
+            if (@$alt_ids == 1) {
+                push @p, $alt_ids->[0] => $id;
+            }
+            else {
+                my ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
+                push @p, $rule->params_list;
+            }
         }
-        # fall through if the class names match
+        %p = @p;
+        unless (@headers) {
+            @headers = keys %p;
+        }
+        push @values, [ values %p ]
     }
-    
-    $obj->__signal_change__("load");
-    return $obj;
+
+    return \@headers, \@values;
 }
 
 1;

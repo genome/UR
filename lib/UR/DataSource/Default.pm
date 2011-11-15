@@ -8,7 +8,7 @@ use UR;
 our $VERSION = "0.35"; # UR $VERSION;
 
 class UR::DataSource::Default {
-    is => ['UR::DataSource'],
+    is => ['UR::DataSource','UR::Singleton'],
     doc => 'allows the class to describe its own loading strategy'
 };
 
