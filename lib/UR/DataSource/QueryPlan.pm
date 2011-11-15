@@ -2021,6 +2021,24 @@ sub _init_default {
     }
     $self->{loading_templates}[0]{property_names} = $expected_headers;
 
+    if ( ( $self->{'loading_templates'}->[0]->{'final_class_name'} eq 'UR::Value'
+            and $bx_template->subject_class_name ne 'UR::Value'
+            and $bx_template->subject_class_name->isa('UR::Value')
+         )
+         or
+         ( $self->{'loading_templates'}->[0]->{'final_class_name'} eq 'UR::Object::Set'
+            and $bx_template->subject_class_name ne 'UR::Object::Set'
+            and $bx_template->subject_class_name->isa('UR::Object::Set')
+         )
+    ) {
+        # Hack so the objects get blessed into the proper subclass in the Object Fabricator.
+        # This is necessary so every possible UR::Value subclass doesn't need its
+        # own "id" property defined.  Without it, the data shows that these objects get
+        # loaded as the base UR::Value class (since its "id" is defined on UR:Value)
+        # and then would get automagically subclassed.
+        $self->{'loading_templates'}->[0]->{'final_class_name'} = $bx_template->subject_class_name
+    }
+
     return $self;
 }
 
