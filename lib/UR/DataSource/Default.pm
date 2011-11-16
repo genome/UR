@@ -57,6 +57,8 @@ sub create_iterator_closure_for_rule {
     return $iterator;
 }
 
+sub can_savepoint { 0 }
+
 sub _map_fields {
     my ($from,$to) = @_;
     my $n = 0;
@@ -78,11 +80,18 @@ sub _sync_database {
     my %params = @_;
     my $changed_objects = $params{changed_objects};
 
+    my %class_can_save;
     my @saved;
     eval {
-        for my $obj ($changed_objects) {
-            push @saved, $obj;
-            $obj->__save__;
+        for my $obj (@$changed_objects) {
+            my $obj_class = $obj->class;
+            unless (exists $class_can_save{$obj_class}) {
+                $class_can_save{$obj_class} = $obj->can('__save__');
+            }
+            if ($class_can_save{$obj_class}) {
+                push @saved, $obj;
+                $obj->__save__;
+            }
         }
     };
 
