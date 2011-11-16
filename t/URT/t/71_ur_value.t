@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 25;
+use Test::More tests => 39;
 
 my $s1 = UR::Value::Text->get('hi there');
 ok($s1, 'Got an object for string "hi there"');
@@ -38,6 +38,10 @@ UR::Object::Type->define(
     ]
 );
 
+eval { Test::Value->get() };
+like($@, qr/Can't load an infinite set of Test::Value/,
+     'Getting infinite set of Test::Values threw an exception');
+
 my $x1 = Test::Value->get('xyz');
 ok($x1,"get('xyz') returned on first call");
 
@@ -66,5 +70,57 @@ my %o = map { $_->id => $_ } @o;
 is($o{'123'}, $n1, "Object with id '123' is the same as the one from earlier");
 is($o{'abc'}, $a1, "Object with id 'abc' is the same as the one from earlier");
 is($o{'xyz'}, $x1, "Object with id 'xyz' is the same as the one from earlier");
+is($o{'456'}->string, '456', 'The 4th value in the last get() constructed the correct object');
 
  
+
+UR::Object::Type->define(
+    class_name => 'Test::Value2',
+    is => 'UR::Value',
+    id_by => [
+        string1 => { is => 'Text' },
+        string2 => { is => 'Text' },
+    ],
+    has => [
+        other_prop => { is => 'Text' },
+    ],
+);
+
+eval { Test::Value2->get(string1 => 'abc') };
+like($@, qr/Can't load an infinite set of Test::Value2/, 
+     'Getting infinite set of Test::Value2s threw an exception');
+
+$a1 = Test::Value2->get(string1 => 'qwe', string2 => undef);
+ok($a1, "get(string1 => 'qwe', string2 => undef) worked");
+$a2 = Test::Value2->get(id => 'qwe');
+ok($a2, "get(id => 'qwe') worked");
+is($a1, $a2, 'They were the same object');
+
+$a1 = Test::Value2->get(string1 => 'abc', string2 => 'def');
+ok($a1, 'get() with both ID properties worked');
+
+my $sep = Test::Value2->__meta__->_resolve_composite_id_separator;
+$a2 = Test::Value2->get('abc' . $sep . 'def');
+ok($a2, 'get() with the composite ID property worked');
+is($a1, $a2, 'They are the same object');
+is($a1->other_prop, undef, 'The non-id property is undefined');
+
+$x1 = Test::Value2->get(string1 => 'xyz', string2 => 'xyz', other_prop => 'hi there');
+ok($x1, 'get() including a non-id property worked');
+is($x1->other_prop, 'hi there', 'The non-id property has the right value');
+
+TODO: {
+    local $TODO = "Can't normalize a composite id in-clause rule";
+
+    # This isn't working properly because of a shortcoming in BoolExpr normalization.  It ends up making
+    # a rule like id => [abc,xyz], when we really want something like
+    # ( string1 => 'abc' and string2 => 'abc) or ( string1 => 'xyz' and string2 => 'xyz')
+
+    @o = Test::Value2->get(['xyz'.$sep.'xyz', 'abc'.$sep.'abc']);
+    is(scalar(@o), 2, 'get() with 2 composite IDs worked');
+}
+
+eval { Test::Value2->get(id => ['xyz'.$sep.'xyz', 'abc'.$sep.'abc'], other_prop => 'somethign else') };
+like($@, qr/Cannot load class Test::Value2 via UR::DataSource::Default when 'id' is a listref and non-id properties appear in the rule/,
+     'Getting with multiple IDs and including non-id properites threw an exception');
+
