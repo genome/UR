@@ -30,7 +30,23 @@ sub __load__ {
         Carp::croak "No id specified for loading members of an infinite set ($class)!"
     }
 
-    my $class_meta = $class->__meta__;
+    if (ref($id) and ref($id) eq 'ARRAY') {
+        # We're being asked to load up more than one object.  In the basic case, this is only
+        # possible if the rule _only_ contains ID properties.  For anything more complicated,
+        # the subclass should implement its own behavior
+
+        my $class_meta = $class->__meta__;
+
+        my %id_properties = map { $_ => 1 } $class_meta->all_id_property_names;
+        my @non_id = grep { ! $id_properties{$_} } $rule->template->_property_names;
+        if (@non_id) {
+            Carp::croak("Cannot load class $class via UR::DataSource::Default when 'id' is a listref and non-id properties appear in the rule:" . join(', ', @non_id));
+        }
+        my $count = @$expected_headers;
+        my $listifier = sub { my $c = $count; my @l; push(@l,$_[0]) while ($c--); return \@l };
+        return ($expected_headers, [ map { &$listifier($_) } @$id ]);
+    }
+
 
     my @values;
     foreach my $header ( @$expected_headers ) {

@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 16;
+use Test::More tests => 25;
 
 my $s1 = UR::Value::Text->get('hi there');
 ok($s1, 'Got an object for string "hi there"');
@@ -38,16 +38,33 @@ UR::Object::Type->define(
     ]
 );
 
-my $z = Test::Value->get('xyz');
-ok($z,"get('xyz') returned on first call");
+my $x1 = Test::Value->get('xyz');
+ok($x1,"get('xyz') returned on first call");
 
-my $y = Test::Value->get('xyz');
-ok($y,"get('xyz') returned on second call");
+my $x2 = Test::Value->get('xyz');
+ok($x2,"get('xyz') returned on second call");
+is($x1, $x2, 'They were the same object');
 
-my $x = Test::Value->get(string => 'abc');
-ok($x,"get(string => 'abc') returned on first call");
+my $a1 = Test::Value->get(string => 'abc');
+ok($a1,"get(string => 'abc') returned on first call");
 
-my $w = Test::Value->get(string => 'abc');
-ok($w,"get(string => 'abc') returned on second call");
+my $a2 = Test::Value->get(string => 'abc');
+ok($a2,"get(string => 'abc') returned on second call");
+is($a1, $a2, 'They were the same object');
+
+my $n1 = Test::Value->get('123');
+ok($n1, "get('123') returned on first call");
+my $n2 = Test::Value->get(string => '123');
+ok($n2,"get(string => '123') returned on second call");
+is($n1, $n2, 'They were the same object');
+
+
+my @o = Test::Value->get(['xyz','abc','123','456']);
+is(scalar(@o), 4, 'Got 4 Test::Values in a single get()');
+my %o = map { $_->id => $_ } @o;
+
+is($o{'123'}, $n1, "Object with id '123' is the same as the one from earlier");
+is($o{'abc'}, $a1, "Object with id 'abc' is the same as the one from earlier");
+is($o{'xyz'}, $x1, "Object with id 'xyz' is the same as the one from earlier");
 
  
