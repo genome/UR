@@ -44,7 +44,10 @@ sub create_iterator_closure_for_rule {
 
     if ("@$headers" ne "@$expected_headers") {
         # translate the headers into the appropriate order
-        my @mapping = _map_fields($headers,$expected_headers);
+        my @mapping = eval { _map_fields($headers,$expected_headers);};
+        if ($@) {
+            Carp::croak("Loading data for class $subject_class_name and boolexpr $rule failed: $@");
+        }
         # print Data::Dumper::Dumper($headers,$expected_headers,\@mapping);
         my $orig_iterator = $iterator;
         $iterator = sub {
@@ -68,8 +71,8 @@ sub _map_fields {
     for my $field (@$to) {
         my $pos = $from{$field};
         unless (defined $pos) {
-            print "@$from\n@$to\n" . Carp::longmess() . "\n";
-            die "Field not found $field!";
+            #print "@$from\n@$to\n" . Carp::longmess() . "\n";
+            die("Can't resolve value for '$field' from the headers returned by its __load__: ". join(', ', @$from));
         }
         push @pos, $pos;
     }
