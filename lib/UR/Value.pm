@@ -27,7 +27,7 @@ sub __load__ {
     my $id = $rule->value_for_id;
     unless (defined $id) {
         #$DB::single = 1;
-        Carp::croak "No id specified for loading members of an infinite set ($class)!"
+        Carp::croak "Can't load an infinite set of $class.  Some id properties were not specified in the rule $rule";
     }
 
     if (ref($id) and ref($id) eq 'ARRAY') {
