@@ -24,41 +24,21 @@ sub __load__ {
     my $rule = shift;
     my $expected_headers = shift;
 
-    # Auto generate the object on the fly.
-    my $id_list = $rule->value_for_id;
-    unless (defined $id_list) {
+    my $id = $rule->value_for_id;
+    unless (defined $id) {
         #$DB::single = 1;
         Carp::croak "No id specified for loading members of an infinite set ($class)!"
     }
 
     my $class_meta = $class->__meta__;
 
-    my(@headers,@values);
-    if (ref($id_list) ne 'ARRAY') {
-        $id_list = [ $id_list ];
+    my @values;
+    foreach my $header ( @$expected_headers ) {
+        my $value = $rule->value_for($header);
+        push @values, $value;
     }
 
-    foreach my $id ( @$id_list ) {
-        my @p = (id => $id);
-        my %p;
-        if (my $alt_ids = $class_meta->{id_by}) {
-            if (@$alt_ids == 1) {
-                push @p, $alt_ids->[0] => $id;
-            }
-            else {
-                my ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
-                push @p, $rule->params_list;
-            }
-        }
-        %p = @p;
-        unless (@headers) {
-            @headers = keys %p;
-        }
-        push @values, [ values %p ]
-    }
-
-    return \@headers, \@values;
+    return $expected_headers, [\@values];
 }
 
 1;
-
