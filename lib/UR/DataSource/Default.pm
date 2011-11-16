@@ -12,12 +12,13 @@ class UR::DataSource::Default {
     doc => 'allows the class to describe its own loading strategy'
 };
 
+
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
     my $subject_class_name = $rule->subject_class_name;
     unless ($subject_class_name->can('__load__')) {
-        Carp::confess("$subject_class_name does not implement __load__!!!!");
+        Carp::croak("Can't load from class $subject_class_name: UR::DataSource::Default requires the class to implement __load__");
     }
 
     my $template = $rule->template;
