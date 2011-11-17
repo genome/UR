@@ -154,9 +154,12 @@ sub _generate_xsl_doc {
     $set_var->('labelName',$label_name);
     $set_var->('currentTime',$time);
 
-    if ($self->subject->id) {
-        my $id = $self->subject->id;
-        $set_var->('objectId', $self->subject->id);
+    if (my $id = $self->subject->id) {
+        $set_var->('objectId', $id);
+    }
+
+    if (my $class_name = $self->subject->class) {
+        $set_var->('objectClassName', $class_name);
     }
 
     if (my $vars = $self->xsl_variables) {
