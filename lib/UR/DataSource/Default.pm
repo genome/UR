@@ -8,16 +8,17 @@ use UR;
 our $VERSION = "0.35"; # UR $VERSION;
 
 class UR::DataSource::Default {
-    is => ['UR::DataSource'],
+    is => ['UR::DataSource','UR::Singleton'],
     doc => 'allows the class to describe its own loading strategy'
 };
+
 
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
     my $subject_class_name = $rule->subject_class_name;
     unless ($subject_class_name->can('__load__')) {
-        Carp::confess("$subject_class_name does not implement __load__!!!!");
+        Carp::croak("Can't load from class $subject_class_name: UR::DataSource::Default requires the class to implement __load__");
     }
 
     my $template = $rule->template;
@@ -43,7 +44,10 @@ sub create_iterator_closure_for_rule {
 
     if ("@$headers" ne "@$expected_headers") {
         # translate the headers into the appropriate order
-        my @mapping = _map_fields($headers,$expected_headers);
+        my @mapping = eval { _map_fields($headers,$expected_headers);};
+        if ($@) {
+            Carp::croak("Loading data for class $subject_class_name and boolexpr $rule failed: $@");
+        }
         # print Data::Dumper::Dumper($headers,$expected_headers,\@mapping);
         my $orig_iterator = $iterator;
         $iterator = sub {
@@ -57,6 +61,8 @@ sub create_iterator_closure_for_rule {
     return $iterator;
 }
 
+sub can_savepoint { 0 }
+
 sub _map_fields {
     my ($from,$to) = @_;
     my $n = 0;
@@ -65,8 +71,8 @@ sub _map_fields {
     for my $field (@$to) {
         my $pos = $from{$field};
         unless (defined $pos) {
-            print "@$from\n@$to\n" . Carp::longmess() . "\n";
-            die "Field not found $field!";
+            #print "@$from\n@$to\n" . Carp::longmess() . "\n";
+            die("Can't resolve value for '$field' from the headers returned by its __load__: ". join(', ', @$from));
         }
         push @pos, $pos;
     }
@@ -78,11 +84,18 @@ sub _sync_database {
     my %params = @_;
     my $changed_objects = $params{changed_objects};
 
+    my %class_can_save;
     my @saved;
     eval {
-        for my $obj ($changed_objects) {
-            push @saved, $obj;
-            $obj->__save__;
+        for my $obj (@$changed_objects) {
+            my $obj_class = $obj->class;
+            unless (exists $class_can_save{$obj_class}) {
+                $class_can_save{$obj_class} = $obj->can('__save__');
+            }
+            if ($class_can_save{$obj_class}) {
+                push @saved, $obj;
+                $obj->__save__;
+            }
         }
     };
 

@@ -11,57 +11,50 @@ our @CARP_NOT = qw( UR::Context );
 UR::Object::Type->define(
     class_name => 'UR::Value',
     is => 'UR::Object',
+    has => ['id'],
+    data_source => 'UR::DataSource::Default',
 );
 
 sub __display_name__ {
-    my $self = $_[0];
-    return $self->id;
+    return shift->id;
 }
 
-sub _load {
-    my $class = shift;    
+sub __load__ {
+    my $class = shift;
     my $rule = shift;
+    my $expected_headers = shift;
 
-    # See if the requested object is loaded.
-    my @loaded = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
-    return $class->context_return(@loaded) if @loaded;
-
-    # Auto generate the object on the fly.
     my $id = $rule->value_for_id;
     unless (defined $id) {
         #$DB::single = 1;
-        Carp::croak "No id specified for loading members of an infinite set ($class)!"
-    }
-    my $class_meta = $class->__meta__;
-    my @p = (id => $id);
-    if (my $alt_ids = $class_meta->{id_by}) {
-        if (@$alt_ids == 1) {
-            push @p, $alt_ids->[0] => $id;
-        }
-        else {
-            my ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
-            push @p, $rule->params_list;
-        }
+        Carp::croak "Can't load an infinite set of $class.  Some id properties were not specified in the rule $rule";
     }
 
-    my $obj = $UR::Context::current->_construct_object($class, @p);
-    
-    if (my $method_name = $class_meta->sub_classification_method_name) {
-        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
-        my $sub_class_name = $obj->$method_name;
-        if ($sub_class_name ne $class) {
-            # delegate to the sub-class to create the object
-            $UR::Context::current->_abandon_object($obj);
-            $obj = $UR::Context::current->_construct_object($sub_class_name,$rule);
-            $obj->__signal_change__("load");
-            return $obj;
+    if (ref($id) and ref($id) eq 'ARRAY') {
+        # We're being asked to load up more than one object.  In the basic case, this is only
+        # possible if the rule _only_ contains ID properties.  For anything more complicated,
+        # the subclass should implement its own behavior
+
+        my $class_meta = $class->__meta__;
+
+        my %id_properties = map { $_ => 1 } $class_meta->all_id_property_names;
+        my @non_id = grep { ! $id_properties{$_} } $rule->template->_property_names;
+        if (@non_id) {
+            Carp::croak("Cannot load class $class via UR::DataSource::Default when 'id' is a listref and non-id properties appear in the rule:" . join(', ', @non_id));
         }
-        # fall through if the class names match
+        my $count = @$expected_headers;
+        my $listifier = sub { my $c = $count; my @l; push(@l,$_[0]) while ($c--); return \@l };
+        return ($expected_headers, [ map { &$listifier($_) } @$id ]);
     }
-    
-    $obj->__signal_change__("load");
-    return $obj;
+
+
+    my @values;
+    foreach my $header ( @$expected_headers ) {
+        my $value = $rule->value_for($header);
+        push @values, $value;
+    }
+
+    return $expected_headers, [\@values];
 }
 
 1;
-

@@ -483,7 +483,10 @@ sub query {
 
     # This is here for bootstrapping reasons: we must be able to load class singletons
     # in order to have metadata for regular loading....
-    if (!$rule->has_meta_options and ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::Value"))) {
+    # UR::DataSource::QueryPlan isa UR::Value (which has custom loading logic), but we need to be able to generate
+    # a QueryPlan independant of the normal loading process, otherwise there'd be endless recursion (Can't generate a QueryPlan
+    # for a QueryPlan without generating a QueryPlan first....)
+    if (!$rule->has_meta_options and ($class->isa("UR::Object::Type") or $class->isa("UR::Singleton") or $class->isa("UR::DataSource::QueryPlan"))) {
         my $normalized_rule = $rule->normalize;
         my @objects = $class->_load($normalized_rule);
         

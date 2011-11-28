@@ -46,14 +46,7 @@ sub validate_subscription {
     my $retval = $self->SUPER::validate_subscription($subscription_property, @_);
     return $retval if $retval;
 
-    unless ( defined($subscription_property)
-             and
-             (
-               $subscription_property eq 'error_die'
-                   or
-               $subscription_property eq 'error_rv_false'
-             )
-    ) {
+    unless ( defined($subscription_property) and $subscription_property eq 'error_die') {
         $subscription_property = '(undef)' unless defined ($subscription_property);
         Carp::croak("Unrecognized subscription aspect '$subscription_property'");
     }
@@ -138,38 +131,17 @@ sub execute {
 
     my $result;
     eval { $result = $self->_execute_body(@_); };
-    if ($@) {
+    if ($@ or not $result) {
         my %error_data;
 
-        #parse bjobs -l for a 9 digit build id
-        $error_data{build_id} = $1 if $ENV{LSB_JOBID} && `bjobs -l $ENV{LSB_JOBID}` =~ /build(\d{9})\D/;
-
-        #The die message is parsed with a regex to glean extra information
-        if ($@ =~ m{(.+?) at /.+?/Genome/(.+?) line (\d+)}) {
-            $error_data{inferred_message} = $1;
-            $error_data{inferred_file} = $2;
-            $error_data{inferred_line} = $3;
-        }
-        $error_data{error_message} = defined($self->error_message)?$self->error_message:'';
-        $error_data{error_package} = defined($self->error_package)?$self->error_package:'';
-        $error_data{error_file} = defined($self->error_file)?$self->error_file:'';
-        $error_data{error_subroutine} = defined($self->error_subroutine)?$self->error_subroutine:'';
-        $error_data{error_line} = defined($self->error_line)?$self->error_line:'';
-        $self->__signal_change__('error_die', %error_data);
-        die $@;
-    }
-    elsif (not $result) {
-        my %error_data;
-
-        #parse bjobs -l for a numerical build id
-        $error_data{build_id} = $1 if $ENV{LSB_JOBID} && `bjobs -l $ENV{LSB_JOBID}` =~ /build(\d+)\D/;
-
-        $error_data{error_message} = defined($self->error_message)?$self->error_message:'';
-        $error_data{error_package} = defined($self->error_package)?$self->error_package:'';
-        $error_data{error_file} = defined($self->error_file)?$self->error_file:'';
-        $error_data{error_subroutine} = defined($self->error_subroutine)?$self->error_subroutine:'';
-        $error_data{error_line} = defined($self->error_line)?$self->error_line:'';
-        $self->__signal_change__('error_rv_false', %error_data);
+        $error_data{die_message} = defined($@) ? $@:'';
+        $error_data{error_message} = defined($self->error_message) ? $self->error_message:'';
+        $error_data{error_package} = defined($self->error_package) ? $self->error_package:'';
+        $error_data{error_file} = defined($self->error_file) ? $self->error_file:'';
+        $error_data{error_subroutine} = defined($self->error_subroutine) ? $self->error_subroutine:'';
+        $error_data{error_line} = defined($self->error_line) ? $self->error_line:'';
+        $self->__signal_observers__('error_die', %error_data);
+        die $@ if $@;
     }
 
     $self->is_executed(1);

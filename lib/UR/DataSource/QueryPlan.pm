@@ -84,6 +84,52 @@ class UR::DataSource::QueryPlan {
     ]
 };
 
+
+sub _load {
+        my $class = shift;
+    my $rule = shift;
+
+    # See if the requested object is loaded.
+    my @loaded = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
+    return $class->context_return(@loaded) if @loaded;
+
+    # Auto generate the object on the fly.
+    my $id = $rule->value_for_id;
+    unless (defined $id) {
+        #$DB::single = 1;
+        Carp::croak "No id specified for loading members of an infinite set ($class)!"
+    }
+    my $class_meta = $class->__meta__;
+    my @p = (id => $id);
+    if (my $alt_ids = $class_meta->{id_by}) {
+        if (@$alt_ids == 1) {
+            push @p, $alt_ids->[0] => $id;
+        }
+        else {
+            my ($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
+            push @p, $rule->params_list;
+        }
+    }
+
+    my $obj = $UR::Context::current->_construct_object($class, @p);
+
+    if (my $method_name = $class_meta->sub_classification_method_name) {
+        my($rule, %extra) = UR::BoolExpr->resolve_normalized($class, $rule);
+        my $sub_class_name = $obj->$method_name;
+        if ($sub_class_name ne $class) {
+            # delegate to the sub-class to create the object
+            $UR::Context::current->_abandon_object($obj);
+            $obj = $UR::Context::current->_construct_object($sub_class_name,$rule);
+            $obj->__signal_change__("load");
+            return $obj;
+        }
+        # fall through if the class names match
+    }
+
+    $obj->__signal_change__("load");
+    return $obj;
+}
+
 # these hash keys are probably removable
 # because they are not above, they will be deleted if _init sets them
 # this exists primarily as a cleanup target list
@@ -1923,9 +1969,13 @@ sub _init_core {
         $rule_template_specifies_value_for_subtype = $rule_template->specifies_value_for($sub_typing_property)
     }
 
-    my $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@all_properties);
+    my @this_ds_properties = grep { ! $_->[1]->is_delegated
+                                    and (! $_->[1]->is_calculated or $_->[1]->calculate_sql)
+                                  }
+                             @all_properties;
 
-    
+    my $per_object_in_resultset_loading_detail = $ds->_generate_loading_templates_arrayref(\@this_ds_properties);
+
     %$self = (
         %$self,
 
@@ -1970,6 +2020,15 @@ sub _init_default {
         push @$expected_headers, $pname;
     }
     $self->{loading_templates}[0]{property_names} = $expected_headers;
+
+    if ($bx_template->subject_class_name->isa('UR::Value')) {
+        # Hack so the objects get blessed into the proper subclass in the Object Fabricator.
+        # This is necessary so every possible UR::Value subclass doesn't need its
+        # own "id" property defined.  Without it, the data shows that these objects get
+        # loaded as the base UR::Value class (since its "id" is defined on UR:Value)
+        # and then would get automagically subclassed.
+        $self->{'loading_templates'}->[0]->{'final_class_name'} = $bx_template->subject_class_name
+    }
 
     return $self;
 }
