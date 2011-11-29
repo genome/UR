@@ -49,7 +49,7 @@ sub create {
     if (!defined ($subject_id)) { $subject_id = '' };
     # old validation API
     unless ($subject_class_name->validate_subscription($aspect, $subject_id, $callback)) {
-        $class->error_message("Failed to validate requested subscription fot '$aspect' on class $subject_class_name");
+        $class->error_message("Failed to validate requested subscription for '$aspect' on class $subject_class_name");
         return;
     }
 
@@ -66,7 +66,7 @@ sub create {
 #        note => "$self",
 #    );
 
-    push @{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$self->subject_id} }, [$callback,$self->note,$self->priority, $self->id];
+    push @{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id} }, [$callback,$self->note,$self->priority, $self->id];
 
     # because subscription is low level it is not deleted by the low level _abandon_object
     # but the delete signal is fired so we can cleanup with a subscription on delete
