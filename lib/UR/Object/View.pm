@@ -379,14 +379,14 @@ sub _bind_subject {
 sub _update_view_from_subject {
     # This is called whenever the view changes, or the subject changes.
     # It passes the change(s) along, so that the update can be targeted, if the developer chooses.
-    Carp::confess("The _update_view_from_subject method must be implemented for all concreate "
-        . " view subclasses.  No _update_subject_from_viewfor " 
+    Carp::croak("The _update_view_from_subject method must be implemented for all concreate "
+        . " view subclasses.  No _update_subject_from_view for " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
 sub _update_subject_from_view {
-    Carp::confess("The _update_subject_from_view method must be implemented for all concreate "
-        . " view subclasses.  No _update_subject_from_viewfor " 
+    Carp::croak("The _update_subject_from_view method must be implemented for all concreate "
+        . " view subclasses.  No _update_subject_from_view for " 
         . (ref($_[0]) ? ref($_[0]) : $_[0]) . "!");
 }
 
