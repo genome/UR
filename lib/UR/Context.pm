@@ -2827,6 +2827,11 @@ sub _reverse_all_changes {
                     }
                     delete $object->{'_change_count'};
                 }
+                elsif ($object->isa('UR::DeletedRef')) {
+                    # DeletedRefs can appear if un-doing some items causes others in @$objects_this_class
+                    # to get deleted because of observers of their own.  Skip these
+                    1;
+                }
                 else {
                     # Object not in database, get rid of it.
                     # Because we only go back to the last sync not (not last commit),
