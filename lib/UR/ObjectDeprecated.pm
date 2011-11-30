@@ -342,6 +342,7 @@ sub cancel_change_subscription ($@)
     }
 
     my @observers = UR::Observer->get(%params);
+    return unless @observers;
     if (@observers > 1) {
         Carp::croak('Matched more than one observer within cancel_change_subscription().  Params were: '
                     . join(', ', map { "$_ => " . $params{$_} } keys %params));
