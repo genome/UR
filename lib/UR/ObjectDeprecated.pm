@@ -259,7 +259,7 @@ sub create_subscription  {
 #    no warnings;
 #    push @{ $UR::Context::all_change_subscriptions->{$class}->{$method}->{$id} }, [$callback,$note,$priority];
 
-    my $observer = UR::Observer->create(subject_class_name => $class, subject_id => $id, note => $note, priority => $priority, callback => $callback);
+    my $observer = UR::Observer->create(subject_class_name => $class, subject_id => $id, aspect => $method, note => $note, priority => $priority, callback => $callback);
     return unless $observer;
     return [$class,$id,$method,$callback,$note];
 }
