@@ -118,7 +118,7 @@ ok(UR::Object::Property->create( class_name => 'URT::Child', property_name => 'e
    'Created an extra property on Child class');
 
 @props = $child_meta->properties();
-is(scalar(@props), 10, 'Child class now has 8 properties()');
+is(scalar(@props), 10, 'Child class now has 10 properties()');
 @names = map { $_->property_name } @props;
 @expected = qw(child_id child_value extra_property id parent_id parent_value rel_id_a rel_id_b related_object related_value),
 is_deeply(\@names, \@expected, 'Property names check out') or diag ("@names\n@expected\n");
