@@ -54,18 +54,15 @@ sub _create_or_define {
     my $aspect = $rule->value_for('aspect');
     my $subject_id = $rule->value_for('subject_id');
     unless ($subject_class_name->__meta__->_is_valid_signal($aspect)) {
-        $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
-        return;
+        if ($subject_class_name->can('validate_subscription') and ! $subject_class_name->validate_subscription($aspect, $subject_id, $callback)) {
+            $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
+            return;
+        }
     }
 
     if (!defined($subject_class_name) or $subject_class_name eq 'UR::Object') { $subject_class_name = '' }; # This was part of the old API, not sure why it's still here?!
     if (!defined ($aspect)) { $aspect = '' };
     if (!defined ($subject_id)) { $subject_id = '' };
-    # old validation API
-    unless ($subject_class_name->validate_subscription($aspect, $subject_id, $callback)) {
-        $class->error_message("Failed to validate requested subscription for '$aspect' on class $subject_class_name");
-        return;
-    }
 
     my $self;
     if ($method eq 'create') {
