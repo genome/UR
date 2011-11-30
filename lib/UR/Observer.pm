@@ -25,6 +25,20 @@ UR::Object::Type->define(
 
 sub create {
     my $class = shift;
+
+    $class->_create_or_define('create', @_);
+}
+
+sub __define__ {
+    my $class = shift;
+
+    $class->_create_or_define('__define__', @_);
+}
+
+sub _create_or_define {
+    my $class = shift;
+    my $method = shift;
+
     my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);
     my $callback = delete $extra{callback};
     unless ($callback) {
@@ -53,7 +67,14 @@ sub create {
         return;
     }
 
-    my $self = $class->SUPER::create($rule);
+    my $self;
+    if ($method eq 'create') {
+        $self = $class->SUPER::create($rule);
+    } elsif ($method eq '__define__') {
+        $self = $class->SUPER::__define__($rule->params_list);
+    } else {
+        Carp::croak('Instantiating a UR::Observer with some method other than create() or __define__() is not supported');
+    }
     $self->{callback} = $callback;
 
     my %params = $rule->params_list;
