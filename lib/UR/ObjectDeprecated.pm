@@ -221,7 +221,9 @@ sub create_subscription  {
     @observer_params{'aspect','callback','note','priority','subject_id'} = delete @params{'method','callback','note','priority','id'};
     $observer_params{'subject_class_name'} = $self->class;
     $observer_params{'priority'} = 1 unless defined $observer_params{'priority'};
-    $observer_params{'subject_id'} = $self->id unless defined $observer_params{'subject_id'};
+    if (!defined $observer_params{'subject_id'} and ref($self)) {
+        $observer_params{'subject_id'} = $self->id;
+    }
 
     if (my @unknown = keys %params) {
         Carp::croak "Unknown options @unknown passed to create_subscription!";
@@ -234,7 +236,7 @@ sub create_subscription  {
 
     my $observer = UR::Observer->create(%observer_params);
     return unless $observer;
-    return [$class,$id,$method,$callback,$note];
+    return [@observer_params{'subject_class_name','subject_id','aspect','callback','note'}];
 }
 
 sub validate_subscription
