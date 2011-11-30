@@ -2836,7 +2836,11 @@ sub _reverse_all_changes {
                     # Object not in database, get rid of it.
                     # Because we only go back to the last sync not (not last commit),
                     # this no longer has to worry about rolling back an uncommitted database save which may have happened.
-                    UR::Object::delete($object);
+                    if ($object->isa('UR::Observer')) {
+                        UR::Observer::delete($object);  # Observers have some state that needs to get cleaned up
+                    } else {
+                        UR::Object::delete($object);
+                    }
                 }
 
             } # next non-ghost object

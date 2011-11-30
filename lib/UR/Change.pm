@@ -72,7 +72,11 @@ sub undo {
         UR::Object::unload($changed_obj);
     }
     elsif ($changed_aspect eq "create") {
-        UR::Object::delete($changed_obj);
+        if ($changed_obj->isa('UR::Observer')) {
+            UR::Observer::delete($changed_obj);  # Observers have state that needs to be cleaned up
+        } else {
+            UR::Object::delete($changed_obj);
+        }
     }
     elsif ($changed_aspect eq "delete") {
         my %stored;
