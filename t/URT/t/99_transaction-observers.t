@@ -4,7 +4,7 @@ use warnings;
 use UR;
 use IO::File;
 
-use Test::More tests => 52;
+use Test::More tests => 57;
 
 UR::Object::Type->define(
     class_name => 'Circle',
@@ -45,12 +45,17 @@ ok($circle->radius == 1, 'default radius is 1');
 # making sure if someone tries to catch their observer's delete that it runs
 # before the observer's self-created delete subscription
 {
+    my $ran_observer_observer = 0;
+
     my $circle_trans = UR::Context::Transaction->begin();
     ok($circle_trans, 'begin transaction');
+    my $ran_circle_radius_observer = 0;
     my $circle_obs = $circle->add_observer(
         aspect => 'radius',
-        callback => sub { 1; },
+        callback => sub { $ran_circle_radius_observer = 1; },
     );
+    my $circle_obs_id = $circle_obs->id;
+
     my $ran_circle_obs_delete_obs = 0;
     my $subscription = $circle_obs->class->create_subscription(
         id => $circle_obs->id,
@@ -58,15 +63,34 @@ ok($circle->radius == 1, 'default radius is 1');
         callback => sub { $ran_circle_obs_delete_obs = 1; },
         note => "$circle_obs",
     );
-    ok($circle_obs->isa('UR::Observer'), 'added an observer');
+    my $observer_observer = UR::Observer->get(subject_class_name => 'UR::Observer', subject_id => $subscription->[1]);
+
+    ok($circle_obs->isa('UR::Observer'), 'added an observer on the circle');
+    is(UR::Observer->get(subject_class_name => 'Circle', subject_id => $circle->id, aspect => 'radius'),
+       $circle_obs,
+       'Can get the observer on the circle with get()');
     my $circle_sub = $UR::Context::all_change_subscriptions->{Circle}->{radius}->{$circle->id};
-    ok($circle_sub, 'adding observer created a subscription');
+    ok($circle_sub, 'adding observer inserted a callback into the Context data structure for callbacks');
+
+    is(UR::Observer->get(subject_class_name => 'UR::Observer', subject_id => $circle_obs->id, aspect => 'delete'),
+       $observer_observer,
+       'Can get the observer on the original observer deletion with get()');
+
     ok($circle_trans->rollback(), 'rolled back transaction');
-    ok($ran_circle_obs_delete_obs == 1, 'rollback ran delete observer before running its delete observer');
+
+    ok($ran_circle_obs_delete_obs == 0, 'rollback did not run the delete observer');  # because it's creation was undone before the radius observer was deleted
     $circle_sub = $UR::Context::all_change_subscriptions->{Circle}->{radius}->{$circle->id};
     ok(!$circle_sub, 'rolling back transaction (and with it the observer) removed the subscription');
-    ok($circle_obs->isa('UR::DeletedRef'), 'radius observer deleted');
+    ok($circle_obs->isa('UR::DeletedRef'), 'radius observer is now a DeletedRef');
+
+    ok(! UR::Observer->get(subject_class_name => 'Circle', subject_id => $circle->id, aspect => 'radius'),
+       'get() no longer returns the circle observer');
+    ok(! UR::Observer->get(subject_class_name => 'UR::Observer', subject_id => $circle_obs_id, aspect => 'delete'),
+       'get() no longer returns the observer observer');
+
+    $ran_circle_obs_delete_obs = 0;
     $circle->radius(1);
+    is($ran_circle_obs_delete_obs, 0, 'The circle radius observer did not run');
 };
 
 
