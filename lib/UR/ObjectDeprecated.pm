@@ -216,20 +216,12 @@ sub create_subscription  {
 
     # parse parameters
     my ($class,$id,$method,$callback,$note,$priority);
-    $class = $self->class;
-    $method = delete $params{method};
-    $callback = delete $params{callback};
-    $note = delete $params{note};
-    $priority = delete $params{priority};
-    unless (defined($priority)) {
-        $priority = 1;
-    }
-    if (exists $params{id}) {
-        $id = delete $params{id};
-    }
-    elsif (ref($self)) {
-        $id = $self->id;
-    }
+
+    my %observer_params;
+    @observer_params{'aspect','callback','note','priority','subject_id'} = delete @params{'method','callback','note','priority','id'};
+    $observer_params{'subject_class_name'} = $self->class;
+    $observer_params{'priority'} = 1 unless defined $observer_params{'priority'};
+    $observer_params{'subject_id'} = $self->id unless defined $observer_params{'subject_id'};
 
     if (my @unknown = keys %params) {
         Carp::croak "Unknown options @unknown passed to create_subscription!";
@@ -259,7 +251,7 @@ sub create_subscription  {
 #    no warnings;
 #    push @{ $UR::Context::all_change_subscriptions->{$class}->{$method}->{$id} }, [$callback,$note,$priority];
 
-    my $observer = UR::Observer->create(subject_class_name => $class, subject_id => $id, aspect => $method, note => $note, priority => $priority, callback => $callback);
+    my $observer = UR::Observer->create(%observer_params);
     return unless $observer;
     return [$class,$id,$method,$callback,$note];
 }
