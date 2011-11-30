@@ -14,6 +14,7 @@ UR::DataSource::FileMux->create(
     delimiter => "\t",
     file_resolver => sub { return $TheFile },
     required_for_get => [],
+    constant_values => [],
 );
     
 #class Test::Callcount::List::DataSource {
