@@ -227,29 +227,10 @@ sub create_subscription  {
         Carp::croak "Unknown options @unknown passed to create_subscription!";
     }
 
-    # print STDOUT "Caught subscription class $class id $id property $property callback $callback $note\n";
-
     # validate
     if (my @bad_params = %params) {
         Carp::croak "Bad params passed to add_listener: @bad_params";
     }
-
-#    # Allow the class to know that it is getting a subscription.
-#    # It may choose to turn on/off optimizations depending on whether anyone is watching it.
-#    # It may also reject all subscriptions because it knows it is too busy to signal changes.
-#    unless($class->validate_subscription($method,$id,$callback)) {
-#        #$DB::single = 1;
-#        $class->validate_subscription($method,$id,$callback);
-#        Carp::croak("Failed to validate requested subscription: @_\n");
-#        return 0; # If/when the above is removed.
-#    }
-#
-#    # Handle global subscriptions.
-#    $class = undef if ($class eq __PACKAGE__);
-#
-#    # Record amd return the subscription.
-#    no warnings;
-#    push @{ $UR::Context::all_change_subscriptions->{$class}->{$method}->{$id} }, [$callback,$note,$priority];
 
     my $observer = UR::Observer->create(%observer_params);
     return unless $observer;
@@ -340,81 +321,6 @@ sub cancel_change_subscription ($@)
                     . join(', ', map { "$_ => " . $params{$_} } keys %params));
     }
     $observers[0]->delete();
-
-#    # Handle global subscriptions.  Subscriptions to UR::Object affect all objects.
-#    # This can be removed when the __signal_change__ method uses inheritance.
-#
-#    $class = undef if ($class eq __PACKAGE__);
-#
-#    # Look for the callback
-#
-#    $class = '' if not defined $class;
-#    $property = '' if not defined $property;
-#    $id = '' if not defined $id;
-#
-#    my $arrayref = $UR::Context::all_change_subscriptions->{$class}->{$property}->{$id};
-#    return unless $arrayref;   # This thing didn't have a subscription in the first place
-#    my $index = 0;
-#
-#    while ($index < @$arrayref)
-#    {
-#        my ($cancel_callback, $note) = @{ $arrayref->[$index] };
-#
-#        if
-#        (
-#            (not defined($callback))
-#            or
-#            ($callback eq $cancel_callback)
-#            or
-#            (defined $note && $note =~ $callback)
-#        )
-#        {
-#            # Remove the callback from the subscription list.
-#
-#            my $found = splice(@$arrayref,$index,1);
-#            #die "Bad splice $found $index @$arrayref!" unless $found eq $arrayref->[$index];
-#
-#            # Prune the $all_change_subscriptions hash tree.
-#
-#            #print STDOUT Dumper($UR::Context::all_change_subscriptions);
-#
-#            if (@$arrayref == 0)
-#            {
-#                $arrayref = undef;
-#
-#                delete $UR::Context::all_change_subscriptions->{$class}->{$property}->{$id};
-#
-#                if (keys(%{ $UR::Context::all_change_subscriptions->{$class}->{$property} }) == 0)
-#                {
-#                    delete $UR::Context::all_change_subscriptions->{$class}->{$property};
-#                }
-#            }
-#
-#            #print STDOUT Dumper($UR::Context::all_change_subscriptions);
-#
-#            # Tell the class that a subscription has been cancelled, if it cares
-#            # (most classes do not impliment this, and the default UR::Object version is ignored.
-#
-#            unless($class eq '' || $class->inform_subscription_cancellation($property,$id,$callback))
-#            {
-#                Carp::confess("Failed to validate requested subscription cancellation: @_\n");
-#                return 0; # If/when the above is removed.
-#            }
-#
-#            # Return a ref to the callback removed.  This is "true", but better than true.
-#
-#            return $found;
-#        }
-#        else
-#        {
-#            # Increment only if we did not splice-out a value.
-#            $index++;
-#        }
-#    }
-#
-#    # Return nothing if we found no subscription.
-#
-#    return;
 }
 
 # This should go away when we shift to fully to a transaction log for deletions.
