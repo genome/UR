@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 7;
+use Test::More tests => 11;
 
 # When a different ordering is requested, make sure a get() that hits
 # the DB returns items in the same order as one that returns cached objects.
@@ -14,7 +14,6 @@ use Test::More tests => 7;
 &setup_classes_and_db();
 
 my @o = URT::Thing->get('name like' => 'Bob%', -order => ['data']);
-is(scalar(@o), 5, 'Got 2 things with name like Bob% ordered by data');
 
 my @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 
@@ -23,14 +22,45 @@ my @expected = ( { id => 5, name => 'Bobs',   data => 'aaa' },
                  { id => 4, name => 'Bobby',  data => 'abc' },
                  { id => 6, name => 'Bobert', data => 'infinity' },
                  { id => 1, name => 'Bobert', data => 'zzz' },
+#                 { id => 0, name => 'Bobbb',  data => undef },
                );
+
+is(scalar(@o), scalar(@expected), 'Got correct number of things with name like Bob% ordered by data');
 
 is_deeply(\@got, \@expected, 'Returned data is as expected')
     or diag(Data::Dumper::Dumper(@got));
 
 # Now try it again, cached
 @o = URT::Thing->get('name like' => 'Bob%', -order => ['data']);
-is(scalar(@o), 5, 'Got 2 things with name like Bob% ordered by data');
+is(scalar(@o), scalar(@expected), 'Got correct number of things with name like Bob% ordered by data from the cache');
+
+@got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
+is_deeply(\@got, \@expected, 'Returned cached data is as expected')
+    or diag(Data::Dumper::Dumper(\@got,\@expected));
+
+
+
+# Now do descending
+
+@o = URT::Thing->get('name like' => 'Fred%', -order => ['-data']);
+
+@got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
+
+@expected = ( #{ id => 10, name => 'Freddd',  data => undef },
+              { id => 11, name => 'Fredert', data => 'zzz' },
+              { id => 16, name => 'Fredert', data => 'infinity' },
+              { id => 12, name => 'Fred',    data => 'abc' },
+              { id => 14, name => 'Freddy',  data => 'abc' },
+              { id => 15, name => 'Freds',   data => 'aaa' },
+            );
+is(scalar(@o), scalar(@expected), 'Got correct number of things with name like Fred% ordered by data DESC');
+
+is_deeply(\@got, \@expected, 'Returned data is as expected')
+    or diag(Data::Dumper::Dumper(@got));
+
+# Now try it again, cached
+@o = URT::Thing->get('name like' => 'Fred%', -order => ['-data']);
+is(scalar(@o), scalar(@expected), 'Got correct number of things with name like Fred% ordered by data DESC from the cache');
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 is_deeply(\@got, \@expected, 'Returned cached data is as expected')
@@ -59,6 +89,13 @@ sub setup_classes_and_db {
                         [1, 'Bobert', 'zzz'],
                         [6, 'Bobert', 'infinity'],
                         [5, 'Bobs', 'aaa'],
+
+                        [14, 'Freddy', 'abc'],
+                        [12, 'Fred', 'abc'],
+                     #   [10, 'Freddd', undef],
+                        [11, 'Fredert', 'zzz'],
+                        [16, 'Fredert', 'infinity'],
+                        [15, 'Freds', 'aaa'],
                     )) {
         unless ($insert->execute(@$row)) {
             die "Couldn't insert a row into 'things': $DBI::errstr";

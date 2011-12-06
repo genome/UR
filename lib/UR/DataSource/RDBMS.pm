@@ -1431,7 +1431,15 @@ sub _get_sequence_name_for_table_and_column {
 sub resolve_order_by_clause {
     my($self,$order_by_columns) = @_;
 
-    my @cols = map { m/^-/ ? "$_ DESC" : $_ } @$order_by_columns;
+    my @cols = @$order_by_columns;
+    foreach my $col ( @cols) {
+        if ($col =~ m/^(-|\+)(.*)$/) {
+            $col = $2;
+            if ($1 eq '-') {
+                $col = $col . ' DESC';
+            }
+        }
+    }
     return  'order by ' . join(', ',@cols);
 }
 

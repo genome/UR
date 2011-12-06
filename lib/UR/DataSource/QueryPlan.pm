@@ -773,7 +773,7 @@ sub _init_rdbms {
             my $name;
             if ($order_prop =~ m/^(-|\+)(.*)$/) {
                 $name = $2;
-                $is_descending{$name} = 1;
+                $is_descending{$name} = $1 eq '-';
             } else {
                 $name = $order_prop;
             }
@@ -793,7 +793,7 @@ sub _init_rdbms {
             # appear earlier in the list
             my %additional_order_by_columns = map { $_ => 1 } @$additional_order_by_columns;
             my @existing_order_by_columns = grep { ! $additional_order_by_columns{$_} } @$order_by_columns;
-            $order_by_columns = [ map { $is_descending{$_} ? $_ . ' DESC' : $_ } ( @$additional_order_by_columns, @existing_order_by_columns ) ];
+            $order_by_columns = [ map { $is_descending{$_} ? '-'. $_  : $_ } ( @$additional_order_by_columns, @existing_order_by_columns ) ];
         }
     }
 
