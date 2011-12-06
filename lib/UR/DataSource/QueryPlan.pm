@@ -744,6 +744,8 @@ sub _init_rdbms {
 
     my $order_by_non_column_data;
     if ($order_by = $rule_template->order_by) {
+        my %db_property_data_map = map { $_->[1]->property_name => $_ } @$db_property_data;
+
         # this is duplicated in _add_join
         my %order_by_property_names;
         if ($order_by) {
@@ -754,17 +756,18 @@ sub _init_rdbms {
                 unless ($class_name->can($check_name)) {
                     Carp::croak("Cannot order by '$name': Class $class_name has no property/method named '$check_name'");
                 }
-                $order_by_property_names{$name} = 1;
+                #$order_by_property_names{$name} = 1;
+                $order_by_property_names{$name} = $db_property_data_map{$check_name};
             }
-            for my $data (@$db_property_data) {
-                my $name = $data->[1]->property_name;
-                if ($order_by_property_names{$name}) {
-                    $order_by_property_names{$name} = $data;
-
-                } elsif ($order_by_property_names{'-' . $name}) {
-                    $order_by_property_names{'-' . $name} = $data;
-                }
-            }
+#            for my $data (@$db_property_data) {
+#                my $name = $data->[1]->property_name;
+#                if ($order_by_property_names{$name}) {
+#                    $order_by_property_names{$name} = $data;
+#
+#                } elsif ($order_by_property_names{'-' . $name}) {
+#                    $order_by_property_names{'-' . $name} = $data;
+#                }
+#            }
         }
 
         my @data;
