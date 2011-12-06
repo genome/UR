@@ -249,8 +249,10 @@ sub _init_rdbms {
     if ($order_by) {
         # we only pull back columns we're ordering by if there is ordering happening
         for my $name (@$order_by) {
-            unless ($class_name->can($name)) {
-                Carp::croak("Cannot order by '$name': Class $class_name has no property/method by that name");
+            my $check_name = $name;
+            $check_name =~ s/^-|\+//;  # Remove the optional - or + for Descending or ascending sort
+            unless ($class_name->can($check_name)) {
+                Carp::croak("Cannot order by '$name': Class $class_name has no property/method named '$check_name'");
             }
             $order_by_property_names{$name} = 1;
         }
@@ -258,6 +260,8 @@ sub _init_rdbms {
             my $name = $data->[1]->property_name;
             if ($order_by_property_names{$name}) {
                 $order_by_property_names{$name} = $data;
+            } elsif ($order_by_property_names{'-' . $name}) {
+                $order_by_property_names{'-' . $name} = $data;
             }
         }
     }
@@ -278,10 +282,14 @@ sub _init_rdbms {
             delete $filters{'id'};
         }
 
+        # Remove the flag for descending/ascending sort
+        my @order_by_properties = $order_by ? @$order_by : ();;
+        s/^-|\+//  foreach @order_by_properties;
+
         my %properties_involved = map { $_ => 1 }
                                     keys(%filters),
                                     ($hints ? @$hints : ()),
-                                    ($order_by ? @$order_by : ()),
+                                    @order_by_properties,
                                     ($group_by ? @$group_by : ());
         
         my @properties_involved = sort keys(%properties_involved);
@@ -741,8 +749,10 @@ sub _init_rdbms {
         if ($order_by) {
             # we only pull back columns we're ordering by if there is ordering happening
             for my $name (@$order_by) {
-                unless ($class_name->can($name)) {
-                    Carp::croak("Cannot order by '$name': Class $class_name has no property/method by that name");
+                my $check_name = $name;
+                $check_name =~ s/^-|+//;  # Remove the optional Descending/ascending sort flag
+                unless ($class_name->can($check_name)) {
+                    Carp::croak("Cannot order by '$name': Class $class_name has no property/method named '$check_name'");
                 }
                 $order_by_property_names{$name} = 1;
             }
@@ -750,6 +760,9 @@ sub _init_rdbms {
                 my $name = $data->[1]->property_name;
                 if ($order_by_property_names{$name}) {
                     $order_by_property_names{$name} = $data;
+
+                } elsif ($order_by_property_names{'-' . $name}) {
+                    $order_by_property_names{'-' . $name} = $data;
                 }
             }
         }
