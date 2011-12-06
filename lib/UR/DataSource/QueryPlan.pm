@@ -246,23 +246,41 @@ sub _init_rdbms {
     }
 
     my %order_by_property_names;
+    my $order_by_non_column_data;
     if ($order_by) {
+        my %db_property_data_map = map { $_->[1]->property_name => $_ } @db_property_data;
+
         # we only pull back columns we're ordering by if there is ordering happening
+        my %is_descending;
+        my @column_data;
         for my $name (@$order_by) {
-            my $check_name = $name;
-            $check_name =~ s/^-|\+//;  # Remove the optional - or + for Descending or ascending sort
-            unless ($class_name->can($check_name)) {
-                Carp::croak("Cannot order by '$name': Class $class_name has no property/method named '$check_name'");
+            my $order_by_prop = $name;
+            if ($order_by_prop =~ m/^(-|\+)(.*)$/) {
+                $order_by_prop = $2;
+                $is_descending{$order_by_prop} = $1 eq '-';
             }
-            $order_by_property_names{$name} = 1;
+
+            unless ($class_name->can($order_by_prop)) {
+                Carp::croak("Cannot order by '$name': Class $class_name has no property or method named '$order_by_prop'");
+            }
+            if ($order_by_property_names{$name} = $db_property_data_map{$order_by_prop}) {
+                push @column_data, $order_by_property_names{$name};
+                my $table_column_names = $ds->_select_clause_columns_for_table_property_data($column_data[-1]);
+                $is_descending{$table_column_names->[0]} = $is_descending{$order_by_prop};
+            } else {
+                $order_by_non_column_data = 1;
+            }
         }
-        for my $data (@db_property_data) {
-            my $name = $data->[1]->property_name;
-            if ($order_by_property_names{$name}) {
-                $order_by_property_names{$name} = $data;
-            } elsif ($order_by_property_names{'-' . $name}) {
-                $order_by_property_names{'-' . $name} = $data;
-            }
+
+        if (@column_data) {
+            my $additional_order_by_columns = $ds->_select_clause_columns_for_table_property_data(@column_data);
+
+            # Strip out columns named in the original $order_by_columns list that now appear in the
+            # additional order by list so we don't duplicate columns names, and the additional columns
+            # appear earlier in the list
+            my %additional_order_by_columns = map { $_ => 1 } @$additional_order_by_columns;
+            my @existing_order_by_columns = grep { ! $additional_order_by_columns{$_} } @$order_by_columns;
+            $order_by_columns = [ map { $is_descending{$_} ? '-'. $_  : $_ } ( @$additional_order_by_columns, @existing_order_by_columns ) ];
         }
     }
     
@@ -739,64 +757,6 @@ sub _init_rdbms {
         }
         unless (@$group_by == @$db_property_data) {
             print "mismatch table properties vs group by!\n";
-        }
-    }
-
-    my $order_by_non_column_data;
-    if ($order_by = $rule_template->order_by) {
-        my %db_property_data_map = map { $_->[1]->property_name => $_ } @$db_property_data;
-
-        # this is duplicated in _add_join
-        my %order_by_property_names;
-        if ($order_by) {
-            # we only pull back columns we're ordering by if there is ordering happening
-            for my $name (@$order_by) {
-                my $check_name = $name;
-                $check_name =~ s/^-|\+//;  # Remove the optional Descending/ascending sort flag
-                unless ($class_name->can($check_name)) {
-                    Carp::croak("Cannot order by '$name': Class $class_name has no property/method named '$check_name'");
-                }
-                #$order_by_property_names{$name} = 1;
-                $order_by_property_names{$name} = $db_property_data_map{$check_name};
-            }
-#            for my $data (@$db_property_data) {
-#                my $name = $data->[1]->property_name;
-#                if ($order_by_property_names{$name}) {
-#                    $order_by_property_names{$name} = $data;
-#
-#                } elsif ($order_by_property_names{'-' . $name}) {
-#                    $order_by_property_names{'-' . $name} = $data;
-#                }
-#            }
-        }
-
-        my @data;
-        my %is_descending;
-        for my $order_prop (@$order_by) {
-            my $name;
-            if ($order_prop =~ m/^(-|\+)(.*)$/) {
-                $name = $2;
-                $is_descending{$name} = $1 eq '-';
-            } else {
-                $name = $order_prop;
-            }
-
-            my $data = $order_by_property_names{$name};
-            unless (ref($data)) {
-                $order_by_non_column_data = 1;
-                next;
-            }
-            push @data, $data;
-        }
-        if (@data) {
-            my $additional_order_by_columns = $ds->_select_clause_columns_for_table_property_data(@data);
-
-            # Strip out columns named in the original $order_by_columns list that now appear in the
-            # additional order by list so we don't duplicate columns names, and the additional columns
-            # appear earlier in the list
-            my %additional_order_by_columns = map { $_ => 1 } @$additional_order_by_columns;
-            my @existing_order_by_columns = grep { ! $additional_order_by_columns{$_} } @$order_by_columns;
-            $order_by_columns = [ map { $is_descending{$_} ? '-'. $_  : $_ } ( @$additional_order_by_columns, @existing_order_by_columns ) ];
         }
     }
 
