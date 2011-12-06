@@ -533,7 +533,13 @@ sub sorter {
     my $sorter = $self->{_sorter}{$key};
     unless ($sorter) {
         my @is_numeric;
+        my @is_descending;
         for my $property (@properties) {
+            if ($property =~ m/^(-|\+)(.*)$/) {
+                push @is_descending, $1 eq '-';
+                $property = $2;  # yes, we're manipulating the original list element
+            }
+
             my $pmeta;
             if ($self->isa("UR::Object::Set::Type")) {
                 # If we're a set, we want to examine the property of our members.
@@ -560,11 +566,12 @@ sub sorter {
             for (my $n = 0; $n < @properties; $n++) {
                 my $property = $properties[$n];
                 my $cmp;
+                my($first,$second) = $is_descending[$n] ? (1,0) : (0,1);
                 if ($is_numeric[$n]) {
-                    $cmp = ($_[0]->$property <=> $_[1]->$property);
+                    $cmp = ($_[$first]->$property <=> $_[$second]->$property);
                 }
                 else {
-                    $cmp = ($_[0]->$property cmp $_[1]->$property);
+                    $cmp = ($_[$first]->$property cmp $_[$second]->$property);
                 }                    
                 return $cmp if $cmp;
             }
