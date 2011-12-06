@@ -750,7 +750,7 @@ sub _init_rdbms {
             # we only pull back columns we're ordering by if there is ordering happening
             for my $name (@$order_by) {
                 my $check_name = $name;
-                $check_name =~ s/^-|+//;  # Remove the optional Descending/ascending sort flag
+                $check_name =~ s/^-|\+//;  # Remove the optional Descending/ascending sort flag
                 unless ($class_name->can($check_name)) {
                     Carp::croak("Cannot order by '$name': Class $class_name has no property/method named '$check_name'");
                 }
@@ -768,7 +768,16 @@ sub _init_rdbms {
         }
 
         my @data;
-        for my $name (@$order_by) {
+        my %is_descending;
+        for my $order_prop (@$order_by) {
+            my $name;
+            if ($order_prop =~ m/^(-|\+)(.*)$/) {
+                $name = $2;
+                $is_descending{$name} = 1;
+            } else {
+                $name = $order_prop;
+            }
+
             my $data = $order_by_property_names{$name};
             unless (ref($data)) {
                 $order_by_non_column_data = 1;
@@ -784,7 +793,7 @@ sub _init_rdbms {
             # appear earlier in the list
             my %additional_order_by_columns = map { $_ => 1 } @$additional_order_by_columns;
             my @existing_order_by_columns = grep { ! $additional_order_by_columns{$_} } @$order_by_columns;
-            $order_by_columns = [ @$additional_order_by_columns, @existing_order_by_columns ];
+            $order_by_columns = [ map { $is_descending{$_} ? $_ . ' DESC' : $_ } ( @$additional_order_by_columns, @existing_order_by_columns ) ];
         }
     }
 
