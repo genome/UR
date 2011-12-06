@@ -538,6 +538,8 @@ sub sorter {
             if ($property =~ m/^(-|\+)(.*)$/) {
                 push @is_descending, $1 eq '-';
                 $property = $2;  # yes, we're manipulating the original list element
+            } else {
+                push @is_descending, 0;
             }
 
             my $pmeta;
@@ -561,6 +563,7 @@ sub sorter {
                 push @is_numeric, 0;
             }
         }
+
         no warnings;   # don't print a warning about undef values ...alow them to be treated as 0 or '' 
         $sorter = $self->{_sorter}{$key} ||= sub($$) {
             for (my $n = 0; $n < @properties; $n++) {
