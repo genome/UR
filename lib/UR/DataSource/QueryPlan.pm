@@ -265,8 +265,9 @@ sub _init_rdbms {
             }
             if ($order_by_property_names{$name} = $db_property_data_map{$order_by_prop}) {
                 push @column_data, $order_by_property_names{$name};
+
                 my $table_column_names = $ds->_select_clause_columns_for_table_property_data($column_data[-1]);
-                $is_descending{$table_column_names->[0]} = $is_descending{$order_by_prop};
+                $is_descending{$table_column_names->[0]} = $is_descending{$order_by_prop}; # copy for table.column designation
             } else {
                 $order_by_non_column_data = 1;
             }
