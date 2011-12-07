@@ -569,7 +569,13 @@ sub sorter {
             for (my $n = 0; $n < @properties; $n++) {
                 my $property = $properties[$n];
                 my($first,$second) = $is_descending[$n] ? ($_[1]->$property,$_[0]->$property) : ($_[0]->$property,$_[1]->$property);
-                my $cmp            = $is_numeric[$n] ? $first <=> $second : $first cmp $second;
+                if (!defined($second)) {
+                    return -1;
+                } elsif (!defined($first)) {
+                    return 1;
+                }
+
+                my $cmp = $is_numeric[$n] ? $first <=> $second : $first cmp $second;
                 return $cmp if $cmp;
             }
             return 0;
