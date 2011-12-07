@@ -568,14 +568,8 @@ sub sorter {
         $sorter = $self->{_sorter}{$key} ||= sub($$) {
             for (my $n = 0; $n < @properties; $n++) {
                 my $property = $properties[$n];
-                my $cmp;
-                my($first,$second) = $is_descending[$n] ? (1,0) : (0,1);
-                if ($is_numeric[$n]) {
-                    $cmp = ($_[$first]->$property <=> $_[$second]->$property);
-                }
-                else {
-                    $cmp = ($_[$first]->$property cmp $_[$second]->$property);
-                }                    
+                my($first,$second) = $is_descending[$n] ? ($_[1]->$property,$_[0]->$property) : ($_[0]->$property,$_[1]->$property);
+                my $cmp            = $is_numeric[$n] ? $first <=> $second : $first cmp $second;
                 return $cmp if $cmp;
             }
             return 0;
