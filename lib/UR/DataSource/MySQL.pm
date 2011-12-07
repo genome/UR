@@ -122,6 +122,37 @@ my($self,$sp_name) = @_;
     $dbh->do("rollback to savepoint $sp_name");
 }
 
+
+sub resolve_order_by_clause {
+    my($self,$order_by_columns,$order_by_column_data) = @_;
+
+    my @cols = @$order_by_columns;
+    foreach my $col ( @cols) {
+        my $is_descending;
+        if ($col =~ m/^(-|\+)(.*)$/) {
+            $col = $2;
+            if ($1 eq '-') {
+                $is_descending = 1;
+            }
+        }
+
+        my $property_meta = $order_by_column_data->{$col} ? $order_by_column_data->{$col}->[1] : undef;
+        my $is_optional; $is_optional = $property_meta->is_optional if $property_meta;
+
+        if ($is_optional) {
+            if ($is_descending) {
+                $col = "CASE WHEN $col ISNULL THEN 0 ELSE 1 END, $col DESC";
+            } else {
+                $col = "CASE WHEN $col ISNULL THEN 1 ELSE 0 END, $col";
+            }
+        } elsif ($is_descending) {
+            $col = $col . ' DESC';
+        }
+    }
+    return  'order by ' . join(', ',@cols);
+}
+
+
 # FIXME This works on Mysql 4.x (and later?).  Mysql5 has a database called
 # IMFORMATION_SCHEMA that may be more useful for these kinds of queries
 sub get_unique_index_details_from_data_dictionary {

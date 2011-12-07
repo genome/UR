@@ -263,11 +263,12 @@ sub _init_rdbms {
             unless ($class_name->can($order_by_prop)) {
                 Carp::croak("Cannot order by '$name': Class $class_name has no property or method named '$order_by_prop'");
             }
-            if ($order_by_property_names{$name} = $db_property_data_map{$order_by_prop}) {
+            if ($order_by_property_names{$name} = $db_property_data_map{$order_by_prop}) {  # yes, single =
                 push @column_data, $order_by_property_names{$name};
 
                 my $table_column_names = $ds->_select_clause_columns_for_table_property_data($column_data[-1]);
                 $is_descending{$table_column_names->[0]} = $is_descending{$order_by_prop}; # copy for table.column designation
+                $order_by_property_names{$table_column_names->[0]} = $order_by_property_names{$name};
             } else {
                 $order_by_non_column_data = 1;
             }

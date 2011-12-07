@@ -1429,7 +1429,7 @@ sub _get_sequence_name_for_table_and_column {
 }
 
 sub resolve_order_by_clause {
-    my($self,$order_by_columns) = @_;
+    my($self,$order_by_columns,$order_by_column_data) = @_;
 
     my @cols = @$order_by_columns;
     foreach my $col ( @cols) {
@@ -1505,7 +1505,7 @@ sub create_iterator_closure_for_rule {
     # The full SQL statement for the template, besides the filter logic, is built here.    
     my $order_by_clause;
     if (@$order_by_columns) {
-        $order_by_clause = $self->resolve_order_by_clause($order_by_columns);
+        $order_by_clause = $self->resolve_order_by_clause($order_by_columns,$query_plan->_order_by_property_names);
     }
 
     my $sql = "\nselect ";
