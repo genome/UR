@@ -22,7 +22,7 @@ my @expected = ( { id => 5, name => 'Bobs',   data => 'aaa' },
                  { id => 4, name => 'Bobby',  data => 'abc' },
                  { id => 6, name => 'Bobert', data => 'infinity' },
                  { id => 1, name => 'Bobert', data => 'zzz' },
-#                 { id => 0, name => 'Bobbb',  data => undef },
+                 { id => 0, name => 'Bobbb',  data => undef },
                );
 
 is(scalar(@o), scalar(@expected), 'Got correct number of things with name like Bob% ordered by data');
@@ -45,7 +45,7 @@ is_deeply(\@got, \@expected, 'Returned cached data is as expected')
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 
-@expected = ( #{ id => 10, name => 'Freddd',  data => undef },
+@expected = ( { id => 10, name => 'Freddd',  data => undef },
               { id => 11, name => 'Fredert', data => 'zzz' },
               { id => 16, name => 'Fredert', data => 'infinity' },
               { id => 12, name => 'Fred',    data => 'abc' },
@@ -73,12 +73,12 @@ $_->unload foreach @o;
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 
-@expected = ( #{ id => 10, name => 'Freddd',  data => undef },
-              { id => 16, name => 'Fredert', data => 'infinity' },
+@expected = ( { id => 16, name => 'Fredert', data => 'infinity' },
               { id => 15, name => 'Freds',   data => 'aaa' },
               { id => 14, name => 'Freddy',  data => 'abc' },
               { id => 12, name => 'Fred',    data => 'abc' },
               { id => 11, name => 'Fredert', data => 'zzz' },
+              { id => 10, name => 'Freddd',  data => undef },
             );
 is(scalar(@o), scalar(@expected), 'Got correct number of things with name like Fred% ordered by id DESC');
 
@@ -101,12 +101,13 @@ $_->unload foreach @o;
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 
-@expected = ( #{ id => 10, name => 'Freddd',  data => undef },
+@expected = ( 
               { id => 15, name => 'Freds',   data => 'aaa' },
               { id => 12, name => 'Fred',    data => 'abc' },
               { id => 14, name => 'Freddy',  data => 'abc' },
               { id => 16, name => 'Fredert', data => 'infinity' },
               { id => 11, name => 'Fredert', data => 'zzz' },
+              { id => 10, name => 'Freddd',  data => undef },
             );
 is(scalar(@o), scalar(@expected), 'Got correct number of things with name like Fred% ordered by data, name');
 
@@ -130,12 +131,13 @@ $_->unload foreach @o;
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 
-@expected = ( #{ id => 10, name => 'Freddd',  data => undef },
+@expected = ( 
               { id => 15, name => 'Freds',   data => 'aaa' },
               { id => 14, name => 'Freddy',  data => 'abc' },
               { id => 12, name => 'Fred',    data => 'abc' },
               { id => 16, name => 'Fredert', data => 'infinity' },
               { id => 11, name => 'Fredert', data => 'zzz' },
+              { id => 10, name => 'Freddd',  data => undef },
             );
 is(scalar(@o), scalar(@expected), 'Got correct number of things with name like Fred% ordered by data, name DESC');
 
@@ -159,7 +161,7 @@ $_->unload foreach @o;
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 
-@expected = ( #{ id => 10, name => 'Freddd',  data => undef },
+@expected = ( { id => 10, name => 'Freddd',  data => undef },
               { id => 11, name => 'Fredert', data => 'zzz' },
               { id => 16, name => 'Fredert', data => 'infinity' },
               { id => 12, name => 'Fred',    data => 'abc' },
@@ -188,7 +190,7 @@ $_->unload foreach @o;
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 
-@expected = ( #{ id => 10, name => 'Freddd',  data => undef },
+@expected = ( { id => 10, name => 'Freddd',  data => undef },
               { id => 11, name => 'Fredert', data => 'zzz' },
               { id => 16, name => 'Fredert', data => 'infinity' },
               { id => 14, name => 'Freddy',  data => 'abc' },
@@ -231,13 +233,14 @@ sub setup_classes_and_db {
     foreach my $row ( ( 
                         [4, 'Bobby', 'abc'],
                         [2, 'Bob', 'abc'],
+                        [0, 'Bobbb', undef],
                         [1, 'Bobert', 'zzz'],
                         [6, 'Bobert', 'infinity'],
                         [5, 'Bobs', 'aaa'],
 
                         [14, 'Freddy', 'abc'],
                         [12, 'Fred', 'abc'],
-                     #   [10, 'Freddd', undef],
+                        [10, 'Freddd', undef],
                         [11, 'Fredert', 'zzz'],
                         [16, 'Fredert', 'infinity'],
                         [15, 'Freds', 'aaa'],
@@ -261,7 +264,10 @@ sub setup_classes_and_db {
     ok(UR::Object::Type->define(
            class_name => 'URT::Thing',
            id_by => 'thing_id',
-           has => ['name', 'data'],
+           has => [
+               'name' => { is => 'String' },
+               'data' => { is => 'String', is_optional => 1 },
+           ],
            data_source => 'URT::DataSource::SomeSQLite',
            table_name => 'things'),
        'Created class URT::Thing');
