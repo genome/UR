@@ -93,7 +93,14 @@ EOS
 
 sub help_detail {
     return <<EOS
-This command is like "prove" or "make test", running the test suite for the current namespace.
+This command is like "prove" or "make test", running the test suite for the
+current namespace.
+
+It uses many of the TAP:: family of modules, and so the underlying behavior
+can be influenced by changing the environment variables they use such
+as PERL_TEST_HARNESS_DUMP_TAP and ALLOW_PASSING_TODOS.  These modules include
+TAP::Harness, TAP::Formatter::Console, TAP::Formatter::Junit, TAP::Parser
+and others.
 EOS
 }
 

@@ -102,7 +102,7 @@ sub resolve_class_description_perl {
             
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->__meta__->all_property_type_names;
-    my @specified = qw/is class_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name id_generator/;
+    my @specified = qw/is class_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name id_generator valid_signals/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
         my $property_obj = $class_meta_meta->property_meta_for_name($property_name);
@@ -227,6 +227,14 @@ sub resolve_class_description_perl {
             $print_id_generator = 1;
         }
         $perl .= "    id_generator => '$id_generator',\n" if ($print_id_generator);
+    }
+
+    if (my $valid_signals = $self->valid_signals) {
+        if (ref($valid_signals) ne 'ARRAY') {
+            Carp::croak("The 'valid_signals' metadata for class $class_name must be an arrayref, got: ".Data::Dumper::Dumper($valid_signals));
+        } elsif (@$valid_signals) {
+            $perl .= "    valid_signals => ['" . join("', '", @$valid_signals) . "'],\n";
+        }
     }
 
     my $doc = $self->doc;

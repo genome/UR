@@ -48,7 +48,7 @@ sub AUTOLOAD {
     our $AUTOLOAD;
     my $method = $AUTOLOAD;
     $method =~ s/^.*:://g;
-    Carp::confess("Attempt to use a reference to an object which has been deleted.  A call was made to method '$method'\nRessurrect it first.\n" . Dumper($_[0]));
+    Carp::croak("Attempt to use a reference to an object which has been deleted.  A call was made to method '$method'\nRessurrect it first.\n" . Dumper($_[0]));
 }
 
 sub DESTROY {

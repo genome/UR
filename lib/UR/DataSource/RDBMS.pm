@@ -27,6 +27,7 @@ UR::Object::Type->define(
         _default_dbh                     => { type => 'DBI::db',    len => undef, is_transient => 1 },
         _last_savepoint                  => { type => 'String',     len => undef, is_transient => 1 },
     ],
+    valid_signals => ['query'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
@@ -1427,6 +1428,21 @@ sub _get_sequence_name_for_table_and_column {
     return $column_name;
 }
 
+sub resolve_order_by_clause {
+    my($self,$order_by_columns,$order_by_column_data) = @_;
+
+    my @cols = @$order_by_columns;
+    foreach my $col ( @cols) {
+        if ($col =~ m/^(-|\+)(.*)$/) {
+            $col = $2;
+            if ($1 eq '-') {
+                $col = $col . ' DESC';
+            }
+        }
+    }
+    return  'order by ' . join(', ',@cols);
+}
+
 sub create_iterator_closure_for_rule {
     my ($self, $rule) = @_; 
 
@@ -1489,7 +1505,7 @@ sub create_iterator_closure_for_rule {
     # The full SQL statement for the template, besides the filter logic, is built here.    
     my $order_by_clause;
     if (@$order_by_columns) {
-        $order_by_clause = 'order by ' . join(', ',@$order_by_columns);
+        $order_by_clause = $self->resolve_order_by_clause($order_by_columns,$query_plan->_order_by_property_names);
     }
 
     my $sql = "\nselect ";

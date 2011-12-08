@@ -533,7 +533,15 @@ sub sorter {
     my $sorter = $self->{_sorter}{$key};
     unless ($sorter) {
         my @is_numeric;
+        my @is_descending;
         for my $property (@properties) {
+            if ($property =~ m/^(-|\+)(.*)$/) {
+                push @is_descending, $1 eq '-';
+                $property = $2;  # yes, we're manipulating the original list element
+            } else {
+                push @is_descending, 0;
+            }
+
             my $pmeta;
             if ($self->isa("UR::Object::Set::Type")) {
                 # If we're a set, we want to examine the property of our members.
@@ -555,17 +563,19 @@ sub sorter {
                 push @is_numeric, 0;
             }
         }
+
         no warnings;   # don't print a warning about undef values ...alow them to be treated as 0 or '' 
         $sorter = $self->{_sorter}{$key} ||= sub($$) {
             for (my $n = 0; $n < @properties; $n++) {
                 my $property = $properties[$n];
-                my $cmp;
-                if ($is_numeric[$n]) {
-                    $cmp = ($_[0]->$property <=> $_[1]->$property);
+                my($first,$second) = $is_descending[$n] ? ($_[1]->$property,$_[0]->$property) : ($_[0]->$property,$_[1]->$property);
+                if (!defined($second)) {
+                    return -1;
+                } elsif (!defined($first)) {
+                    return 1;
                 }
-                else {
-                    $cmp = ($_[0]->$property cmp $_[1]->$property);
-                }                    
+
+                my $cmp = $is_numeric[$n] ? $first <=> $second : $first cmp $second;
                 return $cmp if $cmp;
             }
             return 0;
@@ -1481,6 +1491,44 @@ sub __signal_change__ {
         $self->ungenerate();
     }
     return @rv;
+}
+
+our %STANDARD_VALID_SIGNALS = ( create        => 1,
+                                'delete'      => 1,
+                                commit        => 1,
+                                rollback      => 1,
+                                load          => 1,
+                                unload        => 1,
+                                load_external => 1 );
+sub _is_valid_signal {
+    my $self = shift;
+    my $aspect = shift;
+
+    # Undefined attributes indicate that the subscriber wants any changes at all to generate a callback.
+    return 1 if (! defined $aspect);
+
+    # All standard creation and destruction methods emit a signal.
+    return 1 if ($STANDARD_VALID_SIGNALS{$aspect});
+
+    for my $property ($self->all_property_names)
+    {
+        return 1 if $property eq $aspect;
+    }
+
+    if (!exists $self->{'_is_valid_signal'}) {
+        $self->{'_is_valid_signal'} = { map { $_ => 1 } @{$self->{'valid_signals'}} };
+    }
+
+    return 1 if ($self->{'_is_valid_signal'}->{$aspect});
+
+    foreach my $parent_meta ( $self->parent_class_metas ) {
+        if ($parent_meta->_is_valid_signal($aspect)) {
+            $self->{'_is_valid_signal'}->{$aspect} = 1;
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 

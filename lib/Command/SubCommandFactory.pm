@@ -88,22 +88,15 @@ sub _build_sub_command_mapping {
 
         if (my @matches = grep { -e $_ . '/' . $module_name } @INC) {
             my $c = UR::Object::Type->get($class_name);
-            no warnings 'redefine';
-            eval "sub ${class_name}::_target_class_name { '$target_class_name' }";
-            use warnings;
-
+            $class->_overload_target_class_name($class_name, $target);
             my $name = $class->_command_name_for_class_word($target);
             $mapping->{$name} = $class_name;
             next;
         }
 
-
         my @new_class_names = $class->_build_sub_command($class_name, @inheritance);
         for my $new_class_name (@new_class_names) {
-            no warnings 'redefine';
-            eval "sub ${new_class_name}::_target_class_name { '$target_class_name' }";
-            use warnings;
-
+            $class->_overload_target_class_name($new_class_name, $target);
             my $name = $class->_command_name_for_class_word($target);
             $mapping->{$name} = $class_name;
         }
@@ -121,8 +114,18 @@ sub _build_sub_command {
     return $class_name;
 }
 
-sub _target_class_name { undef }
+sub _overload_target_class_name {
+    my ($class, $class_name) = @_;
+    Carp::confess('No class name given to overload target class name!') if not $class_name;
+    my @tokens = split('::', $class_name);
+    my $target_class_name = $class->_target_base_class.'::'.$tokens[$#tokens];
+    no warnings 'redefine';
+    eval "sub ${class_name}::_target_class_name { '$target_class_name' }";
+    return 1;
+}
 
+sub _target_base_class { return $_[0]->_sub_commands_from; }
+sub _target_class_name { undef }
 sub _sub_commands_inherit_from { undef }
 
 1;

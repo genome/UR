@@ -331,7 +331,12 @@ sub initialize_bootstrap_classes
     $bootstrapping = 0;
 
     # It should be safe to set up callbacks now.
-    UR::Object::Property->create_subscription(callback => \&UR::Object::Type::_property_change_callback);
+    # __define__ instead of create() so a subsequent rollback won't remove the observer
+    # and since we're in bootstrapping time, we have to supply an ID.  The UUID generator
+    # doesn't require any outside info, so it's safe to use
+    UR::Observer->__define__(id => UR::Object::Type->autogenerate_new_object_id_uuid,
+                             subject_class_name => 'UR::Object::Property',
+                             callback => \&UR::Object::Type::_property_change_callback);
 }
 
 sub _normalize_class_description {
@@ -418,6 +423,7 @@ sub _normalize_class_description_impl {
         [ id_generator           => qw/id_sequence_generator_name/],
         [ subclassify_by_version => qw//],        
         [ meta_class_name        => qw//],
+        [ valid_signals          => qw//],
     ) {        
         my ($primary_field_name, @alternate_field_names) = @$mapping;                
         my @all_fields = ($primary_field_name, @alternate_field_names);
@@ -489,6 +495,17 @@ sub _normalize_class_description_impl {
 
     unless ($new_class{'doc'}) {
         $new_class{'doc'} = undef;
+    }
+
+    if ($new_class{'valid_signals'}) {
+        if (!ref($new_class{'valid_signals'})) {
+            # If it's a plain string, wrap it into an arrayref
+            $new_class{'valid_signals'} = [ $new_class{'valid_signals'} ];
+        } elsif (ref($new_class{'valid_signals'}) ne 'ARRAY') {
+            Carp::confess("The 'valid_signals' metadata for class $class_name must be an arrayref");
+        }
+    } else {
+        $new_class{'valid_signals'} = [];
     }
   
     for my $field (qw/is id_by has relationships constraints/) {

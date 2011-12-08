@@ -79,6 +79,10 @@ sub _map_fields {
     return @pos;
 }
 
+# Nothing to be done for commit and rollback
+sub rollback { 1;}
+sub commit   { 1; }
+
 sub _sync_database {
     my $self = shift;
     my %params = @_;

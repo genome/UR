@@ -6,8 +6,9 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 35;
+use Test::More tests => 28;
 
+package URT::Person;
 UR::Object::Type->define(
     class_name => 'URT::Person',
     has => [
@@ -19,8 +20,14 @@ UR::Object::Type->define(
             calculate => '$first_name . " " . $last_name',
         }
     ],
-    valid_signals => ['something_else'],
 );
+sub validate_subscription {
+    my($class,$method) = @_;
+    return 1 if $method eq 'something_else';
+    return $class->SUPER::validate_subscription($method);
+}
+
+package main;
 
 my $p1 = URT::Person->create(
     id => 1, first_name => "John", last_name => "Doe"
@@ -31,7 +38,6 @@ my $p2 = URT::Person->create(
     id => 2, first_name => "Jane", last_name => "Doe"
 );
 ok($p2, "Made another person");
-
 
 my $change_count = get_change_count();
 
@@ -45,9 +51,10 @@ foreach my $thing ( $p1,$p2,'URT::Person') {
         my $id = ref($thing) ? $thing->id : $thing;
         my %args = ( callback => sub { no warnings 'uninitialized'; $observations->{$id}->{$aspect}++ } );
         if ($aspect) {
-            $args{'aspect'} = $aspect;
+            $args{'method'} = $aspect;
         }
-        ok($thing->add_observer(%args), "Made an observer on $thing for aspect $aspect");
+        #ok($thing->add_observer(%args), "Made an observer on $thing for aspect $aspect");
+        ok($thing->create_subscription(%args), "Made an observer on $thing for aspect $aspect");
     }
 }
 
@@ -76,18 +83,18 @@ is(get_change_count(), $change_count + 1, '1 change recorded');
 
 $change_count = get_change_count();
 $observations = {};
-ok($p2->__signal_observers__('something_else'),'send the "something_else" signal to person 2');
+ok($p2->__signal_change__('something_else'),'send the "something_else" signal to person 2');
 is_deeply($observations,
           { 2             => { '' => 1, 'something_else' => 1},
             'URT::Person' => { '' => 1, 'something_else' => 1},
           },
           'Callbacks were fired');
-is(get_change_count(), $change_count, 'no changes recorded for non-change signal');
+is(get_change_count(), $change_count + 1, 'one change recorded for non-change signal');
 
 
 $change_count = get_change_count();
 $observations = {};
-ok(URT::Person->__signal_observers__('something_else'), 'Send the "something_else" signal to the URT::Person class');
+ok(URT::Person->__signal_change__('something_else'), 'Send the "something_else" signal to the URT::Person class');
 is_deeply($observations,
           { 1             => { '' => 1, 'something_else' => 1},
             2             => { '' => 1, 'something_else' => 1},
@@ -99,7 +106,7 @@ is(get_change_count(), $change_count, 'no changes recorded for non-change signal
 
 $change_count = get_change_count();
 $observations = {};
-ok(URT::Person->__signal_observers__('blablah'), 'Send the "blahblah" signal to the URT::Person class');
+ok(URT::Person->__signal_change__('blablah'), 'Send the "blahblah" signal to the URT::Person class');
 is_deeply($observations,
           { 1             => { '' => 1,},
             2             => { '' => 1,},
@@ -108,28 +115,6 @@ is_deeply($observations,
           'Callbacks were fired');
 is(get_change_count(), $change_count, 'no changes recorded for non-change signal');
 
-
-ok(scalar($p1->remove_observers()), 'Remove observers for Person 1');
-
-
-$change_count = get_change_count();
-$observations = {};
-is($p1->last_name("Doooo"),"Doooo", "changed person 1");
-is_deeply($observations,
-          { 'URT::Person' => { '' => 1, 'last_name' => 1 } },
-          'Callbacks were fired');
-is(get_change_count(), $change_count + 1, '1 change recorded');
-
-
-$change_count = get_change_count();
-$observations = {};
-is($p2->last_name("Boo"),"Boo", "changed person 2");
-is_deeply($observations,
-          { 'URT::Person' => { '' => 1, 'last_name' => 1 },
-            2             => { '' => 1, 'last_name' => 1 },
-          },
-          'Callbacks were fired');
-is(get_change_count(), $change_count + 1, '1 change recorded');
 
 
 sub get_change_count {

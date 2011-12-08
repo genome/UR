@@ -15,19 +15,16 @@ use URT::DataSource::SomeSQLite;
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 ok($dbh, "got a db handle");
 
-
+# SQLite's rollback un-does the table creation, too, so we
+# have to re-create the table and object when no-commit is on
+# And this needs to be re-created each time the main Context rolls back
+# because subscription creation is a transactional action
 my $init_db = sub {
     $dbh->do('create table IF NOT EXISTS person ( person_id int NOT NULL PRIMARY KEY, name varchar)');
     $dbh->do(q(delete from person));
     $dbh->do(q(insert into person (person_id, name) values (1, 'Bob')));
 };
 $init_db->();
-
-# SQLite's rollback un-does the table creation, too, so we
-# have to re-create the table and object when no-commit is on
-UR::Context->create_subscription(
-                method => 'rollback',
-                callback => $init_db);
 
 ok(UR::Object::Type->define( 
         class_name => 'URT::Person',
@@ -159,6 +156,7 @@ sub try_in_context_transaction {
     $within->();
 
     ok(UR::Context->rollback(), 'rollback the context');
+    $init_db->();
 
     $after->();
 }

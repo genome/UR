@@ -128,6 +128,7 @@ require UR::Object::Type;
 require UR::Object::Ghost;
 require UR::Object::Property;
 
+require UR::Observer;
 
 require UR::BoolExpr::Util;
 require UR::BoolExpr;                                  # has meta 
@@ -248,6 +249,8 @@ UR::Object::Type->define(
         composite_id_separator           => { is => 'Text', len => 2 , default_value => "\t", is_optional => 1,
                                                 doc => 'for classes whose objects have a multi-value "id", this overrides using a "\t" to compose/decompose' },        
         
+        valid_signals                    => { is => 'ARRAY', is_optional => 1,
+                                                doc => 'List of non-standard signal names observers can bind to ' },
         # details used by the managment of the "real" entity outside of the app (persistence) 
         table_name                       => { is => 'Text', len => undef, is_optional => 1, 
                                                 doc => 'for classes with a data source, this specifies the table or equivalent data structure which holds instances' },
