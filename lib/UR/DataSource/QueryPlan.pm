@@ -289,8 +289,14 @@ sub _init_rdbms {
         while (my $property_name = shift @properties_involved) {
             my (@pmeta) = $class_meta->property_meta_for_name($property_name);
             unless (@pmeta) {
-                push @errors, "Class ".$class_meta->id." has no property named '$property_name'";
-                next;
+                if ($class_name->can($property_name)) {
+                    # method, not property
+                    next;
+                }
+                else {
+                    push @errors, "Class ".$class_meta->id." has no property or method named '$property_name'";
+                    next;
+                }
             }
             
             if (index($property_name,'.') != -1) {
