@@ -602,7 +602,9 @@ sub _kill_running_jobs  {
 }
 
 END {
+    my $exit_code = $?;
     &_kill_running_jobs();
+    $? = $exit_code;  # restore the exit code, since the bkill commands set a different exit code
 }
 
 
