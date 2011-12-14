@@ -3394,6 +3394,38 @@ to being off, and must be explicitly turned on with this method.
 
 =back
 
+=head1 Custom observer aspects
+
+UR::Context sends signals for observers watching for some non-standard aspects.
+
+=over 2
+
+=item precommit
+
+After C<commit()> has been called, but before any changes are saved to the
+data sources.  The only parameters to the Observer's callback are the Context
+object and the aspect ("precommit").
+
+=item commit
+
+After C<commit()> has been called, and after an attempt has been made to save
+the changes to the data sources.  The parameters to the callback are the
+Context object, the aspect ("commit"), and a boolean value indicating whether
+the commit succeeded or not.
+
+=item prerollback
+
+After C<rollback()> has been called, but before and object state is reverted.
+
+=item rollback
+
+After C<rollback()> has been called, and after an attempt has been made to
+revert the state of all the loaded objects.  The parameters to the callback
+are the Context object, the aspect ("rollback"), and a boolean value
+indicating whether the rollback succeeded or not.
+
+=back
+
 =head1 Data Concurrency
 
 Currently, the Context is optimistic about data concurrency, meaning that 
@@ -3816,7 +3848,7 @@ soon as possible by calling C<__weaken__>.
 =head1 SEE ALSO
 
 L<UR::Context::Root>, L<UR::Context::Process>, L<UR::Object>,
-L<UR::DataSource>, L<UR::Object::Ghost>
+L<UR::DataSource>, L<UR::Object::Ghost>, L<UR::Observer>
 
 =cut
 

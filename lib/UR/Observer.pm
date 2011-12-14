@@ -207,7 +207,23 @@ UR::Observer - bind callbacks to object changes
             sub {
                 print "fuel level is: " . shift->fuel_level . "\n"
             },
+        priority => 2,
     );
+
+    $observer2 = UR::Observer->create(
+        subject_class => 'Acme::Rocket',
+        subject_id    => $rocket->id,
+        aspect => 'fuel_level',
+        callback =>
+            sub {
+                my($self,$changed_aspect,$old_value,$new_value) = @_;
+                if ($new_value == 0) {
+                    print "Bail out!\n";
+                }
+            },
+        priority => 0
+    );
+
 
     for (3 .. 0) {
         $rocket->fuel_level($_);
@@ -215,9 +231,123 @@ UR::Observer - bind callbacks to object changes
     # fuel level is: 3
     # fuel level is: 2
     # fuel level is: 1
+    # Bail out!
     # fuel level is: 0
     
     $observer->delete;
+
+=head1 DESCRIPTION
+
+UR::Observer implements the observer pattern for UR objects.  These observers
+can be attached to individual object instances, or to whole classes.  They
+can send notifications for changes to object attributes, or to other state
+changes such as when an object is loaded from its datasource or deleted.
+
+=head1 CONSTRUCTOR
+
+Observers can be created either by using the method C<add_observer()> on
+another class, or by calling C<create()> on the UR::Observer class.
+
+  my $o1 = Some::Other::Class->add_observer(...);
+  my $o2 = $object_instance->add_observer(...);
+  my $o3 = UR::Observer->create(...);
+
+The constructor accepts these parameters:
+
+=over 2
+
+=item subject_class_name
+
+The name of the class the observer is watching.  If this observer is being
+created via C<add_observer()>, then it figures out the subject_class_name
+from the class or object it is being called on.
+
+=item subject_id
+
+The ID of the object the observer is watching.  If this observer is being
+created via C<add_observer()>, then it figures out the subject_id from the
+object it was called on.  If C<add_observer()> was called as a class method,
+then subject_id is omitted, and means that the observer should fire for
+changes on any instance of the class or sub-class.
+
+=item priority
+
+A numeric value used to determine the order the callbacks are fired.  Lower
+numbers are higher priority, and are run before callbacks with a numerically
+higher priority.  The default priority is 1.  Negative numbers are ok.
+
+=item aspect
+
+The attribute the observer is watching for changes on.  The aspect is commonly
+one of the properties of the class.  In this case, the callback is fired after
+the property's value changes.  aspect can be omitted, which means the observer
+should fire for any change in the object state.  If both subject_id and aspect
+are omitted, then the observer will fire for any change to any instance of the
+class.
+
+There are other, system-level aspects that can be watched for that correspond to other types
+of state change:
+
+=over 2
+
+=item create
+
+After a new object instance is created
+
+=item delete
+
+After an n object instance is deleted
+
+=item load
+
+After an object instance is loaded from its data source
+
+=item commit
+
+After an object instance has changes saved to its data source
+
+=back
+
+=item callback
+
+A coderef that is called after the observer's event happens.  The coderef is
+passed four parameters: $self, $aspect, $old_value, $new_value.  In this case,
+$self is the object that is changing, not the UR::Observer instance (unless,
+of course, you have created an observer on UR::Observer).  The return value of
+the callback is ignored.
+
+=item note
+
+A text string that is ignored by the system
+
+=back
+
+=head2 Custom aspects
+
+You can create an observer for an aspect that is neither a property nor one
+of the system aspects by listing the aspect names in the metadata for the
+class.
+
+    class My::Class {
+        has => [ 'prop_a', 'another_prop' ],
+        valid_signals => ['custom', 'pow' ],
+    };
+
+    my $o = My::Class->add_observer(
+                aspect => 'pow',
+                callback => sub { print "POW!\n" },
+            );
+    My::Class->__signal_observers__('pow');  # POW!
+
+    my $obj = My::Class->create(prop_a => 1);
+    $obj->__signal_observers__('custom');  # not an error
+
+To help catch typos, creating an observer for a non-standard aspect generates
+an error message but not an exception, unless the named aspect is in the
+list of 'valid_signals' in the class metadata.  Nothing in the system will
+trigger these observers, but they can be triggered in your own code using the
+C<__signal_observers()__> class or object method.  Sending a signal for an
+aspect that no observers are watching for is not an error.
 
 =cut
 
