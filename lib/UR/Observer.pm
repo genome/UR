@@ -22,6 +22,10 @@ UR::Object::Type->define(
     is_transactional => 1,
 );
 
+# This is not implemented as a "real" observer via create() because at the point during bootstrapping
+# that this module is loaded, we're not yet ready to start creating objects
+__PACKAGE__->_insert_record_into_all_change_subscriptions('UR::Observer', 'priority', '',
+                                          [\&_modify_priority, '', 0, UR::Object::Type->autogenerate_new_object_id_uuid]);
 
 sub create {
     my $class = shift;
@@ -77,7 +81,6 @@ sub _create_or_define {
     my %params = $rule->params_list;
     my ($subscription, $delete_subscription);
 
-    #push @{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id} }, [$callback,$self->note,$self->priority, $self->id];
     $self->_insert_record_into_all_change_subscriptions($subject_class_name, $aspect, $subject_id,
                                                         [$callback, $self->note, $self->priority, $self->id]);
 
@@ -88,15 +91,32 @@ sub _create_or_define {
 sub _insert_record_into_all_change_subscriptions {
     my($class,$subject_class_name, $aspect,$subject_id, $new_record) = @_;
 
-    my $priority = $new_record->[2];
     my $list = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id} ||= [];
+    push @$list, $new_record;
+}
 
-    my $i = 0;
-    while ($i < @$list and $list->[$i]->[2] < $priority) {
-        $i++;
+sub _modify_priority {
+    my($self, $aspect, $old_val, $new_val) = @_;
+
+    my $subject_class_name = $self->subject_class_name;
+    my $subject_aspect = $self->aspect;
+    my $subject_id = $self->subject_id;
+
+    my $list = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$subject_aspect}->{$subject_id};
+    return unless $list;  # this is probably an error condition
+
+    my $data;
+    for (my $i = 0; $i < @$list; $i++) {
+        if ($list->[$i]->[3] eq $self->id) {
+            ($data) = splice(@$list,$i, 1);
+            last;
+        }
     }
+    return unless $data;  # This is probably an error condition...
 
-    splice(@$list, $i, 0, $new_record);
+    $data->[2] = $new_val;
+
+    $self->_insert_record_into_all_change_subscriptions($subject_class_name, $subject_aspect, $subject_id, $data);
 }
 
 sub callback {
