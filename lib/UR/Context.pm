@@ -368,11 +368,6 @@ sub send_notification_to_observers {
     my @check_properties    = ($property    ? ($property, '')    : ('') );
     my @check_ids           = (defined($id) ? ($id, '')          : ('') );
 
-    #my @per_class  = grep { defined $_ } @$all_change_subscriptions{@check_classes};
-    #my @per_method = grep { defined $_ } map { @$_{@check_properties} } @per_class;
-    #my @per_id     = grep { defined $_ } map { @$_{@check_ids} } @per_method;
-    #my @matches = map { @$_ } @per_id;
-
     my @matches =
         map { @$_ }
         grep { defined $_ } map { defined($id) ? @$_{@check_ids} : values(%$_) }
@@ -381,22 +376,12 @@ sub send_notification_to_observers {
 
     return unless @matches;
 
-    #Carp::cluck() unless UR::Object::Subscription->can("class");
-    #my @s = UR::Object::Subscription->get(
-    ##    monitor_class_name => \@check_classes,
-    #    monitor_method_name => \@check_properties,
-    #    monitor_id => \@check_ids,
-    #);
-
-    #print STDOUT "fire __signal_change__: class $class id $id method $property data @data -> \n" . join("\n", map { "@$_" } @matches) . "\n";
-
     $sig_depth++;
     if (@matches > 1) {
         no warnings;
         @matches = sort { $a->[2] <=> $b->[2] } @matches;
     };
     
-    #print scalar(@matches) . " index matches\n";
     foreach my $callback_info (@matches) {
         my ($callback, $note) = @$callback_info;
         $callback->($subject, $property, @data)
