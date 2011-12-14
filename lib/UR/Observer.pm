@@ -77,9 +77,26 @@ sub _create_or_define {
     my %params = $rule->params_list;
     my ($subscription, $delete_subscription);
 
-    push @{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id} }, [$callback,$self->note,$self->priority, $self->id];
+    #push @{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id} }, [$callback,$self->note,$self->priority, $self->id];
+    $self->_insert_record_into_all_change_subscriptions($subject_class_name, $aspect, $subject_id,
+                                                        [$callback, $self->note, $self->priority, $self->id]);
 
     return $self;
+}
+
+
+sub _insert_record_into_all_change_subscriptions {
+    my($class,$subject_class_name, $aspect,$subject_id, $new_record) = @_;
+
+    my $priority = $new_record->[2];
+    my $list = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id} ||= [];
+
+    my $i = 0;
+    while ($i < @$list and $list->[$i]->[2] < $priority) {
+        $i++;
+    }
+
+    splice(@$list, $i, 0, $new_record);
 }
 
 sub callback {
