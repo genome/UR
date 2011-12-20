@@ -334,6 +334,7 @@ sub ghost_class {
 }
 
 
+package UR::ModuleBase;
 # Method for setting a callback using the old, non-command messaging API
 
 =pod
@@ -383,6 +384,78 @@ sub message_callback
 
     # To support the old, deprecated, non-command messaging API
     UR::Object->$methodname($wrapper_callback);
+}
+
+# class that stores and manages messages for the deprecated API
+package UR::ModuleBase::Message;
+
+use Scalar::Util qw(weaken);
+
+##- use UR::Util;
+UR::Util->generate_readonly_methods
+(
+    text         => undef,
+    level        => undef,
+    package_name => undef,
+    call_stack   => [],
+    time_stamp   => undef,
+    owner_class  => undef,
+    owner_id     => undef,
+    type         => undef,
+);
+
+sub create
+{
+    my $class = shift;
+    my $obj = {@_};
+    bless ($obj,$class);
+   weaken $obj->{'owner_id'} if (ref($obj->{'owner_id'}));
+
+    return $obj;
+}
+
+sub owner
+{
+    my $self = shift;
+    my ($owner_class,$owner_id) = ($self->owner_class, $self->owner_id);
+    if (not defined($owner_id))
+    {
+        return $owner_class;
+    }
+    elsif (ref($owner_id))
+    {
+        return $owner_id;
+    }
+    else
+    {
+        return $owner_class->get($owner_id);
+    }
+}
+
+sub string
+{
+    my $self = shift;
+    "$self->{time_stamp} $self->{type}: $self->{text}\n";
+}
+
+sub _stack_item_params
+{
+    my ($self, $stack_item) = @_;
+    my ($function, $parameters, @parameters);
+
+    return unless ($stack_item =~ s/\) called at [^\)]+ line [^\)]+\s*$/\)/);
+
+    if ($stack_item =~ /^\s*([^\(]*)(.*)$/)
+    {
+        $function = $1;
+        $parameters = $2;
+        @parameters = eval $parameters;
+        return ($function, @parameters);
+    }
+    else
+    {
+        return;
+    }
 }
 
 
