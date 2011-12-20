@@ -496,8 +496,8 @@ sub _get_msgdata {
 
     if (ref($self)) {
         no strict 'refs';
-        my $object_msgdata = $msgdata{$self->id} ||= {};  # This actually overwrites things if there are 2 objects with the same ID
         my $class_msgdata = ref($self)->_get_msgdata;
+        my $object_msgdata = $class_msgdata->{'..id..'}->{$self->id} ||= {};
 
         while (my ($k,$v) = each(%$class_msgdata)) {
             # Copy class' value for this config item unless it's already set on the object
