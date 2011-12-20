@@ -632,6 +632,13 @@ sub message_callback
     my $self = shift;
     my ($type, $callback) = @_;
 
+    my $methodname = $type . '_messages_callback';
+
+    if (!$callback) {
+        # to clear the old, deprecated non-command messaging API callback
+        return UR::Object->$methodname($callback);
+    }
+
     my $wrapper_callback = sub {
         my($obj,$msg) = @_;
 
@@ -652,8 +659,6 @@ sub message_callback
         $callback->($message_object, $obj, $type);
     };
 
-    my $methodname = $type . '_messages_callback';
-    #$self->$methodname($wrapper_callback);
     # To support the old, deprecated, non-command messaging API
     UR::Object->$methodname($wrapper_callback);
 }
