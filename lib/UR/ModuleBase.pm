@@ -452,7 +452,7 @@ yet.
 
 =cut
 
-our @message_types = qw(error status warning debug);
+our @message_types = qw(error status warning debug usage);
 sub message_types
 {
     my $class = shift;
@@ -463,40 +463,156 @@ sub message_types
     return @message_types;
 }
 
-# create methods to set and return messages
-foreach my $type (@message_types)
-{
-    no strict 'refs';
-    # This method looks like a r/w accessor, but internally does extra work.
-    # On write it actually creates a message object from the passed-in text (and call stack info).
-    # On read it, retrieves such object, if it exists, and returns the ->text property of it.
-    # Other methods below allow deeper introspection to the last message logged for an object/class. 
-    my $accessor = sub {
-        my $msg = shift->message_object($type, @_);
-        return ($msg ? $msg->text : undef);
-    };
-    *{"${type}_message"} = $accessor; 
+#
+# Implement error_mesage/warning_message/status_message in a way
+# which handles object-specific callbacks.
+#
+# Build a set of methods for getting/setting/printing error/warning/status messages
+# $class->dump_error_messages(<bool>) Turn on/off printing the messages to STDERR
+#     error and warnings default to on, status messages default to off
+# $class->queue_error_messages(<bool>) Turn on/off queueing of messages
+#     defaults to off
+# $class->error_message("blah"): set an error message
+# $class->error_message() return the last message
+# $class->error_messages()  return all the messages that have been queued up
+# $class->error_messages_arrayref()  return the reference to the underlying
+#     list messages get queued to.  This is the method for truncating the list
+#     or altering already queued messages
+# $class->error_messages_callback(<subref>)  Specify a callback for when error
+#     messages are set.  The callback runs before printing or queueing, so
+#     you can alter @_ and change the message that gets printed or queued
+# And then the same thing for status and warning messages
 
-    # methods to access different features of the message
-    foreach my $func_suffix (qw(string text package_name call_stack time_stamp
-                                level))
-    {
-        # This is used in the closure below.
-        # It must be lexically scoped INSIDE of the for loop.
-        my $mobj_method = $func_suffix;
+# The filehandle to print these messages to.  In normal operation this'll just be
+# STDERR, but the test case can change it to capture the messages to somewhere else
 
-        # Set the class method up.
-        my $fname = "${type}_${func_suffix}";
-        *$fname = sub
-        {
-            my $self = shift;
-            my $message_object
-                = (ref($self) ? $self->{"${type}_message"} : ${"${self}::${type}_message"});
-            return unless $message_object;
-            return $message_object->$mobj_method(@_);
+our $stderr = \*STDERR;
+our $stdout = \*STDOUT;
+
+our %msgdata;
+
+sub _get_msgdata {
+    my $self = $_[0];
+
+    if (ref($self)) {
+        no strict 'refs';
+        my $object_msgdata = $msgdata{$self->id} ||= {};  # This actually overwrites things if there are 2 objects with the same ID
+        my $class_msgdata = ref($self)->_get_msgdata;
+
+        while (my ($k,$v) = each(%$class_msgdata)) {
+            # Copy class' value for this config item unless it's already set on the object
+            $object_msgdata->{$k} = $v unless (exists $object_msgdata->{$k});
         }
+
+        return $object_msgdata;
+    }
+    else {
+        no strict 'refs';
+        return ${ $self . "::msgdata" } ||= {};
     }
 }
+
+for my $type (@message_types) {
+
+    for my $method_base (qw/_messages_callback queue_ dump_ _package _file _line _subroutine/) {
+        my $method = (substr($method_base,0,1) eq "_"
+            ? $type . $method_base
+            : $method_base . $type . "_messages"
+        );
+        my $method_subref = sub {
+            my $self = shift;
+            my $msgdata = $self->_get_msgdata;
+            $msgdata->{$method} = pop if @_;
+            return $msgdata->{$method};
+        };
+        no strict;
+        no warnings;
+        *$method = $method_subref;
+    }
+
+    my $logger_subname = $type . "_message";
+    my $logger_subref = sub {
+        my $self = shift;
+
+        my $msgdata = $self->_get_msgdata();
+
+        if (@_) {
+            my $msg = shift;
+            chomp $msg if defined $msg;
+
+            unless (defined ($msgdata->{'dump_' . $type . '_messages'})) {
+                $msgdata->{'dump_' . $type . '_messages'} = $type eq "status" ? (exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} && $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} ? 1 : 0) : 1;
+            }
+
+            if (my $code = $msgdata->{ $type . "_messages_callback"}) {
+                $code->($self,$msg);
+            } else {
+                # To support the deprecated non-command messaging API
+                my $deprecated_msgdata = UR::Object->_get_msgdata();
+                my $code = $deprecated_msgdata->{ $type . "_messages_callback"};
+                $code->($self,$msg) if ($code);
+            }
+
+            if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
+                if ( $type eq 'usage' ) {
+                    (ref($fh) ? $fh : $stdout)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                }
+                else {
+                    (ref($fh) ? $fh : $stderr)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
+                }
+            }
+            if ($msgdata->{ "queue_" . $type . "_messages"}) {
+                my $a = $msgdata->{ $type . "_messages_arrayref" } ||= [];
+                push @$a, $msg;
+            }
+            $msgdata->{ $type . "_message" } = $msg;
+
+            my ($package, $file, $line, $subroutine) = caller;
+            $msgdata->{ $type . "_package" } = $package;
+            $msgdata->{ $type . "_file" } = $file;
+            $msgdata->{ $type . "_line" } = $line;
+            $msgdata->{ $type . "_subroutine" } = $subroutine;
+        }
+
+        if (wantarray) {
+            return (
+                $msgdata->{ $type . "_message" },
+                $msgdata->{ $type . "_package" },
+                $msgdata->{ $type . "_file" },
+                $msgdata->{ $type . "_line" },
+                $msgdata->{ $type . "_subroutine"},
+            );
+        }
+        return $msgdata->{ $type . "_message" };
+    };
+
+
+    my $arrayref_subname = $type . "_messages_arrayref";
+    my $arrayref_subref = sub {
+        my $self = shift;
+        my $msgdata = $self->_get_msgdata;
+        return $msgdata->{$type . "_messages_arrayref"};
+    };
+
+
+    my $array_subname = $type . "_messages";
+    my $array_subref = sub {
+        my $self = shift;
+
+        my $msgdata = $self->_get_msgdata;
+        return ref($msgdata->{$type . "_messages_arrayref"}) ?
+               @{ $msgdata->{$type . "_messages_arrayref"} } :
+               ();
+    };
+
+    no strict;
+    no warnings;
+
+    *$logger_subname    = $logger_subref;
+    *$arrayref_subname  = $arrayref_subref;
+    *$array_subname     = $array_subref;
+}
+
 
 =pod
 
@@ -510,138 +626,36 @@ messages of a specific type.
 
 =cut
 
-# set or return a callback that has been created for a message type
-our %message_callback;
+## set or return a callback that has been created for a message type
 sub message_callback
 {
     my $self = shift;
     my ($type, $callback) = @_;
 
-    # set the callback for a given message type if callback provided
-    if (@_ > 1)
-    {
-        $message_callback{$type} = $callback;
-    }
-    return $message_callback{$type};
-}
+    my $wrapper_callback = sub {
+        my($obj,$msg) = @_;
 
-# create message object, fire callbacks, and set message on parents
-sub message_object
-{
-    my $self = shift;
-    # see how we were called
-    if (@_ < 2)
-    {
-        no strict 'refs';
-        # return the message object
-        my ($type) = @_;
-        my $mobj = (ref($self) ? $self->{"${type}_message"} : ${"${self}::${type}_message"});
-        unless ($mobj) 
-        {
-            # See if the most recent message was directly or 
-            # indirectly on $self in our current scope.
-            my $last_message = ${"UR::ModuleBase::${type}_message"};
-            if ($last_message) 
-            {
-                # Get both call stacks.
-                my @s1 = $last_message->call_stack;
-                my $s2 = _current_call_stack();
-                                                
-                # Make sure the upper call of the last error
-                # matches all of our current upper call stack.
-                for (my $n=$#$s2-1; $n >=0; $n--) {
-                    if ($s1[$n] ne $s2->[$n]) {
-                        # call stack mismatch
-                        return;
-                    }
-                }                
-                
-                # Make sure that the last message 
-                # occurred under a call to $self. 
-                my $last_message_sub_at_this_scope = $s1[$#$s2];
-                unless ($last_message_sub_at_this_scope) {
-                    return;
-                }
-                my ($pkg,$sub) = 
-                    ($last_message_sub_at_this_scope =~ /^\s*(\w+)::([^\:\W]+)/);
-                unless ($self->isa($pkg) and $self->can($sub)) {
-                    # The last message did not occur under this object.
-                    return;
-                }
-                
-                # No mismatch.  The message occurred in the current function,
-                # and under the object we're testing.  Steal the message.
-                $mobj = $last_message;
-                $s1[-1] =~ s/^(\s+).* called at/ logged at/;
-                $s1[-1] = $1 . ucfirst($type) . $s1[-1];
-                $self->message_object (
-                    "warning",
-                    "Found unpropagated error message.  Set $type message before return from: ${pkg}::${sub}:\n"
-                        . join("\n",@s1)
-                );
-            }            
-        }
-        return $mobj;
-    }
-    else
-    {
-        # create a message object
-        my ($type, $text, $level) = @_;
-        $text ||= '(not set)';
-        $level ||= 1;
-        my $class = $self->class;
-        my $id = (ref($self) ? ($self->can("id") ? $self->id : $self) : $self);
+        my $obj_class = $obj->class;
+        my $obj_id = (ref($obj) ? ($obj->can("id") ? $obj->id : $obj) : $obj);
 
-        # Turn the message into an object with all of the goodies.
         my $message_object = UR::ModuleBase::Message->create
-        (
-            text         => $text,
-            level        => $level,
-            package_name => ((caller(0))[0]),
-            call_stack   => ($type eq "error" ? _current_call_stack() : []),
-            time_stamp   => time,
-            type         => $type,
-            owner_class  => $class,
-            owner_id     => $id,
-        );
+            (
+                text         => $msg,
+                level        => 1,
+                package_name => ((caller(1))[0]),
+                call_stack   => ($type eq "error" ? _current_call_stack() : []),
+                time_stamp   => time,
+                type         => $type,
+                owner_class  => $obj_class,
+                owner_id     => $obj_id,
+            );
+        $callback->($message_object, $obj, $type);
+    };
 
-        no strict 'refs';
-
-        # Get existing values for the class and object.
-        my $class_old = ${"${class}::${type}_message"};
-        my $object_old =  $self->{"${type}_message"} if (ref($self));
-
-        # Fire the callback as appropriate.
-        my $callback = $message_callback{$type};
-        if ($callback)
-        {
-            $callback->($message_object,$self,$type,$class_old,$object_old);
-        }
-        elsif ($type eq 'status') {
-            my $t = $text;
-            chomp($t);
-            STDERR->print($t,"\n");
-        }
-        elsif ($type ne 'debug')
-        {
-            # if no callback defined, print non-debug messages to stderr
-            my $warn_txt = "$class: " . uc($type) . ": "
-                . join(': ', (caller(2))[0, 2]) . ": $text";
-            chomp($warn_txt);
-            STDERR->print("$warn_txt\n");
-        }
-
-        # Set the value on the object, the class, and all parent classes.
-        $self->{"${type}_message"} = $message_object if (ref($self));
-        foreach my $set_class ($class, $class->inheritance)
-        {
-            no warnings;
-            ${"${set_class}::${type}_message"} = $message_object;
-        }
-
-        # Return the message which was passed-in.
-        return $message_object;
-    }
+    my $methodname = $type . '_messages_callback';
+    #$self->$methodname($wrapper_callback);
+    # To support the old, deprecated, non-command messaging API
+    UR::Object->$methodname($wrapper_callback);
 }
 
 sub _current_call_stack
