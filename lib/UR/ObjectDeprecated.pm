@@ -333,6 +333,59 @@ sub ghost_class {
     return $class;
 }
 
+
+# Method for setting a callback using the old, non-command messaging API
+
+=pod
+
+=item message_callback
+
+  $sub_ref = UR::ModuleBase->message_callback($type);
+  UR::ModuleBase->message_callback($type, $sub_ref);
+
+This method returns and optionally sets the subroutine that handles
+messages of a specific type.
+
+=cut
+
+## set or return a callback that has been created for a message type
+sub message_callback
+{
+    my $self = shift;
+    my ($type, $callback) = @_;
+
+    my $methodname = $type . '_messages_callback';
+
+    if (!$callback) {
+        # to clear the old, deprecated non-command messaging API callback
+        return UR::Object->$methodname($callback);
+    }
+
+    my $wrapper_callback = sub {
+        my($obj,$msg) = @_;
+
+        my $obj_class = $obj->class;
+        my $obj_id = (ref($obj) ? ($obj->can("id") ? $obj->id : $obj) : $obj);
+
+        my $message_object = UR::ModuleBase::Message->create
+            (
+                text         => $msg,
+                level        => 1,
+                package_name => ((caller(1))[0]),
+                call_stack   => ($type eq "error" ? _current_call_stack() : []),
+                time_stamp   => time,
+                type         => $type,
+                owner_class  => $obj_class,
+                owner_id     => $obj_id,
+            );
+        $callback->($message_object, $obj, $type);
+    };
+
+    # To support the old, deprecated, non-command messaging API
+    UR::Object->$methodname($wrapper_callback);
+}
+
+
 1;
 
 
