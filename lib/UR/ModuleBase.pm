@@ -505,10 +505,23 @@ sub _get_msgdata {
         }
 
         return $object_msgdata;
+
+    } elsif ($self eq 'UR::Object') {
+        $UR::Object::msgdata ||= {};
+        return $UR::Object::msgdata;
     }
     else {
         no strict 'refs';
-        return ${ $self . "::msgdata" } ||= {};
+        my $class_msgdata = ${ $self . '::msgdata' } ||= {};
+
+        my $parent_class = @{$self->__meta__->is}[0];  # yeah, ignore multiple inheritance :(
+        my $parent_msgdata = $parent_class->_get_msgdata();
+
+        while (my ($k,$v) = each(%$parent_msgdata)) {
+            # Copy class' value for this config item unless it's already set on the object
+            $class_msgdata->{$k} = $v unless (exists $class_msgdata->{$k});
+        }
+        return $class_msgdata;
     }
 }
 
