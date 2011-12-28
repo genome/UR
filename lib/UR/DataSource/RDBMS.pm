@@ -1519,6 +1519,8 @@ sub create_iterator_closure_for_rule {
     $sql .= "\n$group_by_clause" if $group_by_clause;
     $sql .= "\n$order_by_clause" if $order_by_clause;
 
+    $self->__signal_change__('query',$sql);
+
     my $dbh = $self->get_default_handle;
     my $sth = $dbh->prepare($sql,$query_config);
     unless ($sth) {
@@ -1532,8 +1534,6 @@ sub create_iterator_closure_for_rule {
 
     die unless $sth;   # FIXME - this has no effect, right?  
 
-    $self->__signal_change__('query',$sql);
-    
     # buffers for the iterator
     my $next_db_row;
     my $pending_db_object_data;

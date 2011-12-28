@@ -96,6 +96,11 @@ sub help_detail {
 This command is like "prove" or "make test", running the test suite for the
 current namespace.
 
+The default behavior is to search for tests by finding directories named 't'
+under the current directory, and then find files matching *.t under those
+directories.  If the --recurse option is used, then it will search for *.t
+files anywhere under the current directory.
+
 It uses many of the TAP:: family of modules, and so the underlying behavior
 can be influenced by changing the environment variables they use such
 as PERL_TEST_HARNESS_DUMP_TAP and ALLOW_PASSING_TODOS.  These modules include
@@ -164,29 +169,33 @@ sub execute {
             $self->error_message("Cannot currently combine the recurse option with a specific test list.");
             return;
         }
-        File::Find::find(sub {
-                if ($File::Find::name =~ /\.t$/ and not -d $File::Find::name) {
-                    push @tests, $File::Find::name;
-                }
-            }, $working_path);
-        chomp @tests;
-        @tests = sort @tests;
+        @tests = $self->_find_t_files_under_directory($working_path);
     }
     elsif (not @tests) {
-        my @dirs = `find $working_path`;
-        chomp @dirs;
-        @dirs = grep { $_ =~ /\/t$/ and -d $_ } @dirs;
+        my @dirs;
+        File::Find::find(sub {
+                if ($_ eq 't' and -d $_) {
+                    push @dirs, $File::Find::name;
+                }
+            },
+            $working_path);
+
         if (@dirs == 0) {
-            die "No 't' directories found!.  Write some tests...\n";
+            $self->error_message("No 't' directories found.  Write some tests.");
+            return;
         }
+        chomp @dirs;
         for my $dir (@dirs) {
-            # use all in the current t directory
-            push @tests, glob("$dir/*.t");
+            push @tests, $self->_find_t_files_under_directory($dir);
         }
     }
     else {
         # rely on the @tests list from the cmdline
     }
+
+    # uniqify and sort them
+    my %tests = map { $_ => 1 } @tests;
+    @tests = sort keys %tests;
 
     if ($self->list) {
         $self->status_message("Tests:");
@@ -204,6 +213,20 @@ sub execute {
     my $results = $self->_run_tests(@tests);
 
     return $results;
+}
+
+
+sub _find_t_files_under_directory {
+    my($self,$path) = @_;
+
+    my @tests;
+    File::Find::find(sub {
+            if (m/\.t$/ and not -d $_) {
+                push @tests, $File::Find::name;
+            }
+        }, $path);
+    chomp @tests;
+    return @tests;
 }
 
 # Run by the test harness when test are scheduled out via LSF
@@ -948,7 +971,10 @@ directory, and runs ALL tests under that directory.
 
 =item --recurse
 
- Run all tests in the current directory, and in sub-directories.
+ Run all tests in the current directory, and in sub-directories.  Without
+ --recurse, it will first recursively search for directories named 't' under
+ the current directory, and then recursively seatch for *.t files under those
+ directories.
 
 =item --long
 
