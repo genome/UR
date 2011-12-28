@@ -30,11 +30,8 @@ sub _dont_emit_initializing_messages {
     my($msgobj, $dsobj, $msgtype) = @_;
 
     my $message = $msgobj->text;
-    if ($message !~ m/^Re-creating/) {
-        $dsobj->message_callback($msgtype, undef);
-        my $msg_method = $msgtype . '_message';
-        $dsobj->$msg_method($message);
-        $dsobj->message_callback($msgtype, \&_dont_emit_initializing_messages);
+    if ($message =~ m/^Re-creating|Skipped unload/) {
+        die;
     }
 }
 
