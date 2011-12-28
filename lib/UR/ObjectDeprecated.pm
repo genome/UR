@@ -380,6 +380,7 @@ sub message_callback
                 owner_id     => $obj_id,
             );
         $callback->($message_object, $obj, $type);
+        $_[1] = $message_object->text;
     };
 
     # To support the old, deprecated, non-command messaging API
@@ -457,6 +458,8 @@ sub _stack_item_params
         return;
     }
 }
+
+package UR::Object;
 
 
 1;
