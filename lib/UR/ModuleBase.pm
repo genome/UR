@@ -514,8 +514,14 @@ sub _get_msgdata {
         no strict 'refs';
         my $class_msgdata = ${ $self . '::msgdata' } ||= {};
 
-        my $parent_class = @{$self->__meta__->is}[0];  # yeah, ignore multiple inheritance :(
-        my $parent_msgdata = $parent_class->_get_msgdata();
+        # eval since some packages aren't forman UR classes with metadata
+        my $parent_class = eval { @{$self->__meta__->is}[0]; };  # yeah, ignore multiple inheritance :(
+        my $parent_msgdata;
+        if ($parent_class) {
+            $parent_msgdata = $parent_class->_get_msgdata();
+        } else {
+            $parent_msgdata = UR::Object->_get_msgdata();
+        }
 
         while (my ($k,$v) = each(%$parent_msgdata)) {
             # Copy class' value for this config item unless it's already set on the object
