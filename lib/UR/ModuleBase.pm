@@ -563,14 +563,19 @@ for my $type (@message_types) {
                 $msgdata->{'dump_' . $type . '_messages'} = $type eq "status" ? (exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} && $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} ? 1 : 0) : 1;
             }
 
-            if (my $code = $msgdata->{ $type . "_messages_callback"}) {
-                $code->($self,$msg);
-            } else {
-                # To support the deprecated non-command messaging API
-                my $deprecated_msgdata = UR::Object->_get_msgdata();
-                my $code = $deprecated_msgdata->{ $type . "_messages_callback"};
-                $code->($self,$msg) if ($code);
-            }
+            eval {
+                if (my $code = $msgdata->{ $type . "_messages_callback"}) {
+                    $code->($self,$msg);
+                } else {
+                    # To support the deprecated non-command messaging API
+                    my $deprecated_msgdata = UR::Object->_get_msgdata();
+                    my $code = $deprecated_msgdata->{ $type . "_messages_callback"};
+                    if ($code) {
+                        $code->($self,$msg) if ($code);
+                    }
+                }
+            };
+            return if $@;  # if the callback threw an exception, don't print the msg
 
             if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
                 if ( $type eq 'usage' ) {
