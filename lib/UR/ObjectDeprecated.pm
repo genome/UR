@@ -387,6 +387,46 @@ sub message_callback
     UR::Object->$methodname($wrapper_callback);
 }
 
+sub message_object
+{
+    my $self = shift;
+    # see how we were called
+    if (@_ < 2)
+    {
+        no strict 'refs';
+        # return the message object
+        my ($type) = @_;
+        my $method = $type . '_message';
+        my $msg_text = $self->method();
+        my $obj_class = $self->class;
+        my $obj_id = (ref($self) ? ($self->can("id") ? $self->id : $self) : $self);
+        return UR::ModuleBase::Message->create
+            (
+                text         => $msg_text,
+                level        => 1,
+                package_name => ((caller(1))[0]),
+                call_stack   => ($type eq "error" ? _current_call_stack() : []),
+                time_stamp   => time,
+                type         => $type,
+                owner_class  => $obj_class,
+                owner_id     => $obj_id,
+            );
+    }
+}
+
+foreach my $type ( UR::ModuleBase->message_types ) {
+     my $retriever_name = $type . '_text';
+     my $compat_name = $type . '_message';
+     my $sub = sub {
+         my $self = shift;
+         return $self->$compat_name();
+     };
+
+     no strict 'refs';
+     *$retriever_name = $sub;
+}
+
+
 # class that stores and manages messages for the deprecated API
 package UR::ModuleBase::Message;
 
