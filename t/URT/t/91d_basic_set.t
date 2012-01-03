@@ -1,9 +1,11 @@
-use URT;
-
 use strict;
 use warnings;
-
 use Test::More tests => 28;
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
+use lib File::Basename::dirname(__FILE__).'/../..';
+
+use URT;
 
 ok(UR::Object::Type->define(
     class_name => 'URT::ThingNoDataSource',
