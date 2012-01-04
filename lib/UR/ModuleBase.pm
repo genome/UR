@@ -560,7 +560,28 @@ for my $type (@message_types) {
             chomp $msg if defined $msg;
 
             unless (defined ($msgdata->{'dump_' . $type . '_messages'})) {
-                $msgdata->{'dump_' . $type . '_messages'} = $type eq "status" ? (exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} && $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} ? 1 : 0) : 1;
+                my $do_dump;
+                if ($type eq "status" 
+                    and
+                    exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'}
+                    and
+                    $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'}
+                ) {
+                    $do_dump = 1;
+                } elsif ($type eq 'debug'
+                    and
+                    exists $ENV{'UR_DUMP_DEBUG_MESSAGES'}
+                    and
+                    $ENV{'UR_DUMP_DEBUG_MESSAGES'}
+                ) {
+                    $do_dump = 1;
+                } elsif ($type eq 'warning' or $type eq 'error') {
+                    $do_dump = 1;
+                } else {
+                    $do_dump = 0;
+                }
+
+                $msgdata->{'dump_' . $type . '_messages'} = $do_dump;
             }
 
             eval {
