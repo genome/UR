@@ -11,7 +11,7 @@ libur-perl (0.36-1) unstable; urgency=low
   * Fix exit code for 'ur test run' when the --lsf arg is used.  It used always return a false value (1).  Now it returns true (0) if all tests pass, and false (1) if any one test fails.
   * UR::Object now implements the messaging API that used to be in Command (error_message, dump_error_messages, etc).  The old messaging API is now deprecated.
 
- -- Anthony Brummett <brummett@cpan.org> Thu, 05 Jan 2012 15:40:00 -0500
+ -- Anthony Brummett <brummett@cpan.org>  Thu, 05 Jan 2012 15:40:00 -0500
 
 libur-perl (0.35-1) unstable; urgency=low
 
@@ -25,7 +25,7 @@ libur-perl (0.35-1) unstable; urgency=low
   * Command module fixes
   * Deleted objects hanging around as UR::DeletedRefs are recycled if the original object gets re-created
 
- -- Anthony Brummett <brummett@cpan.org> Fri, 28 Oct 2011 12:40:00 -0500
+ -- Anthony Brummett <brummett@cpan.org>  Fri, 28 Oct 2011 12:40:00 -0500
 
 libur-perl (0.34-1) unstable; urgency=low
 
