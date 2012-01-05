@@ -5,7 +5,7 @@ use warnings;
 use File::Find;
 
 require UR;
-our $VERSION = "0.35"; # UR $VERSION;
+our $VERSION = "0.36"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::Namespace',

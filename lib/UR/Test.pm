@@ -2,7 +2,7 @@ package UR::Test;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.35"; # UR $VERSION;
+our $VERSION = "0.36"; # UR $VERSION;
 use Test::More;
 
 sub check_properties {

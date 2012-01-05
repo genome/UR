@@ -3,7 +3,7 @@ package UR::Namespace::Command::Old::ExportDbicClasses;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.35"; # UR $VERSION;
+our $VERSION = "0.36"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

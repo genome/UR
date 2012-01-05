@@ -11,7 +11,7 @@ use Getopt::Long;
 use Command::View::DocMethods;
 use Command::Dispatch::Shell;
 
-our $VERSION = "0.35"; # UR $VERSION;
+our $VERSION = "0.36"; # UR $VERSION;
 
 our $entry_point_class;
 our $entry_point_bin;

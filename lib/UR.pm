@@ -8,7 +8,7 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = "0.35"; # UR $VERSION
+our $VERSION = "0.36"; # UR $VERSION
 
 BEGIN {
     # unless otherwise specified, begin uncaching at 1 million objects 
@@ -468,7 +468,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.35
+This document describes UR version 0.36
 
 =head1 SYNOPSIS
 
