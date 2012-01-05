@@ -1,4 +1,4 @@
-bur-perl (0.36-1) unstable; urgency=low
+libur-perl (0.36-1) unstable; urgency=low
 
   * Fix for 'like' clause's escape string on PostgreSQL
   * Speed improvement for class initialization by normalizing metadata more efficiently and only calculating the cached data for property_meta_for_name() once.
