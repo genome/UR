@@ -218,6 +218,7 @@ lib/UR/Object/Type/Initializer.pm
 lib/UR/Object/Type/Initializer.pod
 lib/UR/Object/Type/InternalAPI.pm
 lib/UR/Object/Type/ModuleWriter.pm
+lib/UR/Object/Type/View/AvailableViews/Json.pm
 lib/UR/Object/Type/View/AvailableViews/Xml.pm
 lib/UR/Object/Type/View/Default/Text.pm
 lib/UR/Object/Type/View/Default/Xml.pm
@@ -399,6 +400,7 @@ t/URT/t/11d_create_with_single_delegated_property_via_is_many_property.t
 t/URT/t/12_properties_metadata_query.t
 t/URT/t/13a_command_message_v1.t
 t/URT/t/13b_command_message_v2.t
+t/URT/t/13c_object_message.t
 t/URT/t/14_ghost_objects.t
 t/URT/t/15_singleton.t
 t/URT/t/16_viewer.t
@@ -412,6 +414,8 @@ t/URT/t/21_observer.t
 t/URT/t/21b_load_observer_autosubclass.t
 t/URT/t/21c_load_observer_abstract_parent.t
 t/URT/t/21d_db_entity_observers.t
+t/URT/t/21e_old_subscription_api.t
+t/URT/t/21f_observer_priority.t
 t/URT/t/22_cached_get_with_subclasses.t
 t/URT/t/23_id_class_by_with_bad_data.t
 t/URT/t/24_query_by_is_calculated.t
@@ -532,6 +536,7 @@ t/URT/t/90_comparison_value_and_escape_character_to_regex.t
 t/URT/t/91_object_sets.t
 t/URT/t/91b_sets_count_with_changes.t
 t/URT/t/91c_set_relay.t
+t/URT/t/91d_basic_set.t
 t/URT/t/92_save_object_with_propertyless_column.t
 t/URT/t/93_namespace.t
 t/URT/t/93b_namespace_loaded_from_symlink.t
