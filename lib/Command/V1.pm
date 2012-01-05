@@ -244,6 +244,7 @@ sub _execute_delegate_class_with_params {
     $delegate_class->dump_status_messages(1);
     $delegate_class->dump_warning_messages(1);
     $delegate_class->dump_error_messages(1);
+    $delegate_class->dump_usage_messages(1);
     $delegate_class->dump_debug_messages(0);
 
     if ( $delegate_class->is_sub_command_delegator && !defined($params) ) {

@@ -72,6 +72,7 @@ sub _execute_delegate_class_with_params {
         $class->dump_status_messages(1);
         $class->dump_warning_messages(1);
         $class->dump_error_messages(1);
+        $class->dump_usage_messages(1);
         $class->dump_debug_messages(0);
         $class->usage_message($class->help_usage_complete_text);
         return;
@@ -80,6 +81,7 @@ sub _execute_delegate_class_with_params {
     $delegate_class->dump_status_messages(1);
     $delegate_class->dump_warning_messages(1);
     $delegate_class->dump_error_messages(1);
+    $delegate_class->dump_usage_messages(1);
     $delegate_class->dump_debug_messages(0);
 
     if ( !defined($params) ) {
