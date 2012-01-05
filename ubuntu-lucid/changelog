@@ -1,4 +1,19 @@
-libur-perl (0.34-1) unstable; urgency=low
+bur-perl (0.36-1) unstable; urgency=low
+
+  * Fix for 'like' clause's escape string on PostgreSQL
+  * Speed improvement for class initialization by normalizing metadata more efficiently and only calculating the cached data for property_meta_for_name() once.
+  * Workaround for a bug in Perl 5.8 involving sorters by avoiding method calls inside some sort subs
+  * Fully deprecate the old Subscription API in favor of the new Observer api
+  * UR::Value classes use UR::DataSource::Default and the normal loading mechanism.  Previously, UR::Values used a special codepath to get loaded into memory
+  * Add a json perspective for available views
+  * Allow descending sorts in order-by
+  * Standardize sorting results on columns with NULLs by having NULL/undef always appears at the end for ascending sorts.  Previously, the order depended on the data source's behavior.  Oracle and PostgreSQL put them at the end, while MySQL, SQLite and cached get()s put them at the beginnind.
+  * Fix exit code for 'ur test run' when the --lsf arg is used.  It used always return a false value (1).  Now it returns true (0) if all tests pass, and false (1) if any one test fails.
+  * UR::Object now implements the messaging API that used to be in Command (error_message, dump_error_messages, etc).  The old messaging API is now deprecated.
+
+ -- Anthony Brummett <brummett@cpan.org> Thu, 05 Jan 2012 15:40:00 -0500
+
+libur-perl (0.35-1) unstable; urgency=low
 
   * Queries with the -recurse option are suppored for all datasources, not just those that support recursive queries directly
   * Make the object listers more user-friendly by implicitly putting '%' wildcards on either side of the user-supplied 'like' filter
