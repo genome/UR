@@ -1103,6 +1103,7 @@ sub _trim_list_from_response {
 
 sub _pad_string {
     my ($self, $str, $width, $pos) = @_;
+    $str = '' if ! defined $str;
     my $padding = $width - length($str);
     $padding = 0 if ($padding < 0);
     if ($pos && $pos eq 'suffix') {
