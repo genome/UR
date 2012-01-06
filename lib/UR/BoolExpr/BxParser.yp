@@ -82,10 +82,10 @@ value: IDENTIFIER { $_[1] }
      | keyword_as_value { $_[1] }
      ;
 
-number: INTEGER { $_[1] }
-      | REAL    { $_[1] }
-      | MINUS INTEGER { -$_[2] } # to reject --5
-      | MINUS REAL { -$_[2] }
+number: INTEGER { $_[1] + 0 }
+      | REAL    { $_[1] + 0 }
+      | MINUS INTEGER { 0 - $_[2] } # to reject --5
+      | MINUS REAL { 0 - $_[2] }
       ; 
 
 %%
