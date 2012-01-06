@@ -49,6 +49,7 @@ in_operator: IN_WORD { 'in' }
 
 in_value: set  { $_[1] }
         | value IN_DIVIDER in_value { [ $_[1], @{$_[3]} ] }
+        | value IN_DIVIDER value { [ $_[1], $_[3] ] }
         ; 
 
 set: LEFT_BRACKET set_body RIGHT_BRACKET { $_[2] }
