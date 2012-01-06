@@ -123,34 +123,45 @@ my @tokens = (
 sub parse {
     my $string = shift;
 
-    my $parser = BxParse->new();
+print "\nStarting parse for string $string\n";
+    my $parser = BxParser->new();
 
     my $get_next_token = sub {
+        if (length($string) == 0) {
+print "String is empty, we're done!\n";
+            return (undef, '');  
+       }
+
         my $longest = 0;
         my $longest_token = '';
         my $longest_match = '';
 
-       
         for(my $i = 0; $i < @tokens; $i += 2) {
             my($tok, $regex) = @tokens[$i, $i+1];
 print "Trying token $tok... ";
 
             if ($string =~ m/^(\s*($regex)\s*)/) {
+print "Matched >>$1<<";
                 my $match_len = length($1);
                 if ($match_len > $longest) {
+print "\n  ** It's now the longest";
                     $longest = $match_len;
                     $longest_token = $tok;
                     $longest_match = $2;
                 }
             }
+print "\n";
         }
 
         $string = substr($string, $longest);
+print "Consuming up to char pos $longest chars, string is now >>$string<<\n";
         $parser->YYData->{REMAINING} = $string;
         if ($longest) {
             $parser->YYData->{INPUT} = $longest_token;
+print "Returning token $longest_token, match $longest_match\n";;
             return ($longest_token, $longest_match);
         }
+print "Didn't match anything, done!\n";
         return (undef, '');  # Didn't match anything
     };
 
