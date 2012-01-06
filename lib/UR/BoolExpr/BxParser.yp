@@ -138,13 +138,16 @@ my @tokens = (
 
 sub parse {
     my $string = shift;
+    my %params = @_;
 
-print "\nStarting parse for string $string\n";
+    my $debug = $params{'debug'};
+
+    print "\nStarting parse for string $string\n" if $debug;
     my $parser = BxParser->new();
 
     my $get_next_token = sub {
         if (length($string) == 0) {
-#print "String is empty, we're done!\n";
+            print "String is empty, we're done!\n" if $debug;
             return (undef, '');  
        }
 
@@ -154,30 +157,30 @@ print "\nStarting parse for string $string\n";
 
         for(my $i = 0; $i < @tokens; $i += 2) {
             my($tok, $regex) = @tokens[$i, $i+1];
-#print "Trying token $tok... ";
+            print "Trying token $tok... " if $debug;
 
             if ($string =~ m/^(\s*($regex)\s*)/) {
-#print "Matched >>$1<<";
+                print "Matched >>$1<<" if $debug;
                 my $match_len = length($1);
                 if ($match_len > $longest) {
-#print "\n  ** It's now the longest";
+                    print "\n  ** It's now the longest" if $debug;
                     $longest = $match_len;
                     $longest_token = $tok;
                     $longest_match = $2;
                 }
             }
-#print "\n";
+            print "\n" if $debug;
         }
 
         $string = substr($string, $longest);
-#print "Consuming up to char pos $longest chars, string is now >>$string<<\n";
+        print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
         $parser->YYData->{REMAINING} = $string;
         if ($longest) {
             $parser->YYData->{INPUT} = $longest_token;
-#print "Returning token $longest_token, match $longest_match\n";;
+            print "Returning token $longest_token, match $longest_match\n" if $debug;
             return ($longest_token, $longest_match);
         }
-#print "Didn't match anything, done!\n";
+        print "Didn't match anything, done!\n" if $debug;
         return (undef, '');  # Didn't match anything
     };
 
