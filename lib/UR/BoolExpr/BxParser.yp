@@ -73,6 +73,11 @@ number: INTEGER { $_[1] }
 
 %%
 
+package UR::BoolExpr::BxParser;
+
+use strict;
+use warnings;
+
 sub _error {
     my @expect = $_[0]->YYExpect;
     my $tok = $_[0]->YYData->{INPUT};
