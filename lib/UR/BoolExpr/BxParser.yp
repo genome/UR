@@ -13,7 +13,11 @@ expr: condition                   { $_[1] }
 condition: property operator value                 { [ "$_[1] $_[2]" => $_[3] ] }
          | property like_operator LIKE_PATTERN     { [ "$_[1] $_[2]" => $_[3] ] }
          | property in_operator in_value           { [ "$_[1] $_[2]" => $_[3] ] }
+         | property COLON in_value                 { [ "$_[1] in" => $_[3] ] }
+         | property negation COLON in_value        { [ "$_[1] $_[2] in" => $_[4] ] }
          | property between_operator between_value { [ "$_[1] $_[2]" => $_[3] ] }
+         | property COLON between_value            { [ "$_[1] in" => $_[3] ] }
+         | property negation COLON between_value   { [ "$_[1] $_[2] in" => $_[4] ] }
          ;
 
 property:   IDENTIFIER { $_[1] }
@@ -43,8 +47,6 @@ like_operator: LIKE_WORD { 'like' }
 
 in_operator: IN_WORD { 'in' }
            | negation IN_WORD { "$_[1] in" }
-           | COLON { 'in' }
-           | negation COLON { "$_[1] in" }
            ;
 
 in_value: set  { $_[1] }
