@@ -23,7 +23,8 @@ operator: an_operator           { $_[1] }
         | negation an_operator  { "$_[1] $_[2]" }
         ;
 
-negation: NOT { 'not' }
+negation: NOT_WORD { 'not' }
+        | NOT_BANG { 'not' }
         ;
 
 an_operator: equality  { $_[1] }
@@ -60,8 +61,12 @@ between_operator: BETWEEN { 'between' }
 between_value: value MINUS value { [ $_[1], $_[3] ] }
              ;
    
-keyword: AND { $_[1] }
-       | OR  { $_[1] }
+keyword_as_value: AND { $_[1] }
+                | OR  { $_[1] }
+                | IN { $_[1] }
+                | LIKE { $_[1] }
+                | BETWEEN { $_[1] }
+                | NOT_WORD { $_[1] }
        ;
 
 value: IDENTIFIER { $_[1] }
@@ -69,7 +74,7 @@ value: IDENTIFIER { $_[1] }
      | WORD   { $_[1] }
      | DOUBLEQUOTE_STRING { ($_[1] =~ m/^"(.*?)"$/)[0]; }
      | SINGLEQUOTE_STRING { ($_[1] =~ m/^'(.*?)'$/)[0]; }
-     | keyword { $_[1] }
+     | keyword_as_value { $_[1] }
      ;
 
 number: INTEGER { $_[1] }
