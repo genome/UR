@@ -30,7 +30,8 @@ an_operator: equality  { $_[1] }
            | OPERATORS { $_[1] }
         ;
 
-equality: EQUAL { '=' }
+equality: EQUAL_SIGN { '=' }
+        | DOUBLEEQUAL_SIGN { '=' }
         ;
 
 like_operator: LIKE { 'like' }
@@ -109,8 +110,10 @@ my @tokens = (
     LEFT_BRACKET => qr{\[},
     RIGHT_BRACKET => qr{\]},
     COMMA => qr{,},
-    NOT => qr{!|not},
-    EQUAL => qr{=},
+    NOT_WORD => qr{not},
+    NOT_BANG => qr{!},
+    EQUAL_SIGN => qr{=},
+    DOUBLEEQUAL_SIGN => qr{=>},
     OPERATORS => qr{<|>|<=|>=},
     BETWEEN => qr{between|:},
     IN => qr{in|:|=},
