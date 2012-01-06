@@ -59,10 +59,16 @@ between_operator: BETWEEN { 'between' }
 between_value: value BETWEEN_RANGE value { [ $_[1], $_[3] ] }
              ;
    
-value: number { $_[1] }
+keyword: AND { $_[1] }
+       | OR  { $_[1] }
+       ;
+
+value: IDENTIFIER { $_[1] }
+     | number { $_[1] }
      | WORD   { $_[1] }
-     | DOUBLEQUOTE_STRING { $_[1] }
-     | SINGLEQUOTE_STRING { $_[1] }
+     | DOUBLEQUOTE_STRING { ($_[1] =~ m/^"(.*?)"$/)[0]; }
+     | SINGLEQUOTE_STRING { ($_[1] =~ m/^'(.*?)'$/)[0]; }
+     | keyword { $_[1] }
      ;
 
 number: INTEGER { $_[1] }
