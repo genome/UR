@@ -846,6 +846,7 @@ sub resolve_for_string {
         if ($@) {
             Carp::croak("resolve_for_string() can't load UR::BoolExpr::BxParser: $@");
         }
+        $LOADED_BXPARSE=1;
     }
 
     $DB::single=1;
