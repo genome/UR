@@ -35,12 +35,16 @@ equality: EQUAL_SIGN { '=' }
         | DOUBLEEQUAL_SIGN { '=' }
         ;
 
-like_operator: LIKE { 'like' }
-             | negation LIKE { "$_[1] like" }
+like_operator: LIKE_WORD { 'like' }
+             | negation LIKE_WORD { "$_[1] like" }
+             | TILDE { 'like' }
+             | negation TILDE { "$_[1] like" }
              ;
 
-in_operator: IN { 'in' }
-           | negation IN { "$_[1] in" }
+in_operator: IN_WORD { 'in' }
+           | negation IN_WORD { "$_[1] in" }
+           | COLON { 'in' }
+           | negation COLON { "$_[1] in" }
            ;
 
 in_value: set  { $_[1] }
@@ -54,8 +58,8 @@ set_body: value COMMA set_body { [ $_[1], @{$_[3]} ] }
         | value { [ $_[1] ] }
         ;
 
-between_operator: BETWEEN { 'between' }
-                | negation BETWEEN { "$_[1] between" }
+between_operator: BETWEEN_WORD { 'between' }
+                | negation BETWEEN_WORD { "$_[1] between" }
                 ;
 
 between_value: value MINUS value { [ $_[1], $_[3] ] }
@@ -63,9 +67,9 @@ between_value: value MINUS value { [ $_[1], $_[3] ] }
    
 keyword_as_value: AND { $_[1] }
                 | OR  { $_[1] }
-                | IN { $_[1] }
-                | LIKE { $_[1] }
-                | BETWEEN { $_[1] }
+                | IN_WORD { $_[1] }
+                | LIKE_WORD { $_[1] }
+                | BETWEEN_WORD { $_[1] }
                 | NOT_WORD { $_[1] }
        ;
 
@@ -120,9 +124,11 @@ my @tokens = (
     EQUAL_SIGN => qr{=},
     DOUBLEEQUAL_SIGN => qr{=>},
     OPERATORS => qr{<|>|<=|>=},
-    BETWEEN => qr{between|:},
-    IN => qr{in|:|=},
-    LIKE => qr{like|~},
+    BETWEEN_WORD => qr{between|:},
+    IN_WORD => qr{in},
+    COLON => qr{:},
+    LIKE_WORD => qr{like},
+    TILDE => qr{~},
     LIKE_PATTERN => qr{[\w%_]+},
     IN_DIVIDER => qr{\/},
     BETWEEN_RANGE => qr{-},
