@@ -8,7 +8,7 @@ require UR;
 use Carp;
 our @CARP_NOT = ('UR::Context');
 
-our $VERSION = "0.35"; # UR $VERSION;;
+our $VERSION = "0.36"; # UR $VERSION;;
 
 # readable stringification
 use overload ('""' => '__display_name__');
@@ -448,7 +448,10 @@ sub resolve {
     # this next section uses class metadata
     # it should be moved into the normalization layer
 
-    my $subject_class_meta = $subject_class->__meta__;
+    my $subject_class_meta = eval { $subject_class->__meta__ };
+    if ($@) {
+        Carp::croak("Can't get class metadata for $subject_class.  Is it a valid class name?\nErrors were: $@");
+    }
     unless ($subject_class_meta) {
         Carp::croak("No class metadata for $subject_class?!");
     }

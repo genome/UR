@@ -6,7 +6,7 @@ use Sub::Name;
 use Scalar::Util;
 
 require UR;
-our $VERSION = "0.35"; # UR $VERSION;
+our $VERSION = "0.36"; # UR $VERSION;
 
 use UR::Context::ImportIterator;
 use UR::Context::ObjectFabricator;
@@ -368,11 +368,6 @@ sub send_notification_to_observers {
     my @check_properties    = ($property    ? ($property, '')    : ('') );
     my @check_ids           = (defined($id) ? ($id, '')          : ('') );
 
-    #my @per_class  = grep { defined $_ } @$all_change_subscriptions{@check_classes};
-    #my @per_method = grep { defined $_ } map { @$_{@check_properties} } @per_class;
-    #my @per_id     = grep { defined $_ } map { @$_{@check_ids} } @per_method;
-    #my @matches = map { @$_ } @per_id;
-
     my @matches =
         map { @$_ }
         grep { defined $_ } map { defined($id) ? @$_{@check_ids} : values(%$_) }
@@ -381,22 +376,12 @@ sub send_notification_to_observers {
 
     return unless @matches;
 
-    #Carp::cluck() unless UR::Object::Subscription->can("class");
-    #my @s = UR::Object::Subscription->get(
-    ##    monitor_class_name => \@check_classes,
-    #    monitor_method_name => \@check_properties,
-    #    monitor_id => \@check_ids,
-    #);
-
-    #print STDOUT "fire __signal_change__: class $class id $id method $property data @data -> \n" . join("\n", map { "@$_" } @matches) . "\n";
-
     $sig_depth++;
     if (@matches > 1) {
         no warnings;
         @matches = sort { $a->[2] <=> $b->[2] } @matches;
     };
     
-    #print scalar(@matches) . " index matches\n";
     foreach my $callback_info (@matches) {
         my ($callback, $note) = @$callback_info;
         $callback->($subject, $property, @data)
@@ -3409,6 +3394,38 @@ to being off, and must be explicitly turned on with this method.
 
 =back
 
+=head1 Custom observer aspects
+
+UR::Context sends signals for observers watching for some non-standard aspects.
+
+=over 2
+
+=item precommit
+
+After C<commit()> has been called, but before any changes are saved to the
+data sources.  The only parameters to the Observer's callback are the Context
+object and the aspect ("precommit").
+
+=item commit
+
+After C<commit()> has been called, and after an attempt has been made to save
+the changes to the data sources.  The parameters to the callback are the
+Context object, the aspect ("commit"), and a boolean value indicating whether
+the commit succeeded or not.
+
+=item prerollback
+
+After C<rollback()> has been called, but before and object state is reverted.
+
+=item rollback
+
+After C<rollback()> has been called, and after an attempt has been made to
+revert the state of all the loaded objects.  The parameters to the callback
+are the Context object, the aspect ("rollback"), and a boolean value
+indicating whether the rollback succeeded or not.
+
+=back
+
 =head1 Data Concurrency
 
 Currently, the Context is optimistic about data concurrency, meaning that 
@@ -3831,7 +3848,7 @@ soon as possible by calling C<__weaken__>.
 =head1 SEE ALSO
 
 L<UR::Context::Root>, L<UR::Context::Process>, L<UR::Object>,
-L<UR::DataSource>, L<UR::Object::Ghost>
+L<UR::DataSource>, L<UR::Object::Ghost>, L<UR::Observer>
 
 =cut
 

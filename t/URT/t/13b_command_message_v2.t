@@ -21,9 +21,9 @@ class UR::Namespace::Command::Foo {
 # can read from, $stderr_twin, but regular perl diagnostic messages still go
 # to the real STDERR
 my $stderr_twin;
-$Command::V2::stderr = undef;
-socketpair($Command::V2::stderr,$stderr_twin, AF_UNIX, SOCK_STREAM, PF_UNSPEC);
-$Command::V2::stderr->autoflush(1);
+$UR::ModuleBase::stderr = undef;
+socketpair($UR::ModuleBase::stderr,$stderr_twin, AF_UNIX, SOCK_STREAM, PF_UNSPEC);
+$UR::ModuleBase::stderr->autoflush(1);
 $stderr_twin->blocking(0);
 
 my $buffer;

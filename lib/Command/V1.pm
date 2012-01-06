@@ -10,7 +10,7 @@ use Getopt::Long;
 use Term::ANSIColor;
 require Text::Wrap;
 
-our $VERSION = "0.35"; # UR $VERSION;
+our $VERSION = "0.36"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -244,6 +244,7 @@ sub _execute_delegate_class_with_params {
     $delegate_class->dump_status_messages(1);
     $delegate_class->dump_warning_messages(1);
     $delegate_class->dump_error_messages(1);
+    $delegate_class->dump_usage_messages(1);
     $delegate_class->dump_debug_messages(0);
 
     if ( $delegate_class->is_sub_command_delegator && !defined($params) ) {
@@ -1452,148 +1453,6 @@ sub class_for_sub_command {
     else {
         return;
     }
-}
-
-#
-# Implement error_mesage/warning_message/status_message in a way
-# which handles command-specific callbacks.
-#
-# Build a set of methods for getting/setting/printing error/warning/status messages
-# $class->dump_error_messages(<bool>) Turn on/off printing the messages to STDERR
-#     error and warnings default to on, status messages default to off
-# $class->queue_error_messages(<bool>) Turn on/off queueing of messages
-#     defaults to off
-# $class->error_message("blah"): set an error message
-# $class->error_message() return the last message
-# $class->error_messages()  return all the messages that have been queued up
-# $class->error_messages_arrayref()  return the reference to the underlying
-#     list messages get queued to.  This is the method for truncating the list
-#     or altering already queued messages
-# $class->error_messages_callback(<subref>)  Specify a callback for when error
-#     messages are set.  The callback runs before printing or queueing, so
-#     you can alter @_ and change the message that gets printed or queued
-# And then the same thing for status and warning messages
-
-# The filehandle to print these messages to.  In normal operation this'll just be
-# STDERR, but the test case can change it to capture the messages to somewhere else
-our $stderr = \*STDERR;
-our $stdout = \*STDOUT;
-
-our %msgdata;
-
-sub _get_msgdata {
-    my $self = $_[0];
-
-    if (ref($self)) {
-        no strict 'refs';
-        my $object_msgdata = $msgdata{$self->id} ||= {};
-        my $class_msgdata = ref($self)->_get_msgdata;
-
-        while (my ($k,$v) = each(%$class_msgdata)) {
-            $object_msgdata->{$k} = $v unless (exists $object_msgdata->{$k});
-        }
-
-        return $object_msgdata;
-    }
-    else {
-        no strict 'refs';
-        return ${ $self . "::msgdata" } ||= {};
-    }
-}
-
-for my $type (qw/error warning status debug usage/) {
-
-    for my $method_base (qw/_messages_callback queue_ dump_ _package _file _line _subroutine/) {
-        my $method = (substr($method_base,0,1) eq "_"
-            ? $type . $method_base
-            : $method_base . $type . "_messages"
-        );
-        my $method_subref = sub {
-            my $self = shift;
-            my $msgdata = $self->_get_msgdata;
-            $msgdata->{$method} = pop if @_;
-            return $msgdata->{$method};
-        };
-        no strict;
-        no warnings;
-        *$method = $method_subref;
-    }
-
-    my $logger_subname = $type . "_message";
-    my $logger_subref = sub {
-        my $self = shift;
-
-        my $msgdata = $self->_get_msgdata();
-
-        if (@_) {
-            my $msg = shift;
-            chomp $msg if defined $msg;
-
-            unless (defined ($msgdata->{'dump_' . $type . '_messages'})) {
-                $msgdata->{'dump_' . $type . '_messages'} = $type eq "status" ? (exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} && $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} ? 1 : 0) : 1;
-            }
-
-            if (my $code = $msgdata->{ $type . "_messages_callback"}) {
-                $code->($self,$msg);
-            }
-            if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
-                if ( $type eq 'usage' ) {
-                    (ref($fh) ? $fh : $stdout)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
-                }
-                else {
-                    (ref($fh) ? $fh : $stderr)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
-                }
-            }
-            if ($msgdata->{ "queue_" . $type . "_messages"}) {
-                my $a = $msgdata->{ $type . "_messages_arrayref" } ||= [];
-                push @$a, $msg;
-            }
-            $msgdata->{ $type . "_message" } = $msg;
-
-            my ($package, $file, $line, $subroutine) = caller;
-            $msgdata->{ $type . "_package" } = $package;
-            $msgdata->{ $type . "_file" } = $file;
-            $msgdata->{ $type . "_line" } = $line;
-            $msgdata->{ $type . "_subroutine" } = $subroutine;
-        }
-
-        if (wantarray) {
-            return (
-                $msgdata->{ $type . "_message" },
-                $msgdata->{ $type . "_package" },
-                $msgdata->{ $type . "_file" },
-                $msgdata->{ $type . "_line" },
-                $msgdata->{ $type . "_subroutine"},
-            );
-        }
-        return $msgdata->{ $type . "_message" };
-    };
-
-
-    my $arrayref_subname = $type . "_messages_arrayref";
-    my $arrayref_subref = sub {
-        my $self = shift;
-        my $msgdata = $self->_get_msgdata;
-        return $msgdata->{$type . "_messages_arrayref"};
-    };
-
-
-    my $array_subname = $type . "_messages";
-    my $array_subref = sub {
-        my $self = shift;
-
-        my $msgdata = $self->_get_msgdata;
-        return ref($msgdata->{$type . "_messages_arrayref"}) ?
-               @{ $msgdata->{$type . "_messages_arrayref"} } :
-               ();
-    };
-
-    no strict;
-    no warnings;
-
-    *$logger_subname    = $logger_subref;
-    *$arrayref_subname  = $arrayref_subref;
-    *$array_subname     = $array_subref;
 }
 
 # Run the given command-line with stdout and stderr redirected to /dev/null

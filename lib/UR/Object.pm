@@ -8,7 +8,7 @@ require UR;
 use Scalar::Util;
 
 our @ISA = ('UR::ModuleBase');
-our $VERSION = "0.35"; # UR $VERSION;;
+our $VERSION = "0.36"; # UR $VERSION;;
 
 # Base object API
 
@@ -326,19 +326,10 @@ sub add_observer {
     my $self = shift;
     my %params = @_;
 
-    my $aspect = delete $params{aspect};
-    my $callback = delete $params{callback};
-    if (%params) {
-        Carp::croak('Unrecognized parameters for observer addition: '
-                     . Data::Dumper::Dumper(\%params)
-                     . "Expected 'aspect' and 'callback'");
-    }
-
     my $observer = UR::Observer->create(
         subject_class_name => $self->class,
         subject_id => (ref($self) ? $self->id : undef),
-        aspect => $aspect,
-        callback => $callback,
+        %params,
     );
     unless ($observer) {
         $self->error_message(

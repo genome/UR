@@ -5,7 +5,7 @@ use warnings;
 
 use UR::Context;
 
-our $VERSION = "0.35"; # UR $VERSION;
+our $VERSION = "0.36"; # UR $VERSION;
 
 # A helper package for UR::Context to handling queries which require loading
 # data from outside the current context.  It is responsible for collating 
@@ -289,7 +289,10 @@ sub _create {
                 # In addition, the change could have been to an order-by property, one of the
                 # properties in the BoolExpr, or both
 
-                if ($context->object_exists_in_underlying_context($next_obj_current_context)) {
+                if (! $next_obj_current_context->isa('UR::Object::Set')  # Sets aren't really from the underlying context
+                    and
+                    $context->object_exists_in_underlying_context($next_obj_current_context)
+                ) {
                     if ($next_obj_current_context->__changes__) {
                         if ($change_is_order_by_property->($next_obj_current_context)) {
 

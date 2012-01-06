@@ -5,7 +5,7 @@ package UR::Object;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.35"; # UR $VERSION;
+our $VERSION = "0.36"; # UR $VERSION;
 
 use Data::Dumper;
 use Scalar::Util qw(blessed);
@@ -332,6 +332,177 @@ sub ghost_class {
     $class = $class . '::Ghost';
     return $class;
 }
+
+
+package UR::ModuleBase;
+# Method for setting a callback using the old, non-command messaging API
+
+=pod
+
+=item message_callback
+
+  $sub_ref = UR::ModuleBase->message_callback($type);
+  UR::ModuleBase->message_callback($type, $sub_ref);
+
+This method returns and optionally sets the subroutine that handles
+messages of a specific type.
+
+=cut
+
+## set or return a callback that has been created for a message type
+sub message_callback
+{
+    my $self = shift;
+    my ($type, $callback) = @_;
+
+    my $methodname = $type . '_messages_callback';
+
+    if (!$callback) {
+        # to clear the old, deprecated non-command messaging API callback
+        return UR::Object->$methodname($callback);
+    }
+
+    my $wrapper_callback = sub {
+        my($obj,$msg) = @_;
+
+        my $obj_class = $obj->class;
+        my $obj_id = (ref($obj) ? ($obj->can("id") ? $obj->id : $obj) : $obj);
+
+        my $msgdata = $self->_get_msgdata();
+        my $message_object = UR::ModuleBase::Message->create
+            (
+                text         => $msg,
+                level        => 1,
+                package_name => $msgdata->{$type . '_package'},
+                call_stack   => ($type eq "error" ? _current_call_stack() : []),
+                time_stamp   => time,
+                type         => $type,
+                owner_class  => $obj_class,
+                owner_id     => $obj_id,
+            );
+        $callback->($message_object, $obj, $type);
+        $_[1] = $message_object->text;
+    };
+
+    # To support the old, deprecated, non-command messaging API
+    UR::Object->$methodname($wrapper_callback);
+}
+
+sub message_object
+{
+    my $self = shift;
+    # see how we were called
+    if (@_ < 2)
+    {
+        no strict 'refs';
+        # return the message object
+        my ($type) = @_;
+        my $method = $type . '_message';
+        my $msg_text = $self->method();
+        my $obj_class = $self->class;
+        my $obj_id = (ref($self) ? ($self->can("id") ? $self->id : $self) : $self);
+        my $msgdata = $self->_get_msgdata();
+        return UR::ModuleBase::Message->create
+            (
+                text         => $msg_text,
+                level        => 1,
+                package_name => $msgdata->{$type . '_package'},
+                call_stack   => ($type eq "error" ? _current_call_stack() : []),
+                time_stamp   => time,
+                type         => $type,
+                owner_class  => $obj_class,
+                owner_id     => $obj_id,
+            );
+    }
+}
+
+foreach my $type ( UR::ModuleBase->message_types ) {
+     my $retriever_name = $type . '_text';
+     my $compat_name = $type . '_message';
+     my $sub = sub {
+         my $self = shift;
+         return $self->$compat_name();
+     };
+
+     no strict 'refs';
+     *$retriever_name = $sub;
+}
+
+
+# class that stores and manages messages for the deprecated API
+package UR::ModuleBase::Message;
+
+use Scalar::Util qw(weaken);
+
+##- use UR::Util;
+UR::Util->generate_readonly_methods
+(
+    text         => undef,
+    level        => undef,
+    package_name => undef,
+    call_stack   => [],
+    time_stamp   => undef,
+    owner_class  => undef,
+    owner_id     => undef,
+    type         => undef,
+);
+
+sub create
+{
+    my $class = shift;
+    my $obj = {@_};
+    bless ($obj,$class);
+   weaken $obj->{'owner_id'} if (ref($obj->{'owner_id'}));
+
+    return $obj;
+}
+
+sub owner
+{
+    my $self = shift;
+    my ($owner_class,$owner_id) = ($self->owner_class, $self->owner_id);
+    if (not defined($owner_id))
+    {
+        return $owner_class;
+    }
+    elsif (ref($owner_id))
+    {
+        return $owner_id;
+    }
+    else
+    {
+        return $owner_class->get($owner_id);
+    }
+}
+
+sub string
+{
+    my $self = shift;
+    "$self->{time_stamp} $self->{type}: $self->{text}\n";
+}
+
+sub _stack_item_params
+{
+    my ($self, $stack_item) = @_;
+    my ($function, $parameters, @parameters);
+
+    return unless ($stack_item =~ s/\) called at [^\)]+ line [^\)]+\s*$/\)/);
+
+    if ($stack_item =~ /^\s*([^\(]*)(.*)$/)
+    {
+        $function = $1;
+        $parameters = $2;
+        @parameters = eval $parameters;
+        return ($function, @parameters);
+    }
+    else
+    {
+        return;
+    }
+}
+
+package UR::Object;
+
 
 1;
 

@@ -1,5 +1,34 @@
 Revision history for UR
 
+0.36    2012-01-05
+        Fix for 'like' clause's escape string on PostgreSQL
+        Speed improvement for class initialization by normalizing metadata
+           more efficiently and only calculating the cached data for
+           property_meta_for_name() once.
+        Workaround for a bug in Perl 5.8 involving sorters by avoiding method
+            calls inside some sort subs
+        Fully deprecate the old Subscription API in favor of the new Observer api
+        UR::Value classes use UR::DataSource::Default and the normal loading
+            mechanism.  Previously, UR::Values used a special codepath to get
+            loaded into memory
+        Add a json perspective for available views
+        Allow descending sorts in order-by.  For example:
+            my @o = Some::Class->get(prop => 'value', -order => ['field1','-field2']
+            To get all objects where prop is equal to the string 'value', first
+            sorted by field1 in ascending order, then by field2 in descending
+            order
+        Standardize sorting results on columns with NULLs by having NULL/undef
+            always appears at the end for ascending sorts.  Previously, the
+            order depended on the data source's behavior.  Oracle and
+            PostgreSQL put them at the end, while MySQL, SQLite and cached
+            get()s put them at the beginnind.
+        Fix exit code for 'ur test run' when the --lsf arg is used.  It used
+            always return a false value (1).  Now it returns true (0) if all
+            tests pass, and false (1) if any one test fails.
+        UR::Object now implements the messaging API that used to be in Command
+            (error_message, dump_error_messages, etc).  The old messaging API
+            is now deprecated.
+
 0.35    2011-10-28
         Queries with the -recurse option are suppored for all datasources, not
             just those that support recursive queries directly
