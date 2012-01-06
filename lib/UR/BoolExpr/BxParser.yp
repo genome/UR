@@ -1,0 +1,143 @@
+%right OR
+%right AND
+%left NEGATIVE
+
+%%
+
+expr: condition                   { $_[1] }
+    | expr COMMA expr             { [ $_[1], $_[3] ] }
+    | expr AND expr               { [ $_[1], $_[3] ] }
+    | expr OR expr                { [ [$_[1]], [$_[3]] ] }
+    | LEFT_PAREN expr RIGHT_PAREN { $_[2] }
+    ;
+
+condition: property operator value                 { [ "$_[1] $_[2]" => $_[3] ] }
+         | property like_operator LIKE_PATTERN     { [ "$_[1] $_[2]" => $_[3] ] }
+         | property in_operator in_value           { [ "$_[1] $_[2]" => $_[3] ] }
+         | property between_operator between_value { [ "$_[1] $_[2]" => $_[3] ] }
+         ;
+
+property:   IDENTIFIER { $_[1] }
+        ;
+
+operator: an_operator           { $_[1] }
+        | negation an_operator  { "$_[1] $_[2]" }
+        ;
+
+negation: NOT { 'not' }
+        ;
+
+an_operator: equality  { $_[1] }
+           | OPERATORS { $_[1] }
+        ;
+
+equality: EQUAL { '=' }
+        ;
+
+like_operator: LIKE { 'like' }
+             | negation LIKE { "$_[1] like" }
+             ;
+
+in_operator: IN { 'in' }
+           | negation IN { "$_[1] in" }
+           ;
+
+in_value: set  { $_[1] }
+        | value IN_DIVIVER in_value { [ $_[1], @{$_[3]} ] }
+        ; 
+
+set: LEFT_BRACKET set_body RIGHT_BRACKET { $_[2] }
+   ;
+
+set_body: value COMMA set_body { [ $_[1], @{$_[3]} ] }
+        | value { [ $_[1] ] }
+        ;
+
+between_operator: BETWEEN { 'between' }
+                | negation BETWEEN { "$_[1] between" }
+                ;
+
+between_value: value BETWEEN_RANGE value { [ $_[1], $_[3] ] }
+             ;
+   
+value: number { $_[1] }
+     | WORD   { $_[1] }
+     | DOUBLEQUOTE_STRING { $_[1] }
+     | SINGLEQUOTE_STRING { $_[1] }
+     ;
+
+number: INTEGER { $_[1] }
+      | REAL    { $_[1] }
+      | NEGATIVE INTEGER { -$_[2] } # to reject --5
+      | NEGATIVE REAL { -$_[2] }
+      ; 
+
+%%
+
+sub _error {
+    Carp::croak("Didn't parse!");
+}
+
+my %tokens = (
+    AND => qr{and},
+    OR => qr{or},
+    NEGATIVE => qr{-}
+    INTEGER => qr{\d+}
+    REAL => qr{\d*\.\d+|\d+\.\d*}
+    WORD => qr{\w+}
+    IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*}
+    DOUBLEQUOTE_STRING => qr{"(\\.|[^"])+"}
+    SINGLEQUOTE_STRING => qr{'(\\.|[^'])+'}
+    LEFT_PAREN => qr{\(}
+    RIGHT_PAREN => qr{\)}
+    LEFT_BRACKET => qr{\[}
+    RIGHT_BRACKET => qr{\]}
+    COMMA => qr{,}
+    NOT => qr{!|not}
+    EQUAL => qr{=>|=}
+    OPERATORS => qr{<|>|<=|>=}
+    BETWEEN => qr{between|:}
+    IN => qr{in|:|=|=>}
+    LIKE => qr{like|~}
+    LIKE_PATTERN => qr{[\w%_]+}
+    IN_DIVIDER => qr{\/}
+    BETWEEN_RANGE => qr{-}
+);
+
+sub parse {
+    my $string = shift;
+
+    my $parser = BxParse->new();
+
+    my $get_next_token = sub {
+        my $longest = 0;
+        my $longest_token = '';
+        my $longest_match = '';
+
+        while( my($tok, $regex) = each %tokens) {
+            if ($string =~ m/^(\s*($regex)\s*)/) {
+                my $match_len = length($1);
+                if ($match_len > $longest) {
+                    $longest = $match_len;
+                    $longest_token = $tok;
+                    $longest_match = $2;
+                }
+            }
+        }
+
+        $string = substr($string, $longest);
+        $parser->YYData->{REMAINING} = $string;
+        if ($longest) {
+            $parser->YYData->{INPUT} = $longest_token;
+            return ($longest_token, $longest_match);
+        }
+        return (undef, '');  # Didn't match anything
+    };
+
+    return $parser->YYParse(
+               yylex => $get_next_token,
+               yyerror => \&_error,
+               yydebug => $params{debug},
+           );
+}
+
