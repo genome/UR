@@ -1,6 +1,6 @@
 %right OR
 %right AND
-%left NEGATIVE
+%left MINUS
 
 %%
 
@@ -57,7 +57,7 @@ between_operator: BETWEEN { 'between' }
                 | negation BETWEEN { "$_[1] between" }
                 ;
 
-between_value: value BETWEEN_RANGE value { [ $_[1], $_[3] ] }
+between_value: value MINUS value { [ $_[1], $_[3] ] }
              ;
    
 keyword: AND { $_[1] }
@@ -74,8 +74,8 @@ value: IDENTIFIER { $_[1] }
 
 number: INTEGER { $_[1] }
       | REAL    { $_[1] }
-      | NEGATIVE INTEGER { -$_[2] } # to reject --5
-      | NEGATIVE REAL { -$_[2] }
+      | MINUS INTEGER { -$_[2] } # to reject --5
+      | MINUS REAL { -$_[2] }
       ; 
 
 %%
