@@ -108,6 +108,9 @@ sub _error {
 my @tokens = (
     AND => qr{and|,},
     OR => qr{or},
+    BETWEEN_WORD => qr{between},
+    LIKE_WORD => qr{like},
+    IN_WORD => qr{in},
     IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*},
     MINUS => qr{-},
     INTEGER => qr{\d+},
@@ -125,14 +128,10 @@ my @tokens = (
     EQUAL_SIGN => qr{=},
     DOUBLEEQUAL_SIGN => qr{=>},
     OPERATORS => qr{<|>|<=|>=},
-    BETWEEN_WORD => qr{between|:},
-    IN_WORD => qr{in},
     COLON => qr{:},
-    LIKE_WORD => qr{like},
     TILDE => qr{~},
     LIKE_PATTERN => qr{[\w%_]+},
     IN_DIVIDER => qr{\/},
-    BETWEEN_RANGE => qr{-},
 );
 
 sub parse {
