@@ -18,7 +18,7 @@ sub resolve_class_and_params_for_argv {
     my $self = shift;
     my @argv = @_;
 
-    if ( $argv[0] and $argv[0] !~ /^\-/ 
+    if ( $argv[0] and $argv[0] !~ /^\-/
             and my $class_for_sub_command = $self->class_for_sub_command($argv[0]) ) {
         # delegate
         shift @argv;
@@ -84,7 +84,7 @@ sub doc_help {
 
     my $command_name = $self->command_name;
     my $text;
-    
+
     # show the list of sub-commands
     $text = sprintf(
         "Sub-commands for %s:\n%s",
@@ -99,13 +99,13 @@ sub doc_help {
 sub doc_manual {
     my $self = shift;
     my $pod = $self->_doc_name_version;
-    
+
     my $manual = $self->_doc_manual_body;
     my $help = $self->help_detail;
     if ($manual or $help) {
         $pod .= "=head1 DESCRIPTION:\n\n";
 
-        my $txt = $manual || $help;        
+        my $txt = $manual || $help;
         if ($txt =~ /^\=/) {
             # pure POD
             $pod .= $manual;
@@ -117,7 +117,7 @@ sub doc_manual {
         }
     }
 
-    
+
     my $sub_commands = $self->help_sub_commands(brief => 1);
     $pod .= "=head1 SUB-COMMANDS\n\n" . $sub_commands . "\n\n";
 
@@ -134,7 +134,7 @@ sub sorted_sub_command_classes {
             ($a->[0] <=> $b->[0])
             ||
             ($a->[0] cmp $b->[0])
-        } 
+        }
         @c;
 }
 
@@ -175,7 +175,7 @@ sub sub_commands_table {
 
 sub _categorize_sub_commands {
     my $class = shift;
-    
+
     my @sub_command_classes = $class->sorted_sub_command_classes;
     my %categories;
     my @order;
@@ -184,7 +184,7 @@ sub _categorize_sub_commands {
         my $category = $sub_command_class->sub_command_category || '';
         unless (exists $categories{$category}) {
             if ($category) {
-                push(@order, $category) 
+                push(@order, $category)
             } else {
                 unshift(@order, '');
             }
@@ -195,7 +195,7 @@ sub _categorize_sub_commands {
 
     return (\@order, \%categories);
 }
-    
+
 sub help_sub_commands {
     my ($self, %params) = @_;
     my ($order, $categories) = $self->_categorize_sub_commands(@_);
@@ -203,7 +203,7 @@ sub help_sub_commands {
 
     no warnings;
     local $Text::Wrap::columns = 60;
-    
+
     my @full_data;
     for my $category (@$order) {
         my $sub_commands_within_this_category = $categories->{$category};
@@ -216,15 +216,15 @@ sub help_sub_commands {
                         ($_->isa('Command::Tree') ? '...' : ''), #$_->_shell_args_usage_string_abbreviated,
                         $rows[0],
                     ],
-                    map { 
-                        [ 
+                    map {
+                        [
                             '',
                             ' ',
                             $rows[$_],
                         ]
                     } (1..$#rows)
                 );
-            } 
+            }
             @$sub_commands_within_this_category;
 
         if ($category) {
@@ -234,7 +234,7 @@ sub help_sub_commands {
             if ($category =~ /\D/) {
                 # non-numeric categories show their category as a header
                 $category .= ':' if $category =~ /\S/;
-                push @full_data, 
+                push @full_data,
                     [
                         Term::ANSIColor::colored(uc($category), 'blue'),
                         '',
@@ -294,7 +294,7 @@ sub doc_sub_commands {
 }
 
 #
-# The following methods build allow a command to determine its 
+# The following methods build allow a command to determine its
 # sub-commands, if there are any.
 #
 
@@ -332,7 +332,7 @@ sub _build_sub_command_mapping {
 
     unless (ref($mapping) eq 'HASH') {
         # for My::Foo::Command::* commands and sub-trees
-        my $subdir = $class; 
+        my $subdir = $class;
         $subdir =~ s|::|\/|g;
 
         # for My::Foo::*::Command sub-trees
@@ -363,7 +363,7 @@ sub _build_sub_command_mapping {
                     $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
                     next unless $sub_command_class_name->isa("Command");
                     next if $sub_command_class_meta->is_abstract;
-                    my $name = $class->_command_name_for_class_word($basename); 
+                    my $name = $class->_command_name_for_class_word($basename);
                     $mapping->{$name} = $sub_command_class_name;
                 }
             }
@@ -385,8 +385,8 @@ sub _build_sub_command_mapping {
                 next if $sub_command_class_name->__meta__->is_abstract;
                 my $basename = $second_to_last_word;
                 $basename =~ s/.pm$//;
-                my $name = $class->_command_name_for_class_word($basename); 
-                $mapping->{$name} = $sub_command_class_name;                
+                my $name = $class->_command_name_for_class_word($basename);
+                $mapping->{$name} = $sub_command_class_name;
             }
         }
     }
@@ -483,7 +483,7 @@ __END__
 
 =head1 NAME
 
-Command::Tree -base class for commands which delegate to a list of sub-commands 
+Command::Tree -base class for commands which delegate to a list of sub-commands
 
 =head1 DESCRIPTION
 
