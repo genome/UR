@@ -88,30 +88,30 @@ sub _error {
     Carp::croak($err);
 }
 
-my %tokens = (
+my @tokens = (
     AND => qr{and|,},
     OR => qr{or},
-    NEGATIVE => qr{-}
-    INTEGER => qr{\d+}
-    REAL => qr{\d*\.\d+|\d+\.\d*}
-    WORD => qr{\w+}
-    IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*}
-    DOUBLEQUOTE_STRING => qr{"(\\.|[^"])+"}
-    SINGLEQUOTE_STRING => qr{'(\\.|[^'])+'}
-    LEFT_PAREN => qr{\(}
-    RIGHT_PAREN => qr{\)}
-    LEFT_BRACKET => qr{\[}
-    RIGHT_BRACKET => qr{\]}
-    COMMA => qr{,}
-    NOT => qr{!|not}
-    EQUAL => qr{=>|=}
-    OPERATORS => qr{<|>|<=|>=}
-    BETWEEN => qr{between|:}
-    IN => qr{in|:|=|=>}
-    LIKE => qr{like|~}
-    LIKE_PATTERN => qr{[\w%_]+}
-    IN_DIVIDER => qr{\/}
-    BETWEEN_RANGE => qr{-}
+    IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*},
+    NEGATIVE => qr{-},
+    INTEGER => qr{\d+},
+    REAL => qr{\d*\.\d+|\d+\.\d*},
+    WORD => qr{\w+},
+    DOUBLEQUOTE_STRING => qr{"(\\.|[^"])+"},
+    SINGLEQUOTE_STRING => qr{'(\\.|[^'])+'},
+    LEFT_PAREN => qr{\(},
+    RIGHT_PAREN => qr{\)},
+    LEFT_BRACKET => qr{\[},
+    RIGHT_BRACKET => qr{\]},
+    COMMA => qr{,},
+    NOT => qr{!|not},
+    EQUAL => qr{=},
+    OPERATORS => qr{<|>|<=|>=},
+    BETWEEN => qr{between|:},
+    IN => qr{in|:|=},
+    LIKE => qr{like|~},
+    LIKE_PATTERN => qr{[\w%_]+},
+    IN_DIVIDER => qr{\/},
+    BETWEEN_RANGE => qr{-},
 );
 
 sub parse {
@@ -124,7 +124,11 @@ sub parse {
         my $longest_token = '';
         my $longest_match = '';
 
-        while( my($tok, $regex) = each %tokens) {
+       
+        for(my $i = 0; $i < @tokens; $i += 2) {
+            my($tok, $regex) = @tokens[$i, $i+1];
+print "Trying token $tok... ";
+
             if ($string =~ m/^(\s*($regex)\s*)/) {
                 my $match_len = length($1);
                 if ($match_len > $longest) {
@@ -147,7 +151,7 @@ sub parse {
     return $parser->YYParse(
                yylex => $get_next_token,
                yyerror => \&_error,
-               yydebug => $params{debug},
+               yydebug => 0,
            );
 }
 
