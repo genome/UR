@@ -162,7 +162,7 @@ sub config
         my $val;
         if (exists($cfg{$key}))
         {
-            $self->debug_message("config key $key exists", 4);
+            $self->debug_message("config key $key exists");
             $val = $cfg{$key};
         }
         else
@@ -200,11 +200,11 @@ sub check_config
 
     if (exists($cfg{$key}))
     {
-        $self->debug_message("configuration key $key set: $cfg{$key}", 4);
+        $self->debug_message("configuration key $key set: $cfg{$key}");
         return $cfg{$key};
     }
     # else
-    $self->debug_message("configuration key $key not set", 4);
+    $self->debug_message("configuration key $key not set");
     return;
 }
 
@@ -234,10 +234,10 @@ sub default_config
         # see is config value is already set
         if (exists($cfg{$k}))
         {
-            $self->debug_message("config $k already set", 5);
+            $self->debug_message("config $k already set");
             next;
         }
-        $self->debug_message("setting default for $k", 5);
+        $self->debug_message("setting default for $k");
 
         # set config key
         $self->config($k => $v);
@@ -274,7 +274,7 @@ sub config_file
         # make sure file is ok
         if (-f $opts{path})
         {
-            $self->debug_message("config file exists: $opts{path}", 4);
+            $self->debug_message("config file exists: $opts{path}");
         }
         else
         {
@@ -283,7 +283,7 @@ sub config_file
         }
         if (-r $opts{path})
         {
-            $self->debug_message("config file is readable: $opts{path}", 4);
+            $self->debug_message("config file is readable: $opts{path}");
         }
         else
         {
@@ -295,8 +295,7 @@ sub config_file
         $fh = IO::File->new("<$opts{path}");
         if (defined($fh))
         {
-            $self->debug_message("opened config file for reading: $opts{path}",
-                                 4);
+            $self->debug_message("opened config file for reading: $opts{path}");
         }
         else
         {
