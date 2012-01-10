@@ -320,25 +320,42 @@ sub is_sub_command_delegator {
     return scalar(shift->sub_command_classes);
 }
 
+sub command_tree_source_classes {
+    # override in subclass if you want different sources
+    my $class = shift;
+    return $class;
+}
+
 sub _build_sub_command_mapping {
     my $class = shift;
     $class = ref($class) || $class;
+
+    my @source_classes = $class->command_tree_source_classes;
 
     my $mapping;
     do {
         no strict 'refs';
         $mapping = ${ $class . '::SUB_COMMAND_MAPPING'};
+        if (ref($mapping) eq 'HASH') {
+            return $mapping;
+        }
     };
 
-    unless (ref($mapping) eq 'HASH') {
+    for my $source_class (@source_classes) {
+        eval "use $source_class";
+        my $use_error = $@;
+        if ($use_error) {
+            die $use_error;
+        }
+
         # for My::Foo::Command::* commands and sub-trees
-        my $subdir = $class;
+        my $subdir = $source_class;
         $subdir =~ s|::|\/|g;
 
         # for My::Foo::*::Command sub-trees
-        my $class_above = $class;
-        $class_above =~ s/::Command//;
-        my $subdir2 = $class_above;
+        my $source_class_above = $source_class;
+        $source_class_above =~ s/::Command//;
+        my $subdir2 = $source_class_above;
         $subdir2 =~ s|::|/|g;
 
         # check everywhere
@@ -351,7 +368,7 @@ sub _build_sub_command_mapping {
                 for my $file (@files) {
                     my $basename = basename($file);
                     $basename =~ s/.pm$// or next;
-                    my $sub_command_class_name = $class . '::' . $basename;
+                    my $sub_command_class_name = $source_class . '::' . $basename;
                     my $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
                     unless ($sub_command_class_meta) {
                         local $SIG{__DIE__};
@@ -363,7 +380,8 @@ sub _build_sub_command_mapping {
                     $sub_command_class_meta = UR::Object::Type->get($sub_command_class_name);
                     next unless $sub_command_class_name->isa("Command");
                     next if $sub_command_class_meta->is_abstract;
-                    my $name = $class->_command_name_for_class_word($basename);
+                    next if $sub_command_class_name eq $class;
+                    my $name = $source_class->_command_name_for_class_word($basename);
                     $mapping->{$name} = $sub_command_class_name;
                 }
             }
@@ -380,12 +398,13 @@ sub _build_sub_command_mapping {
                 $last_word =~ s/.pm$// or next;
                 my $dir = File::Basename::dirname($file);
                 my $second_to_last_word = File::Basename::basename($dir);
-                my $sub_command_class_name = $class_above . '::' . $second_to_last_word . '::' . $last_word;
+                my $sub_command_class_name = $source_class_above . '::' . $second_to_last_word . '::' . $last_word;
                 next unless $sub_command_class_name->isa('Command');
                 next if $sub_command_class_name->__meta__->is_abstract;
+                next if $sub_command_class_name eq $class;
                 my $basename = $second_to_last_word;
                 $basename =~ s/.pm$//;
-                my $name = $class->_command_name_for_class_word($basename);
+                my $name = $source_class->_command_name_for_class_word($basename);
                 $mapping->{$name} = $sub_command_class_name;
             }
         }
