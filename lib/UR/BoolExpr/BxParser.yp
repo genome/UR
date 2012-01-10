@@ -31,12 +31,9 @@ negation: NOT_WORD { 'not' }
         | NOT_BANG { 'not' }
         ;
 
-an_operator: equality  { $_[1] }
-           | OPERATORS { $_[1] }
-        ;
-
-equality: EQUAL_SIGN { '=' }
-        | DOUBLEEQUAL_SIGN { '=' }
+an_operator: OPERATORS { $_[1] }
+           | EQUAL_SIGN { '=' }
+           | DOUBLEEQUAL_SIGN { '=' }
         ;
 
 like_operator: LIKE_WORD { 'like' }
