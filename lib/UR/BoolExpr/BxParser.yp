@@ -54,7 +54,7 @@ in_value: set  { $_[1] }
 set: LEFT_BRACKET set_body RIGHT_BRACKET { $_[2] }
    ;
 
-set_body: value COMMA set_body { [ $_[1], @{$_[3]} ] }
+set_body: value SET_SEPARATOR set_body { [ $_[1], @{$_[3]} ] }
         | value { [ $_[1] ] }
         ;
 
@@ -105,7 +105,7 @@ sub _error {
 }
 
 my @tokens = (
-    AND => qr{and|,},
+    AND => qr{and},
     OR => qr{or},
     BETWEEN_WORD => qr{between},
     LIKE_WORD => qr{like},
@@ -126,6 +126,7 @@ my @tokens = (
     EQUAL_SIGN => qr{=},
     DOUBLEEQUAL_SIGN => qr{=>},
     OPERATORS => qr{<|>|<=|>=},
+    COMMA => qr{,},  # Depending on state, can be either AND or SET_SEPARATOR
     COLON => qr{:},
     TILDE => qr{~},
     LIKE_PATTERN => qr{[\w%_]+},
@@ -140,6 +141,8 @@ sub parse {
 
     print "\nStarting parse for string $string\n" if $debug;
     my $parser = BxParser->new();
+
+    my $parser_state = '';
 
     my $get_next_token = sub {
         if (length($string) == 0) {
@@ -172,8 +175,15 @@ sub parse {
         print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
         $parser->YYData->{REMAINING} = $string;
         if ($longest) {
-            $parser->YYData->{INPUT} = $longest_token;
             print "Returning token $longest_token, match $longest_match\n" if $debug;
+            if ($longest_token eq 'LEFT_BRACKET') {
+                $parser_state = 'set_contents';
+            } elsif ($longest_token eq 'RIGHT_BRACKET') {
+                $parser_state = '';
+            } elsif ($longest_token eq 'COMMA') {
+                $longest_token = $parser_state eq 'set_contents' ? 'SET_SEPARATOR' : 'AND';
+            }
+            $parser->YYData->{INPUT} = $longest_token;
             return ($longest_token, $longest_match);
         }
         print "Didn't match anything, done!\n" if $debug;
