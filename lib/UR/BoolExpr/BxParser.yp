@@ -6,7 +6,7 @@
 
 expr: condition                   { $_[1] }
     | expr AND expr               { [ @{$_[1]}, @{$_[3]} ] }
-    | expr OR expr                { [ [$_[1]], [$_[3]] ] }
+    | expr OR expr                { [ '-or', [$_[1], $_[3]] ] }
     | LEFT_PAREN expr RIGHT_PAREN { $_[2] }
     ;
 
