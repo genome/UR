@@ -855,18 +855,11 @@ sub resolve_for_string {
         Carp::croak("resolve_for_string() ouldn't parse string \"$filter_string\"");
     }
 print "Parsed tree is ",Data::Dumper::Dumper($tree);
-
-    my %extra;
-    $extra{'hints'} = [ split(',',$usage_hints_string) ];
-    $extra{'order'} = [ split(',',$order_string) ];
-    $extra{'page'} = [ split(',',$page_string) ];
-
     my @args = @$tree;
-    foreach my $key ( qw( hints order page ) ) {
-        if (@{$extra{$key}}) {
-            push @args, '-'.$key, $extra{$key};
-        }
-    }
+
+    push @args, '-hints',    [split(',',$usage_hints_string) ] if ($usage_hints_string);
+    push @args, '-order_by', [split(',',$order_string) ] if ($order_string);
+    push @args, '-page',     [split(',',$page_string) ] if ($page_string);
 
     my $bx = UR::BoolExpr->resolve($subject_class_name, @args);
     unless ($bx) {
