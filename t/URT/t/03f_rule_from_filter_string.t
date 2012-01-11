@@ -103,6 +103,14 @@ foreach my $test (
       values => { score => [1,2,3] },
       operators => { score => 'not in' },
     },
+#    { string => 'score=[1,2,3]',
+#      values => { score => [1,2,3] },
+#      operators => { score => 'in' },
+#    },
+#    { string => 'score!=[1,2,3]',
+#      values => { score => [1,2,3] },
+#      operators => { score => 'not in' },
+#    },
     { string => 'foo:one/two/three,score:10-100',  # These both use :
       values => { foo => ['one','three','two'], score => [10,100] },
       operators => { foo => 'in', score => 'between' },
@@ -188,9 +196,54 @@ foreach my $test (
                    }
                ],
     },
-#    { string => 'name=bob and (score=2 or foo=bar)',
-#
-#    }
+    { string => 'name=bob or name=foo or foo=bar',
+      rules => [
+                  { values => { name => 'bob' },
+                    operators => { name => '=' },
+                  },
+                  { values => { name => 'foo' },
+                    operators => { name => '=' },
+                  },
+                  { values => { foo => 'bar' },
+                    operators => { foo => '=' },
+                  },
+               ],
+     },
+    { string => 'name=bob and (score=2 or foo=bar)',
+      rules => [
+                   { values => { name => 'bob', score => 2, },
+                     operators => { name => '=', score => '=' },
+                   },
+                   { values => { name => 'bob', foo => 'bar' },
+                     operators => { name => '=', foo => '=' },
+                   },
+               ],
+    },
+    { string => 'name = bob and (score=2 or foo=bar and (name in ["bob","fred","joe"] and score > -10.16))',
+      rules => [
+                   { values => { name => 'bob', score => 2 },
+                     operators => { name => '=', score => '=' },
+                   },
+                   { values => { name => ['bob','fred','joe'], foo => 'bar', score => -10.16 },
+                     operators => { name => 'in', foo => '=', score => '>' },
+                     # calling values() will return 4 things (since name is in there twice), but value_for('name') returns the list
+                     override_value_count => 4,
+                   },
+                ],
+    },
+    { string => q(name=bob and (score = 2 or (foo:"bar "/baz/' quux "quux" ' and (score!:-100.321--.123 or score<4321)))),
+      rules => [
+                   { values => { name => 'bob', score => 2 },
+                     operators => { name => '=', score => '=' },
+                   },
+                   { values => { name => 'bob', foo => ['bar ','baz',' quux "quux"'], score => [-100.321, -0.123]},
+                     operators => { name => '=', foo => 'in', score => 'not between' },
+                   },
+                   { values => { name => 'bob', foo => ['bar ','baz',' quux "quux" '], score => 4321 },
+                     operators => { name => '=', foo => 'in', score => '<' },
+                   },
+               ],
+    },
 ) {
     my $string = $test->{'string'};
     my $composite_rule = UR::BoolExpr->resolve_for_string('URT::Item',$string);
@@ -206,11 +259,12 @@ foreach my $test (
         my $test_rule = $test->{'rules'}->[$i];
 
         my $values = $test_rule->{'values'};
-        my $value_count = scalar(values %$values);
+        my $value_count = $test_rule->{'override_value_count'} || scalar(values %$values);
         my @properties = keys %$values;
         my $operators = $test_rule->{'operators'};
 
         my @got_values = $r->values();
+print "Got values from rule: ",Data::Dumper::Dumper(\@got_values);
         is(scalar(@got_values), $value_count, "Composite rule $i has the right number of values");
 
         foreach my $property (@properties) {

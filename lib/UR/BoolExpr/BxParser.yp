@@ -197,3 +197,39 @@ sub parse {
            );
 }
 
+# Takes a freshly parsed tree with ANDs at the top level, and including an OR, and rewrites it
+# to be a top-level OR and redistributes that top-level ANDs to all the OR conditions
+# for example: prop1 = foo and ( prop2 = bar or prop3 = baz)
+# becomes
+# (prop1 = foo and prop2 = bar) or (prop1 = foo and pro3 = baz)
+
+sub flatten {
+    my($class,$tree) = @_;
+
+    my @ands;
+    my @ors;
+    while (@$tree) {
+        my $elem = shift @$tree;
+        if ($elem eq '-or' ) {
+            my $subtree = shift @$tree;
+            push @ors, $subtree;
+        } else {
+            push @ands, $elem;
+        }
+    }
+    if (! @ors) {
+        return \@ands;
+    }
+
+$DB::single=1;
+    my @flattened_tree;
+    foreach my $or ( @ors ) {
+        foreach my $expr ( @$or ) {
+            unshift @$expr, @ands;
+            $expr = $class->flatten($expr);
+        }
+        push @flattened_tree, @$or;
+    }
+
+    return ['-or', \@flattened_tree]
+}
