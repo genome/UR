@@ -856,15 +856,21 @@ print "About to parse string $filter_string\n";
         Carp::croak("resolve_for_string() ouldn't parse string \"$filter_string\"");
     }
 print "Parsed tree is ",Data::Dumper::Dumper($tree);
-    $tree = UR::BoolExpr::BxParser->flatten($tree);
-print "Flattened tree is ",Data::Dumper::Dumper($tree);
-    my @args = @$tree;
+    my @flattened_tree = UR::BoolExpr::BxParser->flatten($tree);
+print "Flattened tree is ",Data::Dumper::Dumper(\@flattened_tree);
+    my @args;
+    if (@flattened_tree > 1) {
+        @args = ('-or', \@flattened_tree);
+    } else {
+        @args = @{$flattened_tree[0]};
+    }
 
     push @args, '-hints',    [split(',',$usage_hints_string) ] if ($usage_hints_string);
     push @args, '-order_by', [split(',',$order_string) ] if ($order_string);
     push @args, '-page',     [split(',',$page_string) ] if ($page_string);
 
 $DB::single=1 if $filter_string =~ m/ or /;
+print "Args passed to BoolExpr->resolve(): ",Data::Dumper::Dumper(\@args);
     my $bx = UR::BoolExpr->resolve($subject_class_name, @args);
     unless ($bx) {
         Carp::croak("Can't create BoolExpr on $subject_class_name from params generated from string "

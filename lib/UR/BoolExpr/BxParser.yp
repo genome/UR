@@ -6,7 +6,7 @@
 
 expr: condition                   { $_[1] }
     | expr AND expr               { [ @{$_[1]}, @{$_[3]} ] }
-    | expr OR expr                { $_[3]->[0] eq '-or' ? [ '-or', [$_[1], @{$_[3]->[1]}] ] : [ '-or', [$_[1], $_[3]] ] }  # collapse nested ORs
+    | expr OR expr                { [  $_[1], $_[3] ] }
     | LEFT_PAREN expr RIGHT_PAREN { $_[2] }
     ;
 
@@ -210,11 +210,11 @@ sub flatten {
     my @ors;
     while (@$tree) {
         my $elem = shift @$tree;
-        if ($elem eq '-or' ) {
-            my $subtree = shift @$tree;
-            push @ors, $subtree;
+        if (ref($elem) eq 'ARRAY' ) {
+            push @ors, $elem;
         } else {
-            push @ands, $elem;
+            push @ands, $elem;         # property+operator
+            push @ands, shift @$tree;  # value
         }
     }
     if (! @ors) {
@@ -224,12 +224,14 @@ sub flatten {
 $DB::single=1;
     my @flattened_tree;
     foreach my $or ( @ors ) {
-        foreach my $expr ( @$or ) {
-            unshift @$expr, @ands;
-            $expr = $class->flatten($expr);
-        }
-        push @flattened_tree, @$or;
+        unshift @$or, @ands;
+        my @exprs = $class->flatten($or);
+        #foreach my $expr ( @$or ) {
+        #    unshift @$expr, @ands;
+        #    $expr = $class->flatten($expr);
+        #}
+        push @flattened_tree, @exprs;
     }
 
-    return ['-or', \@flattened_tree]
+    return @flattened_tree;
 }
