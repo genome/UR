@@ -199,7 +199,7 @@ foreach my $test (
 
 #print Data::Dumper::Dumper($composite_rule);
     my @r = $composite_rule->underlying_rules();
-    is(scalar(@r), scalar(@{$test->{'rules'}}), 'Underlying rules cound is correct');
+    is(scalar(@r), scalar(@{$test->{'rules'}}), 'Underlying rules count is correct');
 
     for (my $i = 0; $i< @{ $test->{'rules'}}; $i++) {
         my $r = $r[$i];
