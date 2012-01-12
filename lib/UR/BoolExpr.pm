@@ -858,12 +858,12 @@ sub resolve_for_string {
     my @args;
     if (ref($tree->[0])) {
         if (@$tree == 1) {
-            @args = @{$tree->[0]};
+            @args = @{$tree->[0]};  # An or-type parse tree, but with only one AND subrule - use as a simple and-type rule
         } else {
-            @args = ('-or', $tree);
+            @args = ('-or', $tree); # an or-type parse tree with multiple subrules
         }
     } else {
-        @args = @$tree;
+        @args = @$tree;  # A simple, 1-level and-type rule
     }
 
     push @args, '-hints',    [split(',',$usage_hints_string) ] if ($usage_hints_string);
