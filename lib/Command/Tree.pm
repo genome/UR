@@ -345,7 +345,7 @@ sub _build_sub_command_mapping {
         eval "use $source_class";
         my $use_error = $@;
         if ($use_error) {
-            die $use_error;
+            warn $use_error;
         }
 
         # for My::Foo::Command::* commands and sub-trees
