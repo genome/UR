@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 419;
+use Test::More tests => 465;
 use Data::Dumper;
 use IO::Handle;
 
@@ -86,6 +86,10 @@ foreach my $test (
     { string => 'name~%yoyo,score:10-100',
       values => { name => '%yoyo', score => [10,100] },
       operators => { name => 'like', score => 'between' }
+    },
+    { string => 'name like yoyo',
+      values => { name => '%yoyo%' },
+      operators => { name => 'like' }
     },
     { string => 'foo:one/two/three',
       values => { foo => ['one','three','two'] },  # They get sorted internally
