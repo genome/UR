@@ -384,7 +384,6 @@ foreach my $test (
         my $operators = $test_rule->{'operators'};
 
         my @got_values = $r->values();
-print "Got values from rule: ",Data::Dumper::Dumper(\@got_values);
         is(scalar(@got_values), $value_count, "Composite rule $i has the right number of values");
 
         foreach my $property (@properties) {
