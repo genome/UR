@@ -93,6 +93,7 @@ sub _init_subclass {
     for my $p (@p) {
         next if $p->property_name eq 'id';
         next if $p->class_name eq __PACKAGE__;
+        next unless $p->class_name->isa('Command');
         unless ($p->is_input or $p->is_output or $p->is_param or $p->is_transient or $p->is_calculated) {
             my $modname = $subclass_name;
             $modname =~ s|::|/|g;
