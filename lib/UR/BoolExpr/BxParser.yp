@@ -5,8 +5,28 @@
 %%
 
 expr: condition                   { $_[1] }
-    | expr AND expr               { [ @{$_[1]}, @{$_[3]} ] }
-    | expr OR expr                { [  $_[1], $_[3] ] }
+    | expr AND expr               {
+                                    foreach my $i ( 1,3 ) {
+                                        unless (ref($_[$i][0])) {
+                                            $_[$i] = [$_[$i]];
+                                        }
+                                    }
+                                    my @and;
+                                    foreach my $left ( @{$_[1]} ) {
+                                        foreach my $right (@{$_[3]}) {
+                                            push @and, [@$left, @$right];
+                                        }
+                                    }
+                                    \@and;
+                                  }
+    | expr OR expr                {
+                                    foreach my $i ( 1,3 ) {
+                                        unless (ref($_[$i][0])) {
+                                            $_[$i] = [$_[$i]];
+                                        }
+                                    }
+                                    [ @{$_[1]}, @{$_[3]} ];
+                                  }
     | LEFT_PAREN expr RIGHT_PAREN { $_[2] }
     ;
 
@@ -197,41 +217,3 @@ sub parse {
            );
 }
 
-# Takes a freshly parsed tree with ANDs at the top level, and including an OR, and rewrites it
-# to be a top-level OR and redistributes that top-level ANDs to all the OR conditions
-# for example: prop1 = foo and ( prop2 = bar or prop3 = baz)
-# becomes
-# (prop1 = foo and prop2 = bar) or (prop1 = foo and pro3 = baz)
-
-sub flatten {
-    my($class,$tree) = @_;
-
-    my @ands;
-    my @ors;
-    while (@$tree) {
-        my $elem = shift @$tree;
-        if (ref($elem) eq 'ARRAY' ) {
-            push @ors, $elem;
-        } else {
-            push @ands, $elem;         # property+operator
-            push @ands, shift @$tree;  # value
-        }
-    }
-    if (! @ors) {
-        return \@ands;
-    }
-
-$DB::single=1;
-    my @flattened_tree;
-    foreach my $or ( @ors ) {
-        unshift @$or, @ands;
-        my @exprs = $class->flatten($or);
-        #foreach my $expr ( @$or ) {
-        #    unshift @$expr, @ands;
-        #    $expr = $class->flatten($expr);
-        #}
-        push @flattened_tree, @exprs;
-    }
-
-    return @flattened_tree;
-}

@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 22;
+use Test::More tests => 419;
 use Data::Dumper;
 use IO::Handle;
 
@@ -37,19 +37,19 @@ class URT::Item {
 foreach my $test (
     { string => 'name = bob',
       values => { name => 'bob' },
-      operators => { name => '=' }
+      operators => { name => '=' },
     },
     { string => 'name=bob',
       values => { name => 'bob' },
-      operators => { name => '=' }
+      operators => { name => '=' },
     },
     { string => 'name=>bob',
       values => { name => 'bob' },
-      operators => { name => '=' }
+      operators => { name => '=' },
     },
     { string => 'name=fred and score>2',
       values => { name => 'fred', score => 2 },
-      operators => { name => '=', score => '>'}
+      operators => { name => '=', score => '>'},
     },
     { string => 'name=",",score=2',
       values => { name => ',', score => 2 },
@@ -147,6 +147,10 @@ foreach my $test (
       values => { name => 'foo', 'ritem.ritem_property' => 'bar','ritem.ritem_number' => 0.2 },
       operators => { name => '=', 'ritem.ritem_property' => '=', 'ritem.ritem_number' => '=' },
     },
+    { string => 'name=foo and foo=bar and score=2',
+      values => { name => 'foo', foo => 'bar', score => 2 },
+      operators => { name => '=', foo => '=', score => '=' },
+    },
     { string => 'name=foo and ( foo=bar and score=2 )',
       values => { name => 'foo', foo => 'bar', score => 2 },
       operators => { name => '=', foo => '=', score => '=' },
@@ -170,6 +174,7 @@ foreach my $test (
         is_deeply($r->value_for($property), $values->{$property}, "Value for $property is correct");
         is($r->operator_for($property), $operators->{$property}, "Operator for $property is correct");
     }
+   exit if ($test->{'stop'});
 #    print Data::Dumper::Dumper($r);
 }
 #exit;
@@ -219,22 +224,22 @@ foreach my $test (
                    },
                ],
     },
-#    { string => '(name=bob or name=joe) and (score = 2 or score = 4)',
-#      rules => [
-#                   { values => { name => 'bob', score => 2 },
-#                     operators => { name => '=', score => '=' },
-#                   },
-#                   { values => { name => 'bob', score => 4 },
-#                     operators => { name => '=', score => '=' },
-#                   },
-#                   { values => { name => 'joe', score => 2 },
-#                     operators => { name => '=', score => '=' },
-#                   },
-#                   { values => { name => 'joe', score => 4 },
-#                     operators => { name => '=', score => '=' },
-#                   },
-#                ],
-#    },
+    { string => '(name=bob or name=joe) and (score = 2 or score = 4)',
+      rules => [
+                   { values => { name => 'bob', score => 2 },
+                     operators => { name => '=', score => '=' },
+                   },
+                   { values => { name => 'bob', score => 4 },
+                     operators => { name => '=', score => '=' },
+                   },
+                   { values => { name => 'joe', score => 2 },
+                     operators => { name => '=', score => '=' },
+                   },
+                   { values => { name => 'joe', score => 4 },
+                     operators => { name => '=', score => '=' },
+                   },
+                ],
+    },
     { string => 'name = bob and (score=2 or foo=bar and (name in ["bob","fred","joe"] and score > -10.16))',
       rules => [
                    { values => { name => 'bob', score => 2 },
@@ -335,15 +340,31 @@ foreach my $test (
                    },
                ],
     },
-#    { string => q( name=bob and (score = 2 or ( foo = bar and (parent_name=joe or ((group=cool or ritem.ritem_number<0.123) and (ritem_id = 123 or ritem.ritem_property=mojo)))))),
-#      rules => [
-#                   { values => { name => 'bob', score => 2 },
-#                     operators => { name => '=', score => '=' },
-#                   },
-#               ],
-#    },
+    { string => q( name=bob and (score = 2 or ( foo = bar and (parent_name=joe or ((group=cool or ritem.ritem_number<0.123) and (ritem_id = 123 or ritem.ritem_property=mojo)))))),
+      rules => [
+                   { values => { name => 'bob', score => 2 },
+                     operators => { name => '=', score => '=' },
+                   },
+                   { values => { name => 'bob', foo => 'bar', parent_name => 'joe' },
+                     operators => { name => '=', foo => '=', parent_name => '=' },
+                   },
+                   { values => { name => 'bob', foo => 'bar', group => 'cool', ritem_id => 123 },
+                     operators => { name => '=', foo => '=', group => '=', ritem_id => '=' },
+                   },
+                   { values => { name => 'bob', foo => 'bar', group => 'cool', 'ritem.ritem_property' => 'mojo' },
+                     operators => { name => '=', foo => '=', group => '=', 'ritem.ritem_property' => '=' },
+                   },
+                   { values => { name => 'bob', foo => 'bar', 'ritem.ritem_number' => 0.123, ritem_id => 123 },
+                     operators => { name => '=', foo => '=', 'ritem.ritem_number' => '<', ritem_id => '=' },
+                   },
+                   { values => { name => 'bob', foo => 'bar', 'ritem.ritem_number' => 0.123, 'ritem.ritem_property' => 'mojo' },
+                     operators => { name => '=', foo => '=', 'ritem.ritem_number' => '<', 'ritem.ritem_property' => '=' },
+                   },
+               ],
+    },
 
 ) {
+   $DB::single=1 if ($test->{'stop'});
     my $string = $test->{'string'};
     my $composite_rule = UR::BoolExpr->resolve_for_string('URT::Item',$string);
     ok($composite_rule, "Created rule from string $string");
@@ -371,6 +392,7 @@ print "Got values from rule: ",Data::Dumper::Dumper(\@got_values);
             is($r->operator_for($property), $operators->{$property}, "Operator for $property is correct");
         }
     }
+    exit if ($test->{'stop'});
 }
 
 1;
