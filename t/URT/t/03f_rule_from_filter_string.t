@@ -155,6 +155,48 @@ foreach my $test (
       values => { name => 'foo', foo => 'bar', score => 2 },
       operators => { name => '=', foo => '=', score => '=' },
     },
+    { string => 'name=foo order by score' ,
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['score'],
+    },
+    { string => 'name=foo order by -score' ,
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['-score'],
+    },
+    { string => 'name=foo order by score,foo',
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['score','foo'],
+    },
+    { string => 'name=foo order by score,-foo',
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['score','-foo'],
+    },
+    { string => 'name=foo order by -score,-foo',
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['-score','-foo'],
+    },
+    { string => 'name=foo order by -score,-foo',
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['-score','-foo'],
+    },
+    { string => 'name=foo order by -score,-foo group by ritem_id',
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['-score','-foo'],
+      group_by => ['ritem_id'],
+    },
+    { string => 'name=foo order by -score,-foo group by ritem_id, parent_name',
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['-score','-foo'],
+      group_by => ['ritem_id','parent_name'],
+    },
 ) {
 
     my $string = $test->{'string'};
@@ -173,6 +215,13 @@ foreach my $test (
     foreach my $property (@properties) {
         is_deeply($r->value_for($property), $values->{$property}, "Value for $property is correct");
         is($r->operator_for($property), $operators->{$property}, "Operator for $property is correct");
+    }
+
+    foreach my $meta ( 'order_by', 'group_by' ) {
+        if ($test->{$meta}) {
+            my $got = $r->template->$meta;
+            is_deeply($got, $test->{$meta}, "$meta is correct");
+        }
     }
    exit if ($test->{'stop'});
 #    print Data::Dumper::Dumper($r);

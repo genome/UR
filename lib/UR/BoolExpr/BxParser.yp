@@ -14,6 +14,8 @@ boolexpr: expr                    { my $expr = $_[1];
                                     }
                                     $expr;
                                   }
+        | boolexpr ORDER_BY order_by_list { [@{$_[1]}, '-order', $_[3]] }
+        | boolexpr GROUP_BY group_by_list { [@{$_[1]}, '-group', $_[3]] }
         ;
 
 expr: condition                   { $_[1] }
@@ -54,6 +56,16 @@ condition: property operator value                 { [ "$_[1] $_[2]" => $_[3] ] 
 
 property:   IDENTIFIER { $_[1] }
         ;
+
+order_by_list: property { [ $_[1] ] }
+             | MINUS property { [ '-'.$_[2] ] }
+             | property AND order_by_list { [$_[1], @{$_[3]}] }
+             | MINUS property AND order_by_list { [ '-'.$_[2], @{$_[4]}] }
+             ;
+
+group_by_list: property { [ $_[1] ] }
+             | property AND group_by_list { [$_[1], @{$_[3]}] }
+             ;
 
 operator: an_operator           { $_[1] }
         | negation an_operator  { "$_[1] $_[2]" }
@@ -163,6 +175,8 @@ my @tokens = (
     TILDE => qr{~},
     LIKE_PATTERN => qr{[\w%_]+},
     IN_DIVIDER => qr{\/},
+    ORDER_BY => qr{order by},
+    GROUP_BY => qr{group by},
 );
 
 sub parse {
