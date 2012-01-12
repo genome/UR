@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 79;
+use Test::More tests=> 81;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -245,3 +245,19 @@ is($fred->car_count, 1, 'Fred has 1 car using the set');
 
 my $frank = URT::Person->get(name => 'Frank');
 is($frank->car_count, 0, 'Frank has 0 cars using the set');
+
+do {
+    my $set_class = 'URT::Person::Set';
+    my $initializer = $set_class->can('_init_subclass');
+    eval { $initializer->($set_class, $set_class) };
+    my $error = $@;
+    isnt($error, 'no error when calling _init_subclass on set class');
+};
+
+do {
+    my $set = URT::Person->define_set();
+    my $initializer = $set->can('_init_subclass');
+    eval { $initializer->($set, $set) };
+    my $error = $@;
+    like($error, qr/_init_subclass/, 'got error when calling _init_subclass on a set object');
+};
