@@ -4,6 +4,18 @@
 
 %%
 
+boolexpr: expr                    { my $expr = $_[1];
+                                    if (ref($expr->[0])) {
+                                        if (@$expr == 1) {
+                                            $expr = $expr->[0];  # An or-type parse tree, but with only one AND subrule - use as a simple and-type rule
+                                        } else {
+                                            $expr = ['-or', $expr]; # an or-type parse tree with multiple subrules
+                                        }
+                                    }
+                                    $expr;
+                                  }
+        ;
+
 expr: condition                   { $_[1] }
     | expr AND expr               {
                                     foreach my $i ( 1,3 ) {

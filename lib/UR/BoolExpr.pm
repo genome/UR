@@ -855,26 +855,16 @@ sub resolve_for_string {
     unless ($tree) {
         Carp::croak("resolve_for_string() couldn't parse string \"$filter_string\"");
     }
-    my @args;
-    if (ref($tree->[0])) {
-        if (@$tree == 1) {
-            @args = @{$tree->[0]};  # An or-type parse tree, but with only one AND subrule - use as a simple and-type rule
-        } else {
-            @args = ('-or', $tree); # an or-type parse tree with multiple subrules
-        }
-    } else {
-        @args = @$tree;  # A simple, 1-level and-type rule
-    }
 
-    push @args, '-hints',    [split(',',$usage_hints_string) ] if ($usage_hints_string);
-    push @args, '-order_by', [split(',',$order_string) ] if ($order_string);
-    push @args, '-page',     [split(',',$page_string) ] if ($page_string);
+    push @$tree, '-hints',    [split(',',$usage_hints_string) ] if ($usage_hints_string);
+    push @$tree, '-order_by', [split(',',$order_string) ] if ($order_string);
+    push @$tree, '-page',     [split(',',$page_string) ] if ($page_string);
 
-    my $bx = UR::BoolExpr->resolve($subject_class_name, @args);
+    my $bx = UR::BoolExpr->resolve($subject_class_name, @$tree);
     unless ($bx) {
         Carp::croak("Can't create BoolExpr on $subject_class_name from params generated from string "
                     . $filter_string . " which parsed as:\n"
-                    . Data::Dumper::Dumper(\@args));
+                    . Data::Dumper::Dumper($tree));
     }
     return $bx;
 }
