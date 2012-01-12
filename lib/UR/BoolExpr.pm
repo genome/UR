@@ -342,6 +342,7 @@ sub resolve {
             $subject_class,
             @sub_queries,
         );
+        $resolve_depth--;
         return $bx;
     }
 
