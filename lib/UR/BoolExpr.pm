@@ -854,7 +854,7 @@ sub resolve_for_string {
 print "About to parse string $filter_string\n";
     my $tree = UR::BoolExpr::BxParser::parse($filter_string);#, debug => 1);
     unless ($tree) {
-        Carp::croak("resolve_for_string() ouldn't parse string \"$filter_string\"");
+        Carp::croak("resolve_for_string() couldn't parse string \"$filter_string\"");
     }
 print "Parsed tree is ",Data::Dumper::Dumper($tree);
     my @flattened_tree = UR::BoolExpr::BxParser->flatten($tree);
