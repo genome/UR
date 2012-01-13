@@ -698,13 +698,13 @@ sub
 		 'expr', 3,
 sub
 #line 17 "BxParser.yp"
-{ UR::BoolExpr::BxParser->_and(@_) }
+{ UR::BoolExpr::BxParser->_and($_[1], $_[3]) }
 	],
 	[#Rule 7
 		 'expr', 3,
 sub
 #line 18 "BxParser.yp"
-{ UR::BoolExpr::BxParser->_or(@_) }
+{ UR::BoolExpr::BxParser->_or($_[1], $_[3]) }
 	],
 	[#Rule 8
 		 'expr', 3,
@@ -1186,31 +1186,29 @@ sub _simplify {
 # AND-type rules, or a 1-level deep OR-type rule composed of any number of
 # 1-level deep AND-type rules
 sub _and {
-    my $class = shift;
+    my($class,$left, $right) = @_;
 
-    foreach my $i ( 1,3 ) {
-        unless (ref($_[$i][0])) {
-            $_[$i] = [$_[$i]];
-        }
-    }
+    # force them to be [[ "property operator" => value]] instead of just [ "property operator" => value ]
+    $left  = [ $left ]  unless (ref($left->[0]));
+    $right = [ $right ] unless (ref($right->[0]));
+
     my @and;
-    foreach my $left ( @{$_[1]} ) {
-        foreach my $right (@{$_[3]}) {
-            push @and, [@$left, @$right];
+    foreach my $left_subexpr ( @$left ) {
+        foreach my $right_subexpr (@$right) {
+            push @and, [@$left_subexpr, @$right_subexpr];
         }
     }
     \@and;
 }
 
 sub _or {
-    my $class = shift;
+    my($class,$left, $right) = @_;
 
-    foreach my $i ( 1,3 ) {
-        unless (ref($_[$i][0])) {
-            $_[$i] = [$_[$i]];
-        }
-    }
-    [ @{$_[1]}, @{$_[3]} ];
+    # force them to be [[ "property operator" => value]] instead of just [ "property operator" => value ]
+    $left  = [ $left ]  unless (ref($left->[0]));
+    $right = [ $right ] unless (ref($right->[0]));
+
+    [ @$left, @$right ];
 }
 
 1;
