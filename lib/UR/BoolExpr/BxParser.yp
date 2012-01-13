@@ -8,16 +8,7 @@
 %%
 
 boolexpr:                         { [] }
-        | expr                    { my $expr = $_[1];
-                                    if (ref($expr->[0])) {
-                                        if (@$expr == 1) {
-                                            $expr = $expr->[0];  # An or-type parse tree, but with only one AND subrule - use as a simple and-type rule
-                                        } else {
-                                            $expr = ['-or', $expr]; # an or-type parse tree with multiple subrules
-                                        }
-                                    }
-                                    $expr;
-                                  }
+        | expr                    { UR::BoolExpr::BxParser->_simplify($_[1]) }
         | boolexpr ORDER_BY order_by_list { [@{$_[1]}, '-order', $_[3]] }
         | boolexpr GROUP_BY group_by_list { [@{$_[1]}, '-group', $_[3]] }
         ;
@@ -248,4 +239,24 @@ sub parse {
                yydebug => 0,
            );
 }
+
+# Used by the top-level expr production to turn an or-type parse tree with
+# only a single AND condition into a simple AND-type tree (1-level arrayref).
+# Or to add the '-or' to the front of a real OR-type tree so it can be passed
+# directly to UR::BoolExpr::resolve()
+sub _simplify {
+    my($class, $expr) = @_;
+
+    if (ref($expr->[0])) {
+        if (@$expr == 1) {
+            # An or-type parse tree, but with only one AND subrule - use as a simple and-type rule
+            $expr = $expr->[0];
+        } else {
+            $expr = ['-or', $expr]; # an or-type parse tree with multiple subrules
+        }
+    }
+    return $expr;
+}
+
+1;
 

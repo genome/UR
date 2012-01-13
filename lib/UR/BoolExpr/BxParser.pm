@@ -674,39 +674,30 @@ sub
 		 'boolexpr', 1,
 sub
 #line 11 "BxParser.yp"
-{ my $expr = $_[1];
-                                    if (ref($expr->[0])) {
-                                        if (@$expr == 1) {
-                                            $expr = $expr->[0];  # An or-type parse tree, but with only one AND subrule - use as a simple and-type rule
-                                        } else {
-                                            $expr = ['-or', $expr]; # an or-type parse tree with multiple subrules
-                                        }
-                                    }
-                                    $expr;
-                                  }
+{ UR::BoolExpr::BxParser->_simplify($_[1]) }
 	],
 	[#Rule 3
 		 'boolexpr', 3,
 sub
-#line 21 "BxParser.yp"
+#line 12 "BxParser.yp"
 { [@{$_[1]}, '-order', $_[3]] }
 	],
 	[#Rule 4
 		 'boolexpr', 3,
 sub
-#line 22 "BxParser.yp"
+#line 13 "BxParser.yp"
 { [@{$_[1]}, '-group', $_[3]] }
 	],
 	[#Rule 5
 		 'expr', 1,
 sub
-#line 25 "BxParser.yp"
+#line 16 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 6
 		 'expr', 3,
 sub
-#line 26 "BxParser.yp"
+#line 17 "BxParser.yp"
 {
                                     foreach my $i ( 1,3 ) {
                                         unless (ref($_[$i][0])) {
@@ -725,7 +716,7 @@ sub
 	[#Rule 7
 		 'expr', 3,
 sub
-#line 40 "BxParser.yp"
+#line 31 "BxParser.yp"
 {
                                     foreach my $i ( 1,3 ) {
                                         unless (ref($_[$i][0])) {
@@ -738,337 +729,337 @@ sub
 	[#Rule 8
 		 'expr', 3,
 sub
-#line 48 "BxParser.yp"
+#line 39 "BxParser.yp"
 { $_[2] }
 	],
 	[#Rule 9
 		 'condition', 3,
 sub
-#line 51 "BxParser.yp"
+#line 42 "BxParser.yp"
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 10
 		 'condition', 3,
 sub
-#line 52 "BxParser.yp"
+#line 43 "BxParser.yp"
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 11
 		 'condition', 3,
 sub
-#line 53 "BxParser.yp"
+#line 44 "BxParser.yp"
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 12
 		 'condition', 3,
 sub
-#line 54 "BxParser.yp"
+#line 45 "BxParser.yp"
 { [ "$_[1] in" => $_[3] ] }
 	],
 	[#Rule 13
 		 'condition', 4,
 sub
-#line 55 "BxParser.yp"
+#line 46 "BxParser.yp"
 { [ "$_[1] $_[2] in" => $_[4] ] }
 	],
 	[#Rule 14
 		 'condition', 3,
 sub
-#line 56 "BxParser.yp"
+#line 47 "BxParser.yp"
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 15
 		 'condition', 3,
 sub
-#line 57 "BxParser.yp"
+#line 48 "BxParser.yp"
 { [ "$_[1] between" => $_[3] ] }
 	],
 	[#Rule 16
 		 'condition', 4,
 sub
-#line 58 "BxParser.yp"
+#line 49 "BxParser.yp"
 { [ "$_[1] $_[2] between" => $_[4] ] }
 	],
 	[#Rule 17
 		 'property', 1,
 sub
-#line 61 "BxParser.yp"
+#line 52 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 18
 		 'order_by_list', 1,
 sub
-#line 64 "BxParser.yp"
+#line 55 "BxParser.yp"
 { [ $_[1] ] }
 	],
 	[#Rule 19
 		 'order_by_list', 2,
 sub
-#line 65 "BxParser.yp"
+#line 56 "BxParser.yp"
 { [ '-'.$_[2] ] }
 	],
 	[#Rule 20
 		 'order_by_list', 3,
 sub
-#line 66 "BxParser.yp"
+#line 57 "BxParser.yp"
 { [$_[1], @{$_[3]}] }
 	],
 	[#Rule 21
 		 'order_by_list', 4,
 sub
-#line 67 "BxParser.yp"
+#line 58 "BxParser.yp"
 { [ '-'.$_[2], @{$_[4]}] }
 	],
 	[#Rule 22
 		 'group_by_list', 1,
 sub
-#line 70 "BxParser.yp"
+#line 61 "BxParser.yp"
 { [ $_[1] ] }
 	],
 	[#Rule 23
 		 'group_by_list', 3,
 sub
-#line 71 "BxParser.yp"
+#line 62 "BxParser.yp"
 { [$_[1], @{$_[3]}] }
 	],
 	[#Rule 24
 		 'operator', 1,
 sub
-#line 74 "BxParser.yp"
+#line 65 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 25
 		 'operator', 2,
 sub
-#line 75 "BxParser.yp"
+#line 66 "BxParser.yp"
 { "$_[1] $_[2]" }
 	],
 	[#Rule 26
 		 'negation', 1,
 sub
-#line 78 "BxParser.yp"
+#line 69 "BxParser.yp"
 { 'not' }
 	],
 	[#Rule 27
 		 'negation', 1,
 sub
-#line 79 "BxParser.yp"
+#line 70 "BxParser.yp"
 { 'not' }
 	],
 	[#Rule 28
 		 'an_operator', 1,
 sub
-#line 82 "BxParser.yp"
+#line 73 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 29
 		 'an_operator', 1,
 sub
-#line 83 "BxParser.yp"
+#line 74 "BxParser.yp"
 { '=' }
 	],
 	[#Rule 30
 		 'an_operator', 1,
 sub
-#line 84 "BxParser.yp"
+#line 75 "BxParser.yp"
 { '=' }
 	],
 	[#Rule 31
 		 'like_operator', 1,
 sub
-#line 87 "BxParser.yp"
+#line 78 "BxParser.yp"
 { 'like' }
 	],
 	[#Rule 32
 		 'like_operator', 2,
 sub
-#line 88 "BxParser.yp"
+#line 79 "BxParser.yp"
 { "$_[1] like" }
 	],
 	[#Rule 33
 		 'like_operator', 1,
 sub
-#line 89 "BxParser.yp"
+#line 80 "BxParser.yp"
 { 'like' }
 	],
 	[#Rule 34
 		 'like_operator', 2,
 sub
-#line 90 "BxParser.yp"
+#line 81 "BxParser.yp"
 { "$_[1] like" }
 	],
 	[#Rule 35
 		 'like_value', 1,
 sub
-#line 93 "BxParser.yp"
+#line 84 "BxParser.yp"
 { '%' . $_[1] . '%' }
 	],
 	[#Rule 36
 		 'like_value', 1,
 sub
-#line 94 "BxParser.yp"
+#line 85 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 37
 		 'in_operator', 1,
 sub
-#line 97 "BxParser.yp"
+#line 88 "BxParser.yp"
 { 'in' }
 	],
 	[#Rule 38
 		 'in_operator', 2,
 sub
-#line 98 "BxParser.yp"
+#line 89 "BxParser.yp"
 { "$_[1] in" }
 	],
 	[#Rule 39
 		 'in_value', 1,
 sub
-#line 101 "BxParser.yp"
+#line 92 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 40
 		 'in_value', 3,
 sub
-#line 102 "BxParser.yp"
+#line 93 "BxParser.yp"
 { [ $_[1], @{$_[3]} ] }
 	],
 	[#Rule 41
 		 'in_value', 3,
 sub
-#line 103 "BxParser.yp"
+#line 94 "BxParser.yp"
 { [ $_[1], $_[3] ] }
 	],
 	[#Rule 42
 		 'set', 3,
 sub
-#line 106 "BxParser.yp"
+#line 97 "BxParser.yp"
 { $_[2] }
 	],
 	[#Rule 43
 		 'set_body', 3,
 sub
-#line 109 "BxParser.yp"
+#line 100 "BxParser.yp"
 { [ $_[1], @{$_[3]} ] }
 	],
 	[#Rule 44
 		 'set_body', 1,
 sub
-#line 110 "BxParser.yp"
+#line 101 "BxParser.yp"
 { [ $_[1] ] }
 	],
 	[#Rule 45
 		 'between_operator', 1,
 sub
-#line 113 "BxParser.yp"
+#line 104 "BxParser.yp"
 { 'between' }
 	],
 	[#Rule 46
 		 'between_operator', 2,
 sub
-#line 114 "BxParser.yp"
+#line 105 "BxParser.yp"
 { "$_[1] between" }
 	],
 	[#Rule 47
 		 'between_value', 3,
 sub
-#line 117 "BxParser.yp"
+#line 108 "BxParser.yp"
 { [ $_[1], $_[3] ] }
 	],
 	[#Rule 48
 		 'keyword_as_value', 1,
 sub
-#line 120 "BxParser.yp"
+#line 111 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 49
 		 'keyword_as_value', 1,
 sub
-#line 121 "BxParser.yp"
+#line 112 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 50
 		 'keyword_as_value', 1,
 sub
-#line 122 "BxParser.yp"
+#line 113 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 51
 		 'keyword_as_value', 1,
 sub
-#line 123 "BxParser.yp"
+#line 114 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 52
 		 'keyword_as_value', 1,
 sub
-#line 124 "BxParser.yp"
+#line 115 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 53
 		 'keyword_as_value', 1,
 sub
-#line 125 "BxParser.yp"
+#line 116 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 54
 		 'value', 1,
 sub
-#line 128 "BxParser.yp"
+#line 119 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 55
 		 'value', 1,
 sub
-#line 129 "BxParser.yp"
+#line 120 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 56
 		 'value', 1,
 sub
-#line 130 "BxParser.yp"
+#line 121 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 57
 		 'value', 1,
 sub
-#line 131 "BxParser.yp"
+#line 122 "BxParser.yp"
 { ($_[1] =~ m/^"(.*?)"$/)[0]; }
 	],
 	[#Rule 58
 		 'value', 1,
 sub
-#line 132 "BxParser.yp"
+#line 123 "BxParser.yp"
 { ($_[1] =~ m/^'(.*?)'$/)[0]; }
 	],
 	[#Rule 59
 		 'value', 1,
 sub
-#line 133 "BxParser.yp"
+#line 124 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 60
 		 'number', 1,
 sub
-#line 136 "BxParser.yp"
+#line 127 "BxParser.yp"
 { $_[1] + 0 }
 	],
 	[#Rule 61
 		 'number', 1,
 sub
-#line 137 "BxParser.yp"
+#line 128 "BxParser.yp"
 { $_[1] + 0 }
 	],
 	[#Rule 62
 		 'number', 2,
 sub
-#line 138 "BxParser.yp"
+#line 129 "BxParser.yp"
 { 0 - $_[2] }
 	],
 	[#Rule 63
 		 'number', 2,
 sub
-#line 139 "BxParser.yp"
+#line 130 "BxParser.yp"
 { 0 - $_[2] }
 	]
 ],
@@ -1076,7 +1067,7 @@ sub
     bless($self,$class);
 }
 
-#line 142 "BxParser.yp"
+#line 133 "BxParser.yp"
 
 
 use strict;
@@ -1186,6 +1177,26 @@ sub parse {
                yydebug => 0,
            );
 }
+
+# Used by the top-level expr production to turn an or-type parse tree with
+# only a single AND condition into a simple AND-type tree (1-level arrayref).
+# Or to add the '-or' to the front of a real OR-type tree so it can be passed
+# directly to UR::BoolExpr::resolve()
+sub _simplify {
+    my($class, $expr) = @_;
+
+    if (ref($expr->[0])) {
+        if (@$expr == 1) {
+            # An or-type parse tree, but with only one AND subrule - use as a simple and-type rule
+            $expr = $expr->[0];
+        } else {
+            $expr = ['-or', $expr]; # an or-type parse tree with multiple subrules
+        }
+    }
+    return $expr;
+}
+
+1;
 
 
 1;
