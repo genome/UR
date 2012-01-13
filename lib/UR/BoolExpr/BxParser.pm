@@ -698,368 +698,348 @@ sub
 		 'expr', 3,
 sub
 #line 17 "BxParser.yp"
-{
-                                    foreach my $i ( 1,3 ) {
-                                        unless (ref($_[$i][0])) {
-                                            $_[$i] = [$_[$i]];
-                                        }
-                                    }
-                                    my @and;
-                                    foreach my $left ( @{$_[1]} ) {
-                                        foreach my $right (@{$_[3]}) {
-                                            push @and, [@$left, @$right];
-                                        }
-                                    }
-                                    \@and;
-                                  }
+{ UR::BoolExpr::BxParser->_and(@_) }
 	],
 	[#Rule 7
 		 'expr', 3,
 sub
-#line 31 "BxParser.yp"
-{
-                                    foreach my $i ( 1,3 ) {
-                                        unless (ref($_[$i][0])) {
-                                            $_[$i] = [$_[$i]];
-                                        }
-                                    }
-                                    [ @{$_[1]}, @{$_[3]} ];
-                                  }
+#line 18 "BxParser.yp"
+{ UR::BoolExpr::BxParser->_or(@_) }
 	],
 	[#Rule 8
 		 'expr', 3,
 sub
-#line 39 "BxParser.yp"
+#line 19 "BxParser.yp"
 { $_[2] }
 	],
 	[#Rule 9
 		 'condition', 3,
 sub
-#line 42 "BxParser.yp"
+#line 22 "BxParser.yp"
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 10
 		 'condition', 3,
 sub
-#line 43 "BxParser.yp"
+#line 23 "BxParser.yp"
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 11
 		 'condition', 3,
 sub
-#line 44 "BxParser.yp"
+#line 24 "BxParser.yp"
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 12
 		 'condition', 3,
 sub
-#line 45 "BxParser.yp"
+#line 25 "BxParser.yp"
 { [ "$_[1] in" => $_[3] ] }
 	],
 	[#Rule 13
 		 'condition', 4,
 sub
-#line 46 "BxParser.yp"
+#line 26 "BxParser.yp"
 { [ "$_[1] $_[2] in" => $_[4] ] }
 	],
 	[#Rule 14
 		 'condition', 3,
 sub
-#line 47 "BxParser.yp"
+#line 27 "BxParser.yp"
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 15
 		 'condition', 3,
 sub
-#line 48 "BxParser.yp"
+#line 28 "BxParser.yp"
 { [ "$_[1] between" => $_[3] ] }
 	],
 	[#Rule 16
 		 'condition', 4,
 sub
-#line 49 "BxParser.yp"
+#line 29 "BxParser.yp"
 { [ "$_[1] $_[2] between" => $_[4] ] }
 	],
 	[#Rule 17
 		 'property', 1,
 sub
-#line 52 "BxParser.yp"
+#line 32 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 18
 		 'order_by_list', 1,
 sub
-#line 55 "BxParser.yp"
+#line 35 "BxParser.yp"
 { [ $_[1] ] }
 	],
 	[#Rule 19
 		 'order_by_list', 2,
 sub
-#line 56 "BxParser.yp"
+#line 36 "BxParser.yp"
 { [ '-'.$_[2] ] }
 	],
 	[#Rule 20
 		 'order_by_list', 3,
 sub
-#line 57 "BxParser.yp"
+#line 37 "BxParser.yp"
 { [$_[1], @{$_[3]}] }
 	],
 	[#Rule 21
 		 'order_by_list', 4,
 sub
-#line 58 "BxParser.yp"
+#line 38 "BxParser.yp"
 { [ '-'.$_[2], @{$_[4]}] }
 	],
 	[#Rule 22
 		 'group_by_list', 1,
 sub
-#line 61 "BxParser.yp"
+#line 41 "BxParser.yp"
 { [ $_[1] ] }
 	],
 	[#Rule 23
 		 'group_by_list', 3,
 sub
-#line 62 "BxParser.yp"
+#line 42 "BxParser.yp"
 { [$_[1], @{$_[3]}] }
 	],
 	[#Rule 24
 		 'operator', 1,
 sub
-#line 65 "BxParser.yp"
+#line 45 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 25
 		 'operator', 2,
 sub
-#line 66 "BxParser.yp"
+#line 46 "BxParser.yp"
 { "$_[1] $_[2]" }
 	],
 	[#Rule 26
 		 'negation', 1,
 sub
-#line 69 "BxParser.yp"
+#line 49 "BxParser.yp"
 { 'not' }
 	],
 	[#Rule 27
 		 'negation', 1,
 sub
-#line 70 "BxParser.yp"
+#line 50 "BxParser.yp"
 { 'not' }
 	],
 	[#Rule 28
 		 'an_operator', 1,
 sub
-#line 73 "BxParser.yp"
+#line 53 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 29
 		 'an_operator', 1,
 sub
-#line 74 "BxParser.yp"
+#line 54 "BxParser.yp"
 { '=' }
 	],
 	[#Rule 30
 		 'an_operator', 1,
 sub
-#line 75 "BxParser.yp"
+#line 55 "BxParser.yp"
 { '=' }
 	],
 	[#Rule 31
 		 'like_operator', 1,
 sub
-#line 78 "BxParser.yp"
+#line 58 "BxParser.yp"
 { 'like' }
 	],
 	[#Rule 32
 		 'like_operator', 2,
 sub
-#line 79 "BxParser.yp"
+#line 59 "BxParser.yp"
 { "$_[1] like" }
 	],
 	[#Rule 33
 		 'like_operator', 1,
 sub
-#line 80 "BxParser.yp"
+#line 60 "BxParser.yp"
 { 'like' }
 	],
 	[#Rule 34
 		 'like_operator', 2,
 sub
-#line 81 "BxParser.yp"
+#line 61 "BxParser.yp"
 { "$_[1] like" }
 	],
 	[#Rule 35
 		 'like_value', 1,
 sub
-#line 84 "BxParser.yp"
+#line 64 "BxParser.yp"
 { '%' . $_[1] . '%' }
 	],
 	[#Rule 36
 		 'like_value', 1,
 sub
-#line 85 "BxParser.yp"
+#line 65 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 37
 		 'in_operator', 1,
 sub
-#line 88 "BxParser.yp"
+#line 68 "BxParser.yp"
 { 'in' }
 	],
 	[#Rule 38
 		 'in_operator', 2,
 sub
-#line 89 "BxParser.yp"
+#line 69 "BxParser.yp"
 { "$_[1] in" }
 	],
 	[#Rule 39
 		 'in_value', 1,
 sub
-#line 92 "BxParser.yp"
+#line 72 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 40
 		 'in_value', 3,
 sub
-#line 93 "BxParser.yp"
+#line 73 "BxParser.yp"
 { [ $_[1], @{$_[3]} ] }
 	],
 	[#Rule 41
 		 'in_value', 3,
 sub
-#line 94 "BxParser.yp"
+#line 74 "BxParser.yp"
 { [ $_[1], $_[3] ] }
 	],
 	[#Rule 42
 		 'set', 3,
 sub
-#line 97 "BxParser.yp"
+#line 77 "BxParser.yp"
 { $_[2] }
 	],
 	[#Rule 43
 		 'set_body', 3,
 sub
-#line 100 "BxParser.yp"
+#line 80 "BxParser.yp"
 { [ $_[1], @{$_[3]} ] }
 	],
 	[#Rule 44
 		 'set_body', 1,
 sub
-#line 101 "BxParser.yp"
+#line 81 "BxParser.yp"
 { [ $_[1] ] }
 	],
 	[#Rule 45
 		 'between_operator', 1,
 sub
-#line 104 "BxParser.yp"
+#line 84 "BxParser.yp"
 { 'between' }
 	],
 	[#Rule 46
 		 'between_operator', 2,
 sub
-#line 105 "BxParser.yp"
+#line 85 "BxParser.yp"
 { "$_[1] between" }
 	],
 	[#Rule 47
 		 'between_value', 3,
 sub
-#line 108 "BxParser.yp"
+#line 88 "BxParser.yp"
 { [ $_[1], $_[3] ] }
 	],
 	[#Rule 48
 		 'keyword_as_value', 1,
 sub
-#line 111 "BxParser.yp"
+#line 91 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 49
 		 'keyword_as_value', 1,
 sub
-#line 112 "BxParser.yp"
+#line 92 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 50
 		 'keyword_as_value', 1,
 sub
-#line 113 "BxParser.yp"
+#line 93 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 51
 		 'keyword_as_value', 1,
 sub
-#line 114 "BxParser.yp"
+#line 94 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 52
 		 'keyword_as_value', 1,
 sub
-#line 115 "BxParser.yp"
+#line 95 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 53
 		 'keyword_as_value', 1,
 sub
-#line 116 "BxParser.yp"
+#line 96 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 54
 		 'value', 1,
 sub
-#line 119 "BxParser.yp"
+#line 99 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 55
 		 'value', 1,
 sub
-#line 120 "BxParser.yp"
+#line 100 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 56
 		 'value', 1,
 sub
-#line 121 "BxParser.yp"
+#line 101 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 57
 		 'value', 1,
 sub
-#line 122 "BxParser.yp"
+#line 102 "BxParser.yp"
 { ($_[1] =~ m/^"(.*?)"$/)[0]; }
 	],
 	[#Rule 58
 		 'value', 1,
 sub
-#line 123 "BxParser.yp"
+#line 103 "BxParser.yp"
 { ($_[1] =~ m/^'(.*?)'$/)[0]; }
 	],
 	[#Rule 59
 		 'value', 1,
 sub
-#line 124 "BxParser.yp"
+#line 104 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 60
 		 'number', 1,
 sub
-#line 127 "BxParser.yp"
+#line 107 "BxParser.yp"
 { $_[1] + 0 }
 	],
 	[#Rule 61
 		 'number', 1,
 sub
-#line 128 "BxParser.yp"
+#line 108 "BxParser.yp"
 { $_[1] + 0 }
 	],
 	[#Rule 62
 		 'number', 2,
 sub
-#line 129 "BxParser.yp"
+#line 109 "BxParser.yp"
 { 0 - $_[2] }
 	],
 	[#Rule 63
 		 'number', 2,
 sub
-#line 130 "BxParser.yp"
+#line 110 "BxParser.yp"
 { 0 - $_[2] }
 	]
 ],
@@ -1067,7 +1047,7 @@ sub
     bless($self,$class);
 }
 
-#line 133 "BxParser.yp"
+#line 113 "BxParser.yp"
 
 
 use strict;
@@ -1194,6 +1174,43 @@ sub _simplify {
         }
     }
     return $expr;
+}
+
+# Handles the case for "expr AND expr" where one or both exprs can be an
+# OR-type expr.  In that case, it distributes the AND exprs among all the
+# OR conditions.  For example:
+# (a=1 or b=2) and (c=3 or d=4)
+# is the same as
+# (a=1 and c=3) or (a=1 and d=4) or (b=2 and c=3) or (b=2 and d=4)
+# This is necessary because the BoolExpr resolver can only handle 1-level deep
+# AND-type rules, or a 1-level deep OR-type rule composed of any number of
+# 1-level deep AND-type rules
+sub _and {
+    my $class = shift;
+
+    foreach my $i ( 1,3 ) {
+        unless (ref($_[$i][0])) {
+            $_[$i] = [$_[$i]];
+        }
+    }
+    my @and;
+    foreach my $left ( @{$_[1]} ) {
+        foreach my $right (@{$_[3]}) {
+            push @and, [@$left, @$right];
+        }
+    }
+    \@and;
+}
+
+sub _or {
+    my $class = shift;
+
+    foreach my $i ( 1,3 ) {
+        unless (ref($_[$i][0])) {
+            $_[$i] = [$_[$i]];
+        }
+    }
+    [ @{$_[1]}, @{$_[3]} ];
 }
 
 1;
