@@ -216,7 +216,7 @@ foreach my $test (
     my $r = UR::BoolExpr->resolve_for_string(
                'URT::Item',
                $test->{'string'});
-    ok($r, "Created rule from string $string");
+    ok($r, "Created rule from string \"$string\"");
     my @got_values = $r->values();
     is(scalar(@got_values), $value_count, 'Rule has the right number of values');
 
@@ -424,7 +424,7 @@ foreach my $test (
    $DB::single=1 if ($test->{'stop'});
     my $string = $test->{'string'};
     my $composite_rule = UR::BoolExpr->resolve_for_string('URT::Item',$string);
-    ok($composite_rule, "Created rule from string $string");
+    ok($composite_rule, "Created rule from string \"$string\"");
     isa_ok($composite_rule->template, 'UR::BoolExpr::Template::Or');
 
 #print Data::Dumper::Dumper($composite_rule);
