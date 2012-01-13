@@ -29,6 +29,7 @@ sub new {
 			'LEFT_PAREN' => 2,
 			'IDENTIFIER' => 1
 		},
+		DEFAULT => -1,
 		GOTOS => {
 			'boolexpr' => 3,
 			'expr' => 4,
@@ -37,7 +38,7 @@ sub new {
 		}
 	},
 	{#State 1
-		DEFAULT => -16
+		DEFAULT => -17
 	},
 	{#State 2
 		ACTIONS => {
@@ -62,7 +63,7 @@ sub new {
 			'AND' => 11,
 			'OR' => 12
 		},
-		DEFAULT => -1
+		DEFAULT => -2
 	},
 	{#State 5
 		ACTIONS => {
@@ -87,7 +88,7 @@ sub new {
 		}
 	},
 	{#State 6
-		DEFAULT => -4
+		DEFAULT => -5
 	},
 	{#State 7
 		ACTIONS => {
@@ -141,7 +142,7 @@ sub new {
 		}
 	},
 	{#State 13
-		DEFAULT => -29
+		DEFAULT => -30
 	},
 	{#State 14
 		ACTIONS => {
@@ -170,7 +171,7 @@ sub new {
 		}
 	},
 	{#State 15
-		DEFAULT => -27
+		DEFAULT => -28
 	},
 	{#State 16
 		ACTIONS => {
@@ -195,7 +196,7 @@ sub new {
 		}
 	},
 	{#State 17
-		DEFAULT => -44
+		DEFAULT => -45
 	},
 	{#State 18
 		ACTIONS => {
@@ -222,22 +223,22 @@ sub new {
 		}
 	},
 	{#State 19
-		DEFAULT => -23
+		DEFAULT => -24
 	},
 	{#State 20
-		DEFAULT => -26
+		DEFAULT => -27
 	},
 	{#State 21
-		DEFAULT => -25
+		DEFAULT => -26
 	},
 	{#State 22
-		DEFAULT => -30
+		DEFAULT => -31
 	},
 	{#State 23
-		DEFAULT => -28
+		DEFAULT => -29
 	},
 	{#State 24
-		DEFAULT => -32
+		DEFAULT => -33
 	},
 	{#State 25
 		ACTIONS => {
@@ -265,7 +266,7 @@ sub new {
 		}
 	},
 	{#State 26
-		DEFAULT => -36
+		DEFAULT => -37
 	},
 	{#State 27
 		ACTIONS => {
@@ -306,16 +307,16 @@ sub new {
 		}
 	},
 	{#State 29
-		DEFAULT => -7
+		DEFAULT => -8
 	},
 	{#State 30
-		DEFAULT => -3
+		DEFAULT => -4
 	},
 	{#State 31
 		ACTIONS => {
 			'AND' => 71
 		},
-		DEFAULT => -21
+		DEFAULT => -22
 	},
 	{#State 32
 		ACTIONS => {
@@ -329,26 +330,26 @@ sub new {
 		ACTIONS => {
 			'AND' => 73
 		},
-		DEFAULT => -17
+		DEFAULT => -18
 	},
 	{#State 34
-		DEFAULT => -2
+		DEFAULT => -3
 	},
 	{#State 35
 		ACTIONS => {
 			'AND' => 11
 		},
-		DEFAULT => -5
+		DEFAULT => -6
 	},
 	{#State 36
 		ACTIONS => {
 			'AND' => 11,
 			'OR' => 12
 		},
-		DEFAULT => -6
+		DEFAULT => -7
 	},
 	{#State 37
-		DEFAULT => -55
+		DEFAULT => -56
 	},
 	{#State 38
 		ACTIONS => {
@@ -374,7 +375,7 @@ sub new {
 		}
 	},
 	{#State 39
-		DEFAULT => -56
+		DEFAULT => -57
 	},
 	{#State 40
 		ACTIONS => {
@@ -383,31 +384,31 @@ sub new {
 		}
 	},
 	{#State 41
-		DEFAULT => -54
+		DEFAULT => -55
 	},
 	{#State 42
-		DEFAULT => -51
-	},
-	{#State 43
-		DEFAULT => -60
-	},
-	{#State 44
-		DEFAULT => -38
-	},
-	{#State 45
-		DEFAULT => -59
-	},
-	{#State 46
-		DEFAULT => -53
-	},
-	{#State 47
-		DEFAULT => -14
-	},
-	{#State 48
 		DEFAULT => -52
 	},
+	{#State 43
+		DEFAULT => -61
+	},
+	{#State 44
+		DEFAULT => -39
+	},
+	{#State 45
+		DEFAULT => -60
+	},
+	{#State 46
+		DEFAULT => -54
+	},
+	{#State 47
+		DEFAULT => -15
+	},
+	{#State 48
+		DEFAULT => -53
+	},
 	{#State 49
-		DEFAULT => -58
+		DEFAULT => -59
 	},
 	{#State 50
 		ACTIONS => {
@@ -416,34 +417,34 @@ sub new {
 		}
 	},
 	{#State 51
-		DEFAULT => -50
+		DEFAULT => -51
 	},
 	{#State 52
-		DEFAULT => -47
-	},
-	{#State 53
-		DEFAULT => -11
-	},
-	{#State 54
-		DEFAULT => -49
-	},
-	{#State 55
 		DEFAULT => -48
 	},
+	{#State 53
+		DEFAULT => -12
+	},
+	{#State 54
+		DEFAULT => -50
+	},
+	{#State 55
+		DEFAULT => -49
+	},
 	{#State 56
-		DEFAULT => -57
+		DEFAULT => -58
 	},
 	{#State 57
-		DEFAULT => -8
-	},
-	{#State 58
 		DEFAULT => -9
 	},
+	{#State 58
+		DEFAULT => -10
+	},
 	{#State 59
-		DEFAULT => -35
+		DEFAULT => -36
 	},
 	{#State 60
-		DEFAULT => -34
+		DEFAULT => -35
 	},
 	{#State 61
 		ACTIONS => {
@@ -451,10 +452,10 @@ sub new {
 		}
 	},
 	{#State 62
-		DEFAULT => -10
+		DEFAULT => -11
 	},
 	{#State 63
-		DEFAULT => -13
+		DEFAULT => -14
 	},
 	{#State 64
 		ACTIONS => {
@@ -488,19 +489,19 @@ sub new {
 		}
 	},
 	{#State 66
-		DEFAULT => -45
+		DEFAULT => -46
 	},
 	{#State 67
-		DEFAULT => -24
+		DEFAULT => -25
 	},
 	{#State 68
-		DEFAULT => -31
+		DEFAULT => -32
 	},
 	{#State 69
-		DEFAULT => -33
+		DEFAULT => -34
 	},
 	{#State 70
-		DEFAULT => -37
+		DEFAULT => -38
 	},
 	{#State 71
 		ACTIONS => {
@@ -515,7 +516,7 @@ sub new {
 		ACTIONS => {
 			'AND' => 83
 		},
-		DEFAULT => -18
+		DEFAULT => -19
 	},
 	{#State 73
 		ACTIONS => {
@@ -536,13 +537,13 @@ sub new {
 		ACTIONS => {
 			'SET_SEPARATOR' => 86
 		},
-		DEFAULT => -43
+		DEFAULT => -44
 	},
 	{#State 76
-		DEFAULT => -62
+		DEFAULT => -63
 	},
 	{#State 77
-		DEFAULT => -61
+		DEFAULT => -62
 	},
 	{#State 78
 		ACTIONS => {
@@ -592,13 +593,13 @@ sub new {
 		}
 	},
 	{#State 80
-		DEFAULT => -15
+		DEFAULT => -16
 	},
 	{#State 81
-		DEFAULT => -12
+		DEFAULT => -13
 	},
 	{#State 82
-		DEFAULT => -22
+		DEFAULT => -23
 	},
 	{#State 83
 		ACTIONS => {
@@ -611,10 +612,10 @@ sub new {
 		}
 	},
 	{#State 84
-		DEFAULT => -19
+		DEFAULT => -20
 	},
 	{#State 85
-		DEFAULT => -41
+		DEFAULT => -42
 	},
 	{#State 86
 		ACTIONS => {
@@ -640,22 +641,22 @@ sub new {
 		}
 	},
 	{#State 87
-		DEFAULT => -46
+		DEFAULT => -47
 	},
 	{#State 88
 		ACTIONS => {
 			'IN_DIVIDER' => 79
 		},
-		DEFAULT => -40
+		DEFAULT => -41
 	},
 	{#State 89
-		DEFAULT => -39
+		DEFAULT => -40
 	},
 	{#State 90
-		DEFAULT => -20
+		DEFAULT => -21
 	},
 	{#State 91
-		DEFAULT => -42
+		DEFAULT => -43
 	}
 ],
                                   yyrules  =>
@@ -664,9 +665,15 @@ sub new {
 		 '$start', 2, undef
 	],
 	[#Rule 1
-		 'boolexpr', 1,
+		 'boolexpr', 0,
 sub
 #line 10 "BxParser.yp"
+{ [] }
+	],
+	[#Rule 2
+		 'boolexpr', 1,
+sub
+#line 11 "BxParser.yp"
 { my $expr = $_[1];
                                     if (ref($expr->[0])) {
                                         if (@$expr == 1) {
@@ -678,28 +685,28 @@ sub
                                     $expr;
                                   }
 	],
-	[#Rule 2
-		 'boolexpr', 3,
-sub
-#line 20 "BxParser.yp"
-{ [@{$_[1]}, '-order', $_[3]] }
-	],
 	[#Rule 3
 		 'boolexpr', 3,
 sub
 #line 21 "BxParser.yp"
-{ [@{$_[1]}, '-group', $_[3]] }
+{ [@{$_[1]}, '-order', $_[3]] }
 	],
 	[#Rule 4
-		 'expr', 1,
+		 'boolexpr', 3,
 sub
-#line 24 "BxParser.yp"
-{ $_[1] }
+#line 22 "BxParser.yp"
+{ [@{$_[1]}, '-group', $_[3]] }
 	],
 	[#Rule 5
-		 'expr', 3,
+		 'expr', 1,
 sub
 #line 25 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 6
+		 'expr', 3,
+sub
+#line 26 "BxParser.yp"
 {
                                     foreach my $i ( 1,3 ) {
                                         unless (ref($_[$i][0])) {
@@ -715,10 +722,10 @@ sub
                                     \@and;
                                   }
 	],
-	[#Rule 6
+	[#Rule 7
 		 'expr', 3,
 sub
-#line 39 "BxParser.yp"
+#line 40 "BxParser.yp"
 {
                                     foreach my $i ( 1,3 ) {
                                         unless (ref($_[$i][0])) {
@@ -728,17 +735,11 @@ sub
                                     [ @{$_[1]}, @{$_[3]} ];
                                   }
 	],
-	[#Rule 7
+	[#Rule 8
 		 'expr', 3,
 sub
-#line 47 "BxParser.yp"
+#line 48 "BxParser.yp"
 { $_[2] }
-	],
-	[#Rule 8
-		 'condition', 3,
-sub
-#line 50 "BxParser.yp"
-{ [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 9
 		 'condition', 3,
@@ -756,91 +757,91 @@ sub
 		 'condition', 3,
 sub
 #line 53 "BxParser.yp"
-{ [ "$_[1] in" => $_[3] ] }
+{ [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 12
-		 'condition', 4,
-sub
-#line 54 "BxParser.yp"
-{ [ "$_[1] $_[2] in" => $_[4] ] }
-	],
-	[#Rule 13
 		 'condition', 3,
 sub
+#line 54 "BxParser.yp"
+{ [ "$_[1] in" => $_[3] ] }
+	],
+	[#Rule 13
+		 'condition', 4,
+sub
 #line 55 "BxParser.yp"
-{ [ "$_[1] $_[2]" => $_[3] ] }
+{ [ "$_[1] $_[2] in" => $_[4] ] }
 	],
 	[#Rule 14
 		 'condition', 3,
 sub
 #line 56 "BxParser.yp"
-{ [ "$_[1] between" => $_[3] ] }
+{ [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 15
-		 'condition', 4,
+		 'condition', 3,
 sub
 #line 57 "BxParser.yp"
-{ [ "$_[1] $_[2] between" => $_[4] ] }
+{ [ "$_[1] between" => $_[3] ] }
 	],
 	[#Rule 16
-		 'property', 1,
+		 'condition', 4,
 sub
-#line 60 "BxParser.yp"
-{ $_[1] }
+#line 58 "BxParser.yp"
+{ [ "$_[1] $_[2] between" => $_[4] ] }
 	],
 	[#Rule 17
-		 'order_by_list', 1,
+		 'property', 1,
 sub
-#line 63 "BxParser.yp"
-{ [ $_[1] ] }
-	],
-	[#Rule 18
-		 'order_by_list', 2,
-sub
-#line 64 "BxParser.yp"
-{ [ '-'.$_[2] ] }
-	],
-	[#Rule 19
-		 'order_by_list', 3,
-sub
-#line 65 "BxParser.yp"
-{ [$_[1], @{$_[3]}] }
-	],
-	[#Rule 20
-		 'order_by_list', 4,
-sub
-#line 66 "BxParser.yp"
-{ [ '-'.$_[2], @{$_[4]}] }
-	],
-	[#Rule 21
-		 'group_by_list', 1,
-sub
-#line 69 "BxParser.yp"
-{ [ $_[1] ] }
-	],
-	[#Rule 22
-		 'group_by_list', 3,
-sub
-#line 70 "BxParser.yp"
-{ [$_[1], @{$_[3]}] }
-	],
-	[#Rule 23
-		 'operator', 1,
-sub
-#line 73 "BxParser.yp"
+#line 61 "BxParser.yp"
 { $_[1] }
 	],
+	[#Rule 18
+		 'order_by_list', 1,
+sub
+#line 64 "BxParser.yp"
+{ [ $_[1] ] }
+	],
+	[#Rule 19
+		 'order_by_list', 2,
+sub
+#line 65 "BxParser.yp"
+{ [ '-'.$_[2] ] }
+	],
+	[#Rule 20
+		 'order_by_list', 3,
+sub
+#line 66 "BxParser.yp"
+{ [$_[1], @{$_[3]}] }
+	],
+	[#Rule 21
+		 'order_by_list', 4,
+sub
+#line 67 "BxParser.yp"
+{ [ '-'.$_[2], @{$_[4]}] }
+	],
+	[#Rule 22
+		 'group_by_list', 1,
+sub
+#line 70 "BxParser.yp"
+{ [ $_[1] ] }
+	],
+	[#Rule 23
+		 'group_by_list', 3,
+sub
+#line 71 "BxParser.yp"
+{ [$_[1], @{$_[3]}] }
+	],
 	[#Rule 24
-		 'operator', 2,
+		 'operator', 1,
 sub
 #line 74 "BxParser.yp"
-{ "$_[1] $_[2]" }
+{ $_[1] }
 	],
 	[#Rule 25
-		 'negation', 1,
+		 'operator', 2,
 sub
-#line 77 "BxParser.yp"
-{ 'not' }
+#line 75 "BxParser.yp"
+{ "$_[1] $_[2]" }
 	],
 	[#Rule 26
 		 'negation', 1,
@@ -849,16 +850,16 @@ sub
 { 'not' }
 	],
 	[#Rule 27
-		 'an_operator', 1,
+		 'negation', 1,
 sub
-#line 81 "BxParser.yp"
-{ $_[1] }
+#line 79 "BxParser.yp"
+{ 'not' }
 	],
 	[#Rule 28
 		 'an_operator', 1,
 sub
 #line 82 "BxParser.yp"
-{ '=' }
+{ $_[1] }
 	],
 	[#Rule 29
 		 'an_operator', 1,
@@ -867,112 +868,112 @@ sub
 { '=' }
 	],
 	[#Rule 30
-		 'like_operator', 1,
+		 'an_operator', 1,
 sub
-#line 86 "BxParser.yp"
-{ 'like' }
+#line 84 "BxParser.yp"
+{ '=' }
 	],
 	[#Rule 31
-		 'like_operator', 2,
-sub
-#line 87 "BxParser.yp"
-{ "$_[1] like" }
-	],
-	[#Rule 32
 		 'like_operator', 1,
 sub
-#line 88 "BxParser.yp"
+#line 87 "BxParser.yp"
 { 'like' }
 	],
-	[#Rule 33
+	[#Rule 32
 		 'like_operator', 2,
 sub
-#line 89 "BxParser.yp"
+#line 88 "BxParser.yp"
 { "$_[1] like" }
 	],
-	[#Rule 34
-		 'like_value', 1,
+	[#Rule 33
+		 'like_operator', 1,
 sub
-#line 92 "BxParser.yp"
-{ '%' . $_[1] . '%' }
+#line 89 "BxParser.yp"
+{ 'like' }
+	],
+	[#Rule 34
+		 'like_operator', 2,
+sub
+#line 90 "BxParser.yp"
+{ "$_[1] like" }
 	],
 	[#Rule 35
 		 'like_value', 1,
 sub
 #line 93 "BxParser.yp"
-{ $_[1] }
+{ '%' . $_[1] . '%' }
 	],
 	[#Rule 36
-		 'in_operator', 1,
+		 'like_value', 1,
 sub
-#line 96 "BxParser.yp"
-{ 'in' }
-	],
-	[#Rule 37
-		 'in_operator', 2,
-sub
-#line 97 "BxParser.yp"
-{ "$_[1] in" }
-	],
-	[#Rule 38
-		 'in_value', 1,
-sub
-#line 100 "BxParser.yp"
+#line 94 "BxParser.yp"
 { $_[1] }
 	],
+	[#Rule 37
+		 'in_operator', 1,
+sub
+#line 97 "BxParser.yp"
+{ 'in' }
+	],
+	[#Rule 38
+		 'in_operator', 2,
+sub
+#line 98 "BxParser.yp"
+{ "$_[1] in" }
+	],
 	[#Rule 39
-		 'in_value', 3,
+		 'in_value', 1,
 sub
 #line 101 "BxParser.yp"
-{ [ $_[1], @{$_[3]} ] }
+{ $_[1] }
 	],
 	[#Rule 40
 		 'in_value', 3,
 sub
 #line 102 "BxParser.yp"
-{ [ $_[1], $_[3] ] }
-	],
-	[#Rule 41
-		 'set', 3,
-sub
-#line 105 "BxParser.yp"
-{ $_[2] }
-	],
-	[#Rule 42
-		 'set_body', 3,
-sub
-#line 108 "BxParser.yp"
 { [ $_[1], @{$_[3]} ] }
 	],
-	[#Rule 43
-		 'set_body', 1,
+	[#Rule 41
+		 'in_value', 3,
 sub
-#line 109 "BxParser.yp"
-{ [ $_[1] ] }
-	],
-	[#Rule 44
-		 'between_operator', 1,
-sub
-#line 112 "BxParser.yp"
-{ 'between' }
-	],
-	[#Rule 45
-		 'between_operator', 2,
-sub
-#line 113 "BxParser.yp"
-{ "$_[1] between" }
-	],
-	[#Rule 46
-		 'between_value', 3,
-sub
-#line 116 "BxParser.yp"
+#line 103 "BxParser.yp"
 { [ $_[1], $_[3] ] }
 	],
-	[#Rule 47
-		 'keyword_as_value', 1,
+	[#Rule 42
+		 'set', 3,
 sub
-#line 119 "BxParser.yp"
-{ $_[1] }
+#line 106 "BxParser.yp"
+{ $_[2] }
+	],
+	[#Rule 43
+		 'set_body', 3,
+sub
+#line 109 "BxParser.yp"
+{ [ $_[1], @{$_[3]} ] }
+	],
+	[#Rule 44
+		 'set_body', 1,
+sub
+#line 110 "BxParser.yp"
+{ [ $_[1] ] }
+	],
+	[#Rule 45
+		 'between_operator', 1,
+sub
+#line 113 "BxParser.yp"
+{ 'between' }
+	],
+	[#Rule 46
+		 'between_operator', 2,
+sub
+#line 114 "BxParser.yp"
+{ "$_[1] between" }
+	],
+	[#Rule 47
+		 'between_value', 3,
+sub
+#line 117 "BxParser.yp"
+{ [ $_[1], $_[3] ] }
 	],
 	[#Rule 48
 		 'keyword_as_value', 1,
@@ -1005,9 +1006,9 @@ sub
 { $_[1] }
 	],
 	[#Rule 53
-		 'value', 1,
+		 'keyword_as_value', 1,
 sub
-#line 127 "BxParser.yp"
+#line 125 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 54
@@ -1026,25 +1027,25 @@ sub
 		 'value', 1,
 sub
 #line 130 "BxParser.yp"
-{ ($_[1] =~ m/^"(.*?)"$/)[0]; }
+{ $_[1] }
 	],
 	[#Rule 57
 		 'value', 1,
 sub
 #line 131 "BxParser.yp"
-{ ($_[1] =~ m/^'(.*?)'$/)[0]; }
+{ ($_[1] =~ m/^"(.*?)"$/)[0]; }
 	],
 	[#Rule 58
 		 'value', 1,
 sub
 #line 132 "BxParser.yp"
-{ $_[1] }
+{ ($_[1] =~ m/^'(.*?)'$/)[0]; }
 	],
 	[#Rule 59
-		 'number', 1,
+		 'value', 1,
 sub
-#line 135 "BxParser.yp"
-{ $_[1] + 0 }
+#line 133 "BxParser.yp"
+{ $_[1] }
 	],
 	[#Rule 60
 		 'number', 1,
@@ -1053,15 +1054,21 @@ sub
 { $_[1] + 0 }
 	],
 	[#Rule 61
-		 'number', 2,
+		 'number', 1,
 sub
 #line 137 "BxParser.yp"
-{ 0 - $_[2] }
+{ $_[1] + 0 }
 	],
 	[#Rule 62
 		 'number', 2,
 sub
 #line 138 "BxParser.yp"
+{ 0 - $_[2] }
+	],
+	[#Rule 63
+		 'number', 2,
+sub
+#line 139 "BxParser.yp"
 { 0 - $_[2] }
 	]
 ],
@@ -1069,7 +1076,7 @@ sub
     bless($self,$class);
 }
 
-#line 141 "BxParser.yp"
+#line 142 "BxParser.yp"
 
 
 use strict;

@@ -7,7 +7,8 @@
 
 %%
 
-boolexpr: expr                    { my $expr = $_[1];
+boolexpr:                         { [] }
+        | expr                    { my $expr = $_[1];
                                     if (ref($expr->[0])) {
                                         if (@$expr == 1) {
                                             $expr = $expr->[0];  # An or-type parse tree, but with only one AND subrule - use as a simple and-type rule

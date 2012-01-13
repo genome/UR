@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 465;
+use Test::More tests => 467;
 use Data::Dumper;
 use IO::Handle;
 
@@ -35,6 +35,10 @@ class URT::Item {
 #$::RD_TRACE=1;
 
 foreach my $test (
+    { string => '',
+      values => {},
+      operators => {},
+    },
     { string => 'name = bob',
       values => { name => 'bob' },
       operators => { name => '=' },
