@@ -35,10 +35,6 @@ class URT::Item {
 #$::RD_TRACE=1;
 
 foreach my $test (
-    { string => '',
-      values => {},
-      operators => {},
-    },
     { string => 'name = bob',
       values => { name => 'bob' },
       operators => { name => '=' },
@@ -204,6 +200,15 @@ foreach my $test (
       operators => { name => '=' },
       order_by => ['-score','-foo'],
       group_by => ['ritem_id','parent_name'],
+    },
+    { string => '',
+      values => {},
+      operators => {},
+    },
+    { string => 'order by score',
+      values => {},
+      operators => {},
+      order_by => ['score'],
     },
 ) {
 
