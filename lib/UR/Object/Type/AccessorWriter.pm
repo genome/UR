@@ -75,122 +75,6 @@ sub mk_ro_accessor {
 
 }
 
-sub mk_id_based_flex_accessor {
-    my ($self, $class_name, $accessor_name, $id_by, $r_class_name, $where, $id_class_by) = @_;
-
-    unless (ref($id_by)) {
-        $id_by = [ $id_by ];
-    }
-
-    my $id_resolver;
-    my $id_decomposer;
-    my @id;
-    my $id;
-    my $full_name = join( '::', $class_name, $accessor_name );
-    my $concrete_r_class_name = $r_class_name;
-    my $accessor = Sub::Name::subname $full_name => sub {
-        my $self = shift;
-        if (@_ == 1) {
-            # This one is to support syntax like this
-            # $cd->artist($different_artist);
-            # to switch which artist object this cd points to
-            my $object_value = shift;
-            if ($id_class_by and not ref $object_value) {
-                # when we have an id-class-by accessor and get a primitive, store it as a UR::Value
-                $object_value = UR::Value->get($object_value);
-            }
-            if (defined $object_value) {
-                if ($id_class_by) {
-                    $concrete_r_class_name = ($object_value->can('class') ? $object_value->class : ref($object_value));
-                    $id_decomposer = undef;
-                    $id_resolver = undef;
-                    $self->$id_class_by($concrete_r_class_name);
-                } elsif (! Scalar::Util::blessed($object_value) and ! $object_value->can('id')) {
-                    Carp::croak("Can't call method \"id\" without a package or object reference.  Expected an object as parameter to '$accessor_name', not the value '$object_value'");
-                }
-
-                my $r_class_meta = eval { $concrete_r_class_name->__meta__ };
-                unless ($r_class_meta) {
-                    Carp::croak("Can't get metadata for class $concrete_r_class_name.  Is it a UR class?");
-                }
-
-                $id_decomposer ||= $r_class_meta->get_composite_id_decomposer;
-                @id = $id_decomposer->($object_value->id);
-                if (@$id_by == 1) {
-                    my $id_property_name = $id_by->[0];
-                    $self->$id_property_name($object_value->id);
-                } else {
-                    @id = $id_decomposer->($object_value->id);
-                    Carp::croak("Cannot alter value for '$accessor_name' on $class_name: The passed-in object of type "
-                                . $object_value->class . " has " . scalar(@id) . " id properties, but the accessor '$accessor_name' has "
-                                . scalar(@$id_by) . " id_by properties");
-                    for my $id_property_name (@$id_by) {
-                        $self->$id_property_name(shift @id);
-                    }
-                }
-            }
-            else {
-                if ($id_class_by) {
-                    $self->$id_class_by(undef);
-                }
-                for my $id_property_name (@$id_by) {
-                    $self->$id_property_name(undef);
-                }
-            }
-            return $object_value;
-        }
-        else {
-            if ($id_class_by) {
-                $concrete_r_class_name = $self->$id_class_by;
-                $id_decomposer = undef;
-                $id_resolver = undef;
-                return unless $concrete_r_class_name;
-            }
-            unless ($id_resolver) {
-                my $concrete_r_class_meta = UR::Object::Type->get($concrete_r_class_name);
-                unless ($concrete_r_class_meta) {
-                    Carp::croak("Can't resolve value for '$accessor_name' on class $class_name id '".$self->id
-                                . "': No class metadata for value '$concrete_r_class_name' referenced as property '$id_class_by'");
-                }
-                $id_resolver = $concrete_r_class_meta->get_composite_id_resolver;
-            }
-            
-            # eliminate the old map{} because of side effects with $_
-            # when the id_by property happens to be calculated
-            #@id = map { $self->$_ } @$id_by;
-            @id=();
-            for my $property_name (@$id_by) {      # no implicit topic
-                my $value = $self->$property_name; # scalar context
-                push @id, $value;
-            }
-
-            $id = $id_resolver->(@id);
-            return if not defined $id;
-            if ($concrete_r_class_name eq 'UR::Object') {
-                Carp::carp("Querying by using UR::Object class is deprecated.");
-            }
-
-            if ($concrete_r_class_name->isa("UR::Value")) {
-                return $id;
-            }
-            else {
-                if (@_ || $where) { 
-                    # There were additional params passed in 
-                    return $concrete_r_class_name->get(id => $id, @_, @$where);
-                } else {
-                    return $concrete_r_class_name->get($id);
-                }
-            }
-        }
-    };
-
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $accessor_name,
-        code => $accessor,
-    });
-}
-
 sub mk_id_based_object_accessor {
     my ($self, $class_name, $accessor_name, $id_by, $r_class_name, $where, $id_class_by) = @_;
 
@@ -1459,13 +1343,7 @@ sub initialize_direct_accessors {
             my $r_class_name = $property_data->{data_type};
             #$self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where);
             my $id_class_by = $property_data->{id_class_by};
-            if ($property_data->{access_as} and $property_data->{access_as} eq 'auto') {
-                $self->mk_id_based_flex_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where, $id_class_by);
-                $self->mk_id_based_object_accessor($class_name, $accessor_name . ($property_data->{is_many} ? '_objs' : '_obj'), $id_by, $r_class_name,$where, $id_class_by);
-            }
-            else {
-                $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where, $id_class_by);
-            }
+            $self->mk_id_based_object_accessor($class_name, $accessor_name, $id_by, $r_class_name,$where, $id_class_by);
         }
         elsif ($property_data->{'is_calculated'} and ! $property_data->{'is_mutable'}) {# and $property_data->{'column_name'}) {
             # For calculated + immutable properties, their calculation function is called

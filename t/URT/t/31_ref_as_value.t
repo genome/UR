@@ -104,14 +104,8 @@ is_deeply($c->foo,[qw{foo bar baz}],'Checking array for alpha-sort');
 
 # new rule logic seems to allow boolexpr references to be cloned
 
-my $n = 0;
 for my $c ('Bar') {
-    class {$c} { };
-    
-    $n++;
-    my $Foo = "Foo" . $n;
-
-    class {$Foo} { 
+    class Foo { 
         has => [ 
             a => { is => $c }, 
             b => { is => $c }, 
@@ -119,11 +113,10 @@ for my $c ('Bar') {
         ] 
     }; 
 
-
     my @r = map { bless({ id => $_ },"Bar"); } (100..102); 
     my @f = qw/a b c/;
 
-    my $oo = $Foo->define_boolexpr(a => $r[0], c => $r[2], b => $r[1]); 
+    my $oo = Foo->define_boolexpr(a => $r[0], c => $r[2], b => $r[1]); 
     my %pp = $oo->params_list; 
     my @pp = @pp{@f}; 
 

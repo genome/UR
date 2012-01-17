@@ -614,7 +614,7 @@ sub resolve {
                     push @xremove_keys, $kn-1;
                     push @xremove_values, $vn-1;
                 }
-                elsif ($value->isa($property_meta->_data_type_as_class_name)) {
+                elsif ($value->isa($property_meta->data_type)) {
                     push @hard_refs, $vn-1, $value;
                 }
                 elsif ($value->can($property_name)) {
@@ -625,9 +625,6 @@ sub resolve {
                 }
                 else {
                     $operator = 'eq' unless $operator;
-                    $DB::single = 1;
-                    print $value->isa($property_meta->_data_type_as_class_name),"\n";
-                    print $value->isa($property_meta->_data_type_as_class_name),"\n";
                     Carp::croak("Invalid data type in rule.  A value of type " . ref($value) . " cannot be used in class $subject_class property '$property_name' with operator $operator!");
                 }
                 # end of handling a value which is an arrayref
