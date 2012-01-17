@@ -81,10 +81,6 @@ sub _convert_data_type_for_source_class_to_final_class {
         else {
             Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
         }
-        eval "use $foreign_class;";
-        if (!$@) {
-            return $foreign_class;
-        }
     }
 
     return $final_class;
