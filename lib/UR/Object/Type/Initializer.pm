@@ -1002,6 +1002,7 @@ sub _normalize_property_description1 {
         [ id_class_by                     => qw//],
         [ specify_by                      => qw//],
         [ order_by                        => qw//],
+        [ access_as                       => qw//],
         [ via                             => qw//], 
         [ to                              => qw//],             
         [ where                           => qw/restrict filter/],

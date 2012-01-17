@@ -30,6 +30,66 @@ sub is_numeric {
     return $self->{'_is_numeric'};
 }
 
+sub _convert_data_type_for_source_class_to_final_class {
+    my ($class, $foreign_class, $source_class) = @_;
+
+    # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
+    # We should have an is_primitive flag set on these so we do efficient work.
+
+    my ($ns) = ($source_class =~ /^([^:]+)::/);
+    if ($ns and not $ns->isa("UR::Namespace")) {
+        $ns = undef;
+    }
+
+    my $final_class;
+    if ($foreign_class) {
+        if ($foreign_class->can('__meta__')) {
+            $final_class = $foreign_class;
+        }
+        else {
+            my ($ns_value_class, $ur_value_class);
+
+            if ($ns and $ns->can("get")) {
+                $ns_value_class = $ns . '::Value::' . $foreign_class;
+                if ($ns_value_class->can('__meta__')) {
+                    $final_class = $ns_value_class;
+                }
+            }
+
+            if (!$final_class) {
+                $ur_value_class = 'UR::Value::' . $foreign_class;
+                if ($ur_value_class->can('__meta__')) {
+                    $final_class = $ur_value_class;
+                }
+            }
+            if (!$final_class) {
+                $ur_value_class = 'UR::Value::' . ucfirst(lc($foreign_class));
+                if ($ur_value_class->can('__meta__')) {
+                    $final_class = $ur_value_class;
+                }
+            }
+        }
+    }
+
+    if (!$final_class) {
+        if (Class::Autouse->class_exists($foreign_class)) {
+            return $foreign_class;
+        }
+        elsif (!$ns or $ns->get()->allow_sloppy_primitives) {
+            $final_class = 'UR::Value::SloppyPrimitive';
+        }
+        else {
+            Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
+        }
+        eval "use $foreign_class;";
+        if (!$@) {
+            return $foreign_class;
+        }
+    }
+
+    return $final_class;
+}
+
 sub _data_type_as_class_name {
     my $self = $_[0];
     return $self->{_data_type_as_class_name} ||= do {
@@ -37,6 +97,7 @@ sub _data_type_as_class_name {
         #this is so NUMBER -> Number
         my $foreign_class = $self->data_type;
 
+        
         if (not $foreign_class) {
             if ($self->via or $self->to) {
                 my @joins = UR::Object::Join->resolve_chain(
@@ -48,54 +109,7 @@ sub _data_type_as_class_name {
             }
         }
 
-        # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
-        # We should have an is_primitive flag set on these so we do efficient work.
-
-        my ($ns) = ($source_class =~ /^([^:]+)::/);
-        if ($ns and not $ns->isa("UR::Namespace")) {
-            $ns = undef;
-        }
-
-        my $final_class;
-        if ($foreign_class) {
-            if ($foreign_class->can('__meta__')) {
-                $final_class = $foreign_class;
-            }
-            else {
-                my ($ns_value_class, $ur_value_class);
-
-                if ($ns and $ns->can("get")) {
-                    $ns_value_class = $ns . '::Value::' . $foreign_class;
-                    if ($ns_value_class->can('__meta__')) {
-                        $final_class = $ns_value_class;
-                    }
-                }
-
-                if (!$final_class) {
-                    $ur_value_class = 'UR::Value::' . $foreign_class;
-                    if ($ur_value_class->can('__meta__')) {
-                        $final_class = $ur_value_class;
-                    }
-                }
-                if (!$final_class) {
-                    $ur_value_class = 'UR::Value::' . ucfirst(lc($foreign_class));
-                    if ($ur_value_class->can('__meta__')) {
-                        $final_class = $ur_value_class;
-                    }
-                }
-            }
-        }
-
-        if (!$final_class) {
-            if (!$ns or $ns->get()->allow_sloppy_primitives) {
-                $final_class = 'UR::Value::SloppyPrimitive';
-            }
-            else {
-                Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
-            }
-        }
-
-        $final_class;
+        __PACKAGE__->_convert_data_type_for_source_class_to_final_class($foreign_class, $source_class);
     };
 }
 
