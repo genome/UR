@@ -321,7 +321,10 @@ sub CAN {
         if (my $method = $self->{$accessor_key}) {
             return $method;
         }
-        if (exists $self->class_name->__meta__->{attributes_have}{$method}) {
+        if ($self->class_name->__meta__->{attributes_have}
+            and
+            exists $self->class_name->__meta__->{attributes_have}{$method}
+        ) {
             return $self->{$accessor_key} = sub {
                 return $_[0]->{$method};
             }
