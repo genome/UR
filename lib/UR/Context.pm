@@ -125,6 +125,14 @@ sub monitor_query {
 }
 
 my %_query_log_times;
+my $query_logging_fh = IO::Handle->new();
+$query_logging_fh->fdopen(fileno(STDERR), 'w');
+$query_logging_fh->autoflush(1);
+sub query_logging_fh {
+    $query_logging_fh = $_[1] if @_ > 1;
+    return $query_logging_fh;
+}
+
 sub _log_query_for_rule {
     return if $UR::Object::Type::bootstrapping;
     my $self = shift;
@@ -147,7 +155,7 @@ sub _log_query_for_rule {
     if ($elapsed_time) {
         $message .= sprintf("  Elapsed %.4f s", $elapsed_time);
     }
-    $self->status_message($message);
+    $query_logging_fh->print($message);
 }
 
 sub _log_done_elapsed_time_for_rule {
