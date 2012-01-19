@@ -1040,7 +1040,6 @@ my %token_states = (
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
         WORD => qr{[\/\w][-\w\/]*},   # also allow / for pathnames and - for hyphenated names
-        #WORD => qr{\w+},
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
         LEFT_PAREN => qr{\(},
@@ -1069,10 +1068,6 @@ my %token_states = (
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
     ],
-#    'after_operator' => [
-#        INTEGER => qr{\d+},
-#        REAL => qr{\d*\.\d+|\d+\.\d*},
-#    ],
 );
 
 sub parse {
@@ -1088,7 +1083,6 @@ sub parse {
     $parser->YYData->{PARSER_STATE} = 'DEFAULT';
 
     my $get_next_token = sub {
-$DB::single=1;
         if (length($string) == 0) {
             print "String is empty, we're done!\n" if $debug;
             return (undef, '');  
@@ -1139,13 +1133,6 @@ $DB::single=1;
             $parser->YYData->{REMAINING} = $string;
             if ($longest) {
                 print "Returning token $longest_token, match $longest_match\n" if $debug;
-                #if ($longest_token eq 'LEFT_BRACKET') {
-                #    $parser_state = 'set_contents';
-                #} elsif ($longest_token eq 'RIGHT_BRACKET') {
-                #    $parser_state = '';
-                #} elsif ($longest_token eq 'COMMA') {
-                #    $longest_token = $parser_state eq 'set_contents' ? 'SET_SEPARATOR' : 'AND';
-                #}
                 $parser->YYData->{PARSER_STATE} = $next_parser_state if ($next_parser_state);
                 print "  next state is named ".$parser->YYData->{PARSER_STATE}."\n" if $debug;
                 $parser->YYData->{INPUT} = $longest_token;
