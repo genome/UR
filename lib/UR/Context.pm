@@ -1505,7 +1505,7 @@ sub object_exists_in_underlying_context {
     return (exists($obj->{'db_committed'}) || exists($obj->{'db_saved_uncommitted'}));
 }
 
-   
+
 # this is the underlying method for get/load/is_loaded in ::Object
 
 sub get_objects_for_class_and_rule {
@@ -1543,23 +1543,48 @@ sub get_objects_for_class_and_rule {
         $rule = $rule->normalize;
         my @u = $rule->underlying_rules;
         my @results;
+$DB::single=1;
         for my $u (@u) {
-            if ($return_closure or wantarray) {
-                #push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
-                push @results, $self->get_objects_for_class_and_rule($class,$u,$load,0);
+            if (wantarray) {
+                push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
             }
             else {
-                #my $result = $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
-                my $result = $self->get_objects_for_class_and_rule($class,$u,$load,0);
+                my $result = $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
                 push @results, $result;
             }
         }
         if ($return_closure) {
-            #Carp::confess("TOOD: implement iterator closures for OR rules");
             my $object_sorter = $rule->template->sorter();
-            @results = sort $object_sorter @results;
+            #my $tmpl = $rule->template;
+            #my $object_sorter = $tmpl->sorter();
+
+            my @next;
             return sub {
-                return shift @results;
+$DB::single=1;
+                # fill in missing slots in @next
+                for(my $i = 0; $i < @results; $i++) {
+                    unless (defined $next[$i]) {
+                        # This slot got used lat time through
+                        $next[$i] = $results[$i]->();
+                        unless (defined $next[$i]) {
+                            # That iterator is exhausted, splice it out
+                            splice(@results, $i, 1);
+                            splice(@next, $i, 1);
+                        }
+                    }
+                }
+
+                my $lowest_slot = 0;
+                for(my $i = 1; $i < @results; $i++) {
+                    my $cmp = $object_sorter->($next[$lowest_slot], $next[$i]);
+                    if ($cmp > 0) {
+                        $lowest_slot = $i;
+                    }
+                }
+
+                my $retval = $next[$lowest_slot];
+                $next[$lowest_slot] = undef;
+                return $retval;
             };
         }
 
