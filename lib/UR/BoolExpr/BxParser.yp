@@ -128,8 +128,8 @@ sub _error {
 
 my %token_states = (
     'DEFAULT' => [
-        AND => qr{and},
-        OR => qr{or},
+        AND => [ qr{and}, 'DEFAULT'],
+        OR => [ qr{or}, 'DEFAULT' ],
         BETWEEN_WORD => qr{between},
         LIKE_WORD => qr{like},
         IN_WORD => qr{in},
@@ -138,7 +138,8 @@ my %token_states = (
         MINUS => qr{-},
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
-        WORD => qr{\w+},
+        WORD => qr{\w[-\w\/]*},   # also allow / for pathnames and - for hyphenated names
+        #WORD => qr{\w+},
         DOUBLEQUOTE_STRING => qr{"(\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(\\.|[^'])+'},
         LEFT_PAREN => qr{\(},
@@ -149,20 +150,28 @@ my %token_states = (
         EQUAL_SIGN => qr{=},
         DOUBLEEQUAL_SIGN => qr{=>},
         OPERATORS => qr{<|>|<=|>=},
-        AND => qr{,},  # Depending on state, can be either AND or SET_SEPARATOR
-        COLON => qr{:},
+        AND => [ qr{,}, 'DEFAULT' ],
+        COLON => [ qr{:}, 'after_colon_value' ],
         TILDE => qr{~},
         LIKE_PATTERN => qr{[\w%_]+},
-        IN_DIVIDER => qr{\/},
         ORDER_BY => qr{order by},
         GROUP_BY => qr{group by},
     ],
     'set_contents' => [
         SET_SEPARATOR => [qr{,}, ''],  # Depending on state, can be either AND or SET_SEPARATOR
     ],
-    'single_value' => [
-        WORD => [ qr{\w[\w-]*}, '' ],
+    'after_colon_value' => [
+        INTEGER => qr{\d+},
+        REAL => qr{\d*\.\d+|\d+\.\d*},
+        IN_DIVIDER => qr{\/},
+        WORD => qr{\w+},    # Override WORD in DEFAULT to disallow /
+        DOUBLEQUOTE_STRING => qr{"(\\.|[^"])+"},
+        SINGLEQUOTE_STRING => qr{'(\\.|[^'])+'},
     ],
+#    'after_operator' => [
+#        INTEGER => qr{\d+},
+#        REAL => qr{\d*\.\d+|\d+\.\d*},
+#    ],
 );
 
 sub parse {
@@ -175,7 +184,7 @@ sub parse {
     my $parser = UR::BoolExpr::BxParser->new();
     $parser->YYData->{STRING} = $string;
 
-    my $parser_state = 'DEFAULT';
+    $parser->YYData->{PARSER_STATE} = 'DEFAULT';
 
     my $get_next_token = sub {
 $DB::single=1;
@@ -184,12 +193,15 @@ $DB::single=1;
             return (undef, '');  
        }
 
+        my $parser_state = $parser->YYData->{PARSER_STATE};
+
         my $longest = 0;
         my $longest_token = '';
         my $longest_match = '';
         my $next_parser_state = $parser_state;
 
         for my $token_list ( $parser_state, 'DEFAULT' ) {
+            print "\nTrying tokens for state $token_list...\n" if $debug;
             my $tokens = $token_states{$token_list};
             for(my $i = 0; $i < @$tokens; $i += 2) {
                 my($tok, $re) = @$tokens[$i, $i+1];
@@ -203,15 +215,20 @@ $DB::single=1;
                     $possible_next_parser_state = $next_parser_state;
                 }
 
-                if ($string =~ m/^(\s*($regex)\s*)/) {
+                if ($string =~ m/^((\s*)($regex)(\s*))/) {
                     print "Matched >>$1<<" if $debug;
                     my $match_len = length($1);
                     if ($match_len > $longest) {
                         print "\n  ** It's now the longest" if $debug;
                         $longest = $match_len;
                         $longest_token = $tok;
-                        $longest_match = $2;
-                        $next_parser_state = $possible_next_parser_state;
+                        $longest_match = $3;
+                        if (length($2) or length($4)) {
+print "\n*** Spaces surround match, going back to DEFAULT state.  \$2>>$2<< \$3>>$3<< \$4>>$4<<\n";
+                            $next_parser_state = 'DEFAULT';
+                        } else {
+                            $next_parser_state = $possible_next_parser_state;
+                        }
                     }
                 }
                 print "\n" if $debug;
@@ -229,8 +246,8 @@ $DB::single=1;
                 #} elsif ($longest_token eq 'COMMA') {
                 #    $longest_token = $parser_state eq 'set_contents' ? 'SET_SEPARATOR' : 'AND';
                 #}
-                $parser_state = $next_parser_state if ($next_parser_state);
-                print "  next state is named $parser_state\n" if $debug;
+                $parser->YYData->{PARSER_STATE} = $next_parser_state if ($next_parser_state);
+                print "  next state is named ".$parser->YYData->{PARSER_STATE}."\n" if $debug;
                 $parser->YYData->{INPUT} = $longest_token;
                 return ($longest_token, $longest_match);
             }
