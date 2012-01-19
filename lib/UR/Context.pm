@@ -1544,16 +1544,23 @@ sub get_objects_for_class_and_rule {
         my @u = $rule->underlying_rules;
         my @results;
         for my $u (@u) {
-            if (wantarray) {
-                push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
+            if ($return_closure or wantarray) {
+                #push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
+                push @results, $self->get_objects_for_class_and_rule($class,$u,$load,0);
             }
             else {
-                my $result = $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
+                #my $result = $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
+                my $result = $self->get_objects_for_class_and_rule($class,$u,$load,0);
                 push @results, $result;
             }
         }
         if ($return_closure) {
-            Carp::confess("TOOD: implement iterator closures for OR rules");
+            #Carp::confess("TOOD: implement iterator closures for OR rules");
+            my $object_sorter = $rule->template->sorter();
+            @results = sort $object_sorter @results;
+            return sub {
+                return shift @results;
+            };
         }
 
         # remove duplicates
