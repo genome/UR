@@ -273,8 +273,11 @@ sub CAN {
     $member_class_name =~ s/::Set$//g; 
     return unless $member_class_name; 
 
-    # pass class methods through
-    if (not ref $self) {
+    # Added the check for __PACKAGE__ because this was causing infinite
+    # recursion when calling UR::Object::Set->can. Looks like Class::AutoloadCAN
+    # does not see this sub on set subclasses so they work fine.
+    # pass class methods through (except for this class)
+    if (!ref($self) && $self ne __PACKAGE__) {
         return $self->can($method);
     }
     elsif ($member_class_name->can($method)) {
