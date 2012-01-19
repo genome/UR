@@ -1192,8 +1192,8 @@ sub _sync_database {
         Carp::croak("Error setting objects to a saved state after sync_database.  Exiting.");
         return;
     }
-    $self->_set_object_saved_committed($_) foreach @$changed_objects;
 
+    $self->_set_all_specified_objects_saved_committed(@$changed_objects);
     return 1;
 }
 

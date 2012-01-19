@@ -552,11 +552,15 @@ for my $type (@message_types) {
     my $logger_subname = $type . "_message";
     my $logger_subref = sub {
         my $self = shift;
+        my @messages = @_;
 
         my $msgdata = $self->_get_msgdata();
 
-        if (@_) {
-            my $msg = shift;
+        if (@messages > 1) {
+            Carp::carp("More than one string passed to ".$type."_message; only using the first one");
+        }
+        if (@messages) {
+            my $msg = shift @messages;
             chomp $msg if defined $msg;
 
             unless (defined ($msgdata->{'dump_' . $type . '_messages'})) {

@@ -611,13 +611,29 @@ sub _set_specified_objects_saved_uncommitted {
 sub _set_all_objects_saved_committed {
     # called by UR::DBI on commit
     my $self = shift;
-    my @objects = $self->_get_current_entities;
-    for my $obj (@objects)  {
-        unless ($self->_set_object_saved_committed($obj)) {
-            die "An error occurred setting " . $obj->__display_name__
-             . " to match the committed database state.  Exiting...";
+    return $self->_set_all_specified_objects_saved_committed($self->_get_current_entities);
+}
+
+sub _set_all_specified_objects_saved_committed {
+    my $self = shift;
+    my @objects = @_;
+
+    # Two step process... set saved and committed, then fire commit observers.
+    # Doing so prevents problems should any of the observers themselves commit.
+    my @saved_objects;
+    for my $obj (@objects) {
+        my $saved = $self->_set_object_saved_committed($obj);
+        push @saved_objects, $saved if $saved;
+    }
+
+    for my $obj (@saved_objects) {
+        next if $obj->isa('UR::DeletedRef');
+        $obj->__signal_change__('commit');
+        if ($obj->isa('UR::Object::Ghost')) {
+            $UR::Context::current->_abandon_object($obj);
         }
     }
+
     return scalar(@objects) || "0 but true";
 }
 
@@ -625,20 +641,18 @@ sub _set_object_saved_committed {
     # called by the above, and some test cases
     my ($self, $object) = @_;
     if ($object->{db_saved_uncommitted}) {
-        if ($object->isa("UR::Object::Ghost")) {
-            $object->__signal_change__("commit");
-            $UR::Context::current->_abandon_object($object);
-        }
-        else {
+        unless ($object->isa('UR::Object::Ghost')) {
             %{ $object->{db_committed} } = (
                 ($object->{db_committed} ? %{ $object->{db_committed} } : ()),
                 %{ $object->{db_saved_uncommitted} }
             );
             delete $object->{db_saved_uncommitted};
-            $object->__signal_change__("commit");
         }
+        return $object;
     }
-    return $object;
+    else {
+        return;
+    }
 }
 
 sub _set_all_objects_saved_rolled_back {
