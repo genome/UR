@@ -1524,8 +1524,6 @@ sub _get_objects_for_class_and_or_rule {
     }
     if ($return_closure) {
         my $object_sorter = $rule->template->sorter();
-        #my $tmpl = $rule->template;
-        #my $object_sorter = $tmpl->sorter();
 
         my @next;
         return sub {
