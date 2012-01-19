@@ -242,22 +242,6 @@ sub __related_set__ {
     return $bx2->subject_class_name->define_set($bx2);
 }
 
-sub _init_subclass {
-    my $self = shift;
-    my $class = ref($self) || $self;
-
-    if (ref $self) {
-        Carp::croak('Cannot call _init_subclass on Set object');
-    }
-
-    my ($member_class) = $class =~ /(.*)::Set/;
-    if ($member_class && $member_class->can('_init_subclass')) {
-        return $member_class->_init_subclass(@_);
-    }
-
-    return 1;
-}
-
 require Class::AutoloadCAN;
 Class::AutoloadCAN->import();
 
@@ -272,12 +256,7 @@ sub CAN {
     my $member_class_name = $class;
     $member_class_name =~ s/::Set$//g; 
     return unless $member_class_name; 
-
-    # pass class methods through
-    if (not ref $self) {
-        return $self->can($method);
-    }
-    elsif ($member_class_name->can($method)) {
+    if ($member_class_name->can($method)) {
         my $member_class_meta = $member_class_name->__meta__;
         my $member_property_meta = $member_class_meta->property_meta_for_name($method);
         
