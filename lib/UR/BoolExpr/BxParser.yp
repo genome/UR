@@ -119,7 +119,7 @@ sub _error {
     my @expect = $_[0]->YYExpect;
     my $tok = $_[0]->YYData->{INPUT};
     my $string = $_[0]->YYData->{STRING};
-    my $err = qq(Can't parse expression "$string"\n  Syntax error near '$tok');
+    my $err = qq(Can't parse expression "$string"\n  Syntax error near token '$tok');
     my $rem = $_[0]->YYData->{REMAINING};
     $err .= ", remaining text: '$rem'" if $rem;
     $err .= "\nExpected one of: " . join(", ", @expect) . "\n";
