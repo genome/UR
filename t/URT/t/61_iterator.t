@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 18;
+use Test::More tests => 17;
 
 my $dbh = &setup_classes_and_db();
 
@@ -52,7 +52,6 @@ while(my $o = $iter->next()) {
     push @objs, $o;
 }
 is(scalar(@objs), 3, '3 things returned by the iterator');
-print "Got objects ",Data::Dumper::Dumper(\@objs);
 is_deeply( [ map { $_->id } @objs], [2,6,4], 'Got the right object IDs from the iterator');
 
 
