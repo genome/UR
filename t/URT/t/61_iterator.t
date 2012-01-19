@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 17;
+use Test::More tests => 20;
 
 my $dbh = &setup_classes_and_db();
 
@@ -47,13 +47,22 @@ is_deeply( [ map { $_->id } @objs], [4,6], 'Got the right object IDs from the it
 
 @objs = ();
 $iter = URT::Thing->create_iterator(-or => [[name => 'Joe', data => 'foo'],[name => 'Bob']], -order => ['-data']);
-ok($iter, 'Created an iterator for an OR with with descending order by');
+ok($iter, 'Created an iterator for an OR rule with with descending order by');
 while(my $o = $iter->next()) {
     push @objs, $o;
 }
 is(scalar(@objs), 3, '3 things returned by the iterator');
 is_deeply( [ map { $_->id } @objs], [2,6,4], 'Got the right object IDs from the iterator');
 
+
+@objs = ();
+$iter = URT::Thing->create_iterator(-or => [[ id => 2 ], [name => 'Bob', data => 'foo']]);
+ok($iter, 'Created an iterator for an OR rule with two ways to match the same single object');
+while(my $o = $iter->next()) {
+    push @objs, $o;
+}
+is(scalar(@objs), 1, 'Got one object back from the iterstor');
+is_deeply( [ map { $_->id } @objs], [2], 'Gor the right object ID from the iterator');
 
 sub setup_classes_and_db {
     my $dbh = URT::DataSource::SomeSQLite->get_default_handle();

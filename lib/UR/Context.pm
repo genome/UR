@@ -1545,6 +1545,9 @@ sub _get_objects_for_class_and_or_rule {
                 my $cmp = $object_sorter->($next[$lowest_slot], $next[$i]);
                 if ($cmp > 0) {
                     $lowest_slot = $i;
+                } elsif ($cmp == 0) {
+                    # duplicate object, mark this slot to fill in next time around
+                    $next[$i] = undef;
                 }
             }
 
