@@ -342,6 +342,17 @@ sub resolve {
             $subject_class,
             @sub_queries,
         );
+        # FIXME a hack to support order-by.  To make it more general to work for -group, -recurse, etc
+        # support needs to go into UR::BoolExpr::Template::Or::_compose()
+        for (my $i = 0; $i < @in_params; $i+=2 ) {
+            if ($in_params[$i] eq '-order' or $in_params[$i] eq '-order_by') {
+                my $order_by = $in_params[$i+1];
+                $bx->template->order_by($order_by);
+                foreach ( $bx->underlying_rules ) {
+                    $_->template->order_by($order_by);
+                }
+            }
+        }
         $resolve_depth--;
         return $bx;
     }
