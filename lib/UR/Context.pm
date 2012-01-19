@@ -1506,6 +1506,71 @@ sub object_exists_in_underlying_context {
 }
 
 
+# Holds the logic for handling OR-type rules passed to get_objects_for_class_and_rule()
+sub _get_objects_for_class_and_or_rule {
+    my ($self, $class, $rule, $load, $return_closure) = @_;
+
+    $rule = $rule->normalize;
+    my @u = $rule->underlying_rules;
+    my @results;
+    for my $u (@u) {
+        if (wantarray) {
+            push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
+        }
+        else {
+            my $result = $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
+            push @results, $result;
+        }
+    }
+    if ($return_closure) {
+        my $object_sorter = $rule->template->sorter();
+        #my $tmpl = $rule->template;
+        #my $object_sorter = $tmpl->sorter();
+
+        my @next;
+        return sub {
+            # fill in missing slots in @next
+            for(my $i = 0; $i < @results; $i++) {
+                unless (defined $next[$i]) {
+                    # This slot got used lat time through
+                    $next[$i] = $results[$i]->();
+                    unless (defined $next[$i]) {
+                        # That iterator is exhausted, splice it out
+                        splice(@results, $i, 1);
+                        splice(@next, $i, 1);
+                    }
+                }
+            }
+
+            my $lowest_slot = 0;
+            for(my $i = 1; $i < @results; $i++) {
+                my $cmp = $object_sorter->($next[$lowest_slot], $next[$i]);
+                if ($cmp > 0) {
+                    $lowest_slot = $i;
+                }
+            }
+
+            my $retval = $next[$lowest_slot];
+            $next[$lowest_slot] = undef;
+            return $retval;
+        };
+    }
+
+    # remove duplicates
+    my $last = 0;
+    my $plast = 0;
+    my $next = 0;
+    @results = grep { $plast = $last; $last = $_; $plast == $_ ? () : ($_) } sort @results;
+
+    return unless defined wantarray;
+    return @results if wantarray;
+    if (@results > 1) {
+        $self->_exception_for_multi_objects_in_scalar_context($rule,\@results);
+    }
+    return $results[0];
+}
+
+
 # this is the underlying method for get/load/is_loaded in ::Object
 
 sub get_objects_for_class_and_rule {
@@ -1540,64 +1605,7 @@ sub get_objects_for_class_and_rule {
     }
 
     if ($rule_template->isa("UR::BoolExpr::Template::Or")) {
-        $rule = $rule->normalize;
-        my @u = $rule->underlying_rules;
-        my @results;
-        for my $u (@u) {
-            if (wantarray) {
-                push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
-            }
-            else {
-                my $result = $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
-                push @results, $result;
-            }
-        }
-        if ($return_closure) {
-            my $object_sorter = $rule->template->sorter();
-            #my $tmpl = $rule->template;
-            #my $object_sorter = $tmpl->sorter();
-
-            my @next;
-            return sub {
-                # fill in missing slots in @next
-                for(my $i = 0; $i < @results; $i++) {
-                    unless (defined $next[$i]) {
-                        # This slot got used lat time through
-                        $next[$i] = $results[$i]->();
-                        unless (defined $next[$i]) {
-                            # That iterator is exhausted, splice it out
-                            splice(@results, $i, 1);
-                            splice(@next, $i, 1);
-                        }
-                    }
-                }
-
-                my $lowest_slot = 0;
-                for(my $i = 1; $i < @results; $i++) {
-                    my $cmp = $object_sorter->($next[$lowest_slot], $next[$i]);
-                    if ($cmp > 0) {
-                        $lowest_slot = $i;
-                    }
-                }
-
-                my $retval = $next[$lowest_slot];
-                $next[$lowest_slot] = undef;
-                return $retval;
-            };
-        }
-
-        # remove duplicates
-        my $last = 0;
-        my $plast = 0;
-        my $next = 0;
-        @results = grep { $plast = $last; $last = $_; $plast == $_ ? () : ($_) } sort @results;
-    
-        return unless defined wantarray;
-        return @results if wantarray;
-        if (@results > 1) {
-            $self->_exception_for_multi_objects_in_scalar_context($rule,\@results);
-        }
-        return $results[0];
+        return $self->_get_objects_for_class_and_or_rule($class,$rule,$load,$return_closure);
     }
 
     # an identifier for all objects gotten in this request will be set/updated on each of them for pruning later
