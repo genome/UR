@@ -1543,7 +1543,6 @@ sub get_objects_for_class_and_rule {
         $rule = $rule->normalize;
         my @u = $rule->underlying_rules;
         my @results;
-$DB::single=1;
         for my $u (@u) {
             if (wantarray) {
                 push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
@@ -1560,7 +1559,6 @@ $DB::single=1;
 
             my @next;
             return sub {
-$DB::single=1;
                 # fill in missing slots in @next
                 for(my $i = 0; $i < @results; $i++) {
                     unless (defined $next[$i]) {
