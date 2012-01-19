@@ -1080,7 +1080,7 @@ sub parse {
     my $parser = UR::BoolExpr::BxParser->new();
     $parser->YYData->{STRING} = $string;
 
-    $parser->YYData->{PARSER_STATE} = 'DEFAULT';
+    my $parser_state = 'DEFAULT';
 
     my $get_next_token = sub {
         if (length($string) == 0) {
@@ -1088,12 +1088,9 @@ sub parse {
             return (undef, '');  
        }
 
-        my $parser_state = $parser->YYData->{PARSER_STATE};
-
         my $longest = 0;
         my $longest_token = '';
         my $longest_match = '';
-        my $next_parser_state = $parser_state;
 
         for my $token_list ( $parser_state, 'DEFAULT' ) {
             print "\nTrying tokens for state $token_list...\n" if $debug;
@@ -1102,12 +1099,11 @@ sub parse {
                 my($tok, $re) = @$tokens[$i, $i+1];
                 print "Trying token $tok... " if $debug;
 
-                my($regex,$possible_next_parser_state);
+                my($regex,$next_parser_state);
                 if (ref($re) eq 'ARRAY') {
-                    ($regex,$possible_next_parser_state) = @$re;
+                    ($regex,$next_parser_state) = @$re;
                 } else {
                     $regex = $re;
-                    $possible_next_parser_state = $next_parser_state;
                 }
 
                 if ($string =~ m/^((\s*)($regex)(\s*))/) {
@@ -1119,9 +1115,9 @@ sub parse {
                         $longest_token = $tok;
                         $longest_match = $3;
                         if (length($2) or length($4)) {
-                            $next_parser_state = 'DEFAULT';
-                        } else {
-                            $next_parser_state = $possible_next_parser_state;
+                            $parser_state = 'DEFAULT';
+                        } elsif ($next_parser_state) {
+                            $parser_state = $next_parser_state;
                         }
                     }
                 }
@@ -1132,9 +1128,7 @@ sub parse {
             print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
             $parser->YYData->{REMAINING} = $string;
             if ($longest) {
-                print "Returning token $longest_token, match $longest_match\n" if $debug;
-                $parser->YYData->{PARSER_STATE} = $next_parser_state if ($next_parser_state);
-                print "  next state is named ".$parser->YYData->{PARSER_STATE}."\n" if $debug;
+                print "Returning token $longest_token, match $longest_match\n  next state is named $parser_state\n" if $debug;
                 $parser->YYData->{INPUT} = $longest_token;
                 return ($longest_token, $longest_match);
             }
