@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 470;
+use Test::More tests => 490;
 use Data::Dumper;
 use IO::Handle;
 
@@ -32,8 +32,6 @@ class URT::Item {
     ]
 };
 
-#$::RD_TRACE=1;
-
 foreach my $test (
     { string => 'name = bob',
       values => { name => 'bob' },
@@ -47,6 +45,15 @@ foreach my $test (
       values => { name => 'bob' },
       operators => { name => '=' },
     },
+    { string => 'name=a-longer-string',
+      values => { name => 'a-longer-string' },
+      operators => { name => '=' },
+    },
+    { string => 'name=2012-jan-12',
+      values => { name => '2012-jan-12' },
+      operators => { name => '=' },
+      #stop => 1,
+    },
     { string => 'name=fred and score>2',
       values => { name => 'fred', score => 2 },
       operators => { name => '=', score => '>'},
@@ -59,10 +66,14 @@ foreach my $test (
       values => { name => 'and', score => 2 },
       operators => { name => '=', score => '=' },
     },
-    { string => 'name in bob/fred and score<-2',
+    { string => 'name in [bob,fred] and score<-2',
       values => { name => ['bob','fred'], score => -2 },
       operators => { name => 'in', score => '<' }
     },
+#    { string => 'name in bob/fred and score<-2',
+#      values => { name => ['bob','fred'], score => -2 },
+#      operators => { name => 'in', score => '<' }
+#    },
     { string => 'score = -12.2' ,
       values => { score => -12.2 },
       operators => { score => '=' },
@@ -82,6 +93,7 @@ foreach my $test (
     { string => 'score!:-100--10.2',
       values => { score => [-100, -10.2] },
       operators => { score => 'not between' },
+#stop => 1,
     },
     { string => 'name~%yoyo,score:10-100',
       values => { name => '%yoyo', score => [10,100] },
@@ -98,6 +110,22 @@ foreach my $test (
     { string => 'foo!:one/two/three',
       values => { foo => ['one','three','two'] },  # They get sorted internally
       operators => { foo => 'not in' },
+    },
+    { string => 'name=/a/path/name',
+      values => { name => '/a/path/name' },
+      operators => { name => '=' },
+    },
+#    { string => 'name:/a/path/name',
+#      values => { name => ['','a','name','path'] },
+#      operators => { name => 'in' },
+#    },
+    { string => 'name:a/path/name',
+      values => { name => ['a','name','path'] },
+      operators => { name => 'in' },
+    },
+    { string => 'name in ["/a/path/name","/other/path/","relative/path/name"]',
+      values => { name => ['/a/path/name','/other/path/','relative/path/name'] },
+      operators => {name => 'in' },
     },
     { string => 'score in [1,2,3]',
       values => { score => [1,2,3] },
@@ -125,7 +153,7 @@ foreach my $test (
     },
     { string => q(name="bob is cool",foo:'one "two"'/three),
       values => { name => 'bob is cool', foo => ['one "two"','three'] },
-      operators => { name => '=', foo => 'in' }
+      operators => { name => '=', foo => 'in' },
     },
     { string => 'name not like %joe',
       values => { name => '%joe' },

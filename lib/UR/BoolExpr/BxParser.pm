@@ -1056,42 +1056,60 @@ use warnings;
 sub _error {
     my @expect = $_[0]->YYExpect;
     my $tok = $_[0]->YYData->{INPUT};
-    my $err = "Syntax error near '$tok'";
+    my $string = $_[0]->YYData->{STRING};
+    my $err = qq(Can't parse expression "$string"\n  Syntax error near token '$tok');
     my $rem = $_[0]->YYData->{REMAINING};
     $err .= ", remaining text: '$rem'" if $rem;
     $err .= "\nExpected one of: " . join(", ", @expect) . "\n";
     Carp::croak($err);
 }
 
-my @tokens = (
-    AND => qr{and},
-    OR => qr{or},
-    BETWEEN_WORD => qr{between},
-    LIKE_WORD => qr{like},
-    IN_WORD => qr{in},
-    NOT_WORD => qr{not},
-    IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*},
-    MINUS => qr{-},
-    INTEGER => qr{\d+},
-    REAL => qr{\d*\.\d+|\d+\.\d*},
-    WORD => qr{\w+},
-    DOUBLEQUOTE_STRING => qr{"(\\.|[^"])+"},
-    SINGLEQUOTE_STRING => qr{'(\\.|[^'])+'},
-    LEFT_PAREN => qr{\(},
-    RIGHT_PAREN => qr{\)},
-    LEFT_BRACKET => qr{\[},
-    RIGHT_BRACKET => qr{\]},
-    NOT_BANG => qr{!},
-    EQUAL_SIGN => qr{=},
-    DOUBLEEQUAL_SIGN => qr{=>},
-    OPERATORS => qr{<|>|<=|>=},
-    COMMA => qr{,},  # Depending on state, can be either AND or SET_SEPARATOR
-    COLON => qr{:},
-    TILDE => qr{~},
-    LIKE_PATTERN => qr{[\w%_]+},
-    IN_DIVIDER => qr{\/},
-    ORDER_BY => qr{order by},
-    GROUP_BY => qr{group by},
+my %token_states = (
+    'DEFAULT' => [
+        AND => [ qr{and}, 'DEFAULT'],
+        OR => [ qr{or}, 'DEFAULT' ],
+        BETWEEN_WORD => qr{between},
+        LIKE_WORD => qr{like},
+        IN_WORD => qr{in},
+        NOT_WORD => qr{not},
+        IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*},
+        MINUS => qr{-},
+        INTEGER => qr{\d+},
+        REAL => qr{\d*\.\d+|\d+\.\d*},
+        WORD => qr{[\/\w][-\w\/]*},   # also allow / for pathnames and - for hyphenated names
+        #WORD => qr{\w+},
+        DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
+        SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
+        LEFT_PAREN => qr{\(},
+        RIGHT_PAREN => qr{\)},
+        LEFT_BRACKET => [ qr{\[}, 'set_contents'],
+        RIGHT_BRACKET => [qr{\]}, 'DEFAULT' ],
+        NOT_BANG => qr{!},
+        EQUAL_SIGN => qr{=},
+        DOUBLEEQUAL_SIGN => qr{=>},
+        OPERATORS => qr{<|>|<=|>=},
+        AND => [ qr{,}, 'DEFAULT' ],
+        COLON => [ qr{:}, 'after_colon_value' ],
+        TILDE => qr{~},
+        LIKE_PATTERN => qr{[\w%_]+},
+        ORDER_BY => qr{order by},
+        GROUP_BY => qr{group by},
+    ],
+    'set_contents' => [
+        SET_SEPARATOR => [qr{,}, ''],  # Depending on state, can be either AND or SET_SEPARATOR
+    ],
+    'after_colon_value' => [
+        INTEGER => qr{\d+},
+        REAL => qr{\d*\.\d+|\d+\.\d*},
+        IN_DIVIDER => qr{\/},
+        WORD => qr{\w+},    # Override WORD in DEFAULT to disallow /
+        DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
+        SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
+    ],
+#    'after_operator' => [
+#        INTEGER => qr{\d+},
+#        REAL => qr{\d*\.\d+|\d+\.\d*},
+#    ],
 );
 
 sub parse {
@@ -1102,50 +1120,76 @@ sub parse {
 
     print "\nStarting parse for string $string\n" if $debug;
     my $parser = UR::BoolExpr::BxParser->new();
+    $parser->YYData->{STRING} = $string;
 
-    my $parser_state = '';
+    $parser->YYData->{PARSER_STATE} = 'DEFAULT';
 
     my $get_next_token = sub {
+$DB::single=1;
         if (length($string) == 0) {
             print "String is empty, we're done!\n" if $debug;
             return (undef, '');  
        }
 
+        my $parser_state = $parser->YYData->{PARSER_STATE};
+
         my $longest = 0;
         my $longest_token = '';
         my $longest_match = '';
+        my $next_parser_state = $parser_state;
 
-        for(my $i = 0; $i < @tokens; $i += 2) {
-            my($tok, $regex) = @tokens[$i, $i+1];
-            print "Trying token $tok... " if $debug;
+        for my $token_list ( $parser_state, 'DEFAULT' ) {
+            print "\nTrying tokens for state $token_list...\n" if $debug;
+            my $tokens = $token_states{$token_list};
+            for(my $i = 0; $i < @$tokens; $i += 2) {
+                my($tok, $re) = @$tokens[$i, $i+1];
+                print "Trying token $tok... " if $debug;
 
-            if ($string =~ m/^(\s*($regex)\s*)/) {
-                print "Matched >>$1<<" if $debug;
-                my $match_len = length($1);
-                if ($match_len > $longest) {
-                    print "\n  ** It's now the longest" if $debug;
-                    $longest = $match_len;
-                    $longest_token = $tok;
-                    $longest_match = $2;
+                my($regex,$possible_next_parser_state);
+                if (ref($re) eq 'ARRAY') {
+                    ($regex,$possible_next_parser_state) = @$re;
+                } else {
+                    $regex = $re;
+                    $possible_next_parser_state = $next_parser_state;
                 }
-            }
-            print "\n" if $debug;
-        }
 
-        $string = substr($string, $longest);
-        print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
-        $parser->YYData->{REMAINING} = $string;
-        if ($longest) {
-            print "Returning token $longest_token, match $longest_match\n" if $debug;
-            if ($longest_token eq 'LEFT_BRACKET') {
-                $parser_state = 'set_contents';
-            } elsif ($longest_token eq 'RIGHT_BRACKET') {
-                $parser_state = '';
-            } elsif ($longest_token eq 'COMMA') {
-                $longest_token = $parser_state eq 'set_contents' ? 'SET_SEPARATOR' : 'AND';
+                if ($string =~ m/^((\s*)($regex)(\s*))/) {
+                    print "Matched >>$1<<" if $debug;
+                    my $match_len = length($1);
+                    if ($match_len > $longest) {
+                        print "\n  ** It's now the longest" if $debug;
+                        $longest = $match_len;
+                        $longest_token = $tok;
+                        $longest_match = $3;
+                        if (length($2) or length($4)) {
+print "\n*** Spaces surround match, going back to DEFAULT state.  \$2>>$2<< \$3>>$3<< \$4>>$4<<\n";
+                            $next_parser_state = 'DEFAULT';
+                        } else {
+                            $next_parser_state = $possible_next_parser_state;
+                        }
+                    }
+                }
+                print "\n" if $debug;
             }
-            $parser->YYData->{INPUT} = $longest_token;
-            return ($longest_token, $longest_match);
+
+            $string = substr($string, $longest);
+            print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
+            $parser->YYData->{REMAINING} = $string;
+            if ($longest) {
+                print "Returning token $longest_token, match $longest_match\n" if $debug;
+                #if ($longest_token eq 'LEFT_BRACKET') {
+                #    $parser_state = 'set_contents';
+                #} elsif ($longest_token eq 'RIGHT_BRACKET') {
+                #    $parser_state = '';
+                #} elsif ($longest_token eq 'COMMA') {
+                #    $longest_token = $parser_state eq 'set_contents' ? 'SET_SEPARATOR' : 'AND';
+                #}
+                $parser->YYData->{PARSER_STATE} = $next_parser_state if ($next_parser_state);
+                print "  next state is named ".$parser->YYData->{PARSER_STATE}."\n" if $debug;
+                $parser->YYData->{INPUT} = $longest_token;
+                return ($longest_token, $longest_match);
+            }
+            last if $token_list eq 'DEFAULT';  # avoid going over it twice if $parser_state is DEFAULT
         }
         print "Didn't match anything, done!\n" if $debug;
         return (undef, '');  # Didn't match anything
