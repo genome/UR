@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 490;
+use Test::More tests => 500;
 use Data::Dumper;
 use IO::Handle;
 
@@ -70,10 +70,6 @@ foreach my $test (
       values => { name => ['bob','fred'], score => -2 },
       operators => { name => 'in', score => '<' }
     },
-#    { string => 'name in bob/fred and score<-2',
-#      values => { name => ['bob','fred'], score => -2 },
-#      operators => { name => 'in', score => '<' }
-#    },
     { string => 'score = -12.2' ,
       values => { score => -12.2 },
       operators => { score => '=' },
@@ -115,10 +111,6 @@ foreach my $test (
       values => { name => '/a/path/name' },
       operators => { name => '=' },
     },
-#    { string => 'name:/a/path/name',
-#      values => { name => ['','a','name','path'] },
-#      operators => { name => 'in' },
-#    },
     { string => 'name:a/path/name',
       values => { name => ['a','name','path'] },
       operators => { name => 'in' },
@@ -135,14 +127,6 @@ foreach my $test (
       values => { score => [1,2,3] },
       operators => { score => 'not in' },
     },
-#    { string => 'score=[1,2,3]',
-#      values => { score => [1,2,3] },
-#      operators => { score => 'in' },
-#    },
-#    { string => 'score!=[1,2,3]',
-#      values => { score => [1,2,3] },
-#      operators => { score => 'not in' },
-#    },
     { string => 'foo:one/two/three,score:10-100',  # These both use :
       values => { foo => ['one','three','two'], score => [10,100] },
       operators => { foo => 'in', score => 'between' },
@@ -482,6 +466,38 @@ foreach my $test (
         }
     }
     exit if ($test->{'stop'});
+}
+
+foreach my $test (
+    { string => 'name in bob/fred and score<-2',
+      exception => qr{Syntax error near token 'WORD'.*Expected one of: LEFT_BRACKET}s,
+    },
+    { string => 'name:[bob,fred] and score<-2',
+      exception => qr{Syntax error near token 'LEFT_BRACKET'},
+    },
+    { string => 'name:/a/path/name',
+      exception => qr{Syntax error near token 'IN_DIVIDER'},
+    },
+    { string => 'score=[1,2,3]',
+      exception => qr{Syntax error near token 'LEFT_BRACKET'},
+    },
+    { string => 'score!=[1,2,3]',
+      exception => qr{Syntax error near token 'LEFT_BRACKET'},
+    },
+) {
+
+    my $string = $test->{'string'};
+    my $exception_re = $test->{'exception'};
+
+    my $r;
+    eval {
+        $r = UR::BoolExpr->resolve_for_string(
+               'URT::Item',
+               $test->{'string'});
+    };
+    ok(!$r, "Correctly did not create rule from string \"$string\"");
+
+    like($@, $exception_re, 'exception looks right');
 }
 
 1;

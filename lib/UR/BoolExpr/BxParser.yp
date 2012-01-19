@@ -21,9 +21,9 @@ expr: condition                   { $_[1] }
 
 condition: property operator value                 { [ "$_[1] $_[2]" => $_[3] ] }
          | property like_operator like_value       { [ "$_[1] $_[2]" => $_[3] ] }
-         | property in_operator in_value           { [ "$_[1] $_[2]" => $_[3] ] }
-         | property COLON in_value                 { [ "$_[1] in" => $_[3] ] }
-         | property negation COLON in_value        { [ "$_[1] $_[2] in" => $_[4] ] }
+         | property in_operator set                { [ "$_[1] $_[2]" => $_[3] ] }
+         | property COLON old_syntax_in_value          { [ "$_[1] in" => $_[3] ] }
+         | property negation COLON old_syntax_in_value { [ "$_[1] $_[2] in" => $_[4] ] }
          | property between_operator between_value { [ "$_[1] $_[2]" => $_[3] ] }
          | property COLON between_value            { [ "$_[1] between" => $_[3] ] }
          | property negation COLON between_value   { [ "$_[1] $_[2] between" => $_[4] ] }
@@ -69,9 +69,8 @@ in_operator: IN_WORD { 'in' }
            | negation IN_WORD { "$_[1] in" }
            ;
 
-in_value: set  { $_[1] }
-        | value IN_DIVIDER in_value { [ $_[1], @{$_[3]} ] }
-        | value IN_DIVIDER value { [ $_[1], $_[3] ] }
+old_syntax_in_value: value IN_DIVIDER old_syntax_in_value { [ $_[1], @{$_[3]} ] }
+                   | value IN_DIVIDER value { [ $_[1], $_[3] ] }
         ; 
 
 set: LEFT_BRACKET set_body RIGHT_BRACKET { $_[2] }
@@ -224,7 +223,6 @@ $DB::single=1;
                         $longest_token = $tok;
                         $longest_match = $3;
                         if (length($2) or length($4)) {
-print "\n*** Spaces surround match, going back to DEFAULT state.  \$2>>$2<< \$3>>$3<< \$4>>$4<<\n";
                             $next_parser_state = 'DEFAULT';
                         } else {
                             $next_parser_state = $possible_next_parser_state;
