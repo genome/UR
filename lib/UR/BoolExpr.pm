@@ -1163,10 +1163,16 @@ simplify to this level.  See L<UR::BoolExpr::Template> for details.
   my $bx = UR::BoolExpr->resolve('Some::Class', property_1 => 'value_1', ... property_n => 'value_n');
   my $bx1 = Some::Class->define_boolexpr(property_1 => value_1, ... property_n => 'value_n');
   my $bx2 = Some::Class->define_boolexpr('property_1 >' => 12345);
+  my $bx3 = UR::BoolExpr->resolve_for_string(
+                'Some::Class',
+                'property_1 = value_1 and ( property_2 < value_2 or property_3 = value_3 )',
+            );
 
 Returns a UR::BoolExpr object that can be used to perform tests on the given class and
-properties.  The default comparison for each property is equality.  The last example shows
-using greater-than operator for property_1.
+properties.  The default comparison for each property is equality.  The third example shows
+using greater-than operator for property_1.  The last example shows constructing a
+UR::BoolExpr from a string containing properties, operators and values joined with
+'and' and 'or', with parentheses indicating precedence.
 
 =back
 
@@ -1351,6 +1357,11 @@ my $rt = $r->template();
 my @rt = $rt->get_underlying_rule_templates();
 
 $r = $rt->get_rule_for_values(@v);
+
+$r = UR::BoolExpr->resolve_for_string(
+       'My::Class',
+       'name=Bob and (score=10 or score < 5)',
+     );
 
 =head1 SEE ALSO
 
