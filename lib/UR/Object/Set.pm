@@ -242,6 +242,26 @@ sub __related_set__ {
     return $bx2->subject_class_name->define_set($bx2);
 }
 
+# Maybe it is common knowledge but it appears AutoloadCAN checks if ThisClass
+# has the method before delegating to ThisClass::CAN. So the CAN below does not
+# get called for _init_subclass which is relevant because _init_subclass is
+# passed arguments which would cause an exception if handled in the CAN below.
+sub _init_subclass {
+    my $self = shift;
+    my $class = ref($self) || $self;
+
+    if (ref $self) {
+        Carp::croak('Must call _init_subclass as a class method on Sets.');
+    }
+
+    my ($member_class) = $class =~ /(.*)::Set/;
+    if ($member_class && $member_class->can('_init_subclass')) {
+        return $member_class->_init_subclass(@_);
+    }
+
+    return 1;
+}
+
 require Class::AutoloadCAN;
 Class::AutoloadCAN->import();
 
