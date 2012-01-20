@@ -242,26 +242,6 @@ sub __related_set__ {
     return $bx2->subject_class_name->define_set($bx2);
 }
 
-# Maybe it is common knowledge but it appears AutoloadCAN checks if ThisClass
-# has the method before delegating to ThisClass::CAN. So the CAN below does not
-# get called for _init_subclass which is relevant because _init_subclass is
-# passed arguments which would cause an exception if handled in the CAN below.
-sub _init_subclass {
-    my $self = shift;
-    my $class = ref($self) || $self;
-
-    if (ref $self) {
-        Carp::croak('Must call _init_subclass as a class method on Sets.');
-    }
-
-    my ($member_class) = $class =~ /(.*)::Set/;
-    if ($member_class && $member_class->can('_init_subclass')) {
-        return $member_class->_init_subclass(@_);
-    }
-
-    return 1;
-}
-
 require Class::AutoloadCAN;
 Class::AutoloadCAN->import();
 
@@ -273,10 +253,23 @@ sub CAN {
         return;
     }
 
+
     my $member_class_name = $class;
     $member_class_name =~ s/::Set$//g; 
     return unless $member_class_name; 
-    if ($member_class_name->can($method)) {
+
+    my $is_class_method = !ref($self);
+    my $member_method_closure = $member_class_name->can($method);
+    if ($is_class_method && $member_method_closure) {
+        # We should only get here if the Set class has not implemented the method.
+        # In which case we will delegate to the member class.
+        return sub {
+            my $self = shift;
+            return $member_method_closure->($member_class_name, @_);
+        };
+    }
+
+    if ($member_method_closure) {
         my $member_class_meta = $member_class_name->__meta__;
         my $member_property_meta = $member_class_meta->property_meta_for_name($method);
         
