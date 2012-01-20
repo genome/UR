@@ -155,7 +155,7 @@ sub _log_query_for_rule {
     if ($elapsed_time) {
         $message .= sprintf("  Elapsed %.4f s", $elapsed_time);
     }
-    $query_logging_fh->print($message);
+    $query_logging_fh->print($message."\n");
 }
 
 sub _log_done_elapsed_time_for_rule {
