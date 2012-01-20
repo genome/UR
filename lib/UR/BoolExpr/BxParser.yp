@@ -7,8 +7,8 @@
 
 %%
 
-boolexpr:                         { [] }
-        | expr                    { UR::BoolExpr::BxParser->_simplify($_[1]) }
+boolexpr:                                 { [] }
+        | expr                            { UR::BoolExpr::BxParser->_simplify($_[1]) }
         | boolexpr ORDER_BY order_by_list { [@{$_[1]}, '-order', $_[3]] }
         | boolexpr GROUP_BY group_by_list { [@{$_[1]}, '-group', $_[3]] }
         ;
@@ -19,14 +19,14 @@ expr: condition                   { $_[1] }
     | LEFT_PAREN expr RIGHT_PAREN { $_[2] }
     ;
 
-condition: property operator value                 { [ "$_[1] $_[2]" => $_[3] ] }
-         | property like_operator like_value       { [ "$_[1] $_[2]" => $_[3] ] }
-         | property in_operator set                { [ "$_[1] $_[2]" => $_[3] ] }
+condition: property operator value                     { [ "$_[1] $_[2]" => $_[3] ] }
+         | property like_operator like_value           { [ "$_[1] $_[2]" => $_[3] ] }
+         | property in_operator set                    { [ "$_[1] $_[2]" => $_[3] ] }
          | property COLON old_syntax_in_value          { [ "$_[1] in" => $_[3] ] }
          | property negation COLON old_syntax_in_value { [ "$_[1] $_[2] in" => $_[4] ] }
-         | property between_operator between_value { [ "$_[1] $_[2]" => $_[3] ] }
-         | property COLON between_value            { [ "$_[1] between" => $_[3] ] }
-         | property negation COLON between_value   { [ "$_[1] $_[2] between" => $_[4] ] }
+         | property between_operator between_value     { [ "$_[1] $_[2]" => $_[3] ] }
+         | property COLON between_value                { [ "$_[1] between" => $_[3] ] }
+         | property negation COLON between_value       { [ "$_[1] $_[2] between" => $_[4] ] }
          ;
 
 property:   IDENTIFIER { $_[1] }
@@ -42,7 +42,7 @@ order_by_list: order_by_property                   { [ $_[1]] }
              | order_by_property AND order_by_list { [$_[1], @{$_[3]}] }
              ;
 
-group_by_list: property { [ $_[1] ] }
+group_by_list: property                   { [ $_[1] ] }
              | property AND group_by_list { [$_[1], @{$_[3]}] }
              ;
 
@@ -54,65 +54,65 @@ negation: NOT_WORD { 'not' }
         | NOT_BANG { 'not' }
         ;
 
-an_operator: OPERATORS { $_[1] }
-           | EQUAL_SIGN { '=' }
+an_operator: OPERATORS        { $_[1] }
+           | EQUAL_SIGN       { '=' }
            | DOUBLEEQUAL_SIGN { '=' }
         ;
 
-like_operator: LIKE_WORD { 'like' }
+like_operator: LIKE_WORD          { 'like' }
              | negation LIKE_WORD { "$_[1] like" }
-             | TILDE { 'like' }
-             | negation TILDE { "$_[1] like" }
+             | TILDE              { 'like' }
+             | negation TILDE     { "$_[1] like" }
              ;
 
-like_value: value        { '%' . $_[1] . '%' }
-          | LIKE_PATTERN { $_[1] }
+like_value: value                 { '%' . $_[1] . '%' }
+          | LIKE_PATTERN          { $_[1] }
           ;
 
-in_operator: IN_WORD { 'in' }
-           | negation IN_WORD { "$_[1] in" }
+in_operator: IN_WORD              { 'in' }
+           | negation IN_WORD     { "$_[1] in" }
            ;
 
 old_syntax_in_value: value IN_DIVIDER old_syntax_in_value { [ $_[1], @{$_[3]} ] }
-                   | value IN_DIVIDER value { [ $_[1], $_[3] ] }
+                   | value IN_DIVIDER value               { [ $_[1], $_[3] ] }
         ; 
 
 set: LEFT_BRACKET set_body RIGHT_BRACKET { $_[2] }
    ;
 
 set_body: value SET_SEPARATOR set_body { [ $_[1], @{$_[3]} ] }
-        | value { [ $_[1] ] }
+        | value                        { [ $_[1] ] }
         ;
 
-between_operator: BETWEEN_WORD { 'between' }
+between_operator: BETWEEN_WORD          { 'between' }
                 | negation BETWEEN_WORD { "$_[1] between" }
                 ;
 
 between_value: value MINUS value { [ $_[1], $_[3] ] }
              ;
    
-keyword_as_value: AND { $_[1] }
-                | OR  { $_[1] }
-                | IN_WORD { $_[1] }
-                | LIKE_WORD { $_[1] }
+keyword_as_value: AND          { $_[1] }
+                | OR           { $_[1] }
+                | IN_WORD      { $_[1] }
+                | LIKE_WORD    { $_[1] }
                 | BETWEEN_WORD { $_[1] }
                 | NOT_WORD     { $_[1] }
                 | DESC_WORD    { $_[1] }
                 | ASC_WORD     { $_[1] }
        ;
 
-value: IDENTIFIER { $_[1] }
-     | number { $_[1] }
-     | WORD   { $_[1] }
+value: IDENTIFIER         { $_[1] }
+     | number             { $_[1] }
+     | WORD               { $_[1] }
      | DOUBLEQUOTE_STRING { ($_[1] =~ m/^"(.*?)"$/)[0]; }
      | SINGLEQUOTE_STRING { ($_[1] =~ m/^'(.*?)'$/)[0]; }
-     | keyword_as_value { $_[1] }
+     | keyword_as_value   { $_[1] }
      ;
 
-number: INTEGER { $_[1] + 0 }
-      | REAL    { $_[1] + 0 }
+number: INTEGER       { $_[1] + 0 }
+      | REAL          { $_[1] + 0 }
       | MINUS INTEGER { 0 - $_[2] } # to reject --5
-      | MINUS REAL { 0 - $_[2] }
+      | MINUS REAL    { 0 - $_[2] }
       ; 
 
 %%
