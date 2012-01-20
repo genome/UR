@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# Test the RecDescent parser used by the Lister commands
+# Test the Parse::YAPP parser used by the Lister commands
 
 use strict;
 use warnings;
