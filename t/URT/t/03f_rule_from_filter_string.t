@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 500;
+use Test::More tests => 552;
 use Data::Dumper;
 use IO::Handle;
 
@@ -529,6 +529,15 @@ foreach my $test (
     },
     { string => 'score!=[1,2,3]',
       exception => qr{Syntax error near token LEFT_BRACKET '\['},
+    },
+    { string => 'name=foo order by -score desc',
+      exception => qr{Syntax error near token DESC_WORD 'desc'},
+    },
+    { string => 'name=foo order by -score asc',
+      exception => qr{Syntax error near token ASC_WORD 'asc'},
+    },
+    { string => 'name=foo order by score desc asc',
+      exception => qr{Syntax error near token ASC_WORD 'asc'},
     },
 ) {
 
