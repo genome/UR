@@ -32,10 +32,14 @@ condition: property operator value                 { [ "$_[1] $_[2]" => $_[3] ] 
 property:   IDENTIFIER { $_[1] }
         ;
 
-order_by_list: property { [ $_[1] ] }
-             | MINUS property { [ '-'.$_[2] ] }
-             | property AND order_by_list { [$_[1], @{$_[3]}] }
-             | MINUS property AND order_by_list { [ '-'.$_[2], @{$_[4]}] }
+order_by_property: property           { $_[1 ] }
+                 | MINUS property     { '-'.$_[2] }
+                 | property DESC_WORD { '-'.$_[1] }
+                 | property ASC_WORD  { $_[1] }
+                 ;
+
+order_by_list: order_by_property                   { [ $_[1]] }
+             | order_by_property AND order_by_list { [$_[1], @{$_[3]}] }
              ;
 
 group_by_list: property { [ $_[1] ] }
@@ -92,7 +96,9 @@ keyword_as_value: AND { $_[1] }
                 | IN_WORD { $_[1] }
                 | LIKE_WORD { $_[1] }
                 | BETWEEN_WORD { $_[1] }
-                | NOT_WORD { $_[1] }
+                | NOT_WORD     { $_[1] }
+                | DESC_WORD    { $_[1] }
+                | ASC_WORD     { $_[1] }
        ;
 
 value: IDENTIFIER { $_[1] }
@@ -133,6 +139,8 @@ my %token_states = (
         LIKE_WORD => qr{like},
         IN_WORD => qr{in},
         NOT_WORD => qr{not},
+        DESC_WORD => qr{desc},
+        ASC_WORD => qr{asc},
         IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*},
         MINUS => qr{-},
         INTEGER => qr{\d+},
