@@ -9,8 +9,6 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 use Test::More tests => 552;
-use Data::Dumper;
-use IO::Handle;
 
 class URT::RelatedItem {
     id_by => 'ritem_id',
