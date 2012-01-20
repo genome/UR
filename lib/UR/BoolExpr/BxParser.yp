@@ -123,8 +123,9 @@ use warnings;
 sub _error {
     my @expect = $_[0]->YYExpect;
     my $tok = $_[0]->YYData->{INPUT};
+    my $match = $_[0]->YYData->{MATCH};
     my $string = $_[0]->YYData->{STRING};
-    my $err = qq(Can't parse expression "$string"\n  Syntax error near token '$tok');
+    my $err = qq(Can't parse expression "$string"\n  Syntax error near token $tok '$match');
     my $rem = $_[0]->YYData->{REMAINING};
     $err .= ", remaining text: '$rem'" if $rem;
     $err .= "\nExpected one of: " . join(", ", @expect) . "\n";
@@ -236,6 +237,7 @@ sub parse {
             if ($longest) {
                 print "Returning token $longest_token, match $longest_match\n  next state is named $parser_state\n" if $debug;
                 $parser->YYData->{INPUT} = $longest_token;
+                $parser->YYData->{MATCH} = $longest_match;
                 return ($longest_token, $longest_match);
             }
             last if $token_list eq 'DEFAULT';  # avoid going over it twice if $parser_state is DEFAULT

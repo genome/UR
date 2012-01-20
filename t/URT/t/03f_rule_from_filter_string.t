@@ -516,19 +516,19 @@ foreach my $test (
 
 foreach my $test (
     { string => 'name in bob/fred and score<-2',
-      exception => qr{Syntax error near token 'WORD'.*Expected one of: LEFT_BRACKET}s,
+      exception => qr{Syntax error near token WORD 'bob/fred'.*Expected one of: LEFT_BRACKET}s,
     },
     { string => 'name:[bob,fred] and score<-2',
-      exception => qr{Syntax error near token 'LEFT_BRACKET'},
+      exception => qr{Syntax error near token LEFT_BRACKET '\['},
     },
     { string => 'name:/a/path/name',
-      exception => qr{Syntax error near token 'IN_DIVIDER'},
+      exception => qr{Syntax error near token IN_DIVIDER '/'},
     },
     { string => 'score=[1,2,3]',
-      exception => qr{Syntax error near token 'LEFT_BRACKET'},
+      exception => qr{Syntax error near token LEFT_BRACKET '\['},
     },
     { string => 'score!=[1,2,3]',
-      exception => qr{Syntax error near token 'LEFT_BRACKET'},
+      exception => qr{Syntax error near token LEFT_BRACKET '\['},
     },
 ) {
 
