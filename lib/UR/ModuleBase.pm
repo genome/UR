@@ -600,7 +600,9 @@ for my $type (@message_types) {
                     }
                 }
             };
-            return if $@;  # if the callback threw an exception, don't print the msg
+            # If the callback set $msg to undef with "$_[1] = undef", then they didn't want the message
+            # processed further
+            return unless defined($msg);
 
             if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
                 if ( $type eq 'usage' ) {
