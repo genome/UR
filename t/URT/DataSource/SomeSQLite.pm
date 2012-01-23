@@ -27,17 +27,16 @@ class URT::DataSource::SomeSQLite {
 # Don't print warnings about loading up the DB if running in the test harness
 # Similar code exists in URT::DataSource::Meta.
 sub _dont_emit_initializing_messages {
-    my($msgobj, $dsobj, $msgtype) = @_;
+    my($dsobj, $msg) = @_;
 
-    my $message = $msgobj->text;
-    if ($message =~ m/^Re-creating|Skipped unload/) {
-        die;
+    if ($msg =~ m/^Re-creating|Skipped unload/) {
+        $_[1] = undef;  # don't print the message
     }
 }
 
 if ($ENV{'HARNESS_ACTIVE'}) {
     # don't emit messages while running in the test harness
-    __PACKAGE__->message_callback('warning', \&_dont_emit_initializing_messages);
+    __PACKAGE__->warning_messages_callback(\&_dont_emit_initializing_messages);
 }
 
 
