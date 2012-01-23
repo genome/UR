@@ -66,12 +66,14 @@ is($id_parts[1], $$, 'process ID part of ID seen');
 # the 2nd part is the time and not reliably checked
 is($id_parts[3], $UR::Object::Type::autogenerate_id_iter, 'Iterator number part of ID seen');
 
-my @error_messages = ();
-TestClass1->message_callback('error', sub { push @error_messages, $_[0]->text });
+TestClass1->dump_error_messages(0);
+TestClass1->queue_error_messages(1);
+my $error_messages = TestClass1->error_messages_arrayref();
+
 $o = TestClass1->create(foo => 'aaaa', value => '123456');
 ok(!$o, "Correctly couldn't create an object with a duplicated ID");
-is(scalar(@error_messages), 1, 'Correctly trapped 1 error message');
-like($error_messages[0], qr/An object of class TestClass1 already exists with id value 'aaaa'/,
+is(scalar(@$error_messages), 1, 'Correctly trapped 1 error message');
+like($error_messages->[0], qr/An object of class TestClass1 already exists with id value 'aaaa'/,
    'The error message was correct');
 
 
@@ -81,36 +83,37 @@ is($o->foo, 'aaaa', "First explicit ID property has the right value");
 is($o->bar, 'bbbb', "Second explicit ID property has the right value");
 is($o->id, join("\t",'aaaa','bbbb'), "Implicit ID property has the right value");
 
-@error_messages = ();
-TestClass2->message_callback('error', sub { push @error_messages, $_[0]->text });
+TestClass2->dump_error_messages(0);
+TestClass2->queue_error_messages(1);
+$error_messages = TestClass2->error_messages_arrayref();
 
 $o = TestClass2->create(foo => 'qqqq', value => 'blah');
 ok(!$o, "Correctly couldn't create a multi-ID property object without specifying all the IDs");
-is(scalar(@error_messages), 1, 'Correctly trapped 2 error messages');
-like($error_messages[0], qr/Attempt to create TestClass2 with multiple ids without these properties: bar/,
+is(scalar(@$error_messages), 1, 'Correctly trapped 1 error messages');
+like($error_messages->[0], qr/Attempt to create TestClass2 with multiple ids without these properties: bar/,
    'The error message was correct');
 
 
-@error_messages = ();
+@$error_messages = ();
 $o = TestClass2->create(bar => 'wwww', value => 'blah');
 ok(!$o, "Correctly couldn't create a multi-ID property object without specifying all the IDs, again");
-is(scalar(@error_messages), 1, 'Correctly trapped 2 error messages');
-like($error_messages[0], qr/Attempt to create TestClass2 with multiple ids without these properties: foo/,
+is(scalar(@$error_messages), 1, 'Correctly trapped 1 error messages');
+like($error_messages->[0], qr/Attempt to create TestClass2 with multiple ids without these properties: foo/,
    'The error message was correct');
 
 
-@error_messages = ();
+@$error_messages = ();
 $o = TestClass2->create(value => 'asdf');
 ok(!$o, "Correctly couldn't create a multi-ID property object without specifying all the IDs, again");
-is(scalar(@error_messages), 1, 'Correctly trapped 2 error messages');
-like($error_messages[0], qr/Attempt to create TestClass2 with multiple ids without these properties: foo, bar/,
+is(scalar(@$error_messages), 1, 'Correctly trapped 1 error messages');
+like($error_messages->[0], qr/Attempt to create TestClass2 with multiple ids without these properties: foo, bar/,
    'The error message was correct');
 
 
-@error_messages = ();
+@$error_messages = ();
 $o = TestClass2->create(foo => 'aaaa', bar => 'bbbb', value => '2');
 ok(!$o, "Correctly couldn't create another object with duplicated ID properites");
-like($error_messages[0], qr/An object of class TestClass2 already exists with id value 'aaaa\tbbbb'/,
+like($error_messages->[0], qr/An object of class TestClass2 already exists with id value 'aaaa\tbbbb'/,
    'The error message was correct');
 
 
