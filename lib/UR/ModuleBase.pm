@@ -642,6 +642,7 @@ for my $type (@message_types) {
     my $arrayref_subref = sub {
         my $self = shift;
         my $msgdata = $self->_get_msgdata;
+        $msgdata->{$type . "_messages_arrayref"} ||= [];
         return $msgdata->{$type . "_messages_arrayref"};
     };
 
