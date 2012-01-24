@@ -181,7 +181,8 @@ sub parse {
     my $string = shift;
     my %params = @_;
 
-    my $debug = $params{'debug'};
+    my $debug = $params{'tokdebug'};
+    my $yydebug = $params{'yydebug'} || 0;
 
     print "\nStarting parse for string $string\n" if $debug;
     my $parser = UR::BoolExpr::BxParser->new();
@@ -249,7 +250,7 @@ sub parse {
     return $parser->YYParse(
                yylex => $get_next_token,
                yyerror => \&_error,
-               yydebug => 0,
+               yydebug => $yydebug,
            );
 }
 

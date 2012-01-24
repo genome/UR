@@ -862,7 +862,8 @@ sub resolve_for_string {
     }
 
     #$DB::single=1;
-    my $tree = UR::BoolExpr::BxParser::parse($filter_string);#, debug => 1);
+    #my $tree = UR::BoolExpr::BxParser::parse($filter_string, tokdebug => 1, yydebug => 7);
+    my $tree = UR::BoolExpr::BxParser::parse($filter_string);
     unless ($tree) {
         Carp::croak("resolve_for_string() couldn't parse string \"$filter_string\"");
     }
