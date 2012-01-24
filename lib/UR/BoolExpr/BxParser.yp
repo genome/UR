@@ -65,8 +65,7 @@ like_operator: LIKE_WORD          { 'like' }
              | negation TILDE     { "$_[1] like" }
              ;
 
-like_value: value                 { '%' . $_[1] . '%' }
-          | LIKE_PATTERN          { $_[1] }
+like_value: value                 {  $_[1] =~ m/\%/ ? $_[1] : '%' . $_[1] . '%' }
           ;
 
 in_operator: IN_WORD              { 'in' }
@@ -146,7 +145,7 @@ my %token_states = (
         MINUS => qr{-},
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
-        WORD => qr{[\/\w][-\w\/]*},   # also allow / for pathnames and - for hyphenated names
+        WORD => qr{[%\/\w][-%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
         LEFT_PAREN => qr{\(},
@@ -160,7 +159,6 @@ my %token_states = (
         AND => [ qr{,}, 'DEFAULT' ],
         COLON => [ qr{:}, 'after_colon_value' ],
         TILDE => qr{~},
-        LIKE_PATTERN => qr{[\w%_]+},
         ORDER_BY => qr{order by},
         GROUP_BY => qr{group by},
     ],
