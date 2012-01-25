@@ -87,7 +87,7 @@ between_operator: BETWEEN_WORD          { 'between' }
                 | negation BETWEEN_WORD { "$_[1] between" }
                 ;
 
-between_value: value MINUS value { [ $_[1], $_[3] ] }
+between_value: first_value_part MINUS first_value_part { [ $_[1], $_[3] ] }
              ;
    
 keyword_as_value: AND          { $_[1] }
@@ -100,13 +100,25 @@ keyword_as_value: AND          { $_[1] }
                 | ASC_WORD     { $_[1] }
        ;
 
-value: IDENTIFIER         { $_[1] }
-     | number             { $_[1] }
-     | WORD               { $_[1] }
-     | DOUBLEQUOTE_STRING { ($_[1] =~ m/^"(.*?)"$/)[0]; }
-     | SINGLEQUOTE_STRING { ($_[1] =~ m/^'(.*?)'$/)[0]; }
-     | keyword_as_value   { $_[1] }
+value: first_value_part subsequent_values_list { "$_[1] $_[2]" }
+     | first_value_part  { $_[1] }
      ;
+
+subsequent_value_part: IDENTIFIER         { $_[1] }
+                     | number             { $_[1] }
+                     | WORD               { $_[1] }
+                     | DOUBLEQUOTE_STRING { ($_[1] =~ m/^"(.*?)"$/)[0]; }
+                     | SINGLEQUOTE_STRING { ($_[1] =~ m/^'(.*?)'$/)[0]; }
+                     ;
+
+subsequent_values_list: subsequent_value_part { $_[1] }
+               | subsequent_value_part subsequent_values_list { "$_[1] $_[2]" }
+               ;
+
+first_value_part: subsequent_value_part   { $_[1] }
+                | keyword_as_value   { $_[1] }
+                ;
+
 
 number: INTEGER       { $_[1] + 0 }
       | REAL          { $_[1] + 0 }
@@ -153,9 +165,9 @@ my %token_states = (
         LEFT_BRACKET => [ qr{\[}, 'set_contents'],
         RIGHT_BRACKET => [qr{\]}, 'DEFAULT' ],
         NOT_BANG => qr{!},
-        EQUAL_SIGN => qr{=},
-        DOUBLEEQUAL_SIGN => qr{=>},
-        OPERATORS => qr{<|>|<=|>=},
+        EQUAL_SIGN => [ qr{=}, 'dont_gobble_spaces' ],
+        DOUBLEEQUAL_SIGN => [ qr{=>}, 'dont_gobble_spaces' ],
+        OPERATORS => [ qr{<|>|<=|>=}, 'dont_gobble_spaces' ],
         AND => [ qr{,}, 'DEFAULT' ],
         COLON => [ qr{:}, 'after_colon_value' ],
         TILDE => qr{~},
@@ -172,6 +184,9 @@ my %token_states = (
         WORD => qr{\w+},    # Override WORD in DEFAULT to disallow /
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
+    ],
+    'dont_gobble_spaces' => [
+        WORD => qr{\s+},
     ],
 );
 
