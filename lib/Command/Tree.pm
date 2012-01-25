@@ -342,8 +342,11 @@ sub _build_sub_command_mapping {
     };
 
     for my $source_class (@source_classes) {
-        eval "use $source_class";
-        my $use_error = $@;
+        # check if this class is already loaded or an in memory class by getting it's meta
+        my $meta = eval{ $source_class->__meta__; };
+        # use the class if no meta
+        eval "use $source_class" if not $meta;
+        my $use_error = $@ if $@;
         if ($use_error) {
             warn $use_error;
         }
