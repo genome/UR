@@ -90,9 +90,7 @@ between_operator: BETWEEN_WORD          { 'between' }
 between_value: first_value_part MINUS first_value_part { [ $_[1], $_[3] ] }
              ;
    
-keyword_as_value: AND          { $_[1] }
-                | OR           { $_[1] }
-                | IN_WORD      { $_[1] }
+keyword_as_value: IN_WORD      { $_[1] }
                 | LIKE_WORD    { $_[1] }
                 | BETWEEN_WORD { $_[1] }
                 | NOT_WORD     { $_[1] }
@@ -109,6 +107,7 @@ subsequent_value_part: IDENTIFIER         { $_[1] }
                      | WORD               { $_[1] }
                      | DOUBLEQUOTE_STRING { ($_[1] =~ m/^"(.*?)"$/)[0]; }
                      | SINGLEQUOTE_STRING { ($_[1] =~ m/^'(.*?)'$/)[0]; }
+                     | keyword_as_value   { $_[1] }
                      ;
 
 subsequent_values_list: subsequent_value_part { $_[1] }
@@ -116,7 +115,8 @@ subsequent_values_list: subsequent_value_part { $_[1] }
                ;
 
 first_value_part: subsequent_value_part   { $_[1] }
-                | keyword_as_value   { $_[1] }
+                | AND                { $_[1] }
+                | OR                { $_[1] }
                 ;
 
 

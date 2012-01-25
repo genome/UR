@@ -352,10 +352,10 @@ sub new {
 		DEFAULT => -7
 	},
 	{#State 38
-		DEFAULT => -60
+		DEFAULT => -58
 	},
 	{#State 39
-		DEFAULT => -61
+		DEFAULT => -59
 	},
 	{#State 40
 		ACTIONS => {
@@ -364,21 +364,28 @@ sub new {
 		}
 	},
 	{#State 41
-		DEFAULT => -59
+		DEFAULT => -57
 	},
 	{#State 42
 		ACTIONS => {
+			'ASC_WORD' => 48,
 			'INTEGER' => 47,
 			'WORD' => 38,
+			'DESC_WORD' => 50,
 			'IDENTIFIER' => 49,
 			'DOUBLEQUOTE_STRING' => 39,
+			'NOT_WORD' => 52,
 			'MINUS' => 81,
+			'LIKE_WORD' => 55,
+			'BETWEEN_WORD' => 45,
+			'IN_WORD' => 57,
 			'REAL' => 46,
 			'SINGLEQUOTE_STRING' => 59
 		},
-		DEFAULT => -57,
+		DEFAULT => -55,
 		GOTOS => {
 			'number' => 41,
+			'keyword_as_value' => 53,
 			'subsequent_values_list' => 83,
 			'subsequent_value_part' => 82
 		}
@@ -387,10 +394,10 @@ sub new {
 		DEFAULT => -12
 	},
 	{#State 44
-		DEFAULT => -65
+		DEFAULT => -64
 	},
 	{#State 45
-		DEFAULT => -52
+		DEFAULT => -50
 	},
 	{#State 46
 		DEFAULT => -68
@@ -399,22 +406,22 @@ sub new {
 		DEFAULT => -67
 	},
 	{#State 48
-		DEFAULT => -55
+		DEFAULT => -53
 	},
 	{#State 49
-		DEFAULT => -58
+		DEFAULT => -56
 	},
 	{#State 50
-		DEFAULT => -54
+		DEFAULT => -52
 	},
 	{#State 51
 		DEFAULT => -15
 	},
 	{#State 52
-		DEFAULT => -53
+		DEFAULT => -51
 	},
 	{#State 53
-		DEFAULT => -66
+		DEFAULT => -61
 	},
 	{#State 54
 		ACTIONS => {
@@ -422,33 +429,40 @@ sub new {
 		}
 	},
 	{#State 55
-		DEFAULT => -51
-	},
-	{#State 56
-		DEFAULT => -48
-	},
-	{#State 57
-		DEFAULT => -50
-	},
-	{#State 58
 		DEFAULT => -49
 	},
+	{#State 56
+		DEFAULT => -65
+	},
+	{#State 57
+		DEFAULT => -48
+	},
+	{#State 58
+		DEFAULT => -66
+	},
 	{#State 59
-		DEFAULT => -62
+		DEFAULT => -60
 	},
 	{#State 60
 		ACTIONS => {
 			'WORD' => 38,
 			'DOUBLEQUOTE_STRING' => 39,
 			'MINUS' => 40,
+			'BETWEEN_WORD' => 45,
 			'REAL' => 46,
 			'INTEGER' => 47,
+			'ASC_WORD' => 48,
 			'IDENTIFIER' => 49,
+			'DESC_WORD' => 50,
+			'NOT_WORD' => 52,
+			'LIKE_WORD' => 55,
+			'IN_WORD' => 57,
 			'SINGLEQUOTE_STRING' => 59
 		},
-		DEFAULT => -57,
+		DEFAULT => -55,
 		GOTOS => {
 			'number' => 41,
+			'keyword_as_value' => 53,
 			'subsequent_values_list' => 83,
 			'subsequent_value_part' => 82
 		}
@@ -608,20 +622,27 @@ sub new {
 			'WORD' => 38,
 			'DOUBLEQUOTE_STRING' => 39,
 			'MINUS' => 40,
+			'BETWEEN_WORD' => 45,
 			'REAL' => 46,
 			'INTEGER' => 47,
+			'ASC_WORD' => 48,
 			'IDENTIFIER' => 49,
+			'DESC_WORD' => 50,
+			'NOT_WORD' => 52,
+			'LIKE_WORD' => 55,
+			'IN_WORD' => 57,
 			'SINGLEQUOTE_STRING' => 59
 		},
-		DEFAULT => -63,
+		DEFAULT => -62,
 		GOTOS => {
 			'number' => 41,
+			'keyword_as_value' => 53,
 			'subsequent_values_list' => 95,
 			'subsequent_value_part' => 82
 		}
 	},
 	{#State 83
-		DEFAULT => -56
+		DEFAULT => -54
 	},
 	{#State 84
 		ACTIONS => {
@@ -704,10 +725,10 @@ sub new {
 	{#State 93
 		ACTIONS => {
 			'' => -68,
-			'AND' => -68,
 			'ORDER_BY' => -68,
-			'GROUP_BY' => -68,
 			'RIGHT_PAREN' => -68,
+			'AND' => -68,
+			'GROUP_BY' => -68,
 			'OR' => -68
 		},
 		DEFAULT => -70
@@ -715,16 +736,16 @@ sub new {
 	{#State 94
 		ACTIONS => {
 			'' => -67,
-			'AND' => -67,
 			'ORDER_BY' => -67,
-			'GROUP_BY' => -67,
 			'RIGHT_PAREN' => -67,
+			'AND' => -67,
+			'GROUP_BY' => -67,
 			'OR' => -67
 		},
 		DEFAULT => -69
 	},
 	{#State 95
-		DEFAULT => -64
+		DEFAULT => -63
 	},
 	{#State 96
 		DEFAULT => -40
@@ -1093,27 +1114,27 @@ sub
 { $_[1] }
 	],
 	[#Rule 54
-		 'keyword_as_value', 1,
+		 'value', 2,
 sub
-#line 99 "BxParser.yp"
-{ $_[1] }
+#line 101 "BxParser.yp"
+{ "$_[1] $_[2]" }
 	],
 	[#Rule 55
-		 'keyword_as_value', 1,
+		 'value', 1,
 sub
-#line 100 "BxParser.yp"
+#line 102 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 56
-		 'value', 2,
+		 'subsequent_value_part', 1,
 sub
-#line 103 "BxParser.yp"
-{ "$_[1] $_[2]" }
+#line 105 "BxParser.yp"
+{ $_[1] }
 	],
 	[#Rule 57
-		 'value', 1,
+		 'subsequent_value_part', 1,
 sub
-#line 104 "BxParser.yp"
+#line 106 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 58
@@ -1126,37 +1147,37 @@ sub
 		 'subsequent_value_part', 1,
 sub
 #line 108 "BxParser.yp"
-{ $_[1] }
+{ ($_[1] =~ m/^"(.*?)"$/)[0]; }
 	],
 	[#Rule 60
 		 'subsequent_value_part', 1,
 sub
 #line 109 "BxParser.yp"
-{ $_[1] }
+{ ($_[1] =~ m/^'(.*?)'$/)[0]; }
 	],
 	[#Rule 61
 		 'subsequent_value_part', 1,
 sub
 #line 110 "BxParser.yp"
-{ ($_[1] =~ m/^"(.*?)"$/)[0]; }
-	],
-	[#Rule 62
-		 'subsequent_value_part', 1,
-sub
-#line 111 "BxParser.yp"
-{ ($_[1] =~ m/^'(.*?)'$/)[0]; }
-	],
-	[#Rule 63
-		 'subsequent_values_list', 1,
-sub
-#line 114 "BxParser.yp"
 { $_[1] }
 	],
-	[#Rule 64
+	[#Rule 62
+		 'subsequent_values_list', 1,
+sub
+#line 113 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 63
 		 'subsequent_values_list', 2,
 sub
-#line 115 "BxParser.yp"
+#line 114 "BxParser.yp"
 { "$_[1] $_[2]" }
+	],
+	[#Rule 64
+		 'first_value_part', 1,
+sub
+#line 117 "BxParser.yp"
+{ $_[1] }
 	],
 	[#Rule 65
 		 'first_value_part', 1,
