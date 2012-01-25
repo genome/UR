@@ -3025,9 +3025,10 @@ sub _generate_class_data_for_loading {
         $sub_classification_meta_class_name ||= $co->sub_classification_meta_class_name;
         $subclassify_by   ||= $co->subclassify_by;
 
+        my $sort_sub = sub ($$) { return $_[0]->property_name cmp $_[1]->property_name };
         push @all_table_properties, 
             map { [$co, $_, $table_name, 0 ] }
-            sort { $a->property_name cmp $b->property_name }
+            sort $sort_sub
             grep { (defined $_->column_name && $_->column_name ne '') or
                 (defined $_->calculate_sql && $_->calculate_sql ne '') }
             UR::Object::Property->get( class_name => $co->class_name );
