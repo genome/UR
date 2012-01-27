@@ -13,18 +13,18 @@ boolexpr:                                 { [] }
         | boolexpr GROUP_BY group_by_list { [@{$_[1]}, '-group', $_[3]] }
         ;
 
-expr: condition                   { $_[1] }
-    | expr AND expr               { UR::BoolExpr::BxParser->_and($_[1], $_[3]) }
-    | expr OR expr                { UR::BoolExpr::BxParser->_or($_[1], $_[3]) }
-    | LEFT_PAREN expr RIGHT_PAREN { $_[2] }
+expr: condition                            { $_[1] }
+    | expr AND expr                        { UR::BoolExpr::BxParser->_and($_[1], $_[3]) }
+    | expr OR expr                         { UR::BoolExpr::BxParser->_or($_[1], $_[3]) }
+    | LEFT_PAREN expr RIGHT_PAREN          { $_[2] }
     ;
 
 condition: property operator optional_spaces value                     { [ "$_[1] $_[2]" => $_[4] ] }
-         | property like_operator like_value           { [ "$_[1] $_[2]" => $_[3] ] }
-         | property in_operator set                    { [ "$_[1] $_[2]" => $_[3] ] }
+         | property like_operator like_value                           { [ "$_[1] $_[2]" => $_[3] ] }
+         | property in_operator set                                    { [ "$_[1] $_[2]" => $_[3] ] }
          | property COLON optional_spaces old_syntax_in_value          { [ "$_[1] in" => $_[4] ] }
          | property negation COLON optional_spaces old_syntax_in_value { [ "$_[1] $_[2] in" => $_[5] ] }
-         | property between_operator between_value     { [ "$_[1] $_[2]" => $_[3] ] }
+         | property between_operator between_value                     { [ "$_[1] $_[2]" => $_[3] ] }
          | property COLON optional_spaces between_value                { [ "$_[1] between" => $_[4] ] }
          | property negation COLON optional_spaces between_value       { [ "$_[1] $_[2] between" => $_[5] ] }
          ;
@@ -32,7 +32,7 @@ condition: property operator optional_spaces value                     { [ "$_[1
 spaces: WHITESPACE { $_[1] }
       ;
 
-optional_spaces:    { undef }
+optional_spaces:        { undef }
                | spaces { undef }
                ;
 
@@ -80,7 +80,7 @@ in_operator: IN_WORD              { 'in' }
            ;
 
 old_syntax_in_value: first_value_part IN_DIVIDER old_syntax_in_value { [ $_[1], @{$_[3]} ] }
-                   | first_value_part IN_DIVIDER first_value_part               { [ $_[1], $_[3] ] }
+                   | first_value_part IN_DIVIDER first_value_part    { [ $_[1], $_[3] ] }
         ; 
 
 set: LEFT_BRACKET set_body RIGHT_BRACKET { $_[2] }
@@ -124,8 +124,8 @@ subsequent_values_list: subsequent_value_part { $_[1] }
                ;
 
 first_value_part: subsequent_value_part   { $_[1] }
-                | AND                { $_[1] }
-                | OR                { $_[1] }
+                | AND                     { $_[1] }
+                | OR                      { $_[1] }
                 ;
 
 
