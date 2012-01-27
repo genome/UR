@@ -119,19 +119,21 @@ sub _resolve_boolexpr {
     my $error = $@;
 
     unless ($bool_expr) {
-        if (eval { UR::BoolExpr->_old_resolve_for_string(
+        eval {
+            ($bool_expr, %extra) = UR::BoolExpr->_old_resolve_for_string(
                                    $self->subject_class_name,
                                    $self->_complete_filter,
                                    $self->_hint_string,
                                    $self->order_by,
-                           ) }
-        ) {
-            $self->warning_message("Failed to parse query.  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well");
-            return;
+                           )
+        };
+        if ($bool_expr) {
+            $self->warning_message("Failed to parse query, but it was recognized by the deprecated filter parser.\n  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well");
+        } else {
+            die $error if $error;
         }
     }
 
-    die $error if $error;
 
     $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
         and return if %extra;
