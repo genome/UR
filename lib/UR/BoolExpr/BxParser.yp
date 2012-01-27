@@ -79,8 +79,8 @@ in_operator: IN_WORD              { 'in' }
            | negation IN_WORD     { "$_[1] in" }
            ;
 
-old_syntax_in_value: first_value_part IN_DIVIDER old_syntax_in_value { [ $_[1], @{$_[3]} ] }
-                   | first_value_part IN_DIVIDER first_value_part    { [ $_[1], $_[3] ] }
+old_syntax_in_value: single_value IN_DIVIDER old_syntax_in_value { [ $_[1], @{$_[3]} ] }
+                   | single_value IN_DIVIDER single_value        { [ $_[1], $_[3] ] }
         ; 
 
 set: LEFT_BRACKET set_body RIGHT_BRACKET { $_[2] }
@@ -94,7 +94,7 @@ between_operator: BETWEEN_WORD          { 'between' }
                 | negation BETWEEN_WORD { "$_[1] between" }
                 ;
 
-between_value: first_value_part MINUS first_value_part { [ $_[1], $_[3] ] }
+between_value: single_value MINUS single_value { [ $_[1], $_[3] ] }
              ;
    
 keyword_as_value: IN_WORD      { $_[1] }
@@ -105,8 +105,8 @@ keyword_as_value: IN_WORD      { $_[1] }
                 | ASC_WORD     { $_[1] }
        ;
 
-value: first_value_part subsequent_values_list { $_[1].$_[2] }
-     | first_value_part  { $_[1] }
+value: single_value subsequent_values_list { $_[1].$_[2] }
+     | single_value                        { $_[1] }
      ;
 
 subsequent_value_part: IDENTIFIER         { $_[1] }
@@ -117,16 +117,16 @@ subsequent_value_part: IDENTIFIER         { $_[1] }
                      | keyword_as_value   { $_[1] }
                      ;
 
-subsequent_values_list: subsequent_value_part { $_[1] }
+subsequent_values_list: subsequent_value_part                 { $_[1] }
                | subsequent_value_part subsequent_values_list { $_[1].$_[2] }
-               | spaces subsequent_values_list { $_[1].$_[2] }
-               | spaces  { '' }
+               | spaces subsequent_values_list                { $_[1].$_[2] }
+               | spaces  { '' }   # to gobble the final space in a value before the next expression part
                ;
 
-first_value_part: subsequent_value_part   { $_[1] }
-                | AND                     { $_[1] }
-                | OR                      { $_[1] }
-                ;
+single_value: subsequent_value_part   { $_[1] }
+            | AND                     { $_[1] }
+            | OR                      { $_[1] }
+            ;
 
 
 number: INTEGER       { $_[1] + 0 }
