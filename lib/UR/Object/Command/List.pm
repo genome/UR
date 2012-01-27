@@ -107,12 +107,31 @@ sub create {
 sub _resolve_boolexpr {
     my $self = shift;
 
-    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
-        $self->subject_class_name, 
-        $self->_complete_filter, 
-        $self->_hint_string,
-        $self->order_by,
-    );
+    my ($bool_expr,%extra);
+    eval {
+        ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
+                                   $self->subject_class_name,
+                                   $self->_complete_filter,
+                                   $self->_hint_string,
+                                   $self->order_by,
+                               );
+    };
+    my $error = $@;
+
+    unless ($bool_expr) {
+        if (eval { UR::BoolExpr->_old_resolve_for_string(
+                                   $self->subject_class_name,
+                                   $self->_complete_filter,
+                                   $self->_hint_string,
+                                   $self->order_by,
+                           ) }
+        ) {
+            $self->warning_message("Failed to parse query.  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well");
+            return;
+        }
+    }
+
+    die $error if $error;
 
     $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
         and return if %extra;
