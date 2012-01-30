@@ -850,7 +850,7 @@ sub legacy_params_hash {
 
 
 my $LOADED_BXPARSE = 0;
-sub _X_resolve_for_string {
+sub resolve_for_string {
     my ($class, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
     unless ($LOADED_BXPARSE) {
@@ -882,19 +882,19 @@ sub _X_resolve_for_string {
 }
 
 # TODO: these methods need a better home, since they are a cmdline/UI standard
-sub filter_regex_for_string {
+sub _old_filter_regex_for_string {
     return '^\s*([\w\.\-]+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*[\'"]?([^\'"]*)[\'"]?\s*$';
 }
 
 # TODO: these methods need a better home, since they are a cmdline/UI standard
-sub resolve_for_string {
+sub _old_resolve_for_string {
     my ($self, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
     my ($property, $op, $value);
 
     no warnings;
 
-    my $filter_regex = $self->filter_regex_for_string();
+    my $filter_regex = $self->_old_filter_regex_for_string();
     my @filters = map {
         unless (($property, $op, $value) = ($_ =~ /$filter_regex/)) {
             Carp::croak "Unable to process filter $_\n";

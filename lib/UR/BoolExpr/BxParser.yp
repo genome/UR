@@ -13,21 +13,28 @@ boolexpr:                                 { [] }
         | boolexpr GROUP_BY group_by_list { [@{$_[1]}, '-group', $_[3]] }
         ;
 
-expr: condition                   { $_[1] }
-    | expr AND expr               { UR::BoolExpr::BxParser->_and($_[1], $_[3]) }
-    | expr OR expr                { UR::BoolExpr::BxParser->_or($_[1], $_[3]) }
-    | LEFT_PAREN expr RIGHT_PAREN { $_[2] }
+expr: condition                            { $_[1] }
+    | expr AND expr                        { UR::BoolExpr::BxParser->_and($_[1], $_[3]) }
+    | expr OR expr                         { UR::BoolExpr::BxParser->_or($_[1], $_[3]) }
+    | LEFT_PAREN expr RIGHT_PAREN          { $_[2] }
     ;
 
-condition: property operator value                     { [ "$_[1] $_[2]" => $_[3] ] }
-         | property like_operator like_value           { [ "$_[1] $_[2]" => $_[3] ] }
-         | property in_operator set                    { [ "$_[1] $_[2]" => $_[3] ] }
-         | property COLON old_syntax_in_value          { [ "$_[1] in" => $_[3] ] }
-         | property negation COLON old_syntax_in_value { [ "$_[1] $_[2] in" => $_[4] ] }
-         | property between_operator between_value     { [ "$_[1] $_[2]" => $_[3] ] }
-         | property COLON between_value                { [ "$_[1] between" => $_[3] ] }
-         | property negation COLON between_value       { [ "$_[1] $_[2] between" => $_[4] ] }
+condition: property operator optional_spaces value                     { [ "$_[1] $_[2]" => $_[4] ] }
+         | property like_operator like_value                           { [ "$_[1] $_[2]" => $_[3] ] }
+         | property in_operator set                                    { [ "$_[1] $_[2]" => $_[3] ] }
+         | property COLON optional_spaces old_syntax_in_value          { [ "$_[1] in" => $_[4] ] }
+         | property negation COLON optional_spaces old_syntax_in_value { [ "$_[1] $_[2] in" => $_[5] ] }
+         | property between_operator between_value                     { [ "$_[1] $_[2]" => $_[3] ] }
+         | property COLON optional_spaces between_value                { [ "$_[1] between" => $_[4] ] }
+         | property negation COLON optional_spaces between_value       { [ "$_[1] $_[2] between" => $_[5] ] }
          ;
+
+spaces: WHITESPACE { $_[1] }
+      ;
+
+optional_spaces:        { undef }
+               | spaces { undef }
+               ;
 
 property:   IDENTIFIER { $_[1] }
         ;
@@ -72,8 +79,8 @@ in_operator: IN_WORD              { 'in' }
            | negation IN_WORD     { "$_[1] in" }
            ;
 
-old_syntax_in_value: value IN_DIVIDER old_syntax_in_value { [ $_[1], @{$_[3]} ] }
-                   | value IN_DIVIDER value               { [ $_[1], $_[3] ] }
+old_syntax_in_value: single_value IN_DIVIDER old_syntax_in_value { [ $_[1], @{$_[3]} ] }
+                   | single_value IN_DIVIDER single_value        { [ $_[1], $_[3] ] }
         ; 
 
 set: LEFT_BRACKET set_body RIGHT_BRACKET { $_[2] }
@@ -87,12 +94,10 @@ between_operator: BETWEEN_WORD          { 'between' }
                 | negation BETWEEN_WORD { "$_[1] between" }
                 ;
 
-between_value: value MINUS value { [ $_[1], $_[3] ] }
+between_value: single_value MINUS single_value { [ $_[1], $_[3] ] }
              ;
    
-keyword_as_value: AND          { $_[1] }
-                | OR           { $_[1] }
-                | IN_WORD      { $_[1] }
+keyword_as_value: IN_WORD      { $_[1] }
                 | LIKE_WORD    { $_[1] }
                 | BETWEEN_WORD { $_[1] }
                 | NOT_WORD     { $_[1] }
@@ -100,13 +105,29 @@ keyword_as_value: AND          { $_[1] }
                 | ASC_WORD     { $_[1] }
        ;
 
-value: IDENTIFIER         { $_[1] }
-     | number             { $_[1] }
-     | WORD               { $_[1] }
-     | DOUBLEQUOTE_STRING { ($_[1] =~ m/^"(.*?)"$/)[0]; }
-     | SINGLEQUOTE_STRING { ($_[1] =~ m/^'(.*?)'$/)[0]; }
-     | keyword_as_value   { $_[1] }
+value: single_value subsequent_values_list { $_[1].$_[2] }
+     | single_value                        { $_[1] }
      ;
+
+subsequent_value_part: IDENTIFIER         { $_[1] }
+                     | number             { $_[1] }
+                     | WORD               { $_[1] }
+                     | DOUBLEQUOTE_STRING { ($_[1] =~ m/^"(.*?)"$/)[0]; }
+                     | SINGLEQUOTE_STRING { ($_[1] =~ m/^'(.*?)'$/)[0]; }
+                     | keyword_as_value   { $_[1] }
+                     ;
+
+subsequent_values_list: subsequent_value_part                 { $_[1] }
+               | subsequent_value_part subsequent_values_list { $_[1].$_[2] }
+               | spaces subsequent_values_list                { $_[1].$_[2] }
+               | spaces  { '' }   # to gobble the final space in a value before the next expression part
+               ;
+
+single_value: subsequent_value_part   { $_[1] }
+            | AND                     { $_[1] }
+            | OR                      { $_[1] }
+            ;
+
 
 number: INTEGER       { $_[1] + 0 }
       | REAL          { $_[1] + 0 }
@@ -133,6 +154,7 @@ sub _error {
 
 my %token_states = (
     'DEFAULT' => [
+        WHITESPACE => qr{\s+},
         AND => [ qr{and}, 'DEFAULT'],
         OR => [ qr{or}, 'DEFAULT' ],
         BETWEEN_WORD => qr{between},
@@ -145,17 +167,17 @@ my %token_states = (
         MINUS => qr{-},
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
-        WORD => qr{[%\/\w][-%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
+        WORD => qr{[%\.\/\w][-\.%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
-        LEFT_PAREN => qr{\(},
-        RIGHT_PAREN => qr{\)},
+        LEFT_PAREN => [ qr{\(}, 'DEFAULT' ],
+        RIGHT_PAREN => [ qr{\)}, 'DEFAULT' ],
         LEFT_BRACKET => [ qr{\[}, 'set_contents'],
         RIGHT_BRACKET => [qr{\]}, 'DEFAULT' ],
         NOT_BANG => qr{!},
-        EQUAL_SIGN => qr{=},
-        DOUBLEEQUAL_SIGN => qr{=>},
-        OPERATORS => qr{<|>|<=|>=},
+        EQUAL_SIGN => [ qr{=}, 'dont_gobble_spaces' ],
+        DOUBLEEQUAL_SIGN => [ qr{=>}, 'dont_gobble_spaces' ],
+        OPERATORS => [ qr{<|>|<=|>=}, 'dont_gobble_spaces' ],
         AND => [ qr{,}, 'DEFAULT' ],
         COLON => [ qr{:}, 'after_colon_value' ],
         TILDE => qr{~},
@@ -172,6 +194,8 @@ my %token_states = (
         WORD => qr{\w+},    # Override WORD in DEFAULT to disallow /
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
+    ],
+    'dont_gobble_spaces' => [
     ],
 );
 
@@ -194,52 +218,61 @@ sub parse {
             return (undef, '');  
        }
 
-        my $longest = 0;
-        my $longest_token = '';
-        my $longest_match = '';
+        GET_NEXT_TOKEN:
+        foreach (1) {
+            my $longest = 0;
+            my $longest_token = '';
+            my $longest_match = '';
 
-        for my $token_list ( $parser_state, 'DEFAULT' ) {
-            print "\nTrying tokens for state $token_list...\n" if $debug;
-            my $tokens = $token_states{$token_list};
-            for(my $i = 0; $i < @$tokens; $i += 2) {
-                my($tok, $re) = @$tokens[$i, $i+1];
-                print "Trying token $tok... " if $debug;
+            for my $token_list ( $parser_state, 'DEFAULT' ) {
+                print "\nTrying tokens for state $token_list...\n" if $debug;
+                my $tokens = $token_states{$token_list};
+                for(my $i = 0; $i < @$tokens; $i += 2) {
+                    my($tok, $re) = @$tokens[$i, $i+1];
+                    print "Trying token $tok... " if $debug;
 
-                my($regex,$next_parser_state);
-                if (ref($re) eq 'ARRAY') {
-                    ($regex,$next_parser_state) = @$re;
-                } else {
-                    $regex = $re;
-                }
+                    my($regex,$next_parser_state);
+                    if (ref($re) eq 'ARRAY') {
+                        ($regex,$next_parser_state) = @$re;
+                    } else {
+                        $regex = $re;
+                    }
 
-                if ($string =~ m/^((\s*)($regex)(\s*))/) {
-                    print "Matched >>$1<<" if $debug;
-                    my $match_len = length($1);
-                    if ($match_len > $longest) {
-                        print "\n  ** It's now the longest" if $debug;
-                        $longest = $match_len;
-                        $longest_token = $tok;
-                        $longest_match = $3;
-                        if (length($2) or length($4)) {
-                            $parser_state = 'DEFAULT';
-                        } elsif ($next_parser_state) {
-                            $parser_state = $next_parser_state;
+                    if ($string =~ m/^($regex)/) {
+                        print "Matched >>$1<<" if $debug;
+                        my $match_len = length($1);
+                        if ($match_len > $longest) {
+                            print "\n  ** It's now the longest" if $debug;
+                            $longest = $match_len;
+                            $longest_token = $tok;
+                            $longest_match = $1;
+                            if ($parser_state ne 'dont_gobble_spaces' and $longest_match =~ m/^\s/) {
+                                $parser_state = 'DEFAULT'
+                            } elsif ($next_parser_state) {
+                                $parser_state = $next_parser_state;
+                            }
                         }
                     }
+                    print "\n" if $debug;
                 }
-                print "\n" if $debug;
-            }
 
-            $string = substr($string, $longest);
-            print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
-            $parser->YYData->{REMAINING} = $string;
-            if ($longest) {
-                print "Returning token $longest_token, match $longest_match\n  next state is named $parser_state\n" if $debug;
-                $parser->YYData->{INPUT} = $longest_token;
-                $parser->YYData->{MATCH} = $longest_match;
-                return ($longest_token, $longest_match);
+                $string = substr($string, $longest);
+                print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
+
+                if ($longest_token eq 'WHITESPACE' and $parser_state ne 'dont_gobble_spaces') {
+                    print "Redoing token extraction after whitespace\n" if $debug;
+                    redo GET_NEXT_TOKEN;
+                }
+
+                $parser->YYData->{REMAINING} = $string;
+                if ($longest) {
+                    print "Returning token $longest_token, match $longest_match\n  next state is named $parser_state\n" if $debug;
+                    $parser->YYData->{INPUT} = $longest_token;
+                    $parser->YYData->{MATCH} = $longest_match;
+                    return ($longest_token, $longest_match);
+                }
+                last if $token_list eq 'DEFAULT';  # avoid going over it twice if $parser_state is DEFAULT
             }
-            last if $token_list eq 'DEFAULT';  # avoid going over it twice if $parser_state is DEFAULT
         }
         print "Didn't match anything, done!\n" if $debug;
         return (undef, '');  # Didn't match anything
