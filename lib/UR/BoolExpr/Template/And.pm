@@ -622,13 +622,20 @@ sub _fast_construct {
         # single-property ID
         ## use Data::Dumper;
         ## print "single property id\n". Dumper($id_translations);
-        my ($key_pos,$key,$property,$op,$x);
+        my ($property, $op);
 
         # Presume we are only getting id properties until another is found.
         # If a multi-property is partially specified, we'll zero this out too.
         
-        for ($key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
-            $key = $keys[$key_pos];
+        my $values_index = -1; # -1 so we can bump it at start of loop
+        for (my $key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
+            my $key = $keys[$key_pos];
+            if (substr($key, 0, 1) eq '-') {
+                # -* are constant value keys and do not need to be changed
+                next;
+            } else {
+                $values_index++;
+            }
 
             my ($property, $op) = ($key =~ /^(.+?)\s+(.*)$/);
             $property ||= $key;
@@ -637,7 +644,6 @@ sub _fast_construct {
             $key_op_hash->{$property} ||= {};
             $key_op_hash->{$property}{$op}++;
             
-            ## print "> $key_pos- $key: $property/$op\n";
             if ($property eq "id" or $id_related->{$property}) {
                 # Put an id key into the key list.
                 for my $alias (["id"], @$id_translations) {
@@ -645,7 +651,7 @@ sub _fast_construct {
                     next if $check_for_duplicate_rules{$alias->[0]};
                     $op ||= "";
                     push @keys, $alias->[0] . ($op ? " $op" : ""); 
-                    push @$extenders, [ [$key_pos], undef, $keys[-1] ];
+                    push @$extenders, [ [$values_index], undef, $keys[-1] ];
                     $key_op_hash->{$alias->[0]} ||= {};
                     $key_op_hash->{$alias->[0]}{$op}++;
                     ## print ">> extend for @$alias with op $op.\n";
@@ -663,10 +669,17 @@ sub _fast_construct {
     else {
         # multi-property ID
         ## print "multi property id\n". Dumper($id_translations);
-        my ($key_pos,$key,$property,$op);
+        my ($property, $op);
         my %id_parts;
-        for ($key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
-            $key = $keys[$key_pos];
+        my $values_index = -1; # -1 so we can bump it at start of loop
+        for (my $key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
+            my $key = $keys[$key_pos];
+            if (substr($key, 0, 1) eq '-') {
+                # -* are constant value keys and do not need to be changed
+                next;
+            } else {
+                $values_index++;
+            }
             next if substr($key,0,1) eq '-';
 
             my ($property, $op) = ($key =~ /^(.+?)\s+(.*)$/);
@@ -676,7 +689,6 @@ sub _fast_construct {
             $key_op_hash->{$property} ||= {};
             $key_op_hash->{$property}{$op}++;
             
-            ## print "> $key_pos- $key: $property/$op\n";
             if ($property eq "id") {
                 $key_op_hash->{id} ||= {};
                 $key_op_hash->{id}{$op}++;                    
@@ -688,7 +700,7 @@ sub _fast_construct {
                     }
                     else {
                         push @keys, @new_keys; 
-                        push @$extenders, [ [$key_pos], "resolve_ordered_values_from_composite_id", @new_keys ];
+                        push @$extenders, [ [$values_index], "resolve_ordered_values_from_composite_id", @new_keys ];
                         for (@$alias) {
                             $key_op_hash->{$_} ||= {};
                             $key_op_hash->{$_}{$op}++;
@@ -699,7 +711,7 @@ sub _fast_construct {
             }    
             elsif ($id_related->{$property}) {
                 if ($op eq "" or $op eq "eq" or $op eq "=" or $op eq 'in') {
-                    $id_parts{$id_pos->{$property}} = $key_pos;                        
+                    $id_parts{$id_pos->{$property}} = $values_index;                        
                 }
                 else {
                     # We're doing some sort of gray-area comparison on an ID                        
