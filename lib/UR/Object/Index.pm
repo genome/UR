@@ -82,7 +82,10 @@ sub get_objects_matching
             if (my $op = $value->{operator})
             {
                 $op = lc($op);
-                if ($op eq 'like' or $op eq 'not like')
+                if ($op eq '=') {
+                   @hr = grep { $_ } map { $_->{$value->{'value'}} } @hr;
+                }
+                elsif ($op eq 'like' or $op eq 'not like')
                 {
                     my $not = 1 if (substr($op,0,1) eq 'n');
                     my $comparison_value = $value->{value};                        

@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 81;
+use Test::More;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -247,17 +247,59 @@ my $frank = URT::Person->get(name => 'Frank');
 is($frank->car_count, 0, 'Frank has 0 cars using the set');
 
 do {
-    my $set_class = 'URT::Person::Set';
-    my $initializer = $set_class->can('_init_subclass');
-    eval { $initializer->($set_class, $set_class) };
+    # Class methods that are not implemented on the Set should be delegated
+    # to the member class and should not be handled by the (immutable)
+    # instance accesors.
+
+    my $_some_member_method = '';
+    local *URT::Person::_some_member_method = sub { $_some_member_method = [@_] };
+
+    my $_some_member_method_can = URT::Person::Set->can('_some_member_method');
+    $@ = '';
+    eval { $_some_member_method_can->('URT::Person::Set', 42) };
     my $error = $@;
-    isnt($error, 'no error when calling _init_subclass on set class');
+    is($error, '', 'no error when calling _some_member_method on set class');
+
+    is_deeply(
+        $_some_member_method,
+        ['URT::Person', 42],
+        '_some_member_method was delegated to member class'
+    );
 };
 
 do {
-    my $set = URT::Person->define_set();
-    my $initializer = $set->can('_init_subclass');
-    eval { $initializer->($set, $set) };
+    # Class methods that are implemented on the Set should be called as
+    # normal and should not be handled by the (immutable) instance accesors.
+
+    my $_some_set_method = 0;
+    local *URT::Person::Set::_some_set_method = sub { $_some_set_method = [@_] };
+
+    my $_some_set_method_can = URT::Person::Set->can('_some_set_method');
+    $@ = '';
+    eval { $_some_set_method_can->('URT::Person::Set', 42) };
     my $error = $@;
-    like($error, qr/_init_subclass/, 'got error when calling _init_subclass on a set object');
+    is($error, '', 'no error when calling _some_set_method on set class');
+
+    is_deeply(
+        $_some_set_method,
+        ['URT::Person::Set', 42],
+        '_some_set_method was not delegated to member class'
+    );
 };
+
+do {
+    # Instance methods should still be handled by the (immutable) member class
+    # accessors.
+    my $_some_member_method = '';
+    local *URT::Person::_some_member_method = sub { $_some_member_method = [@_] };
+
+    my $set = URT::Person->define_set();
+
+    my $_some_member_method_can = $set->can('_some_member_method');
+    $@ = '';
+    eval { $_some_member_method_can->($set, 42) };
+    my $error = $@;
+    like($error, qr/_some_member_method/, 'got error when calling _some_member_method as a mutator on a set object');
+};
+
+done_testing();

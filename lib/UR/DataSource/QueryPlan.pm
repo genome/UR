@@ -260,10 +260,13 @@ sub _init_rdbms {
                 $is_descending{$order_by_prop} = $1 eq '-';
             }
 
-            unless ($class_name->can($order_by_prop)) {
-                Carp::croak("Cannot order by '$name': Class $class_name has no property or method named '$order_by_prop'");
+            my($order_by_prop_meta) = $class_meta->_concrete_property_meta_for_class_and_name($order_by_prop);
+            unless ($order_by_prop_meta) {
+                Carp::croak("Cannot order by '$name': Class $class_name has no property named '$order_by_prop'");
             }
-            if ($order_by_property_names{$name} = $db_property_data_map{$order_by_prop}) {  # yes, single =
+
+            $name = ( $is_descending{$order_by_prop} ? '-' : '' ) . $order_by_prop_meta->property_name;
+            if ($order_by_property_names{$name} = $db_property_data_map{$order_by_prop_meta->property_name}) {  # yes, single =
                 push @column_data, $order_by_property_names{$name};
 
                 my $table_column_names = $ds->_select_clause_columns_for_table_property_data($column_data[-1]);

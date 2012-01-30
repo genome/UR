@@ -107,12 +107,33 @@ sub create {
 sub _resolve_boolexpr {
     my $self = shift;
 
-    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
-        $self->subject_class_name, 
-        $self->_complete_filter, 
-        $self->_hint_string,
-        $self->order_by,
-    );
+    my ($bool_expr,%extra);
+    eval {
+        ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
+                                   $self->subject_class_name,
+                                   $self->_complete_filter,
+                                   $self->_hint_string,
+                                   $self->order_by,
+                               );
+    };
+    my $error = $@;
+
+    unless ($bool_expr) {
+        eval {
+            ($bool_expr, %extra) = UR::BoolExpr->_old_resolve_for_string(
+                                   $self->subject_class_name,
+                                   $self->_complete_filter,
+                                   $self->_hint_string,
+                                   $self->order_by,
+                           )
+        };
+        if ($bool_expr) {
+            $self->warning_message("Failed to parse query, but it was recognized by the deprecated filter parser.\n  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well");
+        } else {
+            die $error if $error;
+        }
+    }
+
 
     $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
         and return if %extra;
@@ -231,10 +252,32 @@ EOS
         $doc .= " $help_synopsis\n";
     } else {
         $doc .= <<EOS
- lister-command --filter name=Bob --show id,name,address --order name
- lister-command --filter name='something with space',employees\>200,job~%manager
- lister-command --filter cost:20000-90000
- lister-command --filter answer:yes/maybe
+ list-cmd --filter name=Bob --show id,name,address --order name
+ list-cmd --filter name='something with space',employees\>200,job~%manager
+ list-cmd --filter cost:20000-90000
+ list-cmd --filter answer:yes/maybe
+
+Extended Syntax:
+----------------
+The filter expression may also use a more free-form syntax with arbitrary
+nesting of parentheses and 'and' or 'or' clauses.  This syntax accepts the
+words 'in', 'like' and 'between' in place of the above ':' and '~' operators.
+In addition, the in-list of values must begin with a left bracket, end with
+a right bracket and the values are separated with commas.
+
+This extended syntax expression will most likely contain spaces or other
+characters having special meaning to the shell, so they will need to be
+escaped with literal backslashes or enclosed in quotes of some kind.
+
+Extended Syntax Examples:
+-------------------------
+ list-cmd --filter 'name=Bob or address like "%main st"'
+ list-cmd --filter 'name="something with space" and (score < 10 or score > 100)'
+ list-cmd --filter 'cost between 20000-90000'
+ list-cmd --filter 'answer in [yes,maybe]'
+
+
+
 EOS
     }
 

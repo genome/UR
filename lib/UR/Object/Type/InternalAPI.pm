@@ -170,7 +170,8 @@ sub direct_id_property_metas {
         map { $DIRECT_ID_PROPERTY_METAS_TEMPLATE->get_rule_for_values($class_name, $_, 0) }
         @{$self->{'id_by'}};
 
-    @id_property_objects = sort { $a->is_id <=> $b->is_id } @id_property_objects;
+    my $sort_sub = sub ($$) { return $_[0]->is_id cmp $_[1]->is_id };
+    @id_property_objects = sort $sort_sub @id_property_objects;
     if (@id_property_objects == 0) {
         @id_property_objects = $self->property_meta_for_name("id");
     }

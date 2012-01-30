@@ -342,10 +342,10 @@ sub _build_sub_command_mapping {
     };
 
     for my $source_class (@source_classes) {
-        eval "use $source_class";
-        my $use_error = $@;
-        if ($use_error) {
-            warn $use_error;
+        # check if this class is valid
+        eval{ $source_class->class; };
+        if ( $@ ) {
+            warn $@;
         }
 
         # for My::Foo::Command::* commands and sub-trees
