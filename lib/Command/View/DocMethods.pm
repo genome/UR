@@ -495,30 +495,27 @@ sub _doc_see_also {
 sub _shell_args_usage_string {
     my $self = shift;
 
-    my $is_executable = eval {
-        if ($self->can("_execute_body") eq __PACKAGE__->can("_execute_body")) {
-            return;
+    return eval {
+        print $self->class."\n";
+        if ( $self->isa('Command::Tree') ) { 
+            return '...';
+        }
+        elsif ($self->can("_execute_body") eq __PACKAGE__->can("_execute_body")) {
+            return '(no execute!)';
         }
         elsif ($self->__meta__->is_abstract) {
-            return;
+            return '(no sub commands!)';
         }
         else {
-            return 1;
+            return join(
+                " ", 
+                map { 
+                    $self->_shell_arg_usage_string_from_property_meta($_) 
+                } $self->_shell_args_property_meta()
+
+            );
         }
     };
-
-    if ($is_executable) {
-        return join(
-            " ", 
-            map { 
-                $self->_shell_arg_usage_string_from_property_meta($_) 
-            } $self->_shell_args_property_meta()
-            
-        );
-    }
-    else {
-        return "(no execute or sub commands implemented)"
-    }
 }
 
 sub _shell_args_usage_string_abbreviated {
