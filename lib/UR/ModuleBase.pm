@@ -21,67 +21,20 @@ BEGIN {
 
 =head1 NAME
 
-UR::ModuleBase - Error, status, and warning messaging for derived packages
+UR::ModuleBase - Methods common to all UR classes and object instances.
 
-=head1 SYNOPSIS
-
-    # common usage
-    
-    sub foo {
-        my $self = shift;
-        ...
-        if ($problem) {           
-            $self->error_message("Something went wrong...");
-            return;
-        }
-        return 1;
-    }
-    
-    unless ($obj->foo) {
-        print STDERR $obj->error_string;
-    }
-    
-    # A complete object is made with each error, staus,
-    # or warning message with detail about the context in 
-    # which it was created.
-    
-    # Some of the details are accessible directly on the object/class:
-    $string       = $obj->error_string;
-    $text         = $obj->error_text;
-    $package_name = $obj->error_package;
-    @call_stack   = $obj->error_call_stack;
-    $time         = $obj->error_time;
-
-    # The developer can also get the message object directly
-    # and examine the properties.
-    $msg_obj      = $obj->error_object;
-        $string         = $msg_obj->string; 
-        $text           = $msg_obj->text;
-        $package_name   = $msg_obj->package_name;
-        @call_stack     = $msg_obj->call_stack;
-        $time           = $msg_obj->time;
-        $type           = $msg_obj->type;  # "error"
-        $owner          = $msg_obj->owner; # $obj
-
-    # WARNING: error_message will return the last error specified
-    # on that object/class.  It is not automatically reset when
-    # other methods are called which work without error.
-    
-    # When no error is explicitly found, a check is made against
-    # the last error in general (UR::ModuleBase->error_message)
-    # and call stacks are compared.  If it occurred in something    
-    # called by the caller.
-    
-    
 =head1 DESCRIPTION
 
 This is a base class for packages, classes, and objects which need to
-set/get error, warning, debug, and status messages on themselves,
-their class, and their parent class(es).
+manage basic functionality in the UR framework such as inheritance, 
+AUTOLOAD/AUTOSUB methods, error/status/warning/etc messages.
+
+UR::ModuleBase is in the @ISA list for UR::Object, but UR::ModuleBase is not
+a formal UR class.
 
 =head1 METHODS
 
-These methods create and change message handlers.
+=over 4
 
 =cut
 
@@ -102,7 +55,7 @@ use UR::Util;
 
   $class = $obj->class;
 
-This returns the class name of a class or an object.
+This returns the class name of a class or an object as a string.
 It is exactly equivalent to:
 
     (ref($self) ? ref($self) : $self)
@@ -254,7 +207,72 @@ sub base_dir
 
 =pod
 
-=item C<AUTOLOAD>
+=item methods
+
+Undocumented.
+
+=cut
+
+sub methods
+{
+    my $self = shift;
+    my @methods;
+    my %methods;
+    my ($class, $possible_method, $possible_method_full, $r, $r1, $r2);
+    no strict; 
+    no warnings;
+
+    for $class (reverse($self, $self->inheritance())) 
+    { 
+        print "$class\n"; 
+        for $possible_method (sort grep { not /^_/ } keys %{$class . "::"}) 
+        {
+            $possible_method_full = $class . "::" . $possible_method;
+            
+            $r1 = $class->can($possible_method);
+            next unless $r1; # not implemented
+            
+            $r2 = $class->super_can($possible_method);
+            next if $r2 eq $r1; # just inherited
+            
+            {
+                push @methods, $possible_method_full; 
+                push @{ $methods{$possible_method} }, $class;
+            }
+        } 
+    }
+    print Dumper(\%methods);
+    return @methods;
+}
+
+=pod
+
+=item C<context_return>
+
+  return MyClass->context_return(@return_values);
+
+Attempts to return either an array or scalar based on the calling context.
+Will die if called in scalar context and @return_values has more than 1
+element.
+
+=cut
+
+sub context_return {
+    my $class = shift;
+    return unless defined wantarray;
+    return @_ if wantarray;
+    if (@_ > 1) {
+        my @caller = caller(1);
+        Carp::croak("Method $caller[3] on $class called in scalar context, but " . scalar(@_) . " items need to be returned");
+    }
+    return $_[0];
+}
+
+=pod
+
+=back
+
+=head1 C<AUTOLOAD>
 
 This package impliments AUTOLOAD so that derived classes can use
 AUTOSUB instead of AUTOLOAD.
@@ -372,71 +390,33 @@ sub AUTOLOAD {
     }
 }
 
-=pod
-
-=item methods
-
-Undocumented.
-
-=cut
-
-sub methods
-{
-    my $self = shift;
-    my @methods;
-    my %methods;
-    my ($class, $possible_method, $possible_method_full, $r, $r1, $r2);
-    no strict; 
-    no warnings;
-
-    for $class (reverse($self, $self->inheritance())) 
-    { 
-        print "$class\n"; 
-        for $possible_method (sort grep { not /^_/ } keys %{$class . "::"}) 
-        {
-            $possible_method_full = $class . "::" . $possible_method;
-            
-            $r1 = $class->can($possible_method);
-            next unless $r1; # not implemented
-            
-            $r2 = $class->super_can($possible_method);
-            next if $r2 eq $r1; # just inherited
-            
-            {
-                push @methods, $possible_method_full; 
-                push @{ $methods{$possible_method} }, $class;
-            }
-        } 
-    }
-    print Dumper(\%methods);
-    return @methods;
-}
 
 =pod
 
-=item C<context_return>
+=head1 MESSAGING
 
-  return MyClass->context_return(@return_values);
+UR::ModuleBase implements several methods for sending and storing error, warning and
+status messages to the user.  
 
-Attempts to return either an array or scalar based on the calling context.
-Will die if called in scalar context and @return_values has more than 1
-element.
+  # common usage
 
-=cut
+  sub foo {
+      my $self = shift;
+      ...
+      if ($problem) {
+          $self->error_message("Something went wrong...");
+          return;
+      }
+      return 1;
+  }
 
-sub context_return {
-    my $class = shift;
-    return unless defined wantarray;
-    return @_ if wantarray;
-    if (@_ > 1) {
-        my @caller = caller(1);
-        Carp::croak("Method $caller[3] on $class called in scalar context, but " . scalar(@_) . " items need to be returned");
-    }
-    return $_[0];
-}
+  unless ($obj->foo) {
+      print LOG $obj->error_message();
+  }
 
+=head2 Messaging Methods
 
-=over
+=over 4
 
 =item message_types
 
@@ -447,8 +427,12 @@ With no arguments, this method returns all the types of messages that
 this class handles.  With arguments, it adds a new type to the
 list.
 
+Standard message types are error, status, warning, debug and usage.
+
 Note that the addition of new types is not fully supported/implemented
 yet.
+
+=back
 
 =cut
 
@@ -530,6 +514,96 @@ sub _get_msgdata {
         return $class_msgdata;
     }
 }
+
+=pod
+
+For each message type, several methods are created for sending and retrieving messages,
+registering a callback to run when messages are sent, controlling whether the messages
+are printed on the terminal, and whether the messages are queued up.
+
+For example, for the "error" message type, these methods are created:
+
+=over 4
+
+=item error_message
+
+    $obj->error_message("Something went wrong...");
+    $msg = $obj->error_message();
+
+When called with one argument, it sends an error message to the object.  The 
+error_message_callback will be run, if one is registered, and the message will
+be printed to the terminal.  When called with no arguments, the last message
+sent will be returned.
+
+=item dump_error_messages
+
+    $obj->dump_error_messages(0);
+    $flag = $obj->dump_error_messages();
+
+Get or set the flag which controls whether messages sent via C<error_message()>
+is printed to the terminal.  This flag defaults to true for warning and error
+messages, and false for others.
+
+=item queue_error_messages
+
+    $obj->queue_error_messages(0);
+    $flag = $obj->queue_error_messages();
+
+Get or set the flag which control whether messages send via C<error_message()>
+are saved into a list.  If true, every message sent is saved and can be retrieved
+with L<error_messages()> or L<error_messages_arrayref()>.  This flag defaults to
+false for all message types.
+
+=item error_messages_callback
+
+    $obj->error_messages_callback($subref);
+    $subref = $obj->error_messages_callback();
+
+Get or set the callback run whenever an error_message is sent.  This callback
+is run with two arguments: The object or class error_message() was called on,
+and a string containing the message.  This callback is run before the message
+is printed to the terminal or queued into its list.  The callback can modify
+the message (by writing to $_[1]) and affect the message that is printed or
+queued.  This callback is run within an eval, and if it throws an exception,
+no message at all is printed or queued.
+
+=item error_messages
+
+    @list = $obj->error_messages();
+
+If the queue_error_messages flag is on, then this method returns the entire list
+of queued messages.
+
+=item error_messages_arrayref
+
+    $listref = $obj->error_messages_arrayref();
+
+If the queue_error_messages flag is on, then this method returns a reference to
+the actual list where messages get queued.  This list can be manipulated to add
+or remove items.
+
+=item error_message_source
+
+    %source_info = $obj->error_message_source
+
+Returns a hash of information about the most recent call to error_message.
+The key "error_message" contains the message.  The keys error_package,
+error_file, error_line and error_subroutine contain info about the location
+in the code where error_message() was called.
+
+=item error_package
+
+=item error_file
+
+=item error_line
+
+=item error_subroutine
+
+These methods return the same data as $obj->error_message_source().
+
+=back
+
+=cut
 
 for my $type (@message_types) {
 
