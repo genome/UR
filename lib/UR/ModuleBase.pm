@@ -623,18 +623,18 @@ for my $type (@message_types) {
             $msgdata->{ $type . "_subroutine" } = $subroutine;
         }
 
-        if (wantarray) {
-            return (
-                $msgdata->{ $type . "_message" },
-                $msgdata->{ $type . "_package" },
-                $msgdata->{ $type . "_file" },
-                $msgdata->{ $type . "_line" },
-                $msgdata->{ $type . "_subroutine"},
-            );
-        }
         return $msgdata->{ $type . "_message" };
     };
 
+    my $messageinfo_subname = $type . "_message_source";
+    my $messageinfo_subref = sub {
+        my $self = shift;
+        my $msgdata = $self->_get_msgdata;
+        my %return;
+        my @keys = map { $type . $_ } qw( _message _package _file _line _subroutine );
+        @return{@keys} = @$msgdata{@keys};
+        return %return;
+    };
 
     my $arrayref_subname = $type . "_messages_arrayref";
     my $arrayref_subref = sub {
@@ -657,9 +657,10 @@ for my $type (@message_types) {
     no strict;
     no warnings;
 
-    *$logger_subname    = $logger_subref;
-    *$arrayref_subname  = $arrayref_subref;
-    *$array_subname     = $array_subref;
+    *$logger_subname      = $logger_subref;
+    *$messageinfo_subname = $messageinfo_subref;
+    *$arrayref_subname    = $arrayref_subref;
+    *$array_subname       = $array_subref;
 }
 
 

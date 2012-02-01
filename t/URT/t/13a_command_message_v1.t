@@ -7,7 +7,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
-use Test::More tests => 774;
+use Test::More tests => 801;
 
 use UR::Namespace::Command::Old::DiffRewrite;
 
@@ -30,6 +30,8 @@ for my $type (qw/error warning status/) {
     my $uc_type = uc($type);
     my $msg_prefix = ($type eq "status" ? "" : "$uc_type: ");
 
+    my $msg_source_sub = $accessor . '_source';
+
     for my $do_queue ([],[0],[1]) {
         for my $do_dump ([],[0],[1]) {
 
@@ -50,9 +52,19 @@ for my $type (qw/error warning status/) {
             my @cb_args;
             ok($c->$cb_register(sub { @cb_args = @_; $cb_msg_count++;}), "can set callback");
 
+            my $message_line = __LINE__ + 1;    # The messaging sub will be called on the next line
             is($c->$accessor("error1"), "error1",       "$type setting works");
             $buffer = $stderr_twin->getline;
             is($buffer, ($c->$dump_flag ? "${msg_prefix}error1\n" : undef), ($c->$dump_flag ?  "got message 1" : "no dump") );
+
+            my %source_info = $c->$msg_source_sub();
+            is_deeply(\%source_info,
+                      { $accessor => 'error1',
+                        $type.'_package' => 'main',
+                        $type.'_file' => __FILE__,
+                        $type.'_line' => $message_line,
+                        $type.'_subroutine' => undef },   # not called from within a sub
+                      "$msg_source_sub returns correct info");
 
             is($cb_msg_count, 1, "$type callback fired");
             is_deeply(
