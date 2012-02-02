@@ -799,6 +799,9 @@ sub _normalize_class_description_impl {
                 Carp::croak("Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@") if $@;
             }
             unless ($parent_class_name->can("__meta__")) {
+                if ($ENV{'HARNESS_ACTIVE'}) {
+                    Carp::confess("Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name.  Does class $parent_class_name exist, and is it loaded?\n  The entire list of base classes was ".join(', ', @base_classes));
+                }
                 Carp::croak("Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name.  Does class $parent_class_name exist, and is it loaded?");
             }
             my $parent_class = $parent_class_name->__meta__;
