@@ -27,7 +27,8 @@ ok($machine->insert('quarter'), 'Inserted a quarter');
 ok($machine->insert('nickel'), 'Inserted a nickel');
 
 my @errors;
-$machine->message_callback('error', sub { push @errors, $_[0]->text });
+$machine->dump_error_messages(0);
+$machine->error_messages_callback('error', sub { push @errors, $_[1]; });
 my @items = $machine->buy('b');
 
 is(scalar(@items), 0, 'Got back no items');

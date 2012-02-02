@@ -37,11 +37,12 @@ is($objs[0]->thing_color, 'purple', 'Color is correct');
 
 
 
-my $error_message;
-UR::Context->message_callback('error', sub { $error_message = $_[0]->text });
+my $filemux_error_message;
+URT::DataSource::SomeFileMux->error_messages_callback(sub { $filemux_error_message = $_[1]; $_[1] = undef });
+
 $obj = eval { URT::Thing->get(thing_id => 2) };
 ok(!$obj, "Correctly couldn't retrieve a Thing without a thing_type");
-like($error_message, qr(Recursive entry.*URT::Thing), 'Error message did mention recursive call trapped');
+like($filemux_error_message, qr(Recursive entry.*URT::Thing), 'Error message did mention recursive call trapped');
 
 my $iter = URT::Thing->create_iterator(thing_type => ['person', 'robot']);
 ok($iter, 'Created an iterator for all Things');
