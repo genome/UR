@@ -135,7 +135,9 @@ sub _resolve_boolexpr {
     }
 
 
-    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+    #$self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+    $self->error_message( sprintf('Cannot list for class %s because some items in the filter or show were not properties of that class: %s',
+                          $self->subject_class_name, join(', ', keys %extra)))
         and return if %extra;
 
     return $bool_expr;
