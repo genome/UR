@@ -128,7 +128,7 @@ sub _resolve_boolexpr {
                            )
         };
         if ($bool_expr) {
-            $self->warning_message("Failed to parse query, but it was recognized by the deprecated filter parser.\n  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well");
+            $self->warning_message("Failed to parse your query, but it was recognized by the deprecated filter parser.\n  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well\n  The error from the parser was:\n    $error");
         } else {
             die $error if $error;
         }
