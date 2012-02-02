@@ -212,6 +212,14 @@ sub _resolve_forward {
     my ($source_name_for_foreign, $foreign_name_for_source);
 
     if ($foreign_class->isa("UR::Value")) {
+        if (my $id_by = $pmeta->id_by) {
+            my @id_by = ref($id_by) eq 'ARRAY' ? @$id_by : ($id_by);
+            foreach my $id_by_name ( @id_by ) {
+                my $id_by_property = $class_meta->property_meta_for_name($id_by_name);
+                push @joins, $id_by_property->_resolve_join_chain($join_label);
+            }
+        }
+
         @source_property_names = ($property_name);
         @foreign_property_names = ('id');
 

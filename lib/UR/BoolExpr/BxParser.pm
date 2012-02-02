@@ -38,7 +38,7 @@ sub new {
 		}
 	},
 	{#State 1
-		DEFAULT => -17
+		DEFAULT => -20
 	},
 	{#State 2
 		ACTIONS => {
@@ -143,157 +143,129 @@ sub new {
 		}
 	},
 	{#State 13
-		DEFAULT => -32
+		DEFAULT => -35
 	},
 	{#State 14
 		ACTIONS => {
-			'ASC_WORD' => 46,
-			'INTEGER' => 45,
-			'WORD' => 38,
-			'DESC_WORD' => 48,
-			'IDENTIFIER' => 47,
-			'DOUBLEQUOTE_STRING' => 39,
-			'NOT_WORD' => 50,
-			'MINUS' => 40,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'BETWEEN_WORD' => 43,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'REAL' => 44,
-			'SINGLEQUOTE_STRING' => 57
+			'WHITESPACE' => 39
 		},
+		DEFAULT => -18,
 		GOTOS => {
-			'between_value' => 49,
-			'number' => 41,
-			'value' => 52,
-			'keyword_as_value' => 51,
-			'old_syntax_in_value' => 42
+			'optional_spaces' => 40,
+			'spaces' => 38
 		}
 	},
 	{#State 15
-		DEFAULT => -30
+		DEFAULT => -33
 	},
 	{#State 16
 		ACTIONS => {
-			'ASC_WORD' => 46,
-			'INTEGER' => 45,
-			'WORD' => 38,
-			'DESC_WORD' => 48,
-			'IDENTIFIER' => 47,
-			'DOUBLEQUOTE_STRING' => 39,
-			'NOT_WORD' => 50,
-			'MINUS' => 40,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'BETWEEN_WORD' => 43,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'REAL' => 44,
-			'SINGLEQUOTE_STRING' => 57
+			'WHITESPACE' => 39
 		},
+		DEFAULT => -18,
 		GOTOS => {
-			'number' => 41,
-			'value' => 58,
-			'keyword_as_value' => 51
+			'optional_spaces' => 41,
+			'spaces' => 38
 		}
 	},
 	{#State 17
-		DEFAULT => -46
+		DEFAULT => -48
 	},
 	{#State 18
 		ACTIONS => {
-			'WORD' => 38,
-			'DOUBLEQUOTE_STRING' => 39,
-			'MINUS' => 40,
-			'BETWEEN_WORD' => 43,
-			'REAL' => 44,
-			'LIKE_PATTERN' => 60,
-			'INTEGER' => 45,
-			'ASC_WORD' => 46,
-			'IDENTIFIER' => 47,
-			'DESC_WORD' => 48,
-			'NOT_WORD' => 50,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'SINGLEQUOTE_STRING' => 57
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
 		},
 		GOTOS => {
-			'number' => 41,
-			'value' => 61,
-			'keyword_as_value' => 51,
-			'like_value' => 59
+			'number' => 45,
+			'value' => 56,
+			'keyword_as_value' => 55,
+			'single_value' => 58,
+			'like_value' => 47,
+			'subsequent_value_part' => 46
 		}
 	},
 	{#State 19
-		DEFAULT => -26
-	},
-	{#State 20
 		DEFAULT => -29
 	},
+	{#State 20
+		DEFAULT => -32
+	},
 	{#State 21
-		DEFAULT => -28
-	},
-	{#State 22
-		DEFAULT => -33
-	},
-	{#State 23
 		DEFAULT => -31
 	},
+	{#State 22
+		DEFAULT => -36
+	},
+	{#State 23
+		DEFAULT => -34
+	},
 	{#State 24
-		DEFAULT => -35
+		DEFAULT => -38
 	},
 	{#State 25
 		ACTIONS => {
-			'LEFT_BRACKET' => 62
+			'LEFT_BRACKET' => 63
 		},
 		GOTOS => {
-			'set' => 63
+			'set' => 64
 		}
 	},
 	{#State 26
-		DEFAULT => -39
+		DEFAULT => -41
 	},
 	{#State 27
 		ACTIONS => {
-			'ASC_WORD' => 46,
-			'INTEGER' => 45,
-			'WORD' => 38,
-			'DESC_WORD' => 48,
-			'IDENTIFIER' => 47,
-			'DOUBLEQUOTE_STRING' => 39,
-			'NOT_WORD' => 50,
-			'MINUS' => 40,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'BETWEEN_WORD' => 43,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'REAL' => 44,
-			'SINGLEQUOTE_STRING' => 57
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
 		},
 		GOTOS => {
-			'between_value' => 64,
-			'number' => 41,
-			'value' => 65,
-			'keyword_as_value' => 51
+			'between_value' => 65,
+			'number' => 45,
+			'keyword_as_value' => 55,
+			'single_value' => 66,
+			'subsequent_value_part' => 46
 		}
 	},
 	{#State 28
 		ACTIONS => {
 			'DOUBLEEQUAL_SIGN' => 13,
-			'BETWEEN_WORD' => 67,
-			'TILDE' => 70,
-			'COLON' => 66,
-			'LIKE_WORD' => 69,
+			'BETWEEN_WORD' => 68,
+			'TILDE' => 71,
+			'COLON' => 67,
+			'LIKE_WORD' => 70,
 			'OPERATORS' => 15,
-			'IN_WORD' => 71,
+			'IN_WORD' => 72,
 			'EQUAL_SIGN' => 23
 		},
 		GOTOS => {
-			'an_operator' => 68
+			'an_operator' => 69
 		}
 	},
 	{#State 29
@@ -304,30 +276,30 @@ sub new {
 	},
 	{#State 31
 		ACTIONS => {
-			'AND' => 72
+			'AND' => 73
 		},
-		DEFAULT => -24
+		DEFAULT => -27
 	},
 	{#State 32
 		ACTIONS => {
 			'IDENTIFIER' => 1
 		},
 		GOTOS => {
-			'property' => 73
+			'property' => 74
 		}
 	},
 	{#State 33
 		ACTIONS => {
-			'AND' => 74
+			'AND' => 75
 		},
-		DEFAULT => -22
+		DEFAULT => -25
 	},
 	{#State 34
 		ACTIONS => {
-			'ASC_WORD' => 75,
-			'DESC_WORD' => 76
+			'ASC_WORD' => 76,
+			'DESC_WORD' => 77
 		},
-		DEFAULT => -18
+		DEFAULT => -21
 	},
 	{#State 35
 		DEFAULT => -3
@@ -346,309 +318,472 @@ sub new {
 		DEFAULT => -7
 	},
 	{#State 38
-		DEFAULT => -59
+		DEFAULT => -19
 	},
 	{#State 39
-		DEFAULT => -60
+		DEFAULT => -17
 	},
 	{#State 40
 		ACTIONS => {
-			'INTEGER' => 78,
-			'REAL' => 77
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
+		},
+		GOTOS => {
+			'between_value' => 79,
+			'number' => 45,
+			'keyword_as_value' => 55,
+			'old_syntax_in_value' => 78,
+			'single_value' => 80,
+			'subsequent_value_part' => 46
 		}
 	},
 	{#State 41
-		DEFAULT => -58
-	},
-	{#State 42
-		DEFAULT => -12
-	},
-	{#State 43
-		DEFAULT => -53
-	},
-	{#State 44
-		DEFAULT => -64
-	},
-	{#State 45
-		DEFAULT => -63
-	},
-	{#State 46
-		DEFAULT => -56
-	},
-	{#State 47
-		DEFAULT => -57
-	},
-	{#State 48
-		DEFAULT => -55
-	},
-	{#State 49
-		DEFAULT => -15
-	},
-	{#State 50
-		DEFAULT => -54
-	},
-	{#State 51
-		DEFAULT => -62
-	},
-	{#State 52
 		ACTIONS => {
-			'IN_DIVIDER' => 80,
-			'MINUS' => 79
-		}
-	},
-	{#State 53
-		DEFAULT => -52
-	},
-	{#State 54
-		DEFAULT => -49
-	},
-	{#State 55
-		DEFAULT => -51
-	},
-	{#State 56
-		DEFAULT => -50
-	},
-	{#State 57
-		DEFAULT => -61
-	},
-	{#State 58
-		DEFAULT => -9
-	},
-	{#State 59
-		DEFAULT => -10
-	},
-	{#State 60
-		DEFAULT => -38
-	},
-	{#State 61
-		DEFAULT => -37
-	},
-	{#State 62
-		ACTIONS => {
-			'ASC_WORD' => 46,
-			'INTEGER' => 45,
-			'WORD' => 38,
-			'DESC_WORD' => 48,
-			'IDENTIFIER' => 47,
-			'DOUBLEQUOTE_STRING' => 39,
-			'NOT_WORD' => 50,
-			'MINUS' => 40,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'BETWEEN_WORD' => 43,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'REAL' => 44,
-			'SINGLEQUOTE_STRING' => 57
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
 		},
 		GOTOS => {
-			'set_body' => 81,
-			'number' => 41,
-			'value' => 82,
-			'keyword_as_value' => 51
+			'number' => 45,
+			'value' => 81,
+			'keyword_as_value' => 55,
+			'single_value' => 58,
+			'subsequent_value_part' => 46
 		}
+	},
+	{#State 42
+		DEFAULT => -61
+	},
+	{#State 43
+		DEFAULT => -62
+	},
+	{#State 44
+		ACTIONS => {
+			'INTEGER' => 83,
+			'REAL' => 82
+		}
+	},
+	{#State 45
+		DEFAULT => -60
+	},
+	{#State 46
+		DEFAULT => -69
+	},
+	{#State 47
+		DEFAULT => -10
+	},
+	{#State 48
+		DEFAULT => -53
+	},
+	{#State 49
+		DEFAULT => -73
+	},
+	{#State 50
+		DEFAULT => -72
+	},
+	{#State 51
+		DEFAULT => -56
+	},
+	{#State 52
+		DEFAULT => -59
+	},
+	{#State 53
+		DEFAULT => -55
+	},
+	{#State 54
+		DEFAULT => -54
+	},
+	{#State 55
+		DEFAULT => -64
+	},
+	{#State 56
+		DEFAULT => -40
+	},
+	{#State 57
+		DEFAULT => -52
+	},
+	{#State 58
+		ACTIONS => {
+			'WORD' => 42,
+			'DOUBLEQUOTE_STRING' => 43,
+			'MINUS' => 44,
+			'BETWEEN_WORD' => 48,
+			'REAL' => 49,
+			'INTEGER' => 50,
+			'ASC_WORD' => 51,
+			'IDENTIFIER' => 52,
+			'DESC_WORD' => 53,
+			'NOT_WORD' => 54,
+			'LIKE_WORD' => 57,
+			'WHITESPACE' => 39,
+			'IN_WORD' => 60,
+			'SINGLEQUOTE_STRING' => 62
+		},
+		DEFAULT => -58,
+		GOTOS => {
+			'number' => 45,
+			'keyword_as_value' => 55,
+			'subsequent_values_list' => 86,
+			'spaces' => 85,
+			'subsequent_value_part' => 84
+		}
+	},
+	{#State 59
+		DEFAULT => -70
+	},
+	{#State 60
+		DEFAULT => -51
+	},
+	{#State 61
+		DEFAULT => -71
+	},
+	{#State 62
+		DEFAULT => -63
 	},
 	{#State 63
-		DEFAULT => -11
+		ACTIONS => {
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
+		},
+		GOTOS => {
+			'set_body' => 87,
+			'number' => 45,
+			'value' => 88,
+			'keyword_as_value' => 55,
+			'single_value' => 58,
+			'subsequent_value_part' => 46
+		}
 	},
 	{#State 64
-		DEFAULT => -14
+		DEFAULT => -11
 	},
 	{#State 65
-		ACTIONS => {
-			'MINUS' => 79
-		}
+		DEFAULT => -14
 	},
 	{#State 66
 		ACTIONS => {
-			'ASC_WORD' => 46,
-			'INTEGER' => 45,
-			'WORD' => 38,
-			'DESC_WORD' => 48,
-			'IDENTIFIER' => 47,
-			'DOUBLEQUOTE_STRING' => 39,
-			'NOT_WORD' => 50,
-			'MINUS' => 40,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'BETWEEN_WORD' => 43,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'REAL' => 44,
-			'SINGLEQUOTE_STRING' => 57
-		},
-		GOTOS => {
-			'between_value' => 84,
-			'number' => 41,
-			'value' => 52,
-			'keyword_as_value' => 51,
-			'old_syntax_in_value' => 83
+			'MINUS' => 89
 		}
 	},
 	{#State 67
-		DEFAULT => -47
+		ACTIONS => {
+			'WHITESPACE' => 39
+		},
+		DEFAULT => -18,
+		GOTOS => {
+			'optional_spaces' => 90,
+			'spaces' => 38
+		}
 	},
 	{#State 68
-		DEFAULT => -27
+		DEFAULT => -49
 	},
 	{#State 69
-		DEFAULT => -34
+		DEFAULT => -30
 	},
 	{#State 70
-		DEFAULT => -36
+		DEFAULT => -37
 	},
 	{#State 71
-		DEFAULT => -40
+		DEFAULT => -39
 	},
 	{#State 72
+		DEFAULT => -42
+	},
+	{#State 73
 		ACTIONS => {
 			'IDENTIFIER' => 1
 		},
 		GOTOS => {
-			'group_by_list' => 85,
+			'group_by_list' => 91,
 			'property' => 31
 		}
 	},
-	{#State 73
-		DEFAULT => -19
-	},
 	{#State 74
+		DEFAULT => -22
+	},
+	{#State 75
 		ACTIONS => {
 			'IDENTIFIER' => 1,
 			'MINUS' => 32
 		},
 		GOTOS => {
-			'order_by_list' => 86,
+			'order_by_list' => 92,
 			'order_by_property' => 33,
 			'property' => 34
 		}
 	},
-	{#State 75
-		DEFAULT => -21
-	},
 	{#State 76
-		DEFAULT => -20
+		DEFAULT => -24
 	},
 	{#State 77
-		DEFAULT => -66
+		DEFAULT => -23
 	},
 	{#State 78
-		DEFAULT => -65
+		DEFAULT => -12
 	},
 	{#State 79
-		ACTIONS => {
-			'ASC_WORD' => 46,
-			'INTEGER' => 45,
-			'WORD' => 38,
-			'DESC_WORD' => 48,
-			'IDENTIFIER' => 47,
-			'DOUBLEQUOTE_STRING' => 39,
-			'NOT_WORD' => 50,
-			'MINUS' => 40,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'BETWEEN_WORD' => 43,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'REAL' => 44,
-			'SINGLEQUOTE_STRING' => 57
-		},
-		GOTOS => {
-			'number' => 41,
-			'value' => 87,
-			'keyword_as_value' => 51
-		}
+		DEFAULT => -15
 	},
 	{#State 80
 		ACTIONS => {
-			'ASC_WORD' => 46,
-			'INTEGER' => 45,
-			'WORD' => 38,
-			'DESC_WORD' => 48,
-			'IDENTIFIER' => 47,
-			'DOUBLEQUOTE_STRING' => 39,
-			'NOT_WORD' => 50,
-			'MINUS' => 40,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'BETWEEN_WORD' => 43,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'REAL' => 44,
-			'SINGLEQUOTE_STRING' => 57
-		},
-		GOTOS => {
-			'number' => 41,
-			'value' => 89,
-			'keyword_as_value' => 51,
-			'old_syntax_in_value' => 88
+			'IN_DIVIDER' => 93,
+			'MINUS' => 89
 		}
 	},
 	{#State 81
-		ACTIONS => {
-			'RIGHT_BRACKET' => 90
-		}
+		DEFAULT => -9
 	},
 	{#State 82
-		ACTIONS => {
-			'SET_SEPARATOR' => 91
-		},
-		DEFAULT => -45
+		DEFAULT => -75
 	},
 	{#State 83
-		DEFAULT => -13
+		DEFAULT => -74
 	},
 	{#State 84
-		DEFAULT => -16
+		ACTIONS => {
+			'WORD' => 42,
+			'DOUBLEQUOTE_STRING' => 43,
+			'MINUS' => 44,
+			'BETWEEN_WORD' => 48,
+			'REAL' => 49,
+			'INTEGER' => 50,
+			'ASC_WORD' => 51,
+			'IDENTIFIER' => 52,
+			'DESC_WORD' => 53,
+			'NOT_WORD' => 54,
+			'LIKE_WORD' => 57,
+			'WHITESPACE' => 39,
+			'IN_WORD' => 60,
+			'SINGLEQUOTE_STRING' => 62
+		},
+		DEFAULT => -65,
+		GOTOS => {
+			'number' => 45,
+			'keyword_as_value' => 55,
+			'subsequent_values_list' => 94,
+			'spaces' => 85,
+			'subsequent_value_part' => 84
+		}
 	},
 	{#State 85
-		DEFAULT => -25
+		ACTIONS => {
+			'WORD' => 42,
+			'DOUBLEQUOTE_STRING' => 43,
+			'MINUS' => 44,
+			'BETWEEN_WORD' => 48,
+			'REAL' => 49,
+			'INTEGER' => 50,
+			'ASC_WORD' => 51,
+			'IDENTIFIER' => 52,
+			'DESC_WORD' => 53,
+			'NOT_WORD' => 54,
+			'LIKE_WORD' => 57,
+			'WHITESPACE' => 39,
+			'IN_WORD' => 60,
+			'SINGLEQUOTE_STRING' => 62
+		},
+		DEFAULT => -68,
+		GOTOS => {
+			'number' => 45,
+			'keyword_as_value' => 55,
+			'subsequent_values_list' => 95,
+			'spaces' => 85,
+			'subsequent_value_part' => 84
+		}
 	},
 	{#State 86
-		DEFAULT => -23
+		DEFAULT => -57
 	},
 	{#State 87
-		DEFAULT => -48
+		ACTIONS => {
+			'RIGHT_BRACKET' => 96
+		}
 	},
 	{#State 88
-		DEFAULT => -41
+		ACTIONS => {
+			'SET_SEPARATOR' => 97
+		},
+		DEFAULT => -47
 	},
 	{#State 89
 		ACTIONS => {
-			'IN_DIVIDER' => 80
-		},
-		DEFAULT => -42
-	},
-	{#State 90
-		DEFAULT => -43
-	},
-	{#State 91
-		ACTIONS => {
-			'ASC_WORD' => 46,
-			'INTEGER' => 45,
-			'WORD' => 38,
-			'DESC_WORD' => 48,
-			'IDENTIFIER' => 47,
-			'DOUBLEQUOTE_STRING' => 39,
-			'NOT_WORD' => 50,
-			'MINUS' => 40,
-			'LIKE_WORD' => 53,
-			'AND' => 54,
-			'BETWEEN_WORD' => 43,
-			'IN_WORD' => 55,
-			'OR' => 56,
-			'REAL' => 44,
-			'SINGLEQUOTE_STRING' => 57
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
 		},
 		GOTOS => {
-			'set_body' => 92,
-			'number' => 41,
-			'value' => 82,
-			'keyword_as_value' => 51
+			'number' => 45,
+			'keyword_as_value' => 55,
+			'single_value' => 98,
+			'subsequent_value_part' => 46
 		}
 	},
+	{#State 90
+		ACTIONS => {
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
+		},
+		GOTOS => {
+			'between_value' => 100,
+			'number' => 45,
+			'keyword_as_value' => 55,
+			'old_syntax_in_value' => 99,
+			'single_value' => 80,
+			'subsequent_value_part' => 46
+		}
+	},
+	{#State 91
+		DEFAULT => -28
+	},
 	{#State 92
+		DEFAULT => -26
+	},
+	{#State 93
+		ACTIONS => {
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
+		},
+		GOTOS => {
+			'number' => 45,
+			'keyword_as_value' => 55,
+			'old_syntax_in_value' => 101,
+			'single_value' => 102,
+			'subsequent_value_part' => 46
+		}
+	},
+	{#State 94
+		DEFAULT => -66
+	},
+	{#State 95
+		DEFAULT => -67
+	},
+	{#State 96
+		DEFAULT => -45
+	},
+	{#State 97
+		ACTIONS => {
+			'ASC_WORD' => 51,
+			'INTEGER' => 50,
+			'WORD' => 42,
+			'DESC_WORD' => 53,
+			'IDENTIFIER' => 52,
+			'DOUBLEQUOTE_STRING' => 43,
+			'NOT_WORD' => 54,
+			'MINUS' => 44,
+			'LIKE_WORD' => 57,
+			'AND' => 59,
+			'BETWEEN_WORD' => 48,
+			'IN_WORD' => 60,
+			'OR' => 61,
+			'REAL' => 49,
+			'SINGLEQUOTE_STRING' => 62
+		},
+		GOTOS => {
+			'set_body' => 103,
+			'number' => 45,
+			'value' => 88,
+			'keyword_as_value' => 55,
+			'single_value' => 58,
+			'subsequent_value_part' => 46
+		}
+	},
+	{#State 98
+		DEFAULT => -50
+	},
+	{#State 99
+		DEFAULT => -13
+	},
+	{#State 100
+		DEFAULT => -16
+	},
+	{#State 101
+		DEFAULT => -43
+	},
+	{#State 102
+		ACTIONS => {
+			'IN_DIVIDER' => 93
+		},
 		DEFAULT => -44
+	},
+	{#State 103
+		DEFAULT => -46
 	}
 ],
                                   yyrules  =>
@@ -705,10 +840,10 @@ sub
 { $_[2] }
 	],
 	[#Rule 9
-		 'condition', 3,
+		 'condition', 4,
 sub
 #line 22 "BxParser.yp"
-{ [ "$_[1] $_[2]" => $_[3] ] }
+{ [ "$_[1] $_[2]" => $_[4] ] }
 	],
 	[#Rule 10
 		 'condition', 3,
@@ -723,16 +858,16 @@ sub
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 12
-		 'condition', 3,
-sub
-#line 25 "BxParser.yp"
-{ [ "$_[1] in" => $_[3] ] }
-	],
-	[#Rule 13
 		 'condition', 4,
 sub
+#line 25 "BxParser.yp"
+{ [ "$_[1] in" => $_[4] ] }
+	],
+	[#Rule 13
+		 'condition', 5,
+sub
 #line 26 "BxParser.yp"
-{ [ "$_[1] $_[2] in" => $_[4] ] }
+{ [ "$_[1] $_[2] in" => $_[5] ] }
 	],
 	[#Rule 14
 		 'condition', 3,
@@ -741,315 +876,369 @@ sub
 { [ "$_[1] $_[2]" => $_[3] ] }
 	],
 	[#Rule 15
-		 'condition', 3,
-sub
-#line 28 "BxParser.yp"
-{ [ "$_[1] between" => $_[3] ] }
-	],
-	[#Rule 16
 		 'condition', 4,
 sub
+#line 28 "BxParser.yp"
+{ [ "$_[1] between" => $_[4] ] }
+	],
+	[#Rule 16
+		 'condition', 5,
+sub
 #line 29 "BxParser.yp"
-{ [ "$_[1] $_[2] between" => $_[4] ] }
+{ [ "$_[1] $_[2] between" => $_[5] ] }
 	],
 	[#Rule 17
-		 'property', 1,
+		 'spaces', 1,
 sub
 #line 32 "BxParser.yp"
 { $_[1] }
 	],
 	[#Rule 18
-		 'order_by_property', 1,
+		 'optional_spaces', 0,
 sub
 #line 35 "BxParser.yp"
-{ $_[1 ] }
+{ undef }
 	],
 	[#Rule 19
-		 'order_by_property', 2,
+		 'optional_spaces', 1,
 sub
 #line 36 "BxParser.yp"
-{ '-'.$_[2] }
+{ undef }
 	],
 	[#Rule 20
-		 'order_by_property', 2,
+		 'property', 1,
 sub
-#line 37 "BxParser.yp"
-{ '-'.$_[1] }
+#line 39 "BxParser.yp"
+{ $_[1] }
 	],
 	[#Rule 21
-		 'order_by_property', 2,
-sub
-#line 38 "BxParser.yp"
-{ $_[1] }
-	],
-	[#Rule 22
-		 'order_by_list', 1,
-sub
-#line 41 "BxParser.yp"
-{ [ $_[1]] }
-	],
-	[#Rule 23
-		 'order_by_list', 3,
+		 'order_by_property', 1,
 sub
 #line 42 "BxParser.yp"
-{ [$_[1], @{$_[3]}] }
+{ $_[1 ] }
+	],
+	[#Rule 22
+		 'order_by_property', 2,
+sub
+#line 43 "BxParser.yp"
+{ '-'.$_[2] }
+	],
+	[#Rule 23
+		 'order_by_property', 2,
+sub
+#line 44 "BxParser.yp"
+{ '-'.$_[1] }
 	],
 	[#Rule 24
-		 'group_by_list', 1,
+		 'order_by_property', 2,
 sub
 #line 45 "BxParser.yp"
-{ [ $_[1] ] }
+{ $_[1] }
 	],
 	[#Rule 25
-		 'group_by_list', 3,
+		 'order_by_list', 1,
 sub
-#line 46 "BxParser.yp"
-{ [$_[1], @{$_[3]}] }
+#line 48 "BxParser.yp"
+{ [ $_[1]] }
 	],
 	[#Rule 26
-		 'operator', 1,
+		 'order_by_list', 3,
 sub
 #line 49 "BxParser.yp"
-{ $_[1] }
+{ [$_[1], @{$_[3]}] }
 	],
 	[#Rule 27
-		 'operator', 2,
+		 'group_by_list', 1,
 sub
-#line 50 "BxParser.yp"
-{ "$_[1] $_[2]" }
-	],
-	[#Rule 28
-		 'negation', 1,
-sub
-#line 53 "BxParser.yp"
-{ 'not' }
-	],
-	[#Rule 29
-		 'negation', 1,
-sub
-#line 54 "BxParser.yp"
-{ 'not' }
-	],
-	[#Rule 30
-		 'an_operator', 1,
-sub
-#line 57 "BxParser.yp"
-{ $_[1] }
-	],
-	[#Rule 31
-		 'an_operator', 1,
-sub
-#line 58 "BxParser.yp"
-{ '=' }
-	],
-	[#Rule 32
-		 'an_operator', 1,
-sub
-#line 59 "BxParser.yp"
-{ '=' }
-	],
-	[#Rule 33
-		 'like_operator', 1,
-sub
-#line 62 "BxParser.yp"
-{ 'like' }
-	],
-	[#Rule 34
-		 'like_operator', 2,
-sub
-#line 63 "BxParser.yp"
-{ "$_[1] like" }
-	],
-	[#Rule 35
-		 'like_operator', 1,
-sub
-#line 64 "BxParser.yp"
-{ 'like' }
-	],
-	[#Rule 36
-		 'like_operator', 2,
-sub
-#line 65 "BxParser.yp"
-{ "$_[1] like" }
-	],
-	[#Rule 37
-		 'like_value', 1,
-sub
-#line 68 "BxParser.yp"
-{ '%' . $_[1] . '%' }
-	],
-	[#Rule 38
-		 'like_value', 1,
-sub
-#line 69 "BxParser.yp"
-{ $_[1] }
-	],
-	[#Rule 39
-		 'in_operator', 1,
-sub
-#line 72 "BxParser.yp"
-{ 'in' }
-	],
-	[#Rule 40
-		 'in_operator', 2,
-sub
-#line 73 "BxParser.yp"
-{ "$_[1] in" }
-	],
-	[#Rule 41
-		 'old_syntax_in_value', 3,
-sub
-#line 76 "BxParser.yp"
-{ [ $_[1], @{$_[3]} ] }
-	],
-	[#Rule 42
-		 'old_syntax_in_value', 3,
-sub
-#line 77 "BxParser.yp"
-{ [ $_[1], $_[3] ] }
-	],
-	[#Rule 43
-		 'set', 3,
-sub
-#line 80 "BxParser.yp"
-{ $_[2] }
-	],
-	[#Rule 44
-		 'set_body', 3,
-sub
-#line 83 "BxParser.yp"
-{ [ $_[1], @{$_[3]} ] }
-	],
-	[#Rule 45
-		 'set_body', 1,
-sub
-#line 84 "BxParser.yp"
+#line 52 "BxParser.yp"
 { [ $_[1] ] }
 	],
-	[#Rule 46
-		 'between_operator', 1,
+	[#Rule 28
+		 'group_by_list', 3,
 sub
-#line 87 "BxParser.yp"
-{ 'between' }
+#line 53 "BxParser.yp"
+{ [$_[1], @{$_[3]}] }
 	],
-	[#Rule 47
-		 'between_operator', 2,
+	[#Rule 29
+		 'operator', 1,
 sub
-#line 88 "BxParser.yp"
-{ "$_[1] between" }
+#line 56 "BxParser.yp"
+{ $_[1] }
 	],
-	[#Rule 48
-		 'between_value', 3,
+	[#Rule 30
+		 'operator', 2,
 sub
-#line 91 "BxParser.yp"
+#line 57 "BxParser.yp"
+{ "$_[1] $_[2]" }
+	],
+	[#Rule 31
+		 'negation', 1,
+sub
+#line 60 "BxParser.yp"
+{ 'not' }
+	],
+	[#Rule 32
+		 'negation', 1,
+sub
+#line 61 "BxParser.yp"
+{ 'not' }
+	],
+	[#Rule 33
+		 'an_operator', 1,
+sub
+#line 64 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 34
+		 'an_operator', 1,
+sub
+#line 65 "BxParser.yp"
+{ '=' }
+	],
+	[#Rule 35
+		 'an_operator', 1,
+sub
+#line 66 "BxParser.yp"
+{ '=' }
+	],
+	[#Rule 36
+		 'like_operator', 1,
+sub
+#line 69 "BxParser.yp"
+{ 'like' }
+	],
+	[#Rule 37
+		 'like_operator', 2,
+sub
+#line 70 "BxParser.yp"
+{ "$_[1] like" }
+	],
+	[#Rule 38
+		 'like_operator', 1,
+sub
+#line 71 "BxParser.yp"
+{ 'like' }
+	],
+	[#Rule 39
+		 'like_operator', 2,
+sub
+#line 72 "BxParser.yp"
+{ "$_[1] like" }
+	],
+	[#Rule 40
+		 'like_value', 1,
+sub
+#line 75 "BxParser.yp"
+{  $_[1] =~ m/\%/ ? $_[1] : '%' . $_[1] . '%' }
+	],
+	[#Rule 41
+		 'in_operator', 1,
+sub
+#line 78 "BxParser.yp"
+{ 'in' }
+	],
+	[#Rule 42
+		 'in_operator', 2,
+sub
+#line 79 "BxParser.yp"
+{ "$_[1] in" }
+	],
+	[#Rule 43
+		 'old_syntax_in_value', 3,
+sub
+#line 82 "BxParser.yp"
+{ [ $_[1], @{$_[3]} ] }
+	],
+	[#Rule 44
+		 'old_syntax_in_value', 3,
+sub
+#line 83 "BxParser.yp"
 { [ $_[1], $_[3] ] }
 	],
+	[#Rule 45
+		 'set', 3,
+sub
+#line 86 "BxParser.yp"
+{ $_[2] }
+	],
+	[#Rule 46
+		 'set_body', 3,
+sub
+#line 89 "BxParser.yp"
+{ [ $_[1], @{$_[3]} ] }
+	],
+	[#Rule 47
+		 'set_body', 1,
+sub
+#line 90 "BxParser.yp"
+{ [ $_[1] ] }
+	],
+	[#Rule 48
+		 'between_operator', 1,
+sub
+#line 93 "BxParser.yp"
+{ 'between' }
+	],
 	[#Rule 49
-		 'keyword_as_value', 1,
+		 'between_operator', 2,
 sub
 #line 94 "BxParser.yp"
-{ $_[1] }
+{ "$_[1] between" }
 	],
 	[#Rule 50
-		 'keyword_as_value', 1,
-sub
-#line 95 "BxParser.yp"
-{ $_[1] }
-	],
-	[#Rule 51
-		 'keyword_as_value', 1,
-sub
-#line 96 "BxParser.yp"
-{ $_[1] }
-	],
-	[#Rule 52
-		 'keyword_as_value', 1,
+		 'between_value', 3,
 sub
 #line 97 "BxParser.yp"
-{ $_[1] }
+{ [ $_[1], $_[3] ] }
 	],
-	[#Rule 53
-		 'keyword_as_value', 1,
-sub
-#line 98 "BxParser.yp"
-{ $_[1] }
-	],
-	[#Rule 54
-		 'keyword_as_value', 1,
-sub
-#line 99 "BxParser.yp"
-{ $_[1] }
-	],
-	[#Rule 55
+	[#Rule 51
 		 'keyword_as_value', 1,
 sub
 #line 100 "BxParser.yp"
 { $_[1] }
 	],
-	[#Rule 56
+	[#Rule 52
 		 'keyword_as_value', 1,
 sub
 #line 101 "BxParser.yp"
 { $_[1] }
 	],
-	[#Rule 57
-		 'value', 1,
+	[#Rule 53
+		 'keyword_as_value', 1,
+sub
+#line 102 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 54
+		 'keyword_as_value', 1,
+sub
+#line 103 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 55
+		 'keyword_as_value', 1,
 sub
 #line 104 "BxParser.yp"
 { $_[1] }
 	],
-	[#Rule 58
-		 'value', 1,
+	[#Rule 56
+		 'keyword_as_value', 1,
 sub
 #line 105 "BxParser.yp"
 { $_[1] }
 	],
-	[#Rule 59
-		 'value', 1,
-sub
-#line 106 "BxParser.yp"
-{ $_[1] }
-	],
-	[#Rule 60
-		 'value', 1,
-sub
-#line 107 "BxParser.yp"
-{ ($_[1] =~ m/^"(.*?)"$/)[0]; }
-	],
-	[#Rule 61
-		 'value', 1,
+	[#Rule 57
+		 'value', 2,
 sub
 #line 108 "BxParser.yp"
-{ ($_[1] =~ m/^'(.*?)'$/)[0]; }
+{ $_[1].$_[2] }
 	],
-	[#Rule 62
+	[#Rule 58
 		 'value', 1,
 sub
 #line 109 "BxParser.yp"
 { $_[1] }
 	],
-	[#Rule 63
-		 'number', 1,
+	[#Rule 59
+		 'subsequent_value_part', 1,
 sub
 #line 112 "BxParser.yp"
-{ $_[1] + 0 }
+{ $_[1] }
 	],
-	[#Rule 64
-		 'number', 1,
+	[#Rule 60
+		 'subsequent_value_part', 1,
 sub
 #line 113 "BxParser.yp"
-{ $_[1] + 0 }
+{ $_[1] }
 	],
-	[#Rule 65
-		 'number', 2,
+	[#Rule 61
+		 'subsequent_value_part', 1,
 sub
 #line 114 "BxParser.yp"
-{ 0 - $_[2] }
+{ $_[1] }
 	],
-	[#Rule 66
-		 'number', 2,
+	[#Rule 62
+		 'subsequent_value_part', 1,
 sub
 #line 115 "BxParser.yp"
+{ ($_[1] =~ m/^"(.*?)"$/)[0]; }
+	],
+	[#Rule 63
+		 'subsequent_value_part', 1,
+sub
+#line 116 "BxParser.yp"
+{ ($_[1] =~ m/^'(.*?)'$/)[0]; }
+	],
+	[#Rule 64
+		 'subsequent_value_part', 1,
+sub
+#line 117 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 65
+		 'subsequent_values_list', 1,
+sub
+#line 120 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 66
+		 'subsequent_values_list', 2,
+sub
+#line 121 "BxParser.yp"
+{ $_[1].$_[2] }
+	],
+	[#Rule 67
+		 'subsequent_values_list', 2,
+sub
+#line 122 "BxParser.yp"
+{ $_[1].$_[2] }
+	],
+	[#Rule 68
+		 'subsequent_values_list', 1,
+sub
+#line 123 "BxParser.yp"
+{ '' }
+	],
+	[#Rule 69
+		 'single_value', 1,
+sub
+#line 126 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 70
+		 'single_value', 1,
+sub
+#line 127 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 71
+		 'single_value', 1,
+sub
+#line 128 "BxParser.yp"
+{ $_[1] }
+	],
+	[#Rule 72
+		 'number', 1,
+sub
+#line 132 "BxParser.yp"
+{ $_[1] + 0 }
+	],
+	[#Rule 73
+		 'number', 1,
+sub
+#line 133 "BxParser.yp"
+{ $_[1] + 0 }
+	],
+	[#Rule 74
+		 'number', 2,
+sub
+#line 134 "BxParser.yp"
+{ 0 - $_[2] }
+	],
+	[#Rule 75
+		 'number', 2,
+sub
+#line 135 "BxParser.yp"
 { 0 - $_[2] }
 	]
 ],
@@ -1057,7 +1246,7 @@ sub
     bless($self,$class);
 }
 
-#line 118 "BxParser.yp"
+#line 138 "BxParser.yp"
 
 
 use strict;
@@ -1077,6 +1266,7 @@ sub _error {
 
 my %token_states = (
     'DEFAULT' => [
+        WHITESPACE => qr{\s+},
         AND => [ qr{and}, 'DEFAULT'],
         OR => [ qr{or}, 'DEFAULT' ],
         BETWEEN_WORD => qr{between},
@@ -1089,21 +1279,20 @@ my %token_states = (
         MINUS => qr{-},
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
-        WORD => qr{[\/\w][-\w\/]*},   # also allow / for pathnames and - for hyphenated names
+        WORD => qr{[%\.\/\w][-\.%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
-        LEFT_PAREN => qr{\(},
-        RIGHT_PAREN => qr{\)},
+        LEFT_PAREN => [ qr{\(}, 'DEFAULT' ],
+        RIGHT_PAREN => [ qr{\)}, 'DEFAULT' ],
         LEFT_BRACKET => [ qr{\[}, 'set_contents'],
         RIGHT_BRACKET => [qr{\]}, 'DEFAULT' ],
         NOT_BANG => qr{!},
-        EQUAL_SIGN => qr{=},
-        DOUBLEEQUAL_SIGN => qr{=>},
-        OPERATORS => qr{<|>|<=|>=},
+        EQUAL_SIGN => [ qr{=}, 'dont_gobble_spaces' ],
+        DOUBLEEQUAL_SIGN => [ qr{=>}, 'dont_gobble_spaces' ],
+        OPERATORS => [ qr{<|>|<=|>=}, 'dont_gobble_spaces' ],
         AND => [ qr{,}, 'DEFAULT' ],
         COLON => [ qr{:}, 'after_colon_value' ],
         TILDE => qr{~},
-        LIKE_PATTERN => qr{[\w%_]+},
         ORDER_BY => qr{order by},
         GROUP_BY => qr{group by},
     ],
@@ -1118,13 +1307,16 @@ my %token_states = (
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
     ],
+    'dont_gobble_spaces' => [
+    ],
 );
 
 sub parse {
     my $string = shift;
     my %params = @_;
 
-    my $debug = $params{'debug'};
+    my $debug = $params{'tokdebug'};
+    my $yydebug = $params{'yydebug'} || 0;
 
     print "\nStarting parse for string $string\n" if $debug;
     my $parser = UR::BoolExpr::BxParser->new();
@@ -1138,52 +1330,61 @@ sub parse {
             return (undef, '');  
        }
 
-        my $longest = 0;
-        my $longest_token = '';
-        my $longest_match = '';
+        GET_NEXT_TOKEN:
+        foreach (1) {
+            my $longest = 0;
+            my $longest_token = '';
+            my $longest_match = '';
 
-        for my $token_list ( $parser_state, 'DEFAULT' ) {
-            print "\nTrying tokens for state $token_list...\n" if $debug;
-            my $tokens = $token_states{$token_list};
-            for(my $i = 0; $i < @$tokens; $i += 2) {
-                my($tok, $re) = @$tokens[$i, $i+1];
-                print "Trying token $tok... " if $debug;
+            for my $token_list ( $parser_state, 'DEFAULT' ) {
+                print "\nTrying tokens for state $token_list...\n" if $debug;
+                my $tokens = $token_states{$token_list};
+                for(my $i = 0; $i < @$tokens; $i += 2) {
+                    my($tok, $re) = @$tokens[$i, $i+1];
+                    print "Trying token $tok... " if $debug;
 
-                my($regex,$next_parser_state);
-                if (ref($re) eq 'ARRAY') {
-                    ($regex,$next_parser_state) = @$re;
-                } else {
-                    $regex = $re;
-                }
+                    my($regex,$next_parser_state);
+                    if (ref($re) eq 'ARRAY') {
+                        ($regex,$next_parser_state) = @$re;
+                    } else {
+                        $regex = $re;
+                    }
 
-                if ($string =~ m/^((\s*)($regex)(\s*))/) {
-                    print "Matched >>$1<<" if $debug;
-                    my $match_len = length($1);
-                    if ($match_len > $longest) {
-                        print "\n  ** It's now the longest" if $debug;
-                        $longest = $match_len;
-                        $longest_token = $tok;
-                        $longest_match = $3;
-                        if (length($2) or length($4)) {
-                            $parser_state = 'DEFAULT';
-                        } elsif ($next_parser_state) {
-                            $parser_state = $next_parser_state;
+                    if ($string =~ m/^($regex)/) {
+                        print "Matched >>$1<<" if $debug;
+                        my $match_len = length($1);
+                        if ($match_len > $longest) {
+                            print "\n  ** It's now the longest" if $debug;
+                            $longest = $match_len;
+                            $longest_token = $tok;
+                            $longest_match = $1;
+                            if ($parser_state ne 'dont_gobble_spaces' and $longest_match =~ m/^\s/) {
+                                $parser_state = 'DEFAULT'
+                            } elsif ($next_parser_state) {
+                                $parser_state = $next_parser_state;
+                            }
                         }
                     }
+                    print "\n" if $debug;
                 }
-                print "\n" if $debug;
-            }
 
-            $string = substr($string, $longest);
-            print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
-            $parser->YYData->{REMAINING} = $string;
-            if ($longest) {
-                print "Returning token $longest_token, match $longest_match\n  next state is named $parser_state\n" if $debug;
-                $parser->YYData->{INPUT} = $longest_token;
-                $parser->YYData->{MATCH} = $longest_match;
-                return ($longest_token, $longest_match);
+                $string = substr($string, $longest);
+                print "Consuming up to char pos $longest chars, string is now >>$string<<\n" if $debug;
+
+                if ($longest_token eq 'WHITESPACE' and $parser_state ne 'dont_gobble_spaces') {
+                    print "Redoing token extraction after whitespace\n" if $debug;
+                    redo GET_NEXT_TOKEN;
+                }
+
+                $parser->YYData->{REMAINING} = $string;
+                if ($longest) {
+                    print "Returning token $longest_token, match $longest_match\n  next state is named $parser_state\n" if $debug;
+                    $parser->YYData->{INPUT} = $longest_token;
+                    $parser->YYData->{MATCH} = $longest_match;
+                    return ($longest_token, $longest_match);
+                }
+                last if $token_list eq 'DEFAULT';  # avoid going over it twice if $parser_state is DEFAULT
             }
-            last if $token_list eq 'DEFAULT';  # avoid going over it twice if $parser_state is DEFAULT
         }
         print "Didn't match anything, done!\n" if $debug;
         return (undef, '');  # Didn't match anything
@@ -1192,7 +1393,7 @@ sub parse {
     return $parser->YYParse(
                yylex => $get_next_token,
                yyerror => \&_error,
-               yydebug => 0,
+               yydebug => $yydebug,
            );
 }
 

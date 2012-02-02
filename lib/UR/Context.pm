@@ -1530,12 +1530,13 @@ sub _get_objects_for_class_and_or_rule {
             # fill in missing slots in @next
             for(my $i = 0; $i < @results; $i++) {
                 unless (defined $next[$i]) {
-                    # This slot got used lat time through
+                    # This slot got used last time through
                     $next[$i] = $results[$i]->();
                     unless (defined $next[$i]) {
                         # That iterator is exhausted, splice it out
                         splice(@results, $i, 1);
                         splice(@next, $i, 1);
+                        redo if $i < @results; #the next iterator is now at $i, not $i++
                     }
                 }
             }

@@ -174,15 +174,10 @@ sub resolve_class_and_params_for_argv {
             }
             my $value = $ARGV[$n];
             my $meta = $self->__meta__->property_meta_for_name($name);
-            if ($meta->is_many) {
-                if ($n == $#names) {
-                    # slurp the rest
-                    $params_hash->{$name} = [@ARGV[$n..$#ARGV]];
-                    last;
-                }
-                else {
-                    die "has-many property $name is not last in bare_shell_argument_names for $self?!";
-                }
+            if ($meta->is_many and $n == $#names) {
+                # slurp the rest
+                $params_hash->{$name} = [@ARGV[$n..$#ARGV]];
+                last;
             }
             else {
                 $params_hash->{$name} = $value;

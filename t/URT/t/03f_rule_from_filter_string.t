@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 552;
+use Test::More tests => 596;
 
 class URT::RelatedItem {
     id_by => 'ritem_id',
@@ -51,6 +51,14 @@ foreach my $test (
       values => { name => '2012-jan-12' },
       operators => { name => '=' },
       #stop => 1,
+    },
+    { string => 'name=some.thing',
+      values => { name => 'some.thing' },
+      operators => { name => '='},
+    },
+    { string => 'name=/some/file.path.ext',
+      values => { name => '/some/file.path.ext' },
+      operators => { name => '='},
     },
     { string => 'name=fred and score>2',
       values => { name => 'fred', score => 2 },
@@ -96,6 +104,18 @@ foreach my $test (
     { string => 'name like yoyo',
       values => { name => '%yoyo%' },
       operators => { name => 'like' }
+    },
+    { string => 'name like something-with-dashes1795%',
+      values => { name => 'something-with-dashes1795%' },
+      operators => { name => 'like' },
+    },
+    { string => 'name like H_%-MPaS3387-1795-lib2',
+      values => { name => 'H_%-MPaS3387-1795-lib2' },
+      operators => { name => 'like' },
+    },
+    { string => 'name like %some/file/path-name.ext',
+      values => { name => '%some/file/path-name.ext' },
+      operators => { name => 'like' },
     },
     { string => 'foo:one/two/three',
       values => { foo => ['one','three','two'] },  # They get sorted internally
@@ -265,6 +285,22 @@ foreach my $test (
       values => {},
       operators => {},
       order_by => ['score'],
+    },
+    { string => 'name = a string and score=2',
+      values => { name => 'a string', score => 2},
+      operators => { name => '=', score => '=' },
+    },
+    { string => 'name=a string with some more words and score = 2',
+      values => { name => 'a string with some more words', score => 2},
+      operators => { name => '=', score => '=' },
+    },
+    { string => 'name=a string with spaces in between the words and score =2',
+      values => { name => 'a string with spaces in between the words', score => 2 },
+      operators => { name => '=', score => '=' },
+    },
+    { string => 'name=a   string   with multiple spaces and score = 2',
+      values => { name => 'a   string   with multiple spaces', score => 2},
+      operators => { name => '=', score => '=' },
     },
 ) {
 

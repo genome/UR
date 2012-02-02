@@ -862,7 +862,8 @@ sub resolve_for_string {
     }
 
     #$DB::single=1;
-    my $tree = UR::BoolExpr::BxParser::parse($filter_string);#, debug => 1);
+    #my $tree = UR::BoolExpr::BxParser::parse($filter_string, tokdebug => 1, yydebug => 7);
+    my $tree = UR::BoolExpr::BxParser::parse($filter_string);
     unless ($tree) {
         Carp::croak("resolve_for_string() couldn't parse string \"$filter_string\"");
     }
@@ -881,19 +882,19 @@ sub resolve_for_string {
 }
 
 # TODO: these methods need a better home, since they are a cmdline/UI standard
-sub _X_filter_regex_for_string {
+sub _old_filter_regex_for_string {
     return '^\s*([\w\.\-]+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*[\'"]?([^\'"]*)[\'"]?\s*$';
 }
 
 # TODO: these methods need a better home, since they are a cmdline/UI standard
-sub _X_resolve_for_string {
+sub _old_resolve_for_string {
     my ($self, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
     my ($property, $op, $value);
 
     no warnings;
 
-    my $filter_regex = $self->filter_regex_for_string();
+    my $filter_regex = $self->_old_filter_regex_for_string();
     my @filters = map {
         unless (($property, $op, $value) = ($_ =~ /$filter_regex/)) {
             Carp::croak "Unable to process filter $_\n";

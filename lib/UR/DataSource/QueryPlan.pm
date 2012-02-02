@@ -464,6 +464,7 @@ sub _init_rdbms {
             # the final join in a chain is often the link between a primitive value
             # and the UR::Value subclass into which it falls ...irrelevent for db joins
             pop @joins;
+            next DELEGATED_PROPERTY unless @joins;
         }
 
         my $last_class_object_excluding_inherited_joins;

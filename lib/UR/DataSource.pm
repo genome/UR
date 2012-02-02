@@ -160,10 +160,8 @@ sub _generate_class_data_for_loading {
         $sub_classification_meta_class_name ||= $co->sub_classification_meta_class_name;
         $subclassify_by   ||= $co->subclassify_by;
         
-        push @all_properties, 
-            map { [$co, $_, $table_name, 0] }
-            sort { $a->property_name cmp $b->property_name }
-            UR::Object::Property->get( class_name => $co->class_name );
+        my $sort_sub = sub ($$) { return $_[0]->property_name cmp $_[1]->property_name };
+        push @all_properties, map { [$co, $_, $table_name, 0]} sort $sort_sub UR::Object::Property->get(class_name => $co->class_name);
     }
 
     my $sub_typing_property = $class_meta->subclassify_by;
