@@ -35,8 +35,9 @@ class Cmd::Module::V2 {
 
 
 
-# V2 dumps errors about missing required properties
+# Commands dump errors about missing required properties
 # we don't care about those problems
+Cmd::Module::V1->dump_error_messages(0);
 Cmd::Module::V2->dump_error_messages(0);
 
 foreach my $the_class ( qw( Cmd::Module::V1 Cmd::Module::V2 )) {
