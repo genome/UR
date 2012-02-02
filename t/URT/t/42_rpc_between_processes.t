@@ -10,11 +10,17 @@ use Test::Fork;
 
 use IO::Socket;
 
+# TCP sockets are used when running separate processes for
+# debugging the test
 our $PORT = '12345';
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
-if ($ARGV[0] and $ARGV[0] eq '--child') {
+my($to_server,$to_client);
+if ($ARGV[0] and $ARGV[0] ne '--parent' and $ARGV[0] ne '--child') {
+  ($to_server, $to_client) = IO::Socket->socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC);
+
+} elsif ($ARGV[0] and $ARGV[0] eq '--child') {
     # This is for debugging the test case.
     # It will start up just the child part
     note('Starting up the child portion');
@@ -50,10 +56,13 @@ END {
 # parent
 
 #plan tests => 28;
-sleep(1);  # Give the child a change to get started
+unless ($to_server) {
+    sleep(1);  # Give the child a change to get started
 
-my $to_server = IO::Socket::INET->new(PeerHost => '127.0.0.1',
-                                      PeerPort => $PORT);
+    $to_server = IO::Socket::INET->new(PeerHost => '127.0.0.1',
+                                       PeerPort => $PORT);
+}
+$to_client && $to_client->close();
 
 ok($to_server, 'Created a socket connected to the child process ' . $!);
 
@@ -163,13 +172,17 @@ sub Child {
             is => 'UR::Service::RPC::Executer'),
        'Created class for RPC executor');
 
-    my $listen_socket = IO::Socket::INET->new(LocalPort => $PORT,
-                                              Proto => 'tcp',
-                                              Listen => 5,
-                                              Reuse => 1);
-    ok($listen_socket, 'Created TCP listen socket');
+    unless ($to_client) {
+        $to_client = IO::Socket::INET->new(LocalPort => $PORT,
+                                                  Proto => 'tcp',
+                                                  Listen => 5,
+                                                  Reuse => 1);
+    }
+    $to_server && $to_server->close();
 
-    my $listen_executer = URT::RPC::Listener->create(fh => $listen_socket);
+    ok($to_client, 'Created TCP listen socket');
+
+    my $listen_executer = URT::RPC::Listener->create(fh => $to_client);
     ok($listen_executer, 'Created RPC executer for the listen socket');
 
     my $rpc_server = UR::Service::RPC::Server->create();
