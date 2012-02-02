@@ -1514,7 +1514,7 @@ sub _get_objects_for_class_and_or_rule {
     my @u = $rule->underlying_rules;
     my @results;
     for my $u (@u) {
-        if (wantarray) {
+        if (wantarray or not defined wantarray) {
             push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
         }
         else {
