@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 19;
+use Test::More tests => 17;
 use DBD::SQLite;
 
 print $DBD::SQLite::VERSION,"\n";
@@ -32,15 +32,11 @@ ok($dbh, 'Got a database handle');
 
 # A sqlite-ism way of pretending we have different schemas
 my $autocommit = $dbh->{'AutoCommit'};
-ok($dbh->do('commit'), 'Commit pending transactions');
 $dbh->{'AutoCommit'} = 1;
-
 # I'd rather use memory DBs, but SQLite segfaults in commit() below
 ok($dbh->do("attach database '$tmp_file1' as PROD_DB"), 'defined PROD_DB schema');
 ok($dbh->do("attach database '$tmp_file2' as PEOPLE"), 'defined PEOPLE schema');
-
 $dbh->{'AutoCommit'} = $autocommit;
-ok($dbh->do('begin'), 'Turn transaction back on');
 
 ok($dbh->do('create table PEOPLE.PEOPLE
             ( person_id int NOT NULL PRIMARY KEY, name varchar )'),
