@@ -533,7 +533,9 @@ For example, for the "error" message type, these methods are created:
 When called with one argument, it sends an error message to the object.  The 
 error_message_callback will be run, if one is registered, and the message will
 be printed to the terminal.  When called with no arguments, the last message
-sent will be returned.
+sent will be returned.  If the message is C<undef> then no message is printed
+or queued, and the next time error_message is run as an accessor, it will
+return undef.
 
 =item dump_error_messages
 
@@ -564,8 +566,9 @@ is run with two arguments: The object or class error_message() was called on,
 and a string containing the message.  This callback is run before the message
 is printed to the terminal or queued into its list.  The callback can modify
 the message (by writing to $_[1]) and affect the message that is printed or
-queued.  This callback is run within an eval, and if it throws an exception,
-no message at all is printed or queued.
+queued.  If $_[1] is set to C<undef>, then no message is printed or queued,
+and the last recorded message is set to undef as when calling error_message
+with undef as the argument.
 
 =item error_messages
 
@@ -662,18 +665,19 @@ for my $type (@message_types) {
                 $msgdata->{'dump_' . $type . '_messages'} = $do_dump;
             }
 
-            eval {
-                if (my $code = $msgdata->{ $type . "_messages_callback"}) {
-                    $code->($self,$msg);
-                } else {
-                    # To support the deprecated non-command messaging API
-                    my $deprecated_msgdata = UR::Object->_get_msgdata();
-                    my $code = $deprecated_msgdata->{ $type . "_messages_callback"};
-                    if ($code) {
-                        $code->($self,$msg) if ($code);
-                    }
+            if (my $code = $msgdata->{ $type . "_messages_callback"}) {
+                $code->($self,$msg);
+            } else {
+                # To support the deprecated non-command messaging API
+                my $deprecated_msgdata = UR::Object->_get_msgdata();
+                my $code = $deprecated_msgdata->{ $type . "_messages_callback"};
+                if ($code) {
+                    $code->($self,$msg) if ($code);
                 }
-            };
+            }
+
+            $msgdata->{ $type . "_message" } = $msg;
+
             # If the callback set $msg to undef with "$_[1] = undef", then they didn't want the message
             # processed further
             return unless defined($msg);
@@ -690,7 +694,6 @@ for my $type (@message_types) {
                 my $a = $msgdata->{ $type . "_messages_arrayref" } ||= [];
                 push @$a, $msg;
             }
-            $msgdata->{ $type . "_message" } = $msg;
 
             my ($package, $file, $line, $subroutine) = caller;
             $msgdata->{ $type . "_package" } = $package;
