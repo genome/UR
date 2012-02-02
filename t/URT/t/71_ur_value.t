@@ -116,11 +116,16 @@ TODO: {
     # a rule like id => [abc,xyz], when we really want something like
     # ( string1 => 'abc' and string2 => 'abc) or ( string1 => 'xyz' and string2 => 'xyz')
 
+    local $SIG{'__WARN__'} = sub {};   # Suppress warnings about is_unique during boolexpr construction
     @o = Test::Value2->get(['xyz'.$sep.'xyz', 'abc'.$sep.'abc']);
     is(scalar(@o), 2, 'get() with 2 composite IDs worked');
 }
 
-eval { Test::Value2->get(id => ['xyz'.$sep.'xyz', 'abc'.$sep.'abc'], other_prop => 'somethign else') };
-like($@, qr/Cannot load class Test::Value2 via UR::DataSource::Default when 'id' is a listref and non-id properties appear in the rule/,
+
+{ 
+    local $SIG{'__WARN__'} = sub {};   # Suppress warnings about is_unique during boolexpr construction
+    eval { Test::Value2->get(id => ['xyz'.$sep.'xyz', 'abc'.$sep.'abc'], other_prop => 'somethign else') };
+    like($@, qr/Cannot load class Test::Value2 via UR::DataSource::Default when 'id' is a listref and non-id properties appear in the rule/,
      'Getting with multiple IDs and including non-id properites threw an exception');
+}
 
