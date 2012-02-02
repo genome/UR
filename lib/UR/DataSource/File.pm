@@ -1054,7 +1054,7 @@ sub _sync_database {
 
     }
 
-    unless (flock($read_fh,LOCK_EX)) {
+    unless (flock($read_fh,LOCK_SH)) {
         unless ($! == EOPNOTSUPP ) {
             Carp::croak($self->class(). ": Can't get exclusive lock for file ".$self->server.": $!");
         }
