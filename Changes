@@ -1,5 +1,20 @@
 Revision history for UR
 
+0.37    2012-02-03
+        Added a proper parser for generating Boolean Expressions from text
+            strings.  The object lister commands (UR::Object::Command::List)
+            use it to process the --filter, and it can be used directly
+            through the method UR::BoolExpr::resolve_for_string().  See the
+            UR::BoolExpr pod for more info.
+        Or-type Boolean Expressions now support -order, and can be the filter
+            for iterators.
+        Important Bugfixes:
+            * Better error messages when a module fails to load properly
+              during autoloading.
+            * Class methods called on Set instances are dispatched to the
+              proper class instead of called on the Set's members.
+            * Values in an SQL in-clause are escaped using DBI's quote() method.
+
 0.36    2012-01-05
         Fix for 'like' clause's escape string on PostgreSQL
         Speed improvement for class initialization by normalizing metadata
@@ -21,7 +36,7 @@ Revision history for UR
             always appears at the end for ascending sorts.  Previously, the
             order depended on the data source's behavior.  Oracle and
             PostgreSQL put them at the end, while MySQL, SQLite and cached
-            get()s put them at the beginnind.
+            get()s put them at the beginning.
         Fix exit code for 'ur test run' when the --lsf arg is used.  It used
             always return a false value (1).  Now it returns true (0) if all
             tests pass, and false (1) if any one test fails.
