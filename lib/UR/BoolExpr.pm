@@ -1204,6 +1204,13 @@ the list of words starting with the first character of the first word and ending
 the last character of the last word, meaning that spaces at the start and end of the
 list are trimmed.
 
+Specific ordering may be requested by putting an "order by" clause at the end, and is the
+same as using a -order argument to resolve():
+    score > 10 order by name,score.
+
+Likewise, grouping and Set construction is indicated with a "group by" clause:
+    score > 10 group by color
+
 =head1 METHODS
 
 =over 4
