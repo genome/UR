@@ -22,6 +22,8 @@ lib/Devel/callcount.pm
 lib/UR.pm
 lib/UR/All.pm
 lib/UR/BoolExpr.pm
+lib/UR/BoolExpr/BxParser.pm
+lib/UR/BoolExpr/BxParser.yp
 lib/UR/BoolExpr/Template.pm
 lib/UR/BoolExpr/Template/And.pm
 lib/UR/BoolExpr/Template/Composite.pm
@@ -376,6 +378,8 @@ t/URT/t/03b_rule_subsets.t
 t/URT/t/03c_rule_values.t
 t/URT/t/03d_rule_construction.t
 t/URT/t/03e_params_list.t
+t/URT/t/03f_rule_from_filter_string.t
+t/URT/t/03g_rule_constant_key_before.t
 t/URT/t/04a_sqlite.t
 t/URT/t/04a_sqlite_init_db_internal.t
 t/URT/t/04a_sqlite_sync_database.t
@@ -398,9 +402,8 @@ t/URT/t/11b_via_to_without_type.t
 t/URT/t/11c_create_with_via_property.t
 t/URT/t/11d_create_with_single_delegated_property_via_is_many_property.t
 t/URT/t/12_properties_metadata_query.t
-t/URT/t/13a_command_message_v1.t
-t/URT/t/13b_command_message_v2.t
-t/URT/t/13c_object_message.t
+t/URT/t/13a_messaging.t
+t/URT/t/13b_dump_message_inheritance.t
 t/URT/t/14_ghost_objects.t
 t/URT/t/15_singleton.t
 t/URT/t/16_viewer.t
@@ -459,6 +462,7 @@ t/URT/t/49f_complicated_get_indirect_id_by.t
 t/URT/t/49g_complicated_get_double_join.t
 t/URT/t/49h_complicated_get_double_join.t
 t/URT/t/49i_complicated_get_join_through_value_class.t
+t/URT/t/49j_complicated_get_join_ends_at_value_class.t
 t/URT/t/49k_complicated_get_joins_with_hangoff_filter.t
 t/URT/t/50_force_always_reload.t
 t/URT/t/50_get_and_reload.t
@@ -475,8 +479,11 @@ t/URT/t/57_order_by_merge_new_objects.t
 t/URT/t/58_order_by_merge_changed_objects.t
 t/URT/t/59_get_merge_new_objs_with_db.t
 t/URT/t/60_get_merge_changed_objs_with_db.t
+t/URT/t/61_iterator.t
 t/URT/t/61_iterator_merge_changed_objs_with_db.t
+t/URT/t/61a_iterator_with_or_boolexpr.t
 t/URT/t/62_in_not_in_operator.t
+t/URT/t/62b_in_not_in_operator.t
 t/URT/t/63_view_text.t
 t/URT/t/63b_view_with_subviews.t
 t/URT/t/63c_view_with_subviews.t
