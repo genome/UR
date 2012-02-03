@@ -1177,6 +1177,33 @@ UR::BoolExpr from a string containing properties, operators and values joined wi
 
 =back
 
+C<resolve_for_string()> can parse simple and complicated expressions.  A simple expression
+is a property name followed by an operator followed by a value.  The property name can be
+a series of properties joined by dots (.) to indicate traversal of multiple layers of
+indirect properties.  Values that include spaces, characters that look like operators,
+commas, or other special characters should be enclosed in quotes.
+
+The parser understands all the same operators the underlying C<resolve()> method understands:
+=, <, >, <=, >=, "like", "between" and "in".  Operators may be prefixed by a bang (!) or the
+word "not" to negate the operator.  The "like" operator understands the SQL wildcards % and _.
+Values for the "between" operator should be separated by a minus (-).  Values for the "in"
+operator should begin with a left bracket, end with a right bracket, and have commas between
+them.  For example:
+    name_property in [Bob,Fred,Joe]
+
+Simple expressions may be joined together with the words "and" and "or" to form a more
+complicated expression.  "and" has higher precedence than "or", and parentheses can 
+surround sub-expressions to indicate the requested precedence.  For example:
+    ((prop1 = foo or prop2 = 1) and (prop2 > 10 or prop3 like 'Yo%')) or prop4 in [1,2,3]
+
+In general, whitespace is insignificant.  The strings "prop1 = 1" is parsed the same as
+"prop1=1".  Spaces inside quoted value strings are preserved.  For backward compatibility
+with the deprecated string parser, bare words that appear after the operators =,<,>,<=
+and >= which are separated by one or more spaces is treated as if it had quotes around
+the list of words starting with the first character of the first word and ending with
+the last character of the last word, meaning that spaces at the start and end of the
+list are trimmed.
+
 =head1 METHODS
 
 =over 4
