@@ -4,7 +4,7 @@ package UR::Object::Set::View::Default::Json;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.36"; # UR $VERSION;
+our $VERSION = "0.37"; # UR $VERSION;
 
 class UR::Object::Set::View::Default::Json {
     is => 'UR::Object::View::Default::Json',
