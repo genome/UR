@@ -443,13 +443,17 @@ sub fork
     my @ds = values %data_source_for_class;
 
     for (grep {defined $_} @ds) {
-        $_->set_all_dbh_to_inactive_destroy if ($_->can('set_all_dbh_to_inactive_destroy'));
+        $_->prepare_for_fork if $_->can('prepare_for_fork'); 
     }
 
     my $pid = fork();
     if (!$pid) {
         $UR::Context::process = undef;
         $UR::Context::process = $class->_create_for_current_process
+    }
+
+    for (grep {defined $_} @ds) {
+        $_->finish_up_after_fork if $_->can('finish_up_after_fork'); 
     }
 
     return $pid;

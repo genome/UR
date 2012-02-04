@@ -749,4 +749,23 @@ sub ur_data_type_for_data_source_data_type {
 }
 
 
+# This is a no-op in the base class.  If the DataSource needs to do any
+# database handle disconnection or other housekeeping prior to a fork, this should be
+# the place to do it.
+sub prepare_for_fork {
+    my $self = shift;
+    
+    die;
+    return 1;
+}
+
+# this is also a no-op here.  If a DataSource needs to do any work after forking
+# this is the place for that.  For example, a file based data source will need to
+# re-open the file and seek() to the location it was at before the fork happened.
+sub finish_up_after_fork {
+    my $self = shift;
+
+    return 1;
+}
+
 1;
