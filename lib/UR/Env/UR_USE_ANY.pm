@@ -2,5 +2,5 @@ package UR::Env::UR_USE_ANY;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.36"; # UR $VERSION;
+our $VERSION = "0.37"; # UR $VERSION;
 1;

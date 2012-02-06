@@ -8,7 +8,7 @@ require Term::ANSIColor;
 use UR;
 use UR::Object::Command::List::Style;
 
-our $VERSION = "0.36"; # UR $VERSION;
+our $VERSION = "0.37"; # UR $VERSION;
 
 class UR::Object::Command::List {
     is => 'Command',
@@ -128,14 +128,16 @@ sub _resolve_boolexpr {
                            )
         };
         if ($bool_expr) {
-            $self->warning_message("Failed to parse query, but it was recognized by the deprecated filter parser.\n  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well");
+            $self->warning_message("Failed to parse your query, but it was recognized by the deprecated filter parser.\n  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well\n  The error from the parser was:\n    $error");
         } else {
             die $error if $error;
         }
     }
 
 
-    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+    #$self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+    $self->error_message( sprintf('Cannot list for class %s because some items in the filter or show were not properties of that class: %s',
+                          $self->subject_class_name, join(', ', keys %extra)))
         and return if %extra;
 
     return $bool_expr;

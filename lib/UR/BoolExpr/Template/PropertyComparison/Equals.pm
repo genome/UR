@@ -2,7 +2,7 @@ package UR::BoolExpr::Template::PropertyComparison::Equals;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.36"; # UR $VERSION;
+our $VERSION = "0.37"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name  => __PACKAGE__, 

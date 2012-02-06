@@ -29,20 +29,17 @@ sub server {
 # Don't print out warnings about loading up the DB if running in the test harness
 # Similar code exists in URT::DataSource::SomeSQLite
 sub _dont_emit_initializing_messages {
-    my($msgobj, $dsobj, $msgtype) = @_;
+    my($dsobj, $message) = @_;
 
-    my $message = $msgobj->text;
-    if ($message !~ m/^Re-creating/) {
-        $dsobj->message_callback($msgtype, undef);
-        my $msg_method = $msgtype . '_message';
-        $dsobj->$msg_method($message);
-        $dsobj->message_callback($msgtype, \&_dont_emit_initializing_messages);
+    if ($message =~ m/^Re-creating/) {
+        # don't emit the message about re-creating the DB when run in the test harness
+        $_[1] = undef;
     }
 }
 
 if ($ENV{'HARNESS_ACTIVE'}) {
     # don't emit messages while running in the test harness
-    __PACKAGE__->message_callback('warning', \&_dont_emit_initializing_messages);
+    __PACKAGE__->warning_messages_callback(\&_dont_emit_initializing_messages);
 }
 
 END {

@@ -72,7 +72,7 @@ UR::ModuleBuild - a Module::Build subclass with UR extensions
 
 =head1 VERSION
 
-This document describes UR::ModuleBuild version 0.36.
+This document describes UR::ModuleBuild version 0.37.
 
 =head1 SYNOPOSIS
 

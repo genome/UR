@@ -135,13 +135,11 @@ foreach my $operator ( 'like', 'not like' ) {
 }
 
 # Supress messages about null in-clauses.
-# Chain to the existing callback supressing warnings about loading up the DB
-my $orig_cb = URT::DataSource::SomeSQLite->message_callback('warning');
-URT::DataSource::SomeSQLite->message_callback('warning',
+URT::DataSource::SomeSQLite->warning_messages_callback(
     sub {
-        my $msgobj = $_[0];
-        if ($msgobj->text !~ m/Null in-clause passed/) {
-            $orig_cb->(@_);
+        my ($self,$msg) = @_;
+        if ($msg =~ m/Null in-clause passed/) {
+            $_[1] = undef;
         }
     }
 );

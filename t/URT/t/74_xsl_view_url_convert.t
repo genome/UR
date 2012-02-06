@@ -9,8 +9,8 @@ use Test::More;
 
 BEGIN {
     eval "use XML::LibXSLT";
-    if ($@ =~ qr(Can't locate XML/LibXSLT.pm in \@INC)) {
-        plan skip_all => 'XML::LibXSLT does not exist on the system';
+    if ($@) {
+        plan skip_all => "Cannot load XML::LibXSLT: $@";
     } else {
         plan tests => 11;
         use_ok('UR::Object::View::Default::Xsl',  qw/url_to_type type_to_url/);

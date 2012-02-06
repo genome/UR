@@ -1,3 +1,13 @@
+libur-perl (0.37-1) unstable; urgency=low
+
+  * Added a proper parser for generating Boolean Expressions from text strings.  See the UR::BoolExpr pod for more info.
+  * Or-type Boolean Expressions now support -order, and can be the filter for iterators.
+  * Better error messages when a module fails to load properly during autoloading.
+  * Class methods called on Set instances are dispatched to the proper class instead of called on the Set's members.
+  * Values in an SQL in-clause are escaped using DBI's quote() method.
+
+ -- Anthony Brummett <brummett@cpan.org>  Fri, 03 Feb 2012 15:40:00 -0500
+
 libur-perl (0.36-1) unstable; urgency=low
 
   * Fix for 'like' clause's escape string on PostgreSQL

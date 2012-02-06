@@ -64,10 +64,12 @@ for my $class (qw/Game::Card/) {
        'second error text is corect');
 
     my $context = UR::Context->current;
-    my @error_messages = ();
-    $context->message_callback('error', sub { push @error_messages, $_[0]->text });
+
+    $context->dump_error_messages(0);
+    $context->queue_error_messages(1);
     ok(!UR::Context->commit, 'Commit fails as expected');
-    @error_messages = sort {$a cmp $b } @error_messages;
+
+    my @error_messages = sort {$a cmp $b } UR::Context->current->error_messages();
     is(scalar(@error_messages), 3, 'commit generated 3 error messages');
     is($error_messages[2],    # This one prints first, but sorts 3rd
        'Invalid data for save!',

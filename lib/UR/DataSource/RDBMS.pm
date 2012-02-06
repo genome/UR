@@ -9,7 +9,7 @@ use Scalar::Util;
 use File::Basename;
 
 require UR;
-our $VERSION = "0.36"; # UR $VERSION;
+our $VERSION = "0.37"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS',
@@ -3189,6 +3189,14 @@ sub ur_data_type_for_data_source_data_type {
         $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
     }
     return $urtype;
+}
+
+sub prepare_for_fork {
+    my $self = shift;
+   
+    $self->set_all_dbh_to_inactive_destroy();
+    
+    return 1;
 }
 
 

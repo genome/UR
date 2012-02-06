@@ -42,18 +42,19 @@ ok($circle->radius == 1, 'default radius is 1');
         return ($tag);
     };
 
-    my @msgobj;
-    $transaction->message_callback('error', sub { push @msgobj, shift } );
+    $transaction->dump_error_messages(0);
+    $transaction->queue_error_messages(1);
 
     is($transaction->commit, undef, 'commit failed');
 
-    is(scalar(@msgobj), 2, 'commit generated 2 error messages');
+    my @messages = $transaction->error_messages();
+    is(scalar(@messages), 2, 'commit generated 2 error messages');
     my $circleid = $circle->id;
-    is($msgobj[0]->text, 'Invalid data for save!', 'First error text is correct');
+    is($messages[0], 'Invalid data for save!', 'First error text is correct');
     #like($msgobj[1]->text,
     #     qr(Circle identified by $circleid has problem on\nINVALID: property 'test_property': intentional error for test)m,
     #     'Error message text is correct');
-   like($msgobj[1]->text,
+   like($messages[1],
         qr(Circle identified by $circleid has problems on\s+INVALID: property 'test_property': intentional error for test),
         'Error message text is correct');
 

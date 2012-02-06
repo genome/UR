@@ -6,7 +6,7 @@ use Sub::Name;
 use Scalar::Util;
 
 require UR;
-our $VERSION = "0.36"; # UR $VERSION;
+our $VERSION = "0.37"; # UR $VERSION;
 
 use UR::Context::ImportIterator;
 use UR::Context::ObjectFabricator;
@@ -509,7 +509,7 @@ sub _resolve_id_for_class_and_rule {
     if ( @id_property_names == 1 ) { # only 1 - try to auto generate
         $id = $class_meta->autogenerate_new_object_id($rule);
         unless ( defined $id ) {
-            $self->error_message("Failed to auto-generate an ID for single ID property class ($class)");
+            $class->error_message("Failed to auto-generate an ID for single ID property class ($class)");
             return;
         }
     }
@@ -520,7 +520,7 @@ sub _resolve_id_for_class_and_rule {
             push @missed_names, $name unless $rule->specifies_value_for($name);
         }
         if ( @missed_names ) { # Ok - prob w/ class def, list the ones we missed
-            $self->error_message("Attempt to create $class with multiple ids without these properties: ".join(', ', @missed_names));
+            $class->error_message("Attempt to create $class with multiple ids without these properties: ".join(', ', @missed_names));
             return;
         }
         else { # Bad - something is really wrong... 
@@ -1514,7 +1514,7 @@ sub _get_objects_for_class_and_or_rule {
     my @u = $rule->underlying_rules;
     my @results;
     for my $u (@u) {
-        if (wantarray) {
+        if (wantarray or not defined wantarray) {
             push @results, $self->get_objects_for_class_and_rule($class,$u,$load,$return_closure);
         }
         else {

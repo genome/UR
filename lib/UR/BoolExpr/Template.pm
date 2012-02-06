@@ -66,7 +66,7 @@ UR::Object::Type->define(
     ]
 );
 
-our $VERSION = "0.36"; # UR $VERSION;;
+our $VERSION = "0.37"; # UR $VERSION;;
 
 # Borrow from the util package.
 # This will go away with refactoring.
@@ -535,7 +535,7 @@ sub legacy_params_hash {
             if ($id_op->{""} or $id_op->{"="}) {
                 $legacy_params_hash->{_unique} = 1;
                 unless ($self->is_unique) {
-                    warn "is_unique false unexpectedly for $self->{id}"
+                    Carp::carp("The BoolExpr includes a filter on ID, but the is_unique flag is unexpectedly false for $self->{id}");
                 }
             }
         }

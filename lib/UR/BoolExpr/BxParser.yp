@@ -3,7 +3,7 @@
 %left MINUS
 
 # Generate the perl module with the command:
-# yapp -m UR::BoolExpr::BxParser BxParser.yp
+# yapp -sm UR::BoolExpr::BxParser BxParser.yp
 
 %%
 
@@ -137,6 +137,7 @@ number: INTEGER       { $_[1] + 0 }
 
 %%
 
+package UR::BoolExpr::BxParser;
 use strict;
 use warnings;
 

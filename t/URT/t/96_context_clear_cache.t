@@ -42,6 +42,7 @@ is(scalar(@things), 5, 'is_loaded returns all 5 things');
 is($query_count, 0, 'Made no queries');
 
 
+UR::Context->dump_warning_messages(0);
 ok(UR::Context->current->clear_cache(), 'clear cache');
 
 $query_count = 0;
