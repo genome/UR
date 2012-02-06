@@ -33,6 +33,8 @@ sub is_numeric {
 sub _convert_data_type_for_source_class_to_final_class {
     my ($class, $foreign_class, $source_class) = @_;
 
+    $foreign_class ||= '';
+
     # TODO: allowing "is => 'Text'" instead of is => 'UR::Value::Text' is syntactic sugar
     # We should have an is_primitive flag set on these so we do efficient work.
 
@@ -72,18 +74,26 @@ sub _convert_data_type_for_source_class_to_final_class {
     }
 
     if (!$final_class) {
+        $DB::single = 1;
         if (Class::Autouse->class_exists($foreign_class)) {
             return $foreign_class;
         }
-        elsif (!$ns or $ns->get()->allow_sloppy_primitives) {
-            $final_class = 'UR::Value::SloppyPrimitive';
+        elsif ($foreign_class =~ /::/) {
+            return $foreign_class;
         }
         else {
-            Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
-        }
-        eval "use $foreign_class;";
-        if (!$@) {
-            return $foreign_class;
+            eval "use $foreign_class;";
+            if (!$@) {
+                return $foreign_class;
+            }
+            
+            if (!$ns or $ns->get()->allow_sloppy_primitives) {
+                # no colons, and no namespace: no choice but to assume it's a sloppy primitive
+                return 'UR::Value::SloppyPrimitive';      
+            }
+            else {
+                Carp::confess("Failed to find a ${ns}::Value::* or UR::Value::* module for primitive type $foreign_class!");
+            }
         }
     }
 

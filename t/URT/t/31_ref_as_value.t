@@ -101,9 +101,12 @@ is_deeply($c->foo,[qw{foo bar baz}],'Checking array for alpha-sort');
 #    diag "data was: " . Data::Dumper::Dumper($d);
 #}
 
+# make Bar a real class so it is not mistaken for a primitive
+package Bar;
+sub bar {};
+package main;
 
 # new rule logic seems to allow boolexpr references to be cloned
-
 for my $c ('Bar') {
     class Foo { 
         has => [ 
@@ -113,7 +116,7 @@ for my $c ('Bar') {
         ] 
     }; 
 
-    my @r = map { bless({ id => $_ },"Bar"); } (100..102); 
+    my @r = map { bless({ id => $_ },$c); } (100..102); 
     my @f = qw/a b c/;
 
     my $oo = Foo->define_boolexpr(a => $r[0], c => $r[2], b => $r[1]); 
@@ -169,4 +172,5 @@ my %n = $n->params_list;
 my @b = %b;
 my @n = %n;
 is("@n","@b", "normalization keeps references correct");
- 
+
+
