@@ -755,7 +755,6 @@ sub ur_data_type_for_data_source_data_type {
 sub prepare_for_fork {
     my $self = shift;
     
-    die;
     return 1;
 }
 
