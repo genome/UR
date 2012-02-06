@@ -52,8 +52,26 @@ sub _properties {
         \@all;
     };
     if (@_) {
-        my $bx = UR::Object::Property->define_boolexpr(@_);
+        my ($bx, %extra) = UR::Object::Property->define_boolexpr(@_);
         my @matches = grep { $bx->evaluate($_) } @$all; 
+        if (%extra) {
+            # Additional meta-properties on meta-properties are not queryable until we
+            # put the UR::Object::Property into a private sub-class.
+            # This will give us most of the functionality. 
+            for my $key (keys %extra) {
+                my ($name,$op) = ($key =~ /(\w+)\s*(.*)/);
+                my @have_the_property = grep { $_->can($name) } @$all;
+                if (@have_the_property == 0) {
+                    die "unknown property $name used to query properties of " . $self->class_name;
+                }
+                if ($op and $op ne '==' and $op ne 'eq') {
+                    die "operations besides equals are not supported currently for added meta-properties like $name on class " . $self->class_name;
+                }
+                my $value = $extra{$key};
+                no warnings;
+                @matches = grep { $_->can($name) and $_->$name eq $value } @matches;                
+            }
+        }
         return if not defined wantarray;
         return @matches if wantarray;
         die "Matched multiple meta-properties, but called in scalar context!" . Data::Dumper::Dumper(\@matches) if @matches > 1;
