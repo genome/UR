@@ -55,9 +55,19 @@ sub _create_or_define {
     }
 
     my $subject_class_name = $rule->value_for('subject_class_name');
+    my $subject_class_meta = eval { $subject_class_name->__meta__ };
+    if ($@) {
+        $class->error_message("Can't create observer with subject_class_name '$subject_class_name': Can't get class metadata for class '$subject_class_name': $@");
+        return;
+    }
+    unless ($subject_class_meta) {
+        $class->error_message("Class $subject_class_name cannot be the subject class for an observer because there is no class metadata");
+        return;
+    }
+
     my $aspect = $rule->value_for('aspect');
     my $subject_id = $rule->value_for('subject_id');
-    unless ($subject_class_name->__meta__->_is_valid_signal($aspect)) {
+    unless ($subject_class_meta->_is_valid_signal($aspect)) {
         if ($subject_class_name->can('validate_subscription') and ! $subject_class_name->validate_subscription($aspect, $subject_id, $callback)) {
             $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
             return;
