@@ -626,7 +626,7 @@ sub resolve {
                     push @xremove_keys, $kn-1;
                     push @xremove_values, $vn-1;
                 }
-                elsif ($value->isa($property_meta->_data_type_as_class_name)) {
+                elsif ($property_meta->is_valid_storage_for_value($value)) {
                     push @hard_refs, $vn-1, $value;
                 }
                 elsif ($value->can($property_name)) {

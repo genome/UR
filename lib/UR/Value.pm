@@ -57,4 +57,8 @@ sub __load__ {
     return $expected_headers, [\@values];
 }
 
+sub underlying_data_types {
+    return ();
+}
+
 1;

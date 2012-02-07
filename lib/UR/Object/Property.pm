@@ -30,6 +30,21 @@ sub is_numeric {
     return $self->{'_is_numeric'};
 }
 
+sub is_valid_storage_for_value {
+    my($self, $value) = @_;
+
+    my $data_class_name = $self->_data_type_as_class_name;
+    return 1 if ($value->isa($data_class_name));
+
+    if ($data_class_name->isa('UR::Value') ) {
+        my @underlying_types = $data_class_name->underlying_data_types;
+        foreach my $underlying_type ( @underlying_types ) {
+            return 1 if ($value->isa($underlying_type));
+        }
+    }
+    return 0;
+}
+
 sub _convert_data_type_for_source_class_to_final_class {
     my ($class, $foreign_class, $source_class) = @_;
 
