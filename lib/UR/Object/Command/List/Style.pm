@@ -31,40 +31,48 @@ sub _object_properties_to_string {
         $char,
         map { defined $_ ? $_ : '<NULL>' }
         map {
-            if (substr($_,0,1) eq '(') {
-                @v = eval $_;
-                if ($@) {
-                    @v = ('<ERROR>'); # ($@ =~ /^(.*)$/);
-                }
-            }
-            else {
-                @v = ();
-                foreach my $i ($o->__get_attr__($_)) {
-                    if (! defined $i) {
-                        push @v, "<NULL>";
-                    } 
-                    elsif (Scalar::Util::blessed($i) and $i->isa('UR::Value') and $i->can('create_view')) {
-                        # Here we allow any UR::Values that have their own views to present themselves.
-                        my $v = $i->create_view( perspective => 'default', toolkit => 'text' );
-                        push @v, $v->content();
-                    }
-                    elsif (Scalar::Util::blessed($i) and $i->can('__display_name__')) {
-                        push @v, $i->__display_name__;
-                    } 
-                    else {
-                        push @v, $i;
-                    }
-                }
-            }
-            if (@v > 1) {
-                no warnings;
-                join(' ',@v)
-            }
-            else {
-                $v[0]
-            }
+            $self->_object_property_to_string($o,$_)
         } @{$self->{show}}
     );
+}
+
+sub _object_property_to_string {
+    my ($self, $o, $property) = @_;
+
+    my @v;
+    if (substr($property,0,1) eq '(') {
+        @v = eval $property;
+        if ($@) {
+            @v = ('<ERROR>'); # ($@ =~ /^(.*)$/);
+        }
+    }
+    else {
+        @v = ();
+        foreach my $i ($o->__get_attr__($property)) {
+            if (! defined $i) {
+                push @v, "<NULL>";
+            } 
+            elsif (Scalar::Util::blessed($i) and $i->isa('UR::Value') and $i->can('create_view')) {
+                # Here we allow any UR::Values that have their own views to present themselves.
+                my $v = $i->create_view( perspective => 'default', toolkit => 'text' );
+                push @v, $v->content();
+            }
+            elsif (Scalar::Util::blessed($i) and $i->can('__display_name__')) {
+                push @v, $i->__display_name__;
+            } 
+            else {
+                push @v, $i;
+            }
+        }
+    }
+
+    if (@v > 1) {
+        no warnings;
+        return join(' ',@v);
+    }
+    else {
+        return $v[0];
+    }
 }
 
 sub format_and_print{
@@ -149,7 +157,7 @@ sub _get_object_string{
     my $out;
     for my $property ( @{$self->{show}} )
     {
-        my $value = join(', ', $object->$property);
+        my $value = join(', ', $self->_object_property_to_string($object,$property));
         $out .= sprintf(
             "%s: %s\n",
             Term::ANSIColor::colored($property, 'red'),
