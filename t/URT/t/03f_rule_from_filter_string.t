@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 596;
+use Test::More tests => 618;
 
 class URT::RelatedItem {
     id_by => 'ritem_id',
@@ -27,6 +27,7 @@ class URT::Item {
         fh      => { is => "IO::Handle", is_optional => 1 },
         score   => { is => 'Integer' },
         ritem   => { is => 'URT::RelatedItem', id_by => 'ritem_id' },
+        desc    => { is => 'String' },
     ]
 };
 
@@ -59,6 +60,18 @@ foreach my $test (
     { string => 'name=/some/file.path.ext',
       values => { name => '/some/file.path.ext' },
       operators => { name => '='},
+    },
+    { string => 'name=Some::Class::Name',
+      values => { name => 'Some::Class::Name' },
+      operators => { name => '='},
+    },
+    { string => 'name:Some::Class/Other::Class/Third::Class,score =2',
+      values => { name => ['Other::Class','Some::Class','Third::Class'], score => 2 },
+      operators => { name => 'in', score => '='},
+    },
+    { string => 'name in [Some::Class, Other::Class, Third::Class] and score = 2',
+      values => { name => ['Other::Class','Some::Class','Third::Class'], score => 2 },
+      operators => { name => 'in', score => '='},
     },
     { string => 'name=fred and score>2',
       values => { name => 'fred', score => 2 },
@@ -116,6 +129,10 @@ foreach my $test (
     { string => 'name like %some/file/path-name.ext',
       values => { name => '%some/file/path-name.ext' },
       operators => { name => 'like' },
+    },
+    { string => 'name like 1234% and desc not like %bar%',
+      values => { name => '1234%', desc => '%bar%' },
+      operators => { name => 'like', desc => 'not like' },
     },
     { string => 'foo:one/two/three',
       values => { foo => ['one','three','two'] },  # They get sorted internally
