@@ -36,7 +36,8 @@ optional_spaces:        { undef }
                | spaces { undef }
                ;
 
-property:   IDENTIFIER { $_[1] }
+property: IDENTIFIER        { $_[1] }
+        | keyword_as_value  { $_[1] }
         ;
 
 order_by_property: property           { $_[1 ] }

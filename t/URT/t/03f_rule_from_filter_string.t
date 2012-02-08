@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 612;
+use Test::More tests => 618;
 
 class URT::RelatedItem {
     id_by => 'ritem_id',
@@ -27,6 +27,7 @@ class URT::Item {
         fh      => { is => "IO::Handle", is_optional => 1 },
         score   => { is => 'Integer' },
         ritem   => { is => 'URT::RelatedItem', id_by => 'ritem_id' },
+        desc    => { is => 'String' },
     ]
 };
 
@@ -128,6 +129,10 @@ foreach my $test (
     { string => 'name like %some/file/path-name.ext',
       values => { name => '%some/file/path-name.ext' },
       operators => { name => 'like' },
+    },
+    { string => 'name like 1234% and desc not like %bar%',
+      values => { name => '1234%', desc => '%bar%' },
+      operators => { name => 'like', desc => 'not like' },
     },
     { string => 'foo:one/two/three',
       values => { foo => ['one','three','two'] },  # They get sorted internally
