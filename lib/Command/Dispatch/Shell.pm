@@ -46,7 +46,7 @@ sub _execute_with_shell_params_and_return_exit_code {
     my ($delegate_class, $params, $errors) = $class->resolve_class_and_params_for_argv(@argv);
 
     my $exit_code;
-    if ($errors and @$errors and not $params) {
+    if ($errors and @$errors) {
         $delegate_class->dump_status_messages(1);
         $delegate_class->dump_warning_messages(1);
         $delegate_class->dump_error_messages(1);
