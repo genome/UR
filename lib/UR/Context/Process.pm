@@ -443,7 +443,7 @@ sub fork
     my @ds = values %data_source_for_class;
 
     for (grep {defined $_} @ds) {
-        $_->prepare_for_fork if $_->can('prepare_for_fork'); 
+        $_->get()->prepare_for_fork if $_->can('prepare_for_fork'); 
     }
 
     my $pid = fork();
@@ -453,7 +453,7 @@ sub fork
     }
 
     for (grep {defined $_} @ds) {
-        $_->finish_up_after_fork if $_->can('finish_up_after_fork'); 
+        $_->get()->finish_up_after_fork if $_->can('finish_up_after_fork'); 
     }
 
     return $pid;

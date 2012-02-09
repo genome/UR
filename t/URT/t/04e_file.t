@@ -79,6 +79,19 @@ ok(! defined($obj), 'Iterator 1 returns undef when all data is exhausted');
 $obj = $iter2->next();
 ok(! defined($obj), 'Iterator 2 returns undef when all data is exhausted');
 
+my $fh2 = $ds->get_default_handle();
+my $thing1 = URT::Things->get(thing_name => 'FredX');
+my $pid = UR::Context::Process->fork();
+if ($pid) {
+    my $thing2= URT::Things->get(thing_name => 'FredY');
+    ok(!$thing2, "correctly failed to get something we didn't expect to see");
+    ok(URT::Things->get(thing_color=>'yellow'), "got something we did expect to see, even after forking");
+    waitpid($pid, 0);
+} else {
+    sleep 3;
+    exit(0);
+}
+
 
 unlink URT::DataSource::SomeFile->server;
 

@@ -96,6 +96,27 @@ sub disconnect_default_handle {
     }
 }
 
+sub prepare_for_fork {
+    my $self = shift;
+
+    # make sure this is clear before we fork
+    $self->{'_fh_position'} = undef;
+    if (defined $self->{'_fh'}) {
+        $self->{'_fh_position'} = $self->{'_fh'}->tell();
+        UR::DBI->sql_fh->printf("FILE: preparing to fork; closing file %s and noting position at %s\n",$self->server, $self->{'_fh_position'});
+    }
+    $self->disconnect_default_handle;
+}
+
+sub finish_up_after_fork {
+    my $self = shift;
+    if (defined $self->{'_fh_position'}) {
+        UR::DBI->sql_fh->printf("FILE: resetting after fork; reopening file %s and fast-forwarding to %s\n",$self->server, $self->{'_fh_position'});
+        my $fh = $self->get_default_handle; 
+        $fh->seek($self->{'_fh_position'},0);
+    }
+}
+
 sub _regex {
     my $self = shift;
 
