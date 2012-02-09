@@ -89,7 +89,6 @@ sub _convert_data_type_for_source_class_to_final_class {
     }
 
     if (!$final_class) {
-        $DB::single = 1;
         if (Class::Autouse->class_exists($foreign_class)) {
             return $foreign_class;
         }

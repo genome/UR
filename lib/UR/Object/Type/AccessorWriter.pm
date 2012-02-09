@@ -627,7 +627,6 @@ sub mk_indirect_rw_accessor {
                         $bridges[0]->delete;
                     }
                     #print "adding via $adder @where :::> $to @_\n";
-                    $DB::single = 1;
                     @bridges = $self->$adder(@where, $to => $_[0]);
                     unless (@bridges) {
                         Carp::croak("Failed to add bridge for '$accessor_name' on $class_name if '$self->{id}': method $adder returned false");
