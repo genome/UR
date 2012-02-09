@@ -36,7 +36,8 @@ optional_spaces:        { undef }
                | spaces { undef }
                ;
 
-property:   IDENTIFIER { $_[1] }
+property: IDENTIFIER        { $_[1] }
+        | keyword_as_value  { $_[1] }
         ;
 
 order_by_property: property           { $_[1 ] }
@@ -186,17 +187,28 @@ my %token_states = (
         GROUP_BY => qr{group by},
     ],
     'set_contents' => [
-        SET_SEPARATOR => [qr{,}, ''],  # Depending on state, can be either AND or SET_SEPARATOR
+        SET_SEPARATOR => qr{,},  # Depending on state, can be either AND or SET_SEPARATOR
+        WORD => qr{[%\.\w\:][\.\:%\w]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
+        RIGHT_BRACKET => [qr{\]}, 'DEFAULT' ],
     ],
     'after_colon_value' => [
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
         IN_DIVIDER => qr{\/},
-        WORD => qr{\w+},    # Override WORD in DEFAULT to disallow /
+        #WORD => qr{\w+},    # Override WORD in DEFAULT to disallow /
+        WORD => qr{[%\.\w\:][\.\:%\w]*},   # Override WORD in DEFAULT to disallow /
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])+"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])+'},
+        WHITESPACE => [qr{\s+}, 'DEFAULT'],
     ],
     'dont_gobble_spaces' => [
+        AND => [ qr{and}, 'DEFAULT'],
+        OR => [ qr{or}, 'DEFAULT' ],
+        INTEGER => qr{\d+},
+        REAL => qr{\d*\.\d+|\d+\.\d*},
+        WORD => qr{[%\.\/\w][\-\.\:%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
+        ORDER_BY => [qr{order by}, 'DEFAULT'],
+        GROUP_BY => [qr{group by}, 'DEFAULT'],
     ],
 );
 
@@ -247,9 +259,7 @@ sub parse {
                             $longest = $match_len;
                             $longest_token = $tok;
                             $longest_match = $1;
-                            if ($parser_state ne 'dont_gobble_spaces' and $longest_match =~ m/^\s/) {
-                                $parser_state = 'DEFAULT'
-                            } elsif ($next_parser_state) {
+                            if ($next_parser_state) {
                                 $parser_state = $next_parser_state;
                             }
                         }
