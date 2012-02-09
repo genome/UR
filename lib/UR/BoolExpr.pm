@@ -183,7 +183,14 @@ sub value_for {
     my $h = $self->legacy_params_hash;
     my $v;
     if (exists $h->{$property_name}) {
+        # normal case
         $v = $h->{$property_name};
+        if (exists $self->{'hard_refs'}->{$property_name}) {
+            $v = $self->{'hard_refs'}->{$property_name};  # It was stored during resolve() as a hard ref
+        }
+        elsif ($self->_value_is_old_style_operator_and_value($v)) {
+            $v = $v->{'value'};   # It was old style operator/value hash
+        }
     } else {
         # No value found under that name... try decomposing the id
         return if $property_name eq 'id';
@@ -199,8 +206,6 @@ sub value_for {
             }
         }
     }
-    return $v unless ref($v);
-    return $v->{value} if ref($v) eq "HASH";
     return $v;
 }
 
@@ -308,6 +313,28 @@ sub resolve_for_template_id_and_values {
     $class->get($rule_id);
 }
 
+
+# Return true if it's a hashref that specifies the old-style operator/value
+# like property => { operator => '=', value => 1 }
+# FYI, the new way to do this is:
+# 'property =' => 1
+sub _value_is_old_style_operator_and_value {
+    my($class,$value) = @_;
+
+    return (ref($value) eq 'HASH')
+            &&
+           (exists($value->{'operator'}))
+           &&
+           (exists($value->{'value'}))
+           &&
+           ( (keys(%$value) == 2)
+              ||
+             ((keys(%$value) == 3)
+                && exists($value->{'escape'}))
+          );
+}
+
+
 my $resolve_depth;
 sub resolve {
     $resolve_depth++;
@@ -405,10 +432,7 @@ sub resolve {
 
         if (my $ref = ref($value)) {
             if ( (not $operator) and ($ref eq "HASH")) {
-                if (
-                    exists $value->{operator}
-                    and exists $value->{value}
-                ) {
+                if ( $class->_value_is_old_style_operator_and_value($value)) {
                     # the key => { operator => $o, value => $v } syntax
                     # cannot be used with a value type of HASH
                     $operator = lc($value->{operator});
