@@ -15,6 +15,12 @@ UR::Object::Type->define(
         domain                  => { is => 'Text', len => undef },
         allow_sloppy_primitives  => { is => 'Boolean', default_value => 1,
                                     doc => 'when true, unrecognized data types will function as UR::Value::SloppyPrimitive' },         
+        method_resolution_order => {
+            is => 'Text',
+            doc => 'Method Resolution Order to use for this namespace. C3 is only supported in Perl >= 5.9.5.',
+            value => ($^V lt v5.9.5 ? 'dfs' : 'c3'),
+            valid_values => ($^V lt v5.9.5 ? ['dfs'] : ['dfs', 'c3']),
+        },
     ],
 );
 

@@ -1203,10 +1203,33 @@ sub _initialize_accessors_and_inheritance {
     unless (@is) {
         @is = ('UR::ModuleBase') 
     }
-    eval "\@${class_name}::ISA = (" 
-        . join(',', map { "'$_'" } @is) . ")\n";
+    eval "\@${class_name}::ISA = (" . join(',', map { "'$_'" } @is) . ")\n";
     Carp::confess($@) if $@;
-        
+
+    my $namespace_mro;
+    my $namespace_name = $self->{namespace};
+    if (
+        !$bootstrapping
+        && !$class_name->isa('UR::Namespace')
+        && $namespace_name
+        && $namespace_name->isa('UR::Namespace')
+        && $namespace_name->can('get')
+        && (my $namespace = $namespace_name->get())
+    ) {
+        $namespace_mro = $namespace->method_resolution_order;
+    }
+
+    if ($^V lt v5.9.5 && $namespace_mro && $namespace_mro eq 'c3') {
+        warn "C3 method resolution order is not supported on Perl < 5.9.5. Reverting $namespace_name namespace to DFS.";
+        my $namespace = $namespace_name->get();
+        $namespace_mro = $namespace->method_resolution_order('dfs');
+    }
+
+    if ($^V ge v5.9.5 && $namespace_mro && mro::get_mro($class_name) ne $namespace_mro) {
+        require mro;
+        mro::set_mro($class_name, $namespace_mro);
+    }
+
     return $self;
 }
 
