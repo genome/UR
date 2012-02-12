@@ -16,7 +16,7 @@ use URT;
 
 class URT::SelfLoader1 {
     has => [qw/nose tail/],
-    data_source => UR::DataSource::Default->create(),
+    data_source => 'UR::DataSource::Default',
 };
 
 sub __load__ {
