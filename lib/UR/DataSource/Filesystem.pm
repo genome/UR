@@ -129,7 +129,7 @@ sub _replace_subs_with_values_in_pathname {
     $prop_values_hash ||= {};
 
     # Match something like /some/path/&sub/name or /some/path&{sub}.ext/name
-    if ($string =~ m/\$\{?(\w+)\}?/) {
+    if ($string =~ m/\&\{?(\w+)\}?/) {
         my $subname = $1;
         unless ($rule->subject_class->can($subname)) {
             Carp::croak("Invalid 'server' for data source ".$self->id
