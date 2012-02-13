@@ -171,41 +171,72 @@ sub _replace_subs_with_values_in_pathname {
     }
 }
 
-#sub _replace_glob_with_values_in_pathname {
-#    my($self, $string, $prop_values_hash) = @_;
-#
-#    my $glob_pos_offset = $prop_values_hash->{'__glob_pos_offset__'} ||= 0;
-#
-#    # a * not preceeded by a backslash, delimited by /
-#    if ($string =~ m/([^/]*[^/](\*)[^/]*)/) {
-#        my $path_part_pos_start = $-[1];
-#        my $path_part_pos_end   = $+[1];
-#        my $glob_pos = $-[2];
-#
-#        my $path_segment_including_glob = substr($string, 0, $-[0]);
-#        my @glob_matches = glob($path_including_part_with_glob);
-#
-#        if (exists $prop_values_hash->{$glob_pos}) {
-#            # This * was put in previously by a $propname in the spec that wasn't mentioned in the rule
-#            # do the filesystem glob and the find out what 
-#
-#            my @glob_pos = (($path_part_pos_start - $glob_pos_offset) .. ($path_pos_end - $glob_pos_offset));
-#            my @these_var_globs = @$prop_values_hash{@glob_pos};
-#
-#            # Make a regex out of $path_including_part_with_glob, swapping out the * with
-#            # a capture so we know the values for this variable obtained from the glob
-#            my $regex_as_str = quotemeta($path_including_part_with_glob);
-#            $regex_as_str =~ s/\*/\(\.\*\?\)/g;
-#            my $regex = qr{$regex_as_str};
-#            
-#            my @a = map { 
-#            
-#        } else {
-#            # This is a glob put in the original path spec
-#            
-#            return map { [ 
-#            
-#            
-#    }
+sub _replace_glob_with_values_in_pathname {
+    my($self, $string, $prop_values_hash) = @_;
+
+$DB::single=1;
+    # a * not preceeded by a backslash, delimited by /
+    if ($string =~ m#([^/]*[^\\/]?(\*)[^/]*)#) {
+        my $glob_pos = $-[2];
+
+        my $path_segment_including_glob = substr($string, 0, $+[0]);
+        my $remaining_path = substr($string, $+[0]);
+        my @glob_matches = map { $_ . $remaining_path }
+                               glob($path_segment_including_glob);
+
+        my @property_values_as_hashes;
+        my $glob_position_list = $prop_values_hash->{'.__glob_positions__'};
+        if ($glob_position_list->[0]->[0] == $glob_pos) {
+            # This * was put in previously by a $propname in the spec that wasn't mentioned in the rule
+
+            my $path_delim_pos = index($path_segment_including_glob, '/', $glob_pos);
+            $path_delim_pos = length($path_segment_including_glob) if ($path_delim_pos == -1);  # No more /s
+
+            #my $regex_as_str = quotemeta($path_segment_including_glob);
+            my $regex_as_str = $path_segment_including_glob;
+            # Find out just how many *s we're dealing with, up to the next /
+            my(@glob_positions, @property_names);
+            while (@$glob_position_list
+                   and
+                  $glob_position_list->[0]->[0] < $path_delim_pos
+            ) {
+                my $this_glob_info = shift @{$glob_position_list};
+                push @glob_positions, $this_glob_info->[0];
+                push @property_names, $this_glob_info->[1];
+            }
+            # Replace the *s found with regex captures
+            my $glob_replacement = '([^/]*)';
+            my $glob_replacement_len = length($glob_replacement);
+            for(my $i = 0; $i < @glob_positions; $i++) {
+                substr($regex_as_str, $glob_positions[$i], 1, $glob_replacement);
+                $glob_replacement_len += $glob_replacement_len;
+#                for (my $j = $i+1; $j < @glob_positions; $j++) {
+#                    # need to increment the remaining positions since the capture regex is longer than '*'
+#                    $glob_positions[$j] += $glob_replacement_len;
+#                }
+            }
+
+            my $regex = qr{$regex_as_str};
+
+            my @property_values_for_each_glob_match = map { [ $_, [ $_ =~ $regex] ] } @glob_matches;
+            @property_values_as_hashes = map { my %h = %$prop_values_hash;
+                                               @h{@property_names} = @{$_->[1]};
+                                               [$_->[0], \%h];
+                                             }
+                                             @property_values_for_each_glob_match;
+
+       } else {
+            # This is a glob put in the original path spec
+            @property_values_as_hashes = map { [ $_, %$prop_values_hash ] } @glob_matches;
+       }
+
+       return map { $self->_replace_glob_with_values_in_pathname( @$_ ) }
+                  @property_values_as_hashes;
+
+    } else {
+        delete $prop_values_hash->{'.__glob_positions__'};
+        return [ $string, $prop_values_hash ];
+    }
+}
 
 1;

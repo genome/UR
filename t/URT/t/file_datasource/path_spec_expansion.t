@@ -42,6 +42,7 @@ class URT::Thing {
 };
 
 
+# First, test the low-level replacement methods for variables and globs
 my $bx = URT::Thing->define_boolexpr(name => 'Pyle', rank => 'Private');
 ok($bx, 'Create boolexpr matching a name and rank');
 my @data = UR::DataSource::Filesystem->_replace_vars_with_values_in_pathname(
@@ -60,6 +61,9 @@ is(scalar(@data), 1, 'property replacement yielded one pathname, with extension'
 is_deeply(\@data, [ [ "${dir}/Private/Pyle.dat", { name => 'Pyle', rank => 'Private'} ]],
           'Path resolution data is correct');
 
+
+
+
 $bx = URT::Thing->define_boolexpr(name => 'Pyle');
 ok($bx, 'Create boolexpr with just name');
 @data = UR::DataSource::Filesystem->_replace_vars_with_values_in_pathname(
@@ -67,8 +71,24 @@ ok($bx, 'Create boolexpr with just name');
                ${dir}.'/$rank/${name}.dat'
             );
 is(scalar(@data), 1, 'property replacement yielded one pathname, with extension');
-is_deeply(\@data, [ [ "${dir}/*/Pyle.dat", { name => 'Pyle', ($dir_strlen+1) => 'rank' } ]],
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "${dir}/*/Pyle.dat",
+               { name => 'Pyle', '.__glob_positions__' => [ [$dir_strlen+1, 'rank' ] ] }
+             ]
+           ],
            'Path resolution data is correct');
+
+@data = UR::DataSource::Filesystem->_replace_glob_with_values_in_pathname(@{$data[0]});
+is(scalar(@data), 3, 'Glob replacement yielded three possible pathnames');
+@data = sort { $a->[0] cmp $b->[0] } @data;
+is_deeply(\@data,
+          [
+              [ "${dir}/General/Pyle.dat", { name => 'Pyle', rank => 'General' } ],
+              [ "${dir}/Private/Pyle.dat", { name => 'Pyle', rank => 'Private' } ],
+              [ "${dir}/Sergent/Pyle.dat", { name => 'Pyle', rank => 'Sergent' } ],
+          ],
+          'Path resolution data is correct');
 
 1;
 
