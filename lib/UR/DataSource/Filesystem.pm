@@ -138,7 +138,7 @@ sub _replace_subs_with_values_in_pathname {
                         . " which is not a method of class " . $rule->subject_class_name);
         }
  
-       my $subject_class_name = $rule->subject_class_name;
+        my $subject_class_name = $rule->subject_class_name;
         my @property_values = { $subject_class_name->$subname($rule) };
         if ($@) {
             Carp::croak("Can't resolve final path for 'server' for data source ".$self->id
