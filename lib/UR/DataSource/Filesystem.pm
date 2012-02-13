@@ -101,13 +101,14 @@ sub _replace_vars_with_values_in_pathname {
         } else {
             # The rule doesn't have a value for this property.
             # Put a shell wildcard in here, and a later glob will match things
-#            my $glob_count = $prop_values_hash->{'__glob_count__'}++;
+            my @glob_positions = @{ $prop_values_hash->{'.__glob_positions__'} || [] };
 
             # Here, the string position as a key means that the * in this position should
             # later be expanded to fill in values for this variable.  That's ok since numbers
             # can't be property names
             my $glob_pos = $-[0];
-            @string_replacement_values = ([ '*', { %$prop_values_hash, $glob_pos => $varname} ]);
+            push @glob_positions, [$glob_pos, $varname];
+            @string_replacement_values = ([ '*', { %$prop_values_hash, '.__glob_positions__' => \@glob_positions} ]);
         }
 
         my @return = map {
