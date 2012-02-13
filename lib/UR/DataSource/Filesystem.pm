@@ -16,13 +16,16 @@ use File::Basename;
 # server => '/path/to/directory/'
 #    means that directory contains one or more files, and the classes using
 #    this datasource can have table_name metadata to pick the file
-# server => '/path/$param1/$param2.ext'
+# server => '/path/$param1/${param2}.ext'
 #    means the values for $param1 and $param2 should come from the input rule.
 #    If the rule doesn't specify the param, then it should glob for the possible
 #    names at that point in the filesystem
 # server => '/path/&method/filename'
 #    means the value for that part of the path should come from a method call
-#    run as $datasource->$method($rule)
+#    run as $subject_class_name->$method($rule)
+# server => '/path/*/path/$name/
+#    means it should glob at the appropriate time for the '*', but no use the
+#    paths found matching the glob to infer any values
 
               
 
@@ -39,7 +42,7 @@ class UR::DataSource::Filesystem {
     ],
     has_optional => [
         columns               => { is => 'ARRAY', doc => 'Names of the columns in the file, in order' },
-        sort_order            => { is => 'ARRAY',  doc => 'Names of the columns by which the data file is sorted' },
+        sort_order            => { is => 'ARRAY', doc => 'Names of the columns by which the data file is sorted' },
     ],
     doc => 'A data source for treating files as relational data',
 };
