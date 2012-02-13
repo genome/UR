@@ -213,10 +213,6 @@ $DB::single=1;
             for(my $i = 0; $i < @glob_positions; $i++) {
                 substr($regex_as_str, $glob_positions[$i], 1, $glob_replacement);
                 $glob_replacement_len += $glob_replacement_len;
-#                for (my $j = $i+1; $j < @glob_positions; $j++) {
-#                    # need to increment the remaining positions since the capture regex is longer than '*'
-#                    $glob_positions[$j] += $glob_replacement_len;
-#                }
             }
 
             my $regex = qr{$regex_as_str};
@@ -229,8 +225,26 @@ $DB::single=1;
                                              @property_values_for_each_glob_match;
 
        } else {
-            # This is a glob put in the original path spec
-            @property_values_as_hashes = map { [ $_, %$prop_values_hash ] } @glob_matches;
+           # This is a glob put in the original path spec
+
+           my $original_path_length = length($string);
+
+           # Given a pathname returned from the glob, return a new glob_position_list
+           # that has fixed up the position information accounting for the fact that
+           # the globbed pathname is a different length than the original spec
+           my $apply_fixups_for_glob_list = sub {
+                  my $glob_match = shift;
+                  return map { [ $_->[0] + length($glob_match) - $original_path_length, $_->[1] ] } @$glob_position_list;
+           };
+
+           @property_values_as_hashes = map { [
+                                                $_,
+                                                { %$prop_values_hash,
+                                                  '.__glob_positions__' => [ $apply_fixups_for_glob_list->($_) ]
+                                                }
+                                              ]
+                                            }
+                                            @glob_matches;
        }
 
        return map { $self->_replace_glob_with_values_in_pathname( @$_ ) }

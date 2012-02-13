@@ -18,9 +18,13 @@ my %people = ( Pyle => { rank => 'Private', serial => 123 },
                Halftrack => { rank => 'General', serial => 567 },
              );
 
-my $dir = File::Temp::tempdir(CLEANUP => 1);
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+ok($tmpdir, 'Created temp dir');
+my $tmpdir_strlen = length($tmpdir);
+
+my $dir = $tmpdir . '/extra_dir';
+ok(mkdir($dir), 'Created extra_dir within temp dir');
 my $dir_strlen = length($dir);
-ok($dir, 'Created temp dir');
 while (my($name,$data) = each %people) {
     ok(_create_data_file($dir,$data->{'rank'},$name,$data->{'serial'}), "Create file for $name");
 }
@@ -110,6 +114,34 @@ is_deeply(\@data,
               [ "${dir}/Sergent/Pyle.dat", { name => 'Pyle', rank => 'Sergent' } ],
           ],
           'Path resolution data is correct');
+
+
+# This path spec has a hardcoded glob in it already
+$bx = $bx = URT::Thing->define_boolexpr(name => 'Pyle');
+ok($bx, 'Create boolexpr with just name');
+@data = UR::DataSource::Filesystem->_replace_vars_with_values_in_pathname(
+               $bx,
+               ${tmpdir}.'/*/$rank/${name}.dat'
+            );
+is(scalar(@data), 1, 'property replacement for spec including a glob yielded one pathname');
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "$tmpdir/*/*/Pyle.dat", { name => 'Pyle', '.__glob_positions__' => [ [$tmpdir_strlen+3, 'rank' ] ] }
+             ]
+           ],
+           'Path resolution data is correct');
+
+@data = UR::DataSource::Filesystem->_replace_glob_with_values_in_pathname(@{$data[0]});
+is(scalar(@data), 3, 'Glob replacement yielded three possible pathnames');
+@data = sort { $a->[0] cmp $b->[0] } @data;
+is_deeply(\@data,
+          [
+              [ "${dir}/General/Pyle.dat", { name => 'Pyle', rank => 'General' } ],
+              [ "${dir}/Private/Pyle.dat", { name => 'Pyle', rank => 'Private' } ],
+              [ "${dir}/Sergent/Pyle.dat", { name => 'Pyle', rank => 'Sergent' } ],
+          ],
+          'Path resolution data is correct');
+
 
 1;
 
