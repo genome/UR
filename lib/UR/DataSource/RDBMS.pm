@@ -2710,8 +2710,6 @@ sub _default_save_sql_for_object {
 
         # Determine the $sql and @values needed to save this object.
 
-        my ($sql, @changed_cols, @values, @value_properties, %value_properties);
-
         if ($table_action eq 'delete')
         {
             # A row loaded from the database with its object deleted.
@@ -2720,7 +2718,7 @@ sub _default_save_sql_for_object {
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
             my @non_pk_nullable_fk_columns = $self->get_non_primary_key_nullable_foreign_key_columns_for_table($table);
 
-            @values = $self->_id_values_for_primary_key($table,$object_to_save);
+            my @values = $self->_id_values_for_primary_key($table,$object_to_save);
             my $where = $self->_matching_where_clause($table, \@values);
 
             if (@non_pk_nullable_fk_columns) {
@@ -2747,7 +2745,7 @@ sub _default_save_sql_for_object {
             }
 
 
-            $sql = " DELETE FROM ";
+            my $sql = " DELETE FROM ";
             $sql .= "${db_owner}." if ($db_owner);
             $sql .= "$table_name_to_update WHERE $where";
 
@@ -2784,6 +2782,7 @@ sub _default_save_sql_for_object {
                 $changes_for_this_table = $change_summary;
             }
 
+            my(@changed_cols,@values);
             for my $property (keys %$changes_for_this_table)
             {
                 my $column_name = $class_object->column_for_property($property); 
@@ -2818,7 +2817,7 @@ sub _default_save_sql_for_object {
                 my @all_values = ( @changed_values, @id_values );
                 my $where = $self->_matching_where_clause($table, \@all_values);
 
-                $sql = " UPDATE ";
+                my $sql = " UPDATE ";
                 $sql .= "${db_owner}." if ($db_owner);
                 $sql .= "$table_name_to_update SET " . join(",", map { "$_ = ?" } @changed_cols) . " WHERE $where";
 
@@ -2840,14 +2839,14 @@ sub _default_save_sql_for_object {
 
             my @changed_cols = reverse sort $table->column_names; 
 
-            $sql = " INSERT INTO ";
+            my $sql = " INSERT INTO ";
             $sql .= "${db_owner}." if ($db_owner);
             $sql .= "$table_name_to_update (" 
                     . join(",", @changed_cols) 
                     . ") VALUES (" 
                     . join(',', split(//,'?' x scalar(@changed_cols))) . ")";
 
-            @values = map { 
+            my @values = map {
                            # when there is a column but no property, use NULL as the value
                            defined($_) && $object_to_save->can($_)
                            ? $object_to_save->$_
