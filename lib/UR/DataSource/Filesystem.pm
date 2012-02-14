@@ -231,12 +231,13 @@ sub _replace_glob_with_values_in_pathname {
 
             $resolve_glob_values_for_each_result = sub {
                 my $apply_fixups_for_glob_list = shift;
-                return map { my %h = %$prop_values_hash;
-                                                   @h{@property_names} = @{$_->[1]};
-                                                   $h{'.__glob_positions__'} = [ $apply_fixups_for_glob_list->($_->[0]) ];
-                                                   [$_->[0], \%h];
-                                                 }
-                                                 @property_values_for_each_glob_match;
+                return map {
+                               my %h = %$prop_values_hash;
+                               @h{@property_names} = @{$_->[1]};
+                               $h{'.__glob_positions__'} = [ $apply_fixups_for_glob_list->($_->[0]) ];
+                               [$_->[0], \%h];
+                           }
+                           @property_values_for_each_glob_match;
             };
 
        } else {
@@ -247,13 +248,13 @@ sub _replace_glob_with_values_in_pathname {
            $resolve_glob_values_for_each_result = sub {
                my $apply_fixups_for_glob_list = shift;
                return map { [
-                                                $_,
-                                                { %$prop_values_hash,
-                                                  '.__glob_positions__' => [ $apply_fixups_for_glob_list->($_) ]
-                                                }
-                                              ]
-                                            }
-                                            @glob_matches;
+                                $_,
+                                { %$prop_values_hash,
+                                  '.__glob_positions__' => [ $apply_fixups_for_glob_list->($_) ]
+                                }
+                            ]
+                          }
+                          @glob_matches;
            };
        }
 
@@ -262,8 +263,8 @@ sub _replace_glob_with_values_in_pathname {
        # that has fixed up the position information accounting for the fact that
        # the globbed pathname is a different length than the original spec
        my $apply_fixups_for_glob_list = sub {
-              my $glob_match = shift;
-              return map { [ $_->[0] + length($glob_match) - $original_path_length, $_->[1] ] } @$glob_position_list;
+              my $pathname = shift;
+              return map { [ $_->[0] + length($pathname) - $original_path_length, $_->[1] ] } @$glob_position_list;
        };
 
        my @resolved_paths_and_property_values = $resolve_glob_values_for_each_result->($apply_fixups_for_glob_list);
