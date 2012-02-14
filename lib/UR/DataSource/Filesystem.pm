@@ -6,6 +6,7 @@ use warnings;
 our $VERSION = "0.37"; # UR $VERSION;
 
 use File::Basename;
+use List::Util;
 
 
 # lets you specify the server in several ways:
@@ -209,11 +210,18 @@ $DB::single=1;
             }
             # Replace the *s found with regex captures
             my $glob_replacement = '([^/]*)';
-            my $glob_replacement_len = length($glob_replacement);
-            for(my $i = 0; $i < @glob_positions; $i++) {
-                substr($regex_as_str, $glob_positions[$i], 1, $glob_replacement);
-                $glob_replacement_len += $glob_replacement_len;
-            }
+            my $glob_rpl_offset = 0;
+            my $offset_inc = length($glob_replacement) - 1;
+            #for(my $i = 0; $i < @glob_positions; $i++) {
+            #    substr($regex_as_str, $glob_positions[$i], 1, $glob_replacement);
+            #    $glob_rpl_offset += $glob_rpl_offset;
+            #}
+            $regex_as_str = List::Util::reduce( sub {
+                                                    substr($a, $b + $glob_rpl_offset, 1, $glob_replacement);
+                                                    $glob_rpl_offset += $offset_inc;
+                                                    $a;
+                                                },
+                                                ($regex_as_str, @glob_positions) );
 
             my $regex = qr{$regex_as_str};
 
