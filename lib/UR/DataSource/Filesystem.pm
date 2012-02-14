@@ -178,7 +178,6 @@ sub _replace_subs_with_values_in_pathname {
 sub _replace_glob_with_values_in_pathname {
     my($self, $string, $prop_values_hash) = @_;
 
-$DB::single=1;
     # a * not preceeded by a backslash, delimited by /
     if ($string =~ m#([^/]*[^\\/]?(\*)[^/]*)#) {
         my $glob_pos = $-[2];
@@ -222,12 +221,18 @@ $DB::single=1;
                                                     $a;
                                                 },
                                                 ($regex_as_str, @glob_positions) );
+            my $original_path_length = length($string);
+            my $apply_fixups_for_glob_list = sub {
+                my $new_path = shift;
+                return map { [ $_->[0] + length($new_path) - $original_path_length, $_->[1] ] } @$glob_position_list;
+            };
 
             my $regex = qr{$regex_as_str};
 
             my @property_values_for_each_glob_match = map { [ $_, [ $_ =~ $regex] ] } @glob_matches;
             @property_values_as_hashes = map { my %h = %$prop_values_hash;
                                                @h{@property_names} = @{$_->[1]};
+                                               $h{'.__glob_positions__'} = [ $apply_fixups_for_glob_list->($_->[0]) ];
                                                [$_->[0], \%h];
                                              }
                                              @property_values_for_each_glob_match;
@@ -255,6 +260,7 @@ $DB::single=1;
                                             @glob_matches;
        }
 
+       # Recursion to process the next glob
        return map { $self->_replace_glob_with_values_in_pathname( @$_ ) }
                   @property_values_as_hashes;
 

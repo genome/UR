@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../../..";
 use URT;
-use Test::More tests => 18;
+use Test::More tests => 36;
 
 use IO::File;
 use File::Temp;
@@ -38,6 +38,7 @@ ok($ds, 'Created data source');
 
 class URT::Thing {
     has => [
+        other => { is => 'String' },
         name => { is => 'String' },
         rank => { is => 'String' },
         serial => { is => 'Number' },
@@ -141,6 +142,73 @@ is_deeply(\@data,
               [ "${dir}/Sergent/Pyle.dat", { name => 'Pyle', rank => 'Sergent' } ],
           ],
           'Path resolution data is correct');
+
+
+
+# Make a bx with no filters and two properties in the path spec
+$bx = $bx = URT::Thing->define_boolexpr();
+ok($bx, 'Create boolexpr with no filters');
+@data = UR::DataSource::Filesystem->_replace_vars_with_values_in_pathname(
+               $bx,
+               ${tmpdir}.'/*/$rank/${name}.dat'
+            );
+is(scalar(@data), 1, 'property replacement for spec including a glob yielded one pathname');
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "$tmpdir/*/*/*.dat", { '.__glob_positions__' => [ [$tmpdir_strlen+3, 'rank' ],[$tmpdir_strlen+5,'name' ] ] }
+             ]
+           ],
+           'Path resolution data is correct');
+
+@data = UR::DataSource::Filesystem->_replace_glob_with_values_in_pathname(@{$data[0]});
+is(scalar(@data), 5, 'Glob replacement yielded one possible pathname');
+@data = sort { $a->[0] cmp $b->[0] } @data;
+is_deeply(\@data,
+          [
+              [ "${dir}/General/Halftrack.dat", { name => 'Halftrack', rank => 'General' } ],
+              [ "${dir}/Private/Bailey.dat", { name => 'Bailey', rank => 'Private' } ],
+              [ "${dir}/Private/Pyle.dat", { name => 'Pyle', rank => 'Private' } ],
+              [ "${dir}/Sergent/Carter.dat", { name => 'Carter', rank => 'Sergent' } ],
+              [ "${dir}/Sergent/Snorkel.dat", { name => 'Snorkel', rank => 'Sergent' } ],
+          ],
+          'Path resolution data is correct');
+
+
+
+# a bx with no filters and three properties in the path spec
+$bx = $bx = URT::Thing->define_boolexpr();
+ok($bx, 'Create boolexpr with no filters');
+@data = UR::DataSource::Filesystem->_replace_vars_with_values_in_pathname(
+               $bx,
+               ${tmpdir}.'/$other/$rank/${name}.dat'
+        );
+is(scalar(@data), 1, 'property replacement for spec including a glob yielded one pathname');
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "$tmpdir/*/*/*.dat", { '.__glob_positions__' => [
+                                                                 [$tmpdir_strlen+1, 'other' ],
+                                                                 [$tmpdir_strlen+3,'rank'],
+                                                                 [$tmpdir_strlen+5,'name' ],
+                                                               ] }
+             ]
+           ],
+           'Path resolution data is correct');
+
+@data = UR::DataSource::Filesystem->_replace_glob_with_values_in_pathname(@{$data[0]});
+is(scalar(@data), 5, 'Glob replacement yielded one possible pathname');
+@data = sort { $a->[0] cmp $b->[0] } @data;
+is_deeply(\@data,
+          [
+              [ "${dir}/General/Halftrack.dat", { other => 'extra_dir', name => 'Halftrack', rank => 'General' } ],
+              [ "${dir}/Private/Bailey.dat",    { other => 'extra_dir', name => 'Bailey',    rank => 'Private' } ],
+              [ "${dir}/Private/Pyle.dat",      { other => 'extra_dir', name => 'Pyle',      rank => 'Private' } ],
+              [ "${dir}/Sergent/Carter.dat",    { other => 'extra_dir', name => 'Carter',    rank => 'Sergent' } ],
+              [ "${dir}/Sergent/Snorkel.dat",   { other => 'extra_dir', name => 'Snorkel',   rank => 'Sergent' } ],
+          ],
+          'Path resolution data is correct');
+
+
+
 
 
 1;
