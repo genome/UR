@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../../..";
 use URT;
-use Test::More tests => 41;
+use Test::More tests => 43;
 
 use IO::File;
 use File::Temp;
@@ -231,6 +231,21 @@ is_deeply(\@data,
            'Path resolution data is correct');
 @data = UR::DataSource::Filesystem->_replace_glob_with_values_in_pathname(@{$data[0]});
 is(scalar(@data), 5, 'Glob replacement yielded five possible pathname');
+@data = sort { $a->[0] cmp $b->[0] } @data;
+is_deeply(\@data,
+          [
+              [ "${dir}/General/Halftrack.dat", { other => 'extra', other2 => 'dir', name => 'Halftrack', rank => 'General' } ],
+              [ "${dir}/Private/Bailey.dat",    { other => 'extra', other2 => 'dir', name => 'Bailey',    rank => 'Private' } ],
+              [ "${dir}/Private/Pyle.dat",      { other => 'extra', other2 => 'dir', name => 'Pyle',      rank => 'Private' } ],
+              [ "${dir}/Sergent/Carter.dat",    { other => 'extra', other2 => 'dir', name => 'Carter',    rank => 'Sergent' } ],
+              [ "${dir}/Sergent/Snorkel.dat",   { other => 'extra', other2 => 'dir', name => 'Snorkel',   rank => 'Sergent' } ],
+          ],
+          'Path resolution data is correct');
+
+# put it all together
+$bx = URT::Thing->define_boolexpr();
+@data = UR::DataSource::Filesystem->resolve_file_info_for_rule_and_path_spec($bx, ${tmpdir}.'/${other}_${other2}/$rank/${name}.dat');
+is(scalar(@data), 5, 'resolve_file_info_for_rule_and_path_spec() returns 5 pathnames');
 @data = sort { $a->[0] cmp $b->[0] } @data;
 is_deeply(\@data,
           [

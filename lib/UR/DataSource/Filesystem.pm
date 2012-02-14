@@ -280,6 +280,17 @@ sub _replace_glob_with_values_in_pathname {
 }
 
 
+sub resolve_file_info_for_rule_and_path_spec {
+    my($self, $rule, $path_spec) = @_;
+
+    $path_spec ||= $self->server;
+
+    return map { $self->_replace_glob_with_values_in_pathname(@$_) }
+           map { $self->_replace_subs_with_values_in_pathname($rule, @$_) }
+               $self->_replace_vars_with_values_in_pathname($rule, $path_spec);
+}
+
+
 
 
 1;
