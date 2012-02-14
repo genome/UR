@@ -289,7 +289,7 @@ sub _run_tests {
 
     if($self->long) {
         # Make sure long tests run
-        $ENV{GSCAPP_RUN_LONG_TESTS}=1;
+        $ENV{UR_RUN_LONG_TESTS}=1;
     }
 
     my @cover_specific_modules;
