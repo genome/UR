@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../../..";
 use URT;
-use Test::More tests => 36;
+use Test::More tests => 41;
 
 use IO::File;
 use File::Temp;
@@ -39,6 +39,7 @@ ok($ds, 'Created data source');
 class URT::Thing {
     has => [
         other => { is => 'String' },
+        other2 => { is => 'String' },
         name => { is => 'String' },
         rank => { is => 'String' },
         serial => { is => 'Number' },
@@ -161,7 +162,7 @@ is_deeply(\@data,
            'Path resolution data is correct');
 
 @data = UR::DataSource::Filesystem->_replace_glob_with_values_in_pathname(@{$data[0]});
-is(scalar(@data), 5, 'Glob replacement yielded one possible pathname');
+is(scalar(@data), 5, 'Glob replacement yielded five possible pathname');
 @data = sort { $a->[0] cmp $b->[0] } @data;
 is_deeply(\@data,
           [
@@ -176,7 +177,7 @@ is_deeply(\@data,
 
 
 # a bx with no filters and three properties in the path spec
-$bx = $bx = URT::Thing->define_boolexpr();
+$bx = URT::Thing->define_boolexpr();
 ok($bx, 'Create boolexpr with no filters');
 @data = UR::DataSource::Filesystem->_replace_vars_with_values_in_pathname(
                $bx,
@@ -195,7 +196,7 @@ is_deeply(\@data,
            'Path resolution data is correct');
 
 @data = UR::DataSource::Filesystem->_replace_glob_with_values_in_pathname(@{$data[0]});
-is(scalar(@data), 5, 'Glob replacement yielded one possible pathname');
+is(scalar(@data), 5, 'Glob replacement yielded five possible pathname');
 @data = sort { $a->[0] cmp $b->[0] } @data;
 is_deeply(\@data,
           [
@@ -204,6 +205,40 @@ is_deeply(\@data,
               [ "${dir}/Private/Pyle.dat",      { other => 'extra_dir', name => 'Pyle',      rank => 'Private' } ],
               [ "${dir}/Sergent/Carter.dat",    { other => 'extra_dir', name => 'Carter',    rank => 'Sergent' } ],
               [ "${dir}/Sergent/Snorkel.dat",   { other => 'extra_dir', name => 'Snorkel',   rank => 'Sergent' } ],
+          ],
+          'Path resolution data is correct');
+
+
+
+# This one has multiple variables in the same path portion
+$bx = URT::Thing->define_boolexpr();
+ok($bx, 'Create boolexpr with no filters');
+@data = UR::DataSource::Filesystem->_replace_vars_with_values_in_pathname(
+               $bx,
+               ${tmpdir}.'/${other}_${other2}/$rank/${name}.dat'
+        );
+is(scalar(@data), 1, 'property replacement for spec including a glob yielded one pathname');
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "$tmpdir/*_*/*/*.dat", { '.__glob_positions__' => [
+                                                                 [$tmpdir_strlen+1, 'other' ],
+                                                                 [$tmpdir_strlen+3, 'other2' ],
+                                                                 [$tmpdir_strlen+5,'rank'],
+                                                                 [$tmpdir_strlen+7,'name' ],
+                                                               ] }
+             ]
+           ],
+           'Path resolution data is correct');
+@data = UR::DataSource::Filesystem->_replace_glob_with_values_in_pathname(@{$data[0]});
+is(scalar(@data), 5, 'Glob replacement yielded five possible pathname');
+@data = sort { $a->[0] cmp $b->[0] } @data;
+is_deeply(\@data,
+          [
+              [ "${dir}/General/Halftrack.dat", { other => 'extra', other2 => 'dir', name => 'Halftrack', rank => 'General' } ],
+              [ "${dir}/Private/Bailey.dat",    { other => 'extra', other2 => 'dir', name => 'Bailey',    rank => 'Private' } ],
+              [ "${dir}/Private/Pyle.dat",      { other => 'extra', other2 => 'dir', name => 'Pyle',      rank => 'Private' } ],
+              [ "${dir}/Sergent/Carter.dat",    { other => 'extra', other2 => 'dir', name => 'Carter',    rank => 'Sergent' } ],
+              [ "${dir}/Sergent/Snorkel.dat",   { other => 'extra', other2 => 'dir', name => 'Snorkel',   rank => 'Sergent' } ],
           ],
           'Path resolution data is correct');
 

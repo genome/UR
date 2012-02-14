@@ -184,7 +184,7 @@ sub _replace_glob_with_values_in_pathname {
     my($self, $string, $prop_values_hash) = @_;
 
     # a * not preceeded by a backslash, delimited by /
-    if ($string =~ m#([^/]*[^\\/]?(\*)[^/]*)#) {
+    if ($string =~ m#([^/]*?[^\\/]?(\*)[^/]*)#) {
         my $glob_pos = $-[2];
 
         my $path_segment_including_glob = substr($string, 0, $+[0]);
@@ -212,6 +212,7 @@ sub _replace_glob_with_values_in_pathname {
 
             my $regex_as_str = $path_segment_including_glob;
             # Find out just how many *s we're dealing with and where they are, up to the next /
+            # remove them from the glob_position_list because we're going to resolve their values
             my(@glob_positions, @property_names);
             while (@$glob_position_list
                    and
