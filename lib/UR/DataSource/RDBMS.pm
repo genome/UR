@@ -1555,7 +1555,7 @@ sub create_iterator_closure_for_rule {
             return;
         } 
 
-        # this handles things lik BLOBS, which have a special interface to get the 'real' data
+        # this handles things like BLOBS, which have a special interface to get the 'real' data
         if ($post_process_results_callback) {
             $next_db_row = $post_process_results_callback->($next_db_row);
         }
@@ -2268,12 +2268,7 @@ sub _sync_database {
 
             # print "Column Types: @column_types\n";
 
-            for my $n (0 .. $#column_objects) {
-                if ($column_objects[$n]->data_type eq 'BLOB')
-                {
-                    $sth->bind_param($n+1, undef, { ora_type => 23 });
-                }
-            }
+            $self->_alter_sth_for_selecting_blob_columns($sth,\@column_objects);
         }
     }
 
@@ -2467,6 +2462,14 @@ sub _sync_database {
 
     return 1;
 }
+
+
+sub _alter_sth_for_selecting_blob_columns {
+    my($self, $sth, $column_objects) = @_;
+
+    return;
+}
+
 
 sub _reverse_sync_database {
     my $self = shift;
