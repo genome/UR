@@ -192,7 +192,7 @@ sub _replace_glob_with_values_in_pathname {
         my @glob_matches = map { $_ . $remaining_path }
                                glob($path_segment_including_glob);
 
-        my @property_values_as_hashes;
+        my $resolve_glob_values_for_each_result;
         my $glob_position_list = $prop_values_hash->{'.__glob_positions__'};
         if ($glob_position_list->[0]->[0] == $glob_pos) {
             # This * was put in previously by a $propname in the spec that wasn't mentioned in the rule
@@ -221,36 +221,32 @@ sub _replace_glob_with_values_in_pathname {
                                                     $a;
                                                 },
                                                 ($regex_as_str, @glob_positions) );
-            my $original_path_length = length($string);
-            my $apply_fixups_for_glob_list = sub {
-                my $new_path = shift;
-                return map { [ $_->[0] + length($new_path) - $original_path_length, $_->[1] ] } @$glob_position_list;
-            };
 
             my $regex = qr{$regex_as_str};
-
             my @property_values_for_each_glob_match = map { [ $_, [ $_ =~ $regex] ] } @glob_matches;
-            @property_values_as_hashes = map { my %h = %$prop_values_hash;
-                                               @h{@property_names} = @{$_->[1]};
-                                               $h{'.__glob_positions__'} = [ $apply_fixups_for_glob_list->($_->[0]) ];
-                                               [$_->[0], \%h];
-                                             }
-                                             @property_values_for_each_glob_match;
+
+            # Fill in the property names into .__glob_positions__
+            # we've resolved in this iteration, and apply offset fixups for the
+            # difference in string length between the pre- and post-glob pathnames
+
+            $resolve_glob_values_for_each_result = sub {
+                my $apply_fixups_for_glob_list = shift;
+                return map { my %h = %$prop_values_hash;
+                                                   @h{@property_names} = @{$_->[1]};
+                                                   $h{'.__glob_positions__'} = [ $apply_fixups_for_glob_list->($_->[0]) ];
+                                                   [$_->[0], \%h];
+                                                 }
+                                                 @property_values_for_each_glob_match;
+            };
 
        } else {
            # This is a glob put in the original path spec
-
-           my $original_path_length = length($string);
-
-           # Given a pathname returned from the glob, return a new glob_position_list
-           # that has fixed up the position information accounting for the fact that
-           # the globbed pathname is a different length than the original spec
-           my $apply_fixups_for_glob_list = sub {
-                  my $glob_match = shift;
-                  return map { [ $_->[0] + length($glob_match) - $original_path_length, $_->[1] ] } @$glob_position_list;
-           };
-
-           @property_values_as_hashes = map { [
+           # The new path comes from the @glob_matches list.
+           # Apply offset fixups for the difference in string length between the
+           # pre- and post-glob pathnames
+           $resolve_glob_values_for_each_result = sub {
+               my $apply_fixups_for_glob_list = shift;
+               return map { [
                                                 $_,
                                                 { %$prop_values_hash,
                                                   '.__glob_positions__' => [ $apply_fixups_for_glob_list->($_) ]
@@ -258,11 +254,23 @@ sub _replace_glob_with_values_in_pathname {
                                               ]
                                             }
                                             @glob_matches;
+           };
        }
+
+       my $original_path_length = length($string);
+       # Given a pathname returned from the glob, return a new glob_position_list
+       # that has fixed up the position information accounting for the fact that
+       # the globbed pathname is a different length than the original spec
+       my $apply_fixups_for_glob_list = sub {
+              my $glob_match = shift;
+              return map { [ $_->[0] + length($glob_match) - $original_path_length, $_->[1] ] } @$glob_position_list;
+       };
+
+       my @resolved_paths_and_property_values = $resolve_glob_values_for_each_result->($apply_fixups_for_glob_list);
 
        # Recursion to process the next glob
        return map { $self->_replace_glob_with_values_in_pathname( @$_ ) }
-                  @property_values_as_hashes;
+                  @resolved_paths_and_property_values;
 
     } else {
         delete $prop_values_hash->{'.__glob_positions__'};
