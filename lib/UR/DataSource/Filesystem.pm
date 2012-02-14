@@ -105,11 +105,12 @@ sub _replace_vars_with_values_in_pathname {
         } else {
             # The rule doesn't have a value for this property.
             # Put a shell wildcard in here, and a later glob will match things
+            # The '.__glob_positions__' key holds a list of places we've inserted shell globs.
+            # Each element is a 2-element list: index 0 is the string position, element 1 if the variable name.
+            # This is needed so the later glob expansion can tell the difference between globs
+            # that are part of the original path spec, and globs put in here
             my @glob_positions = @{ $prop_values_hash->{'.__glob_positions__'} || [] };
 
-            # Here, the string position as a key means that the * in this position should
-            # later be expanded to fill in values for this variable.  That's ok since numbers
-            # can't be property names
             my $glob_pos = $-[0];
             push @glob_positions, [$glob_pos, $varname];
             @string_replacement_values = ([ '*', { %$prop_values_hash, '.__glob_positions__' => \@glob_positions} ]);
@@ -121,6 +122,8 @@ sub _replace_vars_with_values_in_pathname {
                          [ $s, $_->[1] ];
                      }
                      @string_replacement_values;
+
+        # recursion to process the next variable replacement
         return map { $self->_replace_vars_with_values_in_pathname($rule, @$_) } @return;
 
     } else {
@@ -168,6 +171,8 @@ sub _replace_subs_with_values_in_pathname {
                          [ $s, $_->[1] ];
                      }
                      @string_replacement_values;
+
+        # recursion to process the next method call
         return map { $self->_replace_subs_with_values_in_pathname($rule, @$_) } @return;
 
     } else {
@@ -195,9 +200,8 @@ sub _replace_glob_with_values_in_pathname {
             my $path_delim_pos = index($path_segment_including_glob, '/', $glob_pos);
             $path_delim_pos = length($path_segment_including_glob) if ($path_delim_pos == -1);  # No more /s
 
-            #my $regex_as_str = quotemeta($path_segment_including_glob);
             my $regex_as_str = $path_segment_including_glob;
-            # Find out just how many *s we're dealing with, up to the next /
+            # Find out just how many *s we're dealing with and where they are, up to the next /
             my(@glob_positions, @property_names);
             while (@$glob_position_list
                    and
@@ -210,11 +214,7 @@ sub _replace_glob_with_values_in_pathname {
             # Replace the *s found with regex captures
             my $glob_replacement = '([^/]*)';
             my $glob_rpl_offset = 0;
-            my $offset_inc = length($glob_replacement) - 1;
-            #for(my $i = 0; $i < @glob_positions; $i++) {
-            #    substr($regex_as_str, $glob_positions[$i], 1, $glob_replacement);
-            #    $glob_rpl_offset += $glob_rpl_offset;
-            #}
+            my $offset_inc = length($glob_replacement) - 1;  # replacing a 1-char string '*' with a 7-char string '([^/]*)'
             $regex_as_str = List::Util::reduce( sub {
                                                     substr($a, $b + $glob_rpl_offset, 1, $glob_replacement);
                                                     $glob_rpl_offset += $offset_inc;
