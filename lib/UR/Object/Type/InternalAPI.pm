@@ -1196,7 +1196,7 @@ sub table_for_property {
         my $property_object = UR::Object::Property->get( class_name => $class_object->class_name, property_name => $property_name );
         if ( $property_object )
         {
-            return unless $property_object->column_name;
+            next unless $property_object->column_name;
             return $class_object->table_name;
         }
     }
@@ -1241,7 +1241,6 @@ sub property_for_column {
     }
     return;
 }
-
 
 # Methods for maintaining unique constraints
 # This is primarily used by the class re-writer (ur update classes-from-db), but
