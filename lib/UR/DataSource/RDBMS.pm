@@ -2895,27 +2895,31 @@ sub _default_save_sql_for_object {
                                 };
 
                 ##$DB::single = 1;
-                my @pk_values = $self->_id_values_for_primary_key($table, $object_to_save);
-                my $where = $self->_matching_where_clause($table, \@pk_values);
+                # %update_values can be empty if the Metadb is out of date, and has a fk constraint column
+                # that no longer exists in the class metadata
+                if (%update_values) {
+                    my @pk_values = $self->_id_values_for_primary_key($table, $object_to_save);
+                    my $where = $self->_matching_where_clause($table, \@pk_values);
                 
-                my @update_cols = keys %update_values;
-                my @update_values = ((map {$update_values{$_}} @update_cols), @pk_values);
+                    my @update_cols = keys %update_values;
+                    my @update_values = ((map {$update_values{$_}} @update_cols), @pk_values);
                 
                 
 
-                my $update_sql = " UPDATE ";
-                $update_sql .= "${db_owner}." if ($db_owner);
-                $update_sql .= "$table_name_to_update SET ". join(",", map { "$_ = ?" } @update_cols) . " WHERE $where";
+                    my $update_sql = " UPDATE ";
+                    $update_sql .= "${db_owner}." if ($db_owner);
+                    $update_sql .= "$table_name_to_update SET ". join(",", map { "$_ = ?" } @update_cols) . " WHERE $where";
 
-                push @commands, { type         => 'update',
-                                  table_name   => $table_name,
-                                  column_names => \@update_cols,
-                                  sql          => $update_sql,
-                                  params       => \@update_values,
-                                  class        => $table_class,
-                                  id           => $id,
-                                  dbh          => $data_source->get_default_handle
-                                };
+                    push @commands, { type         => 'update',
+                                      table_name   => $table_name,
+                                      column_names => \@update_cols,
+                                      sql          => $update_sql,
+                                      params       => \@update_values,
+                                      class        => $table_class,
+                                      id           => $id,
+                                      dbh          => $data_source->get_default_handle
+                                    };
+                }
             }
             else 
             {
