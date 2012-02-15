@@ -2833,7 +2833,12 @@ sub _default_save_sql_for_object {
             # An object without a row in the database.
             # Insert into the database.
 
-            my @changed_cols = reverse sort $table->column_names; 
+            my @changed_cols = reverse sort
+                               map { $class_object->column_for_property($_->property_name) }
+                               grep { ! $_->is_transient }
+                               grep { ($class_object->table_for_property($_->property_name) || '') eq $table_name }
+                               grep { $_->column_name }
+                                    $class_object->all_property_metas();
 
             my $sql = " INSERT INTO ";
             $sql .= "${db_owner}." if ($db_owner);
