@@ -256,6 +256,9 @@ sub resolve_data_source_for_object {
     if ($class_name->isa('UR::DataSource::RDBMS::Entity') || $class_name->isa('UR::DataSource::RDBMS::Entity::Ghost')) {
         my $data_source = $object->data_source;
         my($namespace) = ($data_source =~ m/(^\w+?)::DataSource/);
+        unless ($namespace) {
+            Carp::croak("Can't resolve data source for object of type $class_name: The object's namespace could not be inferred from its data_source $data_source");
+        }
         my $ds_name = $namespace . '::DataSource::Meta';
         return $ds_name->get();
     }
