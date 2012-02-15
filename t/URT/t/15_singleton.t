@@ -35,7 +35,7 @@ $co = UR::Object::Type->define(
     is => [ 'URT::ChildSingleton'],
 );
 ok($co, 'Defined URT::GrandChild class');
-ok(URT::GrandChild->create(id => '123', property_a => 'foo', property_b=>'bar'), 'Created a URT::GrandChild object');
+ok(URT::GrandChild->create(id => 'URT::GrandChild', property_a => 'foo', property_b=>'bar'), 'Created a URT::GrandChild object');
    
 
 

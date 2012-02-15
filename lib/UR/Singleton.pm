@@ -136,6 +136,7 @@ sub delete {
     $self->SUPER::delete();
     no strict 'refs';
     ${ $class . "::singleton" } = undef if ${ $class . "::singleton" } eq $self;
+    return $self;
 }
 
 # In most cases, the id is the class name itself, but this is not necessary.
