@@ -2250,7 +2250,6 @@ sub _sync_database {
             foreach my $column_name ( @{ $cmd->{column_names} } ) {
                 my $column = $column_objects_by_class_and_column_name{$class_name}->{$column_name};
                 unless ($column) {
-                    #print "looking at parent classes for $class_name\n";
                     FIND_IN_ANCESTRY:
                     for my $ancestor_class_name ($class_object->ancestry_class_names) {
                         $column = $column_objects_by_class_and_column_name{$ancestor_class_name}->{$column_name};
@@ -2258,11 +2257,10 @@ sub _sync_database {
                             $column_objects_by_class_and_column_name{$class_name}->{$column_name} = $column;
                             last FIND_IN_ANCESTRY;
                         }
-                        unless ($column) {
-                            Carp::croak("Failed to find column metadata for column named '$column_name' for class $class_name");
-                        }
                     }
                 }
+                # If we didn't find a column object, then $column will be undef
+                # and we'll have to guess what it looks like
                 push @column_objects, $column;
             }
 
