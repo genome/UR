@@ -2771,7 +2771,7 @@ sub _default_save_sql_for_object {
                     map { $_ => $change_summary->{$_} }
                     grep { $class_object->table_for_property($_) eq $table_name }
                     keys %$change_summary;
-                    $changes_for_this_table = {@changes};
+                $changes_for_this_table = {@changes};
             }
             else
             {
