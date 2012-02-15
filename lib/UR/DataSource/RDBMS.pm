@@ -2789,8 +2789,6 @@ sub _default_save_sql_for_object {
                 push @values, $changes_for_this_table->{$property};
             }
 
-            #$object_to_save->debug_message("Changed cols: @changed_cols", 4);
-
             if (@changed_cols)
             {
                 my @changed_values = map { defined ($_) && $object_to_save->can($_)
