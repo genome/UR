@@ -2865,14 +2865,15 @@ sub _default_save_sql_for_object {
             }
 
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
-            my @non_pk_nullable_fk_columns = $self->get_non_primary_key_nullable_foreign_key_columns_for_table($table);
+            my %non_pk_nullable_fk_columns = map { $_ => 1 }
+                                                 $self->get_non_primary_key_nullable_foreign_key_columns_for_table($table);
 
-            if (@non_pk_nullable_fk_columns){
+            if (%non_pk_nullable_fk_columns){
                 my @insert_values;
                 my %update_values;
                 for (my $i = 0; $i < @changed_cols; $i++){
                     my $col = $changed_cols[$i];
-                    if (grep {$col eq $_} @non_pk_nullable_fk_columns){
+                    if ($non_pk_nullable_fk_columns{$col}) {
                         push @insert_values, undef;
                         $update_values{$col} = $values[$i];
                     }else{
