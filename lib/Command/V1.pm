@@ -988,12 +988,14 @@ sub help_options {
 sub sorted_sub_command_classes {
     no warnings;
     my @c = shift->sub_command_classes;
-    return sort {
-            ($a->sub_command_sort_position <=> $b->sub_command_sort_position)
-            ||
-            ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
-        }
-        @c;
+
+    my @commands_with_position = map { [ $_->sub_command_sort_position, $_ ] } @c;
+    my @sorted = sort { $a->[0] <=> $b->[0]
+                         ||
+                        $a->[0] cmp $b->[0]
+                 }
+                 @commands_with_position;
+    return map { $_->[1] } @sorted;
 }
 
 sub sorted_sub_command_names {
@@ -1175,13 +1177,17 @@ sub _shell_args_property_meta {
     }
 
     my @result;
+    @required   = map { [ $_->property_name, $_ ] } @required;
+    @optional   = map { [ $_->property_name, $_ ] } @optional;
+    @positional = map { [ $_->{shell_args_position}, $_ ] } @positional;
+
     @result = (
-        (sort { $a->property_name cmp $b->property_name } @required),
-        (sort { $a->property_name cmp $b->property_name } @optional),
-        (sort { $a->{shell_args_position} <=> $b->{shell_args_position} } @positional),
+        (sort { $a->[0] cmp $b->[0] } @required),
+        (sort { $a->[0] cmp $b->[0] } @optional),
+        (sort { $a->[0] <=> $b->[0] } @positional),
     );
 
-    return @result;
+    return map { $_->[1] } @result;
 }
 
 sub _shell_arg_name_from_property_meta {

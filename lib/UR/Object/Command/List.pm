@@ -384,7 +384,9 @@ sub _subject_class_filterable_properties {
     my %props = map { $_->property_name => $_ }
                     $self->subject_class->property_metas;
 
-    return sort { $a->property_name cmp $b->property_name }
+    return map { $_->[1] }                   # These maps are to get around a bug in perl 5.8 sort
+           sort { $a->[0] cmp $b->[0] }      # involving method calls inside the sort sub that may
+           map { [ $_->property_name, $_ ] } # do sorts of their own
            grep { substr($_->property_name, 0, 1) ne '_' }  # Skip 'private' properties starting with '_'
            grep { ! $_->data_type or index($_->data_type, '::') == -1 }  # Can't filter object-type properties from a lister, right?
            values %props;

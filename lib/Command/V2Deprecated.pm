@@ -4,13 +4,16 @@ use warnings;
 
 sub sorted_sub_command_classes {
     no warnings;
+
     my @c = shift->sub_command_classes;
-    return sort {
-            ($a->sub_command_sort_position <=> $b->sub_command_sort_position)
-            ||
-            ($a->sub_command_sort_position cmp $b->sub_command_sort_position)
-        } 
-        @c;
+    my @commands_with_position = map { [ $_->sub_command_sort_position, $_ ] } @c;
+
+    return map { $_->[1] }
+           sort { ($a->[0] <=> $b->[0])
+                    ||
+                  ($a->[0] cmp $b->[0])
+                }
+           @commands_with_position;
 }
 
 sub sorted_sub_command_names {

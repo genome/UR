@@ -1523,7 +1523,9 @@ sub _init_light {
                 # Add all of the columns in the join table to the return list.                
                 push @all_properties, 
                     map { [$foreign_class_object, $_, $alias, $object_num] }
-                    sort { $a->property_name cmp $b->property_name }
+                    map { $_->[1] }                    # These three lines are to get around a bug in perl
+                    sort { $a->[0] cmp $b->[0] }       # 5.8's sort involving method calls within the sort
+                    map { [ $_->property_name, $_ ] }  # sub that do sorts of their own
                     grep { defined($_->column_name) && $_->column_name ne '' }
                     UR::Object::Property->get( class_name => $foreign_class_name );
               
@@ -1906,7 +1908,9 @@ sub _init_core {
                 # Add all of the columns in the join table to the return list.                
                 push @all_properties, 
                     map { [$foreign_class_object, $_, $alias, $object_num] }
-                    sort { $a->property_name cmp $b->property_name }
+                    map { $_->[1] }                    # These three lines are to get around a bug in perl
+                    sort { $a->[0] cmp $b->[0] }       # 5.8's sort involving method calls within the sort
+                    map  { [ $_->property_name, $_ ] } # sub that do sorts of their own
                     grep { defined($_->column_name) && $_->column_name ne '' }
                     UR::Object::Property->get( class_name => $foreign_class_name );
               

@@ -643,8 +643,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $bucket = $dd_changes_by_class{$changed_class};
         push @$bucket, $changed_obj;
     }
-    my $sorter = sub { no warnings 'uninitialized';
-                        $a->table_name cmp $b->table_name || $a->id cmp $b->id
+    my $sorter = sub($$) { no warnings 'uninitialized';
+                        $_[0]->table_name cmp $_[1]->table_name || $_[0]->id cmp $_[1]->id
                      };
 
     # FKs are special, in that they might change names, but we use the name as the "id".

@@ -269,7 +269,14 @@ sub _generate_loading_templates_arrayref {
     }
 
     # reorder the requested columns to be in the same order as the file
-    @$sql_cols = sort { $column_to_position_map{$a->[1]->column_name} <=> $column_to_position_map{$b->[1]->column_name}} @$sql_cols;
+    my @sql_cols_with_column_name =
+           map{ [ $column_to_position_map{ $_->[1]->column_name }, $_ ] }
+           @$sql_cols;
+    my @sorted_sql_cols =
+           map { $_->[1] }
+           sort { $a->[0] <=> $b->[0] }
+               @sql_cols_with_column_name;
+    $sql_cols = \@sorted_sql_cols;
     my $templates = $self->SUPER::_generate_loading_templates_arrayref($sql_cols);
 
     if (my $constant_values = $self->constant_values) {

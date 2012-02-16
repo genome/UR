@@ -439,11 +439,15 @@ sub _shell_args_property_meta {
     my $rule = UR::Object::Property->define_boolexpr(@_);
     my %seen;
     my (@positional,@required,@optional);
-    my @property_meta = 
+
+    my @properties_with_position = map { [ $_->position_in_module_header, $_ ] }
+                                   $class_meta->properties();
+    my @sorted =
         sort { 
-            $a->position_in_module_header <=> $b->position_in_module_header
+            $a->[0] <=> $b->[0]
         } 
-        $class_meta->properties();
+        @properties_with_position;
+    my @property_meta = map { $_->[1] } @sorted;
     foreach my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
 
@@ -481,14 +485,18 @@ sub _shell_args_property_meta {
         }
     }
 
+    @required   = map { [ $_->position_in_module_header, $_ ] } @required;
+    @optional   = map { [ $_->position_in_module_header, $_ ] } @optional;
+    @positional = map { [ $_->{shell_args_position}, $_ ] } @positional;
+
     my @result;
     @result = ( 
-        (sort { $a->position_in_module_header cmp $b->position_in_module_header } @required),
-        (sort { $a->position_in_module_header cmp $b->position_in_module_header } @optional),
-        (sort { $a->{shell_args_position} <=> $b->{shell_args_position} } @positional),
+        (sort { $a->[0] cmp $b->[0] } @required),
+        (sort { $a->[0] cmp $b->[0] } @optional),
+        (sort { $a->[0] <=> $b->[0] } @positional),
     );
 
-    return @result;
+    return map { $_->[1] } @result;
 }
 
 
@@ -934,8 +942,13 @@ sub _get_user_verification_for_param_value_drilldown {
     my $max_dname_length = @dnames ? length((sort { length($b) <=> length($a) } @dnames)[0]) : 0;
     my @statuses = map {$_->status} grep { $_->can('status') } @results;
     my $max_status_length = @statuses ? length((sort { length($b) <=> length($a) } @statuses)[0]) : 0;
-    @results = sort {$a->__display_name__ cmp $b->__display_name__} @results;
-    @results = sort {$a->class cmp $b->class} @results;
+
+    my @results_with_display_name_and_class = map { [ $_->__display_name__, $_->class, $_ ] } @results;
+    @results = map { $_->[2] }
+               sort { $a->[1] cmp $b->[1] }
+               sort { $a->[0] cmp $b->[0] }
+               @results_with_display_name_and_class;
+
     my @classes = $self->_unique_elements(map {$_->class} @results);
 
     my $response;

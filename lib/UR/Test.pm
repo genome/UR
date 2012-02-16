@@ -26,7 +26,9 @@ sub check_properties {
     ok($c, "got class meta for $cn");
 
     my @pm = 
-        sort { $a->property_name cmp $b->property_name } 
+        map { $_->[1] }
+        sort { $a->[0] cmp $b->[0] }
+        map { [ $_->property_name, $_ ] }
         $c->all_property_metas;
         
     ok(scalar(@pm), "got " . scalar(@pm) . " properties");

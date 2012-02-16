@@ -72,7 +72,11 @@ sub _generate_xml_doc {
         # the content for any given aspect is handled separately
         my @aspects = $self->aspects;
         if (@aspects) {
-            for my $aspect (sort { $a->number <=> $b->number } @aspects) {
+            my @sorted_aspects = map { $_->[1] }
+                                 sort { $a->[0] <=> $b->[0] }
+                                 map { [ $_->number, $_ ] }
+                                 @aspects;
+            for my $aspect (@sorted_aspects) {
                 next if $aspect->name eq 'id';
 
                 my $aspect_node = $self->_generate_content_for_aspect($aspect);

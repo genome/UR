@@ -1288,7 +1288,11 @@ sub refresh_database_metadata_for_table_name {
 sub _make_foreign_key_fingerprint {
     my($self,$fk) = @_;
 
-    my @fk_cols = sort {$a->column_name cmp $b->column_name} $fk->get_related_column_objects();
+    my @column_objects_with_name = map { [ $_->column_name, $_ ] }
+                                       $fk->get_related_column_objects();
+    my @fk_cols = map { $_->[1] }
+                  sort {$a->[0] cmp $b->[0]}
+                  @column_objects_with_name;
     my $fingerprint =
         join(':',
             $fk->table_name,

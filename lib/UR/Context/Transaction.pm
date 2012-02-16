@@ -162,11 +162,16 @@ sub rollback
     unless ($self eq $open_transaction_stack[-1]) {
         # This is not the top transaction on the stack.
         # Rollback internally nested transactions in order from the end.
-        my @later_transactions =
-            sort { $b->begin_point <=> $a->begin_point }
+        my @transactions_with_begin_point =
+            map { [ $_->begin_point, $_ ] }
             $self->class->get(
                 begin_point =>   { operator => ">", value => $begin_point }
             );
+        my @later_transactions =
+            map { $_->[1] }
+            sort { $b->[0] <=> $a->[0] }
+            @transactions_with_begin_point;
+
         for my $later_transaction (@later_transactions) {
             if ($later_transaction->isa("UR::DeletedRef")) {
                 #$DB::single = 1;

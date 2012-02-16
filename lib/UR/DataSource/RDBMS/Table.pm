@@ -76,7 +76,10 @@ sub primary_key_constraint_columns {
 
     my $pk_class = $self->_pk_constraint_class;
     my @pks = $pk_class->get(data_source => $self->data_source, table_name  => $self->table_name);
-    return sort { $a->rank <=> $b->rank } @pks;
+    my @pks_with_rank = map { [ $_->rank, $_ ] } @pks;
+    return map { $_->[1] }
+           sort { $a->[0] <=> $b->[0] }
+           @pks_with_rank;
 }
 
 

@@ -2682,13 +2682,19 @@ sub _sync_databases {
         push @{ $ds_objects{$data_source_id}->{'changed_objects'} }, $obj;
     }
 
-    my @ds_in_order = 
+    my @ds_with_can_savepoint_and_class = map { [ $ds_objects{$_}->{'ds_obj'}->can_savepoint,
+                                                  $ds_objects{$_}->{'ds_obj'}->class,
+                                                  $_
+                                                ] }
+                                          keys %ds_objects;
+    my @ds_in_order =
+        map { $_->[2] }
         sort {
-            ($ds_objects{$a}->{'ds_obj'}->can_savepoint <=> $ds_objects{$b}->{'ds_obj'}->can_savepoint)
-            || 
-            ($ds_objects{$a}->{'ds_obj'}->class cmp $ds_objects{$b}->{'ds_obj'}->class)
+            ( $a->[0] <=> $b->[0] )
+            ||
+            ( $a->[1] cmp $b->[1] )
         }
-        keys %ds_objects;
+        @ds_with_can_savepoint_and_class;
 
     # save on each in succession
     my @done;

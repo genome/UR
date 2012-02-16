@@ -33,7 +33,11 @@ sub _update_view_from_subject {
         $text .= " (REUSED ADDR)\n";
     } else {
         $text .= "\n";
-        for my $aspect (sort { $a->position <=> $b->position } @aspects) {       
+        my @sorted_aspects = map { $_->[1] }
+                             sort { $a->[0] <=> $b->[0] }
+                             map { [ $_->position, $_ ] }
+                             @aspects;
+        for my $aspect (@sorted_aspects) {
             my $label = $aspect->label;
             $text .= "\n" . $label . ": ";
             if ($subject) {
