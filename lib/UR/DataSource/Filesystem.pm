@@ -170,7 +170,7 @@ sub _replace_subs_with_values_in_pathname {
         my $original_path_length = length($string);
         my $glob_position_list = $prop_values_hash->{'.__glob_positions__'};
         my $subname_replacement_position = $-[0];
-        my $apply_fixups_for_glob_list = sub {
+        my $fix_offsets_in_glob_list = sub {
                my $pathname = shift;
                # alter the position only if it is greater than the position of
                # the subname we're replacing
@@ -185,7 +185,7 @@ sub _replace_subs_with_values_in_pathname {
         my @return = map {
                          my $s = $string;
                          substr($s, $-[0], $+[0] - $-[0], $_->[0]);
-                         $_->[1]->{'.__glob_positions__'} = [ $apply_fixups_for_glob_list->($s) ];
+                         $_->[1]->{'.__glob_positions__'} = [ $fix_offsets_in_glob_list->($s) ];
                          [ $s, $_->[1] ];
                      }
                      @string_replacement_values;
@@ -217,7 +217,7 @@ sub _replace_glob_with_values_in_pathname {
         # that has fixed up the position information accounting for the fact that
         # the globbed pathname is a different length than the original spec
         my $original_path_length = length($string);
-        my $apply_fixups_for_glob_list = sub {
+        my $fix_offsets_in_glob_list = sub {
                my $pathname = shift;
                return map { [ $_->[0] + length($pathname) - $original_path_length, $_->[1] ] } @$glob_position_list;
         };
@@ -262,7 +262,7 @@ sub _replace_glob_with_values_in_pathname {
                 return map {
                                my %h = %$prop_values_hash;
                                @h{@property_names} = @{$_->[1]};
-                               $h{'.__glob_positions__'} = [ $apply_fixups_for_glob_list->($_->[0]) ];
+                               $h{'.__glob_positions__'} = [ $fix_offsets_in_glob_list->($_->[0]) ];
                                [$_->[0], \%h];
                            }
                            @property_values_for_each_glob_match;
@@ -277,7 +277,7 @@ sub _replace_glob_with_values_in_pathname {
                return map { [
                                 $_,
                                 { %$prop_values_hash,
-                                  '.__glob_positions__' => [ $apply_fixups_for_glob_list->($_) ]
+                                  '.__glob_positions__' => [ $fix_offsets_in_glob_list->($_) ]
                                 }
                             ]
                           }
