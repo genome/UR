@@ -135,18 +135,18 @@ sub _replace_subs_with_values_in_pathname {
     my($self, $rule, $string, $prop_values_hash) = @_;
 
     $prop_values_hash ||= {};
+    my $subject_class_name = $rule->subject_class_name;
 
     # Match something like /some/path/&sub/name or /some/path&{sub}.ext/name
     if ($string =~ m/\&\{?(\w+)\}?/) {
         my $subname = $1;
-        unless ($rule->subject_class->can($subname)) {
+        unless ($subject_class_name->can($subname)) {
             Carp::croak("Invalid 'server' for data source ".$self->id
                         . ": Path spec $string requires a value for method $subname "
                         . " which is not a method of class " . $rule->subject_class_name);
         }
  
-        my $subject_class_name = $rule->subject_class_name;
-        my @property_values = { $subject_class_name->$subname($rule) };
+        my @property_values = eval { $subject_class_name->$subname($rule) };
         if ($@) {
             Carp::croak("Can't resolve final path for 'server' for data source ".$self->id
                         . ": Method call to ${subject_class_name}::${subname} died with: $@");
@@ -158,16 +158,34 @@ sub _replace_subs_with_values_in_pathname {
         # rules may have more than one value)
         # Each element has 2 parts, first is the value, second is the accumulated prop_values_hash
         # where we've added the occurance of this property havine one of the values
-        # FIXME - do we need a copy of $prop_values_hash, or is the same ref good enough
         @property_values = map { [ $_, { %$prop_values_hash } ] } @property_values;
 
         # Escape any shell glob characters in the values: [ ] { } ~ ? * and \
-        # we don't want a property with value '?' to be a glob wildcard
-        my @string_replacement_values = map { $_->[0] =~ s/([[\]{}~?*\\])/\\$1/ } @property_values;
+        # we don't want a return value '?' or '*' to be a glob wildcard
+        my @string_replacement_values = map { $_->[0] =~ s/([[\]{}~?*\\])/\\$1/; $_ } @property_values;
+
+        # Given a pathname returned from the glob, return a new glob_position_list
+        # that has fixed up the position information accounting for the fact that
+        # the globbed pathname is a different length than the original spec
+        my $original_path_length = length($string);
+        my $glob_position_list = $prop_values_hash->{'.__glob_positions__'};
+        my $subname_replacement_position = $-[0];
+        my $apply_fixups_for_glob_list = sub {
+               my $pathname = shift;
+               # alter the position only if it is greater than the position of
+               # the subname we're replacing
+               return map { [ $_->[0] < $subname_replacement_position
+                                  ? $_->[0]
+                                  : $_->[0] + length($pathname) - $original_path_length,
+                             $_->[1] ]
+                          }
+                          @$glob_position_list;
+        };
 
         my @return = map {
                          my $s = $string;
                          substr($s, $-[0], $+[0] - $-[0], $_->[0]);
+                         $_->[1]->{'.__glob_positions__'} = [ $apply_fixups_for_glob_list->($s) ];
                          [ $s, $_->[1] ];
                      }
                      @string_replacement_values;

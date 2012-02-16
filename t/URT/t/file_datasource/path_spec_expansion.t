@@ -5,10 +5,11 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../../..";
 use URT;
-use Test::More tests => 43;
+use Test::More tests => 60;
 
 use IO::File;
 use File::Temp;
+use Sub::Install;
 
 # map people to their rank and serial nubmer
 my %people = ( Pyle => { rank => 'Private', serial => 123 },
@@ -242,7 +243,94 @@ is_deeply(\@data,
           ],
           'Path resolution data is correct');
 
+
+# Try it on a method call
+my $is_sub_called = 0;
+my $bx_from_sub;
+my $class_from_sub;
+my $resolver = sub {
+    my($class,$rule) = @_;
+    $class_from_sub = $class;
+    $bx_from_sub = $bx;
+    $is_sub_called++;
+    return 'extra_dir';
+};
+Sub::Install::install_sub({
+    code => $resolver,
+    into => 'URT::Thing',
+    as => 'extra_path_resolver'
+});
+$bx = URT::Thing->define_boolexpr();
+ok($bx, 'Created boolexpr with no filters');
+@data = UR::DataSource::Filesystem->_replace_subs_with_values_in_pathname(
+             $bx,
+             ${tmpdir}.'/&extra_path_resolver/General/Halftrack.dat'
+);
+is(scalar(@data), 1, 'property replacement for spec including a method call yielded one pathname');
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "$tmpdir/extra_dir/General/Halftrack.dat", {'.__glob_positions__' => []} ] ],
+          'Path resolution data is correct');
+is($is_sub_called, 1, 'The resolver sub was called');
+is($class_from_sub, 'URT::Thing', 'The resolver sub was passed the right class name');
+is($bx_from_sub, $bx, 'The resolver sub was passed the right boolexpr');
+
+
+
+# pair of method calls
+Sub::Install::install_sub({ code => sub { 'dat' }, into => 'URT::Thing', as => 'data_file_extension'});
+$bx = URT::Thing->define_boolexpr();
+ok($bx, 'Created boolexpr with no filters');
+@data = UR::DataSource::Filesystem->_replace_subs_with_values_in_pathname(
+             $bx,
+             ${tmpdir}.'/&extra_path_resolver/General/Halftrack.&data_file_extension'
+);
+is(scalar(@data), 1, 'property replacement for spec including two method calls yielded one pathname');
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "$tmpdir/extra_dir/General/Halftrack.dat", {'.__glob_positions__' => []} ] ],
+          'Path resolution data is correct');
+
+
+# pair of methods in the same path part
+Sub::Install::install_sub({ code => sub { 'extra' }, into => 'URT::Thing', as => 'extra_word'});
+Sub::Install::install_sub({ code => sub { 'dir' }, into => 'URT::Thing', as => 'dir_word'});
+ok($bx, 'Created boolexpr with no filters');
+@data = UR::DataSource::Filesystem->_replace_subs_with_values_in_pathname(
+             $bx,
+             ${tmpdir}.'/&{extra_word}_&{dir_word}/General/Halftrack.&data_file_extension'
+);
+is(scalar(@data), 1, 'property replacement for spec including three yielded one pathname');
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "$tmpdir/extra_dir/General/Halftrack.dat", {'.__glob_positions__' => []} ] ],
+          'Path resolution data is correct');
+
+
+
+
+
+# method call returning multiple values
+Sub::Install::install_sub({ code => sub { return ('General','Private','Sergent') }, into => 'URT::Thing', as => 'rank_list'});
+$bx = URT::Thing->define_boolexpr();
+ok($bx, 'Created boolexpr with no filters');
+@data = UR::DataSource::Filesystem->_replace_subs_with_values_in_pathname(
+             $bx,
+             ${tmpdir}.'/&extra_path_resolver/&rank_list/*.&data_file_extension'
+);
+is(scalar(@data), 3, 'property replacement for spec including a glob yielded one pathname');
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+           [ [ "$tmpdir/extra_dir/General/*.dat", {'.__glob_positions__' => []} ],
+             [ "$tmpdir/extra_dir/Private/*.dat", {'.__glob_positions__' => []} ],
+             [ "$tmpdir/extra_dir/Sergent/*.dat", {'.__glob_positions__' => []} ] ],
+          'Path resolution data is correct');
+
+
+
 # put it all together
+
+# a bunch of variables
 $bx = URT::Thing->define_boolexpr();
 @data = UR::DataSource::Filesystem->resolve_file_info_for_rule_and_path_spec($bx, ${tmpdir}.'/${other}_${other2}/$rank/${name}.dat');
 is(scalar(@data), 5, 'resolve_file_info_for_rule_and_path_spec() returns 5 pathnames');
@@ -257,6 +345,25 @@ is_deeply(\@data,
           ],
           'Path resolution data is correct');
 
+
+# variables, methods and globs
+$bx = URT::Thing->define_boolexpr();
+@data = UR::DataSource::Filesystem->resolve_file_info_for_rule_and_path_spec(
+            $bx,
+            ${tmpdir}.'/${other}_&dir_word/$rank/${name}.&data_file_extension'
+);
+is(scalar(@data), 5, 'resolve_file_info_for_rule_and_path_spec() returns 5 pathnames');
+@data = sort { $a->[0] cmp $b->[0] } @data;
+#print Data::Dumper::Dumper(\@data);
+is_deeply(\@data,
+          [
+              [ "${dir}/General/Halftrack.dat", { other => 'extra', name => 'Halftrack', rank => 'General' } ],
+              [ "${dir}/Private/Bailey.dat",    { other => 'extra', name => 'Bailey',    rank => 'Private' } ],
+              [ "${dir}/Private/Pyle.dat",      { other => 'extra', name => 'Pyle',      rank => 'Private' } ],
+              [ "${dir}/Sergent/Carter.dat",    { other => 'extra', name => 'Carter',    rank => 'Sergent' } ],
+              [ "${dir}/Sergent/Snorkel.dat",   { other => 'extra', name => 'Snorkel',   rank => 'Sergent' } ],
+          ],
+          'Path resolution data is correct');
 
 
 
