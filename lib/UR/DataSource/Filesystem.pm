@@ -33,7 +33,7 @@ use List::Util;
 class UR::DataSource::Filesystem {
     is => 'UR::DataSource',
     has => [
-        server                => { doc => 'Path spec for the path on the filesystem containing the data' },
+        path                  => { doc => 'Path spec for the path on the filesystem containing the data' },
         delimiter             => { is => 'String', default_value => '\s*,\s*', doc => 'Delimiter between columns on the same line' },
         record_separator      => { is => 'String', default_value => "\n", doc => 'Delimiter between lines in the file' },
         header_lines          => { is => 'Integer', default_value => 0, doc => 'Number of lines at the start of the file to skip' },
@@ -43,7 +43,7 @@ class UR::DataSource::Filesystem {
     ],
     has_optional => [
         columns               => { is => 'ARRAY', doc => 'Names of the columns in the file, in order' },
-        sort_order            => { is => 'ARRAY', doc => 'Names of the columns by which the data file is sorted' },
+        sorted_columns        => { is => 'ARRAY', doc => 'Names of the columns by which the data file is sorted' },
     ],
     doc => 'A data source for treating files as relational data',
 };
@@ -301,7 +301,7 @@ sub _replace_glob_with_values_in_pathname {
 sub resolve_file_info_for_rule_and_path_spec {
     my($self, $rule, $path_spec) = @_;
 
-    $path_spec ||= $self->server;
+    $path_spec ||= $self->path;
 
     return map { $self->_replace_glob_with_values_in_pathname(@$_) }
            map { $self->_replace_subs_with_values_in_pathname($rule, @$_) }
