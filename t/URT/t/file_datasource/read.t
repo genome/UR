@@ -56,6 +56,8 @@ ok(_compare_to_expected($objs[0], 'Halftrack'), 'First object has correct data')
 ok(_compare_to_expected($objs[1], 'Bob'), 'Second object has correct data');
 
 
+@objs = URT::Soldier->get(name => 'no one');
+is(scalar(@objs), 0, 'Found no soldiers named "no one"');
 
 
 

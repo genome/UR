@@ -918,6 +918,7 @@ $DB::single=1;
                     # That iterator is exhausted, splice it out
                     splice(@iterator_for_each_file, $i, 1);
                     splice(@next_record, $i, 1);
+                    return unless (@iterator_for_each_file);  # This can happen here if none of the files have matching data
                     redo;
                 }
             }
