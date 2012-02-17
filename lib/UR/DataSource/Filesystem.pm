@@ -90,7 +90,7 @@ sub _logger {
                    $log_fh->print($msg);
                };
     } else {
-        return sub {1;};
+        return \&UR::Util::null_sub;
     }
 }
 
