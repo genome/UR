@@ -17,6 +17,7 @@ my %people = ( Pyle => { rank => 'Private', serial => 123 },
                Snorkel => { rank => 'Sergent', serial => 345 },
                Carter => { rank => 'Sergent', serial => 456 },
                Halftrack => { rank => 'General', serial => 567 },
+               Bob => { rank => 'General', serial => 678 },
              );
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -47,12 +48,32 @@ ok(UR::Object::Type->define(
 
 my @objs = URT::Soldier->get(name => 'Pyle', rank => 'Private');
 is(scalar(@objs), 1, 'Got one Private named Pyle');
+ok(_compare_to_expected($objs[0], 'Pyle'), 'Object has the correct data');
+
+@objs = URT::Soldier->get(rank => 'General');
+is(scalar(@objs), 2, 'Got two soldiers with rank General');
+ok(_compare_to_expected($objs[0], 'Halftrack'), 'First object has correct data');
+ok(_compare_to_expected($objs[1], 'Bob'), 'Second object has correct data');
 
 
 
 
 
 
+
+
+sub _compare_to_expected {
+    my($obj,$name) = @_;
+
+    return unless $obj->name eq $name;
+
+    my $expected = $people{$name};
+    return unless $expected;
+    return unless $obj->id eq $expected->{'serial'};
+    return unless $obj->serial eq $expected->{'serial'};
+    return unless $obj->rank eq $expected->{'rank'};
+    return 1;
+}
 
 sub _create_data_file {
     my($dir,$rank,$name,$serial) = @_;
