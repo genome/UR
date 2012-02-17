@@ -731,7 +731,7 @@ $DB::single=1;
     my $monitor_start_time = Time::HiRes::time();
 
     { no warnings 'uninitialized';
-      $logger->("\nFILE starting query covering " . scalar(@possible_file_info_list)." files:\n\t"
+      $logger->("\nFILE: starting query covering " . scalar(@possible_file_info_list)." files:\n\t"
                 . join("\n\t", map { $_->[0] } @possible_file_info_list )
                 . "\nFILTERS: "
                 . join("\n\t", map {
