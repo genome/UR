@@ -772,12 +772,12 @@ $DB::single=1;
 
         my $log_first_fetch;
         $log_first_fetch = sub {
-               $logger->(sprintf("FILE: $pathname FIRST FETCH TIME:  %.4f s\n", Time::HiRes::time() - $monitor_start_time));
+               $logger->(sprintf("FILE: $pathname FIRST FETCH TIME:  %.4f s\n\n", Time::HiRes::time() - $monitor_start_time));
                $log_first_fetch = \&UR::Util::null_sub;
            };
         my $log_first_match;
         $log_first_match = sub {
-               $logger->("FILE: $pathname First match after reading $lines_read lines\n");
+               $logger->("FILE: $pathname First match after reading $lines_read lines\n\n");
                $log_first_fetch = \&UR::Util::null_sub;
            };
 
@@ -829,7 +829,7 @@ $DB::single=1;
 
                     $logger->("FILE: $pathname at EOF\n"
                               . "FILE: $lines_read lines read for this request.  $lines_matched matches in this file\n"
-                              . sprintf("FILE: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time)
+                              . sprintf("FILE: TOTAL EXECUTE-FETCH TIME: %.4f s\n\n", Time::HiRes::time() - $monitor_start_time)
                             );
                     return;
                 }
