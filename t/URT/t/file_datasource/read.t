@@ -5,24 +5,28 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../../..";
 use URT;
-use Test::More tests => 8;
+use Test::More tests => 19;
 
 use IO::File;
 use File::Temp;
 use Sub::Install;
 
 # map people to their rank and serial nubmer
-my %people = ( Pyle => { rank => 'Private', serial => 123 },
+my @people = ( Pyle => { rank => 'Private', serial => 123 },
                Bailey => { rank => 'Private', serial => 234 },
+               Hudson => { rank => 'Private', serial => 299 },
                Snorkel => { rank => 'Sergent', serial => 345 },
                Carter => { rank => 'Sergent', serial => 456 },
+               Hudson => { rank => 'Sergent', serial => 499 },
                Halftrack => { rank => 'General', serial => 567 },
                Bob => { rank => 'General', serial => 678 },
              );
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok($tmpdir, "Created temp dir $tmpdir");
-while (my($name,$data) = each %people) {
+for (my $i = 0; $i < @people; $i += 2) {
+    my $name = $people[$i];
+    my $data = $people[$i+1];
     ok(_create_data_file($tmpdir,$data->{'rank'},$name,$data->{'serial'}), "Create file for $name");
 }
 
@@ -48,29 +52,38 @@ ok(UR::Object::Type->define(
 
 my @objs = URT::Soldier->get(name => 'Pyle', rank => 'Private');
 is(scalar(@objs), 1, 'Got one Private named Pyle');
-ok(_compare_to_expected($objs[0], 'Pyle'), 'Object has the correct data');
+ok(_compare_to_expected($objs[0],
+                        { name => 'Pyle', rank => 'Private', serial => 123} ),
+    'Object has the correct data');
 
 @objs = URT::Soldier->get(rank => 'General');
 is(scalar(@objs), 2, 'Got two soldiers with rank General');
-ok(_compare_to_expected($objs[0], 'Halftrack'), 'First object has correct data');
-ok(_compare_to_expected($objs[1], 'Bob'), 'Second object has correct data');
+ok(_compare_to_expected($objs[0],
+                        { name => 'Halftrack', rank => 'General', serial => 567 }),
+    'First object has correct data');
+ok(_compare_to_expected($objs[1],
+                        { name => 'Bob', rank => 'General', serial => 678 }),
+    'Second object has correct data');
 
 
 @objs = URT::Soldier->get(name => 'no one');
 is(scalar(@objs), 0, 'Found no soldiers named "no one"');
 
 
-
-
+@objs = URT::Soldier->get(name => 'Hudson');
+is(scalar(@objs), 2, 'Matched two soldiers named Hudson');
+ok(_compare_to_expected($objs[0],
+                        { name => 'Hudson', rank => 'Private', serial => 299 }),
+    'First object has correct data');
+ok(_compare_to_expected($objs[1],
+                        { name => 'Hudson', rank => 'Sergent', serial => 499 }),
+    'Second object has correct data');
 
 
 sub _compare_to_expected {
-    my($obj,$name) = @_;
+    my($obj,$expected) = @_;
 
-    return unless $obj->name eq $name;
-
-    my $expected = $people{$name};
-    return unless $expected;
+    return unless $obj->name eq $expected->{'name'};
     return unless $obj->id eq $expected->{'serial'};
     return unless $obj->serial eq $expected->{'serial'};
     return unless $obj->rank eq $expected->{'rank'};
