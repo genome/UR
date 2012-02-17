@@ -374,13 +374,13 @@ sub _things_in_list_are_numeric {
     return 1;
 }
 
-# Construct a closure to perform a test on the $index-th column of
-# @$$next_candidate_row.  The closures return 0 is the test is successful,
-# -1 if unsuccessful but the file's value was less than $value, and 1
-# if unsuccessful and greater.  The iterator that churns throug the file
-# knows that if it's comparing an ID/sorted column, and the comparator
-# returns 1 then we've gone past the point where we can expect to ever
-# find another successful match and we should stop looking
+# Construct a closure to perform an operator test against the given value
+# The closures return 0 is the test is successful, -1 if unsuccessful but
+# the file's value was less than $value, and 1 if unsuccessful and greater.
+# The iterator that churns through the file knows that if it's comparing an
+# ID/sorted column, and the comparator returns 1 then we've gone past the
+# point where we can expect to ever find another successful match and we
+# should stop looking
 my $ALWAYS_FALSE = sub { -1 };
 sub _comparator_for_operator_and_property {
     my($self,$property,$operator,$value) = @_;
