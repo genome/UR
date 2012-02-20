@@ -722,6 +722,11 @@ $DB::single=1;
 
     my @possible_file_info_list = $self->resolve_file_info_for_rule_and_path_spec($rule);
 
+    if (my $table_name = $class_meta->table_name) {
+        # Tack the final file name onto the end if the class has a table name
+        @possible_file_info_list = map { [ $_->[0] . "/$table_name", $_->[1] ] } @possible_file_info_list;
+    }
+
     my $handle_class = $self->handle_class;
     my $use_quick_read = $handle_class->isa('IO::Handle');
     my $split_regex = $self->_regex();
@@ -765,7 +770,10 @@ $DB::single=1;
         my @values_from_path_spec     = values %$property_values_from_path_spec;
 
         my $fh = $handle_class->new($pathname);
-        next unless $fh;   # missing or unopenable files is not fatal
+        unless ($fh) {
+            $logger->("FILE: Skipping $pathname because it did not open: $!\n");
+            next;   # missing or unopenable files is not fatal
+        }
 
         my $lines_read = 0;
         my $lines_matched = 0;
@@ -856,7 +864,7 @@ $DB::single=1;
                 }
 
                 for (my $i = 0; $i < @comparison_for_column; $i++) {
-                    my $comparison = $comparison_for_column[$i]->($next_record->[$i]);
+                    my $comparison = $comparison_for_column[$i]->($next_record->[$rule_columns_in_order[$i]]);
 
                     if ($comparison > 0 and $i < $sorted_columns_in_rule_count) {
                         # We've gone past the last thing that could possibly match
