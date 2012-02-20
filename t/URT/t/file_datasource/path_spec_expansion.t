@@ -32,7 +32,7 @@ while (my($name,$data) = each %people) {
 
 
 my $ds = UR::DataSource::Filesystem->create(
-    server => $dir.'/$rank/${name}.dat',
+    path => $dir.'/$rank/${name}.dat',
     columns => ['serial'],
 );
 ok($ds, 'Created data source');
