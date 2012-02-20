@@ -79,6 +79,12 @@ ok(_compare_to_expected($objs[1],
                         { name => 'Hudson', rank => 'Sergent', serial => 499 }),
     'Second object has correct data');
 
+@objs = URT::Soldier->get(456);
+is(scalar(@objs), 1, 'Got 1 soldier by ID');
+ok(_compare_to_expected($objs[0],
+                        { name => 'Carter', rank => 'Sergent', serial => 456 }),
+    'Object has correct data');
+
 
 sub _compare_to_expected {
     my($obj,$expected) = @_;
