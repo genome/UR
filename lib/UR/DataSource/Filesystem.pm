@@ -788,7 +788,7 @@ $DB::single=1;
         my $log_first_match;
         $log_first_match = sub {
                $logger->("FILE: $pathname First match after reading $lines_read lines\n\n");
-               $log_first_fetch = \&UR::Util::null_sub;
+               $log_first_match = \&UR::Util::null_sub;
            };
 
 
