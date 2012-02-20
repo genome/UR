@@ -671,7 +671,7 @@ $DB::single=1;
     for (my $i = 0; $i < $column_name_count; $i++) {
         my $column_name = $column_names_in_order->[$i];
         my $property_name = $class_meta->property_for_column($column_name);
-        $property_name_to_index_map{$column_name} = $i;
+        $property_name_to_index_map{$property_name} = $i;
     }
 
     my @rule_columns_in_order;         # The order we should perform rule matches on - value is the index in the file row to test
