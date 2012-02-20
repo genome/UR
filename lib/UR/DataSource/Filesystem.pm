@@ -739,7 +739,8 @@ $DB::single=1;
       $logger->("\nFILE: starting query covering " . scalar(@possible_file_info_list)." files:\n\t"
                 . join("\n\t", map { $_->[0] } @possible_file_info_list )
                 . "\nFILTERS: "
-                . join("\n\t", map {
+                . (scalar(@rule_columns_in_order)
+                     ? join("\n\t", map {
                                      $_ . " [$column_name_to_index_map{$_}]"
                                         .  $column_is_used_in_sorted_capacity{$_}
                                         . " $operator_for_column{$_} "
@@ -749,6 +750,7 @@ $DB::single=1;
                                    }
                                map { $column_names_in_order->[$_] }
                                @rule_columns_in_order)
+                     : '*none*')
                 . "\n\n"
               );
     }
