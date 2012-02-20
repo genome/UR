@@ -650,6 +650,28 @@ sub _generate_loading_templates_arrayref {
 
 
 
+sub _resolve_column_names_from_pathname {
+    my($self,$pathname,$fh) = @_;
+
+    unless (exists($self->{'__column_names_from_pathname'}->{$pathname})) {
+        if (my $column_names_in_order = $self->columns) {
+            $self->{'__column_names_from_pathname'}->{$pathname} = $column_names_in_order;
+
+        } else {
+            my $record_separator = $self->record_separator();
+            my $line = $fh->getline();
+            $line =~ s/$record_separator$//;  # chomp, but for any value
+            # FIXME - to support record-oriented files, we need some replacement for this...
+            my $split_regex = $self->_regex();
+            my @headers = split($split_regex, $line);
+            $self->{'__column_names_from_pathname'}->{$pathname} = \@headers;
+        }
+    }
+    return $self->{'__column_names_from_pathname'}->{$pathname};
+}
+
+
+
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
@@ -658,28 +680,32 @@ sub create_iterator_closure_for_rule {
     my $rule_template = $rule->template;
 
 $DB::single=1;
-    my $column_names_in_order = $self->columns;
-    my $column_name_count = 0;
-    my %column_name_to_index_map = map { $column_names_in_order->[$column_name_count] => $column_name_count++ }
-                                       @$column_names_in_order;
+    #my $column_names_in_order = $self->columns;
+    #my $column_name_count = 0;
+    #my %column_name_to_index_map = map { $column_names_in_order->[$column_name_count] => $column_name_count++ }
+    #                                   @$column_names_in_order;
+    my @column_names = grep { defined }
+                       map { $class_meta->column_for_property($_) }
+                       $class_meta->all_property_names;
 
     my $sorted_column_names = $self->sorted_columns || [];
     my %sorted_column_names = map { $_ => 1 } @$sorted_column_names;
-    my @unsorted_column_names = grep { ! exists $sorted_column_names{$_} } @$column_names_in_order;
+    my @unsorted_column_names = grep { ! exists $sorted_column_names{$_} } @column_names;
 
-    my %property_name_to_index_map;
-    for (my $i = 0; $i < $column_name_count; $i++) {
-        my $column_name = $column_names_in_order->[$i];
-        my $property_name = $class_meta->property_for_column($column_name);
-        $property_name_to_index_map{$property_name} = $i;
-    }
+    #my %property_name_to_index_map;
+    #for (my $i = 0; $i < $column_name_count; $i++) {
+    #    my $column_name = $column_names_in_order->[$i];
+    #    my $property_name = $class_meta->property_for_column($column_name);
+    #    $property_name_to_index_map{$property_name} = $i;
+    #}
 
-    my @rule_columns_in_order;         # The order we should perform rule matches on - value is the index in the file row to test
-    my @comparison_for_column;         # closures to call to perform the match - same order as @rule_columns_in_order
+    my @rule_column_names_in_order;    # The order we should perform rule matches on - value is the name of the column in the file
+    my @comparison_for_column;         # closures to call to perform the match - same order as @rule_column_names_in_order
+    my %rule_column_name_to_comparison_index;
 
     my(%property_for_column, %operator_for_column, %value_for_column); # These are used for logging
 
-    my $resolve_comparator_for_column = sub {
+    my $resolve_comparator_for_column_name = sub {
         my $column_name = shift;
 
         my $property_name = $class_meta->property_for_column($column_name);
@@ -698,26 +724,27 @@ $DB::single=1;
                                    $operator,
                                    $rule_value);
 
-        push @rule_columns_in_order, $column_name_to_index_map{$column_name};
+        push @rule_column_names_in_order, $column_name;
         push @comparison_for_column, $comp_function;
+        $rule_column_name_to_comparison_index{$column_name} = $#comparison_for_column;
         return 1;
     };
 
     my $sorted_columns_in_rule_count = 0;  # How many columns we can consider when trying "the shortcut" for sorted data
     my %column_is_used_in_sorted_capacity;
     foreach my $column_name ( @$sorted_column_names ) {
-        if (! $resolve_comparator_for_column->($column_name)
+        if (! $resolve_comparator_for_column_name->($column_name)
               and ! defined($sorted_columns_in_rule_count)
         ) {
-            # The fiest time we don't match a sorted column, record the index
-            $sorted_columns_in_rule_count = scalar(@rule_columns_in_order)
+            # The first time we don't match a sorted column, record the index
+            $sorted_columns_in_rule_count = scalar(@rule_column_names_in_order)
         } else {
             $column_is_used_in_sorted_capacity{$column_name} = ' (sorted)';
         }
     }
 
     foreach my $column_name ( @unsorted_column_names ) {
-        $resolve_comparator_for_column->($column_name);
+        $resolve_comparator_for_column_name->($column_name);
     }
 
     my @possible_file_info_list = $self->resolve_file_info_for_rule_and_path_spec($rule);
@@ -739,17 +766,15 @@ $DB::single=1;
       $logger->("\nFILE: starting query covering " . scalar(@possible_file_info_list)." files:\n\t"
                 . join("\n\t", map { $_->[0] } @possible_file_info_list )
                 . "\nFILTERS: "
-                . (scalar(@rule_columns_in_order)
+                . (scalar(@rule_column_names_in_order)
                      ? join("\n\t", map {
-                                     $_ . " [$column_name_to_index_map{$_}]"
-                                        .  $column_is_used_in_sorted_capacity{$_}
+                                     $_ . $column_is_used_in_sorted_capacity{$_}
                                         . " $operator_for_column{$_} "
                                         . (ref($value_for_column{$_}) eq 'ARRAY'
                                                                      ? '[' . join(',',@{$value_for_column{$_}}) .']'
                                                                      : $value_for_column{$_} )
                                    }
-                               map { $column_names_in_order->[$_] }
-                               @rule_columns_in_order)
+                               @rule_column_names_in_order)
                      : '*none*')
                 . "\n\n"
               );
@@ -761,6 +786,10 @@ $DB::single=1;
     }
     my $loading_template = $query_plan->{loading_templates}->[0];
     my @property_names_in_loading_template_order = @{ $loading_template->{'property_names'} };
+    my %property_name_to_resultset_index_map;
+    for (my $i = 0; $i < @property_names_in_loading_template_order; $i++) {
+        $property_name_to_resultset_index_map{$property_names_in_loading_template_order[$i]} = $i;
+    }
 
     my @iterator_for_each_file;
     my @next_record_for_each_file;
@@ -777,7 +806,50 @@ $DB::single=1;
             next;   # missing or unopenable files is not fatal
         }
 
-        my $lines_read = 0;
+        my $column_names_in_order = $self->_resolve_column_names_from_pathname($pathname,$fh);
+        my $ordered_column_names_count = 0;
+        my %column_name_to_index_map = map { $column_names_in_order->[$ordered_column_names_count] => $ordered_column_names_count++ }
+                                       @$column_names_in_order;
+        my %property_name_to_index_map;
+        for (my $i = 0; $i < $ordered_column_names_count; $i++) {
+            my $column_name = $column_names_in_order->[$i];
+            my $property_name = $class_meta->property_for_column($column_name);
+            $property_name_to_index_map{$property_name} = $i;
+        }
+
+        # rule properties that aren't actually columns in the file should be
+        # satisfied by the path resolution already, so we can strip them out of the
+        # list of columns to test
+        #my @rule_column_names_for_this_file = grep { exists $column_name_to_index_map{$_} }
+        #                                 @rule_column_names_in_order;
+        my @rule_columns_in_order = map { $column_name_to_index_map{$_} }
+                                    grep { exists $column_name_to_index_map{$_} }
+                                    @rule_column_names_in_order;
+        # And also strip out any items in @comparison_for_column for non-column data
+        my @comparison_for_column_this_file = map { $comparison_for_column[ $rule_column_name_to_comparison_index{$_} ] }
+                                              grep { exists $column_name_to_index_map{$_} }
+                                              @rule_column_names_in_order;
+
+        # How to transform the data read from the file/path-spec into the
+        # list expected by the object fabricator.  A ref to a number means get the value from that
+        # column of $next_record.  A regular value means copy that value directly (it came from the
+        # path spec
+        my @file_to_resultset_xform
+            = map {
+                  exists($property_values_from_path_spec->{$_})
+                      ? $property_values_from_path_spec->{$_}
+                      : \$property_name_to_index_map{$_};
+             }
+             @property_names_in_loading_template_order;
+
+        # Burn through the requsite number of header lines
+        my $lines_read = $fh->input_line_number;
+        my $throwaway_line_count = $self->header_lines;
+        while($throwaway_line_count > $lines_read) {
+            $lines_read++;
+            scalar($fh->getline());
+        }
+
         my $lines_matched = 0;
 
         my $log_first_fetch;
@@ -791,18 +863,6 @@ $DB::single=1;
                $log_first_match = \&UR::Util::null_sub;
            };
 
-
-        # How to transform the data read from the file/path-spec into the
-        # list expected by the object fabricator.  A ref to a number means get the value from that
-        # column of $next_record.  A regular value means copy that value directly (it came from the
-        # path spec
-        my @file_to_resultset_xform
-            = map {
-                  exists($property_values_from_path_spec->{$_})
-                      ? $property_values_from_path_spec->{$_}
-                      : \$property_name_to_index_map{$_};
-             }
-             @property_names_in_loading_template_order;
 
         my $next_record;
 
@@ -848,10 +908,11 @@ $DB::single=1;
 
             $line =~ s/$record_separator$//;  # chomp, but for any value
             # FIXME - to support record-oriented files, we need some replacement for this...
-            $next_record = [ split($split_regex, $line, $column_name_count) ];
+            $next_record = [ split($split_regex, $line, $ordered_column_names_count) ];
         };
 
         my $iterator_this_file;
+        my $number_of_comparisons = @comparison_for_column_this_file;
         $iterator_this_file = sub {
             $log_first_fetch->();
 
@@ -865,8 +926,8 @@ $DB::single=1;
                     return;
                 }
 
-                for (my $i = 0; $i < @comparison_for_column; $i++) {
-                    my $comparison = $comparison_for_column[$i]->($next_record->[$rule_columns_in_order[$i]]);
+                for (my $i = 0; $i < $number_of_comparisons; $i++) {
+                    my $comparison = $comparison_for_column_this_file[$i]->($next_record->[$rule_columns_in_order[$i]]);
 
                     if ($comparison > 0 and $i < $sorted_columns_in_rule_count) {
                         # We've gone past the last thing that could possibly match
@@ -903,7 +964,7 @@ $DB::single=1;
 
     my @next_record;
 
-    my @row_index_sort_order = map { $column_name_to_index_map{$_} } @$sorted_column_names;
+    my @row_index_sort_order = map { $property_name_to_resultset_index_map{$_} } @$sorted_column_names;
     my $row_sorter = sub {
         my($idx_a,$idx_b) = shift;
 
