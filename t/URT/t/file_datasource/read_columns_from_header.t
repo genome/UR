@@ -97,7 +97,9 @@ sub _compare_to_expected {
     return 1;
 }
 
+
 my %files;
+my $files_written = 0;
 sub _create_data_file {
     my($dir,$rank,$name,$serial) = @_;
 
@@ -105,13 +107,16 @@ sub _create_data_file {
     my $f = IO::File->new($pathname, '>>');
     die "Can't create file $pathname: $!" unless $f;
 
-    unless ($files{$pathname}++) {
+    my $write_order;
+    unless (defined( $write_order = $files{$pathname})) {
         # First time writing to this file.  Put in the header
         # mix it up - half of the files will have name first, half will have serial first
-        $f->print("name\tserial\n----\t------\n");
+        $write_order = $files{$pathname} = $files_written % 2;
+        $write_order ? $f->print("name\tserial\n----\t------\n") : $f->print("serial\tname\n------\t----\n");
+        $files_written++;
     }
 
-    $f->print("$name\t$serial\n");
+    $write_order ? $f->print("$name\t$serial\n") : $f->print("$serial\t$name\n");
     $f->close;
     1;
 }
