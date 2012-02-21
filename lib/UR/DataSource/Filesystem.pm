@@ -796,7 +796,6 @@ $DB::single=1;
     }
 
     my @iterator_for_each_file;
-    my @next_record_for_each_file;
     foreach ( @possible_file_info_list ) {
         my $pathname = $_->[0];
         my $property_values_from_path_spec = $_->[1];
@@ -985,7 +984,7 @@ $DB::single=1;
         return $iterator_for_each_file[0];  # If there's only 1 file, no need to multiplex
     }
 
-    my @next_record;
+    my @next_record_for_each_file;   # in the same order as @iterator_for_each_file
 
     my @row_index_sort_order = map { $property_name_to_resultset_index_map{$_} } @$sorted_column_names;
     my $row_sorter = sub {
@@ -994,9 +993,9 @@ $DB::single=1;
         for (my $i = 0; $i < @row_index_sort_order; $i++) {
             my $column_num = $row_index_sort_order[$i];
 
-            my $cmp = $next_record[$idx_a]->[$column_num] <=> $next_record[$idx_b]->[$column_num]
+            my $cmp = $next_record_for_each_file[$idx_a]->[$column_num] <=> $next_record_for_each_file[$idx_b]->[$column_num]
                        ||
-                      $next_record[$idx_a]->[$column_num] cmp $next_record[$idx_b]->[$column_num];
+                      $next_record_for_each_file[$idx_a]->[$column_num] cmp $next_record_for_each_file[$idx_b]->[$column_num];
             return $cmp if $cmp;  # done if they're not equal
         }
     };
@@ -1006,12 +1005,12 @@ $DB::single=1;
 
         my $lowest_slot;
         for(my $i = 0; $i < @iterator_for_each_file; $i++) {
-            unless(defined $next_record[$i]) {
-                $next_record[$i] = $iterator_for_each_file[$i]->();
-                unless (defined $next_record[$i]) {
+            unless(defined $next_record_for_each_file[$i]) {
+                $next_record_for_each_file[$i] = $iterator_for_each_file[$i]->();
+                unless (defined $next_record_for_each_file[$i]) {
                     # That iterator is exhausted, splice it out
                     splice(@iterator_for_each_file, $i, 1);
-                    splice(@next_record, $i, 1);
+                    splice(@next_record_for_each_file, $i, 1);
                     return unless (@iterator_for_each_file);  # This can happen here if none of the files have matching data
                     redo;
                 }
@@ -1028,8 +1027,8 @@ $DB::single=1;
             }
         }
 
-        my $retval = $next_record[$lowest_slot];
-        $next_record[$lowest_slot] = undef;
+        my $retval = $next_record_for_each_file[$lowest_slot];
+        $next_record_for_each_file[$lowest_slot] = undef;
         return $retval;
     };
 
