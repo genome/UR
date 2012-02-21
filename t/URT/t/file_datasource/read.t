@@ -12,14 +12,14 @@ use File::Temp;
 use Sub::Install;
 
 # map people to their rank and serial nubmer
-my @people = ( Pyle => { rank => 'Private', serial => 123 },
-               Bailey => { rank => 'Private', serial => 234 },
-               Hudson => { rank => 'Private', serial => 299 },
-               Snorkel => { rank => 'Sergent', serial => 345 },
-               Carter => { rank => 'Sergent', serial => 456 },
-               Hudson => { rank => 'Sergent', serial => 499 },
-               Halftrack => { rank => 'General', serial => 567 },
+my @people = ( Hudson => { rank => 'Sergent', serial => 499 },
                Bob => { rank => 'General', serial => 678 },
+               Carter => { rank => 'Sergent', serial => 456 },
+               Snorkel => { rank => 'Sergent', serial => 345 },
+               Bailey => { rank => 'Private', serial => 234 },
+               Halftrack => { rank => 'General', serial => 567 },
+               Pyle => { rank => 'Private', serial => 123 },
+               Hudson => { rank => 'Private', serial => 299 },
              );
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);

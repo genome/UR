@@ -671,6 +671,21 @@ sub _resolve_column_names_from_pathname {
 }
 
 
+sub file_is_sorted_by_id {
+    my($self,$rule) = @_;
+
+    my $sorted_columns = $self->sorted_columns;
+    return unless ($sorted_columns and @$sorted_columns);  # no sorted columns!
+
+    my $class_meta = $rule->subject_class_name->__meta__;
+    my @id_properties = $class_meta->id_property_names;
+    for (my $i = 0; $i < @id_properties; $i++) {
+        my $column_name = $class_meta->column_for_property($id_properties[$i]);
+        return 0 if ($sorted_columns->[$i] != $column_name);
+    }
+    return 1;
+}
+
 
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
@@ -941,6 +956,25 @@ $DB::single=1;
             my @resultset = map { ref($_) ? $next_record->[$$_] : $_ } @file_to_resultset_xform;
             return \@resultset;
         };
+
+        # Higher layers in the loading logic require rows from the data source to be returned
+        # in ID order. If the file contents is not sorted primarily by ID, then we need to do
+        # the less efficient thing by first reading in all the matching rows in one go, sorting
+        # them by ID, then iterating over the results
+        unless ($self->file_is_sorted_by_id) {
+            my @matching;
+            my $id_resolver = $loading_template->{'id_resolver'};
+            while (my $row = $iterator_this_file->()) {
+                push @matching, [ $id_resolver->($row), $row ];   # save matches as [id, rowref]
+            }
+            @matching = map { $_->[1] }            # return only rowrefs
+                        sort { $a->[0] <=> $b->[0] or $a->[0] cmp $b->[0] }  # sort by ID
+                        @matching;
+
+            $iterator_this_file = sub {
+                return shift @matching;
+            };
+        }
 
         push @iterator_for_each_file, $iterator_this_file;
     }
