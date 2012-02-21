@@ -11,21 +11,21 @@ use Scalar::Util;
 use Errno qw(EINTR EAGAIN EOPNOTSUPP);
 
 # lets you specify the server in several ways:
-# server => '/path/name'
+# path => '/path/name'
 #    means there is one file storing the data
-# server => [ '/path1/name', '/path2/name' ]
+# path => [ '/path1/name', '/path2/name' ]
 #    means the first tile we need to open the file, pick one (for load balancing)
-# server => '/path/to/directory/'
+# path => '/path/to/directory/'
 #    means that directory contains one or more files, and the classes using
 #    this datasource can have table_name metadata to pick the file
-# server => '/path/$param1/${param2}.ext'
+# path => '/path/$param1/${param2}.ext'
 #    means the values for $param1 and $param2 should come from the input rule.
 #    If the rule doesn't specify the param, then it should glob for the possible
 #    names at that point in the filesystem
-# server => '/path/&method/filename'
+# path => '/path/&method/filename'
 #    means the value for that part of the path should come from a method call
 #    run as $subject_class_name->$method($rule)
-# server => '/path/*/path/$name/
+# path => '/path/*/path/$name/
 #    means it should glob at the appropriate time for the '*', but no use the
 #    paths found matching the glob to infer any values
 
@@ -33,7 +33,8 @@ use Errno qw(EINTR EAGAIN EOPNOTSUPP);
 # file:/path/$to/File.ext?columns=[a,b,c]&sorted_columns=[a,b]
 
 # TODO
-# * Need to handle the case where the file data is not sorted in ID order
+# * Allow the rule to specify order-by that is different than the file's sort order
+#   maybe by setting the query plan's order_by_non_column_data flag?
 # * Change the comparator functions to accept a ref to the file's value to avoid
 #   copying large strings
 # * Support non-equality operators for properties that are part of the path spec
