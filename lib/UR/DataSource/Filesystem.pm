@@ -680,10 +680,6 @@ sub create_iterator_closure_for_rule {
     my $rule_template = $rule->template;
 
 $DB::single=1;
-    #my $column_names_in_order = $self->columns;
-    #my $column_name_count = 0;
-    #my %column_name_to_index_map = map { $column_names_in_order->[$column_name_count] => $column_name_count++ }
-    #                                   @$column_names_in_order;
     my @column_names = grep { defined }
                        map { $class_meta->column_for_property($_) }
                        $class_meta->all_property_names;
@@ -691,13 +687,6 @@ $DB::single=1;
     my $sorted_column_names = $self->sorted_columns || [];
     my %sorted_column_names = map { $_ => 1 } @$sorted_column_names;
     my @unsorted_column_names = grep { ! exists $sorted_column_names{$_} } @column_names;
-
-    #my %property_name_to_index_map;
-    #for (my $i = 0; $i < $column_name_count; $i++) {
-    #    my $column_name = $column_names_in_order->[$i];
-    #    my $property_name = $class_meta->property_for_column($column_name);
-    #    $property_name_to_index_map{$property_name} = $i;
-    #}
 
     my @rule_column_names_in_order;    # The order we should perform rule matches on - value is the name of the column in the file
     my @comparison_for_column;         # closures to call to perform the match - same order as @rule_column_names_in_order
