@@ -34,7 +34,9 @@ use Errno qw(EINTR EAGAIN EOPNOTSUPP);
 
 # TODO
 # * Allow the rule to specify order-by that is different than the file's sort order
-#   maybe by setting the query plan's order_by_non_column_data flag?
+#   maybe by setting the query plan's order_by_non_column_data flag?  First doing a
+#   search of files using the files' sort order, then re-sorting before returning
+#   data to higher layers?
 # * Change the comparator functions to accept a ref to the file's value to avoid
 #   copying large strings
 # * Support non-equality operators for properties that are part of the path spec
