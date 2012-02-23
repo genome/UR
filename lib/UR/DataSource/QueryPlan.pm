@@ -1431,11 +1431,16 @@ sub _init_light {
             Carp::croak("No property '$final_accessor' on class " . $via_accessor_meta->data_type .
                           " while resolving property $property_name on class $class_name");
         }
+
+        # Follow the chain of via/to delegation down to where the data ultimately lives
         while($final_accessor_meta->is_delegated) {
+            my $prev_accessor_meta = $final_accessor_meta;
             $final_accessor_meta = $final_accessor_meta->to_property_meta();
             unless ($final_accessor_meta) {
-                Carp::croak("No property '$final_accessor' on class " . $via_accessor_meta->data_type .
-                              " while resolving property $property_name on class $class_name");
+                Carp::croak("Can't resolve property '$final_accessor' of class " . $via_accessor_meta->data_type
+                            . ": Resolution involved property '" . $prev_accessor_meta->property_name . "' of class "
+                            . $prev_accessor_meta->class_name
+                            . " which is delegated, but its via/to metadata does not resolve to a known class and property");
             }
         }
         $final_accessor = $final_accessor_meta->property_name;
