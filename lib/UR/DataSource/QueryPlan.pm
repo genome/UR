@@ -1434,6 +1434,11 @@ sub _init_light {
 
         # Follow the chain of via/to delegation down to where the data ultimately lives
         while($final_accessor_meta->is_delegated) {
+            # May have been 'to' an id_by/id_class_by property.  Stop chaining and do two queries
+            # If we had access to the value at this point, we could continue joining through that
+            # value's class and id
+            next DELEGATED_PROPERTY if ($final_accessor_meta->id_by or $final_accessor_meta->id_class_by);
+
             my $prev_accessor_meta = $final_accessor_meta;
             $final_accessor_meta = $final_accessor_meta->to_property_meta();
             unless ($final_accessor_meta) {
