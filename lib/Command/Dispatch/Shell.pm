@@ -41,6 +41,8 @@ sub _execute_with_shell_params_and_return_exit_code {
     my $class = shift;
     my @argv = @_;
 
+    my $original_cmdline = join("\0",$0,@argv);
+
     # make --foo=bar equivalent to --foo bar
     @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
     my ($delegate_class, $params, $errors) = $class->resolve_class_and_params_for_argv(@argv);
@@ -56,6 +58,7 @@ sub _execute_with_shell_params_and_return_exit_code {
         $exit_code = 1;
     }
     else {
+        $params->{'original_command_line'} = $original_cmdline;
         my $rv = $class->_execute_delegate_class_with_params($delegate_class,$params);
         $exit_code = $delegate_class->exit_code_for_return_value($rv);
     }

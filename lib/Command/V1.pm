@@ -26,6 +26,7 @@ UR::Object::Type->define(
     has_optional => [
         is_executed => { is => 'Boolean' },
         result      => { is => 'Scalar', is_output => 1 },
+        original_command_line => { is => 'String', doc => 'null-byte separated list of command and arguments when run via execute_with_shell_params_and_exit'},
     ],
 );
 
@@ -214,6 +215,8 @@ sub _execute_with_shell_params_and_return_exit_code {
     my $class = shift;
     my @argv = @_;
 
+    my $original_cmdline = join("\0",$0,@argv);
+
     # make --foo=bar equivalent to --foo bar
     @argv = map { ($_ =~ /^(--\w+?)\=(.*)/) ? ($1,$2) : ($_) } @argv;
     my ($delegate_class, $params,$error_tag_list) = $class->resolve_class_and_params_for_argv(@argv);
@@ -225,6 +228,7 @@ sub _execute_with_shell_params_and_return_exit_code {
                                           "Property '" . join("','",@$props) . "' ($type): $desc" }
                                     @$error_tag_list));
     } else {
+        $params->{'original_command_line'} = $original_cmdline;
         $rv = $class->_execute_delegate_class_with_params($delegate_class,$params);
     }
 
@@ -1157,6 +1161,7 @@ sub _shell_args_property_meta {
         next if $property_name eq 'id';
         next if $property_name eq 'result';
         next if $property_name eq 'is_executed';
+        next if $property_name eq 'original_command_line';
         next if $property_name =~ /^_/;
         next if defined($property_meta->data_type) and $property_meta->data_type =~ /::/;
         next if not $property_meta->is_mutable;
