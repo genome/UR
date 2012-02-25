@@ -11,5 +11,28 @@ UR::Object::Type->define(
     is => ['UR::Value'],
 );
 
+use overload (
+    '.' => \&concat,
+    '""' => \&stringify,
+    fallback => 1,
+);
+
+sub swap {
+    my ($a, $b) = @_;
+    return ($b, $a);
+}
+
+sub concat {
+    my ($self, $other, $swap) = @_;
+    my $class = ref $self;
+    $self = $self->id;
+    ($self, $other) = swap($self, $other) if $swap;
+    return $class->get($self . $other);
+}
+
+sub stringify {
+    my $self = shift;
+    return $self->id;
+}
+
 1;
-#$Header$

@@ -19,7 +19,7 @@ my $s3 = UR::Value::Text->get('something else');
 ok($s3, 'Got an object for a different string');
 isnt($s1,$s3, 'They are different objects');
 
-my $s1ref = "$s1";
+my $s1_refaddr = Scalar::Util::refaddr($s1);
 ok($s1->unload(), 'Unload the original string object');
 
 isa_ok($s1, 'UR::DeletedRef');
@@ -28,7 +28,7 @@ isa_ok($s2, 'UR::DeletedRef');
 $s1 = UR::Value::Text->get('hi there');
 ok($s1, 're-get the original string object');
 is($s1->id, 'hi there', 'It has the right id');
-isnt($s1, $s1ref, 'It is not the original object reference');
+isnt(Scalar::Util::refaddr($s1), $s1_refaddr, 'It is not the original object reference');
 
 UR::Object::Type->define(
     class_name => 'Test::Value',
