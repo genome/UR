@@ -684,7 +684,7 @@ sub file_is_sorted_by_id {
     my @id_properties = $class_meta->id_property_names;
     for (my $i = 0; $i < @id_properties; $i++) {
         my $column_name = $class_meta->column_for_property($id_properties[$i]);
-        return 0 if ($sorted_columns->[$i] != $column_name);
+        return 0 if ($sorted_columns->[$i] ne $column_name);
     }
     return 1;
 }
