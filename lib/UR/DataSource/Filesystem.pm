@@ -963,7 +963,7 @@ $DB::single=1;
         # in ID order. If the file contents is not sorted primarily by ID, then we need to do
         # the less efficient thing by first reading in all the matching rows in one go, sorting
         # them by ID, then iterating over the results
-        unless ($self->file_is_sorted_by_id) {
+        unless ($self->file_is_sorted_by_id($rule)) {
             my @matching;
             my $id_resolver = $loading_template->{'id_resolver'};
             while (my $row = $iterator_this_file->()) {
