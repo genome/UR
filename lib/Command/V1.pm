@@ -228,8 +228,7 @@ sub _execute_with_shell_params_and_return_exit_code {
                                           "Property '" . join("','",@$props) . "' ($type): $desc" }
                                     @$error_tag_list));
     } else {
-        $params->{'original_command_line'} = $original_cmdline;
-        $rv = $class->_execute_delegate_class_with_params($delegate_class,$params);
+        $rv = $class->_execute_delegate_class_with_params($delegate_class,$params,$original_cmdline);
     }
 
     my $exit_code = $delegate_class->exit_code_for_return_value($rv);
@@ -238,7 +237,7 @@ sub _execute_with_shell_params_and_return_exit_code {
 
 # this is called by both the shell dispatcher and http dispatcher for now
 sub _execute_delegate_class_with_params {
-    my ($class, $delegate_class, $params) = @_;
+    my ($class, $delegate_class, $params, $original_cmdline) = @_;
 
     unless ($delegate_class) {
         $class->usage_message($class->help_usage_complete_text);
@@ -262,6 +261,7 @@ sub _execute_delegate_class_with_params {
         return 1;
     }
 
+    $params->{'original_command_line'} = $original_cmdline if (defined $original_cmdline);
     my $command_object = $delegate_class->create(%$params);
 
     unless ($command_object) {

@@ -58,8 +58,7 @@ sub _execute_with_shell_params_and_return_exit_code {
         $exit_code = 1;
     }
     else {
-        $params->{'original_command_line'} = $original_cmdline;
-        my $rv = $class->_execute_delegate_class_with_params($delegate_class,$params);
+        my $rv = $class->_execute_delegate_class_with_params($delegate_class,$params,$original_cmdline);
         $exit_code = $delegate_class->exit_code_for_return_value($rv);
     }
 
@@ -69,7 +68,7 @@ sub _execute_with_shell_params_and_return_exit_code {
 
 sub _execute_delegate_class_with_params {
     # this is called by both the shell dispatcher and http dispatcher for now
-    my ($class, $delegate_class, $params) = @_;
+    my ($class, $delegate_class, $params, $original_cmdline) = @_;
 
     unless ($delegate_class) {
         $class->dump_status_messages(1);
@@ -87,6 +86,10 @@ sub _execute_delegate_class_with_params {
     $delegate_class->dump_usage_messages(1);
     $delegate_class->dump_debug_messages(0);
 
+    # FIXME There should be a better check for params that are there because they came from the
+    # command line, and params that exist for infrastructural purposes.  'original_command_line'
+    # won't ever be given on the command line and shouldn't count toward the next test.
+    # maybe check the is_input properties...
     if ( !defined($params) ) {
         my $command_name = $delegate_class->command_name;
         $delegate_class->status_message($delegate_class->help_usage_complete_text);
@@ -99,6 +102,7 @@ sub _execute_delegate_class_with_params {
         return 1;
     }
 
+    $params->{'original_command_line'} = $original_cmdline if (defined $original_cmdline);
     my $command_object = $delegate_class->create(%$params);
 
     unless ($command_object) {
