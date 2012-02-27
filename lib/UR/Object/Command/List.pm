@@ -323,8 +323,8 @@ EOS
                 my $data_type = $property->data_type || '';
                 $data_type = ucfirst(lc $data_type);
 
-                $doc .= sprintf(" %${longest_name}s  ($data_type): $property_doc\n",
-                                $property->property_name);
+                $doc .= sprintf(" %${longest_name}s  (%s): %s\n",
+                                $property->property_name,$data_type, $property_doc);
             }
         }
         else {
