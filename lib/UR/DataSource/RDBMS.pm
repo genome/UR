@@ -3030,7 +3030,7 @@ sub _generate_class_data_for_loading {
                 grep { defined }
                 map { 
                     my $p = $inheritance_class_object->property_meta_for_name($_);
-                    die ("No property $_ found for " . $inheritance_class_object->class_name . "?") unless $p;
+                    Carp::croak("No property $_ found for " . $inheritance_class_object->class_name) unless $p;
                     $p->column_name;
                 } 
                 map { $_->property_name }
