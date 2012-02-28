@@ -3,6 +3,16 @@ package UR::DeletedRef;
 use strict;
 use warnings;
 require UR;
+
+BEGIN {
+    # this is to workaround a Perl bug where the overload magic flag is not updated
+    # for references with a different RV (which happens anytime you do "my $object"
+    # https://rt.perl.org/rt3/Public/Bug/Display.html?id=9472
+    if ($^V lt v5.8.9) {
+        eval "use overload fallback => 1";
+    };
+};
+
 our $VERSION = "0.37"; # UR $VERSION;
 
 our $all_objects_deleted = {};
