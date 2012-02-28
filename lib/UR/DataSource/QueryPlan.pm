@@ -164,6 +164,10 @@ sub _init {
         $self->_init_light();
         $self->_init_rdbms();
     }
+    elsif ($ds->isa('UR::DataSource::Filesystem')) {
+        $self->_init_core();
+        $self->_init_filesystem();
+    }
     else {
         # Once all callers are using the API for this we won't need "_init".
         $self->_init_core();
@@ -870,6 +874,32 @@ sub _init_rdbms {
     );
 
     my $template_data = $rule_template->{loading_data_cache} = $self; 
+    return $self;
+}
+
+sub _init_filesystem {
+    my $self = shift;
+    my $rule_template = $self->rule_template;
+    my $ds = $self->data_source;
+
+    # class-based values
+    my $class_name = $rule_template->subject_class_name;
+    my $class_meta = $class_name->__meta__;
+    my $class_data = $ds->_get_class_data_for_loading($class_meta);
+
+    my @db_property_data                    = @{ $class_data->{all_table_properties} };
+
+    my($order_by_columns, $order_by_non_column_data)
+        = $self->_determine_complete_order_by_list($rule_template, $class_data, \@db_property_data);
+
+    %$self = (
+        %$self,
+
+        order_by_columns            => $order_by_columns,
+        order_by_non_column_data    => $order_by_non_column_data,
+    );
+
+    my $template_data = $rule_template->{loading_data_cache} = $self;
     return $self;
 }
 

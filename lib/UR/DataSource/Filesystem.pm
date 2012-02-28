@@ -674,21 +674,88 @@ sub _resolve_column_names_from_pathname {
 }
 
 
-sub file_is_sorted_by_id {
-    my($self,$rule) = @_;
+sub file_is_sorted_as_requested {
+    my($self, $query_plan) = @_;
 
-    my $sorted_columns = $self->sorted_columns;
-    return unless ($sorted_columns and @$sorted_columns);  # no sorted columns!
+    my $sorted_columns = $self->sorted_columns || [];
 
-    my $class_meta = $rule->subject_class_name->__meta__;
-    my @id_properties = $class_meta->id_property_names;
-    for (my $i = 0; $i < @id_properties; $i++) {
-        my $column_name = $class_meta->column_for_property($id_properties[$i]);
-        return 0 if ($sorted_columns->[$i] ne $column_name);
+    my $order_by_columns = $query_plan->order_by_columns();
+    for (my $i = 0; $i < @$order_by_columns; $i++) {
+        return 0 if $i > $#$sorted_columns;
+        if ($sorted_columns->[$i] ne $order_by_columns->[$i]) {
+            return 0;
+        }
     }
     return 1;
 }
 
+
+# FIXME - this is a copy of parts of _generate_class_data_for_loading from UR::DS::RDBMS
+sub _generate_class_data_for_loading {
+    my ($self, $class_meta) = @_;
+
+    my $parent_class_data = $self->SUPER::_generate_class_data_for_loading($class_meta);
+
+    my @class_hierarchy = ($class_meta->class_name,$class_meta->ancestry_class_names);
+    my $order_by_columns;
+    do {
+        my @id_column_names;
+        for my $inheritance_class_name (@class_hierarchy) {
+            my $inheritance_class_object = UR::Object::Type->get($inheritance_class_name);
+            unless ($inheritance_class_object->table_name) {
+                next;
+            }
+            @id_column_names =
+                #map {
+                #    my $t = $inheritance_class_object->table_name;
+                #    ($t) = ($t =~ /(\S+)\s*$/);
+                #    $t . '.' . $_
+                #}
+                grep { defined }
+                map {
+                    my $p = $inheritance_class_object->property_meta_for_name($_);
+                    die ("No property $_ found for " . $inheritance_class_object->class_name . "?") unless $p;
+                    $p->column_name;
+                }
+                map { $_->property_name }
+                grep { $_->column_name }
+                $inheritance_class_object->direct_id_property_metas;
+
+            last if (@id_column_names);
+        }
+        $order_by_columns = \@id_column_names;
+    };
+
+    my(@all_table_properties, @direct_table_properties, $first_table_name, $subclassify_by);
+    for my $co ( $class_meta, @{ $parent_class_data->{parent_class_objects} } ) {
+        my $table_name = $co->table_name;
+        next unless $table_name;
+
+        $first_table_name ||= $co->table_name;
+#        $sub_classification_method_name ||= $co->sub_classification_method_name;
+#        $sub_classification_meta_class_name ||= $co->sub_classification_meta_class_name;
+        $subclassify_by   ||= $co->subclassify_by;
+
+        my $sort_sub = sub ($$) { return $_[0]->property_name cmp $_[1]->property_name };
+        push @all_table_properties,
+            map { [$co, $_, $table_name, 0 ] }
+            sort $sort_sub
+            grep { defined $_->column_name && $_->column_name ne '' }
+            UR::Object::Property->get( class_name => $co->class_name );
+
+        @direct_table_properties = @all_table_properties if $class_meta eq $co;
+    }
+
+
+    my $class_data = {
+        %$parent_class_data,
+
+        order_by_columns                    => $order_by_columns,
+        direct_table_properties             => \@direct_table_properties,
+        all_table_properties                => \@all_table_properties,
+    };
+    return $class_data;
+}
 
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
@@ -789,14 +856,18 @@ $DB::single=1;
     }
 
     my $query_plan = $self->_resolve_query_plan($rule_template);
+$DB::single=1;
     if (@{ $query_plan->{'loading_templates'} } > 1) {
         Carp::croak(__PACKAGE__ . " does not support joins.  The rule was $rule");
     }
     my $loading_template = $query_plan->{loading_templates}->[0];
     my @property_names_in_loading_template_order = @{ $loading_template->{'property_names'} };
     my %property_name_to_resultset_index_map;
+    my %column_name_to_resultset_index_map;
     for (my $i = 0; $i < @property_names_in_loading_template_order; $i++) {
-        $property_name_to_resultset_index_map{$property_names_in_loading_template_order[$i]} = $i;
+        my $property_name = $property_names_in_loading_template_order[$i];
+        $property_name_to_resultset_index_map{$property_name} = $i;
+        $column_name_to_resultset_index_map{$class_meta->column_for_property($property_name)} = $i;
     }
 
     my @iterator_for_each_file;
@@ -964,19 +1035,12 @@ $DB::single=1;
         # in ID order. If the file contents is not sorted primarily by ID, then we need to do
         # the less efficient thing by first reading in all the matching rows in one go, sorting
         # them by ID, then iterating over the results
-        unless ($self->file_is_sorted_by_id($rule)) {
-            my @matching;
-            my $id_resolver = $loading_template->{'id_resolver'};
-            while (my $row = $iterator_this_file->()) {
-                push @matching, [ $id_resolver->($row), $row ];   # save matches as [id, rowref]
-            }
-            @matching = map { $_->[1] }            # return only rowrefs
-                        sort { $a->[0] <=> $b->[0] or $a->[0] cmp $b->[0] }  # sort by ID
-                        @matching;
-
-            $iterator_this_file = sub {
-                return shift @matching;
-            };
+        unless ($self->file_is_sorted_as_requested($query_plan)) {
+$DB::single=1;
+            my @resultset_indexes_to_sort = map { $column_name_to_resultset_index_map{$_} }
+                                         @{ $query_plan->order_by_columns() };
+            $iterator_this_file
+                = $self->_create_iterator_for_custom_sorted_columns($iterator_this_file, \@resultset_indexes_to_sort);
         }
 
         push @iterator_for_each_file, $iterator_this_file;
@@ -1038,6 +1102,53 @@ $DB::single=1;
 
     return $iterator;
 }
+
+# Higher layers in the loading logic require rows from the data source to be returned
+# in ID order. If the file contents is not sorted primarily by ID, then we need to do
+# the less efficient thing by first reading in all the matching rows in one go, sorting
+# them by ID, then iterating over the results
+sub _create_iterator_for_custom_sorted_columns {
+    my($self, $iterator_this_file, $resultset_indexes_to_sort) = @_;
+
+$DB::single=1;
+    my @matching;
+    while (my $row = $iterator_this_file->()) {
+        push @matching, $row;   # save matches as [id, rowref]
+    }
+
+    my @sorters;
+    {   no warnings 'numeric';
+        no warnings 'uninitialized';
+        @sorters = map {
+                        my $col = $_; sub { $a->[$col] <=> $b->[$col] or $a->[$col] cmp $b->[$col] }
+                      }
+                  @$resultset_indexes_to_sort;
+    }
+
+    my $sort_by_order_by_columns;
+    if (@sorters == 1) {
+        $sort_by_order_by_columns = $sorters[0];
+    } else {
+        $sort_by_order_by_columns
+            = sub($$) {
+                local $a = $_[0];
+                local $b = $_[1];
+                foreach (@sorters) {
+                    if (my $rv = $_->()) {
+                        return $rv;
+                    }
+                }
+                return 0;
+            };
+    }
+    @matching = sort $sort_by_order_by_columns
+                @matching;
+
+    return sub {
+                return shift @matching;
+            };
+}
+
 
 sub initializer_should_create_column_name_for_class_properties {
     1;
