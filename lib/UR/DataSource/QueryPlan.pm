@@ -881,7 +881,6 @@ sub _add_join {
     my $ds = $self->data_source;
 
     my $group_by = $rule_template->group_by;
-    my $order_by = $rule_template->order_by;
     
     #my($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
     if (!$foreign_data_source or ($foreign_data_source ne $ds)) {
