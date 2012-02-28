@@ -7,6 +7,15 @@ package UR::Object::Type;
 use strict;
 use warnings;
 require UR;
+
+BEGIN {
+    # Perl 5.10 did not require mro in order to call get_mro but it looks
+    # like that was "fixed" in newer version.
+    if ($^V ge v5.9.5) {
+        eval "require mro";
+    }
+};
+
 our $VERSION = "0.37"; # UR $VERSION;
 
 use Carp ();
@@ -1226,7 +1235,6 @@ sub _initialize_accessors_and_inheritance {
     }
 
     if ($^V ge v5.9.5 && $namespace_mro && mro::get_mro($class_name) ne $namespace_mro) {
-        require mro;
         mro::set_mro($class_name, $namespace_mro);
     }
 
