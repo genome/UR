@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 65;
+use Test::More tests => 66;
 require File::Temp;
 
 my $s1 = UR::Value::Text->get('hi there');
@@ -169,7 +169,7 @@ do { # file test "operators"
     ok(-l $symlink_filename_a, 'created symlink');
 
     do { # file
-        my $path = UR::Value::FilesystemPath->get($temp_filename);
+        my $path = UR::Value::FilePath->get($temp_filename);
         isa_ok($path, 'UR::Value::FilesystemPath', 'file path');
 
         is($path->exists, 1, 'file path exists');
@@ -180,6 +180,7 @@ do { # file test "operators"
         is($path->size, 0, 'file path size is zero');
         system("echo hello > $path");
         isnt($path->size, 0, "file path size isn't zero");
+        is($path->line_count, 1, 'file path has one line');
     };
 
     do { # dir

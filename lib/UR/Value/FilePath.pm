@@ -11,5 +11,10 @@ UR::Object::Type->define(
     is => ['UR::Value::FilesystemPath'],
 );
 
+sub line_count {
+    my $self = shift;
+    my ($line_count) = qx(wc -l $self) =~ /^(\d+)/;
+    return $line_count;
+}
+
 1;
-#$Header$
