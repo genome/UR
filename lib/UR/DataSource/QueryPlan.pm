@@ -185,6 +185,65 @@ sub _init {
     return $self;
 }
 
+
+sub _determine_complete_order_by_list {
+    my($self, $rule_template, $class_data, $db_property_data) = @_;
+
+    my $class_meta       = $rule_template->subject_class_name->__meta__;
+    my $order_by_columns = $class_data->{order_by_columns} || [];
+    my $order_by         = $rule_template->order_by;
+    my $ds               = $self->data_source;
+
+    my %order_by_property_names;
+    my $order_by_non_column_data;
+    if ($order_by) {
+        my %db_property_data_map = map { $_->[1]->property_name => $_ } @$db_property_data;
+
+        # we only pull back columns we're ordering by if there is ordering happening
+        my %is_descending;
+        my @column_data;
+        for my $name (@$order_by) {
+            my $order_by_prop = $name;
+            if ($order_by_prop =~ m/^(-|\+)(.*)$/) {
+                $order_by_prop = $2;
+                $is_descending{$order_by_prop} = $1 eq '-';
+            }
+
+            my($order_by_prop_meta) = $class_meta->_concrete_property_meta_for_class_and_name($order_by_prop);
+            unless ($order_by_prop_meta) {
+                Carp::croak("Cannot order by '$name': Class "
+                            . $class_meta->class_name
+                            . " has no property named '$order_by_prop'");
+            }
+
+            $name = ( $is_descending{$order_by_prop} ? '-' : '' ) . $order_by_prop_meta->property_name;
+            if ($order_by_property_names{$name} = $db_property_data_map{$order_by_prop_meta->property_name}) {  # yes, single =
+                push @column_data, $order_by_property_names{$name};
+
+                my $table_column_names = $ds->_select_clause_columns_for_table_property_data($column_data[-1]);
+                $is_descending{$table_column_names->[0]} = $is_descending{$order_by_prop}; # copy for table.column designation
+                $order_by_property_names{$table_column_names->[0]} = $order_by_property_names{$name};
+            } else {
+                $order_by_non_column_data = 1;
+            }
+        }
+
+        if (@column_data) {
+            my $additional_order_by_columns = $ds->_select_clause_columns_for_table_property_data(@column_data);
+
+            # Strip out columns named in the original $order_by_columns list that now appear in the
+            # additional order by list so we don't duplicate columns names, and the additional columns
+            # appear earlier in the list
+            my %additional_order_by_columns = map { $_ => 1 } @$additional_order_by_columns;
+            my @existing_order_by_columns = grep { ! $additional_order_by_columns{$_} } @$order_by_columns;
+            $order_by_columns = [ map { $is_descending{$_} ? '-'. $_  : $_ } ( @$additional_order_by_columns, @existing_order_by_columns ) ];
+        }
+    }
+    $self->_order_by_property_names(\%order_by_property_names);
+    return ($order_by_columns, $order_by_non_column_data);
+}
+
+
 sub _init_rdbms {
     my $self = shift;
     my $rule_template = $self->rule_template;
@@ -198,7 +257,6 @@ sub _init_rdbms {
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
     my @all_id_property_names               = @{ $class_data->{all_id_property_names} };
     my @id_properties                       = @{ $class_data->{id_properties} };   
-    my $order_by_columns                    = $class_data->{order_by_columns} || [];
     
     #my $first_table_name                    = $class_data->{first_table_name};
     
@@ -245,53 +303,11 @@ sub _init_rdbms {
         @db_property_data = grep { ref($_) } values %group_by_property_names; 
     }
 
-    my %order_by_property_names;
-    my $order_by_non_column_data;
-    if ($order_by) {
-        my %db_property_data_map = map { $_->[1]->property_name => $_ } @db_property_data;
+    my($order_by_columns, $order_by_non_column_data)
+        = $self->_determine_complete_order_by_list($rule_template, $class_data,\@db_property_data);
 
-        # we only pull back columns we're ordering by if there is ordering happening
-        my %is_descending;
-        my @column_data;
-        for my $name (@$order_by) {
-            my $order_by_prop = $name;
-            if ($order_by_prop =~ m/^(-|\+)(.*)$/) {
-                $order_by_prop = $2;
-                $is_descending{$order_by_prop} = $1 eq '-';
-            }
-
-            my($order_by_prop_meta) = $class_meta->_concrete_property_meta_for_class_and_name($order_by_prop);
-            unless ($order_by_prop_meta) {
-                Carp::croak("Cannot order by '$name': Class $class_name has no property named '$order_by_prop'");
-            }
-
-            $name = ( $is_descending{$order_by_prop} ? '-' : '' ) . $order_by_prop_meta->property_name;
-            if ($order_by_property_names{$name} = $db_property_data_map{$order_by_prop_meta->property_name}) {  # yes, single =
-                push @column_data, $order_by_property_names{$name};
-
-                my $table_column_names = $ds->_select_clause_columns_for_table_property_data($column_data[-1]);
-                $is_descending{$table_column_names->[0]} = $is_descending{$order_by_prop}; # copy for table.column designation
-                $order_by_property_names{$table_column_names->[0]} = $order_by_property_names{$name};
-            } else {
-                $order_by_non_column_data = 1;
-            }
-        }
-
-        if (@column_data) {
-            my $additional_order_by_columns = $ds->_select_clause_columns_for_table_property_data(@column_data);
-
-            # Strip out columns named in the original $order_by_columns list that now appear in the
-            # additional order by list so we don't duplicate columns names, and the additional columns
-            # appear earlier in the list
-            my %additional_order_by_columns = map { $_ => 1 } @$additional_order_by_columns;
-            my @existing_order_by_columns = grep { ! $additional_order_by_columns{$_} } @$order_by_columns;
-            $order_by_columns = [ map { $is_descending{$_} ? '-'. $_  : $_ } ( @$additional_order_by_columns, @existing_order_by_columns ) ];
-        }
-    }
-    
     $self->_db_column_data(\@db_property_data);
     $self->_group_by_property_names(\%group_by_property_names);
-    $self->_order_by_property_names(\%order_by_property_names);
 
     my @sql_filters; 
     my @delegated_properties;
