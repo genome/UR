@@ -541,7 +541,6 @@ sub _normalize_class_description_impl {
     $old_class{has}             = delete $new_class{has};
     $old_class{attributes_have} = delete $new_class{attributes_have};
 
-
     # Install structures to track fully formatted property data.
     my $instance_properties = $new_class{has} = {};
     my $meta_properties     = $new_class{attributes_have} = {};
@@ -1342,6 +1341,14 @@ sub _complete_class_meta_object_definitions {
         my $ds_class = $data_source->{'is'};
         my $inline_ds = $ds_class->create_from_inline_class_data($self, $data_source);
         $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $inline_ds->id;
+    }
+
+    
+    if ($self->{'data_source_id'} and !defined($self->{table_name})) {
+        my $data_source_obj = UR::DataSource->get($self->{'data_source_id'}) || eval { $self->{'data_source_id'}->get() };
+        if ($data_source_obj and $data_source_obj->initializer_should_create_column_name_for_class_properties() ) {
+            $self->{table_name} = '__default__';
+        }
     }
 
     for my $parent_class_name (@$inheritance) {

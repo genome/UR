@@ -756,7 +756,8 @@ $DB::single=1;
 
     my @possible_file_info_list = $self->resolve_file_info_for_rule_and_path_spec($rule);
 
-    if (my $table_name = $class_meta->table_name) {
+    my $table_name = $class_meta->table_name;
+    if (defined($table_name) and $table_name ne '__default__') {
         # Tack the final file name onto the end if the class has a table name
         @possible_file_info_list = map { [ $_->[0] . "/$table_name", $_->[1] ] } @possible_file_info_list;
     }
