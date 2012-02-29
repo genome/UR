@@ -33,10 +33,6 @@ use Errno qw(EINTR EAGAIN EOPNOTSUPP);
 # file:/path/$to/File.ext?columns=[a,b,c]&sorted_columns=[a,b]
 
 # TODO
-# * Allow the rule to specify order-by that is different than the file's sort order
-#   maybe by setting the query plan's order_by_non_column_data flag?  First doing a
-#   search of files using the files' sort order, then re-sorting before returning
-#   data to higher layers?
 # * Change the comparator functions to accept a ref to the file's value to avoid
 #   copying large strings
 # * Support non-equality operators for properties that are part of the path spec
@@ -792,24 +788,43 @@ sub create_iterator_closure_for_rule {
     my $class_meta = $class_name->__meta__;
     my $rule_template = $rule->template;
 
+    # We're defering to the class metadata here because we don't yet know the
+    # pathnames of the files we'll be reading from.  If the columns_from_header flag
+    # is set, then there's no way of knowing what the columns are until then
     my @column_names = grep { defined }
                        map { $class_meta->column_for_property($_) }
                        $class_meta->all_property_names;
 
-    my $sorted_column_names = $self->sorted_columns || [];
-    my %sorted_column_names = map { $_ => 1 } @$sorted_column_names;
+    # FIXME - leaning on the sorted_columns property here means:
+    # 1) It's useless when used where the path spec is a directory and
+    #    classes have table_names, since each file is likely to have different
+    #    columns
+    # 2) If we ultimately end up reading from more than one file, all the files
+    #    must be sorted in the same way.  It's possible the user has sorted each
+    #    file differently, though in practice it would make for a lot of trouble
+    my %column_is_sorted_descending;
+    my @sorted_column_names = map { if (index($_, '-') == 0) {
+                                        my $col = $_;
+                                        substr($col, 0, 1, '');
+                                        $column_is_sorted_descending{$col} = 1;
+                                        $col;
+                                    } else {
+                                        $_;
+                                    }
+                              }
+                              @{ $self->sorted_columns || [] };
+    my %sorted_column_names = map { $_ => 1 } @sorted_column_names;
     my @unsorted_column_names = grep { ! exists $sorted_column_names{$_} } @column_names;
 
     my @rule_column_names_in_order;    # The order we should perform rule matches on - value is the name of the column in the file
     my @comparison_for_column;         # closures to call to perform the match - same order as @rule_column_names_in_order
     my %rule_column_name_to_comparison_index;
+    my %rule_column_name_is_sorted_descending;
 
     my(%property_for_column, %operator_for_column, %value_for_column); # These are used for logging
 
     my $resolve_comparator_for_column_name = sub {
         my $column_name = shift;
-
-        substr($column_name, 0, 1,'') if (index($column_name, '-') == 0);  # remove the '-' if it's sorted descending
 
         my $property_name = $class_meta->property_for_column($column_name);
         return unless $rule->specifies_value_for($property_name);
@@ -833,18 +848,19 @@ sub create_iterator_closure_for_rule {
         return 1;
     };
 
-    my $sorted_columns_in_rule_count = 0;  # How many columns we can consider when trying "the shortcut" for sorted data
+    my $sorted_columns_in_rule_count;  # How many columns we can consider when trying "the shortcut" for sorted data
     my %column_is_used_in_sorted_capacity;
-    foreach my $column_name ( @$sorted_column_names ) {
+    foreach my $column_name ( @sorted_column_names ) {
         if (! $resolve_comparator_for_column_name->($column_name)
               and ! defined($sorted_columns_in_rule_count)
         ) {
             # The first time we don't match a sorted column, record the index
-            $sorted_columns_in_rule_count = scalar(@rule_column_names_in_order)
+            $sorted_columns_in_rule_count = scalar(@rule_column_names_in_order);
         } else {
             $column_is_used_in_sorted_capacity{$column_name} = ' (sorted)';
         }
     }
+    $sorted_columns_in_rule_count ||= scalar(@rule_column_names_in_order);
 
     foreach my $column_name ( @unsorted_column_names ) {
         $resolve_comparator_for_column_name->($column_name);
@@ -922,6 +938,12 @@ sub create_iterator_closure_for_rule {
             my $property_name = $class_meta->property_for_column($column_name);
             $property_name_to_index_map{$property_name} = $i;
         }
+
+        # Convert the column_name keys here to column numbers
+        my %column_for_this_comparison_is_sorted_descending =
+                            #map { $column_name_to_index_map{$_} => $column_is_sorted_descending{$_} }
+                            map { $rule_column_name_to_comparison_index{$_} => $column_is_sorted_descending{$_} }
+                            keys %column_is_sorted_descending;
 
         # rule properties that aren't actually columns in the file should be
         # satisfied by the path resolution already, so we can strip them out of the
@@ -1033,7 +1055,9 @@ sub create_iterator_closure_for_rule {
                 for (my $i = 0; $i < $number_of_comparisons; $i++) {
                     my $comparison = $comparison_for_column_this_file[$i]->($next_record->[$rule_columns_in_order[$i]]);
 
-                    if ($comparison > 0 and $i < $sorted_columns_in_rule_count) {
+                    if ( ( ($column_for_this_comparison_is_sorted_descending{$i} and $comparison < 0) or $comparison > 0)
+                         and $i < $sorted_columns_in_rule_count
+                    ) {
                         # We've gone past the last thing that could possibly match
                         $logger->("FILE: $pathname $lines_read lines read for this request.  $lines_matched matches\n"
                                   . sprintf("FILE: TOTAL EXECUTE-FETCH TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time));
@@ -1079,7 +1103,7 @@ sub create_iterator_closure_for_rule {
 
     my @next_record_for_each_file;   # in the same order as @iterator_for_each_file
 
-    my @row_index_sort_order = map { $property_name_to_resultset_index_map{$_} } @$sorted_column_names;
+    my @row_index_sort_order = map { $property_name_to_resultset_index_map{$_} } @sorted_column_names;
     my $row_sorter = sub {
         my($idx_a,$idx_b) = shift;
 
