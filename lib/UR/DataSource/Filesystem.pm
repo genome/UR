@@ -1017,9 +1017,8 @@ sub create_iterator_closure_for_rule {
             $next_record = [ split($split_regex, $line, $ordered_column_names_count) ];
         };
 
-        my $iterator_this_file;
         my $number_of_comparisons = @comparison_for_column_this_file;
-        $iterator_this_file = sub {
+        my $iterator_this_file = sub {
             $log_first_fetch->();
 
             FOR_EACH_LINE:
@@ -1028,7 +1027,6 @@ sub create_iterator_closure_for_rule {
 
                 unless ($next_record) {
                     # Done reading from this file
-                    $iterator_this_file = \&UR::Util::null_sub;
                     return;
                 }
 
