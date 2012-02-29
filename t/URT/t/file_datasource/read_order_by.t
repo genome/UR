@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../../..";
 use URT;
-use Test::More tests => 23;
+use Test::More tests => 83;
 
 use IO::File;
 use File::Temp;
@@ -59,30 +59,46 @@ foreach my $cols ( [id => 0], [name => 1], [score => 2], [color => 3] ) {
     $sorters{$key} = sub { no warnings 'numeric'; $a->[$col] <=> $b->[$col] or $a->[$col] cmp $b->[$col] };
 }
 
-foreach my $sortby ( 0 .. 3 ) { # The number of columns in @data
-    # sort the data by one of the columns...
-    my @write_data = do { no warnings 'numeric';
-                       sort { $a->[$sortby] <=> $b->[$sortby] or $a->[$sortby] cmp $b->[$sortby] } @data;
-                     };
-    ok(save_data_to_file($datafile, \@write_data), "Saved data sorted by column $sortby $file_columns_in_order[$sortby]");
-    $data_source->sorted_columns( [ $data_source->columns->[$sortby] ] );
-
-    URT::Thing->unload();
-    my @results = map { [ @$_{@file_columns_in_order} ] } URT::Thing->get();
-    my $sort_sub = $sorters{'id'};
-    my @expected = sort $sort_sub @data;
-    is_deeply(\@results, \@expected, 'Got all objects in default (id) sort order');
-
-
-    for my $sort_prop ( 'name', 'score', 'color' ) {
-        URT::Thing->unload();
-        my @results = map { [ @$_{@file_columns_in_order} ] } URT::Thing->get(-order => [$sort_prop]);
-        my $sort_sub = $sorters{$sort_prop};
-        my @expected = sort $sort_sub @data;
-        is_deeply(\@results, \@expected, "Got all objects sorted by $sort_prop in the right order");
-    }
-    
+foreach my $cols ( [id => 0], [name => 1], [score => 2], [color => 3] ) {
+    my($key,$col) = @$cols;
+    $sorters{'-'.$key} = sub { no warnings 'numeric'; $b->[$col] <=> $a->[$col] or $b->[$col] cmp $a->[$col] };
 }
+
+foreach my $write_sort_order ( 'asc','desc' ) {
+    foreach my $sortby_col ( 0 .. 3 ) { # The number of columns in @data
+        # sort the data by one of the columns...
+        my %file_write_sorters = (
+            asc  => sub { no warnings 'numeric'; $a->[$sortby_col] <=> $b->[$sortby_col] or $a->[$sortby_col] cmp $b->[$sortby_col] },
+            desc => sub { no warnings 'numeric'; $b->[$sortby_col] <=> $a->[$sortby_col] or $b->[$sortby_col] cmp $a->[$sortby_col] },
+        );
+
+        my $write_sorter = $file_write_sorters{$write_sort_order};
+        my @write_data = sort $write_sorter @data;
+
+        ok(save_data_to_file($datafile, \@write_data),
+             "Saved data sorted by column $sortby_col $write_sort_order $file_columns_in_order[$sortby_col]");
+        $data_source->sorted_columns( [ ($write_sort_order eq 'desc' ? '-' : '') . $data_source->columns->[$sortby_col] ] );
+
+        URT::Thing->unload();
+        my @results = map { [ @$_{@file_columns_in_order} ] } URT::Thing->get();
+        my $sort_sub = $sorters{'id'};
+        my @expected = sort $sort_sub @data;
+        is_deeply(\@results, \@expected, 'Got all objects in default (id) sort order');
+    
+        foreach my $order_by_direction ( '', '-') {
+            for my $sort_prop ( 'id', 'name', 'score', 'color' ) {
+                URT::Thing->unload();
+                my $order_by_prop = $order_by_direction . $sort_prop;
+                my @results = map { [ @$_{@file_columns_in_order} ] } URT::Thing->get(-order => [ $order_by_prop]);
+                my $sort_sub = $sorters{$order_by_prop};
+                my @expected = sort $sort_sub @data;
+                is_deeply(\@results, \@expected, "Got all objects sorted by $order_by_prop in the right order");
+            }
+        }
+    }
+}
+
+
 
 sub save_data_to_file {
     my($fh, $datalist) = @_;

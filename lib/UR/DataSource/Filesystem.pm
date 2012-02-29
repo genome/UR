@@ -774,7 +774,6 @@ sub create_iterator_closure_for_rule {
     my $class_meta = $class_name->__meta__;
     my $rule_template = $rule->template;
 
-$DB::single=1;
     my @column_names = grep { defined }
                        map { $class_meta->column_for_property($_) }
                        $class_meta->all_property_names;
@@ -791,6 +790,8 @@ $DB::single=1;
 
     my $resolve_comparator_for_column_name = sub {
         my $column_name = shift;
+
+        substr($column_name, 0, 1,'') if (index($column_name, '-') == 0);  # remove the '-' if it's sorted descending
 
         my $property_name = $class_meta->property_for_column($column_name);
         return unless $rule->specifies_value_for($property_name);
@@ -866,7 +867,6 @@ $DB::single=1;
     }
 
     my $query_plan = $self->_resolve_query_plan($rule_template);
-$DB::single=1;
     if (@{ $query_plan->{'loading_templates'} } > 1) {
         Carp::croak(__PACKAGE__ . " does not support joins.  The rule was $rule");
     }
@@ -1046,11 +1046,10 @@ $DB::single=1;
         # the less efficient thing by first reading in all the matching rows in one go, sorting
         # them by ID, then iterating over the results
         unless ($self->file_is_sorted_as_requested($query_plan)) {
-$DB::single=1;
             my @resultset_indexes_to_sort = map { $column_name_to_resultset_index_map{$_} }
                                          @{ $query_plan->order_by_columns() };
             $iterator_this_file
-                = $self->_create_iterator_for_custom_sorted_columns($iterator_this_file, \@resultset_indexes_to_sort);
+                = $self->_create_iterator_for_custom_sorted_columns($iterator_this_file, $query_plan, \%column_name_to_resultset_index_map);
         }
 
         push @iterator_for_each_file, $iterator_this_file;
@@ -1118,21 +1117,34 @@ $DB::single=1;
 # the less efficient thing by first reading in all the matching rows in one go, sorting
 # them by ID, then iterating over the results
 sub _create_iterator_for_custom_sorted_columns {
-    my($self, $iterator_this_file, $resultset_indexes_to_sort) = @_;
+    my($self, $iterator_this_file, $query_plan, $column_name_to_resultset_index_map) = @_;
 
-$DB::single=1;
     my @matching;
     while (my $row = $iterator_this_file->()) {
         push @matching, $row;   # save matches as [id, rowref]
     }
 
+    unless (@matching) {
+        return \&UR::Util::null_sub;   # Easy, no matches
+    }
+
     my @sorters;
     {   no warnings 'numeric';
         no warnings 'uninitialized';
-        @sorters = map {
-                        my $col = $_; sub { $a->[$col] <=> $b->[$col] or $a->[$col] cmp $b->[$col] }
+        @sorters =  map { my($col_idx, $descending) = @$_;
+                          $descending ? sub { $b->[$col_idx] <=> $a->[$col_idx] or $b->[$col_idx] cmp $a->[$col_idx] }
+                                      : sub { $a->[$col_idx] <=> $b->[$col_idx] or $a->[$col_idx] cmp $b->[$col_idx] }
+                        }
+                    map { my $col_name = $_;
+                          my $descending = 0;
+                          if (index($col_name, '-') == 0) {
+                             $descending = 1;
+                             substr($col_name, 0, 1, '');  # remove the -
+                          }
+                          my $col_idx = $column_name_to_resultset_index_map->{$col_name};
+                          [ $col_idx, $descending ];
                       }
-                  @$resultset_indexes_to_sort;
+                  @{ $query_plan->order_by_columns };
     }
 
     my $sort_by_order_by_columns;
