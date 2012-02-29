@@ -336,6 +336,24 @@ sub resolve_file_info_for_rule_and_path_spec {
 }
 
 
+# We're overriding path() so the first time it's called, it will
+# pick one from the list and then stay with that one for the life
+# of the program
+sub path {
+    my $self = shift;
+
+    unless ($self->{'__cached_path'}) {
+        my $path = $self->__path();
+        if (ref($path) and ref($path) eq 'ARRAY') {
+            my $count = @$path;
+            my $idx = $$ % $count;
+            $self->{'_cached_path'} = $path->[$idx];
+        } else {
+            $self->{'_cached_path'} = $path;
+        }
+    }
+    return $self->{'_cached_path'};
+}
 
 # Names of creation params that we should force to be listrefs
 our %creation_param_is_list = map { $_ => 1 } qw( columns sorted_columns );
