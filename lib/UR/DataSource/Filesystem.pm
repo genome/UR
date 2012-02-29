@@ -33,8 +33,6 @@ use Errno qw(EINTR EAGAIN EOPNOTSUPP);
 # file:/path/$to/File.ext?columns=[a,b,c]&sorted_columns=[a,b]
 
 # TODO
-# * Change the comparator functions to accept a ref to the file's value to avoid
-#   copying large strings
 # * Support non-equality operators for properties that are part of the path spec
 
 
@@ -418,10 +416,10 @@ sub _comparator_for_operator_and_property {
 
             # numeric 'between' comparison
             return sub {
-                       return -1 if ($_[0] eq '');
-                       if ($_[0] < $value->[0]) {
+                       return -1 if (${$_[0]} eq '');
+                       if (${$_[0]} < $value->[0]) {
                            return -1;
-                       } elsif ($_[0] > $value->[1]) {
+                       } elsif (${$_[0]} > $value->[1]) {
                            return 1;
                        } else {
                            return 0;
@@ -435,10 +433,10 @@ sub _comparator_for_operator_and_property {
 
             # A string 'between' comparison
             return sub {
-                       return -1 if ($_[0] eq '');
-                       if ($_[0] lt $value->[0]) {
+                       return -1 if (${$_[0]} eq '');
+                       if (${$_[0]} lt $value->[0]) {
                            return -1;
-                       } elsif ($_[0] gt $value->[1]) {
+                       } elsif (${$_[0]} gt $value->[1]) {
                            return 1;
                        } else {
                            return 0;
@@ -456,14 +454,14 @@ sub _comparator_for_operator_and_property {
             # but don't actually match any of the items in the list
             @$value = sort { $a <=> $b } @$value;  # sort the values first
             return sub {
-                       return -1 if ($_[0] eq '');
-                       if ($_[0] < $value->[0]) {
+                       return -1 if (${$_[0]} eq '');
+                       if (${$_[0]} < $value->[0]) {
                            return -1;
-                       } elsif ($_[0] > $value->[-1]) {
+                       } elsif (${$_[0]} > $value->[-1]) {
                            return 1;
                        } else {
                            foreach ( @$value ) {
-                               return 0 if $_[0] == $_;
+                               return 0 if ${$_[0]} == $_;
                            }
                            return -1;
                        }
@@ -473,13 +471,13 @@ sub _comparator_for_operator_and_property {
             # A string 'in' comparison
             @$value = sort { $a cmp $b } @$value;
             return sub {
-                       if ($_[0] lt $value->[0]) {
+                       if (${$_[0]} lt $value->[0]) {
                            return -1;
-                       } elsif ($_[0] gt $value->[-1]) {
+                       } elsif (${$_[0]} gt $value->[-1]) {
                            return 1;
                        } else {
                            foreach ( @$value ) {
-                               return 0 if $_[0] eq $_;
+                               return 0 if ${$_[0]} eq $_;
                            }
                            return -1;
                        }
@@ -494,9 +492,9 @@ sub _comparator_for_operator_and_property {
 
         if ($property->is_numeric and $self->_things_in_list_are_numeric($value)) {
             return sub {
-                return -1 if ($_[0] eq '');
+                return -1 if (${$_[0]} eq '');
                 foreach ( @$value ) {
-                    return -1 if $_[0] == $_;
+                    return -1 if ${$_[0]} == $_;
                 }
                 return 0;
             }
@@ -504,7 +502,7 @@ sub _comparator_for_operator_and_property {
         } else {
             return sub {
                 foreach ( @$value ) {
-                    return -1 if $_[0] eq $_;
+                    return -1 if ${$_[0]} eq $_;
                 }
                 return 0;
             }
@@ -526,8 +524,8 @@ sub _comparator_for_operator_and_property {
         $value =~ s/(?<!\\)_/./g;
         my $regex = qr($value);
         return sub {
-                   return -1 if ($_[0] eq '');
-                   if ($_[0] =~ $regex) {
+                   return -1 if (${$_[0]} eq '');
+                   if (${$_[0]} =~ $regex) {
                        return 0;
                    } else {
                        return 1;
@@ -540,8 +538,8 @@ sub _comparator_for_operator_and_property {
         $value =~ s/(?<!\\)_/./;
         my $regex = qr($value);
         return sub {
-                   return -1 if ($_[0] eq '');
-                   if ($_[0] =~ $regex) {
+                   return -1 if (${$_[0]} eq '');
+                   if (${$_[0]} =~ $regex) {
                        return 1;
                    } else {
                        return 0;
@@ -554,41 +552,41 @@ sub _comparator_for_operator_and_property {
         # Basic numeric comparisons
         if ($operator eq '=') {
             return sub {
-                       return -1 if ($_[0] eq ''); # null always != a number
-                       return $_[0] <=> $value;
+                       return -1 if (${$_[0]} eq ''); # null always != a number
+                       return ${$_[0]} <=> $value;
                    };
         } elsif ($operator eq '<') {
             return sub {
-                       return -1 if ($_[0] eq ''); # null always != a number
-                       $_[0] < $value ? 0 : 1;
+                       return -1 if (${$_[0]} eq ''); # null always != a number
+                       ${$_[0]} < $value ? 0 : 1;
                    };
         } elsif ($operator eq '<=') {
             return sub {
-                       return -1 if ($_[0] eq ''); # null always != a number
-                       $_[0] <= $value ? 0 : 1;
+                       return -1 if (${$_[0]} eq ''); # null always != a number
+                       ${$_[0]} <= $value ? 0 : 1;
                    };
         } elsif ($operator eq '>') {
             return sub {
-                       return -1 if ($_[0] eq ''); # null always != a number
-                       $_[0] > $value ? 0 : -1;
+                       return -1 if (${$_[0]} eq ''); # null always != a number
+                       ${$_[0]} > $value ? 0 : -1;
                    };
         } elsif ($operator eq '>=') {
             return sub {
-                       return -1 if ($_[0] eq ''); # null always != a number
-                       $_[0] >= $value ? 0 : -1;
+                       return -1 if (${$_[0]} eq ''); # null always != a number
+                       ${$_[0]} >= $value ? 0 : -1;
                    };
         } elsif ($operator eq 'true') {
             return sub {
-                       $_[0] ? 0 : -1;
+                       ${$_[0]} ? 0 : -1;
                    };
         } elsif ($operator eq 'false') {
             return sub {
-                       $_[0] ? -1 : 0;
+                       ${$_[0]} ? -1 : 0;
                    };
         } elsif ($operator eq '!=' or $operator eq 'ne') {
              return sub {
-                       return 0 if ($_[0] eq '');  # null always != a number
-                       $_[0] != $value ? 0 : -1;
+                       return 0 if (${$_[0]} eq '');  # null always != a number
+                       ${$_[0]} != $value ? 0 : -1;
              }
         }
 
@@ -596,38 +594,38 @@ sub _comparator_for_operator_and_property {
         # Basic string comparisons
         if ($operator eq '=') {
             return sub {
-                       return -1 if ($_[0] eq '' xor $value eq '');
-                       return $_[0] cmp $value;
+                       return -1 if (${$_[0]} eq '' xor $value eq '');
+                       return ${$_[0]} cmp $value;
                    };
         } elsif ($operator eq '<') {
             return sub {
-                       $_[0] lt $value ? 0 : 1;
+                       ${$_[0]} lt $value ? 0 : 1;
                    };
         } elsif ($operator eq '<=') {
             return sub {
-                       return -1 if ($_[0] eq '' or $value eq '');
-                       $_[0] le $value ? 0 : 1;
+                       return -1 if (${$_[0]} eq '' or $value eq '');
+                       ${$_[0]} le $value ? 0 : 1;
                    };
         } elsif ($operator eq '>') {
             return sub {
-                       $_[0] gt $value ? 0 : -1;
+                       ${$_[0]} gt $value ? 0 : -1;
                    };
         } elsif ($operator eq '>=') {
             return sub {
-                       return -1 if ($_[0] eq '' or $value eq '');
-                       $_[0] ge $value ? 0 : -1;
+                       return -1 if (${$_[0]} eq '' or $value eq '');
+                       ${$_[0]} ge $value ? 0 : -1;
                    };
         } elsif ($operator eq 'true') {
             return sub {
-                       $_[0] ? 0 : -1;
+                       ${$_[0]} ? 0 : -1;
                    };
         } elsif ($operator eq 'false') {
             return sub {
-                       $_[0] ? -1 : 0;
+                       ${$_[0]} ? -1 : 0;
                    };
         } elsif ($operator eq '!=' or $operator eq 'ne') {
              return sub {
-                       $_[0] ne $value ? 0 : -1;
+                       ${$_[0]} ne $value ? 0 : -1;
              }
         }
     }
@@ -1053,7 +1051,7 @@ sub create_iterator_closure_for_rule {
                 }
 
                 for (my $i = 0; $i < $number_of_comparisons; $i++) {
-                    my $comparison = $comparison_for_column_this_file[$i]->($next_record->[$rule_columns_in_order[$i]]);
+                    my $comparison = $comparison_for_column_this_file[$i]->(\$next_record->[$rule_columns_in_order[$i]]);
 
                     if ( ( ($column_for_this_comparison_is_sorted_descending{$i} and $comparison < 0) or $comparison > 0)
                          and $i < $sorted_columns_in_rule_count
