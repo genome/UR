@@ -757,6 +757,16 @@ sub _generate_class_data_for_loading {
     return $class_data;
 }
 
+
+# Needed for the QueryPlan's processing of order-by params
+# Params are a list of the 4-tuples [class-meta, prop-meta, table-name, object-num]
+sub _select_clause_columns_for_table_property_data {
+    my $self = shift;
+
+
+    return [ map { $_->[1]->column_name } @_ ];
+}
+
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
