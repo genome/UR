@@ -1137,19 +1137,9 @@ sub create_iterator_closure_for_rule {
                             @{ $query_plan->order_by_columns };
 
     my @resultset_index_sort_sub
-            = map { if ($column_is_numeric{$_}) {
-                        if ($column_is_sorted_descending{$_}) {
-                            &__descending_numeric_sorter_for_column($property_name_to_resultset_index_map{$_});
-                        } else {
-                            &__ascending_numeric_sorter_for_column($property_name_to_resultset_index_map{$_});
-                        }
-                    } else {
-                        if ($column_is_sorted_descending{$_}) {
-                            &__descending_stringwise_sorter_for_column($property_name_to_resultset_index_map{$_});
-                        } else {
-                            &__ascending_stringwise_sorter_for_column($property_name_to_resultset_index_map{$_});
-                        }
-                    }
+            = map { &_resolve_sorter_for( is_numeric => $column_is_numeric{$_},
+                                          is_descending => $column_is_sorted_descending{$_},
+                                          column_index => $property_name_to_resultset_index_map{$_});
                   }
                   @sorted_column_names;
 
@@ -1205,23 +1195,31 @@ sub create_iterator_closure_for_rule {
 
 
 # Constructors for subs to sort appropriately
-sub __ascending_numeric_sorter_for_column {
-    my $col_idx = shift;
-    return sub($$) { $_[0]->[$col_idx] <=> $_[1]->[$col_idx] };
-}
-sub __descending_numeric_sorter_for_column {
-    my $col_idx = shift;
-    return sub($$) { $_[1]->[$col_idx] <=> $_[0]->[$col_idx] };
-}
-sub __ascending_stringwise_sorter_for_column {
-    my $col_idx = shift;
-    return sub($$) { $_[0]->[$col_idx] cmp $_[1]->[$col_idx] };
-}
-sub __descending_stringwise_sorter_for_column {
-    my $col_idx = shift;
-    return sub($$) { $_[1]->[$col_idx] cmp $_[0]->[$col_idx] };
-}
+sub _resolve_sorter_for {
+    my %params = @_;
 
+    my $col_idx = $params{'column_index'};
+
+    my $is_descending = (exists($params{'is_descending'}) && $params{'is_descending'})
+                       ||
+                        (exists($params{'is_ascending'}) && $params{'is_ascending'});
+    my $is_numeric = (exists($params{'is_numeric'}) && $params{'is_numeric'})
+                    ||
+                     (exists($params{'is_string'}) && $params{'is_string'});
+    if ($is_descending) {
+        if ($is_numeric) {
+            return sub($$) { $_[1]->[$col_idx] <=> $_[0]->[$col_idx] };
+        } else {
+            return sub($$) { $_[1]->[$col_idx] cmp $_[0]->[$col_idx] };
+        }
+    } else {
+        if ($is_numeric) {
+            return sub($$) { $_[0]->[$col_idx] <=> $_[1]->[$col_idx] };
+        } else {
+            return sub($$) { $_[0]->[$col_idx] cmp $_[1]->[$col_idx] };
+        }
+    }
+}
 
 # Higher layers in the loading logic require rows from the data source to be returned
 # in ID order. If the file contents is not sorted primarily by ID, then we need to do
@@ -1249,21 +1247,7 @@ sub _create_iterator_for_custom_sorted_columns {
     my @sorters;
     {   no warnings 'numeric';
         no warnings 'uninitialized';
-        @sorters =  map { my($col_idx, $descending, $is_numeric) = @$_;
-                          if ($descending) {
-                              if ($is_numeric) {
-                                  &__descending_numeric_sorter_for_column($col_idx);
-                              } else {
-                                  &__descending_stringwise_sorter_for_column($col_idx);
-                              }
-                          } else {
-                              if ($is_numeric) {
-                                  &__ascending_numeric_sorter_for_column($col_idx);
-                              } else {
-                                  &__ascending_stringwise_sorter_for_column($col_idx);
-                              }
-                          }
-                        }
+        @sorters =  map { &_resolve_sorter_for(%$_) }
                     map { my $col_name = $_;
                           my $descending = 0;
                           if (index($col_name, '-') == 0) {
@@ -1271,7 +1255,7 @@ sub _create_iterator_for_custom_sorted_columns {
                              substr($col_name, 0, 1, '');  # remove the -
                           }
                           my $col_idx = $column_name_to_resultset_index_map->{$col_name};
-                          [ $col_idx, $descending, $column_is_numeric{$col_name} ];
+                          { column_index => $col_idx, is_descending => $descending, is_numeric => $column_is_numeric{$col_name} };
                       }
                   @{ $query_plan->order_by_columns };
     }
