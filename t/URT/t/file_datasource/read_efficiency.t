@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../../..";
 use URT;
-use Test::More tests => 26;
+use Test::More tests => 32;
 
 use IO::File;
 use File::Temp;
@@ -158,6 +158,24 @@ is($file_new, 1, 'One new filehandle was created');
 is($file_getline, 6, 'getline() was called 6 times');
 is($file_DESTROY, 1, 'DESTROY was called one time');
 
+
+
+ok($data_source->sorted_columns(['name','-is_upper']),
+    'Configure the data source to be sorted by name and -is_upper');
+
+URT::Letter->unload();
+&clear_trackers();
+@matches = URT::Letter->get('name between' => ['BBB','DDD']);
+@results = map { [ @$_{@file_columns_in_order} ] } @matches;
+is(scalar(@results), 3, 'Got 3 results matching name between BBB and DDD');
+is_deeply(\@results,
+          [ [ 2, 'BBB', 1],
+            [ 3, 'CCC', 1],
+            [ 4, 'DDD', 1] ],
+    'Got the right data back');
+is($file_new, 1, 'One new filehandle was created');
+is($file_getline, 5, 'getline() was called 5 times');
+is($file_DESTROY, 1, 'DESTROY was called one time');
 
 
 sub save_data_to_file {
