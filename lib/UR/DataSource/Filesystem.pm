@@ -92,6 +92,16 @@ sub _logger {
 }
 
 
+# The behavior for handling the filehandles after fork is contained in
+# the read_record_from_file closure.  There's nothing special for the
+# data source to do
+sub prepare_for_fork {
+    return 1;
+}
+sub finish_up_after_fork {
+    return 1;
+}
+
 sub _replace_vars_with_values_in_pathname {
     my($self, $rule, $string, $prop_values_hash) = @_;
 
@@ -920,6 +930,7 @@ sub create_iterator_closure_for_rule {
         my @properties_from_path_spec = keys %$property_values_from_path_spec;
         my @values_from_path_spec     = values %$property_values_from_path_spec;
 
+        my $pid = $$;    # For tracking whether there's been a fork()
         my $fh = $handle_class->new($pathname);
         unless ($fh) {
             $logger->("FILE: Skipping $pathname because it did not open: $!\n");
@@ -996,6 +1007,20 @@ sub create_iterator_closure_for_rule {
 
             # Make sure some wise guy hasn't changed this out from under us
             local $/ = $record_separator;
+
+            if ($pid != $$) {
+                # There's been a fork() between the original opening and now
+                # This filehandle is no longer valid to read from, but tell()
+                # should still report the right position
+                my $pos = $fh->tell();
+                $logger->("FILE: reopening file $pathname and seeking to position $pos after fork()\n");
+                my $fh = $handle_class->new($pathname);
+                unless ($fh) {
+                    $logger->("FILE: Reopening $pathname after fork() failed: $!\n");
+                    return;   # behave if we're at EOF
+                }
+                $fh->seek($pos, 0);  # fast-forward to the old position
+            }
 
             my $line;
             READ_LINE_FROM_FILE:
