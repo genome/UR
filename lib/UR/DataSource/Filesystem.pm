@@ -937,10 +937,10 @@ sub create_iterator_closure_for_rule {
             $property_name_to_index_map{$property_name} = $i;
         }
 
-        # Convert the column_name keys here to column numbers
+        # Convert the column_name keys here to column numbers in the comparison list
         my %column_for_this_comparison_is_sorted_descending =
-                            #map { $column_name_to_index_map{$_} => $column_is_sorted_descending{$_} }
                             map { $rule_column_name_to_comparison_index{$_} => $column_is_sorted_descending{$_} }
+                            grep { exists $rule_column_name_to_comparison_index{$_} }
                             keys %column_is_sorted_descending;
 
         # rule properties that aren't actually columns in the file should be
