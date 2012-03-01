@@ -946,8 +946,6 @@ sub create_iterator_closure_for_rule {
         # rule properties that aren't actually columns in the file should be
         # satisfied by the path resolution already, so we can strip them out of the
         # list of columns to test
-        #my @rule_column_names_for_this_file = grep { exists $column_name_to_index_map{$_} }
-        #                                 @rule_column_names_in_order;
         my @rule_columns_in_order = map { $column_name_to_index_map{$_} }
                                     grep { exists $column_name_to_index_map{$_} }
                                     @rule_column_names_in_order;
@@ -992,6 +990,8 @@ sub create_iterator_closure_for_rule {
 
         my $next_record;
 
+        # This sub reads the next record (line) from the file, splits the line into
+        # columns and puts the data into @$next_record
         my $read_record_from_file = sub {
 
             # Make sure some wise guy hasn't changed this out from under us
@@ -1038,7 +1038,12 @@ sub create_iterator_closure_for_rule {
         };
 
         my $number_of_comparisons = @comparison_for_column_this_file;
-        my $iterator_this_file = sub {
+
+        # The file filter iterator.
+        # This sub looks at @$next_record and applies the comparator functions in order.
+        # If it passes all of them, it constructs a resultset row and passes it up to the
+        # multiplexer iterator
+        my $file_filter_iterator = sub {
             $log_first_fetch->();
 
             FOR_EACH_LINE:
@@ -1086,11 +1091,11 @@ sub create_iterator_closure_for_rule {
         unless ($self->file_is_sorted_as_requested($query_plan)) {
             my @resultset_indexes_to_sort = map { $column_name_to_resultset_index_map{$_} }
                                          @{ $query_plan->order_by_columns() };
-            $iterator_this_file
-                = $self->_create_iterator_for_custom_sorted_columns($iterator_this_file, $query_plan, \%column_name_to_resultset_index_map);
+            $file_filter_iterator
+                = $self->_create_iterator_for_custom_sorted_columns($file_filter_iterator, $query_plan, \%column_name_to_resultset_index_map);
         }
 
-        push @iterator_for_each_file, $iterator_this_file;
+        push @iterator_for_each_file, $file_filter_iterator;
     }
 
     if (! @iterator_for_each_file) {
@@ -1122,7 +1127,10 @@ sub create_iterator_closure_for_rule {
         }
     };
 
-    my $iterator = sub {
+    # This is the iterator returned to the Context, and knows about all the individual
+    # file filter iterators.  It compares the next resultset from each of them and
+    # returns the next resultset to the Context
+    my $multiplex_iterator = sub {
         return unless @iterator_for_each_file;  # if they're all run out
 
         my $lowest_slot;
@@ -1154,7 +1162,7 @@ sub create_iterator_closure_for_rule {
         return $retval;
     };
 
-    return $iterator;
+    return $multiplex_iterator;
 }
 
 # Higher layers in the loading logic require rows from the data source to be returned
