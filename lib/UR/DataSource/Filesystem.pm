@@ -827,7 +827,6 @@ sub create_iterator_closure_for_rule {
     my @rule_column_names_in_order;    # The order we should perform rule matches on - value is the name of the column in the file
     my @comparison_for_column;         # closures to call to perform the match - same order as @rule_column_names_in_order
     my %rule_column_name_to_comparison_index;
-    my %rule_column_name_is_sorted_descending;
 
     my(%property_for_column, %operator_for_column, %value_for_column); # These are used for logging
 
@@ -948,7 +947,7 @@ sub create_iterator_closure_for_rule {
             $property_name_to_index_map{$property_name} = $i;
         }
 
-        # Convert the column_name keys here to column numbers in the comparison list
+        # Convert the column_name keys here to indexes into the comparison list
         my %column_for_this_comparison_is_sorted_descending =
                             map { $rule_column_name_to_comparison_index{$_} => $column_is_sorted_descending{$_} }
                             grep { exists $rule_column_name_to_comparison_index{$_} }
@@ -1131,25 +1130,39 @@ sub create_iterator_closure_for_rule {
 
     my @next_record_for_each_file;   # in the same order as @iterator_for_each_file
 
-    my @row_index_sort_order = map { $property_name_to_resultset_index_map{$_} } @sorted_column_names;
+    my %column_is_numeric = map { $_->column_name => $_->is_numeric }
+                            map { $class_meta->property_meta_for_name($_) }
+                            map { $class_meta->property_for_column($_) }
+                            map { index($_, '-') == 0 ? substr($_, 1) : $_ }
+                            @{ $query_plan->order_by_columns };
+
+    my @resultset_index_sort_sub
+            = map { if ($column_is_numeric{$_}) {
+                        if ($column_is_sorted_descending{$_}) {
+                            &__descending_numeric_sorter_for_column($property_name_to_resultset_index_map{$_});
+                        } else {
+                            &__ascending_numeric_sorter_for_column($property_name_to_resultset_index_map{$_});
+                        }
+                    } else {
+                        if ($column_is_sorted_descending{$_}) {
+                            &__descending_stringwise_sorter_for_column($property_name_to_resultset_index_map{$_});
+                        } else {
+                            &__ascending_stringwise_sorter_for_column($property_name_to_resultset_index_map{$_});
+                        }
+                    }
+                  }
+                  @sorted_column_names;
 
     my %resultset_idx_is_sorted_descending = map { $column_name_to_resultset_index_map{$_} => 1 }
                                              keys %column_is_sorted_descending;
-    my $row_sorter = sub {
+    my $resultset_sorter = sub {
         my($idx_a,$idx_b) = shift;
 
-        for (my $i = 0; $i < @row_index_sort_order; $i++) {
-            my $column_num = $row_index_sort_order[$i];
-
-            my $cmp = $next_record_for_each_file[$idx_a]->[$column_num] <=> $next_record_for_each_file[$idx_b]->[$column_num]
-                       ||
-                      $next_record_for_each_file[$idx_a]->[$column_num] cmp $next_record_for_each_file[$idx_b]->[$column_num];
-
-            if ($cmp and $resultset_idx_is_sorted_descending{$column_num}) {
-                $cmp = 0 - $cmp;
-            }
+        foreach my $sort_sub ( @resultset_index_sort_sub ) {
+            my $cmp = $sort_sub->($next_record_for_each_file[$idx_a], $next_record_for_each_file[$idx_b]);
             return $cmp if $cmp;  # done if they're not equal
         }
+        return 0;
     };
 
     # This is the iterator returned to the Context, and knows about all the individual
@@ -1176,7 +1189,7 @@ sub create_iterator_closure_for_rule {
                 next;
             }
 
-            my $cmp = $row_sorter->($lowest_slot, $i);
+            my $cmp = $resultset_sorter->($lowest_slot, $i);
             if ($cmp > 0) {
                 $lowest_slot = $i;
             }
@@ -1189,6 +1202,26 @@ sub create_iterator_closure_for_rule {
 
     return $multiplex_iterator;
 }
+
+
+# Constructors for subs to sort appropriately
+sub __ascending_numeric_sorter_for_column {
+    my $col_idx = shift;
+    return sub($$) { $_[0]->[$col_idx] <=> $_[1]->[$col_idx] };
+}
+sub __descending_numeric_sorter_for_column {
+    my $col_idx = shift;
+    return sub($$) { $_[1]->[$col_idx] <=> $_[0]->[$col_idx] };
+}
+sub __ascending_stringwise_sorter_for_column {
+    my $col_idx = shift;
+    return sub($$) { $_[0]->[$col_idx] cmp $_[1]->[$col_idx] };
+}
+sub __descending_stringwise_sorter_for_column {
+    my $col_idx = shift;
+    return sub($$) { $_[1]->[$col_idx] cmp $_[0]->[$col_idx] };
+}
+
 
 # Higher layers in the loading logic require rows from the data source to be returned
 # in ID order. If the file contents is not sorted primarily by ID, then we need to do
@@ -1206,12 +1239,30 @@ sub _create_iterator_for_custom_sorted_columns {
         return \&UR::Util::null_sub;   # Easy, no matches
     }
 
+    my $class_meta = $query_plan->class_name->__meta__;
+    my %column_is_numeric = map { $_->column_name => $_->is_numeric }
+                            map { $class_meta->property_meta_for_name($_) }
+                            map { $class_meta->property_for_column($_) }
+                            map { index($_, '-') == 0 ? substr($_,1) : $_ }
+                            @{ $query_plan->order_by_columns };
+
     my @sorters;
     {   no warnings 'numeric';
         no warnings 'uninitialized';
-        @sorters =  map { my($col_idx, $descending) = @$_;
-                          $descending ? sub { $b->[$col_idx] <=> $a->[$col_idx] or $b->[$col_idx] cmp $a->[$col_idx] }
-                                      : sub { $a->[$col_idx] <=> $b->[$col_idx] or $a->[$col_idx] cmp $b->[$col_idx] }
+        @sorters =  map { my($col_idx, $descending, $is_numeric) = @$_;
+                          if ($descending) {
+                              if ($is_numeric) {
+                                  &__descending_numeric_sorter_for_column($col_idx);
+                              } else {
+                                  &__descending_stringwise_sorter_for_column($col_idx);
+                              }
+                          } else {
+                              if ($is_numeric) {
+                                  &__ascending_numeric_sorter_for_column($col_idx);
+                              } else {
+                                  &__ascending_stringwise_sorter_for_column($col_idx);
+                              }
+                          }
                         }
                     map { my $col_name = $_;
                           my $descending = 0;
@@ -1220,7 +1271,7 @@ sub _create_iterator_for_custom_sorted_columns {
                              substr($col_name, 0, 1, '');  # remove the -
                           }
                           my $col_idx = $column_name_to_resultset_index_map->{$col_name};
-                          [ $col_idx, $descending ];
+                          [ $col_idx, $descending, $column_is_numeric{$col_name} ];
                       }
                   @{ $query_plan->order_by_columns };
     }
@@ -1231,10 +1282,8 @@ sub _create_iterator_for_custom_sorted_columns {
     } else {
         $sort_by_order_by_columns
             = sub($$) {
-                local $a = $_[0];
-                local $b = $_[1];
                 foreach (@sorters) {
-                    if (my $rv = $_->()) {
+                    if (my $rv = $_->(@_)) {
                         return $rv;
                     }
                 }
