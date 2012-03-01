@@ -1102,6 +1102,9 @@ sub create_iterator_closure_for_rule {
     my @next_record_for_each_file;   # in the same order as @iterator_for_each_file
 
     my @row_index_sort_order = map { $property_name_to_resultset_index_map{$_} } @sorted_column_names;
+
+    my %resultset_idx_is_sorted_descending = map { $column_name_to_resultset_index_map{$_} => 1 }
+                                             keys %column_is_sorted_descending;
     my $row_sorter = sub {
         my($idx_a,$idx_b) = shift;
 
@@ -1111,6 +1114,10 @@ sub create_iterator_closure_for_rule {
             my $cmp = $next_record_for_each_file[$idx_a]->[$column_num] <=> $next_record_for_each_file[$idx_b]->[$column_num]
                        ||
                       $next_record_for_each_file[$idx_a]->[$column_num] cmp $next_record_for_each_file[$idx_b]->[$column_num];
+
+            if ($cmp and $resultset_idx_is_sorted_descending{$column_num}) {
+                $cmp = 0 - $cmp;
+            }
             return $cmp if $cmp;  # done if they're not equal
         }
     };
