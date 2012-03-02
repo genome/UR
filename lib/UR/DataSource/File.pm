@@ -1221,7 +1221,7 @@ sub _sync_database {
         return;
     }
 
-    $self->_set_all_specified_objects_saved_committed(@$changed_objects);
+    $self->_set_specified_objects_saved_committed($changed_objects);
     return 1;
 }
 
