@@ -6,6 +6,7 @@ use warnings;
 our $VERSION = "0.37"; # UR $VERSION;
 
 use File::Basename;
+use File::Path;
 use List::Util;
 use Scalar::Util;
 use Errno qw(EINTR EAGAIN EOPNOTSUPP);
@@ -91,7 +92,6 @@ sub _logger {
     }
 }
 
-
 # The behavior for handling the filehandles after fork is contained in
 # the read_record_from_file closure.  There's nothing special for the
 # data source to do
@@ -102,15 +102,47 @@ sub finish_up_after_fork {
     return 1;
 }
 
+# Like UR::BoolExpr::specifies_value_for, but works on either a BoolExpr
+# or another object.  In the latter case, it returns true if the object's
+# class has the given property
+sub __specifies_value_for {
+    my($self, $thing, $property_name) = @_;
+
+    return $thing->isa('UR::BoolExpr')
+            ? $thing->specifies_value_for($property_name)
+            : $thing->__meta__->property_meta_for_name($property_name);
+}
+
+# Like UR::BoolExpr::value_for, but works on either a BoolExpr
+# or another object.
+sub __value_for {
+    my($self, $thing, $property_name) = @_;
+
+    return $thing->isa('UR::BoolExpr')
+            ? $thing->value_for($property_name)
+            : $thing->$property_name;
+}
+
+# Like UR::BoolExpr::subject_class_name, but works on either a BoolExpr
+# or another object.
+sub __subject_class_name {
+    my($self, $thing) = @_;
+
+    return $thing->isa('UR::BoolExpr')
+            ? $thing->subject_class_name()
+            : $thing->class;
+}
+
+
 sub _replace_vars_with_values_in_pathname {
-    my($self, $rule, $string, $prop_values_hash) = @_;
+    my($self, $rule_or_obj, $string, $prop_values_hash) = @_;
 
     $prop_values_hash ||= {};
 
     # Match something like /some/path/$var/name or /some/path${var}.ext/name
     if ($string =~ m/\$\{?(\w+)\}?/) {
         my $varname = $1;
-        my $subject_class_name = $rule->subject_class_name;
+        my $subject_class_name = $self->__subject_class_name($rule_or_obj);
         unless ($subject_class_name->__meta__->property_meta_for_name($varname)) {
             Carp::croak("Invalid 'server' for data source ".$self->id
                         . ": Path spec $string requires a value for property $varname "
@@ -118,8 +150,8 @@ sub _replace_vars_with_values_in_pathname {
         }
         my @string_replacement_values;
 
-        if ($rule->specifies_value_for($varname)) {
-            my @property_values = $rule->value_for($varname);
+        if ($self->__specifies_value_for($rule_or_obj, $varname)) {
+            my @property_values = $self->__value_for($rule_or_obj, $varname);
             if (@property_values == 1 and ref($property_values[0]) eq 'ARRAY') {
                 @property_values = @{$property_values[0]};
             }
@@ -155,7 +187,7 @@ sub _replace_vars_with_values_in_pathname {
                      @string_replacement_values;
 
         # recursion to process the next variable replacement
-        return map { $self->_replace_vars_with_values_in_pathname($rule, @$_) } @return;
+        return map { $self->_replace_vars_with_values_in_pathname($rule_or_obj, @$_) } @return;
 
     } else {
         return [ $string, $prop_values_hash ];
@@ -163,10 +195,10 @@ sub _replace_vars_with_values_in_pathname {
 }
 
 sub _replace_subs_with_values_in_pathname {
-    my($self, $rule, $string, $prop_values_hash) = @_;
+    my($self, $rule_or_obj, $string, $prop_values_hash) = @_;
 
     $prop_values_hash ||= {};
-    my $subject_class_name = $rule->subject_class_name;
+    my $subject_class_name = $self->__subject_class_name($rule_or_obj);
 
     # Match something like /some/path/&sub/name or /some/path&{sub}.ext/name
     if ($string =~ m/\&\{?(\w+)\}?/) {
@@ -174,10 +206,10 @@ sub _replace_subs_with_values_in_pathname {
         unless ($subject_class_name->can($subname)) {
             Carp::croak("Invalid 'server' for data source ".$self->id
                         . ": Path spec $string requires a value for method $subname "
-                        . " which is not a method of class " . $rule->subject_class_name);
+                        . " which is not a method of class " . $self->__subject_class_name($rule_or_obj));
         }
  
-        my @property_values = eval { $subject_class_name->$subname($rule) };
+        my @property_values = eval { $subject_class_name->$subname($rule_or_obj) };
         if ($@) {
             Carp::croak("Can't resolve final path for 'server' for data source ".$self->id
                         . ": Method call to ${subject_class_name}::${subname} died with: $@");
@@ -222,7 +254,7 @@ sub _replace_subs_with_values_in_pathname {
                      @string_replacement_values;
 
         # recursion to process the next method call
-        return map { $self->_replace_subs_with_values_in_pathname($rule, @$_) } @return;
+        return map { $self->_replace_subs_with_values_in_pathname($rule_or_obj, @$_) } @return;
 
     } else {
         return [ $string, $prop_values_hash ];
@@ -1285,6 +1317,393 @@ sub _create_iterator_for_custom_sorted_columns {
 
 sub initializer_should_create_column_name_for_class_properties {
     1;
+}
+
+
+# The string used to join fields of a row together when writing
+#
+# Since the 'delimiter' property is interpreted as a regex in the reading
+# code, we'll try to be smart about making a real string from that.
+#
+# subclasses can override this to provide a different implementation
+sub column_join_string {
+    my $self = shift;
+
+    my $join_pattern = $self->delimiter;
+
+    # make some common substitutions...
+    if ($join_pattern eq '\s*,\s*') {
+        # The default...
+        return ', ';
+    }
+
+    $join_pattern =~ s/\\s*//g;  # Turn 0-or-more whitespaces to nothing
+    $join_pattern =~ s/\\t/\t/;  # tab
+    $join_pattern =~ s/\\s/ /;   # whitespace
+
+    return $join_pattern;
+}
+
+
+sub _sync_database {
+    my $self = shift;
+    my %params = @_;
+
+    unless (ref($self)) {
+        if ($self->isa("UR::Singleton")) {
+            $self = $self->_singleton_object;
+        }
+        else {
+            Carp::croak("Cannot call _sync_database as a class method on a non-singleton class");
+        }
+    }
+
+$DB::single=1;
+    my $changed_objects = delete $params{'changed_objects'};
+
+    my $path_spec = $self->path;
+
+    # First, bin up the changed objects by their class' table_name
+    my %objects_for_path;
+    foreach my $obj ( @$changed_objects ) {
+        my @path = $self->resolve_file_info_for_rule_and_path_spec($obj, $path_spec);
+        if (!@path) {
+            $self->error_message("Couldn't resolve destination file for object "
+                                  .$obj->class." ID ".$obj->id.": ".Data::Dumper::Dumper($obj));
+            return;
+        } elsif (@path > 1) {
+            $self->error_message("Got multiple filenames when resolving destination file for object "
+                                 . $obj->class." ID ".$obj->id.": ".join(', ', @path));
+        }
+        $objects_for_path{ $path[0]->[0] } ||= [];
+        push @{ $objects_for_path{ $path[0]->[0] } }, $obj;
+    }
+
+    my %objects_for_pathname;
+    foreach my $path ( keys %objects_for_path ) {
+        foreach my $obj ( @{ $objects_for_path{$path} } ) {
+            my $class_meta = $obj->__meta__;
+            my $table_name = $class_meta->table_name;
+            my $pathname = $path;
+            if (defined($table_name) and $table_name ne '__default__') {
+                $pathname .= '/' . $table_name;
+            }
+            $objects_for_pathname{$pathname} ||= [];
+            push @{ $objects_for_pathname{$pathname} }, $obj;
+        }
+    }
+
+    my %column_is_sorted_descending;
+    my @sorted_column_names =   map { if (index($_, '-') == 0) {
+                                        my $s = $_;
+                                        substr($s, 0, 1, '');
+                                        $column_is_sorted_descending{$s} = $s;
+                                      } else {
+                                        $_;
+                                      }
+                                    }
+                                @{ $self->sorted_columns() || [] };
+
+    my $handle_class = $self->handle_class;
+    my $use_quick_read = $handle_class->isa('IO::Handle');
+
+    my $join_string = $self->column_join_string;
+    my $record_separator = $self->record_separator;
+    my $split_regex = $self->_regex();
+    local $/;   # Make sure some wise guy hasn't changed this out from under us
+    $/ = $record_separator;
+
+    my $logger = $self->_logger('UR_DBI_MONITOR_SQL');
+    my $total_save_time = Time::HiRes::time();
+    $logger->("FILE: Saving changes to ".scalar(keys %objects_for_pathname) . " files:\n\t"
+                . join("\n\t", keys(%objects_for_pathname)) . "\n\n");
+
+    foreach my $pathname ( keys %objects_for_pathname ) {
+        my $use_quick_rename;
+        my $containing_directory = File::Basename::dirname($pathname);
+        unless (-d $containing_directory) {
+            File::Path::mkpath($containing_directory);
+        }
+        if (-w $containing_directory) {
+            $use_quick_rename = 1;
+        } elsif (! -w $pathname) {
+            Carp::croak("Cannot save to file $pathname: Neither the directory nor the file are writable");
+        }
+
+        my $read_fh = $handle_class->new($pathname);
+
+        # Objects going to the same file should all be of a common class
+        my $class_meta = $objects_for_pathname{$pathname}->[0]->__meta__;
+
+        my @property_names_that_are_sorted = map { $class_meta->property_for_column($_) }
+                                            @sorted_column_names;
+        # Returns true of the passed-in object has a change in one of the sorted columns
+        my $object_has_changed_sorted_column = sub {
+                my $obj = shift;
+                foreach my $prop ( @property_names_that_are_sorted ) {
+                    if (UR::Context->_get_committed_property_value($obj, $prop) ne $obj->$prop) {
+                        return 1;
+                    }
+                }
+                return 0;
+        };
+
+        my $column_names_in_file = $self->_resolve_column_names_from_pathname($pathname, $read_fh);
+        my $column_names_count = @$column_names_in_file;
+        my %column_name_to_index;
+        for (my $i = 0; $i < @$column_names_in_file; $i++) {
+            $column_name_to_index{$column_names_in_file->[$i]} = $i;
+        }
+        # This lets us take a hash slice of the object and get a row for the file
+        my @property_names_in_column_order = map { $class_meta->property_for_column($_) }
+                                             @$column_names_in_file;
+
+        my %column_name_is_numeric = map { $_->column_name => $_->is_numeric }
+                                     map { $class_meta->property_meta_for_name($_) }
+                                     map { $class_meta->property_for_column($_) }
+                                     @$column_names_in_file;
+
+        my $insert = [];
+        my $update = {};
+        my $delete = {};
+        foreach my $obj ( @{ $objects_for_pathname{$pathname} } ) { 
+            if ($obj->isa('UR::Object::Ghost')) {
+                # This should be removed from the file
+                my $original = $obj->{'db_committed'};
+                my $line = join($join_string, @{$original}{@property_names_in_column_order}) . $record_separator;
+                $delete->{$line} = $obj;
+
+            } elsif ($obj->{'db_committed'}) {
+                # this is a changed object
+                my $original = $obj->{'db_committed'};
+
+                if ($object_has_changed_sorted_column->($obj)) {
+                    # One of hte sorted columns has changed.  Model this as a delete and insert
+                    push @$insert, [ @{$obj}{@property_names_in_column_order} ];
+                    my $line = join($join_string, @{$original}{@property_names_in_column_order}) . $record_separator;
+                    $delete->{$line} = $obj;
+                } else {
+                    # This object is changed since it was read in the file
+                    my $original_line = join($join_string, @{$original}{@property_names_in_column_order}) . $record_separator;
+                    my $changed_line = join($join_string, @{$obj}{@property_names_in_column_order}) . $record_separator;
+                    $update->{$original_line} = $changed_line;
+                }
+
+            } else {
+                # This object is new and should be added to the file
+                push @$insert, [ @{$obj}{@property_names_in_column_order} ];
+            }
+        }
+
+        my %column_is_sorted_descending;
+        my @sorted_column_names =   map { if (index($_, '-') == 0) {
+                                              my $s = $_;
+                                              substr($s, 0, 1, '');
+                                              $column_is_sorted_descending{$s} = $s;
+                                            } else {
+                                              $_;
+                                            }
+                                          }
+                                @{ $self->sorted_columns() || [] };
+
+        my $row_sort_sub;
+        if (@sorted_column_names) {
+            my @comparison_subs = map { &_resolve_sorter_for(is_numeric => $column_name_is_numeric{$_},
+                                                             is_descending => $column_is_sorted_descending{$_},
+                                                             column_index => $column_name_to_index{$_})
+                                      }
+                                  @sorted_column_names;
+
+            $row_sort_sub = sub ($$) {
+                    foreach my $comparator ( @comparison_subs ) {
+                        my $cmp = $comparator->($_[0], $_[1]);
+                        return $cmp if $cmp;
+                    }
+                    return 0;
+            };
+
+            # Put the rows-to-insert in sorted order
+            my @insert_sorted = sort $row_sort_sub @$insert;
+            $insert = \@insert_sorted;
+        }
+
+        my $write_fh = $use_quick_rename
+                        ? File::Temp->new(DIR => $containing_directory)
+                        : File::Temp->new();
+        unless ($write_fh) {
+            Carp::croak("Can't save changes for $pathname: Can't create temporary file for writing: $!");
+        }
+       
+        my $monitor_start_rime = Time::HiRes::time();
+        my $time = time();
+        $logger->(sprintf("\nFILE: SYNC DATABASE AT %s [%s].  Started transaction for %s to temp file %s\n",
+                          $time, scalar(localtime($time)), $pathname, $write_fh->filename));
+
+        # Write headers to the new file
+        for (my $i = 0; $i < $self->header_lines; $i++) {
+            my $line = $use_quick_read ? <$read_fh> : $read_fh->getline();
+            $write_fh->print($line);
+        }
+
+        my $line;
+        READ_A_LINE:
+        while(1) {
+            unless ($line) {
+                $line = $use_quick_read ? <$read_fh> : $read_fh->getline();
+                last unless defined $line;
+            }
+
+            if (@sorted_column_names and scalar(@$insert)) {
+                # There are sorted things waiting to insert
+                my $chomped = $line;
+                $chomped =~ s/$record_separator$//;  # chomp, but for any value
+                my $row = [ split($split_regex, $chomped, $column_names_count) ];
+                my $cmp = $row_sort_sub->($row, $insert->[0]);
+                if ($cmp > 0) {
+                    # write the object's data
+                    no warnings 'uninitialized';  # Some of the object's data may be undef
+                    my $new_row = shift @$insert;
+                    my $new_line = join($join_string, @$new_row) . $record_separator;
+
+                    $logger->("INSERT >>$new_line<<\n");
+
+                    $write_fh->print($new_line);
+                    # Don't undef the last line read, meaning it could still be written to the output...
+                    next READ_A_LINE;
+                }
+            }
+
+            if (my $obj = delete $delete->{$line}) {
+                $logger->("DELETE >>$line<<\n");
+
+            } elsif (my $changed = delete $update->{$line}) {
+                $logger->("UPDFATE replace >>$line<< with >>$changed<<\n");
+                $write_fh->print($changed);
+
+            } else {
+                # This line form the file was unchanged in the app
+                $write_fh->print($line);
+            }
+            $line = undef;
+        }
+
+        if (keys %$delete) {
+            $self->warning_message("There were " . scalar( keys %$delete)
+                                   . " deleted " . $class_meta->class_name
+                                   . " objects that did not match data in file $pathname");
+        }
+        if (keys %$update) {
+            $self->warning_message("There were " . scalar( keys %$delete)
+                                   . " updated " . $class_meta->class_name
+                                   . " objects that did not match data in file $pathname");
+        }
+
+        # finish out by writing the rest of the new data
+        foreach my $new_row ( @$insert ) {
+            no warnings 'uninitialized';   # Some of the object's data may be undef
+            my $new_line = join($join_string, @$new_row) . $record_separator;
+            $logger->("INSERT >>$new_line<<\n");
+            $write_fh->print($new_line);
+        }
+
+        my $changed_objects = $objects_for_pathname{$pathname};
+        unless ($self->_set_specified_objects_saved_uncommitted( $changed_objects )) {
+            Carp::croak("Error setting objects to a saved state after syncing");
+        }
+        # These closures will keep $write_fh in scope and delay their removal until
+        # commit() or rollback().  Call these with no args to commit, and one arg (doesn't
+        # matter what) to roll back
+        my $commit = $use_quick_rename 
+                    ? sub {
+                            if (@_) {
+                                $self->_set_specified_objects_saved_rolled_back($changed_objects);
+                            } else {
+                                my $temp_filename = $write_fh->filename;
+                                $logger->("FILE: COMMIT rename $temp_filename => $pathname\n");
+                                unless (rename($temp_filename, $pathname)) {
+                                    $self->error_message("Can't rename $temp_filename to $pathname: $!");
+                                    return;
+                                }
+                                $self->_set_specified_objects_saved_committed($changed_objects);
+                            }
+                            return 1;
+                        }
+                    : 
+                      sub {
+                            if (@_) {
+                                $self->_set_specified_objects_saved_rolled_back($changed_objects);
+                            } else {
+                                my $temp_filename = $write_fh->filename;
+                                $logger->("FILE: COMMIT copy " . $temp_filename . " => $pathname\n");
+                                my $read_fh = IO::File->new($temp_filename);
+                                unless ($read_fh) {
+                                    $self->error_message("Can't open file $temp_filename for reading: $!");
+                                    return;
+                                }
+                                my $copy_fh = IO::File->new($pathname, 'w');
+                                unless ($copy_fh) {
+                                    $self->error_message("Can't open file $pathname for writing: $!");
+                                    return;
+                                }
+
+                                while(<$read_fh>) {
+                                    $copy_fh->print($_);
+                                }
+                                $copy_fh->close();
+                                $read_fh->close();
+                                $self->_set_specified_objects_saved_committed($changed_objects);
+                            }
+                            return 1;
+                        };
+
+        $write_fh->close();
+
+        $self->{'__saved_uncommitted'} ||= [];
+        push @{ $self->{'__saved_uncommitted'} }, $commit;
+
+        $time = time();
+        $logger->("\nFILE: SYNC DATABASE finished ".$write_fh->filename . "\n");
+    }
+
+    $logger->(sprintf("Saved changes to %d files in %.4f s\n",
+                      scalar(@{ $self->{'__saved_uncommitted'}}), Time::HiRes::time() - $total_save_time));
+scalar(<STDIN>);
+
+    return 1;
+}
+
+sub commit {
+    my $self = shift;
+    if (! ref($self) and $self->isa('UR::Singleton')) {
+        $self = $self->_singleton_object;
+    }
+
+    if ($self->{'__saved_uncommitted'}) {
+        foreach my $commit ( @{ $self->{'__saved_uncommitted'}}) {
+            $commit->();
+        }
+    }
+    delete $self->{'__saved_uncommitted'};
+scalar(<STDIN>);
+
+    return 1;
+}
+
+
+sub rollback {
+    my $self = shift;
+    if (! ref($self) and $self->isa('UR::Singleton')) {
+        $self = $self->_singleton_object;
+    }
+
+    if ($self->{'__saved_uncommitted'}) {
+        foreach my $commit ( @{ $self->{'__saved_uncommitted'}}) {
+            $commit->('rollback');
+        }
+    }
+    delete $self->{'__saved_uncommitted'};
+
+    return 1;
 }
 
 
