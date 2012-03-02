@@ -466,6 +466,7 @@ sub _shell_args_property_meta {
         next if $property_name eq 'id';
         next if $property_name eq 'result';
         next if $property_name eq 'is_executed';
+        next if $property_name eq 'original_command_line';
         next if $property_name =~ /^_/;
 
         next if $property_meta->implied_by;
