@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 66;
+use Test::More tests => 82;
 require File::Temp;
 
 my $s1 = UR::Value::Text->get('hi there');
@@ -19,6 +19,35 @@ is($s1,$s2, 'They are the same object');
 my $s3 = UR::Value::Text->get('something else');
 ok($s3, 'Got an object for a different string');
 isnt($s1,$s3, 'They are different objects');
+
+my $text = UR::Value::Text->get('metagenomic composition 16s is awesome');
+ok($text, 'Got an object for string "metagenomic composition 16s is awesome"');
+is($text->id, 'metagenomic composition 16s is awesome', 'Id is correct');
+
+my $capitalized = $text->capitalize;
+isa_ok($capitalized, 'UR::Value::Text');
+is($capitalized->id, 'Metagenomic Composition 16s Is Awesome', 'Capitalized for is "Metagenomic Composition 16s Is Awesome"');
+
+my $text_to_camel_case = $text->to_camel_case;
+isa_ok($text_to_camel_case, 'UR::Value::CamelCase');
+is($text_to_camel_case->id, 'MetagenomicComposition16sIsAwesome', 'Text To camel case for is "MetagenomicComposition16sIsAwesome"');
+
+my $camel_case_to_text = $text_to_camel_case->to_text;
+isa_ok($camel_case_to_text, 'UR::Value::Text');
+is($camel_case_to_text->id, 'metagenomic composition 16s is awesome', 'Camel case to text for is "MetagenomicComposition16sIsAwesome"');
+is($camel_case_to_text, $text, 'Got the same UR::Value::Text object back for camel case to text');
+
+ok(!$text->to_hash, 'Failed to convert text to hahs that does not start with a dash (-)');
+my $text_for_text_to_hash = '-aa foo -b1b -1 bar --c22 baz baz -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   -m';
+my $text_to_hash = UR::Value::Text->get($text_for_text_to_hash);
+ok($text_to_hash, 'Got object for param text');
+my $hash = $text_to_hash->to_hash;
+ok($hash, 'Got hash for text');
+is_deeply($hash->id, { aa => 'foo', b1b => '-1 bar', c22 => 'baz baz', ddd => -11, eee => '', f => '', g22g => 'text -1111', h_h => 44, 'i-i' => -5, 'j-----j' => '-5 -6 hello', k => '', 'l_l-l' => 'g  a   p', m => '', }, 'Text to hash id is correct'); 
+is($hash->__display_name__, "aa => 'foo',b1b => '-1 bar',c22 => 'baz baz',ddd => '-11',eee => '',f => '',g22g => 'text -1111',h_h => '44',i-i => '-5',j-----j => '-5 -6 hello',k => '',l_l-l => 'g  a   p',m => ''", 'Hash display name');
+my $hash_to_text = $hash->to_text;
+ok($hash_to_text, 'Got hash to text');
+is($hash_to_text, '-aa foo -b1b -1 bar -c22 baz baz -ddd -11 -eee -f -g22g text -1111 -h_h 44 -i-i -5 -j-----j -5 -6 hello -k -l_l-l g  a   p -m', 'Hash to text is correct');
 
 my $s1_refaddr = Scalar::Util::refaddr($s1);
 ok($s1->unload(), 'Unload the original string object');
