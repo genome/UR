@@ -1565,7 +1565,7 @@ $DB::single=1;
                     my $new_row = shift @$insert;
                     my $new_line = join($join_string, @$new_row) . $record_separator;
 
-                    $logger->("INSERT >>$new_line<<\n");
+                    $logger->("FILE: INSERT >>$new_line<<\n");
 
                     $write_fh->print($new_line);
                     # Don't undef the last line read, meaning it could still be written to the output...
@@ -1574,10 +1574,10 @@ $DB::single=1;
             }
 
             if (my $obj = delete $delete->{$line}) {
-                $logger->("DELETE >>$line<<\n");
+                $logger->("FILE: DELETE >>$line<<\n");
 
             } elsif (my $changed = delete $update->{$line}) {
-                $logger->("UPDFATE replace >>$line<< with >>$changed<<\n");
+                $logger->("FILE: UPDFATE replace >>$line<< with >>$changed<<\n");
                 $write_fh->print($changed);
 
             } else {
@@ -1602,7 +1602,7 @@ $DB::single=1;
         foreach my $new_row ( @$insert ) {
             no warnings 'uninitialized';   # Some of the object's data may be undef
             my $new_line = join($join_string, @$new_row) . $record_separator;
-            $logger->("INSERT >>$new_line<<\n");
+            $logger->("FILE: INSERT >>$new_line<<\n");
             $write_fh->print($new_line);
         }
 
@@ -1667,8 +1667,6 @@ $DB::single=1;
 
     $logger->(sprintf("Saved changes to %d files in %.4f s\n",
                       scalar(@{ $self->{'__saved_uncommitted'}}), Time::HiRes::time() - $total_save_time));
-scalar(<STDIN>);
-
     return 1;
 }
 
@@ -1684,7 +1682,6 @@ sub commit {
         }
     }
     delete $self->{'__saved_uncommitted'};
-scalar(<STDIN>);
 
     return 1;
 }
