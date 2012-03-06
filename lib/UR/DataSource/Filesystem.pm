@@ -1051,6 +1051,7 @@ sub create_iterator_closure_for_rule {
                     return;   # behave if we're at EOF
                 }
                 $fh->seek($pos, 0);  # fast-forward to the old position
+                $pid = $$;
             }
 
             my $line;
