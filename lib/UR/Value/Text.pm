@@ -43,12 +43,21 @@ sub capitalize {
     return $self->class->get($capitalized_string);
 }
 
-sub to_camel_case {
+sub to_camel {
     my $self = shift;
     my $seps = join('', ( @_ ? @_ : ( ' ', '_' )));
     my $regexp = qr/[$seps]+/;
     my $camel_case = join('', map { ucfirst } split($regexp, $self->id));
-    return UR::Value::CamelCase->get($camel_case);
+    return $self->class->get($camel_case);
+}
+
+sub to_lemac { # camel backwards = undo camel case. This was nutters idea. Ignore 'git blame'
+    my $self = shift;
+    # Split on the first capital or the start of a number
+    my @words = split( /(?=(?<![A-Z])[A-Z])|(?=(?<!\d)\d)/, $self->id);
+    # Default join is a space
+    my $join = ( defined $_[0] ) ? $_[0] : ' '; 
+    return $self->class->get( join($join, map { lc } @words) );
 }
 
 sub to_hash {
