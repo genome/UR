@@ -46,7 +46,6 @@ class UR::DataSource::Filesystem {
         header_lines          => { is => 'Integer', default_value => 0, doc => 'Number of lines at the start of the file to skip' },
         columns_from_header   => { is => 'Boolean', default_value => 0, doc => 'The column names are in the first line of the file' },
         handle_class          => { is => 'String', default_value => 'IO::File', doc => 'Class to use for new file handles' },
-        quick_disconnect      => { is => 'Boolean', default_value => 1, doc => 'Do not hold the file handle open between requests' },
     ],
     has_optional => [
         columns               => { is => 'ARRAY', doc => 'Names of the columns in the file, in order' },
@@ -403,7 +402,7 @@ sub create_from_inline_class_data {
 
     my %ds_creation_params;
     foreach my $param ( qw( path delimiter record_separator columns header_lines
-                            columns_from_header handle_class quick_disconnect sorted_columns )
+                            columns_from_header handle_class sorted_columns )
     ) {
         if (exists $ds_data->{$param}) {
             if ($creation_param_is_list{$param} and ref($ds_data->{$param}) ne 'ARRAY') {
