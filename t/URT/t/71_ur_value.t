@@ -28,14 +28,14 @@ my $capitalized = $text->capitalize;
 isa_ok($capitalized, 'UR::Value::Text');
 is($capitalized->id, 'Metagenomic Composition 16s Is Awesome', 'Capitalized for is "Metagenomic Composition 16s Is Awesome"');
 
-my $text_to_camel_case = $text->to_camel_case;
-isa_ok($text_to_camel_case, 'UR::Value::CamelCase');
-is($text_to_camel_case->id, 'MetagenomicComposition16sIsAwesome', 'Text To camel case for is "MetagenomicComposition16sIsAwesome"');
+my $camel = $text->to_camel;
+isa_ok($camel, 'UR::Value::Text');
+is($camel->id, 'MetagenomicComposition16sIsAwesome', 'Text To camel case for is "MetagenomicComposition16sIsAwesome"');
 
-my $camel_case_to_text = $text_to_camel_case->to_text;
-isa_ok($camel_case_to_text, 'UR::Value::Text');
-is($camel_case_to_text->id, 'metagenomic composition 16s is awesome', 'Camel case to text for is "MetagenomicComposition16sIsAwesome"');
-is($camel_case_to_text, $text, 'Got the same UR::Value::Text object back for camel case to text');
+my $lemac = $camel->to_lemac;
+isa_ok($lemac, 'UR::Value::Text');
+is($lemac->id, 'metagenomic composition 16s is awesome', 'Camel case to text for is "MetagenomicComposition16sIsAwesome"');
+is($lemac, $text, 'Got the same UR::Value::Text object back for camel case to text');
 
 ok(!$text->to_hash, 'Failed to convert text to hahs that does not start with a dash (-)');
 my $text_for_text_to_hash = '-aa foo -b1b -1 bar --c22 baz baz -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   -m';
