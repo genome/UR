@@ -1842,12 +1842,18 @@ it would find the data files using the glob expression
   /var/people/*/Springfield/people.txt
 
 It also knows that any objects coming from the file
+
   /var/people/CA/Springfield/people.txt
+
 must have the value 'CA' for their 'state' property, even though that
 information is not in the contents of the file.
 
 When committing changes back to the file, the object property values are
 used to determine which file it should be saved to.
+
+The property name can also be wrapped in braces:
+
+  /var/people/${state}_US/city_${city}/people.txt
 
 =item &method
 
@@ -1858,6 +1864,10 @@ class of the query.  The method is called like this:
 
 During a query, the method is passed a BoolExpr; during a commit, the method
 is passed an object.  It must return a string.
+
+The method name can also be wrapped in braces:
+
+  /&{resolve_prefix}.dir/people.txt
 
 =item *, ?
 
