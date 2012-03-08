@@ -143,12 +143,12 @@ sub _log_query_for_rule {
     return if (substr($subject_class, 0,4) eq 'UR::' and $monitor_level < 2);   # Don't log queries for internal classes
 
     my $elapsed_time = 0;
-    if ($rule) {
+    if (defined($rule)) {
         my $time_now = Time::HiRes::time();
-        if (! exists $_query_log_times{$rule}) {
-            $_query_log_times{$rule} = $time_now;
+        if (! exists $_query_log_times{$rule->id}) {
+            $_query_log_times{$rule->id} = $time_now;
         } else {
-            $elapsed_time = $time_now - $_query_log_times{$rule};
+            $elapsed_time = $time_now - $_query_log_times{$rule->id};
         }
     }
 
@@ -161,7 +161,7 @@ sub _log_query_for_rule {
 sub _log_done_elapsed_time_for_rule {
     my($self, $rule) = @_;
 
-    delete $_query_log_times{$rule};
+    delete $_query_log_times{$rule->id};
 }
 
 
