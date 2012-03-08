@@ -1705,3 +1705,178 @@ sub rollback {
 
 
 1;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+UR::DataSource::Filesystem - Get and save objects to delimited text files
+
+=head1 SYNOPSIS
+
+  # Create an object for the data file
+  my $people_data = UR::DataSource::Filesystem->create(
+      columns => ['person_id','name','age','street_address'],
+      sorted_columns => ['age','person_id'],
+      path => '/var/lib/people/$state/$city/people.txt',
+      delimiter        => "\t", # between columns in the file
+      record_separator => "\n", # between lines in the file
+  );
+
+  # Define an entity class for the people in the file
+  class MyProgram::Person {
+      id_by => 'person_id',
+      has => [
+          name           => { is => 'String' },
+          age            => { is => 'Number' },
+          street_address => { is => 'String' },
+          city           => { is => 'String' },
+          state          => { is => 'String' },
+      ],
+      data_source_id => $people_data->id,
+  };
+
+  # Get all people that live in any city named Springfield older than 40
+  my @springfielders = MyProgram::Person->get(city => 'Springfield', 'age >' => 40);
+
+=head1 DESCRIPTION
+
+A Filesystem data source object represents one or more files on the fileystem.
+In the simplest case, the object's 'path' property names a file that stores
+the data.  
+
+=head2 Properties
+
+These properties determine the configuration for the data source.
+
+=over 4
+
+=item path <string>
+
+path is a string representing the path to the files.  Besides just being a
+simple pathname to one file, the string can also be a specification of
+many similar files, or a directory containing multiple files.  See below
+for more information about 'path'
+
+=item record_separator <string>
+
+The separator between lines in the file.  This gets stored in $/ before calling
+getline() to read data.  The default record_separator is "\n".
+
+=item delimiter <string>
+
+The separator between columns in the file.  It is used to construct a regex
+with qr() to split() a line into a list of values.  The default delimiter
+is '\s*,\s*', meaning that the file is separated by commas.  Another common
+value would be "\t" for tabs.
+
+=item columns <ARRAY>
+
+A listref of column names in the file.  Just as SQL tables have columns,
+Filesystem files also have named columns so the system knows how to read
+the file data into object properties.  A Filesystem data source does
+not need to specify named columns if the 'columns_from_header' property
+is true.
+
+=item sorted_columns <ARRAY>
+
+A listref of column names that the file is sorted by, in the order of the
+sorting.  If a column is sorted in descending order, put a minus (-) in front
+of the name.  If the file is sorted by multiple columns, say first by last_name
+and then by first_name, then include them both:
+
+  sorted_columns => ['last_name','first_name']
+
+The system uses this information to know when to stop reading if a query is
+done on a sorted column.
+
+=item columns_from_header <boolean>
+
+If true, the system will read the first line of the file to determine what the
+column names are.
+
+=item header_lines <integer>
+
+The number of lines at the top of the file that do not contain entity data.
+When the file is opened, this number of lines are skipped before reading
+data.  If the columns_from_header flag is true, the header_lines value should
+be at least 1.
+
+=item handle_class <string>
+
+Which class to use for reading and writing to the file.  The default is
+IO::File.  Any other value must refer to a class that has the same interface
+as IO::File, in particular: new, input_line_number, getline, tell, seek and
+print.
+
+=back
+
+=head2 Path specification
+
+Besides refering to just one file on the filesystem, the path spec is a
+recipe for finding files in a directory tree.  If a class using a Filesystem
+data source does not have 'table_name' metadata, then the path specification
+must resolve to file names.  Alternatively, classes may specify their
+'table_name' which is interpreted as a file within the directory indicated
+by the path specification.
+
+Three kinds of special tokens can also appear in a file spec:
+
+=over 4
+
+=item $property
+
+When querying, the system will extract the value (or values, for an in-clause)
+of $property from the BoolExpr when constructing the pathname.  If the
+BoolExpr does not have a value for that property, then the system will do a
+shell glob to find the possible values.  For example, given this path spec
+and query:
+
+  path => '/var/people/$state/$city/people.txt'
+  my @people = MyProgram::People->get(city => 'Springfield', 'age >' => 40);
+
+it would find the data files using the glob expression
+
+  /var/people/*/Springfield/people.txt
+
+It also knows that any objects coming from the file
+  /var/people/CA/Springfield/people.txt
+must have the value 'CA' for their 'state' property, even though that
+information is not in the contents of the file.
+
+When committing changes back to the file, the object property values are
+used to determine which file it should be saved to.
+
+=item &method
+
+The replacement value is resolved by calling the named method on the subject
+class of the query.  The method is called like this:
+
+  $replacement = $subject_class->$method( $boolexpr_or_object);
+
+During a query, the method is passed a BoolExpr; during a commit, the method
+is passed an object.  It must return a string.
+
+=item *, ?
+
+Literal shell glob wildcards are honored when finding files, but their values
+are not used to supply values to objects.
+
+=back
+
+=head2 Environment Variables
+
+If the environment variable $UR_DBI_MONITOR_SQL is true, then the Filesystem
+data source will print information about the queries it runs.
+
+=head1 INHERITANCE
+
+  UR::DataSource
+
+=head1 SEE ALSO
+
+UR, UR::DataSource
+
+=cut
