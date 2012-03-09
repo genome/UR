@@ -318,6 +318,11 @@ sub _init_rdbms {
         my @properties_involved = sort keys(%properties_involved);
         my @errors;
         while (my $property_name = shift @properties_involved) {
+            if (index($property_name,'.') != -1) {
+                push @delegated_properties, $property_name;
+                next;
+            }
+
             my (@pmeta) = $class_meta->property_meta_for_name($property_name);
             unless (@pmeta) {
                 if ($class_name->can($property_name)) {
@@ -330,11 +335,6 @@ sub _init_rdbms {
                 }
             }
             
-            if (index($property_name,'.') != -1) {
-                push @delegated_properties, $property_name;
-                next;
-            }
-
             # For each property in this list, go up the inheritance and find the right property
             # to query on.  Give priority to properties that actually have columns
             FIND_PROPERTY_WITH_COLUMN:
