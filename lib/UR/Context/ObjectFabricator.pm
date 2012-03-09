@@ -150,18 +150,22 @@ sub create_for_loading_template {
         my %rule_properties_with_in_clauses = map { $_ => 1 } @rule_properties_with_in_clauses;
         @all_rule_property_names = $rule_template_without_in_clause->_property_names;
         foreach my $property ( @rule_properties_with_in_clauses ) {
+            my $values_for_in_clause = $rule_without_recursion_desc->value_for($property);
+            if (@$values_for_in_clause > 100) {
+                $do_record_in_all_params_loaded = 0;
+                next;
+            }
+
             my @other_values = map { exists $rule_properties_with_in_clauses{$_}
                                      ? undef   # placeholder filled in below
                                      : $rule_without_recursion_desc->value_for($_) }
                                $rule_template_without_in_clause->_property_names;
             my $position_for_this_property = $rule_template_without_in_clause->value_position_for_property_name($property);
 
-            my $values_for_in_clause = $rule_without_recursion_desc->value_for($property);
 
             # If the number of items in the in-clause is over this number, then don't bother recording
             # the template-id/rule-id, since searching the list to see if this query has been done before
             # is going to take longer than just re-doing the query
-            $do_record_in_all_params_loaded = 0 if (@$values_for_in_clause > 100);
             foreach my $value ( @$values_for_in_clause ) {
                 $value = '' if (!defined $value);
                 $other_values[$position_for_this_property] = $value;
