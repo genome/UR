@@ -568,7 +568,8 @@ sub _shell_arg_getopt_specification_from_property_meta {
     my $arg_name = $self->_shell_arg_name_from_property_meta($property_meta);
     return (
         $arg_name .  $self->_shell_arg_getopt_qualifier_from_property_meta($property_meta),
-        ($property_meta->is_many ? ($arg_name => []) : ())
+        #this prevents defaults from being used for is_many properties
+        #($property_meta->is_many ? ($arg_name => []) : ())
     );
 }
 
