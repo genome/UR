@@ -287,15 +287,20 @@ sub to_property_meta {
 
 sub get_property_name_pairs_for_join {
     my ($self) = @_;
-    my @linkage = $self->_get_direct_join_linkage();
-    unless (@linkage) {
-        Carp::croak("Cannot resolve underlying property joins for property ".$self->id);
+    unless ($self->{'_get_property_name_pairs_for_join'}) {
+        my @linkage = $self->_get_direct_join_linkage();
+        unless (@linkage) {
+            Carp::croak("Cannot resolve underlying property joins for property ".$self->id);
+        }
+        my @results;
+        if ($self->reverse_as) {
+            @results = map { [ $_->[1] => $_->[0] ] } @linkage;
+        } else {
+            @results = map { [ $_->[0] => $_->[1] ] } @linkage;
+        }
+        $self->{'_get_property_name_pairs_for_join'} = \@results;
     }
-    if ($self->reverse_as) {
-        return map { [ $_->[1] => $_->[0] ] } @linkage;
-    } else {
-        return map { [ $_->[0] => $_->[1] ] } @linkage;
-    }
+    return @{$self->{'_get_property_name_pairs_for_join'}};
 }
 
 sub _get_direct_join_linkage {
