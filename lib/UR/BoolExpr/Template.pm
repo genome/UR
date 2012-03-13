@@ -481,9 +481,7 @@ sub get {
 # Return true if the template has recursion_desc, hints, order or page set
 sub has_meta_options {
     my $self = shift;
-    foreach my $opt ( @meta_param_names ) {
-        return 1 if (defined $self->$opt);
-    }
+    return 1 if @$self{@meta_param_names};
     return 0;
 }
 
