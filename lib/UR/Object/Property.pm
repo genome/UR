@@ -10,6 +10,17 @@ use Class::AutoloadCAN;
 our $VERSION = "0.37"; # UR $VERSION;;
 our @CARP_NOT = qw( UR::DataSource::RDBMS UR::Object::Type );
 
+# class_meta and r_class_meta duplicate the functionality if two properties of the same name,
+# but these are faster
+sub class_meta {
+    return shift->{'class_name'}->class->__meta__;
+}
+
+sub r_class_meta {
+    return shift->{'data_type'}->class->__meta__;
+}
+
+
 sub is_direct {
     my $self = shift;
     if ($self->is_calculated or $self->is_constant or $self->is_many or $self->via) {
