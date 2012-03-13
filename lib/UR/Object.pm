@@ -148,10 +148,10 @@ sub __errors__ {
     for my $property_metadata (@properties) {
         # For now we don't validate these.
         # Ultimately, we should delegate to the property metadata object for value validation.
-        next if $property_metadata->is_delegated;
-        next if $property_metadata->is_calculated;
+        my($is_delegated, $is_calculated, $property_name, $is_optional, $generic_data_type, $data_length)
+            = @$property_metadata{'is_delegated','is_calculated','property_name','is_optional', 'data_type','data_length'};
 
-        my $property_name = $property_metadata->property_name;
+        next if $is_delegated || $is_calculated;
 
         # TODO: is this making commits slow by calling lots of indirect accessors?
         my @values = $self->$property_name;
@@ -159,7 +159,7 @@ sub __errors__ {
 
         my $value = $values[0];
 
-        if (! $property_metadata->is_optional and !defined($value)) {
+        if (! ($is_optional or defined($value))) {
             push @tags, UR::Object::Tag->create(
                             type => 'invalid',
                             properties => [$property_name],
@@ -173,9 +173,6 @@ sub __errors__ {
 
         # Check data type
         # TODO: delegate to the data type module for this
-        my $generic_data_type = $property_metadata->data_type || "";
-        my $data_length       = $property_metadata->data_length;
-
         if ($generic_data_type eq 'Float') {
             $value =~ s/\s//g;
             $value = $value + 0;
