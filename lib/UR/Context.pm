@@ -2203,7 +2203,7 @@ sub _get_objects_for_class_and_rule_from_cache {
             # FIXME - optimize by using the rule (template?)'s param names directly to get the
             # index id instead of re-figuring it out each time
 
-            my $class_meta = UR::Object::Type->get($rule->subject_class_name);
+            my $class_meta = $rule->subject_class_name->__meta__;
             my %params = $rule->params_list;
             my $should_evaluate_later;
             for my $key (keys %params) {
