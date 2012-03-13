@@ -183,28 +183,30 @@ sub parent_class_names {
     return @{ $self->{is} };
 }
 
+push @cache_keys, '_id_property_names';
 sub id_property_names {
     # FIXME Take a look at id_property_names and all_id_property_names.  
     # They look extremely similar, but tests start dying if you replace one
     # with the other, or remove both and rely on the property's accessor method
 
     my $self = _object(shift);
-    my @id_by;
-    #my $template = UR::BoolExpr::Template->resolve('UR::Object::Type', 'class_name');
 
-    unless ($self->{id_by} and @id_by = @{ $self->{id_by} }) {
-        foreach my $parent ( @{ $self->{'is'} } ) {
-            my $parent_class = UR::Object::Type->get(class_name => $parent);
-            #my $rule = $template->get_rule_for_values($parent);
-            #my $parent_class = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Type', $rule);
-            next unless $parent_class;
-            @id_by = $parent_class->id_property_names;
-            last if @id_by;
+    unless ($self->{'_id_property_names'}) {
+        my @id_by;
+        unless ($self->{id_by} and @id_by = @{ $self->{id_by} }) {
+            foreach my $parent ( @{ $self->{'is'} } ) {
+                my $parent_class = $parent->class->__meta__;
+                next unless $parent_class;
+                @id_by = $parent_class->id_property_names;
+                last if @id_by;
+            }
         }
-    }   
-    return @id_by;    
+        $self->{'_id_property_names'} = \@id_by;
+    }
+    return @{$self->{'_id_property_names'}};
 }
 
+push @cache_keys, '_all_id_property_names';
 sub all_id_property_names {
     # return shift->id_property_names(@_); This makes URT/t/99_transaction.t fail
     my $self = shift;
