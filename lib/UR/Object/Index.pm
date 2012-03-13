@@ -66,17 +66,8 @@ sub get_objects_matching
     my $value;
     for $value (@_)
     {               
-        if (not ref($value))
-        {
-            # property => value
-            @hr = grep { $_ } map { $_->{$value} } @hr;
-        }           
-        elsif (ref($value) eq "ARRAY") 
-        {
-            # property => [ v1, v2, v3]
-            @hr = grep { $_ } map { @$_{@$value} } @hr;
-        } 
-        elsif(ref($value) eq "HASH") 
+        my $value_ref = ref($value);
+        if($value_ref eq "HASH")
         {
             # property => { operator => "not like", value => "H~_WGS%", escape "~" }
             if (my $op = $value->{operator})
@@ -280,8 +271,18 @@ sub get_objects_matching
             {
                 Carp::confess("No operator specified in hashref value!" . Dumper($value));
             }
-        } 
-    }            
+        }
+        elsif (not $value_ref)
+        {
+            # property => value
+            @hr = grep { $_ } map { $_->{$value} } @hr;
+        }
+        elsif ($value_ref eq "ARRAY")
+        {
+            # property => [ v1, v2, v3]
+            @hr = grep { $_ } map { @$_{@$value} } @hr;
+        }
+    }
     return (map { values(%$_) } @hr);
 }
 
