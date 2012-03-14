@@ -173,6 +173,7 @@ sub __errors__ {
 
         # Check data type
         # TODO: delegate to the data type module for this
+        $generic_data_type = '' unless (defined $generic_data_type);
         if ($generic_data_type eq 'Float') {
             $value =~ s/\s//g;
             $value = $value + 0;
