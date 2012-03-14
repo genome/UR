@@ -785,8 +785,9 @@ sub create_entity {
     # normal case: make a rule out of the passed-in params
     # rather than normalizing the rule, we just do the extension part which is fast
     my $rule = UR::BoolExpr->resolve($class, @_); 
-    my $template = $rule->{template};
-    my $params = { @{$rule->{_params_list}}, $template->extend_params_list_for_values(@{$rule->{values}}) };
+    my $template = $rule->template;
+
+    my $params = { $rule->_params_list, $template->extend_params_list_for_values(@{$rule->{values}}) };
     if (my $a = $template->{_ambiguous_keys}) {
         my $p = $template->{_ambiguous_property_names};
         @$params{@$p} = delete @$params{@$a};
