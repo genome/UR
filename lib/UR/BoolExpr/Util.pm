@@ -45,41 +45,42 @@ sub values_to_value_id {
 
     for my $value (@_) {
 
-        if (not defined $value ) {
-            $value_id .= $null_value . $record_sep;
-        }
-        elsif ($value eq "") {
-            $value_id .= $empty_string . $record_sep;
-        }
-        elsif (ref($value) eq "ARRAY") {            
-            if (@$value == 0) {
-                $value_id .= $empty_list;
+        no warnings;# 'uninitialized';
+        if (length($value)) {
+            if (ref($value) eq "ARRAY") {
+                if (@$value == 0) {
+                    $value_id .= $empty_list;
+                }
+                else {
+                    for my $value2 (@$value) {
+                        if (not defined $value2 ) {
+                            $value_id .= $null_value . $unit_sep;
+                        }
+                        elsif ($value2 eq "") {
+                            $value_id .= $empty_string . $unit_sep;
+                        }
+                        else {
+                            if (ref($value2) or index($value2, $unit_sep) >= 0 or index($value2, $record_sep) >= 0) {
+                                return $self->values_to_value_id_frozen(@_);
+                            }
+                            $value_id .= $value2 . $unit_sep;
+                        }
+                    }
+                }
+                $value_id .= $record_sep;
             }
             else {
-                for my $value2 (@$value) {
-                    if (not defined $value2 ) {
-                        $value_id .= $null_value . $unit_sep;
-                    }
-                    elsif ($value2 eq "") {
-                        $value_id .= $empty_string . $unit_sep;
-                    }
-                    else {
-                        if (ref($value2) or $value2 =~ m/($unit_sep|$record_sep)/) {
-                            return $self->values_to_value_id_frozen(@_);
-                        }
-                        $value_id .= $value2 . $unit_sep;
-                    }                
+                if (ref($value) or index($value,$unit_sep) >= 0 or index($value,$record_sep) >= 0) {
+                    return $self->values_to_value_id_frozen(@_);
                 }
+                $value_id .= $value . $record_sep;
             }
-            $value_id .= $record_sep;
+        } elsif (not defined $value ) {
+            $value_id .= $null_value . $record_sep;
         }
-        else {
-            #if ($value =~ m/($unit_sep|$record_sep)/o) {
-            if (ref($value) or index($value,$unit_sep) >= 0 or index($value,$record_sep) >= 0) { 
-                return $self->values_to_value_id_frozen(@_);
-            }
-            $value_id .= $value . $record_sep;
-        }        
+        else {# ($value eq "") {
+            $value_id .= $empty_string . $record_sep;
+        }
     }
     return $value_id;
 }
