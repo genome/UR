@@ -671,33 +671,39 @@ sub autogenerate_new_object_id_datasource {
 
 # Support the autogeneration of unique IDs for objects which require them.
 sub autogenerate_new_object_id {
-    my $self = shift;
-    my $rule = shift;
+    my $self = _object($_[0]);
+    #my $rule = shift;
 
-    my $id_generator = $self->id_generator;
+    unless ($self->{'_resolved_id_generator'}) {
+        my $id_generator = $self->id_generator;
 
-    if (ref($id_generator) eq 'CODE') {
-        return $id_generator->($self,$rule);
+        if (ref($id_generator) eq 'CODE') {
+            $self->{'_resolved_id_generator'} = $id_generator;
 
-    } elsif ($id_generator and $id_generator =~ m/^\-(\S+)/) {
-        my $id_method = 'autogenerate_new_object_id_' . $1;
-        unless ($self->can($id_method)) {
-            Carp::croak("'$id_generator' is an invalid id_generator for class "
-                        . $self->class_name
-                        . ": Can't locate object method '$id_method' via package ".ref($self));
-        }
-        return $self->$id_method($rule);
+        } elsif ($id_generator and $id_generator =~ m/^\-(\S+)/) {
+            my $id_method = 'autogenerate_new_object_id_' . $1;
+            my $subref = $self->can($id_method);
+            unless ($subref) {
+                Carp::croak("'$id_generator' is an invalid id_generator for class "
+                            . $self->class_name
+                            . ": Can't locate object method '$id_method' via package ".ref($self));
+            }
+            $self->{'_resolved_id_generator'} = $subref;
 
-    } else {
-        # delegate to the data source
-        my ($data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($self);
-        if ($data_source) {
-            return $data_source->autogenerate_new_object_id_for_class_name_and_rule(
-                $self->class_name,
-                $rule
-            )
+        } else {
+            # delegate to the data source
+            my ($data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($self);
+            if ($data_source) {
+                $self->{'_resolved_id_generator'} = sub {
+                    $data_source->autogenerate_new_object_id_for_class_name_and_rule(
+                        shift->class_name,
+                        shift
+                    )
+                };
+            }
         }
     }
+    goto $self->{'_resolved_id_generator'};
 }
 
 # from ::Object->generate_support_class
