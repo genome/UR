@@ -180,13 +180,15 @@ sub value_for {
     my $property_name = shift;
 
     # TODO: refactor to be more efficient
+    my $template = $self->template;
     my $h = $self->legacy_params_hash;
     my $v;
     if (exists $h->{$property_name}) {
         # normal case
         $v = $h->{$property_name};
-        if (exists $self->{'hard_refs'}->{$property_name}) {
-            $v = $self->{'hard_refs'}->{$property_name};  # It was stored during resolve() as a hard ref
+        my $tmpl_pos = $template->value_position_for_property_name($property_name);
+        if (exists $self->{'hard_refs'}->{$tmpl_pos}) {
+            $v = $self->{'hard_refs'}->{$tmpl_pos};  # It was stored during resolve() as a hard ref
         }
         elsif ($self->_value_is_old_style_operator_and_value($v)) {
             $v = $v->{'value'};   # It was old style operator/value hash
