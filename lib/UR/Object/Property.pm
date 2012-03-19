@@ -212,7 +212,8 @@ sub _involves_id_property {
 
             if ($self->where) {
                 unless ($to_meta) {
-                    Carp::confess("No to_meta for $self->{id}");
+                    Carp::confess("Property '" . $self->property_name . "' of class " . $self->class_name
+                                . " has 'to' metadata that does not resolve to a known property.");
                 }
                 my $other_class_meta = $to_meta->class_meta;
                 my $where = $self->where;
