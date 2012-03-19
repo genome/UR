@@ -258,12 +258,13 @@ sub get_rule_for_values {
     my $value_id = UR::BoolExpr::Util->values_to_value_id(@_);    
     my $rule_id = UR::BoolExpr->__meta__->resolve_composite_id_from_ordered_values($self->id,$value_id);
     my $r = UR::BoolExpr->get($rule_id);
-
-    for (my $i = 0; $i < @_; $i++) {
-        if (ref($_[$i]) and ! Scalar::Util::blessed($_[$i])) {
-            $r->{'hard_refs'}->{$i} = $_[$i];
-        }
-    }
+#
+#    # FIXME - Don't do this part if the operator is 'in' or 'between'
+#    for (my $i = 0; $i < @_; $i++) {
+#        if (ref($_[$i]) and ! Scalar::Util::blessed($_[$i])) {
+#            $r->{'hard_refs'}->{$i} = $_[$i];
+#        }
+#    }
     return $r;
 }
 

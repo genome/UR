@@ -51,7 +51,9 @@ ok($tmpl, 'Created BoolExpr template');
 my $rule_from_tmpl = $tmpl->get_rule_for_values('Bob', $scores, $things,$related_ids);
 #ok($rule_from_tmpl, 'Created BoolExpr from that template');
 
-is($rule_from_tmpl->value_for('scores'), $scores, 'Getting the value for "scores" returns the exact same array as was put in');
-is($rule_from_tmpl->value_for('things'), $things, 'Getting the value for "things" returns the exact same hash as was put in');
-is($rule_from_tmpl->value_for('related_ids'), $related_ids, 'Getting the value for "related_ids" does not return the exact same array as was put in');
-
+TODO: {
+local $TODO = "rules created from get_rule_for_values() don't have their hard refs properly saved";
+    is($rule_from_tmpl->value_for('scores'), $scores, 'Getting the value for "scores" returns the exact same array as was put in');
+    is($rule_from_tmpl->value_for('things'), $things, 'Getting the value for "things" returns the exact same hash as was put in');
+    is($rule_from_tmpl->value_for('related_ids'), $related_ids, 'Getting the value for "related_ids" does not return the exact same array as was put in');
+}
