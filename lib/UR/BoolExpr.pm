@@ -148,14 +148,11 @@ sub values {
     my $value_id = $self->value_id;
     return unless defined($value_id) and length($value_id);
     my @values;
+    @values = UR::BoolExpr::Util->value_id_to_values($value_id);
     if (my $hard_refs = $self->{hard_refs}) {
-        @values = UR::BoolExpr::Util->value_id_to_values($value_id);
         for my $n (keys %$hard_refs) {
             $values[$n] = $hard_refs->{$n};
         }
-    }
-    else {
-        @values = UR::BoolExpr::Util->value_id_to_values($value_id);
     }
     $self->{values} = \@values;
     return @values;
