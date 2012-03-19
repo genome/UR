@@ -257,7 +257,15 @@ sub get_rule_for_values {
     my $self = shift;
     my $value_id = UR::BoolExpr::Util->values_to_value_id(@_);    
     my $rule_id = UR::BoolExpr->__meta__->resolve_composite_id_from_ordered_values($self->id,$value_id);
-    return UR::BoolExpr->get($rule_id);
+    my $r = UR::BoolExpr->get($rule_id);
+#
+#    # FIXME - Don't do this part if the operator is 'in' or 'between'
+#    for (my $i = 0; $i < @_; $i++) {
+#        if (ref($_[$i]) and ! Scalar::Util::blessed($_[$i])) {
+#            $r->{'hard_refs'}->{$i} = $_[$i];
+#        }
+#    }
+    return $r;
 }
 
 sub get_rule_for_value_id {
@@ -481,9 +489,7 @@ sub get {
 # Return true if the template has recursion_desc, hints, order or page set
 sub has_meta_options {
     my $self = shift;
-    foreach my $opt ( @meta_param_names ) {
-        return 1 if (defined $self->$opt);
-    }
+    return 1 if @$self{@meta_param_names};
     return 0;
 }
 

@@ -96,6 +96,7 @@ sub take_state_snapshot {
                 delete $copy->{_all_property_names};
                 delete $copy->{_all_id_property_names};
                 delete $copy->{_id_property_sorter};
+                delete $copy->{_id_property_names};
                 delete $copy->{_sorter};
                 delete $copy->{_property_meta_for_name};
                 delete $copy->{db_committed}{_id_property_sorter};
@@ -108,6 +109,7 @@ sub take_state_snapshot {
             if ($class_name->isa('UR::Object::Property')) {
                 delete $copy->{_is_numeric};
                 delete $copy->{_data_type_as_class_name};
+                delete $copy->{_get_property_name_pairs_for_join};
             }
 
             for my $key (keys %$copy) {

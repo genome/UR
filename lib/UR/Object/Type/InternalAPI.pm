@@ -183,28 +183,30 @@ sub parent_class_names {
     return @{ $self->{is} };
 }
 
+push @cache_keys, '_id_property_names';
 sub id_property_names {
     # FIXME Take a look at id_property_names and all_id_property_names.  
     # They look extremely similar, but tests start dying if you replace one
     # with the other, or remove both and rely on the property's accessor method
 
     my $self = _object(shift);
-    my @id_by;
-    #my $template = UR::BoolExpr::Template->resolve('UR::Object::Type', 'class_name');
 
-    unless ($self->{id_by} and @id_by = @{ $self->{id_by} }) {
-        foreach my $parent ( @{ $self->{'is'} } ) {
-            my $parent_class = UR::Object::Type->get(class_name => $parent);
-            #my $rule = $template->get_rule_for_values($parent);
-            #my $parent_class = $UR::Context::current->get_objects_for_class_and_rule('UR::Object::Type', $rule);
-            next unless $parent_class;
-            @id_by = $parent_class->id_property_names;
-            last if @id_by;
+    unless ($self->{'_id_property_names'}) {
+        my @id_by;
+        unless ($self->{id_by} and @id_by = @{ $self->{id_by} }) {
+            foreach my $parent ( @{ $self->{'is'} } ) {
+                my $parent_class = $parent->class->__meta__;
+                next unless $parent_class;
+                @id_by = $parent_class->id_property_names;
+                last if @id_by;
+            }
         }
-    }   
-    return @id_by;    
+        $self->{'_id_property_names'} = \@id_by;
+    }
+    return @{$self->{'_id_property_names'}};
 }
 
+push @cache_keys, '_all_id_property_names';
 sub all_id_property_names {
     # return shift->id_property_names(@_); This makes URT/t/99_transaction.t fail
     my $self = shift;
@@ -669,33 +671,39 @@ sub autogenerate_new_object_id_datasource {
 
 # Support the autogeneration of unique IDs for objects which require them.
 sub autogenerate_new_object_id {
-    my $self = shift;
-    my $rule = shift;
+    my $self = _object($_[0]);
+    #my $rule = shift;
 
-    my $id_generator = $self->id_generator;
+    unless ($self->{'_resolved_id_generator'}) {
+        my $id_generator = $self->id_generator;
 
-    if (ref($id_generator) eq 'CODE') {
-        return $id_generator->($self,$rule);
+        if (ref($id_generator) eq 'CODE') {
+            $self->{'_resolved_id_generator'} = $id_generator;
 
-    } elsif ($id_generator and $id_generator =~ m/^\-(\S+)/) {
-        my $id_method = 'autogenerate_new_object_id_' . $1;
-        unless ($self->can($id_method)) {
-            Carp::croak("'$id_generator' is an invalid id_generator for class "
-                        . $self->class_name
-                        . ": Can't locate object method '$id_method' via package ".ref($self));
-        }
-        return $self->$id_method($rule);
+        } elsif ($id_generator and $id_generator =~ m/^\-(\S+)/) {
+            my $id_method = 'autogenerate_new_object_id_' . $1;
+            my $subref = $self->can($id_method);
+            unless ($subref) {
+                Carp::croak("'$id_generator' is an invalid id_generator for class "
+                            . $self->class_name
+                            . ": Can't locate object method '$id_method' via package ".ref($self));
+            }
+            $self->{'_resolved_id_generator'} = $subref;
 
-    } else {
-        # delegate to the data source
-        my ($data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($self);
-        if ($data_source) {
-            return $data_source->autogenerate_new_object_id_for_class_name_and_rule(
-                $self->class_name,
-                $rule
-            )
+        } else {
+            # delegate to the data source
+            my ($data_source) = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule($self);
+            if ($data_source) {
+                $self->{'_resolved_id_generator'} = sub {
+                    $data_source->autogenerate_new_object_id_for_class_name_and_rule(
+                        shift->class_name,
+                        shift
+                    )
+                };
+            }
         }
     }
+    goto $self->{'_resolved_id_generator'};
 }
 
 # from ::Object->generate_support_class

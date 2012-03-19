@@ -148,14 +148,11 @@ sub values {
     my $value_id = $self->value_id;
     return unless defined($value_id) and length($value_id);
     my @values;
+    @values = UR::BoolExpr::Util->value_id_to_values($value_id);
     if (my $hard_refs = $self->{hard_refs}) {
-        @values = UR::BoolExpr::Util->value_id_to_values($value_id);
         for my $n (keys %$hard_refs) {
             $values[$n] = $hard_refs->{$n};
         }
-    }
-    else {
-        @values = UR::BoolExpr::Util->value_id_to_values($value_id);
     }
     $self->{values} = \@values;
     return @values;
@@ -180,13 +177,15 @@ sub value_for {
     my $property_name = shift;
 
     # TODO: refactor to be more efficient
+    my $template = $self->template;
     my $h = $self->legacy_params_hash;
     my $v;
     if (exists $h->{$property_name}) {
         # normal case
         $v = $h->{$property_name};
-        if (exists $self->{'hard_refs'}->{$property_name}) {
-            $v = $self->{'hard_refs'}->{$property_name};  # It was stored during resolve() as a hard ref
+        my $tmpl_pos = $template->value_position_for_property_name($property_name);
+        if (exists $self->{'hard_refs'}->{$tmpl_pos}) {
+            $v = $self->{'hard_refs'}->{$tmpl_pos};  # It was stored during resolve() as a hard ref
         }
         elsif ($self->_value_is_old_style_operator_and_value($v)) {
             $v = $v->{'value'};   # It was old style operator/value hash

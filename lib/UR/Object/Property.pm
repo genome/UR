@@ -10,6 +10,17 @@ use Class::AutoloadCAN;
 our $VERSION = "0.37"; # UR $VERSION;;
 our @CARP_NOT = qw( UR::DataSource::RDBMS UR::Object::Type );
 
+# class_meta and r_class_meta duplicate the functionality if two properties of the same name,
+# but these are faster
+sub class_meta {
+    return shift->{'class_name'}->class->__meta__;
+}
+
+sub r_class_meta {
+    return shift->{'data_type'}->class->__meta__;
+}
+
+
 sub is_direct {
     my $self = shift;
     if ($self->is_calculated or $self->is_constant or $self->is_many or $self->via) {
@@ -276,15 +287,20 @@ sub to_property_meta {
 
 sub get_property_name_pairs_for_join {
     my ($self) = @_;
-    my @linkage = $self->_get_direct_join_linkage();
-    unless (@linkage) {
-        Carp::croak("Cannot resolve underlying property joins for property ".$self->id);
+    unless ($self->{'_get_property_name_pairs_for_join'}) {
+        my @linkage = $self->_get_direct_join_linkage();
+        unless (@linkage) {
+            Carp::croak("Cannot resolve underlying property joins for property ".$self->id);
+        }
+        my @results;
+        if ($self->reverse_as) {
+            @results = map { [ $_->[1] => $_->[0] ] } @linkage;
+        } else {
+            @results = map { [ $_->[0] => $_->[1] ] } @linkage;
+        }
+        $self->{'_get_property_name_pairs_for_join'} = \@results;
     }
-    if ($self->reverse_as) {
-        return map { [ $_->[1] => $_->[0] ] } @linkage;
-    } else {
-        return map { [ $_->[0] => $_->[1] ] } @linkage;
-    }
+    return @{$self->{'_get_property_name_pairs_for_join'}};
 }
 
 sub _get_direct_join_linkage {
