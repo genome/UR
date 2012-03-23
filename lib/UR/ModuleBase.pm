@@ -42,7 +42,7 @@ a formal UR class.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.37"; # UR $VERSION;;
+our $VERSION = "0.38"; # UR $VERSION;;
 
 # set up module
 use Carp;
@@ -200,7 +200,7 @@ sub base_dir
     my $class = ref($self) || $self;    
     $class =~ s/\:\:/\//g;
     my $dir = $INC{$class . '.pm'} || $INC{$class . '.pl'};
-    die "Failed to find module $class in \%INC: " . Dumper(%INC) unless ($dir);
+    die "Failed to find module $class in \%INC: " . Data::Dumper(%INC) unless ($dir);
     $dir =~ s/\.p[lm]\s*$//;
     return $dir;
 }

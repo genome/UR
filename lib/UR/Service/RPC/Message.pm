@@ -6,7 +6,7 @@ use IO::Select;
 
 use strict;
 use warnings;
-our $VERSION = "0.37"; # UR $VERSION;
+our $VERSION = "0.38"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::Service::RPC::Message',

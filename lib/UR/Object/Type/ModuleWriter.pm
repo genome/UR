@@ -5,7 +5,7 @@ package UR::Object::Type; # hold methods for the class which cover Module Read/W
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.37"; # UR $VERSION;
+our $VERSION = "0.38"; # UR $VERSION;
 
 our %meta_classes;
 our $bootstrapping = 1;

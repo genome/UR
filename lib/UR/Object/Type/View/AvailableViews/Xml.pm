@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 require UR;
-our $VERSION = "0.37"; # UR $VERSION;
+our $VERSION = "0.38"; # UR $VERSION;
 
 class UR::Object::Type::View::AvailableViews::Xml {
     is => 'UR::Object::View::Default::Xml',
