@@ -37,7 +37,7 @@ isa_ok($lemac, 'UR::Value::Text');
 is($lemac->id, 'metagenomic composition 16s is awesome', 'Camel case to text for is "MetagenomicComposition16sIsAwesome"');
 is($lemac, $text, 'Got the same UR::Value::Text object back for camel case to text');
 
-ok(!$text->to_hash, 'Failed to convert text to hahs that does not start with a dash (-)');
+ok(!$text->to_hash, 'Failed to convert text object "' . $text->id . '"to a hash when does not start with a dash (-)');
 my $text_for_text_to_hash = '-aa foo -b1b -1 bar --c22 baz baz -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   -m';
 my $text_to_hash = UR::Value::Text->get($text_for_text_to_hash);
 ok($text_to_hash, 'Got object for param text');
