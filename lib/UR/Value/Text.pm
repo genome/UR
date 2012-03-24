@@ -65,7 +65,7 @@ sub to_hash {
 
     my $text = $self->id;
     if ( $text !~ m#^-# ) {
-        Carp::cluck('Can not convert text to hash. Text must start with a dash (-)');
+        Carp::cluck('Can not convert text object with id "' . $self->id . '" to hash. Text must start with a dash (-)');
         return;
     }
 
