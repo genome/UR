@@ -77,29 +77,22 @@ is($cmd->namespace_path, $expected_namespace_path, 'namespace_path is correct');
 is($cmd->command_name, 'u-r-t test-base', 'command_name is correct');
 
 # This needs to be updated if we ever drop in a new module under URT/
-my @expected_modules = sort qw(URT/34Baseclass.pm URT/38Primary.pm URT/43Primary.pm URT/ObjWithHash.pm URT/Thingy.pm
-                               URT/34Subclass.pm URT/38Related.pm URT/43Related.pm URT/RAMThingy.pm URT/Vocabulary.pm
-                               URT/Context/Testing.pm URT/DataSource/CircFk.pm URT/DataSource/Meta.pm
-                               URT/DataSource/SomeFile.pm URT/DataSource/SomeFileMux.pm URT/DataSource/SomeMySQL.pm
-                               URT/DataSource/SomeOracle.pm URT/DataSource/SomePostgreSQL.pm URT/DataSource/SomeSQLite.pm);
+my @expected_modules = sort qw(URT/Thing1.pm URT/Thing2.pm URT/Other/Thing3.pm URT/Other/Thing4.pm);
 my @modules = sort $cmd->_modules_in_tree();
+
 # remove modules created by the 'ur update classes-from-db' test that may be running in parallel
 @modules = grep { $_ !~ m/Car.pm|Person.pm|Employee.pm/ } @modules; 
 is_deeply(\@modules, \@expected_modules, '_modules_in_tree with no args is correct');
 
-my @expected_class_names = sort qw(URT::34Baseclass URT::38Primary URT::43Primary URT::ObjWithHash URT::Thingy
-                                   URT::34Subclass URT::38Related URT::43Related URT::RAMThingy URT::Vocabulary
-                                   URT::Context::Testing URT::DataSource::CircFk URT::DataSource::Meta
-                                   URT::DataSource::SomeFile URT::DataSource::SomeFileMux URT::DataSource::SomeMySQL
-                                   URT::DataSource::SomeOracle URT::DataSource::SomePostgreSQL URT::DataSource::SomeSQLite);
+my @expected_class_names = sort qw(URT::Thing1 URT::Thing2 URT::Other::Thing3 URT::Other::Thing4);
 my @class_names = sort $cmd->_class_names_in_tree;
 # remove classes created by the 'ur update classes-from-db' test that may be running in parallel
 @class_names = grep { $_ !~ m/URT::Car|URT::Person|URT::Employee/ } @class_names; 
 is_deeply(\@class_names, \@expected_class_names, '_class_names_in_tree with no args is correct');
 
 
-@modules = sort $cmd->_modules_in_tree( qw( URT/34Baseclass.pm URT/DataSource/Meta.pm URT/Something/NonExistent.pm
-                                            URT::34Baseclass URT::DataSource::SomeOracle URT::NotAModule ) );
-@expected_modules = sort qw( URT/34Baseclass.pm URT/DataSource/Meta.pm URT/34Baseclass.pm URT/DataSource/SomeOracle.pm );
+@modules = sort $cmd->_modules_in_tree( qw( URT/Thing1.pm URT/Other/Thing3.pm URT/Something/NonExistent.pm
+                                            URT::Other::Thing4 URT::NotAModule ) );
+@expected_modules = sort qw( URT/Thing1.pm URT/Other/Thing3.pm URT/Other/Thing4.pm );
 is_deeply(\@modules, \@expected_modules, '_modules_in_tree with args is correct');
 
