@@ -13,7 +13,7 @@ UR::Object::Type->define(
 
 sub line_count {
     my $self = shift;
-    my ($line_count) = qx(wc -l $self) =~ /^(\d+)/;
+    my ($line_count) = qx(wc -l $self) =~ /^\s*(\d+)/;
     return $line_count;
 }
 
