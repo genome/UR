@@ -58,7 +58,7 @@ sub ACTION_docs {
     $self->depends_on('manpages', 'html');
 }
 
-print "@UR::ModuleBuild::ISA\n";
+#print "@UR::ModuleBuild::ISA\n";
 
 
 1;
