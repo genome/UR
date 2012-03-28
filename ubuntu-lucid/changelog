@@ -1,3 +1,17 @@
+libur-perl (0.38-1) unstable; urgency=low
+
+  * Bug fixes to support C3 inheritance on the Mac correctly.
+  * Rich extensions to primitive/value data-types for files, etc.
+  * Optimization for very large in-clauses.
+  * Database updates now infer table structure from class meta-data instead of leaning on database metadata when inserting (update and delete already do this).  
+  * Bug fixes to the new boolean expression parser.  
+  * Fixes to complex inheritance in RDBMS data.
+  * Fix to sorting issues in older Perl 5.8.
+  * Bug fixes to boolean expressions with values which are non-UR objects
+  * Smarter query plans when the join table is variable (not supported in SQL, but in the API), leading to multiple database queries where necessary.
+
+ -- Scott Smith <sakoht@cpan.org>  Wed, 28 Mar 2012 14:24:00 -0500
+
 libur-perl (0.37-1) unstable; urgency=low
 
   * Added a proper parser for generating Boolean Expressions from text strings.  See the UR::BoolExpr pod for more info.
