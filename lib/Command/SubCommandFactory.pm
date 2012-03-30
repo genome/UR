@@ -55,11 +55,9 @@ sub _build_sub_command_mapping {
 
     my $ref_path = $ref_class;
     $ref_path =~ s/::/\//g;
-
     my $full_ref_path = $base_path . '/' . $ref_path;
 
     my @target_paths = glob("$full_ref_path/*.pm");
-
     my @target_class_names;
     for my $target_path (@target_paths) { 
         my $target = $target_path;
@@ -76,30 +74,32 @@ sub _build_sub_command_mapping {
     }
     my %target_classes = @target_class_names;
 
+    # Create a mapping of command names to command classes, and either find or
+    # create those command classes
     my $mapping;
     for my $target (sort keys %target_classes) {
         my $target_class_name = $target_classes{$target};
 
-        my $class_name = $class . '::' . $target; 
+        my $command_class_name = $class . '::' . $target; 
+        my $command_module_name = $command_class_name;
+        $command_module_name =~ s|::|/|g;
+        $command_module_name .= '.pm';
 
-        my $module_name = $class_name;
-        $module_name =~ s|::|/|g;
-        $module_name .= '.pm';
-
-        if (my @matches = grep { -e $_ . '/' . $module_name } @INC) {
-            my $c = UR::Object::Type->get($class_name);
-            $class->_overload_target_class_name($class_name, $target);
-            my $name = $class->_command_name_for_class_word($target);
-            $mapping->{$name} = $class_name;
-            next;
+        # If the command class already exists, load it. Otherwise, create one.
+        if (grep { -e $_ . '/' . $command_module_name } @INC) {
+            UR::Object::Type->get($command_class_name);
+        }
+        else {
+            $class->_build_sub_command($command_class_name, @inheritance);
         }
 
-        my @new_class_names = $class->_build_sub_command($class_name, @inheritance);
-        for my $new_class_name (@new_class_names) {
-            $class->_overload_target_class_name($new_class_name, $target);
-            my $name = $class->_command_name_for_class_word($target);
-            $mapping->{$name} = $class_name;
-        }
+        # Created commands need to know where their parameters came from
+        no warnings 'redefine';
+        eval "sub ${command_class_name}::_target_class_name { '$target_class_name' }";
+        use warnings;
+
+        my $command_name = $class->_command_name_for_class_word($target);
+        $mapping->{$command_name} = $command_class_name;
     }
 
     return $mapping;
@@ -112,16 +112,6 @@ sub _build_sub_command {
         doc => '',
     };
     return $class_name;
-}
-
-sub _overload_target_class_name {
-    my ($class, $class_name) = @_;
-    Carp::confess('No class name given to overload target class name!') if not $class_name;
-    my @tokens = split('::', $class_name);
-    my $target_class_name = $class->_target_base_class.'::'.$tokens[$#tokens];
-    no warnings 'redefine';
-    eval "sub ${class_name}::_target_class_name { '$target_class_name' }";
-    return 1;
 }
 
 sub _target_base_class { return $_[0]->_sub_commands_from; }
