@@ -163,7 +163,9 @@ sub get_all_subcommands {
 
     my @subcommands;
     eval {
-        @subcommands = $command->sub_command_classes;
+        if ($command->can('sub_command_classes')) {
+            @subcommands = $command->sub_command_classes;
+        }
     };
 
     if($@) {
