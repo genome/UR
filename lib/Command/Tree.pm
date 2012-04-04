@@ -493,6 +493,23 @@ sub class_for_sub_command {
     }
 }
 
+my $depth = 0;
+sub __extend_namespace__ {
+    my ($self,$ext) = @_;
+
+    my $meta = $self->SUPER::__extend_namespace__($ext);
+    return $meta if $meta;
+
+    $depth++;
+    if ($depth>1) {
+        $depth--;
+        return;
+    }
+
+    my $class = Command::Tree::class_for_sub_command((ref $self || $self), $self->_command_name_for_class_word($ext));
+    return $class->__meta__ if $class;
+    return;
+}
 
 1;
 
