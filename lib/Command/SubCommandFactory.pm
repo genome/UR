@@ -64,11 +64,12 @@ sub _build_sub_command_mapping {
         $target =~ s#$base_path\/$ref_path/##; 
         $target =~ s/\.pm//;
 
-        my $target_class_name = $ref_class . '::' . $target;  
+        my $target_base_class = $class->_target_base_class;
+        my $target_class_name = $target_base_class . '::' . $target;  
 
         my $target_meta = UR::Object::Type->get($target_class_name);
         next unless $target_meta; 
-        next unless $target_class_name->isa($ref_class); 
+        next unless $target_class_name->isa($target_base_class); 
 
         push @target_class_names, $target => $target_class_name; 
     }
