@@ -162,6 +162,16 @@ sub _generate_content_for_aspect {
         return $aspect_node;
     }
 
+    if (not Scalar::Util::blessed($value[0])) {
+        # shortcut to optimize for simple scalar values without delegate views
+        for my $value ( @value ) {
+            my $value_node = $aspect_node->addChild( $xml_doc->createElement('value') );
+            $value = '' if not defined $value;
+            $value_node->addChild( $xml_doc->createTextNode($value) );
+        }
+        return $aspect_node;
+    }
+
     unless ($aspect->delegate_view) {
         $aspect->generate_delegate_view;
     }
