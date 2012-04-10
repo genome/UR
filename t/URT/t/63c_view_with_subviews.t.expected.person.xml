@@ -11,7 +11,7 @@
     <value>Fester</value>
   </aspect>
   <aspect name="age">
-    <value>99 yrs</value>
+    <value>99</value>
   </aspect>
   <aspect name="cats">
     <object type="Acme::Cat" id="222">
@@ -26,7 +26,7 @@
         <value>fluffy</value>
       </aspect>
       <aspect name="age">
-        <value>2 yrs</value>
+        <value>2</value>
       </aspect>
       <aspect name="fluf">
         <value>11</value>
@@ -55,10 +55,10 @@
         <value>nestor</value>
       </aspect>
       <aspect name="age">
-        <value>8 yrs</value>
+        <value>8</value>
       </aspect>
       <aspect name="fluf">
-        <value>22 yrs</value>
+        <value>22</value>
       </aspect>
       <aspect name="owner">
         <object type="Acme::Person" id="111">
