@@ -928,7 +928,8 @@ sub _load {
         # We need to handle $@ here otherwise we'll see
         # "Can't locate UR/Object/Type/Ghost.pm in @INC" error.
         # We want to fall through "in the right circumstances".
-        Carp::croak("Error while autoloading with 'use $class_name': $@") unless ($@ =~ /Can't locate \S+ in \@INC/);
+        (my $module_path = $class_name . '.pm') =~ s/::/\//g;
+        Carp::croak("Error while autoloading with 'use $class_name': $@") unless ($@ =~ /Can't locate $module_path in \@INC/);
         # FIXME: I think other conditions here will result in silent errors.
     }
 
