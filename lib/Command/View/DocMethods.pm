@@ -496,7 +496,6 @@ sub _shell_args_usage_string {
     my $self = shift;
 
     return eval {
-        print $self->class."\n";
         if ( $self->isa('Command::Tree') ) { 
             return '...';
         }
