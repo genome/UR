@@ -109,7 +109,8 @@ sub _concrete_property_meta_for_class_and_name {
 
     if ($property_meta
         and $property_meta->class_name eq 'UR::Object'
-        and $property_meta->property_name eq 'id')
+        and $property_meta->property_name eq 'id'
+        and $property_name !~ /\./) #If we're looking at a foreign object's id, can't replace with our own
     {
         # This is the generic id property.  Remap it to the class' real ID property name
         my @id_properties = $self->id_property_names;
@@ -545,15 +546,21 @@ sub sorter {
                 push @is_descending, 0;
             }
 
-            my $pmeta;
+            my $class_meta;
             if ($self->isa("UR::Object::Set::Type")) {
                 # If we're a set, we want to examine the property of our members.
                 my $subject_class = $self->class_name;
                 $subject_class =~ s/::Set$//g;
-                $pmeta = $subject_class->__meta__->property($property);
+                $class_meta = $subject_class->__meta__;#->property($property);
             } else {
-                $pmeta = $self->property($property);
+                $class_meta = $self;
             }
+
+            my ($pmeta,@extra) = $class_meta->_concrete_property_meta_for_class_and_name($property);
+            if(@extra) {
+                $pmeta = $class_meta->property($property); #a composite property (typically ID)
+            }
+
             if ($pmeta) {
                 my $is_numeric = $pmeta->is_numeric;
                 push @is_numeric, $is_numeric;
@@ -569,13 +576,20 @@ sub sorter {
 
         no warnings;   # don't print a warning about undef values ...alow them to be treated as 0 or '' 
         $sorter = $self->{_sorter}{$key} ||= sub($$) {
+
             for (my $n = 0; $n < @properties; $n++) {
                 my $property = $properties[$n];
-                my($first,$second) = $is_descending[$n] ? ($_[1]->$property,$_[0]->$property) : ($_[0]->$property,$_[1]->$property);
-                if (!defined($second)) {
-                    return -1;
-                } elsif (!defined($first)) {
-                    return 1;
+                my @property_string = split('\.',$property);
+
+                my($first,$second) = $is_descending[$n] ? ($_[1], $_[0]) : ($_[0], $_[1]);
+                for my $current (@property_string) {
+                    $first = $first->$current;
+                    $second = $second->$current;
+                    if (!defined($second)) {
+                        return -1;
+                    } elsif (!defined($first)) {
+                        return 1;
+                    }
                 }
 
                 my $cmp = $is_numeric[$n] ? $first <=> $second : $first cmp $second;
