@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 44;
+use Test::More tests => 45;
 use Data::Dumper;
 
 class URT::Item {
@@ -32,6 +32,7 @@ class URT::UnrelatedItem {
     has => [
         name    => { is => "String" },
         group   => { is => "String" },
+        nicknames => { is_many => 1, is => "Integer" },
     ],
 };
 
@@ -169,5 +170,6 @@ ok(! $r->evaluate($b), 'Base class object evaluated through rule on child class 
 $r = URT::UnrelatedItem->define_boolexpr(name => 'Bob', group => 'shirts');
 ok(! $r->evaluate($p), 'Original parent object evaluated false through rule on unrelatd class');
 
-
-
+my $j = URT::UnrelatedItem->create(name => 'James', group => 'shirts', nicknames => [12345, 12347, 34, 36, 37]);
+$r = URT::UnrelatedItem->define_boolexpr(nicknames => [12347, 82]);
+ok($r->evaluate($j), 'Many-to-many comparison finds the matching nickname');
