@@ -433,22 +433,46 @@ sub _init_rdbms {
         my $property_name = $delegated_property;
         my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
         $delegation_chain_data->{"__all__"}{table_alias} = {};
-       
+$DB::single = 1;       
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name,$property_name);
         unless ($final_accessor) {
             $self->needs_further_boolexpr_evaluation_after_loading(1);
             next;
         }
 
+        my %ds_for_class;
+        for my $join (@joins) {
+            my $source_class_object = $join->{'source_class'}->__meta__;
+            my ($source_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($source_class_object, $rule_template);
+            $ds_for_class{$join->{'source_class'}} = $source_data_source;
+            
+            my $foreign_class_object = $join->{'foreign_class'}->__meta__;
+            my ($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
+            $ds_for_class{$join->{'foreign_class'}} = $foreign_data_source;
+        }
+
+
         # Splice out joins that go through a UR::Value class and back out to the DB, since UR::Value-types
         # don't get stored in the DB
         for (my $i = 0; $i < @joins; $i++) {
-            if ($joins[$i]->{'foreign_class'}->isa('UR::Value')
-                and $i < $#joins
-                and $joins[$i+1]->{'source_class'}->isa('UR::Value')
-                and $joins[$i]->{'foreign_class'}->isa($joins[$i+1]->{'source_class'}) )
-
-            {
+            if (
+                $i < $#joins
+                and 
+                (
+                    (
+                        # db -> UR::Value -> db : shortcut
+                        $joins[$i]->{'foreign_class'}->isa('UR::Value')
+                        and $joins[$i+1]->{'source_class'}->isa('UR::Value')
+                        and $joins[$i]->{'foreign_class'}->isa($joins[$i+1]->{'source_class'}) 
+                    )
+                    or
+                    (
+                        # foreign class has no data source, but the next join's source class does: shortcut
+                        $ds_for_class{$joins[$i+1]->{'source_class'}} 
+                        and not $ds_for_class{$joins[$i]->{'foreign_class'}} 
+                    )
+                )
+            ) { 
                 my $fixed_join = UR::Object::Join->_get_or_define(
                                       source_class => $joins[$i]->{'source_class'},
                                       source_property_names => $joins[$i]->{'source_property_names'},
@@ -463,6 +487,7 @@ sub _init_rdbms {
         if ($joins[-1]{foreign_class}->isa("UR::Value")) {
             # the final join in a chain is often the link between a primitive value
             # and the UR::Value subclass into which it falls ...irrelevent for db joins
+            $final_accessor = $joins[-1]->source_property_names->[0]; 
             pop @joins;
             next DELEGATED_PROPERTY unless @joins;
         }
@@ -486,15 +511,34 @@ sub _init_rdbms {
 
                 my $foreign_class_name = $join->{foreign_class};
                 my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
-                my $alias = $self->_add_join(
-                        $delegated_property,
-                        $join,
-                        $object_num,
-                        $is_optional,
-                        $final_accessor,
-                    );
 
-                unless ($alias) {
+                if (not exists $ds_for_class{$foreign_class_name}) {
+                    # error: we should have at least a key with an empty value if we tried to find the ds
+                    die "no data source key for $foreign_class_name when adding a join?"
+                }
+
+                my $ds = $ds_for_class{$foreign_class_name};
+
+                if (not $ds) {
+                    # no ds for the next piece of data: we will have to resolve this on the client side
+                    # this is where things may get slow if the query is insufficiently filtered
+                    $self->needs_further_boolexpr_evaluation_after_loading(1);
+                    next DELEGATED_PROPERTY;
+                }
+
+                my $alias = $self->_add_join(
+                    $delegated_property,
+                    $join,
+                    $object_num,
+                    $is_optional,
+                    $final_accessor,
+                    $ds_for_class{$foreign_class_name},
+                );
+
+                if (not $alias) {
+                    # unable to add a join for another reason
+                    # TODO: is the above the only valid case of a join being impossible?
+                    # Can we remove this?
                     $self->needs_further_boolexpr_evaluation_after_loading(1);
                     next DELEGATED_PROPERTY;
                 }
@@ -514,11 +558,12 @@ sub _init_rdbms {
                         my @last_id_property_names = $foreign_class_object->id_property_names;
                         for my $parent (@parents) {
                             my @parent_id_property_names = $parent->id_property_names;
-                            die if @parent_id_property_names > 1;                    
+                            die if @parent_id_property_names > 1;
+                            my $parent_join_foreign_class_name = $parent->class_name;
                             my $inheritance_join = UR::Object::Join->_get_or_define( 
                                 source_class => $last_class_name,
                                 source_property_names => [@last_id_property_names], # we change content below
-                                foreign_class => $parent->class_name,
+                                foreign_class => $parent_join_foreign_class_name,
                                 foreign_property_names => \@parent_id_property_names,
                                 is_optional => $is_optional,
                                 id => "${last_class_name}::" . join(',',@last_id_property_names),
@@ -526,6 +571,10 @@ sub _init_rdbms {
                             unshift @joins_for_object, $inheritance_join; 
                             @last_id_property_names = @parent_id_property_names;
                             $last_class_name = $foreign_class_name;
+
+                            my $foreign_class_object = $parent_join_foreign_class_name->__meta__;
+                            my ($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
+                            $ds_for_class{$parent_join_foreign_class_name} = $foreign_data_source;
                         }
                         next;
                     }
@@ -804,6 +853,7 @@ sub _add_join {
         $object_num,
         $is_optional,
         $final_accessor,
+        $foreign_data_source,
     ) = @_;
 
     my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
@@ -822,7 +872,7 @@ sub _add_join {
     my $group_by = $rule_template->group_by;
     my $order_by = $rule_template->order_by;
     
-    my($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
+    #my($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
     if (!$foreign_data_source or ($foreign_data_source ne $ds)) {
         # FIXME - do something smarter in the future where it can do a join-y thing in memory
         $self->needs_further_boolexpr_evaluation_after_loading(1);
