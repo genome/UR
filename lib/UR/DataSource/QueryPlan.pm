@@ -511,16 +511,34 @@ $DB::single = 1;
 
                 my $foreign_class_name = $join->{foreign_class};
                 my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
-                my $alias = $self->_add_join(
-                        $delegated_property,
-                        $join,
-                        $object_num,
-                        $is_optional,
-                        $final_accessor,
-                        $ds_for_class{$foreign_class_name},
-                    );
 
-                unless ($alias) {
+                if (not exists $ds_for_class{$foreign_class_name}) {
+                    # error: we should have at least a key with an empty value if we tried to find the ds
+                    die "no data source key for $foreign_class_name when adding a join?"
+                }
+
+                my $ds = $ds_for_class{$foreign_class_name};
+
+                if (not $ds) {
+                    # no ds for the next piece of data: we will have to resolve this on the client side
+                    # this is where things may get slow if the query is insufficiently filtered
+                    $self->needs_further_boolexpr_evaluation_after_loading(1);
+                    next DELEGATED_PROPERTY;
+                }
+
+                my $alias = $self->_add_join(
+                    $delegated_property,
+                    $join,
+                    $object_num,
+                    $is_optional,
+                    $final_accessor,
+                    $ds_for_class{$foreign_class_name},
+                );
+
+                if (not $alias) {
+                    # unable to add a join for another reason
+                    # TODO: is the above the only valid case of a join being impossible?
+                    # Can we remove this?
                     $self->needs_further_boolexpr_evaluation_after_loading(1);
                     next DELEGATED_PROPERTY;
                 }
@@ -540,11 +558,12 @@ $DB::single = 1;
                         my @last_id_property_names = $foreign_class_object->id_property_names;
                         for my $parent (@parents) {
                             my @parent_id_property_names = $parent->id_property_names;
-                            die if @parent_id_property_names > 1;                    
+                            die if @parent_id_property_names > 1;
+                            my $parent_join_foreign_class_name = $parent->class_name;
                             my $inheritance_join = UR::Object::Join->_get_or_define( 
                                 source_class => $last_class_name,
                                 source_property_names => [@last_id_property_names], # we change content below
-                                foreign_class => $parent->class_name,
+                                foreign_class => $parent_join_foreign_class_name,
                                 foreign_property_names => \@parent_id_property_names,
                                 is_optional => $is_optional,
                                 id => "${last_class_name}::" . join(',',@last_id_property_names),
@@ -552,6 +571,10 @@ $DB::single = 1;
                             unshift @joins_for_object, $inheritance_join; 
                             @last_id_property_names = @parent_id_property_names;
                             $last_class_name = $foreign_class_name;
+
+                            my $foreign_class_object = $parent_join_foreign_class_name->__meta__;
+                            my ($foreign_data_source) = UR::Context->resolve_data_sources_for_class_meta_and_rule($foreign_class_object, $rule_template);
+                            $ds_for_class{$parent_join_foreign_class_name} = $foreign_data_source;
                         }
                         next;
                     }
