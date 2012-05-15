@@ -2510,7 +2510,7 @@ sub commit {
 
 sub rollback {
     my $self = shift;
-
+$DB::single = 1;
     unless ($self) {
         warn 'UR::Context::rollback() called as a function, not a method.  Assumming rollback on current context';
         $self = UR::Context->current();
