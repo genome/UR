@@ -1301,7 +1301,9 @@ sub _resolve_object_join_data_for_property_chain {
                 $last_class_meta = $meta->class_name->__meta__;
                 next;
             }
-            Carp::croak "can't join to class " . $last_class_meta->class_name . " with multiple id properties";
+            elsif (@id_properties > 1) {
+                Carp::confess "can't join to class " . $last_class_meta->class_name . " with multiple id properties: @id_properties";
+            }
         }
         if($meta->data_type and $meta->data_type =~ /::/) {
             $last_class_meta = UR::Object::Type->get($meta->data_type);
