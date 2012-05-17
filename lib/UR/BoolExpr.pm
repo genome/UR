@@ -291,6 +291,48 @@ sub DESTROY {
     delete $UR::Object::rules->{$_[0]->{id}};
 }
 
+sub flatten_hard_refs {
+    my $self = $_[0];
+    return $self if not $self->{hard_refs};
+
+    my $subject_class_name = $self->subject_class_name;
+    my $meta = $subject_class_name->__meta__;
+    my %params = $self->_params_list;
+    my $changes = 0;
+    for my $key (keys %params) {
+        my $value = $params{$key};
+        if (ref($value) and Scalar::Util::blessed($value) and $value->isa("UR::Object")) {
+            my ($property_name,$op) = ($key =~ /^(\S+)\s*(.*)/);
+            
+            my $value_class_name = $meta->property($property_name)->data_type;
+            next unless $value_class_name;
+            $DB::single = 1;
+            my $id = $value->id;
+            my $value2 = eval { 
+                $value_class_name->get($id)
+            };
+            if (not $value2) {
+                next;
+            }
+            if ($value2 == $value) {
+                # safe to re-represent as .id
+                my $new_key = $property_name . '.id';
+                $new_key .= ' ' . $op if $op;
+                my $new_value = $value->id;
+                delete $params{$key};
+                $params{$new_key} = $new_value;
+                $changes++;
+            }
+        }
+    }
+    if ($changes) {
+        return $self->resolve($subject_class_name, %params);
+    }
+    else {
+        return $self;
+    }
+}
+
 sub resolve_normalized {
     my $class = shift;
     my ($unnormalized_rule, @extra) = $class->resolve(@_);
@@ -649,6 +691,15 @@ sub resolve {
                     push @xremove_keys, $kn-1;
                     push @xremove_values, $vn-1;
                 }
+                # This is disabled here because it is good for get() but not create()
+                # The flatten_hard_refs() method is run before doing a get() to create the same effect.
+                # elsif ($property_meta->is_delegated and not $property_meta->is_many) {
+                #    print STDERR "adding $property_name.id\n";
+                #    push @xadd_keys, $property_name . '.id' . ' ' . $operator;
+                #    push @xadd_values, $value->id;
+                #    push @xremove_keys, $kn-1;
+                #    push @xremove_values, $vn-1;
+                # }
                 elsif ($property_meta->is_valid_storage_for_value($value)) {
                     push @hard_refs, $vn-1, $value;
                 }

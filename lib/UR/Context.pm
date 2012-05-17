@@ -1649,12 +1649,15 @@ sub get_objects_for_class_and_rule {
     # this is an arrayref of all of the cached data
     # it is set in one of two places below
     my $cached;
+   
+    # this will turn foo=>$foo into foo.id=>$foo->id where possible
+    my $no_hard_refs_rule = $rule->flatten_hard_refs;
+    
+    # we do not currently fully "flatten" b/c the bx constant_values do not flatten/reframe
+    #my $flat_rule = ( (1 or $no_hard_refs_rule->subject_class_name eq 'UR::Object::Property') ? $no_hard_refs_rule : $no_hard_refs_rule->flatten);
     
     # this is a no-op if the rule is already normalized
-    # we do not currently flatten b/c the bx constant_values do not flatten/reframe
-    #my $flat_rule = ( (1 or $rule->subject_class_name eq 'UR::Object::Property') ? $rule : $rule->flatten);
-    #my $normalized_rule = $flat_rule->normalize;
-    my $normalized_rule = $rule->normalize;
+    my $normalized_rule = $no_hard_refs_rule->normalize;
 
     my $is_monitor_query = $self->monitor_query;
     $self->_log_query_for_rule($class,$normalized_rule,Carp::shortmess("QUERY: Query start for rule $normalized_rule")) if ($is_monitor_query);
