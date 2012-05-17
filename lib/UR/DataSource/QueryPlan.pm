@@ -433,7 +433,7 @@ sub _init_rdbms {
         my $property_name = $delegated_property;
         my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
         $delegation_chain_data->{"__all__"}{table_alias} = {};
-$DB::single = 1;       
+
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name,$property_name);
         unless ($final_accessor) {
             $self->needs_further_boolexpr_evaluation_after_loading(1);
