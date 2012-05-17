@@ -1,6 +1,10 @@
 use strict;
 use warnings;
+<<<<<<< HEAD
 use Test::More tests=> 40;
+=======
+use Test::More tests=> 36;
+>>>>>>> master
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -169,4 +173,3 @@ is(scalar(@muppets), 1, "got one muppet that loves kermit");
 is($query_count, 1, "only did one query to get the muppet: succesfully re-wrote the join chain through a generic UR::Object to one with a data source");
 @loaded = URT::Person->is_loaded();
 is(scalar(@loaded), 2, "only found the new object and the parameter object in the cachee (succesffully wrote the where clause to exclude the other db data)");
-
