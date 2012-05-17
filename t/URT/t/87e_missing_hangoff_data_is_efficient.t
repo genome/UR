@@ -1,10 +1,6 @@
 use strict;
 use warnings;
-<<<<<<< HEAD
 use Test::More tests=> 40;
-=======
-use Test::More tests=> 36;
->>>>>>> master
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -54,12 +50,11 @@ ok(UR::Object::Type->define(
     has => [
         name        => { is => 'String' },
         infos       => { is => 'URT::PersonInfo', reverse_as => 'person', is_many => 1 },
-        color       => { via => 'infos', to => 'value_id', where => [key => 'color'] },
-        species     => { via => 'infos', to => 'value_id', where => [key => 'species'] },
-        food        => { via => 'infos', to => 'value_id', where => [key => 'food'], is_optional => 1 },
-        sport       => { via => 'infos', to => 'value_id', where => [key => 'sport'], is_optional => 1 },
-        truelove    => { via => 'infos', to => 'value_obj', where => [key => 'truelove'], is_optional => 1 },
-        
+        color       => { is => 'Text',          via => 'infos', to => 'value_id', where => [key => 'color'] },
+        species     => { is => 'Text',          via => 'infos', to => 'value_id', where => [key => 'species'] },
+        food        => { is => 'Text',          via => 'infos', to => 'value_id', where => [key => 'food'], is_optional => 1 },
+        sport       => { is => 'Text',          via => 'infos', to => 'value_id', where => [key => 'sport'], is_optional => 1 },
+        truelove    => { is => 'URT::Person',   via => 'infos', to => 'value_obj', where => [key => 'truelove'], is_optional => 1 },
     ],
 ),
 'Created class for main');
@@ -162,14 +157,14 @@ is(scalar(@loaded), 1, "only loaded the object needed (succesffully wrote the wh
 
 for my $o (URT::PersonInfo->is_loaded()) { $o->unload }
 for my $o (URT::Person->is_loaded()) { $o->unload }
-my @loaded = URT::PersonInfo->is_loaded();
+@loaded = URT::PersonInfo->is_loaded();
 is(scalar(@loaded), 0, "no hangoff data loaded");
 
 #$ENV{UR_DBI_MONITOR_SQL} = 1;
 $kermit = URT::Person->get(1);
 $query_count = 0;
-my @muppets = URT::Person->get('truelove' => $kermit);
-is(scalar(@muppets), 1, "got one muppet that loves kermit");
+@muppets = URT::Person->get('truelove' => $kermit);
+is(scalar(@muppets), 1, "got one muppet that loves kermit") or diag(\@muppets);
 is($query_count, 1, "only did one query to get the muppet: succesfully re-wrote the join chain through a generic UR::Object to one with a data source");
 @loaded = URT::Person->is_loaded();
 is(scalar(@loaded), 2, "only found the new object and the parameter object in the cachee (succesffully wrote the where clause to exclude the other db data)");
