@@ -204,7 +204,7 @@ sub _init_rdbms {
     
     #my $id_property_sorter                  = $class_data->{id_property_sorter};    
     #my @lob_column_names                    = @{ $class_data->{lob_column_names} };
-    #my @lob_column_positions                = @{ $class_data->{lob_column_positions} };
+    my @lob_column_positions                = @{ $class_data->{lob_column_positions} };
     #my $query_config                        = $class_data->{query_config}; 
     #my $post_process_results_callback       = $class_data->{post_process_results_callback};
     #my $class_table_name                    = $class_data->{class_table_name};
@@ -1177,8 +1177,21 @@ sub _set_alias_required {
 
 sub _add_columns {
     my $self = shift;
-    my $db_column_data = $self->_db_column_data;
-    push @$db_column_data, @_;
+    my @new = @_;
+    my $old = $self->_db_column_data;
+    my $pos = @$old;
+    my $lob_column_positions = $self->{lob_column_positions};
+    my $lob_column_names = $self->{lob_column_names};
+    for my $class_property (@new) {
+        my ($sql_class,$sql_property,$sql_table_name) = @$class_property;
+        my $data_type = $sql_property->data_type || '';             
+        if ($data_type =~ /LOB$/) {
+            push @$lob_column_names, $sql_property->column_name;
+            push @$lob_column_positions, $pos;
+        }
+        $pos++;
+    }
+    push @$old, @new;
 }
 
 # Used by the object fabricator to find out which resultset column a
