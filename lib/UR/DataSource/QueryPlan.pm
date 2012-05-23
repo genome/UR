@@ -1305,6 +1305,9 @@ sub _resolve_object_join_data_for_property_chain {
 
     my $last_class_meta = $class_meta;
     for my $meta (@pmeta) {
+        if (!$meta) {
+            Carp::croak "Can't resolve joins for ".$rule_template->subject_class_name . " property '$property_name': No property metadata found for that class and property_name";
+        }
         #id is a special property that we want to look up, but isn't necessarily on a table
         #so if it aliases another property, we look at that instead
         if($meta->property_name eq 'id' and $meta->class_name eq 'UR::Object') {
@@ -1330,9 +1333,6 @@ sub _resolve_object_join_data_for_property_chain {
     # something non-optional
     $is_optional = 0;
     for my $pmeta (@pmeta) {
-        if (!$pmeta) {
-            Carp::croak "Can't resolve joins for ".$rule_template->subject_class_name . " property '$property_name': No property metadata found for that class and property_name";
-        }
         push @joins, $pmeta->_resolve_join_chain($join_label);
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
