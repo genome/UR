@@ -1,5 +1,4 @@
 #!/usr/bin/env perl
-#use lib '/gscuser/ssmith/git/ur/lib';
 use UR;
 use Test::More tests => 8;
 
