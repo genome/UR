@@ -379,6 +379,9 @@ sub _resolve_reverse {
         $prev_where = $next_where;
     }
     if ($prev_where) {
+        # Having a where clause in the last join is only a problem if testing
+        # the where condition needs more joins.  But if it did, then those additional
+        # joins would have already been in the list, right?
         #Carp::confess("final join needs placement! " . Data::Dumper::Dumper($prev_where));
     }
 
