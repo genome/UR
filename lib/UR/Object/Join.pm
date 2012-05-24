@@ -175,7 +175,36 @@ sub _resolve_via_to {
 
         push @joins, $to_meta->_resolve_join_chain($join_label);
     }
-    
+   
+    if (my $return_class_name = $pmeta->class->_convert_data_type_for_source_class_to_final_class($pmeta->data_type, $pmeta->class_name)) {
+        my $final_class_name = $joins[-1]->foreign_class;
+        if ($return_class_name ne $final_class_name) {
+            if ($return_class_name->isa($final_class_name)) {
+                # the property is a subclass of the one involved in the final join
+                # this happens when there is a via/where/to where say "to" goes-to any "Animal" but this overall property is known to be a "Dog". 
+                my $general_join = pop @joins;
+                my $specific_join = UR::Object::Join->_get_or_define(
+                    source_class => $general_join->{'source_class'},
+                    source_property_names => $general_join->{'source_property_names'},
+                    foreign_class => $return_class_name, # more specific 
+                    foreign_property_names => $general_join->{'foreign_property_names'}, # presume the borrow took you into a subclass and these still work
+                    is_optional => $general_join->{'is_optional'},
+                    id => $general_join->{id} . ' isa ' . $return_class_name
+                );
+                push @joins, $specific_join;
+            }
+            elsif ($return_class_name eq 'UR::Value::SloppyPrimitive' or $final_class_name eq 'UR::Value::SloppyPrimitive') {
+                # backward-compatible layer for before there were primitive types
+            }
+            elsif ($final_class_name->isa($return_class_name)) {
+                warn "joins in $pmeta->{id} is declared as $return_class_name while its joins connect to a more specific $final_class_name!";
+            }
+            else {
+                warn "incompatible join: $final_class_name is not a $return_class_name";
+            }
+        }
+    }
+
     return @joins;
 }
 
@@ -348,7 +377,7 @@ sub _resolve_reverse {
         $prev_where = $next_where;
     }
     if ($prev_where) {
-        Carp::confess("final join needs placement! " . Data::Dumper::Dumper($prev_where));
+        #Carp::confess("final join needs placement! " . Data::Dumper::Dumper($prev_where));
     }
 
     for my $join_data (@join_data) {
