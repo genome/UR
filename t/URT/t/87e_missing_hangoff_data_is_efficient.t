@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 40;
+use Test::More tests=> 44;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -112,7 +112,7 @@ is($query_count, 0, 'Made no queries for indirect, hinted property');
 
 $query_count = 0;
 is($kermit->truelove, undef, 'truelove is undef');
-is($query_count, 1, 'Made no queries for indirect, hinted property');
+is($query_count, 0, 'Made no queries for indirect, hinted property');
 
 $query_count = 0;
 my $piggy = URT::Person->get(id => 2, -hints => ['color','sport']);
@@ -143,28 +143,40 @@ is($query_count, 0, 'Made no queries for indirect, hinted property');
 #is($piggy->truelove, $kermit, 'truelove is kermit!');
 #is($query_count, 0, 'Made no queries for indirect, hinted property');
 
-for my $o (URT::PersonInfo->is_loaded()) { $o->unload }
-for my $o (URT::Person->is_loaded()) { $o->unload }
-my @loaded = URT::PersonInfo->is_loaded();
-is(scalar(@loaded), 0, "no hangoff data loaded");
+sub unload_everything {
+  for my $o (URT::PersonInfo->is_loaded()) { $o->unload }
+  for my $o (URT::Person->is_loaded()) { $o->unload }
+  my @loaded = URT::PersonInfo->is_loaded();
+  is(scalar(@loaded), 0, "no hangoff data loaded");
+}
 
+my (@muppets, @loaded);
+
+unload_everything();
 $query_count = 0;
-my @muppets = URT::Person->get('truelove.id' => 1);
+@muppets = URT::Person->get('truelove.id' => 1);
 is(scalar(@muppets), 1, "got one muppet that loves kermit");
 is($query_count, 1, "only did one query to get the muppet: succesfully re-wrote the join chain through a generic UR::Object to one with a data source");
 @loaded = URT::Person->is_loaded();
 is(scalar(@loaded), 2, "only loaded the object needed and the comparison object, and not the other object in the table (successfully wrote the where clause)");
 
-for my $o (URT::PersonInfo->is_loaded()) { $o->unload }
-for my $o (URT::Person->is_loaded()) { $o->unload }
-@loaded = URT::PersonInfo->is_loaded();
-is(scalar(@loaded), 0, "no hangoff data loaded");
-
-#$ENV{UR_DBI_MONITOR_SQL} = 1;
+unload_everything();
 $kermit = URT::Person->get(1);
 $query_count = 0;
 @muppets = URT::Person->get('truelove' => $kermit);
 is(scalar(@muppets), 1, "got one muppet that loves kermit") or diag(\@muppets);
+
 is($query_count, 1, "only did one query to get the muppet: succesfully re-wrote the join chain through a generic UR::Object to one with a data source");
 @loaded = URT::Person->is_loaded();
 is(scalar(@loaded), 2, "only found the new object and the parameter object in the cachee (succesffully wrote the where clause to exclude the other db data)");
+
+unload_everything();
+$kermit = URT::Person->get(1);
+$query_count = 0;
+@muppets = URT::Person->get('truelove.food' => 'flies');
+is(scalar(@muppets), 1, "got one muppet that loves someone who eats flies") or diag(\@muppets);
+
+is($query_count, 1, "only did one query to get the muppet: succesfully re-wrote the join chain through a generic UR::Object to one with a data source and beyond");
+@loaded = URT::Person->is_loaded();
+is(scalar(@loaded), 2, "only found the new object and the parameter object in the cachee (succesffully wrote the where clause to exclude the other db data)");
+

@@ -435,11 +435,16 @@ sub _init_rdbms {
         $delegation_chain_data->{"__all__"}{table_alias} = {};
 
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name,$property_name);
-        unless ($final_accessor) {
-            $self->needs_further_boolexpr_evaluation_after_loading(1);
-            next;
-        }
+        
+        # when there is no "final_accessor" it often means we have an object-accessor in a hint
+        # we want that to go through the join process, and only be left out at filter construction time
+        #unless ($final_accessor) {
+            #$self->needs_further_boolexpr_evaluation_after_loading(1);
+            #next;
+        #}
 
+        # this is gathered here and used below, but previously was gathered internally to the methods which take it
+        # since it is no longer needed directly in this method it might be refactored into the places which use it
         my %ds_for_class;
         for my $join (@joins) {
             my $source_class_object = $join->{'source_class'}->__meta__;
@@ -454,23 +459,16 @@ sub _init_rdbms {
 
         # Splice out joins that go through a UR::Value class and back out to the DB, since UR::Value-types
         # don't get stored in the DB
+        # TODO: move this inot the join creation logic
         for (my $i = 0; $i < @joins; $i++) {
             if (
                 $i < $#joins
                 and 
                 (
-                    (
-                        # db -> UR::Value -> db : shortcut
-                        $joins[$i]->{'foreign_class'}->isa('UR::Value')
-                        and $joins[$i+1]->{'source_class'}->isa('UR::Value')
-                        and $joins[$i]->{'foreign_class'}->isa($joins[$i+1]->{'source_class'}) 
-                    )
-                    or
-                    (
-                        # foreign class has no data source, but the next join's source class does: shortcut
-                        $ds_for_class{$joins[$i+1]->{'source_class'}} 
-                        and not $ds_for_class{$joins[$i]->{'foreign_class'}} 
-                    )
+                    # db -> UR::Value -> db : shortcut
+                    $joins[$i]->{'foreign_class'}->isa('UR::Value')
+                    and $joins[$i+1]->{'source_class'}->isa('UR::Value')
+                    #and $joins[$i]->{'foreign_class'}->isa($joins[$i+1]->{'source_class'})  ## remove this?
                 )
             ) { 
                 my $fixed_join = UR::Object::Join->_get_or_define(
@@ -484,7 +482,7 @@ sub _init_rdbms {
             }
         }
 
-        if ($joins[-1]{foreign_class}->isa("UR::Value")) {
+        if (@joins and $joins[-1]{foreign_class}->isa("UR::Value")) {
             # the final join in a chain is often the link between a primitive value
             # and the UR::Value subclass into which it falls ...irrelevent for db joins
             $final_accessor = $joins[-1]->source_property_names->[0]; 
@@ -603,42 +601,53 @@ sub _init_rdbms {
 
         # done adding any new joins for this delegated property/property-chain
 
-        my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
-        unless ($final_accessor_property_meta) {
-            Carp::croak("No property metadata for property named '$final_accessor' in class "
-                        . $last_class_object_excluding_inherited_joins->class_name
-                        . " while resolving joins for property '" . $delegated_property->property_name . "' in class "
-                        . $delegated_property->class_name);
-        }
-
-        my $sql_lvalue;
-        if ($final_accessor_property_meta->is_calculated) {
-            $sql_lvalue = $final_accessor_property_meta->calculate_sql;
-            unless (defined($sql_lvalue)) {
+        # now see if anything in the where-clause needs to filter on the item joined-to
+        my $value_position = $rule_template->value_position_for_property_name($property_name);
+        if (defined $value_position) {
+            # this property _is_ used to filter results 
+            if (not $final_accessor) {
+                # on the client side :(
                 $self->needs_further_boolexpr_evaluation_after_loading(1);
                 next;
             }
-        }
-        else {
-            $sql_lvalue = $final_accessor_property_meta->column_name;
-            unless (defined($sql_lvalue)) {
-                Carp::confess("No column name set for non-delegated/calculated property $property_name of $class_name");
+            else {
+                # at the database level :)
+                my $final_accessor_property_meta = $last_class_object_excluding_inherited_joins->property_meta_for_name($final_accessor);
+                unless ($final_accessor_property_meta) {
+                    Carp::croak("No property metadata for property named '$final_accessor' in class "
+                                . $last_class_object_excluding_inherited_joins->class_name
+                                . " while resolving joins for property '" . $delegated_property->property_name . "' in class "
+                                . $delegated_property->class_name);
+                }
+
+                my $sql_lvalue;
+                if ($final_accessor_property_meta->is_calculated) {
+                    $sql_lvalue = $final_accessor_property_meta->calculate_sql;
+                    unless (defined($sql_lvalue)) {
+                        $self->needs_further_boolexpr_evaluation_after_loading(1);
+                        next;
+                    }
+                }
+                else {
+                    $sql_lvalue = $final_accessor_property_meta->column_name;
+                    unless (defined($sql_lvalue)) {
+                        Carp::confess("No column name set for non-delegated/calculated property $property_name of $class_name");
+                    }
+                }
+
+                my $operator       = $rule_template->operator_for($property_name);
+
+                unless ($alias_for_property_value) {
+                    die "No alias found for $property_name?!";
+                }
+
+                push @sql_filters, 
+                    $alias_for_property_value => { 
+                        $sql_lvalue => { operator => $operator, value_position => $value_position } 
+                    };
             }
         }
-
-        my $value_position = $rule_template->value_position_for_property_name($property_name);
-        if (defined $value_position) {
-            my $operator       = $rule_template->operator_for($property_name);
-
-            unless ($alias_for_property_value) {
-                die "No alias found for $property_name?!";
-            }
-
-            push @sql_filters, 
-                $alias_for_property_value => { 
-                    $sql_lvalue => { operator => $operator, value_position => $value_position } 
-                };
-        }
+        
     } # next delegated property
 
     # the columns to query
@@ -1294,7 +1303,7 @@ sub _resolve_db_joins_for_inheritance {
 }
 
 sub _resolve_object_join_data_for_property_chain {
-    my ($rule_template, $property_name,$join_label) = @_;
+    my ($rule_template, $property_name, $join_label) = @_;
     my $class_meta = $rule_template->subject_class_name->__meta__;
     
     my @joins;
@@ -1325,6 +1334,7 @@ sub _resolve_object_join_data_for_property_chain {
         }
         last unless $last_class_meta;
     }
+
     # we can't actually get this from the joins because 
     # a bunch of optional things can be chained together to form
     # something non-optional
