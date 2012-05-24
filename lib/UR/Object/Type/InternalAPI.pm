@@ -131,9 +131,9 @@ sub _flatten_property_name {
     my @add_keys;
     my @add_values;
 
-    my @meta = $self->property_meta_for_name($name);
-    for my $meta (@meta) {
-        my @joins = $meta->_resolve_join_chain();
+    my @pmeta = $self->property_meta_for_name($name);
+    for my $pmeta (@pmeta) {
+        my @joins = $pmeta->_resolve_join_chain();
         for my $join (@joins) {
             if ($flattened_name) {
                 $flattened_name .= '.'; 
