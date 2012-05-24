@@ -197,10 +197,12 @@ sub _resolve_via_to {
                 # backward-compatible layer for before there were primitive types
             }
             elsif ($final_class_name->isa($return_class_name)) {
-                warn "joins in $pmeta->{id} is declared as $return_class_name while its joins connect to a more specific $final_class_name!";
+                Carp::carp("Joins for property '" . $pmeta->property_name . "' of class " . $pmeta->class_name
+                            .  " is declared as $return_class_name while its joins connect to a more specific $final_class_name!");
             }
             else {
-                warn "incompatible join: $final_class_name is not a $return_class_name";
+                Carp::carp("Incompatible join for property '" . $pmeta->property_name . "' of class " . $pmeta->class_name
+                            . ": $final_class_name is not a $return_class_name");
             }
         }
     }
