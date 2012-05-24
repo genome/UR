@@ -176,7 +176,7 @@ sub _resolve_via_to {
         push @joins, $to_meta->_resolve_join_chain($join_label);
     }
    
-    if (my $return_class_name = $pmeta->class->_convert_data_type_for_source_class_to_final_class($pmeta->data_type, $pmeta->class_name)) {
+    if (my $return_class_name = $pmeta->_convert_data_type_for_source_class_to_final_class($pmeta->data_type, $pmeta->class_name)) {
         my $final_class_name = $joins[-1]->foreign_class;
         if ($return_class_name ne $final_class_name) {
             if ($return_class_name->isa($final_class_name)) {
