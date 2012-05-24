@@ -200,7 +200,7 @@ sub _resolve_via_to {
                 warn "joins in $pmeta->{id} is declared as $return_class_name while its joins connect to a more specific $final_class_name!";
             }
             else {
-                warn "incompatible join: $final_class_name is not a $return_class_name";
+                # warn "incompatible join: $final_class_name is not a $return_class_name";
             }
         }
     }
