@@ -1314,6 +1314,7 @@ sub _resolve_object_join_data_for_property_chain {
 
     my $last_class_meta = $class_meta;
     for my $meta (@pmeta) {
+        next;
         #id is a special property that we want to look up, but isn't necessarily on a table
         #so if it aliases another property, we look at that instead
         if($meta->property_name eq 'id' and $meta->class_name eq 'UR::Object') {
@@ -1347,6 +1348,13 @@ sub _resolve_object_join_data_for_property_chain {
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
+    my @joins2 = UR::Object::Join->resolve_chain($class_meta->id,$property_name,$join_label);
+    unless ("@joins" eq "@joins2") {
+      #print Data::Dumper::Dumper(\@joins,\@joins2);
+      print join(" *** ", map { $_->id } @joins),"\n";
+      print join(" *** ", map { $_->id } @joins2),"\n";
+      exit;
+    }
     return unless @joins;
     return ($joins[-1]->{source_name_for_foreign}, $is_optional, @joins)
 };

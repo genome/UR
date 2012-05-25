@@ -42,15 +42,70 @@ sub resolve_chain {
         $resolve_chain{$class_name}{$join_label}{$property_chain}
             ||= do {
                 my $class_meta = $class_name->__meta__;
-                my @pmeta = $class_meta->property_meta_for_name($property_chain);
                 my @joins;
-                for my $pmeta (@pmeta) {
-                    push @joins, $class->_resolve_chain_for_property_meta($pmeta,$join_label);
+                if (index($property_chain,'.') != -1) {
+                    # dot-syntax: call ourselves recursively
+                    my @chain = split(/\./,$property_chain);
+                    my $last_class_name = $class_name;
+                    my $last_class_meta = $class_meta;
+                    for my $full_link (@chain) {
+                        my ($link) = ($full_link =~ /^([^\-\?]+)/);
+                        #push @pmeta, $property_meta;
+                        #last if $link eq $chain[-1];
+                        my @new_joins = UR::Object::Join->resolve_chain($last_class_name, $link);
+                        #return unless @new_joins;
+                        if (@joins and @new_joins) {
+                            ($joins[-1],$new_joins[0]) = $class->connect_pair( $joins[-1], $new_joins[0]);
+                        }
+                        push @joins, @new_joins;
+                        $last_class_name = $new_joins[-1]{foreign_class};
+                        $last_class_meta = $last_class_name->__meta__;
+                    }
                 }
+                else {
+                    # regular syntax: 
+                    my $pmeta = $class_meta->property_meta_for_name($property_chain);
+                    @joins = $class->_resolve_chain_for_property_meta($pmeta,$join_label);
+                }
+
+                # return the arrayref to cache the value
                 \@joins;
             };
 
     return @$join_chain;
+}
+
+sub connect_pair {
+    my ($class, $j1, $j2) = @_;
+    my $j1_class_name = $j1->foreign_class;
+    my $j2_class_name = $j2->source_class;
+    if ($j1_class_name ne $j2_class_name) {
+        if ($j2_class_name->isa($j1_class_name)) {
+            my $new_j1 = UR::Object::Join->_get_or_define(
+                source_class => $j1->source_class,
+                source_property_names => $j1->source_property_names,
+                foreign_class => $j2_class_name, # more specific 
+                foreign_property_names => $j1->foreign_property_names, # presume the borrow took you into a subclass and these still work
+                is_optional => $j1->is_optional,
+                id => $j1->{id} . ' isa ' . $j2_class_name
+            );
+            print "swap j1 \n" . Data::Dumper::Dumper($j1,$new_j1);
+            return ($new_j1,$j2); 
+        }
+        elsif($j1_class_name->isa($j2_class_name)) {
+            my $new_j2 = UR::Object::Join->_get_or_define(
+                source_class => $j1_class_name, 
+                source_property_names => $j2->source_property_names,
+                foreign_class => $j2->foreign_class, # more specific 
+                foreign_property_names => $j2->foreign_property_names, # presume the borrow took you into a subclass and these still work
+                is_optional => $j2->is_optional,
+                id => $j2->{id} . ' isa ' . $j2_class_name
+            );
+            print "swap j2 \n" . Data::Dumper::Dumper($j2,$new_j2);
+            return ($j1,$new_j2); 
+        }
+    }
+    return ($j1,$j2);
 }
 
 sub _resolve_chain_for_property_meta {
