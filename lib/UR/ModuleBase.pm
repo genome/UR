@@ -495,8 +495,11 @@ sub _get_msgdata {
         return $UR::Object::msgdata;
     }
     else {
-        no strict 'refs';
-        my $class_msgdata = ${ $self . '::msgdata' } ||= {};
+        my $class_msgdata = do { 
+          no strict 'refs';
+          no warnings; 
+          ${ $self . '::msgdata' } ||= {};
+        };
 
         # eval since some packages aren't forman UR classes with metadata
         my $parent_class = eval { @{$self->__meta__->is}[0]; };  # yeah, ignore multiple inheritance :(
