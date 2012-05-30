@@ -704,6 +704,7 @@ sub resolve_param_value_from_cmdline_text {
             %SEEN_FROM_CLASS = ();
             # call resolve_param_value_from_text without a via_method to "bootstrap" recursion
             @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
+            Carp::croak($@) if ($@ and $@ !~ m/Not a valid BoolExpr/);
         } 
         last if ($@ && !@arg_results);
 
