@@ -902,9 +902,7 @@ sub _resolve_param_value_from_text_by_name_or_id {
     }
 
     my $first_type = $class_meta->property_meta_for_name($id_property_names[0])->data_type || '';
-    if (@id_property_names > 1 or $first_type eq 'Text' or $str =~ /^-?\d+$/) { # try to get by ID
-        @results = $param_class->get($str);
-    }
+    @results = eval { $param_class->get($str) };
     if (!@results && $param_class->can('name')) {
         @results = $param_class->get(name => $str);
         unless (@results) {
