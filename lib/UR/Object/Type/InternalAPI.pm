@@ -250,6 +250,26 @@ sub all_table_names {
     return @table_names;
 }
 
+sub first_table_name {
+    my $self = _object(shift);
+    if ($self->{_first_table_name}) {
+        return $self->{first_table_name};
+    }
+
+    my @classes = ($self);
+    while(@classes) {
+        my $co = shift @classes;
+        if (my $table_name = $co->table_name) {
+            $self->{first_table_name} = $table_name;
+            return $table_name;
+        }
+        my @parents = map { $_->__meta__ } @{$co->{'is'}};
+        push @classes, @parents;
+    }
+    return;
+}
+    
+
 sub ancestry_class_names {
     my $self = shift;
     

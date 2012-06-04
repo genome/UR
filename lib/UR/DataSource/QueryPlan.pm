@@ -351,7 +351,7 @@ sub _init_rdbms {
             }
 
             my $property = $pmeta[0];
-            my $table_name = $property->class_meta->table_name;
+            my $table_name = $property->class_meta->first_table_name;
             my $operator       = $rule_template->operator_for($property_name);
             my $value_position = $rule_template->value_position_for_property_name($property_name);
 
@@ -397,10 +397,7 @@ sub _init_rdbms {
             elsif ($property->is_delegated) {
                 push @delegated_properties, $property->property_name;
             }
-            elsif (($property->is_calculated || $property->is_constant || $property->is_transient)
-                   and
-                   ( ! exists($hints{$property_name}) or exists($filters{$property_name}) )
-            ) {
+            elsif ( ! exists($hints{$property_name}) or exists($filters{$property_name}) ) {
                 $self->needs_further_boolexpr_evaluation_after_loading(1);
             }
             else {

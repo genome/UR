@@ -3021,7 +3021,7 @@ sub _generate_class_data_for_loading {
 
     my @all_table_properties;
     my @direct_table_properties;
-    my $first_table_name;
+    my $first_table_name = $class_meta->first_table_name;
     my $sub_classification_method_name;
     my ($sub_classification_meta_class_name, $subclassify_by);
 
@@ -3030,10 +3030,10 @@ sub _generate_class_data_for_loading {
     my $prev_id_column_name;
 
     for my $co ( $class_meta, @{ $parent_class_data->{parent_class_objects} } ) {   
-        my $table_name = $co->table_name;
+        my $table_name = $co->first_table_name;
         next unless $table_name;
 
-        $first_table_name ||= $co->table_name;
+        #$first_table_name ||= $co->table_name;
         $sub_classification_method_name ||= $co->sub_classification_method_name;
         $sub_classification_meta_class_name ||= $co->sub_classification_meta_class_name;
         $subclassify_by   ||= $co->subclassify_by;
