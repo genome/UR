@@ -1213,7 +1213,7 @@ sub _initialize_accessors_and_inheritance {
         @is = ('UR::ModuleBase')
     }
     eval "\@${class_name}::ISA = (" . join(',', map { "'$_'" } @is) . ")\n";
-    Carp::confess($@) if $@;
+    Carp::croak("Can't initialize \@ISA for class_name '$class_name': $@\nMaybe the class_name or one of the parent classes are not valid class names") if $@;
 
     my $namespace_mro;
     my $namespace_name = $self->{namespace};
