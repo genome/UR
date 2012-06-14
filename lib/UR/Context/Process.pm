@@ -439,11 +439,10 @@ sub fork
 {
     my $class = shift;
 
-    my %data_source_for_class = $class->get_data_sources_for_loaded_classes;
-    my @ds = values %data_source_for_class;
+    my @ds = UR::DataSource->is_loaded();
 
     for (grep {defined $_} @ds) {
-        $_->get()->prepare_for_fork if $_->can('prepare_for_fork'); 
+        $_->prepare_for_fork if $_->can('prepare_for_fork'); 
     }
 
     my $pid = fork();
