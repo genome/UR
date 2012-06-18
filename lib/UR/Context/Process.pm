@@ -452,7 +452,7 @@ sub fork
     }
 
     for (grep {defined $_} @ds) {
-        $_->get()->finish_up_after_fork if $_->can('finish_up_after_fork'); 
+        $_->finish_up_after_fork if $_->can('finish_up_after_fork'); 
     }
 
     return $pid;
