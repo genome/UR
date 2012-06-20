@@ -773,7 +773,7 @@ sub resolve_param_value_from_text {
     if (!@results && !$@) {
         # no result and was valid BoolExpr then we don't want to break it apart because we
         # could query enormous amounts of info
-        die $@;
+        return;
     }
     # the first param_arg is all param_args to try BoolExpr so skip if it has commas
     if (!@results && $param_arg !~ /,/) {
