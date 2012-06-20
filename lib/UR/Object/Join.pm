@@ -363,7 +363,9 @@ sub _resolve_reverse {
         my $next_where = $_->{where};
         $_->{where} = $prev_where;
 
+        no warnings qw(uninitialized); #source_name_for_foreign can be undefined at the end of the chain
         my $id = $_->{source_class} . '::' . $_->{source_name_for_foreign};
+        use warnings qw(uninitialized);
         if ($prev_where) {
             my $where_rule = UR::BoolExpr->resolve($foreign_class, @$where);
             $id .= ' ' . $where_rule->id;
