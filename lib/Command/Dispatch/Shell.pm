@@ -891,25 +891,35 @@ sub _resolve_param_value_from_text_by_bool_expr {
     return @results;
 }
 
-sub _resolve_param_value_from_text_by_name_or_id {
+sub _try_get_by_id {
     my ($self, $param_class, $str) = @_;
-    my (@results);
 
     my $class_meta = $param_class->__meta__;
     my @id_property_names = $class_meta->id_property_names;
     if (@id_property_names == 0) {
-        die "Failed to determine id property names for class $param_class.";
+        die "Failed to determine ID property names for class ($param_class).";
+    } elsif (@id_property_names == 1) {
+        my $id_data_type = $class_meta->property_meta_for_name($id_property_names[0])->data_type || '';
+        # Validate $str, if possible, to prevent warnings from database if $str does not fit column type.
+        if ($id_data_type eq 'Number') { # Oracle's Number data type includes floats but we just use integers for numeric IDs
+            return ($str =~ /^[+-]?\d+$/);
+        }
     }
+    return 1;
+}
 
-    my $first_type = $class_meta->property_meta_for_name($id_property_names[0])->data_type || '';
-    @results = eval { $param_class->get($str) };
+sub _resolve_param_value_from_text_by_name_or_id {
+    my ($self, $param_class, $str) = @_;
+    my (@results);
+    if ($self->_try_get_by_id($param_class, $str)) {
+        @results = eval { $param_class->get($str) };
+    }
     if (!@results && $param_class->can('name')) {
         @results = $param_class->get(name => $str);
         unless (@results) {
             @results = $param_class->get("name like" => "$str");
         }
     }
-    #$self->debug_message("S: $param_class '$str' " . scalar(@results));
 
     return @results;
 }
