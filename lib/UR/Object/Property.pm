@@ -291,7 +291,7 @@ sub get_property_name_pairs_for_join {
     unless ($self->{'_get_property_name_pairs_for_join'}) {
         my @linkage = $self->_get_direct_join_linkage();
         unless (@linkage) {
-            Carp::croak("Cannot resolve underlying property joins for property ".$self->id);
+            Carp::confess("Cannot resolve underlying property joins for property ".$self->id);
         }
         my @results;
         if ($self->reverse_as) {
