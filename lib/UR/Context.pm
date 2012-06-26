@@ -1767,7 +1767,7 @@ sub get_objects_for_class_and_rule {
         if ($loading_iterator) {
             # use the iterator made above
             my $found;
-            while ($found = $loading_iterator->(1)) {        
+            while (defined($found = $loading_iterator->(1))) {
                 push @results, $found;
             }
         }

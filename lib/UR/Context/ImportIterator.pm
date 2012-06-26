@@ -551,7 +551,7 @@ sub _create_import_iterator_for_underlying_context {
         my $primary_object_for_next_db_row;
 
         LOAD_AN_OBJECT:
-        until ($primary_object_for_next_db_row) { # note that we return directly when the db is out of data
+        until (defined $primary_object_for_next_db_row) { # note that we return directly when the db is out of data
 
             my ($next_db_row);
             ($next_db_row) = $db_iterator->() if ($db_iterator);
@@ -737,8 +737,7 @@ sub _create_import_iterator_for_underlying_context {
                 grep { defined && ref }
                 @imported;
 
-
-            if ($re_iterate and $primary_object_for_next_db_row and ! ref($primary_object_for_next_db_row)) {
+            if ($re_iterate and defined($primary_object_for_next_db_row) and ! ref($primary_object_for_next_db_row)) {
                 # It is possible that one or more objects go into subclasses which require more
                 # data than is on the results row.  For each subclass (or set of subclasses),
                 # we make a more specific, subordinate iterator to delegate-to.
@@ -764,7 +763,7 @@ sub _create_import_iterator_for_underlying_context {
 
             } # end of handling a possible subordinate iterator delegate
 
-            unless ($primary_object_for_next_db_row) {
+            unless (defined $primary_object_for_next_db_row) {
             #if (!$primary_object_for_next_db_row or $rule->evaluate($primary_object_for_next_db_row)) {
                 redo LOAD_AN_OBJECT;
             }
@@ -779,7 +778,9 @@ sub _create_import_iterator_for_underlying_context {
                 push @by_hand_recursive_source_values, @values;
             }
 
-            if (! $next_object_to_return or $next_object_to_return eq $primary_object_for_next_db_row) {
+            if (! defined($next_object_to_return)
+                or (Scalar::Util::refaddr($next_object_to_return) == Scalar::Util::refaddr($primary_object_for_next_db_row))
+            ) {
                 # The first time through the iterator, we need to buffer the object until
                 # $primary_object_for_next_db_row is something different.
                 $next_object_to_return = $primary_object_for_next_db_row;

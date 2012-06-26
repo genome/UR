@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 82;
+use Test::More tests => 86;
 require File::Temp;
 
 my $s1 = UR::Value::Text->get('hi there');
@@ -19,6 +19,11 @@ is($s1,$s2, 'They are the same object');
 my $s3 = UR::Value::Text->get('something else');
 ok($s3, 'Got an object for a different string');
 isnt($s1,$s3, 'They are different objects');
+
+my $s4 = UR::Value::Text->get('0');
+ok(defined($s4), 'Got an object for the string "0"'); # Note that $s4 stringifies to "0" which is boolean false
+is($s4->id, '0', 'The ID is correct');
+is($s4, '0', 'It stringifies correctly');
 
 my $text = UR::Value::Text->get('metagenomic composition 16s is awesome');
 ok($text, 'Got an object for string "metagenomic composition 16s is awesome"');
@@ -95,6 +100,9 @@ is($n1, $n2, 'They were the same object');
 
 my @o = Test::Value->get(['xyz','abc','123','456']);
 is(scalar(@o), 4, 'Got 4 Test::Values in a single get()');
+is_deeply([ map { $_->id} @o],
+          ['123','456','abc','xyz'],
+          'Values were returned in ID order');
 my %o = map { $_->id => $_ } @o;
 
 is($o{'123'}, $n1, "Object with id '123' is the same as the one from earlier");

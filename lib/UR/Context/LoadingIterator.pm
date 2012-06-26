@@ -127,13 +127,13 @@ sub _create {
         my $next_object;
 
         PICK_NEXT_OBJECT_FOR_LOADING:
-        while (! $next_object) {
-            if ($underlying_context_iterator && ! $next_obj_underlying_context) {
+        while (! defined($next_object)) {
+            if ($underlying_context_iterator && ! defined($next_obj_underlying_context)) {
                 ($next_obj_underlying_context) = $underlying_context_iterator->(1);
 
-                $underlying_context_objects_count++ if ($is_monitor_query and $next_obj_underlying_context);
+                $underlying_context_objects_count++ if ($is_monitor_query and defined($next_obj_underlying_context));
 
-                if ($next_obj_underlying_context) {
+                if (defined($next_obj_underlying_context)) {
                      if ($next_obj_underlying_context->isa('UR::DeletedRef')) {
                          # This object is deleted in the current context and not yet committed
                          # skip it and pick again
@@ -152,11 +152,11 @@ sub _create {
                 }
             }
 
-            unless ($next_obj_current_context) {
+            unless (defined $next_obj_current_context) {
                 ($next_obj_current_context) = shift @$cached;
                 $cached_objects_count++ if ($is_monitor_query and $next_obj_current_context);
             }
-            if ($next_obj_current_context and $next_obj_current_context->isa('UR::DeletedRef')) {
+            if (defined($next_obj_current_context) and $next_obj_current_context->isa('UR::DeletedRef')) {
                  my $obj_to_complain_about = $next_obj_current_context;
                  # undef it in case the user traps the exception, next time we'll pull another off the list
                  $next_obj_current_context = undef;
@@ -165,7 +165,7 @@ sub _create {
                              . Data::Dumper::Dumper($obj_to_complain_about) );
             }
 
-            if (!$next_obj_underlying_context) {
+            if (!defined($next_obj_underlying_context)) {
 
                 if ($is_monitor_query) {
                     $context->_log_query_for_rule($bx_subject_class,
@@ -205,20 +205,20 @@ sub _create {
             # we're collating these into one return stream here
 
             my $comparison_result = undef;
-            if ($next_obj_underlying_context && $next_obj_current_context) {
+            if (defined($next_obj_underlying_context) && defined($next_obj_current_context)) {
                 $comparison_result = $object_sorter->($next_obj_underlying_context, $next_obj_current_context);
             }
 
             my $next_obj_underlying_context_id;
-            $next_obj_underlying_context_id = $next_obj_underlying_context->id if ($next_obj_underlying_context);
+            $next_obj_underlying_context_id = $next_obj_underlying_context->id if (defined $next_obj_underlying_context);
             my $next_obj_current_context_id;
-            $next_obj_current_context_id = $next_obj_current_context->id if ($next_obj_current_context);
+            $next_obj_current_context_id = $next_obj_current_context->id if (defined $next_obj_current_context);
 
             # This if() section is for when the in-memory and DB iterators return the same
             # object at the same time.
             if (
-                $next_obj_underlying_context
-                and $next_obj_current_context
+                defined($next_obj_underlying_context)
+                and defined($next_obj_current_context)
                 and $comparison_result == 0 # $next_obj_underlying_context->id eq $next_obj_current_context->id
             ) {
                 # Both objects sort the same.  Since the ID properties are always last in the sort order list,
@@ -231,9 +231,9 @@ sub _create {
 
             # This if() section is for when the DB iterator's object sorts first
             elsif (
-                $next_obj_underlying_context
+                defined($next_obj_underlying_context)
                 and (
-                    (!$next_obj_current_context)
+                    (!defined($next_obj_current_context))
                     or
                     ($comparison_result < 0) # ($next_obj_underlying_context->id le $next_obj_current_context->id) 
                 )
@@ -277,9 +277,9 @@ sub _create {
 
             # This if() section is for when the in-memory iterator's object sorts first
             elsif (
-                $next_obj_current_context
+                defined($next_obj_current_context)
                 and (
-                    (!$next_obj_underlying_context)
+                    (!defined($next_obj_underlying_context))
                     or
                     ($comparison_result > 0) # ($next_obj_underlying_context->id ge $next_obj_current_context->id) 
                 )
@@ -412,13 +412,13 @@ sub _create {
 
         # end while ! $next_object
         } continue {
-            if ($next_object and defined($offset) and $offset) {
+            if (defined($next_object) and defined($offset) and $offset) {
                 $offset--;
                 $next_object = undef;
             }
         }
 
-        $last_loaded_id = $next_object->id if $next_object;
+        $last_loaded_id = $next_object->id if (defined $next_object);
 
         $limit-- if defined $limit;
 
