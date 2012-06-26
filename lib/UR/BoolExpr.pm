@@ -537,22 +537,9 @@ sub resolve {
         $subject_class_meta->{'cache'}{'UR::BoolExpr::resolve'} ||=
         { map {$_, 1}  ( $subject_class_meta->all_property_type_names) };
 
-    my ($op,@extra);
-
-    my $kn = 0;
-    my $vn = 0;
-    my $cn = 0;
-
-    my @xadd_keys;
-    my @xadd_values;
-    my @xremove_keys;
-    my @xremove_values;
-    my @extra_key_pos;
-    my @extra_value_pos;
-    my @swap_key_pos;
-    my @swap_key_value;
-    my $complex_values = 0;
-    my %in_clause_values_are_strings;
+    my($kn, $vn, $cn, $complex_values) = (0,0,0,0);
+    my ($op,@extra,@xadd_keys,@xadd_values,@xremove_keys,@xremove_values,@extra_key_pos,@extra_value_pos,
+        @swap_key_pos,@swap_key_value,%in_clause_values_are_strings);
 
     for my $value (@values) {
         $key = $keys[$kn++];
