@@ -460,7 +460,7 @@ sub mk_indirect_ro_accessor {
 
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
-        Carp::confess("assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
+        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
 
         unless ($bridge_collector) {
             ($bridge_collector, $bridge_crosser)
@@ -477,7 +477,7 @@ sub mk_indirect_ro_accessor {
     };
 
     unless ($accessor_name) {
-        Carp::confess("No accessor name specified for indirect ro accessor $class_name $accessor!");
+        Carp::croak("No accessor name specified for indirect ro accessor $class_name $accessor!");
     }
 
     Sub::Install::reinstall_sub({
@@ -1036,7 +1036,7 @@ sub mk_object_set_accessors {
         if ($reverse_as) {
             # join to get the data...
             unless ($r_class_meta) {
-                Carp::confess("No r_class_meta?"); 
+                Carp::croak("No remote class metadata found for class $r_class_name while resolving property '$singular_name' of class $class_name");
             }
             my $property_meta = $r_class_meta->property_meta_for_name($reverse_as);
             unless ($property_meta) {
@@ -1450,7 +1450,7 @@ sub initialize_direct_accessors {
         };
 
         unless ($accessor_name) {
-            Carp::confess("No accessor name for property $class_name $property_name?");
+            Carp::croak("No accessor name for property '$property_name' of class $class_name");
         }        
 
         my $accessor_type;
