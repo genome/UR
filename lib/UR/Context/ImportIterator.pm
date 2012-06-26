@@ -729,15 +729,14 @@ sub _create_import_iterator_for_underlying_context {
 
             $primary_object_for_next_db_row = $imported[-1];
 
-            foreach my $obj (@imported) {
-                # The object importer will return undef for an object if no object
-                # got created for that $next_db_row, and will return a string if the object
-                # needs to be subclassed before being returned.  Don't put serial numbers on
-                # these
-                next unless (defined($obj) && ref($obj));
+            # The object importer will return undef for an object if no object
+            # got created for that $next_db_row, and will return a string if the object
+            # needs to be subclassed before being returned.  Don't put serial numbers on
+            # these
+            map { $_->{'__get_serial'} = $this_get_serial }
+                grep { defined && ref }
+                @imported;
 
-                $obj->{'__get_serial'} = $this_get_serial;
-            }
 
             if ($re_iterate and $primary_object_for_next_db_row and ! ref($primary_object_for_next_db_row)) {
                 # It is possible that one or more objects go into subclasses which require more
