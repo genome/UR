@@ -56,6 +56,16 @@ sub is_valid_storage_for_value {
     return 0;
 }
 
+sub alias_for {
+    my $self = shift;
+
+    if ($self->{'via'} and $self->{'to'} and $self->{'via'} eq '__self__') {
+        return $self->{'to'};
+    } else {
+        return $self->{'property_name'};
+    }
+}
+
 sub _convert_data_type_for_source_class_to_final_class {
     my ($class, $foreign_class, $source_class) = @_;
 

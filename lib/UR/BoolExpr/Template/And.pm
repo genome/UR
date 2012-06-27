@@ -887,7 +887,15 @@ sub _fast_construct {
     # The normalizer will store this.  Below, we'll
     # find or create the template for this ID.
     my $normalized_constant_value_id = (scalar(@constant_values_sorted) ? UR::BoolExpr::Util->values_to_value_id(@constant_values_sorted) : $constant_value_id);
-    my $normalized_id = UR::BoolExpr::Template->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, "And", join(",",@keys_sorted), $normalized_constant_value_id);
+
+    my @keys_unaliased = eval { $UR::Object::Type::bootstrapping
+                            ? @keys_sorted
+                            : map { $subject_class_meta->property_meta_for_name($_)->alias_for() }
+                                map { my $pos = index($_, ' ');  $pos == -1 ? $_ : substr($_, 0, $pos) }
+                                @keys_sorted; };
+    $DB::single=1 if $@;
+    my $normalized_id = UR::BoolExpr::Template->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, "And", join(",",@keys_unaliased), $normalized_constant_value_id);
+    #my $normalized_id = UR::BoolExpr::Template->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, "And", join(",",@keys_sorted), $normalized_constant_value_id);
 
     $self = bless {
         id                              => $id,

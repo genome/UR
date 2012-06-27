@@ -46,6 +46,35 @@ sub mk_rw_accessor {
 }
 
 
+sub mk_alias_accessor {
+    my($self, $class_name, $accessor_name, $alias_for) = @_;
+
+    if ($accessor_name eq $alias_for) {
+        Carp::croak("Cannot create alias property '$accessor_name' which is an alias to itself");
+    }
+
+    my $full_name = join('::', $class_name, $accessor_name);
+    my $accessor = Sub::Name::subname $full_name => sub {
+        my $real_sub = $_[0]->can($alias_for);
+        unless ($real_sub) {
+            Carp::croak("Can't locate object method \"$alias_for\" via package \"$class_name\" while resolving alias property \"$accessor_name\"");
+        }
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => $accessor_name,
+            code => $real_sub,
+        });
+
+        goto $real_sub;
+    };
+
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name,
+        code => $accessor,
+    });
+}
+
 sub mk_ro_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name) = @_;
     $property_name ||= $accessor_name;
@@ -1484,16 +1513,21 @@ sub initialize_direct_accessors {
         }
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
-            if ($property_data->{is_mutable}) {
-                my $singular_name;
-                if ($property_data->{'is_many'}) {
-                    require Lingua::EN::Inflect;
-                    $singular_name = Lingua::EN::Inflect::PL_V($accessor_name);
+            if ($via eq '__self__') {
+                $self->mk_alias_accessor($class_name, $accessor_name, $to);
+
+            } else {
+                if ($property_data->{is_mutable}) {
+                    my $singular_name;
+                    if ($property_data->{'is_many'}) {
+                        require Lingua::EN::Inflect;
+                        $singular_name = Lingua::EN::Inflect::PL_V($accessor_name);
+                    }
+                    $self->mk_indirect_rw_accessor($class_name,$accessor_name,$via,$to,$where,$property_data->{'is_many'} && $singular_name);
                 }
-                $self->mk_indirect_rw_accessor($class_name,$accessor_name,$via,$to,$where,$property_data->{'is_many'} && $singular_name);
-            }
-            else {
-                $self->mk_indirect_ro_accessor($class_name,$accessor_name,$via,$to,$where);
+                else {
+                    $self->mk_indirect_ro_accessor($class_name,$accessor_name,$via,$to,$where);
+                }
             }
         }
         elsif (my $calculate = $property_data->{calculate}) {
