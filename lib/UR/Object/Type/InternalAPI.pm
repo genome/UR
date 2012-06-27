@@ -184,6 +184,24 @@ sub parent_class_names {
     return @{ $self->{is} };
 }
 
+
+# If $property_name represents an alias-type property (via => '__self__'),
+# then return a string with all the aliases removed
+push @cache_keys, '_resolve_property_aliases';
+sub resolve_property_aliases {
+    my($self,$property_name) = @_;
+
+    unless ($self->{'_resolve_property_alises'} && $self->{'_resolve_property_aliases'}->{$property_name}) {
+        $self->{'_resolve_property_aliases'} ||= {};
+
+        my @property_metas = $self->property_meta_for_name($property_name);
+        my @property_names = map { $_->alias_for } @property_metas;
+        $self->{'_resolve_property_aliases'}->{$property_name} = join('.', @property_names);
+    }
+    return $self->{'_resolve_property_aliases'}->{$property_name};
+}
+
+
 push @cache_keys, '_id_property_names';
 sub id_property_names {
     # FIXME Take a look at id_property_names and all_id_property_names.  
