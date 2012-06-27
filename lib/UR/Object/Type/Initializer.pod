@@ -291,7 +291,7 @@ Specifies the data type of this property. Basic types include 'String',
 name of another class here. See the Relationships section of
 L<UR::Manual::Cookbook> for more information.
 
-Object properties do not normally hold references to other objects, but you
+Object properties do not normally hold Perl references to other objects, but you
 may use 'ARRAY' or 'HASH' here to indicate that the object will store the
 reference directly.  Note that these properties are not usually savable to
 outside data sources.
@@ -491,10 +491,29 @@ find a Person object where its 'name' is 'No one' and assign the Thing's
 owner_id to point to that Person.  If no matching Person is found, it will
 first create one with the name 'No one'.
 
+=head2 Alias Properties
+
+Sometimes it's useful to have a property that is an alias for another
+property, perhaps as a refactoring tool or to make the API clearer.  The is
+accomilished by defining an indirect property where the 'via' is __self__.
+
+  class Thing {
+      id_by => 'thing_id',
+      has => [
+          owner => { is => 'Person', id_by => 'owner_id' },
+          titleholder => { via => '__self__', to => 'owner' },
+      ]
+  };
+
+In this case, 'titleholder' is an alias for the 'owner' property.  titleholder
+can be called as a method any place owner is a valid method call.  BoolExprs
+may refer to titleholder, but any such references will be rewrittn to 'owner'
+when they are normalized.
+
 =head2 Subclassing Members of an Abstract Class
 
 In some cases, objects may be loaded using a parent class, but all the
-objects most be binned into some other subclass.
+objects are binned into some other subclass.
 
   class Widget {
       has => [
