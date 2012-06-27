@@ -890,8 +890,8 @@ sub _fast_construct {
 
     my @keys_unaliased = eval { $UR::Object::Type::bootstrapping
                             ? @keys_sorted
-                            : map { $subject_class_meta->property_meta_for_name($_)->alias_for() }
-                                map { my $pos = index($_, ' ');  $pos == -1 ? $_ : substr($_, 0, $pos) }
+                            : map { $_->[0] = $subject_class_meta->property_meta_for_name($_->[0])->alias_for(); join(' ',@$_) }
+                                map { [ split(' ') ] }
                                 @keys_sorted; };
     $DB::single=1 if $@;
     my $normalized_id = UR::BoolExpr::Template->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, "And", join(",",@keys_unaliased), $normalized_constant_value_id);
