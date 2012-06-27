@@ -890,7 +890,9 @@ sub _fast_construct {
 
     my @keys_unaliased = eval { $UR::Object::Type::bootstrapping
                             ? @keys_sorted
-                            : map { $_->[0] = $subject_class_meta->property_meta_for_name($_->[0])->alias_for(); join(' ',@$_) }
+                            : map { my $prop = $subject_class_meta->property_meta_for_name($_->[0]);
+                                    $_->[0] = $prop->alias_for() if $prop;
+                                    join(' ',@$_); }
                                 map { [ split(' ') ] }
                                 @keys_sorted; };
     $DB::single=1 if $@;
