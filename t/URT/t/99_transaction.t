@@ -104,6 +104,7 @@ sub take_state_snapshot {
                 delete $copy->{db_committed}{_sorter};
                 delete $copy->{get_composite_id_resolver};
                 delete $copy->{_property_name_class_map};
+                delete $copy->{_resolve_property_aliases};
                 delete $copy->{cache};
             }
             if ($class_name->isa('UR::Object::Property')) {
