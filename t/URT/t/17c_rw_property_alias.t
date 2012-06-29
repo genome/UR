@@ -6,20 +6,39 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 25;
+use Test::More tests => 35;
 use URT::DataSource::SomeSQLite;
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 ok($dbh, 'Got DB handle');
 
-ok( $dbh->do("create table car (car_id integer PRIMARY KEY, make varchar NOT NULL)"),
+ok( $dbh->do("create table person (person_id integer PRIMARY KEY, name varchar NOT NULL)"), 'Created person table');
+ok( $dbh->do("create table car (car_id integer PRIMARY KEY, make varchar NOT NULL, owner_id integer NOT NULL REFERENCES person(person_id))"),
         'Created car table');
 
-ok( $dbh->do("insert into car values(1, 'Ford')"),     'Insert car 1');
-ok( $dbh->do("insert into car values(2, 'GM')"),       'Insert car 2');
-ok( $dbh->do("insert into car values(3, 'Chrysler')"), 'Insert car 3');
+
+ok( $dbh->do("insert into person values(1, 'Henry')"),     'Insert person 1');
+ok( $dbh->do("insert into person values(2, 'Louis')"),     'Insert person 2');
+ok( $dbh->do("insert into person values(3, 'Walter')"),    'Insert person 3');
+ok( $dbh->do("insert into person values(4, 'Frederick')"), 'Insert person 4');
+
+ok( $dbh->do("insert into car values(1, 'Ford', 1)"),     'Insert car 1');
+ok( $dbh->do("insert into car values(2, 'GM', 2)"),       'Insert car 2');
+ok( $dbh->do("insert into car values(3, 'Chrysler', 3)"), 'Insert car 3');
+ok( $dbh->do("insert into car values(4, 'Duesenberg', 4)"), 'Insert car 4');
 
 ok($dbh->commit(), 'DB commit');
+
+UR::Object::Type->define(
+    class_name => 'URT::Person',
+    id_by => [ 'person_id' ],
+    has => [
+        'name' => { is => 'String' },
+        'mark' => { via => '__self__', to => 'name' },
+    ],
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'person',
+);
 
 UR::Object::Type->define(
     class_name => 'URT::Car',
@@ -29,11 +48,14 @@ UR::Object::Type->define(
     has_mutable => [
         make => { is => 'UR::Value::Text' },
         manufacturer => { is => 'String', via => '__self__', to => 'make' },
-        #manufacturer => { is => 'String', via => 'make', to => '__self__' },
+        owner => { is => 'URT::Person', id_by => 'owner_id' },
+        titleholder => { via => '__self__', to => 'owner' },
     ],
     data_source => 'URT::DataSource::SomeSQLite',
     table_name => 'car',
 );
+
+# Try calling the alias methods
 
 my $car = URT::Car->get(manufacturer => 'GM');
 ok($car, 'Got car 2 filtered by manufacturer');
@@ -55,12 +77,25 @@ is($car->make, 'Toyota', '"make" is updated');
 is($car->manufacturer, 'Toyota', '"manufacturer" is the same');
 
 
-my $bmw_car = URT::Car->create(id => 4, make => 'BMW');
+# Try querying by different kinds of properties
+
+$car = URT::Car->get('owner.name' => 'Walter');
+ok($car, 'Got a car via owner.name');
+is($car->make, 'Chrysler', 'It is the right car');
+
+$car = URT::Car->get('titleholder.mark', 'Frederick');
+ok($car, 'Got a car via titleholder.mark');
+is($car->make, 'Duesenberg', 'It is the right car');
+
+
+# Try creating something new
+
+my $bmw_car = URT::Car->create(id => 10, make => 'BMW', owner_id => 1);
 ok($bmw_car, 'Created new car with "make"');
 is($bmw_car->make, 'BMW', '"make" returns correct value');
 is($bmw_car->manufacturer, 'BMW', '"manufacturer" returns correct value');
 
-my $audi_car = URT::Car->create(id => 5, manufacturer => 'Audi');
+my $audi_car = URT::Car->create(id => 11, manufacturer => 'Audi', owner_id => 1);
 ok($audi_car, 'Created new car with "manufacturer"');
 is($audi_car->make, 'Audi', '"make" returns correct value');
 is($audi_car->manufacturer, 'Audi', '"manufacturer" returns correct value');
@@ -71,10 +106,11 @@ my $sth = $dbh->prepare('select * from car');
 $sth->execute();
 my $results = $sth->fetchall_hashref('car_id');
 is_deeply($results,
-        {   1 => { car_id => 1, make => 'Toyota' },
-            2 => { car_id => 2, make => 'GM' },
-            3 => { car_id => 3, make => 'Chrysler' },
-            4 => { car_id => 4, make => 'BMW' },
-            5 => { car_id => 5, make => 'Audi' } },
+        {   1 => { car_id => 1, make => 'Toyota', owner_id => 1 },
+            2 => { car_id => 2, make => 'GM', owner_id => 2 },
+            3 => { car_id => 3, make => 'Chrysler', owner_id => 3 },
+            4 => { car_id => 4, make => 'Duesenberg', owner_id => 4 },
+            10 => { car_id => 10, make => 'BMW', owner_id => 1 },
+            11 => { car_id => 11, make => 'Audi', owner_id => 1 } },
         'Data was saved to the DB properly');
 

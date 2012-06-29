@@ -118,6 +118,14 @@ sub _resolve_via_to {
 
     my $via_meta;
     if ($via) {
+        if ($via eq '__self__') {
+            my $to_meta = $class_meta->property_meta_for_name($to);
+            unless ($to_meta) {
+                my $property_name = $pmeta->property_name;
+                Carp::croak "Can't resolve joins for property '$property_name' of $class_name: No property metadata 'to' property '$to'";
+            }
+            return $to_meta->_resolve_join_chain($join_label);
+        }
         $via_meta = $class_meta->property_meta_for_name($via);
         unless ($via_meta) {
             return if $class_name->can($via);  # It's via a method, not an actual property
