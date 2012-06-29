@@ -123,7 +123,6 @@ sub _resolve_via_to {
             return if $class_name->can($via);  # It's via a method, not an actual property
 
             my $property_name = $pmeta->property_name;
-            my $class_name = $pmeta->class_name;
             Carp::croak "Can't resolve joins for property '$property_name' of $class_name: No property metadata for via property '$via'";
         }
 
