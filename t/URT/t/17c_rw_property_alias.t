@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 35;
+use Test::More tests => 42;
 use URT::DataSource::SomeSQLite;
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
@@ -113,4 +113,40 @@ is_deeply($results,
             10 => { car_id => 10, make => 'BMW', owner_id => 1 },
             11 => { car_id => 11, make => 'Audi', owner_id => 1 } },
         'Data was saved to the DB properly');
+
+
+
+
+# Try with some non-standard property definitions
+
+UR::Object::Type->define(
+    class_name => 'URT::Owner',
+    id_by => 'owner_id',
+    has => ['name'],
+);
+
+UR::Object::Type->define(
+    class_name => 'URT::Thing',
+    id_by => 'thing_id',
+    has => [
+        name => { is => 'String'},
+        owner => { is => 'URT::Owner' },  # no id_by
+        titleholder => { via => '__self__', to => 'owner' },
+    ],
+);
+
+my $owner = URT::Owner->create(name => 'Bob');
+ok($owner, 'Created an Owner');
+my $thing = URT::Thing->create(name => 'Thingy');
+ok($thing, 'Created a Thing');
+
+ok($thing->owner($owner), 'Assigned an owner to the thing');
+
+my $thing2 = URT::Thing->get('owner.name' => 'Bob');
+ok($thing2, 'Got a thing via owner.name');
+is($thing2->id, $thing->id, 'It is the right Thing');
+
+$thing2 = URT::Thing->get('titleholder.name' => 'Bob');
+ok($thing2, 'Got a thing via titleholder.name');
+is($thing2->id, $thing->id, 'It is the right Thing');
 

@@ -191,11 +191,24 @@ push @cache_keys, '_resolve_property_aliases';
 sub resolve_property_aliases {
     my($self,$property_name) = @_;
 
+    return unless $property_name;
     unless ($self->{'_resolve_property_aliases'} && $self->{'_resolve_property_aliases'}->{$property_name}) {
         $self->{'_resolve_property_aliases'} ||= {};
 
         my @property_metas = $self->property_meta_for_name($property_name);
-        my @property_names = map { $_->alias_for } @property_metas;
+        my @property_names;
+        if (@property_metas) {
+            @property_names = map { $_->alias_for } @property_metas;
+        } else {
+            # there was a problem resolving the chain of properties
+            # This happens in the case of an object accessor (is => 'Some::Class') without an id_by
+            my @split_names = split(/\./,$property_name);
+            my $prop_meta = $self->property_meta_for_name(shift @split_names);
+            return unless $prop_meta;
+            my $foreign_class = $prop_meta->data_type && eval { $prop_meta->data_type->__meta__};
+            return unless $foreign_class;
+            @property_names = ( $prop_meta->alias_for, $foreign_class->resolve_property_aliases(join('.', @split_names)));
+        }
         $self->{'_resolve_property_aliases'}->{$property_name} = join('.', @property_names);
     }
     return $self->{'_resolve_property_aliases'}->{$property_name};
