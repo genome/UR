@@ -191,7 +191,7 @@ push @cache_keys, '_resolve_property_aliases';
 sub resolve_property_aliases {
     my($self,$property_name) = @_;
 
-    unless ($self->{'_resolve_property_alises'} && $self->{'_resolve_property_aliases'}->{$property_name}) {
+    unless ($self->{'_resolve_property_aliases'} && $self->{'_resolve_property_aliases'}->{$property_name}) {
         $self->{'_resolve_property_aliases'} ||= {};
 
         my @property_metas = $self->property_meta_for_name($property_name);
