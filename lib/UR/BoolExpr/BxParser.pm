@@ -2001,7 +2001,7 @@ my %token_states = (
         NOT_BANG => qr{!},
         EQUAL_SIGN => [ qr{=}, 'dont_gobble_spaces' ],
         DOUBLEEQUAL_SIGN => [ qr{=>}, 'dont_gobble_spaces' ],
-        OPERATORS => [ qr{<|>|<=|>=}, 'dont_gobble_spaces' ],
+        OPERATORS => [ qr{<=|>=|<|>}, 'dont_gobble_spaces' ],
         AND => [ qr{,}, 'DEFAULT' ],
         COLON => [ qr{:}, 'after_colon_value' ],
         TILDE => qr{~},
