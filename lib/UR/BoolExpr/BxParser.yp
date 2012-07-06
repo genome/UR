@@ -11,6 +11,8 @@ boolexpr:                                 { [] }
         | expr                            { UR::BoolExpr::BxParser->_simplify($_[1]) }
         | boolexpr ORDER_BY order_by_list { [@{$_[1]}, '-order', $_[3]] }
         | boolexpr GROUP_BY group_by_list { [@{$_[1]}, '-group', $_[3]] }
+        | boolexpr LIMIT INTEGER          { [@{$_[1]}, '-limit', $_[3]] }
+        | boolexpr OFFSET INTEGER         { [@{$_[1]}, '-offset', $_[3]] }
         ;
 
 expr: condition                            { $_[1] }
@@ -165,6 +167,8 @@ my %token_states = (
         NOT_WORD => qr{not},
         DESC_WORD => qr{desc},
         ASC_WORD => qr{asc},
+        LIMIT => qr{limit},
+        OFFSET => qr{offset},
         IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*},
         MINUS => qr{-},
         INTEGER => qr{\d+},
@@ -204,6 +208,8 @@ my %token_states = (
     'dont_gobble_spaces' => [
         AND => [ qr{and}, 'DEFAULT'],
         OR => [ qr{or}, 'DEFAULT' ],
+        LIMIT => [qr{limit}, 'DEFAULT'],
+        OFFSET => [qr{offset}, 'DEFAULT'],
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
         WORD => qr{[%\.\/\w][\-\.\:%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards

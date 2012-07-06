@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 618;
+use Test::More tests => 650;
 
 class URT::RelatedItem {
     id_by => 'ritem_id',
@@ -206,6 +206,28 @@ foreach my $test (
       values => { name => 'foo', foo => 'bar', score => 2 },
       operators => { name => '=', foo => '=', score => '=' },
     },
+    { string => 'name=foo limit 10',
+      values => { name => 'foo' },
+      operators => {name => '='},
+      limit => 10,
+    },
+    { string => 'name=foo offset 10',
+      values => { name => 'foo' },
+      operators => {name => '='},
+      offset => 10,
+    },
+    { string => 'name=foo limit 10 offset 20',
+      values => { name => 'foo' },
+      operators => {name => '='},
+      limit => 10,
+      offset => 20,
+    },
+    { string => 'name=foo and score=2 limit 10 offset 20',
+      values => { name => 'foo', score => 2 },
+      operators => {name => '=', score => '='},
+      limit => 10,
+      offset => 20,
+    },
     { string => 'name=foo order by score' ,
       values => { name => 'foo' },
       operators => { name => '=' },
@@ -294,6 +316,14 @@ foreach my $test (
       order_by => ['-score','-foo'],
       group_by => ['ritem_id','parent_name'],
     },
+    { string => 'name=foo order by -score,-foo group by ritem_id, parent_name limit 10 offset 20',
+      values => { name => 'foo' },
+      operators => { name => '=' },
+      order_by => ['-score','-foo'],
+      group_by => ['ritem_id','parent_name'],
+      limit => 10,
+      offset => 20,
+    },
     { string => '',
       values => {},
       operators => {},
@@ -339,7 +369,7 @@ foreach my $test (
         is($r->operator_for($property), $operators->{$property}, "Operator for $property is correct");
     }
 
-    foreach my $meta ( 'order_by', 'group_by' ) {
+    foreach my $meta ( 'order_by', 'group_by', 'limit', 'offset' ) {
         if ($test->{$meta}) {
             my $got = $r->template->$meta;
             is_deeply($got, $test->{$meta}, "$meta is correct");
