@@ -30,11 +30,17 @@ condition: property operator optional_spaces value                     { [ "$_[1
          | property COLON optional_spaces between_value                { [ "$_[1] between" => $_[4] ] }
          | property negation COLON optional_spaces between_value       { [ "$_[1] $_[2] between" => $_[5] ] }
          | property boolean_op_word                                    { [ "$_[1] $_[2]" => 1 ] }
+         | property null_op_word                                       { [ "$_[1] $_[2]" => undef ] }
          ;
 
 boolean_op_word: TRUE_WORD  { $_[1] }
                | FALSE_WORD { $_[1] }
       ;
+
+null_op_word: IS_NULL { '=' }
+            | negation IS_NULL  { "!=" }
+            | IS_NOT_NULL { '!=' }
+            ;
 
 spaces: WHITESPACE { $_[1] }
       ;
@@ -198,6 +204,8 @@ my %token_states = (
         TILDE => qr{~},
         ORDER_BY => qr{order by},
         GROUP_BY => qr{group by},
+        IS_NULL => qr{is null|is undef},
+        IS_NOT_NULL => qr{is not null|is not undef},
     ],
     'set_contents' => [
         SET_SEPARATOR => qr{,},  # Depending on state, can be either AND or SET_SEPARATOR
