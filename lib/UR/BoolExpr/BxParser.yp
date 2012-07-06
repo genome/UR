@@ -29,7 +29,12 @@ condition: property operator optional_spaces value                     { [ "$_[1
          | property between_operator between_value                     { [ "$_[1] $_[2]" => $_[3] ] }
          | property COLON optional_spaces between_value                { [ "$_[1] between" => $_[4] ] }
          | property negation COLON optional_spaces between_value       { [ "$_[1] $_[2] between" => $_[5] ] }
+         | property boolean_op_word                                    { [ "$_[1] $_[2]" => 1 ] }
          ;
+
+boolean_op_word: TRUE_WORD  { $_[1] }
+               | FALSE_WORD { $_[1] }
+      ;
 
 spaces: WHITESPACE { $_[1] }
       ;
@@ -106,6 +111,8 @@ keyword_as_value: IN_WORD      { $_[1] }
                 | NOT_WORD     { $_[1] }
                 | DESC_WORD    { $_[1] }
                 | ASC_WORD     { $_[1] }
+                | TRUE_WORD    { $_[1] }
+                | FALSE_WORD   { $_[1] }
        ;
 
 value: single_value subsequent_values_list { $_[1].$_[2] }
@@ -167,6 +174,8 @@ my %token_states = (
         NOT_WORD => qr{not},
         DESC_WORD => qr{desc},
         ASC_WORD => qr{asc},
+        TRUE_WORD => qr{true},
+        FALSE_WORD => qr{false},
         LIMIT => qr{limit},
         OFFSET => qr{offset},
         IDENTIFIER => qr{[a-zA-Z_][a-zA-Z0-9_.]*},

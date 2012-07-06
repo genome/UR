@@ -349,6 +349,18 @@ foreach my $test (
       values => { name => 'a   string   with multiple spaces', score => 2},
       operators => { name => '=', score => '=' },
     },
+    { string => 'name true',
+      operators => { name => 'true' },
+      values => { name => 1 },
+    },
+    { string => 'name false',
+      operators => { name => 'false' },
+      values => { name => 1 },
+    },
+    { string => 'name true and score=2',
+      operators => { name => 'true', score => '=' },
+      values => { name => 1, score => 2 },
+    },
 ) {
 
     my $string = $test->{'string'};
