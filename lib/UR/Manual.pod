@@ -22,7 +22,7 @@ L<UR::Manual::Metadata> - UR's metadata system
 
 L<UR::Object::Type::Initializer> - Defining classes
 
-L<UR::Manual::UR> - UR's command line tool
+L<ur> - UR's command line tool
 
 =head1 Basic Entities
 
