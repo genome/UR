@@ -52,6 +52,8 @@ sub before {
     $self->{failure} = 0;
     $self->{used_libs} = {};
     $self->{used_mods} = {};
+    $self->{failed_libs} = [];
+    $self->{default_print_fh} = fileno(select);
     $self->SUPER::before(@_);
 }
 
@@ -85,6 +87,13 @@ sub for_each_module_file {
     if ($@) {
         print "$module_file  FAILED:\n$@\n";
         $self->{failure}++;
+        push @{$self->{failed_libs}}, $module_file;
+    } elsif (fileno(select) != $self->{default_print_fh}) {
+        # un-steal the default file handle back
+        select(STDOUT);
+        print "$module_file  FAILED DUE TO IMPROPER FILEHANDLE USE\n";
+        $self->{failure}++;
+        push @{$self->{failed_libs}}, $module_file;
     }
     else {
         print "$module_file  OK\n" if $self->verbose;
@@ -97,6 +106,10 @@ sub after {
     my $self = shift;
     $self->status_message("SUCCESS: $self->{success}");
     $self->status_message("FAILURE: $self->{failure}");
+
+    if ($self->{failure} > 0) {
+        $self->status_message("FAILED LIBS: " . YAML::Dump($self->{failed_libs}));
+    }
     
     if (%{ $self->{used_libs} }) {
         $self->status_message(
