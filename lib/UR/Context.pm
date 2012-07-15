@@ -2664,28 +2664,25 @@ sub _sync_databases {
     );
 
     return 1 unless (@changed_objects);
-    $DB::single = 1;
 
-    my @invalid;
+    # Ensure validity.
+    # This is primarily to catch custom validity logic in class overrides.
+    my @invalid = grep { $_->__errors__ } @changed_objects;
+    #my @invalid = UR::Util->mapreduce_grep(sub { $_[0]->__errors__}, @changed_objects);
+    if (@invalid) {
+        $self->display_invalid_data_for_save(\@invalid);
+        goto PROBLEM_SAVING;
+        #return;
+    }
 
     # group changed objects by data source
     my %ds_objects;
     for my $obj (@changed_objects) {
         my $data_source = $self->resolve_data_source_for_object($obj);
         next unless $data_source;
-        push @invalid, grep { $_->__errors__ } @changed_objects;
         my $data_source_id = $data_source->id;
         $ds_objects{$data_source_id} ||= { 'ds_obj' => $data_source, 'changed_objects' => []};
         push @{ $ds_objects{$data_source_id}->{'changed_objects'} }, $obj;
-    }
-
-    # Ensure validity.
-    # This is primarily to catch custom validity logic in class overrides.
-    if (@invalid) {
-        $DB::single = 1;
-        $self->display_invalid_data_for_save(\@invalid);
-        goto PROBLEM_SAVING;
-        #return;
     }
 
     my @ds_with_can_savepoint_and_class = map { [ $ds_objects{$_}->{'ds_obj'}->can_savepoint,
