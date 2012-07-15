@@ -12,16 +12,25 @@ UR::Object::Type->define(
     is => ['UR::Singleton'],
     is_abstract => 1,
     has => [
-        domain                  => { is => 'Text', len => undef },
-        allow_sloppy_primitives  => { is => 'Boolean', default_value => 1,
-                                    doc => 'when true, unrecognized data types will function as UR::Value::SloppyPrimitive' },         
+        domain => { 
+            is => 'Text',
+            is_optional => 1,
+            len => undef,
+            doc => "DNS domain name associated with the namespace in question",
+        },
+        allow_sloppy_primitives => { 
+            is => 'Boolean', 
+            default_value => 1,
+            doc => 'when true, unrecognized data types will function as UR::Value::SloppyPrimitive' 
+        },
         method_resolution_order => {
             is => 'Text',
-            doc => 'Method Resolution Order to use for this namespace. C3 is only supported in Perl >= 5.9.5.',
             value => ($^V lt v5.9.5 ? 'dfs' : 'c3'),
             valid_values => ($^V lt v5.9.5 ? ['dfs'] : ['dfs', 'c3']),
+            doc => 'Method Resolution Order to use for this namespace. C3 is only supported in Perl >= 5.9.5.',
         },
     ],
+    doc => 'The class for a singleton module representing a UR namespace.',
 );
 
 sub get_member_class {

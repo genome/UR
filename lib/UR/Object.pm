@@ -192,8 +192,7 @@ sub __errors__ {
                 --$length if $2 == 0 && $4;
             }
             else{
-                push @tags, UR::Object::Tag->create
-                (
+                push @tags, UR::Object::Tag->create (
                     type => 'invalid',
                     properties => [$property_name],
                     desc => 'Invalid decimal value.'
@@ -206,7 +205,7 @@ sub __errors__ {
             $value =~ s/\s//g;
             if ($value =~ /\D/) {
                 #$DB::single = 1;
-                print "$self $property_name @values\n";
+                print "$self $self->{id} $property_name @values\n";
             }
             $value = $value + 0;
             if ($value !~ /^(\+|\-)?[0-9]*$/)
