@@ -433,8 +433,11 @@ provides:
   UR::Namespace::Command::Define::Namespace:
     file: lib/UR/Namespace/Command/Define/Namespace.pm
     version: 0.38
-  UR::Namespace::Command::Describe:
-    file: lib/UR/Namespace/Command/Describe.pm
+  UR::Namespace::Command::Show::Properties
+    file: lib/UR/Namespace/Command/Show/Properties.pm
+    version: 0.38
+  UR::Namespace::Command::Show::Schema
+    file: lib/UR/Namespace/Command/Show/Schema.pm
     version: 0.38
   UR::Namespace::Command::Init:
     file: lib/UR/Namespace/Command/Init.pm

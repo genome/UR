@@ -60,6 +60,6 @@ UR::Object::Property::View::DescriptionLineItem::Text - View class for UR::Objec
 
 =head1 DESCRIPTION
 
-Used by UR::Namespace::Command::Describe when displaying information about a property
+Used by UR::Namespace::Command::Show::Properties when displaying information about a property
 
 =cut
