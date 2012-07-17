@@ -97,7 +97,7 @@ relationships, inheritance, data sources and contexts are available as
 instances of metadata classes. You can get information about any class
 currently available from the command line with the command
 
-  ur describe Thing
+  ur show properties Thing
 
 with the caveat that "currently available" means you need to be under a
 namespace directory that contains the class you're describing. 
@@ -268,7 +268,7 @@ property is directly used to subclass the loaded object.
 
 =head2 Properties properties
 
-C<ur describe UR::Object::Property> will print out an exhaustive list of all
+C<ur show properties UR::Object::Property> will print out an exhaustive list of all
 the properties of a Class Property. A class' properties are declared in the 'id_by'
 or one of the 'has' sections.  Some of the more important ones:
 

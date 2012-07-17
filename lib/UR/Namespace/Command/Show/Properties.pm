@@ -22,9 +22,9 @@ sub sub_command_sort_position { 3 }
 
 sub help_synopsis {
     return <<EOS
-ur describe UR::Object
+ur show properties UR::Object
 
-ur describe Acme::Order Acme::Product Acme::Order::LineItem
+ur show properties Acme::Order Acme::Product Acme::Order::LineItem
 
 EOS
 }

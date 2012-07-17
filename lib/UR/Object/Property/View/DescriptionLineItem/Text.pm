@@ -8,7 +8,7 @@ our $VERSION = "0.38"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object::View::Default::Text',
-    doc => "View used by 'ur describe' for each property line item",
+    doc => "View used by 'ur show properties' for each property line item",
 );
 
 sub _update_view_from_subject {
