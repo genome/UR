@@ -1,4 +1,4 @@
-package UR::Namespace::Command::Describe;
+package UR::Namespace::Command::Show::Properties;
 use strict;
 use warnings;
 use UR;
