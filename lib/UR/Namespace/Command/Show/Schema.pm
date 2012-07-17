@@ -24,11 +24,12 @@ class UR::Namespace::Command::Show::Schema {
 sub execute {
     my $self = shift;
     my @class_names = $self->class_names;
-    my @class_metas = map { print $_,"\n"; eval "use $_"; $_->__meta__ } @class_names;
     $ENV{UR_DBI_NO_COMMIT} = 1;
     my $t = UR::Context::Transaction->begin;
     $DB::single = 1;
-    for my $meta (@class_metas) {
+    for my $class_name (@class_names) {
+        my $meta = $class_name->__meta__;
+
         my $class_name = $meta->class_name;
         $self->status_message("-- class $class_name\n");
         my $ds = $meta->data_source;
