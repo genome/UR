@@ -51,14 +51,19 @@ sub create_database {
 }
 
 sub _resolve_ddl_for_table {
-    my ($self,$table) = @_;
+    my ($self,$table, %opts) = @_;
+
+    my $all = delete $opts{all};
+    if (%opts) {
+        Carp::confess("odd arguments to _resolve_ddl_for_table: " . UR::Util::d(\%opts));
+    }
 
     my $table_name = $table->table_name;
     my @ddl;
-    if ($table->{db_committed}) {
+    if ($table->{db_committed} and not $all) {
         my @columns = $table->columns;
         for my $column (@columns) {
-            next unless $column->last_object_revision eq '-';
+            next unless $all or $column->last_object_revision eq '-';
             my $column_name = $column->column_name;
             my $ddl = "alter table $table_name add column ";
 
@@ -73,7 +78,7 @@ sub _resolve_ddl_for_table {
         my $ddl;
         my @columns = $table->columns;
         for my $column (@columns) {
-            next unless $column->last_object_revision eq '-';
+            next unless $all or $column->last_object_revision eq '-';
             my $column_name = $column->column_name;
             $ddl = 'create table ' . $table_name . "(\n" unless defined $ddl;
 
