@@ -362,7 +362,7 @@ sub _resolve_reverse {
                         $pmeta->property_name . "' of class " . $pmeta->class_name);
     }
 
-    my @join_data = map { { %$_ } } reverse $foreign_property_via->_resolve_join_chain($join_label);
+    my @join_data = map { { %$_ } } $foreign_property_via->_resolve_join_chain($join_label);
     my $prev_where = $where;
     for (@join_data) { 
         @$_{@new} = @$_{@old};
@@ -389,6 +389,7 @@ sub _resolve_reverse {
 
         $prev_where = $next_where;
     }
+    @join_data = reverse @join_data;
     if ($prev_where) {
         # Having a where clause in the last join is only a problem if testing
         # the where condition needs more joins.  But if it did, then those additional
