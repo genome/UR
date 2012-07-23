@@ -475,6 +475,11 @@ sub _init_rdbms {
                                       foreign_property_names => $joins[$i+1]->{'foreign_property_names'},
                                       is_optional => $joins[$i]->{'is_optional'},
                                       id => $joins[$i]->{id} . "->" . $joins[$i+1]->{id});
+                if ($joins[$i+1]->{where}) {
+                    # If there's a where involved, it will always be on the second thing,
+                    # where the foreign_class is NOT a UR::Value
+                    $fixed_join->{where} = $joins[$i+1]->{where};
+                }
                 splice(@joins, $i, 2, $fixed_join);
             }
         }
