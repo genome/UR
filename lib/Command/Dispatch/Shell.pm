@@ -899,9 +899,9 @@ sub _try_get_by_id {
     if (@id_property_names == 0) {
         die "Failed to determine ID property names for class ($param_class).";
     } elsif (@id_property_names == 1) {
-        my $id_data_type = $class_meta->property_meta_for_name($id_property_names[0])->data_type || '';
+        my $id_data_type = $class_meta->property_meta_for_name($id_property_names[0])->_data_type_as_class_name || '';
         # Validate $str, if possible, to prevent warnings from database if $str does not fit column type.
-        if ($id_data_type eq 'Number') { # Oracle's Number data type includes floats but we just use integers for numeric IDs
+        if ($id_data_type->isa('UR::Value::Number')) { # Oracle's Number data type includes floats but we just use integers for numeric IDs
             return ($str =~ /^[+-]?\d+$/);
         }
     }
