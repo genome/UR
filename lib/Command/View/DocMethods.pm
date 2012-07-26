@@ -528,11 +528,39 @@ sub _shell_args_usage_string_abbreviated {
     }
 }
 
+sub sub_command_mapping {
+    my ($self, $class) = @_;
+    return if !$class;
+    no strict 'refs';
+    my $mapping = ${ $class . '::SUB_COMMAND_MAPPING'};
+    if (ref($mapping) eq 'HASH') {
+        return $mapping;
+    } else {
+        return;
+    }
+};
+
 sub command_name {
     my $self = shift;
     my $class = ref($self) || $self;
     my $prepend = '';
-    if (defined($Command::entry_point_class) and $class =~ /^($Command::entry_point_class)(::.+|)$/) {
+
+
+    # There can be a hash in the command entry point class that maps
+    # root level tools to classes so they can be in a different location
+    # ...this bit of code considers that misdirection:
+    my $entry_point_class = $Command::entry_point_class;
+    my $mapping = $self->sub_command_mapping($entry_point_class);
+    for my $k (%$mapping) {
+        my $v = $mapping->{$k};
+        if ($v && $v eq $class) {
+            my @words = grep { $_ ne 'Command' } split(/::/,$class);
+            return join(' ', $self->_command_name_for_class_word($words[0]), $k);
+        }
+    }
+
+
+    if (defined($entry_point_class) and $class =~ /^($entry_point_class)(::.+|)$/) {
         $prepend = $Command::entry_point_bin;
         $class = $2;
         if ($class =~ s/^:://) {
