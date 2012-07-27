@@ -312,11 +312,12 @@ sub parse {
         return (undef, '');  # Didn't match anything
     };
 
-    return $parser->YYParse(
-               yylex => $get_next_token,
-               yyerror => \&_error,
-               yydebug => $yydebug,
-           );
+    return ( $parser->YYParse(
+                yylex => $get_next_token,
+                yyerror => \&_error,
+                yydebug => $yydebug),
+             \$string,
+            );
 }
 
 # Used by the top-level expr production to turn an or-type parse tree with
