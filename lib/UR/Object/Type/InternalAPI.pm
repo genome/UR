@@ -947,8 +947,8 @@ sub _load {
             my @classes = $namespace->get_material_classes;
             return $class->is_loaded($params);
         }
-        my @params = %$params;
-        Carp::confess("Non-class_name used to find a class object: @params");
+        Carp::confess("Non-class_name used to find a class object: "
+                    . join(', ', map { "$_ => " . (defined $params->{$_} ? "'" . $params->{$_} . "'" : 'undef') } keys %$params));
     }
 
     # Besides the common case of asking for a class by its name, the next most
