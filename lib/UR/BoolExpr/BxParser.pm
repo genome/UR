@@ -11,7 +11,7 @@ package UR::BoolExpr::BxParser;
 use vars qw ( @ISA );
 use strict;
 
-@ISA= qw ( UR::BoolExpr::Parser::ParseYappDriver );
+@ISA= qw ( Parse::Yapp::Driver );
 #Included Parse/Yapp/Driver.pm file----------------------------------------
 {
 #
@@ -29,7 +29,7 @@ use strict;
 # (see the pod text in Parse::Yapp module for use and distribution rights)
 #
 
-package UR::BoolExpr::Parser::ParseYappDriver;
+package Parse::Yapp::Driver;
 
 require 5.004;
 
@@ -1991,7 +1991,7 @@ my %token_states = (
         MINUS => qr{-},
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
-        WORD => qr{[%\.\/\w][-\.%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
+        WORD => qr{[%\+\.\/\w][\+\-\.%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])*"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])*'},
         LEFT_PAREN => [ qr{\(}, 'DEFAULT' ],
@@ -2012,7 +2012,7 @@ my %token_states = (
     ],
     'set_contents' => [
         SET_SEPARATOR => qr{,},  # Depending on state, can be either AND or SET_SEPARATOR
-        WORD => qr{[%\.\w\:][\.\:%\w]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
+        WORD => qr{[%\+\.\w\:][\+\.\:%\w]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
         RIGHT_BRACKET => [qr{\]}, 'DEFAULT' ],
     ],
     'after_colon_value' => [
@@ -2020,7 +2020,7 @@ my %token_states = (
         REAL => qr{\d*\.\d+|\d+\.\d*},
         IN_DIVIDER => qr{\/},
         #WORD => qr{\w+},    # Override WORD in DEFAULT to disallow /
-        WORD => qr{[%\.\w\:][\.\:%\w]*},   # Override WORD in DEFAULT to disallow /
+        WORD => qr{[%\+\.\w\:][\+\.\:%\w]*},   # Override WORD in DEFAULT to disallow /
         DOUBLEQUOTE_STRING => qr{"(?:\\.|[^"])*"},
         SINGLEQUOTE_STRING => qr{'(?:\\.|[^'])*'},
         WHITESPACE => [qr{\s+}, 'DEFAULT'],
@@ -2032,7 +2032,7 @@ my %token_states = (
         OFFSET => [qr{offset}, 'DEFAULT'],
         INTEGER => qr{\d+},
         REAL => qr{\d*\.\d+|\d+\.\d*},
-        WORD => qr{[%\.\/\w][\-\.\:%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
+        WORD => qr{[%\+\.\/\w][\+\-\.\:%\w\/]*},   # also allow / for pathnames, - for hyphenated names, % for like wildcards
         ORDER_BY => [qr{order by}, 'DEFAULT'],
         GROUP_BY => [qr{group by}, 'DEFAULT'],
     ],
