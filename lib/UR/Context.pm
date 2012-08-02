@@ -469,7 +469,7 @@ sub query {
     
     if (@extra) {
         # remove this and have the developer go to the datasource 
-        if (scalar @extra == 2 and $extra[0] eq "sql") {
+        if (scalar @extra == 2 and ($extra[0] eq "sql" or $extra[0] eq 'sql in')) {
             return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
         }
         
@@ -1938,10 +1938,10 @@ sub _get_objects_for_class_and_sql {
     my $meta = $class->__meta__;        
     #my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,$class->define_boolexpr());    
     my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,UR::BoolExpr->resolve($class));
-    my @ids = $ds->_resolve_ids_from_class_name_and_sql($class,$sql);
-    return unless @ids;
+    my $id_list = $ds->_resolve_ids_from_class_name_and_sql($class,$sql);
+    return unless (defined($id_list) and @$id_list);
 
-    my $rule = UR::BoolExpr->resolve_normalized($class,id => \@ids);    
+    my $rule = UR::BoolExpr->resolve_normalized($class, id => $id_list);
     
     return $self->get_objects_for_class_and_rule($class,$rule);
 }
@@ -3028,7 +3028,7 @@ sub reload {
     my ($rule, @extra) = UR::BoolExpr->resolve_normalized($class,@_);
     
     if (@extra) {
-        if (scalar @extra == 2 and $extra[0] eq "sql") {
+        if (scalar @extra == 2 and ($extra[0] eq "sql" or $extra[0] eq 'sql in')) {
            return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
         }
         else {

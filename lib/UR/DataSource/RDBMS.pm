@@ -1746,20 +1746,35 @@ sub _resolve_ids_from_class_name_and_sql {
     my $sth = $dbh->prepare($query);
 
     unless ($sth) {
-        confess("could not prepare query $query");
+        Carp::croak("Could not prepare query $query: $DBI::errstr");
     }
+    unless ($sth->{NUM_OF_PARAMS} == scalar(@params)) {
+        Carp::croak('The number of params supplied ('
+                    . scalar(@params)
+                    . ') does not match the number of placeholders (' . $sth->{NUM_OF_PARAMS}
+                    . ") in the supplied sql: $query");
+    }
+
     $sth->execute(@params);
-    my $data;
 
-    my @id_fetch_set;
-
-    while ($data = $sth->fetchrow_hashref()) {
-        my @id_vals = map { $data->{$_} } @id_columns;
-        my $cid = $class_name->__meta__->resolve_composite_id_from_ordered_values(@id_vals);
-        push @id_fetch_set, $cid;       
+    # After execute, we can see if the SQL contained all the required primary keys
+    my @id_column_idx = map { $sth->{NAME_lc_hash}->{$_} }
+                        map { lc }
+                        @id_columns;
+    if (grep { ! defined } @id_column_idx) {
+        @id_columns  = sort @id_columns;
+        my @missing_ids = sort grep { ! defined($sth->{NAME_lc_hash}->{lc($_)}) } @id_columns;
+        Carp::croak("The SQL supplied is missing one or more ID columns.\n\tExpected: "
+                    . join(', ', @id_columns)
+                    . ' but some were missing: '
+                    . join(', ', @missing_ids)
+                   . " for query: $query");
     }
 
-    return @id_fetch_set;
+    my $id_resolver = $class_name->__meta__->get_composite_id_resolver();
+
+    my $id_values = $sth->fetchall_arrayref(\@id_column_idx);
+    return [ map { $id_resolver->(@$_) } @$id_values ];
 }
 
 sub _sync_database {
