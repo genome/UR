@@ -469,7 +469,7 @@ sub query {
     
     if (@extra) {
         # remove this and have the developer go to the datasource 
-        if (scalar @extra == 2 and $extra[0] eq "sql") {
+        if (scalar @extra == 2 and ($extra[0] eq "sql" or $extra[0] eq 'sql in')) {
             return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
         }
         
@@ -3028,7 +3028,7 @@ sub reload {
     my ($rule, @extra) = UR::BoolExpr->resolve_normalized($class,@_);
     
     if (@extra) {
-        if (scalar @extra == 2 and $extra[0] eq "sql") {
+        if (scalar @extra == 2 and ($extra[0] eq "sql" or $extra[0] eq 'sql in')) {
            return $UR::Context::current->_get_objects_for_class_and_sql($class,$extra[1]);
         }
         else {
