@@ -1769,20 +1769,18 @@ sub _resolve_ids_from_class_name_and_sql {
         @missing_ids = sort @missing_ids;
         Carp::croak("The SQL supplied is missing one or more ID columns.\n\tExpected: "
                     . join(', ', @id_columns)
-                    . ' but got '
+                    . ' but some were missing: '
                     . join(', ', @missing_ids)
-                    . " for query $query");
+                   . " for query $query");
     }
 
-    my %id_fetch_set;
+    my @id_column_idx = map { $sth->{NAME_lc_hash}->{$_} }
+                        map { lc }
+                        @id_columns;
+    my $id_resolver = $class_name->__meta__->get_composite_id_resolver();
 
-    while (my $data = $sth->fetchrow_hashref()) {
-        my @id_vals = map { $data->{$_} } @id_columns;
-        my $cid = $class_name->__meta__->resolve_composite_id_from_ordered_values(@id_vals);
-        $id_fetch_set{$cid} = undef;
-    }
-
-    return [ keys %id_fetch_set ];
+    my $id_values = $sth->fetchall_arrayref(\@id_column_idx);
+    return [ map { $id_resolver->(@$_) } @$id_values ];
 }
 
 sub _sync_database {
