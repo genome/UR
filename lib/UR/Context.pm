@@ -1938,10 +1938,10 @@ sub _get_objects_for_class_and_sql {
     my $meta = $class->__meta__;        
     #my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,$class->define_boolexpr());    
     my $ds = $self->resolve_data_sources_for_class_meta_and_rule($meta,UR::BoolExpr->resolve($class));
-    my @ids = $ds->_resolve_ids_from_class_name_and_sql($class,$sql);
-    return unless @ids;
+    my $id_list = $ds->_resolve_ids_from_class_name_and_sql($class,$sql);
+    return unless (defined($id_list) and @$id_list);
 
-    my $rule = UR::BoolExpr->resolve_normalized($class,id => \@ids);    
+    my $rule = UR::BoolExpr->resolve_normalized($class, id => $id_list);
     
     return $self->get_objects_for_class_and_rule($class,$rule);
 }

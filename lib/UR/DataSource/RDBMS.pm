@@ -1750,15 +1750,15 @@ sub _resolve_ids_from_class_name_and_sql {
     }
     $sth->execute(@params);
 
-    my @id_fetch_set;
+    my %id_fetch_set;
 
     while (my $data = $sth->fetchrow_hashref()) {
         my @id_vals = map { $data->{$_} } @id_columns;
         my $cid = $class_name->__meta__->resolve_composite_id_from_ordered_values(@id_vals);
-        push @id_fetch_set, $cid;       
+        $id_fetch_set{$cid} = undef;
     }
 
-    return @id_fetch_set;
+    return [ keys %id_fetch_set ];
 }
 
 sub _sync_database {
