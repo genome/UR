@@ -1746,7 +1746,7 @@ sub _resolve_ids_from_class_name_and_sql {
     my $sth = $dbh->prepare($query);
 
     unless ($sth) {
-        confess("could not prepare query $query");
+        Carp::croak("Could not prepare query $query: $DBI::errstr");
     }
     $sth->execute(@params);
     my $data;
