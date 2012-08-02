@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 64;
+use Test::More tests => 18;
 use URT::DataSource::SomeSQLite;
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
@@ -76,6 +76,15 @@ is(scalar(@things), 0, 'Returned 0 things');
 @things = URT::Thing->get(sql => ['select thing_id from thing where name = ?', 'pink']);
 is(scalar(@things), 1, 'Got 1 thing with name pink using SQL with a placeholder');
 is($things[0]->id, 1, 'It was the right ID');
+
+@things = eval { URT::Thing->get(sql => ['select thing_id from thing where name = ? and thing_id = ?', 'pink']) };
+like($@,
+    qr{The number of params supplied \(1\) does not match the number of placeholders \(2\)},
+    'got exception from SQL without primary key');
+is(scalar(@things), 0, 'Returned 0 things');
+
+
+
 
 ok( $dbh->do('create table multi_thing (id1 integer not null, id2 integer not null, name varchar, primary key(id1,id2))'),
     'Create table with 2 primary keys');

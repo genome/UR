@@ -1748,6 +1748,13 @@ sub _resolve_ids_from_class_name_and_sql {
     unless ($sth) {
         Carp::croak("Could not prepare query $query: $DBI::errstr");
     }
+    unless ($sth->{NUM_OF_PARAMS} == scalar(@params)) {
+        Carp::croak('The number of params supplied ('
+                    . scalar(@params)
+                    . ') does not match the number of placeholders (' . $sth->{NUM_OF_PARAMS}
+                    . ") in the supplied sql: $query");
+    }
+
     $sth->execute(@params);
 
     # After execute, we can see if the SQL contained all the required primary keys
