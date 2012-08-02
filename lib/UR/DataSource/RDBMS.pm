@@ -1750,6 +1750,23 @@ sub _resolve_ids_from_class_name_and_sql {
     }
     $sth->execute(@params);
 
+    # After execute, we can see if the SQL contained all the required primary keys
+    my @missing_ids;
+    foreach my $id_col ( @id_columns ) {
+        unless (defined $sth->{NAME_lc_hash}->{lc($id_col)}) {
+            push @missing_ids, $id_col;
+        }
+    }
+    if (@missing_ids) {
+        @id_columns  = sort @id_columns;
+        @missing_ids = sort @missing_ids;
+        Carp::croak("The SQL supplied is missing one or more ID columns.\n\tExpected: "
+                    . join(', ', @id_columns)
+                    . ' but got '
+                    . join(', ', @missing_ids)
+                    . " for query $query");
+    }
+
     my %id_fetch_set;
 
     while (my $data = $sth->fetchrow_hashref()) {
