@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 18;
+use Test::More tests => 20;
 use URT::DataSource::SomeSQLite;
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
@@ -68,7 +68,7 @@ is_deeply([map { $_->id } @things],
 
 @things = eval { URT::Thing->get(sql => 'select name from thing') };
 like($@,
-    qr{The SQL supplied is missing one or more ID columns},
+    qr{The SQL supplied is missing one or more ID columns.*?missing: thing_id}s,
     'got exception from SQL without primary key');
 is(scalar(@things), 0, 'Returned 0 things');
 
@@ -107,3 +107,15 @@ is(scalar(@things), 4, 'Got 4 items from multi_thing table');
 is_deeply([map { $_->id } @things],
         ["1\t1","1\t2","2\t1","2\t2"],
         'Objects returned in the right order');
+
+@things = eval { URT::MultiThing->get(sql => 'select id1 from multi_thing') };
+like($@,
+    qr{The SQL supplied is missing one or more ID columns.*?missing: id2}s,
+    'got exception from SQL missing one primary key');
+
+
+@things = eval { URT::MultiThing->get(sql => 'select name from multi_thing') };
+like($@,
+    qr{The SQL supplied is missing one or more ID columns.*?missing: id1, id2}s,
+    'got exception from SQL missing both primary keys');
+
