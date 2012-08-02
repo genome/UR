@@ -1749,11 +1749,10 @@ sub _resolve_ids_from_class_name_and_sql {
         Carp::croak("Could not prepare query $query: $DBI::errstr");
     }
     $sth->execute(@params);
-    my $data;
 
     my @id_fetch_set;
 
-    while ($data = $sth->fetchrow_hashref()) {
+    while (my $data = $sth->fetchrow_hashref()) {
         my @id_vals = map { $data->{$_} } @id_columns;
         my $cid = $class_name->__meta__->resolve_composite_id_from_ordered_values(@id_vals);
         push @id_fetch_set, $cid;       
