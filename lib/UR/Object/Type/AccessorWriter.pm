@@ -1093,6 +1093,7 @@ sub mk_object_set_accessors {
             unless ($rule_template) {
                 die "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
             }
+            return $tmp_rule;
         }
         else {
             # data is stored locally on the hashref
@@ -1132,9 +1133,10 @@ sub mk_object_set_accessors {
 
     my $list_accessor = Sub::Name::subname $class_name ."::$plural_name" => sub {
         my $self = shift;
-        $rule_resolver->($self) unless ($rule_template);
+        my $rule;
+        $rule = $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) { 
-            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
             if (@_) {
                 return $UR::Context::current->query($r_class_name, $rule->params_list,@_);
             }
@@ -1185,9 +1187,10 @@ sub mk_object_set_accessors {
 
     my $iterator_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_iterator' => sub {
         my $self = shift;
-        $rule_resolver->($self) unless ($rule_template);
+        my $rule;
+        $rule = $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) {
-            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
             if (@_) {
                 return $r_class_name->create_iterator($rule->params_list,@_);
             } else {
@@ -1206,9 +1209,10 @@ sub mk_object_set_accessors {
     
     my $set_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_set' => sub {
         my $self = shift;
-        $rule_resolver->($self) unless ($rule_template);
+        my $rule;
+        $rule = $rule_resolver->($self) unless ($rule_template);
         if ($rule_template) {
-            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values);
+            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values) unless (defined $rule);
             return $r_class_name->define_set($rule->params_list,@_);
         }
         else {
