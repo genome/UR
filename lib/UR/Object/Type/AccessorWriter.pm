@@ -1082,7 +1082,7 @@ sub mk_object_set_accessors {
                 push @get_params, $link->[0], ($obj->$my_property_name || undef);
             }
             if (my $id_class_by = $property_meta->id_class_by) {
-                push @get_params, $id_class_by, $class_name;
+                push @get_params, $id_class_by, $obj->class;
                 push @property_names, 'class';
             }
             my $tmp_rule = $r_class_name->define_boolexpr(@get_params,@where);
