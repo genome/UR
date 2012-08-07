@@ -105,21 +105,23 @@ sub property_meta_for_name {
 sub _concrete_property_meta_for_class_and_name {
     my($self,$property_name) = @_;
 
-    my $property_meta = $self->property_meta_for_name($property_name);
+    my @property_metas = $self->property_meta_for_name($property_name);
 
-    if ($property_meta
-        and $property_meta->class_name eq 'UR::Object'
-        and $property_meta->property_name eq 'id'
-        and $property_name !~ /\./) #If we're looking at a foreign object's id, can't replace with our own
-    {
-        # This is the generic id property.  Remap it to the class' real ID property name
-        my @id_properties = $self->id_property_names;
-        if (@id_properties == 1 and $id_properties[0] eq 'id') {
-            return $property_meta;
+    for (my $i = 0; $i < @property_metas; $i++) {
+        if ($property_metas[$i]->id eq "UR::Object\tid"
+            and $property_name !~ /\./) #If we're looking at a foreign object's id, can't replace with our own
+        {
+            # This is the generic id property.  Remap it to the class' real ID property name
+            my @id_properties = $self->id_property_names;
+            if (@id_properties == 1 and $id_properties[0] eq 'id') {
+                next; # this class doesn't have any other ID properties
+            }
+            #return map { $self->_concrete_property_meta_for_class_and_name($_) } @id_properties;
+            my @remapped = map { $self->_concrete_property_meta_for_class_and_name($_) } @id_properties;
+            splice(@property_metas, $i, 1, @remapped);
         }
-        return map { $self->_concrete_property_meta_for_class_and_name($_) } @id_properties;
     }
-    return $property_meta;
+    return @property_metas;
 }
 
 
