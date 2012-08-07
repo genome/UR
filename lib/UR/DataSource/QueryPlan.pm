@@ -890,6 +890,8 @@ sub _add_join {
         return; 
     }
 
+    my $foreign_class_loading_data = $ds->_get_class_data_for_loading($foreign_class_object);
+
     # This will get filled in during the first pass, and every time after we've successfully
     # performed a join - ie. that the delegated property points directly to a class/property
     # that is a real table/column, and not a tableless class or another delegated property
@@ -952,8 +954,6 @@ sub _add_join {
         # some calculated properties, be sure to re-check for a match after loading the object
         $self->needs_further_boolexpr_evaluation_after_loading(1);
     }
-
-    my $foreign_class_loading_data = $ds->_get_class_data_for_loading($foreign_class_object);
 
     my $alias = $self->_get_join_alias($join);
 
