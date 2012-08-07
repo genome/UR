@@ -1071,16 +1071,24 @@ sub mk_object_set_accessors {
             unless ($property_meta) {
                 Carp::croak "Can't resolve reverse relationship $class_name -> $plural_name.  Remote class $r_class_name has no property $reverse_as";
             }
-            my @property_links = $property_meta->get_property_name_pairs_for_join;
             my @get_params;
-            for my $link (@property_links) {
-                my $my_property_name = $link->[1];
-                push @property_names, $my_property_name;
-                unless ($obj->can($my_property_name)) {
-                    Carp::croak "Cannot handle indirect relationship $r_class_name -> $reverse_as.  Class $class_name has no property named $my_property_name";
+            if ($property_meta->via) {
+                # get_property_name_pairs_for_join() only works for properties connected directly.
+                # we still need to use it during initialization, but for more complicated relationships
+                # this should do the right thing
+                push @get_params, $property_meta->property_name . '.id' => $obj->id;
+            } else {
+                my @property_links = $property_meta->get_property_name_pairs_for_join;
+                for my $link (@property_links) {
+                    my $my_property_name = $link->[1];
+                    push @property_names, $my_property_name;
+                    unless ($obj->can($my_property_name)) {
+                        Carp::croak "Cannot handle indirect relationship $r_class_name -> $reverse_as.  Class $class_name has no property named $my_property_name";
+                    }
+                    push @get_params, $link->[0], ($obj->$my_property_name || undef);
                 }
-                push @get_params, $link->[0], ($obj->$my_property_name || undef);
             }
+
             if (my $id_class_by = $property_meta->id_class_by) {
                 push @get_params, $id_class_by, $obj->class;
                 push @property_names, 'class';
