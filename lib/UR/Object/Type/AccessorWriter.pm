@@ -489,7 +489,7 @@ sub mk_indirect_ro_accessor {
 
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
-        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name!") if @_;
+        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_;
 
         unless ($bridge_collector) {
             ($bridge_collector, $bridge_crosser)
@@ -506,7 +506,7 @@ sub mk_indirect_ro_accessor {
     };
 
     unless ($accessor_name) {
-        Carp::croak("No accessor name specified for indirect ro accessor $class_name $accessor!");
+        Carp::croak("No accessor name specified for read-only indirect accessor $accessor_name for class $class_name");
     }
 
     Sub::Install::reinstall_sub({
