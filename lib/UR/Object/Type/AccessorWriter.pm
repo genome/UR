@@ -385,7 +385,7 @@ sub _resolve_bridge_logic_for_indirect_property {
                 push @where_values, $where_value;
             }
         }
-     
+
         #my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class,
         #                                                      @their_join_properties,
         #                                                      @where_properties,
@@ -401,9 +401,9 @@ sub _resolve_bridge_logic_for_indirect_property {
 
          if($to_property_meta->is_delegated and $to_property_meta->via) {
              # It's a "normal" doubly delegated property
-             my $second_via_property_meta = $to_property_meta->via_property_meta; 
+             my $second_via_property_meta = $to_property_meta->via_property_meta;
              my $final_class_name = $second_via_property_meta->data_type;
-         
+
              if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
                  my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
                  if (@via2_join_properties > 1) {
