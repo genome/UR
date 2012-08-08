@@ -362,7 +362,7 @@ sub _resolve_bridge_logic_for_indirect_property {
 
         my @via_join_properties = $via_property_meta->get_property_name_pairs_for_join;
         my (@my_join_properties,@their_join_properties);
-            for (my $i = 0; $i < @via_join_properties; $i++) {
+        for (my $i = 0; $i < @via_join_properties; $i++) {
             ($my_join_properties[$i], $their_join_properties[$i]) = @{ $via_join_properties[$i] };
         }
 
