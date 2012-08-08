@@ -12,7 +12,7 @@ our $VERSION = "0.38"; # UR $VERSION;
 use Carp ();
 use Sub::Name ();
 use Sub::Install ();
-use List::MoreUtils;
+use List::Util;
 
 sub mk_rw_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;
@@ -361,7 +361,14 @@ sub _resolve_bridge_logic_for_indirect_property {
     ) {
         my $bridge_class = $via_property_meta->data_type;
 
-        my @via_join_properties = $via_property_meta->get_property_name_pairs_for_join;
+        my @via_join_properties = eval { $via_property_meta->get_property_name_pairs_for_join };
+        if (! @via_join_properties) {
+            # this can happen if the properties aren't linked together as expected.
+            # For example, a property involved in a many-to-many relationship, but is
+            # defined as a one-to-many with reverse_as.
+            return ($bridge_collector, $bridge_crosser);
+        }
+
         my (@my_join_properties,@their_join_properties);
         for (my $i = 0; $i < @via_join_properties; $i++) {
             ($my_join_properties[$i], $their_join_properties[$i]) = @{ $via_join_properties[$i] };
@@ -1149,6 +1156,7 @@ sub mk_object_set_accessors {
                 # we still need to use it during initialization, but for more complicated relationships
                 # this should do the right thing
                 push @get_params, $property_meta->property_name . '.id' => $obj->id;
+                push @property_names, 'id';
             } else {
                 my @property_links = $property_meta->get_property_name_pairs_for_join;
                 for my $link (@property_links) {
