@@ -486,44 +486,76 @@ sub mk_indirect_ro_accessor {
     my $filterable_accessor_name = 'get_' . $accessor_name;  # FIXME we need a better name for 
     my $filterable_full_name = join( '::', $class_name, $filterable_accessor_name );
 
-    my @collectors;
-    my @crossers;
-
-    #my $accessor = Sub::Name::subname $full_name => sub {
+    # This is part of an experimental refactoring of indirect accessors.  The goal is to
+    # get rid of all the special cases inside of _resolve_bridge_logic_for_indirect_property()
+    # and do the right thing with the Join data
+    my (@collectors, @crossers);
     my $accessor2 = Sub::Name::subname $full_name.'_new' => sub {
         my $self = shift;
         Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_;
 
+        if ($class_name =~ m/^UR::/) {
+            # Some methods will recurse into here if called on a UR::* class (especially
+            # UR::BoolExpr), so do the dumb but safe thing
+            my $bridge_collector = sub {
+                my $self = shift;
+                my @results = $self->$via(@$where);
+                # Indirect has one properties must return a single undef value for an empty result, even in list context.
+                return if @results == 1 and not defined $results[0];
+                return @results;
+            };
+            my $bridge_crosser = sub { return map { $_->$to} @_ };
+            my @bridges = $bridge_collector->($self);
+            return unless @bridges;
+            return $self->context_return(@bridges) if ($to eq '-filter');
+
+            my @results = $bridge_crosser->(@bridges);
+            return $self->context_return(@results);
+        }
+
         unless (@collectors) {
+            require List::MoreUtils;
+
             my $prop_meta = $class_name->__meta__->property_meta_for_name($accessor_name);
             my @join_list = $prop_meta->_resolve_join_chain();
             foreach my $join ( @join_list ) {
                 my @source_property_names = @{$join->{source_property_names}};
-                push @collectors, sub { return [ map { my $o = $_; map { $o->$_ } @source_property_names} @_ ] };
+                my $collector = sub {
+                    my @list = grep { defined && length } map { my $o = $_; map { $o->$_ } @source_property_names} @_;
+                    return @list == 1 ? $list[0] : \@list;
+                };
+                push @collectors, $collector;
 
                 my $foreign_class = $join->{foreign_class};
-                my @foreign_property_names = @{$join->{foreign_property_names}};
+                my $crosser;
+                if (! $foreign_class->isa('UR::Value')) {
+                    my @foreign_property_names = @{$join->{foreign_property_names}};
 
-                push @crossers, sub { my @get_params = List::MoreUtils::pairwise
-                                                            { $a => $b } @foreign_property_names, @_;
-                                      return $foreign_class->get(@get_params); };
+                    $crosser = sub { my @get_params = List::MoreUtils::pairwise
+                                                                { $a => $b } @foreign_property_names, @_;
+                                          return $foreign_class->get(@get_params); };
+                }
+                push @crossers, $crosser;
             }
         }
 
-        my @objects = ($self);
+        my @working = ($self);
 
+        # This can probably be rewritten with List::Util::reduce
         for (my $i = 0; $i < @collectors; $i++) {
-            last unless @objects;
-            my @next_values = $collectors[$i]->(@objects);
-            @objects = $crossers[$i]->(@next_values);
+            last unless @working;
+            my @working = $collectors[$i]->(@working);
+            next unless $crossers[$i];
+            @working = $crossers[$i]->(@working);
         }
-        $self->context_return(@objects);
+        $self->context_return(@working);
     };
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $accessor_name.'_new',
-        code => $accessor2,
-    });
+    #Sub::Install::reinstall_sub({
+    #    into => $class_name,
+    #    as   => $accessor_name.'_new',
+    #    code => $accessor2,
+    #});
+
 
     my($bridge_collector, $bridge_crosser);
 
