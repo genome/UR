@@ -50,7 +50,7 @@ our $GET_COUNTER = 1;                         # This is where the serial number 
 $UR::Context::current = __PACKAGE__;
 
 # called by UR.pm during bootstraping
-my $initialized = 0;
+our $initialized = 0;
 sub _initialize_for_current_process {
     my $class = shift;
     if ($initialized) {
@@ -89,6 +89,7 @@ sub _initialize_for_current_process {
         $UR::Context::current->monitor_query($ENV{'UR_CONTEXT_MONITOR_QUERY'});
     }
 
+    $initialized = 1;
     return $UR::Context::current;
 }
 
@@ -2150,7 +2151,9 @@ sub _get_objects_for_class_and_rule_from_cache {
             else {
                 # The $id is a normal scalar.
                 if (not defined $id) {
-                    Carp::carp("Undefined id passed as params for query on $class");
+                    #Carp::carp("Undefined id passed as params for query on $class");
+$DB::single=1;
+                    Carp::cluck("\n\n****  Undefined id passed as params for query on $class");
                     $id ||= '';
                 }
                 my $match;
