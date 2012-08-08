@@ -108,9 +108,8 @@ is($query_count, 1, 'Made 1 query');
 is($cars[0]->model, 'batmobile', 'It is the right car');
 
 
-__END__
 $query_count = 0;
-my @models = $driver->car_models();
+my @models = $driver->car_models_new();
 is(scalar(@models), 1, 'batman has 1 car model');
 is_deeply(\@models, ['batmobile'], 'Got the right car');
 is($query_count, 0, 'Made 0 queries');
@@ -118,15 +117,16 @@ is($query_count, 0, 'Made 0 queries');
 $query_count = 0;
 $driver = URT::Driver->get(name => 'speed racer');
 ok($driver, 'Got speed racer');
-@models = $driver->car_models();
+@models = $driver->car_models_new();
 is(scalar(@models), 2, 'speed racer drives 2 cars');
-is_deeply(\@models, ['race car', 'mack 5'], 'Got the right cars');
+@models = sort @models;
+is_deeply(\@models, ['mach 5', 'race car'], 'Got the right cars');
 is($query_count, 1, 'Made 1 query');
 
 $query_count = 0;
 $driver = URT::Driver->get(name => 'superman');
 ok($driver, 'Got superman');
-@models = $driver->car_models();
+@models = $driver->car_models_new();
 is(scalar(@models), 0, 'superman drives 0 cars');
 is($query_count, 1, 'Made 1 query');
 

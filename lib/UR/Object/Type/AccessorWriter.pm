@@ -12,6 +12,7 @@ our $VERSION = "0.38"; # UR $VERSION;
 use Carp ();
 use Sub::Name ();
 use Sub::Install ();
+use List::MoreUtils;
 
 sub mk_rw_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name, $is_transient) = @_;
@@ -484,6 +485,45 @@ sub mk_indirect_ro_accessor {
     my $full_name = join( '::', $class_name, $accessor_name );
     my $filterable_accessor_name = 'get_' . $accessor_name;  # FIXME we need a better name for 
     my $filterable_full_name = join( '::', $class_name, $filterable_accessor_name );
+
+    my @collectors;
+    my @crossers;
+
+    #my $accessor = Sub::Name::subname $full_name => sub {
+    my $accessor2 = Sub::Name::subname $full_name.'_new' => sub {
+        my $self = shift;
+        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_;
+
+        unless (@collectors) {
+            my $prop_meta = $class_name->__meta__->property_meta_for_name($accessor_name);
+            my @join_list = $prop_meta->_resolve_join_chain();
+            foreach my $join ( @join_list ) {
+                my @source_property_names = @{$join->{source_property_names}};
+                push @collectors, sub { return [ map { my $o = $_; map { $o->$_ } @source_property_names} @_ ] };
+
+                my $foreign_class = $join->{foreign_class};
+                my @foreign_property_names = @{$join->{foreign_property_names}};
+
+                push @crossers, sub { my @get_params = List::MoreUtils::pairwise
+                                                            { $a => $b } @foreign_property_names, @_;
+                                      return $foreign_class->get(@get_params); };
+            }
+        }
+
+        my @objects = ($self);
+
+        for (my $i = 0; $i < @collectors; $i++) {
+            last unless @objects;
+            my @next_values = $collectors[$i]->(@objects);
+            @objects = $crossers[$i]->(@next_values);
+        }
+        $self->context_return(@objects);
+    };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $accessor_name.'_new',
+        code => $accessor2,
+    });
 
     my($bridge_collector, $bridge_crosser);
 
