@@ -1222,7 +1222,7 @@ sub mk_object_set_accessors {
     my $list_accessor = Sub::Name::subname $class_name ."::$plural_name" => sub {
         my $self = shift;
         my $rule;
-        $rule = $rule_resolver->($self) unless ($rule_template);
+        $rule = $rule_resolver->($self) unless (defined $rule_template);
         if ($rule_template) { 
             $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
             if (@_) {
@@ -1276,7 +1276,7 @@ sub mk_object_set_accessors {
     my $iterator_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_iterator' => sub {
         my $self = shift;
         my $rule;
-        $rule = $rule_resolver->($self) unless ($rule_template);
+        $rule = $rule_resolver->($self) unless (defined $rule_template);
         if ($rule_template) {
             $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
             if (@_) {
@@ -1298,7 +1298,7 @@ sub mk_object_set_accessors {
     my $set_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_set' => sub {
         my $self = shift;
         my $rule;
-        $rule = $rule_resolver->($self) unless ($rule_template);
+        $rule = $rule_resolver->($self) unless (defined $rule_template);
         if ($rule_template) {
             $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values) unless (defined $rule);
             return $r_class_name->define_set($rule->params_list,@_);
@@ -1349,9 +1349,10 @@ sub mk_object_set_accessors {
     if ($singular_name ne $plural_name) {
         my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
             my $self = shift;
-            $rule_resolver->($self) unless ($rule_template);
+            my $rule;
+            $rule = $rule_resolver->($self) unless (defined $rule_template);
             if ($rule_template) {
-                my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+                my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
                 $params_prefix_resolver->() unless $params_prefix_resolved;
                 unshift @_, @params_prefix if @_ == 1;
                 if (@_) {
@@ -1386,11 +1387,12 @@ sub mk_object_set_accessors {
     my $add_accessor = Sub::Name::subname $class_name ."::add_$singular_name" => sub {
         # TODO: this handles only a single item when making objects: support a list of hashrefs
         my $self = shift;
-        $rule_resolver->($self) unless ($rule_template);
+        my $rule;
+        $rule = $rule_resolver->($self) unless (defined $rule_template);
         if ($rule_template) {
             $params_prefix_resolver->() unless $params_prefix_resolved;
             unshift @_, @params_prefix if @_ == 1;
-            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
             $r_class_name->create($rule->params_list,@_);
         }
         else {
@@ -1425,10 +1427,11 @@ sub mk_object_set_accessors {
 
     my $remove_accessor = Sub::Name::subname $class_name ."::remove_$singular_name" => sub {
         my $self = shift;
-        $rule_resolver->($self) unless ($rule_template);
+        my $rule;
+        $rule = $rule_resolver->($self) unless (defined $rule_template);
         if ($rule_template) {
             # an id-linked "has-many"
-            my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
             $params_prefix_resolver->() unless $params_prefix_resolved;
             my @matches;
             if (@_ == 1 and ref($_[0])) {
