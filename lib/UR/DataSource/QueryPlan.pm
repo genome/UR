@@ -1312,7 +1312,7 @@ sub _resolve_object_join_data_for_property_chain {
     my $is_optional;
     my $final_accessor;
 
-    my @pmeta = $class_meta->property_meta_for_name($property_name);
+    my @pmeta = $class_meta->_concrete_property_meta_for_class_and_name($property_name);
 
     my $last_class_meta = $class_meta;
     for my $meta (@pmeta) {
