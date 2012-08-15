@@ -123,7 +123,7 @@ is($s,100,"got back the non-id value through the indirect accessor");
 
 # Give animal 3 two eyes of different colors
 # We're avoiding the add_eye method so the rule/template captured by the
-# method's closure isn't pre-created when we sue the filterable accessor
+# method's closure isn't pre-created when we use the filterable accessor
 Animal::Eye->create(animal => $a3, color => 'blue');
 Animal::Eye->create(animal => $a3, color => 'green');
 my $eye = $a3->eye(color => 'green');
