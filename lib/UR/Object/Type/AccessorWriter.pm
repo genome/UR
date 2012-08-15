@@ -1352,7 +1352,7 @@ sub mk_object_set_accessors {
             my $rule;
             $rule = $rule_resolver->($self) unless (defined $rule_template);
             if ($rule_template) {
-                my $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
+                $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
                 $params_prefix_resolver->() unless $params_prefix_resolved;
                 unshift @_, @params_prefix if @_ == 1;
                 if (@_) {
