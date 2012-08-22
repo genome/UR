@@ -52,11 +52,11 @@ sub _dbi_connect_args {
     return @args;
 }
 
-sub _prepare_for_lob {
+sub _lob_query_attr_for_prepare {
     { ora_auto_lob => 0 }
 }
 
-sub _post_process_lob_values {
+sub _post_process_lob_values_for_select {
     my ($self, $dbh, $lob_id_arrayref) = @_;
     return 
         map { 

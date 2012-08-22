@@ -3088,7 +3088,7 @@ sub _generate_class_data_for_loading {
     my $query_config; 
     my $post_process_results_callback;
     if (@lob_column_names) {
-        $query_config = $self->_prepare_for_lob;
+        $query_config = $self->_lob_query_attr_for_prepare();
         if ($query_config) {
             my $dbh = $self->get_default_handle;
             my $results_row_arrayref;
@@ -3097,7 +3097,7 @@ sub _generate_class_data_for_loading {
             $post_process_results_callback = sub { 
                 $results_row_arrayref = shift;
                 @lob_ids = @$results_row_arrayref[@lob_column_positions];
-                @lob_values = $self->_post_process_lob_values($dbh,\@lob_ids);
+                @lob_values = $self->_post_process_lob_values_for_select($dbh,\@lob_ids);
                 @$results_row_arrayref[@lob_column_positions] = @lob_values;
                 $results_row_arrayref;
             };
