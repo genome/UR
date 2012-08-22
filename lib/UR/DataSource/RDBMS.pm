@@ -3235,6 +3235,14 @@ sub prepare_for_fork {
 }
 
 
+# Derived classes that need to pass special %attrs to the prepare()
+# statement when retrieving BLOB data should return a hashref of those
+# attributes.
+sub _lob_query_attr_for_prepare {
+    return;
+}
+
+
 1;
 
 =pod

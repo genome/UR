@@ -31,6 +31,8 @@ sub owner { shift->_singleton_object->login }
 #    undef
 #}
 
+our $LOB_CHUNK_SIZE = 4096;  # Read/write this many bytes with each lo_read() and lo_write()
+
 sub _default_sql_like_escape_string { return '\\\\' };
 
 sub _format_sql_like_escape_string {
@@ -152,6 +154,29 @@ sub ur_data_type_for_data_source_data_type {
     }
     return $urtype;
 }
+
+sub _post_process_lob_values_for_select {
+    my ($self, $dbh, $lob_id_arrayref) = @_;
+
+    my $reader = sub {
+        my $oid = shift;
+
+        my $fh = $dbh->lo_open($oid, $dbh->{pg_INV_READ});
+        return undef unless $fh;
+
+        my $buffer = '';
+        my $chunk = '';
+        # seems DBD::Pg doesn't have a way to get the LOB size ahead of time
+        # read until we can't read any more
+        while ( my $len = $dbh->lo_read($fh, $chunk, $LOB_CHUNK_SIZE)) {
+            $buffer .= $chunk;
+        }
+        return $buffer;
+    };
+
+    return map { $reader->($_) } @$lob_id_arrayref;
+}
+
 
 
 1;
