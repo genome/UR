@@ -2860,11 +2860,18 @@ sub _default_save_sql_for_object {
                 my $sql = " UPDATE $table_ident SET ";
                 $sql .= join(",", map { "$_ = ?" } @changed_cols) . " WHERE $where";
 
+                my @changed_col_objects = map { UR::DataSource::RDBMS::TableColumn->get(
+                                                    table_name => $table_name,
+                                                    data_source => $table->data_source,
+                                                    column_name => $_)
+                                            }
+                                            @changed_cols;
+
                 my $update_blob_closure =
                     $self->_create_closure_to_update_blobs( $data_source->get_default_handle,
                                                             $table_ident,
                                                             $where,
-                                                            [ $table->columns ]);
+                                                            \@changed_col_objects);
 
                  push @commands, { type         => 'update',
                                   table_name   => $table_name,
@@ -2915,11 +2922,18 @@ sub _default_save_sql_for_object {
                            . "property metadata");
             }
 
+            my @changed_col_objects = map { UR::DataSource::RDBMS::TableColumn->get(
+                                                table_name => $table_name,
+                                                data_source => $table->data_source,
+                                                column_name => $_)
+                                        }
+                                        @changed_cols;
+
             my $insert_blob_closure =
                     $self->_create_closure_to_update_blobs( $data_source->get_default_handle,
                                                             $table_ident,
                                                             undef,  # insert doesn't need a where
-                                                            [ $table->columns ]);
+                                                            \@changed_col_objects);
 
 
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
