@@ -200,7 +200,7 @@ sub _resolve_blob_column_names_from_columns {
     my($self, $columns) = @_;
 
     return map { $_->column_name }
-           grep { $_->data_type and $_->data_type eq 'BLOB' }
+           grep { $_->data_type and ($_->data_type eq 'OID' or $_->data_type eq 'BLOB') }
            @$columns;
 }
 
@@ -226,7 +226,8 @@ sub _create_closure_to_update_blobs {
 
     my @blob_column_idx;
     for (my $n = 0; $n < @$column_objects; $n++) {
-        if ($column_objects->[$n]->data_type eq 'BLOB') {
+        my $this_column_data_type = $column_objects->[$n]->data_type;
+        if ($this_column_data_type eq 'OID' or $this_column_data_type eq 'BLOB') {
             push(@blob_column_idx, $n);
         }
     }
@@ -274,7 +275,8 @@ sub _create_closure_to_insert_blobs {
 
     my @blob_column_idx;
     for (my $n = 0; $n < @$column_objects; $n++) {
-        if ($column_objects->[$n]->data_type eq 'BLOB') {
+        my $this_column_data_type = $column_objects->[$n]->data_type;
+        if ($this_column_data_type eq 'OID' or $this_column_data_type eq 'BLOB') {
             push(@blob_column_idx, $n);
         }
     }
