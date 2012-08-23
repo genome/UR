@@ -2402,7 +2402,14 @@ sub _sync_database {
     for (1) {
         @failures = ();
         for my $cmd (@explicit_commands_in_order) {
-            unless ($sth{$cmd->{sql}}->execute(@{$cmd->{params}}))
+            my $sth = $sth{$cmd->{sql}};
+
+            # Call the 'before' callback
+            if ($cmd->{before}) {
+                $cmd->{before}->($sth, $cmd);
+            }
+
+            unless ($sth->execute(@{$cmd->{params}}))
             {
                 #my $dbh = $cmd->{class}->dbh;
                 # my $dbh = UR::Context->resolve_data_source_for_object($cmd->{class})->get_default_handle;
@@ -2410,6 +2417,11 @@ sub _sync_database {
                 last if $skip_fault_tolerance_check;
             }
             $sth{$cmd->{sql}}->finish();
+
+            # Call the 'before' callback
+            if ($cmd->{after}) {
+                $cmd->{after}->($sth, $cmd);
+            }
         }
 
         if (@failures) {
@@ -2711,6 +2723,8 @@ sub _default_save_sql_for_object {
 
         my $table_action = $action;
 
+        my $table_ident = ($db_owner ? "${db_owner}." : '') . $table_name_to_update;
+
         # Handle re-classification of objects.
         # We skip deletion and turn insert into update in these cases.
 
@@ -2748,9 +2762,7 @@ sub _default_save_sql_for_object {
 
             if (@non_pk_nullable_fk_columns) {
                 #generate an update statement to set nullable fk columns to null pre delete
-                my $update_sql = "UPDATE ";
-                $update_sql .= "${db_owner}." if ($db_owner);
-                $update_sql .= "$table_name_to_update SET ";
+                my $update_sql = "UPDATE $table_ident SET ";
                 $update_sql .= join(", ", map { "$_=?"} @non_pk_nullable_fk_columns);
                 $update_sql .= " WHERE $where";
                 my @update_values = @values;
@@ -2770,9 +2782,13 @@ sub _default_save_sql_for_object {
             }
 
 
-            my $sql = " DELETE FROM ";
-            $sql .= "${db_owner}." if ($db_owner);
-            $sql .= "$table_name_to_update WHERE $where";
+            my $sql = " DELETE FROM $table_ident WHERE $where";
+
+            my $remove_blob_closure =
+                    $self->_create_closure_to_unlink_blobs( $data_source->get_default_handle,
+                                                            $table_ident,
+                                                            $where,
+                                                            [ $table->columns ]);
 
             push @commands, { type         => 'delete',
                               table_name   => $table_name,
@@ -2781,7 +2797,8 @@ sub _default_save_sql_for_object {
                               params       => \@values,
                               class        => $table_class,
                               id           => $id,
-                              dbh          => $data_source->get_default_handle
+                              dbh          => $data_source->get_default_handle,
+                              before       => $remove_blob_closure,
                            };
 
             #print Data::Dumper::Dumper \@commands;
@@ -2840,18 +2857,24 @@ sub _default_save_sql_for_object {
                 my @all_values = ( @changed_values, @id_values );
                 my $where = $self->_matching_where_clause($table, \@all_values);
 
-                my $sql = " UPDATE ";
-                $sql .= "${db_owner}." if ($db_owner);
-                $sql .= "$table_name_to_update SET " . join(",", map { "$_ = ?" } @changed_cols) . " WHERE $where";
+                my $sql = " UPDATE $table_ident SET ";
+                $sql .= join(",", map { "$_ = ?" } @changed_cols) . " WHERE $where";
 
-                push @commands, { type         => 'update',
+                my $update_blob_closure =
+                    $self->_create_closure_to_update_blobs( $data_source->get_default_handle,
+                                                            $table_ident,
+                                                            $where,
+                                                            [ $table->columns ]);
+
+                 push @commands, { type         => 'update',
                                   table_name   => $table_name,
                                   column_names => \@changed_cols,
                                   sql          => $sql,
                                   params       => \@all_values,
                                   class        => $table_class,
                                   id           => $id,
-                                  dbh          => $data_source->get_default_handle
+                                  dbh          => $data_source->get_default_handle,
+                                  before       => $update_blob_closure,
                                 };
             }
         }
@@ -2867,10 +2890,8 @@ sub _default_save_sql_for_object {
                                grep { $_->column_name }
                                     $class_object->all_property_metas();
 
-            my $sql = " INSERT INTO ";
-            $sql .= "${db_owner}." if ($db_owner);
-            $sql .= "$table_name_to_update (" 
-                    . join(",", @changed_cols) 
+            my $sql = " INSERT INTO $table_ident (";
+            $sql .= join(",", @changed_cols)
                     . ") VALUES (" 
                     . join(',', split(//,'?' x scalar(@changed_cols))) . ")";
 
@@ -2893,6 +2914,13 @@ sub _default_save_sql_for_object {
                            . "There is probably a mismatch between the database column metadata and the column_name "
                            . "property metadata");
             }
+
+            my $insert_blob_closure =
+                    $self->_create_closure_to_update_blobs( $data_source->get_default_handle,
+                                                            $table_ident,
+                                                            undef,  # insert doesn't need a where
+                                                            [ $table->columns ]);
+
 
             #grab fk_constraints so we can undef non primary-key nullable fks before delete
             my %non_pk_nullable_fk_columns = map { $_ => 1 }
@@ -2918,7 +2946,8 @@ sub _default_save_sql_for_object {
                                   params       => \@insert_values,
                                   class        => $table_class,
                                   id           => $id,
-                                  dbh          => $data_source->get_default_handle
+                                  dbh          => $data_source->get_default_handle,
+                                  before       => $insert_blob_closure,
                                 };
 
                 ##$DB::single = 1;
@@ -2933,9 +2962,8 @@ sub _default_save_sql_for_object {
                 
                 
 
-                    my $update_sql = " UPDATE ";
-                    $update_sql .= "${db_owner}." if ($db_owner);
-                    $update_sql .= "$table_name_to_update SET ". join(",", map { "$_ = ?" } @update_cols) . " WHERE $where";
+                    my $update_sql = " UPDATE $table_ident SET ";
+                    $update_sql .= join(",", map { "$_ = ?" } @update_cols) . " WHERE $where";
 
                     push @commands, { type         => 'update',
                                       table_name   => $table_name,
@@ -2957,7 +2985,8 @@ sub _default_save_sql_for_object {
                                   params       => \@values,
                                   class        => $table_class,
                                   id           => $id,
-                                  dbh          => $data_source->get_default_handle
+                                  dbh          => $data_source->get_default_handle,
+                                  before       => $insert_blob_closure,
                                 };
             }
 
@@ -3241,6 +3270,26 @@ sub prepare_for_fork {
 sub _lob_query_attr_for_prepare {
     return;
 }
+
+# Derived classes that have special handling behavior for BLOB columns should override
+# these.  Each method must return a closure that accepts 2 params:
+# 1) The statement handle that is just about to be executed
+# 2) The "cmd" hadhref that's built by _default_save_sql_for_object()
+
+# PostgreSQL and Oracle each have slightly different behaviors
+sub _create_closure_to_insert_blobs {
+    return;
+}
+
+sub _create_closure_to_update_blobs {
+    return;
+}
+
+sub _create_closure_to_unlink_blobs {
+    return;
+}
+
+
 
 
 1;
