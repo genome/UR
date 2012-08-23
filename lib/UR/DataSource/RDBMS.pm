@@ -2221,9 +2221,6 @@ sub _sync_database {
         }
     }
 
-    my %table_objects_by_class_name;
-    my %column_objects_by_class_and_column_name;
-
     # Make statement handles.
     my %sth;
     for my $cmd (@explicit_commands_in_order)
@@ -2245,55 +2242,6 @@ sub _sync_database {
                 return;
             }
 
-            my $tables = $table_objects_by_class_name{$class_name};
-            my $class_object = $class_name->__meta__;
-            unless ($tables) {                
-                my $tables;
-                my @all_table_names = $class_object->all_table_names;                
-                for my $table_name (@all_table_names) {                    
-                    my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-                    my $table = UR::DataSource::RDBMS::Table->get(
-                                    table_name => $ds_table,
-                                    owner => $ds_owner,
-                                    data_source => $self->class)
-                                ||
-                                UR::DataSource::RDBMS::Table->get(
-                                    table_name => $ds_table,
-                                    owner => $ds_owner,
-                                    data_source => 'UR::DataSource::Meta');
-                    push @$tables, $table;
-                    $column_objects_by_class_and_column_name{$class_name} ||= {};             
-                    my $columns = $column_objects_by_class_and_column_name{$class_name};
-                    unless (%$columns) {
-                        for my $column ($table->columns) {
-                            $columns->{$column->column_name} = $column;
-                        }
-                    }
-                }
-                $table_objects_by_class_name{$class_name} = $tables;
-            }
-
-            my @column_objects;
-            foreach my $column_name ( @{ $cmd->{column_names} } ) {
-                my $column = $column_objects_by_class_and_column_name{$class_name}->{$column_name};
-                unless ($column) {
-                    FIND_IN_ANCESTRY:
-                    for my $ancestor_class_name ($class_object->ancestry_class_names) {
-                        $column = $column_objects_by_class_and_column_name{$ancestor_class_name}->{$column_name};
-                        if ($column) {
-                            $column_objects_by_class_and_column_name{$class_name}->{$column_name} = $column;
-                            last FIND_IN_ANCESTRY;
-                        }
-                    }
-                }
-                # If we didn't find a column object, then $column will be undef
-                # and we'll have to guess what it looks like
-                push @column_objects, $column;
-            }
-
-            # print "Column Types: @column_types\n";
-
-            $self->_alter_sth_for_selecting_blob_columns($sth,\@column_objects);
         }
     }
 

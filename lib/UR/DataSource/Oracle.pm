@@ -262,15 +262,34 @@ sub ur_data_type_for_data_source_data_type {
     return $urtype;
 }
 
-sub _alter_sth_for_selecting_blob_columns {
-    my($self, $sth, $column_objects) = @_;
+sub _create_closure_to_insert_blobs {
+    my($self, $dbh, $table_ident, $where, $column_objects) = @_;
 
+    my @blob_column_idx;
     for (my $n = 0; $n < @$column_objects; $n++) {
-        next unless defined ($column_objects->[$n]);  # No metaDB info for this one
         if ($column_objects->[$n]->data_type eq 'BLOB') {
-            $sth->bind_param($n+1, undef, { ora_type => 23 });
+            push(@blob_column_idx, $n);
         }
     }
+    return unless @blob_column_idx;
+
+    return sub {
+        my($sth, $cmd)= shift;
+        foreach my $col ( @blob_column_idx) {
+            $sth->bind_param($col+1, undef, { ora_type => 23 });
+        }
+    };
+}
+
+sub _create_closure_to_update_blobs {
+   my $self = shift;
+   return $self->_create_closure_to_insert_blobs(@_);
+}
+
+# Oracle BLOB data is part of the row.  So, deleting the
+# row removes the blob(s).  We don't have to do anything special.
+sub _create_closure_to_unlink_blobs {
+    return;
 }
 
 
