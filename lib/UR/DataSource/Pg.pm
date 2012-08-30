@@ -61,6 +61,9 @@ sub _init_created_dbh
     my ($self, $dbh) = @_;
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
+    my $server = $self->server;
+    my ($dbname) = $dbh->selectrow_array("select current_database();");
+    $dbh->do(sprintf("alter database %s set bytea_output = 'escape';",$dbname ));
     return $dbh;
 }
 
