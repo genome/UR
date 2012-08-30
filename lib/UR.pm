@@ -223,7 +223,7 @@ UR::Object::Type->define(
         is_final                         => { is => 'Boolean', default_value => 0,
                                                 doc => 'further subclassification is prohibited on final classes' },
 
-        is_transactional                 => { is => 'Boolean', default_value => 1,
+        is_transactional                 => { is => 'Boolean', default_value => 1, is_optional => 1,
                                                 doc => 'non-transactional objects are left out of in-memory transactions' },
 
         is_singleton                     => { is => 'Boolean', default_value => 0,

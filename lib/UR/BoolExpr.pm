@@ -927,7 +927,7 @@ sub resolve_for_string {
 
     #$DB::single=1;
     #my $tree = UR::BoolExpr::BxParser::parse($filter_string, tokdebug => 1, yydebug => 7);
-    my $tree = UR::BoolExpr::BxParser::parse($filter_string);
+    my($tree, $remaining_strref) = UR::BoolExpr::BxParser::parse($filter_string);
     unless ($tree) {
         Carp::croak("resolve_for_string() couldn't parse string \"$filter_string\"");
     }
@@ -941,6 +941,9 @@ sub resolve_for_string {
         Carp::croak("Can't create BoolExpr on $subject_class_name from params generated from string "
                     . $filter_string . " which parsed as:\n"
                     . Data::Dumper::Dumper($tree));
+    }
+    if ($$remaining_strref) {
+        Carp::croak("Trailing input after the parsable end of the filter string: '". $$remaining_strref."'");
     }
     return $bx;
 }

@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 13;
+use Test::More tests => 23;
 
 class Animal {
     has => [
@@ -34,6 +34,9 @@ class Animal {
             to => 'text', 
             is_mutable => 1 
         },
+
+        eyes    => { is => 'Animal::Eye', reverse_as => 'animal', is_many => 1 },
+        antlers => { is => 'Animal::Antler', reverse_as => 'animal', is_many => 1 },
     ],
 };
 
@@ -54,6 +57,21 @@ class Animal::Note {
         text    => { is => 'Text' },
     ]
 };
+
+class Animal::Eye {
+    has => [
+        animal => { is => 'Animal', id_by => 'animal_id' },
+        color  => { is => 'String' },
+    ],
+};
+
+class Animal::Antler {
+    has => [
+        animal      => { is => 'Animal', id_by => 'animal_id' },
+        pointiness  => { is => 'Number' },
+    ],
+};
+
 
 # make an example object
 my $a = Animal->create();
@@ -102,4 +120,35 @@ is($s,100,"set a remote non-id value through the indirect accessor");
 $s = $a3->foreleg_flexibility_score();
 is($s,100,"got back the non-id value through the indirect accessor");
 
+
+# Give animal 3 two eyes of different colors
+# We're avoiding the add_eye method so the rule/template captured by the
+# method's closure isn't pre-created when we use the filterable accessor
+Animal::Eye->create(animal => $a3, color => 'blue');
+Animal::Eye->create(animal => $a3, color => 'green');
+my $eye = $a3->eye(color => 'green');
+ok($eye, 'Got an eye via the filterable accessor');
+is($eye->color, 'green', 'It is the correct eye');
+
+$eye = $a3->eye(color => 'blue');
+ok($eye, 'Got an eye via the filterable accessor');
+is($eye->color, 'blue', 'It is the correct eye');
+
+$eye = $a3->eye(color => 'tractor');
+ok(! $eye, 'Correctly found no eye via the filterable accessor');
+
+# Do it again with the missing thing first
+# and use the plural accessor to test that one out too
+Animal::Antler->create(animal => $a3, pointiness => 1);
+Animal::Antler->create(animal => $a3, pointiness => 2);
+my $antler = $a3->antlers(pointiness => 100);
+ok(! $antler, 'Correctly found no antler via the filterable accessor');
+
+$antler = $a3->antlers(pointiness => 1);
+ok($antler, 'Got an antler via the filterable accessor');
+is($antler->pointiness, 1, 'It is the correct antler');
+
+$antler = $a3->antlers(pointiness => 2);
+ok($antler, 'Got an antler via the filterable accessor');
+is($antler->pointiness, 2, 'It is the correct antler');
 

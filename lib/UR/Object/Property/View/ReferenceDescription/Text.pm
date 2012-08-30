@@ -8,7 +8,7 @@ our $VERSION = "0.38"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object::View::Default::Text',
-    doc => "View used by 'ur describe' for each object-accessor property",
+    doc => "View used by 'ur show properties' for each object-accessor property",
 );
 
 sub _update_view_from_subject {
@@ -60,6 +60,6 @@ UR::Object::Property::View::DescriptionLineItem::Text - View class for UR::Objec
 
 =head1 DESCRIPTION
 
-Used by UR::Namespace::Command::Describe when displaying information about a property
+Used by UR::Namespace::Command::Show::Properties when displaying information about a property
 
 =cut

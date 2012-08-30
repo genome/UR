@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 706;
+use Test::More tests => 710;
 
 class URT::RelatedItem {
     id_by => 'ritem_id',
@@ -396,6 +396,10 @@ foreach my $test (
     { string => 'name is not undef and score=2',
       operators => { name => '!=', score => '=' },
       values => { name => undef, score => 2 },
+    },
+    { string => 'name=this that + the other thing',
+      operators => { name => '=' },
+      values => { name => 'this that + the other thing' },
     },
 ) {
 

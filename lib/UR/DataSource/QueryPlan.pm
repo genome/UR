@@ -475,6 +475,11 @@ sub _init_rdbms {
                                       foreign_property_names => $joins[$i+1]->{'foreign_property_names'},
                                       is_optional => $joins[$i]->{'is_optional'},
                                       id => $joins[$i]->{id} . "->" . $joins[$i+1]->{id});
+                if ($joins[$i+1]->{where}) {
+                    # If there's a where involved, it will always be on the second thing,
+                    # where the foreign_class is NOT a UR::Value
+                    $fixed_join->{where} = $joins[$i+1]->{where};
+                }
                 splice(@joins, $i, 2, $fixed_join);
             }
         }
@@ -885,6 +890,8 @@ sub _add_join {
         return; 
     }
 
+    my $foreign_class_loading_data = $ds->_get_class_data_for_loading($foreign_class_object);
+
     # This will get filled in during the first pass, and every time after we've successfully
     # performed a join - ie. that the delegated property points directly to a class/property
     # that is a real table/column, and not a tableless class or another delegated property
@@ -947,8 +954,6 @@ sub _add_join {
         # some calculated properties, be sure to re-check for a match after loading the object
         $self->needs_further_boolexpr_evaluation_after_loading(1);
     }
-
-    my $foreign_class_loading_data = $ds->_get_class_data_for_loading($foreign_class_object);
 
     my $alias = $self->_get_join_alias($join);
 
@@ -1307,7 +1312,7 @@ sub _resolve_object_join_data_for_property_chain {
     my $is_optional;
     my $final_accessor;
 
-    my @pmeta = $class_meta->property_meta_for_name($property_name);
+    my @pmeta = $class_meta->_concrete_property_meta_for_class_and_name($property_name);
 
     my $last_class_meta = $class_meta;
     for my $meta (@pmeta) {

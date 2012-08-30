@@ -301,7 +301,10 @@ sub get_property_name_pairs_for_join {
     unless ($self->{'_get_property_name_pairs_for_join'}) {
         my @linkage = $self->_get_direct_join_linkage();
         unless (@linkage) {
-            Carp::confess("Cannot resolve underlying property joins for property ".$self->id);
+            Carp::croak("Cannot resolve underlying property joins for property '"
+                            . $self->property_name . "' of class "
+                            . $self->class_name
+                            . ": Couldn't determine which properties link to the remote class");
         }
         my @results;
         if ($self->reverse_as) {
