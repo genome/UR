@@ -61,14 +61,6 @@ sub _init_created_dbh
     my ($self, $dbh) = @_;
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
-    my $server = $self->server;
-    my ($dbname) = $dbh->selectrow_array("select current_database();");
-
-    my ($version) = $dbh->selectrow_array("select Substr(setting, 1, strpos(setting, '.')-1) from pg_settings where name = 'server_version'");
-    if ($version >= 9) {
-        $dbh->do(sprintf("alter database %s set bytea_output = 'escape';",$dbname ));
-    }
-
     return $dbh;
 }
 
