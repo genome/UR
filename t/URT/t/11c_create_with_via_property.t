@@ -71,7 +71,7 @@ is($e->boss_office, $o, 'Employee boss_office is correct');
 
 
 my $o2 = URT::Office->create(office_number => 456);
-ok($o, 'Created office 456');
+ok($o2, 'Created office 456');
 
 $e = eval { URT::Employee->create(name => 'Frank', boss => $b, boss_office => $o2) };
 ok(!$e, 'Correctly couldn not create an employee with conflicting boss and boss_office');
