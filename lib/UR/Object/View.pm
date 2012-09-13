@@ -178,8 +178,12 @@ sub _resolve_view_class_for_params {
             )
         );
 
-        my $subclass_meta = UR::Object::Type->get($subclass_name);
-        unless ($subclass_meta) {
+        my $subclass_meta;
+        eval {
+            $subclass_meta = $subclass_name->__meta__;
+        };
+        if ($@ or not $subclass_meta) {
+            #not a class... keep looking
             next;
         }
 
@@ -301,8 +305,9 @@ sub all_subject_classes_ancestry {
 
     my @aclasses;
     for my $class (@classes) {
-        my $m = UR::Object::Type->get($class);
-        next unless $m;
+        my $m;
+        eval { $m = $class->__meta__ };
+        next if $@ or not $m;
 
         push @aclasses, reverse($class, $m->ancestry_class_names);
     }
