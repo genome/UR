@@ -493,6 +493,17 @@ sub _dbi_connect_args {
     return @connection;
 }
 
+sub get_connection_debug_info {
+    my $self = shift;
+    my @debug_info = (
+        "DBI Data Source Name: ", $self->dbi_data_source_name, "\n",
+        "DBI Login: ", $self->login, "\n",
+        "DBI Version: ", $DBI::VERSION, "\n",
+        "DBI Error: ", UR::DBI->errstr, "\n",
+    );
+    return @debug_info;
+}
+
 sub create_dbh {
     my $self = shift;
     if (! ref($self) and $self->isa('UR::Singleton')) {
@@ -504,9 +515,13 @@ sub create_dbh {
     
     # connect
     my $dbh = UR::DBI->connect(@connection);
-    $dbh or
-        Carp::confess("Failed to connect to the database!\n"
-            . UR::DBI->errstr . "\n");
+    unless ($dbh) {
+        my @confession = (
+            "Failed to connect to the database!\n",
+            $self->get_connection_debug_info(),
+        );
+        Carp::confess(@confession);
+    }
 
     # used for reverse lookups
     $dbh->{'private_UR::DataSource::RDBMS_name'} = $self->class;

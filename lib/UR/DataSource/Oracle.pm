@@ -273,6 +273,17 @@ sub _alter_sth_for_selecting_blob_columns {
     }
 }
 
+sub get_connection_debug_info {
+    my $self = shift;
+    my @debug_info = $self->SUPER::get_connection_debug_info(@_);
+    push @debug_info, (
+        "DBD::Oracle Version: ", $DBD::Oracle::VERSION, "\n",
+        "TNS_ADMIN: ", $ENV{TNS_ADMIN}, "\n",
+        "ORACLE_HOME: ", $ENV{ORACLE_HOME}, "\n",
+    );
+    return @debug_info;
+}
+
 
 1;
 
