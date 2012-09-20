@@ -2610,7 +2610,7 @@ sub _id_values_for_primary_key {
             Carp::croak("While committing, metadata for table $table_name does not match class $class_name.\n  Table primary key columns are " .
                         join(', ',@pk_cols) .
                         "\n  class ID property columns " .
-                        join('', @columns));
+                        join(', ', @columns));
         }
     }
 
