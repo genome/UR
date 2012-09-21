@@ -251,6 +251,7 @@ sub get_userenv {
 
 my %ur_data_type_for_vendor_data_type = (
     'VARCHAR2'  => ['Text', undef],
+    'BLOB'  => ['XmlBlob', undef],
 );
 sub ur_data_type_for_data_source_data_type {
     my($class,$type) = @_;

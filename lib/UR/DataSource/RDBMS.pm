@@ -451,16 +451,16 @@ sub disconnect_default_handle {
     return $dbh;
 }
 
-sub set_all_dbh_to_inactive_destroy {
+sub clone_db_handles_for_child_process {
     my $self = shift->_singleton_object;
     my $dbhs = $self->_all_dbh_hashref;    
     for my $k (keys %$dbhs) {
-        $dbhs->{$k}->{InactiveDestroy} = 1;
-        delete $dbhs->{$k};
-    }
-    my $dbh = $self->_default_dbh;
-    if ($dbh) {
-        $self->disconnect_default_dbh;;
+        if ($dbhs->{$k}) {
+            my $new_dbh = $dbhs->{$k}->clone();
+            $dbhs->{$k}->{InactiveDestroy} = 1;
+            delete $dbhs->{$k};
+            $dbhs->{$k} = $new_dbh;
+        }
     }
     return 1;
 }
@@ -3241,12 +3241,10 @@ sub ur_data_type_for_data_source_data_type {
     return $urtype;
 }
 
-sub prepare_for_fork {
+sub do_after_fork_in_child {
     my $self = shift;
-   
-    $self->set_all_dbh_to_inactive_destroy();
-    
-    return 1;
+    $self->clone_db_handles_for_child_process()
+
 }
 
 

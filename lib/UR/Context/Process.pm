@@ -448,7 +448,10 @@ sub fork
     my $pid = fork();
     if (!$pid) {
         $UR::Context::process = undef;
-        $UR::Context::process = $class->_create_for_current_process
+        $UR::Context::process = $class->_create_for_current_process;
+        for (grep {defined $_} @ds) {
+            $_->do_after_fork_in_child if $_->can('do_after_fork_in_child');
+        }
     }
 
     for (grep {defined $_} @ds) {
