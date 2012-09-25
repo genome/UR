@@ -790,6 +790,51 @@ sub resolve_property_name_for_column_name {
     return $type_name;
 }
 
+sub _get_or_create_table_meta {
+	my $self = shift;
+
+	my ($data_source, 
+		$ur_owner,
+		$ur_table_name,
+		$db_table_name,
+		$creation_method,
+		$table_data,
+		$revision_time) = @_;
+	
+        my $data_source_id = $self->_my_data_source_id;	
+	my $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source_id,
+	                                                     owner       => $ur_owner,
+	                                                     table_name  => $ur_table_name);
+	if ($table_object) {
+	    # Already exists, update the existing entry
+	    # Instead of deleting and recreating the table object (the old way),
+	    # modify its attributes in-place.  The name can't change but all the other
+	    # stuff might.
+	    $table_object->table_type($table_data->{TABLE_TYPE});
+	    $table_object->owner($table_data->{TABLE_SCHEM});
+	    $table_object->data_source($data_source->class);
+	    $table_object->remarks($table_data->{REMARKS});
+	    $table_object->last_object_revision($revision_time) if ($table_object->__changes__());
+
+	} else {
+	    # Create a brand new one from scratch
+
+	    $table_object = UR::DataSource::RDBMS::Table->$creation_method(
+	        table_name => $ur_table_name,
+	        table_type => $table_data->{TABLE_TYPE},
+	        owner => $table_data->{TABLE_SCHEM},
+	        data_source => $data_source_id,
+	        remarks => $table_data->{REMARKS},
+	        last_object_revision => $revision_time,
+	    );
+	    unless ($table_object) {
+	        Carp::confess("Failed to $creation_method table object for $db_table_name");
+	    }
+	}
+	
+	return $table_object;
+}
+
 sub refresh_database_metadata_for_table_name {
     my ($self,$db_table_name, $creation_method) = @_;
 
@@ -828,37 +873,18 @@ sub refresh_database_metadata_for_table_name {
         return;
     }
 
+	
     my $data_source_id = $data_source->id;
-    my $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source_id,
-                                                         owner       => $ur_owner,
-                                                         table_name  => $ur_table_name);
-    if ($table_object) {
-        # Already exists, update the existing entry
-        # Instead of deleting and recreating the table object (the old way),
-        # modify its attributes in-place.  The name can't change but all the other
-        # stuff might.
-        $table_object->table_type($table_data->{TABLE_TYPE});
-        $table_object->owner($table_data->{TABLE_SCHEM});
-        $table_object->data_source($data_source->class);
-        $table_object->remarks($table_data->{REMARKS});
-        $table_object->last_object_revision($revision_time) if ($table_object->__changes__());
-
-    } else {
-        # Create a brand new one from scratch
-
-        $table_object = UR::DataSource::RDBMS::Table->$creation_method(
-            table_name => $ur_table_name,
-            table_type => $table_data->{TABLE_TYPE},
-            owner => $table_data->{TABLE_SCHEM},
-            data_source => $data_source_id,
-            remarks => $table_data->{REMARKS},
-            last_object_revision => $revision_time,
-        );
-        unless ($table_object) {
-            Carp::confess("Failed to $creation_method table object for $db_table_name");
-        }
-    }
-
+	
+	
+	my $table_object = $self->_get_or_create_table_meta(
+									$data_source,
+									$ur_owner,
+									$ur_table_name,
+									$db_table_name,
+									$creation_method,
+									$table_data,
+									$revision_time);
 
     # COLUMNS
     # mysql databases seem to require you to actually put in the database name in the first arg
@@ -1862,17 +1888,8 @@ sub _sync_database {
                     my $id = $change->{id};                    
                     $all_tables{$table_name}++;
                     my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-                    my $table =
-                        UR::DataSource::RDBMS::Table->get(
-                            table_name => $ds_table,
-                            owner => $ds_owner,
-                            data_source => $self->class)
-                        ||
-                        UR::DataSource::RDBMS::Table->get(
-                            table_name => $ds_table,
-                            owner => $ds_owner,
-                            data_source => 'UR::DataSource::Meta');
-
+					
+					my $table = $self->_get_table_object($ds_table, $ds_owner);
                     my $fully_qualified_table_name = defined $ds_owner ? join('.', $ds_owner, $ds_table) : $ds_table;
                     if ($change->{type} eq 'insert')
                     {
@@ -1900,15 +1917,7 @@ sub _sync_database {
     my %tables_requiring_lock;
     for my $table_name (keys %all_tables) {
         my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-        my $table_object = UR::DataSource::RDBMS::Table->get(
-                               table_name => $ds_table,
-                               owner => $ds_owner,
-                               data_source => $self->class)
-                           ||
-                           UR::DataSource::RDBMS::Table->get(
-                               table_name => $ds_table,
-                               owner => $ds_owner,
-                               data_source => 'UR::DataSource::Meta');
+		my $table_object = $self->_get_table_object($ds_table, $ds_owner);
 
         unless ($table_object) {
             warn "looking up schema for RDBMS table $table_name...\n";
@@ -1956,15 +1965,9 @@ sub _sync_database {
 
     for my $table_name_from_class (keys %all_tables) {
         my($ds_owner,$ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name_from_class);
-        my $table = UR::DataSource::RDBMS::Table->get(
-                        table_name => $ds_table,
-                        owner => $ds_owner,
-                        data_source => $self->class)
-                    ||
-                    UR::DataSource::RDBMS::Table->get(
-                        table_name => $ds_table,
-                        owner => $ds_owner,
-                        data_source => 'UR::DataSource::Meta');
+		
+		my $data_source_id = $self->class;
+		my $table = $self->_get_table_object($ds_table, $ds_owner);
 
         my @fk = $table->fk_constraints;
 
@@ -2267,15 +2270,10 @@ sub _sync_database {
                 my @all_table_names = $class_object->all_table_names;                
                 for my $table_name (@all_table_names) {                    
                     my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-                    my $table = UR::DataSource::RDBMS::Table->get(
-                                    table_name => $ds_table,
-                                    owner => $ds_owner,
-                                    data_source => $self->class)
-                                ||
-                                UR::DataSource::RDBMS::Table->get(
-                                    table_name => $ds_table,
-                                    owner => $ds_owner,
-                                    data_source => 'UR::DataSource::Meta');
+					
+					my $data_source_id = $self->class;
+					my $table = $self->_get_table_object($ds_table, $ds_owner);
+					
                     push @$tables, $table;
                     $column_objects_by_class_and_column_name{$class_name} ||= {};             
                     my $columns = $column_objects_by_class_and_column_name{$class_name};
@@ -2344,15 +2342,7 @@ sub _sync_database {
         my $max_failed_attempts = 10;
         for my $table_name (@tables_requiring_lock) {
             my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-            my $table = UR::DataSource::RDBMS::Table->get(
-                            table_name => $ds_table,
-                            owner => $ds_owner,
-                            data_source => $self->class)
-                        ||
-                        UR::DataSource::RDBMS::Table->get(
-                            table_name => $ds_table,
-                            owner => $ds_owner,
-                            data_source => 'UR::DataSource::Meta');
+			my $table = $self->_get_table_object($ds_table, $ds_owner);
             my $dbh = $table->dbh;
             my $sth = $dbh->prepare("lock table $table_name in exclusive mode");
             my $failed_attempts = 0;
@@ -2501,6 +2491,31 @@ sub _sync_database {
     }
 
     return 1;
+}
+
+# this is necessary for overriding data source names when looking up table metadata with 
+# bifurcated oracle/postgres syncs in testing.
+sub _my_data_source_id {
+	my $self = shift;
+	return ref($self) ? $self->id : $self;
+}
+
+sub _get_table_object {
+	my $self = shift;
+	my ($ds_table, $ds_owner) = @_;
+	
+    my $data_source_id = $self->_my_data_source_id;
+	
+    my $table = UR::DataSource::RDBMS::Table->get(
+                    table_name => $ds_table,
+                    owner => $ds_owner,
+                    data_source => $data_source_id)
+                ||
+                UR::DataSource::RDBMS::Table->get(
+                    table_name => $ds_table,
+                    owner => $ds_owner,
+                    data_source => 'UR::DataSource::Meta');
+
 }
 
 
@@ -2679,27 +2694,12 @@ sub _default_save_sql_for_object {
 
         my $dsn = ref($self) ? $self->id : $self;  # The data source name
 
-        my $table = UR::DataSource::RDBMS::Table->get(
-                        table_name => $table_name_to_update,
-                        owner => $db_owner,
-                        data_source => $dsn)
-                    ||
-                    UR::DataSource::RDBMS::Table->get(
-                        table_name => $table_name_to_update,
-                        owner => $db_owner,
-                        data_source => 'UR::DataSource::Meta');
+		my $table = $self->_get_table_object($table_name_to_update, $db_owner);
+
         unless ($table) {
             $self->generate_schema_for_class_meta($class_object,1);
             # try again...
-            $table = UR::DataSource::RDBMS::Table->get(
-                         table_name => $table_name_to_update,
-                         owner => $db_owner,
-                         data_source => $dsn)
-                     ||
-                     UR::DataSource::RDBMS::Table->get(
-                         table_name => $table_name_to_update,
-                         owner => $db_owner,
-                         data_source => 'UR::DataSource::Meta');
+			my $table = $self->_get_table_object($table_name_to_update, $db_owner);
             unless ($table) {
                 Carp::croak("No table $table_name found for data source $dsn and owner '$db_owner'");
             }
