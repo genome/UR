@@ -5,18 +5,27 @@ use UR;
 
 use Data::Dumper;
 use Test::More;
-plan tests => 81;
+plan tests => 84;
 
 UR::Object::Type->define(
-    class_name => 'URT::Value1'
+    class_name => 'URT::Value1',
+    has => [
+        p1 => { is => 'Text', is_optional => 1 },
+    ]
 );
 
 UR::Object::Type->define(
-    class_name => 'URT::Value2'
+    class_name => 'URT::Value2',
+    has => [
+        p1 => { is => 'Text', is_optional => 1 },
+    ]
 );
 
 UR::Object::Type->define(
-    class_name => 'URT::Value3'
+    class_name => 'URT::Value3',
+    has => [
+        p1 => { is => 'Text', is_optional => 1 },
+    ]
 );
 
 UR::Object::Type->define(
@@ -233,6 +242,13 @@ is($params[2]->name, 'interesting', "param 3's name is interesting");
 is($params[0]->value, $v1, "param 1's value is correct");
 is($params[1]->value, $v2, "param 2's value is correct");
 is($params[2]->value, $v3, "param 3's value is correct");
+
+$v1->p1(1000);
+my @values = $thing2->param_values(p1 => 1000);
+is(scalar(@values), 1, "got one object back when filtering in an indirect accessor which is two steps away");
+is($values[0], $v1, "got the correct object back when filtering in an indirect accessor which his two steps away");
+@values = $thing2->param_values();
+is(scalar(@values), 3, "got everything back when not filtering with an indirect accessor which is two steps away");
 
 # Try to get the object again w/ id
 my $o2 = URT::Thing->get(2);
