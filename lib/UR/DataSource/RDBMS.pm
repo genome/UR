@@ -642,8 +642,6 @@ sub get_nullable_foreign_key_columns_for_table {
     my $table = shift;
 
     my @nullable_fk_columns;
-
-    Carp::cluck;
     my @fk = $table->fk_constraints;
     for my $fk (@fk){
         my @fk_columns = UR::DataSource::RDBMS::FkConstraintColumn->get(
