@@ -1,4 +1,4 @@
-
+ 
 package UR::Object::Type::AccessorWriter;
 
 package UR::Object::Type;
@@ -338,7 +338,10 @@ sub _resolve_bridge_logic_for_indirect_property {
         return if @results == 1 and not defined $results[0];
         return @results;
     };
-    my $bridge_crosser = sub { return map { $_->$to} @_ };
+    my $bridge_crosser = sub {
+        my $bridges = shift;
+        return map { $_->$to(@_) } @$bridges;
+    };
 
     return($bridge_collector, $bridge_crosser) if ($UR::Object::Type::bootstrapping);
 
@@ -423,9 +426,10 @@ sub _resolve_bridge_logic_for_indirect_property {
                  my $result_property_name = $to_property_meta->to;
 
                  $bridge_crosser = sub {
-                     my @linking_values = map { $_->$my_property_name } @_;
+                     my $bridges = shift;
+                     my @linking_values = map { $_->$my_property_name } @$bridges;
                      my $bx = $crosser_template->get_rule_for_values(\@linking_values);
-                     my @result_objects = $final_class_name->get($bx);
+                     my @result_objects = (@_ ? $final_class_name->get($bx->params_list, @_) : $final_class_name->get($bx) );
                      return map { $_->$result_property_name } @result_objects;
                  };
              }
@@ -438,9 +442,10 @@ sub _resolve_bridge_logic_for_indirect_property {
             my $bridging_identifiers = $to_property_meta->id_by;
 
             $bridge_crosser = sub {
+                my $bridges = shift;
                 my %result_class_names_and_ids;
 
-                foreach my $bridge ( @_ ) {
+                foreach my $bridge ( @$bridges ) {
                     my $result_class = $bridge->$result_class_resolver;
                     $result_class_names_and_ids{$result_class} ||= [];
 
@@ -453,10 +458,19 @@ sub _resolve_bridge_logic_for_indirect_property {
 
                 my @results;
                 foreach my $result_class ( keys %result_class_names_and_ids ) {
-                    if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                        push @results, map { $result_class->get($_) } @{$result_class_names_and_ids{$result_class}};
-                    } else {
-                        push @results, $result_class->get($result_class_names_and_ids{$result_class});
+                    if (@_) {
+                        if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
+                            push @results, map { $result_class->get(id => $_, @_) } @{$result_class_names_and_ids{$result_class}};
+                        } else {
+                            push @results, $result_class->get(id => $result_class_names_and_ids{$result_class}, @_);
+                        }
+                    }
+                    else {
+                        if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
+                            push @results, map { $result_class->get($_) } @{$result_class_names_and_ids{$result_class}};
+                        } else {
+                            push @results, $result_class->get($result_class_names_and_ids{$result_class});
+                        }
                     }
                 }
                 return @results;
@@ -466,8 +480,9 @@ sub _resolve_bridge_logic_for_indirect_property {
             my $bridging_identifiers = $to_property_meta->id_by;
 
             $bridge_crosser = sub {
+                my $bridges = shift;
                 my @ids;
-                foreach my $bridge ( @_ ) {
+                foreach my $bridge ( @$bridges ) {
                     my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
                     my @id = map { $bridge->$_ } @$bridging_identifiers;
                     my $id = $id_resolver->(@id);
@@ -475,7 +490,7 @@ sub _resolve_bridge_logic_for_indirect_property {
                     push @ids, $id;
                 }
 
-                my @results = $result_class->get(\@ids);
+                my @results = (@_ ? $result_class->get(id => \@ids, @_) : $result_class->get(\@ids) );
                 return @results;
             }
         }
@@ -485,6 +500,12 @@ sub _resolve_bridge_logic_for_indirect_property {
 }
          
 
+sub _is_assignment_value {
+    return (
+        @_ == 1 
+        and not (ref($_[0]) and Scalar::Util::blessed($_[0]) and $_[0]->isa("UR::BoolExpr"))
+    );
+}
 
 sub mk_indirect_ro_accessor {
     my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where) = @_;
@@ -499,7 +520,7 @@ sub mk_indirect_ro_accessor {
     my (@collectors, @crossers);
     my $accessor2 = Sub::Name::subname $full_name.'_new' => sub {
         my $self = shift;
-        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_;
+        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_ and _is_assignment_value(@_);
 
         if ($class_name =~ m/^UR::/) {
             # Some methods will recurse into here if called on a UR::* class (especially
@@ -511,7 +532,10 @@ sub mk_indirect_ro_accessor {
                 return if @results == 1 and not defined $results[0];
                 return @results;
             };
-            my $bridge_crosser = sub { return map { $_->$to} @_ };
+
+            #TODO: move this crosser closure logic down and get rid of the closure
+            my @filter = @_;
+            my $bridge_crosser = sub { return map { $_->$to(@filter) } @_ };
             my @bridges = $bridge_collector->($self);
             return unless @bridges;
             return $self->context_return(@bridges) if ($to eq '-filter');
@@ -568,7 +592,7 @@ sub mk_indirect_ro_accessor {
 
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
-        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_;
+        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_ == 1 and _is_assignment_value(@_); 
 
         unless ($bridge_collector) {
             ($bridge_collector, $bridge_crosser)
@@ -580,7 +604,7 @@ sub mk_indirect_ro_accessor {
         return unless @bridges;
         return $self->context_return(@bridges) if ($to eq '-filter');
 
-        my @results = $bridge_crosser->(@bridges);
+        my @results = $bridge_crosser->(\@bridges, @_);
         $self->context_return(@results); 
     };
 
@@ -699,7 +723,7 @@ sub mk_indirect_rw_accessor {
 
         my @bridges = $bridge_collector->($self);
 
-        if (@_) {            
+        if ( @_ == 1 and _is_assignment_value(@_) ) {            
             $resolve_update_strategy->() unless (defined $update_strategy);
 
             if ($update_strategy eq 'change') {
@@ -748,11 +772,11 @@ sub mk_indirect_rw_accessor {
 
         if ($is_many) {
             return unless @bridges;
-            my @results = $bridge_crosser->(@bridges);
+            my @results = $bridge_crosser->(\@bridges, @_);
             $self->context_return(@results);
         } else {
             return undef unless @bridges;
-            my @results = map { $_->$to } @bridges;
+            my @results = map { $_->$to(@_) } @bridges;
             $self->context_return(@results);
         }
     };
