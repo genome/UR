@@ -643,6 +643,7 @@ sub get_nullable_foreign_key_columns_for_table {
 
     my @nullable_fk_columns;
 
+    Carp::cluck;
     my @fk = $table->fk_constraints;
     for my $fk (@fk){
         my @fk_columns = UR::DataSource::RDBMS::FkConstraintColumn->get(
@@ -2699,12 +2700,13 @@ sub _default_save_sql_for_object {
         unless ($table) {
             $self->generate_schema_for_class_meta($class_object,1);
             # try again...
-			my $table = $self->_get_table_object($table_name_to_update, $db_owner);
+			$table = $self->_get_table_object($table_name_to_update, $db_owner);
             unless ($table) {
                 Carp::croak("No table $table_name found for data source $dsn and owner '$db_owner'");
             }
         }        
-        my @table_class_obj = grep { $_->class_name !~ /::Ghost$/ } UR::Object::Type->is_loaded(table_name => $table_name);
+		
+		my @table_class_obj = grep { $_->class_name !~ /::Ghost$/ } UR::Object::Type->is_loaded(table_name => $table_name);
         my $table_class;
         my $table_class_obj;
         if (@table_class_obj == 1) {
