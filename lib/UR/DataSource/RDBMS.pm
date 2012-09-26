@@ -3093,7 +3093,7 @@ sub _generate_class_data_for_loading {
     for my $class_property (@all_table_properties) {
         my ($sql_class,$sql_property,$sql_table_name) = @$class_property;
         my $data_type = $sql_property->data_type || '';             
-        if ($data_type =~ /LOB$/) {
+        if ($data_type =~ /LOB$/i) {
             push @lob_column_names, $sql_property->column_name;
             push @lob_column_positions, $pos;
         }
