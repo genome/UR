@@ -2644,6 +2644,22 @@ sub _id_values_for_primary_key {
     return @id_values_in_pk_order;
 }
 
+sub _lookup_class_for_table_name {
+    my $self = shift;
+    my $table_name = shift;
+
+    my @table_class_obj = grep { $_->class_name !~ /::Ghost$/ } UR::Object::Type->is_loaded(table_name => $table_name);
+    my $table_class;
+    my $table_class_obj;
+    if (@table_class_obj == 1) {
+        $table_class_obj = $table_class_obj[0]; 
+        return $table_class_obj->class_name; 
+    } elsif (@table_class_obj > 1) {
+        Carp::confess("Got more than one class object for $table_name, this should not happen: @table_class_obj");
+    }
+}
+
+
 sub _default_save_sql_for_object {
     my $self = shift;        
     my $object_to_save = shift;
@@ -2691,7 +2707,7 @@ sub _default_save_sql_for_object {
         my ($db_owner, $table_name_to_update) = $self->_resolve_owner_and_table_from_table_name($table_name);
         # Get general info on the table we're working-with.                
 
-        my $dsn = ref($self) ? $self->id : $self;  # The data source name
+        my $dsn = ref($self) ? $self->_my_data_source_id : $self;  # The data source name
 
 		my $table = $self->_get_table_object($table_name_to_update, $db_owner);
 
@@ -2703,18 +2719,12 @@ sub _default_save_sql_for_object {
                 Carp::croak("No table $table_name found for data source $dsn and owner '$db_owner'");
             }
         }        
-		
-		my @table_class_obj = grep { $_->class_name !~ /::Ghost$/ } UR::Object::Type->is_loaded(table_name => $table_name);
-        my $table_class;
-        my $table_class_obj;
-        if (@table_class_obj == 1) {
-            $table_class_obj = $table_class_obj[0]; 
-            $table_class = $table_class_obj->class_name; 
-        }
-        else {
-            Carp::croak("NO CLASS FOR $table_name: @table_class_obj!\n");
-        }        
 
+        my $table_class = $self->_lookup_class_for_table_name($table_name);
+        if (!$table_class) {
+            Carp::croak("NO CLASS FOR $table_name\n");
+        }        
+	
 
         my $data_source = $UR::Context::current->resolve_data_source_for_object($object_to_save);
         unless ($data_source) {
