@@ -451,17 +451,26 @@ sub disconnect_default_handle {
     return $dbh;
 }
 
+# this will get called at fork time.
+# need to set inactive destroy and let go of our database handle 
+# without actually disconnecting it.  Then, get a new handle.
 sub clone_db_handles_for_child_process {
     my $self = shift->_singleton_object;
     my $dbhs = $self->_all_dbh_hashref;    
     for my $k (keys %$dbhs) {
         if ($dbhs->{$k}) {
-            my $new_dbh = $dbhs->{$k}->clone();
             $dbhs->{$k}->{InactiveDestroy} = 1;
             delete $dbhs->{$k};
-            $dbhs->{$k} = $new_dbh;
         }
     }
+   
+    # reset our state back to being "disconnected" 
+    $self->_default_dbh(undef);
+    $self->_all_dbh_hashref({});
+    $self->is_connected(0);
+
+    # now force a reconnect
+    $self->get_default_handle();
     return 1;
 }
 
