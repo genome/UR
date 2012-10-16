@@ -179,7 +179,7 @@ sub generate_schema_for_class_meta {
         my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
         $table = UR::DataSource::RDBMS::Table->$method(
             table_name  => $ds_table,
-            data_source => $self->id,
+            data_source => $self->_my_data_source_id,
             owner => $ds_owner,
             remarks => $class_meta->doc,
             er_type => 'entity',
@@ -268,7 +268,7 @@ sub generate_schema_for_class_meta {
             r_table_name    => $ds_r_table,
             owner           => $ds_owner,
             r_owner         => $ds_owner,
-            data_source     => $self->id,
+            data_source     => $self->_my_data_source_id,
             last_object_revision => '-',
         );
         unless ($fk) {
@@ -286,7 +286,7 @@ sub generate_schema_for_class_meta {
                                  r_table_name    => $ds_r_table,
                                  r_column_name   => $r_column_name,
                                  owner           => $ds_owner,
-                                 data_source     => $self->id,
+                                 data_source     => $self->_my_data_source_id,
                                );
 
             my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params);
@@ -656,9 +656,9 @@ sub get_nullable_foreign_key_columns_for_table {
         my @fk_columns = UR::DataSource::RDBMS::FkConstraintColumn->get(
                              fk_constraint_name => $fk->fk_constraint_name,
                              owner => $table->owner,
-                             data_source => $self->id);
+                             data_source => $self->_my_data_source_id);
         for my $fk_col (@fk_columns){
-            my $column_obj = UR::DataSource::RDBMS::TableColumn->get(data_source => $self->id,
+            my $column_obj = UR::DataSource::RDBMS::TableColumn->get(data_source => $self->_my_data_source_id,
                                  table_name => $fk_col->table_name,
                                  owner => $fk_col->owner,
                                  column_name=> $fk_col->column_name);
@@ -882,7 +882,7 @@ sub refresh_database_metadata_for_table_name {
     }
 
 	
-    my $data_source_id = $data_source->id;
+    my $data_source_id = $data_source->_my_data_source_id;
 	
 	
 	my $table_object = $self->_get_or_create_table_meta(
@@ -1438,7 +1438,7 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
         my $table_meta = UR::DataSource::RDBMS::Table->get(
                              table_name => $ds_table,
                              owner => $ds_owner,
-                             data_source => $self->id);
+                             data_source => $self->_my_data_source_id);
 
         my @primary_keys;
         if ($table_meta) {
@@ -1974,7 +1974,7 @@ sub _sync_database {
     for my $table_name_from_class (keys %all_tables) {
         my($ds_owner,$ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name_from_class);
 		
-		my $data_source_id = $self->class;
+		my $data_source_id = $self->_my_data_source_id;
 		my $table = $self->_get_table_object($ds_table, $ds_owner);
 
         my @fk = $table->fk_constraints;
@@ -2279,7 +2279,7 @@ sub _sync_database {
                 for my $table_name (@all_table_names) {                    
                     my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
 					
-					my $data_source_id = $self->class;
+					my $data_source_id = $self->_my_data_source_id;
 					my $table = $self->_get_table_object($ds_table, $ds_owner);
 					
                     push @$tables, $table;
@@ -2716,7 +2716,7 @@ sub _default_save_sql_for_object {
         my ($db_owner, $table_name_to_update) = $self->_resolve_owner_and_table_from_table_name($table_name);
         # Get general info on the table we're working-with.                
 
-        my $dsn = ref($self) ? $self->_my_data_source_id : $self;  # The data source name
+        my $dsn = ref($self) ? $self->_my_data_source_id: $self;  # The data source name
 
 		my $table = $self->_get_table_object($table_name_to_update, $db_owner);
 
