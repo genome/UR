@@ -749,22 +749,11 @@ sub ur_data_type_for_data_source_data_type {
 }
 
 
-# This is a no-op in the base class.  If the DataSource needs to do any
-# database handle disconnection or other housekeeping prior to a fork, this should be
-# the place to do it.
-sub prepare_for_fork {
-    my $self = shift;
-    
-    return 1;
-}
-
-# this is also a no-op here.  If a DataSource needs to do any work after forking
-# this is the place for that.  For example, a file based data source will need to
-# re-open the file and seek() to the location it was at before the fork happened.
-sub finish_up_after_fork {
-    my $self = shift;
-
-    return 1;
-}
+# prepare_for_fork, do_after_fork_in_child, and finish_up_after_fork are no-op
+# here in the UR::DataSource base class and should be implented in subclasses
+# as needed.
+sub prepare_for_fork { return 1 }
+sub do_after_fork_in_child { return 1 }
+sub finish_up_after_fork { return 1 }
 
 1;
