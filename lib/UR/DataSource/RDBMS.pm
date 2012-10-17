@@ -145,7 +145,7 @@ sub generate_schema_for_class_meta {
     
     unless ($table_name) {
         if (my @column_names = keys %properties_with_expected_columns) {
-            Carp::confess "class " . $class_meta->__display_name__ . " has no table_name specified for columns @column_names!";
+            Carp::confess("class " . $class_meta->__display_name__ . " has no table_name specified for columns @column_names!");
         }
         else {
             # no table, but no storable columns.  all ok.
@@ -2488,7 +2488,7 @@ sub _sync_database {
     if (@previous_failure_sets) {
         my $msg = "Dependency failure saving: " . Dumper(\@explicit_commands_in_order)
                   . "\n\nThe following error sets were produced:\n"
-                  . Dumper(\@previous_failure_sets) . "\n\n" . Carp::cluck . "\n\n";
+                  . Dumper(\@previous_failure_sets) . "\n\n" . Carp::cluck() . "\n\n";
 
         $self->warning_message($msg);
         $UR::Context::current->send_email(
