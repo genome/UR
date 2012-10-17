@@ -3101,12 +3101,12 @@ sub _generate_class_data_for_loading {
     if (@lob_column_names) {
         $query_config = $self->_prepare_for_lob;
         if ($query_config) {
-            my $dbh = $self->get_default_handle;
             my $results_row_arrayref;
             my @lob_ids;
             my @lob_values;
             $post_process_results_callback = sub { 
                 $results_row_arrayref = shift;
+                my $dbh = $self->get_default_handle;
                 @lob_ids = @$results_row_arrayref[@lob_column_positions];
                 @lob_values = $self->_post_process_lob_values($dbh,\@lob_ids);
                 @$results_row_arrayref[@lob_column_positions] = @lob_values;
