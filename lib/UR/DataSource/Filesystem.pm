@@ -1012,7 +1012,9 @@ $DB::single=1;
         my $column_names_in_order = $self->_resolve_column_names_from_pathname($pathname,$fh);
         # %value_for_column_name holds subs that return the value for that column.  For values
         # determined from the path resolver, save that value here.  Most other values get plucked out
-        # of the line read from the file.  The remaining values are special tokens like $. and __FILE__
+        # of the line read from the file.  The remaining values are special tokens like $. and __FILE__.
+        # These subs are used both for testing whether values read from the data source pass the rule
+        # and for constructing the resultset passed up to the Context
         my %value_for_column_name;
         my %column_name_to_index_map;
         my $ordered_column_names_count = scalar(@$column_names_in_order);
@@ -1020,13 +1022,16 @@ $DB::single=1;
             my $column_name = $column_names_in_order->[$i];
             $column_name_to_index_map{$column_name} = $i;
             $value_for_column_name{$column_name}
-                = exists($property_values_from_path_spec->{ $class_meta->property_for_column($column_name) })
-                    ? $property_values_from_path_spec->{ $class_meta->property_for_column($column_name) }
-                    : $self->_create_value_extractor_for_column_name($rule, $column_name, $i);
+                = $self->_create_value_extractor_for_column_name($rule, $column_name, $i);
         }
         foreach ( '$.', '__FILE__' ) {
             $value_for_column_name{$_} = $self->_create_value_extractor_for_column_name($rule, $_, undef);
             $column_name_to_index_map{$_} = undef;
+        }
+        while (my($prop, $value) = each %$property_values_from_path_spec) {
+            my $column = $class_meta->column_for_property($prop);
+            $value_for_column_name{$column} = sub { return \$value };
+            $column_name_to_index_map{$column} = undef;
         }
 
         # Convert the column_name keys here to indexes into the comparison list
