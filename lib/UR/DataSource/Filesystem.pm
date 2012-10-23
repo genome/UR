@@ -1179,9 +1179,6 @@ sub create_iterator_closure_for_rule {
 
             $log_first_match->();
             $lines_matched++;
-            #my @resultset = map { ref($_) ? $next_record->[$$_] : $_ } @file_to_resultset_xform;
-            #my $resultset = $xform_next_record_to_resultset->();
-            #return $resultset;
             my @resultset = map { ref($_) ? $$_ : $_ }
                             map { ref($value_for_column_name{$_})
                                         ? $value_for_column_name{$_}->($self, $next_record, $fh, $pathname)
