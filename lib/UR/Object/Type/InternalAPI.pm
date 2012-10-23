@@ -1025,7 +1025,7 @@ sub _load {
         # which would fire recursively for three extensions of
         # Acme::Equipment.
         my $full_base_class_name = $prefix . ($base ? "::" . $base : "");
-        my $base_class_obj = UR::Object::Type->get(class_name => $full_base_class_name);
+        my $base_class_obj = eval { $full_base_class_name->__meta__ };
 
         if ($base_class_obj)
         {

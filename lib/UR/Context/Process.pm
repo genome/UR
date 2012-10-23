@@ -442,17 +442,20 @@ sub fork
     my @ds = UR::DataSource->is_loaded();
 
     for (grep {defined $_} @ds) {
-        $_->prepare_for_fork if $_->can('prepare_for_fork'); 
+        $_->prepare_for_fork;
     }
 
     my $pid = fork();
     if (!$pid) {
         $UR::Context::process = undef;
-        $UR::Context::process = $class->_create_for_current_process
+        $UR::Context::process = $class->_create_for_current_process;
+        for (grep {defined $_} @ds) {
+            $_->do_after_fork_in_child;
+        }
     }
 
     for (grep {defined $_} @ds) {
-        $_->finish_up_after_fork if $_->can('finish_up_after_fork'); 
+        $_->finish_up_after_fork;
     }
 
     return $pid;

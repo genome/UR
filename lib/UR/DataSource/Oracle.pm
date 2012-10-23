@@ -251,6 +251,7 @@ sub get_userenv {
 
 my %ur_data_type_for_vendor_data_type = (
     'VARCHAR2'  => ['Text', undef],
+    'BLOB'  => ['XmlBlob', undef],
 );
 sub ur_data_type_for_data_source_data_type {
     my($class,$type) = @_;
@@ -271,6 +272,17 @@ sub _alter_sth_for_selecting_blob_columns {
             $sth->bind_param($n+1, undef, { ora_type => 23 });
         }
     }
+}
+
+sub get_connection_debug_info {
+    my $self = shift;
+    my @debug_info = $self->SUPER::get_connection_debug_info(@_);
+    push @debug_info, (
+        "DBD::Oracle Version: ", $DBD::Oracle::VERSION, "\n",
+        "TNS_ADMIN: ", $ENV{TNS_ADMIN}, "\n",
+        "ORACLE_HOME: ", $ENV{ORACLE_HOME}, "\n",
+    );
+    return @debug_info;
 }
 
 

@@ -2,6 +2,8 @@ package UR::DataSource::Pg;
 use strict;
 use warnings;
 
+use DBD::Pg;
+
 require UR;
 our $VERSION = "0.38"; # UR $VERSION;
 
@@ -138,7 +140,7 @@ my %ur_data_type_for_vendor_data_type = (
      'SMALLINT'  => ['Integer', undef],
      'BIGINT'    => ['Integer', undef],
      'SERIAL'    => ['Integer', undef],
-
+     'TEXT'      => ['XmlBlob', undef],
      'BYTEA'     => ['Blob', undef],
 
      'DOUBLE PRECISION' => ['Number', undef],
@@ -153,6 +155,25 @@ sub ur_data_type_for_data_source_data_type {
     return $urtype;
 }
 
+
+sub _alter_sth_for_selecting_blob_columns {
+    my($self, $sth, $column_objects) = @_;
+
+    for (my $n = 0; $n < @$column_objects; $n++) {
+        next unless defined ($column_objects->[$n]);  # No metaDB info for this one
+        if (uc($column_objects->[$n]->data_type) eq 'BLOB') {
+            $sth->bind_param($n+1, undef, { pg_type => PG_BYTEA });
+        }
+    }
+}
+
+sub _value_is_null {
+    my ($class,$value) = @_;
+    return 1 if not defined $value;
+    return 1 if $value eq '';
+    return 1 if (ref($value) eq 'HASH' and $value->{operator} eq '=' and (!defied($value->{value}) or $value->{value} eq ''));
+    return 0;
+}   
 
 1;
 

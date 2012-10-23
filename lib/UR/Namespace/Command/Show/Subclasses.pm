@@ -10,17 +10,16 @@ my $spacing = '';
 class UR::Namespace::Command::Show::Subclasses {
     is => 'Command::V2',
     has=> [
+        superclass => {
+            is => 'Text',
+            shell_args_position => 1,
+            doc => 'Only show subclasses of this class.',
+        },
         color => {
             is => 'Boolean',
             is_optional => 1,
             default_value => 1,
             doc => 'Display in color.',
-        },
-        source => {
-            is => 'Boolean',
-            is_optional => 1,
-            default_value => 0,
-            doc => 'Show source definition filename (if possible).',
         },
         maximum_depth => {
             is => 'Int',
@@ -33,11 +32,6 @@ class UR::Namespace::Command::Show::Subclasses {
             is_optional => 1,
             default_value => 0,
             doc => 'Recreate the cache instead of using the results of a previous run.',
-        },
-        superclass => {
-            is => 'Text',
-            shell_args_position => 1,
-            doc => 'Only show subclasses of this class.',
         },
         flat => {
             is => 'Boolean',
@@ -69,6 +63,28 @@ EOP
     return $result;
 }
 
+sub _mine_tree_for_class {
+    my ($tree, $name, $result) = @_;
+
+    if(ref($tree) eq 'HASH') {
+        for my $key (keys %{$tree}) {
+            if($key eq $name) {
+                push(@{$result}, 1);
+            } else {
+                _mine_tree_for_class($tree->{$key}, $name, $result);
+            }
+        }
+    } elsif(ref($tree) eq 'ARRAY') {
+        for my $item (@{$tree}) {
+            if($item eq $name) {
+                push(@{$result}, 1);
+            }
+            _mine_tree_for_class($item, $name, $result);
+        }
+    }
+    return;
+}
+
 sub execute {
     my ($self) = @_;
     my $indexfile = '/tmp/.ur_class_index';
@@ -90,6 +106,18 @@ sub execute {
         close($output_fh);
     } else {
         $subclass_index_ref = parse_subclass_index_file($indexfile);
+    }
+
+    # check to see if superclass is even in the subclass_index
+    my @result;
+    _mine_tree_for_class($subclass_index_ref, $self->superclass, \@result);
+    unless(@result) {
+        my $class_name = $self->color ?
+                Term::ANSIColor::colored($self->superclass, 'red') :
+                $self->superclass;
+        printf "%s is not a valid class, check your spelling or " .
+                "see --help (recalculate).\n", $class_name;
+        return;
     }
 
     if($self->flat) {
