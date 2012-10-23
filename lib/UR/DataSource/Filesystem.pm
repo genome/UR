@@ -1075,6 +1075,7 @@ sub create_iterator_closure_for_rule {
 
         # This sub reads the next record (line) from the file, splits the line into
         # columns and puts the data into @$next_record
+        my $record_separator_re = qr($record_separator$);
         my $read_record_from_file = sub {
 
             # Make sure some wise guy hasn't changed this out from under us
@@ -1109,6 +1110,21 @@ sub create_iterator_closure_for_rule {
                 # anyway
                 $! = 0;
                 $line = $use_quick_read ? <$fh> : $fh->getline();
+
+                if ($line and $line !~ $record_separator_re) {
+                    # Was a short read - probably at EOF
+                    # If the record_separator is a multi-char string, and the last
+                    # characters of $line are the first characters of the
+                    # record_separator, it's likely (though not certain) that the right
+                    # Thing to do is to remove the partial record separator.
+                    for (my $keep_chars = length($record_separator); $keep_chars > 0; $keep_chars--) {
+                        my $match_rs = substr($record_separator, 0, $keep_chars);
+                        if ($line =~ m/$match_rs$/) {
+                            substr($line, 0 - $keep_chars) = '';
+                            last;
+                        }
+                    }
+                }
 
                 unless (defined $line) {
                     if ($! && ! $fh->eof()) {
