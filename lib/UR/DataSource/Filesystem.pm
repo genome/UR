@@ -1017,6 +1017,7 @@ sub create_iterator_closure_for_rule {
         my $ordered_column_names_count = scalar(@$column_names_in_order);
         for (my $i = 0; $i < $ordered_column_names_count; $i++) {
             my $column_name = $column_names_in_order->[$i];
+            next unless (defined $column_name);
             $column_name_to_index_map{$column_name} = $i;
             $value_for_column_name{$column_name}
                 = $self->_create_value_extractor_for_column_name($rule, $column_name, $i);
