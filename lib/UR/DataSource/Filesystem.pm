@@ -949,7 +949,7 @@ sub create_iterator_closure_for_rule {
     }
 
     my $handle_class = $self->handle_class;
-    my $use_quick_read = $handle_class->isa('IO::Handle');
+    my $use_quick_read = $handle_class eq 'IO::Handle';
     my $split_regex = $self->_regex();
     my $logger = $self->_logger('UR_DBI_MONITOR_SQL');
     my $record_separator = $self->record_separator;
