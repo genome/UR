@@ -731,9 +731,13 @@ sub file_is_sorted_as_requested {
     my($self, $query_plan) = @_;
 
     my $sorted_columns = $self->sorted_columns || [];
+$DB::single=1;
 
     my $order_by_columns = $query_plan->order_by_columns();
     for (my $i = 0; $i < @$order_by_columns; $i++) {
+        next if ($order_by_columns->[$i] eq '$.');  # input line number is always sorted
+        next if ($order_by_columns->[$i] eq '__FILE__');
+
         return 0 if $i > $#$sorted_columns;
         if ($sorted_columns->[$i] ne $order_by_columns->[$i]) {
             return 0;
@@ -820,9 +824,41 @@ sub _select_clause_columns_for_table_property_data {
     return [ map { $_->[1]->column_name } @_ ];
 }
 
+# Used to populate the %value_extractor_for_column_name hash
+# It should return a sub that, when given a row of data from the source,
+# returns the proper data from that row.
+#
+# It's expected to return a sub that accepts ($self, $row, $fh, $filename)
+# and return a reference to the right data.  In most cases, it'll just pluck
+# out the $column_idx'th element from $@row, but we're using it
+# to attach special meaning to the $. token
+sub _create_value_extractor_for_column_name {
+    my($self, $rule, $column_name, $column_idx) = @_;
+
+    if ($column_name eq '$.') {
+        return sub {
+            my($self, $row, $fh, $filename) = @_;
+            my $line_no = $fh->input_line_number();
+            return \$line_no;
+        };
+    } elsif ($column_name eq '__FILE__') {
+        return sub {
+            my($self,$row,$fh,$filename) = @_;
+            return \$filename;
+        };
+    } else  {
+        return sub {
+            my($self, $row, $fh, $filename) = @_;
+            return \$row->[$column_idx];
+        };
+    }
+}
+
+
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
+$DB::single=1;
     my $class_name = $rule->subject_class_name;
     my $class_meta = $class_name->__meta__;
     my $rule_template = $rule->template;
@@ -904,7 +940,9 @@ sub create_iterator_closure_for_rule {
         $resolve_comparator_for_column_name->($column_name);
     }
 
-    my @possible_file_info_list = $self->resolve_file_info_for_rule_and_path_spec($rule);
+    # sort them by filename
+    my @possible_file_info_list = sort { $a->[0] cmp $b->[0] }
+                                    $self->resolve_file_info_for_rule_and_path_spec($rule);
 
     my $table_name = $class_meta->table_name;
     if (defined($table_name) and $table_name ne '__default__') {
@@ -944,6 +982,9 @@ sub create_iterator_closure_for_rule {
     }
     my $loading_template = $query_plan->{loading_templates}->[0];
     my @property_names_in_loading_template_order = @{ $loading_template->{'property_names'} };
+    my @column_names_in_loading_template_order = map { $class_meta->column_for_property($_) }
+                                                  @property_names_in_loading_template_order;
+
     my %property_name_to_resultset_index_map;
     my %column_name_to_resultset_index_map;
     for (my $i = 0; $i < @property_names_in_loading_template_order; $i++) {
@@ -967,15 +1008,25 @@ sub create_iterator_closure_for_rule {
             next;   # missing or unopenable files is not fatal
         }
 
+$DB::single=1;
         my $column_names_in_order = $self->_resolve_column_names_from_pathname($pathname,$fh);
-        my $ordered_column_names_count = 0;
-        my %column_name_to_index_map = map { $column_names_in_order->[$ordered_column_names_count] => $ordered_column_names_count++ }
-                                       @$column_names_in_order;
-        my %property_name_to_index_map;
+        # %value_for_column_name holds subs that return the value for that column.  For values
+        # determined from the path resolver, save that value here.  Most other values get plucked out
+        # of the line read from the file.  The remaining values are special tokens like $. and __FILE__
+        my %value_for_column_name;
+        my %column_name_to_index_map;
+        my $ordered_column_names_count = scalar(@$column_names_in_order);
         for (my $i = 0; $i < $ordered_column_names_count; $i++) {
             my $column_name = $column_names_in_order->[$i];
-            my $property_name = $class_meta->property_for_column($column_name);
-            $property_name_to_index_map{$property_name} = $i;
+            $column_name_to_index_map{$column_name} = $i;
+            $value_for_column_name{$column_name}
+                = exists($property_values_from_path_spec->{ $class_meta->property_for_column($column_name) })
+                    ? $property_values_from_path_spec->{ $class_meta->property_for_column($column_name) }
+                    : $self->_create_value_extractor_for_column_name($rule, $column_name, $i);
+        }
+        foreach ( '$.', '__FILE__' ) {
+            $value_for_column_name{$_} = $self->_create_value_extractor_for_column_name($rule, $_, undef);
+            $column_name_to_index_map{$_} = undef;
         }
 
         # Convert the column_name keys here to indexes into the comparison list
@@ -987,6 +1038,7 @@ sub create_iterator_closure_for_rule {
         # rule properties that aren't actually columns in the file should be
         # satisfied by the path resolution already, so we can strip them out of the
         # list of columns to test
+$DB::single=1;
         my @rule_columns_in_order = map { $column_name_to_index_map{$_} }
                                     grep { exists $column_name_to_index_map{$_} }
                                     @rule_column_names_in_order;
@@ -994,18 +1046,6 @@ sub create_iterator_closure_for_rule {
         my @comparison_for_column_this_file = map { $comparison_for_column[ $rule_column_name_to_comparison_index{$_} ] }
                                               grep { exists $column_name_to_index_map{$_} }
                                               @rule_column_names_in_order;
-
-        # How to transform the data read from the file/path-spec into the
-        # list expected by the object fabricator.  A ref to a number means get the value from that
-        # column of $next_record.  A regular value means copy that value directly (it came from the
-        # path spec
-        my @file_to_resultset_xform
-            = map {
-                  exists($property_values_from_path_spec->{$_})
-                      ? $property_values_from_path_spec->{$_}
-                      : \$property_name_to_index_map{$_};
-             }
-             @property_names_in_loading_template_order;
 
         # Burn through the requsite number of header lines
         my $lines_read = $fh->input_line_number;
@@ -1112,7 +1152,10 @@ sub create_iterator_closure_for_rule {
                 }
 
                 for (my $i = 0; $i < $number_of_comparisons; $i++) {
-                    my $comparison = $comparison_for_column_this_file[$i]->(\$next_record->[$rule_columns_in_order[$i]]);
+$DB::single=1;
+                    my $comparison = $comparison_for_column_this_file[$i]->(
+                                        $value_for_column_name{ $rule_column_names_in_order[$i] }->($self, $next_record, $fh, $pathname)
+                                    );
 
                     if ( ( ($column_for_this_comparison_is_sorted_descending{$i} and $comparison < 0) or $comparison > 0)
                          and $i < $sorted_columns_in_rule_count
@@ -1136,7 +1179,16 @@ sub create_iterator_closure_for_rule {
 
             $log_first_match->();
             $lines_matched++;
-            my @resultset = map { ref($_) ? $next_record->[$$_] : $_ } @file_to_resultset_xform;
+            #my @resultset = map { ref($_) ? $next_record->[$$_] : $_ } @file_to_resultset_xform;
+            #my $resultset = $xform_next_record_to_resultset->();
+            #return $resultset;
+$DB::single=1;
+            my @resultset = map { ref($_) ? $$_ : $_ }
+                            map { ref($value_for_column_name{$_})
+                                        ? $value_for_column_name{$_}->($self, $next_record, $fh, $pathname)
+                                        : $value_for_column_name{$_}  # constant value from path spec
+                                }
+                            @column_names_in_loading_template_order;
             return \@resultset;
         };
 
