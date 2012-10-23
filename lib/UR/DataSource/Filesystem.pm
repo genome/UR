@@ -1111,7 +1111,7 @@ sub create_iterator_closure_for_rule {
                 $line = $use_quick_read ? <$fh> : $fh->getline();
 
                 unless (defined $line) {
-                    if ($!) {
+                    if ($! && ! $fh->eof()) {
                         redo READ_LINE_FROM_FILE if ($! == EAGAIN or $! == EINTR);
                         Carp::croak("read failed for file $pathname: $!");
                     }
