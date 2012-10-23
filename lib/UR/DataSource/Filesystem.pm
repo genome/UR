@@ -1845,6 +1845,16 @@ the file data into object properties.  A Filesystem data source does
 not need to specify named columns if the 'columns_from_header' property
 is true.
 
+Classes that use the Filesystem data source attach their properties to the
+data source's columns via the 'column_name' metadata.  Besides the columns
+directly named in the 'columns' list, two additional column-like tokens may
+be used as a column_name: '__FILE__' and '$.'.  __FILE__ means the object's
+property will hold the name of the file the data was read from.  $. means the
+value will be the input line number from the file.  These are useful when
+iterating over the contents of a file.  Since these two fake columns are
+always considered "sorted", it makes reading from the file faster in some
+cases.  See the 'sorted_columns' discussion below for more information.
+
 =item sorted_columns <ARRAY>
 
 A listref of column names that the file is sorted by, in the order of the
@@ -1855,7 +1865,25 @@ and then by first_name, then include them both:
   sorted_columns => ['last_name','first_name']
 
 The system uses this information to know when to stop reading if a query is
-done on a sorted column.
+done on a sorted column.  It's also used to determine whether a query done
+on the data source matches the sort order of the file.  If not, then the
+data must be gathered in two passes.  The first pass finds records in the
+file that match the filter.  After that, the matching records are sorted
+in the same way the query is requesting before returning the data to the
+Context.
+
+The Context expects incoming data to always be sorted by at least the
+class' ID properties.  If the file is unsorted and the caller wants to be
+able to iterate over the data, then it is common to have the class' ID
+properties specified like this:
+
+  id_by => [
+      file => { is => 'String', column_name => '__FILE__' },
+      line => { is => 'Integer', column_name => '$.' },
+  ]
+
+Otherwise, it will need to read in the whole file and sort the contents
+before returning the first row of data from its iterator.
 
 =item columns_from_header <boolean>
 
