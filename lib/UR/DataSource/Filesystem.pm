@@ -731,7 +731,6 @@ sub file_is_sorted_as_requested {
     my($self, $query_plan) = @_;
 
     my $sorted_columns = $self->sorted_columns || [];
-$DB::single=1;
 
     my $order_by_columns = $query_plan->order_by_columns();
     for (my $i = 0; $i < @$order_by_columns; $i++) {
@@ -858,7 +857,6 @@ sub _create_value_extractor_for_column_name {
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
-$DB::single=1;
     my $class_name = $rule->subject_class_name;
     my $class_meta = $class_name->__meta__;
     my $rule_template = $rule->template;
@@ -1008,7 +1006,6 @@ $DB::single=1;
             next;   # missing or unopenable files is not fatal
         }
 
-$DB::single=1;
         my $column_names_in_order = $self->_resolve_column_names_from_pathname($pathname,$fh);
         # %value_for_column_name holds subs that return the value for that column.  For values
         # determined from the path resolver, save that value here.  Most other values get plucked out
@@ -1043,7 +1040,6 @@ $DB::single=1;
         # rule properties that aren't actually columns in the file should be
         # satisfied by the path resolution already, so we can strip them out of the
         # list of columns to test
-$DB::single=1;
         my @rule_columns_in_order = map { $column_name_to_index_map{$_} }
                                     grep { exists $column_name_to_index_map{$_} }
                                     @rule_column_names_in_order;
@@ -1157,7 +1153,6 @@ $DB::single=1;
                 }
 
                 for (my $i = 0; $i < $number_of_comparisons; $i++) {
-$DB::single=1;
                     my $comparison = $comparison_for_column_this_file[$i]->(
                                         $value_for_column_name{ $rule_column_names_in_order[$i] }->($self, $next_record, $fh, $pathname)
                                     );
@@ -1187,7 +1182,6 @@ $DB::single=1;
             #my @resultset = map { ref($_) ? $next_record->[$$_] : $_ } @file_to_resultset_xform;
             #my $resultset = $xform_next_record_to_resultset->();
             #return $resultset;
-$DB::single=1;
             my @resultset = map { ref($_) ? $$_ : $_ }
                             map { ref($value_for_column_name{$_})
                                         ? $value_for_column_name{$_}->($self, $next_record, $fh, $pathname)
