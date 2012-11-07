@@ -80,35 +80,35 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
 
 # test creating/deleting/modifying objects that match extant sets
 $query_count = 0;
-my $person_set = URT::Person->define_set(is_cool => 1);
-ok($person_set, 'Defined set of poeple that are cool');
-is($person_set->is_cool, 1, "access to a defining property works");
+my $cool_person_set = URT::Person->define_set(is_cool => 1);
+ok($cool_person_set, 'Defined set of poeple that are cool');
+is($cool_person_set->is_cool, 1, "access to a defining property works");
 is($query_count, 0, 'Made no queries');
 
 
 $query_count = 0;
-is($person_set->count, 3, '3 people are cool');
-#print Data::Dumper::Dumper($person_set);
+is($cool_person_set->count, 3, '3 people are cool');
+#print Data::Dumper::Dumper($cool_person_set);
 is($query_count, 1, 'Made one query');
 
 $query_count = 0;
-is($person_set->max('age'), 45, 'determined max age');
-#print Data::Dumper::Dumper($person_set);
+is($cool_person_set->max('age'), 45, 'determined max age');
+#print Data::Dumper::Dumper($cool_person_set);
 is($query_count, 1, 'Made one query');
 
 $query_count = 0;
-is($person_set->min('age'), 25, 'determined min age');
-#print Data::Dumper::Dumper($person_set);
+is($cool_person_set->min('age'), 25, 'determined min age');
+#print Data::Dumper::Dumper($cool_person_set);
 is($query_count, 1, 'Made one query');
 
 $query_count = 0;
-is($person_set->sum('age'), 110, 'determined the sum of all ages of the set');
-#print Data::Dumper::Dumper($person_set);
+is($cool_person_set->sum('age'), 110, 'determined the sum of all ages of the set');
+#print Data::Dumper::Dumper($cool_person_set);
 is($query_count, 1, 'Made one query');
 
 =pod
 
-my $age_set = $person_set->age_set;
+my $age_set = $cool_person_set->age_set;
 ok($age_set, "got a set of ages for the person set: object set -> value set");
 
 my $max_age = $age_set->max;
@@ -118,7 +118,7 @@ is($query_count, 1, "one query to produce the max age");
 my @distinct_ages = $age_set->distinct();
 my @all_ages = $age_set->value();
 
-my @distinct_colors = $person_set->car_set->color_set->distinct;
+my @distinct_colors = $cool_person_set->car_set->color_set->distinct;
 
 =cut
 
@@ -128,37 +128,38 @@ my @distinct_colors = $person_set->car_set->color_set->distinct;
 my $bubba = URT::Person->create(name => 'Bubba', is_cool => 0, age => 25);
 ok($bubba, 'Create a new not-cool person');
 $query_count = 0;
-is($person_set->count, 3, 'still, 3 people are cool');
+is($cool_person_set->count, 3, 'still, 3 people are cool');
 is($query_count, 1, 'Made one query');  
 
 # Test set-relaying.
-my $car_set = $person_set->cars_set;
+my $car_set = $cool_person_set->cars_set;
 ok($car_set, "got a set of cars for the person set: object set -> value set");
 
 # If objects have modifications, all aggregates occur directly on objects in memory.
 my $p = URT::Person->get(11);
 ok($p->age($p->age+1), " changed the age of the youngest person to be +1 (26)");
-is($person_set->count, 3, "set membership count is still the same");
-is($person_set->min('age'), 26, "minimum age is now 26");
-is($person_set->max('age'), 45, "maximum age is still 45");
-is($person_set->sum('age'), 111, "the sum of all ages is now 111");
+is($cool_person_set->count, 3, "set membership count is still the same");
+is($cool_person_set->min('age'), 26, "minimum age is now 26");
+is($cool_person_set->max('age'), 45, "maximum age is still 45");
+is($cool_person_set->sum('age'), 111, "the sum of all ages is now 111");
+
 
 my $jamesbond = URT::Person->create(name => 'James Bond', is_cool => 1, age => '35');
 ok($jamesbond, 'Create a new cool person');
 
 $query_count = 0;
-is($person_set->count, 4, 'now, 4 people are cool');
+is($cool_person_set->count, 4, 'now, 4 people are cool');
 is($query_count, 0, 'Made no queries');
 
 $query_count = 0;
 ok($bubba->is_cool(1), 'Bubbba is now cool');
-is($person_set->count, 5, 'After making Bubba cool, 5 people are cool');
+is($cool_person_set->count, 5, 'After making Bubba cool, 5 people are cool');
 is($query_count, 0, 'Made no queries');
 
 
 $query_count = 0;
 ok($jamesbond->delete, 'Delete James Bond');
-is($person_set->count, 4, 'Now 4 people are cool');
+is($cool_person_set->count, 4, 'Now 4 people are cool');
 is($query_count, 0, 'Made no queries');
 
 
