@@ -10,6 +10,8 @@ our @CARP_NOT = qw( UR::Object::Type );
 use overload ('""' => '__display_name__');
 use overload ('==' => sub { $_[0] . ''  eq $_[1] . '' } );
 use overload ('eq' => sub { $_[0] . ''  eq $_[1] . '' } );
+use overload ('!=' => sub { $_[0] . ''  ne $_[1] . '' } );
+use overload ('ne' => sub { $_[0] . ''  ne $_[1] . '' } );
 
 class UR::Object::Set {
     is => 'UR::Value',
