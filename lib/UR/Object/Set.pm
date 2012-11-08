@@ -3,6 +3,7 @@ package UR::Object::Set;
 use strict;
 use warnings;
 use UR;
+use List::MoreUtils qw(any);
 our $VERSION = "0.38"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object::Type );
@@ -122,6 +123,11 @@ sub members {
     return $self->member_class_name->get($rule);
 }
 
+sub _members_have_changes {
+    my $self = shift;
+    return any { $self->rule->evaluate($_) && $_->__changes__ } $self->member_class_name->is_loaded;
+}
+
 sub subset {
     my $self = shift;
     my $member_class_name = $self->member_class_name;
@@ -149,15 +155,6 @@ sub __aggregate__ {
 
     Carp::croak("$f is a group operation, and is not writable") if @_;
 
-    # If there are no member-class objects with changes, we can just interrogate the DB
-    my $has_changes = 0;
-    foreach my $obj ( $self->member_class_name->is_loaded() ) {
-        if ($obj->__changes__) {
-            $has_changes = 1;
-            last;
-        }
-    }
-
     my $subject_class_meta = $self->rule->subject_class_name->__meta__;
 
     my $not_ds_expressable = grep { $_->is_calculated or $_->is_transient or $_->is_constant }
@@ -165,7 +162,8 @@ sub __aggregate__ {
                              map { $subject_class_meta->property_meta_for_name($_) || () }
                              $self->rule->template->_property_names;
 
-    if ($has_changes or $not_ds_expressable) {
+    # If there are no member-class objects with changes, we can just interrogate the DB
+    if ($self->_members_have_changes or $not_ds_expressable) {
         my $fname;
         my @fargs;
         if ($f =~ /^(\w+)\((.*)\)$/) {

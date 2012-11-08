@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 35;
+use Test::More tests=> 51;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -71,96 +71,125 @@ foreach my $row ( [ 1,'red',0,  11], [ 2,'blue',1, 12], [3,'red',1,13],[4,'blue'
 $insert->finish();
 
 
+my $aggr_query_count = 0;
 my $query_count = 0;
-my $query_text = '';
 ok(URT::DataSource::SomeSQLite->create_subscription(
                     method => 'query',
-                    callback => sub {$query_text = $_[0]; $query_count++}),
+                    callback => sub {
+                        my ($observed, $aspect, $data) = @_;
+                        if ($data =~ /count|sum|min|max/) {
+                            $aggr_query_count++
+                        }
+                        $query_count++;
+                    }),
     'Created a subscription for query');
 
-# test creating/deleting/modifying objects that match extant sets
+# Test creating/deleting/modifying objects that match extant sets.
 $query_count = 0;
+my $uncool_person_set = URT::Person->define_set(is_cool => 0);
+ok($uncool_person_set, 'Defined set of people that are not cool');
 my $cool_person_set = URT::Person->define_set(is_cool => 1);
-ok($cool_person_set, 'Defined set of poeple that are cool');
+ok($cool_person_set, 'Defined set of people that are cool');
 is($cool_person_set->is_cool, 1, "access to a defining property works");
 is($query_count, 0, 'Made no queries');
-
-
-$query_count = 0;
-is($cool_person_set->count, 3, '3 people are cool');
-#print Data::Dumper::Dumper($cool_person_set);
-is($query_count, 1, 'Made one query');
-
-$query_count = 0;
-is($cool_person_set->max('age'), 45, 'determined max age');
-#print Data::Dumper::Dumper($cool_person_set);
-is($query_count, 1, 'Made one query');
-
-$query_count = 0;
-is($cool_person_set->min('age'), 25, 'determined min age');
-#print Data::Dumper::Dumper($cool_person_set);
-is($query_count, 1, 'Made one query');
-
-$query_count = 0;
-is($cool_person_set->sum('age'), 110, 'determined the sum of all ages of the set');
-#print Data::Dumper::Dumper($cool_person_set);
-is($query_count, 1, 'Made one query');
-
-=pod
-
-my $age_set = $cool_person_set->age_set;
-ok($age_set, "got a set of ages for the person set: object set -> value set");
-
-my $max_age = $age_set->max;
-ok($max_age, "got the max age from a set of values");
-is($query_count, 1, "one query to produce the max age");
-
-my @distinct_ages = $age_set->distinct();
-my @all_ages = $age_set->value();
-
-my @distinct_colors = $cool_person_set->car_set->color_set->distinct;
-
-=cut
-
-# Currently, if a class has changed objects, the Set must do a get() for all
-# members and manually count them, which requires a query in this case.  In the
-# future this may not be nevessary
-my $bubba = URT::Person->create(name => 'Bubba', is_cool => 0, age => 25);
-ok($bubba, 'Create a new not-cool person');
-$query_count = 0;
-is($cool_person_set->count, 3, 'still, 3 people are cool');
-is($query_count, 1, 'Made one query');  
 
 # Test set-relaying.
 my $car_set = $cool_person_set->cars_set;
 ok($car_set, "got a set of cars for the person set: object set -> value set");
 
-# If objects have modifications, all aggregates occur directly on objects in memory.
-my $p = URT::Person->get(11);
-ok($p->age($p->age+1), " changed the age of the youngest person to be +1 (26)");
-is($cool_person_set->count, 3, "set membership count is still the same");
-is($cool_person_set->min('age'), 26, "minimum age is now 26");
-is($cool_person_set->max('age'), 45, "maximum age is still 45");
-is($cool_person_set->sum('age'), 111, "the sum of all ages is now 111");
+# Test aggregate function on a set that has no member changes.
+# All aggregate functions should trigger query since function is
+# performed server-side on the data source.
+{
+    ok(!$cool_person_set->_members_have_changes, 'cool set has no changed objects');
 
+    $aggr_query_count = 0;
+    is($cool_person_set->count, 3, '3 people are cool');
+    is($aggr_query_count, 1, 'count triggered one query');
 
-my $jamesbond = URT::Person->create(name => 'James Bond', is_cool => 1, age => '35');
-ok($jamesbond, 'Create a new cool person');
+    $aggr_query_count = 0;
+    is($cool_person_set->min('age'), 25, 'determined min age');
+    is($aggr_query_count, 1, 'min triggered one query');
 
-$query_count = 0;
-is($cool_person_set->count, 4, 'now, 4 people are cool');
-is($query_count, 0, 'Made no queries');
+    $aggr_query_count = 0;
+    is($cool_person_set->max('age'), 45, 'determined max age');
+    is($aggr_query_count, 1, 'max triggered one query');
 
-$query_count = 0;
-ok($bubba->is_cool(1), 'Bubbba is now cool');
-is($cool_person_set->count, 5, 'After making Bubba cool, 5 people are cool');
-is($query_count, 0, 'Made no queries');
+    $aggr_query_count = 0;
+    is($cool_person_set->sum('age'), 110, 'determined the sum of all ages of the set');
+    is($aggr_query_count, 1, 'sum triggered one query');
+}
 
+# Now induce a change in a member and ensure no queries are performed.
+{
+    my $p = URT::Person->get(11);
+    ok($cool_person_set->rule->evaluate($p), 'person is member of cool person set');
+    ok($p->age($p->age + 1), 'changed the age of the youngest person to be +1 (26)');
 
-$query_count = 0;
-ok($jamesbond->delete, 'Delete James Bond');
-is($cool_person_set->count, 4, 'Now 4 people are cool');
-is($query_count, 0, 'Made no queries');
+    ok($cool_person_set->_members_have_changes, 'cool person set no has changes');
 
+    $aggr_query_count = 0;
+    is($cool_person_set->count, 3, 'set membership count is still the same');
+    is($aggr_query_count, 0, 'count did not trigger query');
 
+    $aggr_query_count = 0;
+    is($cool_person_set->min('age'), 26, 'minimum age is now 26');
+    is($aggr_query_count, 0, 'min did not trigger query');
 
+    $aggr_query_count = 0;
+    is($cool_person_set->max('age'), 45, 'maximum age is still 45');
+    is($aggr_query_count, 0, 'max did not trigger query');
+
+    $aggr_query_count = 0;
+    is($cool_person_set->sum('age'), 111, 'the sum of all ages is now 111');
+    is($aggr_query_count, 0, 'sum did not trigger query');
+}
+
+# Now ensure that a set with same member class but without any actual
+# member changes is not affected.
+{
+    is($uncool_person_set->member_class_name, $cool_person_set->member_class_name, 'sets have the same member class');
+    isnt($uncool_person_set, $cool_person_set, 'sets are not the same');
+    ok(!$uncool_person_set->_members_have_changes, 'uncool set has no changed objects');
+
+    $aggr_query_count = 0;
+    is($uncool_person_set->count, 2, 'set membership count is still the same');
+    is($aggr_query_count, 1, 'count triggered one query');
+
+    $aggr_query_count = 0;
+    is($uncool_person_set->min('age'), 30, 'minimum age is now 30');
+    is($aggr_query_count, 1, 'min triggered one query');
+
+    $aggr_query_count = 0;
+    is($uncool_person_set->max('age'), 35, 'maximum age is still 35');
+    is($aggr_query_count, 1, 'max triggered one query');
+
+    $aggr_query_count = 0;
+    is($uncool_person_set->sum('age'), 65, 'the sum of all ages is now 65');
+    is($aggr_query_count, 1, 'sum triggered one query');
+}
+
+# Now ensure that changes to members are reflected in the set.
+{
+    my $cool_person_count = $cool_person_set->count;
+
+    my $jamesbond = URT::Person->create(name => 'James Bond', is_cool => 1, age => '35');
+    ok($jamesbond, 'Create a new cool person');
+
+    $aggr_query_count = 0;
+    is($cool_person_set->count, $cool_person_count + 1, 'count increased');
+    is($aggr_query_count, 0, 'count did not trigger query');
+
+    my $fred = URT::Person->get(12);
+    is($fred->is_cool, 0, 'fred is not cool (yet)');
+    $fred->is_cool(1);
+
+    $aggr_query_count = 0;
+    is($cool_person_set->count, $cool_person_count + 2, 'count increased again');
+    is($aggr_query_count, 0, 'count did not trigger query');
+
+    $aggr_query_count = 0;
+    ok($jamesbond->delete, 'Delete James Bond');
+    is($cool_person_set->count, $cool_person_count + 1, 'count decreased after delete');
+    is($aggr_query_count, 0, 'Made no queries');
+}
