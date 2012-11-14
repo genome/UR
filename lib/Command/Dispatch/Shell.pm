@@ -2,14 +2,29 @@ package Command::V2;  # additional methods to dispatch from a command-line
 use strict;
 use warnings;
 
+# instead of tacking these methods onto general Command::V2 objects
+# they could be put on the Command::Shell class, which is a wrapper/adaptor Command for translating from
+# command-line shell to purely functional commands.
+
+# old entry point
+# new cmds will call Command::Shell->run("MyClass",@ARGV)
+# which goes straight into _cmdline_run for now...
 sub execute_with_shell_params_and_exit {
-    # This automatically parses command-line options and "does the right thing":
-    # TODO: abstract out all dispatchers for commands into a given API
     my $class = shift;
-    
     if (@_) {
         die "No params expected for execute_with_shell_params_and_exit()!";
     }
+    my @argv = @ARGV;
+    @ARGV = ();
+    my $exit_code = $class->_cmdline_run(@argv);
+    exit $exit_code;
+}
+
+sub _cmdline_run {
+    # This automatically parses command-line options and "does the right thing":
+    # TODO: abstract out all dispatchers for commands into a given API
+    my $class = shift;
+    my @argv = @_; 
 
     $Command::entry_point_class ||= $class;
     $Command::entry_point_bin ||= File::Basename::basename($0);
@@ -22,8 +37,6 @@ sub execute_with_shell_params_and_exit {
         die "error: failed to exit after handling shell completion!";
     }
 
-    my @argv = @ARGV;
-    @ARGV = ();
     my $exit_code;
     eval {
         $exit_code = $class->_execute_with_shell_params_and_return_exit_code(@argv);
@@ -34,7 +47,7 @@ sub execute_with_shell_params_and_exit {
         UR::Context->rollback or die "Failed to rollback changes after failed commit!!!\n";
         $exit_code = 255 unless ($exit_code);
     }
-    exit $exit_code;
+    return $exit_code;
 }
 
 sub _execute_with_shell_params_and_return_exit_code {
@@ -443,25 +456,26 @@ sub _shell_args_property_meta {
     # Find which property metas match the rules.  We have to do it this way
     # because just calling 'get_all_property_metas()' will product multiple matches 
     # if a property is overridden in a child class
-    my $rule = UR::Object::Property->define_boolexpr(@_);
+    my ($rule, %extra) = UR::Object::Property->define_boolexpr(@_);
     my %seen;
-    my (@positional,@required,@optional);
+    my (@positional,@required_input,@required_param,@optional_input,@optional_param);
 
-    my @properties_with_position = map { [ $_->position_in_module_header, $_ ] }
-                                   $class_meta->properties();
-    my @sorted =
-        sort { 
-            $a->[0] <=> $b->[0]
-        } 
-        @properties_with_position;
-    my @property_meta = map { $_->[1] } @sorted;
+    my @property_meta = $class_meta->properties(); 
+    PROP:
     foreach my $property_meta (@property_meta) {
         my $property_name = $property_meta->property_name;
 
         next if $seen{$property_name}++;
         next unless $rule->evaluate($property_meta);
-
         next unless $property_meta->can("is_param") and ($property_meta->is_param or $property_meta->is_input);
+        if (%extra) {
+            no warnings;
+            for my $key (keys %extra) {
+                if ($property_meta->$key ne $extra{value}) {
+                    next PROP;
+                }
+            }
+        }
 
         next if $property_name eq 'id';
         next if $property_name eq 'result';
@@ -486,25 +500,33 @@ sub _shell_args_property_meta {
             push @positional, $property_meta;
         }
         elsif ($property_meta->is_optional) {
-            push @optional, $property_meta;
+            if ($property_meta->is_input) {
+                push @optional_input, $property_meta;
+            }
+            elsif ($property_meta->is_param) {
+                push @optional_param, $property_meta;
+            }
         }
         else {
-            push @required, $property_meta;
+            if ($property_meta->is_input) {
+                push @required_input, $property_meta;
+            }
+            elsif ($property_meta->is_param) {
+                push @required_param, $property_meta;
+            }
         }
     }
 
-    @required   = map { [ $_->position_in_module_header, $_ ] } @required;
-    @optional   = map { [ $_->position_in_module_header, $_ ] } @optional;
-    @positional = map { [ $_->{shell_args_position}, $_ ] } @positional;
-
     my @result;
     @result = ( 
-        (sort { $a->[0] cmp $b->[0] } @required),
-        (sort { $a->[0] cmp $b->[0] } @optional),
-        (sort { $a->[0] <=> $b->[0] } @positional),
+        (sort { $a->position_in_module_header cmp $b->position_in_module_header } @required_param),
+        (sort { $a->position_in_module_header cmp $b->position_in_module_header } @optional_param),
+        (sort { $a->position_in_module_header cmp $b->position_in_module_header } @required_input),
+        (sort { $a->position_in_module_header cmp $b->position_in_module_header } @optional_input),
+        (sort { $a->shell_args_position <=> $b->shell_args_position } @positional),
     );
 
-    return map { $_->[1] } @result;
+    return @result;
 }
 
 

@@ -81,8 +81,10 @@ sub doc_help {
 
     # standard: update this to do the old --help format
     my $synopsis = $self->help_synopsis;
-    my $required_args = $self->help_options(is_optional => 0);
-    my $optional_args = $self->help_options(is_optional => 1);
+    my $required_inputs = $self->help_options(is_optional => 0, is_input => 1);
+    my $required_params = $self->help_options(is_optional => 0, is_param => 1);
+    my $optional_inputs = $self->help_options(is_optional => 1, is_input => 1);
+    my $optional_params = $self->help_options(is_optional => 1, is_param => 1);
     $text = sprintf(
         "\n%s\n%s\n\n%s%s%s%s%s\n",
         Term::ANSIColor::colored('USAGE', 'underline'),
@@ -96,12 +98,20 @@ sub doc_help {
             ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
             : ''
         ),
-        ( $required_args 
-            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED ARGUMENTS", 'underline'), $required_args)
+        ( $required_inputs
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED INPUTS", 'underline'), $required_inputs)
             : ''
         ),
-        ( $optional_args 
-            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL ARGUMENTS", 'underline'), $optional_args)
+        ( $required_params
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED PARAMS", 'underline'), $required_params)
+            : ''
+        ),
+        ( $optional_inputs
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL INPUTS", 'underline'), $optional_inputs)
+            : ''
+        ),
+        ( $optional_params
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL PARAMS", 'underline'), $optional_params)
             : ''
         ),
         sprintf(
