@@ -7,6 +7,7 @@ require UR;
 our $VERSION = "0.38"; # UR $VERSION;
 use Cwd;
 use Data::Dumper;
+use Clone::PP;
 
 sub d {
     Data::Dumper->new([@_])->Terse(1)->Indent(0)->Useqq(1)->Dump;
@@ -83,7 +84,6 @@ sub compiled_inc {
 }
 
 sub deep_copy {
-    require Clone::PP;
     return Clone::PP::clone($_[0]);
 }
 
