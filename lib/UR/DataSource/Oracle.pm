@@ -286,6 +286,82 @@ sub get_connection_debug_info {
 }
 
 
+# This is a near cut-and-paste from DBD::Oracle, with the exception that
+# the query hint is removed, since it performs poorly on Oracle 11
+sub get_foreign_key_details_from_data_dictionary {
+    my $self = shift;
+
+    my @version = split(/\./, $self->_get_oracle_server_version());
+    if ($version[0] < '11') {
+        return $self->SUPER::get_foreign_key_details_from_data_dictionary(@_);
+    }
+
+    my $attr = ( ref $_[0] eq 'HASH') ? $_[0] : {
+        'UK_TABLE_SCHEM' => $_[1],'UK_TABLE_NAME ' => $_[2]
+        ,'FK_TABLE_SCHEM' => $_[4],'FK_TABLE_NAME ' => $_[5] };
+    my $SQL = <<'SQL';  # XXX: DEFERABILITY
+SELECT *
+  FROM
+(
+  SELECT
+         to_char( NULL )    UK_TABLE_CAT
+       , uk.OWNER           UK_TABLE_SCHEM
+       , uk.TABLE_NAME      UK_TABLE_NAME
+       , uc.COLUMN_NAME     UK_COLUMN_NAME
+       , to_char( NULL )    FK_TABLE_CAT
+       , fk.OWNER           FK_TABLE_SCHEM
+       , fk.TABLE_NAME      FK_TABLE_NAME
+       , fc.COLUMN_NAME     FK_COLUMN_NAME
+       , uc.POSITION        ORDINAL_POSITION
+       , 3                  UPDATE_RULE
+       , decode( fk.DELETE_RULE, 'CASCADE', 0, 'RESTRICT', 1, 'SET NULL', 2, 'NO ACTION', 3, 'SET DEFAULT', 4 )
+                            DELETE_RULE
+       , fk.CONSTRAINT_NAME FK_NAME
+       , uk.CONSTRAINT_NAME UK_NAME
+       , to_char( NULL )    DEFERABILITY
+       , decode( uk.CONSTRAINT_TYPE, 'P', 'PRIMARY', 'U', 'UNIQUE')
+                            UNIQUE_OR_PRIMARY
+    FROM ALL_CONSTRAINTS    uk
+       , ALL_CONS_COLUMNS   uc
+       , ALL_CONSTRAINTS    fk
+       , ALL_CONS_COLUMNS   fc
+   WHERE uk.OWNER            = uc.OWNER
+     AND uk.CONSTRAINT_NAME  = uc.CONSTRAINT_NAME
+     AND fk.OWNER            = fc.OWNER
+     AND fk.CONSTRAINT_NAME  = fc.CONSTRAINT_NAME
+     AND uk.CONSTRAINT_TYPE IN ('P','U')
+     AND fk.CONSTRAINT_TYPE  = 'R'
+     AND uk.CONSTRAINT_NAME  = fk.R_CONSTRAINT_NAME
+     AND uk.OWNER            = fk.R_OWNER
+     AND uc.POSITION         = fc.POSITION
+)
+ WHERE 1              = 1
+SQL
+    my @BindVals = ();
+    while ( my ( $k, $v ) = each %$attr ) {
+        if ( $v ) {
+        $SQL .= "   AND $k = ?\n";
+        push @BindVals, $v;
+        }
+    }
+    $SQL .= " ORDER BY UK_TABLE_SCHEM, UK_TABLE_NAME, FK_TABLE_SCHEM, FK_TABLE_NAME, ORDINAL_POSITION\n";
+    my $sth = $self->get_default_handle->prepare( $SQL ) or return undef;
+    $sth->execute( @BindVals ) or return undef;
+    $sth;
+}
+
+
+sub _get_oracle_server_version {
+    my $self = shift;
+
+    unless (exists $self->{'__ora_server_version'}) {
+        my $dbh = $self->get_default_handle();
+        my @data = $dbh->selectrow_arrayref('select version from v$instance');
+        $self->{'__ora_server_version'} = $data[0]->[0];
+    }
+    return $self->{'__ora_server_version'};
+}
+
 1;
 
 =pod
