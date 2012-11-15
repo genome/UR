@@ -286,6 +286,388 @@ sub get_connection_debug_info {
 }
 
 
+# This is a near cut-and-paste from DBD::Oracle, with the exception that
+# the query hint is removed, since it performs poorly on Oracle 11
+sub get_table_details_from_data_dictionary {
+    my $self = shift;
+
+    my $version = $self->_get_oracle_major_server_version();
+    if ($version < '11') {
+        return $self->SUPER::get_table_details_from_data_dictionary(@_);
+    }
+
+    my($CatVal, $SchVal, $TblVal, $TypVal) = @_;
+    my $dbh = $self->get_default_handle();
+    # XXX add knowledge of temp tables, etc
+    # SQL/CLI (ISO/IEC JTC 1/SC 32 N 0595), 6.63 Tables
+    if (ref $CatVal eq 'HASH') {
+        ($CatVal, $SchVal, $TblVal, $TypVal) =
+        @$CatVal{'TABLE_CAT','TABLE_SCHEM','TABLE_NAME','TABLE_TYPE'};
+    }
+    my @Where = ();
+    my $SQL;
+    if ( defined $CatVal && $CatVal eq '%' && (!defined $SchVal || $SchVal eq '') && (!defined $TblVal || $TblVal eq '')) { # Rule 19a
+        $SQL = <<'SQL';
+SELECT NULL TABLE_CAT
+     , NULL TABLE_SCHEM
+     , NULL TABLE_NAME
+     , NULL TABLE_TYPE
+     , NULL REMARKS
+  FROM DUAL
+SQL
+    }
+    elsif ( defined $SchVal && $SchVal eq '%' && (!defined $CatVal || $CatVal eq '') && (!defined $TblVal || $TblVal eq '')) { # Rule 19b
+        $SQL = <<'SQL';
+SELECT NULL TABLE_CAT
+     , s    TABLE_SCHEM
+     , NULL TABLE_NAME
+     , NULL TABLE_TYPE
+     , NULL REMARKS
+  FROM
+(
+  SELECT USERNAME s FROM ALL_USERS
+  UNION
+  SELECT 'PUBLIC' s FROM DUAL
+)
+ ORDER BY TABLE_SCHEM
+SQL
+    }
+    elsif ( defined $TypVal && $TypVal eq '%' && (!defined $CatVal || $CatVal eq '') && (!defined $SchVal || $SchVal eq '') && (!defined $TblVal || $TblVal eq '')) { # Rule 19c
+        $SQL = <<'SQL';
+SELECT NULL TABLE_CAT
+     , NULL TABLE_SCHEM
+     , NULL TABLE_NAME
+     , t.tt TABLE_TYPE
+     , NULL REMARKS
+  FROM
+(
+  SELECT 'TABLE'    tt FROM DUAL
+    UNION
+  SELECT 'VIEW'     tt FROM DUAL
+    UNION
+  SELECT 'SYNONYM'  tt FROM DUAL
+    UNION
+  SELECT 'SEQUENCE' tt FROM DUAL
+) t
+ ORDER BY TABLE_TYPE
+SQL
+    }
+    else {
+        $SQL = <<'SQL';
+SELECT *
+  FROM
+(
+  SELECT
+       NULL         TABLE_CAT
+     , t.OWNER      TABLE_SCHEM
+     , t.TABLE_NAME TABLE_NAME
+     , decode(t.OWNER
+      , 'SYS'    , 'SYSTEM '
+      , 'SYSTEM' , 'SYSTEM '
+          , '' ) || t.TABLE_TYPE TABLE_TYPE
+     , c.COMMENTS   REMARKS
+  FROM ALL_TAB_COMMENTS c
+     , ALL_CATALOG      t
+ WHERE c.OWNER      (+) = t.OWNER
+   AND c.TABLE_NAME (+) = t.TABLE_NAME
+   AND c.TABLE_TYPE (+) = t.TABLE_TYPE
+)
+SQL
+        if ( defined $SchVal ) {
+            push @Where, "TABLE_SCHEM LIKE '$SchVal' ESCAPE '\\'";
+        }
+        if ( defined $TblVal ) {
+            push @Where, "TABLE_NAME  LIKE '$TblVal' ESCAPE '\\'";
+        }
+        if ( defined $TypVal ) {
+            my $table_type_list;
+            $TypVal =~ s/^\s+//;
+            $TypVal =~ s/\s+$//;
+            my @ttype_list = split (/\s*,\s*/, $TypVal);
+            foreach my $table_type (@ttype_list) {
+                if ($table_type !~ /^'.*'$/) {
+                    $table_type = "'" . $table_type . "'";
+                }
+                $table_type_list = join(", ", @ttype_list);
+            }
+            push @Where, "TABLE_TYPE IN ($table_type_list)";
+        }
+        $SQL .= ' WHERE ' . join("\n   AND ", @Where ) . "\n" if @Where;
+        $SQL .= " ORDER BY TABLE_TYPE, TABLE_SCHEM, TABLE_NAME\n";
+    }
+    my $sth = $dbh->prepare($SQL) or return undef;
+    $sth->execute or return undef;
+    $sth;
+}
+
+sub get_column_details_from_data_dictionary {
+    my $self = shift;
+
+    my $version = $self->_get_oracle_major_server_version();
+    if ($version < '11') {
+        return $self->SUPER::get_column_details_from_data_dictionary(@_);
+    }
+
+    my $dbh = $self->get_default_handle();
+    my $attr = ( ref $_[0] eq 'HASH') ? $_[0] : {
+        'TABLE_SCHEM' => $_[1],'TABLE_NAME' => $_[2],'COLUMN_NAME' => $_[3] };
+    my($typecase,$typecaseend) = ('','');
+    if (DBD::Oracle::db::ora_server_version($dbh)->[0] >= 8) {
+        $typecase = <<'SQL';
+CASE WHEN tc.DATA_TYPE LIKE 'TIMESTAMP% WITH% TIME ZONE' THEN 95
+     WHEN tc.DATA_TYPE LIKE 'TIMESTAMP%'                 THEN 93
+     WHEN tc.DATA_TYPE LIKE 'INTERVAL DAY% TO SECOND%'   THEN 110
+     WHEN tc.DATA_TYPE LIKE 'INTERVAL YEAR% TO MONTH'    THEN 107
+ELSE
+SQL
+        $typecaseend = 'END';
+    }
+    my $SQL = <<"SQL";
+SELECT *
+  FROM
+(
+  SELECT
+         to_char( NULL )     TABLE_CAT
+       , tc.OWNER            TABLE_SCHEM
+       , tc.TABLE_NAME       TABLE_NAME
+       , tc.COLUMN_NAME      COLUMN_NAME
+       , $typecase decode( tc.DATA_TYPE
+         , 'MLSLABEL' , -9106
+         , 'ROWID'    , -9104
+         , 'UROWID'   , -9104
+         , 'BFILE'    ,    -4 -- 31?
+         , 'LONG RAW' ,    -4
+         , 'RAW'      ,    -3
+         , 'LONG'     ,    -1
+         , 'UNDEFINED',     0
+         , 'CHAR'     ,     1
+         , 'NCHAR'    ,     1
+         , 'NUMBER'   ,     decode( tc.DATA_SCALE, NULL, 8, 3 )
+         , 'FLOAT'    ,     8
+         , 'VARCHAR2' ,    12
+         , 'NVARCHAR2',    12
+         , 'BLOB'     ,    30
+         , 'CLOB'     ,    40
+         , 'NCLOB'    ,    40
+         , 'DATE'     ,    93
+         , NULL
+         ) $typecaseend      DATA_TYPE          -- ...
+       , tc.DATA_TYPE        TYPE_NAME          -- std.?
+       , decode( tc.DATA_TYPE
+         , 'LONG RAW' , 2147483647
+         , 'LONG'     , 2147483647
+         , 'CLOB'     , 2147483647
+         , 'NCLOB'    , 2147483647
+         , 'BLOB'     , 2147483647
+         , 'BFILE'    , 2147483647
+         , 'NUMBER'   , decode( tc.DATA_SCALE
+                        , NULL, 126
+                        , nvl( tc.DATA_PRECISION, 38 )
+                        )
+         , 'FLOAT'    , tc.DATA_PRECISION
+         , 'DATE'     , 19
+         , tc.DATA_LENGTH
+         )                   COLUMN_SIZE
+       , decode( tc.DATA_TYPE
+         , 'LONG RAW' , 2147483647
+         , 'LONG'     , 2147483647
+         , 'CLOB'     , 2147483647
+         , 'NCLOB'    , 2147483647
+         , 'BLOB'     , 2147483647
+         , 'BFILE'    , 2147483647
+         , 'NUMBER'   , nvl( tc.DATA_PRECISION, 38 ) + 2
+         , 'FLOAT'    ,  8 -- ?
+         , 'DATE'     , 16
+         , tc.DATA_LENGTH
+         )                   BUFFER_LENGTH
+       , decode( tc.DATA_TYPE
+         , 'DATE'     ,  0
+         , tc.DATA_SCALE
+         )                   DECIMAL_DIGITS     -- ...
+       , decode( tc.DATA_TYPE
+         , 'FLOAT'    ,  2
+         , 'NUMBER'   ,  decode( tc.DATA_SCALE, NULL, 2, 10 )
+         , NULL
+         )                   NUM_PREC_RADIX
+       , decode( tc.NULLABLE
+         , 'Y'        ,  1
+         , 'N'        ,  0
+         , NULL
+         )                   NULLABLE
+       , cc.COMMENTS         REMARKS
+       , tc.DATA_DEFAULT     COLUMN_DEF         -- Column is LONG!
+       , decode( tc.DATA_TYPE
+         , 'MLSLABEL' , -9106
+         , 'ROWID'    , -9104
+         , 'UROWID'   , -9104
+         , 'BFILE'    ,    -4 -- 31?
+         , 'LONG RAW' ,    -4
+         , 'RAW'      ,    -3
+         , 'LONG'     ,    -1
+         , 'UNDEFINED',     0
+         , 'CHAR'     ,     1
+         , 'NCHAR'    ,     1
+         , 'NUMBER'   ,     decode( tc.DATA_SCALE, NULL, 8, 3 )
+         , 'FLOAT'    ,     8
+         , 'VARCHAR2' ,    12
+         , 'NVARCHAR2',    12
+         , 'BLOB'     ,    30
+         , 'CLOB'     ,    40
+         , 'NCLOB'    ,    40
+         , 'DATE'     ,     9 -- not 93!
+         , NULL
+         )                   SQL_DATA_TYPE      -- ...
+       , decode( tc.DATA_TYPE
+         , 'DATE'     ,     3
+         , NULL
+         )                   SQL_DATETIME_SUB   -- ...
+       , to_number( NULL )   CHAR_OCTET_LENGTH  -- TODO
+       , tc.COLUMN_ID        ORDINAL_POSITION
+       , decode( tc.NULLABLE
+         , 'Y'        , 'YES'
+         , 'N'        , 'NO'
+         , NULL
+         )                   IS_NULLABLE
+    FROM ALL_TAB_COLUMNS  tc
+       , ALL_COL_COMMENTS cc
+   WHERE tc.OWNER         = cc.OWNER
+     AND tc.TABLE_NAME    = cc.TABLE_NAME
+     AND tc.COLUMN_NAME   = cc.COLUMN_NAME
+)
+ WHERE 1              = 1
+SQL
+    my @BindVals = ();
+    while ( my ( $k, $v ) = each %$attr ) {
+        if ( $v ) {
+        $SQL .= "   AND $k LIKE ? ESCAPE '\\'\n";
+        push @BindVals, $v;
+        }
+    }
+    $SQL .= " ORDER BY TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION\n";
+    my $sth = $dbh->prepare( $SQL ) or return undef;
+    $sth->execute( @BindVals ) or return undef;
+    $sth;
+}
+
+sub get_primary_key_details_from_data_dictionary {
+    my $self = shift;
+
+    my $version = $self->_get_oracle_major_server_version();
+    if ($version < '11') {
+        return $self->SUPER::get_primary_key_details_from_data_dictionary(@_);
+    }
+
+    my $dbh = $self->get_default_handle();
+    my($catalog, $schema, $table) = @_;
+    if (ref $catalog eq 'HASH') {
+        ($schema, $table) = @$catalog{'TABLE_SCHEM','TABLE_NAME'};
+        $catalog = undef;
+    }
+    my $SQL = <<'SQL';
+SELECT *
+  FROM
+(
+  SELECT
+         NULL              TABLE_CAT
+       , c.OWNER           TABLE_SCHEM
+       , c.TABLE_NAME      TABLE_NAME
+       , c.COLUMN_NAME     COLUMN_NAME
+       , c.POSITION        KEY_SEQ
+       , c.CONSTRAINT_NAME PK_NAME
+    FROM ALL_CONSTRAINTS   p
+       , ALL_CONS_COLUMNS  c
+   WHERE p.OWNER           = c.OWNER
+     AND p.TABLE_NAME      = c.TABLE_NAME
+     AND p.CONSTRAINT_NAME = c.CONSTRAINT_NAME
+     AND p.CONSTRAINT_TYPE = 'P'
+)
+ WHERE TABLE_SCHEM = ?
+   AND TABLE_NAME  = ?
+ ORDER BY TABLE_SCHEM, TABLE_NAME, KEY_SEQ
+SQL
+#warn "@_\n$Sql ($schema, $table)";
+    my $sth = $dbh->prepare($SQL) or return undef;
+    $sth->execute($schema, $table) or return undef;
+    $sth;
+}
+
+
+
+sub get_foreign_key_details_from_data_dictionary {
+    my $self = shift;
+
+    my $version = $self->_get_oracle_major_server_version();
+    if ($version < '11') {
+        return $self->SUPER::get_foreign_key_details_from_data_dictionary(@_);
+    }
+
+    my $dbh = $self->get_default_handle();
+    my $attr = ( ref $_[0] eq 'HASH') ? $_[0] : {
+        'UK_TABLE_SCHEM' => $_[1],'UK_TABLE_NAME ' => $_[2]
+        ,'FK_TABLE_SCHEM' => $_[4],'FK_TABLE_NAME ' => $_[5] };
+    my $SQL = <<'SQL';  # XXX: DEFERABILITY
+SELECT *
+  FROM
+(
+  SELECT
+         to_char( NULL )    UK_TABLE_CAT
+       , uk.OWNER           UK_TABLE_SCHEM
+       , uk.TABLE_NAME      UK_TABLE_NAME
+       , uc.COLUMN_NAME     UK_COLUMN_NAME
+       , to_char( NULL )    FK_TABLE_CAT
+       , fk.OWNER           FK_TABLE_SCHEM
+       , fk.TABLE_NAME      FK_TABLE_NAME
+       , fc.COLUMN_NAME     FK_COLUMN_NAME
+       , uc.POSITION        ORDINAL_POSITION
+       , 3                  UPDATE_RULE
+       , decode( fk.DELETE_RULE, 'CASCADE', 0, 'RESTRICT', 1, 'SET NULL', 2, 'NO ACTION', 3, 'SET DEFAULT', 4 )
+                            DELETE_RULE
+       , fk.CONSTRAINT_NAME FK_NAME
+       , uk.CONSTRAINT_NAME UK_NAME
+       , to_char( NULL )    DEFERABILITY
+       , decode( uk.CONSTRAINT_TYPE, 'P', 'PRIMARY', 'U', 'UNIQUE')
+                            UNIQUE_OR_PRIMARY
+    FROM ALL_CONSTRAINTS    uk
+       , ALL_CONS_COLUMNS   uc
+       , ALL_CONSTRAINTS    fk
+       , ALL_CONS_COLUMNS   fc
+   WHERE uk.OWNER            = uc.OWNER
+     AND uk.CONSTRAINT_NAME  = uc.CONSTRAINT_NAME
+     AND fk.OWNER            = fc.OWNER
+     AND fk.CONSTRAINT_NAME  = fc.CONSTRAINT_NAME
+     AND uk.CONSTRAINT_TYPE IN ('P','U')
+     AND fk.CONSTRAINT_TYPE  = 'R'
+     AND uk.CONSTRAINT_NAME  = fk.R_CONSTRAINT_NAME
+     AND uk.OWNER            = fk.R_OWNER
+     AND uc.POSITION         = fc.POSITION
+)
+ WHERE 1              = 1
+SQL
+    my @BindVals = ();
+    while ( my ( $k, $v ) = each %$attr ) {
+        if ( $v ) {
+        $SQL .= "   AND $k = ?\n";
+        push @BindVals, $v;
+        }
+    }
+    $SQL .= " ORDER BY UK_TABLE_SCHEM, UK_TABLE_NAME, FK_TABLE_SCHEM, FK_TABLE_NAME, ORDINAL_POSITION\n";
+    my $sth = $dbh->prepare( $SQL ) or return undef;
+    $sth->execute( @BindVals ) or return undef;
+    $sth;
+}
+
+
+sub _get_oracle_major_server_version {
+    my $self = shift;
+
+    unless (exists $self->{'__ora_major_server_version'}) {
+        my $dbh = $self->get_default_handle();
+        my @data = $dbh->selectrow_arrayref('select version from v$instance');
+        $self->{'__ora_major_server_version'} = (split(/\./, $data[0]->[0]))[0];
+    }
+    return $self->{'__ora_major_server_version'};
+}
+
 1;
 
 =pod
