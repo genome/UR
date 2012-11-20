@@ -48,6 +48,9 @@ if ($0 eq __FILE__) {
     exit __PACKAGE__->_cmdline_run(@ARGV)
 }
 
+sub help_detail {
+    return "HELP DETAIL";
+}
 
 
 1;
