@@ -85,41 +85,55 @@ sub doc_help {
     my $required_params = $self->help_options(is_optional => 0, is_param => 1);
     my $optional_inputs = $self->help_options(is_optional => 1, is_input => 1);
     my $optional_params = $self->help_options(is_optional => 1, is_param => 1);
-    $text = sprintf(
-        "\n%s\n%s\n\n%s%s%s%s%s\n",
-        Term::ANSIColor::colored('USAGE', 'underline'),
+    $DB::single = 1;
+    my @parts;
+    
+    push @parts, Term::ANSIColor::colored('USAGE', 'underline');
+    push @parts, 
         Text::Wrap::wrap(
             ' ', 
             '    ', 
             Term::ANSIColor::colored($self->command_name, 'bold'),
             $self->_shell_args_usage_string || '',
-        ),
+        );
+
+    push @parts, 
         ( $synopsis 
             ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SYNOPSIS", 'underline'), $synopsis)
             : ''
-        ),
+        );
+    push @parts, 
         ( $required_inputs
             ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED INPUTS", 'underline'), $required_inputs)
             : ''
-        ),
+        );
+    push @parts, 
         ( $required_params
             ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED PARAMS", 'underline'), $required_params)
             : ''
-        ),
+        );
+    push @parts, 
         ( $optional_inputs
             ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL INPUTS", 'underline'), $optional_inputs)
             : ''
-        ),
+        );
+    push @parts, 
         ( $optional_params
             ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL PARAMS", 'underline'), $optional_params)
             : ''
-        ),
+        );
+    push @parts, 
         sprintf(
             "%s\n%s\n",
             Term::ANSIColor::colored("DESCRIPTION", 'underline'),
             _pod2txt($self->help_detail || '')
-        ),
-        ( $extra_help ? $extra_help : '' ),
+        );
+    push @parts, 
+        ( $extra_help ? $extra_help : '' );
+
+    $text = sprintf(
+        "\n%s\n%s\n\n%s%s%s%s%s%s%s\n",
+        @parts
     );
 
     return $text;
