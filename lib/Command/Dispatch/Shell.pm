@@ -469,9 +469,10 @@ sub _shell_args_property_meta {
         next unless $rule->evaluate($property_meta);
         next unless $property_meta->can("is_param") and ($property_meta->is_param or $property_meta->is_input);
         if (%extra) {
+            $DB::single = 1;
             no warnings;
             for my $key (keys %extra) {
-                if ($property_meta->$key ne $extra{value}) {
+                if ($property_meta->$key ne $extra{$key}) {
                     next PROP;
                 }
             }
