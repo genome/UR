@@ -446,6 +446,11 @@ sub fork
     }
 
     my $pid = fork();
+
+    unless(defined $pid) {
+        Carp::confess('Failed to fork process. ' . $!);
+    }
+
     if (!$pid) {
         $UR::Context::process = undef;
         $UR::Context::process = $class->_create_for_current_process;
