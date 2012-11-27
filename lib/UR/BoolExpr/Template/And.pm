@@ -489,7 +489,8 @@ sub params_list_for_values {
         else {
             my ($property, $op) = ($key =~ /^(\-*[\w\.]+)\s*(.*)$/);        
             unless ($property) {
-                die "bad key $key in @keys_sorted";
+                $DB::single = 1;
+                Carp::confess("bad key $key in @keys_sorted");
             }
             my $value = $values_sorted[$v];
             if ($op) {
