@@ -323,6 +323,39 @@ sub _errors_from_missing_parameters {
 
     my $class_meta = $self->__meta__;
 
+    my @all_property_metas = $class_meta->properties();
+    my @specified_property_metas = grep { exists $params->{$_->property_name} } @all_property_metas;
+
+    my %specified_property_metas = map { $_->property_name => $_ } @specified_property_metas;
+    my %set_indirectly;
+    my @todo = @specified_property_metas;
+    while (my $property_meta = shift @todo) {
+        if (my $via = $property_meta->via) {
+            if (not $property_meta->is_mutable) {
+                my $list = $set_indirectly{$via} ||= [];
+                push @$list, $property_meta;
+            }
+            unless ($specified_property_metas{$via}) {
+                my $via_meta = $specified_property_metas{$via} = $class_meta->property($via);
+                push @specified_property_metas, $via_meta;
+                push @todo, $via_meta;
+            }
+        }
+        elsif (my $id_by = $property_meta) {
+            my $list = $set_indirectly{$id_by} ||= [];
+            push @$list, $property_meta;
+            unless ($specified_property_metas{$id_by}) {
+                my $id_by_meta = $specified_property_metas{$id_by} = $class_meta->property($id_by);
+                push @specified_property_metas, $id_by_meta;
+                push @todo, $id_by_meta;
+            }
+        }
+    }
+
+    # TODO: this should use @all_property_metas, and filter down to is_param and is_input
+    # This old code just ignores things inherited from a base class.
+    # We will need to be careful fixing this because it could add checks to tools which
+    # work currently and lead to unexpected failures. 
     my @property_names;
     if (my $has = $class_meta->{has}) {
         @property_names = $self->_unique_elements(keys %$has);
@@ -337,6 +370,13 @@ sub _errors_from_missing_parameters {
         next if $property_meta->implied_by;
         next if defined $property_meta->default_value;
         next if defined $params->{$pn};
+        next if $set_indirectly{$pn};
+
+        if (my $via = $property_meta->via) {
+            if ($params->{$via} or $set_indirectly{$via}) {
+                next;
+            }
+        }
 
         my $arg = $pn;
         $arg =~ s/_/-/g;
