@@ -1975,8 +1975,8 @@ sub _error {
 my %token_states = (
     'DEFAULT' => [
         WHITESPACE => qr{\s+},
-        AND => [ qr{and}, 'DEFAULT'],
-        OR => [ qr{or}, 'DEFAULT' ],
+        AND => [ qr{and}i, 'DEFAULT'],
+        OR => [ qr{or}i, 'DEFAULT' ],
         BETWEEN_WORD => qr{between},
         LIKE_WORD => qr{like},
         IN_WORD => qr{in},
@@ -2119,7 +2119,8 @@ sub parse {
                 yylex => $get_next_token,
                 yyerror => \&_error,
                 yydebug => $yydebug),
-             \$string);
+             \$string,
+            );
 }
 
 # Used by the top-level expr production to turn an or-type parse tree with
