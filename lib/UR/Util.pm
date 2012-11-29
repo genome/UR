@@ -9,6 +9,15 @@ use Cwd;
 use Data::Dumper;
 use Clone::PP;
 
+sub on_destroy(&) {
+    my $sub = shift;
+    unless ($sub) {
+        Carp::confess("expected an anonymous sub!")
+    }
+    return bless($sub, "UR::Util::CallOnDestroy");
+}
+sub UR::Util::CallOnDestroy::DESTROY { shift->(); }
+
 sub d {
     Data::Dumper->new([@_])->Terse(1)->Indent(0)->Useqq(1)->Dump;
 }
