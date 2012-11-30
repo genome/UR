@@ -412,7 +412,8 @@ sub get_column_details_from_data_dictionary {
     my $attr = ( ref $_[0] eq 'HASH') ? $_[0] : {
         'TABLE_SCHEM' => $_[1],'TABLE_NAME' => $_[2],'COLUMN_NAME' => $_[3] };
     my($typecase,$typecaseend) = ('','');
-    if (DBD::Oracle::db::ora_server_version($dbh)->[0] >= 8) {
+    my $v = DBD::Oracle::db::ora_server_version($dbh);
+    if (!defined($v) or $v->[0] >= 8) {
         $typecase = <<'SQL';
 CASE WHEN tc.DATA_TYPE LIKE 'TIMESTAMP% WITH% TIME ZONE' THEN 95
      WHEN tc.DATA_TYPE LIKE 'TIMESTAMP%'                 THEN 93
