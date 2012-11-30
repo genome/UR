@@ -16,7 +16,10 @@ sub on_destroy(&) {
     }
     return bless($sub, "UR::Util::CallOnDestroy");
 }
-sub UR::Util::CallOnDestroy::DESTROY { shift->(); }
+
+# used only by the above sub
+# the local $@ ensures that we this does not stomp on thrown exceptions
+sub UR::Util::CallOnDestroy::DESTROY { local $@; shift->(); }
 
 sub d {
     Data::Dumper->new([@_])->Terse(1)->Indent(0)->Useqq(1)->Dump;
