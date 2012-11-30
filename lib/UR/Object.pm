@@ -205,7 +205,7 @@ sub __errors__ {
             $value =~ s/\s//g;
             if ($value =~ /\D/) {
                 #$DB::single = 1;
-                print "$self $self->{id} $property_name @values\n";
+                #print "$self $self->{id} $property_name @values\n";
             }
             $value = $value + 0;
             if ($value !~ /^(\+|\-)?[0-9]*$/)
