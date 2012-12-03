@@ -502,7 +502,11 @@ sub _get_msgdata {
         };
 
         # eval since some packages aren't forman UR classes with metadata
-        my $parent_class = eval { @{$self->__meta__->is}[0]; };  # yeah, ignore multiple inheritance :(
+        my $parent_class;
+        do {
+            local($@);
+            $parent_class = eval { @{$self->__meta__->is}[0]; };  # yeah, ignore multiple inheritance :(
+        };
         my $parent_msgdata;
         if ($parent_class) {
             $parent_msgdata = $parent_class->_get_msgdata();
