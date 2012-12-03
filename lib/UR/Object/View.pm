@@ -275,8 +275,10 @@ sub _subject_is_used_in_an_encompassing_view {
 sub all_subject_classes {
     my $self = shift;
     my @classes = ();
+
+    # suppress error callbacks inside this method
     my $old_cb = UR::ModuleBase->message_callback('error');
-    UR::ModuleBase->message_callback('error', sub {});
+    UR::ModuleBase->message_callback('error', sub {}) if ($old_cb);
 
     for my $aspect ($self->aspects) {
         unless ($aspect->delegate_view) {
@@ -288,7 +290,7 @@ sub all_subject_classes {
             push @classes, $aspect->delegate_view->all_subject_classes
         }
     }
-    UR::ModuleBase->message_callback('error', $old_cb);
+    UR::ModuleBase->message_callback('error', $old_cb) if ($old_cb);
 
     push @classes, $self->subject_class_name;
 
