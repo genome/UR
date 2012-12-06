@@ -248,6 +248,22 @@ L</Inline Data Sources>.
 When the class' data source is some kind of database, C<table_name> Specifies
 the name of the table where this class' data is stored to.
 
+=item select_hint
+
+Some relational databases use hints as a way of telling the query optimizer
+to behave differently than usual.  These hints are specified inside comments
+like this:
+    /* the hint */
+If the class is the primary class of a query, and it has a hint, then the hint
+will appear after the word 'select' in the SQL.
+
+=item join_hint
+
+If the class is part of a query where it is joined, then its hint will be
+added to the hints already part of the query.  The primary table's hint will
+be first, followed by the joined class' hints in the order they are joined.
+All the hints are separated by a single space.
+
 =item is_abstract
 
 A flag indicating that no instances of this class may be instantiated,
