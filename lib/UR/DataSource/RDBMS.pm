@@ -1548,7 +1548,12 @@ sub create_iterator_closure_for_rule {
 
     my $sql = "\nselect ";
     if ($select_hint) {
-        $sql .= $select_hint . " ";
+        my $hint = '';
+        foreach (@$select_hint) {
+            $hint .= ' ' . $_;
+        }
+        $hint =~ s/\/\*\s?|\s?\*\///g;  # remove embedded comment marks
+        $sql .= "/*$hint */ ";
     }
     $sql .= $select_clause;
     $sql .= "\nfrom $from_clause";

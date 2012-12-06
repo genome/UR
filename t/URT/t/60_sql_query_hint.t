@@ -1,11 +1,11 @@
 use strict;
 use warnings;
-use Test::More tests=> 12;
+use Test::More tests=> 10;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
-# Make sure query_hints in class metadata appear in the generated SQL
+# Make sure query_hint and join_hint in class metadata appear in the generated SQL
 
 use URT;
 
@@ -42,6 +42,8 @@ ok(UR::Object::Type->define(
 ok(UR::Object::Type->define(
         class_name => 'URT::Car',
         table_name => 'CAR',
+        query_hint => '/* car hint */',
+        join_hint => '/* car join hint */',
         id_by => [
             car_id =>           { is => 'NUMBER' },
         ],
@@ -85,3 +87,8 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
 my @p = URT::Person->get(1);
 is(scalar(@p), 1, 'Got one person');
 like($query_text, qr(/\* person hint \*/), 'Saw the person hint');
+
+
+@p = URT::Person->get(id => 2, -hint => ['cars']);
+is(scalar(@p), 1, 'Got a different person');
+like($query_text, qr(/\* person hint car join hint \*/), 'Saw both hints');

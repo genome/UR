@@ -313,6 +313,7 @@ sub _init_rdbms {
     $self->_db_column_data(\@db_property_data);
     $self->_group_by_property_names(\%group_by_property_names);
 
+    # Find out what delegated properties we'll be dealing with
     my @sql_filters; 
     my @delegated_properties;
     do {         
@@ -437,6 +438,8 @@ sub _init_rdbms {
     my $object_num = 0; 
     $self->_alias_count(0);
     
+    my @select_hint;
+
     # FIXME - this needs to be broken out into delegated-property-join-resolver
     # and inheritance-join-resolver methods that can be called recursively.
     # It would better encapsulate what's going on and avoid bugs with complicated
@@ -531,6 +534,10 @@ sub _init_rdbms {
 
                 my $foreign_class_name = $join->{foreign_class};
                 my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
+
+                if ($foreign_class_object->join_hint) {
+                    push @select_hint, $foreign_class_object->join_hint;
+                }
 
                 if (not exists $ds_for_class{$foreign_class_name}) {
                     # error: we should have at least a key with an empty value if we tried to find the ds
@@ -677,7 +684,6 @@ sub _init_rdbms {
 
     # the following two sets of variables hold the net result of the logic
     my $select_clause;
-    my $select_hint;
     my $from_clause;
     my $connect_by_clause;
     my $group_by_clause;
@@ -686,7 +692,7 @@ sub _init_rdbms {
     $select_clause = $ds->_select_clause_for_table_property_data(@$db_property_data);
 
     # Oracle places group_by in a comment in the select 
-    $select_hint = $class_meta->query_hint;
+    unshift(@select_hint, $class_meta->query_hint) if $class_meta->query_hint;
 
     # Build the FROM clause base.
     # Add joins to the from clause as necessary, then
@@ -857,7 +863,7 @@ sub _init_rdbms {
 
         # custom for RDBMS
         select_clause                               => $select_clause,
-        select_hint                                 => $select_hint,
+        select_hint                                 => scalar(@select_hint) ? \@select_hint : undef,
         from_clause                                 => $from_clause,        
         connect_by_clause                           => $connect_by_clause,
         group_by_clause                             => $group_by_clause,
