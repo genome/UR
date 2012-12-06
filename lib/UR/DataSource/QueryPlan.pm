@@ -692,7 +692,7 @@ sub _init_rdbms {
     $select_clause = $ds->_select_clause_for_table_property_data(@$db_property_data);
 
     # Oracle places group_by in a comment in the select 
-    unshift(@select_hint, $class_meta->query_hint) if $class_meta->query_hint;
+    unshift(@select_hint, $class_meta->select_hint) if $class_meta->select_hint;
 
     # Build the FROM clause base.
     # Add joins to the from clause as necessary, then

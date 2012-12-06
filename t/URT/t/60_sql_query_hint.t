@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 10;
+use Test::More tests=> 12;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -23,7 +23,7 @@ ok($dbh->do('create table CAR
 ok(UR::Object::Type->define(
     class_name => 'URT::Person',
     table_name => 'PERSON',
-    query_hint => '/* person hint */',
+    select_hint => '/* person hint */',
     id_by => [
         person_id => { is => 'NUMBER' },
     ],
@@ -42,7 +42,7 @@ ok(UR::Object::Type->define(
 ok(UR::Object::Type->define(
         class_name => 'URT::Car',
         table_name => 'CAR',
-        query_hint => '/* car hint */',
+        query_hint => '/* car hint */',   # query_hint is an alias for select_hint
         join_hint => '/* car join hint */',
         id_by => [
             car_id =>           { is => 'NUMBER' },
@@ -92,3 +92,7 @@ like($query_text, qr(/\* person hint \*/), 'Saw the person hint');
 @p = URT::Person->get(id => 2, -hint => ['cars']);
 is(scalar(@p), 1, 'Got a different person');
 like($query_text, qr(/\* person hint car join hint \*/), 'Saw both hints');
+
+my @c = URT::Car->get(id => 5);
+is(scalar(@c), 1, 'Got one car');
+like($query_text, qr(/\* car hint \*/), 'Saw the car hint');

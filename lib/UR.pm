@@ -255,7 +255,7 @@ UR::Object::Type->define(
         table_name                       => { is => 'Text', len => undef, is_optional => 1, 
                                                 doc => 'for classes with a data source, this specifies the table or equivalent data structure which holds instances' },
 
-        query_hint                       => { is => 'Text', len => 1024 , is_optional => 1,
+        select_hint                       => { is => 'Text', len => 1024 , is_optional => 1,
                                                 doc => 'used to optimize access to underlying storage (database specific)' },
 
         join_hint                        => { is => 'Text', len => 1024 , is_optional => 1,
