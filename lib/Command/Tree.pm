@@ -53,8 +53,13 @@ sub resolve_option_completion_spec {
             push @completion_spec, '>' . $sub => $sub_tree;
         }
         else {
-            print "WARNING: $sub has sub_class $sub_class of ($class) but could not resolve option completion spec for it.\n".
-                    "Setting $sub to non-delegating command, investigate to correct tab completion.\n";
+            if (defined $sub_class) {
+                print "WARNING: $sub has sub_class $sub_class of ($class) but could not resolve option completion spec for it.\n".
+                        "Setting $sub to non-delegating command, investigate to correct tab completion.\n";
+            } else {
+                print "WARNING: $sub has no sub_class so could not resolve option completion spec for it.\n".
+                        "Setting $sub to non-delegating command, investigate to correct tab completion.\n";
+            }
             push @completion_spec, $sub => undef;
         }
     }
