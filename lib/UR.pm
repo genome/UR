@@ -257,6 +257,9 @@ UR::Object::Type->define(
 
         query_hint                       => { is => 'Text', len => 1024 , is_optional => 1,
                                                 doc => 'used to optimize access to underlying storage (database specific)' },
+
+        join_hint                        => { is => 'Text', len => 1024 , is_optional => 1,
+                                                doc => 'used to optimize access to underlying storage when this class is part of a join (database specific)' },
                                             
         id_generator                     => { is => 'Text', len => 256, is_optional => 1,
                                                 doc => 'override the default choice for generating new object IDs' },
