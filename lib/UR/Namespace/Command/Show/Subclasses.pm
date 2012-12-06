@@ -127,6 +127,8 @@ sub execute {
         $self->display_subclasses($subclass_index_ref,
                 $self->superclass, '', '  ', 0);
     }
+
+    return 1;
 }
 
 sub create_subclass_index {
