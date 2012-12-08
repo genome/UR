@@ -54,9 +54,18 @@ use UR::DataSource::Default;
 use UR::DataSource::File;
 use UR::DataSource::FileMux;
 use UR::DataSource::Meta;
-use UR::DataSource::MySQL;
-use UR::DataSource::Oracle;
-use UR::DataSource::Pg;
+BEGIN {
+    eval { require DBD::mysql };
+    require UR::DataSource::MySQL unless $@;
+}
+BEGIN {
+    eval { require DBD::Oracle };
+    require UR::DataSource::Oracle unless $@;
+}
+BEGIN {
+    eval { require DBD::Pg };
+    require UR::DataSource::Pg unless $@;
+}
 use UR::DataSource::RDBMS;
 use UR::DataSource::RDBMS::BitmapIndex;
 use UR::DataSource::RDBMS::Entity;
