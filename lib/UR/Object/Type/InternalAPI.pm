@@ -1486,6 +1486,7 @@ sub _invalidate_cached_data_for_subclasses {
     my @subclasses = @{$UR::Object::_init_subclasses_loaded{$class_meta->class_name}};
     my %seen;
     while (my $subclass = shift @subclasses) {
+        next if ($seen{$subclass}++);
         my $sub_meta = UR::Object::Type->get(class_name => $subclass);
         delete @$sub_meta{@cache_keys};
         #push @subclasses, $sub_meta->subclasses_loaded($subclass);
