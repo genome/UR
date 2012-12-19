@@ -68,11 +68,32 @@ sub _compose {
         unless ($underlying_query->template->isa("UR::BoolExpr::Template::And")) {
             Carp::confess("$underlying_query is not an AND template");
         }
+        push @underlying_rules, $underlying_query;
+
         push @expressions, $underlying_query->template->logic_detail;
         push @values, $underlying_query->values;
     }
     my $bxt = UR::BoolExpr::Template::Or->get_by_subject_class_name_logic_type_and_logic_detail($subject_class,'Or',join('|',@expressions));
     my $bx = $bxt->get_rule_for_values(@values);
+    # This (and accompanying "caching" in UR::BoolExpr::underlying_rules())
+    # is a giant hack to allow composite rules to have -order and -group
+    # The real fix is to coax the above combination of
+    # get_by_subject_class_name_logic_type_and_logic_detail() and get_rule_for_values() to
+    # properly encode these constant/template values into the rule and template IDs,
+    # and subsequently reconsitiute them when you call $template->order_by
+    $bx->{'_underlying_rules'} = \@underlying_rules;
+    for (my $i = 0; $i < @$meta_params; $i += 2) {
+        my $method = $meta_params->[$i];
+        substr($method, 0, 1, '');  # remove the -
+        if ($method eq 'recurse') {
+            $bx->template->recursion_desc($meta_params->[$i + 1]);
+        } elsif ($method eq 'order') {
+            $bx->template->order_by($meta_params->[$i + 1]);
+        } else {
+            $bx->template->$method($meta_params->[$i + 1]);
+        }
+    }
+
     return $bx;
 }
 

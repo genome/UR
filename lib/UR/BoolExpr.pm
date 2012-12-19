@@ -221,8 +221,11 @@ sub operator_for {
 
 sub underlying_rules {
     my $self = shift;
-    my @values = $self->values;
-    return $self->template->get_underlying_rules_for_values(@values);
+    unless (exists $self->{'_underlying_rules'}) {
+        my @values = $self->values;
+        $self->{'_underlying_rules'} = [ $self->template->get_underlying_rules_for_values(@values) ];
+    }
+    return @{ $self->{'_underlying_rules'} };
 }
 
 # De-compose the rule back into its original form.
