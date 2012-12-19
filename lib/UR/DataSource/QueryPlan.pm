@@ -438,6 +438,7 @@ sub _init_rdbms {
     my $object_num = 0; 
     $self->_alias_count(0);
     
+    my %hints_included;
     my @select_hint;
 
     # FIXME - this needs to be broken out into delegated-property-join-resolver
@@ -535,7 +536,7 @@ sub _init_rdbms {
                 my $foreign_class_name = $join->{foreign_class};
                 my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
 
-                if ($foreign_class_object->join_hint) {
+                if ($foreign_class_object->join_hint and !($hints_included{$foreign_class_name}++)) {
                     push @select_hint, $foreign_class_object->join_hint;
                 }
 
