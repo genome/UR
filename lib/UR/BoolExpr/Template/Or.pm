@@ -19,7 +19,7 @@ sub _flatten_bx {
         my $new = $old->flatten;
         push @new, [ $new->_params_list ];
     }
-    my $flattened_bx = $class->_compose($bx->subject_class_name,@new);
+    my $flattened_bx = $class->_compose($bx->subject_class_name,\@new);
     return $flattened_bx;
 }
 
@@ -33,30 +33,32 @@ sub _reframe_bx {
     }
     my @meta = $bx->subject_class_name->__meta__->property_meta_for_name($in_terms_of);
     my @joins = $meta[-1]->_resolve_join_chain($in_terms_of);
-    my $reframed_bx = $class->_compose($joins[-1]{foreign_class},@new);
+    my $reframed_bx = $class->_compose($joins[-1]{foreign_class},\@new);
     return $reframed_bx;
 }
 
 sub _compose {
     my $self = shift;
     my $subject_class = shift;
-    my @sub_queries  = @_;
+    my $sub_queries  = shift;
+    my $meta_params = shift;
 
+    my @underlying_rules;
     my @expressions;
     my @values;
-    while (@sub_queries) {
+    while (@$sub_queries) {
         my $underlying_query;
-        if (ref($sub_queries[0]) eq 'ARRAY') {
-            $underlying_query = UR::BoolExpr->resolve($subject_class, @{$sub_queries[0]});
-            shift @sub_queries;
+        if (ref($sub_queries->[0]) eq 'ARRAY') {
+            $underlying_query = UR::BoolExpr->resolve($subject_class, @{$sub_queries->[0]}, @$meta_params);
+            shift @$sub_queries;
         }
-        elsif (ref($sub_queries[0]) eq 'UR::BoolExpr::And') {
-            $underlying_query = shift @sub_queries;
+        elsif (ref($sub_queries->[0]) eq 'UR::BoolExpr::And') {
+            $underlying_query = shift @$sub_queries;
         }
         else  {
-            $underlying_query = UR::BoolExpr->resolve($subject_class, @sub_queries[0,1]);
-            shift @sub_queries;
-            shift @sub_queries;
+            $underlying_query = UR::BoolExpr->resolve($subject_class, @$sub_queries[0,1], @$meta_params);
+            shift @$sub_queries;
+            shift @$sub_queries;
         }
 
         if ($underlying_query->{'_constant_values'}) {

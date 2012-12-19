@@ -408,7 +408,8 @@ sub resolve {
         my @sub_queries = @{ shift @in_params };
         my $bx = UR::BoolExpr::Template::Or->_compose(
             $subject_class,
-            @sub_queries,
+            \@sub_queries,
+            \@meta_params,
         );
         # FIXME a hack to support order-by.  To make it more general to work for -group, -recurse, etc
         # support needs to go into UR::BoolExpr::Template::Or::_compose()
