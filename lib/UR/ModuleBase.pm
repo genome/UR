@@ -2,6 +2,9 @@
 
 package UR::ModuleBase;
 
+use Sub::Name;
+use Sub::Install;
+
 BEGIN {
     use Class::Autouse;
     # the file above now does this, but just in case:
@@ -622,19 +625,21 @@ for my $type (@message_types) {
             ? $type . $method_base
             : $method_base . $type . "_messages"
         );
-        my $method_subref = sub {
+        my $method_subref = Sub::Name::subname $method => sub {
             my $self = shift;
             my $msgdata = $self->_get_msgdata;
             $msgdata->{$method} = pop if @_;
             return $msgdata->{$method};
         };
-        no strict;
-        no warnings;
-        *$method = $method_subref;
+        Sub::Install::install_sub({
+            code => $method_subref,
+            into => __PACKAGE__,
+            as => $method,
+        });
     }
 
     my $logger_subname = $type . "_message";
-    my $logger_subref = sub {
+    my $logger_subref = Sub::Name::subname $logger_subname => sub {
         my $self = shift;
         my @messages = @_;
 
@@ -711,9 +716,14 @@ for my $type (@message_types) {
 
         return $msgdata->{ $type . "_message" };
     };
+    Sub::Install::install_sub({
+        code => $logger_subref,
+        into => __PACKAGE__,
+        as => $logger_subname,
+    });
 
     my $messageinfo_subname = $type . "_message_source";
-    my $messageinfo_subref = sub {
+    my $messageinfo_subref = Sub::Name::subname $messageinfo_subname => sub {
         my $self = shift;
         my $msgdata = $self->_get_msgdata;
         my %return;
@@ -721,18 +731,29 @@ for my $type (@message_types) {
         @return{@keys} = @$msgdata{@keys};
         return %return;
     };
+    Sub::Install::install_sub({
+        code => $messageinfo_subref,
+        into => __PACKAGE__,
+        as => $messageinfo_subname,
+    });
+
 
     my $arrayref_subname = $type . "_messages_arrayref";
-    my $arrayref_subref = sub {
+    my $arrayref_subref = Sub::Name::subname $arrayref_subname => sub {
         my $self = shift;
         my $msgdata = $self->_get_msgdata;
         $msgdata->{$type . "_messages_arrayref"} ||= [];
         return $msgdata->{$type . "_messages_arrayref"};
     };
+    Sub::Install::install_sub({
+        code => $arrayref_subref,
+        into => __PACKAGE__,
+        as => $arrayref_subname,
+    });
 
 
     my $array_subname = $type . "_messages";
-    my $array_subref = sub {
+    my $array_subref = Sub::Name::subname $array_subname => sub {
         my $self = shift;
 
         my $msgdata = $self->_get_msgdata;
@@ -740,14 +761,12 @@ for my $type (@message_types) {
                @{ $msgdata->{$type . "_messages_arrayref"} } :
                ();
     };
+    Sub::Install::install_sub({
+        code => $array_subref,
+        into => __PACKAGE__,
+        as => $array_subname,
+    });
 
-    no strict;
-    no warnings;
-
-    *$logger_subname      = $logger_subref;
-    *$messageinfo_subname = $messageinfo_subref;
-    *$arrayref_subname    = $arrayref_subref;
-    *$array_subname       = $array_subref;
 }
 
 
