@@ -439,16 +439,32 @@ yet.
 
 =cut
 
-our @message_types = qw(error status warning debug usage);
+my $create_subs_for_message_type;  # filled in lower down
+my @message_types = qw(error status warning debug usage);
 sub message_types
 {
-    my $class = shift;
+    my $self = shift;
     if (@_)
     {
-        push(@message_types, @_);
+        foreach my $msg_type ( @_ ) {
+            if (! $self->can("${msg_type}_message")) {
+                # This is a new one
+                $create_subs_for_message_type->($self, $msg_type);
+                push @message_types, $msg_type;
+            }
+        }
+    } else {
+        return grep { $self->can($_ . '_message') } @message_types;
     }
-    return @message_types;
 }
+
+
+# Most defaults are false
+my %default_messaging_settings;
+$default_messaging_settings{dump_error_messages} = 1;
+$default_messaging_settings{dump_warning_messages} = 1;
+$default_messaging_settings{dump_status_messages} = $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} if (exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'});
+$default_messaging_settings{dump_debug_messages} = $ENV{'UR_DUMP_DEBUG_MESSAGES'} if (exists $ENV{'UR_DUMP_DEBUG_MESSAGES'});
 
 #
 # Implement error_mesage/warning_message/status_message in a way
@@ -469,61 +485,6 @@ sub message_types
 #     messages are set.  The callback runs before printing or queueing, so
 #     you can alter @_ and change the message that gets printed or queued
 # And then the same thing for status and warning messages
-
-# The filehandle to print these messages to.  In normal operation this'll just be
-# STDERR, but the test case can change it to capture the messages to somewhere else
-
-our $stderr = \*STDERR;
-our $stdout = \*STDOUT;
-
-our %msgdata;
-
-sub _get_msgdata {
-    my $self = $_[0];
-
-    if (ref($self)) {
-        no strict 'refs';
-        my $class_msgdata = ref($self)->_get_msgdata;
-        my $object_msgdata = $class_msgdata->{'__by_id__'}->{$self->id} ||= {};
-
-        while (my ($k,$v) = each(%$class_msgdata)) {
-            # Copy class' value for this config item unless it's already set on the object
-            $object_msgdata->{$k} = $v unless (exists $object_msgdata->{$k});
-        }
-
-        return $object_msgdata;
-
-    } elsif ($self eq 'UR::Object') {
-        $UR::Object::msgdata ||= {};
-        return $UR::Object::msgdata;
-    }
-    else {
-        my $class_msgdata = do { 
-          no strict 'refs';
-          no warnings; 
-          ${ $self . '::msgdata' } ||= {};
-        };
-
-        # eval since some packages aren't forman UR classes with metadata
-        my $parent_class;
-        do {
-            local($@);
-            $parent_class = eval { @{$self->__meta__->is}[0]; };  # yeah, ignore multiple inheritance :(
-        };
-        my $parent_msgdata;
-        if ($parent_class) {
-            $parent_msgdata = $parent_class->_get_msgdata();
-        } else {
-            $parent_msgdata = UR::Object->_get_msgdata();
-        }
-
-        while (my ($k,$v) = each(%$parent_msgdata)) {
-            # Copy class' value for this config item unless it's already set on the object
-            $class_msgdata->{$k} = $v unless (exists $class_msgdata->{$k});
-        }
-        return $class_msgdata;
-    }
-}
 
 =pod
 
@@ -618,156 +579,206 @@ These methods return the same data as $obj->error_message_source().
 
 =cut
 
-for my $type (@message_types) {
+my %message_settings;
 
-    for my $method_base (qw/_messages_callback queue_ dump_ _package _file _line _subroutine/) {
-        my $method = (substr($method_base,0,1) eq "_"
-            ? $type . $method_base
-            : $method_base . $type . "_messages"
-        );
-        my $method_subref = Sub::Name::subname $method => sub {
+# This sub creates the settings mutator subs for each message type
+# For example, when passed in 'error', it creates the subs error_messages_callback,
+# queue_error_messages, dump_error_messages, etc
+$create_subs_for_message_type = sub {
+    my($self, $type) = @_;
+
+    my $class = ref($self) ? $self->class : $self;
+
+    my $class_name_maker = sub { return $class . '::' . shift() };
+    my $id_name_maker = sub { return $class . '::' . shift() . '_by_id' };
+
+    my $make_mutator = sub {
+        my $name = shift;
+        my $by_class_name = $class_name_maker->($name);
+        my $by_id_name = $id_name_maker->($name);
+        return sub {
             my $self = shift;
-            my $msgdata = $self->_get_msgdata;
-            $msgdata->{$method} = pop if @_;
-            return $msgdata->{$method};
+
+            if (@_) {
+                # setting the value
+                if (ref $self) {
+                    $message_settings{ $by_id_name }->{$self->id} = shift;
+                } else {
+                    $message_settings{ $by_class_name } = shift;
+                }
+
+            } else {
+                # getting the value
+                if (ref $self) {
+                    # called on an object
+                    if (exists $message_settings{ $by_id_name }->{$self->id}) {
+                        return $message_settings{ $by_id_name }->{$self->id};
+                    } else {
+                        # not set, try asking the class
+                        return $class->$name();
+                    }
+
+                } else {
+                    # called on a class name
+                    if (exists $message_settings{ $by_class_name }) {
+                        # already has a set value
+                        return $message_settings{ $by_class_name};
+
+                    } else {
+                        my @super = $class->inheritance();
+                        foreach my $super ( @super ) {
+                            if (my $super_sub = $super->can($name)) {
+                                return $super_sub->($self);
+                            }
+                        }
+                        # None of the parent classes implement it, or there aren't
+                        # any parent classes
+                        return $default_messaging_settings{$name};
+                    }
+                }
+            }
         };
+    };
+
+    foreach my $base ( qw( %s_messages_callback queue_%s_messages %s_package dump_%s_messages
+                            %s_file %s_line %s_subroutine )
+    ) {
+        my $method = sprintf($base, $type);
+        my $full_name = $class . '::' . $method;
+
+        my $method_subref = Sub::Name::subname $full_name => $make_mutator->($method);
         Sub::Install::install_sub({
             code => $method_subref,
-            into => __PACKAGE__,
+            into => $class,
             as => $method,
         });
     }
 
-    my $logger_subname = $type . "_message";
-    my $logger_subref = Sub::Name::subname $logger_subname => sub {
+    my $messages_arrayref = "${type}_messages_arrayref";
+    my $message_arrayref_by_class_name = $class_name_maker->($messages_arrayref);
+    my $message_arrayref_by_id_name = $id_name_maker->($messages_arrayref);
+    my $message_arrayref_sub = Sub::Name::subname "${class}::${messages_arrayref}" => sub {
         my $self = shift;
-        my @messages = @_;
-
-        my $msgdata = $self->_get_msgdata();
-
-        if (@messages > 1) {
-            Carp::carp("More than one string passed to ".$type."_message; only using the first one");
+        if (ref $self) {
+            $message_settings{ $message_arrayref_by_id_name }->{$self->id} ||= [];
+            return $message_settings{ $message_arrayref_by_id_name }->{$self->id};
+        } else {
+            $message_settings{ $message_arrayref_by_class_name } ||= [];
+            return $message_settings{ $message_arrayref_by_class_name };
         }
-        if (@messages) {
-            my $msg = shift @messages;
-            chomp $msg if defined $msg;
+    };
+    Sub::Install::install_sub({
+        code => $message_arrayref_sub,
+        into => $class,
+        as => $messages_arrayref,
+    });
 
-            unless (defined ($msgdata->{'dump_' . $type . '_messages'})) {
-                my $do_dump;
-                if ($type eq "status" 
-                    and
-                    exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'}
-                    and
-                    $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'}
-                ) {
-                    $do_dump = 1;
-                } elsif ($type eq 'debug'
-                    and
-                    exists $ENV{'UR_DUMP_DEBUG_MESSAGES'}
-                    and
-                    $ENV{'UR_DUMP_DEBUG_MESSAGES'}
-                ) {
-                    $do_dump = 1;
-                } elsif ($type eq 'warning' or $type eq 'error') {
-                    $do_dump = 1;
-                } else {
-                    $do_dump = 0;
-                }
-
-                $msgdata->{'dump_' . $type . '_messages'} = $do_dump;
-            }
-
-            if (my $code = $msgdata->{ $type . "_messages_callback"}) {
-                $code->($self,$msg);
+    my $array_subname = "${type}_messages";
+    my $array_subref = Sub::Name::subname "${class}::${array_subname}" => sub {
+        if (ref $self) {
+            if (exists $message_settings{ $message_arrayref_by_id_name }->{$self->id}) {
+                return @{ $message_settings{ $message_arrayref_by_id_name }->{$self->id}};
             } else {
-                # To support the deprecated non-command messaging API
-                my $deprecated_msgdata = UR::Object->_get_msgdata();
-                my $code = $deprecated_msgdata->{ $type . "_messages_callback"};
-                if ($code) {
-                    $code->($self,$msg) if ($code);
+                return ();
+            }
+        } else {
+            if (exists $message_settings{ $message_arrayref_by_class_name }) {
+                return @{ $message_settings{ $message_arrayref_by_class_name }};
+            } else {
+                return ();
+            }
+        }
+    };
+    Sub::Install::install_sub({
+        code => $array_subref,
+        into => $class,
+        as => $array_subname,
+    });
+
+
+    my $messageinfo_subname = "${type}_message_source";
+    my @messageinfo_keys = map { $type . $_ } qw( _message _package _file _line _subroutine );
+    my $messageinfo_subref = Sub::Name::subname "${class}::${messageinfo_subname}" => sub {
+        my $self = shift;
+        return map { $_ => $self->$_ } @messageinfo_keys;
+    };
+    Sub::Install::install_sub({
+        code => $messageinfo_subref,
+        into => $class,
+        as => $messageinfo_subname,
+    });
+
+    # usage messages go to STDOUT, others to STDERR
+    my $default_fh = $type eq 'usage' ? \*STDOUT : \*STDERR;
+
+    my $should_dump_messages = "${type}_messages";
+    my $should_queue_messages = "queue_${type}_messages";
+    my $check_callback = "${type}_messages_callback";
+    my $message_text_prefix = ($type eq 'status' or $type eq 'usage') ? '' : uc($type) . ': ';
+    my $message_package     = "${type}_package";
+    my $message_file        = "${type}_file";
+    my $message_line        = "${type}_line";
+    my $message_subroutine  = "${type}_subroutine";
+
+    my $logger_subname = "${type}_message";
+    my $message_storage_by_class_name = $class_name_maker->($logger_subname);
+    my $message_storage_by_id_name = $id_name_maker->($logger_subname);
+    my $logger_subref = Sub::Name::subname "${class}::${logger_subname}" => sub {
+        my $self = shift;
+
+        foreach ( @_ ) {
+            my $msg = $_;
+            # old-style callback registered with error_messages_callback
+            if (my $code = $class->$check_callback()) {
+                if (ref $code) {
+                    $code->($self, $msg);
+                } else {
+                    $self->$code($msg);
                 }
             }
 
-            $msgdata->{ $type . "_message" } = $msg;
+            if (ref $self) {
+                $message_settings{$message_storage_by_id_name}->{$self->id} = $msg;
+            } else {
+                $message_settings{$message_storage_by_class_name} = $msg;
+            }
 
             # If the callback set $msg to undef with "$_[1] = undef", then they didn't want the message
             # processed further
-            return unless defined($msg);
+            next unless defined($msg);
 
-            if (my $fh = $msgdata->{ "dump_" . $type . "_messages" }) {
-                if ( $type eq 'usage' ) {
-                    (ref($fh) ? $fh : $stdout)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
-                }
-                else {
-                    (ref($fh) ? $fh : $stderr)->print((($type eq "status" or $type eq 'usage') ? () : (uc($type), ": ")), (defined($msg) ? $msg : ""), "\n");
-                }
+            if (my $fh = $self->$should_dump_messages()) {
+                $fh = $default_fh unless (ref $fh);
+
+                $fh->print($message_text_prefix . $msg . "\n");
             }
-            if ($msgdata->{ "queue_" . $type . "_messages"}) {
-                my $a = $msgdata->{ $type . "_messages_arrayref" } ||= [];
+
+            if ($self->$should_queue_messages()) {
+                my $a = $self->$messages_arrayref();
                 push @$a, $msg;
             }
 
             my ($package, $file, $line, $subroutine) = caller;
-            $msgdata->{ $type . "_package" } = $package;
-            $msgdata->{ $type . "_file" } = $file;
-            $msgdata->{ $type . "_line" } = $line;
-            $msgdata->{ $type . "_subroutine" } = $subroutine;
+            $self->$message_package($package);
+            $self->$message_file($file);
+            $self->$message_line($line);
+            $self->$message_subroutine($subroutine);
         }
 
-        return $msgdata->{ $type . "_message" };
+        return (ref $self)
+                ? $message_settings{$message_storage_by_id_name}->{$self->id}
+                : $message_settings{$message_storage_by_class_name};
     };
     Sub::Install::install_sub({
         code => $logger_subref,
-        into => __PACKAGE__,
+        into => $class,
         as => $logger_subname,
     });
-
-    my $messageinfo_subname = $type . "_message_source";
-    my $messageinfo_subref = Sub::Name::subname $messageinfo_subname => sub {
-        my $self = shift;
-        my $msgdata = $self->_get_msgdata;
-        my %return;
-        my @keys = map { $type . $_ } qw( _message _package _file _line _subroutine );
-        @return{@keys} = @$msgdata{@keys};
-        return %return;
-    };
-    Sub::Install::install_sub({
-        code => $messageinfo_subref,
-        into => __PACKAGE__,
-        as => $messageinfo_subname,
-    });
+};
 
 
-    my $arrayref_subname = $type . "_messages_arrayref";
-    my $arrayref_subref = Sub::Name::subname $arrayref_subname => sub {
-        my $self = shift;
-        my $msgdata = $self->_get_msgdata;
-        $msgdata->{$type . "_messages_arrayref"} ||= [];
-        return $msgdata->{$type . "_messages_arrayref"};
-    };
-    Sub::Install::install_sub({
-        code => $arrayref_subref,
-        into => __PACKAGE__,
-        as => $arrayref_subname,
-    });
-
-
-    my $array_subname = $type . "_messages";
-    my $array_subref = Sub::Name::subname $array_subname => sub {
-        my $self = shift;
-
-        my $msgdata = $self->_get_msgdata;
-        return ref($msgdata->{$type . "_messages_arrayref"}) ?
-               @{ $msgdata->{$type . "_messages_arrayref"} } :
-               ();
-    };
-    Sub::Install::install_sub({
-        code => $array_subref,
-        into => __PACKAGE__,
-        as => $array_subname,
-    });
-
-}
+# at init time, make messaging subs for the initial message types
+$create_subs_for_message_type->(__PACKAGE__, $_) foreach @message_types;
 
 
 sub _current_call_stack
