@@ -727,10 +727,9 @@ $create_subs_for_message_type = sub {
                 }
             }
 
-            if (ref $self) {
-                $message_settings{$message_storage_by_id_name}->{$self->id} = $msg;
-            } else {
-                $message_settings{$message_storage_by_class_name} = $msg;
+            # New-style callback registered as an observer
+            if ($UR::initialized) {
+                $self->__signal_observers__($logger_subname, $msg);
             }
 
             $save_setting->($self, $logger_subname, $msg);
