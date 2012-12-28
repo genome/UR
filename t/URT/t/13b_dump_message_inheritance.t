@@ -5,7 +5,7 @@ use UR;
 
 use Test::More;
 
-plan tests => 30;
+plan tests => 128;
 
 ok(UR::Object::Type->define( class_name => 'A'), 'Define class A');
 ok(UR::Object::Type->define( class_name => 'B'), 'Define class B');
@@ -44,16 +44,111 @@ is($a->dump_status_messages(), 0, 'object a dump_status_messages() is 0');
 is(ChildB->dump_status_messages(), 0, 'ChildB dump_status_messages() is 0');
 is($b->dump_status_messages(), 0, 'object b dump_status_messages() is 0');
 
-# All the class' dump flags are initialized, change the parent shouldn't change the child
-is(Parent->dump_status_messages(1), 1, 'Change Parent dump_status_messages() to 1');
-is(ChildA->dump_status_messages(), 0, 'ChildA dump_status_messages() is still 0');
-is($a->dump_status_messages(), 0, 'object a dump_status_messages() is still 0');
-is(ChildB->dump_status_messages(), 0, 'ChildB dump_status_messages() is still 0');
-is($b->dump_status_messages(), 0, 'object b dump_status_messages() is still 0');
+# Change the parent and the child classes and instances inherit it, since they haven't
+# overriden anything yet
+foreach my $val ( 1, 0 ) {
+    is(Parent->dump_status_messages($val), $val, "Change Parent dump_status_messages() to $val");
+    is(Parent->dump_status_messages(), $val, 'Parent dump_status_messages() is set');
+    is(ChildA->dump_status_messages(), $val, 'ChildA dump_status_messages() matches Parent');
+    is($a->dump_status_messages(), $val, 'object a dump_status_messages() matches Parent');
+    is(ChildB->dump_status_messages(), $val, 'ChildB dump_status_messages() matches Parent');
+    is($b->dump_status_messages(), $val, 'object b dump_status_messages() matches Parent');
+}
 
-is(ChildA->dump_status_messages(1), 1, 'Change ChildA class dump_status_messages to 1');
-is($a->dump_status_messages(), 0, 'object a dump_status_messages() is still 0');
-is(ChildB->dump_status_messages(), 0, 'ChildB dump_status_messages() is still 0');
-is($b->dump_status_messages(), 0, 'object b dump_status_messages() is still 0');
+# Twiddle both the parent and one of the child classes
+foreach my $parent_val ( 2, 1, 0) {
+    is(Parent->dump_status_messages($parent_val), $parent_val, "Set Parent dump_status_messages() to $parent_val");
+    foreach my $child_val ( 1, 0 ) {
+        is(ChildA->dump_status_messages($child_val), $child_val, "Change ChildA dump_status_messages() to $child_val");
+        is(ChildA->dump_status_messages(), $child_val, 'ChildA dump_status_messages() is set');
+        is($a->dump_status_messages(), $child_val, 'object a dump_status_messages() matches ChildA');
+
+        is(Parent->dump_status_messages(), $parent_val, 'Parent dump_status_messages() is still set');
+        is(ChildB->dump_status_messages(), $parent_val, 'ChildB dump_status_messages() matches Parent');
+        is($b->dump_status_messages(), $parent_val, 'object b dump_status_messages() matches Parent');
+    }
+}
+    
+my $a2 = ChildA->create();
+my $b2 = ChildB->create();
+
+# Explicity set all the invilved entities
+is(Parent->dump_status_messages(1), 1, ' Set Parent dump_status_messages() to 1');
+is(ChildA->dump_status_messages(2), 2, ' Set ChildA dump_status_messages() to 2');
+is(ChildB->dump_status_messages(3), 3, ' Set Parent dump_status_messages() to 3');
+is($a->dump_status_messages(4), 4, ' Set object a dump_status_messages() to 4');
+is($a2->dump_status_messages(5), 5, ' Set object a2 dump_status_messages() to 5');
+is($b->dump_status_messages(6), 6, ' Set object b dump_status_messages() to 6');
+is($b2->dump_status_messages(7), 7, ' Set object b dump_status_messages() to 7');
+
+# Check the values
+is(Parent->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is(ChildA->dump_status_messages(), 2, 'ChildA dump_status_messages() is 2');
+is(ChildB->dump_status_messages(), 3, 'Parent dump_status_messages() is 3');
+is($a->dump_status_messages(), 4, 'object a dump_status_messages() is 4');
+is($a2->dump_status_messages(), 5, 'object a2 dump_status_messages() is 5');
+is($b->dump_status_messages(), 6, 'object b dump_status_messages() is 6');
+is($b2->dump_status_messages(), 7, 'object b dump_status_messages() is 7');
+
+# Now, start setting some of them to undef, meaning they should again inherit from their parent
+diag('Clear setting on object a');
+$a->dump_status_messages(undef);
+is(Parent->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is(ChildA->dump_status_messages(), 2, 'ChildA dump_status_messages() is 2');
+is(ChildB->dump_status_messages(), 3, 'Parent dump_status_messages() is 3');
+is($a->dump_status_messages(), 2, 'object a dump_status_messages() is now 2');
+is($a2->dump_status_messages(), 5, 'object a2 dump_status_messages() is 5');
+is($b->dump_status_messages(), 6, 'object b dump_status_messages() is 6');
+is($b2->dump_status_messages(), 7, 'object b dump_status_messages() is 7');
+
+diag('Clear setting on ChildA');
+ChildA->dump_status_messages(undef);
+is(Parent->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is(ChildA->dump_status_messages(), 1, 'ChildA dump_status_messages() is 1');
+is(ChildB->dump_status_messages(), 3, 'Parent dump_status_messages() is 3');
+is($a->dump_status_messages(), 1, 'object a dump_status_messages() is now 1');
+is($a2->dump_status_messages(), 5, 'object a2 dump_status_messages() is 5');
+is($b->dump_status_messages(), 6, 'object b dump_status_messages() is 6');
+is($b2->dump_status_messages(), 7, 'object b dump_status_messages() is 7');
+
+diag('Clear setting on object a2');
+$a2->dump_status_messages(undef);
+is(Parent->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is(ChildA->dump_status_messages(), 1, 'ChildA dump_status_messages() is 1');
+is(ChildB->dump_status_messages(), 3, 'Parent dump_status_messages() is 3');
+is($a->dump_status_messages(), 1, 'object a dump_status_messages() is now 1');
+is($a2->dump_status_messages(), 1, 'object a2 dump_status_messages() is 1');
+is($b->dump_status_messages(), 6, 'object b dump_status_messages() is 6');
+is($b2->dump_status_messages(), 7, 'object b dump_status_messages() is 7');
+
+diag('Clear setting on object b');
+$b->dump_status_messages(undef);
+is(Parent->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is(ChildA->dump_status_messages(), 1, 'ChildA dump_status_messages() is 1');
+is(ChildB->dump_status_messages(), 3, 'Parent dump_status_messages() is 3');
+is($a->dump_status_messages(), 1, 'object a dump_status_messages() is now 1');
+is($a2->dump_status_messages(), 1, 'object a2 dump_status_messages() is 1');
+is($b->dump_status_messages(), 3, 'object b dump_status_messages() is 3');
+is($b2->dump_status_messages(), 7, 'object b dump_status_messages() is 7');
+
+diag('Clear setting on ChildB');
+ChildB->dump_status_messages(undef);
+is(Parent->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is(ChildA->dump_status_messages(), 1, 'ChildA dump_status_messages() is 1');
+is(ChildB->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is($a->dump_status_messages(), 1, 'object a dump_status_messages() is now 1');
+is($a2->dump_status_messages(), 1, 'object a2 dump_status_messages() is 1');
+is($b->dump_status_messages(), 1, 'object b dump_status_messages() is 1');
+is($b2->dump_status_messages(), 7, 'object b dump_status_messages() is 7');
+
+diag('Clear setting on object b2');
+$b2->dump_status_messages(undef);
+is(Parent->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is(ChildA->dump_status_messages(), 1, 'ChildA dump_status_messages() is 1');
+is(ChildB->dump_status_messages(), 1, 'Parent dump_status_messages() is 1');
+is($a->dump_status_messages(), 1, 'object a dump_status_messages() is now 1');
+is($a2->dump_status_messages(), 1, 'object a2 dump_status_messages() is 1');
+is($b->dump_status_messages(), 1, 'object b dump_status_messages() is 1');
+is($b2->dump_status_messages(), 1, 'object b dump_status_messages() is 1');
 
 
