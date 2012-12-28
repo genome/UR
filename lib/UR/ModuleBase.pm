@@ -715,9 +715,8 @@ $create_subs_for_message_type = sub {
     my $logger_subref = Sub::Name::subname "${class}::${logger_subname}" => sub {
         my $self = shift;
 
-        my $msg;
         foreach ( @_ ) {
-            $msg = $_;
+            chomp(my $msg = $_);
             # old-style callback registered with error_messages_callback
             if (my $code = $self->$check_callback()) {
                 if (ref $code) {
