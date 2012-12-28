@@ -700,7 +700,7 @@ $create_subs_for_message_type = sub {
     # usage messages go to STDOUT, others to STDERR
     my $default_fh = $type eq 'usage' ? \*STDOUT : \*STDERR;
 
-    my $should_dump_messages = "${type}_messages";
+    my $should_dump_messages = "dump_${type}_messages";
     my $should_queue_messages = "queue_${type}_messages";
     my $check_callback = "${type}_messages_callback";
     my $message_text_prefix = ($type eq 'status' or $type eq 'usage') ? '' : uc($type) . ': ';
