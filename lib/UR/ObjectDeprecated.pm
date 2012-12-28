@@ -368,12 +368,12 @@ sub message_callback
         my $obj_class = $obj->class;
         my $obj_id = (ref($obj) ? ($obj->can("id") ? $obj->id : $obj) : $obj);
 
-        my $msgdata = $self->_get_msgdata();
+        my $message_package = $type . '_package';
         my $message_object = UR::ModuleBase::Message->create
             (
                 text         => $msg,
                 level        => 1,
-                package_name => $msgdata->{$type . '_package'},
+                package_name => $obj->$message_package(),
                 call_stack   => ($type eq "error" ? _current_call_stack() : []),
                 time_stamp   => time,
                 type         => $type,
