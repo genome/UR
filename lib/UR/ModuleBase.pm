@@ -589,52 +589,55 @@ $create_subs_for_message_type = sub {
 
     my $class = ref($self) ? $self->class : $self;
 
-    my $class_name_maker = sub { return $class . '::' . shift() };
-    my $id_name_maker = sub { return $class . '::' . shift() . '_by_id' };
+    my $save_setting = sub {
+        my($self, $name, $val) = @_;
+        if (ref $self) {
+            $message_settings{ $self->class . '::' . $name . '_by_id' }->{$self->id} = $val;
+        } else {
+            $message_settings{ $self->class . '::' . $name } = $val;
+        }
+    };
+    my $get_setting = sub {
+        my($self, $name) = @_;
+        if (ref $self) {
+            return exists($message_settings{ $self->class . '::' . $name . '_by_id' })
+                    ? $message_settings{ $self->class . '::' . $name . '_by_id' }->{$self->id}
+                    : undef;
+        } else {
+            return $message_settings{ $self->class . '::' . $name };
+        }
+    };
 
     my $make_mutator = sub {
         my $name = shift;
-        my $by_class_name = $class_name_maker->($name);
-        my $by_id_name = $id_name_maker->($name);
         return sub {
             my $self = shift;
 
             if (@_) {
                 # setting the value
-                if (ref $self) {
-                    $message_settings{ $by_id_name }->{$self->id} = shift;
-                } else {
-                    $message_settings{ $by_class_name } = shift;
-                }
+                $save_setting->($self, $name, @_);
 
             } else {
                 # getting the value
-                if (ref $self) {
-                    # called on an object
-                    if (exists $message_settings{ $by_id_name }->{$self->id}) {
-                        return $message_settings{ $by_id_name }->{$self->id};
-                    } else {
-                        # not set, try asking the class
-                        return $class->$name();
-                    }
+                my $val = $get_setting->($self, $name);
+                if (defined $val) {
+                    return $val;
+
+                } elsif (ref $self) {
+                    # called on an object and no value set, try the class
+                    return $self->class->$name();
 
                 } else {
                     # called on a class name
-                    if (exists $message_settings{ $by_class_name }) {
-                        # already has a set value
-                        return $message_settings{ $by_class_name};
-
-                    } else {
-                        my @super = $class->inheritance();
-                        foreach my $super ( @super ) {
-                            if (my $super_sub = $super->can($name)) {
-                                return $super_sub->($self);
-                            }
+                    my @super = $self->inheritance();
+                    foreach my $super ( @super ) {
+                        if (my $super_sub = $super->can($name)) {
+                            return $super_sub->($super);
                         }
-                        # None of the parent classes implement it, or there aren't
-                        # any parent classes
-                        return $default_messaging_settings{$name};
                     }
+                    # None of the parent classes implement it, or there aren't
+                    # any parent classes
+                    return $default_messaging_settings{$name};
                 }
             }
         };
@@ -655,17 +658,13 @@ $create_subs_for_message_type = sub {
     }
 
     my $messages_arrayref = "${type}_messages_arrayref";
-    my $message_arrayref_by_class_name = $class_name_maker->($messages_arrayref);
-    my $message_arrayref_by_id_name = $id_name_maker->($messages_arrayref);
     my $message_arrayref_sub = Sub::Name::subname "${class}::${messages_arrayref}" => sub {
         my $self = shift;
-        if (ref $self) {
-            $message_settings{ $message_arrayref_by_id_name }->{$self->id} ||= [];
-            return $message_settings{ $message_arrayref_by_id_name }->{$self->id};
-        } else {
-            $message_settings{ $message_arrayref_by_class_name } ||= [];
-            return $message_settings{ $message_arrayref_by_class_name };
+        my $a = $get_setting->($self, $messages_arrayref);
+        if (! defined $a) {
+            $save_setting->($self, $messages_arrayref, $a = []);
         }
+        return $a;
     };
     Sub::Install::install_sub({
         code => $message_arrayref_sub,
@@ -675,19 +674,9 @@ $create_subs_for_message_type = sub {
 
     my $array_subname = "${type}_messages";
     my $array_subref = Sub::Name::subname "${class}::${array_subname}" => sub {
-        if (ref $self) {
-            if (exists $message_settings{ $message_arrayref_by_id_name }->{$self->id}) {
-                return @{ $message_settings{ $message_arrayref_by_id_name }->{$self->id}};
-            } else {
-                return ();
-            }
-        } else {
-            if (exists $message_settings{ $message_arrayref_by_class_name }) {
-                return @{ $message_settings{ $message_arrayref_by_class_name }};
-            } else {
-                return ();
-            }
-        }
+        my $self = shift;
+        my $a = $get_setting->($self, $messages_arrayref);
+        return $a ? @$a : ();
     };
     Sub::Install::install_sub({
         code => $array_subref,
@@ -721,15 +710,14 @@ $create_subs_for_message_type = sub {
     my $message_subroutine  = "${type}_subroutine";
 
     my $logger_subname = "${type}_message";
-    my $message_storage_by_class_name = $class_name_maker->($logger_subname);
-    my $message_storage_by_id_name = $id_name_maker->($logger_subname);
     my $logger_subref = Sub::Name::subname "${class}::${logger_subname}" => sub {
         my $self = shift;
 
+        my $msg;
         foreach ( @_ ) {
-            my $msg = $_;
+            $msg = $_;
             # old-style callback registered with error_messages_callback
-            if (my $code = $class->$check_callback()) {
+            if (my $code = $self->$check_callback()) {
                 if (ref $code) {
                     $code->($self, $msg);
                 } else {
@@ -743,6 +731,7 @@ $create_subs_for_message_type = sub {
                 $message_settings{$message_storage_by_class_name} = $msg;
             }
 
+            $save_setting->($self, $logger_subname, $msg);
             # If the callback set $msg to undef with "$_[1] = undef", then they didn't want the message
             # processed further
             next unless defined($msg);
@@ -765,9 +754,7 @@ $create_subs_for_message_type = sub {
             $self->$message_subroutine($subroutine);
         }
 
-        return (ref $self)
-                ? $message_settings{$message_storage_by_id_name}->{$self->id}
-                : $message_settings{$message_storage_by_class_name};
+        return $get_setting->($self, $logger_subname);
     };
     Sub::Install::install_sub({
         code => $logger_subref,
