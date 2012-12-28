@@ -6,10 +6,17 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 35;
+use Test::More tests => 40;
+
+UR::Object::Type->define(
+    class_name => 'URT::Parent',
+    is_abstract => 1,
+    valid_signals => ['something_else'],
+);
 
 UR::Object::Type->define(
     class_name => 'URT::Person',
+    is => 'URT::Parent',
     has => [
         first_name  => { is => 'String' },
         last_name   => { is => 'String' },
@@ -19,7 +26,6 @@ UR::Object::Type->define(
             calculate => '$first_name . " " . $last_name',
         }
     ],
-    valid_signals => ['something_else'],
 );
 
 my $p1 = URT::Person->create(
@@ -40,7 +46,7 @@ $p1->last_name("DoDo");
 is_deeply($observations, {}, "no callback count change with no observers defined");
 is(get_change_count(), $change_count + 1, '1 change recorded even with no observers');
 
-foreach my $thing ( $p1,$p2,'URT::Person') {
+foreach my $thing ( $p1,$p2,'URT::Person','URT::Parent') {
     foreach my $aspect ( '','last_name','something_else' ) {
         my $id = ref($thing) ? $thing->id : $thing;
         my %args = ( callback => sub { no warnings 'uninitialized'; $observations->{$id}->{$aspect}++ } );
@@ -58,6 +64,7 @@ is($p1->last_name("Doh!"),"Doh!", "changed person 1");
 is_deeply($observations,
           { 1             => { '' => 1, 'last_name' => 1 },
             'URT::Person' => { '' => 1, 'last_name' => 1 },
+            'URT::Parent' => { '' => 1, 'last_name' => 1 },
           },
           'Callbacks were fired');
 is(get_change_count(), $change_count + 1, '1 change recorded');
@@ -69,6 +76,7 @@ is($p2->last_name("Do"),"Do", "changed person 2");
 is_deeply($observations,
           { 2             => { '' => 1, 'last_name' => 1 },
             'URT::Person' => { '' => 1, 'last_name' => 1 },
+            'URT::Parent' => { '' => 1, 'last_name' => 1 },
           },
           'Callbacks were fired');
 is(get_change_count(), $change_count + 1, '1 change recorded');
@@ -80,6 +88,7 @@ ok($p2->__signal_observers__('something_else'),'send the "something_else" signal
 is_deeply($observations,
           { 2             => { '' => 1, 'something_else' => 1},
             'URT::Person' => { '' => 1, 'something_else' => 1},
+            'URT::Parent' => { '' => 1, 'something_else' => 1},
           },
           'Callbacks were fired');
 is(get_change_count(), $change_count, 'no changes recorded for non-change signal');
@@ -92,9 +101,20 @@ is_deeply($observations,
           { 1             => { '' => 1, 'something_else' => 1},
             2             => { '' => 1, 'something_else' => 1},
             'URT::Person' => { '' => 1, 'something_else' => 1},
+            'URT::Parent' => { '' => 1, 'something_else' => 1},
           },
           'Callbacks were fired');
 is(get_change_count(), $change_count, 'no changes recorded for non-change signal');
+
+$change_count = get_change_count();
+$observations = {};
+# Signals don't propagate down the inheritance tree, only up
+ok(URT::Parent->__signal_observers__('something_else'), 'Send the "something_else" signal to the URT::Parent class');
+is_deeply($observations,
+          { 'URT::Parent' => { '' => 1, 'something_else' => 1},
+          },
+          'Callbacks were fired');
+
 
 
 $change_count = get_change_count();
@@ -104,6 +124,7 @@ is_deeply($observations,
           { 1             => { '' => 1,},
             2             => { '' => 1,},
             'URT::Person' => { '' => 1,},
+            'URT::Parent' => { '' => 1,},
           },
           'Callbacks were fired');
 is(get_change_count(), $change_count, 'no changes recorded for non-change signal');
@@ -116,7 +137,9 @@ $change_count = get_change_count();
 $observations = {};
 is($p1->last_name("Doooo"),"Doooo", "changed person 1");
 is_deeply($observations,
-          { 'URT::Person' => { '' => 1, 'last_name' => 1 } },
+          { 'URT::Person' => { '' => 1, 'last_name' => 1 },
+            'URT::Parent' => { '' => 1, 'last_name' => 1 }
+          },
           'Callbacks were fired');
 is(get_change_count(), $change_count + 1, '1 change recorded');
 
@@ -126,6 +149,7 @@ $observations = {};
 is($p2->last_name("Boo"),"Boo", "changed person 2");
 is_deeply($observations,
           { 'URT::Person' => { '' => 1, 'last_name' => 1 },
+            'URT::Parent' => { '' => 1, 'last_name' => 1 },
             2             => { '' => 1, 'last_name' => 1 },
           },
           'Callbacks were fired');
