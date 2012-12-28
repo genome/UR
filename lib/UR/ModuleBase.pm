@@ -727,7 +727,8 @@ $create_subs_for_message_type = sub {
             }
 
             # New-style callback registered as an observer
-            if ($UR::initialized) {
+            # Some non-UR classes inherit from UR::ModuleBase, and can't __signal
+            if ($UR::initialized && $self->can('__signal_observers__')) {
                 $self->__signal_observers__($logger_subname, $msg);
             }
 
