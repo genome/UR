@@ -579,6 +579,8 @@ These methods return the same data as $obj->error_message_source().
 
 =cut
 
+our $stderr = \*STDERR;
+our $stdout = \*STDOUT;
 my %message_settings;
 
 # This sub creates the settings mutator subs for each message type
@@ -698,7 +700,7 @@ $create_subs_for_message_type = sub {
     });
 
     # usage messages go to STDOUT, others to STDERR
-    my $default_fh = $type eq 'usage' ? \*STDOUT : \*STDERR;
+    my $default_fh = $type eq 'usage' ? \$stdout : \$stderr;
 
     my $should_dump_messages = "dump_${type}_messages";
     my $should_queue_messages = "queue_${type}_messages";
@@ -737,7 +739,7 @@ $create_subs_for_message_type = sub {
             next unless defined($msg);
 
             if (my $fh = $self->$should_dump_messages()) {
-                $fh = $default_fh unless (ref $fh);
+                $fh = $$default_fh unless (ref $fh);
 
                 $fh->print($message_text_prefix . $msg . "\n");
             }
