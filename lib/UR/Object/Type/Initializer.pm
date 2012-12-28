@@ -1241,6 +1241,11 @@ sub _initialize_accessors_and_inheritance {
     return $self;
 }
 
+our %_init_subclasses_loaded;
+sub subclasses_loaded {
+    return @{ $_init_subclasses_loaded{shift->class_name}};
+}
+
 our %_inform_all_parent_classes_of_newly_loaded_subclass;
 sub _inform_all_parent_classes_of_newly_loaded_subclass {
     my $self = shift;
@@ -1262,13 +1267,13 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
     }
 
     my @i = sort $class_name->inheritance;
-    $UR::Object::_init_subclasses_loaded{$class_name} ||= [];
+    $_init_subclasses_loaded{$class_name} ||= [];
     my $last_parent_class = "";
     for my $parent_class (@i) {
         next if $parent_class eq $last_parent_class;
         $last_parent_class = $parent_class;
-        $UR::Object::_init_subclasses_loaded{$parent_class} ||= [];
-        push @{ $UR::Object::_init_subclasses_loaded{$parent_class} }, $class_name;
+        $_init_subclasses_loaded{$parent_class} ||= [];
+        push @{ $_init_subclasses_loaded{$parent_class} }, $class_name;
         push @{ $parent_class . "::_init_subclasses_loaded" }, $class_name;
 
         # any index on a parent class must move to the child class

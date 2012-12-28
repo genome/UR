@@ -376,7 +376,7 @@ sub _setup_change_subscription
         
         my @properties_to_watch = (@indexed_property_names, qw/create delete load unload/);
         #print "making index $self->{id}\n";
-        for my $class ($indexed_class_name, @{ $UR::Object::_init_subclasses_loaded{$indexed_class_name} }) {        
+        for my $class ($indexed_class_name, @{ $UR::Object::Type::_init_subclasses_loaded{$indexed_class_name} }) {
             for my $property (@properties_to_watch) {
                 my $index_list = $UR::Object::Index::all_by_class_name_and_property_name{$class}{$property} ||= [];
                 #print " adding to $class\n";

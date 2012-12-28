@@ -1482,14 +1482,12 @@ sub _invalidate_cached_data_for_subclasses {
 
     delete @$class_meta{@cache_keys};
 
-    #my @subclasses = $class_meta->subclasses_loaded($class_obj->class_name);
-    my @subclasses = @{$UR::Object::_init_subclasses_loaded{$class_meta->class_name}};
+    my @subclasses = @{$UR::Object::Type::_init_subclasses_loaded{$class_meta->class_name}};
     my %seen;
     while (my $subclass = shift @subclasses) {
         my $sub_meta = UR::Object::Type->get(class_name => $subclass);
         delete @$sub_meta{@cache_keys};
-        #push @subclasses, $sub_meta->subclasses_loaded($subclass);
-        push @subclasses, @{$UR::Object::_init_subclasses_loaded{$sub_meta->class_name}};
+        push @subclasses, @{$UR::Object::Type::_init_subclasses_loaded{$sub_meta->class_name}};
     }
 }
 

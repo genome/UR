@@ -129,7 +129,7 @@ sub unload {
         }
 
         # unload any objects that belong to any subclasses
-        for my $subclass ($cx->subclasses_loaded($class))
+        for my $subclass ($cx->__meta__->subclasses_loaded($class))
         {
             push @involved_classes, $subclass;
             push @unloaded, $subclass->unload;
@@ -168,7 +168,7 @@ sub is_loaded {
         return $obj if $obj;
         # we could safely return nothing right now, except 
         # that a subclass of this type may have the object
-        return unless $_[0]->subclasses_loaded;  # nope, there were no subclasses
+        return unless $_[0]->__meta__->subclasses_loaded;  # nope, there were no subclasses
     }
 
     my $class = shift;
@@ -176,14 +176,11 @@ sub is_loaded {
     return $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);    
 }
 
-    
-# THESE SHOULD PROBABLY GO ON THE CLASS META    
-
 sub subclasses_loaded  {
-    no strict 'refs';
-    no warnings;    
-    return @{ $UR::Object::_init_subclasses_loaded{$_[0]} };
+    return shift->__meta__->subclasses_loaded();
 }
+
+# THESE SHOULD PROBABLY GO ON THE CLASS META
 
 sub all_objects_are_loaded  {
     # Keep track of which classes claim that they are completely loaded, and that no more loading should be done.

@@ -134,7 +134,7 @@ sub execute {
 sub create_subclass_index {
     my ($seed, $index_ref) = @_;
 
-    my @children = $seed->subclasses_loaded;
+    my @children = $seed->__meta__->subclasses_loaded;
     for my $child (@children) {
         my @parents = @{$child->__meta__->{is}};
         for my $parent (@parents) {
