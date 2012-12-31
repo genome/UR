@@ -396,7 +396,7 @@ sub send_notification_to_observers {
     
     foreach my $callback_info (@matches) {
         my ($callback, $note) = @$callback_info;
-        $callback->($subject, $property, @data)
+        $callback->($subject, $property, @data);
     }
     $sig_depth--;
 
@@ -424,7 +424,7 @@ sub query {
                 $obj->{'__get_serial'} = $UR::Context::GET_COUNTER++;
                 return $obj;
 
-            } elsif (my $subclasses = $UR::Object::_init_subclasses_loaded{$_[0]}) {
+            } elsif (my $subclasses = $UR::Object::Type::_init_subclasses_loaded{$_[0]}) {
                 # Check subclasses of the requested class, along with the ID
                 # yes, it only goes one level deep.  This should catch enough cases to be worth it.
                 # Deeper searches will be covered by get_objects_for_class_and_rule()
@@ -1977,7 +1977,7 @@ sub _cache_is_complete_for_class_and_normalized_rule {
                 grep { $_ }
                 map { @$_{@$id} }
                 map { $all_objects_loaded->{$_} }
-                ($class, $class->subclasses_loaded);
+                ($class, $class->__meta__->subclasses_loaded);
 
             # see if we found all of the requested objects
             if (@objects == @$id) {
@@ -2009,7 +2009,7 @@ sub _cache_is_complete_for_class_and_normalized_rule {
                 @objects =
                     grep { $_ }
                     map { $all_objects_loaded->{$_}->{$id} }
-                    $class->subclasses_loaded;
+                    $class->__meta__->subclasses_loaded;
                 if (@objects) {
                     $cache_is_complete = 1;
                 }
@@ -2086,7 +2086,7 @@ sub all_objects_loaded  {
     return(
         grep {$_}
         map { values %{ $UR::Context::all_objects_loaded->{$_} } } 
-        $class, $class->subclasses_loaded
+        $class, $class->__meta__->subclasses_loaded
     );  
 }
 
@@ -2152,7 +2152,6 @@ sub _get_objects_for_class_and_rule_from_cache {
                 # The $id is a normal scalar.
                 if (not defined $id) {
                     #Carp::carp("Undefined id passed as params for query on $class");
-$DB::single=1;
                     Carp::cluck("\n\n****  Undefined id passed as params for query on $class");
                     $id ||= '';
                 }
@@ -2182,7 +2181,7 @@ $DB::single=1;
             # We may be adding to matches made above is we used an arrayref
             # and the results are incomplete.
     
-            my @subclasses_loaded = $class->subclasses_loaded;
+            my @subclasses_loaded = $class->__meta__->subclasses_loaded;
             return @matches unless @subclasses_loaded;
     
             if (ref($id) eq 'ARRAY') {
@@ -2554,13 +2553,13 @@ sub clear_cache {
     if ($args{'dont_unload'}) {
         for my $class_name (@{$args{'dont_unload'}}) {
             $local_dont_unload{$class_name} = 1;
-            for my $subclass_name ($class_name->subclasses_loaded) {
+            for my $subclass_name ($class_name->__meta__->subclasses_loaded) {
                 $local_dont_unload{$subclass_name} = 1;
             }
         }
     }
 
-    for my $class_name (UR::Object->subclasses_loaded) {
+    for my $class_name (UR::Object->__meta__->subclasses_loaded) {
 
         # Once transactions are fully implemented, the command params will sit
         # beneath the regular transaction, so we won't need this.  For now,
@@ -2792,7 +2791,7 @@ sub _reverse_all_changes {
     # this prevents cirucularity, since some objects 
     # can seem re-reversible (like ghosts)
     my %_delete_objects;
-    my @all_subclasses_loaded = sort UR::Object->subclasses_loaded;
+    my @all_subclasses_loaded = sort UR::Object->__meta__->subclasses_loaded;
     for my $class_name (@all_subclasses_loaded) { 
         next unless $class_name->can('__meta__');
         next if $class_name->isa("UR::Value");

@@ -7,7 +7,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
-use Test::More tests => 801;
+use Test::More tests => 828;
 
 use UR::Namespace::Command::Old::DiffRewrite;
 
@@ -50,7 +50,9 @@ for my $type (qw/error warning status/) {
             my $cb_register = $type . "_messages_callback";
             my $cb_msg_count = 0;
             my @cb_args;
-            ok($c->$cb_register(sub { @cb_args = @_; $cb_msg_count++;}), "can set callback");
+            my $callback_sub = sub { @cb_args = @_; $cb_msg_count++;};
+            ok($c->$cb_register($callback_sub), "can set callback");
+            is($c->$cb_register(), $callback_sub, 'can get callback');
 
             my $message_line = __LINE__ + 1;    # The messaging sub will be called on the next line
             is($c->$accessor("error1"), "error1",       "$type setting works");
