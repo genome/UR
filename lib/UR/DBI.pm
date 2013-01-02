@@ -825,13 +825,9 @@ use warnings;
 
 use Time::HiRes;
 use Sys::Hostname;
+use Devel::GlobalDestruction;
 
 our @ISA = qw(DBI::st);
-
-our $global_destruction = 0;
-END {
-    $global_destruction = 1;
-}
 
 sub _mk_mutator {
     my ($class, $method) = @_;
@@ -843,7 +839,7 @@ sub _mk_mutator {
     $hash_key =~ s/::/_/g;
 
     my $sub = sub {
-        return if $global_destruction;
+        return if Devel::GlobalDestruction::in_global_destruction;
         my $sth = shift;
         if (@_) {
             no warnings 'uninitialized';
