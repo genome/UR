@@ -91,7 +91,7 @@ my $self = shift;
 
 # FIXME is there a way to dynamically get all the available namespaces?
 sub GetNamespaceNames {
-return qw(GSC UR);
+    return map { $_->class } UR::Namespace->is_loaded();
 }
 
 

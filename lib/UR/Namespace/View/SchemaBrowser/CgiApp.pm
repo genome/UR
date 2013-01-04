@@ -104,14 +104,27 @@ my $req = shift;
 
     our %PAGE_OBJ_CACHE;
     my $page_obj = $PAGE_OBJ_CACHE{$page_class} ||= eval { $page_class->new(ur_namespace => $self->subject_class_name) };
+    if (!$page_obj and $@) {
+        print "Exception when calling new() on $page_class: $@\n";
+        $resp->Print("Exception when calling new() on $page_class: $@\n");
+        $resp->Code(500);
+        return $resp;
+    }
 
     my $output;
     if ($page_obj) {
         $page_obj->request($req);
         $page_obj->response($resp);
 
-        $output = $page_obj->run();
-        $resp->Code(200);
+        $output = eval { $page_obj->run() };
+        if (!$output and $@) {
+            my $error = $@;
+            $error =~ s/\n/<br>/;
+            $output = "Exception when calling run() on an instance of $page_class: $@";
+            $resp->Code(500);
+        } else {
+            $resp->Code(200);
+        }
     } else {
         $output = q(<TITLE>Object not found</TITLE><BODY><H1>Object not found!</H1>The URL you requested could not be translated to a valid module</BODY>);
         $resp->Code(404);
