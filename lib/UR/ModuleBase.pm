@@ -463,8 +463,6 @@ sub message_types
 my %default_messaging_settings;
 $default_messaging_settings{dump_error_messages} = 1;
 $default_messaging_settings{dump_warning_messages} = 1;
-$default_messaging_settings{dump_status_messages} = $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'} if (exists $ENV{'UR_COMMAND_DUMP_STATUS_MESSAGES'});
-$default_messaging_settings{dump_debug_messages} = $ENV{'UR_DUMP_DEBUG_MESSAGES'} if (exists $ENV{'UR_DUMP_DEBUG_MESSAGES'});
 
 #
 # Implement error_mesage/warning_message/status_message in a way
@@ -645,7 +643,7 @@ $create_subs_for_message_type = sub {
         };
     };
 
-    foreach my $base ( qw( %s_messages_callback queue_%s_messages %s_package dump_%s_messages
+    foreach my $base ( qw( %s_messages_callback queue_%s_messages %s_package
                             %s_file %s_line %s_subroutine )
     ) {
         my $method = sprintf($base, $type);
@@ -658,6 +656,26 @@ $create_subs_for_message_type = sub {
             as => $method,
         });
     }
+
+    my $should_dump_messages = "dump_${type}_messages";
+    my $dump_mutator = $make_mutator->($should_dump_messages);
+    my @dump_env_vars = map { $_ . uc($should_dump_messages) } ('UR_', 'UR_COMMAND_');
+    my $should_dump_messages_subref = Sub::Name::subname $class . '::' . $should_dump_messages => sub {
+        my $self = shift;
+        if (@_) {
+            return $dump_mutator->($self, @_);
+        }
+        foreach my $varname ( @dump_env_vars ) {
+            return $ENV{$varname} if (defined $ENV{$varname});
+        }
+        return $dump_mutator->($self);
+    };
+    Sub::Install::install_sub({
+        code => $should_dump_messages_subref,
+        into => $class,
+        as => $should_dump_messages,
+    });
+
 
     my $messages_arrayref = "${type}_messages_arrayref";
     my $message_arrayref_sub = Sub::Name::subname "${class}::${messages_arrayref}" => sub {
@@ -702,7 +720,6 @@ $create_subs_for_message_type = sub {
     # usage messages go to STDOUT, others to STDERR
     my $default_fh = $type eq 'usage' ? \$stdout : \$stderr;
 
-    my $should_dump_messages = "dump_${type}_messages";
     my $should_queue_messages = "queue_${type}_messages";
     my $check_callback = "${type}_messages_callback";
     my $message_text_prefix = ($type eq 'status' or $type eq 'usage') ? '' : uc($type) . ': ';

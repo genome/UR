@@ -5,7 +5,7 @@ use UR;
 
 use Test::More;
 
-plan tests => 128;
+plan tests => 142;
 
 ok(UR::Object::Type->define( class_name => 'A'), 'Define class A');
 ok(UR::Object::Type->define( class_name => 'B'), 'Define class B');
@@ -151,4 +151,20 @@ is($a2->dump_status_messages(), 1, 'object a2 dump_status_messages() is 1');
 is($b->dump_status_messages(), 1, 'object b dump_status_messages() is 1');
 is($b2->dump_status_messages(), 1, 'object b dump_status_messages() is 1');
 
+my @ENV_VARS = ('UR_DUMP_STATUS_MESSAGES', 'UR_COMMAND_DUMP_STATUS_MESSAGES');
+$DB::single=1;
+foreach $var ( @ENV_VARS ) {
+    delete $ENV{$_} foreach @ENV_VARS;  # clear them first
+
+    diag("use the $var env var");
+    $ENV{$var} = 99;
+
+    is(Parent->dump_status_messages(), 99, 'Parent dump_status_messages() is 1');
+    is(ChildA->dump_status_messages(), 99, 'ChildA dump_status_messages() is 1');
+    is(ChildB->dump_status_messages(), 99, 'Parent dump_status_messages() is 1');
+    is($a->dump_status_messages(), 99, 'object a dump_status_messages() is now 1');
+    is($a2->dump_status_messages(), 99, 'object a2 dump_status_messages() is 1');
+    is($b->dump_status_messages(), 99, 'object b dump_status_messages() is 1');
+    is($b2->dump_status_messages(), 99, 'object b dump_status_messages() is 1');
+}
 
