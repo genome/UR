@@ -165,15 +165,19 @@ sub resolve_class_and_params_for_argv {
     do {
         # GetOptions also likes to emit warnings instead of return a list of errors :( 
         my @errors;
-        local $SIG{__WARN__} = sub { push @errors, @_ };
-        
-        ## Change the pattern to be '--', '-' followed by a non-digit, or '+'.
-        ## This s the effect of treating a negative number as a value of an option.
-        ## This means that we won't be allowed to have an option named, say, -1.
-        ## But since command modules' properties have to be allowable function names,
-        ## and "1" is not a valid function name, it's not really a problem
-        #Getopt::Long::Configure('prefix_pattern=--|-(?!\D)|\+');
-        unless (GetOptions($params_hash,@spec)) {
+        my $rv;
+        {
+            local $SIG{__WARN__} = sub { push @errors, @_ };
+
+            ## Change the pattern to be '--', '-' followed by a non-digit, or '+'.
+            ## This s the effect of treating a negative number as a value of an option.
+            ## This means that we won't be allowed to have an option named, say, -1.
+            ## But since command modules' properties have to be allowable function names,
+            ## and "1" is not a valid function name, it's not really a problem
+            #Getopt::Long::Configure('prefix_pattern=--|-(?!\D)|\+');
+            $rv = GetOptions($params_hash,@spec);
+        }
+        unless ($rv) {
             for my $error (@errors) {
                 $self->error_message($error);
             }
