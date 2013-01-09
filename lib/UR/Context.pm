@@ -361,8 +361,6 @@ sub send_notification_to_observers {
         $id = $subject->id;
     } else {
         $class = $subject;
-        $subject = undef;
-        $id = undef;
     }
 
     my $check_classes = $subscription_classes{$class};

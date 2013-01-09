@@ -1,3 +1,9 @@
+BEGIN {
+    # This environment variable overrides default UR behavior so unsetting it
+    # for the test.
+    delete $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES};
+};
+
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
