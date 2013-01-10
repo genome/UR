@@ -15,7 +15,7 @@ use Sub::Install;
 # make sure that the last record in the file does not match that whole string
 
 # Make a FASTQ-like format file intentionally missing a blank line at the end
-my($fh,$filename) = File::Temp::tempfile();
+my $fh = File::Temp->new();
 my $data = "read1
 ACGTTGCA
 +
@@ -49,7 +49,7 @@ ok(UR::Object::Type->define(
     ),
     'Defined class for fastq reads');
 
-my @objs = URT::FastqReads->get(path => $filename);
+my @objs = URT::FastqReads->get(path => $fh->filename);
 is(scalar(@objs), 2, 'Read in 1 records from the fastq file');
 my @expected = (
     { seq_id => 'read1', sequence => 'ACGTTGCA', quality => '12345678' },
