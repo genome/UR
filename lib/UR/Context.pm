@@ -104,8 +104,12 @@ sub process {
     return $UR::Context::process;
 }
 
+sub date_template {
+    return q|%Y-%m-%d %H:%M:%S|;
+}
+
 sub now {
-    return Date::Format::time2str(q|%Y-%m-%d %H:%M:%S|,time());
+    return Date::Format::time2str(date_template(), time());
 }
 
 my $master_monitor_query = 0;
