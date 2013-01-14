@@ -84,6 +84,14 @@ sub create {
     ) 
         and return unless grep { $self->style eq $_ } valid_styles();
 
+    if (defined($self->csv_delimiter)
+        and ($self->csv_delimiter ne $self->__meta__->property_meta_for_name('csv_delimiter')->default_value)
+        and ($self->style ne 'csv')
+    ) {
+        $self->error_message('--csv-delimiter is only valid when used with --style csv');
+        return;
+    }
+
 #    my $show = $self->show;
 #    my @show = split(',',$show);
 #    my $subject_class_name = $self->subject_class_name;
@@ -416,6 +424,7 @@ Listing Styles:
 ---------------
  text - table like
  csv - comma separated values
+ tsv - tab separated values
  pretty - objects listed singly with color enhancements
  html - html table
  xml - xml document using elements
@@ -424,7 +433,7 @@ EOS
 }
 
 sub valid_styles {
-    return (qw/ text csv pretty html xml newtext/);
+    return (qw/text csv tsv pretty html xml newtext/);
 }
 
 sub _hint_string {

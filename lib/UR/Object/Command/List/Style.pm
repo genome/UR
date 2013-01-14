@@ -144,6 +144,23 @@ sub _get_object_string {
     return $self->_object_properties_to_string($object, $self->{'csv_delimiter'});
 }
 
+package UR::Object::Command::List::Tsv;
+use base 'UR::Object::Command::List::Csv';
+
+sub _get_header_string{
+    my $self = shift;
+
+    my $delimiter = "\t";
+    return join($delimiter, map { lc } @{$self->{show}});
+}
+
+sub _get_object_string {
+    my ($self, $object) = @_;
+
+    return $self->_object_properties_to_string($object, "\t");
+}
+
+
 package UR::Object::Command::List::Pretty;
 use base 'UR::Object::Command::List::Style';
 
