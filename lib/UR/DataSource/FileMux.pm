@@ -522,7 +522,7 @@ sub _sync_database {
     if ($ENV{'UR_DBI_MONITOR_SQL'}) {
         $monitor_start_time = Time::HiRes::time();
         my $time = time();
-        $self->sql_fh->print("FILEMux: SYNC_DATABASE AT %d [%s].\n", $time, scalar(localtime($time)));
+        $self->sql_fh->printf("FILEMux: SYNC_DATABASE AT %d [%s].\n", $time, scalar(localtime($time)));
     }
 
     my $concrete_ds_type = $self->_delegate_data_source_class;

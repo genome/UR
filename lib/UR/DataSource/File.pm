@@ -1079,7 +1079,7 @@ sub _sync_database {
         $monitor_start_time = Time::HiRes::time();
         my $time = time();
         UR::DBI->sql_fh->printf("\nFILE: SYNC_DATABASE AT %d [%s].  Started transaction for %s to temp file %s\n",
-                                $time, scalar(localtime($time)), $original_data_file, $write_fh->filename);
+                                $time, scalar(localtime($time)), $original_data_file, $temp_file_name);
 
     }
 
