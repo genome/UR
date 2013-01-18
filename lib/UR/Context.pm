@@ -30,7 +30,7 @@ consistency, locking, etc. by delegating to the correct components to handle the
 EOS
 );
 
-our @CARP_NOT = qw( UR::Object::Iterator );
+our @CARP_NOT = qw( UR::Object::Iterator Class::AutoloadCAN );
 
 # These references all point to internal structures of the current process context.
 # They are created here for boostrapping purposes, because they must exist before the object itself does.
