@@ -7,6 +7,7 @@ use Data::Dumper;
 require Term::ANSIColor;
 use UR;
 use UR::Object::Command::List::Style;
+use List::Util qw(reduce);
 
 our $VERSION = "0.38"; # UR $VERSION;
 
@@ -317,33 +318,28 @@ EOS
         $longest_name = $name_len if ($name_len > $longest_name);
     }
 
+    my @data;
     if ( ! $self->subject_class_name ) {
-        $doc .= " Can't determine the list of properties without a subject_class_name";
+        $doc .= " Can't determine the list of properties without a subject_class_name.\n";
     } elsif ( ! @properties ) {
         $doc .= sprintf(" %s\n", $self->error_message);
     } else {
         if (@filterable_properties) {
-            $doc .= <<EOS;
-
-Filterable Properties:
-----------------------
-EOS
+            push @data, 'Filterable Properties:';
             for my $property ( @filterable_properties ) {
-                $doc .= $self->_doc_for_property($property, $longest_name);
+                push @data, [$property->property_name, $self->_doc_for_property($property, $longest_name)];
             }
         }
 
         if (@relational_properties) {
-            $doc .= <<EOS;
-
-Relational Properties:
-----------------------
-EOS
+            push @data, 'Relational Properties:';
             for my $property ( @relational_properties ) {
-                $doc .= $self->_doc_for_property($property, $longest_name);
+                push @data, [$property->property_name, $self->_doc_for_property($property, $longest_name)];
             }
         }
     }
+    my @lines = $class->_format_property_doc_data(@data);
+    $doc .= join("\n", @lines);
 
     $self->delete;
     return $doc;
@@ -368,15 +364,35 @@ sub _doc_for_property {
             }
         };
     }
-    $property_doc ||= ' (undocumented)';
+    $property_doc ||= '(undocumented)';
     $property_doc =~ s/\n//gs;   # Get rid of embeded newlines
 
     my $data_type = $property->data_type || '';
     $data_type = (index($data_type, '::') == -1) ? ucfirst(lc $data_type) : $data_type;
 
-    $doc .= sprintf(" %${longest_name}s  (%s): %s\n",
-                    $property->property_name, $data_type, $property_doc);
-    return $doc;
+    # include the data type in the doc so it can be reformatted
+    $property_doc = sprintf('(%s): %s', $data_type, $property_doc);
+
+    return $property_doc;
+}
+
+sub _format_property_doc_data {
+    my ($class, @data) = @_;
+
+    my @names = map { $_->[0] } grep { ref $_ } @data;
+    my $longest_name = reduce { length($a) > length($b) ? $a : $b } @names;
+    my $w = length($longest_name);
+
+    my @lines;
+    for my $data (@data) {
+        if (ref $data) {
+            push @lines, sprintf(" %${w}s  %s", $data->[0], $data->[1]);
+        } else {
+            push @lines, '', $data, '-' x length($data);
+        }
+    }
+
+    return @lines;
 }
 
 sub _validate_subject_class {
@@ -478,4 +494,3 @@ sub _hint_string {
 
 
 1;
-
