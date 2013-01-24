@@ -14,11 +14,11 @@ class UR::Object::Command::List {
     is => 'Command',
     has => [
         subject_class => {
-            is => 'UR::Object::Type', 
+            is => 'UR::Object::Type',
             id_by => 'subject_class_name',
-        }, 
+        },
         filter => {
-            is => 'Text',  
+            is => 'Text',
             is_optional => 1,
             doc => 'Filter results based on the parameters.  See below for how to.',
             shell_args_position => 1,
@@ -33,7 +33,7 @@ class UR::Object::Command::List {
             is_optional => 1,
             doc => 'Output rows are listed sorted by these named columns in increasing order',
         },
-        style => { 
+        style => {
             is => 'Text',
             is_optional => 1,
             default_value => 'text',
@@ -45,7 +45,7 @@ class UR::Object::Command::List {
            default_value => ',',
            doc => 'For the csv output style, specify the field delimiter',
         },
-        noheaders => { 
+        noheaders => {
             is => 'Boolean',
             is_optional => 1,
             default => 0,
@@ -63,7 +63,7 @@ class UR::Object::Command::List {
             is_optional => 1,
             doc => 'Methods which the caller intends to use on the fetched objects.  May lead to pre-fetching the data.',
         },
-    ], 
+    ],
     doc => 'lists objects matching specified params',
 };
 
@@ -75,13 +75,13 @@ sub create {
 	#$DB::single = 1;
 
     # validate style
-    $self->error_message( 
+    $self->error_message(
         sprintf(
-            'Invalid style (%s).  Please choose from: %s', 
-            $self->style, 
+            'Invalid style (%s).  Please choose from: %s',
+            $self->style,
             join(', ', valid_styles()),
-        ) 
-    ) 
+        )
+    )
         and return unless grep { $self->style eq $_ } valid_styles();
 
     if (defined($self->csv_delimiter)
@@ -161,15 +161,15 @@ sub _show_item_is_property_name {
     return $item =~ m/^[\w\.]+$/;
 }
 
-sub execute {  
-    my $self = shift;    
-    
+sub execute {
+    my $self = shift;
+
     $self->_validate_subject_class
         or return;
 
     my $bool_expr = $self->_resolve_boolexpr();
     return unless (defined $bool_expr);
-  
+
     # TODO: instead of using an iterator, get all the results back in a list and
     # have the styler use the list, since it needs all the results to space the columns
     # out properly anyway
@@ -178,7 +178,7 @@ sub execute {
         $self->error_message($self->subject_class_name->error_message);
         return;
     }
-   
+
     # prevent commits due to changes here
     # this can be prevented by careful use of environment variables if you REALLY want to use this to update data
     $ENV{UR_DBI_NO_COMMIT} = 1 unless (exists $ENV{UR_DBI_NO_COMMIT});
@@ -210,7 +210,7 @@ sub execute {
             die "Bad expression: $expr\n$@\n";
         }
         $self->show(\@show);
-        
+
         #TODO validate things to show??
     }
     else {
@@ -218,7 +218,7 @@ sub execute {
     }
 
     my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
-    my $style_module = $style_module_name->new( 
+    my $style_module = $style_module_name->new(
         iterator => $iterator,
         show => $self->show,
         csv_delimiter => $self->csv_delimiter,
@@ -230,7 +230,7 @@ sub execute {
     return 1;
 }
 
-sub _filter_doc {          
+sub _filter_doc {
     my $class = shift;
 
     my $doc = <<EOS;
@@ -238,7 +238,7 @@ Filtering:
 ----------
  Create filter equations by combining filterable properties with operators and
      values.
- Combine and separate these 'equations' by commas.  
+ Combine and separate these 'equations' by commas.
  Use single quotes (') to contain values with spaces: name='genome institute'
  Use percent signs (%) as wild cards in like (~).
  Use backslash or single quotes to escape characters which have special meaning
@@ -362,7 +362,7 @@ sub _validate_subject_class {
         and return if $subject_class_name =~ /^UR::/;
 
     UR::Object::Type->use_module_with_namespace_constraints($subject_class_name);
-    
+
     my $subject_class = $self->subject_class;
     $self->error_message(
         sprintf(
@@ -371,12 +371,12 @@ sub _validate_subject_class {
         )
     )
         and return unless $subject_class;
-    
+
     $self->error_message(
         sprintf(
             'Can\'t find method (all_property_metas) in %s.  Is this a properly declared UR::Object class?',
             $subject_class_name,
-        ) 
+        )
     )
         and return unless $subject_class->can('all_property_metas');
 
