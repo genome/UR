@@ -244,6 +244,16 @@ Filtering:
  Use backslash or single quotes to escape characters which have special meaning
      to the shell such as < > and &
 
+Relational Properties:
+----------------------
+
+Relational properties are properties that point to other objects. Each type of
+object has its own set of filterable properties and even its own set of
+relational properties. The objects's properties can be addressed using "dot
+notation", e.g. employee.name where "name" is a property of the "employee"
+object/property. Refer to the relational property's own lister, or if not
+available to `ur show properties`, for help on its filterable properties.
+
 Operators:
 ----------
  =  (exactly equal to)
@@ -266,6 +276,8 @@ EOS
  list-cmd --filter name='something with space',employees\>200,job~%manager
  list-cmd --filter cost:20000-90000
  list-cmd --filter answer:yes/maybe
+ list-cmd --filter employee.name=Bob
+ list-cmd --filter employee.address.city='St. Louis'
 
 Extended Syntax:
 ----------------
@@ -285,64 +297,85 @@ Extended Syntax Examples:
  list-cmd --filter 'name="something with space" and (score < 10 or score > 100)'
  list-cmd --filter 'cost between 20000-90000'
  list-cmd --filter 'answer in [yes,maybe]'
-
-
-
 EOS
     }
 
-    $doc .= <<EOS;
-
-Filterable Properties: 
-----------------------
-EOS
-
     # Try to get the subject class name
     my $self = $class->create;
-    if ( not $self->subject_class_name 
+    if ( not $self->subject_class_name
             and my $subject_class_name = $self->_resolved_params_from_get_options->{subject_class_name} ) {
         $self = $class->create(subject_class_name => $subject_class_name);
     }
 
-    if ( $self->subject_class_name ) {
-        if ( my @properties = $self->_subject_class_filterable_properties ) {
-            my $longest_name = 0;
-            foreach my $property ( @properties ) {
-                my $name_len = length($property->property_name);
-                $longest_name = $name_len if ($name_len > $longest_name);
-            }
+    my @properties = $self->_subject_class_filterable_properties;
+    my @filterable_properties   = grep { ! $_->data_type or index($_->data_type, '::') == -1 } @properties;
+    my @relational_properties = grep {   $_->data_type and index($_->data_type, '::') >=  0 } @properties;
 
-            for my $property ( @properties ) {
-                my $property_doc = $property->doc;
-                unless ($property_doc) {
-                    eval {
-                        foreach my $ancestor_class_meta ( $property->class_meta->ancestry_class_metas ) {
-                            my $ancestor_property_meta = $ancestor_class_meta->property_meta_for_name($property->property_name);
-                            if ($ancestor_property_meta and $ancestor_property_meta->doc) {
-                                $property_doc = $ancestor_property_meta->doc;
-                                last;
-                            }
-                        }
-                    };
-                }
-                $property_doc ||= ' (undocumented)';
-                $property_doc =~ s/\n//gs;   # Get rid of embeded newlines
+    my $longest_name = 0;
+    foreach my $property ( @properties ) {
+        my $name_len = length($property->property_name);
+        $longest_name = $name_len if ($name_len > $longest_name);
+    }
 
-                my $data_type = $property->data_type || '';
-                $data_type = ucfirst(lc $data_type);
+    if ( ! $self->subject_class_name ) {
+        $doc .= " Can't determine the list of properties without a subject_class_name";
+    } elsif ( ! @properties ) {
+        $doc .= sprintf(" %s\n", $self->error_message);
+    } else {
+        if (@filterable_properties) {
+            $doc .= <<EOS;
 
-                $doc .= sprintf(" %${longest_name}s  (%s): %s\n",
-                                $property->property_name,$data_type, $property_doc);
+Filterable Properties:
+----------------------
+EOS
+            for my $property ( @filterable_properties ) {
+                $doc .= $self->_doc_for_property($property, $longest_name);
             }
         }
-        else {
-            $doc .= sprintf(" %s\n", $self->error_message);
+
+        if (@relational_properties) {
+            $doc .= <<EOS;
+
+Relational Properties:
+----------------------
+EOS
+            for my $property ( @relational_properties ) {
+                $doc .= $self->_doc_for_property($property, $longest_name);
+            }
         }
     }
-    else {
-        $doc .= " Can't determine the list of filterable properties without a subject_class_name";
-    }
+
     $self->delete;
+    return $doc;
+}
+
+sub _doc_for_property {
+    my $self = shift;
+    my $property = shift;
+    my $longest_name = shift;
+
+    my $doc;
+
+    my $property_doc = $property->doc;
+    unless ($property_doc) {
+        eval {
+            foreach my $ancestor_class_meta ( $property->class_meta->ancestry_class_metas ) {
+                my $ancestor_property_meta = $ancestor_class_meta->property_meta_for_name($property->property_name);
+                if ($ancestor_property_meta and $ancestor_property_meta->doc) {
+                    $property_doc = $ancestor_property_meta->doc;
+                    last;
+                }
+            }
+        };
+    }
+    $property_doc ||= ' (undocumented)';
+    $property_doc =~ s/\n//gs;   # Get rid of embeded newlines
+
+    my $data_type = $property->data_type || '';
+    $data_type = (index($data_type, '::') == -1) ? ucfirst(lc $data_type) : $data_type;
+
+    $doc .= sprintf(" %${longest_name}s  (%s): %s\n",
+                    $property->property_name, $data_type, $property_doc);
     return $doc;
 }
 
@@ -396,7 +429,6 @@ sub _subject_class_filterable_properties {
            sort { $a->[0] cmp $b->[0] }      # involving method calls inside the sort sub that may
            map { [ $_->property_name, $_ ] } # do sorts of their own
            grep { substr($_->property_name, 0, 1) ne '_' }  # Skip 'private' properties starting with '_'
-           grep { ! $_->data_type or index($_->data_type, '::') == -1 }  # Can't filter object-type properties from a lister, right?
            values %props;
 }
 
