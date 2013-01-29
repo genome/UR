@@ -10,3 +10,4 @@
 \.tar\.gz$
 ^blib
 ^i
+^MYMETA\.json$

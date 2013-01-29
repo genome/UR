@@ -9,7 +9,7 @@ use UR;
 use UR::Object::Command::List::Style;
 use List::Util qw(reduce);
 
-our $VERSION = "0.38"; # UR $VERSION;
+our $VERSION = "0.39"; # UR $VERSION;
 
 class UR::Object::Command::List {
     is => 'Command',

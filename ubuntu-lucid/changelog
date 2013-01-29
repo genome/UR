@@ -1,3 +1,7 @@
+libur-perl (0.39-1) unstable; urgency=low
+
+  * 
+
 libur-perl (0.38-1) unstable; urgency=low
 
   * Bug fixes to support C3 inheritance on the Mac correctly.

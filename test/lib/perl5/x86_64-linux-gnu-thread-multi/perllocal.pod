@@ -1,0 +1,484 @@
+=head2 Tue Jan 29 10:46:49 2013: C<Module> L<ExtUtils::MakeMaker|ExtUtils::MakeMaker>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 6.64>
+
+=item *
+
+C<EXE_FILES: bin/instmodsh>
+
+=back
+
+=head2 Tue Jan 29 10:46:57 2013: C<Module> L<Class::Autouse|Class::Autouse>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 2.01>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:47:06 2013: C<Module> L<YAML|YAML>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.84>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:49:18 2013: C<Module> L<DBI|DBI>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.623>
+
+=item *
+
+C<EXE_FILES: dbiproxy dbiprof dbilogstrip>
+
+=back
+
+=head2 Tue Jan 29 10:50:12 2013: C<Module> L<DBD::SQLite|DBD::SQLite>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.37>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:14 2013: C<Module> L<TimeDate|TimeDate>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.20>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:24 2013: C<Module> L<Clone::PP|Clone::PP>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.02>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:27 2013: C<Module> L<FreezeThaw|FreezeThaw>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.5001>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:30 2013: C<Module> L<Sub::Name|Sub::Name>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.05>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:33 2013: C<Module> L<Data::UUID|Data::UUID>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.218>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:35 2013: C<Module> L<Algorithm::Diff|Algorithm::Diff>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.1902>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:36 2013: C<Module> L<Text::Diff|Text::Diff>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.41>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:40 2013: C<Module> L<Number::Compare|Number::Compare>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.03>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:41 2013: C<Module> L<File::Find::Rule|File::Find::Rule>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.33>
+
+=item *
+
+C<EXE_FILES: findrule>
+
+=back
+
+=head2 Tue Jan 29 10:50:43 2013: C<Module> L<Data::Compare|Data::Compare>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.22>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:46 2013: C<Module> L<Sub-Exporter-Progressive|Sub-Exporter-Progressive>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.001008>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:47 2013: C<Module> L<Devel::GlobalDestruction|Devel::GlobalDestruction>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.09>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:50:53 2013: C<Module> L<Sub::Install|Sub::Install>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.926>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:51:00 2013: C<Module> L<common::sense|common::sense>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 3.6>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:51:07 2013: C<Module> L<JSON::XS|JSON::XS>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 2.33>
+
+=item *
+
+C<EXE_FILES: bin/json_xs>
+
+=back
+
+=head2 Tue Jan 29 10:51:16 2013: C<Module> L<JSON|JSON>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 2.53>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Tue Jan 29 10:51:18 2013: C<Module> L<Class::Inspector|Class::Inspector>
+
+=over 4
+
+=item *
+
+C<installed into: /home/ckandoth/src/UR/test/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.28>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+

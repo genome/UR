@@ -1,0 +1,38 @@
+do{ my $x = {
+       'build_requires' => {},
+       'conflicts' => {},
+       'requires' => {
+                       'Pod::Simple::HTML' => '3.03',
+                       'Class::Autouse' => '2.0',
+                       'YAML' => '',
+                       'DBD::SQLite' => '1.14',
+                       'Pod::Simple::Text' => '2.02',
+                       'Date::Format' => '',
+                       'Lingua::EN::Inflect' => '1.88',
+                       'File::Path' => '',
+                       'Text::Glob' => '',
+                       'DBI' => '1.601',
+                       'Clone::PP' => '1.02',
+                       'Class::AutoloadCAN' => '0.03',
+                       'FreezeThaw' => '0.43',
+                       'version' => '',
+                       'Sub::Name' => '0.04',
+                       'Data::UUID' => '0.148',
+                       'Carp' => '',
+                       'perl' => 'v5.8.7',
+                       'Text::Diff' => '0.35',
+                       'Getopt::Complete' => '0.26',
+                       'Devel::GlobalDestruction' => '',
+                       'Data::Compare' => '0.13',
+                       'Sub::Install' => '0.924',
+                       'File::Temp' => '',
+                       'Test::Fork' => '',
+                       'Path::Class' => '',
+                       'JSON' => '',
+                       'File::Basename' => '2.73',
+                       'Class::Inspector' => '',
+                       'Sys::Hostname' => '1.11'
+                     },
+       'recommends' => {}
+     };
+$x; }
