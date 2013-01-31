@@ -3,7 +3,7 @@ package UR::BoolExpr::Template::PropertyComparison;
 
 use warnings;
 use strict;
-our $VERSION = "0.38"; # UR $VERSION;;
+our $VERSION = "0.39"; # UR $VERSION;;
 
 # Define the class metadata.
 

@@ -3,7 +3,7 @@ package UR::Object::Iterator;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.38"; # UR $VERSION;
+our $VERSION = "0.39"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object );
 

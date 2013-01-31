@@ -2,7 +2,7 @@ package UR::BoolExpr::Template::And;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.38"; # UR $VERSION;;
+our $VERSION = "0.39"; # UR $VERSION;;
 
 UR::Object::Type->define(
     class_name      => __PACKAGE__,

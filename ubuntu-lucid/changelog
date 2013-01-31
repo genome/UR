@@ -1,3 +1,29 @@
+libur-perl (0.39-1) unstable; urgency=low
+
+  * Better support for PostgreSQL.  It is now on par with Oracle.
+  * New datasource UR::DataSource::Filesystem.  It obsoletes UR::DataSource::File
+     and UR::DataSource::FileMux, and is more flexible.
+  * Classes can specify a query hint when they are used as the primary
+     class of a get() or when they are involved in a join.  
+  * BoolExprs with an or-clause now support hints and order-by correctly..
+  * Messaging methods (error_message(), status_message(), etc) now trigger
+     observers of the same name.  This means any number of message
+     observers can be attached at any point in the class hierarchy.
+  * Using chained delegated properties with the dot-syntax (object.deledate.prop)
+     is accepted in more places.
+  * Better support for queries using direct SQL.
+  * Many fixes for the Boolean Expression syntax parser.  Besides fixing
+     bugs, it now supports more operators and understands 'offset' and 'limit'.
+  * Support for defining a property that is an alias for another.
+  * Fixes for remaining connected to databases after fork().
+  * Optimization for the case where a delegation goes through an abstract
+     class with no data source and back to the original data source. It
+      now does one query instead of many.
+  * Improvements to the Command API documentation.
+  * Removed some deps on XML-related modules.
+
+ -- Scott Smith <sakoht@cpan.org>  Wed, 30 Jan 2013 20:17:00 -0500
+
 libur-perl (0.38-1) unstable; urgency=low
 
   * Bug fixes to support C3 inheritance on the Mac correctly.
