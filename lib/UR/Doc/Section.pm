@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = "0.39"; # UR $VERSION;
+our $VERSION = "0.391"; # UR $VERSION;
 
 class UR::Doc::Section {
     is => 'UR::Object',

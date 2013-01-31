@@ -3,7 +3,7 @@ package UR::Value::Boolean::View::Default::Text;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.39"; # UR $VERSION;
+our $VERSION = "0.391"; # UR $VERSION;
 
 class UR::Value::Boolean::View::Default::Text {
   is => 'UR::Object::View::Default::Text'

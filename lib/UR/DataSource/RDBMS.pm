@@ -9,7 +9,7 @@ use Scalar::Util;
 use File::Basename;
 
 require UR;
-our $VERSION = "0.39"; # UR $VERSION;
+our $VERSION = "0.391"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS',
