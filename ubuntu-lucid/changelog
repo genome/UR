@@ -1,3 +1,9 @@
+libur-perl (0.391-1) unstable; urgency=low
+
+  * Changed the name for the Yapp driver package to avoid a CPAN warning about unauthorized use of their namespace
+
+ -- Anthony Brummett <brummett@cpan.org>  Thu, 31 Jan 2013 13:45:00 -0500
+
 libur-perl (0.39-1) unstable; urgency=low
 
   * Better support for PostgreSQL.  It is now on par with Oracle.
