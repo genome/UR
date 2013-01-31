@@ -1,16 +1,20 @@
 Revision history for UR
 
+0.391   2021-01-31
+        Changed the name for the Yapp driver package to avoid a CPAN warning
+          about unauthorized use of their namespace
+
 0.39    2013-01-30
         Better support for PostgreSQL.  It is now on par with Oracle.
         New datasource UR::DataSource::Filesystem.  It obsoletes UR::DataSource::File
          and UR::DataSource::FileMux, and is more flexible.
         Classes can specify a query hint when they are used as the primary
          class of a get() or when they are involved in a join.  
-        BoolExprs with an or-clause now support hints and order-by correctly..
+        BoolExprs with an or-clause now support hints and order-by correctly.
         Messaging methods (error_message(), status_message(), etc) now trigger
          observers of the same name.  This means any number of message
          observers can be attached at any point in the class hierarchy.
-        Using chained delegated properties with the dot-syntax (object.deledate.prop)
+        Using chained delegated properties with the dot-syntax (object.delegate.prop)
          is accepted in more places.
         Better support for queries using direct SQL.
         Many fixes for the Boolean Expression syntax parser.  Besides fixing
