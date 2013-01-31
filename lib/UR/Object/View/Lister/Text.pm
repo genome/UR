@@ -3,7 +3,7 @@ package UR::Object::View::Lister::Text;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.38"; # UR $VERSION;
+our $VERSION = "0.39"; # UR $VERSION;
 use IO::File;
 
 UR::Object::Type->define(

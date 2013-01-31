@@ -13,7 +13,7 @@ BEGIN {
     };
 };
 
-our $VERSION = "0.38"; # UR $VERSION;
+our $VERSION = "0.39"; # UR $VERSION;
 
 our $all_objects_deleted = {};
 

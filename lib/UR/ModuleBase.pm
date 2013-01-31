@@ -45,7 +45,7 @@ a formal UR class.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.38"; # UR $VERSION;;
+our $VERSION = "0.39"; # UR $VERSION;;
 
 # set up module
 use Carp;
@@ -463,6 +463,7 @@ sub message_types
 my %default_messaging_settings;
 $default_messaging_settings{dump_error_messages} = 1;
 $default_messaging_settings{dump_warning_messages} = 1;
+$default_messaging_settings{dump_status_messages} = 1;
 
 #
 # Implement error_mesage/warning_message/status_message in a way

@@ -1,12 +1,11 @@
 ---
 abstract: 'rich declarative transactional objects'
 author:
-  - 'Anthony Brummett   brummett@cpan.org'
-  - 'Scott Smith	    sakoht@cpan.org'
+  - unknown
 build_requires: {}
 configure_requires:
-  Module::Build: 0.4
-dynamic_config: 1
+  Module::Build: 0.340201
+dynamic_config: 0
 generated_by: 'Module::Build version 0.4, CPAN::Meta::Converter version 2.112150'
 license: perl
 meta-spec:
@@ -50,6 +49,9 @@ provides:
   Command::V2:
     file: lib/Command/V2.pm
     version: 0.39
+  DB:
+    file: lib/Devel/callcount.pm
+    version: 0
   Devel::callsfrom:
     file: lib/Devel/callcount.pm
     version: 0
