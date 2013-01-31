@@ -128,10 +128,6 @@
          "file" : "lib/UR/Namespace/Command/Test/Run.pm",
          "version" : 0
       },
-      "Parse::Yapp::Driver" : {
-         "file" : "lib/UR/BoolExpr/BxParser.pm",
-         "version" : "1.05"
-      },
       "UR" : {
          "file" : "lib/UR.pm",
          "version" : "0.39"
