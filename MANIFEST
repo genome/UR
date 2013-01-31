@@ -647,6 +647,7 @@ t/Vending/DataSource/CoinType.pm
 t/Vending/DataSource/Machine.pm
 t/Vending/DataSource/Machine.sqlite3-dump
 t/Vending/DataSource/Meta.pm
+t/Vending/DataSource/Meta.sqlite3
 t/Vending/DataSource/Meta.sqlite3-dump
 t/Vending/get_coin_by_value.pl
 t/Vending/Machine.pm
@@ -665,6 +666,3 @@ t/Vending/t/coin_return.t
 t/Vending/vend
 t/Vending/vend_interactive.pl
 t/Vending/Vocabulary.pm
-UR-0.38/lib/Command/Test/Tree1/Echo2.pm
-UR-0.38/pod/ur-define-class.pod
-UR-0.38/pod/ur-old-diff-rewrite.pod

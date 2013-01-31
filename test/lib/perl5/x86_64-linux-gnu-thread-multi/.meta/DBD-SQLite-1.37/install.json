@@ -1,1 +1,0 @@
-{"provides":{"DBD::SQLite::dr":{"file":"DBD/SQLite.pm"},"DBD::SQLite":{"version":"1.37","file":"DBD/SQLite.pm"},"DBD::SQLite::db":{"file":"DBD/SQLite.pm"}},"version":"1.37","name":"DBD::SQLite","dist":"DBD-SQLite-1.37","pathname":"A/AD/ADAMK/DBD-SQLite-1.37.tar.gz","module":"DBD::SQLite"}
