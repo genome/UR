@@ -1,6 +1,5 @@
 bin/ur
 Build.PL
-Build.PL~
 Changes
 gmt-web/common.yml
 gmt-web/content/documentation.html
@@ -303,7 +302,6 @@ lib/UR/Vocabulary.pm
 LICENSE
 MANIFEST			This list of files
 MANIFEST.SKIP
-META.json
 META.yml
 pod/ur-define-class.pod
 pod/ur-define-datasource-file.pod
@@ -647,7 +645,6 @@ t/Vending/DataSource/CoinType.pm
 t/Vending/DataSource/Machine.pm
 t/Vending/DataSource/Machine.sqlite3-dump
 t/Vending/DataSource/Meta.pm
-t/Vending/DataSource/Meta.sqlite3
 t/Vending/DataSource/Meta.sqlite3-dump
 t/Vending/get_coin_by_value.pl
 t/Vending/Machine.pm
