@@ -26,6 +26,10 @@ my $subclass = Module::Build->subclass(
 my $build = $subclass->new(
   module_name => 'UR',
   license => 'perl',
+  dist_author => [
+        'Anthony Brummett   brummett@cpan.org',
+        'Scott Smith       sakoht@cpan.org',
+  ],
   requires => {
     # known bugs with Perl 5.6
     perl => 'v5.8.7',
