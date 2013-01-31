@@ -4,7 +4,7 @@ use warnings;
 package UR::DataSource::RDBMS::BitmapIndex;
 
 use UR;
-our $VERSION = "0.391"; # UR $VERSION;
+our $VERSION = "0.392"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::BitmapIndex',

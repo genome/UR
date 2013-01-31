@@ -26,7 +26,7 @@ Or write the singleton to represent the source directly:
 =cut
 
 require UR;
-our $VERSION = "0.391"; # UR $VERSION;
+our $VERSION = "0.392"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::SQLite',

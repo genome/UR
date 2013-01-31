@@ -4,7 +4,7 @@ use UR;
 
 use strict;
 use warnings;
-our $VERSION = "0.391"; # UR $VERSION;
+our $VERSION = "0.392"; # UR $VERSION;
 
 class UR::Service::RPC::TcpConnectionListener {
     is => 'UR::Service::RPC::Executer',

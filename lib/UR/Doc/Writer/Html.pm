@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = "0.391"; # UR $VERSION;
+our $VERSION = "0.392"; # UR $VERSION;
 
 use UR::Doc::Section;
 use UR::Doc::Pod2Html;

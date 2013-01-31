@@ -2,7 +2,7 @@ package UR::Value::Set;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.391"; # UR $VERSION;
+our $VERSION = "0.392"; # UR $VERSION;
 
 sub members {
     my $self = shift;
