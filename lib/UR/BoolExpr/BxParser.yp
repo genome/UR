@@ -3,7 +3,7 @@
 %left MINUS
 
 # Generate the perl module with the command:
-# yapp -sm UR::BoolExpr::BxParser BxParser.yp
+# yapp -sm UR::BoolExpr::BxParser -o - BxParser.yp | sed s/Parse::Yapp::Driver/UR::BoolExpr::BxParser::Yapp::Driver/ > BxParse.pm
 
 %%
 

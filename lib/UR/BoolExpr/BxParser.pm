@@ -11,11 +11,11 @@ package UR::BoolExpr::BxParser;
 use vars qw ( @ISA );
 use strict;
 
-@ISA= qw ( Parse::Yapp::Driver );
+@ISA= qw ( UR::BoolExpr::BxParser::Yapp::Driver );
 #Included Parse/Yapp/Driver.pm file----------------------------------------
 {
 #
-# Module Parse::Yapp::Driver
+# Module UR::BoolExpr::BxParser::Yapp::Driver
 #
 # This module is part of the Parse::Yapp package available on your
 # nearest CPAN
@@ -29,7 +29,7 @@ use strict;
 # (see the pod text in Parse::Yapp module for use and distribution rights)
 #
 
-package Parse::Yapp::Driver;
+package UR::BoolExpr::BxParser::Yapp::Driver;
 
 require 5.004;
 
