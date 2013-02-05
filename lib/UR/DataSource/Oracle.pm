@@ -37,12 +37,14 @@ my($self,$sp_name) = @_;
 }
 
 
+my $DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
+my $TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
 sub _init_created_dbh {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
-    $dbh->do("alter session set NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'");
-    $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SSXFF'");
+    $dbh->do("alter session set NLS_DATE_FORMAT = '$DATE_FORMAT'");
+    $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = '$TIMESTAMP_FORMAT'");
     return $dbh;
 }
 
