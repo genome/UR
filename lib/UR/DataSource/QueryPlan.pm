@@ -923,6 +923,7 @@ sub _add_join {
 
     my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
     my $table_alias                     = $delegation_chain_data->{"__all__"}{table_alias} ||= {};
+    my $class_alias                     = $delegation_chain_data->{"__all__"}{class_alias} ||= {};
     my $source_table_and_column_names   = $delegation_chain_data->{$property_name}{latest_source_table_and_column_names} ||= [];
 
     my $source_class_name = $join->{source_class};
@@ -1069,7 +1070,21 @@ sub _add_join {
                 
                 my $foreign_column_name = $foreign_column_names[$n];
 
-                push @db_join_data, $foreign_column_name => { link_table_name => $link_table_name, link_column_name => $link_column_name }; 
+                my $link_class_meta = $class_alias->{$link_table_name} || $source_class_object;
+                my $link_property_name = $link_class_meta->property_for_column($link_column_name);
+
+                my @coercion = $self->data_source->cast_for_data_conversion(
+                                    $link_class_meta->_concrete_property_meta_for_class_and_name($link_property_name),
+                                    $foreign_property_meta[$n],
+                                );
+
+                push @db_join_data,
+                        $foreign_column_name => {
+                            link_table_name     => $link_table_name,
+                            link_column_name    => $link_column_name,
+                            left_coercion       => $coercion[0],
+                            right_coercion      => $coercion[1],
+                        };
             }
 
             $self->_add_db_join(
@@ -1152,6 +1167,7 @@ sub _add_join {
 
     if ($foreign_class_object->table_name) {
         $table_alias->{$foreign_table_name} = $alias;
+        $class_alias->{$alias} = $foreign_class_object;
         @$source_table_and_column_names = ();  # Flag that we need to re-derive this at the top of the loop
     }
 
@@ -1316,6 +1332,7 @@ sub _resolve_db_joins_for_inheritance {
 
     my $prev_table_name; 
     my $prev_id_column_name; 
+    my $prev_property_meta;
 
     my @parent_class_objects  = $class_meta->ancestry_class_metas;
 
@@ -1339,18 +1356,25 @@ sub _resolve_db_joins_for_inheritance {
                 else {
                     $prev_table_alias = $prev_table_name;
                 }
+
+                my @coercion = $co->data_source->cast_for_data_conversion(
+                                    $prev_property_meta,
+                                    $id_property_objects[0]);
                 push @sql_joins,
                     $table_name =>
                     {
                         $id_property_objects[0]->column_name => { 
                             link_table_name => $prev_table_alias, 
-                            link_column_name => $prev_id_column_name 
+                            link_column_name => $prev_id_column_name,
+                            left_coercion   => $coercion[0],
+                            right_coercion  => $coercion[1],
                         },
                         -is_required => 1,
                     };
             }
             $prev_table_name = $table_name;
             $prev_id_column_name = $id_property_objects[0]->column_name;
+            $prev_property_meta = $id_property_objects[0];
         }
     }
 
@@ -2032,14 +2056,21 @@ sub _init_core {
                 $alias = "${relationship_name}_${alias_num}";
                 $alias_num++;
                 $object_num++;
-                
+
+                my @source_property_meta = map { $source_class_object->_concrete_property_meta_for_class_and_name($_) }
+                                            @source_property_names;
                 push @sql_joins,
                     "$foreign_table_name $alias" =>
                         {
                             map {
+                                my @coercion = $ds->cast_for_data_conversion(
+                                        $source_property_meta[$_],
+                                        $foreign_property_meta[$_]);
                                 $foreign_property_names[$_] => { 
                                     link_table_name     => $last_alias_for_this_chain || $source_table_and_column_names[$_][0],
-                                    link_column_name    => $source_table_and_column_names[$_][1] 
+                                    link_column_name    => $source_table_and_column_names[$_][1],
+                                    left_coercion       => $coercion[0],
+                                    right_coercion      => $coercion[1],
                                 }
                             }
                             (0..$#foreign_property_names)
