@@ -248,8 +248,9 @@ sub _resolve_forward {
     #####
     
     # direct reference (or primitive, which is a direct ref to a value obj)
-    my (@source_property_names, @foreign_property_names);
-    my ($source_name_for_foreign, $foreign_name_for_source);
+    my (@source_property_names, @source_property_types,
+        @foreign_property_names, @foreign_property_types,
+        $source_name_for_foreign, $foreign_name_for_source);
 
     if ($foreign_class->isa("UR::Value")) {
         if (my $id_by = $pmeta->id_by) {
