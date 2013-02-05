@@ -926,11 +926,15 @@ sub _add_join {
 
     my $delegation_chain_data           = $self->_delegation_chain_data || $self->_delegation_chain_data({});
     my $table_alias                     = $delegation_chain_data->{"__all__"}{table_alias} ||= {};
-    my $class_alias                     = $delegation_chain_data->{"__all__"}{class_alias} ||= {};
     my $source_table_and_column_names   = $delegation_chain_data->{$property_name}{latest_source_table_and_column_names} ||= [];
 
     my $source_class_name = $join->{source_class};
     my $source_class_object = $join->{'source_class_meta'} || $source_class_name->__meta__;                    
+
+    my $class_alias                     = $delegation_chain_data->{"__all__"}{class_alias} ||= {};
+    if (! %$class_alias and $source_class_object->table_name) {
+        $class_alias->{$source_class_object->table_name} = $source_class_object;
+    }
 
     my $foreign_class_name = $join->{foreign_class};
     my $foreign_class_object = $join->{'foreign_class_meta'} || $foreign_class_name->__meta__;
