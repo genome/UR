@@ -1064,7 +1064,7 @@ sub _add_join {
 
             my @db_join_data;
             for (my $n = 0; $n < @foreign_column_names; $n++) {
-                
+
                 my $link_table_name = $table_alias->{$source_table_and_column_names->[$n][0]};
                 $link_table_name ||= $source_table_and_column_names->[$n][2];
                 $link_table_name ||= $source_table_and_column_names->[$n][0];
@@ -1681,7 +1681,7 @@ sub _init_light {
                             map {
                                 $foreign_property_names[$_] => { 
                                     link_table_name     => $last_alias_for_this_chain || $source_table_and_column_names[$_][0],
-                                    link_column_name    => $source_table_and_column_names[$_][1] 
+                                    link_column_name    => $source_table_and_column_names[$_][1]
                                 }
                             }
                             (0..$#foreign_property_names)
