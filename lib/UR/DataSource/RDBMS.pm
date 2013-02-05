@@ -3242,6 +3242,21 @@ sub ur_data_type_for_data_source_data_type {
     return $urtype;
 }
 
+
+# Given two properties with different 'is', return a 2-element list of
+# SQL functions to apply to perform a comparison in the DB.  0th element
+# gets applied to the left side, 1st element to the right.  This implementation
+# uses printf formats where the %s gets fed an SQL expression like
+# "table.column"
+#
+# SQLite basically treats everything as strings, so needs no conversion.
+# other DBs will have their own conversions
+sub cast_for_data_conversion {
+    my($class, $prop_meta1, $prop_meta2) = @_;
+
+    return ('%s', '%s');
+}
+
 sub prepare_for_fork {
     my $self = shift;
     if ($self->has_default_handle) {
