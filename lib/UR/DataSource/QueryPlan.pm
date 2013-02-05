@@ -480,7 +480,7 @@ sub _init_rdbms {
 
         # Splice out joins that go through a UR::Value class and back out to the DB, since UR::Value-types
         # don't get stored in the DB
-        # TODO: move this inot the join creation logic
+        # TODO: move this into the join creation logic
         for (my $i = 0; $i < @joins; $i++) {
             if (
                 $i < $#joins
