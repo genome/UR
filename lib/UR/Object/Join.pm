@@ -208,10 +208,10 @@ sub _resolve_via_to {
                             .  " is declared as data type $return_class_name while its joins connect to a more specific data type $final_class_name!");
             }
             else {
-                Carp::carp("Discrepant join for property '" . $pmeta->property_name . "' of class " . $pmeta->class_name
-                            . ".  Its data type ($return_class_name) does not match the join from property '"
-                            . join("','", @{$joins[-1]->{source_property_names}}) . "' of class " . $joins[-1]->{source_class}
-                            . " with type $final_class_name");
+                #Carp::carp("Discrepant join for property '" . $pmeta->property_name . "' of class " . $pmeta->class_name
+                #            . ".  Its data type ($return_class_name) does not match the join from property '"
+                #            . join("','", @{$joins[-1]->{source_property_names}}) . "' of class " . $joins[-1]->{source_class}
+                #            . " with type $final_class_name");
             }
         }
     }

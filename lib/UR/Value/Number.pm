@@ -6,7 +6,7 @@ our $VERSION = "0.392"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::Value::Number',
-    is => ['UR::Value::Text'],
+    is => ['UR::Value'],
 );
 
 1;
