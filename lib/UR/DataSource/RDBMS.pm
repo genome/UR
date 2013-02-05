@@ -190,7 +190,7 @@ sub generate_schema_for_class_meta {
         push @defined, $table;
     }
 
-    my ($update,$add,$extra) = _intersect_lists([keys %properties_with_expected_columns],[keys %existing_columns]);
+    my ($update,$add,$extra) = UR::Util::intersect_lists([keys %properties_with_expected_columns],[keys %existing_columns]);
 
     for my $column_name (@$extra) {
         my $column = $existing_columns{$column_name};
@@ -325,28 +325,6 @@ sub generate_schema_for_class_meta {
     }
 
     return @defined;
-}
-
-# why isn't something like this in List::Util?
-sub _intersect_lists {
-    my ($m,$n) = @_;
-    my %shared;
-    my %monly;
-    my %nonly;
-    @monly{@$m} = @$m;
-    for my $v (@$n) {
-        if ($monly{$v}) {
-            $shared{$v} = delete $monly{$v};
-        }    
-        else{
-            $nonly{$v} = $v;
-        }
-    }
-    return (
-        [ values %shared ],
-        [ values %monly ],
-        [ values %nonly ],
-    );
 }
 
 # override in architecture-oriented subclasses

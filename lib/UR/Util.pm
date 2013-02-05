@@ -534,6 +534,33 @@ sub display_string_for_params_list {
     return join(', ', @strings);
 }
 
+# why isn't something like this in List::Util?
+# Return a list of 3 listrefs:
+# 0: items common to both lists
+# 1: items in the first list only
+# 2: items in the second list only
+sub intersect_lists {
+    my ($m,$n) = @_;
+    my %shared;
+    my %monly;
+    my %nonly;
+    @monly{@$m} = @$m;
+    for my $v (@$n) {
+        if ($monly{$v}) {
+            $shared{$v} = delete $monly{$v};
+        }
+        else{
+            $nonly{$v} = $v;
+        }
+    }
+    return (
+        [ values %shared ],
+        [ values %monly ],
+        [ values %nonly ],
+    );
+}
+
+
 
 1;
 
