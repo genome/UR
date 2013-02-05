@@ -725,8 +725,9 @@ sub _init_rdbms {
 
             my $linkage_data = $condition->{$column_name};
             my $expr_sql = (substr($column_name,0,1) eq " " ? $column_name : "${table_alias}.${column_name}");
-            my @keys = qw/operator value_position value link_table_name link_column_name/;
-            my ($operator, $value_position, $value, $link_table_name, $link_column_name) = @$linkage_data{@keys};
+            my ($operator, $value_position, $value, $link_table_name, $link_column_name)
+                = @$linkage_data{qw/operator value_position value link_table_name link_column_name/};
+
 
             $from_clause .= "\n    and " if ($cnt++);
 
@@ -762,8 +763,8 @@ sub _init_rdbms {
         for my $column_name (keys %$condition) {
             my $linkage_data = $condition->{$column_name};
             my $expr_sql = (substr($column_name,0,1) eq " " ? $column_name : "${table_alias}.${column_name}");                                
-            my @keys = qw/operator value_position value link_table_name link_column_name/;
-            my ($operator, $value_position, $value, $link_table_name, $link_column_name) = @$linkage_data{@keys};
+            my ($operator, $value_position, $value, $link_table_name, $link_column_name)
+                = @$linkage_data{qw/operator value_position value link_table_name link_column_name/};
 
             if ($link_table_name and $link_column_name) {
                 # the linkage data is a join specifier
