@@ -725,15 +725,18 @@ sub _init_rdbms {
 
             my $linkage_data = $condition->{$column_name};
             my $expr_sql = (substr($column_name,0,1) eq " " ? $column_name : "${table_alias}.${column_name}");
-            my ($operator, $value_position, $value, $link_table_name, $link_column_name)
-                = @$linkage_data{qw/operator value_position value link_table_name link_column_name/};
+            my ($operator, $value_position, $value, $link_table_name, $link_column_name, $left_coercion, $right_coercion)
+                = @$linkage_data{qw/operator value_position value link_table_name link_column_name left_coercion right_coercion/};
 
+            $expr_sql = sprintf($right_coercion, $expr_sql) if ($right_coercion);
 
             $from_clause .= "\n    and " if ($cnt++);
 
             if ($link_table_name and $link_column_name) {
                 # the linkage data is a join specifier
-                $from_clause .= "${link_table_name}.${link_column_name} = $expr_sql";
+                my $link_sql = "${link_table_name}.${link_column_name}";
+                $link_sql = sprintf($left_coercion, $link_sql) if ($left_coercion);
+                $from_clause .= "$link_sql = $expr_sql";
             }
             elsif (defined $value_position) {
                 Carp::croak("Joins cannot use variable values currently!");
