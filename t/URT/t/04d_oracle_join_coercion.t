@@ -38,9 +38,6 @@ UR::Object::Type->define(
     id_by => [
         a_id => { is => 'Number' },
     ],
-    has => [
-
-    ],
     table_name => 'A_CHILD',
     data_source => 'URT::DataSource::SomeOracle',
 );
