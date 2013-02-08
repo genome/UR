@@ -58,6 +58,8 @@ my $build = $subclass->new(
     'Test::Fork'          => '',
     'Pod::Simple::Text'   => '2.02',
     'Pod::Simple::HTML'   => '3.03',
+    'List::MoreUtils'     => '',
+    'MRO::Compat'         => '',
 
     # C
     'FreezeThaw'          => '0.43',
