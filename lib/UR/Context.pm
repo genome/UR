@@ -809,6 +809,7 @@ sub create_entity {
     
     my %default_values = %$initial_default_values;
     
+    #for my $name (qw//) {
     for my $name (keys %$default_value_requires_query) {
         my @id_by;
         if (my $id_by = $property_objects->{$name}->id_by) {
@@ -840,12 +841,17 @@ sub create_entity {
             }
             my $prop = $property_objects->{$name};
             my $class = $prop->_data_type_as_class_name;
-            if ($prop->is_many) {
-                $default_values{$name} = [ $class->get(@query) ];
-            }
-            else {
-                $default_values{$name} = $class->get(@query);
-            }
+            eval {
+                if ($prop->is_many) {
+                    $default_values{$name} = [ $class->get(@query) ];
+                }
+                else {
+                    $default_values{$name} = $class->get(@query);
+                }
+            };
+            if ($@) {
+                warn "error setting " . $prop->class_name . " " . $prop->property_name . " to default_value from query $query for type $class!";
+            };
         }
     }
 
