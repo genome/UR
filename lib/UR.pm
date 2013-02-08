@@ -361,6 +361,7 @@ UR::Object::Type->define(
         data_type                       => { is => 'Text', len => 256, is_optional => 1 },
         default_value                   => { is_optional => 1 },
         valid_values                    => { is => 'ARRAY', is_optional => 1, },
+        example_values                  => { is => 'ARRAY', is_optional => 1, },
         doc                             => { is => 'Text', len => 1000, is_optional => 1 },
         is_id                           => { is => 'Integer', default_value => undef, doc => 'denotes this is an ID property of the class, and ranks them' },
         is_optional                     => { is => 'Boolean' , default_value => 0},

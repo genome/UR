@@ -993,6 +993,7 @@ sub _normalize_property_description1 {
         [ data_type                       => qw/type is isa is_a/],
         [ default_value                   => qw/default value/],
         [ valid_values                    => qw//],
+        [ example_values                  => qw//],
         [ doc                             => qw/description/],
         [ is_optional                     => qw/is_nullable nullable optional/],
         [ is_transient                    => qw//],
