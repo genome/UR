@@ -71,7 +71,8 @@ sub _resolve_chain_for_property_meta {
         }
         else {
             # TODO: handle hard-references to objects here maybe?
-            $pmeta->error_message("Property " . $pmeta->id . " has no 'id_by' or 'reverse_as' property metadata");
+            $pmeta->error_message("Property '" . $pmeta->property_name . "' of class " . $pmeta->class_name
+                                    . " has no 'id_by' or 'reverse_as' property metadata");
             return;
         }
     }
