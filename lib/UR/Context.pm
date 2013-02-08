@@ -680,7 +680,7 @@ sub create_entity {
 
                 my $default_value = $prop->default_value;
                 if (defined $default_value) {
-                    if ($prop->_data_type_as_class_name eq $prop->data_type and $prop->_data_type_as_class_name->can("get")) {
+                    if ($prop->data_type and $prop->_data_type_as_class_name eq $prop->data_type and $prop->_data_type_as_class_name->can("get")) {
                         # an ID or other query params in hash/array form return an object or objects
                         $default_value_requires_query{$name} = $default_value;
                     }
