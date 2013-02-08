@@ -50,6 +50,8 @@ my $cleanup_files = sub { unlink @FILES_TO_DELETE };
 
 &$cleanup_files;
 
+
+UR::Namespace::Command::Define::Datasource->dump_status_messages(0); # don't print to the terminal
 # SQLite
 { 
     my($delegate_class, $create_params) = UR::Namespace::Command::Define::Datasource->resolve_class_and_params_for_argv(

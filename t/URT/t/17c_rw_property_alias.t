@@ -142,6 +142,8 @@ ok($thing, 'Created a Thing');
 
 ok($thing->owner($owner), 'Assigned an owner to the thing');
 
+# The next get() will generate an error message, suppress it
+URT::Thing->__meta__->property('owner')->dump_error_messages(0);
 my $thing2 = URT::Thing->get('owner.name' => 'Bob');
 ok($thing2, 'Got a thing via owner.name');
 is($thing2->id, $thing->id, 'It is the right Thing');

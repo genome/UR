@@ -104,7 +104,7 @@ sub prepare_for_fork {
     $self->{'_fh_position'} = undef;
     if (defined $self->{'_fh'}) {
         $self->{'_fh_position'} = $self->{'_fh'}->tell();
-        UR::DBI->sql_fh->printf("FILE: preparing to fork; closing file %s and noting position at %s\n",$self->server, $self->{'_fh_position'});
+        UR::DBI->sql_fh->printf("FILE: preparing to fork; closing file %s and noting position at %s\n",$self->server, $self->{'_fh_position'}) if $ENV{'UR_DBI_MONITOR_SQL'};
     }
     $self->disconnect_default_handle;
 }
@@ -112,7 +112,7 @@ sub prepare_for_fork {
 sub finish_up_after_fork {
     my $self = shift;
     if (defined $self->{'_fh_position'}) {
-        UR::DBI->sql_fh->printf("FILE: resetting after fork; reopening file %s and fast-forwarding to %s\n",$self->server, $self->{'_fh_position'});
+        UR::DBI->sql_fh->printf("FILE: resetting after fork; reopening file %s and fast-forwarding to %s\n",$self->server, $self->{'_fh_position'}) if $ENV{'UR_DBI_MONITOR_SQL'};
         my $fh = $self->get_default_handle; 
         $fh->seek($self->{'_fh_position'},0);
     }

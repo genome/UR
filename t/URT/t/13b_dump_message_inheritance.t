@@ -97,7 +97,7 @@ is($b->dump_debug_messages(), 6, 'object b dump_debug_messages() is 6');
 is($b2->dump_debug_messages(), 7, 'object b dump_debug_messages() is 7');
 
 # Now, start setting some of them to undef, meaning they should again inherit from their parent
-diag('Clear setting on object a');
+#diag('Clear setting on object a');
 $a->dump_debug_messages(undef);
 is(Parent->dump_debug_messages(), 1, 'Parent dump_debug_messages() is 1');
 is(ChildA->dump_debug_messages(), 2, 'ChildA dump_debug_messages() is 2');
@@ -107,7 +107,7 @@ is($a2->dump_debug_messages(), 5, 'object a2 dump_debug_messages() is 5');
 is($b->dump_debug_messages(), 6, 'object b dump_debug_messages() is 6');
 is($b2->dump_debug_messages(), 7, 'object b dump_debug_messages() is 7');
 
-diag('Clear setting on ChildA');
+#diag('Clear setting on ChildA');
 ChildA->dump_debug_messages(undef);
 is(Parent->dump_debug_messages(), 1, 'Parent dump_debug_messages() is 1');
 is(ChildA->dump_debug_messages(), 1, 'ChildA dump_debug_messages() is 1');
@@ -117,7 +117,7 @@ is($a2->dump_debug_messages(), 5, 'object a2 dump_debug_messages() is 5');
 is($b->dump_debug_messages(), 6, 'object b dump_debug_messages() is 6');
 is($b2->dump_debug_messages(), 7, 'object b dump_debug_messages() is 7');
 
-diag('Clear setting on object a2');
+#diag('Clear setting on object a2');
 $a2->dump_debug_messages(undef);
 is(Parent->dump_debug_messages(), 1, 'Parent dump_debug_messages() is 1');
 is(ChildA->dump_debug_messages(), 1, 'ChildA dump_debug_messages() is 1');
@@ -127,7 +127,7 @@ is($a2->dump_debug_messages(), 1, 'object a2 dump_debug_messages() is 1');
 is($b->dump_debug_messages(), 6, 'object b dump_debug_messages() is 6');
 is($b2->dump_debug_messages(), 7, 'object b dump_debug_messages() is 7');
 
-diag('Clear setting on object b');
+#diag('Clear setting on object b');
 $b->dump_debug_messages(undef);
 is(Parent->dump_debug_messages(), 1, 'Parent dump_debug_messages() is 1');
 is(ChildA->dump_debug_messages(), 1, 'ChildA dump_debug_messages() is 1');
@@ -137,7 +137,7 @@ is($a2->dump_debug_messages(), 1, 'object a2 dump_debug_messages() is 1');
 is($b->dump_debug_messages(), 3, 'object b dump_debug_messages() is 3');
 is($b2->dump_debug_messages(), 7, 'object b dump_debug_messages() is 7');
 
-diag('Clear setting on ChildB');
+#diag('Clear setting on ChildB');
 ChildB->dump_debug_messages(undef);
 is(Parent->dump_debug_messages(), 1, 'Parent dump_debug_messages() is 1');
 is(ChildA->dump_debug_messages(), 1, 'ChildA dump_debug_messages() is 1');
@@ -147,7 +147,7 @@ is($a2->dump_debug_messages(), 1, 'object a2 dump_debug_messages() is 1');
 is($b->dump_debug_messages(), 1, 'object b dump_debug_messages() is 1');
 is($b2->dump_debug_messages(), 7, 'object b dump_debug_messages() is 7');
 
-diag('Clear setting on object b2');
+#diag('Clear setting on object b2');
 $b2->dump_debug_messages(undef);
 is(Parent->dump_debug_messages(), 1, 'Parent dump_debug_messages() is 1');
 is(ChildA->dump_debug_messages(), 1, 'ChildA dump_debug_messages() is 1');
@@ -162,7 +162,7 @@ $DB::single=1;
 foreach $var ( @ENV_VARS ) {
     delete $ENV{$_} foreach @ENV_VARS;  # clear them first
 
-    diag("use the $var env var");
+    #diag("use the $var env var");
     $ENV{$var} = 99;
 
     is(Parent->dump_debug_messages(), 99, 'Parent dump_debug_messages() is 1');
