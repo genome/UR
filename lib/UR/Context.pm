@@ -658,6 +658,7 @@ sub create_entity {
         my %indirect_properties; 
         my %set_properties;
         my %default_values;
+        my %default_value_requires_query;
         my %immutable_properties;
         my @deep_copy_default_values;
 
@@ -679,7 +680,11 @@ sub create_entity {
 
                 my $default_value = $prop->default_value;
                 if (defined $default_value) {
-                    if (ref($default_value)) {
+                    if ($prop->_data_type_as_class_name eq $prop->data_type and $prop->_data_type_as_class_name->can("get")) {
+                        # an ID or other query params in hash/array form return an object or objects
+                        $default_value_requires_query{$name} = $default_value;
+                    }
+                    elsif (ref($default_value)) {
                         #warn (
                         #    "a reference value $default_value is used as a default on "
                         #    . $co->class_name 
@@ -736,6 +741,7 @@ sub create_entity {
             \@subclassify_by_methods,
             \%default_values,
             (@deep_copy_default_values ? \@deep_copy_default_values : undef),
+            \%default_value_requires_query,
         ];
     }
     
@@ -752,15 +758,8 @@ sub create_entity {
         $subclassify_by_methods,
         $initial_default_values,
         $deep_copy_default_values,
+        $default_value_requires_query,
     ) = @$memo;
-
-    my %default_values = %$initial_default_values;
-
-    if ($deep_copy_default_values) {
-        for my $name (@$deep_copy_default_values) {
-            $default_values{$name} = UR::Util::deep_copy($default_values{$name});
-        }
-    }
 
     # The old way of automagic subclassing...
     # The class specifies that we should call a class method (sub_classification_method_name)
@@ -804,6 +803,61 @@ sub create_entity {
         }
         $rule = UR::BoolExpr->resolve_normalized($class, %$params, id => $id);
         $params = { $rule->params_list }; ;
+    }
+
+    # handle postprocessing default values
+    
+    my %default_values = %$initial_default_values;
+    
+    for my $name (keys %$default_value_requires_query) {
+        my @id_by;
+        if (my $id_by = $property_objects->{$name}->id_by) {
+            @id_by = (ref($id_by) ? @$id_by : ($id_by));
+        }
+
+        if ($params->{$name}) {
+            delete $default_values{$name};
+        }
+        elsif (@$params{@id_by}) {
+            # some or all of the id is present
+            # don't fall back to the default
+            for my $id_by (@id_by) {
+                delete $default_values{$id_by} if exists $params->{$id_by};
+            }
+            delete $default_values{$name};
+        }
+        else {
+            $DB::single = 1;
+            my $query = $default_value_requires_query->{$name};
+            my @query;
+            if (ref($query) eq 'HASH') {
+                # queries come in as a hash 
+                @query = %$query;
+            }
+            else {
+                # an ID or a boolean expression
+                @query = ($query);
+            }
+            my $prop = $property_objects->{$name};
+            my $class = $prop->_data_type_as_class_name;
+            if ($prop->is_many) {
+                $default_values{$name} = [ $class->get(@query) ];
+            }
+            else {
+                $default_values{$name} = $class->get(@query);
+            }
+        }
+    }
+
+    if ($deep_copy_default_values) {
+        for my $name (@$deep_copy_default_values) {
+            if ($params->{$name}) {
+                delete $default_values{$name};
+            }
+            else {
+                $default_values{$name} = UR::Util::deep_copy($default_values{$name});
+            }
+        }
     }
 
     # @extra is extra values gotten by inheritance

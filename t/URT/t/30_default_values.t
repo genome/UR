@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 75;
+use Test::More tests => 84;
 
 UR::Object::Type->define(
     class_name => 'URT::Parent',
@@ -190,6 +190,83 @@ is($cmd->opt, 1, '--opt value is 1');
 $cmd = URT::CommandThing->create(opt => 0);
 ok($cmd, 'Created CommandThing with --opt 0');
 is($cmd->opt, 0, '--opt value is 0');
+
+# test oo defaults
+
+my $p1 = URT::Parent->get(1);
+my $p2 = URT::Parent->get(2);
+
+class URT::Thing2a {
+    has => [
+        o1 => { is => 'URT::Parent', default_value => 2 },
+    ]
+};
+class URT::Thing2b {
+    has => [
+        o1 => { is => 'URT::Parent', id_by => 'o1_id', default_value => 2 },
+    ]
+};
+class URT::Thing2c {
+    has => [
+        o1 => { is => 'URT::Parent', is_many => 1, default_value => [1,2] },
+    ]
+};
+
+
+note("test default values specified as IDs");
+
+my $t1 = URT::Thing2a->create();
+is($t1->o1, $p2, "default value is set (no id_by): $p2");
+
+my $t2 = URT::Thing2b->create();
+is($t1->o1, $p2, "default value is set (with id_by) $p2");
+
+my $t3 = URT::Thing2c->create();
+my @t3o1 = $t3->o1;
+is("@t3o1", "$p1 $p2", "default value is set to two items on an is_many property");
+
+
+note("test default values overridden in construction not doing anything");
+
+my $t4 = URT::Thing2a->create(o1 => $p1);
+is($t4->o1, $p1, "value is set as specified to $p1 not the default $p2");
+
+my $t5 = URT::Thing2b->create(o1 => $p1);
+is($t5->o1, $p1, "value is set as specified to $p1 not the default $p2 (id_by)");
+
+$DB::single = 1;
+my $t6 = URT::Thing2c->create(o1 => [$p2]);
+my @t6o1 = $t6->o1;
+is("@t6o1", "$p2", "value is set to as specified $p2 no the default of $p1 and $p2 (is_many)");
+
+
+note("test default values specified as queries");
+
+class URT::Thing3a {
+    has => [
+        o1 => { is => 'URT::Parent', default_value => { name => "Fred" } },
+    ]
+};
+class URT::Thing3b {
+    has => [
+        o1 => { is => 'URT::Parent', id_by => 'o1_id', default_value => { name => "Fred" } },
+    ]
+};
+class URT::Thing3c {
+    has => [
+        o1 => { is => 'URT::Parent', is_many => 1, default_value => { name => ["Fred","Bob"] } },
+    ]
+};
+
+my $t7 = URT::Thing3a->create();
+is($t7->o1, $p2, "default value is $p2 as specified by query");
+
+my $t2q = URT::Thing3b->create();
+is($t7->o1, $p2, "default value is $p2 as specified by query");
+
+my $t9 = URT::Thing3c->create();
+my @t9o1 = $t9->o1;
+is("@t9o1", "$p1 $p2", "default value is set to both $p1 and $p2 as specified by query");
 
 SKIP: {
     skip "UR::Command::sub_command_dirs() complains if there's no module, even if the class exists", 4;
