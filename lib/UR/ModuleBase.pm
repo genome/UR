@@ -72,31 +72,6 @@ sub class
     return $class;
 }
 
-=pod
-
-=item C<super_class>
-
-  $obj->super_class->super_class_method1();
-  $obj->super_class->super_class_method2();
-
-This returns the super-class name of a class or an object.
-It is exactly equivalent to:
-    $self->class . "::SUPER"
-
-Note that MyClass::SUPER is specially defined to include all
-of the items in the classes in @MyClass::ISA, so in a multiple
-inheritance scenario:
-
-  $obj->super_class->super_class_method1();
-  $obj->super_class->super_class_method2();
-
-...could have super_class_method1() in one parent class
-and super_class_method2() in another parent class.
-
-=cut
-
-sub super_class { shift->class . "::SUPER" }
-
 =pod 
 
 =item C<super_can>
@@ -113,22 +88,14 @@ super classes provide a method named C<func>, C<undef> is returned.
 
 sub super_can
 {
-    my $super_class = shift->super_class;
+    my $class = shift;
     
-    # Handle the case in which the super_class has overridden
-    # UNIVERSAL::can()
-    my $super_can = $super_class->can("can");
-    
-    # Call the correct can() on the super_class with the normal params.
-    return $super_can->($super_class,@_);
-    
-    #no strict;
-    #foreach my $parent_class (@{$class . '::ISA'})
-    #{
-    #    my $code = $parent_class->can(@_);
-    #    return $code if $code;
-    #}
-    #return;
+    foreach my $parent_class ( $class->parent_classes )
+    {
+        my $code = $parent_class->can(@_);
+        return $code if $code;
+    }
+    return;
 }
 
 =pod
@@ -177,8 +144,7 @@ sub parent_classes
 {
     my $self = $_[0];
     my $class = ref($self) || $self;
-    no strict;
-    no warnings;
+    no strict 'refs';
     my @parent_classes = @{$class . '::ISA'};
     return (wantarray ? @parent_classes : $parent_classes[0]);
 }
@@ -734,7 +700,8 @@ $create_subs_for_message_type = sub {
         my $self = shift;
 
         foreach ( @_ ) {
-            chomp(my $msg = $_);
+            my $msg = $_;
+            chomp($msg) if defined;
             # old-style callback registered with error_messages_callback
             if (my $code = $self->$check_callback()) {
                 if (ref $code) {
