@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 14;
+use Test::More tests => 18;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -179,5 +179,76 @@ like($@, qr(escape), 'Query on Thing, filter on activity_descriptions like %cool
 is($sql,
     q{select THING.latest_date, THING.name, THING.thing_id, bridges_1.date, bridges_1.thing_id, activity_descriptions_2.date, activity_descriptions_2.description from THING LEFT join BRIDGE bridges_1 on to_char(THING.thing_id) = bridges_1.thing_id LEFT join ACTIVITY activity_descriptions_2 on bridges_1.date = to_char(activity_descriptions_2.date, 'YYYY-MM-DD HH24:MI:SS') where activity_descriptions_2.description like ? escape '\' order by THING.thing_id},
     "to_char coercion present joining THING to BRIDGE by thing_id, and joining BRIDGE to ACTIVITY by date");
+
+
+# These are the same classes as immediatly above, but URT::Activity2::date is a Timestamp
+# instead of DateTime
+UR::Object::Type->define(
+    class_name => 'URT::Activity2',
+    id_by => [
+        date => { is => 'Timestamp' },
+    ],
+    has => [
+        description => { is => 'String' },
+    ],
+    has_many => [
+        bridges => { is => 'URT::ThingActivityBridge2', reverse_as => 'activity' },
+        things => { is => 'URT::Thing2', via => 'bridges', to => 'thing' },
+    ],
+    data_source => 'URT::DataSource::SomeOracle',
+    table_name => 'ACTIVITY',
+);
+
+UR::Object::Type->define(
+    class_name => 'URT::Thing2',
+    id_by => [
+        thing_id => { is => 'Number' },
+    ],
+    has => [
+        name            => { is => 'String' },
+        latest_date     => { is => 'String' },
+        latest_activity => { is => 'URT::Activity2', id_by => 'latest_date' },
+        latest_activity_description => { via => 'latest_activity', to => 'description' },
+    ],
+    has_many => [
+        bridges         => { is => 'URT::ThingActivityBridge2', reverse_as => 'thing' },
+        activities      => { is => 'URT::Activity2', via => 'bridges', to => 'activity' },
+        activity_descriptions => { via => 'activities', to => 'description' },
+    ],
+    data_source => 'URT::DataSource::SomeOracle',
+    table_name => 'THING',
+);
+
+UR::Object::Type->define(
+    class_name => 'URT::ThingActivityBridge2',
+    id_by => [
+        thing_id => { is => 'String' },
+        date => { is => 'String' },
+    ],
+    has => [
+        thing => { is => 'URT::Thing2', id_by => 'thing_id' },
+        activity => { is => 'URT::Activity2', id_by => 'date' },
+    ],
+    data_source => 'URT::DataSource::SomeOracle',
+    table_name => 'BRIDGE',
+);
+
+
+$sql = '';
+eval { URT::Thing2->get(-hints => ['latest_activity_description']) };
+like($@, qr(escape), 'Query on Thing, -hint on latest_activity_description');
+is($sql,
+    q{select THING.latest_date, THING.name, THING.thing_id, latest_activity_description_1.date, latest_activity_description_1.description from THING LEFT join ACTIVITY latest_activity_description_1 on THING.latest_date = to_char(latest_activity_description_1.date, 'YYYY-MM-DD HH24:MI:SSXFF') order by THING.thing_id},
+    "to_char coercion used when joining ACTIVITY's date column to THING's latest_date column");
+
+
+$sql = '';
+eval { URT::Thing2->get('activity_descriptions like' => '%cool%') };
+like($@, qr(escape), 'Query on Thing, filter on activity_descriptions like %cool%');
+is($sql,
+    q{select THING.latest_date, THING.name, THING.thing_id, bridges_1.date, bridges_1.thing_id, activity_descriptions_2.date, activity_descriptions_2.description from THING LEFT join BRIDGE bridges_1 on to_char(THING.thing_id) = bridges_1.thing_id LEFT join ACTIVITY activity_descriptions_2 on bridges_1.date = to_char(activity_descriptions_2.date, 'YYYY-MM-DD HH24:MI:SSXFF') where activity_descriptions_2.description like ? escape '\' order by THING.thing_id},
+    "to_char coercion present joining THING to BRIDGE by thing_id, and joining BRIDGE to ACTIVITY by date");
+
+
 
 1;

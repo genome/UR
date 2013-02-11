@@ -38,7 +38,7 @@ my($self,$sp_name) = @_;
 
 
 my $DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
-my $TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
+my $TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SSXFF';
 sub _init_created_dbh {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
