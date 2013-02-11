@@ -8,50 +8,56 @@ require Term::ANSIColor;
 use UR;
 use UR::Object::Command::List::Style;
 use List::Util qw(reduce);
+use Command::V2;
 
 our $VERSION = "0.392"; # UR $VERSION;
 
 class UR::Object::Command::List {
-    is => 'Command',
-    has => [
-        subject_class => {
-            is => 'UR::Object::Type',
-            id_by => 'subject_class_name',
+    is => 'Command::V2',
+    has_input => [
+        subject_class_name => {
+            is => 'ClassName',
+            doc => 'the type of object to list',
         },
         filter => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Filter results based on the parameters.  See below for how to.',
+            doc => 'Filter results based on the parameters.  See below for details.',
             shell_args_position => 1,
         },
         show => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Specify which columns to show, in order.',
+            doc => 'Specify which columns to show, in order.  Prefix with "+" or "^" to append/prepend to the default list.',
         },
         order_by => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Output rows are listed sorted by these named columns in increasing order',
+            doc => 'Output rows are listed sorted by these named columns in increasing order.',
         },
+    ],
+    has_param => [
         style => {
             is => 'Text',
             is_optional => 1,
+            valid_values => [qw/text csv tsv pretty html xml newtext/],
             default_value => 'text',
-            doc => 'Style of the list: text (default), csv, pretty, html, xml',
+            doc => 'The output format.',
         },
         csv_delimiter => {
            is => 'Text',
            is_optional => 1,
            default_value => ',',
-           doc => 'For the csv output style, specify the field delimiter',
+           doc => 'For the "csv" output style, specify the field delimiter for something besides a comma.',
         },
         noheaders => {
             is => 'Boolean',
             is_optional => 1,
             default => 0,
-            doc => 'Do not include headers',
+            doc => 'Include headers.  Set --noheaders to turn headers off.',
         },
+    ],
+    has_transient => [
         output => {
             is => 'IO::Handle',
             is_optional =>1,
@@ -65,7 +71,7 @@ class UR::Object::Command::List {
             doc => 'Methods which the caller intends to use on the fetched objects.  May lead to pre-fetching the data.',
         },
     ],
-    doc => 'lists objects matching specified params',
+    doc => 'lists objects matching the specified expression',
 };
 
 sub sub_command_sort_position { .2 };
@@ -75,16 +81,6 @@ sub create {
     my $self = $class->SUPER::create(@_);
 	#$DB::single = 1;
 
-    # validate style
-    $self->error_message(
-        sprintf(
-            'Invalid style (%s).  Please choose from: %s',
-            $self->style,
-            join(', ', valid_styles()),
-        )
-    )
-        and return unless grep { $self->style eq $_ } valid_styles();
-
     if (defined($self->csv_delimiter)
         and ($self->csv_delimiter ne $self->__meta__->property_meta_for_name('csv_delimiter')->default_value)
         and ($self->style ne 'csv')
@@ -92,17 +88,6 @@ sub create {
         $self->error_message('--csv-delimiter is only valid when used with --style csv');
         return;
     }
-
-#    my $show = $self->show;
-#    my @show = split(',',$show);
-#    my $subject_class_name = $self->subject_class_name;
-#    foreach my $item ( @show ) {
-#        next unless $self->_show_item_is_property_name($item);
-#        unless ($subject_class_name->can($item)) {
-#            $self->error_message("Parameter $item in the 'show' list is not supported by subject class $subject_class_name");
-#            return;
-#        }
-#    }
 
     unless ( ref $self->output ){
         my $ofh = IO::File->new("> ".$self->output);
@@ -143,11 +128,15 @@ sub _resolve_boolexpr {
         }
     }
 
-
-    #$self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
-    $self->error_message( sprintf('Cannot list for class %s because some items in the filter or show were not properties of that class: %s',
-                          $self->subject_class_name, join(', ', keys %extra)))
-        and return if %extra;
+    if (%extra) {
+        $self->error_message( 
+            sprintf(
+                'Cannot list for class %s because some items in the filter or show were not properties of that class: %s',
+                $self->subject_class_name, 
+                join(', ', keys %extra)
+            )
+        )
+    } 
 
     return $bool_expr;
 }
@@ -158,15 +147,23 @@ sub _resolve_boolexpr {
 # to be eval-ed later
 sub _show_item_is_property_name {
     my($self, $item) = @_;
-
     return $item =~ m/^[\w\.]+$/;
 }
 
 sub execute {
     my $self = shift;
 
-    $self->_validate_subject_class
-        or return;
+    my $subject_class_name = $self->subject_class_name;
+
+    # ensure classes can be loaded from whatever namespace the subject class has
+    # TODO: make the UR command open the door for the type loading below to hit 
+    # all namespaces when _it_ is running only.  The ur commands are sw maint tools.
+    my ($ns) = ($subject_class_name =~ /^(.*?)::/);
+    eval "use $ns";
+    my $subject_class = UR::Object::Type->get($subject_class_name);
+    
+    # Determine things to show
+    my @fields = $self->_resolve_field_list;
 
     my $bool_expr = $self->_resolve_boolexpr();
     return unless (defined $bool_expr);
@@ -180,17 +177,58 @@ sub execute {
         return;
     }
 
-    # prevent commits due to changes here
-    # this can be prevented by careful use of environment variables if you REALLY want to use this to update data
-    $ENV{UR_DBI_NO_COMMIT} = 1 unless (exists $ENV{UR_DBI_NO_COMMIT});
+    my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
+    my $style_module = $style_module_name->new(
+        iterator => $iterator,
+        show => \@fields,
+        csv_delimiter => $self->csv_delimiter,
+        noheaders => $self->noheaders,
+        output => $self->output,
+    );
+    $style_module->format_and_print;
 
-    # Determine things to show
+    return 1;
+}
+
+sub _resolve_field_list {
+    my $self = shift;
+
     if ( my $show = $self->show ) {
+        $DB::single = 1;
+        if (substr($show,0,1) =~ /([\+\^\-])/) {
+            my $default = $self->__meta__->property('show')->default_value;
+            unless ($default) {
+                $default = join(",", map { $_->property_name } $self->_properties_for_class_to_document($self->subject_class_name));
+            }
+            $show = join(',',$default,$show);
+        }
+
         my @show;
         my $expr;
-        for my $item (split(/,/, $show)) {
+        my @parts = (split(/,/, $show));
+        for my $item (@parts) {
+            my ($append_prepend_or_omit) = ($item =~ /^([\+\^\-])/);
+            if ($append_prepend_or_omit) {
+                $item = substr($item,1);
+            }
             if ($self->_show_item_is_property_name($item) and not defined $expr) {
-                push @show, $item;
+                if ($append_prepend_or_omit) {
+                    if ($append_prepend_or_omit eq '-') {
+                        @show = grep { $_ ne $item } @show;
+                    }
+                    elsif ($append_prepend_or_omit eq '+') {
+                        push @show, $item;
+                    }
+                    elsif ($append_prepend_or_omit eq '^') {
+                        unshift @show, $item;
+                    }
+                    else {
+                        die "unrecognized operator in show string: $append_prepend_or_omit";
+                    }
+                }
+                else {
+                    push @show, $item;
+                }
             }
             else {
                 if ($expr) {
@@ -210,95 +248,56 @@ sub execute {
         if ($expr) {
             die "Bad expression: $expr\n$@\n";
         }
-        $self->show(\@show);
-
-        #TODO validate things to show??
+        return @show;
     }
     else {
-        $self->show([ map { $_->property_name } $self->_subject_class_filterable_properties ]);
+        return map { $_->property_name } $self->_properties_for_class_to_document($self->subject_class_name);
     }
-
-    my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
-    my $style_module = $style_module_name->new(
-        iterator => $iterator,
-        show => $self->show,
-        csv_delimiter => $self->csv_delimiter,
-        noheaders => $self->noheaders,
-        output => $self->output,
-    );
-    $style_module->format_and_print;
-
-    return 1;
 }
 
 sub _filter_doc {
     my $class = shift;
-
     my $doc = <<EOS;
-Filtering:
-----------
- Create filter equations by combining filterable properties with operators and
-     values.
- Combine and separate these 'equations' by commas.
- Use single quotes (') to contain values with spaces: name='genome institute'
- Use percent signs (%) as wild cards in like (~).
- Use backslash or single quotes to escape characters which have special meaning
-     to the shell such as < > and &
+ Filtering:
+ ----------
+ Restrict which itemes are listed by adding a filter.
+     job=Captain
 
-Relational Properties:
-----------------------
+ Quotes are needed only when spaces or special words are involved.
+ Sylistically, use " on the outer expression, and ' around field values:
+     "age>18"            # > is a special character
+     name='Bob Jones'    # spaces in a field value
 
-Relational properties are properties that point to other objects. Each type of
-object has its own set of filterable properties and even its own set of
-relational properties. The objects's properties can be addressed using "dot
-notation", e.g. employee.name where "name" is a property of the "employee"
-object/property. Refer to the relational property's own lister, or if not
-available to `ur show properties`, for help on its filterable properties.
+ Standard and/or predicated logic is supported (like in SQL).
+     "name='Bob Jones' and job='Captain' and age>18"
+     "name='Betty Jones' and (score < 10 or score > 100)"
 
-Operators:
-----------
- =  (exactly equal to)
- ~  (like the value)
- :  (in the list of several values, slash "/" separated)
-    (or between two values, dash "-" separated)
- >  (greater than)
- >= (greater than or equal to)
- <  (less than)
- <= (less than or equal to)
+ The "like" operator uses "%" as a wildcard:
+     "name like '%Jones'"
 
-Examples:
----------
+ Use square brackets for "in" clauses.
+     "name like '%Jones' and job in [Captain,Ensign,'First Officer']"
+
+ Use a dot (".") to indirectly access related data (joins):
+     "age<18 and father.address.city='St. Louis'"
+     "previous_order.items.price > 100"
+
+ A shorthand filter form allows many queries to be written more concisely:
+    regular:    "name = 'Jones' and age between 18-25 and happy in ['yes','no','maybe']"
+    shorthand:  name~%Jones,age:18-25,happy:yes/no/maybe
+
+    Shorthand Key:
+    --------------
+    ,  " and "
+    =  exactly equal to
+    ~  "like" the value
+    :   "between" two values, dash "-" separated
+    :  "in" the list of several values, slash "/" separated
 EOS
+
     if (my $help_synopsis = $class->help_synopsis) {
+        $doc .= "\n Examples:\n ---------\n";
         $doc .= " $help_synopsis\n";
-    } else {
-        $doc .= <<EOS
- list-cmd --filter name=Bob --show id,name,address --order name
- list-cmd --filter name='something with space',employees\>200,job~%manager
- list-cmd --filter cost:20000-90000
- list-cmd --filter answer:yes/maybe
- list-cmd --filter employee.name=Bob
- list-cmd --filter employee.address.city='St. Louis'
-
-Extended Syntax:
-----------------
-The filter expression may also use a more free-form syntax with arbitrary
-nesting of parentheses and 'and' or 'or' clauses.  This syntax accepts the
-words 'in', 'like' and 'between' in place of the above ':' and '~' operators.
-In addition, the in-list of values must begin with a left bracket, end with
-a right bracket and the values are separated with commas.
-
-This extended syntax expression will most likely contain spaces or other
-characters having special meaning to the shell, so they will need to be
-escaped with literal backslashes or enclosed in quotes of some kind.
-
-Extended Syntax Examples:
--------------------------
- list-cmd --filter 'name=Bob or address like "%main st"'
- list-cmd --filter 'name="something with space" and (score < 10 or score > 100)'
- list-cmd --filter 'cost between 20000-90000'
- list-cmd --filter 'answer in [yes,maybe]'
-EOS
     }
 
     # Try to get the subject class name
@@ -308,7 +307,7 @@ EOS
         $self = $class->create(subject_class_name => $subject_class_name);
     }
 
-    my @properties = $self->_subject_class_filterable_properties;
+    my @properties = $self->_properties_for_class_to_document($self->subject_class_name);
     my @filterable_properties   = grep { ! $_->data_type or index($_->data_type, '::') == -1 } @properties;
     my @relational_properties = grep {   $_->data_type and index($_->data_type, '::') >=  0 } @properties;
 
@@ -325,21 +324,26 @@ EOS
         $doc .= sprintf(" %s\n", $self->error_message);
     } else {
         if (@filterable_properties) {
-            push @data, 'Filterable Properties:';
+            push @data, 'Simple Properties:';
             for my $property ( @filterable_properties ) {
                 push @data, [$property->property_name, $self->_doc_for_property($property, $longest_name)];
             }
         }
 
         if (@relational_properties) {
-            push @data, 'Relational Properties:';
+            push @data, 'Complex Properties (support dot-syntax):';
             for my $property ( @relational_properties ) {
-                push @data, [$property->property_name, $self->_doc_for_property($property, $longest_name)];
+                my $name = $property->property_name;
+                my @doc = $self->_doc_for_property($property,$longest_name);
+                push @data, [$name, $doc[0]];
+                for my $n (1..$#doc) {
+                    push @data, ['', $doc[$n]];
+                }
             }
         }
     }
     my @lines = $class->_format_property_doc_data(@data);
-    $doc .= join("\n", @lines);
+    $doc .= join("\n ", @lines);
 
     $self->delete;
     return $doc;
@@ -364,16 +368,43 @@ sub _doc_for_property {
             }
         };
     }
-    $property_doc ||= '(undocumented)';
+    $property_doc ||= '';
     $property_doc =~ s/\n//gs;   # Get rid of embeded newlines
 
-    my $data_type = $property->data_type || '';
-    $data_type = (index($data_type, '::') == -1) ? ucfirst(lc $data_type) : $data_type;
+    my $data_type = $property->data_type;
+    my $data_class = eval { $property->_data_type_as_class_name };
 
-    # include the data type in the doc so it can be reformatted
-    $property_doc = sprintf('(%s): %s', $data_type, $property_doc);
-
-    return $property_doc;
+    if ($data_type and $data_class eq $data_type) {
+        my @has = $self->_properties_for_class_to_document($data_class);
+        my @labels;
+        for my $pmeta (@has) {
+            my $name = $pmeta->property_name;
+            my $type = $pmeta->data_type;
+            if ($type and $type =~ /::/) {
+                push @labels, "$name\[.*\]";
+            }
+            else {
+                push @labels, $name;
+            }
+        }
+        return (
+            ($property_doc ? $property_doc : ()), 
+            " see <man $data_class> for more details",
+            ' has: ' . join(", ", @labels),
+            '',
+        );
+    }
+    else {
+        $data_type ||= 'Text';
+        $data_type = (index($data_type, '::') == -1) ? ucfirst(lc $data_type) : $data_type;
+        if ($property_doc) {
+            $property_doc = '(' . $data_type . '): ' . $property_doc;
+        }
+        else {
+            $property_doc = '(' . $data_type . ')';
+        }
+        return $property_doc;
+    }
 }
 
 sub _format_property_doc_data {
@@ -388,64 +419,39 @@ sub _format_property_doc_data {
         if (ref $data) {
             push @lines, sprintf(" %${w}s  %s", $data->[0], $data->[1]);
         } else {
-            push @lines, '', $data, '-' x length($data);
+            push @lines, ' ', $data, '-' x length($data);
         }
     }
-
+    
     return @lines;
 }
 
-sub _validate_subject_class {
+sub _properties_for_class_to_document {
     my $self = shift;
+    my $target_class_name = shift;
 
-    my $subject_class_name = $self->subject_class_name;
-    $self->error_message("No subject_class_name indicated.")
-        and return unless $subject_class_name;
+    my $target_class_meta = $target_class_name->__meta__;
+    my @id_by = $target_class_meta->id_properties;
 
-    $self->error_message(
-        sprintf(
-            'This command is not designed to work on a base UR class (%s).',
-            $subject_class_name,
-        )
-    )
-        and return if $subject_class_name =~ /^UR::/;
+    my @props = $target_class_meta->properties;
 
-    UR::Object::Type->use_module_with_namespace_constraints($subject_class_name);
-
-    my $subject_class = $self->subject_class;
-    $self->error_message(
-        sprintf(
-            'Can\'t get class meta object for class (%s).  Is this class a properly declared UR::Object?',
-            $subject_class_name,
-        )
-    )
-        and return unless $subject_class;
-
-    $self->error_message(
-        sprintf(
-            'Can\'t find method (all_property_metas) in %s.  Is this a properly declared UR::Object class?',
-            $subject_class_name,
-        )
-    )
-        and return unless $subject_class->can('all_property_metas');
-
-    return 1;
-}
-
-sub _subject_class_filterable_properties {
-    my $self = shift;
-
-    $self->_validate_subject_class
-        or return;
-
-    my %props = map { $_->property_name => $_ }
-                    $self->subject_class->property_metas;
-
-    return map { $_->[1] }                   # These maps are to get around a bug in perl 5.8 sort
-           sort { $a->[0] cmp $b->[0] }      # involving method calls inside the sort sub that may
-           map { [ $_->property_name, $_ ] } # do sorts of their own
-           grep { substr($_->property_name, 0, 1) ne '_' }  # Skip 'private' properties starting with '_'
-           values %props;
+    no warnings;
+    # These final maps are to get around a bug in perl 5.8 sort
+    # involving method calls inside the sort sub that may
+    # do sorts of their own
+    return 
+        map { $_->[1] }                   
+        sort { $a->[1]->position_in_module_header <=> $b->[1]->position_in_module_header or $a->[0] cmp $b->[0] }      
+        map { [ $_->property_name, $_ ] } 
+        grep {
+            substr($_->property_name, 0, 1) ne '_' 
+            and not $_->implied_by
+            and not $_->is_transient
+            and not $_->is_deprecated
+            and $_->can("is_input")
+            and ($_->is_input or $_->is_param)
+        }
+        @props;
 }
 
 sub _base_filter {
@@ -468,27 +474,22 @@ sub help_detail {
 
 sub _style_doc {
     return <<EOS;
-Listing Styles:
----------------
+ Listing Styles:
+ ---------------
  text - table like
- csv - comma separated values
- tsv - tab separated values
  pretty - objects listed singly with color enhancements
  html - html table
  xml - xml document using elements
+ tsv - tab separated values
+ csv - comma (or other character) separated values*
 
+ --csv-delimiter can be used tospecify another delimiter besides a comma for "csv"
 EOS
-}
-
-sub valid_styles {
-    return (qw/text csv tsv pretty html xml newtext/);
 }
 
 sub _hint_string {
     my $self = shift;
-
-    my @show_parts = grep { $self->_show_item_is_property_name($_) }
-                          split(',',$self->show);
+    my @show_parts = grep { $self->_show_item_is_property_name($_) } $self->_resolve_field_list();
     return join(',',@show_parts);
 }
 

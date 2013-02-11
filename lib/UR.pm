@@ -153,7 +153,7 @@ UR::Object::Type->define(
     is_abstract => 1,
     composite_id_separator => "\t",
     id_by => [
-        id  => { is => 'Scalar' }
+        id  => { is => 'Scalar', doc => 'unique identifier' }
     ]
 );
 
@@ -382,6 +382,8 @@ UR::Object::Type->define(
         is_numeric                      => { calculate_from => ['data_type'], },
         id_by                           => { is => 'ARRAY', is_optional => 1},
         id_class_by                     => { is => 'Text', is_optional => 1},
+        is_undocumented                 => { is => 'Boolean', is_optional => 1, doc => 'do not show in documentation to users' },
+        doc_position                    => { is => 'Number', is_optional => 1, doc => 'override the sort position within documentation' },
         access_as                       => { is => 'Text', is_optional => 1, doc => 'when id_class_by is set, and this is set to "auto", primitives will return as their ID instead of boxed' },
         order_by                        => { is => 'ARRAY', is_optional => 1},
         specify_by                      => { is => 'Text', is_optional => 1},
