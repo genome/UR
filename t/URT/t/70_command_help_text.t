@@ -5,14 +5,14 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 13;
+use Test::More tests => 15;
 
 UR::Object::Type->define(
     class_name => 'Acme::ParentCommand',
     is => 'Command',
     has => [
         param_a => { is => 'String', is_optional => 1, doc => 'Some documentation for param a' },
-        param_b => { is => 'String', is_optional => 0 },
+        param_b => { is => 'String', is_optional => 0, example_values => ['1','2','3'] },
         param_c => { is => 'String', doc => 'Parent documentation for param c' },
     ],
 );
@@ -61,8 +61,11 @@ like($usage_string, qr(param-b\s+String), 'Child help text mentions param-b');
 like($usage_string, qr(param-c\s+String\s+Child documentation for param c), 'Child help text mentions param-c with child documentation');
 unlike($usage_string, qr(OPTIONAL ARGUMENTS\s+param-a\s+String), 'Child help text does not list param-a as optional');
 
-
-
+my $meta = Acme::ParentCommand->__meta__;
+my $p_meta_b = $meta->property('param_b');     
+my $example_values_arrayref = $p_meta_b->example_values;
+is("@$example_values_arrayref", "1 2 3", "example values are stored");
+is(scalar(@$example_values_arrayref), 3, "example value count is as expected");
 
 
 

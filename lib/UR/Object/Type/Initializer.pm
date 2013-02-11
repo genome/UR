@@ -58,6 +58,8 @@ use Sub::Install ();
     is_specified_in_module_header => 0,
     is_deprecated    => 0,
     position_in_module_header => -1,
+    doc_position    => -1,
+    is_undocumented => 0,
 );
 
 @UR::Object::Type::meta_id_ref_shared_properties = (
@@ -73,6 +75,7 @@ use Sub::Install ();
         is_final
         is_many
         is_deprecated
+        is_undocumented
     /
 );
 
@@ -993,6 +996,7 @@ sub _normalize_property_description1 {
         [ data_type                       => qw/type is isa is_a/],
         [ default_value                   => qw/default value/],
         [ valid_values                    => qw//],
+        [ example_values                  => qw//],
         [ doc                             => qw/description/],
         [ is_optional                     => qw/is_nullable nullable optional/],
         [ is_transient                    => qw//],
@@ -1008,6 +1012,7 @@ sub _normalize_property_description1 {
         [ is_final                        => qw//],
         [ is_many                         => qw//],
         [ is_deprecated                   => qw//],
+        [ is_undocumented                 => qw//],
         [ is_numeric                      => qw//],
         [ is_id                           => qw//],
         [ id_by                           => qw//],

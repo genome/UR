@@ -422,10 +422,16 @@ sub _get_display_fields_for_property {
         push @fields, 'where => [ ' . join(', ', @where_parts) . ' ]';
     }
 
-    if (my $values_arrayref = $property->valid_values) {
+    if (my $valid_values_arrayref = $property->valid_values) {
         $seen{'valid_values'} = 1;
-        my $value_string = Data::Dumper->new([$values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+        my $value_string = Data::Dumper->new([$valid_values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
         push @fields, "valid_values => $value_string";
+    }
+    
+    if (my $example_values_arrayref = $property->example_values) {
+        $seen{'example_values'} = 1;
+        my $value_string = Data::Dumper->new([$example_values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+        push @fields, "example_values => $value_string";
     }
 
     # All the things like is_optional, is_many, etc
