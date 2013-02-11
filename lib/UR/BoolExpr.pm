@@ -309,7 +309,6 @@ sub flatten_hard_refs {
             
             my $value_class_name = $meta->property($property_name)->data_type;
             next unless $value_class_name;
-            $DB::single = 1;
             my $id = $value->id;
             my $value2 = eval { 
                 $value_class_name->get($id)
