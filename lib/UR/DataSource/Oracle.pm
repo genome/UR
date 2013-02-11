@@ -708,10 +708,10 @@ sub cast_for_data_conversion {
 
     } elsif ($data_type->isa('UR::Value::Timestamp')) {
         # These time formats shoule match what's given in _init_created_dbh
-        $retval[$i] = qq{to_char(%s, '$DATE_FORMAT')};
+        $retval[$i] = qq{to_char(%s, '$TIMESTAMP_FORMAT')};
 
     } elsif ($data_type->isa('UR::Value::DateTime')) {
-        $retval[$i] = qq{to_char(%s, '$TIMESTAMP_FORMAT')};
+        $retval[$i] = qq{to_char(%s, '$DATE_FORMAT')};
 
     } else {
         @retval = $class->SUPER::cast_for_data_conversion($prop_meta1, $prop_meta2);
