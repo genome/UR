@@ -196,6 +196,7 @@ sub _resolve_field_list {
     if ( my $show = $self->show ) {
         $DB::single = 1;
         if (substr($show,0,1) =~ /([\+\^\-])/) {
+            # if it starts with any of the special characters, combine with the default
             my $default = $self->__meta__->property('show')->default_value;
             unless ($default) {
                 $default = join(",", map { $_->property_name } $self->_properties_for_class_to_document($self->subject_class_name));
@@ -206,28 +207,32 @@ sub _resolve_field_list {
         my @show;
         my $expr;
         my @parts = (split(/,/, $show));
+        my $append_prepend_or_omit = '+';
+        my $prepend_count = 0;
         for my $item (@parts) {
-            my ($append_prepend_or_omit) = ($item =~ /^([\+\^\-])/);
-            if ($append_prepend_or_omit) {
+            if ($item =~ /^([\+\^\-])/) {
+                if ($1 eq '^') {
+                    $prepend_count = 0;
+                }
+                $append_prepend_or_omit = $1;
                 $item = substr($item,1);
             }
             if ($self->_show_item_is_property_name($item) and not defined $expr) {
-                if ($append_prepend_or_omit) {
-                    if ($append_prepend_or_omit eq '-') {
-                        @show = grep { $_ ne $item } @show;
-                    }
-                    elsif ($append_prepend_or_omit eq '+') {
-                        push @show, $item;
-                    }
-                    elsif ($append_prepend_or_omit eq '^') {
-                        unshift @show, $item;
-                    }
-                    else {
-                        die "unrecognized operator in show string: $append_prepend_or_omit";
-                    }
+                if ($append_prepend_or_omit eq '+') {
+                    # append
+                    push @show, $item;
+                }
+                elsif ($append_prepend_or_omit eq '^') {
+                    # prepend
+                    splice(@show, $prepend_count, 0, $item);
+                    $prepend_count++;
+                }
+                elsif ($append_prepend_or_omit eq '-') {
+                    # omit
+                    @show = grep { $_ ne $item } @show;
                 }
                 else {
-                    push @show, $item;
+                    die "unrecognized operator in show string: $append_prepend_or_omit";
                 }
             }
             else {
