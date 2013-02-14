@@ -445,16 +445,16 @@ sub _properties_for_class_to_document {
     # involving method calls inside the sort sub that may
     # do sorts of their own
     return 
-        map { $_->[1] }                   
-        sort { $a->[1]->position_in_module_header <=> $b->[1]->position_in_module_header or $a->[0] cmp $b->[0] }      
-        map { [ $_->property_name, $_ ] } 
+        map { $_->[1] }
+        sort { $a->[1]->position_in_module_header <=> $b->[1]->position_in_module_header or $a->[0] cmp $b->[0] }
+        map { [ $_->property_name, $_ ] }
         grep {
-            substr($_->property_name, 0, 1) ne '_' 
+            substr($_->property_name, 0, 1) ne '_'
             and not $_->implied_by
             and not $_->is_transient
             and not $_->is_deprecated
-            and $_->can("is_input")
-            and ($_->is_input or $_->is_param)
+            #and $_->can("is_input")
+            #and ($_->is_input or $_->is_param)
         }
         @props;
 }
