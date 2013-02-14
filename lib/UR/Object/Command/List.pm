@@ -453,8 +453,6 @@ sub _properties_for_class_to_document {
             and not $_->implied_by
             and not $_->is_transient
             and not $_->is_deprecated
-            #and $_->can("is_input")
-            #and ($_->is_input or $_->is_param)
         }
         @props;
 }
