@@ -23,7 +23,8 @@ BEGIN {
 };
 
 sub use_package {
-    my $class = shift;
+    my $class  = shift;
+    my $caller = (caller(1))[0];
     my $module = $class;
     $module =~ s/::/\//g;
     $module .= ".pm";
@@ -32,7 +33,7 @@ sub use_package {
     ## higher priority than paths based on cwd
     for my $path (keys %used_libs) {
         if (-e "$path/$module") {
-            eval "use $class";
+            eval "package $caller; use $class";
             die $@ if $@;
             return;
         }
@@ -69,7 +70,7 @@ sub use_package {
     }
 
     # Now use the module.
-    eval "use $class";
+    eval "package $caller; use $class";
     die $@ if $@;
 
 };
