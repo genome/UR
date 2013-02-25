@@ -45,7 +45,7 @@ a formal UR class.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.392"; # UR $VERSION;;
+our $VERSION = "0.40"; # UR $VERSION;;
 
 # set up module
 use Carp;
