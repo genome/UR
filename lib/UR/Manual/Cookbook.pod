@@ -245,7 +245,7 @@ actually stored in a direct property of a related class.
 As in the has-a relationship, and the container class wants to have a
 property actually stored on the contained class. Using the same schema in
 the has-a relationship above, and we want the contained_value property to
-be accessable from the container class.
+be accessible from the container class.
 
   class TheNamespace::Container {
      id_by => [

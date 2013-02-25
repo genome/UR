@@ -3570,7 +3570,7 @@ If an already cached object's data is reloaded as part of some other query,
 data consistency of each property will be checked.  If there are no
 conflicting changes, then any differences between the object's initial state
 and the current state in the underlying Context will be applied to the
-object's notion of what it thinks its intial state is.
+object's notion of what it thinks its initial state is.
 
 In some future release, UR may support additional data concurrency methods
 such as pessimistic concurrency: check that the current state of all

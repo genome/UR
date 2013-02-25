@@ -264,7 +264,7 @@ time.
 
     By default it resolves the target classes, and calls  _build_sub_command
 
-    It can be overriden to customize behavior, or filter results.  Be sure
+    It can be overridden to customize behavior, or filter results.  Be sure
     to call @cmds = $self->SUPER::_build_all_sub_commands() if you want 
     to get the default commands in addition to overriding.
 

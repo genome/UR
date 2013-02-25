@@ -309,7 +309,7 @@ L<UR::Manual::Cookbook> for more information.
 
 Object properties do not normally hold Perl references to other objects, but you
 may use 'ARRAY' or 'HASH' here to indicate that the object will store the
-reference directly.  Note that these properties are not usually savable to
+reference directly.  Note that these properties are not usually saveable to
 outside data sources.
 
 =item data_type
@@ -335,7 +335,7 @@ object.
 
 A flag indicating that this property can be changed. It is the default state
 of a property.  Set this to 0 in the property definition if the property is
-not changable after the object is created.
+not changeable after the object is created.
 
 =item is_constant
 

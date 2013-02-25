@@ -82,7 +82,7 @@ the object is a particular truth-assertion in the context in which it exists
 
 UR's primary reason for existing is to function as an ORM. That is, managing
 how to store instances of objects in memory of a running program with more
-persistant storage in a relational database, and retrieve them later.  It
+persistent storage in a relational database, and retrieve them later.  It
 handles the common cases where each table is implemented by a class their
 columns are properties of the classes; retrieving objects by arbitrary
 properties; creating, updating and deleting objects with enforced database
@@ -214,7 +214,7 @@ Besides the object instances representing data used by the program, the UR
 system has other objects representing metadata about the classes (class
 information, properties, relationships, etc), database entities (databases,
 tables, columns, constraints, etc), transactions, data sources, etc. All the
-metadata is accessable through the same API as any of the database-backed
+metadata is accessible through the same API as any of the database-backed
 data.
 
 For classes backed by the database, after a schema change (like adding tables

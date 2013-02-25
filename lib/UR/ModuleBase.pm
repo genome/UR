@@ -250,7 +250,7 @@ When a class or object has a method called which is not found in the
 final class or any derived classes, perl checks up the tree for
 AUTOLOAD.  We impliment AUTOLOAD at the top of the tree, and then
 check each class in the tree in order for an AUTOSUB method.  Where a
-class implements AUTOSUB, it will recieve a function name as its first
+class implements AUTOSUB, it will receive a function name as its first
 parameter, and it is expected to return either a subroutine reference,
 or undef.  If undef is returned then the inheritance tree search will
 continue.  If a subroutine reference is returned it will be executed

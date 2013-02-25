@@ -1016,7 +1016,7 @@ Add an item to the set of values with add_*:
   $added  = $elmo->add_job($snore);
 
 A variation of the above will construt the item and add it at once.
-This second form of add_* automaticaly would identify that the line items
+This second form of add_* automatically would identify that the line items
 also reference the order, and establish the correct converse relationship
 automatically.
 

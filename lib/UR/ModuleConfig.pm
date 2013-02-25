@@ -109,7 +109,7 @@ configuration hash.
 When called as an object method, the config for both the object and
 all classes in its inheritance hierarchy are referenced, with the
 object config taking precedence over class methods and class methods
-closer to the object (first in the @ISA array) taking precendence over
+closer to the object (first in the @ISA array) taking precedence over
 those further away (later in the @ISA array).  When called as a class
 method, the same procedure is used, except no object configuration is
 referenced.

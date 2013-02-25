@@ -1188,7 +1188,7 @@ UR::BoolExpr - a "where clause" for objects
     my $bx3 = $bx->flatten();
     # any indirection in the params takes the form a.b.c at the lowest level
     # also 'payroll_category' might become 'pay_history.category', and 'pay_history.is_current' => 1 is added to the list
-    # if this paramter has that as a custom filter
+    # if this parameter has that as a custom filter
 
 
 =head1 DESCRIPTION
@@ -1196,7 +1196,7 @@ UR::BoolExpr - a "where clause" for objects
 A UR::BoolExpr object captures a set of match criteria for some class of object.
 
 Calls to get(), create(), and define_set() all use this internally to objectify
-their paramters.  If given a boolean expression object directly they will use it.
+their parameters.  If given a boolean expression object directly they will use it.
 Otherwise they will construct one from the parameters given.
 
 They have a 1:1 correspondence within the WHERE clause in an SQL statement where

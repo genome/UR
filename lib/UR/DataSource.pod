@@ -28,7 +28,7 @@ In normal use, your data sources will probably inherit from an abstract
 data source class such as L<UR::DataSource::Oracle> or
 L<UR::DataSource::File>, as well as L<UR::Singleton>.  This makes it easy
 to link classes to this data source, since the class name will be the
-same as its ID, and the module autoloader will instantiate it automaticly.
+same as its ID, and the module autoloader will instantiate it automatically.
 
 =head1 INHERITANCE
 

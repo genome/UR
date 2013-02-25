@@ -596,7 +596,7 @@ of the property in any way, but is useful in documentation.
 
 =item implied_by => Text
 
-If this propery is created as a result of another property's existence,
+If this property is created as a result of another property's existence,
 implied_by is the name of that other property.  This can happen in the
 case where an object accessor property is defined
 
