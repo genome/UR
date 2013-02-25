@@ -2,10 +2,10 @@
    "abstract" : "rich declarative transactional objects",
    "author" : [
       "Anthony Brummett   brummett@cpan.org",
-      "Scott Smith\t    sakoht@cpan.org"
+      "Scott Smith       sakoht@cpan.org"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.4, CPAN::Meta::Converter version 2.112150",
+   "generated_by" : "Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630",
    "license" : [
       "perl_5"
    ],
@@ -17,41 +17,42 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.4"
+            "Module::Build" : "0.39"
          }
       },
       "runtime" : {
          "requires" : {
-            "Carp" : 0,
+            "Carp" : "0",
             "Class::AutoloadCAN" : "0.03",
             "Class::Autouse" : "2.0",
-            "Class::Inspector" : 0,
             "Clone::PP" : "1.02",
             "DBD::SQLite" : "1.14",
             "DBI" : "1.601",
             "Data::Compare" : "0.13",
             "Data::UUID" : "0.148",
-            "Date::Format" : 0,
-            "Devel::GlobalDestruction" : 0,
+            "Date::Format" : "0",
+            "Devel::GlobalDestruction" : "0",
             "File::Basename" : "2.73",
-            "File::Path" : 0,
-            "File::Temp" : 0,
+            "File::Path" : "0",
+            "File::Temp" : "0",
             "FreezeThaw" : "0.43",
             "Getopt::Complete" : "0.26",
-            "JSON" : 0,
+            "JSON" : "0",
             "Lingua::EN::Inflect" : "1.88",
-            "Path::Class" : 0,
+            "List::MoreUtils" : "0",
+            "MRO::Compat" : "0",
+            "Path::Class" : "0",
             "Pod::Simple::HTML" : "3.03",
             "Pod::Simple::Text" : "2.02",
             "Sub::Install" : "0.924",
             "Sub::Name" : "0.04",
             "Sys::Hostname" : "1.11",
-            "Test::Fork" : 0,
+            "Test::Fork" : "0",
             "Text::Diff" : "0.35",
-            "Text::Glob" : 0,
-            "YAML" : 0,
+            "Text::Glob" : "0",
+            "YAML" : "0",
             "perl" : "v5.8.7",
-            "version" : 0
+            "version" : "0"
          }
       }
    },
@@ -143,6 +144,10 @@
       "UR::BoolExpr::BxParser" : {
          "file" : "lib/UR/BoolExpr/BxParser.pm",
          "version" : 0
+      },
+      "UR::BoolExpr::BxParser::Yapp::Driver" : {
+         "file" : "lib/UR/BoolExpr/BxParser.pm",
+         "version" : "1.05"
       },
       "UR::BoolExpr::Template" : {
          "file" : "lib/UR/BoolExpr/Template.pm",
@@ -298,7 +303,7 @@
       },
       "UR::DataSource::Filesystem" : {
          "file" : "lib/UR/DataSource/Filesystem.pm",
-         "version" : "0.37"
+         "version" : "0.40"
       },
       "UR::DataSource::Meta" : {
          "file" : "lib/UR/DataSource/Meta.pm",
@@ -862,7 +867,7 @@
       },
       "UR::Object::Set::View::Default::Html" : {
          "file" : "lib/UR/Object/Set/View/Default/Html.pm",
-         "version" : "0.31"
+         "version" : "0.40"
       },
       "UR::Object::Set::View::Default::Json" : {
          "file" : "lib/UR/Object/Set/View/Default/Json.pm",
@@ -870,7 +875,7 @@
       },
       "UR::Object::Set::View::Default::Text" : {
          "file" : "lib/UR/Object/Set/View/Default/Text.pm",
-         "version" : "0.31"
+         "version" : "0.40"
       },
       "UR::Object::Set::View::Default::Xml" : {
          "file" : "lib/UR/Object/Set/View/Default/Xml.pm",
