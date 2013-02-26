@@ -849,6 +849,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         else {
             # create
             my $data_source = $table->data_source;
+            my $data_source_id = (ref $data_source ? $data_source->id : $data_source);
             my $class_name = $data_source->resolve_class_name_for_table_name($table_name,$table->table_type);
             unless ($class_name) {
                 Carp::confess(
@@ -861,12 +862,13 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             # new one actually has a table, then this is just another schema change and
             # not an error.  Set the table_name attribute and go on...
             my $class = UR::Object::Type->get(class_name => $class_name);
-            my $prev_table_name = $class->table_name if ($class);
+            my $prev_table_name = ($class ? $class->table_name : undef);
+            my $prev_data_source_id = ($class ? $class->data_source_id : undef);
             if ($class && $prev_table_name) {
 
                 Carp::confess(
-                    "Class $class_name already exists for table '$prev_table_name'."
-                    . "  Cannot generate class for $table_name."
+                    "Class $class_name already exists for table '$prev_table_name' in $prev_data_source_id."
+                    . "  Cannot generate class for $table_name in $data_source_id."
                 );
             }
 
