@@ -584,49 +584,45 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
     my $namespace = $self->namespace_name;
 
-=cut
-
-    $self->status_message("Using filesystem classes for namespace \"$namespace\" (this may be slow)");
-    my @material_classes = $namespace->get_material_classes;
-
-
-    $self->status_message("Verifying class/table relationships...");
-    my %table_ids_used;
-    for my $class (sort { $a->class_name cmp $b->class_name } @material_classes) {
-        my $table_name  = $class->table_name;
-        next unless $table_name;
-
-        my $class_name  = $class->class_name;
-
-        if (my $prev_class_name = $table_ids_used{$table_name}) {
-            $self->error_message(
-                sprintf(
-                    "C %-40s uses table %-32s, but so does %-40s" . "\n",
-                    $class_name, $table_name, $prev_class_name
-                )
-            );
-            return;
-        }
-
-        my $data_source = $class->data_source;
-
-        my $table = UR::DataSource::RDBMS::Table->get(data_source => $data_source, table_name => $table_name)
-                    ||
-                    UR::DataSource::RDBMS::Table::Ghost->get(data_source => $data_source, table_name => $table_name);
-
-        unless ($table) {
-            $self->error_message(
-                sprintf(
-                    "C %-32s %-32s is referenced by class %-40s but cannot be found!?" . "\n",
-                    $data_source, $table_name, $class_name
-                )
-            );
-            return;
-        }
-        $table_ids_used{$table_name} = $class;
-    }
-
-=cut
+#    $self->status_message("Using filesystem classes for namespace \"$namespace\" (this may be slow)");
+#    my @material_classes = $namespace->get_material_classes;
+#
+#
+#    $self->status_message("Verifying class/table relationships...");
+#    my %table_ids_used;
+#    for my $class (sort { $a->class_name cmp $b->class_name } @material_classes) {
+#        my $table_name  = $class->table_name;
+#        next unless $table_name;
+#
+#        my $class_name  = $class->class_name;
+#
+#        if (my $prev_class_name = $table_ids_used{$table_name}) {
+#            $self->error_message(
+#                sprintf(
+#                    "C %-40s uses table %-32s, but so does %-40s" . "\n",
+#                    $class_name, $table_name, $prev_class_name
+#                )
+#            );
+#            return;
+#        }
+#
+#        my $data_source = $class->data_source;
+#
+#        my $table = UR::DataSource::RDBMS::Table->get(data_source => $data_source, table_name => $table_name)
+#                    ||
+#                    UR::DataSource::RDBMS::Table::Ghost->get(data_source => $data_source, table_name => $table_name);
+#
+#        unless ($table) {
+#            $self->error_message(
+#                sprintf(
+#                    "C %-32s %-32s is referenced by class %-40s but cannot be found!?" . "\n",
+#                    $data_source, $table_name, $class_name
+#                )
+#            );
+#            return;
+#        }
+#        $table_ids_used{$table_name} = $class;
+#    }
 
     $self->status_message("Updating classes...");
 
