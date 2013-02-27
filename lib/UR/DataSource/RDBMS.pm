@@ -3235,13 +3235,25 @@ sub cast_for_data_conversion {
     return ('%s', '%s');
 }
 
-sub prepare_for_fork {
-    my $self = shift;
-    if ($self->has_default_handle) {
-        $self->disconnect_default_handle;
+sub do_after_fork_in_child {
+    my $self = shift->_singleton_object;
+    my $dbhs = $self->_all_dbh_hashref;
+    for my $k (keys %$dbhs) {
+        if ($dbhs->{$k}) {
+            $dbhs->{$k}->{InactiveDestroy} = 1;
+            delete $dbhs->{$k};
+        }
     }
-}
 
+    # reset our state back to being "disconnected"
+    $self->_default_dbh(undef);
+    $self->_all_dbh_hashref({});
+    $self->is_connected(0);
+
+    # now force a reconnect
+    $self->get_default_handle();
+    return 1;
+}
 
 1;
 
