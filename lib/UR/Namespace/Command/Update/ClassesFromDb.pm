@@ -1144,7 +1144,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             eval { $class->remove_unique_constraint($uc_name) };
             if ($@ =~ m/There is no constraint named/) {
                 next;  # it's OK if there's no UR metadata for this constraint yet
-            } else {
+            } elsif ($@) {
                 die $@;
             }
 
