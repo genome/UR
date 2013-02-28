@@ -919,18 +919,12 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
     $self->status_message($_) foreach @saved_removed_column_messages;
 
     # COLUMN
-    my @column_property_translations = (
-        ['data_type'    => 'data_type'],
-        ['data_length'  => 'data_length'],
-        ['nullable'     => 'is_optional', sub { (defined($_[0]) and ($_[0] eq "Y")) ? 1 : 0 } ],
-        ['remarks'      => 'doc'],
-    );
     
     for my $column (sort $sorter @{ $dd_changes_by_class{'UR::DataSource::RDBMS::TableColumn'} }) {
         my $table = $column->get_table;
         my $column_name = $column->column_name;
         my $data_source = $table->data_source;
-        my($ur_data_type,$default_length) = @{ $data_source->ur_data_type_for_data_source_data_type($column->data_type) };
+        my($ur_data_type, $default_length) = @{ $data_source->ur_data_type_for_data_source_data_type($column->data_type) };
         my $ur_data_length = defined($column->data_length) ? $column->data_length : $default_length;
 
         #my $class = UR::Object::Type->get(
@@ -958,6 +952,21 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
         # We care less whether the column is new/updated, than whether there is property metadata for it.
         if ($property) {
+            my @column_property_translations = (
+                # [ column_name, property_name, conversion_sub(column_obj, value) ]
+                ['data_length'  => 'data_length',
+                    # lengths for these data types are based on the number of bytes used internally in the
+                    # database.  The UR-based objects will store the text version, which will always be longer,
+                    # making $obj->__errors__() complain about the length being out of bounds
+                    sub { my ($c, $av) = @_;  defined($av) ? $av : ($c->is_time_data ? undef : $ur_data_length) } ],
+                ['data_type'    => 'data_type',
+                    sub { my ($c, $av) = @_;  defined($ur_data_type) ? $ur_data_type : $av } ],
+                ['nullable'     => 'is_optional',
+                    sub { my ($c, $av) = @_; (defined($av) and ($av eq "Y")) ? 1 : 0 } ],
+                ['remarks'      => 'doc',
+                    # Ideally this would only use DB value ($av) if the last_ddl_time was newer.
+                    sub { my ($c, $av) = @_; defined($av) ? $av : $property->doc } ],
+            );
             # update
             for my $translation (@column_property_translations) {
                 my ($column_attr, $property_attr, $conversion_sub) = @$translation;
@@ -966,22 +975,14 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 no warnings;
                 if (UR::Context->_get_committed_property_value($column,$column_attr) ne $column->$column_attr) {
                     if ($conversion_sub) {
-                        $property->$property_attr($conversion_sub->($column->$column_attr));
+                        $property->$property_attr($conversion_sub->($column, $column->$column_attr));
                     }
                     else {
                         $property->$property_attr($column->$column_attr);
                     }
                 }
             }
-            $property->data_type($ur_data_type) if (! defined $property->data_type);
-            # lengths for these data types are based on the number of bytes used internally in the
-            # database.  The UR-based objects will store the text version, which will always be longer,
-            # making $obj->__errors__() complain about the length being out of bounds
-            $property->data_length($column->is_time_data ? undef : $ur_data_length) if (! defined $property->data_length);
 
-            $property->is_optional($column->nullable eq "Y" ? 1 : 0);
-            $property->doc($column->remarks);
-            
             if ($property->__changes__) {
                 no warnings;
                 $self->status_message(
