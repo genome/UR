@@ -1069,9 +1069,9 @@ sub _add_join {
             my @db_join_data;
             for (my $n = 0; $n < @foreign_column_names; $n++) {
 
-                my $link_table_name = $table_alias->{$source_table_and_column_names->[$n][0]};
-                $link_table_name ||= $source_table_and_column_names->[$n][2];
-                $link_table_name ||= $source_table_and_column_names->[$n][0];
+                my $link_table_name = $table_alias->{$source_table_and_column_names->[$n][0]}
+                                    || $source_table_and_column_names->[$n][2]
+                                    || $source_table_and_column_names->[$n][0];
 
                 my $link_column_name = $source_table_and_column_names->[$n][1];
                 
