@@ -194,7 +194,6 @@ sub _resolve_field_list {
     my $self = shift;
 
     if ( my $show = $self->show ) {
-        $DB::single = 1;
         if (substr($show,0,1) =~ /([\+\^\-])/) {
             # if it starts with any of the special characters, combine with the default
             my $default = $self->__meta__->property('show')->default_value;
