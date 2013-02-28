@@ -886,7 +886,7 @@ sub _normalize_class_description_impl {
     }
 
     # Catch a mistake in the class definition where a property is 'via'
-    # something, and its 'to' # is the same as the via's reverse_as.  This
+    # something, and its 'to' is the same as the via's reverse_as.  This
     # ends up being a circular definition and generates junk SQL
     foreach my $property_name ( @property_names ) {
         my $property_data = $instance_properties->{$property_name};
