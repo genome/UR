@@ -1298,7 +1298,6 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
 
 sub _complete_class_meta_object_definitions {
     my $self = shift;
-    my $class = $self->{class_name};
 
     # track related objects
     my @subordinate_objects;
@@ -1424,7 +1423,7 @@ sub _complete_class_meta_object_definitions {
                     # instead put off loading until it's necessary
                     $r_class ||= UR::Object::Type->get($r_class_name);
                     unless ($r_class) {
-                        Carp::confess("Unable to load $r_class_name while defining relationship ".$pinfo->{'property_name'}. " in class $class");
+                        Carp::confess("Unable to load $r_class_name while defining relationship ".$pinfo->{'property_name'}. " in class $class_name");
                     }
                     @r_id_properties = $r_class->id_property_names;
                 }
@@ -1439,12 +1438,12 @@ sub _complete_class_meta_object_definitions {
                     #$DB::single = 1;
                     my $property_name = $pinfo->{'property_name'};
                     if (@$id_properties != @r_id_properties) {
-                        Carp::croak("Can't resolve relationship for class $class property '$property_name': "
+                        Carp::croak("Can't resolve relationship for class $class_name property '$property_name': "
                                     . "id_by metadata has " . scalar(@$id_properties) . " items, but remote class "
                                     . "$r_class_name only has " . scalar(@r_id_properties) . " ID properties\n");
                     } else {
                         my $r_id_property = $r_id_properties[$n] ? "'$r_id_properties[$n]'" : '(undef)';
-                        Carp::croak("Can't resolve relationship for class $class property '$property_name': "
+                        Carp::croak("Can't resolve relationship for class $class_name property '$property_name': "
                                     . "Class $r_class_name does not have an ID property named $r_id_property, "
                                     . "which would be linked to the local property '".$id_properties->[$n]."'\n");
                     }
@@ -1504,7 +1503,7 @@ sub _complete_class_meta_object_definitions {
         my $property_object = UR::Object::Property->__define__(%$pinfo, id => $class_name . "\t" . $property_name);
 
         unless ($property_object) {
-            $self->error_message("Error creating property $property_name for class " . $self->class_name . ": " . $class->error_message);
+            $self->error_message("Error creating property $property_name for class " . $self->class_name . ": " . $class_name->error_message);
             for $property_object (@subordinate_objects) { $property_object->unload }
             $self->unload;
             return;
