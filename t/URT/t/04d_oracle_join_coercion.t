@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 18;
+use Test::More tests => 20;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -248,6 +248,54 @@ like($@, qr(escape), 'Query on Thing, filter on activity_descriptions like %cool
 is($sql,
     q{select THING.latest_date, THING.name, THING.thing_id, bridges_1.date, bridges_1.thing_id, activity_descriptions_2.date, activity_descriptions_2.description from THING LEFT join BRIDGE bridges_1 on to_char(THING.thing_id) = bridges_1.thing_id LEFT join ACTIVITY activity_descriptions_2 on bridges_1.date = to_char(activity_descriptions_2.date, 'YYYY-MM-DD HH24:MI:SSXFF') where activity_descriptions_2.description like ? escape '\' order by THING.thing_id},
     "to_char coercion present joining THING to BRIDGE by thing_id, and joining BRIDGE to ACTIVITY by date");
+
+
+# Test a join where the get() target and the class it joins to do not
+# have tables, but their parent do.  Also, the joined columns have different names
+UR::Object::Type->define(
+    class_name => 'URT::LinkParent',
+    id_by => [
+        id => { is => 'Integer' },
+    ],
+    has => [
+        name => { is => 'String' },
+    ],
+    data_source => 'URT::DataSource::SomeOracle',
+    table_name => 'LINK',
+);
+UR::Object::Type->define(
+    class_name => 'URT::Link',
+    is => 'URT::LinkParent'
+);
+UR::Object::Type->define(
+    class_name => 'URT::AbstractParent',
+    id_by => [
+        parent_id => { is => 'String' },
+    ],
+    has => [
+        link_id => { is => 'String' },
+        link => { is => 'URT::Parent', id_by => 'link_id' },
+        link_name => { via => 'link', to => 'name' },
+    ],
+    data_source => 'URT::DataSource::SomeOracle',
+    table_name => 'ABSTRACT_PARENT',
+);
+UR::Object::Type->define(
+    class_name => 'URT::Concrete',
+    is => 'URT::AbstractParent',
+    has => [
+        # Child overrides parent property with more specific 'is'
+        link => { is => 'URT::Link', id_by => 'link_id' },
+        something => { is => 'String' }
+    ]
+);
+
+$sql = '';
+eval { URT::Concrete->get(-hints => ['link']) };
+like($@, qr(escape), 'Query on Thing, filter on activity_descriptions like %cool%');
+is($sql,
+    q(select ABSTRACT_PARENT.link_id, ABSTRACT_PARENT.parent_id, link_2.id, link_2.name from ABSTRACT_PARENT LEFT join LINK link_2 on ABSTRACT_PARENT.link_id = to_char(link_2.id) order by ABSTRACT_PARENT.parent_id),
+    'to_char conversion and correct column linking when joining child classes that do not have tables');
 
 
 
