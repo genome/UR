@@ -1417,6 +1417,16 @@ sub _complete_class_meta_object_definitions {
                 #$DB::single = 1;
                 1;
             }
+
+            # No data_type specified, first try parent classes for the same property name
+            # and use their type
+            if (!$bootstrapping and !exists($id_property_detail->{data_type})) {
+                if (my $inh_prop = ($self->ancestry_property_metas(property_name => $id_property_name))[0]) {
+                    $id_property_detail->{data_type} = $inh_prop->data_type;
+                }
+            }
+
+            # Didn't find one - use the data type of the ID property(s) in the class we point to
             unless ($id_property_detail->{data_type}) {
                 unless ($r_class) {
                     # FIXME - it'd be nice if we didn't have to load the remote class here, and

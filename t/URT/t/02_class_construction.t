@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 23;
+use Test::More tests => 24;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -64,3 +64,28 @@ is($props{'id_prop_a'}->is_id, '0 but true', 'id_prop_a is an ID property and ha
 is($props{'id_prop_b'}->is_id, '1', 'id_prop_b is an ID property and has the correct rank');
 is($props{'prop_c'}->is_id, undef, 'prop_c is not an ID property');
 is($props{'prop_d'}->is_id, undef, 'prop_d is not an ID property');
+
+
+my $other_class = UR::Object::Type->define(
+    class_name => 'URT::OtherClass',
+    id_by => [
+        id => { is => 'String' },
+    ],
+);
+my $parent_with_id_prop = UR::Object::Type->define(
+    class_name => 'URT::ParentWithProp',
+    has => [
+        other_id => { is => 'Integer' },
+    ],
+);
+$DB::foo=1;
+my $child_without_id_prop = UR::Object::Type->define(
+    class_name => 'URT::ChildWithoutProp',
+    is => 'URT::ParentWithProp',
+    has => [
+        other => { is => 'URT::OtherClass', id_by => 'other_id' }
+    ],
+);
+is($child_without_id_prop->property_meta_for_name('other_id')->data_type,
+    'Integer',
+    'implied property gets data_type from parent when specified');
