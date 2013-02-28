@@ -166,16 +166,13 @@ sub resolve_class_description_perl {
                                 $pos_a <=> $pos_b;
                               }
                               @{$properties_by_section{$section}};
-        
+
+        # section is indented 4 so name is indent 4 + 4
+        my $indent_section = ' ' x 4;
+        my $indent_name = $indent_section . ' ' x 4;
+        my $indent_key  = $indent_name . ' ' x 4;
+
         my $section_src = '';
-        my $max_name_length = 0;
-        my $multi_line_indent = '';
-        foreach my $property_meta ( @properties ) {
-            my $name = $property_meta->property_name;
-            $max_name_length = length($name) if (length($name) > $max_name_length);
-        }
-        # 14 is the 8 spaces at the start of the $line, plus ' => { '
-        $multi_line_indent = ' ' x ($max_name_length + 14);
         foreach my $property_meta ( @properties ) {
             my $name = $property_meta->property_name;
             my @fields = $self->_get_display_fields_for_property(
@@ -185,19 +182,20 @@ sub resolve_class_description_perl {
                                         data_source => $data_source,
                                         attributes_have => \@property_meta_property_names);
 
-            foreach ( @fields ) {
-                s/\n/\n$multi_line_indent/;
-            }
-            my $line = "        "
-                . $name . (" " x ($max_name_length - length($name)))
-                . " => { "
-                . join(", ", @fields)
-                . " },\n";
+            foreach ( @fields ) { s/^\s+// }
+            if (@fields > 1) {
+                my $line =
+                    $indent_name . $name . " => {\n"
+                    . $indent_key . join(",\n$indent_key", @fields) . ",\n"
+                    . $indent_name . "},\n";
 
-            $section_src .= $line;
+                $section_src .= $line;
+            } else {
+                $section_src .= $indent_name . $name . " => { " . (defined $fields[0] ? $fields[0] : '') . " },\n";
+            }
         }
 
-        $perl .= "    $section => [\n$section_src    ],\n";
+        $perl .= "$indent_section$section => [\n$section_src$indent_section],\n";
     }
 
     my $unique_groups = $self->unique_property_set_hashref;
@@ -297,12 +295,11 @@ sub _get_display_fields_for_property {
         $seen{'is_delegated'} = 1;
     }
     elsif ($property->is_calculated) {
-        my @calc_fields;
         if (my $calc_from = $property->calculate_from) {
             if ($calc_from and @$calc_from == 1) {
-                push @calc_fields, "calculate_from => '" . $calc_from->[0] . "'";
+                push @fields, "calculate_from => '" . $calc_from->[0] . "'";
             } elsif ($calc_from) {
-                push @calc_fields, "calculate_from => [ '" . join("', '", @$calc_from) . "' ]";
+                push @fields, "calculate_from => [ '" . join("', '", @$calc_from) . "' ]";
             }
         }
 
@@ -310,13 +307,12 @@ sub _get_display_fields_for_property {
         foreach my $calc_type ( qw( calculate calculate_sql calculate_perl calculate_js ) ) {
             if ($property->$calc_type) {
                 $calc_source = 1;
-                push @calc_fields, "$calc_type => q(" . $property->$calc_type . ")";
+                push @fields, "$calc_type => q(" . $property->$calc_type . ")";
             }
         }
 
-        push @calc_fields, 'is_calculated => 1' unless ($calc_source);
+        push @fields, 'is_calculated => 1' unless ($calc_source);
 
-        push @fields, join(",$next_line_prefix", @calc_fields);
         $seen{'is_calculated'} = 1;
     } 
     elsif ($params{has_table} && ! $property->is_transient) {
@@ -324,16 +320,17 @@ sub _get_display_fields_for_property {
             die("no column for property on class with table: " . $property->property_name .
                 " class: " . $self->class_name . "?");
         }
-        if ( ( $params{'data_source'}
-                and $params{'data_source'}->table_and_column_names_are_upper_case
-                and $property->column_name ne uc($property->property_name)
-             )
-             or
-             ( $property->column_name ne $property->property_name)
-        ) {
-            # If the column name doesn't match the property name, write it out
-            push @fields,  "column_name => '" . $property->column_name . "'";
+
+        my $ds = $params{'data_source'};
+        my $should_uc = ($ds && $ds->table_and_column_names_are_upper_case);
+
+        my $cname = $property->column_name;
+        my $pname = $property->property_name;
+        my $expected_cname = $should_uc ? uc($pname) : $pname;
+        if ($cname ne $expected_cname) {
+            push @fields,  "column_name => '" . $cname . "'";
         }
+
         $seen{'column_name'} = 1;
     }
 

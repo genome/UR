@@ -49,8 +49,8 @@ ok($c, 'Defined URT::Remote class');
 
 # Make up a class definition with all the different kinds of properties we can think of...
 # FIXME - I'm not sure how the attributes_have and id_implied stuff is meant to work
-my $test_class_definition =
-    q(    is => [ 'URT::Parent' ],
+my $test_class_definition = q(
+    is => [ 'URT::Parent' ],
     table_name => 'PARENT_TABLE',
     attributes_have => [
         meta_prop_a => { is => 'Boolean', is_optional => 1 },
@@ -58,34 +58,90 @@ my $test_class_definition =
     ],
     subclassify_by => 'my_subclass_name',
     id_by => [
-        another_id => { is => 'String', 
-            doc => 'blahblah' },
-        related => { is => 'URT::Related', id_by => [ 'parent_id', 'related_id' ], 
-                      doc => 'related' },
+        another_id => {
+            is => 'String',
+            doc => 'blahblah',
+        },
+        related => {
+            is => 'URT::Related',
+            id_by => [ 'parent_id', 'related_id' ],
+            doc => 'related',
+        },
         foobaz => { is => 'Integer' },
     ],
     has => [
-        property_a          => { is => 'String', meta_prop_a => 1 },
-        property_b          => { is => 'Integer', is_abstract => 1, meta_prop_b => 'metafoo', doc => 'property_b' },
-        calc_sql            => { calculate_sql => q(to_upper(property_b)) },
-        some_enum           => { is => 'Integer', column_name => 'SOME_ENUM', valid_values => [100,200,300] },
-        another_enum        => { is => 'String', column_name => 'different_name', valid_values => ["one","two","three",3,"four"] },
-        my_subclass_name    => { is => 'Text', calculate_from => [ 'property_a', 'property_b' ], calculate => q("URT::TestClass") },
-        subclass_by_prop    => { is => 'String', implied_by => 'subclass_by_obj' },
-        subclass_by_id      => { is => 'Integer', implied_by => 'subclass_by_obj' },
-        subclass_by_obj     => { is => 'UR::Object', id_by => 'subclass_by_id', id_class_by => 'subclass_by_prop' },
+        property_a => {
+            is => 'String',
+            meta_prop_a => 1,
+        },
+        property_b => {
+            is => 'Integer',
+            is_abstract => 1,
+            meta_prop_b => 'metafoo',
+            doc => 'property_b',
+        },
+        calc_sql => { calculate_sql => q(to_upper(property_b)) },
+        some_enum => {
+            is => 'Integer',
+            column_name => 'SOME_ENUM',
+            valid_values => [100,200,300],
+        },
+        another_enum => {
+            is => 'String',
+            column_name => 'different_name',
+            valid_values => ["one","two","three",3,"four"],
+        },
+        my_subclass_name => {
+            is => 'Text',
+            calculate_from => [ 'property_a', 'property_b' ],
+            calculate => q("URT::TestClass"),
+        },
+        subclass_by_prop => {
+            is => 'String',
+            implied_by => 'subclass_by_obj',
+        },
+        subclass_by_id => {
+            is => 'Integer',
+            implied_by => 'subclass_by_obj',
+        },
+        subclass_by_obj => {
+            is => 'UR::Object',
+            id_by => 'subclass_by_id',
+            id_class_by => 'subclass_by_prop',
+        },
     ],
     has_many => [
-        property_cs => { is => 'String', is_optional => 1 },
-        remotes => { is => 'URT::Remote', reverse_as => 'testobj', where => [ something => { operator => 'like', value => '%match%' } ] },
+        property_cs => {
+            is => 'String',
+            is_optional => 1,
+        },
+        remotes => {
+            is => 'URT::Remote',
+            reverse_as => 'testobj',
+            where => [ something => { operator => 'like', value => '%match%' }  ],
+        },
     ],
     has_optional => [
         property_d => { is => 'Number' },
-        calc_perl  => { calculate_from => [ 'property_a', 'property_b' ],
-                        calculate => q($property_a . $property_b) },
-        another_related => { is => 'URT::Related', id_by => [ 'rel_id1', 'rel_id2' ], where => [ property_a => 'foo' ] },
-        related_value => { is => 'StringSubclass', via => 'another_related' },
-        related_value2 => { is => 'StringSubclass', via => 'another_related', to => 'related_value', is_mutable => 1 },
+        calc_perl => {
+            calculate_from => [ 'property_a', 'property_b' ],
+            calculate => q($property_a . $property_b),
+        },
+        another_related => {
+            is => 'URT::Related',
+            id_by => [ 'rel_id1', 'rel_id2' ],
+            where => [ property_a => 'foo' ],
+        },
+        related_value => {
+            is => 'StringSubclass',
+            via => 'another_related',
+        },
+        related_value2 => {
+            is => 'StringSubclass',
+            via => 'another_related',
+            to => 'related_value',
+            is_mutable => 1,
+        },
     ],
     schema_name => 'SomeFile',
     data_source => 'URT::DataSource::SomeFile',
