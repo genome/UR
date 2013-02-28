@@ -5,7 +5,7 @@ use strict;
 
 require UR;
 
-use Scalar::Util;
+use Scalar::Util qw(looks_like_number);
 
 our @ISA = ('UR::ModuleBase');
 our $VERSION = "0.41"; # UR $VERSION;;
@@ -174,51 +174,18 @@ sub __errors__ {
         # Check data type
         # TODO: delegate to the data type module for this
         $generic_data_type = '' unless (defined $generic_data_type);
-        if ($generic_data_type eq 'Float') {
-            $value =~ s/\s//g;
-            $value = $value + 0;
 
-            my $length =0;
-
-            if($value =~ /^(\+|\-)?([0-9]+)(\.([0-9]*))?[eE](\+|\-)?(\d+)$/){ #-- scientific notation
-                $length = length($2)-1 + $6 + (!$5 || $5 eq '+' ? 1 : 0);
-            }
-            elsif($value =~ /^(\+|\-)?([0-9]*)(\.([0-9]*))?$/) {
-                # If the data type is specified as a Float, but really contains an int, then
-                # $4 is undef causing a warning about "uninitialized value in concatenation",
-                # but otherwise works OK
-                no warnings 'uninitialized';
-                $length = length($2.$4);
-                --$length if $2 == 0 && $4;
+        if ($generic_data_type eq 'Float' || $generic_data_type eq 'Integer') {
+            if (looks_like_number($value)) {
+                $value = $value + 0;
             }
             else{
                 push @tags, UR::Object::Tag->create (
                     type => 'invalid',
                     properties => [$property_name],
-                    desc => 'Invalid decimal value.'
+                    desc => "Invalid $generic_data_type value."
                 );
             }
-            # Cleanup for size check below.
-            $value = '.' x $length;
-        }
-        elsif ($generic_data_type eq 'Integer') {
-            $value =~ s/\s//g;
-            if ($value =~ /\D/) {
-                #$DB::single = 1;
-                #print "$self $self->{id} $property_name @values\n";
-            }
-            $value = $value + 0;
-            if ($value !~ /^(\+|\-)?[0-9]*$/)
-            {
-                push @tags, UR::Object::Tag->create
-                (
-                    type => 'invalid',
-                    properties => [$property_name],
-                    desc => 'Invalid integer.'
-                );
-            }
-            # Cleanup for size check below.
-            $value =~ s/[\+\-]//g;
         }
         elsif ($generic_data_type eq 'DateTime') {
             # This check is currently disabled b/c of time format irrecularities

@@ -5,14 +5,14 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 18;
+use Test::More tests => 25;
 
 class Game::Card {
     has => [
         suit    => { is => 'Text', valid_values => [qw/heart diamond club spade/], },
         color   => { is => 'Text', valid_values => [qw/red blue green/], is_mutable => 0 },
         owner   => { is => 'Text', is_optional => 1 },
-        pips    => { is => 'Number', is_optional => 0 },
+        pips    => { is => 'Integer', is_optional => 0 },
     ],
 };
 
@@ -27,6 +27,21 @@ for my $class (qw/Game::Card/) {
 
     my $c2 = $class->create(suit => 'badsuit', color => 'blue', pips => 9);
     ok($c2, "created an object with an invalid property");
+
+    my $pips_is_integer = $class->__meta__->properties(property_name => 'pips', data_type => 'Integer');
+    ok($pips_is_integer, 'pips is Integer (not Number) so Integer checks are performed');
+
+    my $c5 = $class->create(suit => 'heart', color => 'blue', pips => '0 but true');
+    ok($c5, "created an object with an invalid property");
+    my @i5 = $c5->__errors__;
+    is(scalar(@i5), 0, 'got no errors on c5 object');
+
+    my $c6 = $class->create(suit => 'heart', color => 'blue', pips => '0buttrue');
+    ok($c6, "created an object with an invalid property");
+    my @i6 = $c6->__errors__;
+    is(scalar(@i6), 1, 'got one error on c6 object');
+    is($i6[0]->type, 'invalid', 'got an invalid error on c6 object');
+    is(($i6[0]->properties)[0], 'pips', 'got an invalid error for `pips` on c6 object');
 
     my @i2 = $c2->__errors__;
     is(scalar(@i2), 1, "one expected cases of invalididy") 
@@ -70,21 +85,17 @@ for my $class (qw/Game::Card/) {
     ok(!UR::Context->commit, 'Commit fails as expected');
 
     my @error_messages = sort {$a cmp $b } UR::Context->current->error_messages();
-    is(scalar(@error_messages), 3, 'commit generated 3 error messages');
-    is($error_messages[2],    # This one prints first, but sorts 3rd
+    is(scalar(@error_messages), 4, 'commit generated 4 error messages');
+    is($error_messages[-1],    # This one prints first, but is last
        'Invalid data for save!',
        'First error message is correct');
-    my $c3_id = $c3->id;
-    like($error_messages[0],
-       qr/Game::Card identified by $c3_id has problems on\s+INVALID: property 'pips': No value specified for required property\s+Current state:\s+\$VAR1 = bless\( {/s,
-       'Second error message is correct');
     my $c4_id = $c4->id;
-    like($error_messages[1],
+    like($error_messages[-2],
        qr/Game::Card identified by $c4_id has problems on\s+INVALID: property 'pips': No value specified for required property\s+INVALID: property 'suit': The value badsuit is not in the list of valid values for suit.  Valid values are: heart, diamond, club, spade\s+Current state:\s+\$VAR1 = bless\( {/s,
+       'Second error message is correct');
+    my $c3_id = $c3->id;
+    like($error_messages[-3],
+       qr/Game::Card identified by $c3_id has problems on\s+INVALID: property 'pips': No value specified for required property\s+Current state:\s+\$VAR1 = bless\( {/s,
        'Third error message is correct');
-
-    #my $c5 = eval { $class->create(suit => 'spade', color => 'badcolor') };
-    #ok(!defined($c5), "correctly refused to create an object with an invalid immutable property")
-    #    or diag(Data::Dumper::Dumper($c5));
 }
 
