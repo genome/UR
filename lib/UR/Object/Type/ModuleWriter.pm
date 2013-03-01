@@ -14,7 +14,7 @@ our $pwd_at_compile_time = cwd();
 
 sub resolve_class_description_perl {
     my $self = $_[0];
-    
+
     no strict 'refs';
     my @isa = @{ $self->class_name . "::ISA" };
     use strict;
@@ -31,12 +31,12 @@ sub resolve_class_description_perl {
         #Carp::confess("FAILED TO SET ISA FOR $self->{class_name}!?");
         my @i = ${ $self->is };
         my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
-                    
+
         unless (@i and @i == @parent_class_objects) {
             #$DB::single = 1;
             Carp::confess("No inheritance meta-data found for ( @i / @parent_class_objects)" . $self->class_name)
         }
-        
+
         @isa = map { $_->class_name } @parent_class_objects;
     }
 
@@ -46,9 +46,9 @@ sub resolve_class_description_perl {
 
     # For getting default values for some of the properties
     my $class_meta_meta = UR::Object::Type->get(class_name => 'UR::Object::Type');
-    
+
     my $perl = '';
-    
+
     unless (@isa == 1 and $isa[0] =~ /^UR::Object|UR::Entity$/ ) {
         $perl .= "    is => " . (@isa == 1 ? "[ '@isa' ],\n" : "[ qw/@isa/ ],\n");
     }
@@ -80,7 +80,7 @@ sub resolve_class_description_perl {
             foreach my $key ( sort keys %$this_meta_struct ) {
                 next if grep { $key eq $_ } qw( is is_optional is_specified_in_module_header position_in_module_header );  # skip the ones we've already done
                 my $value = $this_meta_struct->{$key};
-                
+
                 my $format = $self->_is_number($value) ? "%s => %s" : "%s => '%s'";
                 push @this_meta_properties, sprintf($format, $key, $value);
             }
@@ -88,7 +88,7 @@ sub resolve_class_description_perl {
         }
     }
     if (@property_meta_property_strings) {
-        $perl .= "    attributes_have => [\n        " . 
+        $perl .= "    attributes_have => [\n        " .
                  join("\n        ", @property_meta_property_strings) .
                  "\n    ],\n";
     }
@@ -99,7 +99,7 @@ sub resolve_class_description_perl {
         # property through the normal channels
         $perl .= "    first_sub_classification_method_name => '" . $self->{'first_sub_classification_method_name'} ."',\n";
     }
-            
+
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->__meta__->all_property_type_names;
     my @specified = qw/is class_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name id_generator valid_signals/;
@@ -117,7 +117,7 @@ sub resolve_class_description_perl {
         if ( defined $property_value and
              ( ($property_value + 0 eq $property_value and
                 $default_value + 0 eq $default_value and
-                $property_value != $default_value) 
+                $property_value != $default_value)
                or
                 ($property_value ne $default_value)
              )
@@ -134,7 +134,7 @@ sub resolve_class_description_perl {
         my $mentioned_section = $property_meta->is_specified_in_module_header;
         next unless $mentioned_section;  # skip implied properites
         ($mentioned_section) = ($mentioned_section =~ m/::(\w+)$/);
-         
+
         if (($mentioned_section and $mentioned_section eq 'id_implied')
             or $id_property_names{$property_meta->property_name}) {
 
@@ -142,7 +142,7 @@ sub resolve_class_description_perl {
 
         } elsif ($mentioned_section) {
             push @{$properties_by_section{$mentioned_section}}, $property_meta;
-  
+
         } else {
             push @{$properties_by_section{'has'}}, $property_meta;
         }
@@ -261,33 +261,33 @@ sub _get_display_fields_for_property {
     my $self = shift;
     my $property = shift;
     my %params = @_;
-    
+
     if (not $property->is_specified_in_module_header) {
         # we omit showing implied properties which have no additional data,
         # unless they have their own docs, a specified column, etc.
         return();
-    }    
-    
-    my @fields;    
+    }
+
+    my @fields;
     my %seen;
     my $property_name = $property->property_name;
-    
+
     my $type = $property->data_type;
     if ($type) {
         push @fields, "is => '$type'" if $type;
         $seen{'is'} = 1;
     }
-    
+
     if (defined($property->data_length) and length($property->data_length)) {
         push @fields, "len => " . $property->data_length;
         $seen{'data_length'} = 1;
     }
-    
+
     #$line .= "references => '???', ";
-    if ($property->is_legacy_eav) { 
+    if ($property->is_legacy_eav) {
         # temp hack for entity attribute values
         #push @fields, "delegate => { via => 'eav_" . $property->property_name . "', to => 'value' }";
-        push @fields, "is_legacy_eav => 1";                
+        push @fields, "is_legacy_eav => 1";
         $seen{'is_legacy_eav'} = 1;
     }
     elsif ($property->is_delegated) {
@@ -314,7 +314,7 @@ sub _get_display_fields_for_property {
         push @fields, 'is_calculated => 1' unless ($calc_source);
 
         $seen{'is_calculated'} = 1;
-    } 
+    }
     elsif ($params{has_table} && ! $property->is_transient) {
         unless ($property->column_name) {
             die("no column for property on class with table: " . $property->property_name .
@@ -342,16 +342,16 @@ sub _get_display_fields_for_property {
         push @fields, "default_value => $value";
         $seen{'default_value'} = 1;
     }
-    
+
     my $implied_property = 0;
-    if (defined($property->implied_by) and length($property->implied_by)) { 
+    if (defined($property->implied_by) and length($property->implied_by)) {
         push @fields,  "implied_by => '" . $property->implied_by . "'";
         $implied_property = 1;
         $seen{'implied_by'} = 1;
     }
 
     if (my @id_by = eval { $property->get_property_name_pairs_for_join }) {
-        push @fields, "id_by => " 
+        push @fields, "id_by => "
             . (@id_by > 1 ? '[ ' : '')
             . join(", ", map { "'" . $_->[0] . "'" } @id_by)
             . (@id_by > 1 ? ' ]' : '');
@@ -429,7 +429,7 @@ sub _get_display_fields_for_property {
         $value_string =~ s/\s*$//;
         push @fields, "valid_values => $value_string";
     }
-    
+
     if (my $example_values_arrayref = $property->example_values) {
         $seen{'example_values'} = 1;
         my $value_string = Data::Dumper->new([$example_values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
@@ -442,7 +442,7 @@ sub _get_display_fields_for_property {
     my $section = $params{'section'};
     $section =~ m/^has_(.*)/;
     my @sections = split('_',$1 || '');
-    
+
     for my $std_field_name (qw/optional abstract transient constant classwide many deprecated/) {
         $seen{$property_name} = 1;
         next if (grep { $std_field_name eq $_ } @sections); # Don't print is_optional if we're in the has_optional section
@@ -458,14 +458,14 @@ sub _get_display_fields_for_property {
             push @fields, sprintf($format, $meta_property, $value);
         }
     }
-    
+
     my $desc = $property->doc;
     if ($desc && length($desc)) {
         $desc =~ s/([\$\@\%\\\"])/\\$1/g;
         $desc =~ s/\n/\\n/g;
         push @fields, $next_line_prefix . "doc => '$desc'";
     }
-    
+
     return @fields;
 }
 
@@ -504,12 +504,12 @@ sub module_path {
     return;
     #Carp::confess("Failed to find a module path for class " . $self->class_name);
 }
-            
-sub _abs_path_relative_to_pwd_at_compile_time { # not a method 
+
+sub _abs_path_relative_to_pwd_at_compile_time { # not a method
     my $path = shift;
     if ($path !~ /^[\/\\]/) {
         $path = $pwd_at_compile_time . '/' . $path;
-    } 
+    }
     my $path2 = Cwd::abs_path($path);
 #    Carp::confess("$path abs is undef?") if not defined $path2;
     return $path2;
@@ -549,17 +549,17 @@ sub module_header_positions {
     my @module_src = $self->module_source_lines;
     my $namespace = $self->namespace;
     my $class_name = $self->class_name;
-    
+
     unless ($self->namespace) {
         die "No namespace on $self->{class_name}?"
-    }    
-    
+    }
+
     $namespace = 'UR' if $namespace eq $self->class_name;
 
     my $state = 'before';
     my ($begin,$end,$use);
     for (my $n = 0; $n < @module_src; $n++) {
-        my $line = $module_src[$n];        
+        my $line = $module_src[$n];
         if ($state eq 'before') {
             if ($line and $line =~ /^use $namespace;/) {
                 $use = $n;
@@ -623,10 +623,10 @@ sub rewrite_module_header {
     }
 
     my ($begin,$end,$use) = $self->module_header_positions;
-    
+
     my $namespace = $self->namespace;
     $namespace = 'UR' if $namespace eq $self->class_name;
-    
+
     unless ($namespace) {
         ($namespace) = ($package =~ /^(.*?)::/);
     }
@@ -680,7 +680,7 @@ sub rewrite_module_header {
         # replace the old lines with the new source
         # note that the inserted "row" is multi-line, but joins nicely below...
         splice(@module_src,$begin,$len,$new_meta_src);
-        
+
         my $f = IO::File->new($module_file_path);
         $old_file_data = join('',$f->getlines);
         $f->close();
@@ -762,7 +762,7 @@ Subroutines within this module actually live in the UR::Object::Type
 namespace;  this module is just a convienent place to collect them.  The
 Module Writer is used by the class updater system (L<(UR::Namespace::Command::Update::Classes>
 and 'ur update classes) to add, remove and alter the Perl modules behind
-the classes within a Namespace.  
+the classes within a Namespace.
 
 =head1 METHODS
 
