@@ -23,7 +23,7 @@ package UR::Object::View::Toolkit;
 
 use warnings;
 use strict;
-our $VERSION = "0.40"; # UR $VERSION;;
+our $VERSION = "0.41_01"; # UR $VERSION;;
 
 require UR;
 
