@@ -421,7 +421,12 @@ sub _get_display_fields_for_property {
 
     if (my $valid_values_arrayref = $property->valid_values) {
         $seen{'valid_values'} = 1;
-        my $value_string = Data::Dumper->new([$valid_values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+        # Useqq(1) causes newlines to be escaped so the only newlines are those
+        # injected by Indent(1). Useqq(1) also quotes string values so we can
+        # strip the whitespace around the newlines.
+        my $value_string = Data::Dumper->new([$valid_values_arrayref])->Terse(1)->Indent(1)->Useqq(1)->Dump;
+        $value_string =~ s/\s*\n\s*/ /g;
+        $value_string =~ s/\s*$//;
         push @fields, "valid_values => $value_string";
     }
     

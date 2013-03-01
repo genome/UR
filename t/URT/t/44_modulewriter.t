@@ -84,12 +84,12 @@ my $test_class_definition = q(
         some_enum => {
             is => 'Integer',
             column_name => 'SOME_ENUM',
-            valid_values => [100,200,300],
+            valid_values => [ 100, 200, 300 ],
         },
         another_enum => {
             is => 'String',
             column_name => 'different_name',
-            valid_values => ["one","two","three",3,"four"],
+            valid_values => [ "one", "two", "three", 3, "four" ],
         },
         my_subclass_name => {
             is => 'Text',
