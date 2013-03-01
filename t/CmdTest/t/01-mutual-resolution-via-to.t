@@ -7,14 +7,21 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 
+use Config;
+diag explain \%Config;
 my $prefix = UR::Util->used_libs_perl5lib_prefix;
-$ENV{PERL5LIB} = $prefix . ':' . $ENV{PERL5LIB};
+diag("prefix is >>$prefix<<");
+##$ENV{PERL5LIB} = $prefix . ':' . $ENV{PERL5LIB};
+$ENV{PERL5LIB} = $prefix . $ENV{PERL5LIB};
+diag("PERL5LIB is now >>$ENV{PERL5LIB}<<");
 
 use UR;
 use Command::Shell;
 use CmdTest;
 use CmdTest::C2;
 use CmdTest::C3;
+
+#$ENV{PERL5LIB} .= ':' . File::Basename::dirname(__FILE__)."/../..";
 
 ok(CmdTest->isa('Command::Tree'), "CmdTest isa Command::Tree");
 
