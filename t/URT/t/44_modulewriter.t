@@ -53,7 +53,10 @@ my $test_class_definition = q(
     is => [ 'URT::Parent' ],
     table_name => 'PARENT_TABLE',
     attributes_have => [
-        meta_prop_a => { is => 'Boolean', is_optional => 1 },
+        meta_prop_a => {
+            is => 'Boolean',
+            is_optional => 1,
+        },
         meta_prop_b => { is => 'String' },
     ],
     subclassify_by => 'my_subclass_name',

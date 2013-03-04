@@ -58,12 +58,12 @@ sub resolve_class_description_perl {
 
     # Meta-property attributes
     my @property_meta_property_names;
-    my @property_meta_property_strings;
     if ($self->{'attributes_have'}) {
         @property_meta_property_names = sort { $self->{'attributes_have'}->{$a}->{'position_in_module_header'}
                                                  <=>
                                                $self->{'attributes_have'}->{$b}->{'position_in_module_header'} }
                                             keys %{$self->{'attributes_have'}};
+        my $section_src = '';
         foreach my $meta_name ( @property_meta_property_names ) {
             my $this_meta_struct = $self->{'attributes_have'}->{$meta_name};
 
@@ -84,13 +84,13 @@ sub resolve_class_description_perl {
                 my $format = $self->_is_number($value) ? "%s => %s" : "%s => '%s'";
                 push @this_meta_properties, sprintf($format, $key, $value);
             }
-            push @property_meta_property_strings, "$meta_name => { " . join(', ', @this_meta_properties) . " },";
+            $section_src .= pprint_subsection($meta_name, ' ' x 8, @this_meta_properties);
         }
-    }
-    if (@property_meta_property_strings) {
-        $perl .= "    attributes_have => [\n        " .
-                 join("\n        ", @property_meta_property_strings) .
-                 "\n    ],\n";
+        if ($section_src) {
+            my $indent_section = ' ' x 4;
+            my $section = 'attributes_have';
+            $perl .= "$indent_section$section => [\n$section_src$indent_section],\n";
+        }
     }
 
     if (exists $self->{'first_sub_classification_method_name'}) {
@@ -169,8 +169,7 @@ sub resolve_class_description_perl {
 
         # section is indented 4 so name is indent 4 + 4
         my $indent_section = ' ' x 4;
-        my $indent_name = $indent_section . ' ' x 4;
-        my $indent_key  = $indent_name . ' ' x 4;
+        my $indent_subsection = $indent_section . ' ' x 4;
 
         my $section_src = '';
         foreach my $property_meta ( @properties ) {
@@ -182,17 +181,7 @@ sub resolve_class_description_perl {
                                         data_source => $data_source,
                                         attributes_have => \@property_meta_property_names);
 
-            foreach ( @fields ) { s/^\s+// }
-            if (@fields > 1) {
-                my $line =
-                    $indent_name . $name . " => {\n"
-                    . $indent_key . join(",\n$indent_key", @fields) . ",\n"
-                    . $indent_name . "},\n";
-
-                $section_src .= $line;
-            } else {
-                $section_src .= $indent_name . $name . " => { " . (defined $fields[0] ? $fields[0] : '') . " },\n";
-            }
+            $section_src .= pprint_subsection($name, $indent_subsection, @fields);
         }
 
         $perl .= "$indent_section$section => [\n$section_src$indent_section],\n";
@@ -746,6 +735,26 @@ sub _is_number {
     my $is_number = ($value + 0) eq $value;
     return $is_number;
 }
+
+
+sub pprint_subsection {
+    my ($name, $indent_name, @fields) = @_;
+    my $indent_key  = $indent_name . ' ' x 4;
+
+    my $section_src;
+    foreach ( @fields ) { s/^\s+// }
+    if (@fields > 1) {
+        my $line =
+        $indent_name . $name . " => {\n"
+        . $indent_key . join(",\n$indent_key", @fields) . ",\n"
+        . $indent_name . "},\n";
+
+        $section_src = $line;
+    } else {
+        $section_src = $indent_name . $name . " => { " . (defined $fields[0] ? $fields[0] : '') . " },\n";
+    }
+    return $section_src;
+};
 
 
 1;
