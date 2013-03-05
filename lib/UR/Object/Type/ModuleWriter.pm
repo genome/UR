@@ -5,6 +5,9 @@ package UR::Object::Type; # hold methods for the class which cover Module Read/W
 use strict;
 use warnings;
 require UR;
+use List::MoreUtils qw(first_index);
+use Scalar::Util qw(looks_like_number);
+
 our $VERSION = "0.41"; # UR $VERSION;
 
 our %meta_classes;
@@ -56,6 +59,23 @@ sub resolve_class_description_perl {
     $perl .= "    is_abstract => 1,\n" if $self->is_abstract;
     $perl .= "    er_role => '" . $self->er_role . "',\n" if ($self->er_role and ($self->er_role ne $class_meta_meta->property_meta_for_name('er_role')->default_value));
 
+    if ($self->{type_has}) {
+        my @keys = qw(is_optional is);
+        my %type_has = @{$self->{type_has}};
+        my @type_has_names = keys %type_has;
+        my $section_src;
+        for my $name (@type_has_names) {
+            my $struct = $type_has{$name};
+            $section_src .= pprint_subsection($name, ' ' x 8, _section_lines($struct, @keys));
+        }
+        if ($section_src) {
+            my $indent_section = ' ' x 4;
+            my $section = 'type_has';
+            $perl .= "$indent_section$section => [\n$section_src$indent_section],\n";
+        }
+    }
+
+
     # Meta-property attributes
     my @property_meta_property_names;
     if ($self->{'attributes_have'}) {
@@ -81,7 +101,7 @@ sub resolve_class_description_perl {
                 next if grep { $key eq $_ } qw( is is_optional is_specified_in_module_header position_in_module_header );  # skip the ones we've already done
                 my $value = $this_meta_struct->{$key};
 
-                my $format = $self->_is_number($value) ? "%s => %s" : "%s => '%s'";
+                my $format = looks_like_number($value) ? "%s => %s" : "%s => '%s'";
                 push @this_meta_properties, sprintf($format, $key, $value);
             }
             $section_src .= pprint_subsection($meta_name, ' ' x 8, @this_meta_properties);
@@ -105,7 +125,7 @@ sub resolve_class_description_perl {
     my @specified = qw/is class_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name id_generator valid_signals/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
-        my $property_obj = $class_meta_meta->property_meta_for_name($property_name);
+        my $property_obj = $self->__meta__->property_meta_for_name($property_name);
         next if ($property_obj->is_calculated or $property_obj->is_delegated);
 
         my $property_value = $self->$property_name;
@@ -325,7 +345,7 @@ sub _get_display_fields_for_property {
 
     if (defined($property->default_value)) {
         my $value = $property->default_value;
-        if (! $self->_is_number($value)) {
+        if (! looks_like_number($value)) {
             $value = "'$value'";
         }
         push @fields, "default_value => $value";
@@ -443,7 +463,7 @@ sub _get_display_fields_for_property {
     foreach my $meta_property ( @{$params{'attributes_have'}} ) {
         my $value = $property->{$meta_property};
         if (defined $value) {
-            my $format = $self->_is_number($value) ? "%s => %s" : "%s => '%s'";
+            my $format = looks_like_number($value) ? "%s => %s" : "%s => '%s'";
             push @fields, sprintf($format, $meta_property, $value);
         }
     }
@@ -728,15 +748,6 @@ sub rewrite_module_header {
 }
 
 
-# TODO: move to UR::Util
-sub _is_number {
-    my($self,$value) = @_;
-    no warnings 'numeric';
-    my $is_number = ($value + 0) eq $value;
-    return $is_number;
-}
-
-
 sub pprint_subsection {
     my ($name, $indent_name, @fields) = @_;
     my $indent_key  = $indent_name . ' ' x 4;
@@ -755,6 +766,68 @@ sub pprint_subsection {
     }
     return $section_src;
 };
+
+sub _quoted_value {
+    my $value = shift;
+    my ($qo, $qc) = ('', '');
+    if (!looks_like_number($value)) {
+        if ($value =~ /'/) {
+            ($qo, $qc) = ('q(', ')');
+        } else {
+            ($qo, $qc) = ("'", "'");
+        }
+    }
+    return "$qo$value$qc";
+}
+
+sub _idx {
+    my $e = shift;
+    my @expected_order = qw(
+        is
+        is_optional
+    );
+    my $e_idx = first_index { $_ eq $e } @expected_order;
+    if ($e_idx == -1) {
+        $e_idx = scalar(@expected_order);
+    }
+    return $e_idx;
+}
+
+sub _key_sorter {
+    my ($a_idx, $b_idx) = (_idx($a), _idx($b));
+    my $cmp;
+    if ($a_idx == $b_idx) {
+        $cmp = $a cmp $b;
+    } else {
+        $cmp = $a_idx <=> $b_idx;
+    }
+    return $cmp;
+}
+
+sub _sort_keys {
+    sort _key_sorter @_;
+}
+
+sub _exclude_items {
+    my ($list, $exclude) = @_;
+    return grep {
+        my $l = $_;
+        !grep {
+            my $e = $_;
+            $e eq $l;
+        } @$exclude;
+    } @$list;
+}
+
+sub _section_lines {
+    my ($struct, @keys) = @_;
+    @keys = _sort_keys(@keys);
+    my @lines = map {
+        my $value = _quoted_value($struct->{$_});
+        sprintf('%s => %s', $_, $value);
+    } @keys;
+    return @lines;
+}
 
 
 1;

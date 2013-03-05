@@ -8,7 +8,52 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-plan tests => 5;
+plan tests => 14;
+
+use_ok('UR::Object::Type::ModuleWriter');
+
+eval {
+    my $f = \&UR::Object::Type::_quoted_value;
+    my @tests = (
+        [q(123), q(123)],
+        [q(1.23), q(1.23)],
+        [q(abc), q('abc')],
+        [q(a'c), q(q(a'c))],
+    );
+    for my $test (@tests) {
+        my ($i, $e) = @$test;
+        is($f->($i), $e, "_quoted_value matched: $i");
+    }
+};
+
+eval {
+    my $f = \&UR::Object::Type::_idx;
+    my @tests = (
+        ['is', 0],
+        ['foo', 2],
+    );
+    for my $test (@tests) {
+        my ($i, $e) = @$test;
+        is($f->($i), $e, "_idx matched: $i");
+    }
+};
+
+eval {
+    my $f = \&UR::Object::Type::_sort_keys;
+    my @i = qw(foo bar is baz);
+    my @e = qw(is bar baz foo);
+    my @o = $f->(@i);
+    is_deeply(\@o, \@e, "_sort_keys matched: " . join(', ', @i));
+};
+
+eval {
+    my $f = \&UR::Object::Type::_exclude_items;
+    my @i = qw(foo bar baz qux);
+    my @x = qw(foo baz);
+    my @e = qw(bar qux);
+    my @o = $f->(\@i, \@x);
+    is_deeply(\@o, \@e, "_exclude_items matched: [" . join(', ', @i) . "], [" . join(', ', @x) . "]");
+};
 
 # First, make a couple of classes we can point to
 my $c = UR::Object::Type->define(
@@ -52,6 +97,12 @@ ok($c, 'Defined URT::Remote class');
 my $test_class_definition = q(
     is => [ 'URT::Parent' ],
     table_name => 'PARENT_TABLE',
+    type_has => [
+        some_new_property => {
+            is => 'Integer',
+            is_optional => 1,
+        },
+    ],
     attributes_have => [
         meta_prop_a => {
             is => 'Boolean',
