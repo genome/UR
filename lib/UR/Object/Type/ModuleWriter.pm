@@ -419,9 +419,11 @@ sub _get_display_fields_for_property {
                     }
                 }
                 $comparison = '{ ' . join(', ', @operator_parts) . ' } ';
+            } elsif (ref($comparison) eq 'ARRAY') {
+                $comparison = pprint_arrayref($comparison);
             } else {
                 my $class_name = $property->class_name;
-                Carp::croak("Modulewriter doesn't know how to handle property $property_name of class $class_name.  Its 'where' is not a simple scalar or hashref");
+                Carp::croak("Modulewriter doesn't know how to handle property $property_name of class $class_name.  Its 'where' is not a simple scalar, hashref, or arrayref.");
             }
             push @where_parts, "$prop_name => $comparison";
         }
