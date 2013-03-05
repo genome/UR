@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = "0.41_02"; # UR $VERSION;
+our $VERSION = "0.41_03"; # UR $VERSION;
 use Data::Dumper;
 
 class UR::Object::Command::FetchAndDo {

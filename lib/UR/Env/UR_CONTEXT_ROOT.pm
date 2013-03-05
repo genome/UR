@@ -2,5 +2,5 @@ package UR::Env::UR_CONTEXT_ROOT;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.41_02"; # UR $VERSION;
+our $VERSION = "0.41_03"; # UR $VERSION;
 1;

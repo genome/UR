@@ -2,7 +2,7 @@ package UR::Object::View;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.41_02"; # UR $VERSION;;
+our $VERSION = "0.41_03"; # UR $VERSION;;
 
 class UR::Object::View {
     has_abstract_constant => [
