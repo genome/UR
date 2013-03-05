@@ -430,19 +430,12 @@ sub _get_display_fields_for_property {
 
     if (my $valid_values_arrayref = $property->valid_values) {
         $seen{'valid_values'} = 1;
-        # Useqq(1) causes newlines to be escaped so the only newlines are those
-        # injected by Indent(1). Useqq(1) also quotes string values so we can
-        # strip the whitespace around the newlines.
-        my $value_string = Data::Dumper->new([$valid_values_arrayref])->Terse(1)->Indent(1)->Useqq(1)->Dump;
-        $value_string =~ s/\s*\n\s*/ /g;
-        $value_string =~ s/\s*$//;
-        push @fields, "valid_values => $value_string";
+        push @fields, "valid_values => " . pprint_arrayref($valid_values_arrayref);
     }
 
     if (my $example_values_arrayref = $property->example_values) {
         $seen{'example_values'} = 1;
-        my $value_string = Data::Dumper->new([$example_values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
-        push @fields, "example_values => $value_string";
+        push @fields, "example_values => " . pprint_arrayref($example_values_arrayref);
     }
 
     # All the things like is_optional, is_many, etc
@@ -747,6 +740,17 @@ sub rewrite_module_header {
     return 1;
 }
 
+
+sub pprint_arrayref {
+    my $arrayref = shift;
+    # Useqq(1) causes newlines to be escaped so the only newlines are those
+    # injected by Indent(1). Useqq(1) also quotes string values so we can
+    # strip the whitespace around the newlines.
+    my $value_string = Data::Dumper->new([$arrayref])->Terse(1)->Indent(1)->Useqq(1)->Dump;
+    $value_string =~ s/\s*\n\s*/ /g;
+    $value_string =~ s/\s*$//;
+    return $value_string;
+}
 
 sub pprint_subsection {
     my ($name, $indent_name, @fields) = @_;
