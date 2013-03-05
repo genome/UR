@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 package CmdTest::C3;
 use Command::V2;
 use strict;

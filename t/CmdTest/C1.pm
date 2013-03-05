@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use Command::V2;
 use strict;
 use warnings;
