@@ -467,7 +467,12 @@ sub _get_display_fields_for_property {
     if ($desc && length($desc)) {
         $desc =~ s/([\$\@\%\\\"])/\\$1/g;
         $desc =~ s/\n/\\n/g;
-        push @fields, $next_line_prefix . "doc => '$desc'";
+        if ($desc =~ /'/) {
+            $desc = "q($desc)";
+        } else {
+            $desc = "'$desc'";
+        }
+        push @fields, $next_line_prefix . "doc => $desc";
     }
 
     return @fields;

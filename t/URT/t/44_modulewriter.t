@@ -132,7 +132,7 @@ my $test_class_definition = q(
             is => 'Integer',
             is_abstract => 1,
             meta_prop_b => 'metafoo',
-            doc => 'property_b',
+            doc => q(property'b),
         },
         calc_sql => { calculate_sql => q(to_upper(property_b)) },
         some_enum => {
