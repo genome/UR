@@ -104,7 +104,8 @@ sub execute {
         if ($specified_class_name_arrayref) {
             $ds_table_list = [
                 map { [$_->data_source, $_->table_name] }
-                map { $_->__meta__ } 
+                grep { $_->data_source }
+                map { $_->__meta__ }
                 @$specified_class_name_arrayref
             ];        
         }

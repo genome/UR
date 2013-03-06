@@ -401,6 +401,10 @@ sub _get_display_fields_for_property {
         while (@where) {
             my $prop_name = shift @where;
             my $comparison = shift @where;
+            # wrap 'property operator' with quotes if it contains space
+            if (index($prop_name, ' ') >= 0) {
+                $prop_name = "'$prop_name'";
+            }
             if (! ref($comparison)) {
                 # It's a strictly equals comparison.
                 # wrap it in quotes...

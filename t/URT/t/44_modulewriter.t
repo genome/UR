@@ -184,7 +184,7 @@ my $test_class_definition = q(
         another_related => {
             is => 'URT::Related',
             id_by => [ 'rel_id1', 'rel_id2' ],
-            where => [ property_a => 'foo', property_b => [ "foo", "bar" ] ],
+            where => [ 'property_a like' => 'foo', property_b => [ "foo", "bar" ] ],
         },
         related_value => {
             is => 'StringSubclass',
