@@ -143,7 +143,13 @@ sub resolve_class_description_perl {
              )
            ) {
                 # then it should show up in the class definition
-                $perl .= "    $property_name => '" . $self->$property_name . "',\n";
+                my $value = $self->$property_name;
+                if (ref $value eq 'ARRAY') {
+                    $value = pprint_arrayref($value);
+                } else {
+                    $value = qq('$value');
+                }
+                $perl .= "    $property_name => $value,\n";
            }
     }
 

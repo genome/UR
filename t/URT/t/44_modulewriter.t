@@ -71,6 +71,9 @@ ok($c, 'Defined URT::Related class');
 
 $c = UR::Object::Type->define(
     class_name => 'URT::Parent',
+    type_has => [
+        some_type_meta => { is => 'ARRAY', is_optional => 1, },
+    ],
     id_by => [
         parent_id => { is => 'String' },
     ],
@@ -110,6 +113,7 @@ my $test_class_definition = q(
         },
         meta_prop_b => { is => 'String' },
     ],
+    some_type_meta => [ "foo" ],
     subclassify_by => 'my_subclass_name',
     id_by => [
         another_id => {
