@@ -95,7 +95,7 @@ ok($c, 'Defined URT::Remote class');
 # Make up a class definition with all the different kinds of properties we can think of...
 # FIXME - I'm not sure how the attributes_have and id_implied stuff is meant to work
 my $test_class_definition = q(
-    is => [ 'URT::Parent' ],
+    is => 'URT::Parent',
     table_name => 'PARENT_TABLE',
     type_has => [
         some_new_property => {
