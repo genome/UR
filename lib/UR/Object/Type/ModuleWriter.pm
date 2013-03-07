@@ -360,15 +360,18 @@ sub _get_display_fields_for_property {
     }
 
     if (my @id_by = eval { $property->get_property_name_pairs_for_join }) {
-        push @fields, "id_by => "
-            . (@id_by > 1 ? '[ ' : '')
-            . join(", ", map { "'" . $_->[0] . "'" } @id_by)
-            . (@id_by > 1 ? ' ]' : '');
-        $seen{'get_property_name_pairs_for_join'} = 1;
+        unless (defined $property->reverse_as) {
+            push @fields, "id_by => "
+                . (@id_by > 1 ? '[ ' : '')
+                . join(", ", map { "'" . $_->[0] . "'" } @id_by)
+                . (@id_by > 1 ? ' ]' : '');
+        }
 
         if (defined $property->id_class_by) {
             push @fields, sprintf("id_class_by => '%s'", $property->id_class_by);
         }
+
+        $seen{'get_property_name_pairs_for_join'} = 1;
     }
 
     if ($property->via) {
