@@ -110,16 +110,13 @@ $test_class_definition =~ s/\s+/ /gm;
 $string =~ s/\n//gm;
 $string =~ s/\s+/ /gm;
 
-my $diffcmd = 'sdiff -s ';
+my $diffcmd = 'diff -u';
 
 if ($string ne $test_class_definition) {
     ok(0, 'Rewritten class definition matches original');
-    #is($string, $test_class_definition, 'Rewritten class definition matches original');
-    diag("Original definition string:\n$orig_test_class\n");
-    diag("Generated definition:\n$orig_string\n");
     IO::File->new('>/tmp/old')->print($orig_test_class);
     IO::File->new('>/tmp/new')->print($orig_string);
-    system "$diffcmd/tmp/old /tmp/new";
+    diag(qx($diffcmd /tmp/old /tmp/new));
 } else {
     ok(1, 'Rewritten class definition matches original');
 }
