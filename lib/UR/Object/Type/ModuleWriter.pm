@@ -53,7 +53,7 @@ sub resolve_class_description_perl {
     my $perl = '';
 
     unless (@isa == 1 and $isa[0] =~ /^UR::Object|UR::Entity$/ ) {
-        $perl .= "    is => " . (@isa == 1 ? "'@isa',\n" : "[ qw/@isa/ ],\n");
+        $perl .= "    is => " . (@isa == 1 ? "'@isa',\n" : pprint_arrayref(\@isa) . ",\n");
     }
     $perl .= "    table_name => " . ($self->table_name ? "'" . $self->table_name . "'" : 'undef') . ",\n" if $self->data_source_id;
     $perl .= "    is_abstract => 1,\n" if $self->is_abstract;
