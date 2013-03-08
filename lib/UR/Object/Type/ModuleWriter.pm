@@ -393,7 +393,11 @@ sub _get_display_fields_for_property {
             push @fields, 'is_mutable => 1';
         }
 
-        my $via = $property->class_name->__meta__->properties(property_name => $property->via);
+        my $via_property_name = $property->via;
+        if ($via_property_name eq '__self__') {
+            $via_property_name = $property->to;
+        }
+        my $via = $property->class_name->__meta__->properties(property_name => $via_property_name);
         if ($property->is_many ne $via->is_many) {
             push @fields, 'is_many => ' . $property->is_many;
         }

@@ -128,6 +128,10 @@ my $test_class_definition = q(
         foobaz => { is => 'Integer' },
     ],
     has => [
+        property_0 => {
+            via => '__self__',
+            to => 'property_a',
+        },
         property_a => {
             is => 'String',
             meta_prop_a => 1,
