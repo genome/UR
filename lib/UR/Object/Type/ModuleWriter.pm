@@ -392,6 +392,11 @@ sub _get_display_fields_for_property {
             # via properties are not usually mutable
             push @fields, 'is_mutable => 1';
         }
+
+        my $via = $property->class_name->__meta__->properties(property_name => $property->via);
+        if ($property->is_many ne $via->is_many) {
+            push @fields, 'is_many => ' . $property->is_many;
+        }
     }
     if ($property->reverse_as) {
         push @fields, "reverse_as => '" . $property->reverse_as . "'";
