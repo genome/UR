@@ -158,14 +158,8 @@ my $test_class_definition = q(
             calculate_from => [ 'property_a', 'property_b' ],
             calculate => q("URT::TestClass"),
         },
-        subclass_by_prop => {
-            is => 'String',
-            implied_by => 'subclass_by_obj',
-        },
-        subclass_by_id => {
-            is => 'Integer',
-            implied_by => 'subclass_by_obj',
-        },
+        subclass_by_prop => { is => 'String' },
+        subclass_by_id => { is => 'Integer' },
         subclass_by_obj => {
             is => 'UR::Object',
             id_by => 'subclass_by_id',

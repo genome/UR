@@ -358,13 +358,6 @@ sub _get_display_fields_for_property {
         $seen{'default_value'} = 1;
     }
 
-    my $implied_property = 0;
-    if (defined($property->implied_by) and length($property->implied_by)) {
-        push @fields,  "implied_by => '" . $property->implied_by . "'";
-        $implied_property = 1;
-        $seen{'implied_by'} = 1;
-    }
-
     if (my @id_by = eval { $property->get_property_name_pairs_for_join }) {
         unless (defined $property->reverse_as) {
             push @fields, "id_by => "
