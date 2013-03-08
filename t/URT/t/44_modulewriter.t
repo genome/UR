@@ -178,6 +178,12 @@ my $test_class_definition = q(
             reverse_as => 'testobj',
             where => [ something => { operator => 'like', value => '%match%' }  ],
         },
+        set_remotes => {
+            is => 'URT::Remote',
+            reverse_as => 'testobj',
+            is_mutable => 1,
+            where => [ something => { operator => 'like', value => '%match%' }  ],
+        },
     ],
     has_optional => [
         property_d => { is => 'Number' },

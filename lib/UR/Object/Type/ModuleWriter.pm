@@ -400,6 +400,12 @@ sub _get_display_fields_for_property {
     }
     if ($property->reverse_as) {
         push @fields, "reverse_as => '" . $property->reverse_as . "'";
+
+        if ($property->is_mutable) {
+            # reverse_as properties are not usually mutable
+            push @fields, 'is_mutable => 1';
+        }
+
         $seen{'reverse_as'} = 1;
     }
 
