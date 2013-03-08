@@ -284,18 +284,15 @@ sub _get_display_fields_for_property {
     }
 
     my @fields;
-    my %seen;
     my $property_name = $property->property_name;
 
     my $type = $property->data_type;
     if ($type) {
         push @fields, "is => '$type'" if $type;
-        $seen{'is'} = 1;
     }
 
     if (defined($property->data_length) and length($property->data_length)) {
         push @fields, "len => " . $property->data_length;
-        $seen{'data_length'} = 1;
     }
 
     #$line .= "references => '???', ";
@@ -303,11 +300,9 @@ sub _get_display_fields_for_property {
         # temp hack for entity attribute values
         #push @fields, "delegate => { via => 'eav_" . $property->property_name . "', to => 'value' }";
         push @fields, "is_legacy_eav => 1";
-        $seen{'is_legacy_eav'} = 1;
     }
     elsif ($property->is_delegated) {
         # do nothing
-        $seen{'is_delegated'} = 1;
     }
     elsif ($property->is_calculated) {
         if (my $calc_from = $property->calculate_from) {
@@ -327,8 +322,6 @@ sub _get_display_fields_for_property {
         }
 
         push @fields, 'is_calculated => 1' unless ($calc_source);
-
-        $seen{'is_calculated'} = 1;
     }
     elsif ($params{has_table} && ! $property->is_transient) {
         unless ($property->column_name) {
@@ -345,8 +338,6 @@ sub _get_display_fields_for_property {
         if ($cname ne $expected_cname) {
             push @fields,  "column_name => '" . $cname . "'";
         }
-
-        $seen{'column_name'} = 1;
     }
 
     if (defined($property->default_value)) {
@@ -355,7 +346,6 @@ sub _get_display_fields_for_property {
             $value = "'$value'";
         }
         push @fields, "default_value => $value";
-        $seen{'default_value'} = 1;
     }
 
     if (my @id_by = eval { $property->get_property_name_pairs_for_join }) {
@@ -369,16 +359,12 @@ sub _get_display_fields_for_property {
         if (defined $property->id_class_by) {
             push @fields, sprintf("id_class_by => '%s'", $property->id_class_by);
         }
-
-        $seen{'get_property_name_pairs_for_join'} = 1;
     }
 
     if ($property->via) {
         push @fields, "via => '" . $property->via . "'";
-        $seen{'via'} = 1;
         if ($property->to and $property->to ne $property->property_name) {
             push @fields, "to => '" . $property->to . "'";
-            $seen{'to'} = 1;
         }
 
         if ($property->is_mutable) {
@@ -402,13 +388,10 @@ sub _get_display_fields_for_property {
             # reverse_as properties are not usually mutable
             push @fields, 'is_mutable => 1';
         }
-
-        $seen{'reverse_as'} = 1;
     }
 
     if ($property->constraint_name) {
         push @fields, "constraint_name => '" . $property->constraint_name . "'";
-        $seen{'constraint_name'} = 1;
     }
 
     if ($property->where) {
@@ -452,12 +435,10 @@ sub _get_display_fields_for_property {
     }
 
     if (my $valid_values_arrayref = $property->valid_values) {
-        $seen{'valid_values'} = 1;
         push @fields, "valid_values => " . pprint_arrayref($valid_values_arrayref);
     }
 
     if (my $example_values_arrayref = $property->example_values) {
-        $seen{'example_values'} = 1;
         push @fields, "example_values => " . pprint_arrayref($example_values_arrayref);
     }
 
@@ -469,7 +450,6 @@ sub _get_display_fields_for_property {
     my @sections = split('_',$1 || '');
 
     for my $std_field_name (qw/optional abstract transient constant classwide many deprecated/) {
-        $seen{$property_name} = 1;
         next if (grep { $std_field_name eq $_ } @sections); # Don't print is_optional if we're in the has_optional section
         my $property_name = "is_" . $std_field_name;
         push @fields, "$property_name => " . $property->$property_name if $property->$property_name;
