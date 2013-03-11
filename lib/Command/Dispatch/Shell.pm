@@ -755,51 +755,39 @@ sub resolve_param_value_from_cmdline_text {
         }
     }
 
-    #this splits a bool_expr if multiples of the same field are listed, e.g. name=foo,name=bar
-    #in that case, assume they're separate queries
-    if (@param_args > 1) {
-        my %bool_expr_type_count;
-        my @bool_expr_type = map {split(/[=~:]/, $_)} grep { /[=~:]/ } @param_args;
-        for my $type (@bool_expr_type) {
-            $bool_expr_type_count{$type}++;
-        }
-        my $duplicate_bool_expr_type = 0;
-        for my $type (keys %bool_expr_type_count) {
-            $duplicate_bool_expr_type++ if ($bool_expr_type_count{$type} > 1);
-        }
-        #If it's a good boolean expression, just try to find what matches entirely
-        @param_args = ($param_str) if (scalar(@bool_expr_type) and not $duplicate_bool_expr_type);
-    }
-
-    my $pmeta = $self->__meta__->property($param_name);
-
     my $param_resolve_message = "Resolving parameter '$param_name' from command argument '$param_str'...";
-    my @results;
+    my $pmeta = $self->__meta__->property($param_name);
     my $require_user_verify = $pmeta->{'require_user_verify'};
-    for (my $i = 0; $i < @param_args; $i++) {
-        my $arg = $param_args[$i];
-        my @arg_results;
-        (my $arg_display = $arg) =~ s/,/ AND /g; 
 
-        %SEEN_FROM_CLASS = ();
-        # call resolve_param_value_from_text without a via_method to "bootstrap" recursion
-        @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
-        Carp::croak($@) if ($@ and $@ !~ m/Not a valid BoolExpr/);
-        last if ($@ && !@arg_results);
-
-        $require_user_verify = 1 if (@arg_results > 1 && !defined($require_user_verify));
-        if (@arg_results) {
-            push @results, @arg_results;
-            last if ($arg =~ /,/); # the first arg is all param_args as BoolExpr, if it returned values finish; basically enforicing AND (vs. OR)
+    my @results;
+    my $bx = eval { UR::BoolExpr->resolve_for_string($param_class, $param_str) };
+    my $bx_error = $@;
+    if ($bx) {
+        @results = $param_class->get($bx);
+        if (@results > 1 && !defined($require_user_verify)) {
+            $require_user_verify = 1;
         }
-        elsif (@param_args > 1 ) {
-            #print STDERR "WARNING: No match found for $arg!\n";
+    } else {
+        for my $arg (@param_args) {
+            %SEEN_FROM_CLASS = ();
+
+            # call resolve_param_value_from_text without a via_method to "bootstrap" recursion
+            my @arg_results = $self->resolve_param_value_from_text($arg, $param_class);
+
+            if (@arg_results != 1 && !defined($require_user_verify)) {
+                $require_user_verify = 1;
+            }
+
+            push @results, @arg_results;
         }
     }
     if (@results) {
         $self->status_message($param_resolve_message . " found " . @results);
     }
     else {
+        if ($bx_error) {
+            $self->status_message($bx_error);
+        }
         $self->status_message($param_resolve_message . " none found.");
     }
 
@@ -849,6 +837,7 @@ sub resolve_param_value_from_text {
     my @results;
     # try getting BoolExpr, otherwise fallback on '_resolve_param_value_from_text_by_name_or_id' parser
     eval { @results = $self->_resolve_param_value_from_text_by_bool_expr($param_class, $param_arg); };
+    Carp::croak($@) if ($@ and $@ !~ m/Not a valid BoolExpr/);
     if (!@results && !$@) {
         # no result and was valid BoolExpr then we don't want to break it apart because we
         # could query enormous amounts of info
