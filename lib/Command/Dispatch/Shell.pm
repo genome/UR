@@ -746,13 +746,15 @@ sub resolve_param_value_from_cmdline_text {
     my @param_args  = @{$param_info->{value}};
     my $param_str   = join(',', @param_args);
 
-    my @param_class;
     if (ref($param_class) eq 'ARRAY') {
-        @param_class = @$param_class;
-    } else {
-        @param_class = ($param_class);
+        my @param_class = @$param_class;
+        if (@param_class > 1) {
+            die 'Multiple data types on command arguments are not supported.';
+        } else {
+            $param_class = $param_class[0];
+        }
     }
-    undef($param_class);
+
     #this splits a bool_expr if multiples of the same field are listed, e.g. name=foo,name=bar
     #in that case, assume they're separate queries
     if (@param_args > 1) {
@@ -779,12 +781,10 @@ sub resolve_param_value_from_cmdline_text {
         my @arg_results;
         (my $arg_display = $arg) =~ s/,/ AND /g; 
 
-        for my $param_class (@param_class) {
-            %SEEN_FROM_CLASS = ();
-            # call resolve_param_value_from_text without a via_method to "bootstrap" recursion
-            @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
-            Carp::croak($@) if ($@ and $@ !~ m/Not a valid BoolExpr/);
-        } 
+        %SEEN_FROM_CLASS = ();
+        # call resolve_param_value_from_text without a via_method to "bootstrap" recursion
+        @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
+        Carp::croak($@) if ($@ and $@ !~ m/Not a valid BoolExpr/);
         last if ($@ && !@arg_results);
 
         $require_user_verify = 1 if (@arg_results > 1 && !defined($require_user_verify));
