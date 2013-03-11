@@ -12,7 +12,13 @@ use IO::Socket;
 
 # TCP sockets are used when running separate processes for
 # debugging the test
-our $PORT = '12345';
+# Let the system pick a socket for us, and then close it.  We'll use ReuseAddr
+# when we re-open it
+our $PORT;
+{
+    my $s = IO::Socket::INET->new(Listen => 1, Proto => 'tcp');
+    $PORT = $s->sockport();
+}
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
