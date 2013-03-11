@@ -7,7 +7,7 @@ use warnings;
 use UR;
 use UR::Namespace::Command::Base;
 
-our $VERSION = "0.41_03"; # UR $VERSION;
+our $VERSION = "0.41_04"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

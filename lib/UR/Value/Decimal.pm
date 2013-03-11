@@ -2,7 +2,7 @@ package UR::Value::Decimal;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.41_03"; # UR $VERSION;
+our $VERSION = "0.41_04"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::Value::Decimal',

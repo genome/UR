@@ -6,7 +6,7 @@ use Sub::Name;
 use Scalar::Util;
 
 require UR;
-our $VERSION = "0.41_03"; # UR $VERSION;
+our $VERSION = "0.41_04"; # UR $VERSION;
 
 use UR::Context::ImportIterator;
 use UR::Context::ObjectFabricator;

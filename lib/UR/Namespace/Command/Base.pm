@@ -7,7 +7,7 @@ use Cwd;
 use Carp;
 use File::Find;
 
-our $VERSION = "0.41_03"; # UR $VERSION;
+our $VERSION = "0.41_04"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

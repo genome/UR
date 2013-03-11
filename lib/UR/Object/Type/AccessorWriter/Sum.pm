@@ -4,7 +4,7 @@ package UR::Object::Type::AccessorWriter::Sum;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.41_03"; # UR $VERSION;
+our $VERSION = "0.41_04"; # UR $VERSION;
 
 sub calculate {
     my $self = shift;
