@@ -4,11 +4,10 @@ use warnings;
 use Test::More;
 
 eval "use XML::LibXML";
-if ($INC{"XML/LibXML.pm"}) {
-    plan tests => 24;
-}
-else {
-    plan skip_all => 'works only with systems which have XML::LibXML';
+eval "use XML::LibXSLT";
+my $TEST_XML = 1;
+unless ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'}) {
+    $TEST_XML = undef;
 }
 
 use File::Basename;
@@ -54,7 +53,8 @@ is("@c","$c1 $c2", "got expected cat list for the owner");
 
 #########
 
-for my $toolkit ('xml','text') {
+my @toolkits = $TEST_XML ? ( 'xml','text' ) : ( 'text' );
+for my $toolkit (@toolkits) {
 
     note('view 1: no aspects');
     my $pv1 = $p->create_view(
@@ -123,3 +123,4 @@ for my $toolkit ('xml','text') {
     note($c);
 }
 
+done_testing();
