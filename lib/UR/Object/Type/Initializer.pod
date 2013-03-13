@@ -282,6 +282,8 @@ subclass the object should be blessed into.
 Works like 'sub_classification_method_name', except that the value of the
 property is directly used to subclass the loaded object. 
 
+=back
+
 =head2 Properties properties
 
 C<ur show properties UR::Object::Property> will print out an exhaustive list of all
@@ -351,7 +353,11 @@ reverse_as properties.
 
 Indicates that this property can hold the value undef. 
 
+=back
+
 =head3 Calculated Properties
+
+=over
 
 =item is_calculated
 

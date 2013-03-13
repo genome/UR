@@ -336,6 +336,8 @@ package UR::ModuleBase;
 
 =pod
 
+=over
+
 =item message_callback
 
   $sub_ref = UR::ModuleBase->message_callback($type);

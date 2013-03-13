@@ -216,6 +216,8 @@ sub _define_method {
     return 1;
 }
 
+=pod
+
 =over
 
 =item path_relative_to
@@ -227,6 +229,8 @@ and $target are the same, then it returns '.'.  If $target is
 a subdirectory of of $base, then it returns the portion of $target
 that is unique compared to $base.  If $target is not a subdirectory
 of $base, then it returns a relative pathname starting with $base.
+
+=back
 
 =cut
 
@@ -251,6 +255,7 @@ sub path_relative_to {
     return $rel_path;
 }
  
+=pod
 
 =over
 
@@ -269,6 +274,8 @@ scalar method is generated.  If the hash key is a reference to an
 array, an array method is generated.
 
 This method does not overwrite class methods that already exist.
+
+=back
 
 =cut
 
@@ -300,6 +307,8 @@ sub generate_readwrite_methods
 
 =pod
 
+=over
+
 =item generate_readwrite_methods_override
 
   UR::Util->generate_readwrite_methods_override
@@ -310,6 +319,8 @@ sub generate_readwrite_methods
 
 Same as generate_readwrite_function except that we force the functions
 into the namespace even if the function is already defined
+
+=back
 
 =cut
 
@@ -338,6 +349,8 @@ sub generate_readwrite_methods_override
 
 =pod
 
+=over
+
 =item generate_readonly_methods
 
   UR::Util->generate_readonly_methods
@@ -353,6 +366,8 @@ scalar method is generated.  If the hash key is a reference to an
 array, an array method is generated.
 
 This method does not overwrite class methods that already exist.
+
+=back
 
 =cut
 
@@ -384,6 +399,8 @@ sub generate_readonly_methods
 
 =pod 
 
+=over
+
 =item mapreduce_grep
 
     my @matches = UR::Util->map_reduce_grep { shift->some_test } @candidates;
@@ -395,6 +412,8 @@ list, collect the results, and return the matching items as a list.
 
 The test function is called with a single argument, an item from the list to
 be tested, and should return a true of false value.
+
+=back
 
 =cut
 

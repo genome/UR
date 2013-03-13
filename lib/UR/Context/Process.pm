@@ -72,9 +72,7 @@ UR::Object::Type->define(
 These methods provide the accessor and set methods for various names
 associated with an application.
 
-=over 4
-
-=pod 
+=over
 
 =item get_current
 
@@ -83,6 +81,8 @@ associated with an application.
 This is the context which represents the current process.
 
 Also available as UR::Context->get_process();
+
+=back
 
 =cut
 
@@ -93,12 +93,16 @@ sub get_current {
 
 =pod 
 
+=over
+
 =item has_changes()
 
  $bool = UR::Context::Process->has_changes();
 
 Returns true if the current process has changes which might be committed back to
 the underlying context.
+
+=back
 
 =cut
 
@@ -116,6 +120,8 @@ sub has_changes {
 
 =pod 
 
+=over
+
 =item _create_for_current_process
 
  $ctx = UR::Context::Process->_create_for_current_process(@PARAMS)
@@ -125,6 +131,8 @@ It materializes a new object to represent a real process somewhere.
 
 TODO: Remove the exception from create(), and allow other processes to be
 created explicitly w/ the appropriate characteristics.
+
+=back
 
 =cut
 
@@ -157,11 +165,15 @@ sub create {
 
 =pod
 
+=over
+
 =item base_name
 
   $name = UR::Context::Process->base_name;
 
 This is C<basename($0, '.pl'))>.
+
+=back
 
 =cut
 
@@ -169,6 +181,8 @@ our $base_name = basename($0, '.pl');
 sub base_name { return $base_name }
 
 =pod
+
+=over
 
 =item prog_name
 
@@ -183,6 +197,8 @@ this method sets the program name and returns the new name or C<undef>
 if unsuccessful.
 
 It defaults to C<basename> if unspecified.
+
+=back
 
 =cut
 
@@ -200,6 +216,8 @@ sub prog_name
 }
 
 =pod
+
+=over
 
 =item pkg_name
 
@@ -221,6 +239,8 @@ It defaults to C<prog_name> when unspecified, which in turn
 defaults to C<base_name>, which in turn defaults to
 C<basename($0)>.
 
+=back
+
 =cut
 
 # NOTE: this should not use App::Debug because App::Debug::level calls it
@@ -239,6 +259,8 @@ sub pkg_name
 
 =pod
 
+=over
+
 =item title
 
   $name = UR::Context::Process->title;
@@ -255,6 +277,8 @@ It defaults to C<pkg_name> when otherwise unspecified, which
 in turn defaults to C<prog_name> when unspecified, which in
 turn defaults to C<base_name> when unspecified, which
 defaults to C<basename($0)> when unspecified.
+
+=back
 
 =cut
 
@@ -273,6 +297,8 @@ sub title
 
 =pod
 
+=over
+
 =item version
 
   $version = UR::Context::Process->version;
@@ -287,6 +313,8 @@ returned.
 
 This message defaults to C<$main::VERSION> if not set.  Note that
 C<$main::VERSION> may be C<undef>.
+
+=back
 
 =cut
 
@@ -306,6 +334,8 @@ sub version
 
 =pod
 
+=over
+
 =item author
 
   $author = UR::Context::Process->author;
@@ -315,6 +345,8 @@ This method is used to access and set the package author.  If given an
 argument, this method sets the package author and returns the author
 or C<undef> if unsuccessful.  Without an argument, the current author
 is returned.
+
+=back
 
 =cut
 
@@ -334,6 +366,8 @@ sub author
 
 =pod
 
+=over
+
 =item author_email
 
   $author_email = UR::Context::Process->author_email;
@@ -345,6 +379,8 @@ method (see L<App::Getopt/"usage">).  If given an argument, this
 method sets the package author's email address and returns email
 address or C<undef> if unsuccessful.  Without an argument, the current
 email address is returned.
+
+=back
 
 =cut
 
@@ -364,6 +400,8 @@ sub author_email
 
 =pod
 
+=over
+
 =item support_email
 
   $support_email = UR::Context::Process->support_email;
@@ -375,6 +413,8 @@ the C<usage> method (see L<App::Getopt/"usage">).  If given an
 argument, this method sets the support email address and returns that
 email address or C<undef> if unsuccessful.  Without an argument, the
 current email address is returned.
+
+=back
 
 =cut
 
@@ -394,12 +434,16 @@ sub support_email
 
 =pod
 
+=over
+
 =item real_user_name
 
   $login = UR::Context::Process->real_user_name;
 
 This method is used to get the login name of the effective user id of
 the running script.
+
+=back
 
 =cut
 
@@ -425,6 +469,8 @@ sub real_user_name
 
 =pod 
 
+=over
+
 =item fork
     $pid = UR::Context::Process->fork;
 
@@ -433,6 +479,9 @@ Safe fork() wrapper.
 Handles properly disconnecting database handles if necessary so that data sources in children
 are still valid.  Also ensures that the active UR::Context::process has the child's PID 
 recorded within.
+
+=back
+
 =cut
 
 sub fork 
@@ -469,12 +518,16 @@ sub fork
 
 =pod
 
+=over
+
 =item effective_user_name
 
   $login = UR::Context::Process->effective_user_name;
 
 This method is used to get the login name of the effective user id of
 the running script.
+
+=back
 
 =cut
 
@@ -493,6 +546,8 @@ sub effective_user_name
 
 =pod
 
+=over
+
 =item original_program_path
 
  $path = UR::Context::Process->original_program_path;
@@ -501,6 +556,8 @@ This method is used to (try to) get the original program path of the running scr
 This will not change even if the current working directory is changed.
 (In truth it will find the path at the time UR::Context::Process was used.  So, a chdir
 before that happens will cause incorrect results; in that case, undef will be returned.
+
+=back
 
 =cut
 
@@ -539,8 +596,6 @@ sub original_program_name {
 __END__
 
 =pod
-
-=back
 
 =head1 SEE ALSO
 

@@ -37,8 +37,6 @@ a formal UR class.
 
 =head1 METHODS
 
-=over 4
-
 =cut
 
 # set up package
@@ -53,6 +51,8 @@ use IO::Handle;
 use UR::Util;
 
 =pod
+
+=over
 
 =item C<class>
 
@@ -777,8 +777,6 @@ sub _current_call_stack
 __END__
 
 =pod
-
-=back
 
 =head1 SEE ALSO
 

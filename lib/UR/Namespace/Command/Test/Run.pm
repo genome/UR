@@ -1019,7 +1019,11 @@ directory, and runs ALL tests under that directory.
  This many tests should be run in parallel.  If --lsf is also specified, then
  these parallel tests will be submitted as LSF jobs.
 
+=back
+
 =head1 PENDING FEATURES
+
+=over
 
 =item automatic remote execution for tests requiring a distinct hardware platform
 

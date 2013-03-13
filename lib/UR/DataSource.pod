@@ -212,24 +212,20 @@ Called by _generate_template_data_for_loading().  The input is a listref of
 listrefs about properties involved in a query.  The second-level data is
 sets of quads:
 
-=over 2
+=over
 
 =item 1.
-
 The class object for this property
 
 =item 2.
-
 The property metadata object
 
 =item 3.
-
 The database table name the data will come from
 
-=item 4.
-
-The "object number", starting with 0.  This is used in inheritance or
-delegation where a table join will be required.
+=item 4
+The "object number", starting with 0.  This is used in
+inheritance or delegation where a table join will be required.
 
 =back
 
@@ -238,6 +234,8 @@ the request; usually just 1, but can be more than one if inheritance or
 delegation is involved.  The data includes information about the class's
 properties, ID properties, and which columns of the result set the 
 values will be found.
+
+=back
 
 =head1 MetaDB
 
