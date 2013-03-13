@@ -66,7 +66,7 @@ UR::Object::Type->define(
     ]
 );
 
-our $VERSION = "0.41_04"; # UR $VERSION;;
+our $VERSION = "0.41_05"; # UR $VERSION;;
 
 # Borrow from the util package.
 # This will go away with refactoring.

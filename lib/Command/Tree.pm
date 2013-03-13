@@ -5,7 +5,7 @@ use warnings;
 use UR;
 use File::Basename qw/basename/;
 
-our $VERSION = "0.41_04"; # UR $VERSION;
+our $VERSION = "0.41_05"; # UR $VERSION;
 
 class Command::Tree {
     is => 'Command::V2',

@@ -3,7 +3,7 @@ package UR::Object::View::Default::Gtk2;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.41_04"; # UR $VERSION;
+our $VERSION = "0.41_05"; # UR $VERSION;
 
 class UR::Object::View::Default::Gtk2 {
     is => 'UR::Object::View',

@@ -4,7 +4,7 @@ use warnings;
 use strict;
 require UR;
 
-our $VERSION = "0.41_04"; # UR $VERSION;;
+our $VERSION = "0.41_05"; # UR $VERSION;;
 
 class UR::Object::View::Aspect {
     id_by => [

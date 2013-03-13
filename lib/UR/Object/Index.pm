@@ -1,7 +1,7 @@
 # Index for cached objects.
 
 package UR::Object::Index;
-our $VERSION = "0.41_04"; # UR $VERSION;;
+our $VERSION = "0.41_05"; # UR $VERSION;;
 use base qw(UR::Object);
 
 use strict;

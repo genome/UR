@@ -4,7 +4,7 @@ package UR::Namespace::Command::List::Classes;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.41_04"; # UR $VERSION;
+our $VERSION = "0.41_05"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

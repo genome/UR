@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use UR;
 use List::MoreUtils qw(any);
-our $VERSION = "0.41_04"; # UR $VERSION;
+our $VERSION = "0.41_05"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object::Type );
 
