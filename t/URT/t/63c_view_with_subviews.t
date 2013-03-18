@@ -3,21 +3,23 @@ use strict;
 use warnings;
 use Test::More;
 
-eval "use XML::LibXML";
-if ($INC{"XML/LibXML.pm"}) {
-    plan tests => 31;
-}
-else {
-    plan skip_all => 'works only with systems which have XML::LibXML';
-}
-
-use UR;
-
 # let the developer supply the toolkits to test
 # or default to all of them
 # TODO: add html when it stops dying
 our @toolkits = @ARGV;
-@toolkits = qw/json xml text/ unless @toolkits;
+
+eval "use XML::LibXML";
+eval "use XML::LibXSLT";
+my $TEST_XML = 1;
+unless ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'}) {
+    $TEST_XML = undef;
+}
+
+use UR;
+
+unless (@toolkits) {
+    @toolkits = $TEST_XML ? qw/json xml text/ : qw/json text/;
+}
 
 class Acme { is => 'UR::Namespace' };
 
@@ -152,4 +154,4 @@ for my $obj_aspects_pair ( [$p,\@person_aspects], [$cat_set,\@cat_set_aspects] )
     }
 }
 
-
+done_testing();

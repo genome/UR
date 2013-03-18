@@ -169,8 +169,8 @@ is($hn,$hu,"the normalized array is the same ref as the unnormalized");
 
 my %b = $b->params_list;
 my %n = $n->params_list;
-my @b = %b;
-my @n = %n;
+my @b = map { $_ => $b{$_}.'' } sort keys(%b);
+my @n = map { $_ => $n{$_}.'' } sort keys(%n);
 is("@n","@b", "normalization keeps references correct");
 
 

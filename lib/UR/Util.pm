@@ -4,7 +4,7 @@ package UR::Util;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.40"; # UR $VERSION;
+our $VERSION = "0.41_05"; # UR $VERSION;
 use Cwd;
 use Data::Dumper;
 use Clone::PP;

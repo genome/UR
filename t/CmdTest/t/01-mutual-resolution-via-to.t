@@ -7,14 +7,15 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 
-my $prefix = UR::Util->used_libs_perl5lib_prefix;
-$ENV{PERL5LIB} = $prefix . ':' . $ENV{PERL5LIB};
-
 use UR;
 use Command::Shell;
 use CmdTest;
 use CmdTest::C2;
 use CmdTest::C3;
+
+# Put this into Perl5Lib so when we exec the commands below, they can
+# find CmdTest::Stuff
+$ENV{PERL5LIB} .= ':' . File::Basename::dirname(__FILE__)."/../..";
 
 ok(CmdTest->isa('Command::Tree'), "CmdTest isa Command::Tree");
 
@@ -23,11 +24,11 @@ my $path = $INC{"CmdTest/C3.pm"};
 ok($path, "found path to test module")
     or die "cannot continue!";
 
-my $result1 = `$path --thing=two`;
+my $result1 = `$^X $path --thing=two`;
 chomp $result1;
 is($result1, "thing_id is 222", "specifying an object automatically specifies its indirect value");
 
-my $result2 = `$path --thing-name=two`;
+my $result2 = `$^X $path --thing-name=two`;
 chomp $result2;
 is($result2, "thing_id is 222", "specifying an indirect value automatically sets the value it is via");
 

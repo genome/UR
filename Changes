@@ -1,5 +1,9 @@
 Revision history for UR
 
+0.41_01 2013-03-01
+        Add test diags to the CmdTest test to determine why it fails on
+        CPAN Testers machines
+
 0.40    2013-02-25
         RDBMS data sources now have infrastructure for comparing text and
             non-text columns during a join.  When a number or date column

@@ -5,7 +5,7 @@ use warnings;
 use UR;
 use File::Basename qw/basename/;
 
-our $VERSION = "0.40"; # UR $VERSION;
+our $VERSION = "0.41_05"; # UR $VERSION;
 
 class Command::Tree {
     is => 'Command::V2',
@@ -267,7 +267,7 @@ sub help_sub_commands {
     for my $row (@full_data) {
         for my $c (0..2) {
             $text .= ' ';
-            $text .= Term::ANSIColor::colored($row->[$c], $colors[$c]);
+            $text .= $colors[$c] ? Term::ANSIColor::colored($row->[$c], $colors[$c]) : $row->[$c];
             $text .= ' ';
             $text .= ' ' x ($max_width_found[$c]-length($row->[$c]));
         }

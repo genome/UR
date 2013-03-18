@@ -72,6 +72,11 @@ UR::Context->object_cache_size_lowwater(undef);
 UR::Context->object_cache_size_highwater(undef);
 @file_data_sources = UR::DataSource::File->is_loaded();
 is(scalar(@file_data_sources), 0, 'After cache pruning, no file data sources are defined');
+if (@file_data_sources) {
+    foreach (@file_data_sources) {
+        print STDERR Data::Dumper::Dumper($_);
+    }
+}
 
 # try getting something again, should re-create the data source object
 $obj = UR::Context->current->reload('URT::Thing', thing_type => 'person', thing_id => 1);

@@ -4,11 +4,12 @@ use warnings;
 use Test::More;
 
 eval "use XML::LibXML";
-if ($INC{"XML/LibXML.pm"}) {
+eval "use XML::LibXSLT";
+if ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'}) {
     plan tests => 11;
 }
 else {
-    plan skip_all => 'works only with systems which have XML::LibXML';
+    plan skip_all => 'works only with systems which have XML::LibXML and XML::LibXSLT.pm';
 }
 
 #use File::Basename;

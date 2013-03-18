@@ -7,6 +7,8 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
 use Test::More tests => 15;
 
+BEGIN { $ENV{'ANSI_COLORS_DISABLED'} = 1 }
+
 UR::Object::Type->define(
     class_name => 'Acme::ParentCommand',
     is => 'Command',

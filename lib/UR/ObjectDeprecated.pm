@@ -5,7 +5,7 @@ package UR::Object;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.40"; # UR $VERSION;
+our $VERSION = "0.41_05"; # UR $VERSION;
 
 use Data::Dumper;
 use Scalar::Util qw(blessed);
