@@ -4,7 +4,7 @@ package UR::DataSource::Code;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.41_05"; # UR $VERSION;
+our $VERSION = "0.41"; # UR $VERSION;
 use File::Copy qw//;
 ##- use UR;
 
