@@ -1,6 +1,6 @@
 ---
 name: UR
-version: 0.41_05
+version: 0.41
 author:
   - Anthony Brummett   brummett@cpan.org
   - Scott Smith       sakoht@cpan.org
@@ -45,7 +45,7 @@ configure_requires:
 provides:
   Command:
     file: lib/Command.pm
-    version: 0.41_05
+    version: 0.41
   Command::DynamicSubCommands:
     file: lib/Command/DynamicSubCommands.pm
   Command::Shell:
@@ -64,13 +64,13 @@ provides:
     file: lib/Command/Test/Tree1/Echo2.pm
   Command::Tree:
     file: lib/Command/Tree.pm
-    version: 0.41_05
+    version: 0.41
   Command::V1:
     file: lib/Command/V1.pm
-    version: 0.41_05
+    version: 0.41
   Command::V2:
     file: lib/Command/V2.pm
-    version: 0.41_05
+    version: 0.41
   DB:
     file: lib/Devel/callcount.pm
   Devel::callsfrom:
@@ -87,13 +87,13 @@ provides:
     file: lib/UR/Namespace/Command/Test/Run.pm
   UR:
     file: lib/UR.pm
-    version: 0.41_05
+    version: 0.41
   UR::All:
     file: lib/UR/All.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr:
     file: lib/UR/BoolExpr.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::BxParser:
     file: lib/UR/BoolExpr/BxParser.pm
   UR::BoolExpr::BxParser::Yapp::Driver:
@@ -101,482 +101,482 @@ provides:
     version: 1.05
   UR::BoolExpr::Template:
     file: lib/UR/BoolExpr/Template.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::And:
     file: lib/UR/BoolExpr/Template/And.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::Composite:
     file: lib/UR/BoolExpr/Template/Composite.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::Or:
     file: lib/UR/BoolExpr/Template/Or.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison:
     file: lib/UR/BoolExpr/Template/PropertyComparison.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::Between:
     file: lib/UR/BoolExpr/Template/PropertyComparison/Between.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::Equals:
     file: lib/UR/BoolExpr/Template/PropertyComparison/Equals.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::False:
     file: lib/UR/BoolExpr/Template/PropertyComparison/False.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::GreaterOrEqual:
     file: lib/UR/BoolExpr/Template/PropertyComparison/GreaterOrEqual.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::GreaterThan:
     file: lib/UR/BoolExpr/Template/PropertyComparison/GreaterThan.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::In:
     file: lib/UR/BoolExpr/Template/PropertyComparison/In.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::LessOrEqual:
     file: lib/UR/BoolExpr/Template/PropertyComparison/LessOrEqual.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::LessThan:
     file: lib/UR/BoolExpr/Template/PropertyComparison/LessThan.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::Like:
     file: lib/UR/BoolExpr/Template/PropertyComparison/Like.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::Matches:
     file: lib/UR/BoolExpr/Template/PropertyComparison/Matches.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::NotEqual:
     file: lib/UR/BoolExpr/Template/PropertyComparison/NotEqual.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::NotIn:
     file: lib/UR/BoolExpr/Template/PropertyComparison/NotIn.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::NotLike:
     file: lib/UR/BoolExpr/Template/PropertyComparison/NotLike.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Template::PropertyComparison::True:
     file: lib/UR/BoolExpr/Template/PropertyComparison/True.pm
-    version: 0.41_05
+    version: 0.41
   UR::BoolExpr::Util:
     file: lib/UR/BoolExpr/Util.pm
-    version: 0.41_05
+    version: 0.41
   UR::Change:
     file: lib/UR/Change.pm
-    version: 0.41_05
+    version: 0.41
   UR::Context:
     file: lib/UR/Context.pm
-    version: 0.41_05
+    version: 0.41
   UR::Context::DefaultRoot:
     file: lib/UR/Context/DefaultRoot.pm
-    version: 0.41_05
+    version: 0.41
   UR::Context::LoadingIterator:
     file: lib/UR/Context/LoadingIterator.pm
-    version: 0.41_05
+    version: 0.41
   UR::Context::ObjectFabricator:
     file: lib/UR/Context/ObjectFabricator.pm
-    version: 0.41_05
+    version: 0.41
   UR::Context::Process:
     file: lib/UR/Context/Process.pm
-    version: 0.41_05
+    version: 0.41
   UR::Context::Root:
     file: lib/UR/Context/Root.pm
-    version: 0.41_05
+    version: 0.41
   UR::Context::Transaction:
     file: lib/UR/Context/Transaction.pm
-    version: 0.41_05
+    version: 0.41
   UR::DBI:
     file: lib/UR/DBI.pm
-    version: 0.41_05
+    version: 0.41
   UR::DBI::Report:
     file: lib/UR/DBI/Report.pm
-    version: 0.41_05
+    version: 0.41
   UR::DBI::db:
     file: lib/UR/DBI.pm
   UR::DBI::st:
     file: lib/UR/DBI.pm
   UR::DataSource:
     file: lib/UR/DataSource.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::CSV:
     file: lib/UR/DataSource/CSV.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::Code:
     file: lib/UR/DataSource/Code.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::Default:
     file: lib/UR/DataSource/Default.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::File:
     file: lib/UR/DataSource/File.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::FileMux:
     file: lib/UR/DataSource/FileMux.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::Filesystem:
     file: lib/UR/DataSource/Filesystem.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::Meta:
     file: lib/UR/DataSource/Meta.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::MySQL:
     file: lib/UR/DataSource/MySQL.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::Oracle:
     file: lib/UR/DataSource/Oracle.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::Pg:
     file: lib/UR/DataSource/Pg.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::QueryPlan:
     file: lib/UR/DataSource/QueryPlan.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS:
     file: lib/UR/DataSource/RDBMS.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::BitmapIndex:
     file: lib/UR/DataSource/RDBMS/BitmapIndex.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::Entity:
     file: lib/UR/DataSource/RDBMS/Entity.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::FkConstraint:
     file: lib/UR/DataSource/RDBMS/FkConstraint.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::FkConstraintColumn:
     file: lib/UR/DataSource/RDBMS/FkConstraintColumn.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::PkConstraintColumn:
     file: lib/UR/DataSource/RDBMS/PkConstraintColumn.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::Table:
     file: lib/UR/DataSource/RDBMS/Table.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::Table::View::Default::Text:
     file: lib/UR/DataSource/RDBMS/Table/View/Default/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::TableColumn:
     file: lib/UR/DataSource/RDBMS/TableColumn.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::TableColumn::View::Default::Text:
     file: lib/UR/DataSource/RDBMS/TableColumn/View/Default/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::RDBMS::UniqueConstraintColumn:
     file: lib/UR/DataSource/RDBMS/UniqueConstraintColumn.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::SQLite:
     file: lib/UR/DataSource/SQLite.pm
-    version: 0.41_05
+    version: 0.41
   UR::DataSource::ValueDomain:
     file: lib/UR/DataSource/ValueDomain.pm
-    version: 0.41_05
+    version: 0.41
   UR::Debug:
     file: lib/UR/Debug.pm
-    version: 0.41_05
+    version: 0.41
   UR::DeletedRef:
     file: lib/UR/DeletedRef.pm
-    version: 0.41_05
+    version: 0.41
   UR::Doc::Pod2Html:
     file: lib/UR/Doc/Pod2Html.pm
-    version: 0.41_05
+    version: 0.41
   UR::Doc::Section:
     file: lib/UR/Doc/Section.pm
-    version: 0.41_05
+    version: 0.41
   UR::Doc::Writer:
     file: lib/UR/Doc/Writer.pm
-    version: 0.41_05
+    version: 0.41
   UR::Doc::Writer::Html:
     file: lib/UR/Doc/Writer/Html.pm
-    version: 0.41_05
+    version: 0.41
   UR::Doc::Writer::Pod:
     file: lib/UR/Doc/Writer/Pod.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_COMMAND_DUMP_STATUS_MESSAGES:
     file: lib/UR/Env/UR_COMMAND_DUMP_STATUS_MESSAGES.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_CONTEXT_BASE:
     file: lib/UR/Env/UR_CONTEXT_BASE.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_CONTEXT_CACHE_SIZE_HIGHWATER:
     file: lib/UR/Env/UR_CONTEXT_CACHE_SIZE_HIGHWATER.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_CONTEXT_CACHE_SIZE_LOWWATER:
     file: lib/UR/Env/UR_CONTEXT_CACHE_SIZE_LOWWATER.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_CONTEXT_LIBS:
     file: lib/UR/Env/UR_USED_LIBS.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_CONTEXT_MONITOR_QUERY:
     file: lib/UR/Env/UR_CONTEXT_MONITOR_QUERY.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_CONTEXT_ROOT:
     file: lib/UR/Env/UR_CONTEXT_ROOT.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_DUMP_STACK_ON_CONNECT:
     file: lib/UR/Env/UR_DBI_DUMP_STACK_ON_CONNECT.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_EXPLAIN_SQL_CALLSTACK:
     file: lib/UR/Env/UR_DBI_EXPLAIN_SQL_CALLSTACK.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_EXPLAIN_SQL_IF:
     file: lib/UR/Env/UR_DBI_EXPLAIN_SQL_IF.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_EXPLAIN_SQL_MATCH:
     file: lib/UR/Env/UR_DBI_EXPLAIN_SQL_MATCH.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_EXPLAIN_SQL_SLOW:
     file: lib/UR/Env/UR_DBI_EXPLAIN_SQL_SLOW.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_MONITOR_DML:
     file: lib/UR/Env/UR_DBI_MONITOR_DML.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_MONITOR_EVERY_FETCH:
     file: lib/UR/Env/UR_DBI_MONITOR_EVERY_FETCH.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_MONITOR_SQL:
     file: lib/UR/Env/UR_DBI_MONITOR_SQL.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_NO_COMMIT:
     file: lib/UR/Env/UR_DBI_NO_COMMIT.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DBI_SUMMARIZE_SQL:
     file: lib/UR/Env/UR_DBI_SUMMARIZE_SQL.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DEBUG_OBJECT_PRUNING:
     file: lib/UR/Env/UR_DEBUG_OBJECT_PRUNING.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_DEBUG_OBJECT_RELEASE:
     file: lib/UR/Env/UR_DEBUG_OBJECT_RELEASE.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_IGNORE:
     file: lib/UR/Env/UR_IGNORE.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_NO_REQUIRE_USER_VERIFY:
     file: lib/UR/Env/UR_NO_REQUIRE_USER_VERIFY.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_NR_CPU:
     file: lib/UR/Env/UR_NR_CPU.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_RUN_LONG_TESTS:
     file: lib/UR/Env/UR_RUN_LONG_TESTS.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_STACK_DUMP_ON_DIE:
     file: lib/UR/Env/UR_STACK_DUMP_ON_DIE.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_STACK_DUMP_ON_WARN:
     file: lib/UR/Env/UR_STACK_DUMP_ON_WARN.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_TEST_FILLDB:
     file: lib/UR/Env/UR_TEST_FILLDB.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_TEST_QUIET:
     file: lib/UR/Env/UR_TEST_QUIET.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_USED_MODS:
     file: lib/UR/Env/UR_USED_MODS.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_USE_ANY:
     file: lib/UR/Env/UR_USE_ANY.pm
-    version: 0.41_05
+    version: 0.41
   UR::Env::UR_USE_DUMMY_AUTOGENERATED_IDS:
     file: lib/UR/Env/UR_USE_DUMMY_AUTOGENERATED_IDS.pm
-    version: 0.41_05
+    version: 0.41
   UR::Exit:
     file: lib/UR/Exit.pm
-    version: 0.41_05
+    version: 0.41
   UR::ModuleBase:
     file: lib/UR/ModuleBase.pm
-    version: 0.41_05
+    version: 0.41
   UR::ModuleBase::Message:
     file: lib/UR/ObjectDeprecated.pm
   UR::ModuleBuild:
     file: lib/UR/ModuleBuild.pm
   UR::ModuleConfig:
     file: lib/UR/ModuleConfig.pm
-    version: 0.41_05
+    version: 0.41
   UR::ModuleLoader:
     file: lib/UR/ModuleLoader.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace:
     file: lib/UR/Namespace.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command:
     file: lib/UR/Namespace/Command.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Base:
     file: lib/UR/Namespace/Command/Base.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define:
     file: lib/UR/Namespace/Command/Define.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Class:
     file: lib/UR/Namespace/Command/Define/Class.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Datasource:
     file: lib/UR/Namespace/Command/Define/Datasource.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Datasource::File:
     file: lib/UR/Namespace/Command/Define/Datasource/File.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Datasource::Mysql:
     file: lib/UR/Namespace/Command/Define/Datasource/Mysql.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Datasource::Oracle:
     file: lib/UR/Namespace/Command/Define/Datasource/Oracle.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Datasource::Pg:
     file: lib/UR/Namespace/Command/Define/Datasource/Pg.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Datasource::Rdbms:
     file: lib/UR/Namespace/Command/Define/Datasource/Rdbms.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Datasource::RdbmsWithAuth:
     file: lib/UR/Namespace/Command/Define/Datasource/RdbmsWithAuth.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Datasource::Sqlite:
     file: lib/UR/Namespace/Command/Define/Datasource/Sqlite.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Db:
     file: lib/UR/Namespace/Command/Define/Db.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Define::Namespace:
     file: lib/UR/Namespace/Command/Define/Namespace.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Init:
     file: lib/UR/Namespace/Command/Init.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::List:
     file: lib/UR/Namespace/Command/List.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::List::Classes:
     file: lib/UR/Namespace/Command/List/Classes.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::List::Modules:
     file: lib/UR/Namespace/Command/List/Modules.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::List::Objects:
     file: lib/UR/Namespace/Command/List/Objects.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Old:
     file: lib/UR/Namespace/Command/Old.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Old::DiffRewrite:
     file: lib/UR/Namespace/Command/Old/DiffRewrite.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Old::DiffUpdate:
     file: lib/UR/Namespace/Command/Old/DiffUpdate.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Old::ExportDbicClasses:
     file: lib/UR/Namespace/Command/Old/ExportDbicClasses.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Old::Info:
     file: lib/UR/Namespace/Command/Old/Info.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Old::Redescribe:
     file: lib/UR/Namespace/Command/Old/Redescribe.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::RunsOnModulesInTree:
     file: lib/UR/Namespace/Command/RunsOnModulesInTree.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Show:
     file: lib/UR/Namespace/Command/Show.pm
   UR::Namespace::Command::Show::Properties:
     file: lib/UR/Namespace/Command/Show/Properties.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Show::Schema:
     file: lib/UR/Namespace/Command/Show/Schema.pm
   UR::Namespace::Command::Show::Subclasses:
     file: lib/UR/Namespace/Command/Show/Subclasses.pm
   UR::Namespace::Command::Sys:
     file: lib/UR/Namespace/Command/Sys.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Sys::ClassBrowser:
     file: lib/UR/Namespace/Command/Sys/ClassBrowser.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test:
     file: lib/UR/Namespace/Command/Test.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::Callcount:
     file: lib/UR/Namespace/Command/Test/Callcount.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::Callcount::List:
     file: lib/UR/Namespace/Command/Test/Callcount/List.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::Compile:
     file: lib/UR/Namespace/Command/Test/Compile.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::Eval:
     file: lib/UR/Namespace/Command/Test/Eval.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::Run:
     file: lib/UR/Namespace/Command/Test/Run.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::TrackObjectRelease:
     file: lib/UR/Namespace/Command/Test/TrackObjectRelease.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::Use:
     file: lib/UR/Namespace/Command/Test/Use.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::Window:
     file: lib/UR/Namespace/Command/Test/Window.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Test::Window::Tk:
     file: lib/UR/Namespace/Command/Test/Window.pm
   UR::Namespace::Command::Update:
     file: lib/UR/Namespace/Command/Update.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Update::ClassDiagram:
     file: lib/UR/Namespace/Command/Update/ClassDiagram.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Update::ClassesFromDb:
     file: lib/UR/Namespace/Command/Update/ClassesFromDb.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Update::Doc:
     file: lib/UR/Namespace/Command/Update/Doc.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Update::Pod:
     file: lib/UR/Namespace/Command/Update/Pod.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Update::RenameClass:
     file: lib/UR/Namespace/Command/Update/RenameClass.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Update::RewriteClassHeader:
     file: lib/UR/Namespace/Command/Update/RewriteClassHeader.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Update::SchemaDiagram:
     file: lib/UR/Namespace/Command/Update/SchemaDiagram.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::Command::Update::TabCompletionSpec:
     file: lib/UR/Namespace/Command/Update/TabCompletionSpec.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::View::SchemaBrowser::CgiApp:
     file: lib/UR/Namespace/View/SchemaBrowser/CgiApp.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::View::SchemaBrowser::CgiApp::Base:
     file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/Base.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::View::SchemaBrowser::CgiApp::Class:
     file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/Class.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::View::SchemaBrowser::CgiApp::File:
     file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/File.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::View::SchemaBrowser::CgiApp::Index:
     file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/Index.pm
-    version: 0.41_05
+    version: 0.41
   UR::Namespace::View::SchemaBrowser::CgiApp::Schema:
     file: lib/UR/Namespace/View/SchemaBrowser/CgiApp/Schema.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object:
     file: lib/UR/Object.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Accessorized:
     file: lib/UR/Object/Accessorized.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Command::FetchAndDo:
     file: lib/UR/Object/Command/FetchAndDo.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Command::List:
     file: lib/UR/Object/Command/List.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Command::List::Csv:
     file: lib/UR/Object/Command/List/Style.pm
   UR::Object::Command::List::Html:
@@ -587,7 +587,7 @@ provides:
     file: lib/UR/Object/Command/List/Style.pm
   UR::Object::Command::List::Style:
     file: lib/UR/Object/Command/List/Style.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Command::List::Text:
     file: lib/UR/Object/Command/List/Style.pm
   UR::Object::Command::List::Tsv:
@@ -596,226 +596,226 @@ provides:
     file: lib/UR/Object/Command/List/Style.pm
   UR::Object::Ghost:
     file: lib/UR/Object/Ghost.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Index:
     file: lib/UR/Object/Index.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Iterator:
     file: lib/UR/Object/Iterator.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Join:
     file: lib/UR/Object/Join.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Property:
     file: lib/UR/Object/Property.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Property::View::Default::Text:
     file: lib/UR/Object/Property/View/Default/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Property::View::DescriptionLineItem::Text:
     file: lib/UR/Object/Property/View/DescriptionLineItem/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Property::View::ReferenceDescription::Text:
     file: lib/UR/Object/Property/View/ReferenceDescription/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Set:
     file: lib/UR/Object/Set.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Set::View::Default::Html:
     file: lib/UR/Object/Set/View/Default/Html.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Set::View::Default::Json:
     file: lib/UR/Object/Set/View/Default/Json.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Set::View::Default::Text:
     file: lib/UR/Object/Set/View/Default/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Set::View::Default::Xml:
     file: lib/UR/Object/Set/View/Default/Xml.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Tag:
     file: lib/UR/Object/Tag.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Type:
     file: lib/UR/Object/Type.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Type::AccessorWriter:
     file: lib/UR/Object/Type/AccessorWriter.pm
   UR::Object::Type::AccessorWriter::Product:
     file: lib/UR/Object/Type/AccessorWriter/Product.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Type::AccessorWriter::Sum:
     file: lib/UR/Object/Type/AccessorWriter/Sum.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Type::Initializer:
     file: lib/UR/Object/Type/Initializer.pm
   UR::Object::Type::ModuleWriter:
     file: lib/UR/Object/Type/ModuleWriter.pm
   UR::Object::Type::View::AvailableViews::Json:
     file: lib/UR/Object/Type/View/AvailableViews/Json.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Type::View::AvailableViews::Xml:
     file: lib/UR/Object/Type/View/AvailableViews/Xml.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Type::View::Default::Text:
     file: lib/UR/Object/Type/View/Default/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Type::View::Default::Xml:
     file: lib/UR/Object/Type/View/Default/Xml.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::Value:
     file: lib/UR/Object/Value.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View:
     file: lib/UR/Object/View.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Aspect:
     file: lib/UR/Object/View/Aspect.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Default::Gtk:
     file: lib/UR/Object/View/Default/Gtk.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Default::Gtk2:
     file: lib/UR/Object/View/Default/Gtk2.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Default::Html:
     file: lib/UR/Object/View/Default/Html.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Default::Json:
     file: lib/UR/Object/View/Default/Json.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Default::Text:
     file: lib/UR/Object/View/Default/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Default::Xml:
     file: lib/UR/Object/View/Default/Xml.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Default::Xsl:
     file: lib/UR/Object/View/Default/Xsl.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Lister::Text:
     file: lib/UR/Object/View/Lister/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Static::Html:
     file: lib/UR/Object/View/Static/Html.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Toolkit:
     file: lib/UR/Object/View/Toolkit.pm
-    version: 0.41_05
+    version: 0.41
   UR::Object::View::Toolkit::Text:
     file: lib/UR/Object/View/Toolkit/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Observer:
     file: lib/UR/Observer.pm
-    version: 0.41_05
+    version: 0.41
   UR::Service::JsonRpcServer:
     file: lib/UR/Service/JsonRpcServer.pm
-    version: 0.41_05
+    version: 0.41
   UR::Service::RPC::Executer:
     file: lib/UR/Service/RPC/Executer.pm
-    version: 0.41_05
+    version: 0.41
   UR::Service::RPC::Message:
     file: lib/UR/Service/RPC/Message.pm
-    version: 0.41_05
+    version: 0.41
   UR::Service::RPC::Server:
     file: lib/UR/Service/RPC/Server.pm
-    version: 0.41_05
+    version: 0.41
   UR::Service::RPC::TcpConnectionListener:
     file: lib/UR/Service/RPC/TcpConnectionListener.pm
-    version: 0.41_05
+    version: 0.41
   UR::Singleton:
     file: lib/UR/Singleton.pm
-    version: 0.41_05
+    version: 0.41
   UR::Test:
     file: lib/UR/Test.pm
-    version: 0.41_05
+    version: 0.41
   UR::Util:
     file: lib/UR/Util.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value:
     file: lib/UR/Value.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::ARRAY:
     file: lib/UR/Value/ARRAY.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Blob:
     file: lib/UR/Value/Blob.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Boolean:
     file: lib/UR/Value/Boolean.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Boolean::View::Default::Text:
     file: lib/UR/Value/Boolean/View/Default/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::CODE:
     file: lib/UR/Value/CODE.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::CSV:
     file: lib/UR/Value/CSV.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::DateTime:
     file: lib/UR/Value/DateTime.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Decimal:
     file: lib/UR/Value/Decimal.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::DirectoryPath:
     file: lib/UR/Value/DirectoryPath.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::FOF:
     file: lib/UR/Value/FOF.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::FilePath:
     file: lib/UR/Value/FilePath.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::FilesystemPath:
     file: lib/UR/Value/FilesystemPath.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Float:
     file: lib/UR/Value/Float.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::GLOB:
     file: lib/UR/Value/GLOB.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::HASH:
     file: lib/UR/Value/HASH.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Integer:
     file: lib/UR/Value/Integer.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Iterator:
     file: lib/UR/Value/Iterator.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Number:
     file: lib/UR/Value/Number.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::PerlReference:
     file: lib/UR/Value/PerlReference.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::REF:
     file: lib/UR/Value/REF.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::SCALAR:
     file: lib/UR/Value/SCALAR.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Set:
     file: lib/UR/Value/Set.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::SloppyPrimitive:
     file: lib/UR/Value/SloppyPrimitive.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::String:
     file: lib/UR/Value/String.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Text:
     file: lib/UR/Value/Text.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::Timestamp:
     file: lib/UR/Value/Timestamp.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::URL:
     file: lib/UR/Value/URL.pm
-    version: 0.41_05
+    version: 0.41
   UR::Value::View::Default::Html:
     file: lib/UR/Value/View/Default/Html.pm
   UR::Value::View::Default::Json:
@@ -826,7 +826,7 @@ provides:
     file: lib/UR/Value/View/Default/Xml.pm
   UR::Vocabulary:
     file: lib/UR/Vocabulary.pm
-    version: 0.41_05
+    version: 0.41
   above:
     file: lib/above.pm
     version: 0.02
