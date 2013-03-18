@@ -1,3 +1,12 @@
+libur-perl (0.41-1) unstable; urgency=low
+
+  * above.pm now imports symbols into the caller's package
+  * Fix for database connections after fork() in the child process
+  * Fixes for command-line parsing, implied property metadata and database joins
+  * Many test updates to work on more architectures
+
+ -- Anthony Brummett <brummett@cpan.org>  Mon, 18 Mar 2013 13:08:00 -600
+
 libur-perl (0.40-1) unstable; urgency=low
 
   * RDBMS data sources now have infrastructure for comparing text and
