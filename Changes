@@ -1,8 +1,10 @@
 Revision history for UR
 
-0.41_01 2013-03-01
-        Add test diags to the CmdTest test to determine why it fails on
-        CPAN Testers machines
+0.41    2013-03-18
+        above.pm now imports symbols into the caller's package
+        Fix for database connections after fork() in the child process
+        Fixes for command-line parsing, implied property metadata and database joins
+        Many test updates to work on more architectures
 
 0.40    2013-02-25
         RDBMS data sources now have infrastructure for comparing text and
