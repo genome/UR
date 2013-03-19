@@ -390,7 +390,6 @@ sub _normalize_class_description_impl {
     my %old_class = @_;
 
     if (exists $old_class{extra}) {
-        $DB::single=1;
         %old_class = (%{delete $old_class{extra}}, %old_class);
     }
 
