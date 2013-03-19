@@ -8,7 +8,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 710;
+use Test::More tests => 720;
 
 class URT::RelatedItem {
     id_by => 'ritem_id',
@@ -32,6 +32,14 @@ class URT::Item {
 };
 
 foreach my $test (
+    { string => q(name~%foo 123%),
+      values => { name => '%foo 123%' },
+      operators => { name => 'like' },
+    },
+    { string => q(name~%foo 123%,score=5),
+      values => { name => '%foo 123%', score => 5 },
+      operators => { name => 'like', score => '='},
+    },
     { string => 'name = bob',
       values => { name => 'bob' },
       operators => { name => '=' },
