@@ -395,7 +395,7 @@ sub create_mock {
     for my $class_object ($subject_class_object,$subject_class_object->ancestry_class_metas) {
         for my $property ($class_object->direct_property_metas) {
             my $property_name = $property->property_name;
-            if ($property->is_delegated && !exists($params{$property_name})) {
+            if (($property->is_delegated || $property->is_optional) && !exists($params{$property_name})) {
                 next;
             }
             if ($property->is_mutable || $property->is_calculated || $property->is_delegated) {
