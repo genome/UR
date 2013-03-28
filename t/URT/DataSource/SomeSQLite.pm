@@ -19,12 +19,16 @@ BEGIN {
 
 use UR::Object::Type;
 use URT;
-
-# UR::Singleton must come first so this inherits it's id method instead of
-# UR::Object's.
 class URT::DataSource::SomeSQLite {
-    is => ['UR::Singleton', 'UR::DataSource::SQLite'],
+    is => ['UR::DataSource::SQLite','UR::Singleton'],
 };
+
+# "delegate" id to UR::Singleton since Perl 5.8 still uses Depth First Search
+# for Method Resolution Order.
+sub id {
+    return UR::Singleton::id(@_);
+}
+
 
 # Don't print warnings about loading up the DB if running in the test harness
 # Similar code exists in URT::DataSource::Meta.
