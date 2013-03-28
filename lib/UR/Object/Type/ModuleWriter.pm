@@ -63,12 +63,10 @@ sub resolve_class_description_perl {
         my $section_src;
         for my $name (@type_has_names) {
             my $struct = $type_has{$name};
-            $section_src .= pprint_subsection($name, ' ' x 8, _section_lines($struct, @keys));
+            $section_src .= pprint_subsection($name, _section_lines($struct, @keys));
         }
         if ($section_src) {
-            my $indent_section = ' ' x 4;
-            my $section = 'type_has';
-            $perl .= "$indent_section$section => [\n$section_src$indent_section],\n";
+            $perl .= pprint_section('type_has', $section_src);
         }
     }
 
@@ -91,22 +89,14 @@ sub resolve_class_description_perl {
 
             # We want these to appear first
             my @this_meta_properties;
-            push @this_meta_properties, sprintf("is => '%s'", $this_meta_struct->{'is'}) if (exists $this_meta_struct->{'is'});
-            push @this_meta_properties, sprintf("is_optional => %d", $this_meta_struct->{'is_optional'}) if (exists $this_meta_struct->{'is_optional'});
+            # skip the ones we've already done
+            my @exclude_keys = qw(is_specified_in_module_header position_in_module_header);
+            my @keys = _exclude_items([keys %$this_meta_struct], \@exclude_keys);
 
-            foreach my $key ( sort keys %$this_meta_struct ) {
-                next if grep { $key eq $_ } qw( is is_optional is_specified_in_module_header position_in_module_header );  # skip the ones we've already done
-                my $value = $this_meta_struct->{$key};
-
-                my $format = looks_like_number($value) ? "%s => %s" : "%s => '%s'";
-                push @this_meta_properties, sprintf($format, $key, $value);
-            }
-            $section_src .= pprint_subsection($meta_name, ' ' x 8, @this_meta_properties);
+            $section_src .= pprint_subsection($meta_name, _section_lines($this_meta_struct, @keys));
         }
         if ($section_src) {
-            my $indent_section = ' ' x 4;
-            my $section = 'attributes_have';
-            $perl .= "$indent_section$section => [\n$section_src$indent_section],\n";
+            $perl .= pprint_section('attributes_have', $section_src);
         }
     }
 
@@ -190,10 +180,6 @@ sub resolve_class_description_perl {
                               }
                               @{$properties_by_section{$section}};
 
-        # section is indented 4 so name is indent 4 + 4
-        my $indent_section = ' ' x 4;
-        my $indent_subsection = $indent_section . ' ' x 4;
-
         my $section_src = '';
         foreach my $property_meta ( @properties ) {
             my $name = $property_meta->property_name;
@@ -204,10 +190,10 @@ sub resolve_class_description_perl {
                                         data_source => $data_source,
                                         attributes_have => \@property_meta_property_names);
 
-            $section_src .= pprint_subsection($name, $indent_subsection, @fields);
+            $section_src .= pprint_subsection($name, @fields);
         }
 
-        $perl .= "$indent_section$section => [\n$section_src$indent_section],\n";
+        $perl .= pprint_section($section, $section_src);
     }
 
     my $unique_groups = $self->unique_property_set_hashref;
@@ -748,8 +734,17 @@ sub pprint_arrayref {
     return $value_string;
 }
 
+
+sub pprint_section {
+    my ($section, $section_src) = @_;
+    my $indent_section = ' ' x 4;
+    return "$indent_section$section => [\n$section_src$indent_section],\n";
+}
+
+
 sub pprint_subsection {
-    my ($name, $indent_name, @fields) = @_;
+    my ($name, @fields) = @_;
+    my $indent_name = ' ' x 8;
     my $indent_key  = $indent_name . ' ' x 4;
 
     my $section_src;
