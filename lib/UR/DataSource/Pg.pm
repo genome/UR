@@ -146,7 +146,8 @@ my %ur_data_type_for_vendor_data_type = (
 sub ur_data_type_for_data_source_data_type {
     my($class,$type) = @_;
 
-    my $urtype = $ur_data_type_for_vendor_data_type{uc($type)};
+    $type = $class->normalize_vendor_type($type);
+    my $urtype = $ur_data_type_for_vendor_data_type{$type};
     unless (defined $urtype) {
         $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
     }

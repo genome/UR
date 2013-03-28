@@ -5,6 +5,9 @@ package UR::Object::Type; # hold methods for the class which cover Module Read/W
 use strict;
 use warnings;
 require UR;
+use List::MoreUtils qw(first_index);
+use Scalar::Util qw(looks_like_number);
+
 our $VERSION = "0.41"; # UR $VERSION;
 
 our %meta_classes;
@@ -14,13 +17,12 @@ our $pwd_at_compile_time = cwd();
 
 sub resolve_class_description_perl {
     my $self = $_[0];
-    
+
     no strict 'refs';
     my @isa = @{ $self->class_name . "::ISA" };
     use strict;
 
     unless (@isa) {
-        #Carp::cluck("No isa for $self->{class_name}!?");
         my @i = ${ $self->is };
         my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
         die "Parent class objects not all loaded for " . $self->class_name unless (@i == @parent_class_objects);
@@ -28,15 +30,13 @@ sub resolve_class_description_perl {
     }
 
     unless (@isa) {
-        #Carp::confess("FAILED TO SET ISA FOR $self->{class_name}!?");
         my @i = ${ $self->is };
         my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
-                    
+
         unless (@i and @i == @parent_class_objects) {
-            #$DB::single = 1;
             Carp::confess("No inheritance meta-data found for ( @i / @parent_class_objects)" . $self->class_name)
         }
-        
+
         @isa = map { $_->class_name } @parent_class_objects;
     }
 
@@ -46,24 +46,39 @@ sub resolve_class_description_perl {
 
     # For getting default values for some of the properties
     my $class_meta_meta = UR::Object::Type->get(class_name => 'UR::Object::Type');
-    
+
     my $perl = '';
-    
+
     unless (@isa == 1 and $isa[0] =~ /^UR::Object|UR::Entity$/ ) {
-        $perl .= "    is => " . (@isa == 1 ? "[ '@isa' ],\n" : "[ qw/@isa/ ],\n");
+        $perl .= "    is => " . (@isa == 1 ? "'@isa',\n" : pprint_arrayref(\@isa) . ",\n");
     }
     $perl .= "    table_name => " . ($self->table_name ? "'" . $self->table_name . "'" : 'undef') . ",\n" if $self->data_source_id;
     $perl .= "    is_abstract => 1,\n" if $self->is_abstract;
     $perl .= "    er_role => '" . $self->er_role . "',\n" if ($self->er_role and ($self->er_role ne $class_meta_meta->property_meta_for_name('er_role')->default_value));
 
+    if ($self->{type_has}) {
+        my @keys = qw(is_optional is);
+        my %type_has = @{$self->{type_has}};
+        my @type_has_names = keys %type_has;
+        my $section_src;
+        for my $name (@type_has_names) {
+            my $struct = $type_has{$name};
+            $section_src .= pprint_subsection($name, _section_lines($struct, @keys));
+        }
+        if ($section_src) {
+            $perl .= pprint_section('type_has', $section_src);
+        }
+    }
+
+
     # Meta-property attributes
     my @property_meta_property_names;
-    my @property_meta_property_strings;
     if ($self->{'attributes_have'}) {
         @property_meta_property_names = sort { $self->{'attributes_have'}->{$a}->{'position_in_module_header'}
                                                  <=>
                                                $self->{'attributes_have'}->{$b}->{'position_in_module_header'} }
                                             keys %{$self->{'attributes_have'}};
+        my $section_src = '';
         foreach my $meta_name ( @property_meta_property_names ) {
             my $this_meta_struct = $self->{'attributes_have'}->{$meta_name};
 
@@ -74,23 +89,15 @@ sub resolve_class_description_perl {
 
             # We want these to appear first
             my @this_meta_properties;
-            push @this_meta_properties, sprintf("is => '%s'", $this_meta_struct->{'is'}) if (exists $this_meta_struct->{'is'});
-            push @this_meta_properties, sprintf("is_optional => %d", $this_meta_struct->{'is_optional'}) if (exists $this_meta_struct->{'is_optional'});
+            # skip the ones we've already done
+            my @exclude_keys = qw(is_specified_in_module_header position_in_module_header);
+            my @keys = _exclude_items([keys %$this_meta_struct], \@exclude_keys);
 
-            foreach my $key ( sort keys %$this_meta_struct ) {
-                next if grep { $key eq $_ } qw( is is_optional is_specified_in_module_header position_in_module_header );  # skip the ones we've already done
-                my $value = $this_meta_struct->{$key};
-                
-                my $format = $self->_is_number($value) ? "%s => %s" : "%s => '%s'";
-                push @this_meta_properties, sprintf($format, $key, $value);
-            }
-            push @property_meta_property_strings, "$meta_name => { " . join(', ', @this_meta_properties) . " },";
+            $section_src .= pprint_subsection($meta_name, _section_lines($this_meta_struct, @keys));
         }
-    }
-    if (@property_meta_property_strings) {
-        $perl .= "    attributes_have => [\n        " . 
-                 join("\n        ", @property_meta_property_strings) .
-                 "\n    ],\n";
+        if ($section_src) {
+            $perl .= pprint_section('attributes_have', $section_src);
+        }
     }
 
     if (exists $self->{'first_sub_classification_method_name'}) {
@@ -99,13 +106,13 @@ sub resolve_class_description_perl {
         # property through the normal channels
         $perl .= "    first_sub_classification_method_name => '" . $self->{'first_sub_classification_method_name'} ."',\n";
     }
-            
+
     # These property names are either written in other places in this sub, or shouldn't be written out
     my %addl_property_names = map { $_ => 1 } $self->__meta__->all_property_type_names;
     my @specified = qw/is class_name table_name id_by er_role is_abstract generated data_source_id schema_name doc namespace id first_sub_classification_method_name property_metas pproperty_names id_property_metas meta_class_name id_generator valid_signals/;
     delete @addl_property_names{@specified};
     for my $property_name (sort keys %addl_property_names) {
-        my $property_obj = $class_meta_meta->property_meta_for_name($property_name);
+        my $property_obj = $self->__meta__->property_meta_for_name($property_name);
         next if ($property_obj->is_calculated or $property_obj->is_delegated);
 
         my $property_value = $self->$property_name;
@@ -117,13 +124,19 @@ sub resolve_class_description_perl {
         if ( defined $property_value and
              ( ($property_value + 0 eq $property_value and
                 $default_value + 0 eq $default_value and
-                $property_value != $default_value) 
+                $property_value != $default_value)
                or
                 ($property_value ne $default_value)
              )
            ) {
                 # then it should show up in the class definition
-                $perl .= "    $property_name => '" . $self->$property_name . "',\n";
+                my $value = $self->$property_name;
+                if (ref $value eq 'ARRAY') {
+                    $value = pprint_arrayref($value);
+                } else {
+                    $value = qq('$value');
+                }
+                $perl .= "    $property_name => $value,\n";
            }
     }
 
@@ -134,7 +147,7 @@ sub resolve_class_description_perl {
         my $mentioned_section = $property_meta->is_specified_in_module_header;
         next unless $mentioned_section;  # skip implied properites
         ($mentioned_section) = ($mentioned_section =~ m/::(\w+)$/);
-         
+
         if (($mentioned_section and $mentioned_section eq 'id_implied')
             or $id_property_names{$property_meta->property_name}) {
 
@@ -142,7 +155,7 @@ sub resolve_class_description_perl {
 
         } elsif ($mentioned_section) {
             push @{$properties_by_section{$mentioned_section}}, $property_meta;
-  
+
         } else {
             push @{$properties_by_section{'has'}}, $property_meta;
         }
@@ -166,16 +179,8 @@ sub resolve_class_description_perl {
                                 $pos_a <=> $pos_b;
                               }
                               @{$properties_by_section{$section}};
-        
+
         my $section_src = '';
-        my $max_name_length = 0;
-        my $multi_line_indent = '';
-        foreach my $property_meta ( @properties ) {
-            my $name = $property_meta->property_name;
-            $max_name_length = length($name) if (length($name) > $max_name_length);
-        }
-        # 14 is the 8 spaces at the start of the $line, plus ' => { '
-        $multi_line_indent = ' ' x ($max_name_length + 14);
         foreach my $property_meta ( @properties ) {
             my $name = $property_meta->property_name;
             my @fields = $self->_get_display_fields_for_property(
@@ -185,19 +190,10 @@ sub resolve_class_description_perl {
                                         data_source => $data_source,
                                         attributes_have => \@property_meta_property_names);
 
-            foreach ( @fields ) {
-                s/\n/\n$multi_line_indent/;
-            }
-            my $line = "        "
-                . $name . (" " x ($max_name_length - length($name)))
-                . " => { "
-                . join(", ", @fields)
-                . " },\n";
-
-            $section_src .= $line;
+            $section_src .= pprint_subsection($name, @fields);
         }
 
-        $perl .= "    $section => [\n$section_src    ],\n";
+        $perl .= pprint_section($section, $section_src);
     }
 
     my $unique_groups = $self->unique_property_set_hashref;
@@ -263,46 +259,38 @@ sub _get_display_fields_for_property {
     my $self = shift;
     my $property = shift;
     my %params = @_;
-    
+
     if (not $property->is_specified_in_module_header) {
         # we omit showing implied properties which have no additional data,
         # unless they have their own docs, a specified column, etc.
         return();
-    }    
-    
-    my @fields;    
-    my %seen;
+    }
+
+    my @fields;
     my $property_name = $property->property_name;
-    
+
     my $type = $property->data_type;
     if ($type) {
         push @fields, "is => '$type'" if $type;
-        $seen{'is'} = 1;
     }
-    
+
     if (defined($property->data_length) and length($property->data_length)) {
         push @fields, "len => " . $property->data_length;
-        $seen{'data_length'} = 1;
     }
-    
-    #$line .= "references => '???', ";
-    if ($property->is_legacy_eav) { 
+
+    if ($property->is_legacy_eav) {
         # temp hack for entity attribute values
-        #push @fields, "delegate => { via => 'eav_" . $property->property_name . "', to => 'value' }";
-        push @fields, "is_legacy_eav => 1";                
-        $seen{'is_legacy_eav'} = 1;
+        push @fields, "is_legacy_eav => 1";
     }
     elsif ($property->is_delegated) {
         # do nothing
-        $seen{'is_delegated'} = 1;
     }
     elsif ($property->is_calculated) {
-        my @calc_fields;
         if (my $calc_from = $property->calculate_from) {
             if ($calc_from and @$calc_from == 1) {
-                push @calc_fields, "calculate_from => '" . $calc_from->[0] . "'";
+                push @fields, "calculate_from => '" . $calc_from->[0] . "'";
             } elsif ($calc_from) {
-                push @calc_fields, "calculate_from => [ '" . join("', '", @$calc_from) . "' ]";
+                push @fields, "calculate_from => [ '" . join("', '", @$calc_from) . "' ]";
             }
         }
 
@@ -310,55 +298,44 @@ sub _get_display_fields_for_property {
         foreach my $calc_type ( qw( calculate calculate_sql calculate_perl calculate_js ) ) {
             if ($property->$calc_type) {
                 $calc_source = 1;
-                push @calc_fields, "$calc_type => q(" . $property->$calc_type . ")";
+                push @fields, "$calc_type => q(" . $property->$calc_type . ")";
             }
         }
 
-        push @calc_fields, 'is_calculated => 1' unless ($calc_source);
-
-        push @fields, join(",$next_line_prefix", @calc_fields);
-        $seen{'is_calculated'} = 1;
-    } 
+        push @fields, 'is_calculated => 1' unless ($calc_source);
+    }
     elsif ($params{has_table} && ! $property->is_transient) {
         unless ($property->column_name) {
             die("no column for property on class with table: " . $property->property_name .
                 " class: " . $self->class_name . "?");
         }
-        if ( ( $params{'data_source'}
-                and $params{'data_source'}->table_and_column_names_are_upper_case
-                and $property->column_name ne uc($property->property_name)
-             )
-             or
-             ( $property->column_name ne $property->property_name)
-        ) {
-            # If the column name doesn't match the property name, write it out
-            push @fields,  "column_name => '" . $property->column_name . "'";
+
+        my $ds = $params{'data_source'};
+        my $should_uc = ($ds && $ds->table_and_column_names_are_upper_case);
+
+        my $cname = $property->column_name;
+        my $pname = $property->property_name;
+        my $expected_cname = $should_uc ? uc($pname) : $pname;
+        if ($cname ne $expected_cname) {
+            push @fields,  "column_name => '" . $cname . "'";
         }
-        $seen{'column_name'} = 1;
     }
 
     if (defined($property->default_value)) {
         my $value = $property->default_value;
-        if (! $self->_is_number($value)) {
+        if (! looks_like_number($value)) {
             $value = "'$value'";
         }
         push @fields, "default_value => $value";
-        $seen{'default_value'} = 1;
-    }
-    
-    my $implied_property = 0;
-    if (defined($property->implied_by) and length($property->implied_by)) { 
-        push @fields,  "implied_by => '" . $property->implied_by . "'";
-        $implied_property = 1;
-        $seen{'implied_by'} = 1;
     }
 
     if (my @id_by = eval { $property->get_property_name_pairs_for_join }) {
-        push @fields, "id_by => " 
-            . (@id_by > 1 ? '[ ' : '')
-            . join(", ", map { "'" . $_->[0] . "'" } @id_by)
-            . (@id_by > 1 ? ' ]' : '');
-        $seen{'get_property_name_pairs_for_join'} = 1;
+        unless (defined $property->reverse_as) {
+            push @fields, "id_by => "
+                . (@id_by > 1 ? '[ ' : '')
+                . join(", ", map { "'" . $_->[0] . "'" } @id_by)
+                . (@id_by > 1 ? ' ]' : '');
+        }
 
         if (defined $property->id_class_by) {
             push @fields, sprintf("id_class_by => '%s'", $property->id_class_by);
@@ -367,25 +344,35 @@ sub _get_display_fields_for_property {
 
     if ($property->via) {
         push @fields, "via => '" . $property->via . "'";
-        $seen{'via'} = 1;
         if ($property->to and $property->to ne $property->property_name) {
             push @fields, "to => '" . $property->to . "'";
-            $seen{'to'} = 1;
         }
 
         if ($property->is_mutable) {
             # via properties are not usually mutable
             push @fields, 'is_mutable => 1';
         }
+
+        my $via_property_name = $property->via;
+        if ($via_property_name eq '__self__') {
+            $via_property_name = $property->to;
+        }
+        my $via = $property->class_name->__meta__->properties(property_name => $via_property_name);
+        if ($property->is_many ne $via->is_many) {
+            push @fields, 'is_many => ' . $property->is_many;
+        }
     }
     if ($property->reverse_as) {
         push @fields, "reverse_as => '" . $property->reverse_as . "'";
-        $seen{'reverse_as'} = 1;
+
+        if ($property->is_mutable) {
+            # reverse_as properties are not usually mutable
+            push @fields, 'is_mutable => 1';
+        }
     }
 
     if ($property->constraint_name) {
         push @fields, "constraint_name => '" . $property->constraint_name . "'";
-        $seen{'constraint_name'} = 1;
     }
 
     if ($property->where) {
@@ -395,6 +382,10 @@ sub _get_display_fields_for_property {
         while (@where) {
             my $prop_name = shift @where;
             my $comparison = shift @where;
+            # wrap 'property operator' with quotes if it contains space
+            if (index($prop_name, ' ') >= 0) {
+                $prop_name = "'$prop_name'";
+            }
             if (! ref($comparison)) {
                 # It's a strictly equals comparison.
                 # wrap it in quotes...
@@ -413,9 +404,11 @@ sub _get_display_fields_for_property {
                     }
                 }
                 $comparison = '{ ' . join(', ', @operator_parts) . ' } ';
+            } elsif (ref($comparison) eq 'ARRAY') {
+                $comparison = pprint_arrayref($comparison);
             } else {
                 my $class_name = $property->class_name;
-                Carp::croak("Modulewriter doesn't know how to handle property $property_name of class $class_name.  Its 'where' is not a simple scalar or hashref");
+                Carp::croak("Modulewriter doesn't know how to handle property $property_name of class $class_name.  Its 'where' is not a simple scalar, hashref, or arrayref.");
             }
             push @where_parts, "$prop_name => $comparison";
         }
@@ -423,15 +416,11 @@ sub _get_display_fields_for_property {
     }
 
     if (my $valid_values_arrayref = $property->valid_values) {
-        $seen{'valid_values'} = 1;
-        my $value_string = Data::Dumper->new([$valid_values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
-        push @fields, "valid_values => $value_string";
+        push @fields, "valid_values => " . pprint_arrayref($valid_values_arrayref);
     }
-    
+
     if (my $example_values_arrayref = $property->example_values) {
-        $seen{'example_values'} = 1;
-        my $value_string = Data::Dumper->new([$example_values_arrayref])->Terse(1)->Indent(0)->Useqq(1)->Dump;
-        push @fields, "example_values => $value_string";
+        push @fields, "example_values => " . pprint_arrayref($example_values_arrayref);
     }
 
     # All the things like is_optional, is_many, etc
@@ -440,9 +429,8 @@ sub _get_display_fields_for_property {
     my $section = $params{'section'};
     $section =~ m/^has_(.*)/;
     my @sections = split('_',$1 || '');
-    
+
     for my $std_field_name (qw/optional abstract transient constant classwide many deprecated/) {
-        $seen{$property_name} = 1;
         next if (grep { $std_field_name eq $_ } @sections); # Don't print is_optional if we're in the has_optional section
         my $property_name = "is_" . $std_field_name;
         push @fields, "$property_name => " . $property->$property_name if $property->$property_name;
@@ -452,18 +440,23 @@ sub _get_display_fields_for_property {
     foreach my $meta_property ( @{$params{'attributes_have'}} ) {
         my $value = $property->{$meta_property};
         if (defined $value) {
-            my $format = $self->_is_number($value) ? "%s => %s" : "%s => '%s'";
+            my $format = looks_like_number($value) ? "%s => %s" : "%s => '%s'";
             push @fields, sprintf($format, $meta_property, $value);
         }
     }
-    
+
     my $desc = $property->doc;
     if ($desc && length($desc)) {
         $desc =~ s/([\$\@\%\\\"])/\\$1/g;
         $desc =~ s/\n/\\n/g;
-        push @fields, $next_line_prefix . "doc => '$desc'";
+        if ($desc =~ /'/) {
+            $desc = "q($desc)";
+        } else {
+            $desc = "'$desc'";
+        }
+        push @fields, $next_line_prefix . "doc => $desc";
     }
-    
+
     return @fields;
 }
 
@@ -479,7 +472,6 @@ sub module_path {
     my $base_name = $self->module_base_name;
     my $path = $INC{$base_name};
     return _abs_path_relative_to_pwd_at_compile_time($path) if $path;
-    #warn "Module $base_name is not in \%INC!\n";
 
     my $namespace;
     my $first_slash = index($base_name, '/');
@@ -494,22 +486,19 @@ sub module_path {
 
     for my $dir (map { _abs_path_relative_to_pwd_at_compile_time($_) } grep { -d $_ } @INC) {
         if (-e $dir . "/" . $namespace) {
-            #warn "Found $base_name in $dir...\n";
             my $try_path = $dir . '/' . $base_name;
             return $try_path;
         }
     }
     return;
-    #Carp::confess("Failed to find a module path for class " . $self->class_name);
 }
-            
-sub _abs_path_relative_to_pwd_at_compile_time { # not a method 
+
+sub _abs_path_relative_to_pwd_at_compile_time { # not a method
     my $path = shift;
     if ($path !~ /^[\/\\]/) {
         $path = $pwd_at_compile_time . '/' . $path;
-    } 
+    }
     my $path2 = Cwd::abs_path($path);
-#    Carp::confess("$path abs is undef?") if not defined $path2;
     return $path2;
 }
 
@@ -547,17 +536,17 @@ sub module_header_positions {
     my @module_src = $self->module_source_lines;
     my $namespace = $self->namespace;
     my $class_name = $self->class_name;
-    
+
     unless ($self->namespace) {
         die "No namespace on $self->{class_name}?"
-    }    
-    
+    }
+
     $namespace = 'UR' if $namespace eq $self->class_name;
 
     my $state = 'before';
     my ($begin,$end,$use);
     for (my $n = 0; $n < @module_src; $n++) {
-        my $line = $module_src[$n];        
+        my $line = $module_src[$n];
         if ($state eq 'before') {
             if ($line and $line =~ /^use $namespace;/) {
                 $use = $n;
@@ -583,9 +572,6 @@ sub module_header_positions {
                 $state = 'after';
             }
         }
-        #elsif ($state eq 'after') {
-        #
-        #}
     }
 
     # cache
@@ -621,10 +607,10 @@ sub rewrite_module_header {
     }
 
     my ($begin,$end,$use) = $self->module_header_positions;
-    
+
     my $namespace = $self->namespace;
     $namespace = 'UR' if $namespace eq $self->class_name;
-    
+
     unless ($namespace) {
         ($namespace) = ($package =~ /^(.*?)::/);
     }
@@ -678,7 +664,7 @@ sub rewrite_module_header {
         # replace the old lines with the new source
         # note that the inserted "row" is multi-line, but joins nicely below...
         splice(@module_src,$begin,$len,$new_meta_src);
-        
+
         my $f = IO::File->new($module_file_path);
         $old_file_data = join('',$f->getlines);
         $f->close();
@@ -737,12 +723,105 @@ sub rewrite_module_header {
 }
 
 
-# TODO: move to UR::Util
-sub _is_number {
-    my($self,$value) = @_;
-    no warnings 'numeric';
-    my $is_number = ($value + 0) eq $value;
-    return $is_number;
+sub pprint_arrayref {
+    my $arrayref = shift;
+    # Useqq(1) causes newlines to be escaped so the only newlines are those
+    # injected by Indent(1). Useqq(1) also quotes string values so we can
+    # strip the whitespace around the newlines.
+    my $value_string = Data::Dumper->new([$arrayref])->Terse(1)->Indent(1)->Useqq(1)->Dump;
+    $value_string =~ s/\s*\n\s*/ /g;
+    $value_string =~ s/\s*$//;
+    return $value_string;
+}
+
+
+sub pprint_section {
+    my ($section, $section_src) = @_;
+    my $indent_section = ' ' x 4;
+    return "$indent_section$section => [\n$section_src$indent_section],\n";
+}
+
+
+sub pprint_subsection {
+    my ($name, @fields) = @_;
+    my $indent_name = ' ' x 8;
+    my $indent_key  = $indent_name . ' ' x 4;
+
+    my $section_src;
+    foreach ( @fields ) { s/^\s+// }
+    if (@fields > 1) {
+        my $line =
+        $indent_name . $name . " => {\n"
+        . $indent_key . join(",\n$indent_key", @fields) . ",\n"
+        . $indent_name . "},\n";
+
+        $section_src = $line;
+    } else {
+        $section_src = $indent_name . $name . " => { " . (defined $fields[0] ? $fields[0] : '') . " },\n";
+    }
+    return $section_src;
+};
+
+sub _quoted_value {
+    my $value = shift;
+    my ($qo, $qc) = ('', '');
+    if (!looks_like_number($value)) {
+        if ($value =~ /'/) {
+            ($qo, $qc) = ('q(', ')');
+        } else {
+            ($qo, $qc) = ("'", "'");
+        }
+    }
+    return "$qo$value$qc";
+}
+
+sub _idx {
+    my $e = shift;
+    my @expected_order = qw(
+        is
+        is_optional
+    );
+    my $e_idx = first_index { $_ eq $e } @expected_order;
+    if ($e_idx == -1) {
+        $e_idx = scalar(@expected_order);
+    }
+    return $e_idx;
+}
+
+sub _key_sorter {
+    my ($a_idx, $b_idx) = (_idx($a), _idx($b));
+    my $cmp;
+    if ($a_idx == $b_idx) {
+        $cmp = $a cmp $b;
+    } else {
+        $cmp = $a_idx <=> $b_idx;
+    }
+    return $cmp;
+}
+
+sub _sort_keys {
+    sort _key_sorter @_;
+}
+
+sub _exclude_items {
+    my ($list, $exclude) = @_;
+    return grep {
+        my $l = $_;
+        !grep {
+            my $e = $_;
+            $e eq $l;
+        } @$exclude;
+    } @$list;
+}
+
+sub _section_lines {
+    my ($struct, @keys) = @_;
+    @keys = _sort_keys(@keys);
+    my @lines = map {
+        my $value = _quoted_value($struct->{$_});
+        sprintf('%s => %s', $_, $value);
+    } @keys;
+    return @lines;
 }
 
 
@@ -760,7 +839,7 @@ Subroutines within this module actually live in the UR::Object::Type
 namespace;  this module is just a convienent place to collect them.  The
 Module Writer is used by the class updater system (L<(UR::Namespace::Command::Update::Classes>
 and 'ur update classes) to add, remove and alter the Perl modules behind
-the classes within a Namespace.  
+the classes within a Namespace.
 
 =head1 METHODS
 

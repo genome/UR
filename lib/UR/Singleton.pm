@@ -12,6 +12,11 @@ UR::Object::Type->define(
     is_abstract => 1,
 );
 
+sub id {
+    my $self = shift;
+    return (ref $self ? $self->SUPER::id(@_) : $self);
+}
+
 sub _init_subclass {
     my $class_name = shift;
     my $class_meta_object = $class_name->__meta__;
