@@ -23,7 +23,6 @@ sub resolve_class_description_perl {
     use strict;
 
     unless (@isa) {
-        #Carp::cluck("No isa for $self->{class_name}!?");
         my @i = ${ $self->is };
         my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
         die "Parent class objects not all loaded for " . $self->class_name unless (@i == @parent_class_objects);
@@ -31,12 +30,10 @@ sub resolve_class_description_perl {
     }
 
     unless (@isa) {
-        #Carp::confess("FAILED TO SET ISA FOR $self->{class_name}!?");
         my @i = ${ $self->is };
         my @parent_class_objects = map { UR::Object::Type->is_loaded(class_name => $_) } @i;
 
         unless (@i and @i == @parent_class_objects) {
-            #$DB::single = 1;
             Carp::confess("No inheritance meta-data found for ( @i / @parent_class_objects)" . $self->class_name)
         }
 
@@ -295,10 +292,8 @@ sub _get_display_fields_for_property {
         push @fields, "len => " . $property->data_length;
     }
 
-    #$line .= "references => '???', ";
     if ($property->is_legacy_eav) {
         # temp hack for entity attribute values
-        #push @fields, "delegate => { via => 'eav_" . $property->property_name . "', to => 'value' }";
         push @fields, "is_legacy_eav => 1";
     }
     elsif ($property->is_delegated) {
@@ -491,7 +486,6 @@ sub module_path {
     my $base_name = $self->module_base_name;
     my $path = $INC{$base_name};
     return _abs_path_relative_to_pwd_at_compile_time($path) if $path;
-    #warn "Module $base_name is not in \%INC!\n";
 
     my $namespace;
     my $first_slash = index($base_name, '/');
@@ -506,13 +500,11 @@ sub module_path {
 
     for my $dir (map { _abs_path_relative_to_pwd_at_compile_time($_) } grep { -d $_ } @INC) {
         if (-e $dir . "/" . $namespace) {
-            #warn "Found $base_name in $dir...\n";
             my $try_path = $dir . '/' . $base_name;
             return $try_path;
         }
     }
     return;
-    #Carp::confess("Failed to find a module path for class " . $self->class_name);
 }
 
 sub _abs_path_relative_to_pwd_at_compile_time { # not a method
@@ -521,7 +513,6 @@ sub _abs_path_relative_to_pwd_at_compile_time { # not a method
         $path = $pwd_at_compile_time . '/' . $path;
     }
     my $path2 = Cwd::abs_path($path);
-#    Carp::confess("$path abs is undef?") if not defined $path2;
     return $path2;
 }
 
@@ -595,9 +586,6 @@ sub module_header_positions {
                 $state = 'after';
             }
         }
-        #elsif ($state eq 'after') {
-        #
-        #}
     }
 
     # cache
