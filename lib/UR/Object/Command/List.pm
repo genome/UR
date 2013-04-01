@@ -347,7 +347,9 @@ EOS
         }
     }
     my @lines = $class->_format_property_doc_data(@data);
-    $doc .= join("\n ", @lines);
+    { no warnings 'uninitialized';
+        $doc .= join("\n ", @lines);
+    }
 
     $self->delete;
     return $doc;
