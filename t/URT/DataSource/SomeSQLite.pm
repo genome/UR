@@ -23,6 +23,12 @@ class URT::DataSource::SomeSQLite {
     is => ['UR::DataSource::SQLite','UR::Singleton'],
 };
 
+# "delegate" id to UR::Singleton since Perl 5.8 still uses Depth First Search
+# for Method Resolution Order.
+sub id {
+    return UR::Singleton::id(@_);
+}
+
 
 # Don't print warnings about loading up the DB if running in the test harness
 # Similar code exists in URT::DataSource::Meta.

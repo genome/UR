@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 17;
+use Test::More tests => 25;
 use Cwd;
 use File::Temp;
 
@@ -103,3 +103,21 @@ is_deeply(\@class_names, \@expected_class_names, '_class_names_in_tree with no a
 @expected_modules = sort qw( URT/34Baseclass.pm URT/DataSource/Meta.pm URT/34Baseclass.pm URT/DataSource/SomeOracle.pm );
 is_deeply(\@modules, \@expected_modules, '_modules_in_tree with args is correct');
 
+eval {
+    my $f = \&UR::Namespace::Command::Base::_is_valid_class_name;
+    my @tests = (
+        [q(Foo::Bar) , 1],
+        [q(Foo'Bar)  , 1],
+        [q(Foo_Bar)  , 1],
+        [q(FooBar)   , 1],
+        [q(Foo0::Bar), 1],
+        [q(Foo::0Bar), 1],
+        [q(Foo.d)    , 0],
+        [q(0Foo::Bar), 0],
+    );
+    for my $test (@tests) {
+        my ($i, $e) = @$test;
+        my $n = ($e ? "valid: $i" : "invalid: $i");
+        is($f->($i), $e, $n);
+    }
+};

@@ -2617,7 +2617,14 @@ sub _lookup_class_for_table_name {
     my $self = shift;
     my $table_name = shift;
 
-    my @table_class_obj = grep { $_->class_name !~ /::Ghost$/ } UR::Object::Type->is_loaded(table_name => $table_name);
+    my @table_class_obj = grep { $_->class_name !~ /::Ghost$/ } UR::Object::Type->is_loaded(data_source_id => $self->id, table_name => $table_name);
+
+    # Like _get_table_object, we need to look in the data source and if the
+    # object wasn't found then in 'UR::DataSource::Meta' in order to mimic
+    # behavior elsewhere.
+    unless (@table_class_obj) {
+        @table_class_obj = grep { $_->class_name !~ /::Ghost$/ } UR::Object::Type->is_loaded(data_source_id => 'UR::DataSource::Meta', table_name => $table_name);
+    }
     my $table_class;
     my $table_class_obj;
     if (@table_class_obj == 1) {
@@ -3210,10 +3217,18 @@ my %ur_data_type_for_vendor_data_type = (
     'TIME'             => ['DateTime', undef],
 );
 
+sub normalize_vendor_type {
+    my ($class, $type) = @_;
+    $type = uc($type);
+    $type =~ s/\(\d+\)$//;
+    return $type;
+}
+
 sub ur_data_type_for_data_source_data_type {
     my($class,$type) = @_;
 
-    my $urtype = $ur_data_type_for_vendor_data_type{uc($type)};
+    $type = $class->normalize_vendor_type($type);
+    my $urtype = $ur_data_type_for_vendor_data_type{$type};
     unless (defined $urtype) {
         $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
     }

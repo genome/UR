@@ -1067,6 +1067,10 @@ sub _normalize_property_description1 {
         }
     }
 
+    if ($new_property{id_by} && $new_property{reverse_as}) {
+        die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has both id_by and reverse_as specified.);
+    }
+
     if ($new_property{data_type}) {
         if (my ($length) = ($new_property{data_type} =~ /\((\d+)\)$/)) {
             $new_property{data_length} = $length;
