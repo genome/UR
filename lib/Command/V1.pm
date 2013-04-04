@@ -908,6 +908,7 @@ sub help_options {
         #$param_name = "--$param_name";
         my $doc = $property_meta->doc;
         my $valid_values = $property_meta->valid_values;
+        my $example_values = $property_meta->example_values;
         unless ($doc) {
             # Maybe a parent class has documentation for this property
             eval {
@@ -935,6 +936,13 @@ sub help_options {
                 $max_name_length = length($v)+2 if $max_name_length < length($v)+2;
             }
             chomp $doc;
+        }
+        if ($example_values && @$example_values) {
+            $doc .= "\nexample" . (@$example_values > 1 and 's') . ":\n";
+            $doc .= join(', ',
+                        map { ref($_) ? Data::Dumper->new([$_])->Terse(1)->Dump() : $_ } @$example_values
+                    );
+            chomp($doc);
         }
         $max_name_length = length($param_name) if $max_name_length < length($param_name);
 
