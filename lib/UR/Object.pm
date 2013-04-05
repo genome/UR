@@ -238,7 +238,8 @@ sub __errors__ {
                 }
             }
             unless ($valid) {
-                my $value_list = join(', ',@$constraints);
+                # undef is a valid value in the constraints list
+                my $value_list = join(', ',map { defined($_) ? $_ : '' } @$constraints);
                 push @tags,
                     UR::Object::Tag->create(
                         type => 'invalid',
