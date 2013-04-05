@@ -278,7 +278,8 @@ sub resolve_class_and_params_for_argv {
     # should this be moved up into the methods which are only called
     # directly from the shell, or is it okay everywhere in this module to
     # presume we're a direct cmdline call? -ssmith
-    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = (!exists($ENV{UR_COMMAND_DUMP_STATUS_MESSAGES})
+                                                    or $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES});
 
     my @params_to_resolve = $self->_params_to_resolve($params);
     for my $p (@params_to_resolve) {
