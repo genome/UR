@@ -1460,7 +1460,7 @@ sub resolve_order_by_clause {
 }
 
 
-sub generate_sql_for_rule {
+sub create_iterator_closure_for_rule {
     my ($self, $rule) = @_; 
 
     my ($rule_template, @values) = $rule->template_and_values();    
@@ -1540,27 +1540,17 @@ sub generate_sql_for_rule {
     $sql .= "\n$group_by_clause" if $group_by_clause;
     $sql .= "\n$order_by_clause" if $order_by_clause;
 
-    return ($sql, \@all_sql_params, $query_plan);
-}
-
-sub create_iterator_closure_for_rule {
-    my($self, $rule) = @_;
-
-    my($sql, $all_sql_params, $query_plan) = $self->generate_sql_for_rule($rule);
-    my $class = $query_plan->{class_name};
-    my $post_process_results_callback               = $query_plan->{post_process_results_callback};
-
     $self->__signal_change__('query',$sql);
 
     my $dbh = $self->get_default_handle;
     my $sth = $dbh->prepare($sql,$query_plan->{query_config});
     unless ($sth) {
-        $class->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
-        Carp::confess($class->error_message);
+        $class_name->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
+        Carp::confess($class_name->error_message);
     }
-    unless ($sth->execute(@$all_sql_params)) {
-        $class->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper($all_sql_params) . "\n");
-        Carp::confess($class->error_message);
+    unless ($sth->execute(@all_sql_params)) {
+        $class_name->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper(\@all_sql_params) . "\n");
+        Carp::confess($class_name->error_message);
     }
 
     die unless $sth;   # FIXME - this has no effect, right?  
@@ -1592,7 +1582,7 @@ sub create_iterator_closure_for_rule {
         }
 
         # this is used for automated re-testing against a private database
-        $self->_CopyToAlternateDB($class,$dbh,$next_db_row) if $ur_test_filldb;
+        $self->_CopyToAlternateDB($class_name,$dbh,$next_db_row) if $ur_test_filldb;
 
         return $next_db_row;
     }; # end of iterator closure
