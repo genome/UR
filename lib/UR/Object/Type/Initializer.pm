@@ -1279,6 +1279,7 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
     my $last_parent_class = "";
     for my $parent_class (@i) {
         next if $parent_class eq $last_parent_class;
+
         $last_parent_class = $parent_class;
         $_init_subclasses_loaded{$parent_class} ||= [];
         push @{ $_init_subclasses_loaded{$parent_class} }, $class_name;
@@ -1589,12 +1590,19 @@ sub _complete_class_meta_object_definitions {
 
     $self->__signal_change__("load");
 
+
+    my @i = $class_name->inheritance;
+
+    for my $parent_class_name (@i) {
+        if ($parent_class_name->can('__signal_observers__')) {
+            $parent_class_name->__signal_observers__('subclass_loaded', $class_name);
+        }
+    }
+
     # The inheritance method is high overhead because of the number of times it is called.
     # Cache on a per-class basis.
-    my @i = $class_name->inheritance;
     if (grep { $_ eq '' } @i) {
         print "$class_name! @{ $self->{is} }";
-        #$DB::single = 1;
         $class_name->inheritance;
     }
     Carp::confess("Odd inheritance @i for $class_name") unless $class_name->isa('UR::Object');
