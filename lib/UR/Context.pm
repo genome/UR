@@ -2056,7 +2056,6 @@ sub _cache_is_complete_for_class_and_normalized_rule {
         }
         else {
             # scalar id
-
             # Check for objects already loaded.
             no warnings;
             if (exists $all_objects_loaded->{$class}->{$id}) {
@@ -2065,9 +2064,11 @@ sub _cache_is_complete_for_class_and_normalized_rule {
                     grep { $_ }
                     $all_objects_loaded->{$class}->{$id};
             }
-            else {
+            elsif (not $class->isa("UR::Value")) {
                 # we already checked the immediate class,
                 # so just check derived classes
+                # this is not done for values because an identity can exist 
+                # with independent objects with values, unlike entities
                 @objects =
                     grep { $_ }
                     map { $all_objects_loaded->{$_}->{$id} }
@@ -2482,6 +2483,10 @@ sub _loading_was_done_before_with_a_superset_of_this_rule {
         and exists $UR::Context::all_params_loaded->{$template->id}->{$rule->id}
     ) {
         return 1;
+    }
+
+    if ($template->subject_class_name->isa("UR::Value")) {
+        return;
     }
 
     my @rule_values = $rule->values;
