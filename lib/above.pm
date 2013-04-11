@@ -6,7 +6,7 @@ use warnings;
 use Cwd qw(cwd);
 use File::Spec qw();
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub import {
     my $package = shift;
@@ -30,6 +30,11 @@ sub _caller_use {
     die $@ if $@;
 }
 
+sub _dev {
+    my $path = shift;
+    return (stat($path))[0];
+}
+
 sub use_package {
     my $class  = shift;
     my $caller = (caller(1))[0];
@@ -44,14 +49,28 @@ sub use_package {
         }
     }
 
-    my @parts = File::Spec->splitdir(cwd());
+    my $xdev = $ENV{ABOVE_DISCOVERY_ACROSS_FILESYSTEM};
+    my $cwd = cwd();
+    my $dev = _dev($cwd);
+    my $abort_crawl = sub {
+        my @parts = @_;
+        return 1 if (@parts == 1 && $parts[0] eq ''); # hit root dir
+        my $path = File::Spec->join(@parts);
+        return !($xdev || _dev($path) == $dev); # crossed device
+    };
+    my $found_module_at = sub {
+        my $path = shift;
+        return (-e File::Spec->join($path, $module));
+    };
+
+    my @parts = File::Spec->splitdir($cwd);
     my $path;
     do {
         $path = File::Spec->join(@parts);
         pop @parts;
-    } until (-e File::Spec->join($path, $module) || (@parts == 1 && $parts[0] eq ''));
+    } until ($found_module_at->($path) || $abort_crawl->(@parts));
 
-    if (-d $path) {
+    if ($found_module_at->($path)) {
         while ($path =~ s:/[^/]+/\.\./:/:) { 1 } # simplify
         unless ($used_libs{$path}) {
             print STDERR "Using libraries at $path\n" unless $ENV{PERL_ABOVE_QUIET} or $ENV{COMP_LINE};
@@ -87,6 +106,8 @@ Do NOT use this in modules, or user applications.
 Uses a module as though the cwd and each of its parent directories were at the beginnig of @INC.
 If found in that path, the parent directory is kept as though by "use lib".
 
+Set ABOVE_DISCOVERY_ACROSS_FILESYSTEM shell variable to true value to crawl past device boundaries.
+
 =head1 EXAMPLES
 
 # given
@@ -105,6 +126,7 @@ use My::Module;
 =head1 AUTHOR
 
 Scott Smith
+Nathaniel Nutter
 
 =cut
 
