@@ -3,6 +3,9 @@ package above;
 use strict;
 use warnings;
 
+use Cwd qw(cwd);
+use File::Spec qw();
+
 our $VERSION = '0.02';
 
 sub import {
@@ -14,65 +17,53 @@ sub import {
 
 our %used_libs;
 BEGIN {
-    %used_libs = ($ENV{PERL_USED_ABOVE} ? (map { $_ => 1 } split(":",$ENV{PERL_USED_ABOVE})) : ());
+    %used_libs = ($ENV{PERL_USED_ABOVE} ? (map { $_ => 1 } split(":", $ENV{PERL_USED_ABOVE})) : ());
     for my $path (keys %used_libs) {
-        #print STDERR "Using (parent process') libraries at $path\n";
         eval "use lib '$path';";
         die "Failed to use library path '$path' from the environment PERL_USED_ABOVE?: $@" if $@;
     }
 };
 
+sub _caller_use {
+    my ($caller, $class) = @_;
+    eval "package $caller; use $class";
+    die $@ if $@;
+}
+
 sub use_package {
     my $class  = shift;
     my $caller = (caller(1))[0];
-    my $module = $class;
-    $module =~ s/::/\//g;
-    $module .= ".pm";
+    my $module = File::Spec->join(split(/::/, $class)) . '.pm';
 
     ## paths already found in %used_above have
     ## higher priority than paths based on cwd
     for my $path (keys %used_libs) {
-        if (-e "$path/$module") {
-            eval "package $caller; use $class";
-            die $@ if $@;
+        if (-e File::Spec->join($path, $module)) {
+            _caller_use($caller, $class);
             return;
         }
     }
 
-    require Cwd;
-    my $cwd = Cwd::cwd();
-    my @parts = ($cwd =~ /\//g);
-    my $dirs_above = scalar(@parts);
-    my $path=$cwd.'/';
-    until (-e "$path./$module") {
-        if ($dirs_above == 0) {
-            # Not found.  Use the one out under test.
-            # When deployed.
-            $path = "";
-            last;
-        };
-        #print "Didn't find it in $path, trying higher\n";
-        $path .= "../";
-        $dirs_above--;
-    }
+    my @parts = File::Spec->splitdir(cwd());
+    my $path;
+    do {
+        $path = File::Spec->join(@parts);
+        pop @parts;
+    } until (-e File::Spec->join($path, $module) || (@parts == 1 && $parts[0] eq ''));
 
-    # Get the special path in place
-    if (length($path)) {
+    if (-d $path) {
         while ($path =~ s:/[^/]+/\.\./:/:) { 1 } # simplify
         unless ($used_libs{$path}) {
             print STDERR "Using libraries at $path\n" unless $ENV{PERL_ABOVE_QUIET} or $ENV{COMP_LINE};
             eval "use lib '$path';";
             die $@ if $@;
             $used_libs{$path} = 1;
-            my $env_value = join(":",sort keys %used_libs);
+            my $env_value = join(":", sort keys %used_libs);
             $ENV{PERL_USED_ABOVE} = $env_value;
         }
     }
 
-    # Now use the module.
-    eval "package $caller; use $class";
-    die $@ if $@;
-
+    _caller_use($caller, $class);
 };
 
 1;
