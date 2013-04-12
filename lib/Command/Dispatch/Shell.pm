@@ -40,17 +40,7 @@ sub _cmdline_run {
     my $exit_code;
     eval {
         $exit_code = $class->_execute_with_shell_params_and_return_exit_code(@argv);
-
-        my @changed_objects = (
-            UR::Context->all_objects_loaded('UR::Object::Ghost'),
-            grep { $_->__changes__ } UR::Context->all_objects_loaded('UR::Object')
-        );
-
-        # Only commit if we have things to do.
-        my @committable_changed_objects = grep {UR::Context->resolve_data_source_for_object($_)} @changed_objects;
-        if (@committable_changed_objects > 0) {
-          UR::Context->commit or die "Failed to commit!: " . UR::Context->error_message();
-        }
+        UR::Context->commit or die "Failed to commit!: " . UR::Context->error_message();
     };
     if ($@) {
         $class->error_message($@);
