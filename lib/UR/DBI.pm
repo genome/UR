@@ -673,9 +673,11 @@ sub rollback_without_object_update
 sub disconnect
 {
     my $self = shift;
-    
-    # Always rollback.  Oracle commits by default on disconnect.
-    $self->rollback;    
+    # Rollback if AutoCommit is 0.  Oracle commits by default on disconnect.
+    # Rolling back when AutoCommit is on will generate a DBI warning.
+    if ($self->{'AutoCommit'} == 0) {
+        $self->rollback;    
+    }
     
     # Msg and disconnect.
     UR::DBI::before_execute("disconnecting");
