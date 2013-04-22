@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 73;
+use Test::More tests => 97;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -55,6 +55,20 @@ for (my $testnum = 0; $testnum < @tests; $testnum++) {
     my $expected = $tests[$testnum]->[1];
     my @objs = Acme::Product->get(@$params);
     is(scalar(@objs), $expected, "Got $expected objects for get() test $testnum: ".join(' ', @$params));
+}
+
+# Test old syntax
+for (my $testnum = 0; $testnum < @tests; $testnum++) {
+    my $params = $tests[$testnum]->[0];
+    my $expected = $tests[$testnum]->[1];
+
+    my %params;
+    for(my $i = 0; $i < @$params; $i += 2) {
+        my($prop, undef, $op) = $params->[$i] =~ m/^(\w+)(\s+(.*))?/;
+        $params{$prop} = { operator => $op, value => $params->[$i+1] };
+    }
+    my @objs = Acme::Product->get(%params);
+    is(scalar(@objs), $expected, "Got $expected objects for get() old syntax test $testnum: ".join(' ', @$params));
 }
 
 # test get with a bx
