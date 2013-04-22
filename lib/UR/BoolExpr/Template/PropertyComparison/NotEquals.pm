@@ -1,5 +1,5 @@
 
-package UR::BoolExpr::Template::PropertyComparison::NotEqual;
+package UR::BoolExpr::Template::PropertyComparison::NotEquals;
 
 use strict;
 use warnings;

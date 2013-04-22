@@ -73,10 +73,18 @@ our %subclass_suffix_for_builtin_symbolic_operator = (
     '>'     => "GreaterThan",    
     '[]'    => "In",
     'in []' => "In",
-    '!='    => "NotEqual",
-    'ne'    => "NotEqual",
+    'ne'    => "NotEquals",
     '<='    => 'LessOrEqual',
     '>='    => 'GreaterOrEqual',
+);
+our %subclass_suffix_for_builtin_symbolic_operator_negation = (
+    '<'     => 'GreaterOrEqual',  # 'not less than' is the same as GreaterOrEqual
+    '<='    => 'GreaterThan',
+    '>'     => 'LessOrEqual',
+    '>='    => 'LessThan',
+    'ne'    => 'Equals',
+    'false' => 'True',
+    'true'  => 'False',
 );
 
 sub resolve_subclass_for_comparison_operator {
@@ -86,40 +94,33 @@ sub resolve_subclass_for_comparison_operator {
     # Remove any escape sequence that may have been put in at UR::BoolExpr::resolve()
     $comparison_operator =~ s/-.+$// if $comparison_operator;
     
-    my $subclass_name;
-    
-    if (!defined($comparison_operator) or $comparison_operator eq '') {
-        $subclass_name = $class . '::Equals';
-    }    
-    else {
-        $comparison_operator = lc($comparison_operator);
-        my $suffix;
-        my $not;
-        unless ($suffix = $subclass_suffix_for_builtin_symbolic_operator{$comparison_operator}) {
-            my $core_comparison_operator;
-            if ($comparison_operator =~ /not (.*)/) {
-                $not = 1;
-                $core_comparison_operator = $1;
-            }
-            elsif ($comparison_operator =~ m/between/) {
-                $not = 0;
-                $core_comparison_operator = 'between';
-            }
-            else {
-                $not = 0;
-                $core_comparison_operator = $comparison_operator;
-            }
-
-            $suffix = $subclass_suffix_for_builtin_symbolic_operator{$core_comparison_operator} || ucfirst(lc($core_comparison_operator));
-        }
-        $subclass_name = $class . '::' . ($not ? 'Not' : '') . $suffix;
-        
-        my $subclass_meta = UR::Object::Type->get($subclass_name);
-        unless ($subclass_meta) {
-            Carp::confess("Unknown operator '$comparison_operator'");
-        }
+    my $not = 0;
+    if ($comparison_operator and $comparison_operator =~ m/^(\!|not)\s*(.*)/) {
+        $not = 1;
+        $comparison_operator = $2;
     }
-    
+
+    if (!defined($comparison_operator) or $comparison_operator eq '') {
+        $comparison_operator = '=';
+    }
+
+    my $suffix;
+    if ($not) {
+        $suffix = $subclass_suffix_for_builtin_symbolic_operator_negation{$comparison_operator};
+        unless ($suffix) {
+            $suffix = $subclass_suffix_for_builtin_symbolic_operator{$comparison_operator} || ucfirst(lc($comparison_operator));
+            $suffix = "Not$suffix";
+        }
+    } else {
+        $suffix = $subclass_suffix_for_builtin_symbolic_operator{$comparison_operator} || ucfirst(lc($comparison_operator));
+    }
+
+    my $subclass_name = join('::', $class, $suffix);
+
+    my $subclass_meta = UR::Object::Type->get($subclass_name);
+    unless ($subclass_meta) {
+        Carp::confess("Unknown operator '$comparison_operator'");
+    }
     return $subclass_name;
 }
 
@@ -127,7 +128,7 @@ sub _get_for_subject_class_name_and_logic_detail {
     my $class = shift;
     my $subject_class_name = shift;
     my $logic_detail = shift;
-    
+
     my ($property_name, $comparison_operator) = split(' ',$logic_detail, 2);    
     my $subclass_name = $class->resolve_subclass_for_comparison_operator($comparison_operator);    
     my $id = $subclass_name->__meta__->resolve_composite_id_from_ordered_values($subject_class_name, 'PropertyComparison', $logic_detail);

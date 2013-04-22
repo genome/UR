@@ -73,12 +73,19 @@ sub get_objects_matching
             if (my $op = $value->{operator})
             {
                 $op = lc($op);
-                if ($op eq '=') {
+                my $not = 0;
+                if ($op =~ m/^(!|not\s*)(.*)/) {
+                    $not = 1;
+                    $op = $2;
+                }
+
+                my $result;
+
+                if ($op eq '=' and !$not) {
                    @hr = grep { $_ } map { $_->{$value->{'value'}} } @hr;
                 }
-                elsif ($op eq 'like' or $op eq 'not like')
+                elsif ($op eq 'like')
                 {
-                    my $not = 1 if (substr($op,0,1) eq 'n');
                     my $comparison_value = $value->{value};                        
                     my $escape = $value->{escape};
                     
@@ -116,7 +123,7 @@ sub get_objects_matching
                     }
                     @hr = grep { $_ } @thr;
                 } 
-                elsif ($op eq 'in')
+                elsif ($op eq 'in' and !$not)
                 {                
                     $value = $value->{value};
                     my $has_null = ( (grep { length($_) == 0 } @$value) ? 1 : 0);
@@ -127,7 +134,7 @@ sub get_objects_matching
                         @hr = grep { $_ } map { @$_{@value} } @hr;
                     }
                 }
-                elsif ($op eq 'not in')
+                elsif ($op eq 'in' and $not)
                 {                
                     $value = $value->{value};
                     
@@ -153,34 +160,27 @@ sub get_objects_matching
                         @hr = grep { $_ } @thr;
                     }
 
-                } elsif ($op eq 'true') {
+                } elsif ($op eq 'true' or $op eq 'false') {
+                    $not = (( $op eq 'true' && $not) or ($op eq 'false' && !$not));
                     my @thr;
                     foreach my $h ( @hr ) {
                         foreach my $k ( keys %$h ) {
-                            if ($k) {
+                            if ($k xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
                     }
                     @hr = grep { $_ } @thr;
-                } elsif ($op eq 'false') {
-                    my @thr;
-                    foreach my $h ( @hr ) {
-                        foreach my $k ( keys %$h ) {
-                            unless ($k) {
-                                push @thr, $h->{$k};
-                            }
-                        }
-                    }
-                    @hr = grep { $_ } @thr;
-                } elsif($op eq '!=') {
+
+                } elsif ($not and ($op eq '=' or !$op)) {
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
                             # An empty string for $k means the object's value was loaded as NULL
                             # and we want things like 0 != NULL to be true to match the SQL that
                             # gets generated for the same rule
-                            if($k eq '' or $k != $value->{value}) {  
+                            no warnings 'numeric';
+                            if($k eq '' or $k != $value->{value} or $k ne $value->{value}) {
                                 push @thr, $h->{$k};
                             }
                         }
@@ -191,7 +191,7 @@ sub get_objects_matching
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
                             next unless $k ne '';  # an earlier undef value got saved as an empty string here
-                            if($k > $value->{value}) {
+                            if($k > $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
@@ -202,7 +202,7 @@ sub get_objects_matching
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
                             next unless $k ne '';  # an earlier undef value got saved as an empty string here
-                            if($k < $value->{value}) {
+                            if($k < $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
@@ -213,7 +213,7 @@ sub get_objects_matching
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
                             next unless $k ne '';  # an earlier undef value got saved as an empty string here
-                            if($k >= $value->{value}) {
+                            if($k >= $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
@@ -224,7 +224,7 @@ sub get_objects_matching
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
                             next unless $k ne '';  # an earlier undef value got saved as an empty string here
-                            if($k <= $value->{value}) {
+                            if($k <= $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
@@ -235,7 +235,7 @@ sub get_objects_matching
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
                             next unless $k ne '';  # an earlier undef value got saved as an empty string here
-                            if($k ne $value->{value}) {
+                            if($k ne $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
@@ -245,7 +245,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
-                            if(length($k) and length($value->{value}) and $k ne $value->{value}) {
+                            if((length($k) and length($value->{value}) and $k ne $value->{value}) xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
@@ -256,7 +256,7 @@ sub get_objects_matching
                     my ($min,$max) = @{ $value->{value} };
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
-                            if(length($k) and $k >= $min and $k <= $max) {
+                            if((length($k) and $k >= $min and $k <= $max) xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
