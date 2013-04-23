@@ -17,11 +17,11 @@ class UR::Service::WebServer {
                     doc => 'TCP port to listen on' },
     ],
     has_optional => [
-        server  => { is => 'HTTP::Server::PSGI', calculate_from => ['host','port'], is_constant => 1,
+        server  => { is => 'HTTP::Server::PSGI', calculate_from => ['__host','__port'], is_constant => 1,
                     calculate => q(
                         return UR::Service::WebServer::Server->new(
-                            host => $host,
-                            port => $port,
+                            host => $__host,
+                            port => $__port,
                             timeout => $self->timeout,
                             server_ready => sub { $self->_announce() },
                         );
@@ -34,6 +34,42 @@ class UR::Service::WebServer {
         routers => { is => 'UR::Service::WebServer::Router', is_many => 1 },
     ],
 };
+
+# Override port and host so they can auto-fill when needed
+sub _port_host_override {
+    my $self = shift;
+    my $methodname = shift;
+    my $method = '__'.$methodname;
+    my $socket_method = 'sock'.$methodname;
+    if (@_) {
+        if ($self->{server}) {
+            die "Cannot change $methodname after it has created the listen socket";
+        }
+        $self->$method(@_);
+
+    } else {
+      #  if (!defined($self->$method) && !defined($self->{server})) {
+        unless (defined $self->$method) {
+            unless (defined $self->{server}) {
+                # not connected yet - start the server's listen socket and get its port
+                $self->server->setup_listener();
+            }
+            $self->$method( $self->server->listen_sock->$socket_method() );
+        }
+    }
+    return $self->$method;
+}
+
+sub port {
+    my $self = shift;
+    $self->_port_host_override('port', @_);
+}
+
+sub host {
+    my $self = shift;
+    $self->_port_host_override('host', @_);
+}
+
 
 sub _announce {
     my $self = shift;
