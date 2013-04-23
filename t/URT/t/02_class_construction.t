@@ -78,7 +78,7 @@ my $parent_with_id_prop = UR::Object::Type->define(
         other_id => { is => 'Integer' },
     ],
 );
-$DB::foo=1;
+
 my $child_without_id_prop = UR::Object::Type->define(
     class_name => 'URT::ChildWithoutProp',
     is => 'URT::ParentWithProp',

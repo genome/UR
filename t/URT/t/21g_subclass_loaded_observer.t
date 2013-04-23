@@ -27,7 +27,7 @@ my $cat = UR::Object::Type->define(
 is($cat->class, 'Cat::Type', 'defined Cat');
 ok($subclass_loaded{Cat}, q(Animal's subclass_loaded observer fired when Cat was defined));
 
-my $cat = UR::Object::Type->define(
+$cat = UR::Object::Type->define(
     class_name => 'Tiger',
     is => 'Cat',
 );
