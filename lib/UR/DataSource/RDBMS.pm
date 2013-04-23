@@ -1620,20 +1620,27 @@ sub _extend_sql_for_column_operator_and_value {
     my $sql; 
     my @sql_params;
 
-    if ($op eq '' or $op eq '=' or $op eq 'eq') {
-        $sql .= $expr_sql;
+    if ($op eq '' or $op =~ m/^(!|not)?\s*(=|eq)/ or $op =~ m/^(!|not)$/) {
+        my $not = ($op && $1);
         if ($self->_value_is_null($val))
         {
-            $sql = "$expr_sql is NULL";
-        }
-        else
-        {
-            $sql = "$expr_sql = ?";
+            $sql .= join(' ',   $expr_sql,
+                                'is',
+                                $not ? 'not' : '',
+                                'NULL');
+        } elsif ($not) {
+            $sql .= sprintf("( %s != ? or %s is null)", $expr_sql, $expr_sql);
             push @sql_params, $val;
-        }        
+
+        } else {
+            $sql .= "$expr_sql = ?";
+            push @sql_params, $val;
+        }
     }
-    elsif ($op =~ m/^between( \[\])?/i) {
-        $sql .= "$expr_sql between ? and ?";
+    elsif ($op =~ m/^(!|not)?\s*between( \[\])?/i) {
+        $sql .= join(' ',   $expr_sql,
+                            $1 ? 'not' : '',
+                            'between ? and ?');
         push @sql_params, @$val;
     }
     elsif ($op =~ /\[\]/ or $op =~ /in/i) {
@@ -1669,7 +1676,7 @@ sub _extend_sql_for_column_operator_and_value {
         }
         $sql .= "\n)\n" if $wrap;
     }       
-    elsif($op =~ /^(like|not like|in|not in|\<\>|\<|\>|\=|\<\=|\>\=)$/i ) {
+    elsif($op =~ /^(like|not like|\<\>|\<|\>|\=|\<\=|\>\=)$/i ) {
         # SQL operator.  Use this directly.
         $sql .= "$expr_sql $op ?";
         push @sql_params, $val;        
@@ -1678,7 +1685,20 @@ sub _extend_sql_for_column_operator_and_value {
             $escape = $self->_format_sql_like_escape_string($escape);
             $sql .= " escape $escape";
         }
+    } elsif ($op =~ /^(\!|not)\s*(\>=|\<=|\>|\<)/) {
+        # negated SQL operator
+        $op = $2;
+        $op =~ tr/<>/></;
+        if ($op =~ m/\=$/) {
+            substr($op, -1, 1, '');
+        } else {
+            $op .= '=';
+        }
+        $sql .= "$expr_sql $op ?";
+        push @sql_params, $val;
+
     } elsif($op =~ /^(ne|\!\=)$/i) {                
+        # FIXME - can this be integrated into the =/eq handling above?
         # Perlish inequality.  Special SQL to handle this.
         if (not defined($val)) {
             # ne undef =~ is not null
