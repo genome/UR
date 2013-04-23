@@ -83,7 +83,6 @@ sub run {
     my($self, $cb) = @_;
 
     $cb ||= sub {
-        my $self = shift;
         my @routers = $self->routers;
         foreach (@routers) {
             my $rv = $_->route(@_);
@@ -92,15 +91,11 @@ sub run {
         return [ 404, [ 'Content-Type' => 'text/html'], ['Not found']];
     };
 
-    my $wrapped_cb = sub {
-        $cb->($self, @_);
-    };
-
-    my $timeout = $self->idle_timeout;
+    my $timeout = $self->idle_timeout || 0;
     local $SIG{'ALRM'} = sub { die "alarm\n" };
     eval {
         alarm($timeout);
-        $self->server->run($wrapped_cb);
+        $self->server->run($cb);
     };
     alarm(0);
     die $@ unless $@ eq "alarm\n";

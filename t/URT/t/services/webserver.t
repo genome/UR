@@ -9,8 +9,10 @@ use strict;
 use warnings;
 
 use IO::Socket;
+use HTTP::Request;
+use HTTP::Response;
 
-plan tests => 14;
+plan tests => 30;
 
 # Test out the lazy host and port methods
 {
@@ -100,6 +102,38 @@ plan tests => 14;
 
     $srv->delete();
 }
+
+# Test running through a connection and request
+{
+    #my $srv = UR::Service::WebServer->create(idle_timeout => 1);
+    my $srv = UR::Service::WebServer->create();
+    ok($srv, 'Create WebServer service');
+    $srv->dump_status_messages(0);
+    $srv->queue_status_messages(1);
+
+    my($req_method, $path_info);
+    my $handler = sub {
+        my $env = shift;
+        ($req_method, $path_info) = @$env{'REQUEST_METHOD','PATH_INFO'};
+        # HACK since old versions of HTTP::Server::PSGI don't
+        # support psgix.harakiri.  We can't just simply die because the
+        # handlers are wrapped inside an eval, but the response callbacks
+        # are not.
+        return sub { die "Worked\n" };
+    };
+    my $port = $srv->port;
+    my $conn = IO::Socket::INET->new(PeerPort => $port, PeerHost => 'localhost', Proto => 'tcp');
+    my $req = HTTP::Request->new(GET => 'http://localhost/test',
+                                [ 'user-agent' => 'Test 1.0'] );
+    $req->protocol('HTTP/1.1');
+    $srv->server->buffer_input($req->as_string);
+
+    eval { $srv->run($handler) };
+    is($@, "Worked\n", 'Request handler was invoked');
+    is($req_method, 'GET', 'Request method matches request');
+    is($path_info, 'http://localhost/test', 'Request path matches request');
+}
+
 
 sub pick_random_port {
     # Have the system make socket and pick the port for us
