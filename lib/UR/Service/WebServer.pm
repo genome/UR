@@ -31,7 +31,7 @@ class UR::Service::WebServer {
                         doc => 'Timeout for read and write events' },
         idle_timeout => { is => 'Integer', default_value => undef,
                         doc => 'Exit the event loop after being idle for this many seconds' },
-        routers => { is => 'UR::Service::WebServer::Router', is_many => 1 },
+        cb => { is => 'CODE', doc => 'callback for handling requests' },
     ],
 };
 
@@ -80,16 +80,9 @@ sub _announce {
 }
 
 sub run {
-    my($self, $cb) = @_;
+    my $self = shift;
 
-    $cb ||= sub {
-        my @routers = $self->routers;
-        foreach (@routers) {
-            my $rv = $_->route(@_);
-            return $rv if $rv;
-        }
-        return [ 404, [ 'Content-Type' => 'text/html'], ['Not found']];
-    };
+    my $cb = shift || $self->cb;
 
     my $timeout = $self->idle_timeout || 0;
     local $SIG{'ALRM'} = sub { die "alarm\n" };

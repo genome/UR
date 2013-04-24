@@ -12,7 +12,7 @@ use IO::Socket;
 use HTTP::Request;
 use HTTP::Response;
 
-plan tests => 30;
+plan tests => 33;
 
 # Test out the lazy host and port methods
 {
@@ -129,6 +129,16 @@ plan tests => 30;
     $srv->server->buffer_input($req->as_string);
 
     eval { $srv->run($handler) };
+    is($@, "Worked\n", 'Request handler was invoked');
+    is($req_method, 'GET', 'Request method matches request');
+    is($path_info, 'http://localhost/test', 'Request path matches request');
+    $conn->close;
+
+    # Test assigning a callback before run()
+    $conn = IO::Socket::INET->new(PeerPort => $port, PeerHost => 'localhost', Proto => 'tcp');
+    $srv->cb($handler);
+    $srv->server->buffer_input($req->as_string);
+    eval { $srv->run() };
     is($@, "Worked\n", 'Request handler was invoked');
     is($req_method, 'GET', 'Request method matches request');
     is($path_info, 'http://localhost/test', 'Request path matches request');
