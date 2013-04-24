@@ -103,13 +103,14 @@ my %mime_types = (
 sub _mime_type_for_filename {
     my($self, $pathname) = @_;
     my($ext) = ($pathname =~ m/\.(\w+)$/);
+    $ext ||= '*';
     return $mime_types{$ext} || $mime_types{'*'};
 }
 sub _file_opener_for_directory {
     my($self, $dir) = @_;
     return sub {
         (my $pathname = shift) =~ s#/?\.\.##g;  # Remove .. - don't want them escaping the given directory tree
-        return IO::File->new( join(',', $dir, $pathname), 'r');
+        return IO::File->new( join('/', $dir, $pathname), 'r');
     };
     
 }
@@ -119,11 +120,11 @@ sub file_handler_for_directory {
     my $opener = $self->_file_opener_for_directory($dir);
 
     return sub {
-        my($self, $pathname) = @_;
+        my($env, $pathname) = @_;
 
         my $fh = $opener->($pathname);
         unless($fh) {
-            return [ 404, [ 'Content-Type' => 'text/html'], ['Not found']];
+            return [ 404, [ 'Content-Type' => 'text/plain'], ['Not Found']];
         }
         my $type = $self->_mime_type_for_filename($pathname);
         if ($does_streaming) {
