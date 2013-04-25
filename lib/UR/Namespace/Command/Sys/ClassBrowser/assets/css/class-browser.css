@@ -1,0 +1,8 @@
+body {
+    padding-top: 45px;  /* For the fixed-top navbar */
+}
+
+#class-picker {
+    width: 33%;
+    float: left;
+}

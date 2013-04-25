@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Schema/Class Browser</title>
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="assets/css/class-browser.css" rel="stylesheet" media="screen">
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function() {
+
+        });
+    </script>
+</head>
+<body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="navbar-inner">
+            <a class="brand" href="/">UR Class Browser</a>
+            <form class="navbar-search form-search pull-left">
+                <div class="input-prepend">
+                    <button class="btn" type="submit" id="submit-namespace">Namespace</button>
+                    <select id="namespace-select" class="input-small">
+                        [% FOREACH namespace = namespaces %]
+                            <option value="[% namespace %]">[% namespace %]</option>
+                        [% END %]
+                    </select>
+                </div>
+                <div class="input-append">
+                    <input type="text" class="search-query span2 input-small">
+                    <button type="submit" class="btn">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="class-picker" class="tabbable">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#classes-by-name" data-toggle="tab">Classes</a></li>
+            <li><a href="#classes-by-inheritance" data-toggle="tab">Inheritance</a></li>
+            <li><a href="#classes-by-path" data-toggle="tab">Paths</a></li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane active" id="classes-by-name">
+                Class Names
+            </div>
+            <div class="tab-pane" id="classes-by-inheritance">
+                Class Inheritance
+            </div>
+            <div class="tab-pane" id="classes-by-path">
+                Class Paths
+            </div>
+        </div>
+    </div>
+
+    <div id="detail">
+        Detail about something
+    </div>
+</body>
+</html>

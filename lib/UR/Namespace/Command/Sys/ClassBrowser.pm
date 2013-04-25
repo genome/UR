@@ -18,6 +18,8 @@ use Data::Dumper;
 use File::Spec;
 use File::Basename;
 use IO::File;
+use Template;
+use Plack::Request;
 our $VERSION = "0.41"; # UR $VERSION;
 
 UR::Object::Type->define(
@@ -26,7 +28,7 @@ UR::Object::Type->define(
     has_optional => [
         generate_cache  => { is => 'Boolean', default_value => 0, doc => 'Generate the class cache file' },
         use_cache       => { is => 'Boolean', default_value => 1, doc => 'Use the class cache instead of scanning for modules'},
-        port            => { is => 'Integer', doc => 'TCP port to listen for connections' },
+        port            => { is => 'Integer', default_value => 8080, doc => 'TCP port to listen for connections' },
         timeout         => { is => 'Integer', doc => 'If specified, exit after this many minutes of inactivity' },
     ],
 );
@@ -44,6 +46,8 @@ sub _class_info_cache_file_name_for_namespace {
         die $@ if $@;
     }
     my $class_cache_file = sprintf('.%s-class-browser-cache', $namespace);
+print "class cache file $class_cache_file\n";
+print "namespace base dir name is ".$namespace->get_base_directory_name,"\n";
     return File::Spec->catfile($namespace->get_base_directory_name, $class_cache_file);
 }
 
@@ -51,12 +55,14 @@ sub _class_info_cache_file_name_for_namespace {
 sub load_class_info_for_namespace {
     my($self, $namespace) = @_;
 
+print "Loading class info for $namespace\n";
     my $class_cache_file = $self->_class_info_cache_file_name_for_namespace($namespace);
+print "Class cache file is \n";
     if ($self->use_cache and -f $class_cache_file) {
         $self->_load_class_info_from_cache_file($class_cache_file);
     } else {
         $self->status_message("Preloading class information for namespace $namespace...");
-        $self->_load_class_info_from_modules_on_filesystem();
+        $self->_load_class_info_from_modules_on_filesystem($namespace);
     }
 }
 
@@ -64,6 +70,7 @@ sub _load_class_info_from_modules_on_filesystem {
     my $self = shift;
     my $namespace = shift;
 
+print "_load_class_info_from_modules_on_filesystem for $namespace\n";
     my $by_class_name = $self->{_cache}->{$namespace}->{by_class_name} ||= $self->_generate_class_name_cache($namespace);
 
     my $by_class_name_tree = $self->{_cache}->{$namespace}->{by_class_name_tree} ||= {};
@@ -191,6 +198,8 @@ sub _write_class_info_to_cache_file {
 sub execute {
     my $self = shift;
 
+print "In new execute!!\n";
+$DB::single=1;
     if ($self->generate_cache) {
         $self->_load_class_info_from_modules_on_filesystem($self->namespace_name);
         $self->_write_class_info_to_cache_file();
@@ -199,10 +208,13 @@ sub execute {
 
     $self->load_class_info_for_namespace($self->namespace_name);
 
-    my $server = UR::Service::WebServer->create(timeout => $self->timeout);
+    my $tt = $self->{_tt} ||= Template->new({ INCLUDE_PATH => $self->_template_dir });
 
-    my $router = UR::Service::Router->create();
-    #$router->GET(qr(/assets/(.*)), $server->
+    my $server = UR::Service::WebServer->create(timeout => $self->timeout, port => $self->port);
+
+    my $router = UR::Service::UrlRouter->create( verbose => 1);
+    my $assets_dir = $self->__meta__->module_data_subdirectory.'/assets/';
+    $router->GET(qr(/assets/(.*)), $server->file_handler_for_directory( $assets_dir, 1));
     $router->GET('/', sub { $self->index(@_) });
 
     $server->cb($router);
@@ -213,7 +225,7 @@ sub execute {
 
 sub _template_dir {
     my $self = shift;
-    return $self->module_data_subdirectory();
+    return $self->__meta__->module_data_subdirectory();
 }
 
 sub index {
@@ -223,16 +235,17 @@ sub index {
     my $req = Plack::Request->new($env);
     my $namespace = $req->param('namespace') || $self->namespace_name;
 
-    my $tt = $self->{_tt} ||= Template->new({ INCLUDE_PATH => $self->_template_dir });
-
     my $data = {
-        namespaces  => [ map { $_->class_name } UR::Namespace->is_loaded() ],
-        classnames  => $self->{_cache}->{$namespace}->{by_class_name_tree},
-        inheritance => $self->{_cache}->{$namespace}->{by_class_inh_tree},
+        namespaces  => [ map { $_->id } UR::Namespace->is_loaded() ],
+        #classnames  => $self->{_cache}->{$namespace}->{by_class_name_tree},
+        #inheritance => $self->{_cache}->{$namespace}->{by_class_inh_tree},
         paths       => $self->{_cache}->{$namespace}->{by_directory_tree},
     };
 
-    return [ 200, [ 'Content-Type' => 'text/html' ], [ $tt->process('class-browser.html', $data) ] ];
+    my $out = '';
+    my $tmpl = $self->{_tt};
+    $tmpl->process('class-browser.html', $data, \$out)
+            and return [ 200, [ 'Content-Type' => 'text/html' ], [ $out ]];
 }
 
 
