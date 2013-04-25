@@ -1,67 +1,239 @@
 package UR::Namespace::Command::Sys::ClassBrowser;
 
+# This turns on the perl stuff to insert data in the DB
+# namespace so we can get line numbers and stuff about
+# loaded modules
+#BEGIN {
+#   unless ($^P) {
+#       no strict 'refs';
+#       *DB::DB = sub {};
+#       $^P = 0x31f;
+#   }
+#}
+
 use strict;
 use warnings;
 use UR;
+use Data::Dumper;
+use File::Spec;
+use File::Basename;
+use IO::File;
 our $VERSION = "0.41"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Namespace::Command::Base',
+    has_optional => [
+        generate_cache  => { is => 'Boolean', default_value => 0, doc => 'Generate the class cache file' },
+        use_cache       => { is => 'Boolean', default_value => 1, doc => 'Use the class cache instead of scanning for modules'},
+        port            => { is => 'Integer', doc => 'TCP port to listen for connections' },
+        timeout         => { is => 'Integer', doc => 'If specified, exit after this many minutes of inactivity' },
+    ],
 );
-
-
-# This turns on the perl stuff to insert data in the DB
-# namespace so we can get line numbers and stuff about
-# loaded modules
-BEGIN {
-   unless ($^P) {
-       no strict 'refs';
-       *DB::DB = sub {};
-       $^P = 0x31f;
-   }
-}
 
 sub is_sub_command_delegator { 0;}
 
-
 sub help_brief {
     "Start a web server to browse through the class and database structures.";
+}
+
+sub _class_info_cache_file_name_for_namespace {
+    my($self, $namespace) = @_;
+    unless ($INC{$namespace.'.pm'}) {
+        eval "use $namespace";
+        die $@ if $@;
+    }
+    my $class_cache_file = sprintf('.%s-class-browser-cache', $namespace);
+    return File::Spec->catfile($namespace->get_base_directory_name, $class_cache_file);
+}
+
+
+sub load_class_info_for_namespace {
+    my($self, $namespace) = @_;
+
+    my $class_cache_file = $self->_class_info_cache_file_name_for_namespace($namespace);
+    if ($self->use_cache and -f $class_cache_file) {
+        $self->_load_class_info_from_cache_file($class_cache_file);
+    } else {
+        $self->status_message("Preloading class information for namespace $namespace...");
+        $self->_load_class_info_from_modules_on_filesystem();
+    }
+}
+
+sub _load_class_info_from_modules_on_filesystem {
+    my $self = shift;
+    my $namespace = shift;
+
+    my $by_class_name = $self->{_cache}->{$namespace}->{by_class_name} ||= $self->_generate_class_name_cache($namespace);
+
+    my $by_class_name_tree = $self->{_cache}->{$namespace}->{by_class_name_tree} ||= {};
+    my $by_class_inh_tree = $self->{_cache}->{$namespace}->{by_class_inh_tree} ||= {};
+    my $by_directory_tree = $self->{_cache}->{$namespace}->{by_directory_tree} ||= {};
+    foreach my $data ( values %$by_class_name ) {
+        $self->_insert_cache_for_path($data, $by_directory_tree);
+        #$self->_insert_cache_for_class_name_tree($data, $by_class_name_tree);
+        #$self->_insert_cache_for_class_inh_tree($data, $by_class_name, $by_class_inh_tree);
+    }
+    1;
+}
+
+sub _generate_class_name_cache {
+    my($self, $namespace) = @_;
+
+    my $cwd = Cwd::getcwd;
+    my $namespace_meta = $namespace->__meta__;
+    (my $path = $namespace_meta->module_path) =~ s/^$cwd/\./;
+    my $by_class_name = {  $namespace => {
+                                __class_name => $namespace,
+                                __is        => $namespace_meta->is,
+                                __path      => $path,
+                            }
+                        };
+    foreach my $class_meta ( $namespace->get_material_classes ) {
+
+        my $class_name = $class_meta->class_name;
+        ($path = $class_meta->module_path) =~ s/^$cwd/\./;
+        $by_class_name->{$class_name} = {
+            __class_name  => $class_name,
+            __path        => $path,
+            __is          => $class_meta->is,
+        };
+    }
+    return $by_class_name;
+}
+
+
+# Build the by_directory_tree data
+sub _insert_cache_for_path {
+    my($self, $data, $pathstruct) = @_;
+
+    # split up the path to the module relative to the namespace directory
+    my @currentpath = File::Spec->splitdir($data->{__path});
+    shift @currentpath if $currentpath[0] eq '.';  # remove . at the start of the path
+
+    my $currentpath;
+    while (@currentpath > 1) {
+        my $dir = shift @currentpath;
+        $currentpath = defined($currentpath) ? join('/', $currentpath, $dir) : $dir;
+        $pathstruct = $pathstruct->{$dir} ||= {__is_dir => 1, __path => $currentpath};
+    }
+
+    $pathstruct->{ $currentpath[0] } = $data;
+}
+
+sub class_info_for_pathname {
+    my($self, $namespace, $pathname, $pathstruct) = @_;
+    die "class_info_for_pathname requires a \$namespace" unless defined $namespace;
+
+    $pathstruct ||= $self->{_cache}->{$namespace}->{by_directory_tree};
+
+    if ($pathname) {
+        my @paths = File::Spec->splitdir($pathname);
+        while(@paths) {
+            my $path = shift @paths;
+            return unless $pathstruct->{$path};
+            $pathstruct = $pathstruct->{$path};
+        }
+    }
+    return $pathstruct;
+}
+
+# build the by_class_name_tree data
+sub _insert_cache_for_class_name_tree {
+    my($self, $data, $classstruct) = @_;
+
+    my @names = split('::', $data->{class_name});
+
+    while(@names > 1) {
+        my $name = shift @names;
+        $classstruct = $classstruct->{$name} ||= {};
+    }
+    $classstruct->{ $names[0] } = $data;
+}
+
+# build the by_class_inh_tree data
+sub _insert_cache_for_class_inh_tree {
+    my($self, $data, $by_class_name, $classtree, @inh) = @_;
+
+    @inh = ( $data->{class_name} ) unless @inh;  # first (non-recursive) call?
+
+    # find the parents of the last class added to the @inh list
+    my $is_list = $by_class_name->{$inh[-1]}->{is};
+    if ($is_list and @$is_list) {
+        # This class has one or more parents
+        $self->_insert_cache_for_class_inh_tree($data, $by_class_name, $classtree, @inh, $_) foreach @$is_list;
+
+    } else {
+        # At the root - no more parents
+        while (@inh > 1) {
+            my $name = pop @inh;
+            $classtree = $classtree->{$name} ||= {};
+        }
+        $classtree->{ $inh[0] } = $data;
+    }
+}
+
+sub _write_class_info_to_cache_file {
+    my $self = shift;
+
+    my $current_namespace = $self->namespace_name;
+    return unless ($self->{_cache}->{$current_namespace});
+
+    my $cache_file = $self->_class_info_cache_file_name_for_namespace($current_namespace);
+    my $fh = IO::File->new($cache_file, 'w') || die "Can't open $cache_file for writing: $!";
+
+    $fh->print( Data::Dumper->Dump([$self->{_cache}->{$current_namespace}]) );
+    $fh->close();
+    $self->status_message("Saved class info to cache file $cache_file");
 }
 
 
 sub execute {
     my $self = shift;
 
-    my $params = shift;
-  
-    my $namespace = $self->namespace_name;
-    # FIXME why dosen't require work here?
-    eval "use  $namespace";
-    if ($@) {
-        $self->error_message("Failed to load module for $namespace: $@");
-        return;
+    if ($self->generate_cache) {
+        $self->_load_class_info_from_modules_on_filesystem($self->namespace_name);
+        $self->_write_class_info_to_cache_file();
+        return 1;
     }
 
-    # FIXME This is a hack to preload all the default namespace's classes at startup
-    # when the class metadata is in the SQLite DB, this won't be necessary anymore
-    print "Preloading class information for namespace $namespace\n";
-    $namespace->get_material_class_names;
+    $self->load_class_info_for_namespace($self->namespace_name);
 
-    # FIXME the vocabulary converted "cgi app" into CgiApp, instead of CGIApp even though
-    # I added CGI to the list of special cased words in GSC::Vocabulary.  It looks like
-    # UR::Object::View::create() is hard coded to use App::Vocabulary instead of whatever
-    # the current namespace's vocabulary is
-    my $v = $namespace->create_view(perspective => "schema browser", toolkit => "cgi app");
+    my $server = UR::Service::WebServer->create(timeout => $self->timeout);
 
-    printf("URL is http://%s:%d/\n",$v->hostname, $v->port);
+    my $router = UR::Service::Router->create();
+    #$router->GET(qr(/assets/(.*)), $server->
+    $router->GET('/', sub { $self->index(@_) });
 
-    $v->timeout(600);
+    $server->cb($router);
+    $server->run();
 
-    $v->show();
+    return 1;
+}
 
+sub _template_dir {
+    my $self = shift;
+    return $self->module_data_subdirectory();
+}
+
+sub index {
+    my $self = shift;
+    my $env = shift;
+
+    my $req = Plack::Request->new($env);
+    my $namespace = $req->param('namespace') || $self->namespace_name;
+
+    my $tt = $self->{_tt} ||= Template->new({ INCLUDE_PATH => $self->_template_dir });
+
+    my $data = {
+        namespaces  => [ map { $_->class_name } UR::Namespace->is_loaded() ],
+        classnames  => $self->{_cache}->{$namespace}->{by_class_name_tree},
+        inheritance => $self->{_cache}->{$namespace}->{by_class_inh_tree},
+        paths       => $self->{_cache}->{$namespace}->{by_directory_tree},
+    };
+
+    return [ 200, [ 'Content-Type' => 'text/html' ], [ $tt->process('class-browser.html', $data) ] ];
 }
 
 
-    
 1;
