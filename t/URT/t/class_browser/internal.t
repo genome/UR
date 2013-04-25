@@ -18,8 +18,6 @@ my $cmd = UR::Namespace::Command::Sys::ClassBrowser->create(
             );
 ok($cmd, 'Created ClassBrowser command');
 
-print "namespace module_directory is ",Testing->__meta__->module_directory,"\n";
-exit;
 my $by_class_name = $cmd->_generate_class_name_cache('Testing');
 my $base_dir = File::Basename::dirname(__FILE__);
 
