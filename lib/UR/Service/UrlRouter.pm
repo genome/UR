@@ -9,7 +9,11 @@ use Sub::Install;
 use overload '&{}' => \&__call__,  # To support being called as a code ref
              'bool' => sub { 1 };  # Required due to an unless() test in UR::Context
 
-class UR::Service::UrlRouter { };
+class UR::Service::UrlRouter {
+    has_optional => [
+        verbose => { is => 'Boolean' },
+    ]
+};
 
 foreach my $method ( qw( GET POST PUT DELETE ) ) {
     my $code = sub {
@@ -24,8 +28,15 @@ foreach my $method ( qw( GET POST PUT DELETE ) ) {
     });
 }
 
+sub _log {
+    my $self = shift;
+    return unless $self->verbose;
+    print STDERR join("\t", @_),"\n";
+}
+
 sub __call__ {
     my $self = shift;
+
     return sub {
         my $env = shift;
 
@@ -35,6 +46,7 @@ sub __call__ {
         foreach my $route ( @$matchlist ) {
             my($path,$cb) = @$route;
             my $call = sub {    my $rv = $cb->($env, @_);
+                                $self->_log(200, $req_method, $env->{PATH_INFO}, $path);
                                 return ref($rv) ? $rv : [ 200, [], [$rv] ];
                             };
 
@@ -48,6 +60,7 @@ sub __call__ {
                 return $call->();
             }
         }
+        $self->_log(404, $req_method, $env->{PATH_INFO});
         return [ 404, [ 'Content-Type' => 'text/plain' ], [ 'Not Found' ] ];
     }
 }
