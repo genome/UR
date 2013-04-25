@@ -514,6 +514,14 @@ sub module_directory {
     return $path;
 }
 
+sub module_data_subdirectory {
+    my $self = shift;
+    my $path = $self->module_path;
+    $path =~ s/.pm$//;
+    return $path;
+}
+
+
 sub module_source_lines {
     my $self = shift;
     my $file_name = $self->module_path;
