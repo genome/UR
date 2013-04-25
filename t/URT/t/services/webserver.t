@@ -10,10 +10,10 @@ use warnings;
 
 use IO::Socket;
 use HTTP::Request;
-use HTTP::Response;
 use File::Temp;
+use Plack::Util;
 
-plan tests => 38;
+plan tests => 43;
 
 # Test out the lazy host and port methods
 {
@@ -145,36 +145,58 @@ plan tests => 38;
     is($path_info, 'http://localhost/test', 'Request path matches request');
 }
 
-# Test the file/directory handling, non streaming
+# Test the file/directory handling, non streaming and streaming
 {
-    my $tmpdir = File::Temp::tempdir( CLEANUP => 1 );
-    IO::File->new($tmpdir . '/file1','w')->print("This is file 1\n");
-    IO::File->new($tmpdir . '/file2.css','w')->print("This is file 2\n");
-    IO::File->new($tmpdir . '/file3.html','w')->print("This is file 3\n");
-    my $dirhandler = UR::Service::WebServer->file_handler_for_directory( $tmpdir, 0);
+    for my $does_streaming ( 0, 1) {
 
-    ok($dirhandler, 'Create file handler for directory');
-    my $data = $dirhandler->(undef, '/file1');
-    is_deeply($data,
-        [ 200, [ 'Content-Type' => 'text/plain' ], ["This is file 1\n"]],
-        'Got data for file1');
+        my $check_dirhandler_result = sub {
+            my($data, $expected_data, $message) = @_;
 
-    $data = $dirhandler->(undef, '/nothere');
-    is_deeply($data,
-        [ 404, [ 'Content-Type' => 'text/plain' ], ["Not Found"]],
-        'Got 404 for non-existent file');
+            if ($does_streaming and ref($data->[2]) ne 'ARRAY') {
+                my $fh = $data->[2];
+                local $/;
+                $data->[2] =  [ <$fh> ];
+            }
+            is_deeply($data, $expected_data, $message);
+        };
 
-    $data = $dirhandler->(undef, '/file2.css');
-    is_deeply($data,
-        [ 200, [ 'Content-Type' => 'text/css' ], ["This is file 2\n"]],
-        'Got data for file2');
+        my $tmpdir = File::Temp::tempdir( CLEANUP => 1 );
+        IO::File->new($tmpdir . '/file1','w')->print("This is file 1\n");
+        IO::File->new($tmpdir . '/file2.css','w')->print("This is file 2\n");
+        IO::File->new($tmpdir . '/file3.html','w')->print("This is file 3\n");
+        my $dirhandler = UR::Service::WebServer->file_handler_for_directory( $tmpdir, $does_streaming);
 
-    $data = $dirhandler->(undef, '/file3.html');
-    is_deeply($data,
-        [ 200, [ 'Content-Type' => 'text/html' ], ["This is file 3\n"]],
-        'Got data for file3');
+        my $psgi_env = { 'psgi.streaming' => Plack::Util::TRUE };
+        ok($dirhandler, 'Create file handler for directory');
+        my $data = $dirhandler->($psgi_env, '/file1');
+        $check_dirhandler_result->(
+            $data,
+            [ 200, [ 'Content-Type' => 'text/plain' ], ["This is file 1\n"]],
+            'Got data for file1'
+        );
+
+        $data = $dirhandler->($psgi_env, '/nothere');
+        $check_dirhandler_result->(
+            $data,
+            [ 404, [ 'Content-Type' => 'text/plain' ], ["Not Found"]],
+            'Got 404 for non-existent file'
+        );
+
+        $data = $dirhandler->($psgi_env, '/file2.css');
+        $check_dirhandler_result->(
+            $data,
+            [ 200, [ 'Content-Type' => 'text/css' ], ["This is file 2\n"]],
+            'Got data for file2'
+        );
+
+        $data = $dirhandler->($psgi_env, '/file3.html');
+        $check_dirhandler_result->(
+            $data,
+            [ 200, [ 'Content-Type' => 'text/html' ], ["This is file 3\n"]],
+            'Got data for file3'
+        );
+    }
 }
-    
 
 
 sub pick_random_port {

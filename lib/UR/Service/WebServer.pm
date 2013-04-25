@@ -127,7 +127,7 @@ sub file_handler_for_directory {
             return [ 404, [ 'Content-Type' => 'text/plain'], ['Not Found']];
         }
         my $type = $self->_mime_type_for_filename($pathname);
-        if ($does_streaming) {
+        if ($does_streaming && $env->{'psgi.streaming'}) {
             return [ 200, ['Content-Type' => $type], $fh];
         } else {
             local $/;
