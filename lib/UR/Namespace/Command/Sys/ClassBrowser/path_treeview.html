@@ -1,0 +1,15 @@
+<ul>
+[% FOREACH name IN valid_paths(paths) %]
+    [% SET pathitem = paths.item(name) %]
+    [% SET path = pathitem.item('__path') %]
+        <li>
+            [% IF pathitem.item('__is_dir') %]
+                <input type="checkbox" id="[% path %]" />
+                <label for="[% path %]">[% name %]</label>
+                [% INCLUDE path_treeview.html paths = pathitem %]
+            [% ELSE %]
+                <a href="#" class="btn btn-small file-path" data-path="[% path %]"><i class="icon-file"></i> [% name %]</a>
+            [% END %]
+        </li>
+[% END %]
+</ul>

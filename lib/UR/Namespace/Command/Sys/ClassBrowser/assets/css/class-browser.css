@@ -3,9 +3,18 @@ body {
 }
 
 #class-picker {
-    width: 33%;
-    float: left;
+
 }
+
+#detail {
+
+}
+
+.code {
+    font-family: monospace;
+    white-space: pre;
+}
+
 
 
 /* CSS for the no-javascript treeview from http://experiments.wemakesites.net/css3-treeview.html */

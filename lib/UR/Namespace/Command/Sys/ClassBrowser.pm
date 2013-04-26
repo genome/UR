@@ -140,6 +140,7 @@ sub cache_info_for_pathname {
     if ($pathname) {
         my @paths = File::Spec->splitdir($pathname);
         while(my $dir = shift @paths) {
+            next if $dir eq '.';
             last unless $pathstruct;
             $pathstruct = $pathstruct->{$dir};
         }
@@ -218,6 +219,8 @@ $DB::single=1;
     my $assets_dir = $self->__meta__->module_data_subdirectory.'/assets/';
     $router->GET(qr(/assets/(.*)), $server->file_handler_for_directory( $assets_dir, 1));
     $router->GET('/', sub { $self->index(@_) });
+    $router->POST('/class-info-for-path', sub { $self->class_info_for_path(@_) });
+    $router->GET(qr(/render-perl-module/(.*)), sub { $self->render_perl_module(@_) });
 
     $server->cb($router);
     $server->run();
@@ -264,5 +267,33 @@ sub _process_template {
     return [ 500, [ 'Content-Type' => 'text/plain' ], [ 'Template failed', $tmpl->error ]];
 }
 
+
+sub class_info_for_path {
+    my $self = shift;
+    my $env = shift;
+
+    my $req = Plack::Request->new($env);
+    my $namespace = $req->param('namespace') || $self->namespace_name;
+    my $path = $req->param('path');
+
+    my $class_data = $self->cache_info_for_pathname($namespace, $path);
+    my $class_meta = $class_data->{__name}->__meta__;
+    return $self->_process_template('class-detail.html', { meta => $class_meta });
+}
+
+sub render_perl_module {
+    my($self, $env, $module_name) = @_;
+
+    (my $module_path = $module_name) =~ s/::/\//g;
+    my $module_path = $INC{$module_path . '.pm'};
+    unless ($module_path and -f $module_path) {
+        return [ 404, [ 'Content-Type' => 'text/plain' ], [ 'Not found' ]];
+    }
+
+    my $fh = IO::File->new($module_path, 'r');
+    my @lines = <$fh>;
+    chomp(@lines);
+    return $self->_process_template('render-perl-module.html', { module_name => $module_name, lines => \@lines });
+}
 
 1;

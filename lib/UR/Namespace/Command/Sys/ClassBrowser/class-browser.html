@@ -6,9 +6,11 @@
     <link href="assets/css/class-browser.css" rel="stylesheet" media="screen">
     <script src="assets/js/jquery.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/class-browser.js"></script>
     <script>
         $(document).ready(function() {
-
+            var b = new classBrowser();
+            b.run();
         });
     </script>
 </head>
@@ -33,30 +35,32 @@
         </div>
     </div>
 
-    <div id="class-picker" class="tabbable">
-        <ul class="nav nav-tabs">
-            <li class="active"><a href="#classes-by-name" data-toggle="tab">Classes</a></li>
-            <li><a href="#classes-by-inheritance" data-toggle="tab">Inheritance</a></li>
-            <li><a href="#classes-by-path" data-toggle="tab">Paths</a></li>
-        </ul>
+    <div class="row">
+        <div id="class-picker" class="tabbable span4">
+            <ul class="nav nav-tabs">
+                <li class="active"><a href="#classes-by-name" data-toggle="tab">Classes</a></li>
+                <li><a href="#classes-by-inheritance" data-toggle="tab">Inheritance</a></li>
+                <li><a href="#classes-by-path" data-toggle="tab">Paths</a></li>
+            </ul>
 
-        <div class="tab-content">
-            <div class="tab-pane active" id="classes-by-name">
-                Class Names
-            </div>
-            <div class="tab-pane" id="classes-by-inheritance">
-                Class Inheritance
-            </div>
-            <div class="tab-pane" id="classes-by-path">
-                <div class="css-treeview">
-                    [% PROCESS path_treeview.html paths = paths %]
+            <div class="tab-content">
+                <div class="tab-pane active" id="classes-by-name">
+                    Class Names
+                </div>
+                <div class="tab-pane" id="classes-by-inheritance">
+                    Class Inheritance
+                </div>
+                <div class="tab-pane" id="classes-by-path">
+                    <div class="css-treeview">
+                        [% PROCESS path_treeview.html paths = paths %]
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="detail">
-        Detail about something
+        <div id="detail" class="span8">
+
+        </div>
     </div>
 </body>
 </html>
