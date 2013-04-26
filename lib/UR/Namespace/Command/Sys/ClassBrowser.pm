@@ -267,6 +267,10 @@ sub _process_template {
     return [ 500, [ 'Content-Type' => 'text/plain' ], [ 'Template failed', $tmpl->error ]];
 }
 
+sub _fourohfour {
+    return [ 404, [ 'Content-Type' => 'text/plain' ], ['Not Found']];
+}
+
 
 sub class_info_for_path {
     my $self = shift;
@@ -287,7 +291,7 @@ sub render_perl_module {
     (my $module_path = $module_name) =~ s/::/\//g;
     my $module_path = $INC{$module_path . '.pm'};
     unless ($module_path and -f $module_path) {
-        return [ 404, [ 'Content-Type' => 'text/plain' ], [ 'Not found' ]];
+        return $self->_fourohfour;
     }
 
     my $fh = IO::File->new($module_path, 'r');
