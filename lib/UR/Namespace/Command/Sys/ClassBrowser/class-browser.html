@@ -48,7 +48,9 @@
                 Class Inheritance
             </div>
             <div class="tab-pane" id="classes-by-path">
-                Class Paths
+                <div class="css-treeview">
+                    [% PROCESS path_treeview.html paths = paths %]
+                </div>
             </div>
         </div>
     </div>

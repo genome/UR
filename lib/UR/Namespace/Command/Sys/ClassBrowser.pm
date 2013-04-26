@@ -210,7 +210,7 @@ $DB::single=1;
 
     $self->load_class_info_for_namespace($self->namespace_name);
 
-    my $tt = $self->{_tt} ||= Template->new({ INCLUDE_PATH => $self->_template_dir });
+    my $tt = $self->{_tt} ||= Template->new({ INCLUDE_PATH => $self->_template_dir, RECURSION => 1 });
 
     my $server = UR::Service::WebServer->create(timeout => $self->timeout, port => $self->port);
 
@@ -242,12 +242,20 @@ sub index {
         #classnames  => $self->{_cache}->{$namespace}->{by_class_name_tree},
         #inheritance => $self->{_cache}->{$namespace}->{by_class_inh_tree},
         paths       => $self->{_cache}->{$namespace}->{by_directory_tree},
+        valid_paths => sub {
+                            my $hash = shift;
+                            return [ sort {$a cmp $b }
+                                     grep { ! m/^__/ } keys %$hash ];
+                        },
     };
 
     my $out = '';
     my $tmpl = $self->{_tt};
     $tmpl->process('class-browser.html', $data, \$out)
             and return [ 200, [ 'Content-Type' => 'text/html' ], [ $out ]];
+
+    # Template error :(
+    return [ 500, [ 'Content-Type' => 'text/html' ], [ 'Template failed', $tmpl->error ]];
 }
 
 
