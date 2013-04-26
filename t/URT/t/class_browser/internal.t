@@ -11,7 +11,7 @@ use warnings;
 
 use Cwd;
 
-plan tests => 27;
+plan tests => 11;
 
 my $cmd = UR::Namespace::Command::Sys::ClassBrowser->create(
                 namespace_name => 'Testing',
@@ -23,29 +23,34 @@ my $base_dir = File::Basename::dirname(__FILE__);
 
 my %expected_class_data = (
                 Testing => {
-                    __class_name=> 'Testing',
-                    __is        => ['UR::Namespace'],
-                    __path      => $base_dir.'/test_namespace/Testing.pm',
+                    __name  => 'Testing',
+                    __is    => ['UR::Namespace'],
+                    __path  => $base_dir.'/test_namespace/Testing.pm',
+                    __file  => 'Testing.pm',
                 },
                 'Testing::Something' => {
-                    __class_name => 'Testing::Something',
-                    __is        => ['UR::Object'],
-                    __path      => $base_dir.'/test_namespace/Testing/Something.pm',
+                    __name  => 'Testing::Something',
+                    __is    => ['UR::Object'],
+                    __path  => $base_dir.'/test_namespace/Testing/Something.pm',
+                    __file  => 'Something.pm',
                 },
                 'Testing::Something::SubClass1' => {
-                    __class_name => 'Testing::Something::SubClass1',
-                    __is        => ['Testing::Something'],
-                    __path      => $base_dir.'/test_namespace/Testing/Something/SubClass1.pm',
+                    __name  => 'Testing::Something::SubClass1',
+                    __is    => ['Testing::Something'],
+                    __path  => $base_dir.'/test_namespace/Testing/Something/SubClass1.pm',
+                    __file  => 'SubClass1.pm',
                 },
                 'Testing::Something::SubClass2' => {
-                    __class_name => 'Testing::Something::SubClass2',
-                    __is        => ['Testing::Something'],
-                    __path      => $base_dir.'/test_namespace/Testing/Something/SubClass2.pm',
+                    __name  => 'Testing::Something::SubClass2',
+                    __is    => ['Testing::Something'],
+                    __path  => $base_dir.'/test_namespace/Testing/Something/SubClass2.pm',
+                    __file  => 'SubClass2.pm',
                 },
                 'Testing::Color' => {
-                    __class_name=> 'Testing::Color',
-                    __is        => ['UR::Object'],
-                    __path      => $base_dir.'/test_namespace/Testing/Color.pm',
+                    __name  => 'Testing::Color',
+                    __is    => ['UR::Object'],
+                    __path  => $base_dir.'/test_namespace/Testing/Color.pm',
+                    __file  => 'Color.pm',
                 },
             );
 
@@ -53,14 +58,18 @@ is_deeply($by_class_name, \%expected_class_data, '_generate__class_name_cache');
 
 ok( $cmd->_load_class_info_from_modules_on_filesystem('Testing') ,'_load_class_info_from_modules_on_filesystem');
 
-my $path_data = $cmd->class_info_for_pathname('Testing');
+my $path_data = $cmd->cache_info_for_pathname('Testing');
 ok($path_data->{test_namespace}, "pathname 'test_namespace' is present at Testing namespace's root");
+is($path_data->{test_namespace}->{__is_dir}, 1, 'It is a directory');
+is($path_data->{test_namespace}->{__file}, 'test_namespace', '... file test_namespace');
+is($path_data->{test_namespace}->{__name}, 'test_namespace', '... named test_namespace');
 
-$path_data = $cmd->class_info_for_pathname('Testing', 'test_namespace/Testing');
-is($path_data->{__path}, 'test_namespace/Testing', 'pathname "test_namespace/Testing" is present');
-ok($path_data->{__is_dir}, '"test_namespace/Testing" is a directory');
+$path_data = $cmd->cache_info_for_pathname('Testing', 'test_namespace/Testing');
+my @items = sort grep { m/^[^_]/} keys(%$path_data);
+is(scalar(@items), 3, 'pathname "test_namespace/Testing" has 3 items');
+is_deeply(\@items, [ qw( Color.pm Something Something.pm )], 'Expected contents');
 
-$path_data = $cmd->class_info_for_pathname('Testing', 'test_namespace/Testing/Something/SubClass1.pm');
+$path_data = $cmd->cache_info_for_pathname('Testing', 'test_namespace/Testing/Something/SubClass1.pm');
 is_deeply($path_data, $expected_class_data{'Testing::Something::SubClass1'}, 'Found class data at "test_namespace/Testing/Something/SubClass1.pm"');
 
-ok(! $cmd->class_info_for_pathname('Testing', 'test_namespace/does/not/exist'), 'non-existent pathname returns false');
+ok(! $cmd->cache_info_for_pathname('Testing', 'test_namespace/does/not/exist'), 'non-existent pathname returns false');

@@ -46,8 +46,6 @@ sub _class_info_cache_file_name_for_namespace {
         die $@ if $@;
     }
     my $class_cache_file = sprintf('.%s-class-browser-cache', $namespace);
-print "class cache file $class_cache_file\n";
-print "namespace base dir name is ".$namespace->get_base_directory_name,"\n";
     return File::Spec->catfile($namespace->get_base_directory_name, $class_cache_file);
 }
 
@@ -55,9 +53,7 @@ print "namespace base dir name is ".$namespace->get_base_directory_name,"\n";
 sub load_class_info_for_namespace {
     my($self, $namespace) = @_;
 
-print "Loading class info for $namespace\n";
     my $class_cache_file = $self->_class_info_cache_file_name_for_namespace($namespace);
-print "Class cache file is \n";
     if ($self->use_cache and -f $class_cache_file) {
         $self->_load_class_info_from_cache_file($class_cache_file);
     } else {
@@ -70,7 +66,6 @@ sub _load_class_info_from_modules_on_filesystem {
     my $self = shift;
     my $namespace = shift;
 
-print "_load_class_info_from_modules_on_filesystem for $namespace\n";
     my $by_class_name = $self->{_cache}->{$namespace}->{by_class_name} ||= $self->_generate_class_name_cache($namespace);
 
     my $by_class_name_tree = $self->{_cache}->{$namespace}->{by_class_name_tree} ||= {};
@@ -91,9 +86,10 @@ sub _generate_class_name_cache {
     my $namespace_meta = $namespace->__meta__;
     (my $path = $namespace_meta->module_path) =~ s/^$cwd/\./;
     my $by_class_name = {  $namespace => {
-                                __class_name => $namespace,
-                                __is        => $namespace_meta->is,
-                                __path      => $path,
+                                __name  => $namespace,
+                                __is    => $namespace_meta->is,
+                                __path  => $path,
+                                __file => File::Basename::basename($path),
                             }
                         };
     foreach my $class_meta ( $namespace->get_material_classes ) {
@@ -101,9 +97,10 @@ sub _generate_class_name_cache {
         my $class_name = $class_meta->class_name;
         ($path = $class_meta->module_path) =~ s/^$cwd/\./;
         $by_class_name->{$class_name} = {
-            __class_name  => $class_name,
-            __path        => $path,
-            __is          => $class_meta->is,
+            __name  => $class_name,
+            __path  => $path,
+            __file  => File::Basename::basename($path),
+            __is    => $class_meta->is,
         };
     }
     return $by_class_name;
@@ -122,24 +119,29 @@ sub _insert_cache_for_path {
     while (@currentpath > 1) {
         my $dir = shift @currentpath;
         $currentpath = defined($currentpath) ? join('/', $currentpath, $dir) : $dir;
-        $pathstruct = $pathstruct->{$dir} ||= {__is_dir => 1, __path => $currentpath};
+        unless (exists $pathstruct->{$dir}) {
+            $pathstruct->{$dir} = {
+                __path      => $currentpath,
+                __is_dir    => 1,
+                __file      => $dir,
+                __name      => $dir,
+            };
+        }
+        $pathstruct = $pathstruct->{$dir};
     }
-
     $pathstruct->{ $currentpath[0] } = $data;
 }
 
-sub class_info_for_pathname {
-    my($self, $namespace, $pathname, $pathstruct) = @_;
+sub cache_info_for_pathname {
+    my($self, $namespace, $pathname) = @_;
     die "class_info_for_pathname requires a \$namespace" unless defined $namespace;
 
-    $pathstruct ||= $self->{_cache}->{$namespace}->{by_directory_tree};
-
+    my $pathstruct = $self->{_cache}->{$namespace}->{by_directory_tree};
     if ($pathname) {
         my @paths = File::Spec->splitdir($pathname);
-        while(@paths) {
-            my $path = shift @paths;
-            return unless $pathstruct->{$path};
-            $pathstruct = $pathstruct->{$path};
+        while(my $dir = shift @paths) {
+            last unless $pathstruct;
+            $pathstruct = $pathstruct->{$dir};
         }
     }
     return $pathstruct;
