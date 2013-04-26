@@ -219,7 +219,7 @@ $DB::single=1;
     my $assets_dir = $self->__meta__->module_data_subdirectory.'/assets/';
     $router->GET(qr(/assets/(.*)), $server->file_handler_for_directory( $assets_dir, 1));
     $router->GET('/', sub { $self->index(@_) });
-    $router->POST('/class-info-for-path', sub { $self->class_info_for_path(@_) });
+    $router->GET(qr(/detail-for-class/(.*)), sub { $self->detail_for_class(@_) });
     $router->GET(qr(/render-perl-module/(.*)), sub { $self->render_perl_module(@_) });
 
     $server->cb($router);
@@ -272,16 +272,15 @@ sub _fourohfour {
 }
 
 
-sub class_info_for_path {
+sub detail_for_class {
     my $self = shift;
     my $env = shift;
+    my $class = shift;
 
-    my $req = Plack::Request->new($env);
-    my $namespace = $req->param('namespace') || $self->namespace_name;
-    my $path = $req->param('path');
-
-    my $class_data = $self->cache_info_for_pathname($namespace, $path);
-    my $class_meta = $class_data->{__name}->__meta__;
+    my $class_meta = eval { $class->__meta__};
+    unless ($class_meta) {
+        return $self->_fourohfour;
+    }
     return $self->_process_template('class-detail.html', { meta => $class_meta });
 }
 
@@ -289,7 +288,7 @@ sub render_perl_module {
     my($self, $env, $module_name) = @_;
 
     (my $module_path = $module_name) =~ s/::/\//g;
-    my $module_path = $INC{$module_path . '.pm'};
+    $module_path = $INC{$module_path . '.pm'};
     unless ($module_path and -f $module_path) {
         return $self->_fourohfour;
     }

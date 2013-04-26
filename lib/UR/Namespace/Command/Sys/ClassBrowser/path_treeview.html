@@ -8,7 +8,8 @@
                 <label for="[% path %]">[% name %]</label>
                 [% INCLUDE path_treeview.html paths = pathitem %]
             [% ELSE %]
-                <a href="#" class="btn btn-small file-path" data-path="[% path %]"><i class="icon-file"></i> [% name %]</a>
+                <a href="/detail-for-class/[% pathitem.item('__name') %]" class="btn btn-small">
+                <i class="icon-file"></i> [% name %]</a>
             [% END %]
         </li>
 [% END %]
