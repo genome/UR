@@ -287,8 +287,14 @@ sub detail_for_class {
 sub render_perl_module {
     my($self, $env, $module_name) = @_;
 
-    (my $module_path = $module_name) =~ s/::/\//g;
-    $module_path = $INC{$module_path . '.pm'};
+    my $module_path;
+    if (my $class_meta = eval { $module_name->__meta__ }) {
+        $module_path = $class_meta->module_path;
+
+    } else {
+        ($module_path = $module_name) =~ s/::/\//g;
+        $module_path = $INC{$module_path.'.pm'};
+    }
     unless ($module_path and -f $module_path) {
         return $self->_fourohfour;
     }
