@@ -249,13 +249,19 @@ sub index {
                         },
     };
 
+    return $self->_process_template('class-browser.html', $data);
+}
+
+sub _process_template {
+    my($self, $template_name, $template_data) = @_;
+
     my $out = '';
     my $tmpl = $self->{_tt};
-    $tmpl->process('class-browser.html', $data, \$out)
-            and return [ 200, [ 'Content-Type' => 'text/html' ], [ $out ]];
+    $tmpl->process($template_name, $template_data, \$out)
+        and return [ 200, [ 'Content-Type' => 'text/html' ], [ $out ]];
 
     # Template error :(
-    return [ 500, [ 'Content-Type' => 'text/html' ], [ 'Template failed', $tmpl->error ]];
+    return [ 500, [ 'Content-Type' => 'text/plain' ], [ 'Template failed', $tmpl->error ]];
 }
 
 
