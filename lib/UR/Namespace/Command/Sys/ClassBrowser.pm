@@ -84,7 +84,7 @@ sub _load_class_info_from_modules_on_filesystem {
     foreach my $data ( values %$by_class_name ) {
         $self->_insert_cache_for_class_name_tree($data, $by_class_name_tree);
         $self->_insert_cache_for_path($data, $by_directory_tree);
-        $inh_inserter->($data);
+        $inh_inserter->($data->{name});
     }
     1;
 }
@@ -179,8 +179,9 @@ sub _class_inheritance_cache_inserter {
 
     my $do_insert;
     $do_insert = sub {
-        my $data = shift;
-        my $class_name = $data->{name};
+        my $class_name = shift;
+        $by_class_name->{$class_name} ||= $self->_class_name_cache_data_for_class_name($class_name);
+        my $data = $by_class_name->{$class_name};
 
         if ($cache->{$class_name}) {
             return $cache->{$class_name};
@@ -195,9 +196,7 @@ sub _class_inheritance_cache_inserter {
             return $tree = $node;
         }
         foreach my $parent_class ( @{ $data->{is}} ) {
-            $by_class_name->{$parent_class} ||= $self->_class_name_cache_data_for_class_name($parent_class);
-            my $parent_class_data = $by_class_name->{$parent_class};
-            my $parent_class_tree = $do_insert->($parent_class_data);
+            my $parent_class_tree = $do_insert->($parent_class);
             unless ($parent_class_tree->has_child($class_name)) {
                 $parent_class_tree->add_child( $node );
             }
