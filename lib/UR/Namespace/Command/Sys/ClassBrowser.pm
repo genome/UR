@@ -68,119 +68,144 @@ sub _load_class_info_from_modules_on_filesystem {
 
     my $by_class_name = $self->{_cache}->{$namespace}->{by_class_name} ||= $self->_generate_class_name_cache($namespace);
 
-    my $by_class_name_tree = $self->{_cache}->{$namespace}->{by_class_name_tree} ||= {};
-    my $by_class_inh_tree = $self->{_cache}->{$namespace}->{by_class_inh_tree} ||= {};
-    my $by_directory_tree = $self->{_cache}->{$namespace}->{by_directory_tree} ||= {};
+    my $by_class_name_tree = $self->{_cache}->{$namespace}->{by_class_name_tree}
+                            ||= UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                name => $namespace,
+                                relpath => $namespace.'.pm');
+    my $by_class_inh_tree = $self->{_cache}->{$namespace}->{by_class_inh_tree}
+                            ||= UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                name => 'UR::Object',
+                                relpath => 'UR::Object');
+    my $by_directory_tree = $self->{_cache}->{$namespace}->{by_directory_tree}
+                            ||= UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                name => $namespace,
+                                relpath => $namespace.'.pm' );
+    my $inh_inserter = $self->_class_inheritance_cache_inserter($by_class_name, $by_class_inh_tree);
     foreach my $data ( values %$by_class_name ) {
+        $self->_insert_cache_for_class_name_tree($data, $by_class_name_tree);
         $self->_insert_cache_for_path($data, $by_directory_tree);
-        #$self->_insert_cache_for_class_name_tree($data, $by_class_name_tree);
-        #$self->_insert_cache_for_class_inh_tree($data, $by_class_name, $by_class_inh_tree);
+        $inh_inserter->($data);
     }
     1;
 }
 
+# 1-level hash.  Maps a class name to a hashref containing simple
+# data about that class.  relpath is relative to the namespace's module_path
 sub _generate_class_name_cache {
     my($self, $namespace) = @_;
 
-    my $cwd = Cwd::getcwd;
+    my $cwd = Cwd::getcwd . '/';
     my $namespace_meta = $namespace->__meta__;
-    (my $path = $namespace_meta->module_path) =~ s/^$cwd/\./;
+    my $namespace_dir = $namespace_meta->module_directory;
+    (my $path = $namespace_meta->module_path) =~ s/^$cwd//;
     my $by_class_name = {  $namespace => {
-                                __name  => $namespace,
-                                __is    => $namespace_meta->is,
-                                __path  => $path,
-                                __file => File::Basename::basename($path),
+                                name  => $namespace,
+                                is    => $namespace_meta->is,
+                                relpath  => $namespace . '.pm',
+                                id  => $path,
+                                file => File::Basename::basename($path),
                             }
                         };
     foreach my $class_meta ( $namespace->get_material_classes ) {
-
         my $class_name = $class_meta->class_name;
-        ($path = $class_meta->module_path) =~ s/^$cwd/\./;
-        $by_class_name->{$class_name} = {
-            __name  => $class_name,
-            __path  => $path,
-            __file  => File::Basename::basename($path),
-            __is    => $class_meta->is,
-        };
+        $by_class_name->{$class_name} = $self->_class_name_cache_data_for_class_name($class_name);
     }
     return $by_class_name;
 }
 
+sub _class_name_cache_data_for_class_name {
+    my($self, $class_name) = @_;
+
+    my $class_meta = $class_name->__meta__;
+    unless ($class_meta) {
+        Carp::carp("Can't get class metadata for $class_name... skipping.");
+        return;
+    }
+    my $namespace_dir = $class_meta->namespace->__meta__->module_directory;
+    my $module_path = $class_meta->module_path;
+    (my $relpath = $module_path) =~ s/^$namespace_dir//;
+    return {
+        name    => $class_meta->class_name,
+        relpath => $relpath,
+        path    => $module_path,
+        file    => File::Basename::basename($relpath),
+        is      => $class_meta->is,
+    };
+}
+
+# Build the by-class-name tree data
+sub _insert_cache_for_class_name_tree {
+    my($self, $data, $tree) = @_;
+
+    my @names = split('::', $data->{name});
+    my $relpath = shift @names;  # Namespace is first part of the name
+    while(my $name = shift @names) {
+        $relpath = join('::', $relpath, $name);
+        $tree = $tree->get_child($name)
+                    || $tree->add_child(
+                        name        => $name,
+                        relpath     => $relpath);
+    }
+    $tree->data($data);
+    return $tree;
+}
 
 # Build the by_directory_tree data
 sub _insert_cache_for_path {
-    my($self, $data, $pathstruct) = @_;
+    my($self, $data, $tree) = @_;
 
     # split up the path to the module relative to the namespace directory
-    my @currentpath = File::Spec->splitdir($data->{__path});
-    shift @currentpath if $currentpath[0] eq '.';  # remove . at the start of the path
+    my @path_parts = File::Spec->splitdir($data->{relpath});
+    shift @path_parts if $path_parts[0] eq '.';  # remove . at the start of the path
 
-    my $currentpath;
-    while (@currentpath > 1) {
-        my $dir = shift @currentpath;
-        $currentpath = defined($currentpath) ? join('/', $currentpath, $dir) : $dir;
-        unless (exists $pathstruct->{$dir}) {
-            $pathstruct->{$dir} = {
-                __path      => $currentpath,
-                __is_dir    => 1,
-                __file      => $dir,
-                __name      => $dir,
-            };
-        }
-        $pathstruct = $pathstruct->{$dir};
+    my $partial_path = shift @path_parts;
+    while (my $subdir = shift @path_parts) {
+        $partial_path = join('/', $partial_path, $subdir);
+        $tree = $tree->get_child($subdir)
+                    || $tree->add_child(
+                            name    => $subdir,
+                            relpath => $partial_path);
     }
-    $pathstruct->{ $currentpath[0] } = $data;
+    $tree->data($data);
+    return $tree;
 }
 
-sub cache_info_for_pathname {
-    my($self, $namespace, $pathname) = @_;
-    die "class_info_for_pathname requires a \$namespace" unless defined $namespace;
-
-    my $pathstruct = $self->{_cache}->{$namespace}->{by_directory_tree};
-    if ($pathname) {
-        my @paths = File::Spec->splitdir($pathname);
-        while(my $dir = shift @paths) {
-            next if $dir eq '.';
-            last unless $pathstruct;
-            $pathstruct = $pathstruct->{$dir};
-        }
-    }
-    return $pathstruct;
-}
-
-# build the by_class_name_tree data
-sub _insert_cache_for_class_name_tree {
-    my($self, $data, $classstruct) = @_;
-
-    my @names = split('::', $data->{class_name});
-
-    while(@names > 1) {
-        my $name = shift @names;
-        $classstruct = $classstruct->{$name} ||= {};
-    }
-    $classstruct->{ $names[0] } = $data;
-}
 
 # build the by_class_inh_tree data
-sub _insert_cache_for_class_inh_tree {
-    my($self, $data, $by_class_name, $classtree, @inh) = @_;
+sub _class_inheritance_cache_inserter {
+    my($self, $by_class_name, $tree) = @_;
 
-    @inh = ( $data->{class_name} ) unless @inh;  # first (non-recursive) call?
+    my $cache = $tree ? { $tree->name => $tree } : {};
 
-    # find the parents of the last class added to the @inh list
-    my $is_list = $by_class_name->{$inh[-1]}->{is};
-    if ($is_list and @$is_list) {
-        # This class has one or more parents
-        $self->_insert_cache_for_class_inh_tree($data, $by_class_name, $classtree, @inh, $_) foreach @$is_list;
+    my $do_insert;
+    $do_insert = sub {
+        my $data = shift;
+        my $class_name = $data->{name};
 
-    } else {
-        # At the root - no more parents
-        while (@inh > 1) {
-            my $name = pop @inh;
-            $classtree = $classtree->{$name} ||= {};
+        if ($cache->{$class_name}) {
+            return $cache->{$class_name};
         }
-        $classtree->{ $inh[0] } = $data;
-    }
+        my $node = UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                    name => $class_name, data => $data
+                );
+        $cache->{$class_name} = $node;
+
+        if ((! $data->{is}) || (! @{ $data->{is}} )) {
+            # no parents?!  This _is_ the root!
+            return $tree = $node;
+        }
+        foreach my $parent_class ( @{ $data->{is}} ) {
+            $by_class_name->{$parent_class} ||= $self->_class_name_cache_data_for_class_name($parent_class);
+            my $parent_class_data = $by_class_name->{$parent_class};
+            my $parent_class_tree = $do_insert->($parent_class_data);
+            unless ($parent_class_tree->has_child($class_name)) {
+                $parent_class_tree->add_child( $node );
+            }
+        }
+        return $node;
+    };
+
+    return $do_insert;
 }
 
 sub _write_class_info_to_cache_file {
@@ -242,14 +267,9 @@ sub index {
 
     my $data = {
         namespaces  => [ map { $_->id } UR::Namespace->is_loaded() ],
-        #classnames  => $self->{_cache}->{$namespace}->{by_class_name_tree},
-        #inheritance => $self->{_cache}->{$namespace}->{by_class_inh_tree},
+        classnames  => $self->{_cache}->{$namespace}->{by_class_name_tree},
+        inheritance => $self->{_cache}->{$namespace}->{by_class_inh_tree},
         paths       => $self->{_cache}->{$namespace}->{by_directory_tree},
-        valid_paths => sub {
-                            my $hash = shift;
-                            return [ sort {$a cmp $b }
-                                     grep { ! m/^__/ } keys %$hash ];
-                        },
     };
 
     return $self->_process_template('class-browser.html', $data);
@@ -305,4 +325,69 @@ sub render_perl_module {
     return $self->_process_template('render-perl-module.html', { module_name => $module_name, lines => \@lines });
 }
 
+
+package UR::Namespace::Command::Sys::ClassBrowser::TreeItem;
+
+our $ug = Data::UUID->new();
+sub new {
+    my $class = shift;
+    my %node = @_;
+    die "new() requires a 'name' parameter" unless (exists $node{name});
+
+    $node{children} = {};
+    $node{id} ||= $ug->create_str;
+    my $self = bless \%node, __PACKAGE__;
+    return $self;
+}
+
+sub id {
+    return shift->{id};
+}
+
+sub name {
+    return shift->{name};
+}
+
+sub relpath {
+    return shift->{relpath};
+}
+
+sub data {
+    my $self = shift;
+    if (@_) {
+        $self->{data} = shift;
+    }
+    return $self->{data};
+}
+
+sub has_children {
+    my $self = shift;
+    return %{$self->{children}};
+}
+
+sub children {
+    my $self = shift;
+    return [ values(%{$self->{children}}) ];
+}
+
+sub has_child {
+    my $self = shift;
+    my $child_name = shift;
+    return exists($self->{children}->{$child_name});
+}
+
+sub get_child {
+    my $self = shift;
+    my $child_name = shift;
+    return $self->{children}->{$child_name};
+}
+
+sub add_child {
+    my $self = shift;
+    my $child = ref($_[0]) ? shift(@_) : $self->new(@_);
+    $self->{children}->{ $child->name } = $child;
+}
+
+
 1;
+

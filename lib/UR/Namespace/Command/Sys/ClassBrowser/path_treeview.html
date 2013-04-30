@@ -1,16 +1,17 @@
-<ul>
-[% FOREACH name IN valid_paths(paths) %]
-    [% SET pathitem = paths.item(name) %]
-    [% SET path = pathitem.item('__path') %]
-        <li>
-            [% IF pathitem.item('__is_dir') %]
-                <input type="checkbox" id="[% path %]" />
-                <label for="[% path %]">[% name %]</label>
-                [% INCLUDE path_treeview.html paths = pathitem %]
-            [% ELSE %]
-                <a href="/detail-for-class/[% pathitem.item('__name') %]" class="btn btn-small">
-                <i class="icon-file"></i> [% name %]</a>
-            [% END %]
-        </li>
+[% IF tree.data %]
+    <li>
+        <a href="/detail-for-class/[% tree.data.item('name') %]" class="btn btn-small class-detail">
+        <i class="icon-file"></i> [% tree.name %]</a>
+    </li>
 [% END %]
-</ul>
+[% IF tree.has_children %]
+    <li>
+        <input type="checkbox" id="[% tree.id %]" />
+        <label for="[% tree.id %]">[% tree.name %]</label>
+            <ul>
+            [% FOREACH child IN tree.children %]
+                [% PROCESS path_treeview.html tree = child %]
+            [% END %]
+            </ul>
+    </li>
+[% END %]
