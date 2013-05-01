@@ -51,7 +51,9 @@
                     [% IF prop_meta.class_name != meta.class_name %]
                         [% row_class = 'inherited' %]
                     [% END %]
-                    <tr data-class-name="[% prop_meta.class_name %]" data-property-name="[% prop_meta.property_name %]"
+                    <tr data-class-name="[% prop_meta.class_name %]"
+                        data-property-name="[% prop_meta.property_name %]"
+                        data-popover-load="/property-metadata-list/[% prop_meta.class_name %]/[% prop_meta.property_name %]"
                         class="[% row_class %]">
 
                     [% FOREACH prop IN ['property_name', 'data_type', 'column_name', 'class_name','doc' ] %]

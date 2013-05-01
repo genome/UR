@@ -245,6 +245,7 @@ $DB::single=1;
     $router->GET('/', sub { $self->index(@_) });
     $router->GET(qr(/detail-for-class/(.*)), sub { $self->detail_for_class(@_) });
     $router->GET(qr(/render-perl-module/(.*)), sub { $self->render_perl_module(@_) });
+    $router->GET(qr(/property-metadata-list/(.*)/(\w+)), sub { $self->property_metadata_list(@_) });
 
     $server->cb($router);
     $server->run();
@@ -339,6 +340,31 @@ sub render_perl_module {
     my @lines = <$fh>;
     chomp(@lines);
     return $self->_process_template('render-perl-module.html', { module_name => $module_name, lines => \@lines });
+}
+
+# Render the popover content when hovering over a row in the
+# class property table
+sub property_metadata_list {
+    my($self, $env, $class_name, $property_name) = @_;
+
+    my $class_meta = $class_name->__meta__;
+    unless ($class_meta) {
+        return $self->_fourohfour;
+    }
+    my $prop_meta = $class_meta->property_meta_for_name($property_name);
+    unless ($prop_meta) {
+        return $self->_fourohfour;
+    }
+
+    return $self->_process_template('property_metadata_list.html',
+                    { meta => $prop_meta,
+                      show => [qw(  doc class_name column_name data_type data_length is_id
+                                    via to where reverse_as id_by
+                                    valid_values example_values  is_optional is_transient is_constant
+                                    is_mutable is_delegated is_abstract is_many is_deprecated
+                                    is_calculated calculate_perl calculate_sql
+                                )],
+                    });
 }
 
 
