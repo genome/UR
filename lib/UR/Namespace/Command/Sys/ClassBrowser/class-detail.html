@@ -1,6 +1,6 @@
 <div class="class-detail">
     <div class="well">
-        <h3> class [% meta.class_name %]</h3>
+        <h3>[% meta.class_name %]</h3>
     </div>
     <div>
         [% IF meta.table_name %]
@@ -10,5 +10,10 @@
     <div>
         <i class="icon-file"></i>&nbsp;
         <a href="/render-perl-module/[% meta.class_name %]" target="_blank" class="perl-module-file">[% meta.module_path %]</a>
+    </div>
+    <div class="css-inhtree">
+        <ul>
+            [% PROCESS class_inheritance_tree.html tree = class_inheritance_tree %]
+        </ul>
     </div>
 </div>

@@ -297,10 +297,27 @@ sub detail_for_class {
     my $class = shift;
 
     my $class_meta = eval { $class->__meta__};
+
+    my $tree = UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                name => 'UR::Object',
+                                relpath => 'UR::Object');
+
+    my $namespace = $class_meta->namespace;
+    my $treebuilder = $self->_class_inheritance_cache_inserter(
+                            $self->{_cache}->{$namespace}->{by_class_name},
+                            $tree,
+                    );
+    $treebuilder->($class);
+
     unless ($class_meta) {
         return $self->_fourohfour;
     }
-    return $self->_process_template('class-detail.html', { meta => $class_meta });
+
+    my $tmpl_data = {
+        meta                    => $class_meta,
+        class_inheritance_tree  => $tree,
+    };
+    return $self->_process_template('class-detail.html', $tmpl_data);
 }
 
 sub render_perl_module {
