@@ -77,41 +77,10 @@
     </div>
 
     <div class="public-methods">
-        <table class="table table-condensed table-hover">
-            <caption>Public Methods</caption>
-            <thead>
-                <tr><th>Method</th>
-                    <th>From</th>
-                    <th>Source</th>
-                </tr>
-            </thead>
-            <tbody>
-                [% FOREACH method IN public_methods %]
-                    <tr><td><a href="/render-perl-module/[% method.class %]#[% method.line %]"
-                                target="_blank">[% method.method %]</a>
-                        </td>
-
-                        <td>
-                            <ul class="method-inheritance">
-                                [% FOREACH superclass IN method.overrides %]
-                                <li>
-                                    [% IF (superclass == meta.class_name) || (superclass == 'UR::ModuleBase') %]
-                                        [% superclass %]
-                                    [% ELSE %]
-                                        <a href="/detail-for-class/[% method.class %]"
-                                            class="btn btn-mini class-detail">[% superclass %]</a>
-                                    [% END %]
-                                </li>
-                                [% END %]
-                            <ul>
-                        </td>
-                    </tr>
-                [% END %]
-            </tbody>
-        </table>
+        [% PROCESS class_method_table.html title = 'Public Methods', methods = public_methods %]
     </div>
 
     <div class="private-methods">
-
+        [% PROCESS class_method_table.html title = 'Private Methods', methods = private_methods %]
     </div>
 </div>
