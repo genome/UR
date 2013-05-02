@@ -307,9 +307,23 @@ sub _line_for_method {
     return '';
 }
 
+# Return a list of package names where $method is defined
 sub _overrides_for_method {
     my($self, $class, $method) = @_;
-    return [];
+
+    my %seen;
+    my @results;
+    my @isa = ($class);
+    while (my $target_class = shift @isa) {
+        next if $seen{$target_class}++;
+        if (Class::Inspector->function_exists($target_class, $method)) {
+            push @results, $target_class;
+        }
+        {   no strict 'vars';
+            push @isa, eval '@' . $target_class . '::ISA';
+        }
+    }
+    return \@results;
 }
 
 sub detail_for_class {

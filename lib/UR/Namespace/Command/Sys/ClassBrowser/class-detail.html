@@ -92,15 +92,18 @@
                         </td>
 
                         <td>
-                            [% IF method.class == meta.class_name %]
-                                [% method.class %]
-                            [% ELSE %]
-                                <a href="/detail-for-class/[% method.class %]"
-                                    class="btn btn-small class-detail">[% method.class %]</a>
-                            [% END %]
-
-                            [% IF method.overrides %]
-                            [% END %]
+                            <ul class="method-inheritance">
+                                [% FOREACH superclass IN method.overrides %]
+                                <li>
+                                    [% IF (superclass == meta.class_name) || (superclass == 'UR::ModuleBase') %]
+                                        [% superclass %]
+                                    [% ELSE %]
+                                        <a href="/detail-for-class/[% method.class %]"
+                                            class="btn btn-small class-detail">[% superclass %]</a>
+                                    [% END %]
+                                </li>
+                                [% END %]
+                            <ul>
                         </td>
                     </tr>
                 [% END %]

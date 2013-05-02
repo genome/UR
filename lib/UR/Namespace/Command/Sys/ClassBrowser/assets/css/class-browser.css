@@ -15,6 +15,14 @@ body {
     white-space: pre;
 }
 
+ul.method-inheritance li:first-child {
+    list-style-type: none;
+    margin-left: -20px;
+}
+ul.method-inheritance {
+    margin-bottom: 0;
+}
+
 
 
 /* CSS for the no-javascript treeview from http://experiments.wemakesites.net/css3-treeview.html */
