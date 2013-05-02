@@ -37,7 +37,7 @@
                 <input type="checkbox" name="show-properties" value="1" checked/>Show inherited properties
             </label>
         </form>
-        <table class="table table-condensed table-hover">
+        <table class="table table-condensed table-hover class-properties">
             <thead>
                 <tr><th>Name</th>
                     <th>Type</th>
@@ -64,7 +64,7 @@
                     [% FOREACH prop IN ['data_type', 'column_name', 'class_name','doc' ] %]
                         <td>
                             [% IF (prop == 'class_name') && (prop_meta.class_name != meta.class_name) %]
-                                <a href="/detail-for-class/[% prop_meta.class_name %]" class="btn btn-small class-detail">[% prop_meta.item(prop) %]</a>
+                                <a href="/detail-for-class/[% prop_meta.class_name %]" class="btn btn-mini class-detail">[% prop_meta.item(prop) %]</a>
                             [% ELSE %]
                                 [% prop_meta.item(prop) %]
                             [% END %]
@@ -99,7 +99,7 @@
                                         [% superclass %]
                                     [% ELSE %]
                                         <a href="/detail-for-class/[% method.class %]"
-                                            class="btn btn-small class-detail">[% superclass %]</a>
+                                            class="btn btn-mini class-detail">[% superclass %]</a>
                                     [% END %]
                                 </li>
                                 [% END %]
