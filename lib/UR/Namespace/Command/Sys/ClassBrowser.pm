@@ -20,6 +20,8 @@ use File::Basename;
 use IO::File;
 use Template;
 use Plack::Request;
+use Class::Inspector;
+
 our $VERSION = "0.41"; # UR $VERSION;
 
 UR::Object::Type->define(
@@ -87,6 +89,14 @@ sub _load_class_info_from_modules_on_filesystem {
         $inh_inserter->($data->{name});
     }
     1;
+}
+
+
+sub _cached_data_for_class {
+    my($self, $class_name) = @_;
+
+    my($namespace) = $class_name =~ m/^(\w+)(::)?/;
+    return $self->{_cache}->{$namespace}->{by_class_name}->{$class_name};
 }
 
 # 1-level hash.  Maps a class name to a hashref containing simple
@@ -180,6 +190,7 @@ sub _class_inheritance_cache_inserter {
     my $do_insert;
     $do_insert = sub {
         my $class_name = shift;
+                                                  # FIXME isn't this a dup of a method I just added?!?
         $by_class_name->{$class_name} ||= $self->_class_name_cache_data_for_class_name($class_name);
         my $data = $by_class_name->{$class_name};
 
@@ -290,6 +301,16 @@ sub _fourohfour {
     return [ 404, [ 'Content-Type' => 'text/plain' ], ['Not Found']];
 }
 
+sub _line_for_method {
+    my($self, $class, $method) = @_;
+
+    return '';
+}
+
+sub _overrides_for_method {
+    my($self, $class, $method) = @_;
+    return [];
+}
 
 sub detail_for_class {
     my $self = shift;
@@ -313,9 +334,30 @@ sub detail_for_class {
         return $self->_fourohfour;
     }
 
+    my @public_methods = sort { $a->[2] cmp $b->[2] }  # sort by function name
+                        @{ Class::Inspector->methods($class, 'public', 'expanded') };
+    my @private_methods = sort { $a->[2] cmp $b->[2] }  # sort by function name
+                        @{ Class::Inspector->methods($class, 'private', 'expanded') };
+
+    # Convert each of them to a hashref for easier access
+    foreach ( @public_methods, @private_methods ) {
+        my $class = $_->[1];
+        my $method = $_->[2];
+        my $cache = $self->_cached_data_for_class($class);
+        $_ = {
+            class       => $class,
+            method      => $method,
+            file        => $cache->{relpath},
+            line        => $self->_line_for_method($class, $method),
+            overrides   => $self->_overrides_for_method($class, $method),
+        };
+    }
+
     my $tmpl_data = {
         meta                    => $class_meta,
         class_inheritance_tree  => $tree,
+        public_methods          => \@public_methods,
+        private_methods         => \@private_methods,
     };
     return $self->_process_template('class-detail.html', $tmpl_data);
 }

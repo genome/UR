@@ -37,7 +37,7 @@
                 <input type="checkbox" name="show-properties" value="1" checked/>Show inherited properties
             </label>
         </form>
-        <table class="table table-condensed table-hover class-properties">
+        <table class="table table-condensed table-hover">
             <thead>
                 <tr><th>Name</th>
                     <th>Type</th>
@@ -74,4 +74,41 @@
                 [% END %]
             </tbody>
         </table>
+    </div>
+
+    <div class="public-methods">
+        <table class="table table-condensed table-hover">
+            <caption>Public Methods</caption>
+            <thead>
+                <tr><th>Method</th>
+                    <th>From</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                [% FOREACH method IN public_methods %]
+                    <tr><td><a href="/render-perl-module/[% method.class %]#[% method.line %]"
+                                target="_blank">[% method.method %]</a>
+                        </td>
+
+                        <td>
+                            [% IF method.class == meta.class_name %]
+                                [% method.class %]
+                            [% ELSE %]
+                                <a href="/detail-for-class/[% method.class %]"
+                                    class="btn btn-small class-detail">[% method.class %]</a>
+                            [% END %]
+
+                            [% IF method.overrides %]
+                            [% END %]
+                        </td>
+                    </tr>
+                [% END %]
+            </tbody>
+        </table>
+    </div>
+
+    <div class="private-methods">
+
+    </div>
 </div>
