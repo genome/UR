@@ -46,17 +46,17 @@
             <div class="tab-content">
                 <div class="tab-pane active css-treeview" id="classes-by-name">
                     <ul>
-                        [% PROCESS path_treeview.html tree = classnames %]
+                        [% PROCESS partials/path_treeview.html tree = classnames %]
                     </ul>
                 </div>
                 <div class="tab-pane css-treeview" id="classes-by-inheritance">
                     <ul>
-                        [% PROCESS path_treeview.html tree = inheritance %]
+                        [% PROCESS partials/path_treeview.html tree = inheritance %]
                     </ul>
                 </div>
                 <div class="tab-pane css-treeview" id="classes-by-path">
                     <ul>
-                        [% PROCESS path_treeview.html tree = paths %]
+                        [% PROCESS partials/path_treeview.html tree = paths %]
                     </ul>
                 </div>
             </div>

@@ -13,7 +13,7 @@
     </div>
     <div class="css-inhtree">
         <ul>
-            [% PROCESS class_inheritance_tree.html tree = class_inheritance_tree %]
+            [% PROCESS partials/class_inheritance_tree.html tree = class_inheritance_tree %]
         </ul>
     </div>
     <div class="class-meta-info">
@@ -77,10 +77,10 @@
     </div>
 
     <div class="public-methods">
-        [% PROCESS class_method_table.html title = 'Public Methods', methods = public_methods %]
+        [% PROCESS partials/class_method_table.html title = 'Public Methods', methods = public_methods %]
     </div>
 
     <div class="private-methods">
-        [% PROCESS class_method_table.html title = 'Private Methods', methods = private_methods %]
+        [% PROCESS partials/class_method_table.html title = 'Private Methods', methods = private_methods %]
     </div>
 </div>

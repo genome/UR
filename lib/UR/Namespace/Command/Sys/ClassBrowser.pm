@@ -415,7 +415,7 @@ sub property_metadata_list {
         return $self->_fourohfour;
     }
 
-    return $self->_process_template('property_metadata_list.html',
+    return $self->_process_template('partials/property_metadata_list.html',
                     { meta => $prop_meta,
                       show => [qw(  doc class_name column_name data_type data_length is_id
                                     via to where reverse_as id_by

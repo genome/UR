@@ -10,7 +10,7 @@
         <label for="[% tree.id %]">[% tree.name %]</label>
             <ul>
             [% FOREACH child IN tree.children %]
-                [% PROCESS path_treeview.html tree = child %]
+                [% PROCESS partials/path_treeview.html tree = child %]
             [% END %]
             </ul>
     </li>
