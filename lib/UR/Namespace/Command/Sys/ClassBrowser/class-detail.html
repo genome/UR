@@ -55,13 +55,20 @@
                     [% IF prop_meta.is_id %]
                         [% row_classes.push('success') %]
                     [% END %]
-                    <tr data-class-name="[% prop_meta.class_name %]"
-                        data-property-name="[% prop_meta.property_name %]"
-                        data-popover-load="/property-metadata-list/[% prop_meta.class_name %]/[% prop_meta.property_name %]"
-                        class="[% row_classes.join(' ') %]">
-
-                    [% FOREACH prop IN ['property_name', 'data_type', 'column_name', 'class_name','doc' ] %]
-                        <td>[% prop_meta.item(prop) %]</td>
+                    <tr class="[% row_classes.join(' ') %]">
+                    <td>
+                        <a class="modal-link"
+                            href="/property-metadata-list/[% prop_meta.class_name %]/[% prop_meta.property_name %]">
+                            [% prop_meta.property_name %]</a>
+                    </td>
+                    [% FOREACH prop IN ['data_type', 'column_name', 'class_name','doc' ] %]
+                        <td>
+                            [% IF (prop == 'class_name') && (prop_meta.class_name != meta.class_name) %]
+                                <a href="/detail-for-class/[% prop_meta.class_name %]" class="btn btn-small class-detail">[% prop_meta.item(prop) %]</a>
+                            [% ELSE %]
+                                [% prop_meta.item(prop) %]
+                            [% END %]
+                        </td>
                     [% END %]
                     </tr>
                 [% END %]
