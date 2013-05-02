@@ -225,8 +225,6 @@ sub _write_class_info_to_cache_file {
 sub execute {
     my $self = shift;
 
-print "In new execute!!\n";
-$DB::single=1;
     if ($self->generate_cache) {
         $self->_load_class_info_from_modules_on_filesystem($self->namespace_name);
         $self->_write_class_info_to_cache_file();
@@ -284,6 +282,7 @@ sub _process_template {
         and return [ 200, [ 'Content-Type' => 'text/html' ], [ $out ]];
 
     # Template error :(
+    $self->error_message("Template failed: ".$tmpl->error);
     return [ 500, [ 'Content-Type' => 'text/plain' ], [ 'Template failed', $tmpl->error ]];
 }
 
