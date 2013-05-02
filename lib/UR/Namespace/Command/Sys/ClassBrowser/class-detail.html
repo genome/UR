@@ -48,13 +48,17 @@
             </thead>
             <tbody>
                 [% FOREACH prop_meta IN meta.properties %]
+                    [% SET row_classes = [ ] %]
                     [% IF prop_meta.class_name != meta.class_name %]
-                        [% row_class = 'inherited' %]
+                        [% row_classes.push('inherited') %]
+                    [% END %]
+                    [% IF prop_meta.is_id %]
+                        [% row_classes.push('success') %]
                     [% END %]
                     <tr data-class-name="[% prop_meta.class_name %]"
                         data-property-name="[% prop_meta.property_name %]"
                         data-popover-load="/property-metadata-list/[% prop_meta.class_name %]/[% prop_meta.property_name %]"
-                        class="[% row_class %]">
+                        class="[% row_classes.join(' ') %]">
 
                     [% FOREACH prop IN ['property_name', 'data_type', 'column_name', 'class_name','doc' ] %]
                         <td>[% prop_meta.item(prop) %]</td>
