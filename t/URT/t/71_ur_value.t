@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 86;
+use Test::More tests => 87;
 require File::Temp;
 
 my $s1 = UR::Value::Text->get('hi there');
@@ -243,4 +243,24 @@ do { # file test "operators"
         symlink($path, $symlink_filename_b);
         ok(-l $symlink_filename_b, 'created symlink_b (from an object)');
     };
+};
+
+
+do {
+    class TestIterator {
+        has => [
+            things => {
+                is => 'Integer',
+                is_many => 1,
+            },
+        ],
+    };
+
+    my $o = TestIterator->create(things => [5, 6, 7, 8]);
+    my $i = $o->thing_iterator();
+
+    while (my $v = $i->next()) { }
+
+    is_deeply($o->thing_arrayref, [5, 6, 7, 8],
+        'items not remove by Value::Iterator');
 };

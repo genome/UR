@@ -14,7 +14,8 @@ sub create {
 
 sub create_for_value_arrayref {
     my ($class, $arrayref) = @_;
-    return bless { members => $arrayref }, $class;
+    my @copy = @$arrayref;
+    return bless { members => \@copy }, $class;
 }
 
 sub next {
