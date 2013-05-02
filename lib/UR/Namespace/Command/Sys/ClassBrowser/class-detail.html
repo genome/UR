@@ -47,7 +47,7 @@
                 </tr>
             </thead>
             <tbody>
-                [% FOREACH prop_meta IN meta.properties %]
+                [% FOREACH prop_meta IN property_metas %]
                     [% SET row_classes = [ ] %]
                     [% IF prop_meta.class_name != meta.class_name %]
                         [% row_classes.push('inherited') %]

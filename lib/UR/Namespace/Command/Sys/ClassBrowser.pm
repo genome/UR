@@ -353,8 +353,12 @@ sub detail_for_class {
         };
     }
 
+    my @sorted_properties = sort { $a->property_name cmp $b->property_name }
+                            $class_meta->properties;
+
     my $tmpl_data = {
         meta                    => $class_meta,
+        property_metas          => \@sorted_properties,
         class_inheritance_tree  => $tree,
         public_methods          => \@public_methods,
         private_methods         => \@private_methods,
