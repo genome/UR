@@ -19,7 +19,7 @@
     <div class="class-meta-info">
         <h4>Class Metadata</h4>
         <dl class="dl-horizontal">
-            [% FOREACH prop IN [ 'doc', 'is_abstract', 'is_final', 'is_singleton', 'data_source' ] %]
+            [% FOREACH prop IN [ 'doc', 'is_abstract', 'is_final', 'is_singleton', 'data_source', 'table_name' ] %]
                 <dt>[% prop %]</dt>
                 <dd>[% IF meta.item(prop).defined %]
                         [% meta.item(prop) %]
