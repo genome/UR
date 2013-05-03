@@ -3,13 +3,13 @@ package UR::Namespace::Command::Sys::ClassBrowser;
 # This turns on the perl stuff to insert data in the DB
 # namespace so we can get line numbers and stuff about
 # loaded modules
-#BEGIN {
-#   unless ($^P) {
-#       no strict 'refs';
-#       *DB::DB = sub {};
-#       $^P = 0x31f;
-#   }
-#}
+BEGIN {
+   unless ($^P) {
+       no strict 'refs';
+       *DB::DB = sub {};
+       $^P = 0x31f;
+   }
+}
 
 use strict;
 use warnings;
@@ -301,10 +301,31 @@ sub _fourohfour {
     return [ 404, [ 'Content-Type' => 'text/plain' ], ['Not Found']];
 }
 
-sub _line_for_method {
-    my($self, $class, $method) = @_;
+sub _line_for_function {
+    my($self, $name) = @_;
+    my $info = $DB::sub{$name};
 
-    return '';
+    return () unless $info;
+    my ($file,$start);
+    if ($info =~ m/\[(.*?):(\d+)\]/) {  # This should match eval's and __ANON__s
+        ($file,$start) = ($1,$2);
+
+    } elsif ($info =~ m/(.*?):(\d+)-(\d+)$/) {
+        ($file,$start) = ($1,$2);
+
+    }
+
+    if ($start) {
+        # Convert $file into a package name
+        foreach my $inc ( keys %INC ) {
+            if ($INC{$inc} eq $file) {
+                (my $pkg = $inc) =~ s/\//::/g;
+                $pkg =~ s/\.pm$//;
+                return (package => $pkg, line => $start);
+            }
+        }
+    }
+    return;
 }
 
 # Return a list of package names where $method is defined
@@ -357,13 +378,14 @@ sub detail_for_class {
     foreach ( @public_methods, @private_methods ) {
         my $class = $_->[1];
         my $method = $_->[2];
+        my $function = $_->[0];
         my $cache = $self->_cached_data_for_class($class);
         $_ = {
             class       => $class,
             method      => $method,
             file        => $cache->{relpath},
-            line        => $self->_line_for_method($class, $method),
             overrides   => $self->_overrides_for_method($class, $method),
+            $self->_line_for_function($function),
         };
     }
 

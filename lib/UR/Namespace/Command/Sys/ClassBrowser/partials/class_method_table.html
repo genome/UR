@@ -8,8 +8,13 @@
     </thead>
     <tbody>
         [% FOREACH method IN methods %]
-            <tr><td><a href="/render-perl-module/[% method.class %]#[% method.line %]"
-                        target="_blank">[% method.method %]</a>
+            <tr><td>
+                    [% IF method.line.defined %]
+                        <a href="/render-perl-module/[% method.package %]#[% method.line %]"
+                            target="_blank">[% method.method %]</a>
+                    [% ELSE %]
+                        [% method.method %]
+                    [% END %]
                 </td>
 
                 <td>
