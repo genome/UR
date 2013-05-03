@@ -5,6 +5,16 @@ body {
 #class-picker {
 
 }
+#class-picker li {
+    white-space: nowrap;
+}
+.trunc-left {
+    max-width: 300px;
+    display: inline-block;
+    overflow: hidden;
+    direction:rtl;
+    text-align:left;
+}
 
 #detail {
 
