@@ -57,11 +57,45 @@ sub load_class_info_for_namespace {
 
     my $class_cache_file = $self->_class_info_cache_file_name_for_namespace($namespace);
     if ($self->use_cache and -f $class_cache_file) {
-        $self->_load_class_info_from_cache_file($class_cache_file);
+        $self->_load_class_info_from_cache_file($namespace, $class_cache_file);
     } else {
         $self->status_message("Preloading class information for namespace $namespace...");
         $self->_load_class_info_from_modules_on_filesystem($namespace);
     }
+}
+
+sub _write_class_info_to_cache_file {
+    my $self = shift;
+
+    my $current_namespace = $self->namespace_name;
+    return unless ($self->{_cache}->{$current_namespace});
+
+    my $cache_file = $self->_class_info_cache_file_name_for_namespace($current_namespace);
+    my $fh = IO::File->new($cache_file, 'w') || die "Can't open $cache_file for writing: $!";
+
+    $fh->print( Data::Dumper->new([$self->{_cache}->{$current_namespace}], ['cache_data'])->Purity(1)->Dump );
+    $fh->close();
+    $self->status_message("Saved class info to cache file $cache_file");
+}
+
+
+sub _load_class_info_from_cache_file {
+    my($self, $namespace, $class_cache_file) = @_;
+
+    $self->status_message("Loading class info cache file $class_cache_file\n");
+    my $fh = IO::File->new($class_cache_file, 'r');
+    unless ($fh) {
+        $self->error_message("Cannot load class cache file $class_cache_file: $!");
+        return;
+    }
+
+    my $buf;
+    {   local $/;
+        $buf = <$fh>;
+    }
+    my $cache_data;
+    eval $buf;
+    $self->{_cache}->{$namespace} = $cache_data;
 }
 
 sub _load_class_info_from_modules_on_filesystem {
@@ -216,20 +250,6 @@ sub _class_inheritance_cache_inserter {
     };
 
     return $do_insert;
-}
-
-sub _write_class_info_to_cache_file {
-    my $self = shift;
-
-    my $current_namespace = $self->namespace_name;
-    return unless ($self->{_cache}->{$current_namespace});
-
-    my $cache_file = $self->_class_info_cache_file_name_for_namespace($current_namespace);
-    my $fh = IO::File->new($cache_file, 'w') || die "Can't open $cache_file for writing: $!";
-
-    $fh->print( Data::Dumper->Dump([$self->{_cache}->{$current_namespace}]) );
-    $fh->close();
-    $self->status_message("Saved class info to cache file $cache_file");
 }
 
 
