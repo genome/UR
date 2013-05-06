@@ -35,7 +35,7 @@ use UR::BoolExpr::Template::PropertyComparison::LessOrEqual;
 use UR::BoolExpr::Template::PropertyComparison::LessThan;
 use UR::BoolExpr::Template::PropertyComparison::Like;
 use UR::BoolExpr::Template::PropertyComparison::Matches;
-use UR::BoolExpr::Template::PropertyComparison::NotEqual;
+use UR::BoolExpr::Template::PropertyComparison::NotEquals;
 use UR::BoolExpr::Template::PropertyComparison::NotIn;
 use UR::BoolExpr::Template::PropertyComparison::NotLike;
 use UR::BoolExpr::Template::PropertyComparison::True;
