@@ -105,22 +105,25 @@ sub _load_class_info_from_modules_on_filesystem {
     my $by_class_name = $self->{_cache}->{$namespace}->{by_class_name}
                         ||= $self->_generate_class_name_cache($namespace);
 
-    unless ($self->name_tree_cache) {
-        $self->name_tree_cache( UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
-                                name => $namespace,
-                                relpath => $namespace.'.pm'));
+    unless ($self->name_tree_cache($namespace)) {
+        $self->name_tree_cache( $namespace,
+                                UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                    name => $namespace,
+                                    relpath => $namespace.'.pm'));
     }
-    unless ($self->inheritance_tree_cache) {
-        $self->inheritance_tree_cache( UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
-                                name => 'UR::Object',
-                                relpath => 'UR::Object'));
+    unless ($self->inheritance_tree_cache($namespace)) {
+        $self->inheritance_tree_cache( $namespace,
+                                UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                    name => 'UR::Object',
+                                    relpath => 'UR::Object'));
     }
-    unless ($self->directory_tree_cache) {
-        $self->directory_tree_cache( UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
-                                name => $namespace,
-                                relpath => $namespace.'.pm' ));
+    unless ($self->directory_tree_cache($namespace)) {
+        $self->directory_tree_cache($namespace,
+                                UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                    name => $namespace,
+                                    relpath => $namespace.'.pm' ));
     }
-    my $inh_inserter = $self->_class_inheritance_cache_inserter($by_class_name, $self->inheritance_tree_cache);
+    my $inh_inserter = $self->_class_inheritance_cache_inserter($by_class_name, $self->inheritance_tree_cache($namespace));
     foreach my $data ( values %$by_class_name ) {
         $self->_insert_cache_for_class_name_tree($data);
         $self->_insert_cache_for_path($data);
@@ -137,6 +140,9 @@ foreach my $cache ( [ 'by_class_name_tree', 'name_tree_cache'],
     my $sub = sub {
         my $self = shift;
         my $namespace = shift;
+        unless (defined $namespace) {
+            Carp::croak "\$namespace is a required argument";
+        }
         if (@_) {
             $self->{_cache}->{$namespace}->{$key} = shift;
         }
@@ -149,10 +155,16 @@ foreach my $cache ( [ 'by_class_name_tree', 'name_tree_cache'],
     });
 }
 
+
+sub _namespace_for_class_name {
+    my($self, $class_name) = @_;
+    return ($class_name =~ m/^(\w+)(::)?/)[0];
+}
+
 sub _cached_data_for_class {
     my($self, $class_name) = @_;
 
-    my($namespace) = $class_name =~ m/^(\w+)(::)?/;
+    my $namespace = $self->_namespace_for_class_name($class_name);
     return $self->{_cache}->{$namespace}->{by_class_name}->{$class_name};
 }
 
@@ -205,7 +217,8 @@ sub _class_name_cache_data_for_class_name {
 sub _insert_cache_for_class_name_tree {
     my($self, $data) = @_;
 
-    my $tree = $self->name_tree_cache();
+    my $namespace = $self->_namespace_for_class_name($data->{name});
+    my $tree = $self->name_tree_cache($namespace);
     my @names = split('::', $data->{name});
     my $relpath = shift @names;  # Namespace is first part of the name
     while(my $name = shift @names) {
@@ -223,7 +236,8 @@ sub _insert_cache_for_class_name_tree {
 sub _insert_cache_for_path {
     my($self, $data) = @_;
 
-    my $tree = $self->directory_tree_cache();
+    my $namespace = $self->_namespace_for_class_name($data->{name});
+    my $tree = $self->directory_tree_cache($namespace);
 
     # split up the path to the module relative to the namespace directory
     my @path_parts = File::Spec->splitdir($data->{relpath});
