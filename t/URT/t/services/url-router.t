@@ -12,7 +12,7 @@ use Plack::HTTPParser;
 use Plack::Util;
 use HTTP::Request;
 
-plan tests => 30;
+plan tests => 18;
 
 my $router = UR::Service::UrlRouter->create();
 ok($router, 'Created a UrlRouter');
