@@ -102,29 +102,52 @@ sub _load_class_info_from_modules_on_filesystem {
     my $self = shift;
     my $namespace = shift;
 
-    my $by_class_name = $self->{_cache}->{$namespace}->{by_class_name} ||= $self->_generate_class_name_cache($namespace);
+    my $by_class_name = $self->{_cache}->{$namespace}->{by_class_name}
+                        ||= $self->_generate_class_name_cache($namespace);
 
-    my $by_class_name_tree = $self->{_cache}->{$namespace}->{by_class_name_tree}
-                            ||= UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+    unless ($self->name_tree_cache) {
+        $self->name_tree_cache( UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
                                 name => $namespace,
-                                relpath => $namespace.'.pm');
-    my $by_class_inh_tree = $self->{_cache}->{$namespace}->{by_class_inh_tree}
-                            ||= UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                relpath => $namespace.'.pm'));
+    }
+    unless ($self->inheritance_tree_cache) {
+        $self->inheritance_tree_cache( UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
                                 name => 'UR::Object',
-                                relpath => 'UR::Object');
-    my $by_directory_tree = $self->{_cache}->{$namespace}->{by_directory_tree}
-                            ||= UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
+                                relpath => 'UR::Object'));
+    }
+    unless ($self->directory_tree_cache) {
+        $self->directory_tree_cache( UR::Namespace::Command::Sys::ClassBrowser::TreeItem->new(
                                 name => $namespace,
-                                relpath => $namespace.'.pm' );
-    my $inh_inserter = $self->_class_inheritance_cache_inserter($by_class_name, $by_class_inh_tree);
+                                relpath => $namespace.'.pm' ));
+    }
+    my $inh_inserter = $self->_class_inheritance_cache_inserter($by_class_name, $self->inheritance_tree_cache);
     foreach my $data ( values %$by_class_name ) {
-        $self->_insert_cache_for_class_name_tree($data, $by_class_name_tree);
-        $self->_insert_cache_for_path($data, $by_directory_tree);
+        $self->_insert_cache_for_class_name_tree($data);
+        $self->_insert_cache_for_path($data);
         $inh_inserter->($data->{name});
     }
     1;
 }
 
+foreach my $cache ( [ 'by_class_name_tree', 'name_tree_cache'],
+                    [ 'by_class_inh_tree',  'inheritance_tree_cache'],
+                    [ 'by_directory_tree',  'directory_tree_cache'] ) {
+    my $key = $cache->[0];
+    my $subname = $cache->[1];
+    my $sub = sub {
+        my $self = shift;
+        my $namespace = shift;
+        if (@_) {
+            $self->{_cache}->{$namespace}->{$key} = shift;
+        }
+        return $self->{_cache}->{$namespace}->{$key};
+    };
+    Sub::Install::install_sub({
+        into => __PACKAGE__,
+        as => $subname,
+        code => $sub,
+    });
+}
 
 sub _cached_data_for_class {
     my($self, $class_name) = @_;
@@ -146,6 +169,7 @@ sub _generate_class_name_cache {
                                 name  => $namespace,
                                 is    => $namespace_meta->is,
                                 relpath  => $namespace . '.pm',
+                                path    => $namespace_meta->module_path,
                                 id  => $path,
                                 file => File::Basename::basename($path),
                             }
@@ -179,8 +203,9 @@ sub _class_name_cache_data_for_class_name {
 
 # Build the by-class-name tree data
 sub _insert_cache_for_class_name_tree {
-    my($self, $data, $tree) = @_;
+    my($self, $data) = @_;
 
+    my $tree = $self->name_tree_cache();
     my @names = split('::', $data->{name});
     my $relpath = shift @names;  # Namespace is first part of the name
     while(my $name = shift @names) {
@@ -196,7 +221,9 @@ sub _insert_cache_for_class_name_tree {
 
 # Build the by_directory_tree data
 sub _insert_cache_for_path {
-    my($self, $data, $tree) = @_;
+    my($self, $data) = @_;
+
+    my $tree = $self->directory_tree_cache();
 
     # split up the path to the module relative to the namespace directory
     my @path_parts = File::Spec->splitdir($data->{relpath});
@@ -224,7 +251,7 @@ sub _class_inheritance_cache_inserter {
     my $do_insert;
     $do_insert = sub {
         my $class_name = shift;
-                                                  # FIXME isn't this a dup of a method I just added?!?
+
         $by_class_name->{$class_name} ||= $self->_class_name_cache_data_for_class_name($class_name);
         my $data = $by_class_name->{$class_name};
 
@@ -296,9 +323,9 @@ sub index {
 
     my $data = {
         namespaces  => [ map { $_->id } UR::Namespace->is_loaded() ],
-        classnames  => $self->{_cache}->{$namespace}->{by_class_name_tree},
-        inheritance => $self->{_cache}->{$namespace}->{by_class_inh_tree},
-        paths       => $self->{_cache}->{$namespace}->{by_directory_tree},
+        classnames  => $self->name_tree_cache($namespace),
+        inheritance => $self->inheritance_tree_cache($namespace),
+        paths       => $self->directory_tree_cache($namespace),
     };
 
     return $self->_process_template('class-browser.html', $data);
