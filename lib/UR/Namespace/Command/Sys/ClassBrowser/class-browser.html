@@ -12,18 +12,20 @@
     <div class="navbar navbar-inverse navbar-fixed-top">
         <div class="navbar-inner">
             <a class="brand" href="/">UR Class Browser</a>
-            <form class="navbar-search form-search pull-left">
+            <form method="get" id="nav-form" class="navbar-search form-search pull-left">
                 <div class="input-prepend">
-                    <button class="btn" type="submit" id="submit-namespace">Namespace</button>
-                    <select id="namespace-select" class="input-small">
-                        [% FOREACH namespace = namespaces %]
-                            <option value="[% namespace %]">[% namespace %]</option>
-                        [% END %]
-                    </select>
+                    <input type="submit" name="submit" value="Search" class="btn"/>
+                    <input type="text" class="search-query span2 input-small">
                 </div>
                 <div class="input-append">
-                    <input type="text" class="search-query span2 input-small">
-                    <button type="submit" class="btn">Search</button>
+                    <select id="namespace-select" class="input-small" name="namespace">
+                        [% FOREACH namespace = namespaces %]
+                            <option value="[% namespace %]"
+                            [% IF namespace == current_namespace %] selected[% END %]>[% namespace %]</option>
+                        [% END %]
+                    </select>
+                    <input class="btn" type="submit" name="submit"
+                            value="Namespace" id="submit-namespace"/>
                 </div>
             </form>
         </div>

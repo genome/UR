@@ -259,6 +259,11 @@ sub _insert_cache_for_path {
     return $tree;
 }
 
+sub _cache_has_data_for {
+    my($self, $namespace) = @_;
+    return exists($self->{_cache}->{$namespace});
+}
+
 
 # build the by_class_inh_tree data
 sub _class_inheritance_cache_inserter {
@@ -339,7 +344,11 @@ sub index {
     my $req = Plack::Request->new($env);
     my $namespace = $req->param('namespace') || $self->namespace_name;
 
+    unless ($self->_cache_has_data_for($namespace)) {
+        $self->load_class_info_for_namespace($namespace);
+    }
     my $data = {
+        current_namespace => $namespace,
         namespaces  => [ map { $_->id } UR::Namespace->is_loaded() ],
         classnames  => $self->name_tree_cache($namespace),
         inheritance => $self->inheritance_tree_cache($namespace),
