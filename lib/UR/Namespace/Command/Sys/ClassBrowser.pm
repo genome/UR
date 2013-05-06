@@ -82,6 +82,8 @@ sub _write_class_info_to_cache_file {
 sub _load_class_info_from_cache_file {
     my($self, $namespace, $class_cache_file) = @_;
 
+    return 1 if ($self->{_cache}->{$namespace});  # Don't load same namespace more than once
+
     $self->status_message("Loading class info cache file $class_cache_file\n");
     my $fh = IO::File->new($class_cache_file, 'r');
     unless ($fh) {
@@ -101,6 +103,8 @@ sub _load_class_info_from_cache_file {
 sub _load_class_info_from_modules_on_filesystem {
     my $self = shift;
     my $namespace = shift;
+
+    return 1 if ($self->{_cache}->{$namespace});  # Don't load same namespace more than once
 
     my $by_class_name = $self->{_cache}->{$namespace}->{by_class_name}
                         ||= $self->_generate_class_name_cache($namespace);
