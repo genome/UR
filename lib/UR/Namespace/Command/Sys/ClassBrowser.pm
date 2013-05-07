@@ -318,7 +318,7 @@ sub execute {
 
     my $server = UR::Service::WebServer->create(timeout => $self->timeout, port => $self->port);
 
-    my $router = UR::Service::UrlRouter->create( verbose => 1);
+    my $router = UR::Service::UrlRouter->create( verbose => $self->verbose);
     my $assets_dir = $self->__meta__->module_data_subdirectory.'/assets/';
     $router->GET(qr(/assets/(.*)), $server->file_handler_for_directory( $assets_dir, 1));
     $router->GET('/', sub { $self->index(@_) });
