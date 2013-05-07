@@ -98,7 +98,7 @@ plan tests => 43;
     $srv->queue_status_messages(1);
 
     # NOTE - This will hang if the test fails :(
-    $srv->run();
+    $srv->run(sub {} );
     ok(1, 'timeout');
 
     $srv->delete();
@@ -147,7 +147,7 @@ plan tests => 43;
 
 # Test the file/directory handling, non streaming and streaming
 {
-    for my $does_streaming ( 0, 1) {
+    for my $does_streaming ( Plack::Util::FALSE, Plack::Util::TRUE) {
 
         my $check_dirhandler_result = sub {
             my($data, $expected_data, $message) = @_;
@@ -166,7 +166,7 @@ plan tests => 43;
         IO::File->new($tmpdir . '/file3.html','w')->print("This is file 3\n");
         my $dirhandler = UR::Service::WebServer->file_handler_for_directory( $tmpdir, $does_streaming);
 
-        my $psgi_env = { 'psgi.streaming' => Plack::Util::TRUE };
+        my $psgi_env = { 'psgi.streaming' => $does_streaming };
         ok($dirhandler, 'Create file handler for directory');
         my $data = $dirhandler->($psgi_env, '/file1');
         $check_dirhandler_result->(
