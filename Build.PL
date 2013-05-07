@@ -72,8 +72,6 @@ my $build = $subclass->new(
     'Devel::GlobalDestruction' => '',
 
     # possibly move to a web-specific 
-    #'Net::HTTPServer'     => '',
-    #'CGI::Application'    => '',
     #'URI::Escape'         => '',
     
     #'Getopt::Complete' => [
