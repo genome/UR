@@ -84,6 +84,11 @@ sub run {
 
     my $cb = shift || $self->cb;
 
+    unless ($cb) {
+        $self->warning_message("No callback for run()... returning");
+        return;
+    }
+
     my $timeout = $self->idle_timeout || 0;
     local $SIG{'ALRM'} = sub { die "alarm\n" };
     eval {
