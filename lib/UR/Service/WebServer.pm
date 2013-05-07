@@ -150,3 +150,84 @@ sub delete {
 }
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Service::WebServer - A PSGI-based web server
+
+=head1 SYNOPSIS
+
+  my $s = UR::Service::WebServer(port => 4321);
+  $s->run( \&handle_request );
+
+=head1 DESCRIPTION
+
+Implements a simple, standalone web server based on HTTP::Server::PSGI.  The
+event loop is entered by calling the run() method.
+
+=head2 Properties
+
+=over 4
+
+=item host
+
+The IP address to listen on for connections.  The default value is
+'localhost'.  host can be changed any time before the server is created,
+usually the first time run() is called.
+
+=item port
+
+The TCP port to listen on for connections.   The detault value is undef,
+meaning that the system will pick an unused port.  port can be changed any
+time before the server is created, usually the first time run() is called.
+
+=item server
+
+Holds a reference to an object that isa HTTP::Server::PSGI.  This will be
+automaticly created the first time run() is called.
+
+=item cb
+
+Holds a CODE reference used as the default request handler within run().
+
+=back
+
+=head2 Methods
+
+=over 4
+
+=item $self->announce()
+
+This method is called when the PSGI server is ready to accept requests.
+The base-class behavior is to print the listening URL on STDOUT.  Subclasses
+can override it to implement their own behavior.
+
+=item my $code = $self->file_handler_for_directory($path)
+
+A helper method used for implementing server for files located in the
+directory $path.  It returns a CODE ref that takes 2 arguments, $env (the
+standard PSGI env hashref) and $pathname (a path relative to $path).  It
+returns the standard tuple a PSGI server expects.
+
+$pathname is pre-processed by removing all occurances of ".." to keep requests
+within the provided $path.  If the requested file is not found, then it
+returns a 404.
+
+=item $self->run(<$cb>)
+
+Enter the request loop.  If a callback is not provided to run(), then the
+object's cb property is used instead.  If neither have a value, then run()
+returns immediately.
+
+For each request $cb is called with one argument, the standard PSGI env
+hashref.
+
+=back
+
+=head1 SEE ALSO
+
+L<UR::Service::UrlRouter>
+
+=cut
