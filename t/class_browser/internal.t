@@ -2,8 +2,8 @@
 
 use Test::More;
 use File::Basename;
-use lib File::Basename::dirname(__FILE__)."/../../../../lib";
-use lib File::Basename::dirname(__FILE__)."/../../..";
+use lib File::Basename::dirname(__FILE__)."/../../lib";
+use lib File::Basename::dirname(__FILE__)."/..";
 use lib File::Basename::dirname(__FILE__)."/test_namespace/";
 use UR;
 use strict;
