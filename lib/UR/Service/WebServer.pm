@@ -23,7 +23,7 @@ class UR::Service::WebServer {
                             host => $__host,
                             port => $__port,
                             timeout => $self->timeout,
-                            server_ready => sub { $self->_announce() },
+                            server_ready => sub { $self->announce() },
                         );
                     ), },
         timeout => { is => 'Integer',
@@ -71,7 +71,7 @@ sub host {
 }
 
 
-sub _announce {
+sub announce {
     my $self = shift;
 
     my $sock = $self->server->listen_sock;
