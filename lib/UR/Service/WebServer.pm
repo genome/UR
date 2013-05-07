@@ -115,7 +115,7 @@ sub _file_opener_for_directory {
     
 }
 sub file_handler_for_directory {
-    my($self, $dir, $does_streaming) = @_;
+    my($self, $dir) = @_;
 
     my $opener = $self->_file_opener_for_directory($dir);
 
@@ -127,7 +127,7 @@ sub file_handler_for_directory {
             return [ 404, [ 'Content-Type' => 'text/plain'], ['Not Found']];
         }
         my $type = $self->_mime_type_for_filename($pathname);
-        if ($does_streaming && $env->{'psgi.streaming'}) {
+        if ($env->{'psgi.streaming'}) {
             return [ 200, ['Content-Type' => $type], $fh];
         } else {
             local $/;

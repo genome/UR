@@ -320,7 +320,7 @@ sub execute {
 
     my $router = UR::Service::UrlRouter->create( verbose => $self->verbose);
     my $assets_dir = $self->__meta__->module_data_subdirectory.'/assets/';
-    $router->GET(qr(/assets/(.*)), $server->file_handler_for_directory( $assets_dir, 1));
+    $router->GET(qr(/assets/(.*)), $server->file_handler_for_directory( $assets_dir));
     $router->GET('/', sub { $self->index(@_) });
     $router->GET(qr(/detail-for-class/(.*)), sub { $self->detail_for_class(@_) });
     $router->GET(qr(/render-perl-module/(.*)), sub { $self->render_perl_module(@_) });
