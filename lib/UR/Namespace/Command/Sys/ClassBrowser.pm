@@ -337,6 +337,7 @@ sub execute {
     $router->GET(qr(/assets/(.*)), $server->file_handler_for_directory( $assets_dir));
     $router->GET('/', sub { $self->index(@_) });
     $router->GET(qr(/detail-for-class/(.*)), sub { $self->detail_for_class(@_) });
+    $router->GET(qr(/search-for-class/(.*)), sub { $self->search_for_class(@_) });
     $router->GET(qr(/render-perl-module/(.*)), sub { $self->render_perl_module(@_) });
     $router->GET(qr(/property-metadata-list/(.*)/(\w+)), sub { $self->property_metadata_list(@_) });
 
@@ -488,6 +489,26 @@ sub detail_for_class {
         private_methods         => \@private_methods,
     };
     return $self->_process_template('class-detail.html', $tmpl_data);
+}
+
+sub search_for_class {
+    my $self = shift;
+    my $env = shift;
+    my $search = shift;
+
+    my $req = Plack::Request->new($env);
+    my $namespace = $req->param('namespace') || $self->namespace_name;
+
+    my $class_cache = $self->{_cache}->{$namespace}->{by_class_name};
+    my @results = sort
+                  grep { m/$search/i } keys %$class_cache;
+
+    if (@results == 1) {
+        return $self->detail_for_class($env, $results[0]);
+    } else {
+        return $self->_process_template('search_results.html',
+                                        { search => $search, classes => \@results });
+    }
 }
 
 sub render_perl_module {
