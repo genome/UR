@@ -6,6 +6,8 @@ use warnings;
 use UR;
 use UR::Service::WebServer::Server;
 use IO::File;
+use IO::Socket::INET;
+use Sys::Hostname;
 
 class UR::Service::WebServer {
     has => [
@@ -75,7 +77,8 @@ sub announce {
     my $self = shift;
 
     my $sock = $self->server->listen_sock;
-    $self->status_message(sprintf('Listening on http://%s:%d/', $sock->sockhost, $sock->sockport));
+    my $host = ($sock->sockhost eq '0.0.0.0') ? Sys::Hostname::hostname() : gethostbyaddr($sock->sockaddr, AF_INET);
+    $self->status_message(sprintf('Listening on http://%s:%d/', $host, $sock->sockport));
     return 1;
 }
 

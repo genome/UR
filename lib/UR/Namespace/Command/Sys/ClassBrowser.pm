@@ -32,6 +32,7 @@ UR::Object::Type->define(
         use_cache       => { is => 'Boolean', default_value => 1, doc => 'Use the class cache instead of scanning for modules'},
         port            => { is => 'Integer', default_value => 8080, doc => 'TCP port to listen for connections' },
         timeout         => { is => 'Integer', doc => 'If specified, exit after this many minutes of inactivity' },
+        host            => { is => 'String', default_value => 'localhost', doc => 'host to listen on for connections' },
     ],
 );
 
@@ -43,7 +44,12 @@ sub help_brief {
 
 sub help_synopsis {
   q(# Start the web server
+# By default, only connections from localhost are accepted
 ur sys class-browser
+
+# Start the server and accept connections from any
+# address, not just localhost
+ur sys class-browser --host 0
 
 # Create the cache file for the current namespace
 ur sys class-browser --generate-cache);
@@ -330,7 +336,9 @@ sub execute {
 
     my $tt = $self->{_tt} ||= Template->new({ INCLUDE_PATH => $self->_template_dir, RECURSION => 1 });
 
-    my $server = UR::Service::WebServer->create(timeout => $self->timeout, port => $self->port);
+    my $server = UR::Service::WebServer->create(timeout => $self->timeout,
+                                                host => $self->host,
+                                                port => $self->port);
 
     my $router = UR::Service::UrlRouter->create( verbose => $self->verbose);
     my $assets_dir = $self->__meta__->module_data_subdirectory.'/assets/';
