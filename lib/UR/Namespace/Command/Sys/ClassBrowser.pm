@@ -93,7 +93,7 @@ sub _write_class_info_to_cache_file {
     my $cache_file = $self->_class_info_cache_file_name_for_namespace($current_namespace);
     my $fh = IO::File->new($cache_file, 'w') || die "Can't open $cache_file for writing: $!";
 
-    $fh->print( Data::Dumper->new([$self->{_cache}->{$current_namespace}], ['cache_data'])->Purity(1)->Dump );
+    $fh->print( Data::Dumper->new([$self->{_cache}->{$current_namespace}], ['cache_data'])->Sortkeys(1)->Purity(1)->Dump );
     $fh->close();
     $self->status_message("Saved class info to cache file $cache_file");
 }
@@ -205,7 +205,6 @@ sub _generate_class_name_cache {
                                 name  => $namespace,
                                 is    => $namespace_meta->is,
                                 relpath  => $namespace . '.pm',
-                                path    => $namespace_meta->module_path,
                                 id  => $path,
                                 file => File::Basename::basename($path),
                             }
@@ -231,7 +230,6 @@ sub _class_name_cache_data_for_class_name {
     return {
         name    => $class_meta->class_name,
         relpath => $relpath,
-        path    => $module_path,
         file    => File::Basename::basename($relpath),
         is      => $class_meta->is,
     };
