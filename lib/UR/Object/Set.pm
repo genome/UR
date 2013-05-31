@@ -149,6 +149,17 @@ sub group_by {
     return $self->context_return(@groups);
 }
 
+
+sub __invalidate_cache__ {
+    my $self = shift;
+    if (@_) {
+        my $aggregate = shift;
+        delete $self->{__aggregates}->{$aggregate};
+    } else {
+        delete @$self{'__aggregates','__aggregate_deps'};
+    }
+}
+
 sub __aggregate__ {
     my $self = shift;
     my $aggr = shift;
@@ -178,9 +189,9 @@ sub __aggregate__ {
             @fargs = ();
         }
         my $local_method = '__aggregate_' . $fname . '__';
-        $self->{$f} = $self->$local_method(@fargs);
+        $self->{__aggregates}->{$f} = $self->$local_method(@fargs);
     } 
-    elsif (! exists $self->{$f}) {
+    elsif (! exists $self->{__aggregates}->{$f}) {
         my $rule = $self->rule->add_filter(-aggregate => [$f])->add_filter(-group_by => []);
         UR::Context->current->get_objects_for_class_and_rule(
               $self->member_class_name,
@@ -189,7 +200,7 @@ sub __aggregate__ {
               0,    # return_closure
          );
     }
-    return $self->{$f};
+    return $self->{__aggregates}->{$f};
 }
 
 sub __aggregate_count__ {

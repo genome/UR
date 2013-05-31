@@ -204,7 +204,7 @@ $t->rollback();
 # HACK!  The key "min(age)" and other aggregate cache values are set on
 # $cool_person_set.  They need to be invalidated when the rollback changes
 # person 11's age back to its original value
-delete @$cool_person_set{'min(age)','count'};
+$cool_person_set->__invalidate_cache__;
 {
 #UR::DBI->monitor_sql(1);
     ok(URT::Person->unload(), 'Unload all Person objects');
@@ -222,6 +222,7 @@ delete @$cool_person_set{'min(age)','count'};
 
     $aggr_query_count = 0;
     is($cool_person_set->min('age'), 25, 'Minimum age is 25');
+
     is($aggr_query_count, 1, 'Did one aggregate query');
     is(scalar(@{[URT::Person->is_loaded]}), 1, 'Still, one Person object is loaded');
 
