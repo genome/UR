@@ -125,7 +125,7 @@ sub members {
 
 sub _members_have_changes {
     my $self = shift;
-    return any { $self->rule->evaluate($_) && $_->__changes__ } $self->member_class_name->is_loaded;
+    return any { $self->rule->evaluate($_) && $_->__changes__(@_) } $self->member_class_name->is_loaded;
 }
 
 sub subset {
@@ -151,7 +151,10 @@ sub group_by {
 
 sub __aggregate__ {
     my $self = shift;
-    my $f = shift;
+    my $aggr = shift;
+
+    my $f = $aggr->{f};
+    my $aggr_properties = $aggr->{properties};
 
     Carp::croak("$f is a group operation, and is not writable") if @_;
 
@@ -163,7 +166,7 @@ sub __aggregate__ {
                              $self->rule->template->_property_names;
 
     # If there are no member-class objects with changes, we can just interrogate the DB
-    if ($self->_members_have_changes or $not_ds_expressable) {
+    if ($not_ds_expressable or $self->_members_have_changes(@$aggr_properties)) {
         my $fname;
         my @fargs;
         if ($f =~ /^(\w+)\((.*)\)$/) {
@@ -326,10 +329,11 @@ sub CAN {
             return sub {
                 my $self = shift;
                 my $f = $method;
-                if (@_) {
-                    $f .= '(' . join(',',@_) . ')';
+                my @aggr_properties = @_;
+                if (@aggr_properties) {
+                    $f .= '(' . join(',',@aggr_properties) . ')';
                 }
-                return $self->__aggregate__($f);
+                return $self->__aggregate__({ f => $f, properties => \@aggr_properties });
             };
         }
         

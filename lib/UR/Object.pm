@@ -457,14 +457,10 @@ sub __changes__ {
     # This is really only useful internally because the boundary of the object
     # is internal/subjective.
 
-    my ($self,$optional_property) = @_;
+    my $self = shift;
 
     # performance optimization
     return unless $self->{_change_count};
-
-    unless (wantarray) {
-        return $self->{_change_count};  # scalar context only cares if there are any changes or not
-    }
 
     my $meta = $self->__meta__;
     if (ref($meta) eq 'UR::DeletedRef') {
@@ -477,19 +473,43 @@ sub __changes__ {
 
     my $orig = $self->{db_saved_uncommitted} || $self->{db_committed};
 
+    my %prop_metas;
+    my $prop_is_changed = sub {
+        my $prop_name = shift;
+        my $property_meta = $prop_metas{$prop_name} ||= $meta->property_meta_for_name($prop_name);
+        no warnings 'uninitialized';
+        return ($orig->{$prop_name} ne $self->{$prop_name})
+                &&
+                ($self->can($prop_name) and ! UR::Object->can($prop_name))
+                &&
+                defined($property_meta)
+                &&
+               (! $property_meta->is_transient)
+            ;
+    };
+
+    unless (wantarray) {
+        # scalar context only cares if there are any changes or not
+        if (@_) {
+            foreach (@_) {
+                return 1 if $prop_is_changed->($_);
+            }
+            return '';
+        } else {
+            return ($self->{__defined} and $self->{_change_count} == 1)
+                    ? ''
+                    : $self->{_change_count};
+        }
+    }
+
     no warnings;
     my @changed;
     if ($orig) {
         my $class_name = $meta->class_name;
         @changed =
-            grep {
-                my $property_meta = $meta->property_meta_for_name($_);
-                ( ((!$property_meta) or $property_meta->is_transient) ? 0 : 1 );
-            }
-            grep { $self->can($_) and not UR::Object->can($_) }
-            grep { $orig->{$_} ne $self->{$_} }
+            grep { $prop_is_changed->($_) }
             grep { $_ }
-            keys %$orig;
+            @_ ? (@_) : keys(%$orig);
     }
     else {
         @changed = $meta->all_property_names
@@ -1246,8 +1266,11 @@ Called by all mutators to tell the current context about a state change.
 
   @tags = $obj->__changes__()
 
+  @tags = $obj->__changes__('prop1', 'prop2', ...)
+
 Return a list of changes present on the object _directly_.  This is really only
 useful internally because the boundary of the object is internal/subjective.
+Callers may also request only changes to particular properties.
 
 Changes to objects' properties are tracked by the system.  If an object has been
 changed since it was defined or loaded from its external data source, then changed()

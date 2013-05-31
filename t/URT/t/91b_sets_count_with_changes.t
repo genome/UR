@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 51;
+use Test::More tests=> 62;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -97,6 +97,9 @@ is($query_count, 0, 'Made no queries');
 my $car_set = $cool_person_set->cars_set;
 ok($car_set, "got a set of cars for the person set: object set -> value set");
 
+# We're going to roll back all these changes just before the last block of tests
+my $t = UR::Context::Transaction->begin();
+
 # Test aggregate function on a set that has no member changes.
 # All aggregate functions should trigger query since function is
 # performed server-side on the data source.
@@ -126,7 +129,7 @@ ok($car_set, "got a set of cars for the person set: object set -> value set");
     ok($cool_person_set->rule->evaluate($p), 'person is member of cool person set');
     ok($p->age($p->age + 1), 'changed the age of the youngest person to be +1 (26)');
 
-    ok($cool_person_set->_members_have_changes, 'cool person set no has changes');
+    ok($cool_person_set->_members_have_changes, 'cool person set now has changes');
 
     $aggr_query_count = 0;
     is($cool_person_set->count, 3, 'set membership count is still the same');
@@ -193,3 +196,39 @@ ok($car_set, "got a set of cars for the person set: object set -> value set");
     is($cool_person_set->count, $cool_person_count + 1, 'count decreased after delete');
     is($aggr_query_count, 0, 'Made no queries');
 }
+
+# Make a change, then do a set aggregate on a different property
+# it should do a single aggregate query on the DB and not load all
+# members
+$t->rollback();
+# HACK!  The key "min(age)" and other aggregate cache values are set on
+# $cool_person_set.  They need to be invalidated when the rollback changes
+# person 11's age back to its original value
+delete @$cool_person_set{'min(age)','count'};
+{
+#UR::DBI->monitor_sql(1);
+    ok(URT::Person->unload(), 'Unload all Person objects');
+    my $p = URT::Person->get(11);
+    is(scalar(@{[URT::Person->is_loaded]}), 1, 'One Person object is loaded');
+
+    ok($cool_person_set->rule->evaluate($p), 'person is member of cool person set');
+    ok($p->name('AAAA'), 'changed the name of the person to AAAA');
+
+    ok($cool_person_set->_members_have_changes, 'cool person set now has changes');
+
+#    $aggr_query_count = 0;
+#    is($cool_person_set->count, 3, 'set membership count is still the same');
+#    is($aggr_query_count, 1, 'count did not trigger query');
+
+    $aggr_query_count = 0;
+    is($cool_person_set->min('age'), 25, 'Minimum age is 25');
+    is($aggr_query_count, 1, 'Did one aggregate query');
+    is(scalar(@{[URT::Person->is_loaded]}), 1, 'Still, one Person object is loaded');
+
+    $aggr_query_count = 0;
+    is($cool_person_set->min('name'), 'AAAA', 'Minimum name is AAAA');
+    is($aggr_query_count, 0, 'Made no aggregate queries');
+    is(scalar(@{[URT::Person->is_loaded]}), 3, 'All 3 Person objects were loaded that are is_cool');
+}
+
+    
