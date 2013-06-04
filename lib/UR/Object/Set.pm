@@ -60,8 +60,6 @@ UR::Object::Set->create_subscription(
                 # load/unload won't affect aggregate values
                 return if ($attr_name eq 'load' or $attr_name eq 'unload');
 
-#print "In subscription callback for $member.  $attr_name changed from $before to $after\n";
-#print "  for set ",Data::Dumper::Dumper($set);
                 if (exists($rule_property_names{$attr_name})
                     ||
                     ($attr_name eq 'create')
@@ -69,17 +67,15 @@ UR::Object::Set->create_subscription(
                     ($attr_name eq 'delete')
                 ) {
                     # Changes to set membership - invalidate the whole aggregate cache
-#print "Set membership change!\n";
                     delete $set->{__aggregates};
 
-                } elsif (my $dependant_aggregates = delete($deps->{$attr_name})) {
-#print "Change to attr $attr_name with dependants: ",join(',',@$dependant_aggregates),"\n";
+                } elsif ($rule->evaluate($member)
+                        &&
+                        (my $dependant_aggregates = delete($deps->{$attr_name}))
+                ) {
                     # changes to a cached aggregate calculated from this attribute
-                    #delete @{$set->{__aggregates}}{@$dep_aggrs};
-                    my $cached = $set->{__aggregates};
-                    delete @$cached{@$dependant_aggregates};
+                    delete @{$set->{__aggregates}}{@$dependant_aggregates};
                     delete @$deps{@$dependant_aggregates};
-#print "After key deletion: ",Data::Dumper::Dumper($set);
                 }
             }
         );
@@ -87,66 +83,6 @@ UR::Object::Set->create_subscription(
 );
 
 
-# I'll neave this in here commented out for the future
-# It's intended to keep 'count' for sets updated in real-time as objects are 
-# created/deleted/updated
-#sub _load {
-#    my $class = shift;
-#    my $self = $class->SUPER::_load(@_);
-#
-#    my $member_class_name = $rule->subject_class_name;
-#
-#    my $rule = $self->rule
-#    my $rule_template = $rule->template;
-#
-#    my @rule_properties = $rule_template->_property_names;
-#    my %rule_values = map { $_ => $rule->value_for($_) } @rule_properties;
-#
-#    my %underlying_comparator_for_property = map { $_->property_name => $_ } $rule_template->get_underlying_rule_templates;
-#
-#    my @aggregates = qw( count );
-#
-#    $member_class_name->create_subscription(
-#        note => 'set monitor '.$self->id,
-#        priority => 0,
-#        callback => sub {
-#            # make sure the aggregate values get invalidated when objects change
-#            my @agg_set = @$self{aggregates};
-#            return unless exists(@agg_set);   # returns only if none of the aggregates have values
-#
-#            my ($changed_object, $changed_property, $old_value, $new_value) = @_;
-#
-#            if ($changed_property eq 'create') {
-#                if ($rule->evaluate($changed_object)) {
-#                    $self->{'count'}++;
-#                }
-#            } elsif ($changed_property eq 'delete') {
-#                if ($rule->evaluate($changed_object)) {
-#                    $self->{'count'}--;
-#                }
-#            } elsif (exists $value_index_for_property{$changed_property}) {
-#
-#                my $comparator = $underlying_comparator_for_property{$changed_property};
-#
-#                # HACK!
-#                $changed_object->{$changed_property} = $old_value;
-#                my $evaled_before = $comparator->evaluate_subject_and_values($changed_object,$rule_values{$changed_property});
-#
-#                $changed_object->{$changed_property} = $new_value;
-#                my $evaled_after = $comparator->evaluate_subject_and_values($changed_object,$rule_values{$changed_property});
-#
-#                if ($evaled_before and ! $evaled_after) {
-#                    $self->{'count'}--;
-#                } elsif ($evaled_after and ! $evaled_before) {
-#                    $self->{'count'}++;
-#                }
-#            }
-#        }
-#    );
-#
-#    return $self;
-#}
-    
 
 sub get_with_special_parameters {
     Carp::cluck("Getting sets by directly properties of their members method will be removed shortly because of ambiguity on the meaning of 'id'.  Please update the code which calls this.");
@@ -224,35 +160,38 @@ sub __aggregate__ {
                              map { $subject_class_meta->property_meta_for_name($_) || () }
                              $self->rule->template->_property_names;
 
-    # If there are no member-class objects with changes, we can just interrogate the DB
-    if ($not_ds_expressable or $self->_members_have_changes(@$aggr_properties)) {
-        my $fname;
-        my @fargs;
-        if ($f =~ /^(\w+)\((.*)\)$/) {
-            $fname = $1;
-            @fargs = ($2 ? split(',',$2) : ());
-        }
-        else {
-            $fname = $f;
-            @fargs = ();
-        }
-        my $local_method = '__aggregate_' . $fname . '__';
-        $self->{__aggregates}->{$f} = $self->$local_method(@fargs);
-    } 
-    elsif (! exists $self->{__aggregates}->{$f}) {
-        my $rule = $self->rule->add_filter(-aggregate => [$f])->add_filter(-group_by => []);
-        UR::Context->current->get_objects_for_class_and_rule(
-              $self->member_class_name,
-              $rule,
-              1,    # load
-              0,    # return_closure
-         );
+    my($cache, $deps) = @$self{'__aggregates','__aggregate_deps'};
 
-        my $deps = $self->{__aggregate_deps};
-        $deps->{$f} = $aggr_properties;
-        foreach ( @$aggr_properties ) {
-            $deps->{$_} ||= [];
-            push @{$deps->{$_}}, $f;
+    # If there are no member-class objects with changes, we can just interrogate the DB
+    if (! exists($cache->{$f})) {
+        if ($not_ds_expressable or $self->_members_have_changes(@$aggr_properties)) {
+            my $fname;
+            my @fargs;
+            if ($f =~ /^(\w+)\((.*)\)$/) {
+                $fname = $1;
+                @fargs = ($2 ? split(',',$2) : ());
+            }
+            else {
+                $fname = $f;
+                @fargs = ();
+            }
+            my $local_method = '__aggregate_' . $fname . '__';
+            $self->{__aggregates}->{$f} = $self->$local_method(@fargs);
+
+        } else {
+            my $rule = $self->rule->add_filter(-aggregate => [$f])->add_filter(-group_by => []);
+            UR::Context->current->get_objects_for_class_and_rule(
+                  $self->member_class_name,
+                  $rule,
+                  1,    # load
+                  0,    # return_closure
+             );
+
+            $deps->{$f} = $aggr_properties;
+            foreach ( @$aggr_properties ) {
+                $deps->{$_} ||= [];
+                push @{$deps->{$_}}, $f;
+            }
         }
     }
     return $self->{__aggregates}->{$f};

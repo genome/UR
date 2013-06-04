@@ -1,9 +1,11 @@
 use strict;
 use warnings;
-use Test::More tests=> 62;
+use Test::More tests=> 66;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
+
+use Sub::Install;
 
 # Test getting some objects that includes -hints, and then that later get()s
 # don't re-query the DB
@@ -201,10 +203,6 @@ my $t = UR::Context::Transaction->begin();
 # it should do a single aggregate query on the DB and not load all
 # members
 $t->rollback();
-# HACK!  The key "min(age)" and other aggregate cache values are set on
-# $cool_person_set.  They need to be invalidated when the rollback changes
-# person 11's age back to its original value
-$cool_person_set->__invalidate_cache__;
 {
 #UR::DBI->monitor_sql(1);
     ok(URT::Person->unload(), 'Unload all Person objects');
@@ -220,9 +218,18 @@ $cool_person_set->__invalidate_cache__;
 #    is($cool_person_set->count, 3, 'set membership count is still the same');
 #    is($aggr_query_count, 1, 'count did not trigger query');
 
+    # Fab up a method wrapper so we can tell if the accessor is called
+    my $original_age_accessor = \&URT::Person::age;
+    my $age_accessor_called = 0;
+    Sub::Install::reinstall_sub({
+        into => 'URT::Person',
+        as => 'age',
+        code => sub { $age_accessor_called = 1; goto &$original_age_accessor }
+    });
+
     $aggr_query_count = 0;
     is($cool_person_set->min('age'), 25, 'Minimum age is 25');
-
+    is($age_accessor_called, 0, "'age' accessor was not called");  # ran in the DB
     is($aggr_query_count, 1, 'Did one aggregate query');
     is(scalar(@{[URT::Person->is_loaded]}), 1, 'Still, one Person object is loaded');
 
@@ -230,6 +237,11 @@ $cool_person_set->__invalidate_cache__;
     is($cool_person_set->min('name'), 'AAAA', 'Minimum name is AAAA');
     is($aggr_query_count, 0, 'Made no aggregate queries');
     is(scalar(@{[URT::Person->is_loaded]}), 3, 'All 3 Person objects were loaded that are is_cool');
+
+    # After changing the name, the min(age) value should still be cached
+    $age_accessor_called = $aggr_query_count = 0;
+    is($cool_person_set->min('age'), 25, 'Minimum age is 25');
+    is($age_accessor_called, 0, "'age' accessor was not called");
+    is($aggr_query_count, 0, 'Did no aggregate queries');
 }
 
-    
