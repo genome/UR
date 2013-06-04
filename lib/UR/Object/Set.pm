@@ -67,7 +67,7 @@ UR::Object::Set->create_subscription(
                     ($attr_name eq 'delete')
                 ) {
                     # Changes to set membership - invalidate the whole aggregate cache
-                    delete $set->{__aggregates};
+                    $set->__invalidate_cache__;
                     # A later call to _members_have_changes() would miss the case
                     # where a member becomes deleted or a member-defining attribute
                     # changes
@@ -95,8 +95,7 @@ UR::Context::Transaction->create_subscription(
     method  => 'rollback',
     note    => 'rollback set cache invalidator',
     callback => sub {
-        #delete(@$_{'__aggregates','__aggregate_deps','__members_have_changes'}) foreach UR::Object::Set->is_loaded();
-        delete(@$_{'__aggregates','__members_have_changes'}) foreach UR::Object::Set->is_loaded();
+        delete(@$_{'__aggregates','__aggregate_deps','__members_have_changes'}) foreach UR::Object::Set->is_loaded();
     }
 );
 
@@ -206,11 +205,11 @@ sub __aggregate__ {
                   0,    # return_closure
              );
 
-            $deps->{$f} = $aggr_properties;
-            foreach ( @$aggr_properties ) {
-                $deps->{$_} ||= [];
-                push @{$deps->{$_}}, $f;
-            }
+        }
+        $deps->{$f} = $aggr_properties;
+        foreach ( @$aggr_properties ) {
+            $deps->{$_} ||= [];
+            push @{$deps->{$_}}, $f;
         }
     }
     return $self->{__aggregates}->{$f};
