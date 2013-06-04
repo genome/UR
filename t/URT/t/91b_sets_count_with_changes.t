@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 86;
+use Test::More tests=> 98;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -199,32 +199,32 @@ my $t = UR::Context::Transaction->begin();
     is($aggr_query_count, 0, 'Made no queries');
 }
 
+# Fab up a method wrapper so we can tell if the accessor is called
+my $original_age_accessor = \&URT::Person::age;
+my $age_accessor_called = 0;
+Sub::Install::reinstall_sub({
+    into => 'URT::Person',
+    as => 'age',
+    code => sub { $age_accessor_called = 1; goto &$original_age_accessor }
+});
+
+my $original_name_accessor = \&URT::Person::name;
+my $name_accessor_called = 0;
+Sub::Install::reinstall_sub({
+    into => 'URT::Person',
+    as => 'name',
+    code => sub { $name_accessor_called = 1; goto &$original_name_accessor }
+});
+
 # Make a change, then do a set aggregate on a different property
 # it should do a single aggregate query on the DB and not load all
 # members
-$t->rollback();
+ok($t->rollback(), 'Rollback changes');
+$t = UR::Context::Transaction->begin();
 {
     ok(URT::Person->unload(), 'Unload all Person objects');
     my $p = URT::Person->get(11);
     is(scalar(@{[URT::Person->is_loaded]}), 1, 'One Person object is loaded');
-
-    # Fab up a method wrapper so we can tell if the accessor is called
-    my $original_age_accessor = \&URT::Person::age;
-    my $age_accessor_called = 0;
-    Sub::Install::reinstall_sub({
-        into => 'URT::Person',
-        as => 'age',
-        code => sub { $age_accessor_called = 1; goto &$original_age_accessor }
-    });
-
-    my $original_name_accessor = \&URT::Person::name;
-    my $name_accessor_called = 0;
-    Sub::Install::reinstall_sub({
-        into => 'URT::Person',
-        as => 'name',
-        code => sub { $name_accessor_called = 1; goto &$original_name_accessor }
-    });
-
 
     $aggr_query_count = 0;
     is($cool_person_set->count, 3, 'set membership count is still the same');
@@ -287,3 +287,26 @@ $t->rollback();
     is($name_accessor_called, 0, "'name' accessor was not called");
 }
 
+# Test that changing set membership invalidates the whole cache of aggregate values
+ok($t->rollback(), 'Rollback changes');
+{
+    my $p = URT::Person->get(11);
+
+    is($cool_person_set->min('age'), 25, 'Minimum age is 25');
+    is($cool_person_set->sum('age'), 110, 'Get sum(age)');
+    is($cool_person_set->min('name'), 'Bob', 'Minimum name is Bob');
+
+    ok(defined($p->is_cool(0)), 'Set person to be not cool');
+
+    $age_accessor_called = 0;
+    is($cool_person_set->min('age'), 40, 'Minimum cool age is 40');
+    is($age_accessor_called, 1, "'age' accessor was called");
+
+    $age_accessor_called = 0;
+    is($cool_person_set->sum('age'), 85, 'Get cool sum(age)');
+    is($age_accessor_called, 1, '"age" accessor was called');
+
+    $name_accessor_called = 0;
+    is($cool_person_set->min('name'), 'Frank', 'Minimum cool name is Frank');
+    is($name_accessor_called, 1, "'name' accessor was called");
+}

@@ -68,6 +68,10 @@ UR::Object::Set->create_subscription(
                 ) {
                     # Changes to set membership - invalidate the whole aggregate cache
                     delete $set->{__aggregates};
+                    # A later call to _members_have_changes() would miss the case
+                    # where a member becomes deleted or a member-defining attribute
+                    # changes
+                    $set->{__members_have_changes} = 1;
 
                 } elsif ($rule->evaluate($member)
                         &&
@@ -82,6 +86,19 @@ UR::Object::Set->create_subscription(
     }
 );
 
+# When a transaction rolls back, it doesn't trigger subscriptions for the
+# member objects as they get changed back to their original values.
+# The safe thing is to set wipe out all Sets' aggregate caches :(
+# It would be helpful if sets had a db_committed like other objects
+# and we could just revert their values back to their db_committed values
+UR::Context::Transaction->create_subscription(
+    method  => 'rollback',
+    note    => 'rollback set cache invalidator',
+    callback => sub {
+        #delete(@$_{'__aggregates','__aggregate_deps','__members_have_changes'}) foreach UR::Object::Set->is_loaded();
+        delete(@$_{'__aggregates','__members_have_changes'}) foreach UR::Object::Set->is_loaded();
+    }
+);
 
 
 sub get_with_special_parameters {
@@ -109,7 +126,9 @@ sub members {
 
 sub _members_have_changes {
     my $self = shift;
-    return any { $self->rule->evaluate($_) && $_->__changes__(@_) } $self->member_class_name->is_loaded;
+    return 1 if $self->{__members_have_changes};
+    my $rule = $self->rule;
+    return any { $rule->evaluate($_) && $_->__changes__(@_) } $self->member_class_name->is_loaded;
 }
 
 sub subset {
@@ -211,7 +230,7 @@ sub __aggregate_min__ {
     for my $member ($self->members) {
         my $v = $member->$p;
         next unless defined $v;
-        $min = $v if not defined $min or $v < $min;
+        $min = $v if (!defined($min) || ($v < $min) || ($v lt $min));
     }
     return $min;
 }
@@ -224,7 +243,7 @@ sub __aggregate_max__ {
     for my $member ($self->members) {
         my $v = $member->$p;
         next unless defined $v;
-        $max = $v if not defined $max or $v > $max;
+        $max = $v if (!defined($max) || ($v > $max) || ($v gt $max));
     }
     return $max;
 }
