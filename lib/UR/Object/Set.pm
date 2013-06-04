@@ -100,6 +100,15 @@ UR::Context::Transaction->create_subscription(
     }
 );
 
+UR::Context->create_subscription(
+    method => 'commit',
+    callback => sub {
+        my $worked = shift;
+        return unless $worked;  # skip if the commit failed
+        delete $_->{__members_have_changes} foreach UR::Object::Set->is_loaded();
+    }
+);
+
 
 sub get_with_special_parameters {
     Carp::cluck("Getting sets by directly properties of their members method will be removed shortly because of ambiguity on the meaning of 'id'.  Please update the code which calls this.");
