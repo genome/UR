@@ -39,6 +39,54 @@ sub __display_name__ {
     return '(' . ref($self) . ' ' . $s . ')';
 }
 
+# When a set comes into existance, set up a subscription to monitor changes
+# to the set's members
+UR::Object::Set->create_subscription(
+    method  => 'load',
+    note    => 'set creation monitor',
+    callback => sub {
+        my $set = shift;
+        my $rule = $set->rule;
+        my %rule_property_names = map { $_ => 1 } $rule->template->_property_names();
+        my $deps = $set->{__aggregate_deps} ||= {};
+
+        $set->member_class_name->create_subscription(
+            note        => 'set monitor '.$set->id,
+            priority    => 0,
+            callback    => sub {
+                return unless exists($set->{__aggregates});  # nothing cached  yet
+
+                my ($member, $attr_name, $before, $after) = @_;
+                # load/unload won't affect aggregate values
+                return if ($attr_name eq 'load' or $attr_name eq 'unload');
+
+#print "In subscription callback for $member.  $attr_name changed from $before to $after\n";
+#print "  for set ",Data::Dumper::Dumper($set);
+                if (exists($rule_property_names{$attr_name})
+                    ||
+                    ($attr_name eq 'create')
+                    ||
+                    ($attr_name eq 'delete')
+                ) {
+                    # Changes to set membership - invalidate the whole aggregate cache
+#print "Set membership change!\n";
+                    delete $set->{__aggregates};
+
+                } elsif (my $dependant_aggregates = delete($deps->{$attr_name})) {
+#print "Change to attr $attr_name with dependants: ",join(',',@$dependant_aggregates),"\n";
+                    # changes to a cached aggregate calculated from this attribute
+                    #delete @{$set->{__aggregates}}{@$dep_aggrs};
+                    my $cached = $set->{__aggregates};
+                    delete @$cached{@$dependant_aggregates};
+                    delete @$deps{@$dependant_aggregates};
+#print "After key deletion: ",Data::Dumper::Dumper($set);
+                }
+            }
+        );
+    }
+);
+
+
 # I'll neave this in here commented out for the future
 # It's intended to keep 'count' for sets updated in real-time as objects are 
 # created/deleted/updated
@@ -199,6 +247,13 @@ sub __aggregate__ {
               1,    # load
               0,    # return_closure
          );
+
+        my $deps = $self->{__aggregate_deps};
+        $deps->{$f} = $aggr_properties;
+        foreach ( @$aggr_properties ) {
+            $deps->{$_} ||= [];
+            push @{$deps->{$_}}, $f;
+        }
     }
     return $self->{__aggregates}->{$f};
 }
