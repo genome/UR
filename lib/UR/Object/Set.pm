@@ -62,9 +62,10 @@ UR::Object::Set->create_subscription(
 
                 if (exists($rule_property_names{$attr_name})
                     ||
-                    ($attr_name eq 'create')
-                    ||
-                    ($attr_name eq 'delete')
+                    (   ($attr_name eq 'create' or $attr_name eq 'delete')
+                        &&
+                        $rule->evaluate($member)
+                    )
                 ) {
                     # Changes to set membership - invalidate the whole aggregate cache
                     $set->__invalidate_cache__;

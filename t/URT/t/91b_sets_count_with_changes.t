@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 98;
+use Test::More tests=> 125;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -289,6 +289,7 @@ $t = UR::Context::Transaction->begin();
 
 # Test that changing set membership invalidates the whole cache of aggregate values
 ok($t->rollback(), 'Rollback changes');
+$t = UR::Context::Transaction->begin();
 {
     my $p = URT::Person->get(11);
 
@@ -309,4 +310,40 @@ ok($t->rollback(), 'Rollback changes');
     $name_accessor_called = 0;
     is($cool_person_set->min('name'), 'Frank', 'Minimum cool name is Frank');
     is($name_accessor_called, 1, "'name' accessor was called");
+}
+
+# Test that changing a property on an object of the same class, but not a member
+# of the set, does not invalidate cached aggregate values
+ok($t->rollback(), 'Rollback changes');
+{
+    my $p = URT::Person->get(12);
+    is($p->is_cool, 0, 'Got an uncool person');
+
+    is($cool_person_set->min('age'), 25, 'Minimum cool age is 25');
+    is($cool_person_set->sum('age'), 110, 'Get cool sum(age)');
+    is($cool_person_set->min('name'), 'Bob', 'Minimum cool name is Bob');
+
+    ok($p->age(99), "Change uncool person's age");
+    ok($p->name('goo'), "Change uncool person's name");
+
+    my $check_aggrs = sub {
+        $age_accessor_called = 0;
+        is($cool_person_set->min('age'), 25, 'Minimum cool age is 25');
+        is($age_accessor_called, 0, '"age" accessor was not called');
+
+        $age_accessor_called = 0;
+        is($cool_person_set->sum('age'), 110, 'Get cool sum(age)');
+        is($age_accessor_called, 0, '"age" accessor was not called');
+
+        $name_accessor_called = 0;
+        is($cool_person_set->min('name'), 'Bob', 'Minimum cool name is Bob');
+        is($name_accessor_called, 0, '"name" accessor not called');
+    };
+    $check_aggrs->();
+
+    ok($p->delete, 'Delete the uncool person');
+    $check_aggrs->();
+
+    ok(URT::Person->create(is_cool => 0, name => 'Porky Pig', age => 60), 'Create a new uncool person');
+    $check_aggrs->();
 }
