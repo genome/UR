@@ -69,7 +69,7 @@ sub undo {
 
 
     if ($changed_aspect eq "__define__") {
-        UR::Object::unload($changed_obj);
+        $changed_obj->unload();
     }
     elsif ($changed_aspect eq "create") {
         if ($changed_obj->isa('UR::Observer')) {

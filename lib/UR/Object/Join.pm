@@ -33,6 +33,29 @@ class UR::Object::Join {
 };
 
 our %resolve_chain;
+
+# When a Join is unloaded, we need to remove from the cache any join chain
+# using this join
+sub unload {
+    my $self = shift;
+    my $id_to_remove = $self->id;
+
+    foreach my $joins_for_class ( values %resolve_chain ) {
+        foreach my $joins_for_label ( values %$joins_for_class ) {
+            foreach my $property_chain ( keys %$joins_for_label ) {
+                # need to skip over DeletedRefs that may already be in the list
+                if (grep { $_->isa('UR::Object::Join') and ($_->id eq $id_to_remove) }
+                        @{$joins_for_label->{$property_chain}}
+                ) {
+                    # This unloaded join is in the list - nuke the whole list
+                    delete $joins_for_label->{$property_chain};
+                }
+            }
+        }
+    }
+    $self->SUPER::unload(@_);
+}
+
 sub resolve_chain {
     my ($class, $class_name, $property_chain, $join_label) = @_;
 
