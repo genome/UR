@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 12;
+use Test::More tests => 20;
 use URT::DataSource::SomeSQLite;
 
 # There was a bug where after a software transaction rollback, a previously
@@ -79,14 +79,14 @@ foreach (@joins) {
     isa_ok($_, 'UR::Object');
 }
 
-## Another related problem is that UR::DataSource::Default objects were
-## getting unloaded
-#$t = UR::Context::Transaction->begin();
-#ok($t, 'Start another transaction');
-#my @things = URT::Thing->get(owner_name => 'Bob');
-#ok(scalar(@things), "Get Bob's things");
-#
-#ok($t->rollback(), 'Rollback');
-#
-#@things = URT::Thing->get(owner_name2 => 'Bob');
-#ok(scalar(@things), "Get Bob's again");
+# Another related problem is that UR::DataSource::Default objects were
+# getting unloaded
+$t = UR::Context::Transaction->begin();
+ok($t, 'Start another transaction');
+my @things = URT::Thing->get(owner_name => 'Bob');
+ok(scalar(@things), "Get Bob's things");
+
+ok($t->rollback(), 'Rollback');
+
+@things = URT::Thing->get(owner_name2 => 'Bob');
+ok(scalar(@things), "Get Bob's again");

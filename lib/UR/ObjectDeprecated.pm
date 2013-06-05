@@ -88,6 +88,9 @@ sub property_diff {
 # TODO: make this a context operation
 sub unload {
     my $proto = shift;
+
+    return unless ($proto->class->__meta__->is_uncachable);
+
     my ($self, $class);
     ref $proto ? $self = $proto : $class = $proto;
     

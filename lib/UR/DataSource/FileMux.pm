@@ -29,11 +29,18 @@ class UR::DataSource::FileMux {
     ],
 };
 
+UR::Object::Type->define(
+    class_name => 'UR::DataSource::FileMuxFile',
+    is => 'UR::DataSource::File',
+)->is_uncachable(1);
+
 
 # The concreate data sources will be of this type
 sub _delegate_data_source_class {
-    'UR::DataSource::File';
+    'UR::DataSource::FileMuxFile';
 }
+
+
 
 sub sql_fh {
     return UR::DBI->sql_fh();
@@ -314,9 +321,11 @@ sub _generate_loading_templates_arrayref {
     my $delegate_class = $self->_delegate_data_source_class();
     $delegate_class->class;  # trigger the autoloader, if necessary
 
-    my $function_name = $delegate_class . '::_generate_loading_templates_arrayref';
-    no strict 'refs';
-    return &$function_name($self,@_);
+    my $sub = $delegate_class->can('_generate_loading_templates_arrayref');
+    unless ($sub) {
+        Carp::croak(qq(FileMux can't locate method "_generate_loading_templates_arrayref" via package $delegate_class.  Is $delegate_class a File-type DataSource?));
+    }
+    $self->$sub(@_);
 }
 
 

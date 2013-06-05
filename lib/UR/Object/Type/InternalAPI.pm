@@ -680,13 +680,21 @@ sub is_uncachable {
     my $self = shift;
 
     my $class_name = $self->class_name;
+
+    if (@_) {
+        # setting the is_uncachable value
+        return $uncachable_types{$class_name} = shift;
+    }
+
     unless (exists $uncachable_types{$class_name}) {
+        my $is_uncachable = 1;
         foreach my $type ( keys %uncachable_types ) {
-            if ($class_name->isa($type)) {
-                $uncachable_types{$class_name} = $uncachable_types{$type};
+            if ($class_name->isa($type) and ! $uncachable_types{$type}) {
+                $is_uncachable = 0;
                 last;
             }
         }
+        $uncachable_types{$class_name} = $is_uncachable;
         unless (exists $uncachable_types{$class_name}) {
             die "Couldn't determine is_uncachable() for $class_name";
         }
