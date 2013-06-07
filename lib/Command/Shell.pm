@@ -77,7 +77,10 @@ sub execute {
     my $delegate_type = $self->delegate_type;
     eval "use above '$delegate_type'";
     if ($@) {
-        die "Failure to use delegate class $delegate_type!:\n$@";
+        my $t = UR::Object::Type->get($delegate_type);
+        unless ($t) {
+            die "Failure to use delegate class $delegate_type!:\n$@";
+        }
     }
     my @argv = $self->argv;
 
