@@ -60,6 +60,9 @@ UR::Object::Set->create_subscription(
                 # load/unload won't affect aggregate values
                 return if ($attr_name eq 'load' or $attr_name eq 'unload');
 
+                # If a set-defining attribute changes, or an object matching
+                # the set is created or deleted, then the set membership has
+                # possibly changed.  Invalidate the whole aggregate cache.
                 if (exists($set_defining_attributes{$attr_name})
                     ||
                     (   ($attr_name eq 'create' or $attr_name eq 'delete')
@@ -67,7 +70,6 @@ UR::Object::Set->create_subscription(
                         $rule->evaluate($member)
                     )
                 ) {
-                    # Changes to set membership - invalidate the whole aggregate cache
                     $set->__invalidate_cache__;
                     # A later call to _members_have_changes() would miss the case
                     # where a member becomes deleted or a member-defining attribute
@@ -75,12 +77,15 @@ UR::Object::Set->create_subscription(
                     $set->{__members_have_changes} = 1;
 
                 }
+                # if the changed attribute is a dependancy for a cached aggregation
+                # value, and it's a set member...
                 elsif ((my $dependant_aggregates = $deps->{$attr_name})
                         &&
                         $rule->evaluate($member)
                 ) {
-                    # changes to a cached aggregate calculated from this attribute
+                    # remove the cached aggregates that depend on this attribute
                     delete @{$set->{__aggregates}}{@$dependant_aggregates};
+                    # remove the dependancy records
                     delete @$deps{@$dependant_aggregates};
                     delete $deps->{$attr_name}
                 }
@@ -218,7 +223,10 @@ sub __aggregate__ {
              );
 
         }
+        # keep 2-way mapping of dependances...
+        # First, keep a list of properties this aggregate cached value depends on
         $deps->{$f} = $aggr_properties;
+        # And add this aggregate to the lists these properties are dependancies for
         foreach ( @$aggr_properties ) {
             $deps->{$_} ||= [];
             push @{$deps->{$_}}, $f;
