@@ -47,7 +47,7 @@ UR::Object::Set->create_subscription(
     callback => sub {
         my $set = shift;
         my $rule = $set->rule;
-        my %rule_property_names = map { $_ => 1 } $rule->template->_property_names();
+        my %set_defining_attributes = map { $_ => 1 } $rule->template->_property_names();
         my $deps = $set->{__aggregate_deps} ||= {};
 
         $set->member_class_name->create_subscription(
@@ -60,7 +60,7 @@ UR::Object::Set->create_subscription(
                 # load/unload won't affect aggregate values
                 return if ($attr_name eq 'load' or $attr_name eq 'unload');
 
-                if (exists($rule_property_names{$attr_name})
+                if (exists($set_defining_attributes{$attr_name})
                     ||
                     (   ($attr_name eq 'create' or $attr_name eq 'delete')
                         &&
