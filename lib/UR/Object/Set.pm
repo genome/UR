@@ -74,13 +74,15 @@ UR::Object::Set->create_subscription(
                     # changes
                     $set->{__members_have_changes} = 1;
 
-                } elsif ($rule->evaluate($member)
+                }
+                elsif ((my $dependant_aggregates = $deps->{$attr_name})
                         &&
-                        (my $dependant_aggregates = delete($deps->{$attr_name}))
+                        $rule->evaluate($member)
                 ) {
                     # changes to a cached aggregate calculated from this attribute
                     delete @{$set->{__aggregates}}{@$dependant_aggregates};
                     delete @$deps{@$dependant_aggregates};
+                    delete $deps->{$attr_name}
                 }
             }
         );
