@@ -463,7 +463,6 @@ sub command_name {
     my $self = shift;
     my $class = ref($self) || $self;
     my $prepend = '';
-    $DB::single = 1;
     if (defined($Command::entry_point_class) and $class =~ /^($Command::entry_point_class)(::.+|)$/) {
         $prepend = $Command::entry_point_bin;
         $class = $2;
@@ -1140,7 +1139,6 @@ sub help_sub_commands {
         }
         $text .= "\n";
     }
-    #$DB::single = 1;
     return $text;
 }
 
