@@ -57,7 +57,15 @@ sub __meta__  {
 # things like mapping operations easier and calculate_from metadata able
 # to include the object as function args to calculated properties
 sub __self__ {
-    return $_[0];
+    return $_[0] if @_ == 1;
+    my $self = shift;
+    my $bx = $self->class->define_boolexpr(@_);
+    if ($bx->evaluate($self)) {
+        return $self;
+    }
+    else {
+        return;
+    }
 }
 
 
@@ -281,7 +289,13 @@ sub __errors__ {
 #  mock objects
 
 sub define_boolexpr {
-    return UR::BoolExpr->resolve(@_);
+    if (ref($_[0])) {
+        my $class = ref(shift);
+        return UR::BoolExpr->resolve($class,@_);
+    }
+    else {
+        return UR::BoolExpr->resolve(@_);
+    }
 }
 
 sub define_set {
