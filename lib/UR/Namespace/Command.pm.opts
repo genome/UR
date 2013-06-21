@@ -5,6 +5,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             [
               'extends=s',
               'files',
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -21,6 +23,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
                 'server=s',
                 'files',
                 'singleton!',
+                undef,
+                'debug!',
                 undef,
                 'dsid=s',
                 'files',
@@ -43,6 +47,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
                 undef,
                 'owner=s',
                 'files',
+                'debug!',
+                undef,
                 'dsid=s',
                 'files',
                 'namespace-name=s',
@@ -66,6 +72,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
                 undef,
                 'owner=s',
                 'files',
+                'debug!',
+                undef,
                 'dsid=s',
                 'files',
                 'namespace-name=s',
@@ -89,6 +97,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
                 undef,
                 'owner=s',
                 'files',
+                'debug!',
+                undef,
                 'dsid=s',
                 'files',
                 'namespace-name=s',
@@ -105,6 +115,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
               '>sqlite',
               [
                 'nosingleton!',
+                undef,
+                'debug!',
                 undef,
                 'dsid=s',
                 'files',
@@ -124,6 +136,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>db',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -137,6 +151,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>namespace',
             [
+              'debug!',
+              undef,
               'nsname=s',
               'files',
               'help!',
@@ -147,6 +163,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
           ],
           '>init',
           [
+            'debug!',
+            undef,
             'namespace=s',
             'files',
             'db=s',
@@ -158,6 +176,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
           [
             '>classes',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -169,6 +189,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>modules',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -212,6 +234,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
           [
             '>diff-rewrite',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -221,6 +245,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>diff-update',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -230,6 +256,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>export-dbic-classes',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -243,6 +271,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>info',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -254,6 +284,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>redescribe',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -268,6 +300,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
           ],
           '>runs-on-modules-in-tree',
           [
+            'debug!',
+            undef,
             'namespace-name=s',
             'files',
             'verbose!',
@@ -305,6 +339,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>properties',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -321,6 +357,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
           [
             '>class-browser',
             [
+              'debug!',
+              undef,
               'generate-cache!',
               undef,
               'host=s',
@@ -377,6 +415,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>compile',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -388,6 +428,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>eval',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -423,6 +465,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
               undef,
               'coverage!',
               undef,
+              'debug!',
+              undef,
               'inc=s@',
               'files',
               'jobs=s',
@@ -454,6 +498,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             [
               'file=s',
               'files',
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'verbose!',
@@ -463,6 +509,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>use',
             [
+              'debug!',
+              undef,
               'exec=s',
               'files',
               'namespace-name=s',
@@ -478,6 +526,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>window',
             [
+              'debug!',
+              undef,
               'src=s@',
               'files',
               'help!',
@@ -494,6 +544,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'files',
               'data-source=s',
               'files',
+              'debug!',
+              undef,
               'depth=s',
               undef,
               'include-ur-object!',
@@ -516,6 +568,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'class-name=s',
               undef,
               'data-source=s',
+              undef,
+              'debug!',
               undef,
               'force-check-all-tables!',
               undef,
@@ -577,6 +631,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>rename-class',
             [
+              'debug!',
+              undef,
               'force!',
               undef,
               'namespace-name=s',
@@ -590,6 +646,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>rewrite-class-header',
             [
+              'debug!',
+              undef,
               'force!',
               undef,
               'namespace-name=s',
@@ -607,6 +665,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
               'files',
               'data-source=s',
               'files',
+              'debug!',
+              undef,
               'depth=s',
               undef,
               'namespace-name=s',
@@ -622,6 +682,8 @@ $UR::Namespace::Command::OPTS_SPEC = [
             ],
             '>tab-completion-spec',
             [
+              'debug!',
+              undef,
               'namespace-name=s',
               'files',
               'output=s',
