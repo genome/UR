@@ -33,6 +33,7 @@ UR::Object::Type->define(
                                 doc => 'when expanding user supplied values: 0 = never verify, 1 = always verify, undef = determine automatically', },        
     ],
     has_optional => [
+        debug       => { is => 'Boolean', doc => 'enable debug messages' },
         is_executed => { is => 'Boolean' },
         result      => { is => 'Scalar', is_output => 1 },
         original_command_line => { is => 'String', doc => 'null-byte separated list of command and arguments when run via execute_with_shell_params_and_exit'},

@@ -24,6 +24,7 @@ UR::Object::Type->define(
                                  doc => 'when set, this property is a positional argument when run from a shell' },
     ],
     has_optional => [
+        debug       => { is => 'Boolean', doc => 'enable debug messages' },
         is_executed => { is => 'Boolean' },
         result      => { is => 'Scalar', is_output => 1 },
         original_command_line => { is => 'String', doc => 'null-byte separated list of command and arguments when run via execute_with_shell_params_and_exit'},
@@ -274,7 +275,10 @@ sub _execute_delegate_class_with_params {
     $command_object->dump_status_messages(1);
     $command_object->dump_warning_messages(1);
     $command_object->dump_error_messages(1);
-    $command_object->dump_debug_messages(0);
+    $command_object->dump_debug_messages($command_object->debug);
+    if ($command_object->debug) {
+        UR::ModuleBase->dump_debug_messages($command_object->debug);
+    }
 
     my $rv = $command_object->execute($params);
 
