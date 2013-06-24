@@ -46,36 +46,6 @@ sub mk_rw_accessor {
 
 }
 
-
-sub mk_alias_accessor {
-    my($self, $class_name, $accessor_name, $alias_for) = @_;
-
-    if ($accessor_name eq $alias_for) {
-        Carp::croak("Cannot create alias property '$accessor_name' which is an alias to itself");
-    }
-
-    my $full_name = join('::', $class_name, $accessor_name);
-    my $accessor = Sub::Name::subname $full_name => sub {
-        my $real_sub = $_[0]->can($alias_for);
-        unless ($real_sub) {
-            Carp::croak("Can't locate object method \"$alias_for\" via package \"$class_name\" while resolving alias property \"$accessor_name\"");
-        }
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $accessor_name,
-            code => $real_sub,
-        });
-
-        goto $real_sub;
-    };
-
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $accessor_name,
-        code => $accessor,
-    });
-}
-
 sub mk_ro_accessor {
     my ($self, $class_name, $accessor_name, $column_name, $property_name) = @_;
     $property_name ||= $accessor_name;
@@ -659,7 +629,8 @@ sub mk_indirect_ro_accessor {
 
 
 sub mk_indirect_rw_accessor {
-    my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where, $singular_name) = @_;
+    my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where, $singular_name, $property_name) = @_;
+    $property_name ||= $accessor_name;
     my @where = ($where ? @$where : ());
     my $full_name = join( '::', $class_name, $accessor_name );
     
@@ -680,24 +651,24 @@ sub mk_indirect_rw_accessor {
             # this is only allowed when the remote object has no direct properties
             # which are not id properties.
         
-            my $my_property_meta = $class_name->__meta__->property_meta_for_name($accessor_name);
+            my $my_property_meta = $class_name->__meta__->property_meta_for_name($property_name);
             unless ($my_property_meta) {
-                Carp::croak("Failed to find property meta for '$accessor_name' on class $class_name");
+                Carp::croak("Failed to find property meta for '$property_name' on class $class_name");
             }
             $is_many = $my_property_meta->is_many;
 
             $via_property_meta ||= $class_name->__meta__->property_meta_for_name($via);
             unless ($via_property_meta) {
-                Carp::croak("Failed to find property metadata for via property '$via' while resolving property '$accessor_name' on class $class_name");
+                Carp::croak("Failed to find property metadata for via property '$via' while resolving property '$property_name' on class $class_name");
             }
 
             $r_class_name ||= $via_property_meta->data_type;
             unless ($r_class_name) {
-                Carp::croak("Cannot resolve property '$accessor_name' on class $class_name: It is via property '$via' which has no data_type");
+                Carp::croak("Cannot resolve property '$property_name' on class $class_name: It is via property '$via' which has no data_type");
             }
             my $r_class_meta = $r_class_name->__meta__;
             unless ($r_class_meta) {
-                Carp::croak("Cannot resolve property '$accessor_name' on class $class_name: It is via property '$via' with data_type $r_class_name which is not a valid class name");
+                Carp::croak("Cannot resolve property '$property_name' on class $class_name: It is via property '$via' with data_type $r_class_name which is not a valid class name");
             }
 
             $adder = "add_" . $via_property_meta->singular_name;
@@ -1575,10 +1546,26 @@ sub initialize_direct_accessors {
         }
     }    
 
-    for my $property_name (sort keys %{ $self->{has} }) {
-        my $property_data = $self->{has}{$property_name};
+    for my $pname (sort keys %{ $self->{has} }) {
+        my $property_name = $pname; # mutable
+        my $accessor_name = $pname;
         
-        my $accessor_name = $property_name;
+        my $property_data = $self->{has}{$property_name};
+
+        # handle aliases
+        # the underlying property_name and data will change, though the accessor will not
+        my $n = 0;
+        while ($property_data->{via} and $property_data->{via} eq '__self__') {
+            $property_name = $property_data->{to};
+            $property_data = $self->{has}{$property_name};
+            unless ($property_data) {
+                Carp::confess("Property $accessor_name is an alias for $property_name, which does not exist!")
+            }
+            if ($n > 100) {
+                Carp::confess("Deep recursion in property aliases behind $accessor_name!");
+            }
+        }
+
         my $column_name = $property_data->{column_name};
         my $is_transient = $property_data->{is_transient};
         my $where = $property_data->{where};
@@ -1590,9 +1577,9 @@ sub initialize_direct_accessors {
             my $isa = \@{ $class_name . "::ISA" };
             my @old_isa = @$isa;
             @$isa = ();
-            if ($class_name->can($property_name)) {
-                #warn "property $class_name $property_name exists!";
-                $accessor_name = "__$property_name";
+            if ($class_name->can($accessor_name)) {
+                #warn "property $class_name $accessor_name exists!";
+                $accessor_name = "__$accessor_name";
             }
             @$isa = @old_isa;
         };
@@ -1633,20 +1620,19 @@ sub initialize_direct_accessors {
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
             if ($via eq '__self__') {
-                $self->mk_alias_accessor($class_name, $accessor_name, $to);
+                die "aliases should be caught above!"; 
 
-            } else {
-                if ($property_data->{is_mutable}) {
-                    my $singular_name;
-                    if ($property_data->{'is_many'}) {
-                        require Lingua::EN::Inflect;
-                        $singular_name = Lingua::EN::Inflect::PL_V($accessor_name);
-                    }
-                    $self->mk_indirect_rw_accessor($class_name,$accessor_name,$via,$to,$where,$property_data->{'is_many'} && $singular_name);
+            } 
+            if ($property_data->{is_mutable}) {
+                my $singular_name;
+                if ($property_data->{'is_many'}) {
+                    require Lingua::EN::Inflect;
+                    $singular_name = Lingua::EN::Inflect::PL_V($accessor_name);
                 }
-                else {
-                    $self->mk_indirect_ro_accessor($class_name,$accessor_name,$via,$to,$where);
-                }
+                $self->mk_indirect_rw_accessor($class_name,$accessor_name,$via,$to,$where,$property_data->{'is_many'} && $singular_name, $property_name);
+            }
+            else {
+                $self->mk_indirect_ro_accessor($class_name,$accessor_name,$via,$to,$where);
             }
         }
         elsif (my $calculate = $property_data->{calculate}) {
