@@ -15,17 +15,27 @@ UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS',
     is => ['UR::DataSource','UR::Singleton'],
     is_abstract => 1,
-    properties => [
-        server       => { is => 'String', doc => 'the "server" part of the DBI connect string' },
-        login        => { is => 'String', doc => 'user name to connect as', is_optional => 1 },
-        auth         => { is => 'String', doc => 'authentication for the given user', is_optional => 1 },
-        owner        => { is => 'String', doc => 'Schema/owner name to connect to', is_optional => 1  },
+    has => [
+        server       => { is => 'Text', doc => 'the "server" part of the DBI connect string' },
+        login        => { is => 'Text', doc => 'user name to connect as', is_optional => 1 },
+        auth         => { is => 'Text', doc => 'authentication for the given user', is_optional => 1 },
+        owner        => { is => 'Text', doc => 'Schema/owner name to connect to', is_optional => 1  },
     ],
 
     has_optional => [
-        _all_dbh_hashref                 => { type => 'HASH',       len => undef, is_transient => 1 },
-        _default_dbh                     => { type => 'DBI::db',    len => undef, is_transient => 1 },
-        _last_savepoint                  => { type => 'String',     len => undef, is_transient => 1 },
+        camel_case_table_names => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'When true, dynamically calculating class names from table names will expect camel case in table names.',
+        },
+        camel_case_column_names => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'When true, dynamically calculating property names from column names will expect camel case in column names.',
+        },
+        _all_dbh_hashref                 => { is => 'HASH', len => undef, is_transient => 1 },
+        _default_dbh                     => { is => 'DBI::db', len => undef, is_transient => 1 },
+        _last_savepoint                  => { is => 'Text', len => undef, is_transient => 1 },
     ],
     valid_signals => ['query'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
@@ -672,12 +682,16 @@ sub _method2env {
 }
 
 sub resolve_class_name_for_table_name {
-    my $self = shift->_singleton_class_name;
+    my $self = shift->_singleton_object;
     my $table_name = shift;
     my $relation_type = shift;   # Should be 'TABLE' or 'VIEW'
 
     # When a table_name conflicts with a reserved word, it ends in an underscore.
     $table_name =~ s/_$//;
+
+    if ($self->camel_case_table_names) {
+        $table_name = UR::Value::Text->get($table_name)->to_lemac("_");
+    }
 
     my $namespace = $self->get_namespace;
     my $vocabulary = $namespace->get_vocabulary;
@@ -720,9 +734,13 @@ sub resolve_class_name_for_table_name {
 }
 
 sub resolve_type_name_for_table_name {
-    my $self = shift->_singleton_class_name;
+    my $self = shift->_singleton_object;
     my $table_name = shift;
 
+    if ($self->camel_case_table_names) {
+        $table_name = UR::Value::Text->get($table_name)->to_lemac("_");
+    }
+    
     my $namespace = $self->get_namespace;
     my $vocabulary = $namespace->get_vocabulary;
     $vocabulary = 'UR::Vocabulary' unless eval { $vocabulary->__meta__ };
@@ -742,10 +760,13 @@ sub resolve_type_name_for_table_name {
 }
 
 sub resolve_property_name_for_column_name {
-    my $self = shift->_singleton_class_name;
+    my $self = shift->_singleton_object;
     my $column_name = shift;
 
-    my @words =                 
+    if ($self->camel_case_column_names) {
+        $column_name = UR::Value::Text->get($column_name)->to_lemac("_");
+    }
+    my @words =
         map { lc($_) }
         split("_",$column_name);
 

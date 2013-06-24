@@ -35,7 +35,11 @@ sub mk_rw_accessor {
             }
             return $new;
         }
-        return $_[0]->{ $property_name };  # properties with default values are filled in at _construct_object()
+        my $r = eval { $_[0]->{ $property_name } };
+        if ($@) {
+            Carp::confess("Exception while processing property $property_name: $@");
+        }
+        return $r;
     };
 
     Sub::Install::reinstall_sub({
