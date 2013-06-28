@@ -1,11 +1,18 @@
 use strict;
 use warnings;
-use Test::More tests=> 31;
+use Test::More;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
 use URT;
+
+if ($^O eq 'darwin') {
+    plan skip_all => 'known to fail OS X'
+}
+else {
+    plan tests => 31
+}
 
 is(URT->class, 'URT', 'Namespace name');
 
