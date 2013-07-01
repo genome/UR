@@ -160,6 +160,17 @@ sub get_objects_matching
                         @hr = grep { $_ } @thr;
                     }
 
+                } elsif ($op eq 'isa') {
+                    my @thr;
+                    foreach my $h ( @hr ) {
+                        foreach my $k ( keys %$h) {
+                            if ($k->isa($value->{value}) xor $not) {
+                                push @thr, $h->{$k};
+                            }
+                        }
+                    }
+                    @hr = grep { $_ } @thr;
+
                 } elsif ($op eq 'true' or $op eq 'false') {
                     $not = (( $op eq 'true' && $not) or ($op eq 'false' && !$not));
                     my @thr;

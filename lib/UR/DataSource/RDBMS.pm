@@ -1739,6 +1739,8 @@ sub _extend_sql_for_column_operator_and_value {
         $sql .= "( $expr_sql is not null and $expr_sql != 0 )";
     } elsif ($op eq 'false' ) {
         $sql .= "( $expr_sql is null or $expr_sql = 0)";
+    } elsif ($op eq 'isa') {
+        # Can't do isa in the database
 
     } else {
         # Something else?

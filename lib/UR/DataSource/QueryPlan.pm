@@ -318,7 +318,7 @@ sub _init_rdbms {
     my @delegated_properties;
     do {
         my %filters =
-            map { $_ => 0 }
+            map { $_ => $rule_template->operator_for($_) }
             grep { substr($_,0,1) ne '-' }
             $rule_template->_property_names;
 
@@ -402,7 +402,12 @@ sub _init_rdbms {
                 $hints{$_} = 1 foreach @$calculate_from;
             }
 
-            if (my $column_name = $property->column_name) {
+            if (exists($filters{$property_name}) and $filters{$property_name} eq 'isa') {
+                # RDBMS databases can't do 'isa'
+                $self->needs_further_boolexpr_evaluation_after_loading(1);
+                next;
+            }
+            elsif (my $column_name = $property->column_name) {
                 # normal column: filter on it
                 unless ($table_name) {
                     $ds->warning_message("Property '$property_name' of class '$class_name'  has column '$column_name' but has no table!");

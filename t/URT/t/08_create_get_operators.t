@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 194;
+use Test::More tests => 420;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -10,41 +10,61 @@ my @obj;
 use UR;
 use URT;
 
+# Singleton classes for testing isa operator
+UR::Object::Type->define(
+    class_name => 'Acme::Status',
+    is => 'UR::Singleton',
+);
+UR::Object::Type->define(
+    class_name => 'Acme::Status::Design',
+    is => 'Acme::Status',
+);
+UR::Object::Type->define(
+    class_name => 'Acme::Status::Production',
+    is => 'Acme::Status'
+);
+
+
 # memory-only class
 UR::Object::Type->define(
     class_name => 'Acme::Product',
-    has => [qw/name manufacturer_name genius/]
+    has => ['name', 'manufacturer_name', 'genius', 'status',
+        status_obj => { is => 'Acme::Status', id_by => 'status', id_class_by => 'status' },
+    ],
 );
+
 
 # same properties, but in the DB
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
-$dbh->do('create table product (product_id integer NOT NULL PRIMARY KEY, name varchar, genius integer, manufacturer_name varchar)')
+$dbh->do('create table product (product_id integer NOT NULL PRIMARY KEY, name varchar, genius integer, manufacturer_name varchar, status varchar)')
     or die "Can't create product table";
 
 UR::Object::Type->define(
     class_name => 'Acme::DBProduct',
     id_by => 'product_id',
-    has => [qw/name manufacturer_name genius/],
+    has => ['name', 'manufacturer_name', 'genius', 'status',
+        status_obj => { is => 'Acme::Status', id_by => 'status', id_class_by => 'status' },
+    ],
     table_name => 'product',
     data_source => 'URT::DataSource::SomeSQLite',
 );
 
 
 my @products = (
-    [ name => "jet pack",     genius => 6,    manufacturer_name => "Lockheed Martin" ],
-    [ name => "hang glider",  genius => 4,    manufacturer_name => "Boeing"],
-    [ name => "mini copter",  genius => 5,    manufacturer_name => "Boeing"],
-    [ name => "catapult",     genius => 5,    manufacturer_name => "Boeing"],
-    [ name => "firecracker",  genius => 6,    manufacturer_name => "Explosives R US"],
-    [ name => "dynamite",     genius => 9,    manufacturer_name => "Explosives R US"],
-    [ name => "plastique",    genius => 8,    manufacturer_name => "Explosives R US"],
+    [ name => "jet pack",     genius => 6,    manufacturer_name => "Lockheed Martin", status => 'Acme::Status::Design' ],
+    [ name => "hang glider",  genius => 4,    manufacturer_name => "Boeing",          status => 'Acme::Status::Production'],
+    [ name => "mini copter",  genius => 5,    manufacturer_name => "Boeing",          status => 'Acme::Status::Production'],
+    [ name => "catapult",     genius => 5,    manufacturer_name => "Boeing",          status => 'Acme::Status::Design'],
+    [ name => "firecracker",  genius => 6,    manufacturer_name => "Explosives R US", status => 'Acme::Status::Production'],
+    [ name => "dynamite",     genius => 9,    manufacturer_name => "Explosives R US", status => 'Acme::Status::Production'],
+    [ name => "plastique",    genius => 8,    manufacturer_name => "Explosives R US", status => 'Acme::Status::Design'],
 );
 
-my $insert = $dbh->prepare('insert into product values (?,?,?,?)');
+my $insert = $dbh->prepare('insert into product values (?,?,?,?,?)');
 my $id = 1;
 foreach ( @products ) {
     Acme::Product->create(@$_);
-    $insert->execute($id++, @$_[1,3,5])
+    $insert->execute($id++, @$_[1,3,5, 7])
 }
 $insert->finish();
 $dbh->commit();
@@ -75,6 +95,9 @@ my @tests = (
     [ [ 'genius between' => [4,6] ],                            5 ],
     [ [ 'genius !between' => [4,6] ],                           2 ],
     [ [ 'genius not between' => [4,6] ],                        2 ],
+    [ [ 'genius >' => 5, 'status isa' => 'Acme::Status::Production' ],  2 ],
+    [ [ 'status isa' => 'Acme::Status::Design'],                3 ],
+    [ [ 'status isa' => 'Acme::Status' ],                       7 ],
 );
 
 for my $class ( qw( Acme::Product Acme::DBProduct ) ) {
@@ -83,7 +106,7 @@ for my $class ( qw( Acme::Product Acme::DBProduct ) ) {
         my $params = $tests[$testnum]->[0];
         my $expected = $tests[$testnum]->[1];
         my @objs = $class->get(@$params);
-        is(scalar(@objs), $expected, "Got $expected objects for get() test $testnum: ".join(' ', @$params));
+        is(scalar(@objs), $expected, "Got $expected objects for $class->get() test $testnum: ".join(' ', @$params));
     }
 
     # Test old syntax
@@ -97,7 +120,7 @@ for my $class ( qw( Acme::Product Acme::DBProduct ) ) {
             $params{$prop} = { operator => $op, value => $params->[$i+1] };
         }
         my @objs = $class->get(%params);
-        is(scalar(@objs), $expected, "Got $expected objects for get() old syntax test $testnum: ".join(' ', @$params));
+        is(scalar(@objs), $expected, "Got $expected objects for $class->get() old syntax test $testnum: ".join(' ', @$params));
     }
 
     # test get with a bx
@@ -113,6 +136,10 @@ for my $class ( qw( Acme::Product Acme::DBProduct ) ) {
         foreach my $key ( keys %params ) {
             ($key) = $key =~ m/(\w+)/;
             ok($bx->specifies_value_for($key), "bx does specify value for $key");
+        }
+
+        foreach my $obj ( @objs) {
+            ok($bx->evaluate($obj), 'Expected $obj '.$obj->id.' object passes the BoolExpr');
         }
     }
 }
