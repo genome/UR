@@ -316,18 +316,18 @@ sub _init_rdbms {
     # Find out what delegated properties we'll be dealing with
     my @sql_filters; 
     my @delegated_properties;
-    do {         
-        my %filters =     
+    do {
+        my %filters =
             map { $_ => 0 }
             grep { substr($_,0,1) ne '-' }
             $rule_template->_property_names;
-        
+
         unless (@all_id_property_names == 1 && $all_id_property_names[0] eq "id") {
             delete $filters{'id'};
         }
 
         # Remove the flag for descending/ascending sort
-        my @order_by_properties = $order_by ? @$order_by : ();;
+        my @order_by_properties = $order_by ? @$order_by : ();
         s/^-|\+//  foreach @order_by_properties;
 
         my %properties_involved = map { $_ => 1 }
@@ -335,7 +335,7 @@ sub _init_rdbms {
                                     ($hints ? @$hints : ()),
                                     @order_by_properties,
                                     ($group_by ? @$group_by : ());
-        
+
         my @properties_involved = sort keys(%properties_involved);
         my @errors;
         while (my $property_name = shift @properties_involved) {
@@ -355,7 +355,7 @@ sub _init_rdbms {
                     next;
                 }
             }
-            
+
             # For each property in this list, go up the inheritance and find the right property
             # to query on.  Give priority to properties that actually have columns
             FIND_PROPERTY_WITH_COLUMN:
@@ -434,10 +434,10 @@ sub _init_rdbms {
             Carp::croak("Can't continue");
         }
     };
-    
+
     my $object_num = 0; 
     $self->_alias_count(0);
-    
+
     my %hints_included;
     my @select_hint;
 
@@ -445,7 +445,7 @@ sub _init_rdbms {
     # and inheritance-join-resolver methods that can be called recursively.
     # It would better encapsulate what's going on and avoid bugs with complicated
     # get()s
-   
+
     # one iteration per target value involved in the query,
     # including values needed for filtering, ordering, grouping, and hints (selecting more)
     # these "properties" may be a single property name or an ad-hoc "chain"
@@ -457,7 +457,7 @@ sub _init_rdbms {
         $delegation_chain_data->{"__all__"}{class_alias} = { $first_table_name => $class_meta };
 
         my ($final_accessor, $is_optional, @joins) = _resolve_object_join_data_for_property_chain($rule_template,$property_name,$property_name);
-        
+
         # when there is no "final_accessor" it often means we have an object-accessor in a hint
         # we want that to go through the join process, and only be left out at filter construction time
         #unless ($final_accessor) {
