@@ -56,7 +56,8 @@ my($self,$sp_name) = @_;
 }
 
 
-sub _init_created_dbh
+*_init_created_dbh = \&init_created_handle;
+sub init_created_handle
 {
     my ($self, $dbh) = @_;
     return unless defined $dbh;

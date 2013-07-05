@@ -56,6 +56,9 @@ class UR::DataSource::Filesystem {
 
 sub can_savepoint { 0;}  # Doesn't support savepoints
 
+# Filesystem datasources don't have a "default_handle"
+sub create_default_handle { undef }
+
 sub _regex {
     my $self = shift;
 

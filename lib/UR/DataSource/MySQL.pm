@@ -36,7 +36,8 @@ sub _default_sql_like_escape_string { undef };  # can't do an 'escape' clause wi
 
 sub can_savepoint { 1;} 
 
-sub _init_created_dbh
+*_init_created_dbh = \&init_created_handle;
+sub init_created_handle
 {
     my ($self, $dbh) = @_;
     return unless defined $dbh;

@@ -34,7 +34,6 @@ UR::Object::Type->define(
             doc => 'When true, dynamically calculating property names from column names will expect camel case in column names.',
         },
         _all_dbh_hashref                 => { is => 'HASH', len => undef, is_transient => 1 },
-        _default_dbh                     => { is => 'DBI::db', len => undef, is_transient => 1 },
         _last_savepoint                  => { is => 'Text', len => undef, is_transient => 1 },
     ],
     valid_signals => ['query'],
@@ -45,7 +44,7 @@ sub database_exists {
     my $self = shift;
     warn $self->class . " failed to implement the database_exists() method.  Testing connection as a surrogate.  FIXME here!\n";
     eval {
-        my $c = $self->create_dbh();
+        my $c = $self->create_default_handle();
     };
     if ($@) {
         return;
@@ -407,37 +406,19 @@ sub dbi_data_source_name {
     return 'dbi:' . $driver . ':' . $server;
 }
 
+*get_default_dbh = \&get_default_handle;
 sub get_default_handle {    
     my $self = shift->_singleton_object;    
-    my $dbh = $self->_default_dbh;
+    my $dbh = $self->SUPER::get_default_handle;
     unless ($dbh && $dbh->{Active}) {
-        $dbh = $self->create_dbh();
-        $self->_default_dbh($dbh);
+        $self->__invalidate_get_default_handle__;
+        $dbh = $self->create_default_handle();
     }    
     return $dbh;
 }
 
-*get_default_dbh = \&get_default_handle;
-*has_default_dbh = \&has_default_handle;
-*disconnect_default_dbh = \&disconnect_default_handle;
 
-sub has_default_handle {
-    my $self = shift->_singleton_object;
-    return 1 if $self->_default_dbh;
-    return;
-}
 
-sub disconnect_default_handle {
-    my $self = shift->_singleton_object;
-    my $dbh = $self->_default_dbh;
-    unless ($dbh) {
-        Carp::cluck("Cannot disconnect.  Not connected!");
-        return;
-    }
-    $dbh->disconnect;
-    $self->_default_dbh(undef);
-    return $dbh;
-}
 
 sub get_for_dbh {
     my $class = shift;
@@ -449,7 +430,7 @@ sub get_for_dbh {
 }
 
 sub has_changes_in_base_context {
-    shift->has_default_dbh;
+    shift->has_default_handle;
     # TODO: actually check, as this is fairly conservative
     # If used for switching contexts, we'd need to safely rollback any transactions first.
 }
@@ -478,7 +459,8 @@ sub get_connection_debug_info {
     return @debug_info;
 }
 
-sub create_dbh {
+sub create_dbh { shift->create_default_handle_wrapper }
+sub create_default_handle {
     my $self = shift;
     if (! ref($self) and $self->isa('UR::Singleton')) {
         $self = $self->_singleton_object;
@@ -501,8 +483,8 @@ sub create_dbh {
     $dbh->{'private_UR::DataSource::RDBMS_name'} = $self->class;
 
     # this method may be implemented in subclasses to do extra initialization
-    if ($self->can("_init_created_dbh")) {
-        unless ($self->_init_created_dbh($dbh)) {
+    if ($self->can("init_created_handle")) {
+        unless ($self->init_created_handle($dbh)) {
             $dbh->disconnect;
             Carp::confess("Failed to initialize new database connection!\n"
                 . $self->error_message . "\n");
@@ -521,11 +503,6 @@ sub create_dbh {
     $self->is_connected(1);
     
     return $dbh;
-}
-
-sub _init_created_dbh {
-    # override in sub-classes
-    1;
 }
 
 # The default is to ignore no tables, but derived classes
@@ -659,7 +636,7 @@ sub access_level {
     my $self = shift;
     my $env = $self->_method2env("access_level");    
     if (@_) {
-        if ($self->has_default_dbh) {
+        if ($self->has_default_handle) {
             Carp::confess("Cannot change the db access level for $self while connected!");
         }
         $ENV{$env} = lc(shift);
@@ -3020,7 +2997,7 @@ sub _do_on_default_dbh {
     my $self = shift;
     my $method = shift;
 
-    return 1 unless $self->has_default_dbh();
+    return 1 unless $self->has_default_handle();
 
     my $dbh = $self->get_default_handle;
     unless ($dbh->$method(@_)) {
@@ -3047,6 +3024,7 @@ sub disconnect {
         $self = $self->_singleton_object;
     }
     my $rv = $self->_do_on_default_dbh('disconnect', @_);
+    $self->__invalidate_get_default_handle__;
     $self->is_connected(0);
     return $rv;
 }
@@ -3304,7 +3282,7 @@ sub do_after_fork_in_child {
     }
 
     # reset our state back to being "disconnected"
-    $self->_default_dbh(undef);
+    $self->__invalidate_get_default_handle__;
     $self->_all_dbh_hashref({});
     $self->is_connected(0);
 

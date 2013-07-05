@@ -87,7 +87,7 @@ sub dbh {
                   . "Objects no longer have DB handles, data_sources do\n"
                   . "use resolve_data_sources_for_class_meta_and_rule() on a UR::Context instead");
     my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(shift->__meta__);
-    return $ds->get_default_dbh;
+    return $ds->get_default_handle;
 }
 
 

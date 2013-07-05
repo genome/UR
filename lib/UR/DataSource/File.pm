@@ -54,45 +54,43 @@ class UR::DataSource::File {
 
 sub can_savepoint { 0;}  # Doesn't support savepoints
  
-sub get_default_handle {
+sub create_default_handle {
     my $self = shift;
 
-    unless ($self->{'_fh'}) {
-        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
-            my $time = time();
-            UR::DBI->sql_fh->printf("\nFILE OPEN AT %d [%s]\n",$time, scalar(localtime($time)));
-        }
-
-        my $filename = $self->server;
-        unless (-e $filename) {
-            # file doesn't exist
-            $filename = '/dev/null';
-        }
-
-        my $handle_class = $self->handle_class;
-        my $fh = $handle_class->new($filename);
-        unless($fh) {
-            $self->error_message("Can't open ".$self->server." for reading: $!");
-            return;
-        }
-
-        if ($ENV{'UR_DBI_MONITOR_SQL'}) {
-            UR::DBI->sql_fh->printf("FILE: opened %s fileno %d\n\n",$self->server, $fh->fileno);
-        }
-
-        $self->{'_fh'} = $fh;
-        $self->is_connected(1);
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        my $time = time();
+        UR::DBI->sql_fh->printf("\nFILE OPEN AT %d [%s]\n",$time, scalar(localtime($time)));
     }
-    return $self->{'_fh'};
+
+    my $filename = $self->server;
+    unless (-e $filename) {
+        # file doesn't exist
+        $filename = '/dev/null';
+    }
+
+    my $handle_class = $self->handle_class;
+    my $fh = $handle_class->new($filename);
+    unless($fh) {
+        $self->error_message("Can't open ".$self->server." for reading: $!");
+        return;
+    }
+
+    if ($ENV{'UR_DBI_MONITOR_SQL'}) {
+        UR::DBI->sql_fh->printf("FILE: opened %s fileno %d\n\n",$self->server, $fh->fileno);
+    }
+
+    $self->is_connected(1);
+    return $fh;
 }
 
-sub disconnect_default_handle {
+sub disconnect {
     my $self = shift;
 
-    if (my $fh = $self->{'_fh'}) {
+    if ($self->has_default_handle) {
+        my $fh = $self->get_default_handle;
         flock($fh,LOCK_UN);
         $fh->close();
-        $self->{'_fh'} = undef;
+        $self->__invalidate_get_default_handle__;
         $self->is_connected(0);
     }
 }
@@ -102,7 +100,7 @@ sub prepare_for_fork {
 
     # make sure this is clear before we fork
     $self->{'_fh_position'} = undef;
-    if (defined $self->{'_fh'}) {
+    if ($self->has_default_handle) {
         $self->{'_fh_position'} = $self->{'_fh'}->tell();
         UR::DBI->sql_fh->printf("FILE: preparing to fork; closing file %s and noting position at %s\n",$self->server, $self->{'_fh_position'}) if $ENV{'UR_DBI_MONITOR_SQL'};
     }
@@ -875,15 +873,15 @@ sub UR::DataSource::File::Tracker::DESTROY {
     $ds->_open_query_count(--$count);
 
     return unless ($ds->quick_disconnect);
-    if ($count == 0) {
+    if ($count == 0 && $ds->has_default_handle) {
 	# All open queries have supposedly been fulfilled.  Close the
 	# file handle and undef it so get_default_handle() will re-open if necessary
-        my $fh = $ds->{'_fh'};
+        my $fh = $ds->get_default_handle;
 
         UR::DBI->sql_fh->printf("FILE: CLOSING fileno ".fileno($fh)."\n") if ($ENV{'UR_DBI_MONITOR_SQL'});
         #flock($fh,LOCK_UN);
-	$fh->close();
-	$ds->{'_fh'} = undef;
+  	    $fh->close();
+	    $ds->__invalidate_get_default_handle__;
     }
 }
 
@@ -1203,7 +1201,7 @@ sub _sync_database {
     # Because of the rename/copy process during syncing, the previously opened filehandle may
     # not be valid anymore.  get_default_handle will reopen the file next time it's needed
     $self->_invalidate_cache();
-    $self->{_fh} = undef; 
+    $self->__invalidate_get_default_handle__;
 
     if ($ENV{'UR_DBI_MONITOR_SQL'}) {
         UR::DBI->sql_fh->printf("FILE: TOTAL COMMIT TIME: %.4f s\n", Time::HiRes::time() - $monitor_start_time);

@@ -35,6 +35,11 @@ UR::Object::Type->define(
 )->is_uncachable(1);
 
 
+# FileMux doesn't have a 'default_handle'
+sub create_default_handle {
+    return undef;
+}
+
 # The concreate data sources will be of this type
 sub _delegate_data_source_class {
     'UR::DataSource::FileMuxFile';

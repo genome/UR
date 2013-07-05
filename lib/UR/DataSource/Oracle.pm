@@ -39,7 +39,8 @@ my($self,$sp_name) = @_;
 
 my $DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
 my $TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SSXFF';
-sub _init_created_dbh {
+*_init_created_dbh = \&init_created_handle;
+sub init_created_handle {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
@@ -192,7 +193,7 @@ sub set_userenv {
     # 1. this method in UR::DataSource::Oracle is a class method
     # that can be called to change the values later
     # 2. the method in YourSubclass::DataSource::Oracle is called in
-    # _init_created_dbh which is called while the datasource
+    # init_created_handle which is called while the datasource
     # is still being set up- it operates directly on the db handle 
 
     my ($self, %p) = @_;
@@ -708,7 +709,7 @@ sub cast_for_data_conversion {
         $retval[$i] = q{to_char(%s)};
 
     } elsif ($data_type->isa('UR::Value::Timestamp')) {
-        # These time formats shoule match what's given in _init_created_dbh
+        # These time formats shoule match what's given in init_created_handle
         $retval[$i] = qq{to_char(%s, '$TIMESTAMP_FORMAT')};
 
     } elsif ($data_type->isa('UR::Value::DateTime')) {
