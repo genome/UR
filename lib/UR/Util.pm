@@ -397,6 +397,35 @@ sub generate_readonly_methods
     return 1;
 }
 
+=pod
+
+=over
+
+=item object
+
+  my $o = UR::Util::object($something);
+
+Return the object form of the supplied argument.  For regular objects, it
+returns the argument unchanged.  For singleton class names, it returns the
+instance of the Singleton.  For other class names, it throws an exception.
+
+=back
+
+=cut
+
+sub object {
+    my $it = shift;
+
+    unless (ref $it) {
+        if ($it->isa('UR::Singleton')) {
+            $it = $it->_singleton_object();
+        } else {
+            Carp::croak("Expected an object instance or Singleton class name, but got '$it'");
+        }
+    }
+    return $it;
+}
+
 =pod 
 
 =over
