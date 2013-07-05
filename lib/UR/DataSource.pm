@@ -6,7 +6,10 @@ require UR;
 our $VERSION = "0.41"; # UR $VERSION;
 use Sys::Hostname;
 
-*namespace = \&get_namespace;
+{
+    no warnings 'once';
+    *namespace = \&get_namespace;
+}
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource',
