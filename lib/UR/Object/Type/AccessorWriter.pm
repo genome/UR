@@ -893,6 +893,16 @@ sub mk_calculation_accessor {
             }
             return $_[0]->{$accessor_name};
         };
+
+        # Make a method to clear the cached value and force another calculation
+        my $invalidator_name;
+        ($invalidator_name = $accessor_name) =~ s/^_+//;
+        $invalidator_name = "__invalidate_${invalidator_name}__";
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => $invalidator_name,
+            code => sub { delete $_[0]->{$accessor_name} },
+        });
     }
 
     my $full_name = join( '::', $class_name, $accessor_name );
