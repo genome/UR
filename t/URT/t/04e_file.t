@@ -88,7 +88,6 @@ if ($pid) {
     ok(URT::Things->get(thing_color=>'yellow'), "got something we did expect to see, even after forking");
     waitpid($pid, 0);
 } else {
-    sleep 3;
     exit(0);
 }
 
