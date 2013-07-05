@@ -95,13 +95,19 @@ sub disconnect {
     }
 }
 
+sub _file_position {
+    my $self = shift;
+    my $fh = $self->get_default_handle;
+    return $fh ? $fh->tell() : undef;
+}
+
 sub prepare_for_fork {
     my $self = shift;
 
     # make sure this is clear before we fork
     $self->{'_fh_position'} = undef;
     if ($self->has_default_handle) {
-        $self->{'_fh_position'} = $self->{'_fh'}->tell();
+        $self->{'_fh_position'} = $self->_file_position();
         UR::DBI->sql_fh->printf("FILE: preparing to fork; closing file %s and noting position at %s\n",$self->server, $self->{'_fh_position'}) if $ENV{'UR_DBI_MONITOR_SQL'};
     }
     $self->disconnect_default_handle;
@@ -729,7 +735,7 @@ sub create_iterator_closure_for_rule {
                     scalar(<$fh>);
                 }
             }
-            $file_pos = $fh->tell();
+            $file_pos = $self->_file_position();
 
             $self->{'_last_read_fingerprint'} = $read_fingerprint;
         }
@@ -778,7 +784,7 @@ sub create_iterator_closure_for_rule {
             $next_candidate_row = [ split($split_regex, $line, $csv_column_count) ];
             $#{$a} = $csv_column_count-1;
 
-            $file_pos = $fh->tell();
+            $file_pos = $self->_file_position();
             my $file_pos_before_read = $file_pos - $last_read_size;
 
             # Every so many lines read, leave a breadcrumb about what we've seen
