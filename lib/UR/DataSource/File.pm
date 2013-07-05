@@ -886,8 +886,8 @@ sub UR::DataSource::File::Tracker::DESTROY {
 
         UR::DBI->sql_fh->printf("FILE: CLOSING fileno ".fileno($fh)."\n") if ($ENV{'UR_DBI_MONITOR_SQL'});
         #flock($fh,LOCK_UN);
-  	    $fh->close();
-	    $ds->__invalidate_get_default_handle__;
+        $fh->close();
+        $ds->__invalidate_get_default_handle__;
     }
 }
 
