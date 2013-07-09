@@ -482,15 +482,6 @@ sub create_default_handle {
     # used for reverse lookups
     $dbh->{'private_UR::DataSource::RDBMS_name'} = $self->class;
 
-    # this method may be implemented in subclasses to do extra initialization
-    if ($self->can("init_created_handle")) {
-        unless ($self->init_created_handle($dbh)) {
-            $dbh->disconnect;
-            Carp::confess("Failed to initialize new database connection!\n"
-                . $self->error_message . "\n");
-        }
-    }
-
     # store the handle in a hash, since it's not a UR::Object
     my $all_dbh_hashref = $self->_all_dbh_hashref;
     unless ($all_dbh_hashref) {
