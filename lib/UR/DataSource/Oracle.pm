@@ -45,7 +45,7 @@ sub init_created_handle {
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
 
-    my @init_sql = ("alter session set NLS_DATE_FORMAT = '$DATE_FORMAT'".
+    my @init_sql = ("alter session set NLS_DATE_FORMAT = '$DATE_FORMAT'",
                     "alter session set NLS_TIMESTAMP_FORMAT = '$TIMESTAMP_FORMAT'");
     foreach ( @init_sql ) {
         unless ($dbh->do($_)) {
