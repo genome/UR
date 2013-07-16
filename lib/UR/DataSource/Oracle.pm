@@ -44,8 +44,16 @@ sub init_created_handle {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
-    $dbh->do("alter session set NLS_DATE_FORMAT = '$DATE_FORMAT'");
-    $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = '$TIMESTAMP_FORMAT'");
+
+    my @init_sql = ("alter session set NLS_DATE_FORMAT = '$DATE_FORMAT'".
+                    "alter session set NLS_TIMESTAMP_FORMAT = '$TIMESTAMP_FORMAT'");
+    foreach ( @init_sql ) {
+        unless ($dbh->do($_)) {
+            my $name = $self->id;
+            $self->error_message("init_created_handle $name failed, SQL: $_, error: $DBI::errstr");
+            return;
+        }
+    }
     return $dbh;
 }
 
