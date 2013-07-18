@@ -67,7 +67,9 @@ sub for_each_module_file {
     local $SIG{__DIE__};
     local $ENV{UR_DBI_MONITOR_SQL} = 1;
     local $ENV{APP_DBI_MONITOR_SQL} = 1;
+    local *CORE::GLOBAL::exit = sub {};
 
+    $self->debug_message("require $module_file");
     eval "require '$module_file'";
 
     my %new_libs = map { $_ => 1 } grep { not $libs_before{$_} } @INC;
