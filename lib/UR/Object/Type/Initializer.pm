@@ -1386,9 +1386,21 @@ sub _complete_class_meta_object_definitions {
         # For classes with no data source, the default for id_generator is -urinternal
         # For classes with a data source, autogenerate_new_object_id_for_class_name_and_rule gets called
         # on that data source which can use id_generator as it sees fit
-        if (! defined($self->{'id_generator'}) and ! $self->{'data_source_id'}) {
-            $self->{'id_generator'} = '-urinternal';
+        if (! defined $self->{id_generator}) {
+            my $id_generator;
+            if ($self->{data_source_id}) {
+                if ($parent_class->data_source_id
+                    and
+                    $parent_class->data_source_id eq $self->data_source_id
+                ) {
+                    $id_generator = $parent_class->id_generator;
+                }
+            } else {
+                $id_generator = $parent_class->id_generator;
+            }
+            $self->{id_generator} = $self->{'db_committed'}->{id_generator} = $id_generator;
         }
+
 
         # If a parent is declared as a singleton, we are too.
         # This only works for abstract singletons.

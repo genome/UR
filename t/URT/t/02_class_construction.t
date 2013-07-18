@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 24;
+use Test::More tests => 33;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -89,3 +89,110 @@ my $child_without_id_prop = UR::Object::Type->define(
 is($child_without_id_prop->property_meta_for_name('other_id')->data_type,
     'Integer',
     'implied property gets data_type from parent when specified');
+
+
+# Test that the id_generator value propogates properly
+
+# in-memory class
+UR::Object::Type->define(
+    class_name => 'URT::InMemory',
+    id_by => 'id'
+);
+is(URT::InMemory->__meta__->id_generator,
+    '-urinternal',
+    'in-memory class gets default id generator');
+
+# usual case, use the data-source's default sequence generator based on the column and
+# table name.  Blank value in the class meta means delegate to the data source
+UR::Object::Type->define(
+    class_name => 'URT::DS_No_Idgen',
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'ds_no_idgen',
+    id_by => 'id'
+);
+is(URT::DS_No_Idgen->__meta__->id_generator,
+    undef,
+    'parent SQL-stored class has blank id_generator');
+
+UR::Object::Type->define(
+    is => 'URT::DS_No_Idgen',
+    class_name => 'URT::DS_No_Idgen::Child',
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'ds_no_idgen_child',
+    id_by => 'id'
+);
+is(URT::DS_No_Idgen::Child->__meta__->id_generator,
+    undef,
+    'child SQL-stored class has blank id_generator');
+
+# Parent does not specify id_generator, child does
+UR::Object::Type->define(
+    is => 'URT::DS_No_Idgen',
+    class_name => 'URT::DS_No_Idgen::Child_has_idgen',
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'ds_no_idgen_child_has_idgen',
+    id_generator => 'ds_no_idgen_child_has_idgen_seq',
+    id_by => 'id'
+);
+is(URT::DS_No_Idgen::Child_has_idgen->__meta__->id_generator,
+    'ds_no_idgen_child_has_idgen_seq',
+    'Child SQL-stored class can override blank id_generator from parent');
+
+# Parent specifies a sequence generator, the child uses the same one by default
+UR::Object::Type->define(
+    class_name => 'URT::DS_seq_idgen',
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'ds_seq_idgen',
+    id_generator => 'id_seq_idgen_seq',
+    id_by => 'id',
+);
+is(URT::DS_seq_idgen->__meta__->id_generator,
+    'id_seq_idgen_seq',
+    'parent SQL-stored class has sequence id_generator');
+
+UR::Object::Type->define(
+    is => 'URT::DS_seq_idgen',
+    class_name => 'URT::DS_seq_idgen::Child',
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'ds_seq_idgen_child',
+    id_by => 'id',
+);
+is(URT::DS_seq_idgen::Child->__meta__->id_generator,
+    'id_seq_idgen_seq',
+    "child SQL-stored class has parent's sequence id_generator");
+
+# Parent specifies a sequence generator, child specifies a different one
+UR::Object::Type->define(
+    is => 'URT::DS_seq_idgen',
+    class_name => 'URT::DS_seq_idgen::Child2',
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'ds_seq_idgen_child2',
+    id_generator => 'id_seq_idgen_child2_seq',
+    id_by => 'id',
+);
+is(URT::DS_seq_idgen::Child2->__meta__->id_generator,
+    'id_seq_idgen_child2_seq',
+    'child class can specify a different sequence generator than parent');
+
+# parent has uuid generator, child is blank and should inherit the parent's value
+UR::Object::Type->define(
+    class_name => 'URT::Uuid_idgen',
+    data_source => 'URT::DataSource::SomeSQLite',
+    table_name => 'uuid_idgen',
+    id_generator => '-uuid',
+    id_by => 'id',
+);
+is(URT::Uuid_idgen->__meta__->id_generator,
+    '-uuid',
+    'parent SQL-stored class uses uuid id_generator');
+
+UR::Object::Type->define(
+    is => 'URT::Uuid_idgen',
+    class_name => 'URT::Uuid_idgen::Child',
+    table_name => 'uuid_idgen_child',
+    id_by => 'id',
+);
+is(URT::Uuid_idgen::Child->__meta__->id_generator,
+    '-uuid',
+    'child SQL-stored class definition has blank is_generator, but inherits parent value uuid');
+

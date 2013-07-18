@@ -154,7 +154,8 @@ UR::Object::Type->define(
     composite_id_separator => "\t",
     id_by => [
         id  => { is => 'Scalar', doc => 'unique identifier' }
-    ]
+    ],
+    id_generator => '-urinternal',
 );
 
 UR::Object::Type->define(
