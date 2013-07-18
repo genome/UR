@@ -1374,15 +1374,12 @@ sub _complete_class_meta_object_definitions {
             return;
         }
 
-        if (not defined $self->schema_name) {
-            if (my $schema_name = $parent_class->schema_name) {
-                $self->{'schema_name'} = $self->{'db_committed'}->{'schema_name'} = $schema_name;
-            }
-        }
-
-        if (not defined $self->data_source_id) {
-            if (my $data_source_id = $parent_class->data_source_id) {
-                $self->{'data_source_id'} = $self->{'db_committed'}->{'data_source_id'} = $data_source_id;
+        # These class meta values get propogated from parent to child
+        foreach my $inh_property ( qw(schema_name data_source_id) ) {
+            if (not defined ($self->$inh_property)) {
+                if (my $inh_value = $parent_class->$inh_property) {
+                    $self->{$inh_property} = $self->{'db_committed'}->{$inh_property} = $inh_value;
+                }
             }
         }
 
