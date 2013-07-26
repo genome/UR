@@ -236,8 +236,8 @@ sub get_bitmap_index_details_from_data_dictionary {
 }
 
 
-# DBD::CSV doesn't support unique constraints
 sub get_unique_index_details_from_data_dictionary {
+    # DBD::CSV doesn't support unique constraints
     return {};
 }
 

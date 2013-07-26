@@ -157,7 +157,7 @@ sub resolve_order_by_clause {
 # FIXME This works on Mysql 4.x (and later?).  Mysql5 has a database called
 # IMFORMATION_SCHEMA that may be more useful for these kinds of queries
 sub get_unique_index_details_from_data_dictionary {
-my($self,$table_name) = @_;
+    my($self, $table_name) = @_;
 
     my $dbh = $self->get_default_handle();
     return undef unless $dbh;

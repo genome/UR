@@ -130,7 +130,7 @@ my($self,$sequence_name) = @_;
 }
 
 sub get_bitmap_index_details_from_data_dictionary {
-my($self,$table_name) = @_;
+    my($self, $table_name) = @_;
     my $sql = qq(
         select c.table_name,c.column_name,c.index_name
         from all_indexes i join all_ind_columns c on i.index_name = c.index_name
@@ -154,7 +154,7 @@ my($self,$table_name) = @_;
 
 
 sub get_unique_index_details_from_data_dictionary {
-    my ($self,$table_name) = @_;
+    my ($self, $table_name) = @_;
     my $sql = qq(
         select cc.constraint_name, cc.column_name
         from all_cons_columns cc

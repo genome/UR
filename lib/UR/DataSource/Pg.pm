@@ -103,7 +103,7 @@ sub get_bitmap_index_details_from_data_dictionary {
 
 
 sub get_unique_index_details_from_data_dictionary {
-my($self,$table_name) = @_;
+    my($self, $table_name) = @_;
 
     my $sql = qq(
         SELECT c_index.relname, a.attname
