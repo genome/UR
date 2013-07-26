@@ -105,7 +105,7 @@ sub _resolve_ddl_for_table {
 }
 
 sub generate_schema_for_class_meta {
-    my ($self,$class_meta,$temp) = @_;
+    my ($self, $class_meta, $temp) = @_;
 
     # We now support on-the-fly database introspection
     # this gets called with the temp flag when _sync_database realizes 
@@ -1306,7 +1306,7 @@ sub _resolve_owner_and_table_from_table_name {
 
     if ($table_name =~ m/(\w+)\.(\w+)/) {
         return($1,$2);
-    } 
+    }
     else {
         return($self->owner, $table_name);
     }
