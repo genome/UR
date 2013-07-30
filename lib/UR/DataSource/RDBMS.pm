@@ -36,7 +36,7 @@ UR::Object::Type->define(
         _all_dbh_hashref                 => { is => 'HASH', len => undef, is_transient => 1 },
         _last_savepoint                  => { is => 'Text', len => undef, is_transient => 1 },
     ],
-    valid_signals => ['query'],
+    valid_signals => ['query', 'query_failed', 'commit_failed'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
@@ -1534,10 +1534,12 @@ sub create_iterator_closure_for_rule {
     my $dbh = $self->get_default_handle;
     my $sth = $dbh->prepare($sql,$query_plan->{query_config});
     unless ($sth) {
+        $self->__signal_observers__('query_failed', 'prepare', $sql, $dbh->errstr);
         $class_name->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
         Carp::confess($class_name->error_message);
     }
     unless ($sth->execute(@all_sql_params)) {
+        $self->__signal_observers__('query_failed', 'execute', $sql, $dbh->errstr);
         $class_name->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper(\@all_sql_params) . "\n");
         Carp::confess($class_name->error_message);
     }
@@ -2232,12 +2234,13 @@ sub _sync_database {
             my $class_name = $cmd->{class};
 
             # get the db handle to use for this class
-            my $dbh = $cmd->{'dbh'};   #$class_name->dbh;
+            my $dbh = $cmd->{dbh};
             my $sth = $dbh->prepare($sql);
             $sth{$sql} = $sth;
 
-            if ($dbh->errstr)
+            unless ($sth)
             {
+                $self->__signal_observers__('commit_failed', 'prepare', $sql, $dbh->errstr);
                 $self->error_message("Error preparing SQL:\n$sql\n" . $dbh->errstr . "\n");
                 return;
             }
@@ -2388,8 +2391,9 @@ sub _sync_database {
         for my $cmd (@explicit_commands_in_order) {
             unless ($sth{$cmd->{sql}}->execute(@{$cmd->{params}}))
             {
-                #my $dbh = $cmd->{class}->dbh;
+                my $dbh = $cmd->{dbh};
                 # my $dbh = UR::Context->resolve_data_source_for_object($cmd->{class})->get_default_handle;
+                $self->__signal_observers__('commit_failed', 'execute', $cmd->{sql}, $dbh->errstr);
                 push @failures, {cmd => $cmd, error_message => $sth{$cmd->{sql}}->errstr};
                 last if $skip_fault_tolerance_check;
             }
