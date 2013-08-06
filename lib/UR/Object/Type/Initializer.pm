@@ -1136,10 +1136,22 @@ sub _normalize_property_description2 {
         $the_data_source = $new_class{'data_source_id'}->{'is'};
     } elsif ($new_class{'data_source_id'}) {
         $the_data_source = $new_class{'data_source_id'};
+        # using local() here to save $@ doesn't work.  You end up with the
+        # error "Unknown error" if one of the parent classes of the data source has
+        # some kind of problem
+        my $dollarat = $@;
+        $@ = '';
         $the_data_source = UR::DataSource->get($the_data_source) || eval { $the_data_source->get() };
         unless ($the_data_source) {
-            Carp::croak("Can't resolve data source from value '".$new_class{'data_source_id'}."' in class definition for $class_name");
+            my $error = "Can't resolve data source from value '"
+                        . $new_class{'data_source_id'}
+                        . "' in class definition for $class_name";
+            if ($@) {
+                $error .= "\n$@";
+            }
+            Carp::croak($error);
         }
+        $@ = $dollarat;
     }
     # UR::DataSource::File-backed classes don't have table_names, but for querying/saving to
     # work property, their properties still have to have column_name filled in
