@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More;
+use Test::More tests => 8;
 
 my $animal = UR::Object::Type->define(
     class_name => 'Animal',
@@ -41,5 +41,3 @@ my $rock = UR::Object::Type->define(
 );
 is($rock->class, 'Rock::Type', 'defined Rock');
 ok(!$subclass_loaded{Rock}, q(Animal's subclass_loaded observer did not fire when Rock was defined));
-
-done_testing();
