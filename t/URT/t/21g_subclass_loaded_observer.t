@@ -1,8 +1,10 @@
 use strict;
 use warnings;
 
-use UR;
-
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../../../lib";
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT;
 use Test::More;
 
 my $animal = UR::Object::Type->define(
