@@ -35,6 +35,16 @@ sub prepare {
     }
 }
 
+sub do {
+    my $self = shift;
+    if ($configuration{do_fail}) {
+        $self->set_errstr('do_fail');
+        return undef;
+    } else {
+        return 1;
+    }
+}
+
 sub set_errstr {
     my $self = shift;
     my $key = shift;

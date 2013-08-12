@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 10;
+use Test::More tests => 15;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -82,18 +82,18 @@ retry_test('connect_fail', sub { $test_ds->get_default_handle });
 not_retry_test('connect_fail', sub { $test_ds->get_default_handle} );
 
 
-
+# Try a get() failure
 my $test_dbh = URT::FakeDBI->new();
 $test_ds->_use_handle($test_dbh);
 
-       
-#
-# Start of the test...
-#
-
 retry_test('prepare_fail', sub { TestThing->get(1) });
-
 not_retry_test('prepare_fail', sub { TestThing->get(2) });
+
+# Try a do() failure
+
+retry_test('do_fail', sub { $test_ds->do_sql('select foo from something') });
+not_retry_test('do_fail', sub { $test_ds->do_sql('select foo from something') });
+
 
 
 sub retry_test {

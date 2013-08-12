@@ -1466,7 +1466,7 @@ sub do_sql {
     my $rv = $dbh->do($sql);
     unless ($rv) {
         $self->__signal_observers__('do_failed', 'do', $sql, $dbh->errstr);
-        Carp::croak("DBI do() failed: $DBI::errstr");
+        Carp::croak("DBI do() failed: ".$dbh->errstr);
     }
     return $rv;
 }
