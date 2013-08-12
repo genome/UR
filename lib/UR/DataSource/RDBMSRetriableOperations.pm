@@ -21,7 +21,7 @@ class UR::DataSource::RDBMSRetriableOperations {
 # a code ref to perform the retriable action
 
 sub _retriable_operation {
-    my $self = shift;
+    my $self = UR::Util::object(shift);
     my $code = shift;
 
     _make_retriable_operation_observer();
