@@ -7,7 +7,13 @@ package UR::DataSource::RDBMSRetriableOperations;
 # It should return true if the operation generating that error should be
 # retried.
 
-class UR::DataSource::RDBMSRetriableOperations { };
+class UR::DataSource::RDBMSRetriableOperations {
+    has_optional => [
+        retry_sleep_start_sec   => { is => 'Integer', value => 1, doc => 'Initial inter-error sleep time' },
+        retry_sleep_max_sec     => { is => 'Integer', value => 3600, doc => 'Maximum inter-error sleep time' },
+    ],
+    valid_signals => ['retry']
+};
 
 
 # The guts of the thing.  Consumers that want a base-datasource method to
@@ -18,12 +24,13 @@ sub _retriable_operation {
     my $self = shift;
     my $code = shift;
 
-    my $db_retry_sec = 1;
-
     _make_retriable_operation_observer();
 
     RETRY_LOOP:
-    for( my $db_retry_sec = 1; $db_retry_sec < 3600; $db_retry_sec *= 2 ) {
+    for( my $db_retry_sec = $self->retry_sleep_start_sec;
+         $db_retry_sec < $self->retry_sleep_max_sec;
+         $db_retry_sec *= 2
+    ) {
         my @rv = eval { $code->(); };
 
         if ($@) {
