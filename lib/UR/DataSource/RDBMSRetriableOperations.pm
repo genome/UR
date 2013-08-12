@@ -60,7 +60,7 @@ sub _retriable_operation {
                     callback => \&_db_retry_observer,
                 );
             }
-            qw(query_failed commit_failed do_failed);
+            qw(query_failed commit_failed do_failed connect_failed);
         }
     }
 }
@@ -106,7 +106,7 @@ sub rdbms_datasource_method_for {
 
 # The retriable methods we want to wrap
 
-foreach my $parent_method ( qw(create_iterator_closure_for_rule create_dbh _sync_database do_sql) ) {
+foreach my $parent_method ( qw(create_iterator_closure_for_rule create_default_handle _sync_database do_sql) ) {
     my $parent_sub;
 
     my $override = sub {

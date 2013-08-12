@@ -36,7 +36,7 @@ UR::Object::Type->define(
         _all_dbh_hashref                 => { is => 'HASH', len => undef, is_transient => 1 },
         _last_savepoint                  => { is => 'Text', len => undef, is_transient => 1 },
     ],
-    valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed'],
+    valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed', 'connect_failed'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
@@ -473,12 +473,18 @@ sub create_default_handle {
     my @connection = $self->_dbi_connect_args();
     
     # connect
-    my $dbh = $self->default_handle_class->connect(@connection);
+    my $handle_class = $self->default_handle_class;
+    my $dbh = $handle_class->connect(@connection);
     unless ($dbh) {
+        my $errstr;
+        {   no strict 'refs';
+            $errstr = ${"${handle_class}::errstr"};
+        };
         my @confession = (
-            "Failed to connect to the database!\n",
+            "Failed to connect to the database: $errstr\n",
             $self->get_connection_debug_info(),
         );
+        $self->__signal_observers__('connect_failed', 'connect', \@connection, $errstr);
         Carp::confess(@confession);
     }
 
