@@ -84,4 +84,46 @@ sub _db_retry_observer {
     # Code triggering the observer will throw an exception
 }
 
+
+# Searches the parentage of $self for a RDBMS datasource class
+# and returns a ref to the named sub in that package
+# This is necessary because we're using a mixin class and not
+# a real role
+sub rdbms_datasource_method_for {
+    my $self = shift;
+    my $method = shift;
+
+    foreach my $parent ( $self->__meta__->parent_class_names ) {
+        if ($parent->isa('UR::DataSource::RDBMS')
+            and
+            my $sub = $parent->can($method)
+        ) {
+            return $sub;
+        }
+    }
+    return;
+}
+
+# The retriable methods we want to wrap
+
+foreach my $parent_method ( qw(create_iterator_closure_for_rule create_dbh _sync_database do_sql) ) {
+    my $parent_sub;
+
+    my $override = sub {
+        my $self = shift;
+        my @params = @_;
+
+        my $parent_sub ||= $self->rdbms_datasource_method_for($parent_method);
+        $self->_retriable_operation(sub {
+            $self->$parent_sub(@params);
+        });
+    };
+
+    Sub::Install::install_sub({
+        into => __PACKAGE__,
+        as   => $parent_method,
+        code => $override,
+    });
+}
+
 1;
