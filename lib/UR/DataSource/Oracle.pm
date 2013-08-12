@@ -39,21 +39,25 @@ my($self,$sp_name) = @_;
 
 my $DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
 my $TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SSXFF';
+sub _set_date_format {
+    my $self = shift;
+
+    foreach my $sql ("alter session set NLS_DATE_FORMAT = '$DATE_FORMAT'",
+                    "alter session set NLS_TIMESTAMP_FORMAT = '$TIMESTAMP_FORMAT'"
+    ) {
+        $self->do_sql($sql);
+    }
+}
+
+
 *_init_created_dbh = \&init_created_handle;
 sub init_created_handle {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
     $dbh->{LongTruncOk} = 0;
 
-    my @init_sql = ("alter session set NLS_DATE_FORMAT = '$DATE_FORMAT'",
-                    "alter session set NLS_TIMESTAMP_FORMAT = '$TIMESTAMP_FORMAT'");
-    foreach ( @init_sql ) {
-        unless ($dbh->do($_)) {
-            my $name = $self->id;
-            $self->error_message("init_created_handle $name failed, SQL: $_, error: $DBI::errstr");
-            return;
-        }
-    }
+    $self->_set_date_format();
+
     return $dbh;
 }
 
