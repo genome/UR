@@ -78,46 +78,45 @@ $test_ds->add_observer(
 );
  
 # Try a connection failure 
-retry_test('connect_fail', sub { $test_ds->get_default_handle });
-not_retry_test('connect_fail', sub { $test_ds->get_default_handle} );
+retry_test('get_default_handle', 'connect_fail', sub { $test_ds->get_default_handle });
+not_retry_test('get_default_handle', 'connect_fail', sub { $test_ds->get_default_handle} );
 
 
 # Try a get() failure
 my $test_dbh = URT::FakeDBI->new();
 $test_ds->_use_handle($test_dbh);
 
-retry_test('prepare_fail', sub { TestThing->get(1) });
-not_retry_test('prepare_fail', sub { TestThing->get(2) });
+retry_test('get', 'prepare_fail', sub { TestThing->get(1) });
+not_retry_test('get', 'prepare_fail', sub { TestThing->get(2) });
 
 # Try a do() failure
 
-retry_test('do_fail', sub { $test_ds->do_sql('select foo from something') });
-not_retry_test('do_fail', sub { $test_ds->do_sql('select foo from something') });
-
+retry_test('do_sql', 'do_fail', sub { $test_ds->do_sql('select foo from something') });
+not_retry_test('do_sql', 'do_fail', sub { $test_ds->do_sql('select foo from something') });
 
 
 sub retry_test {
-    my($dbi_config, $code) = @_;
+    my($label, $dbi_config, $code) = @_;
 
-    note("Setting fake dbi config key $dbi_config");
     URT::FakeDBI->configure($dbi_config, 'we should retry this');
     $retry_count = 0;
     @sleep_counts = ();
     eval { $code->() };
-    like($@, qr(Maximum database retries reached), 'Trapped "max retry" exception');
-    is($retry_count, 2, 'Retried 2 times');
-    is_deeply(\@sleep_counts, [1,2], 'Sleep times');
+    like($@, qr(Maximum database retries reached), qq($label: Trapped "max retry" exception));
+    is($retry_count, 2, "$label retried 2 times");
+    is_deeply(\@sleep_counts, [1,2], "$label sleep times");
 }
     
 
 sub not_retry_test {
-    my($dbi_config, $code) = @_;
+    my($label, $dbi_config, $code) = @_;
 
-    note("Setting fake dbi config key $dbi_config: not retrying");
     URT::FakeDBI->configure($dbi_config, 'fail only once');
     $retry_count = 0;
     eval { $code->() };
-    like($@, qr(fail only once), 'non-retriable exception');
-    is($retry_count, 0, 'Did not retry');
+
+    my $error_string = $label eq 'commit' ? $test_ds->error_message : $@;
+    like($error_string, qr(fail only once), "$label: non-retriable exception");
+    is($retry_count, 0, "$label did not retry");
 }
 
