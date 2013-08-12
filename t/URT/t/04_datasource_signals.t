@@ -8,6 +8,8 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT; # dummy namespace
 
+use URT::FakeDBI;
+
 
 my(@events,@callback_args);
 
@@ -110,7 +112,7 @@ is_deeply(\@events,
 
 
 # Test the error condition signals
-my $test_dbh = URT::DBI->new();
+my $test_dbh = URT::FakeDBI->new();
 URT::DataSource::Testing->_use_handle($test_dbh);
 URT::DataSource::Testing->dump_error_messages(0);
 URT::TestingObject->dump_error_messages(0);
@@ -169,62 +171,5 @@ is_deeply(\@events,
 is_deeply(\@callback_args,
     [ ['execute', 'INSERT INTO main.foo (test_id) VALUES (?)', 'execute fail on commit'] ],
     'commit_failed given expected args');
-
-
-
-
-
-# A DBI-like package the Testing datasource can use, and can trigger errors on prepare or execute
-package URT::DBI;
-
-sub new {
-    my $class = shift;
-    return bless {}, $class;
-}
-
-sub configure {
-    my $self = shift;
-    my($key, $val) = @_;
-    $self->{$key} = $val;
-}
-
-sub prepare {
-    my $self = shift;
-    if ($self->{prepare_fail}) {
-        $self->set_errstr('prepare_fail');
-        return undef;
-    } else {
-        return URT::DBI::sth->new($self);
-    }
-}
-
-sub set_errstr {
-    my $self = shift;
-    my $key = shift;
-    $self->{errstr} = $self->{$key};
-}
-
-sub errstr {
-    return shift->{errstr};
-}
-
-package URT::DBI::sth;
-
-sub new {
-    my $class = shift;
-    my $dbh = shift;
-    return bless \$dbh, $class;
-}
-
-sub execute {
-    my $self = shift;
-    my $dbh = $$self;
-    if ($dbh->{execute_fail}) {
-        $dbh->set_errstr('execute_fail');
-        return undef;
-    } else {
-        return 1;
-    }
-}
 
 
