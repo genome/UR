@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 15;
+use Test::More tests => 20;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -94,6 +94,10 @@ not_retry_test('get', 'prepare_fail', sub { TestThing->get(2) });
 retry_test('do_sql', 'do_fail', sub { $test_ds->do_sql('select foo from something') });
 not_retry_test('do_sql', 'do_fail', sub { $test_ds->do_sql('select foo from something') });
 
+# try a commit failure
+UR::Context->dump_error_messages(0);
+retry_test('commit', 'prepare_fail', sub { TestThing->create(3); UR::Context->commit });
+not_retry_test('commit', 'prepare_fail', sub { TestThing->create(4); UR::Context->commit });
 
 sub retry_test {
     my($label, $dbi_config, $code) = @_;
