@@ -69,11 +69,18 @@ sub does_support_recursive_queries { ''; }
 }
 
 sub create_default_handle_wrapper {
-    my $self = shift;
+    my $self = UR::Util::object(shift);
 
     $self->__signal_observers__('precreate_handle');
     my $h = $self->create_default_handle;
     $self->__signal_observers__('create_handle', $h);
+
+    # Hack - This is to avoid infinite recursion in the case where the
+    # handle initializers below try to get the hadle by calling $ds->get_default_handle.
+    # The cached/calculated accessor code will look in this hash key and
+    # return the handle instead of recursing back into the handle creation, and
+    # back to here
+    $self->{get_default_handle} = $h;
 
     # Backward compatability for older code that still uses _init_created_dbh
     if ($self->can('_init_created_dbh')) {
