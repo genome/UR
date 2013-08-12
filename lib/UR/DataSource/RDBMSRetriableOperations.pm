@@ -60,7 +60,7 @@ sub _retriable_operation {
                     callback => \&_db_retry_observer,
                 );
             }
-            qw(query_failed commit_failed);
+            qw(query_failed commit_failed do_failed);
         }
     }
 }

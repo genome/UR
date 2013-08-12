@@ -36,7 +36,7 @@ UR::Object::Type->define(
         _all_dbh_hashref                 => { is => 'HASH', len => undef, is_transient => 1 },
         _last_savepoint                  => { is => 'Text', len => undef, is_transient => 1 },
     ],
-    valid_signals => ['query', 'query_failed', 'commit_failed'],
+    valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
@@ -1446,6 +1446,20 @@ sub resolve_order_by_clause {
         }
     }
     return  'order by ' . join(', ',@cols);
+}
+
+
+sub do_sql {
+    my $self = shift;
+    my $sql = shift;
+
+    my $dbh = $self->get_default_handle;
+    my $rv = $dbh->do($sql);
+    unless ($rv) {
+        $self->__signal_observers__('do_failed', 'do', $sql, $dbh->errstr);
+        Carp::croak("DBI do() failed: $DBI::errstr");
+    }
+    return $rv;
 }
 
 
