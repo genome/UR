@@ -36,7 +36,7 @@ UR::Object::Type->define(
         _all_dbh_hashref                 => { is => 'HASH', len => undef, is_transient => 1 },
         _last_savepoint                  => { is => 'Text', len => undef, is_transient => 1 },
     ],
-    valid_signals => ['query', 'query_failed', 'commit_failed'],
+    valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed', 'connect_failed'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
@@ -450,14 +450,17 @@ sub _dbi_connect_args {
 
 sub get_connection_debug_info {
     my $self = shift;
+    my $handle_class = $self->default_handle_class;
     my @debug_info = (
         "DBI Data Source Name: ", $self->dbi_data_source_name, "\n",
         "DBI Login: ", $self->login, "\n",
         "DBI Version: ", $DBI::VERSION, "\n",
-        "DBI Error: ", UR::DBI->errstr, "\n",
+        "DBI Error: ", $handle_class->errstr, "\n",
     );
     return @debug_info;
 }
+
+sub default_handle_class { 'UR::DBI' };
 
 sub create_dbh { shift->create_default_handle_wrapper }
 sub create_default_handle {
@@ -470,12 +473,18 @@ sub create_default_handle {
     my @connection = $self->_dbi_connect_args();
     
     # connect
-    my $dbh = UR::DBI->connect(@connection);
+    my $handle_class = $self->default_handle_class;
+    my $dbh = $handle_class->connect(@connection);
     unless ($dbh) {
+        my $errstr;
+        {   no strict 'refs';
+            $errstr = ${"${handle_class}::errstr"};
+        };
         my @confession = (
-            "Failed to connect to the database!\n",
+            "Failed to connect to the database: $errstr\n",
             $self->get_connection_debug_info(),
         );
+        $self->__signal_observers__('connect_failed', 'connect', \@connection, $errstr);
         Carp::confess(@confession);
     }
 
@@ -1449,6 +1458,20 @@ sub resolve_order_by_clause {
 }
 
 
+sub do_sql {
+    my $self = shift;
+    my $sql = shift;
+
+    my $dbh = $self->get_default_handle;
+    my $rv = $dbh->do($sql);
+    unless ($rv) {
+        $self->__signal_observers__('do_failed', 'do', $sql, $dbh->errstr);
+        Carp::croak("DBI do() failed: ".$dbh->errstr);
+    }
+    return $rv;
+}
+
+
 sub create_iterator_closure_for_rule {
     my ($self, $rule) = @_; 
 
@@ -1535,13 +1558,13 @@ sub create_iterator_closure_for_rule {
     my $sth = $dbh->prepare($sql,$query_plan->{query_config});
     unless ($sth) {
         $self->__signal_observers__('query_failed', 'prepare', $sql, $dbh->errstr);
-        $class_name->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
-        Carp::confess($class_name->error_message);
+        $self->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
+        Carp::confess($self->error_message);
     }
     unless ($sth->execute(@all_sql_params)) {
         $self->__signal_observers__('query_failed', 'execute', $sql, $dbh->errstr);
-        $class_name->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper(\@all_sql_params) . "\n");
-        Carp::confess($class_name->error_message);
+        $self->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper(\@all_sql_params) . "\n");
+        Carp::confess($self->error_message);
     }
 
     die unless $sth;   # FIXME - this has no effect, right?  
