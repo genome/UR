@@ -450,14 +450,17 @@ sub _dbi_connect_args {
 
 sub get_connection_debug_info {
     my $self = shift;
+    my $handle_class = $self->default_handle_class;
     my @debug_info = (
         "DBI Data Source Name: ", $self->dbi_data_source_name, "\n",
         "DBI Login: ", $self->login, "\n",
         "DBI Version: ", $DBI::VERSION, "\n",
-        "DBI Error: ", UR::DBI->errstr, "\n",
+        "DBI Error: ", $handle_class->errstr, "\n",
     );
     return @debug_info;
 }
+
+sub default_handle_class { 'UR::DBI' };
 
 sub create_dbh { shift->create_default_handle_wrapper }
 sub create_default_handle {
@@ -470,7 +473,7 @@ sub create_default_handle {
     my @connection = $self->_dbi_connect_args();
     
     # connect
-    my $dbh = UR::DBI->connect(@connection);
+    my $dbh = $self->default_handle_class->connect(@connection);
     unless ($dbh) {
         my @confession = (
             "Failed to connect to the database!\n",
