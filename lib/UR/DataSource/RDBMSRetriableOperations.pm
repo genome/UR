@@ -38,6 +38,7 @@ sub _retriable_operation {
                 $self->debug_message("Disconnecting and sleeping for $db_retry_sec seconds...\n");
                 $self->disconnect_default_handle;
                 sleep $db_retry_sec;
+                $self->__signal_observers__('retry', $db_retry_sec);
                 next RETRY_LOOP;
             }
             Carp::croak($@);  # re-throw other exceptions
