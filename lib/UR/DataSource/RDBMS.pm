@@ -1558,13 +1558,13 @@ sub create_iterator_closure_for_rule {
     my $sth = $dbh->prepare($sql,$query_plan->{query_config});
     unless ($sth) {
         $self->__signal_observers__('query_failed', 'prepare', $sql, $dbh->errstr);
-        $class_name->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
-        Carp::confess($class_name->error_message);
+        $self->error_message("Failed to prepare SQL $sql\n" . $dbh->errstr . "\n");
+        Carp::confess($self->error_message);
     }
     unless ($sth->execute(@all_sql_params)) {
         $self->__signal_observers__('query_failed', 'execute', $sql, $dbh->errstr);
-        $class_name->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper(\@all_sql_params) . "\n");
-        Carp::confess($class_name->error_message);
+        $self->error_message("Failed to execute SQL $sql\n" . $sth->errstr . "\n" . Data::Dumper::Dumper(\@all_sql_params) . "\n");
+        Carp::confess($self->error_message);
     }
 
     die unless $sth;   # FIXME - this has no effect, right?  
