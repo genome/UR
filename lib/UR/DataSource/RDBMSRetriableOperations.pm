@@ -35,6 +35,7 @@ sub _retriable_operation {
 
         if ($@) {
             if ($@ =~ m/DB_RETRY/) {
+                $self->error_message("DB_RETRY");
                 $self->debug_message("Disconnecting and sleeping for $db_retry_sec seconds...\n");
                 $self->disconnect_default_handle;
                 sleep $db_retry_sec;
