@@ -3028,11 +3028,27 @@ sub _do_on_default_dbh {
 
 sub commit {
     my $self = shift;
+    if ($self->has_default_handle) {
+        if (my $dbh = $self->get_default_handle) {
+            if ($dbh->{AutoCommit} ) {
+                $self->warning_message('Ignoring ineffective commit because AutoCommit is on');
+                return 1;
+            }
+        }
+    }
     $self->_do_on_default_dbh('commit', @_);
 }
 
 sub rollback {
     my $self = shift;
+    if ($self->has_default_handle) {
+        if (my $dbh = $self->get_default_handle) {
+            if ($dbh->{AutoCommit} ) {
+                $self->warning_message('Ignoring ineffective rollback because AutoCommit is on');
+                return 1;
+            }
+        }
+    }
     $self->_do_on_default_dbh('rollback', @_);
 }
 
