@@ -2336,10 +2336,6 @@ sub _sync_database {
         }
         $self->_last_savepoint($savepoint);
     }
-    else {
-        # FIXME SQLite dosen't support savepoints, but autocommit is already off so this dies?!
-        #$dbh->begin_work;
-    }
 
     # Do any explicit table locking necessary.
     if (my @tables_requiring_lock = sort keys %tables_requiring_lock) {
@@ -2367,26 +2363,6 @@ sub _sync_database {
             }
             if ($failed_attempts > 1) {
                 my $err = join("\n",@err);
-                #$UR::Context::current->send_email(
-                #    To => 'example@example.edu',
-                #    From => UR::Context::Process->prog_name . ' <example@example.edu>',
-                #    Subject => (
-                #            $failed_attempts >= $max_failed_attempts
-                #            ? "sync_database lock failure after $failed_attempts attempts"
-                #            : "sync_database lock success after $failed_attempts attempts"
-                #        )
-                #        . " in " . UR::Context::Process->prog_name
-                #        . " on $table_name",
-                #    Message => qq/
-                #        $failed_attempts attempts to lock table $table_name
-                #
-                #        Errors:
-                #        $err
-                #
-                #        The complete table lock list for this sync:
-                #        @tables_requiring_lock
-                #    /
-                #);
                 if ($failed_attempts >= $max_failed_attempts) {
                     $self->error_message(
                         "Could not obtain an exclusive table lock on table "
