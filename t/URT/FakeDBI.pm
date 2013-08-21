@@ -6,7 +6,7 @@ my %configuration;
 
 sub new {
     my $class = shift;
-    return bless \$class, $class;
+    return bless {}, $class;
 }
 
 sub connect {

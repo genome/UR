@@ -2315,6 +2315,17 @@ sub _sync_database {
         }
     }
 
+    # DBI docs say that if AutoCommit is on, then starting a transaction will temporarily
+    # turn it off.  When the handle gets commit() or rollback(), it will get turned back
+    # on automatically by DBI
+    if ($dbh->{AutoCommit}
+        and
+        ! eval { $dbh->begin_work; 1 }
+    ) {
+        Carp::croak(sprintf('Cannot begin transaction on data source %s: %s',
+                            $self->id, $dbh->errstr));
+    }
+
     # Set a savepoint if possible.
     my $savepoint;
     if ($self->can_savepoint) {
