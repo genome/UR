@@ -3018,7 +3018,7 @@ sub commit {
     if ($self->has_default_handle) {
         if (my $dbh = $self->get_default_handle) {
             if ($dbh->{AutoCommit} ) {
-                $self->warning_message('Ignoring ineffective commit because AutoCommit is on');
+                $self->debug_message('Ignoring ineffective commit because AutoCommit is on');
                 return 1;
             }
         }
@@ -3031,7 +3031,7 @@ sub rollback {
     if ($self->has_default_handle) {
         if (my $dbh = $self->get_default_handle) {
             if ($dbh->{AutoCommit} ) {
-                $self->warning_message('Ignoring ineffective rollback because AutoCommit is on');
+                $self->debug_message('Ignoring ineffective rollback because AutoCommit is on');
                 return 1;
             }
         }
