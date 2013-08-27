@@ -49,9 +49,9 @@ sub get_table {
     my $data_source = $self->data_source;
     $data_source or Carp::confess("Can't determine data_source for table $table_name column ".$self->column_name );
     my $table =
-        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $data_source)
+        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $data_source, owner => $self->owner)
         ||
-        UR::DataSource::RDBMS::Table::Ghost->get(table_name => $table_name, data_source => $data_source);
+        UR::DataSource::RDBMS::Table::Ghost->get(table_name => $table_name, data_source => $data_source, owner => $self->owner);
     return $table;
 }
 
@@ -68,6 +68,7 @@ sub fk_constraints {
 
     my $fk_class = $self->_fk_constraint_class();
     my @fks = $fk_class->get(table_name => $self->table_name,
+                             owner => $self->owner,
                              data_source => $self->data_source);
                        
     return @fks;
