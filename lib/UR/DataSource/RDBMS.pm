@@ -3287,7 +3287,7 @@ sub ur_data_type_for_data_source_data_type {
 # SQLite basically treats everything as strings, so needs no conversion.
 # other DBs will have their own conversions
 sub cast_for_data_conversion {
-    my($class, $prop_meta1, $prop_meta2) = @_;
+    my($class, $left_type, $right_type, $operator) = @_;
 
     return ('%s', '%s');
 }

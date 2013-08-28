@@ -686,26 +686,21 @@ sub _get_oracle_major_server_version {
 }
 
 sub cast_for_data_conversion {
-    my($class, $prop_meta1, $prop_meta2) = @_;
+    my($class, $left_type, $right_type, $operator) = @_;
 
     my @retval = ('%s','%s');
 
-    my $prop_meta1_type = $prop_meta1->_data_type_as_class_name;
-    my $prop_meta2_type = $prop_meta2->_data_type_as_class_name;
-    #printf("Cast %s::%s (%s) and %s::%s (%s)\n",
-    #    $prop_meta1->class_name, $prop_meta1->property_name, $prop_meta1_type,
-    #    $prop_meta2->class_name, $prop_meta2->property_name, $prop_meta2_type);
-
-    if ($prop_meta1_type->isa($prop_meta2_type)
+    # compatible types
+    if ($left_type->isa($right_type)
         or
-        $prop_meta2_type->isa($prop_meta1_type)
+        $right_type->isa($left_type)
     ) {
         return @retval;
     }
 
-    if (! $prop_meta1_type->isa('UR::Value::Text')
+    if (! $left_type->isa('UR::Value::Text')
         and
-        ! $prop_meta2_type->isa('UR::Value::Text')
+        ! $right_type->isa('UR::Value::Text')
     ) {
         # We only support cases where one is a string, for now
         # hopefully the DB can sort it out
@@ -713,9 +708,9 @@ sub cast_for_data_conversion {
     }
 
     # Figure out which one is the non-string
-    my($data_type, $i) = $prop_meta1_type->isa('UR::Value::Text')
-                        ? ( $prop_meta2_type, 1)
-                        : ( $prop_meta1_type, 0);
+    my($data_type, $i) = $left_type->isa('UR::Value::Text')
+                        ? ( $right_type, 1)
+                        : ( $left_type, 0);
 
     if ($data_type->isa('UR::Value::Number')) {
         $retval[$i] = q{to_char(%s)};
@@ -728,7 +723,7 @@ sub cast_for_data_conversion {
         $retval[$i] = qq{to_char(%s, '$DATE_FORMAT')};
 
     } else {
-        @retval = $class->SUPER::cast_for_data_conversion($prop_meta1, $prop_meta2);
+        @retval = $class->SUPER::cast_for_data_conversion($left_type, $right_type);
     }
 
     return @retval;
