@@ -1056,7 +1056,12 @@ sub _add_join {
                 for (my $n = 0; $n < @$where; $n += 2) {
                     my $key =$where->[$n];
                     my ($name,$op) = ($key =~ /^(\S+)\s*(.*)/);
-                    
+
+                    if(index($name, '-') == 0) {
+                        #skip '-order_by', '-hint' and the like for joins
+                        next;
+                    }
+
                     #my $meta = $foreign_class_object->property_meta_for_name($name);
                     #my $column = $meta->is_calculated ? (defined($meta->calculate_sql) ? ($meta->calculate_sql) : () ) : ($meta->column_name);
                     my ($table_name, $column_names, $property_metas) = $self->_resolve_table_and_column_data($foreign_class_object, $name);
