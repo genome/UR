@@ -383,11 +383,21 @@ sub _init_rdbms {
                 }
                 my $expr_sql = $property->expr_sql;
                 if (exists $filters{$property_name}) {
+                    my @coercion = $self->data_source->cast_for_data_conversion(
+                                                            $property->_data_type_as_class_name,
+                                                            'UR::Value::String', # We can't know here what the type should be
+                                                            $operator,
+                                                            'where');
                     push @sql_filters, 
                         $table_name => { 
                             # cheap hack of prefixing with a whitespace differentiates 
                             # from a regular column below
-                            " " . $expr_sql => { operator => $operator, value_position => $value_position }
+                            " " . $expr_sql => {
+                                        operator => $operator,
+                                        value_position => $value_position,
+                                        left_coercion => $coercion[0],
+                                        right_coercion => $coercion[1],
+                                    }
                         };
                 }
                 next;
@@ -414,9 +424,19 @@ sub _init_rdbms {
                     next;
                 }
                 if (exists $filters{$property_name}) {
+                    my @coercion = $self->data_source->cast_for_data_conversion(
+                                                            $property->_data_type_as_class_name,
+                                                            'UR::Value::String', # We can't know here what the type should be
+                                                            $operator,
+                                                            'where');
                     push @sql_filters, 
                         $table_name => { 
-                            $column_name => { operator => $operator, value_position => $value_position } 
+                            $column_name => {
+                                    operator => $operator,
+                                    value_position => $value_position,
+                                    left_coercion => $coercion[0],
+                                    right_coercion => $coercion[1],
+                                }
                         };
                 }
             }
@@ -677,9 +697,20 @@ sub _init_rdbms {
                     die "No alias found for $property_name?!";
                 }
 
+                my @coercion = $self->data_source->cast_for_data_conversion(
+                                                        $final_accessor_property_meta->_data_type_as_class_name,
+                                                        'UR::Value::String', # We can't know here what the type should be
+                                                        $operator,
+                                                        'where');
+
                 push @sql_filters, 
                     $alias_for_property_value => { 
-                        $sql_lvalue => { operator => $operator, value_position => $value_position } 
+                        $sql_lvalue => {
+                            operator => $operator,
+                            value_position => $value_position,
+                            left_coercion => $coercion[0],
+                            right_coercion => $coercion[1],
+                         }
                     };
             }
         }
@@ -772,8 +803,9 @@ sub _init_rdbms {
         for my $column_name (keys %$condition) {
             my $linkage_data = $condition->{$column_name};
             my $expr_sql = (substr($column_name,0,1) eq " " ? $column_name : "${table_alias}.${column_name}");                                
-            my ($operator, $value_position, $value, $link_table_name, $link_column_name)
-                = @$linkage_data{qw/operator value_position value link_table_name link_column_name/};
+            my ($operator, $value_position, $value, $link_table_name, $link_column_name, $left_coercion, $right_coercion)
+                = @$linkage_data{qw/operator value_position value link_table_name
+                                    link_column_name left_coercion right_coercion/};
 
             if ($link_table_name and $link_column_name) {
                 # the linkage data is a join specifier
@@ -785,6 +817,9 @@ sub _init_rdbms {
                 unless (defined $value_position) {
                     Carp::confess("No value position for $column_name in query!");
                 }                
+
+                $expr_sql = sprintf($left_coercion, $expr_sql);
+
                 push @filter_specs, [$expr_sql, $operator, $value_position];
             }
         } # next column                

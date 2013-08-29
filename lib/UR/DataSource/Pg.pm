@@ -176,6 +176,48 @@ sub _value_is_null {
     return 0;
 }   
 
+
+my $DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
+my $TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.US';
+sub cast_for_data_conversion {
+    my($class, $left_type, $right_type, $operator, $sql_clause) = @_;
+
+    my @retval = ('%s','%s');
+
+    # compatible types
+    if ($left_type->isa($right_type)
+        or
+        $right_type->isa($left_type)
+    ) {
+        return @retval;
+    }
+
+    # So far, the only casting is to support using 'like' and one or both are strings
+    if ($operator ne 'like'
+        or
+        ( ! $left_type->isa('UR::Value::Text') and ! $right_type->isa('UR::Value::Text') )
+    ) {
+        return @retval;
+    }
+
+    # Figure out which one is the non-string
+    my($data_type, $i) = $left_type->isa('UR::Value::Text')
+                        ? ( $right_type, 1)
+                        : ( $left_type, 0);
+
+    if ($data_type->isa('UR::Value::Timestamp')) {
+        $retval[$i] = qq{to_char(%s, '$TIMESTAMP_FORMAT')};
+
+    } elsif ($data_type->isa('UR::Value::DateTime')) {
+        $retval[$i] = qq{to_char(%s, '$DATE_FORMAT')};
+
+    } else {
+        @retval = $class->SUPER::cast_for_data_conversion($left_type, $right_type, $operator);
+    }
+
+    return @retval;
+}
+
 1;
 
 =pod
