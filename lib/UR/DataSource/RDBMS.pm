@@ -3286,8 +3286,10 @@ sub ur_data_type_for_data_source_data_type {
 #
 # SQLite basically treats everything as strings, so needs no conversion.
 # other DBs will have their own conversions
+#
+# $sql_clause will be one of "join", "where"
 sub cast_for_data_conversion {
-    my($class, $left_type, $right_type, $operator) = @_;
+    my($class, $left_type, $right_type, $operator, $sql_clause) = @_;
 
     return ('%s', '%s');
 }

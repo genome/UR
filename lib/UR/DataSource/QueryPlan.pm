@@ -1097,7 +1097,7 @@ sub _add_join {
                 my($link_prop) = $link_class_meta->_concrete_property_meta_for_class_and_name($link_property_name);
                 my $left_type = $link_prop->_data_type_as_class_name;
                 my $right_type = $foreign_property_meta[$n]->_data_type_as_class_name;
-                my @coercion = $self->data_source->cast_for_data_conversion($left_type, $right_type, '=');
+                my @coercion = $self->data_source->cast_for_data_conversion($left_type, $right_type, '=', 'join');
 
                 push @db_join_data,
                         $foreign_column_name => {
@@ -1381,7 +1381,8 @@ sub _resolve_db_joins_for_inheritance {
                 my @coercion = $co->data_source->cast_for_data_conversion(
                                     $prev_property_meta->_data_type_as_class_name,
                                     $id_property_objects[0]->_data_type_as_class_name,
-                                    '=');
+                                    '=',
+                                    'join');
                 push @sql_joins,
                     $table_name =>
                     {
@@ -2088,7 +2089,8 @@ sub _init_core {
                                 my @coercion = $ds->cast_for_data_conversion(
                                         $source_property_meta[$_]->_data_type_as_class_name,
                                         $foreign_property_meta[$_]->_data_type_as_class_name,
-                                        '=');
+                                        '=',
+                                        'join');
                                 $foreign_property_names[$_] => { 
                                     link_table_name     => $last_alias_for_this_chain || $source_table_and_column_names[$_][0],
                                     link_column_name    => $source_table_and_column_names[$_][1],

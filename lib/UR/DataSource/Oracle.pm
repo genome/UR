@@ -686,7 +686,7 @@ sub _get_oracle_major_server_version {
 }
 
 sub cast_for_data_conversion {
-    my($class, $left_type, $right_type, $operator) = @_;
+    my($class, $left_type, $right_type, $operator, $sql_clause) = @_;
 
     my @retval = ('%s','%s');
 
@@ -704,6 +704,12 @@ sub cast_for_data_conversion {
     ) {
         # We only support cases where one is a string, for now
         # hopefully the DB can sort it out
+        return @retval;
+    }
+
+    # Oracle can auto-convert strings into numbers and dates in the 'where'
+    # clause, but has issues in joins
+    if ($sql_clause eq 'where') {
         return @retval;
     }
 
