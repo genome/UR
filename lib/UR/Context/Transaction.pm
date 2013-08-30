@@ -285,37 +285,6 @@ sub changes_can_be_saved {
     return 1;
 }
 
-sub execute
-{
-    my $class = shift;
-    Carp::confess("Attempt to call class method on instance.  This is probably not what you want...") if ref $class;
-    my $code = shift;
-    my $transaction = $class->begin;
-    my $result = eval($code->());
-    unless ($result) {
-        $transaction->rollback;
-    }
-    if ($@) { 
-        die $@;
-    }
-    $transaction->commit;
-    return $result;
-}
-
-sub execute_and_rollback
-{
-    my $class = shift;
-    Carp::confess("Attempt to call class method on instance.  This is probably not what you want...") if ref $class;
-    my $code = shift;
-    my $transaction = $class->begin;
-    my $result = eval($code->());
-    $transaction->rollback;
-    if ($@) {
-        die $@;
-    }
-    return $result;
-}
-
 1;
 
 =pod
@@ -416,28 +385,12 @@ Return a list or L<UR::Change> objects representing changes within the transacti
 
 =over 4
 
-=item execute
 
-  $retval = UR::Context::Transaction->execute($coderef);
 
-Executes the coderef with no arguments, within an eval and a software
-transaction.  If the coderef returns true, the transaction is committed.
-If it returns false, the transaction is rolled back.  Finally the coderef's
-return value is returned to the caller.
 
-If the coderef throws an exception, it will be caught, the transaction rolled
-back, and the exception will be re-thrown with die().
 
-=item execute_and_rollback
 
-  UR::Context::Transaction->execute_and_rollback($coderef);
 
-Executes the coderef with no arguments, within an eval and a software
-transaction.  Reguardless of the return value of the coderef, the transaction
-will be rolled back.
-
-If the coderef throws an exception, it will be caught, the transaction rolled
-back, and the exception will be re-thrown with die().
 
 =back
 
