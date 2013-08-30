@@ -27,8 +27,7 @@ sub delete {
     $self->rollback;
 }
 
-sub begin 
-{
+sub begin {
     my $class = shift;
     my $id = $last_transaction_id++;
 
@@ -60,8 +59,7 @@ sub begin
     return $self;
 }
 
-sub log_change
-{
+sub log_change {
     my $this_class = shift;
     my ($object, $class, $id, $aspect, $undo_data) = @_;
 
@@ -107,8 +105,7 @@ sub has_changes {
     return (@changes > 1 ? 1 : ());
 }
 
-sub get_changes
-{
+sub get_changes {
     my $self = shift;
     my $begin_point = $self->begin_point;
     my $end_point = $self->end_point || $#change_log;
@@ -121,8 +118,7 @@ sub get_changes
     }
 }
 
-sub get_change_summary
-{
+sub get_change_summary {
     # TODO: This should compress multiple changes to the same object as much as possible
     # Right now, it just omits the creation event for the transaction object itself.
     # -> should the creation of the transaction be part of it?
@@ -138,8 +134,7 @@ sub get_change_summary
     return @changes;
 }
 
-sub rollback
-{
+sub rollback {
     my $self = shift;
 
     # Support calling as a class method: UR::Context::Transaction->rollback rolls back the current trans
@@ -228,8 +223,7 @@ sub rollback
     return 1;
 }
 
-sub commit
-{
+sub commit {
     my $self = shift;
 
     # Support calling as a class method: UR::Context::Transaction->commit commits the current transaction.
