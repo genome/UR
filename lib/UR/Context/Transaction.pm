@@ -6,6 +6,8 @@ use warnings;
 require UR;
 our $VERSION = "0.41"; # UR $VERSION;
 
+use Carp qw(croak confess shortmess);
+
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => ['UR::Context'],
@@ -285,6 +287,53 @@ sub changes_can_be_saved {
     return 1;
 }
 
+sub eval_or_do {
+    my $is_failure = shift;
+    my $block = shift;
+
+    my $class = __PACKAGE__;
+    if (@_) {
+        confess('%s::eval takes one argument', $class);
+    }
+    my $tx = $class->begin();
+    my $result = CORE::eval { $block->() };
+    my $eval_error = $@;
+
+    if ($is_failure->($result, $eval_error)) {
+        $class->debug_message(shortmess('Rolling back transaction'));
+        $class->debug_message($eval_error) if ($eval_error);
+        $tx->rollback();
+    } else {
+        $tx->commit();
+    }
+
+    return ($result, $eval_error);
+}
+
+# eval function takes a block (&) sort of like CORE::eval
+# eval will rollback on a caught die
+sub eval(&) {
+    my $is_failure = sub {
+        my ($result, $eval_error) = @_;
+        return $eval_error;
+    };
+    return eval_or_do($is_failure, @_);
+}
+
+# do function takes a block (&) sort of like CORE::do
+# do will rollback on a false result as well as before re-throwing a caught die
+sub do(&) {
+    my $is_failure = sub {
+        my ($result, $eval_error) = @_;
+        return !$result || $eval_error;
+    };
+    my ($result, $eval_error) = eval_or_do($is_failure, @_);
+    if ($eval_error) {
+        croak $eval_error, "\t...propogated";
+    }
+    return $result;
+}
+
 1;
 
 =pod
@@ -385,12 +434,25 @@ Return a list or L<UR::Change> objects representing changes within the transacti
 
 =over 4
 
+=item eval
 
+  UR::Context::Transaction::eval BLOCK
 
+Executes the BLOCK (with no arguments) wrapped by a software transaction and a
+CORE::eval.  If the BLOCK dies then the exception is caught and the software
+transaction is rolled back.
 
+=item do
 
+  UR::Context::Transaction::do BLOCK
 
+Executes the BLOCK (with no arguments) wrapped by a software transaction and a
+CORE::eval.  If the BLOCK returns a true value and does not die then the
+software transaction is committed.  If the BLOCK returns false or dies then the
+software transaction is rolled back.
 
+If the BLOCK throws an exception, it will be caught, the software transaction
+rolled back, and the exception will be re-thrown with die().
 
 =back
 
