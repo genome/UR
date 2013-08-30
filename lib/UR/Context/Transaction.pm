@@ -24,7 +24,6 @@ our $last_transaction_id = 0;
 
 sub delete {
     my $self = shift;
-    #$DB::single = 1;
     $self->rollback;
 }
 
@@ -32,7 +31,6 @@ sub begin
 {
     my $class = shift;
     my $id = $last_transaction_id++;
-    #my $id = @open_transaction_stack;
 
     my $begin_point = @change_log;
     $log_all_changes = 1;
