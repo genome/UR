@@ -107,7 +107,12 @@ sub rdbms_datasource_method_for {
 
 # The retriable methods we want to wrap
 
-foreach my $parent_method ( qw(create_iterator_closure_for_rule create_default_handle _sync_database do_sql) ) {
+foreach my $parent_method (qw(
+    create_iterator_closure_for_rule
+    create_default_handle
+    _sync_database
+    do_sql
+)) {
     my $parent_sub;
 
     my $override = sub {
