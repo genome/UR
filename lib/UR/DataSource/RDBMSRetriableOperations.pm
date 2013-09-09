@@ -116,8 +116,6 @@ foreach my $parent_method (qw(
     _sync_database
     do_sql
 )) {
-    my $parent_sub;
-
     my $override = sub {
         my $self = shift;
         my @params = @_;
