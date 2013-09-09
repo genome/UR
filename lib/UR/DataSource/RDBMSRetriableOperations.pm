@@ -120,6 +120,10 @@ foreach my $parent_method (qw(
         my $self = shift;
         my @params = @_;
 
+        # Installing this as the $parent_method leads to infinte recursion if
+        # the parent does not directly inherit this class.
+        use warnings FATAL => qw( recursion );
+
         my $parent_sub ||= $self->rdbms_datasource_method_for($parent_method);
         $self->_retriable_operation(sub {
             $self->$parent_sub(@params);
