@@ -1,5 +1,8 @@
 package UR::DataSource::RDBMSRetriableOperations;
 
+use strict;
+use warnings;
+
 # A mixin class that provides methods to retry queries and syncs
 #
 # Consumers should provide should_retry_operation_after_error().
