@@ -100,6 +100,9 @@ sub rdbms_datasource_method_for {
     my $target_class_name = shift;
 
     $target_class_name ||= $self->class;
+    if ($cached_rdbms_datasource_method_for{$target_class_name}) {
+        return $cached_rdbms_datasource_method_for{$target_class_name}->can($method);
+    }
 
     foreach my $parent_class_name ( $target_class_name->__meta__->parent_class_names ) {
         if ( $parent_class_name->isa('UR::DataSource::RDBMS') ) {
@@ -108,6 +111,7 @@ sub rdbms_datasource_method_for {
                     return $sub;
                 }
             } else {
+                $cached_rdbms_datasource_method_for{$target_class_name} = $parent_class_name;
                 return $parent_class_name->can($method);
             }
         }
