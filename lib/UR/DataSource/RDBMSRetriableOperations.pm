@@ -93,16 +93,23 @@ sub _db_retry_observer {
 # and returns a ref to the named sub in that package
 # This is necessary because we're using a mixin class and not
 # a real role
+my %cached_rdbms_datasource_method_for;
 sub rdbms_datasource_method_for {
     my $self = shift;
     my $method = shift;
+    my $target_class_name = shift;
 
-    foreach my $parent ( $self->__meta__->parent_class_names ) {
-        if ($parent->isa('UR::DataSource::RDBMS')
-            and
-            my $sub = $parent->can($method)
-        ) {
-            return $sub;
+    $target_class_name ||= $self->class;
+
+    foreach my $parent_class_name ( $target_class_name->__meta__->parent_class_names ) {
+        if ( $parent_class_name->isa('UR::DataSource::RDBMS') ) {
+            if ($parent_class_name->isa(__PACKAGE__) ) {
+                if (my $sub = $self->rdbms_datasource_method_for($method, $parent_class_name)) {
+                    return $sub;
+                }
+            } else {
+                return $parent_class_name->can($method);
+            }
         }
     }
     return;
