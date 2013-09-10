@@ -1346,6 +1346,21 @@ sub get_unique_index_details_from_data_dictionary {
     Carp::confess("Class $class didn't define its own unique_index_info() method");
 }
 
+
+sub _resolve_table_name_for_class_name {
+    my($self, $class_name) = @_;
+
+    for my $parent_class_name ($class_name, $class_name->inheritance) {
+        my $parent_class = $parent_class_name->__meta__; # UR::Object::Type->get(class_name => $parent_class_name);
+        next unless $parent_class;
+        if (my $table_name = $parent_class->table_name) {
+            return $table_name;
+        }
+    }
+    return;
+}
+
+
 our %sequence_for_class_name;
 sub autogenerate_new_object_id_for_class_name_and_rule {
     # The sequences in the database are named by a naming convention which allows us to connect them to the table
@@ -1369,19 +1384,7 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
     # mechanism), and when we should defer to the parent's sequence...
     unless ($sequence) {
         # This class directly doesn't have a sequence specified.  Search through the inheritance
-        my $table_name;
-        for my $parent_class_name ($class_name, $class_name->inheritance) {
-            # print "checking $parent_class_name (for $class_name)\n";
-            my $parent_class = $parent_class_name->__meta__; # UR::Object::Type->get(class_name => $parent_class_name);
-            # print "object $parent_class\n";
-            next unless $parent_class;
-            #$sequence = $class_meta->id_generator;
-            #last if $sequence;
-            if ($table_name = $parent_class->table_name) {
-                # print "found table $table_name\n";
-                last;
-            }
-        }
+        my $table_name = $self->_resolve_table_name_for_class_name($class_name);
 
         unless ($table_name) {
             Carp::croak("Could not determine a table name for class $class_name");
