@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 20;
+use Test::More tests => 25;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -57,6 +57,12 @@ use URT::FakeDBI;
         table_name => 'test_thing',
         owner => 'main',
         data_source => 'URT::DataSource::Testing');
+    UR::DataSource::RDBMS::PkConstraintColumn->__define__(
+        column_name => 'test_thing_id',
+        table_name => 'test_thing',
+        rank => 1,
+        owner => 'main',
+        data_source => 'URT::DataSource::Testing');
 
 #
 # Set up the test
@@ -93,6 +99,12 @@ not_retry_test('get', 'prepare_fail', sub { TestThing->get(2) });
 
 retry_test('do_sql', 'do_fail', sub { $test_ds->do_sql('select foo from something') });
 not_retry_test('do_sql', 'do_fail', sub { $test_ds->do_sql('select foo from something') });
+
+# try a sequence generator retrieval failure
+# UR::DS::SQLite uses do() to get sequence values
+retry_test('sequence generator', 'do_fail', sub { TestThing->create() });
+not_retry_test('sequence generator', 'do_fail', sub { TestThing->create() });
+
 
 # try a commit failure
 UR::Context->dump_error_messages(0);

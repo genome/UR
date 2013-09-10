@@ -64,7 +64,7 @@ sub _retriable_operation {
                     callback => \&_db_retry_observer,
                 );
             }
-            qw(query_failed commit_failed do_failed connect_failed);
+            qw(query_failed commit_failed do_failed connect_failed sequence_nextval_failed);
         }
     }
 }
@@ -126,6 +126,7 @@ foreach my $parent_method (qw(
     create_default_handle
     _sync_database
     do_sql
+    autogenerate_new_object_id_for_class_name_and_rule
 )) {
     my $override = sub {
         my $self = shift;

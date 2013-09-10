@@ -36,7 +36,7 @@ UR::Object::Type->define(
         _all_dbh_hashref                 => { is => 'HASH', len => undef, is_transient => 1 },
         _last_savepoint                  => { is => 'Text', len => undef, is_transient => 1 },
     ],
-    valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed', 'connect_failed', 'sequence_nextval'],
+    valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed', 'connect_failed', 'sequence_nextval', 'sequence_nextval_failed'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
@@ -1435,24 +1435,34 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
 
     my $sequence = $sequence_for_class_name{$class_name} || $class_name->__meta__->id_generator;
     
-    # FIXME Child classes really should use the same sequence generator as its parent
-    # if it doesn't specify its own.
-    # It'll be hard to distinguish the case of a class meta not explicitly mentioning its
-    # sequence name, but there's a sequence generator in the schema for it (the current
-    # mechanism), and when we should defer to the parent's sequence...
-    unless ($sequence) {
-        $sequence = $self->_resolve_sequence_name_for_class_name($class_name);
+    my $new_id = eval {
+        # FIXME Child classes really should use the same sequence generator as its parent
+        # if it doesn't specify its own.
+        # It'll be hard to distinguish the case of a class meta not explicitly mentioning its
+        # sequence name, but there's a sequence generator in the schema for it (the current
+        # mechanism), and when we should defer to the parent's sequence...
+        unless ($sequence) {
+            $sequence = $self->_resolve_sequence_name_for_class_name($class_name);
 
-        if (!$sequence) {
-            Carp::croak("No identity generator found for class " . $class_name . "\n");
+            if (!$sequence) {
+                Carp::croak("No identity generator found for class " . $class_name . "\n");
+            }
+
+            $sequence_for_class_name{$class_name} = $sequence;
         }
 
-        $sequence_for_class_name{$class_name} = $sequence;
+        $self->__signal_observers__('sequence_nextval', $sequence);
+
+        $self->_get_next_value_from_sequence($sequence);
+    };
+
+    unless (defined $new_id) {
+        my $dbh = $self->get_default_handle;
+        $self->__signal_observers__('sequence_nextval_failed', '', $sequence, $dbh->errstr);
+        no warnings 'uninitialized';
+        Carp::croak("Can't get next value for sequence $sequence. Exception: $@.  DBI error: ".$dbh->errstr);
     }
 
-    $self->__signal_observers__('sequence_nextval', $sequence);
-
-    my $new_id = $self->_get_next_value_from_sequence($sequence);
     return $new_id;
 }
 
