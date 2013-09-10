@@ -36,7 +36,7 @@ UR::Object::Type->define(
         _all_dbh_hashref                 => { is => 'HASH', len => undef, is_transient => 1 },
         _last_savepoint                  => { is => 'Text', len => undef, is_transient => 1 },
     ],
-    valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed', 'connect_failed'],
+    valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed', 'connect_failed', 'sequence_nextval'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
 
@@ -1449,6 +1449,8 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
 
         $sequence_for_class_name{$class_name} = $sequence;
     }
+
+    $self->__signal_observers__('sequence_nextval', $sequence);
 
     my $new_id = $self->_get_next_value_from_sequence($sequence);
     return $new_id;
