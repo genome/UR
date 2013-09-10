@@ -1360,6 +1360,34 @@ sub _resolve_table_name_for_class_name {
     return;
 }
 
+# For when there's no metaDB info for a class' table, it walks up the
+# ancestry of the class, and uses the ID properties to get the column
+# names, and assummes they must be the table primary keys.
+#
+# From there, it guesses the sequence name
+sub _resolve_sequence_name_from_class_id_properties {
+    my($self, $class_name) = @_;
+
+    my $class_meta = $class_name->__meta__;
+    for my $meta ($class_meta, $class_meta->ancestry_class_metas) {
+        next unless $meta->table_name;
+        my @primary_keys = grep { $_ }  # Only interested in the properties with columns defined
+                           map { $_->column_name }
+                           $meta->direct_id_property_metas;
+        if (@primary_keys > 1) {
+            Carp::croak("Tables with multiple primary keys (i.e. " .
+                $meta->table_name  . ": " .
+                join(',',@primary_keys) .
+                ") cannot have a surrogate key created from a sequence.");
+        }
+        elsif (@primary_keys == 1) {
+            my $sequence = $self->_get_sequence_name_for_table_and_column($meta->table_name, $primary_keys[0]);
+            return $sequence if $sequence;
+        }
+    }
+
+}
+
 
 our %sequence_for_class_name;
 sub autogenerate_new_object_id_for_class_name_and_rule {
@@ -1396,33 +1424,18 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
                              owner => $ds_owner,
                              data_source => $self->_my_data_source_id);
 
-        my @primary_keys;
         if ($table_meta) {
-            @primary_keys = $table_meta->primary_key_constraint_column_names;
+            my @primary_keys = $table_meta->primary_key_constraint_column_names;
+            if (@primary_keys == 0) {
+                Carp::croak("No primary keys found for table " . $table_name . "\n");
+            }
             $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $primary_keys[0]);
+
         } else {
             # No metaDB info... try and make a guess based on the class' ID properties
-            my $class_meta = $class_name->__meta__;
-            for my $meta ($class_meta, $class_meta->ancestry_class_metas) {
-                @primary_keys = grep { $_ }  # Only interested in the properties with columns defined
-                                map { $_->column_name }
-                                $meta->direct_id_property_metas;
-                if (@primary_keys > 1) {
-                    Carp::croak("Tables with multiple primary keys (i.e. " .
-                        $table_name  . ": " .
-                        join(',',@primary_keys) .
-                        ") cannot have a surrogate key created from a sequence.");
-                } 
-                elsif (@primary_keys == 1) {
-                    $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $primary_keys[0]);
-                    last if $sequence;
-                }
-            }
+            $sequence = $self->_resolve_sequence_name_from_class_id_properties($class_name);
         }
 
-        if (@primary_keys == 0) {
-            Carp::croak("No primary keys found for table " . $table_name . "\n");
-        }
         if (!$sequence) {
             Carp::croak("No identity generator found for table " . $table_name . "\n");
         }
