@@ -70,7 +70,8 @@ use URT::FakeDBI;
 #
 my $test_ds = TestThing->__meta__->data_source;
 $test_ds->dump_error_messages(0);
-$test_ds->retry_sleep_max_sec(3);
+$test_ds->retry_sleep_start_sec(0.01);
+$test_ds->retry_sleep_max_sec(0.03);
 
 my $retry_count;
 my @sleep_counts;
@@ -120,7 +121,7 @@ sub retry_test {
     eval { $code->() };
     like($@, qr(Maximum database retries reached), qq($label: Trapped "max retry" exception));
     is($retry_count, 2, "$label retried 2 times");
-    is_deeply(\@sleep_counts, [1,2], "$label sleep times");
+    is_deeply(\@sleep_counts, [0.01,0.02], "$label sleep times");
 }
     
 

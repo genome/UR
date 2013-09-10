@@ -3,6 +3,8 @@ package UR::DataSource::RDBMSRetriableOperations;
 use strict;
 use warnings;
 
+use Time::HiRes;
+
 # A mixin class that provides methods to retry queries and syncs
 #
 # Consumers should provide should_retry_operation_after_error().
@@ -41,7 +43,7 @@ sub _retriable_operation {
                 $self->error_message("DB_RETRY");
                 $self->debug_message("Disconnecting and sleeping for $db_retry_sec seconds...\n");
                 $self->disconnect_default_handle;
-                sleep $db_retry_sec;
+                Time::HiRes::sleep($db_retry_sec);
                 $self->__signal_observers__('retry', $db_retry_sec);
                 next RETRY_LOOP;
             }
