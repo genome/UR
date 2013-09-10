@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 14;
+use Test::More tests => 16;
 
 use UR;
 use UR::Context::Transaction;
@@ -18,18 +18,21 @@ is(thing_count(), 1, 'got 1 Thing');
 my $message = 'Something happened!';
 
 # eval dies
-UR::Context::Transaction::eval {
+my $dead_thing = UR::Context::Transaction::eval {
     Thing->create();
     is(thing_count(), 2, 'got 2 Things');
     die $message;
 };
+ok(!$dead_thing, 'got no return from eval (die)');
 is(thing_count(), 1, 'got 1 Thing after eval (die)');
 
 # eval does not die
-UR::Context::Transaction::eval {
-    Thing->create();
+my $live_thing = UR::Context::Transaction::eval {
+    my $thing = Thing->create();
     is(thing_count(), 2, 'got 2 Things');
+    return $thing;
 };
+isa_ok($live_thing, 'Thing', 'return');
 is(thing_count(), 2, 'got 2 Things after eval (success)');
 
 # do dies

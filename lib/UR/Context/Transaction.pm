@@ -307,7 +307,11 @@ sub eval_or_do {
         $tx->commit();
     }
 
-    return ($result, $eval_error);
+    if (wantarray) {
+        return ($result, $eval_error);
+    } else {
+        return $result;
+    }
 }
 
 # eval function takes a block (&) sort of like CORE::eval
