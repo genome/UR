@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 16;
+use Test::More tests => 18;
 
 use UR;
 use UR::Context::Transaction;
@@ -65,6 +65,30 @@ UR::Context::Transaction::do {
     is(thing_count(), 3, 'got 3 Things');
 };
 is(thing_count(), 3, 'got 3 Things');
+
+eval {
+    no warnings 'redefine';
+    local *UR::Context::Transaction::commit = sub { return };
+    eval {
+        UR::Context::Transaction::eval {
+            return 1;
+        };
+    };
+    my $eval_error = $@;
+    like($eval_error, qr/^failed to commit transaction/, 'got exception if eval fails to commit');
+};
+
+eval {
+    no warnings 'redefine';
+    local *UR::Context::Transaction::rollback = sub { return };
+    eval {
+        UR::Context::Transaction::eval {
+            die 'trigger rollback';
+        };
+    };
+    my $eval_error = $@;
+    like($eval_error, qr/^failed to rollback transaction/, 'got exception if eval fails to rollback');
+};
 
 ####
 

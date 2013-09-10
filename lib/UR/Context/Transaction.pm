@@ -302,9 +302,13 @@ sub eval_or_do {
     if ($is_failure->($result, $eval_error)) {
         $class->debug_message(shortmess('Rolling back transaction'));
         $class->debug_message($eval_error) if ($eval_error);
-        $tx->rollback();
+        unless($tx->rollback()) {
+            die 'failed to rollback transaction';
+        }
     } else {
-        $tx->commit();
+        unless($tx->commit()) {
+            die 'failed to commit transaction';
+        }
     }
 
     if (wantarray) {
