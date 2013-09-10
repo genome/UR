@@ -41,7 +41,7 @@ eval {
         Thing->create();
         is(thing_count(), 3, 'got 3 Things');
         die $message;
-    }
+    };
 };
 my $eval_error = $@;
 like($eval_error, qr/^$message/, 'got expected eval error');
@@ -53,7 +53,7 @@ eval {
         Thing->create();
         is(thing_count(), 3, 'got 3 Things');
         return;
-    }
+    };
 };
 $eval_error = $@;
 is($eval_error, '', 'did not get an eval error');
