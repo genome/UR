@@ -1389,6 +1389,36 @@ sub _resolve_sequence_name_from_class_id_properties {
 }
 
 
+sub _resolve_sequence_name_for_class_name {
+    my($self, $class_name) = @_;
+
+    my $table_name = $self->_resolve_table_name_for_class_name($class_name);
+
+    unless ($table_name) {
+        Carp::croak("Could not determine a table name for class $class_name");
+    }
+
+    my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
+    my $table_meta = UR::DataSource::RDBMS::Table->get(
+                         table_name => $ds_table,
+                         owner => $ds_owner,
+                         data_source => $self->_my_data_source_id);
+
+    my $sequence;
+    if ($table_meta) {
+        my @primary_keys = $table_meta->primary_key_constraint_column_names;
+        if (@primary_keys == 0) {
+            Carp::croak("No primary keys found for table " . $table_name . "\n");
+        }
+        $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $primary_keys[0]);
+
+    } else {
+        # No metaDB info... try and make a guess based on the class' ID properties
+        $sequence = $self->_resolve_sequence_name_from_class_id_properties($class_name);
+    }
+    return $sequence;
+}
+
 our %sequence_for_class_name;
 sub autogenerate_new_object_id_for_class_name_and_rule {
     # The sequences in the database are named by a naming convention which allows us to connect them to the table
@@ -1411,33 +1441,10 @@ sub autogenerate_new_object_id_for_class_name_and_rule {
     # sequence name, but there's a sequence generator in the schema for it (the current
     # mechanism), and when we should defer to the parent's sequence...
     unless ($sequence) {
-        # This class directly doesn't have a sequence specified.  Search through the inheritance
-        my $table_name = $self->_resolve_table_name_for_class_name($class_name);
-
-        unless ($table_name) {
-            Carp::croak("Could not determine a table name for class $class_name");
-        }
-
-        my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-        my $table_meta = UR::DataSource::RDBMS::Table->get(
-                             table_name => $ds_table,
-                             owner => $ds_owner,
-                             data_source => $self->_my_data_source_id);
-
-        if ($table_meta) {
-            my @primary_keys = $table_meta->primary_key_constraint_column_names;
-            if (@primary_keys == 0) {
-                Carp::croak("No primary keys found for table " . $table_name . "\n");
-            }
-            $sequence = $self->_get_sequence_name_for_table_and_column($table_name, $primary_keys[0]);
-
-        } else {
-            # No metaDB info... try and make a guess based on the class' ID properties
-            $sequence = $self->_resolve_sequence_name_from_class_id_properties($class_name);
-        }
+        $sequence = $self->_resolve_sequence_name_for_class_name($class_name);
 
         if (!$sequence) {
-            Carp::croak("No identity generator found for table " . $table_name . "\n");
+            Carp::croak("No identity generator found for class " . $class_name . "\n");
         }
 
         $sequence_for_class_name{$class_name} = $sequence;
