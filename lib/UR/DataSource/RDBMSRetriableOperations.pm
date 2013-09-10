@@ -1,5 +1,8 @@
 package UR::DataSource::RDBMSRetriableOperations;
 
+use strict;
+use warnings;
+
 # A mixin class that provides methods to retry queries and syncs
 #
 # Consumers should provide should_retry_operation_after_error().
@@ -90,16 +93,27 @@ sub _db_retry_observer {
 # and returns a ref to the named sub in that package
 # This is necessary because we're using a mixin class and not
 # a real role
+my %cached_rdbms_datasource_method_for;
 sub rdbms_datasource_method_for {
     my $self = shift;
     my $method = shift;
+    my $target_class_name = shift;
 
-    foreach my $parent ( $self->__meta__->parent_class_names ) {
-        if ($parent->isa('UR::DataSource::RDBMS')
-            and
-            my $sub = $parent->can($method)
-        ) {
-            return $sub;
+    $target_class_name ||= $self->class;
+    if ($cached_rdbms_datasource_method_for{$target_class_name}) {
+        return $cached_rdbms_datasource_method_for{$target_class_name}->can($method);
+    }
+
+    foreach my $parent_class_name ( $target_class_name->__meta__->parent_class_names ) {
+        if ( $parent_class_name->isa('UR::DataSource::RDBMS') ) {
+            if ($parent_class_name->isa(__PACKAGE__) ) {
+                if (my $sub = $self->rdbms_datasource_method_for($method, $parent_class_name)) {
+                    return $sub;
+                }
+            } else {
+                $cached_rdbms_datasource_method_for{$target_class_name} = $parent_class_name;
+                return $parent_class_name->can($method);
+            }
         }
     }
     return;
@@ -107,12 +121,19 @@ sub rdbms_datasource_method_for {
 
 # The retriable methods we want to wrap
 
-foreach my $parent_method ( qw(create_iterator_closure_for_rule create_default_handle _sync_database do_sql) ) {
-    my $parent_sub;
-
+foreach my $parent_method (qw(
+    create_iterator_closure_for_rule
+    create_default_handle
+    _sync_database
+    do_sql
+)) {
     my $override = sub {
         my $self = shift;
         my @params = @_;
+
+        # Installing this as the $parent_method leads to infinte recursion if
+        # the parent does not directly inherit this class.
+        use warnings FATAL => qw( recursion );
 
         my $parent_sub ||= $self->rdbms_datasource_method_for($parent_method);
         $self->_retriable_operation(sub {
