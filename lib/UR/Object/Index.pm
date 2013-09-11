@@ -106,7 +106,7 @@ sub get_objects_matching
                         # Get the values using the regular or negative match op.
                         foreach my $h (@hr) {
                             foreach my $k (sort keys %$h) {
-                                next unless $k ne '';  # an earlier undef value got saved as an empty string here
+                                next if $k eq '';  # an earlier undef value got saved as an empty string here
                                 if($k !~ /$regex/) {
                                     push @thr, $h->{$k};
                                 }
@@ -118,7 +118,7 @@ sub get_objects_matching
                         # Standard positive match
                         for my $h (@hr) {
                             for my $k (sort keys %$h) {
-                                next unless $k ne '';  # an earlier undef value got saved as an empty string here
+                                next if $k eq '';  # an earlier undef value got saved as an empty string here
                                 if ($k =~ /$regex/) {
                                     push @thr, $h->{$k};
                                 }
@@ -205,7 +205,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
-                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
+                            next if $k eq '';  # an earlier undef value got saved as an empty string here
                             if($k > $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
@@ -216,7 +216,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
-                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
+                            next if $k eq '';  # an earlier undef value got saved as an empty string here
                             if($k < $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
@@ -227,7 +227,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
-                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
+                            next if $k eq '';  # an earlier undef value got saved as an empty string here
                             if($k >= $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
@@ -238,7 +238,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
-                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
+                            next if $k eq '';  # an earlier undef value got saved as an empty string here
                             if($k <= $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
@@ -249,7 +249,7 @@ sub get_objects_matching
                     my @thr;
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
-                            next unless $k ne '';  # an earlier undef value got saved as an empty string here
+                            next if $k eq '';  # an earlier undef value got saved as an empty string here
                             if($k ne $value->{value} xor $not) {
                                 push @thr, $h->{$k};
                             }
