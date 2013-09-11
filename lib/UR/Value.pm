@@ -23,7 +23,7 @@ sub __load__ {
     my $class = shift;
     my $rule = shift;
     my $expected_headers = shift;
-$DB::single = 1;
+    
     my $id = $rule->value_for_id;
     unless (defined $id) {
         #$DB::single = 1;
