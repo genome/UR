@@ -2813,7 +2813,8 @@ sub display_invalid_data_for_save {
 
     for my $obj (@objects_with_errors) {
         no warnings;
-        my $msg = $obj->class . " identified by " . $obj->__display_name__ . " has problems on\n";
+        my $identifier = eval { $obj->__display_name__ } || $obj->id;
+        my $msg = $obj->class . " identified by " . $identifier . " has problems on\n";
         my @problems = $obj->__errors__;
         foreach my $error ( @problems ) {
             $msg .= $error->__display_name__ . "\n";
