@@ -13,8 +13,12 @@ require UR;
 
 sub indexed_property_names
 {
-    no warnings;
-    return split(/,/,$_[0]->{indexed_property_string});
+    my $self = shift;
+    unless (exists $self->{indexed_property_names}) {
+        no warnings;
+        $self->{indexed_property_names} = [ split(/,/,$self->{indexed_property_string}) ];
+    }
+    return @{$self->{indexed_property_names}};
 }
 
 # the only non-id property has an accessor...
