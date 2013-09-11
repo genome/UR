@@ -21,6 +21,19 @@ sub indexed_property_names
     return @{$self->{indexed_property_names}};
 }
 
+sub indexed_property_numericness {
+    my $self = shift;
+    unless (exists $self->{indexed_property_numericness}) {
+        my $class_meta = $self->indexed_class_name->__meta__;
+        my @is_numeric = map { $_->is_numeric }
+                         map { $class_meta->property_meta_for_name($_) }
+                         $self->indexed_property_names;
+        $self->{indexed_property_numericness} = \@is_numeric;
+    }
+    return @{ $self->{indexed_property_numericness} };
+}
+
+
 # the only non-id property has an accessor...
 
 sub data_tree
@@ -62,14 +75,19 @@ sub create {
 
 sub get_objects_matching
 {
+    my $self = shift;
+
     # The hash access below generates warnings
     # where undef is a value.  Ignore these.
     no warnings 'uninitialized';
-    
-    my @hr = (shift->{data_tree});
+
+    my @hr = ($self->{data_tree});
+    my @is_numeric = $self->indexed_property_numericness;
+
     my $value;
     for $value (@_)
     {               
+        my $is_numeric = shift @is_numeric;
         my $value_ref = ref($value);
         if($value_ref eq "HASH")
         {
