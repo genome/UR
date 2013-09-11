@@ -448,7 +448,7 @@ sub get_composite_id_decomposer {
                     # Handle each underlying ID, turning each into an arrayref divided by property value.
                     my @decomposed_ids;
                     for my $underlying_id (@$id) {
-                        push @decomposed_ids, [map { $_ eq '' ? undef : $_ } split(/\t/,$underlying_id)];
+                        push @decomposed_ids, [map { $_ eq '' ? undef : $_ } split($separator,$underlying_id)];
                     }
             
                     # Count the property values.
