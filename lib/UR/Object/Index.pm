@@ -8,6 +8,7 @@ use strict;
 use warnings;
 require UR;
 
+use List::MoreUtils;
 
 # wrapper for one of the ID properties to make it less ugly
 
@@ -20,6 +21,24 @@ sub indexed_property_names
     }
     return @{$self->{indexed_property_names}};
 }
+
+sub indexed_property_numericness {
+    my $self = shift;
+    unless (exists $self->{indexed_property_numericness}) {
+        my $class_meta = $self->indexed_class_name->__meta__;
+        my @is_numeric = map {
+                            my @props = $class_meta->_concrete_property_meta_for_class_and_name($_);
+                            @props == 1
+                                ? $props[0]->is_numeric
+                                : 0     # multiple ID properties are treated as a string
+                        }
+                        $self->indexed_property_names;
+
+        $self->{indexed_property_numericness} = \@is_numeric;
+    }
+    return @{ $self->{indexed_property_numericness} };
+}
+
 
 # the only non-id property has an accessor...
 
@@ -62,13 +81,18 @@ sub create {
 
 sub get_objects_matching
 {
+    my $self = shift;
+    my @values = @_;
+
     # The hash access below generates warnings
     # where undef is a value.  Ignore these.
     no warnings 'uninitialized';
-    
-    my @hr = (shift->{data_tree});
-    my $value;
-    for $value (@_)
+
+    my @hr = ($self->{data_tree});
+    my @is_numeric = $self->indexed_property_numericness;
+
+    my $iter = List::MoreUtils::each_array(@values, @is_numeric);
+    while(my($value, $is_numeric) = $iter->())
     {               
         my $value_ref = ref($value);
         if($value_ref eq "HASH")
