@@ -47,7 +47,6 @@ sub _create {
 
 sub create_for_loading_template {
     my($fab_class, $context, $loading_template, $query_plan, $rule, $rule_template, $values, $dsx) = @_;
-
     my @values = @$values;
 
     my $class_name                                  = $loading_template->{final_class_name};
@@ -151,6 +150,9 @@ sub create_for_loading_template {
         @all_rule_property_names = $rule_template_without_in_clause->_property_names;
         foreach my $property ( @rule_properties_with_in_clauses ) {
             my $values_for_in_clause = $rule_without_recursion_desc->value_for($property);
+            unless ($values_for_in_clause) {
+                Carp::confess("rule has no value for property $property: $rule_without_recursion_desc");
+            }
             if (@$values_for_in_clause > 100) {
                 $do_record_in_all_params_loaded = 0;
                 next;

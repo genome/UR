@@ -513,7 +513,6 @@ sub legacy_params_hash {
     my $logic_type          = $self->logic_type;    
     my $logic_detail        = $self->logic_detail;    
     my @keys_sorted         = $self->_underlying_keys;
-    
     my $subject_class_meta  = $subject_class_name->__meta__;
     
     if (
@@ -550,13 +549,12 @@ sub legacy_params_hash {
                 
 
         unless ($legacy_params_hash->{_unique}) {         
-            if (defined $legacy_params_hash->{id} and not ref $legacy_params_hash->{id})
-            {
+            if (defined $legacy_params_hash->{id} and not ref $legacy_params_hash->{id}) {
                 # if we have the id, then we have uniqueness
-                $legacy_params_hash->{_unique} = 1;
+                # NOT TRUE: we catch the truly unieq cses of having an id and an unambiguous operator above
+                #$legacy_params_hash->{_unique} = 1;
             }
-            else
-            {
+            else {
                 # default to non-unique
                 $legacy_params_hash->{_unique} = 0;   
                

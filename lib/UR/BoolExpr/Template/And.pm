@@ -523,7 +523,6 @@ sub _fast_construct {
     ) = @_;
 
     my $logic_type = 'And';    
-    
     $logic_detail       ||= join(",",@$keys);
     $constant_value_id  ||= UR::BoolExpr::Util->values_to_value_id(@$constant_values);
    
@@ -547,14 +546,13 @@ sub _fast_construct {
             next unless @id_props;
             $id_prop_is_real = 1 if (grep { $_ eq 'id'} @id_props);
             next if @id_props == 1 and $id_props[0] eq "id" and !$id_prop_is_real;
-            push @$id_translations, \@id_props;
             @$id_related{@id_props} = @id_props;
-            @$id_pos{@id_props} = (0..$#id_props);
+            push @$id_translations, \@id_props;
+            @$id_pos{@id_props} = (0..$#id_props) unless @id_props == 1 and $id_props[0] eq 'id';
         }
         [$id_related,$id_translations,$id_pos];
     };
     my ($id_related,$id_translations,$id_pos) = @$cache;
-
     my @keys = @$keys;
     my @constant_values = @$constant_values;
 
@@ -611,6 +609,7 @@ sub _fast_construct {
             push @$property_names, $name;
         }    
     }
+
 
     # Note whether there are properties not involved in the ID
     # Add value extenders for any cases of id-related properties,
@@ -673,6 +672,7 @@ sub _fast_construct {
         my ($property, $op);
         my %id_parts;
         my $values_index = -1; # -1 so we can bump it at start of loop
+        my $id_op;
         for (my $key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
             my $key = $keys[$key_pos];
             if (substr($key, 0, 1) eq '-') {
@@ -691,12 +691,13 @@ sub _fast_construct {
             $key_op_hash->{$property}{$op}++;
             
             if ($property eq "id") {
+                $id_op = $op;
                 $key_op_hash->{id} ||= {};
                 $key_op_hash->{id}{$op}++;                    
                 # Put an id-breakdown key into the key list.
                 for my $alias (@$id_translations) {
                     my @new_keys = map {  $_ . ($op ? " $op" : "") } @$alias; 
-                    if (grep { $check_for_duplicate_rules{$_} } @new_keys) {
+                    if (grep { $check_for_duplicate_rules{$_} } @$alias) {
                         #print "up @new_keys with @$alias\n";
                     }
                     else {
@@ -711,6 +712,7 @@ sub _fast_construct {
                 }
             }    
             elsif ($id_related->{$property}) {
+                $id_op ||= $op;
                 if ($op eq "" or $op eq "eq" or $op eq "=" or $op eq 'in') {
                     $id_parts{$id_pos->{$property}} = $values_index;                        
                 }
@@ -743,7 +745,7 @@ sub _fast_construct {
                         my @id_pos = sort { $a <=> $b } keys %id_parts;
                         push @$extenders, [ [@id_parts{@id_pos}], "resolve_composite_id_from_ordered_values", 'id' ]; #TODO was this correct?
                         $key_op_hash->{id} ||= {};
-                        $key_op_hash->{id}{$op}++;                        
+                        $key_op_hash->{id}{$id_op}++;                        
                         push @keys, "id"; 
                     }   
                 }
@@ -878,7 +880,7 @@ sub _fast_construct {
         $property ||= $keys[$n];
         $op ||= '';
         $op =~ s/^\s+// if $op;
-        if ($op and $op ne 'eq' and $op ne '==') {
+        if ($op and $op ne 'eq' and $op ne '==' and $op ne '=') {
             push @ambiguous_keys, $keys[$n];
             push @ambiguous_property_names, $property;
         }
