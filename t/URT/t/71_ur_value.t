@@ -147,18 +147,9 @@ $x1 = Test::Value2->get(string1 => 'xyz', string2 => 'xyz', other_prop => 'hi th
 ok($x1, 'get() including a non-id property worked');
 is($x1->other_prop, 'hi there', 'The non-id property has the right value');
 
-TODO: {
-    local $TODO = "Can't normalize a composite id in-clause rule";
-
-    # This isn't working properly because of a shortcoming in BoolExpr normalization.  It ends up making
-    # a rule like id => [abc,xyz], when we really want something like
-    # ( string1 => 'abc' and string2 => 'abc) or ( string1 => 'xyz' and string2 => 'xyz')
-
-    local $SIG{'__WARN__'} = sub {};   # Suppress warnings about is_unique during boolexpr construction
-    @o = Test::Value2->get(['xyz'.$sep.'xyz', 'abc'.$sep.'abc']);
-    is(scalar(@o), 2, 'get() with 2 composite IDs worked');
-}
-
+local $SIG{'__WARN__'} = sub {};   # Suppress warnings about is_unique during boolexpr construction
+@o = Test::Value2->get(['xyz'.$sep.'xyz', 'abc'.$sep.'abc']);
+is(scalar(@o), 2, 'get() with 2 composite IDs worked');
 
 { 
     local $SIG{'__WARN__'} = sub {};   # Suppress warnings about is_unique during boolexpr construction
