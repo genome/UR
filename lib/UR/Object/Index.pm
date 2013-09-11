@@ -218,8 +218,12 @@ sub get_objects_matching
                             # An empty string for $k means the object's value was loaded as NULL
                             # and we want things like 0 != NULL to be true to match the SQL that
                             # gets generated for the same rule
-                            no warnings 'numeric';
-                            if($k eq '' or $k != $value->{value} or $k ne $value->{value}) {
+                            my $t = ($k eq '')
+                                    ||
+                                    ($is_numeric
+                                        ? $k != $value->{value}
+                                        : $k ne $value->{value});
+                            if ($t) {
                                 push @thr, $h->{$k};
                             }
                         }
