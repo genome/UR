@@ -23,7 +23,7 @@ sub __load__ {
     my $class = shift;
     my $rule = shift;
     my $expected_headers = shift;
-
+$DB::single = 1;
     my $id = $rule->value_for_id;
     unless (defined $id) {
         #$DB::single = 1;
@@ -37,14 +37,21 @@ sub __load__ {
 
         my $class_meta = $class->__meta__;
 
-        my %id_properties = map { $_ => 1 } $class_meta->all_id_property_names;
+        my %id_properties = map { $_ => $rule->value_for($_) } $class_meta->all_id_property_names;
         my @non_id = grep { ! $id_properties{$_} } $rule->template->_property_names;
         if (@non_id) {
             Carp::croak("Cannot load class $class via UR::DataSource::Default when 'id' is a listref and non-id properties appear in the rule:" . join(', ', @non_id));
         }
         my $count = @$expected_headers;
-        my $listifier = sub { my $c = $count; my @l; push(@l,$_[0]) while ($c--); return \@l };
-        return ($expected_headers, [ map { &$listifier($_) } @$id ]);
+
+        my @rows;
+        for (my $row_n = 0; $row_n < @$id; $row_n++) {
+            my @row = map { $id_properties{$_}[$row_n] } @$expected_headers;
+            push @rows,\@row;
+        }
+
+        #my $listifier = sub { my $c = $count; my @l; push(@l,$_[0]) while ($c--); return \@l };
+        return ($expected_headers, \@rows);
     }
 
 
