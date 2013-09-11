@@ -322,14 +322,14 @@ sub _build_data_tree
     }
     
     # _add_object in bulk.
-    my ($object,@values,$hr,$value);
     for my $object ($UR::Context::current->all_objects_loaded($indexed_class_name)) {
+        my(@values, $hr);
         if (@indexed_property_names) {
             @values = map { my $val = $object->$_; defined $val ? $val : undef } @indexed_property_names;
             @values = (undef) unless(@values);
         }
         $hr = $hr_base;
-        for $value (@values)
+        for my $value (@values)
         {
             no warnings 'uninitialized';  # in case $value is undef
             $hr->{$value} ||= {};
