@@ -516,6 +516,21 @@ sub _add_object($$)
     }
 }
 
+sub _all_objects_indexed {
+    my $self = shift;
+
+    my @object_hashes = ( $self->{data_tree} );
+    foreach ( $self->indexed_property_names ) {
+        my @new_object_hashes;
+        while (my $hr = shift @object_hashes) {
+            push @new_object_hashes, values(%$hr);
+        }
+        @object_hashes = @new_object_hashes;
+    }
+
+    return map { values %$_ } @object_hashes;
+}
+
 1;
 
 =pod
