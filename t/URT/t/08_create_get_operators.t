@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 450;
+use Test::More tests => 480;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -100,6 +100,8 @@ my @tests = (
     [ [ 'status isa' => 'Acme::Status' ],                       7 ],
     [ [ 'manufacturer_name >' => 'E' ],                         4 ],
     [ [ 'manufacturer_name not >' => 'E' ],                     3 ],
+    [ [ 'manufacturer_name <' => 'E' ],                         3 ],
+    [ [ 'manufacturer_name not <' => 'E' ],                     4 ],
 );
 
 for my $class ( qw( Acme::Product Acme::DBProduct ) ) {

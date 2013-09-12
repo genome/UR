@@ -143,7 +143,9 @@ sub setup_classes_and_db {
 
     ok(UR::Object::Type->define(
            class_name => 'URT::Thing',
-           id_by => 'thing_id',
+           id_by => [
+                'thing_id' => { is => 'Integer' },
+           ],
            has => ['name', 'data'],
            data_source => 'URT::DataSource::SomeSQLite',
            table_name => 'things'),
