@@ -25,9 +25,14 @@ sub indexed_property_numericness {
     my $self = shift;
     unless (exists $self->{indexed_property_numericness}) {
         my $class_meta = $self->indexed_class_name->__meta__;
-        my @is_numeric = map { $_->is_numeric }
-                         map { $class_meta->property_meta_for_name($_) }
-                         $self->indexed_property_names;
+        my @is_numeric = map {
+                            my @props = $class_meta->_concrete_property_meta_for_class_and_name($_);
+                            @props == 1
+                                ? $props[0]->is_numeric
+                                : 0     # multiple ID properties are treated as a string
+                        }
+                        $self->indexed_property_names;
+
         $self->{indexed_property_numericness} = \@is_numeric;
     }
     return @{ $self->{indexed_property_numericness} };
