@@ -262,7 +262,10 @@ sub get_objects_matching
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
                             next if $k eq '';  # an earlier undef value got saved as an empty string here
-                            if($k >= $value->{value} xor $not) {
+                            my $t = $is_numeric
+                                        ? $k >= $value->{value}
+                                        : $k ge $value->{value};
+                            if ($t xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
@@ -273,7 +276,10 @@ sub get_objects_matching
                     foreach my $h (@hr) {
                         foreach my $k (keys %$h) {
                             next if $k eq '';  # an earlier undef value got saved as an empty string here
-                            if($k <= $value->{value} xor $not) {
+                            my $t = $is_numeric
+                                        ? $k <= $value->{value}
+                                        : $k le $value->{value};
+                            if ($t xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
