@@ -115,7 +115,9 @@ sub setup_classes_and_db {
 
     UR::Object::Type->define(
         class_name => 'URT::Thing',
-        id_by => 'thing_id',
+        id_by => [
+            thing_id => { is => 'Integer' },
+        ],
         has => [
             name => { is => 'String' },
             datas => { is => 'URT::Data', reverse_as => 'thing', is_many => 1 },

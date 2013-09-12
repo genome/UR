@@ -12,9 +12,9 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => ['UR::Context'],
     has => [
-        begin_point     => {},
-        end_point       => {is_optional => 1},  # FIXME is this ever used anywhere?
-        state           => {}, # open, committed, rolled-back
+        begin_point     => { is => 'Integer' },
+        end_point       => { is => 'Integer', is_optional => 1},  # FIXME is this ever used anywhere?
+        state           => { is => 'Text' }, # open, committed, rolled-back
     ],
     is_transactional => 1,
 );
