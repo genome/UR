@@ -311,7 +311,11 @@ sub get_objects_matching
                     my ($min,$max) = @{ $value->{value} };
                     foreach my $h (@hr) {
                         foreach my $k (sort keys %$h) {
-                            if((length($k) and $k >= $min and $k <= $max) xor $not) {
+                            next if $k eq '';
+                            my $t = $is_numeric
+                                        ? ( $k >= $min and $k <= $max )
+                                        : ( $k ge $min and $k le $max );
+                            if ($t xor $not) {
                                 push @thr, $h->{$k};
                             }
                         }
