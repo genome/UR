@@ -23,7 +23,7 @@ sub __load__ {
     my $class = shift;
     my $rule = shift;
     my $expected_headers = shift;
-    
+
     my $id = $rule->value_for_id;
     unless (defined $id) {
         #$DB::single = 1;
@@ -66,6 +66,64 @@ sub __load__ {
 
 sub underlying_data_types {
     return ();
+}
+
+package UR::Value::Type;
+
+sub get_composite_id_decomposer {
+    my $class_meta = shift;
+
+    unless ($class_meta->{get_composite_id_decomposer}) {
+        my @id_property_names = $class_meta->id_property_names;
+        my $instance_class = $class_meta->class_name;
+        if (my $decomposer = $instance_class->can('__deserialize_id__')) {
+            $class_meta->{get_composite_id_decomposer} = sub {
+                my @ids = (ref($_[0]) and ref($_[0]) eq 'ARRAY')
+                            ? @{$_[0]}
+                            : ( $_[0] );
+                my @retval;
+                if (@ids == 1) {
+                    my $h = $instance_class->$decomposer($ids[0]);
+                    @retval = @$h{@id_property_names};
+
+                } else {
+                    @retval = map { [] } @id_property_names;  # initialize n empty lists
+                    foreach my $id ( @ids ) {
+                        my $h = $instance_class->$decomposer($id);
+                        #my @h = @$h{@id_property_names};
+                        for (my $i = 0; $i < @id_property_names; $i++) {
+                            push @{ $retval[$i] }, $h->{$id_property_names[$i]};
+                        }
+                    }
+                }
+                return @retval;
+            };
+
+        } else {
+            $decomposer = $class_meta->SUPER::get_composite_id_decomposer();
+            $class_meta->{get_composite_id_decomposer} = $decomposer;
+        }
+    }
+    return $class_meta->{get_composite_id_decomposer};
+}
+
+sub get_composite_id_resolver {
+    my $class_meta = shift;
+    unless ($class_meta->{get_composite_id_resolver}) {
+        my @id_property_names = $class_meta->id_property_names;
+        my $instance_class = $class_meta->class_name;
+        if (my $resolver = $instance_class->can('__serialize_id__')) {
+            $class_meta->{get_composite_id_resolver} = sub {
+                my %h = map { $_ => shift } @id_property_names;
+                return $instance_class->__serialize_id__(\%h);
+            };
+
+        } else {
+            $resolver = $class_meta->SUPER::get_composite_id_resolver();
+            $class_meta->{get_composite_id_resolver} = $resolver;
+        }
+    }
+    return $class_meta->{get_composite_id_resolver};
 }
 
 1;
