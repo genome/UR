@@ -23,45 +23,60 @@ sub __load__ {
     my $class = shift;
     my $rule = shift;
     my $expected_headers = shift;
-    
-    my $id = $rule->value_for_id;
-    unless (defined $id) {
-        #$DB::single = 1;
-        Carp::croak "Can't load an infinite set of $class.  Some id properties were not specified in the rule $rule";
+
+    my $class_meta = $class->__meta__;
+    unless ($class_meta->{_value_loader}) {
+        my @id_property_names = $class_meta->all_id_property_names;
+        my %id_property_names = map { $_ => 1 } @id_property_names;
+
+        my $multi_loader = sub {
+            my $bx = shift;
+
+            my @non_id = grep { ! $id_property_names{$_} } $bx->template->_property_names;
+            if (@non_id) {
+                Carp::croak("Cannot load class "
+                            . $bx->subject_class_name
+                            . " via UR::DataSource::Default when 'id' is a listref and non-id"
+                            . " properties appear in the rule: "
+                            . join(', ', @non_id));
+            }
+
+            my $id = $bx->value_for_id;
+            my %id_property_values = map { $_ => $bx->value_for($_) } @id_property_names;
+
+            my @rows;
+            for (my $row_n = 0; $row_n < @$id; $row_n++) {
+                my @row = map { $id_property_values{$_}->[$row_n] } @$expected_headers;
+                push @rows, \@row;
+            }
+            return ($expected_headers, \@rows);
+        };
+        my $single_loader = sub {
+            my $bx = shift;
+            my @row;
+            foreach my $header ( @$expected_headers ) {
+                push @row, $bx->value_for($header);
+            }
+            return ($expected_headers, [ \@row ]);
+        };
+
+        my $loader = sub {
+            my $bx = shift;
+            my $id = $bx->value_for_id;
+            unless (defined $id) {
+                Carp::croak "Can't load an infinite set of "
+                            . $bx->subject_class_name
+                            . ".  Some id properties were not specified in the rule $bx";
+            }
+            return (ref($id) and ref($id) eq 'ARRAY')
+                    ? $multi_loader->($bx)
+                    : $single_loader->($bx);
+        };
+
+        $class_meta->{_value_loader} = $loader;
     }
 
-    if (ref($id) and ref($id) eq 'ARRAY') {
-        # We're being asked to load up more than one object.  In the basic case, this is only
-        # possible if the rule _only_ contains ID properties.  For anything more complicated,
-        # the subclass should implement its own behavior
-
-        my $class_meta = $class->__meta__;
-
-        my %id_properties = map { $_ => $rule->value_for($_) } $class_meta->all_id_property_names;
-        my @non_id = grep { ! $id_properties{$_} } $rule->template->_property_names;
-        if (@non_id) {
-            Carp::croak("Cannot load class $class via UR::DataSource::Default when 'id' is a listref and non-id properties appear in the rule:" . join(', ', @non_id));
-        }
-        my $count = @$expected_headers;
-
-        my @rows;
-        for (my $row_n = 0; $row_n < @$id; $row_n++) {
-            my @row = map { $id_properties{$_}[$row_n] } @$expected_headers;
-            push @rows,\@row;
-        }
-
-        #my $listifier = sub { my $c = $count; my @l; push(@l,$_[0]) while ($c--); return \@l };
-        return ($expected_headers, \@rows);
-    }
-
-
-    my @values;
-    foreach my $header ( @$expected_headers ) {
-        my $value = $rule->value_for($header);
-        push @values, $value;
-    }
-
-    return $expected_headers, [\@values];
+    return $class_meta->{_value_loader}->($rule);
 }
 
 sub underlying_data_types {
