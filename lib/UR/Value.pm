@@ -4,6 +4,9 @@ use strict;
 use warnings;
 
 require UR;
+
+use List::MoreUtils;
+
 our $VERSION = "0.41"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Context );
@@ -44,13 +47,23 @@ sub __load__ {
             my $id = $bx->value_for_id;
             my %id_property_values = map { $_ => $bx->value_for($_) } @id_property_names;
 
+            # Get the 1st value from each list, then the second, then the third, etc
+            my $iter = List::MoreUtils::each_arrayref
+                        map {
+                            my $v = $bx->value_for($_);
+                            (ref($v) eq 'ARRAY')
+                                ? $v
+                                : [ $v ]
+                        }
+                        @$expected_headers;
             my @rows;
-            for (my $row_n = 0; $row_n < @$id; $row_n++) {
-                my @row = map { $id_property_values{$_}->[$row_n] } @$expected_headers;
+            while(my @row = $iter->()) {
                 push @rows, \@row;
             }
+
             return ($expected_headers, \@rows);
         };
+
         my $single_loader = sub {
             my $bx = shift;
             my @row;
@@ -102,13 +115,16 @@ sub get_composite_id_decomposer {
                     @retval = @$h{@id_property_names};
 
                 } else {
-                    @retval = map { [] } @id_property_names;  # initialize n empty lists
-                    foreach my $id ( @ids ) {
-                        my $h = $instance_class->$decomposer($id);
-                        #my @h = @$h{@id_property_names};
-                        for (my $i = 0; $i < @id_property_names; $i++) {
-                            push @{ $retval[$i] }, $h->{$id_property_names[$i]};
+                    # Get the 1st value from each list, then the second, then the third, etc
+                    my @decomposed = map {
+                            my $h = $instance_class->$decomposer($_);
+                            [ @$h{@id_property_names} ]
                         }
+                        @ids;
+                    my $iter = List::MoreUtils::each_arrayref @decomposed;
+
+                    while( my @row = $iter->() ) {
+                        push @retval, \@row;
                     }
                 }
                 return @retval;
