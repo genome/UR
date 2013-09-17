@@ -32,44 +32,6 @@ sub __load__ {
         my @id_property_names = $class_meta->all_id_property_names;
         my %id_property_names = map { $_ => 1 } @id_property_names;
 
-        my $multi_loader = sub {
-            my $bx = shift;
-
-            my @non_id = grep { ! $id_property_names{$_} } $bx->template->_property_names;
-            if (@non_id) {
-                Carp::croak("Cannot load class "
-                            . $bx->subject_class_name
-                            . " via UR::DataSource::Default when 'id' is a listref and non-id"
-                            . " properties appear in the rule: "
-                            . join(', ', @non_id));
-            }
-
-            my $id = $bx->value_for_id;
-            my %id_property_values = map { $_ => $bx->value_for($_) } @id_property_names;
-
-            # Get the 1st value from each list, then the second, then the third, etc
-            my $iter = List::MoreUtils::each_arrayref
-                        map {
-                            my $v = $bx->value_for($_);
-                            (ref($v) eq 'ARRAY')
-                                ? $v
-                                : [ $v ]
-                        }
-                        @$expected_headers;
-            my @rows;
-            while(my @row = $iter->()) {
-                push @rows, \@row;
-            }
-
-            return ($expected_headers, \@rows);
-        };
-
-        my $single_loader = sub {
-            my $bx = shift;
-            my @row = map { $bx->value_for($_) } @$expected_headers;
-            return ($expected_headers, [ \@row ]);
-        };
-
         my $loader = sub {
             my $bx = shift;
             my $id = $bx->value_for_id;
@@ -78,9 +40,37 @@ sub __load__ {
                             . $bx->subject_class_name
                             . ".  Some id properties were not specified in the rule $bx";
             }
-            return (ref($id) and ref($id) eq 'ARRAY')
-                    ? $multi_loader->($bx)
-                    : $single_loader->($bx);
+            my @rows;
+            if (ref($id) and ref($id) eq 'ARRAY') {
+                # Multiple IDs passed in - return rows for multiple objects
+                my @non_id = grep { ! $id_property_names{$_} } $bx->template->_property_names;
+                if (@non_id) {
+                    Carp::croak("Cannot load class "
+                                . $bx->subject_class_name
+                                . " via UR::DataSource::Default when 'id' is a listref and non-id"
+                                . " properties appear in the rule: "
+                                . join(', ', @non_id));
+                }
+
+                # Get the 1st value from each list, then the second, then the third, etc
+                my $iter = List::MoreUtils::each_arrayref
+                            map {
+                                my $v = $bx->value_for($_);
+                                (ref($v) eq 'ARRAY')
+                                    ? $v
+                                    : [ $v ]
+                            }
+                            @$expected_headers;
+                while(my @row = $iter->()) {
+                    push @rows, \@row;
+                }
+
+            } else {
+                # single ID - return a single row
+                my @row = map { $bx->value_for($_) } @$expected_headers;
+                @rows = ( \@row );
+            }
+            return ($expected_headers, \@rows);
         };
 
         $class_meta->{_value_loader} = $loader;
