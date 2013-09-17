@@ -66,10 +66,7 @@ sub __load__ {
 
         my $single_loader = sub {
             my $bx = shift;
-            my @row;
-            foreach my $header ( @$expected_headers ) {
-                push @row, $bx->value_for($header);
-            }
+            my @row = map { $bx->value_for($_) } @$expected_headers;
             return ($expected_headers, [ \@row ]);
         };
 
