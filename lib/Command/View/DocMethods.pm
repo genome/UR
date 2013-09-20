@@ -440,6 +440,9 @@ sub help_options {
         }
 
         push @data, [$param_name, $param_type, $doc, $default_value];
+        if ($param_type eq 'Boolean') {
+            push @data, ['no'.$param_name, $param_type, "Make $param_name 'false'" ];
+        }
     }
     my $text = '';
     for my $row (@data) {
