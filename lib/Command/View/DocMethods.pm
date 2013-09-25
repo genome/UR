@@ -82,10 +82,11 @@ sub doc_help {
     # standard: update this to do the old --help format
     my $synopsis = $self->help_synopsis;
     my $required_inputs = $self->help_options(is_optional => 0, is_input => 1);
+    my $required_outputs = $self->help_options(is_optional => 0, is_output => 1);
     my $required_params = $self->help_options(is_optional => 0, is_param => 1);
     my $optional_inputs = $self->help_options(is_optional => 1, is_input => 1);
+    my $optional_outputs = $self->help_options(is_optional => 1, is_output => 1);
     my $optional_params = $self->help_options(is_optional => 1, is_param => 1);
-    $DB::single = 1;
     my @parts;
     
     push @parts, Term::ANSIColor::colored('USAGE', 'underline');
@@ -123,6 +124,16 @@ sub doc_help {
             : ''
         );
     push @parts, 
+        ( $required_outputs
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("REQUIRED OUTPUTS", 'underline'), $required_outputs)
+            : ''
+        );
+    push @parts, 
+        ( $optional_outputs
+            ? sprintf("%s\n%s\n", Term::ANSIColor::colored("OPTIONAL OUTPUTS", 'underline'), $optional_outputs)
+            : ''
+        );
+    push @parts, 
         sprintf(
             "%s\n%s\n",
             Term::ANSIColor::colored("DESCRIPTION", 'underline'),
@@ -132,7 +143,7 @@ sub doc_help {
         ( $extra_help ? $extra_help : '' );
 
     $text = sprintf(
-        "\n%s\n%s\n\n%s%s%s%s%s%s%s\n",
+        "\n%s\n%s\n\n%s%s%s%s%s%s%s%s%s\n",
         @parts
     );
 

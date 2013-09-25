@@ -391,7 +391,9 @@ sub _errors_from_missing_parameters {
         $arg = "--$arg";
 
         if ($property_meta->is_output and not $property_meta->is_input and not $property_meta->is_param) {
-            if ($property_meta->_data_type_as_class_name->__meta__->data_source) {
+            if ($property_meta->_data_type_as_class_name->__meta__->data_source 
+                and not $property_meta->_data_type_as_class_name->isa("UR::Value")
+            ) {
                 # outputs with a data source do not need a specification
                 # on the cmdline to "store" them after execution
                 next;
@@ -506,7 +508,7 @@ sub _shell_args_property_meta {
     # if a property is overridden in a child class
     my ($rule, %extra) = UR::Object::Property->define_boolexpr(@_);
     my %seen;
-    my (@positional,@required_input,@required_param,@optional_input,@optional_param);
+    my (@positional,@required_input,@required_param,@optional_input,@optional_param, @output);
 
     my @property_meta = $class_meta->properties();
     PROP:
@@ -515,9 +517,8 @@ sub _shell_args_property_meta {
 
         next if $seen{$property_name}++;
         next unless $rule->evaluate($property_meta);
-        next unless $property_meta->can("is_param") and ($property_meta->is_param or $property_meta->is_input);
+        next unless $property_meta->can("is_param") and ($property_meta->is_param or $property_meta->is_input or $property_meta->is_output);
         if (%extra) {
-            $DB::single = 1;
             no warnings;
             for my $key (keys %extra) {
                 if ($property_meta->$key ne $extra{$key}) {
@@ -545,11 +546,12 @@ sub _shell_args_property_meta {
         else {
             next unless($property_meta->is_mutable);
         }
+
         if ($property_meta->{shell_args_position}) {
             push @positional, $property_meta;
         }
         elsif ($property_meta->is_optional) {
-            if ($property_meta->is_input) {
+            if ($property_meta->is_input or $property_meta->is_output) {
                 push @optional_input, $property_meta;
             }
             elsif ($property_meta->is_param) {
@@ -557,7 +559,7 @@ sub _shell_args_property_meta {
             }
         }
         else {
-            if ($property_meta->is_input) {
+            if ($property_meta->is_input or $property_meta->is_output) {
                 push @required_input, $property_meta;
             }
             elsif ($property_meta->is_param) {
