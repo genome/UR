@@ -566,14 +566,15 @@ sub property_metadata_list {
 
 package UR::Namespace::Command::Sys::ClassBrowser::TreeItem;
 
-our $ug = Data::UUID->new();
 sub new {
     my $class = shift;
     my %node = @_;
     die "new() requires a 'name' parameter" unless (exists $node{name});
 
     $node{children} = {};
-    $node{id} ||= $ug->create_str;
+    unless (defined $node{id}) {
+        ($node{id} = $node{name}) =~ s/::/__/g;
+    }
     my $self = bless \%node, __PACKAGE__;
     return $self;
 }
