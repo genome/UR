@@ -55,7 +55,7 @@ for my $type (qw/error warning status/) {
             is($c->$cb_register(), $callback_sub, 'can get callback');
 
             my $message_line = __LINE__ + 1;    # The messaging sub will be called on the next line
-            is($c->$accessor("error1"), "error1",       "$type setting works");
+            is($c->$accessor("error%d", 1), "error1",       "$type setting works");
             $buffer = $stderr_twin->getline;
             is($buffer, ($c->$dump_flag ? "${msg_prefix}error1\n" : undef), ($c->$dump_flag ?  "got message 1" : "no dump") );
 

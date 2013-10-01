@@ -464,14 +464,16 @@ For example, for the "error" message type, these methods are created:
 =item error_message
 
     $obj->error_message("Something went wrong...");
+    $obj->error_message($format, @list);
     $msg = $obj->error_message();
 
-When called with one argument, it sends an error message to the object.  The 
-error_message_callback will be run, if one is registered, and the message will
-be printed to the terminal.  When called with no arguments, the last message
-sent will be returned.  If the message is C<undef> then no message is printed
-or queued, and the next time error_message is run as an accessor, it will
-return undef.
+When called with one or more arguments, it sends an error message to the
+object.  The error_message_callback will be run, if one is registered, and
+the message will be printed to the terminal.  The actual message is formed
+by passing the format and additional arguments through sprintf.  When called
+with no arguments, the last message sent will be returned.  If the message
+is C<undef> then no message is printed or queued, and the next time
+error_message is run as an accessor, it will return undef.
 
 =item dump_error_messages
 
@@ -699,9 +701,14 @@ $create_subs_for_message_type = sub {
     my $logger_subref = Sub::Name::subname "${class}::${logger_subname}" => sub {
         my $self = shift;
 
-        foreach ( @_ ) {
-            my $msg = $_;
-            chomp($msg) if defined;
+        if (@_) {
+            my $msg;
+            my $format = shift;
+            if (defined $format) {
+                $msg = sprintf($format, @_);
+                defined($msg) && chomp($msg);
+            }
+
             # old-style callback registered with error_messages_callback
             if (my $code = $self->$check_callback()) {
                 if (ref $code) {
@@ -720,24 +727,25 @@ $create_subs_for_message_type = sub {
             $save_setting->($self, $logger_subname, $msg);
             # If the callback set $msg to undef with "$_[1] = undef", then they didn't want the message
             # processed further
-            next unless defined($msg);
+            if (defined $msg) {
 
-            if (my $fh = $self->$should_dump_messages()) {
-                $fh = $$default_fh unless (ref $fh);
+                if (my $fh = $self->$should_dump_messages()) {
+                    $fh = $$default_fh unless (ref $fh);
 
-                $fh->print($message_text_prefix . $msg . "\n");
+                    $fh->print($message_text_prefix . $msg . "\n");
+                }
+
+                if ($self->$should_queue_messages()) {
+                    my $a = $self->$messages_arrayref();
+                    push @$a, $msg;
+                }
+
+                my ($package, $file, $line, $subroutine) = caller;
+                $self->$message_package($package);
+                $self->$message_file($file);
+                $self->$message_line($line);
+                $self->$message_subroutine($subroutine);
             }
-
-            if ($self->$should_queue_messages()) {
-                my $a = $self->$messages_arrayref();
-                push @$a, $msg;
-            }
-
-            my ($package, $file, $line, $subroutine) = caller;
-            $self->$message_package($package);
-            $self->$message_file($file);
-            $self->$message_line($line);
-            $self->$message_subroutine($subroutine);
         }
 
         return $get_setting->($self, $logger_subname);
