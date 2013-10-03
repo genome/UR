@@ -8,7 +8,7 @@ use warnings;
 require UR;
 our $VERSION = "0.41"; # UR $VERSION;
 
-use Scalar::Util qw(blessed);
+use Scalar::Util qw(blessed reftype refaddr);
 use Data::Dumper;
 use FreezeThaw;
 
@@ -34,7 +34,57 @@ sub values_to_value_id_frozen {
 sub value_id_to_values_frozen {
     my $self = shift;
     my $value_id = shift;
-    return FreezeThaw::thaw($value_id);
+    return $self->_fixup_ur_objects_from_thawed_data(FreezeThaw::thaw($value_id));
+}
+
+sub _fixup_ur_objects_from_thawed_data {
+    my $self = shift;
+    my @values = @_;
+
+    # For things that are UR::Objects (or used to be UR objects), swap the
+    # thawed/cloned one with one from the object cache
+    #
+    # This sub is localized inside _fixup_ur_objects_from_thawed_data so it's not called
+    # externally, and uses $_ as the thing to process, which is set in the foreach loop
+    # below - both as a performance speedup of# not having to prepare an argument list while
+    # processing a possibly deep data structure, and clarity of avoiding double dereferencing
+    # as this sub needs to mutate the item it's processing
+    my $process_it = sub {
+        if (blessed($_) and $_->isa('UR::Object')) {
+            my($class, $id) = (ref($_), $_->{id});
+            if (refaddr($_) != refaddr($UR::Context::all_objects_loaded->{$class}->{$id})) {
+                my $cloned_thing = $_;
+                # Swap in the object from the object cache
+                $_ = $UR::Context::all_objects_loaded->{$class}->{$id};
+                # bless the original thing to a non-existent class so UR::Object::DESTROY
+                # doesn't run on it
+                bless $cloned_thing, 'UR::BoolExpr::Util::clonedThing';
+            }
+
+        }
+        $self->_fixup_ur_objects_from_thawed_data($_);
+    };
+
+    foreach my $data ( @values ) {
+        if (ref $data) {
+            my $reftype = reftype($data);
+            my $iter;
+            if ($reftype eq 'ARRAY') {
+                foreach (@$data) {
+                    &$process_it;
+                }
+            } elsif ($reftype eq 'HASH') {
+                foreach (values %$data) {
+                    &$process_it;
+                }
+
+            } elsif ($reftype eq 'SCALAR') {
+                local $_ = $$data;
+                &$process_it;
+            }
+        }
+    }
+    return @values;
 }
 
 # These are used for the simple common-case rules.
