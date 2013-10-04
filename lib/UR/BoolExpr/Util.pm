@@ -42,15 +42,20 @@ sub _fixup_ur_objects_from_thawed_data {
     my @values = @_;
 
     my $process_it = sub {
-        if (blessed($_) and $_->isa('UR::Object')) {
-            my($class, $id) = (ref($_), $_->{id});
+        if (blessed($_)
+            and (
+                $_->isa('UR::Object')
+                or
+                $_->isa('UR::BoolExpr::Util::clonedThing')
+            )
+        ) {
+            my($class, $id) = ($_->class, $_->id);
             if (refaddr($_) != refaddr($UR::Context::all_objects_loaded->{$class}->{$id})) {
-                my $cloned_thing = $_;
+                # bless the original thing to a non-UR::Object class so UR::Object::DESTROY
+                # doesn't run on it
+                my $cloned_thing = UR::BoolExpr::Util::clonedThing->bless($_);
                 # Swap in the object from the object cache
                 $_ = $UR::Context::all_objects_loaded->{$class}->{$id};
-                # bless the original thing to a non-existent class so UR::Object::DESTROY
-                # doesn't run on it
-                bless $cloned_thing, 'UR::BoolExpr::Util::clonedThing';
             }
 
         }
@@ -170,6 +175,24 @@ sub value_id_to_values {
 }
 
 *values_to_value_id_simple = \&values_to_value_id;
+
+package UR::BoolExpr::Util::clonedThing;
+
+sub bless {
+    my($class, $thing) = @_;
+#    return $thing if ($thing->isa(__PACKAGE__));
+
+    $thing->{__original_class} = $thing->class;
+    bless $thing, $class;
+}
+
+sub id {
+    return shift->{id};
+}
+
+sub class {
+    return shift->{__original_class};
+}
 
 1;
 
