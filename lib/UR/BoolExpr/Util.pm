@@ -41,6 +41,10 @@ sub _fixup_ur_objects_from_thawed_data {
     my $self = shift;
     my @values = @_;
 
+    our $seen;
+    local $seen = $seen;
+    $seen ||= {};
+
     # For things that are UR::Objects (or used to be UR objects), swap the
     # thawed/cloned one with one from the object cache
     #
@@ -71,6 +75,7 @@ sub _fixup_ur_objects_from_thawed_data {
     };
 
     foreach my $data ( @values ) {
+        next if $seen->{$data}++;
         if (ref $data) {
             my $reftype = reftype($data);
             my $iter;
