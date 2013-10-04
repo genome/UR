@@ -191,27 +191,3 @@ sub elements_match {
     }
 }
 
-__END__
-    
-
-my $item;
-my @element_ids;
-{
-    my @elements = map { URT::ListElement->create(name => $_) } qw(foo bar baz);
-    $item = URT::Item->create(array => \@elements);
-    ok($item, 'Created Item with an array of subordinate UR objects');
-
-    my $got_elements = $item->array;
-    is(ref($got_elements), 'ARARY', 'calling array returns an arrayref');
-
-    my $max = @elements > @$got_elements ? scalar(@elements) : scalar(@$got_elements);
-    for (my $i = 0; $i < $max; $i++) {
-        is($got_elements->[$i]->id, $elements[$i]->id, "List element $i ID");
-        is(refaddr($got_elements->[$i]), refaddr($elements[$i]), "Reference address element $i matches");
-    }
-
-    @element_ids = map { $_->id } @elements;
-}
-
-# @elements goes out of scope
-my @reget_elements = URT::ListElement->get(
