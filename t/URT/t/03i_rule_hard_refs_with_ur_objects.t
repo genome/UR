@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 22;
+use Test::More tests => 26;
 
 # Test the case where UR objects get serialized in a BoolExpr's value
 # as FreezeThaw data.  When the objects come back out, the objects need
@@ -28,7 +28,7 @@ class URT::ListElement {
     }
 };
 
-my @ELEMENT_NAMES = qw(foo bar baz);
+my @ELEMENT_NAMES = qw(foo bar baz foo);  # foo is in there twice
 
 is(scalar(create_elements()), scalar(@ELEMENT_NAMES), 'create list elements');
 
@@ -37,12 +37,12 @@ test_arrayref();
 test_hashref();
 
 sub create_elements {
-    map { URT::ListElement->create(name => $_) } @ELEMENT_NAMES;
+    map { URT::ListElement->get_or_create(name => $_) } @ELEMENT_NAMES;
 }
 
 sub test_arrayref {
 
-    my @elements = URT::ListElement->get(name => \@ELEMENT_NAMES);
+    my @elements = map { URT::ListElement->get(name => $_) } @ELEMENT_NAMES;
     my $bx_id;
     {
         my $bx = URT::Item->define_boolexpr(array => \@elements);
@@ -65,7 +65,7 @@ sub test_arrayref {
 }
 
 sub test_hashref() {
-    my @elements = URT::ListElement->get(name => \@ELEMENT_NAMES);
+    my @elements = map { URT::ListElement->get(name => $_) } @ELEMENT_NAMES;
     my $bx_id;
     {
         # Besides testing a hashref, also test that it will recurse into
