@@ -6,7 +6,8 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 26;
+use Test::More tests => 37;
+
 
 # Test the case where UR objects get serialized in a BoolExpr's value
 # as FreezeThaw data.  When the objects come back out, the objects need
@@ -18,7 +19,8 @@ class URT::Item {
     has => [
         scalar   => { is => 'SCALAR' },
         array    => { is => 'ARRAY' },
-        hash     => { is => 'HASH' }
+        hash     => { is => 'HASH' },
+        linked_list => { is => 'LinkedListNode' },
     ]
 };
 
@@ -32,9 +34,9 @@ my @ELEMENT_NAMES = qw(foo bar baz foo);  # foo is in there twice
 
 is(scalar(create_elements()), scalar(@ELEMENT_NAMES), 'create list elements');
 
-#test scalarref();
 test_arrayref();
 test_hashref();
+test_self_referential_data();
 
 sub create_elements {
     map { URT::ListElement->get_or_create(name => $_) } @ELEMENT_NAMES;
@@ -99,6 +101,61 @@ sub test_hashref() {
 
 }
 
+sub test_self_referential_data {
+    my @elements = URT::ListElement->get(name => \@ELEMENT_NAMES);
+
+    # make a linked list
+    my $linked_list;
+    my $last;
+    foreach my $element ( @elements ) {
+        my $node = {
+            element => $element,
+            next => undef,
+        };
+
+        if ($linked_list) {
+            $last->{next} = $node;
+        } else {
+            $linked_list = $node;
+        }
+        $last = $node;
+    }
+    # make the linked list circular
+    $last->{next} = $linked_list;
+
+    # Flag an error and exit if unfreezing the rule data goes into deep recursion
+    local $SIG{__WARN__} = sub { ok(0, 'deep recursion'); die; };
+
+    my $bx_id;
+    {
+        my $bx = URT::Item->define_boolexpr(linked_list => $linked_list);
+        ok($bx, 'Create boolexpr containing linked_list with UR Objects');
+
+        my $got_list = $bx->value_for('linked_list');
+        is(ref($got_list), 'HASH', 'Got back linked list head');
+
+        elements_match(
+            [_extract_UR_objects_from_test_linked_list($got_list)],
+            \@elements,
+        );
+        $bx_id = $bx->id;
+    }
+
+    # original bx goes out of scope
+
+    {
+        my $bx = UR::BoolExpr->get($bx_id);
+        ok($bx, 'Retrieve BoolExpr with linked_list by id');
+
+        my $got_list = $bx->value_for('linked_list');
+        elements_match(
+            [ _extract_UR_objects_from_test_linked_list($got_list) ],
+            \@elements,
+        );
+    }
+}
+
+
 sub _extract_UR_objects_from_test_hashref {
     my $data = shift;
 
@@ -107,6 +164,21 @@ sub _extract_UR_objects_from_test_hashref {
         push @elements, $data->{$name}->[0]->{$name};
     }
     return \@elements;
+}
+
+sub _extract_UR_objects_from_test_linked_list {
+    my $list = shift;
+
+    my %seen;
+    my $visit;
+    $visit = sub {
+        my $node = shift;
+        return $seen{$node}++
+                ? ()
+                : ( $node->{element}, $visit->($node->{next}));
+    };
+
+    return $visit->($list);
 }
 
 

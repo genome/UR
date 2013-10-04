@@ -41,6 +41,10 @@ sub _fixup_ur_objects_from_thawed_data {
     my $self = shift;
     my @values = @_;
 
+    use vars '$seen';
+    local $seen = $seen;
+    $seen ||= {};
+
     my $process_it = sub {
         if (blessed($_)
             and (
@@ -63,6 +67,7 @@ sub _fixup_ur_objects_from_thawed_data {
     };
 
     foreach my $data ( @values ) {
+        next if $seen->{$data}++;
         if (ref $data) {
             my $reftype = reftype($data);
             my $iter;
