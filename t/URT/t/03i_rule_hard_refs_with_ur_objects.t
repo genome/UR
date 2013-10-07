@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 37;
+use Test::More tests => 49;
 
 
 # Test the case where UR objects get serialized in a BoolExpr's value
@@ -21,6 +21,7 @@ class URT::Item {
         array    => { is => 'ARRAY' },
         hash     => { is => 'HASH' },
         linked_list => { is => 'LinkedListNode' },
+        reference   => { is => 'REF' },
     ]
 };
 
@@ -37,6 +38,7 @@ is(scalar(create_elements()), scalar(@ELEMENT_NAMES), 'create list elements');
 test_arrayref();
 test_hashref();
 test_self_referential_data();
+test_refref();
 
 sub create_elements {
     map { URT::ListElement->get_or_create(name => $_) } @ELEMENT_NAMES;
@@ -152,6 +154,30 @@ sub test_self_referential_data {
             [ _extract_UR_objects_from_test_linked_list($got_list) ],
             \@elements,
         );
+    }
+}
+
+sub test_refref {
+    my @elements = map { URT::ListElement->get(name => $_) } @ELEMENT_NAMES;
+    my $elements_ref = \@elements;
+    my $bx_id;
+    {
+        my $bx = URT::Item->define_boolexpr(reference => \$elements_ref);
+        ok($bx, 'Create boolexpr comtaining ref to arrayref of UR objects');
+
+        my $got_elements = $bx->value_for('reference');
+        elements_match($$got_elements, $elements_ref);
+        $bx_id = $bx->id;
+    }
+
+    # Original bx goes out of scope
+
+    {
+        my $bx = UR::BoolExpr->get($bx_id);
+        ok($bx, 'Retrieve BoolExpr with arrayref by id');
+
+        my $got_elements = $bx->value_for('reference');
+        elements_match($$got_elements, $elements_ref);
     }
 }
 

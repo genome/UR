@@ -80,7 +80,7 @@ sub _fixup_ur_objects_from_thawed_data {
                     &$process_it;
                 }
 
-            } elsif ($reftype eq 'SCALAR') {
+            } elsif ($reftype eq 'SCALAR' or $reftype eq 'REF') {
                 local $_ = $$data;
                 &$process_it;
             }
