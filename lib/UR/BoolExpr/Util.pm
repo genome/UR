@@ -75,7 +75,9 @@ sub _fixup_ur_objects_from_thawed_data {
     };
 
     foreach my $data ( @values ) {
+        next unless ref $data; # Don't need to recursively inspect normal scalar data
         next if $seen->{$data}++;
+
         if (ref $data) {
             my $reftype = reftype($data);
             my $iter;

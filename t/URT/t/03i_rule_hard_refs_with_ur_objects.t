@@ -39,6 +39,7 @@ test_arrayref();
 test_hashref();
 test_self_referential_data();
 test_refref();
+test_mixed_arrayref();
 
 sub create_elements {
     map { URT::ListElement->get_or_create(name => $_) } @ELEMENT_NAMES;
@@ -181,6 +182,31 @@ sub test_refref {
     }
 }
 
+sub test_mixed_arrayref {
+    local $SIG{__WARN__} = sub { ok(0, 'unexpected warning: '.shift); die; };
+
+    my @elements = ( 1, 2, undef, URT::ListElement->get(name => \@ELEMENT_NAMES), undef, 2, 0);
+    my $bx_id;
+    {
+        my $bx = URT::Item->define_boolexpr(array => \@elements);
+        ok($bx, 'Create boolexpr comtaining arrayref of mixed UR objects and non-ref data');
+
+        my $got_elements = $bx->value_for('array');
+        elements_match($got_elements, \@elements);
+        $bx_id = $bx->id;
+    }
+
+    # Original bx goes out of scope
+
+    {
+        my $bx = UR::BoolExpr->get($bx_id);
+        ok($bx, 'Retrieve BoolExpr with arrayref by id');
+
+        my $got_elements = $bx->value_for('array');
+        elements_match($got_elements, \@elements);
+    }
+
+}
 
 sub _extract_UR_objects_from_test_hashref {
     my $data = shift;
@@ -213,7 +239,11 @@ sub elements_match {
 
     is(scalar(@$got_elements), scalar(@$elements), 'Number of elements match');
     for (my $i = 0; $i < @$got_elements; $i++) {
-        is(refaddr($got_elements->[$i]), refaddr($elements->[$i]), "Element $i is the same reference");
+        if (ref($got_elements->[$i]) and ref($elements->[$i])) {
+            is(refaddr($got_elements->[$i]), refaddr($elements->[$i]), "Element $i is the same reference");
+        } else {
+            is($got_elements->[$i], $elements->[$i], "Element $i matches");
+        }
     }
 }
 
