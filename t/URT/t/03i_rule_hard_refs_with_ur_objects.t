@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 49;
+use Test::More tests => 71;
 
 
 # Test the case where UR objects get serialized in a BoolExpr's value
