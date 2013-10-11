@@ -702,12 +702,12 @@ $create_subs_for_message_type = sub {
         my $self = shift;
 
         if (@_) {
-            my $msg;
-            my $format = shift;
-            if (defined $format) {
-                $msg = sprintf($format, @_);
-                defined($msg) && chomp($msg);
+            my $msg = shift;
+            #if given multiple arguments, assume its a format string
+            if(@_) {
+                $msg = sprintf($msg, @_);
             }
+            defined($msg) && chomp($msg);
 
             # old-style callback registered with error_messages_callback
             if (my $code = $self->$check_callback()) {
