@@ -468,12 +468,14 @@ For example, for the "error" message type, these methods are created:
     $msg = $obj->error_message();
 
 When called with one or more arguments, it sends an error message to the
-object.  The error_message_callback will be run, if one is registered, and
-the message will be printed to the terminal.  The actual message is formed
-by passing the format and additional arguments through sprintf.  When called
-with no arguments, the last message sent will be returned.  If the message
-is C<undef> then no message is printed or queued, and the next time
-error_message is run as an accessor, it will return undef.
+object.  The error_message_callback will be run, if one is registered, and the
+message will be printed to the terminal.  When given a single argument, it will
+be passed through unmodified.  When given multiple arguments, error_message will
+assume the first is a format string and the remainder are parameters to
+sprintf.  When called with no arguments, the last message sent will be
+returned.  If the message is C<undef> then no message is printed or queued, and
+the next time error_message is run as an accessor, it will return
+undef.
 
 =item dump_error_messages
 
@@ -702,12 +704,12 @@ $create_subs_for_message_type = sub {
         my $self = shift;
 
         if (@_) {
-            my $msg;
-            my $format = shift;
-            if (defined $format) {
-                $msg = sprintf($format, @_);
-                defined($msg) && chomp($msg);
+            my $msg = shift;
+            #if given multiple arguments, assume its a format string
+            if(@_) {
+                $msg = sprintf($msg, @_);
             }
+            defined($msg) && chomp($msg);
 
             # old-style callback registered with error_messages_callback
             if (my $code = $self->$check_callback()) {
