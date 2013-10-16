@@ -19,7 +19,7 @@ for my $type (@types) {
     my $accessor = "${type}_message";
     my $return_val_with_format_string = $test_obj->$accessor('Hello, I like %s.', 'turkey sandwiches');
     is($return_val_with_format_string, 'Hello, I like turkey sandwiches.',
-        'When given multiple arguments, it treates it like a format string');
+        "When given multiple arguments, it treats it like a format string");
 
     my $val_with_invalid_format_string = 'Hello, this is not a valid format string %J';
     my $return_val_without_format_string = $test_obj->$accessor($val_with_invalid_format_string);
