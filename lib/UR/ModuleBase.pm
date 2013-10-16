@@ -708,8 +708,9 @@ $create_subs_for_message_type = sub {
 
             # if given multiple arguments, assume it's a format string
             if(@_) {
-                $msg = sprintf($msg, @_);
+                $msg = _carp_sprintf($msg, @_);
             }
+
             defined($msg) && chomp($msg);
 
             # old-style callback registered with error_messages_callback
@@ -759,6 +760,30 @@ $create_subs_for_message_type = sub {
         as => $logger_subname,
     });
 };
+
+sub _carp_sprintf {
+    my $format = shift;
+    my @list = @_;
+
+    # warnings weren't very helpful because they wouldn't tell you who passed
+    # in the "bad" format string
+    my $formatted_string;
+    my $warn_msg;
+    {
+        local $SIG{__WARN__} = sub {
+            my $msg = $_[0];
+            my ($filename, $line) = (caller)[1, 2];
+            my $short_msg = ($msg =~ /(.*) at $filename line $line./)[0];
+            $warn_msg = ($short_msg || $msg);
+        };
+        $formatted_string = sprintf($format, @list);
+    }
+    if ($warn_msg) {
+        Carp::carp($warn_msg);
+    }
+
+    return $formatted_string;
+}
 
 
 # at init time, make messaging subs for the initial message types
