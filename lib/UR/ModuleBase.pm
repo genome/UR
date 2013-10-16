@@ -705,7 +705,8 @@ $create_subs_for_message_type = sub {
 
         if (@_) {
             my $msg = shift;
-            #if given multiple arguments, assume its a format string
+
+            # if given multiple arguments, assume it's a format string
             if(@_) {
                 $msg = sprintf($msg, @_);
             }
