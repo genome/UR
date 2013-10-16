@@ -9,10 +9,13 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
 use Test::More;
+my @types = qw/error warning status/;
+
+plan tests => (2 * @types);
 
 my $test_obj = UR::Value->create('test value');
 
-for my $type (qw/error warning status/) {
+for my $type (@types) {
     my $accessor = "${type}_message";
     my $return_val_with_format_string = $test_obj->$accessor('Hello, I like %s.', 'turkey sandwiches');
     is($return_val_with_format_string, 'Hello, I like turkey sandwiches.',
@@ -24,5 +27,3 @@ for my $type (qw/error warning status/) {
         'When given a single argument, it does not run it through sprintf');
 
 }
-
-done_testing();
