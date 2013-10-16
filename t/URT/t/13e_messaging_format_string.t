@@ -17,6 +17,10 @@ my $test_obj = UR::Value->create('test value');
 
 for my $type (@types) {
     my $accessor = "${type}_message";
+
+    my $dump = "dump_${type}_messages";
+    $test_obj->$dump(0);
+
     my $return_val_with_format_string = $test_obj->$accessor('Hello, I like %s.', 'turkey sandwiches');
     is($return_val_with_format_string, 'Hello, I like turkey sandwiches.',
         "When given multiple arguments, $type treats it like a format string");
