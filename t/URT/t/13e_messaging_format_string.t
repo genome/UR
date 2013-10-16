@@ -9,9 +9,10 @@ use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
 use Test::More;
+
 my @types = qw/error warning status/;
 
-plan tests => (2 * @types);
+plan tests => (4 * @types);
 
 my $test_obj = UR::Value->create('test value');
 
@@ -30,4 +31,19 @@ for my $type (@types) {
     is($val_with_invalid_format_string, $return_val_without_format_string,
         "When given a single argument, $type does not run it through sprintf");
 
+    my $warn_msg;
+    {
+        local $SIG{__WARN__} = sub {
+            $warn_msg = $_[0];
+        };
+        $test_obj->$accessor('%J', 'foo');
+    }
+    like($warn_msg,
+        qr/Invalid conversion in sprintf/,
+        "When given an invalid format string, $type throws a warning");
+
+    my $file = __FILE__;
+    like($warn_msg,
+        qr/$file/,
+        "When given an invalid format string, $type throws a warning from correct perspective");
 }
