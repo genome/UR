@@ -611,6 +611,10 @@ sub intersect_lists {
 }
 
 
+sub is_valid_property_name {
+    my $property_name = shift;
+    return $property_name =~ m/^[_[:alpha:]][_[:alnum:]]*$/;
+}
 
 1;
 
