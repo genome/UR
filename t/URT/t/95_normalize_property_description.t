@@ -64,4 +64,17 @@ my $new_desc2 = UR::Object::Type->_normalize_class_description(%$new_desc);
 ok($new_desc2, 'normalized class object again');
 is_deeply($new_desc, $new_desc2, '2x normalization produces consistent answer') or diag Data::Dumper::Dumper($new_desc, $new_desc2);
 
+# Test that an illegal property name throws an exception
+foreach my $property_name ( ('has a space', 'HASH=(0x1234)', 'has.a.dot', '/path/name', '$var_name') ) {
+    my $new_desc = eval { UR::Object::Type->_normalize_class_description(
+                        class_name => 'Foo',
+                        has => [
+                            $property_name => { is => 'Number' },
+                        ],
+                    ) };
+    my $escaped_property_name = quotemeta($property_name);
+    like($@, qr/Invalid property name in class Foo: '$escaped_property_name' /, "Got exception for invalid property name '$property_name'");
+    is($new_desc, undef, '_normalize_class_description() returns undef');
+}
+
 done_testing();
