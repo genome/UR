@@ -367,6 +367,9 @@ sub _normalize_class_description {
     # normalize the data behind the property descriptions
     my @property_names = keys %{$desc->{has}};
     for my $property_name (@property_names) {
+        Carp::croak("Invalid property name in class ".$desc->{class_name}.": '$property_name'")
+            unless UR::Util::is_valid_property_name($property_name);
+
         my $pdesc = $desc->{has}->{$property_name};
         my $unknown_ma = delete $pdesc->{unrecognized_meta_attributes};
         next unless $unknown_ma;
