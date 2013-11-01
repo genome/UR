@@ -610,7 +610,10 @@ sub intersect_lists {
     );
 }
 
-
+sub is_valid_class_name {
+    my $class = shift;
+    return $class =~ m/^[[:alpha:]]\w*((::|')\w+)*$/;
+}
 
 1;
 

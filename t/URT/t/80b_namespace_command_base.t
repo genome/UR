@@ -111,15 +111,15 @@ eval {
         [q(FooBar)   , 1],
         [q(Foo0::Bar), 1],
         [q(Foo::0Bar), 1],
-        [q(Foo.d)    , 0],
-        [q(0Foo::Bar), 0],
+        [q(Foo.d)    , ''],
+        [q(0Foo::Bar), ''],
     );
     for my $test (@tests) {
         my ($class_name, $is_valid) = @$test;
         my $msg = $is_valid
                     ? "valid: $class_name"
                     : "invalid: $class_name";
-        is(UR::Namespace::Command::Base::_is_valid_class_name($class_name),
+        is(UR::Util::is_valid_class_name($class_name),
             $is_valid,
             $msg);
     }

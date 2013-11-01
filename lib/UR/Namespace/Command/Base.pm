@@ -204,11 +204,6 @@ sub _modules_in_tree {
     return @modules;
 }
 
-sub _is_valid_class_name {
-    my $class = shift;
-    return ($class =~ /^[[:alpha:]]\w*((::|')\w+)*$/ ? 1 : 0);
-}
-
 sub _class_names_in_tree {
     my $self = shift;
     my @modules = $self->_modules_in_tree(@_);
@@ -222,7 +217,7 @@ sub _class_names_in_tree {
 
         # Paths can have invalid package names so are therefore packages in
         # another "namespace" and should not be included.
-        next unless _is_valid_class_name($class);
+        next unless UR::Util::is_valid_class_name($class);
 
         push @class_names, $class;
     }
