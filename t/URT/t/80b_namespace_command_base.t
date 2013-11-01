@@ -104,7 +104,6 @@ is_deeply(\@class_names, \@expected_class_names, '_class_names_in_tree with no a
 is_deeply(\@modules, \@expected_modules, '_modules_in_tree with args is correct');
 
 eval {
-    my $f = \&UR::Namespace::Command::Base::_is_valid_class_name;
     my @tests = (
         [q(Foo::Bar) , 1],
         [q(Foo'Bar)  , 1],
@@ -116,8 +115,12 @@ eval {
         [q(0Foo::Bar), 0],
     );
     for my $test (@tests) {
-        my ($i, $e) = @$test;
-        my $n = ($e ? "valid: $i" : "invalid: $i");
-        is($f->($i), $e, $n);
+        my ($class_name, $is_valid) = @$test;
+        my $msg = $is_valid
+                    ? "valid: $class_name"
+                    : "invalid: $class_name";
+        is(UR::Namespace::Command::Base::_is_valid_class_name($class_name),
+            $is_valid,
+            $msg);
     }
 };
