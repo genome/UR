@@ -168,15 +168,6 @@ sub _alter_sth_for_selecting_blob_columns {
     }
 }
 
-sub _value_is_null {
-    my ($class,$value) = @_;
-    return 1 if not defined $value;
-    return 1 if $value eq '';
-    return 1 if (ref($value) eq 'HASH' and $value->{operator} eq '=' and (!defied($value->{value}) or $value->{value} eq ''));
-    return 0;
-}   
-
-
 my $DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
 my $TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.US';
 sub cast_for_data_conversion {
