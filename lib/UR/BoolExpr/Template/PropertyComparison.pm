@@ -67,26 +67,6 @@ sub evaluate_subject_and_values {
     return $self->_compare($comparison_value, @property_values);
 }
 
-our %subclass_suffix_for_builtin_symbolic_operator = (
-    '='     => "Equals",
-    '<'     => "LessThan",
-    '>'     => "GreaterThan",    
-    '[]'    => "In",
-    'in []' => "In",
-    'ne'    => "NotEquals",
-    '<='    => 'LessOrEqual',
-    '>='    => 'GreaterOrEqual',
-);
-our %subclass_suffix_for_builtin_symbolic_operator_negation = (
-    '<'     => 'GreaterOrEqual',  # 'not less than' is the same as GreaterOrEqual
-    '<='    => 'GreaterThan',
-    '>'     => 'LessOrEqual',
-    '>='    => 'LessThan',
-    'ne'    => 'Equals',
-    'false' => 'True',
-    'true'  => 'False',
-);
-
 sub resolve_subclass_for_comparison_operator {
     my $class = shift;
     my $comparison_operator = shift;
@@ -94,26 +74,7 @@ sub resolve_subclass_for_comparison_operator {
     # Remove any escape sequence that may have been put in at UR::BoolExpr::resolve()
     $comparison_operator =~ s/-.+$// if $comparison_operator;
     
-    my $not = 0;
-    if ($comparison_operator and $comparison_operator =~ m/^(\!|not)\s*(.*)/) {
-        $not = 1;
-        $comparison_operator = $2;
-    }
-
-    if (!defined($comparison_operator) or $comparison_operator eq '') {
-        $comparison_operator = '=';
-    }
-
-    my $suffix;
-    if ($not) {
-        $suffix = $subclass_suffix_for_builtin_symbolic_operator_negation{$comparison_operator};
-        unless ($suffix) {
-            $suffix = $subclass_suffix_for_builtin_symbolic_operator{$comparison_operator} || ucfirst(lc($comparison_operator));
-            $suffix = "Not$suffix";
-        }
-    } else {
-        $suffix = $subclass_suffix_for_builtin_symbolic_operator{$comparison_operator} || ucfirst(lc($comparison_operator));
-    }
+    my $suffix = UR::Util::class_suffix_for_operator($comparison_operator);
 
     my $subclass_name = join('::', $class, $suffix);
 
