@@ -1783,21 +1783,11 @@ sub _extend_sql_for_column_operator_and_value {
 }
 
 sub _value_is_null {
-    # this is a separate method since some databases, like Oracle, treat empty strings as null values
-    my ($self, $value) = @_;
+    my ($class, $value) = @_;
     return 1 if not defined $value;
-    return if not ref($value);
-    if (ref($value) eq 'HASH') {
-        if ($value->{operator} eq '=' or $value->{operator} eq 'eq') {
-            if (not defined $value->{value}) {
-                return 1;
-            }
-            else {
-                return;
-            }
-        }
-    }
-    return;
+    return 1 if $value eq '';
+    return 1 if (ref($value) eq 'HASH' and $value->{operator} eq '=' and (!defied($value->{value}) or $value->{value} eq ''));
+    return 0;
 }
 
 sub _resolve_ids_from_class_name_and_sql {
