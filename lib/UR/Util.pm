@@ -663,6 +663,16 @@ sub is_valid_property_name {
     }
 }
 
+# From DBI::quote()
+# needed in a few places where we need to quote some SQL but don't
+# have access to a database handle to call quote() on
+sub sql_quote {
+    my $str = shift;
+    return "NULL" unless defined $str;
+    $str =~ s/'/''/g; # ISO SQL2
+    return "'$str'";
+}
+
 
 1;
 
