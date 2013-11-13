@@ -620,6 +620,54 @@ sub is_valid_class_name {
     return $class =~ m/^[[:alpha:]]\w*((::|')\w+)*$/;
 }
 
+{
+    my %subclass_suffix_for_builtin_symbolic_operator = (
+        '='     => "Equals",
+        '<'     => "LessThan",
+        '>'     => "GreaterThan",
+        '[]'    => "In",
+        'in []' => "In",
+        'ne'    => "NotEquals",
+        '<='    => 'LessOrEqual',
+        '>='    => 'GreaterOrEqual',
+    );
+    my %subclass_suffix_for_builtin_symbolic_operator_negation = (
+        '<'     => 'GreaterOrEqual',  # 'not less than' is the same as GreaterOrEqual
+        '<='    => 'GreaterThan',
+        '>'     => 'LessOrEqual',
+        '>='    => 'LessThan',
+        'ne'    => 'Equals',
+        'false' => 'True',
+        'true'  => 'False',
+    );
+
+    sub class_suffix_for_operator {
+        my $comparison_operator = shift;
+        my $not = 0;
+        if ($comparison_operator and $comparison_operator =~ m/^(\!|not)\s*(.*)/) {
+            $not = 1;
+            $comparison_operator = $2;
+        }
+
+        if (!defined($comparison_operator) or $comparison_operator eq '') {
+            $comparison_operator = '=';
+        }
+
+        my $suffix;
+        if ($not) {
+            $suffix = $subclass_suffix_for_builtin_symbolic_operator_negation{$comparison_operator};
+            unless ($suffix) {
+                $suffix = $subclass_suffix_for_builtin_symbolic_operator{$comparison_operator} || ucfirst(lc($comparison_operator));
+                $suffix = "Not$suffix";
+            }
+        } else {
+            $suffix = $subclass_suffix_for_builtin_symbolic_operator{$comparison_operator} || ucfirst(lc($comparison_operator));
+        }
+        return $suffix;
+    }
+}
+
+
 1;
 
 =pod
