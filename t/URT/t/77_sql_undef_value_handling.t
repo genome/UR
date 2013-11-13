@@ -45,7 +45,7 @@ my @result;
 # For the equality operator, "value => undef" is converted to SQL as
 # "value IS NULL", not "value = NULL, so it should return the items
 
-foreach my $value ( undef ) {
+foreach my $value ( undef, '' ) {
     # undef and the empty string both mean NULL
 
     @result = URT::Thing->get(value => $value);
@@ -56,21 +56,6 @@ foreach my $value ( undef ) {
 
     URT::Thing->unload();  # clear object and query cache
 }
-
-TODO: {
-    local $TODO = "empty string and undef in a rule will mean the same thing soonly";
-    foreach my $value ( '') {
-        # undef and the empty string both mean NULL
-
-        @result = URT::Thing->get(value => $value);
-        is(scalar(@result), 2, 'value => undef loaded 2 items');
-
-        @result = URT::Thing->get(value => $value);
-        is(scalar(@result), 2, 'value => undef returned all 2 items');
-
-        URT::Thing->unload();  # clear object and query cache
-    }
-};
 
 # For other values using the equality operator, it should return nothing
 foreach my $value ( 0, 1, -1) {
