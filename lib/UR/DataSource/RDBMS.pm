@@ -1656,8 +1656,6 @@ sub _extend_sql_for_column_operator_and_value {
     my($self, $expr_sql, $op, $val, $escape) = @_;
 
     my $class = $self->_sql_generation_class_for_operator($op);
-    eval "require $class"
-        or Carp::croak("Can't load SQL generation class for operator $op: $@");
 
     $escape ||= $self->_default_sql_like_escape_string;
     $escape = $self->_format_sql_like_escape_string($escape);
@@ -1667,8 +1665,17 @@ sub _extend_sql_for_column_operator_and_value {
 sub _sql_generation_class_for_operator {
     my($self, $op) = @_;
     my $suffix = UR::Util::class_suffix_for_operator($op);
-    my $class_name = join('::', __PACKAGE__, 'Operator', $suffix);
-    return $class_name;
+    my @classes = $self->inheritance;
+    foreach my $class ( @classes ) {
+        my $class_name = join('::', $class, 'Operator', $suffix);
+        my $worked = eval "require $class_name";
+        if ($worked) {
+            return $class_name;
+        } elsif ($@ and $@ !~ m/^Can't locate/) {
+            Carp::croak($@);
+        }
+    }
+    Carp::croak("Can't load SQL generation class for operator $op: $@");
 }
 
 sub _value_is_null {
