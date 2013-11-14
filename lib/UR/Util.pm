@@ -673,6 +673,38 @@ sub sql_quote {
     return "'$str'";
 }
 
+# works on non-UR based classes, too
+sub load_class_or_file {
+    my $filename = shift;
+
+    if (looks_like_class_name($filename)) {
+        $filename =~ s/::/\//g;
+        $filename .= '.pm';
+    }
+
+    eval { require $filename }
+        and return 1;
+
+    if ($@ and $@ !~ m/^Can't locate $filename in \@INC/) {
+        Carp::croak($@);
+    }
+    return '';
+}
+
+
+sub looks_like_class_name {
+    my $it = shift;
+    my @parts = split(/::/, $it);
+
+    return '' unless @parts;
+
+    # if each part of the class name is valid as a property name, then
+    # the whole thing is probably a class name
+    foreach ( @parts ) {
+        return '' unless is_valid_property_name($_);
+    }
+    return 1;
+}
 
 1;
 
