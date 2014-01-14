@@ -91,7 +91,7 @@ sub use_package {
 
 =head1 NAME
 
-above - auto "use lib" when a module is in the tree of the PWD 
+above - auto "use lib" when a module is in the tree of the PWD
 
 =head1 SYNOPSIS
 
@@ -113,13 +113,13 @@ Set ABOVE_DISCOVERY_ACROSS_FILESYSTEM shell variable to true value to crawl past
 # given
 /home/me/perlsrc/My/Module.pm
 
-# in    
+# in
 /home/me/perlsrc/My/Module/Some/Path/
 
 # in myapp.pl:
 use above "My::Module";
 
-# does this ..if run anywhere under /home/me/perlsrc: 
+# does this ..if run anywhere under /home/me/perlsrc:
 use lib '/home/me/perlsrc/'
 use My::Module;
 
