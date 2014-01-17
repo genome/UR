@@ -51,7 +51,7 @@ Specifies that a given subroutine be run when the application exits.
 (Unimplimented!)
 
 =cut
- 
+
 sub exit_handler
 {
     die "Unimplimented";
@@ -68,7 +68,7 @@ Exit the application, running all registered subroutines.
 
 =cut
 
-sub clean_exit 
+sub clean_exit
 {
     my $class = shift;
     my ($value) = @_;
@@ -88,10 +88,10 @@ and warn if debugging.
 sub death
 {
     unless ($ENV{'UR_STACK_DUMP_ON_DIE'}) {
-        return; 
+        return;
     }
 
-    # workaround common error    
+    # workaround common error
     if ($_[0] =~ /Can.*t upgrade that kind of scalar during global destruction/)
     {
         exit 1;
@@ -100,7 +100,7 @@ sub death
     if (defined $^S) {
         # $^S is defined when perl is executing (as opposed to interpreting)
         if ($^S) {
-            # $^S is true when its executing in an eval, false outside of one 
+            # $^S is true when its executing in an eval, false outside of one
             return;
         }
     } else {
@@ -126,9 +126,9 @@ sub death
         }
     }
 
-    if 
+    if
     (
-        $_[0] =~ /\n$/ 
+        $_[0] =~ /\n$/
         and UNIVERSAL::can("UR::Context::Process","is_initialized")
         and defined(UR::Context::Process->is_initialized)
         and (UR::Context::Process->is_initialized == 1)
@@ -167,7 +167,7 @@ sub warning
 
     return if $_[0] =~ /Attempt to free unreferenced scalar/;
     return if $_[0] =~ /Use of uninitialized value in exit at/;
-    return if $_[0] =~ /Use of uninitialized value in subroutine entry at/;    
+    return if $_[0] =~ /Use of uninitialized value in subroutine entry at/;
     return if $_[0] =~ /One or more DATA sections were not processed by Inline/;
     UR::ModuleBase->warning_message(@_);
     if ($_[0] =~ /Deep recursion on subroutine/)
