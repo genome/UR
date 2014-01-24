@@ -7,29 +7,29 @@ use Data::Dumper;
 # Debugger flags, so you can see what we turn on below.
 #
 # 0x01  Debug subroutine enter/exit.
-# 
+#
 # 0x02  Line-by-line debugging.
-# 
+#
 # 0x04  Switch off optimizations.
-# 
+#
 # 0x08  Preserve more data for future interactive inspections.
-# 
+#
 # 0x10  Keep info about source lines on which a subroutine is defined.
-# 
+#
 # 0x20  Start with single-step on.
-# 
+#
 # 0x40  Use subroutine address instead of name when reporting.
-# 
+#
 # 0x80  Report "goto &subroutine" as well.
-# 
+#
 # 0x100 Provide informative "file" names for evals based on the place they were com-
 #         piled.
-# 
+#
 # 0x200 Provide informative names to anonymous subroutines based on the place they
 #         were compiled.
-# 
+#
 # 0x400 Debug assertion subroutines enter/exit.
-# 
+#
 
 BEGIN { $^P |= (0x01 | 0x80 | 0x100 | 0x200); };
 #BEGIN { $^P |= (0x004 | 0x100 ); };
@@ -55,8 +55,8 @@ sub sub {
     my ($pkg,$file,$line) = @c1;
     my $csub = $c0[3] || '-';
     my $caller = join(",", $file,$line,$pkg,$csub);
-    print STDERR ((' ' x $DB::CALL_DEPTH) . $DB::sub{$DB::sub} . ' > ' . $DB::sub . "(@_) : " . $caller . "\n") if $CALL_WATCH; 
-    $DB::CALLED{$DB::sub}{$caller}++; 
+    print STDERR ((' ' x $DB::CALL_DEPTH) . $DB::sub{$DB::sub} . ' > ' . $DB::sub . "(@_) : " . $caller . "\n") if $CALL_WATCH;
+    $DB::CALLED{$DB::sub}{$caller}++;
     &{$DB::sub};
 }
 
