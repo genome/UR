@@ -9,6 +9,7 @@ use Cwd;
 use Data::Dumper;
 use Clone::PP;
 use Config;
+use Module::Runtime v0.014 qw(module_notional_filename);
 
 sub on_destroy(&) {
     my $sub = shift;
@@ -677,37 +678,16 @@ sub sql_quote {
     return "'$str'";
 }
 
-# works on non-UR based classes, too
+# load_class_or_file works on non-UR based classes, too.
+# Module::Runtime's use_package_optimistically will not throw an exception if
+# the package cannot be found or if it fails to compile but will if the package
+# has upstream exceptions, e.g. a missing dependency.  We're a little less
+# "optimistic" so we check if the package is in %INC so we can report whether
+# it was believed to be loaded or not.
 sub load_class_or_file {
-    my $filename = shift;
-
-    if (looks_like_class_name($filename)) {
-        $filename =~ s/::/\//g;
-        $filename .= '.pm';
-    }
-
-    eval { require $filename }
-        and return 1;
-
-    if ($@ and $@ !~ m/^Can't locate $filename in \@INC/) {
-        Carp::croak($@);
-    }
-    return '';
-}
-
-
-sub looks_like_class_name {
-    my $it = shift;
-    my @parts = split(/::/, $it);
-
-    return '' unless @parts;
-
-    # if each part of the class name is valid as a property name, then
-    # the whole thing is probably a class name
-    foreach ( @parts ) {
-        return '' unless is_valid_property_name($_);
-    }
-    return 1;
+    my $name = Module::Runtime::use_package_optimistically(shift);
+    my $file = module_notional_filename($name);
+    return $INC{$file};
 }
 
 1;

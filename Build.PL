@@ -60,6 +60,7 @@ my $build = $subclass->new(
     'Pod::Simple::HTML'   => '3.03',
     'List::MoreUtils'     => '',
     'MRO::Compat'         => '',
+    'Module::Runtime'     => '0.014',
 
     # C
     'FreezeThaw'          => '0.43',
