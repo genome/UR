@@ -1669,7 +1669,7 @@ sub _sql_generation_class_for_operator {
     foreach my $class ( @classes ) {
         my $op_class_name = join('::', $class, 'Operator', $suffix);
 
-        return $op_class_name if UR::Util::load_class_or_file($op_class_name);
+        return $op_class_name if UR::Util::use_package_optimistically($op_class_name);
     }
     Carp::croak("Can't load SQL generation class for operator $op: $@");
 }

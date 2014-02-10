@@ -678,13 +678,13 @@ sub sql_quote {
     return "'$str'";
 }
 
-# load_class_or_file works on non-UR based classes, too.
 # Module::Runtime's use_package_optimistically will not throw an exception if
 # the package cannot be found or if it fails to compile but will if the package
 # has upstream exceptions, e.g. a missing dependency.  We're a little less
 # "optimistic" so we check if the package is in %INC so we can report whether
 # it was believed to be loaded or not.
-sub load_class_or_file {
+sub load_class_or_file { &use_package_optimistically }
+sub use_package_optimistically {
     my $name = Module::Runtime::use_package_optimistically(shift);
     my $file = module_notional_filename($name);
     return $INC{$file};
