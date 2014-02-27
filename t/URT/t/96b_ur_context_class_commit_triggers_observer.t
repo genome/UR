@@ -18,17 +18,26 @@ sub main {
 sub ur_context_class_commit_triggers_observer {
     my $self = shift;
     my $context = UR::Context->current;
-    ok(UR::Context->commit, 'UR::Context committed');
     
-    my $commit_callback_ran;
-    my $commit_callback = sub {
-        $commit_callback_ran = 1;
-    };
-    $context->add_observer(
-        aspect => 'commit',
-        callback => $commit_callback,
+    my @expected_signals = (
+            [ $context, 'precommit' ],
+            [ $context, 'sync_databases' => 1 ],
+            [ $context, 'commit' => 1 ],
     );
 
+    my @signals_fired;
+
+    foreach my $signal ( @expected_signals ) {
+        my $aspect = $signal->[1];
+        $context->add_observer(
+            aspect => $aspect,
+            callback => sub {
+                push @signals_fired, [ @_ ];
+            }
+        );
+    }
+
     ok(UR::Context->commit, 'UR::Context committed');
-    is($commit_callback_ran, 1, 'commit_callback ran');
+
+    is_deeply(\@signals_fired, \@expected_signals, 'Got expected signals and args');
 }

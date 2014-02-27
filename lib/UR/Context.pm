@@ -2564,9 +2564,13 @@ sub commit {
     $self->__signal_change__('precommit');
 
     unless ($self->_sync_databases) {
+        $self->__signal_observers__('sync_databases', 0);
         $self->__signal_change__('commit',0);
         return;
     }
+
+    $self->__signal_observers__('sync_databases', 1);
+
     unless ($self->_commit_databases) {
         $self->__signal_change__('commit',0);
         die "Application failure during commit!";
