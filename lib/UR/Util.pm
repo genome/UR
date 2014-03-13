@@ -67,6 +67,11 @@ sub used_libs_perl5lib_prefix {
     return $prefix;
 }
 
+sub touch_file {
+    my $filename = shift;
+    open(my $fh, '>>', $filename);
+}
+
 my @compiled_inc;
 BEGIN {
     use Config;
