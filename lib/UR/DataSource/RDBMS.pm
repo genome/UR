@@ -1640,6 +1640,59 @@ sub create_iterator_closure_for_rule {
     return $iterator;
 }
 
+# Create the table behind this class in the specified database.
+# used by the functionality behind the UR_TEST_FILLDB env var
+sub mk_table_for_class_meta {
+    my($self, $class_meta, $dbh) = @_;
+    return 1 unless $class_meta->has_table;
+
+    $dbh ||= $self->dbh;
+
+    my $table_name = $class_meta->table_name();
+    $self->_mk_table_for_class_meta_schema_handler($table_name, $dbh);
+
+    # we only care about properties backed up by a real column
+    my @props = grep { $_->column_name } $class_meta->direct_property_metas();
+
+    my $sql = "create table IF NOT EXISTS $table_name (";
+
+    my @cols;
+    foreach my $prop ( @props ) {
+        my $col = $prop->column_name;
+        my $type = $prop->data_type || 'varchar';
+        my $len = $prop->data_length;
+        my $nullable = $prop->is_optional;
+
+        my $string = "$col" . " " . $type;
+        $string .= " NOT NULL" unless $nullable;
+        push @cols, $string;
+    }
+    $sql .= join(',',@cols);
+
+    my @id_cols = $class_meta->direct_id_column_names();
+    $sql .= ", PRIMARY KEY (" . join(',',@id_cols) . ")" if (@id_cols);
+
+    # Should we also check for the unique properties?
+
+    $sql .= ")";
+    unless ($dbh->do($sql) ) {
+        $self->error_message("Can't create table $table_name: ".$DBI::errstr."\nSQL: $sql");
+        return undef;
+    }
+
+    1;
+}
+
+sub _mk_table_for_class_meta_schema_handler {
+    my($self, $table_name, $dbh) = @_;
+
+    my($schema_name) = m/(\w+)\.\w+/;
+    if ($schema_name) {
+        $dbh->do("CREATE SCHEMA IF NOT EXISTS $schema_name")
+            || Carp::croak("Could not create schema $schema_name in alternate DB: ".$dbh->errstr);
+    }
+}
+
 sub _default_sql_like_escape_string {
     return '\\';  # Most RDBMSs support an 'escape' as part of a 'like' operator, except mysql
 }

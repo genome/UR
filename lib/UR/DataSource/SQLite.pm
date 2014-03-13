@@ -2,6 +2,8 @@ package UR::DataSource::SQLite;
 use strict;
 use warnings;
 
+use List::MoreUtils;
+
 =pod
 
 =head1 NAME
@@ -866,6 +868,49 @@ sub _dump_db_to_file_internal {
 
     return 1;
 }
-            
+
+sub _mk_table_for_class_meta_schema_handler {
+    my($self, $table_name, $dbh) = @_;
+
+    if ($table_name =~ m/(\w+)\.\w+/
+        and
+        ! $self->is_schema_attached($1, $dbh)
+    ) {
+        # pretend we have schemas
+        my $schema_name = $1;
+
+        my($filename) = $dbh->{Name} =~ m/(?:dbname=)*(.*)/;
+        $filename .= ":$schema_name";
+        unless (UR::Util::touch_file($filename)) {
+            Carp::carp("touch_file failed: $!");
+            return;
+        }
+        unless ($dbh->do(qq(ATTACH DATABASE '$filename' as $schema_name))) {
+            Carp::carp("Cannot attach file $filename as $schema_name: ".$dbh->errstr);
+            return;
+        }
+    }
+
+}
+
+sub attached_schemas {
+    my($self, $dbh) = @_;
+    $dbh ||= $self->dbh;
+
+    # Statement returns id, schema, filename
+    my $sth = $dbh->prepare('PRAGMA database_list') || Carp::croak("Cannot list attached databases: ".$dbh->errstr);
+    $sth->execute();
+    my %schemas = map { $_->[1] => $_->[2] }
+                         @{ $sth->fetchall_arrayref };
+    return \%schemas;
+}
+
+sub is_schema_attached {
+    my($self, $schema, $dbh) = @_;
+
+    my $schemas = $self->attached_schemas($dbh);
+    return exists $schemas->{$schema};
+}
+
 
 1;

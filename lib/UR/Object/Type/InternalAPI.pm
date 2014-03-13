@@ -1175,50 +1175,6 @@ sub _use_safe {
 }
 
 
-# Create the table behind this class in the specified database.
-# Currently, it creates sql valid for SQLite for support of loading
-# up a testing DB.  Maybe this should be moved somewhere under the
-# DataSource objects
-sub mk_table {
-    my($self,$dbh) = @_;
-    return 1 unless $self->has_table;
-
-    $dbh ||= $self->dbh;
-
-    my $table_name = $self->table_name();
-    # we only care about properties backed up by a real column
-    my @props = grep { $_->column_name } $self->direct_property_metas();
-
-    my $sql = "create table $table_name (";
-
-    my @cols;
-    foreach my $prop ( @props ) {
-        my $col = $prop->column_name;
-        my $type = $prop->data_type;
-        my $len = $prop->data_length;
-        my $nullable = $prop->nullable;
-
-        my $string = "$col" . " " . $type;
-        $string .= " NOT NULL" unless $nullable;
-        push @cols, $string;
-    }
-    $sql .= join(',',@cols);
-
-    my @id_cols = $self->direct_id_column_names();
-    $sql .= ", PRIMARY KEY (" . join(',',@id_cols) . ")" if (@id_cols);
-
-    # Should we also check for the unique properties?
-
-    $sql .= ")";
-
-    unless ($dbh->do($sql) ) {
-        $self->error_message("Can't create table $table_name: ".$DBI::errstr."\nSQL: $sql");
-        return undef;
-    }
-
-    1;
-}
-
 # sub _object
 # This is used to make sure that methods are called
 # as object methods and not class methods.
