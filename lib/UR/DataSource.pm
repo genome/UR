@@ -527,6 +527,11 @@ sub _class_is_safe_to_rebless_from_parent_class {
     return ($was_loaded_as_this_parent_class->isa($fcwt));
 }
 
+sub ur_datasource_class_for_dbi_connect_string {
+    my($class, $dsn) = @_;
+    my(undef, $driver) = DBI->parse_dsn($dsn);
+    return 'UR::DataSource::'.$driver;
+}
 
 sub _CopyToAlternateDB {
     # This is used to copy data loaded from the primary database into
