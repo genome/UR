@@ -1608,7 +1608,12 @@ sub create_iterator_closure_for_rule {
     my $next_db_row;
     my $pending_db_object_data;
 
-    my $ur_test_filldb = $ENV{'UR_TEST_FILLDB'};
+    my $ur_test_fill_db = $ENV{'UR_TEST_FILLDB'}
+                            &&
+                            $self->_create_sub_for_copying_to_alternate_db(
+                                    $ENV{'UR_TEST_FILLDB'},
+                                    $query_plan->{loading_templates}
+                                );
 
     my $iterator = sub {
         unless ($sth) {
@@ -1631,13 +1636,75 @@ sub create_iterator_closure_for_rule {
         }
 
         # this is used for automated re-testing against a private database
-        $self->_CopyToAlternateDB($class_name,$dbh,$next_db_row) if $ur_test_filldb;
+        $ur_test_fill_db && $ur_test_fill_db->($next_db_row);
 
         return $next_db_row;
     }; # end of iterator closure
 
     Sub::Name::subname('UR::DataSource::RDBMS::__datasource_iterator(closure)__', $iterator);
     return $iterator;
+}
+
+sub _create_sub_for_copying_to_alternate_db {
+    my($self, $connect_string, $loading_templates) = @_;
+
+    my $dbh = DBI->connect($connect_string, '', '', { AutoCommit => 1 })
+            || do {
+                Carp::carp("Cannot connect to alternate DB for copying: $DBI::errstr");
+                return sub {}
+            };
+
+    my @inserter_for_each_table;
+    my $next_db_row;  # this will be filled in by the encompassing sub below
+    foreach my $template ( @$loading_templates ) {
+        my %seen_ids;  # don't insert the same object more than once
+
+        my $class_name = $template->{data_class_name};
+        my $class_meta = $class_name->__meta__;
+        my $ds_type = $self->ur_datasource_class_for_dbi_connect_string($connect_string);
+        $ds_type->mk_table_for_class_meta($class_meta, $dbh);
+        my $table_name = $class_meta->table_name;
+        my $columns_string = join(', ',
+                                map { $class_meta->column_for_property($_) }
+                                @{ $template->{property_names} } );
+        my $insert_sql = "insert into $table_name ($columns_string) values ("
+                    . join(',',
+                        map { '?' } @{ $template->{property_names} } )
+                    . ')';
+
+        my $insert_sth = $dbh->prepare($insert_sql)
+            || Carp::croak("Prepare for insert on alternate DB table $table_name failed: ".$dbh->errstr);
+
+        my $check_id_sql = "select count(*) from $table_name where "
+                            . join(' and ',
+                                    map { "$_ = ?" }
+                                    map { $class_meta->column_for_property($_) }
+                                    @{ $template->{id_property_names} });
+        my $check_id_sth = $dbh->prepare($check_id_sql)
+            || Carp::croak("Prepare for check ID select on alternate DB table $table_name failed: ".$dbh->errstr);
+        my @id_column_positions = @{$template->{id_column_positions}};
+
+        my @column_positions = @{$template->{column_positions}};
+
+        my $id_resolver = $template->{id_resolver};
+        push @inserter_for_each_table,
+            sub {
+                my $id = $id_resolver->($next_db_row);
+                unless ($seen_ids{$id}++) {
+                    $check_id_sth->execute( @$next_db_row[@id_column_positions]);
+                    my($count) = @{ $check_id_sth->fetchrow_arrayref() };
+                    unless ($count) {
+                        my @column_values = @$next_db_row[@column_positions];
+                        $insert_sth->execute(@column_values);
+                    }
+                }
+            };
+    }
+
+    return sub {
+        $next_db_row = shift;
+        $_->() foreach @inserter_for_each_table;
+    }
 }
 
 # Create the table behind this class in the specified database.
