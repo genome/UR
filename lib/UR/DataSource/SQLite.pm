@@ -985,14 +985,15 @@ sub _assure_schema_exists_for_table {
     ) {
         # pretend we have schemas
 
-        my($filename) = $dbh->{Name} =~ m/(?:dbname=)*(.*)/;
-        $filename .= ":$schema_name";
-        unless (UR::Util::touch_file($filename)) {
-            Carp::carp("touch_file failed: $!");
+        my($main_filename) = $dbh->{Name} =~ m/(?:dbname=)*(.*)/;
+        my $directory = File::Basename::dirname($main_filename);
+        my $schema_filename = File::Spec->catfile($directory, "${schema_name}.sqlite3");
+        unless (UR::Util::touch_file($schema_filename)) {
+            Carp::carp("touch_file $schema_filename failed: $!");
             return;
         }
-        unless ($dbh->do(qq(ATTACH DATABASE '$filename' as $schema_name))) {
-            Carp::carp("Cannot attach file $filename as $schema_name: ".$dbh->errstr);
+        unless ($dbh->do(qq(ATTACH DATABASE '$schema_filename' as $schema_name))) {
+            Carp::carp("Cannot attach file $schema_filename as $schema_name: ".$dbh->errstr);
             return;
         }
     }
