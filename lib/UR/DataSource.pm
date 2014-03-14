@@ -530,6 +530,8 @@ sub _class_is_safe_to_rebless_from_parent_class {
 sub ur_datasource_class_for_dbi_connect_string {
     my($class, $dsn) = @_;
     my(undef, $driver) = DBI->parse_dsn($dsn);
+    $driver
+        || Carp::croak("Could not parse DBI driver out of connect string $dsn");
     return 'UR::DataSource::'.$driver;
 }
 
