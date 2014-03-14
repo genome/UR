@@ -3,6 +3,8 @@ use strict;
 use warnings;
 
 use List::MoreUtils;
+use IO::Dir;
+use File::Spec;
 
 =pod
 
@@ -21,7 +23,18 @@ Or write the singleton to represent the source directly:
     class Acme::DataSource::MyDB1 {
         is => 'UR::DataSource::SQLite',
         has_constant => [
-            _database_file_path => '/var/lib/acme-app/mydb1.sqlitedb'
+            server => '/var/lib/acme-app/mydb1.sqlitedb'
+        ]
+    };
+
+You may also use a directory containing *.sqlite3 files.  The primary database
+must be named main.sqlite3.  All the other *.sqlite3 files are attached when
+the database is opened.
+
+    class Acme::DataSource::MyDB2 {
+        is => 'UR::DataSource::SQLite',
+        has_constant => [
+            server => '/path/to/directory/'
         ]
     };
 
@@ -58,8 +71,61 @@ sub create_default_handle {
     my $self = shift->_singleton_object();
 
     $self->_init_database;
-    return $self->SUPER::create_default_handle(@_);
+    if (-d $self->server) {
+        return $self->_create_default_handle_from_directory();
+    } else {
+        return $self->SUPER::create_default_handle(@_);
+    }
 }
+
+sub _create_default_handle_from_directory {
+    my $self = shift;
+
+    my $server_directory = $self->server;
+    my $main_schema_file = File::Spec->catfile($server_directory, 'main.sqlite3');
+    -f $main_schema_file
+        || UR::Util::touch_file($main_schema_file)
+        || die "Could not create main schema file $main_schema_file: $!";
+
+    my $server_sub_name = join('::', ref($self), 'server');
+    no strict 'refs';
+    no warnings 'redefine';
+    local *$server_sub_name = sub { $main_schema_file };
+    use warnings 'redefine';
+    use strict 'refs';
+
+    my $dbh = $self->SUPER::create_default_handle();
+    $self->_attach_all_schema_files_in_directory($dbh, $server_directory);
+    return $dbh;
+}
+
+sub _attach_all_schema_files_in_directory {
+    my($self, $dbh, $server_directory) = @_;
+    my @schema_files = $self->_schema_files_in_directory($server_directory);
+
+    my $original_autocommit;
+    ($original_autocommit, $dbh->{AutoCommit}) = ($dbh->{AutoCommit}, 1);
+    foreach my $file ( @schema_files ) {
+        next if $file eq 'main.sqlite3';
+        my($schema) = $file =~ m/(.*)\.sqlite3$/;
+        my $pathname = File::Spec->catfile($server_directory, $file);
+        $dbh->do("ATTACH DATABASE '$pathname' as $schema")
+            || Carp::croak("Could not attach schema file $file: ".$dbh->errstr);
+    }
+    $dbh->{AutoCommit} = $original_autocommit;
+}
+
+sub _schema_files_in_directory {
+    my($self, $dir) = @_;
+
+    $dir = IO::Dir->new($dir);
+    my @files;
+    while (my $name = $dir->read) {
+        push(@files, $name) if $name =~ m/\.sqlite3$/;
+    }
+    return @files;
+}
+
 
 sub database_exists {
     my $self = shift;
@@ -890,7 +956,6 @@ sub _mk_table_for_class_meta_schema_handler {
             return;
         }
     }
-
 }
 
 sub attached_schemas {
