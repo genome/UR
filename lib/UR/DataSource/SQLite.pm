@@ -2,6 +2,9 @@ package UR::DataSource::SQLite;
 use strict;
 use warnings;
 
+use IO::Dir;
+use File::Spec;
+
 =pod
 
 =head1 NAME
@@ -19,7 +22,18 @@ Or write the singleton to represent the source directly:
     class Acme::DataSource::MyDB1 {
         is => 'UR::DataSource::SQLite',
         has_constant => [
-            _database_file_path => '/var/lib/acme-app/mydb1.sqlitedb'
+            server => '/var/lib/acme-app/mydb1.sqlitedb'
+        ]
+    };
+
+You may also use a directory containing *.sqlite3 files.  The primary database
+must be named main.sqlite3.  All the other *.sqlite3 files are attached when
+the database is opened.
+
+    class Acme::DataSource::MyDB2 {
+        is => 'UR::DataSource::SQLite',
+        has_constant => [
+            server => '/path/to/directory/'
         ]
     };
 
@@ -56,7 +70,73 @@ sub create_default_handle {
     my $self = shift->_singleton_object();
 
     $self->_init_database;
-    return $self->SUPER::create_default_handle(@_);
+    if (-d $self->server) {
+        return $self->_create_default_handle_from_directory();
+    } else {
+        return $self->SUPER::create_default_handle(@_);
+    }
+}
+
+sub _create_default_handle_from_directory {
+    my $self = shift;
+
+    my $server_directory = $self->server;
+    my $ext = $self->_extension_for_db;
+    my $main_schema_file = File::Spec->catfile($server_directory, "main${ext}");
+    -f $main_schema_file
+        || UR::Util::touch_file($main_schema_file)
+        || die "Could not create main schema file $main_schema_file: $!";
+
+    my $server_sub_name = join('::', ref($self), 'server');
+
+    my $dbh = do {
+        no strict 'refs';
+        no warnings 'redefine';
+        local *$server_sub_name = sub { $main_schema_file };
+
+        $self->SUPER::create_default_handle();
+    };
+
+    $self->_attach_all_schema_files_in_directory($dbh, $server_directory);
+    return $dbh;
+}
+
+sub _attach_all_schema_files_in_directory {
+    my($self, $dbh, $server_directory) = @_;
+    my @schema_files = $self->_schema_files_in_directory($server_directory);
+
+    local $dbh->{AutoCommit} = 1;
+
+    my $main_db_file = join('', 'main', $self->_extension_for_db);
+    foreach my $file ( @schema_files ) {
+        next if $file eq $main_db_file;
+        my $schema = $self->_schema_from_schema_filename($file);
+
+        my $pathname = File::Spec->catfile($server_directory, $file);
+        $dbh->do("ATTACH DATABASE '$pathname' as $schema")
+            || Carp::croak("Could not attach schema file $file: ".$dbh->errstr);
+    }
+}
+
+sub _schema_files_in_directory {
+    my($self, $dir) = @_;
+
+    my $dh = IO::Dir->new($dir);
+
+    my @files;
+    while (my $name = $dh->read) {
+        my $pathname = File::Spec->catfile($dir, $name);
+        next unless -f $pathname;
+        push(@files, $name) if $self->_schema_from_schema_filename($name);
+    }
+    return @files;
+}
+
+sub _schema_from_schema_filename {
+    my($self, $pathname) = @_;
+
+    my($schema, $dir, $ext) = File::Basename::fileparse($pathname, $self->_extension_for_db);
+    return $ext ? $schema : undef;
 }
 
 sub database_exists {
@@ -889,8 +969,7 @@ sub _assure_schema_exists_for_table {
             Carp::carp("Cannot attach file $filename as $schema_name: ".$dbh->errstr);
             return;
         }
-   }
-
+    }
 }
 
 sub attached_schemas {
