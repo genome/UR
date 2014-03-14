@@ -6,6 +6,7 @@ package UR::DataSource::RDBMS;
 use strict;
 use warnings;
 use Scalar::Util;
+use List::MoreUtils;
 use File::Basename;
 
 require UR;
@@ -1657,12 +1658,12 @@ sub _create_sub_for_copying_to_alternate_db {
 
     my @inserter_for_each_table;
     my $next_db_row;  # this will be filled in by the encompassing sub below
-    foreach my $template ( @$loading_templates ) {
+    my @saving_templates = $self->_resolve_loading_templates_for_alternate_db($loading_templates);
+    foreach my $template ( @saving_templates ) {
         my %seen_ids;  # don't insert the same object more than once
 
         my $class_name = $template->{data_class_name};
         my $class_meta = $class_name->__meta__;
-        my $ds_type = $self->ur_datasource_class_for_dbi_connect_string($connect_string);
         $ds_type->mk_table_for_class_meta($class_meta, $dbh);
         my $table_name = $class_meta->table_name;
         my $columns_string = join(', ',
@@ -1706,6 +1707,50 @@ sub _create_sub_for_copying_to_alternate_db {
         $next_db_row = shift;
         $_->() foreach @inserter_for_each_table;
     }
+}
+
+# Given a query plan's loading templates, return a new list of look-alike
+# loading templates.  This new list may look different from the original
+# list in the case of table inheritance: it separates out each class' table
+# and the columns that goes with it.
+sub _resolve_loading_templates_for_alternate_db {
+    my($self, $original_loading_templates) = @_;
+
+    my @loading_templates;
+    foreach my $loading_template ( @$original_loading_templates ) {
+        my $load_class_name = $loading_template->{data_class_name};
+
+        my %column_for_property_name = List::MoreUtils::pairwise { $a => $b }
+                                            @{ $loading_template->{property_names} },
+                                            @{ $loading_template->{column_positions}};
+
+        my @involved_class_metas = reverse
+                                    grep { $_->table_name }
+                                    $load_class_name->__meta__->all_class_metas;
+        foreach my $class_meta ( @involved_class_metas ) {
+            my @id_property_names = map { $_->property_name }
+                                    grep { $_->column_name }
+                                    $class_meta->direct_id_property_metas;
+            my @id_column_positions = map { $column_for_property_name{$_} } @id_property_names;
+            my @property_names = map { $_->property_name }
+                                 grep { $_->column_name }
+                                 $class_meta->direct_property_metas;
+            my @column_positions = map { $column_for_property_name{$_} } @property_names;
+            my $this_template = {
+                    id_property_names   => \@id_property_names,
+                    id_column_positions => \@id_column_positions,
+                    property_names      => \@property_names,
+                    column_positions    => \@column_positions,
+                    table_alias         => $class_meta->table_name,
+                    data_class_name     => $class_meta->class_name,
+                    final_class_name    => $class_meta->class_name,
+                    object_num          => $loading_template->{object_num},
+                    id_resolver         => $class_meta->get_composite_id_resolver,
+                };
+            push @loading_templates, $this_template
+        }
+    }
+    return @loading_templates;
 }
 
 sub _create_dbh_for_alternate_db {
