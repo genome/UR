@@ -1648,7 +1648,8 @@ sub create_iterator_closure_for_rule {
 sub _create_sub_for_copying_to_alternate_db {
     my($self, $connect_string, $loading_templates) = @_;
 
-    my $dbh = DBI->connect($connect_string, '', '', { AutoCommit => 1 })
+    my $ds_type = $self->ur_datasource_class_for_dbi_connect_string($connect_string);
+    my $dbh = $ds_type->_create_dbh_for_alternate_db($connect_string)
             || do {
                 Carp::carp("Cannot connect to alternate DB for copying: $DBI::errstr");
                 return sub {}
@@ -1705,6 +1706,17 @@ sub _create_sub_for_copying_to_alternate_db {
         $next_db_row = shift;
         $_->() foreach @inserter_for_each_table;
     }
+}
+
+sub _create_dbh_for_alternate_db {
+    my($self, $connect_string) = @_;
+
+    # Don't use $self->default_handle_class here
+    # Generally, it'll be UR::DBI, which respects the setting for UR_DBI_NO_COMMIT.
+    # Tests are usually run with no-commit on, and we still want to fill the
+    # test db in that case
+    my $handle_class = 'DBI';
+    $handle_class->connect($connect_string, '', '', { AutoCommit => 1 });
 }
 
 # Create the table behind this class in the specified database.
