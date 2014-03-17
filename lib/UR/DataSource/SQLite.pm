@@ -71,7 +71,7 @@ sub create_default_handle {
     my $self = shift->_singleton_object();
 
     $self->_init_database;
-    if (-d $self->server) {
+    if ($self->_db_path_specifies_a_directory($self->server)) {
         return $self->_create_default_handle_from_directory();
     } else {
         return $self->SUPER::create_default_handle(@_);
@@ -957,10 +957,7 @@ sub _create_dbh_for_alternate_db {
     $db_file
         || Carp::croak("Cannot determine dbname for alternate DB from dbi connect string $connect_string");
 
-    if (-d $db_file
-        or
-        $db_file =~ m{/$}
-    ) {
+    if ($self->_db_path_specifies_a_directory($db_file)) {
         mkdir $db_file;
         my $main_schema_file = join('', 'main', $self->_extension_for_db);
         $db_file = File::Spec->catfile($db_file, $main_schema_file);
@@ -970,6 +967,11 @@ sub _create_dbh_for_alternate_db {
 
     my $dbh = $self->SUPER::_create_dbh_for_alternate_db($connect_string);
     return $dbh;
+}
+
+sub _db_path_specifies_a_directory {
+    my($self, $pathname) = @_;
+    return -d $pathname or $pathname =~ m{/$};
 }
 
 sub _assure_schema_exists_for_table {
