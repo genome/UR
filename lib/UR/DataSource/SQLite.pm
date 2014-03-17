@@ -4,6 +4,7 @@ use warnings;
 
 use IO::Dir;
 use File::Spec;
+use File::Basename;
 
 =pod
 
@@ -947,6 +948,29 @@ sub _dump_db_to_file_internal {
     return 1;
 }
             
+
+sub _create_dbh_for_alternate_db {
+    my($self, $connect_string) = @_;
+
+    my $match_dbname = qr{dbname=([^;]+)}i;
+    my($db_file) = $connect_string =~ m/$match_dbname/;
+    $db_file
+        || Carp::croak("Cannot determine dbname for alternate DB from dbi connect string $connect_string");
+
+    if (-d $db_file
+        or
+        $db_file =~ m{/$}
+    ) {
+        mkdir $db_file;
+        my $main_schema_file = join('', 'main', $self->_extension_for_db);
+        $db_file = File::Spec->catfile($db_file, $main_schema_file);
+
+        $connect_string =~ s/$match_dbname/dbname=$db_file/;
+    }
+
+    my $dbh = $self->SUPER::_create_dbh_for_alternate_db($connect_string);
+    return $dbh;
+}
 
 sub _assure_schema_exists_for_table {
     my($self, $table_name, $dbh) = @_;
