@@ -1649,6 +1649,8 @@ sub mk_table_for_class_meta {
     $dbh ||= $self->get_default_handle;
 
     my $table_name = $class_meta->table_name();
+    $self->_assure_schema_exists_for_table($table_name, $dbh);
+
     # we only care about properties backed up by a real column
     my @props = grep { $_->column_name } $class_meta->direct_property_metas();
 
@@ -1679,6 +1681,25 @@ sub mk_table_for_class_meta {
     }
 
     1;
+}
+
+sub _assure_schema_exists_for_table {
+    my($self, $table_name, $dbh) = @_;
+
+    $dbh ||= $self->get_default_handle;
+
+    my($schema_name, undef) = $self->_extract_schema_and_table_name($table_name);
+    if ($schema_name) {
+        $dbh->do("CREATE SCHEMA IF NOT EXISTS $schema_name")
+            || Carp::croak("Could not create schema $schema_name: ".$dbh->errstr);
+    }
+}
+
+sub _extract_schema_and_table_name {
+    my($self, $string) = @_;
+
+    my($schema_name, $table_name) = $string =~ m/(.*)\.(\w+)$/;
+    return ($schema_name, $table_name);
 }
 
 sub _default_sql_like_escape_string {

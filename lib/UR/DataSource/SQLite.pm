@@ -868,4 +868,49 @@ sub _dump_db_to_file_internal {
 }
             
 
+sub _assure_schema_exists_for_table {
+    my($self, $table_name, $dbh) = @_;
+    $dbh ||= $self->get_default_handle;
+
+    my($schema_name, undef) = $self->_extract_schema_and_table_name($table_name);
+    if ($schema_name
+        and
+        ! $self->is_schema_attached($schema_name, $dbh)
+    ) {
+        # pretend we have schemas
+
+        my($filename) = $dbh->{Name} =~ m/(?:dbname=)*(.*)/;
+        $filename .= ":$schema_name";
+        unless (UR::Util::touch_file($filename)) {
+            Carp::carp("touch_file failed: $!");
+            return;
+        }
+        unless ($dbh->do(qq(ATTACH DATABASE '$filename' as $schema_name))) {
+            Carp::carp("Cannot attach file $filename as $schema_name: ".$dbh->errstr);
+            return;
+        }
+   }
+
+}
+
+sub attached_schemas {
+    my($self, $dbh) = @_;
+    $dbh ||= $self->get_default_handle;
+
+    # Statement returns id, schema, filename
+    my $sth = $dbh->prepare('PRAGMA database_list') || Carp::croak("Cannot list attached databases: ".$dbh->errstr);
+    $sth->execute();
+    my %schemas = map { $_->[1] => $_->[2] }
+                         @{ $sth->fetchall_arrayref };
+    return \%schemas;
+}
+
+sub is_schema_attached {
+    my($self, $schema, $dbh) = @_;
+    $dbh ||= $self->get_default_handle;
+
+    my $schemas = $self->attached_schemas($dbh);
+    return exists $schemas->{$schema};
+}
+
 1;
