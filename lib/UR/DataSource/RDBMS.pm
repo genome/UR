@@ -1652,7 +1652,7 @@ sub mk_table_for_class_meta {
     # we only care about properties backed up by a real column
     my @props = grep { $_->column_name } $class_meta->direct_property_metas();
 
-    my $sql = "create table $table_name (";
+    my $sql = "create table IF NOT EXISTS $table_name (";
 
     my @cols;
     foreach my $prop ( @props ) {
