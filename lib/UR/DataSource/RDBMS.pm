@@ -1657,7 +1657,7 @@ sub mk_table_for_class_meta {
     my @cols;
     foreach my $prop ( @props ) {
         my $col = $prop->column_name;
-        my $type = $prop->data_type;
+        my $type = $prop->data_type || 'varchar';
         my $len = $prop->data_length;
         my $nullable = $prop->is_optional;
 
