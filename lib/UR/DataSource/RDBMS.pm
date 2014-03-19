@@ -1656,7 +1656,13 @@ sub _create_sub_for_copying_to_alternate_db {
             };
 
     my @saving_templates = $self->_resolve_loading_templates_for_alternate_db($loading_templates);
-    my @inserter_for_each_table = map { _make_insert_closure_for_loading_template_for_alternate_db($_, $dbh, $ds_type) }
+
+    foreach my $tmpl ( @saving_templates ) {
+        my $class_meta = $tmpl->{data_class_name}->__meta__;
+        $ds_type->mk_table_for_class_meta($class_meta, $dbh);
+    }
+
+    my @inserter_for_each_table = map { _make_insert_closure_for_loading_template_for_alternate_db($_, $dbh) }
                                     @saving_templates;
 
     return sub {
@@ -1666,13 +1672,12 @@ sub _create_sub_for_copying_to_alternate_db {
 
 # not a method
 sub _make_insert_closure_for_loading_template_for_alternate_db {
-    my($template, $dbh, $ds_type) = @_;
+    my($template, $dbh) = @_;
 
     my %seen_ids;  # don't insert the same object more than once
 
     my $class_name = $template->{data_class_name};
     my $class_meta = $class_name->__meta__;
-    $ds_type->mk_table_for_class_meta($class_meta, $dbh);
     my $table_name = $class_meta->table_name;
     my $columns_string = join(', ',
                             map { $class_meta->column_for_property($_) }
