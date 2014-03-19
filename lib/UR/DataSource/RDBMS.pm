@@ -1655,57 +1655,63 @@ sub _create_sub_for_copying_to_alternate_db {
                 return sub {}
             };
 
-    my @inserter_for_each_table;
-    my $next_db_row;  # this will be filled in by the encompassing sub below
     my @saving_templates = $self->_resolve_loading_templates_for_alternate_db($loading_templates);
-    foreach my $template ( @saving_templates ) {
-        my %seen_ids;  # don't insert the same object more than once
-
-        my $class_name = $template->{data_class_name};
-        my $class_meta = $class_name->__meta__;
-        $ds_type->mk_table_for_class_meta($class_meta, $dbh);
-        my $table_name = $class_meta->table_name;
-        my $columns_string = join(', ',
-                                map { $class_meta->column_for_property($_) }
-                                @{ $template->{property_names} } );
-        my $insert_sql = "insert into $table_name ($columns_string) values ("
-                    . join(',',
-                        map { '?' } @{ $template->{property_names} } )
-                    . ')';
-
-        my $insert_sth = $dbh->prepare($insert_sql)
-            || Carp::croak("Prepare for insert on alternate DB table $table_name failed: ".$dbh->errstr);
-
-        my $check_id_exists_sql = "select count(*) from $table_name where "
-                            . join(' and ',
-                                    map { "$_ = ?" }
-                                    map { $class_meta->column_for_property($_) }
-                                    @{ $template->{id_property_names} });
-        my $check_id_exists_sth = $dbh->prepare($check_id_exists_sql)
-            || Carp::croak("Prepare for check ID select on alternate DB table $table_name failed: ".$dbh->errstr);
-        my @id_column_positions = @{$template->{id_column_positions}};
-
-        my @column_positions = @{$template->{column_positions}};
-
-        my $id_resolver = $template->{id_resolver};
-        push @inserter_for_each_table,
-            sub {
-                my $id = $id_resolver->($next_db_row);
-                unless ($seen_ids{$id}++) {
-                    $check_id_exists_sth->execute( @$next_db_row[@id_column_positions]);
-                    my($count) = @{ $check_id_exists_sth->fetchrow_arrayref() };
-                    unless ($count) {
-                        my @column_values = @$next_db_row[@column_positions];
-                        $insert_sth->execute(@column_values);
-                    }
-                }
-            };
-    }
+    my @inserter_for_each_table = map { $self->_make_insert_closure_for_loading_template_for_alternate_db($_, $dbh, $ds_type) }
+                                    @saving_templates;
 
     return sub {
-        $next_db_row = shift;
-        $_->() foreach @inserter_for_each_table;
+        &$_ foreach @inserter_for_each_table;
     }
+}
+
+sub _make_insert_closure_for_loading_template_for_alternate_db {
+    my($self, $template, $dbh, $ds_type) = @_;
+
+    my %seen_ids;  # don't insert the same object more than once
+
+    my $class_name = $template->{data_class_name};
+    my $class_meta = $class_name->__meta__;
+    $ds_type->mk_table_for_class_meta($class_meta, $dbh);
+    my $table_name = $class_meta->table_name;
+    my $columns_string = join(', ',
+                            map { $class_meta->column_for_property($_) }
+                            @{ $template->{property_names} } );
+    my $insert_sql = "insert into $table_name ($columns_string) values ("
+                . join(',',
+                    map { '?' } @{ $template->{property_names} } )
+                . ')';
+
+    my $insert_sth = $dbh->prepare($insert_sql)
+        || Carp::croak("Prepare for insert on alternate DB table $table_name failed: ".$dbh->errstr);
+
+    my $check_id_exists_sql = "select count(*) from $table_name where "
+                        . join(' and ',
+                                map { "$_ = ?" }
+                                map { $class_meta->column_for_property($_) }
+                                @{ $template->{id_property_names} });
+    my $check_id_exists_sth = $dbh->prepare($check_id_exists_sql)
+        || Carp::croak("Prepare for check ID select on alternate DB table $table_name failed: ".$dbh->errstr);
+    my @id_column_positions = @{$template->{id_column_positions}};
+
+    my @column_positions = @{$template->{column_positions}};
+
+    my $id_resolver = $template->{id_resolver};
+
+    return sub {
+        my($next_db_row) = @_;
+
+        my $id = $id_resolver->(@$next_db_row);
+
+        unless ($seen_ids{$id}++) {
+            $check_id_exists_sth->execute( @$next_db_row[@id_column_positions]);
+            my($count) = @{ $check_id_exists_sth->fetchrow_arrayref() };
+            unless ($count) {
+                my @column_values = @$next_db_row[@column_positions];
+                $insert_sth->execute(@column_values)
+                    || Carp::croak("Inserting to alternate DB for $class_name failed");
+            }
+        }
+    };
 }
 
 # Given a query plan's loading templates, return a new list of look-alike
