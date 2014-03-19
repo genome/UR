@@ -1676,12 +1676,12 @@ sub _create_sub_for_copying_to_alternate_db {
         my $insert_sth = $dbh->prepare($insert_sql)
             || Carp::croak("Prepare for insert on alternate DB table $table_name failed: ".$dbh->errstr);
 
-        my $check_id_sql = "select count(*) from $table_name where "
+        my $check_id_exists_sql = "select count(*) from $table_name where "
                             . join(' and ',
                                     map { "$_ = ?" }
                                     map { $class_meta->column_for_property($_) }
                                     @{ $template->{id_property_names} });
-        my $check_id_sth = $dbh->prepare($check_id_sql)
+        my $check_id_exists_sth = $dbh->prepare($check_id_exists_sql)
             || Carp::croak("Prepare for check ID select on alternate DB table $table_name failed: ".$dbh->errstr);
         my @id_column_positions = @{$template->{id_column_positions}};
 
@@ -1692,8 +1692,8 @@ sub _create_sub_for_copying_to_alternate_db {
             sub {
                 my $id = $id_resolver->($next_db_row);
                 unless ($seen_ids{$id}++) {
-                    $check_id_sth->execute( @$next_db_row[@id_column_positions]);
-                    my($count) = @{ $check_id_sth->fetchrow_arrayref() };
+                    $check_id_exists_sth->execute( @$next_db_row[@id_column_positions]);
+                    my($count) = @{ $check_id_exists_sth->fetchrow_arrayref() };
                     unless ($count) {
                         my @column_values = @$next_db_row[@column_positions];
                         $insert_sth->execute(@column_values);
