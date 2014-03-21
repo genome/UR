@@ -1662,7 +1662,7 @@ sub _create_sub_for_copying_to_alternate_db {
         $ds_type->mk_table_for_class_meta($class_meta, $dbh);
     }
 
-    my @inserter_for_each_table = map { $self->_make_insert_closure_for_loading_template_for_alternate_db($_, $dbh) }
+    my @inserter_for_each_table = map { $self->_make_insert_closures_for_loading_template_for_alternate_db($_, $dbh) }
                                     @saving_templates;
 
     return sub {
@@ -1670,7 +1670,7 @@ sub _create_sub_for_copying_to_alternate_db {
     }
 }
 
-sub _make_insert_closure_for_loading_template_for_alternate_db {
+sub _make_insert_closures_for_loading_template_for_alternate_db {
     my($self, $template, $dbh) = @_;
 
     my %seen_ids;  # don't insert the same object more than once
