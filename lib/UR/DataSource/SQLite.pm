@@ -562,10 +562,13 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
             return;
         }
 
-        while (my $row = $fksth->fetchrow_arrayref) {
-            my($id, $seq, $to_table, $from, $to) = @$row;
-            $fk_info{$id} ||= [];
-            $fk_info{$id}->[$seq] = { from_table => $fk_table, to_table => $to_table, from => $from, to => $to };
+        while (my $row = $fksth->fetchrow_hashref) {
+            my %fk_info_row = ( FK_TABLE_NAME => $fk_table );
+            @fk_info_row{'FK_COLUMN_NAME','UK_TABLE_NAME','UK_COLUMN_NAME'}
+                = @$row{'from','table','to'};
+
+            $fk_info{$row->{id}} ||= [];
+            $fk_info{$row->{id}}->[$row->{seq}] = \%fk_info_row;
         }
 
     } elsif ($pk_table) {
@@ -584,11 +587,14 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
                 return;
             }
 
-            while (my $row = $fksth->fetchrow_arrayref) {
-                my(undef, $seq, $to_table, $from, $to) = @$row;
-                next unless $to_table eq $pk_table;  # Only interested in fks pointing to $pk_table
+            while (my $row = $fksth->fetchrow_hashref) {
+                next unless $row->{table} eq $pk_table;  # Only interested in fks pointing to $pk_table
+                my %fk_info_row = ( FK_TABLE_NAME => $from_table );
+                @fk_info_row{'FK_COLUMN_NAME','UK_TABLE_NAME','UK_COLUMN_NAME'}
+                    = @$row{'from','table','to'};
+
                 $fk_info{$id} ||= [];
-                $fk_info{$id}->[$seq] = { from_table => $from_table, to_table => $to_table, from => $from, to => $to };
+                $fk_info{$id}->[$row->{seq}] = \%fk_info_row;
             }
         }
     } else {
@@ -598,20 +604,15 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
     # next, format it to get returned as a sth
     my @ret_data;
     foreach my $fk_info ( values %fk_info ) {
-        my @column_list = map { $_->{'from'} } @$fk_info;
-        my @r_column_list = map { $_->{'to'} } @$fk_info;
-        my $fk_name = $self->_resolve_fk_name($fk_info->[0]->{'from_table'},
+        my @column_list = map { $_->{FK_COLUMN_NAME} } @$fk_info;
+        my @r_column_list = map { $_->{UK_COLUMN_NAME} } @$fk_info;
+        my $fk_name = $self->_resolve_fk_name($fk_info->[0]->{FK_TABLE_NAME},
                                               \@column_list,
-                                              $fk_info->[0]->{'to_table'},  # They'll all have the same table, right?
+                                              $fk_info->[0]->{UK_TABLE_NAME},  # They'll all have the same table, right?
                                               \@r_column_list);
         foreach my $fk_info_col (@$fk_info) {
-            my $node;
-            $node->{'FK_NAME'}        = $fk_name;
-            $node->{'FK_TABLE_NAME'}  = $fk_info_col->{'from_table'};
-            $node->{'FK_COLUMN_NAME'} = $fk_info_col->{'from'};
-            $node->{'UK_TABLE_NAME'}  = $fk_info_col->{'to_table'};
-            $node->{'UK_COLUMN_NAME'} = $fk_info_col->{'to'};
-            push @ret_data, $node;
+            $fk_info_col->{FK_NAME} = $fk_name;
+            push @ret_data, $fk_info_col;
         }
     }
             
