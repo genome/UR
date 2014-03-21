@@ -562,10 +562,6 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
             return;
         }
 
-        #my($id, $seq, $to_table, $from, $to);
-        # This will generate an error message when there are no result rows
-        #$fksth->bind_columns(\$id, \$seq, \$to_table, \$from, \$to);
-
         while (my $row = $fksth->fetchrow_arrayref) {
             my($id, $seq, $to_table, $from, $to) = @$row;
             $fk_info{$id} ||= [];
@@ -587,8 +583,6 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
                 $self->error_message("foreign_key_list execute failed: $DBI::errstr");
                 return;
             }
-            #my($id, $seq, $to_table, $from, $to);
-            #$fksth->bind_columns(\$id, \$seq, \$to_table, \$from, \$to);
 
             while (my $row = $fksth->fetchrow_arrayref) {
                 my(undef, $seq, $to_table, $from, $to) = @$row;
