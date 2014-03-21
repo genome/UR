@@ -1712,7 +1712,8 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
             my($count) = @{ $check_id_exists_sth->fetchrow_arrayref() };
             unless ($count) {
                 my @column_values = @$next_db_row[@column_positions];
-                $insert_sth->execute(@column_values);
+                $insert_sth->execute(@column_values)
+                    || Carp::croak("Inserting to alternate DB for $class_name failed");
             }
         }
     };
