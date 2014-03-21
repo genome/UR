@@ -69,6 +69,9 @@ sub test_foreign_key_handling {
         my $expected = $expected_fk_data->{'from'}->{$table};
         my $expected_count = scalar(@$expected);
 
+        $found = [ sort { $a->{FK_TABLE_NAME} cmp $b->{FK_TABLE_NAME} } @$found ];
+        $expected = [ sort { $a->{FK_TABLE_NAME} cmp $b->{FK_TABLE_NAME} } @$expected ];
+
         is($found_count, $expected_count, "Number of FK rows from $table is correct");
         is_deeply($found, $expected, 'FK data is correct');
     }
@@ -78,8 +81,10 @@ sub test_foreign_key_handling {
         my $found_count = scalar(@$found);
 
         my $expected = $expected_fk_data->{'to'}->{$table};
-        $expected = sort_fk_records($expected);
         my $expected_count = scalar(@$expected);
+
+        $found = [ sort { $a->{UK_TABLE_NAME} cmp $b->{UK_TABLE_NAME} } @$found ];
+        $expected = [ sort { $a->{UK_TABLE_NAME} cmp $b->{UK_TABLE_NAME} } @$expected ];
 
         is($found_count, $expected_count, "Number of FK rows to $table is correct");
         is_deeply($found, $expected, 'FK data is correct');
@@ -130,7 +135,7 @@ sub setup_schema {
     
 
 sub make_expected_fk_data {
-     my $from = {
+     my $to = {
              foo => [],
              inline => [
                       { FK_NAME => 'inline_id_foo_id1_fk',
@@ -238,16 +243,16 @@ sub make_expected_fk_data {
                       ],
           };
 
-    # The 'to' data is just the inverse of 'from'
-    my $to;
-    foreach my $fk_list ( values %$from ) {
+    # The 'from' data is just the inverse of 'to'
+    my $from;
+    foreach my $fk_list ( values %$to ) {
         foreach my $fk ( @$fk_list ) {
             my $uk_table = $fk->{'UK_TABLE_NAME'};
-            $to->{$uk_table} ||= [];
-            push @{$to->{$uk_table}}, $fk;
+            $from->{$uk_table} ||= [];
+            push @{$from->{$uk_table}}, $fk;
 
             my $fk_table = $fk->{'FK_TABLE_NAME'};
-            $to->{$fk_table} ||= [];
+            $from->{$fk_table} ||= [];
         }
     }
 
@@ -265,25 +270,6 @@ sub get_fk_info_from_dd {
         push @rows, $row;
     }
 
-    my $rows = sort_fk_records(\@rows);
-    return $rows;
+    return \@rows;
 }
 
-
-
-sub sort_fk_records {
-    my($listref) = @_;
-
-#    no warnings 'uninitialized';
-
-    my @sorted = sort { 
-                        $a->{'FK_TABLE_NAME'} cmp $b->{'FK_TABLE_NAME'}
-                        ||
-                        $a->{'FK_COLUMN_NAME'} cmp $b->{'FK_COLUMN_NAME'}
-                        ||    
-                        $a->{'UK_TABLE_NAME'} cmp $b->{'UK_TABLE_NAME'}
-                        ||
-                        $a->{'UK_COLUMN_NAME'} cmp $b->{'UK_COLUMN_NAME'}
-                      } @$listref;
-    return \@sorted;
-}

@@ -548,7 +548,7 @@ sub _resolve_fk_name {
 # $fk_table refers to the table where the fk is attached
 # $pk_table refers to the table the pk points to - where the primary key exists
 sub get_foreign_key_details_from_data_dictionary {
-my($self,$fk_catalog,$fk_schema,$fk_table,$pk_catalog,$pk_schema,$pk_table) = @_;
+my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table) = @_;
 
     my $dbh = $self->get_default_handle();
 
