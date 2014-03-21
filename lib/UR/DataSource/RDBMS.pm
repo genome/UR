@@ -1702,7 +1702,9 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
 
     my $id_resolver = $template->{id_resolver};
 
-    return sub {
+    my @prerequsites = $self->_make_insert_closure_for_prerequsite_tables($class_meta, $template);
+
+    my $inserter = sub {
         my($next_db_row) = @_;
 
         my $id = $id_resolver->(@$next_db_row);
@@ -1717,6 +1719,126 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
             }
         }
     };
+
+    return (@prerequsites, $inserter);
+}
+
+sub _make_insert_closure_for_prerequsite_tables {
+    my($self, $class_meta, $loading_template) = @_;
+
+    my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
+    my @fks;
+    my $table_object = do {
+        local $ENV{UR_TEST_FILLDB}; # so we don't recurse back in here...
+
+        my $table_object = $self->_get_table_object($table_name_without_owner, $db_owner);
+        unless ($table_object) {
+            $self->generate_schema_for_class_meta($class_meta, 1);
+            $table_object = $self->_get_table_object($table_name_without_owner, $db_owner);
+        }
+        @fks = UR::DataSource::RDBMS::FkConstraint->get(
+                    data_source => $self->_my_data_source_id,
+                    owner => $db_owner,
+                    table_name => $table_name_without_owner);
+        $_->get_related_column_objects() foreach @fks;
+        $table_object;
+    };
+
+    my %column_idx_for_property_name;
+    for (my $i = 0; $i < @{ $loading_template->{property_names} }; $i++) {
+        $column_idx_for_property_name{ $loading_template->{property_names}->[$i] }
+            = $loading_template->{column_positions}->[$i];
+    }
+
+    my @prerequsite_loaders;
+    my $class_name = $class_meta->class_name;
+    foreach my $fk ( @fks ) {
+        my $pk_class_name = $self->_lookup_fk_target_class_name($fk);
+
+        # fks for inheritance are handled inside _resolve_loading_templates_for_alternate_db
+        next if $class_name->isa($pk_class_name);
+
+        my $pk_class_meta = $pk_class_name->__meta__;
+
+        my %pk_class_id_column_order = map { $_->column_name => $_->is_id }
+                                    $pk_class_meta->direct_id_property_metas;
+
+        my @fk_columns = map { $column_idx_for_property_name{$_} }
+                         map { $class_meta->property_for_column($_) }
+                         map { $_->column_name }
+                         sort { $pk_class_id_column_order{ $a->column_name } <=> $pk_class_id_column_order{ $b->column_name } }
+                         $fk->get_related_column_objects;
+        if (grep { !defined } @fk_columns
+            or
+            !@fk_columns
+        ) {
+            Carp::croak(sprintf(q(Couldn't determine column order for inserting prerequsites of %s with foreign key "%s" refering to table %s with columns (%s)),
+                $class_name,
+                $fk->fk_constraint_name,
+                $fk->r_table_name,
+                join(', ', map { $_->r_column_name } $fk->get_related_column_objects)
+            ));
+        }
+
+        my $id_resolver = $pk_class_meta->get_composite_id_resolver();
+
+        push @prerequsite_loaders, sub {
+            my($next_db_row) = @_;
+            my @id_values = @$next_db_row[@fk_columns];
+            my $id = $id_resolver->(@id_values);
+            # here we _do_ want to recurse back in.  That way if these prerequsites
+            # have prerequaites of their own, they'll be loaded in the recursive call
+            $pk_class_name->get($id);
+        }
+    }
+    return @prerequsite_loaders;
+}
+
+# given a UR::DataSource::RDBMS::FkConstraint, find the table this fk refers to
+# (the table with the pk_columns), then find which class goes with that table.
+sub _lookup_fk_target_class_name {
+    my($self, $fk) = @_;
+
+    my $pk_owner = $fk->r_owner;
+    my $pk_table_name = $fk->r_table_name;
+    my $pk_table_name_with_owner = $pk_owner ? join('.', $pk_owner, $pk_table_name) : $pk_table_name;
+    my $pk_class_name = $self->_lookup_class_for_table_name( $pk_table_name_with_owner )
+                        || $self->_lookup_class_for_table_name( $pk_table_name );
+
+    unless ($pk_class_name) {
+        # didn't find it.  Maybe the target class isn't loaded yet
+        # try looking up the class on the other side of the FK
+        # and determine which property matches this FK
+
+        my $fk_owner = $fk->owner;
+        my $fk_table_name = $fk->table_name;
+        my $fk_table_name_with_owner = $fk_owner ? join('.', $fk_owner, $fk_table_name) : $fk_table_name;
+
+        my $fk_class_name = $self->_lookup_class_for_table_name( $fk_table_name_with_owner )
+                            || $self->_lookup_class_for_table_name( $fk_table_name );
+        if ($fk_class_name) {
+            # get all the relation property target classes loaded
+            my @relation_property_metas = grep { $_->id_by and $_->data_type  }
+                                          $fk_class_name->__meta__->properties();
+            foreach my $prop_meta ( @relation_property_metas ) {
+                eval { $prop_meta->data_type->__meta__ };
+            }
+
+            # try looking up again
+            $pk_class_name = $self->_lookup_class_for_table_name( $pk_table_name_with_owner )
+                             || $self->_lookup_class_for_table_name( $pk_table_name );
+        }
+    }
+    unless ($pk_class_name) {
+        Carp::croak(
+            sprintf(q(Couldn't determine class with table %s involved in foreign key "%s" from table %s with columns (%s)),
+                        $pk_table_name,
+                        $fk->fk_constraint_name,
+                        $fk->table_name,
+                        join(', ', map { $_->column_name } $fk->get_related_column_objects)
+                    ));
+    }
+    return $pk_class_name;
 }
 
 # Given a query plan's loading templates, return a new list of look-alike

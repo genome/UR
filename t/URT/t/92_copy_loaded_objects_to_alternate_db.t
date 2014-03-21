@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 39;
+use Test::More tests => 43;
 use URT::DataSource::SomeSQLite;
 use File::Temp;
 use File::Spec;
@@ -30,6 +30,8 @@ foreach my $no_commit ( 0, 1 ) {
 
 sub fill_primary_db {
     my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
+
+    $dbh->do('PRAGMA foreign_keys = ON');
 
     # "simple" is a basic table, no inheritance or hangoffs
     ok($dbh->do('create table simple (simple_id integer NOT NULL PRIMARY KEY, name varchar)'),
@@ -59,19 +61,19 @@ sub fill_primary_db {
 
 
     # "obj" and "hangoff" tables
-    ok($dbh->do('create table hangoff (hangoff_id integer NOT NULL PRIMARY KEY, name varchar)'),
+    ok($dbh->do('create table obj (obj_id integer NOT NULL PRIMARY KEY, name varchar)'),
         'create table obj');
-    ok($dbh->do('create table obj (obj_id integer NOT NULL PRIMARY KEY, hangoff_id integer NOT NULL REFERENCES hanhoff(hangoff_id), data varchar)'),
+    ok($dbh->do('create table hangoff (hangoff_id integer NOT NULL PRIMARY KEY, value varchar, obj_id integer REFERENCES obj(obj_id))'),
         'create table hangoff');
-    $sth = $dbh->prepare('insert into hangoff (hangoff_id, name) values (?,?)') || die "prepare hangoff: $DBI::errstr";
-    foreach my $row ( [1, 'use'], [2, 'ignore']) {
-        $sth->execute(@$row) || die "execute obj: $DBI::errstr";
+    $sth = $dbh->prepare('insert into obj (obj_id, name) values (?,?)') || die "prepare obj: $DBI::errstr";
+    foreach my $row ( [1, 'use'], [2, 'ignore'], [3, 'keep'] ) {
+        $sth->execute(@$row) || die "execute hangoff: $DBI::errstr";
     }
     $sth->finish;
 
-    $sth = $dbh->prepare('insert into obj (obj_id, hangoff_id) values (?,?)') || die "prepare obj: $DBI::errstr";
-    foreach my $row ( [1, 1], [2, 2] ) {
-        $sth->execute(@$row) || die "execute hangoff: $DBI::errstr";
+    $sth = $dbh->prepare('insert into hangoff (hangoff_id, value, obj_id) values (?,?,?)') || die "prepare hangoff: $DBI::errstr";
+    foreach my $row ( [1, 'use', 1], [2, 'ignore', 2], [3, 'keep', 3] ) {
+        $sth->execute(@$row) || die "execute obj: $DBI::errstr";
     }
     $sth->finish;
 }
@@ -103,23 +105,28 @@ sub setup_classes {
     );
 
     UR::Object::Type->define(
-        class_name => 'URT::Hangoff',
-        id_by => 'hangoff_id',
-        has => ['name'],
-        data_source => 'URT::DataSource::SomeSQLite',
-        table_name => 'hangoff',
-    );
-
-    UR::Object::Type->define(
         class_name => 'URT::Obj',
         id_by => 'obj_id',
         has => [
-            hangoff => { is => 'URT::Hangoff', id_by => 'hangoff_id' },
-            hangoff_name => { via => 'hangoff', to => 'name' },
+            name => { is => 'String' },
+            hangoff => { is => 'URT::Hangoff', reverse_as => 'obj', is_many => 1 },
+            hangoff_value => { via => 'hangoff', to => 'value' },
         ],
         data_source => 'URT::DataSource::SomeSQLite',
         table_name => 'obj',
     );
+
+    UR::Object::Type->define(
+        class_name => 'URT::Hangoff',
+        id_by => 'hangoff_id',
+        has => [
+            value => { is => 'String' },
+            obj => { is => 'URT::Obj', id_by => 'obj_id' },
+        ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'hangoff',
+    );
+
 }
 
 
@@ -135,7 +142,9 @@ sub _load_objects {
 
     ok(scalar(URT::Child->get(name => 'use')), 'Get child object');
 
-    ok(scalar(URT::Obj->get(hangoff_name => 'use')), 'Get obj with hangoff');
+    ok(scalar(URT::Obj->get(hangoff_value => 'use')), 'Get obj with hangoff');
+
+    ok(scalar(URT::Hangoff->get(value => 'keep')), 'Get hangoff data directly');
 
     $_->unload() foreach ( qw( URT::Simple URT::Child URT::Obj URT::Hangoff ) );
 }
@@ -163,12 +172,17 @@ sub test_results_db_file {
 
     my $obj = $dbh->selectall_hashref('select * from obj', 'obj_id');
     is_deeply($obj,
-        { 1 => { obj_id => 1, hangoff_id => 1 } },
+        { 1 => { obj_id => 1, name => 'use' },
+          3 => { obj_id => 3, name => 'keep' },
+         },
         'table obj');
 
     my $hangoff = $dbh->selectall_hashref('select * from hangoff', 'hangoff_id');
     is_deeply($hangoff,
-        { 1 => { hangoff_id => 1, name => 'use' } },
+        {
+          1 => { hangoff_id => 1, obj_id => 1, value => 'use' },
+          3 => { hangoff_id => 3, obj_id => 3, value => 'keep'},
+         },
         'table hangoff');
 }
 
