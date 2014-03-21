@@ -1706,7 +1706,8 @@ sub _make_insert_closure_for_loading_template_for_alternate_db {
     return sub {
         my($next_db_row) = @_;
 
-        my $id = $id_resolver->($next_db_row);
+        my $id = $id_resolver->(@$next_db_row);
+
         unless ($seen_ids{$id}++) {
             $check_id_exists_sth->execute( @$next_db_row[@id_column_positions]);
             my($count) = @{ $check_id_exists_sth->fetchrow_arrayref() };
