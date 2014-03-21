@@ -1767,12 +1767,19 @@ sub _resolve_loading_templates_for_alternate_db {
 sub _create_dbh_for_alternate_db {
     my($self, $connect_string) = @_;
 
+    # Support an extension of the connect string to allow user and password.
+    # URI::DB supports these kinds of things, too.
+    $connect_string =~ s/user=(\w+);?//;
+    my $user = $1;
+    $connect_string =~ s/password=(\w+);?//;
+    my $password = $1;
+
     # Don't use $self->default_handle_class here
     # Generally, it'll be UR::DBI, which respects the setting for UR_DBI_NO_COMMIT.
     # Tests are usually run with no-commit on, and we still want to fill the
     # test db in that case
     my $handle_class = 'DBI';
-    $handle_class->connect($connect_string, '', '', { AutoCommit => 1 });
+    $handle_class->connect($connect_string, $user || '', $password || '', { AutoCommit => 1, PrintWarn => 0 });
 }
 
 # Create the table behind this class in the specified database.
