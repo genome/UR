@@ -553,22 +553,35 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
     my $dbh = $self->get_default_handle();
 
     # first, build a data structure to collect columns of the same foreign key together
-    my %fk_info;
+    my @returned_fk_info;
     if ($fk_table) {
-        my $fksth = $dbh->prepare_cached("PRAGMA foreign_key_list($fk_table)")
+        my $fksth = $dbh->prepare("PRAGMA foreign_key_list($fk_table)")
                       or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
         unless ($fksth->execute()) {
             $self->error_message("foreign_key_list execute failed: $DBI::errstr");
             return;
         }
 
+        my(@column_list, @r_column_list);
         while (my $row = $fksth->fetchrow_hashref) {
             my %fk_info_row = ( FK_TABLE_NAME => $fk_table );
             @fk_info_row{'FK_COLUMN_NAME','UK_TABLE_NAME','UK_COLUMN_NAME'}
                 = @$row{'from','table','to'};
 
-            $fk_info{$row->{id}} ||= [];
-            $fk_info{$row->{id}}->[$row->{seq}] = \%fk_info_row;
+            push @returned_fk_info, \%fk_info_row;
+
+            push @column_list, $row->{from};
+            push @r_column_list, $row->{to}
+        }
+
+        if (@returned_fk_info) {
+            my $fk_name = $self->_resolve_fk_name($returned_fk_info[0]->{FK_TABLE_NAME},
+                                              \@column_list,
+                                              $returned_fk_info[0]->{UK_TABLE_NAME},  # They'll all have the same table, right?
+                                              \@r_column_list);
+            foreach my $fk_info_row ( @returned_fk_info ) {
+                $fk_info_row->{FK_NAME} = $fk_name;
+            }
         }
 
     } elsif ($pk_table) {
@@ -576,53 +589,51 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
         # the named table
 
         my @tables = $self->_get_info_from_sqlite_master(undef,'table');
-        my $id = 0;
+        TABLE:
         foreach my $table_data ( @tables ) {
             my $from_table = $table_data->{'table_name'};
-            $id++;
-            my $fksth = $dbh->prepare_cached("PRAGMA foreign_key_list($from_table)")
+            my $fksth = $dbh->prepare("PRAGMA foreign_key_list($from_table)")
                       or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
             unless ($fksth->execute()) {
                 $self->error_message("foreign_key_list execute failed: $DBI::errstr");
                 return;
             }
 
+            my(@this_table_fks, @column_list, @r_column_list);
             while (my $row = $fksth->fetchrow_hashref) {
-                next unless $row->{table} eq $pk_table;  # Only interested in fks pointing to $pk_table
+                next TABLE unless $row->{table} eq $pk_table;  # Only interested in fks pointing to $pk_table
                 my %fk_info_row = ( FK_TABLE_NAME => $from_table );
                 @fk_info_row{'FK_COLUMN_NAME','UK_TABLE_NAME','UK_COLUMN_NAME'}
                     = @$row{'from','table','to'};
 
-                $fk_info{$id} ||= [];
-                $fk_info{$id}->[$row->{seq}] = \%fk_info_row;
+                push @this_table_fks, \%fk_info_row;
+
+                push @column_list, $row->{from};
+                push @r_column_list, $row->{to};
             }
+
+            if (@this_table_fks) {
+                my $fk_name = $self->_resolve_fk_name($this_table_fks[0]->{FK_TABLE_NAME},
+                                                  \@column_list,
+                                                  $this_table_fks[0]->{UK_TABLE_NAME},  # They'll all have the same table, right?
+                                                  \@r_column_list);
+                foreach my $fk_info_row ( @this_table_fks ) {
+                    $fk_info_row->{FK_NAME} = $fk_name;
+                }
+            }
+            push @returned_fk_info, @this_table_fks;
         }
     } else {
         Carp::croak("Can't get_foreign_key_details_from_data_dictionary(): either pk_table ($pk_table) or fk_table ($fk_table) are required");
     }
 
-    # next, format it to get returned as a sth
-    my @ret_data;
-    foreach my $fk_info ( values %fk_info ) {
-        my @column_list = map { $_->{FK_COLUMN_NAME} } @$fk_info;
-        my @r_column_list = map { $_->{UK_COLUMN_NAME} } @$fk_info;
-        my $fk_name = $self->_resolve_fk_name($fk_info->[0]->{FK_TABLE_NAME},
-                                              \@column_list,
-                                              $fk_info->[0]->{UK_TABLE_NAME},  # They'll all have the same table, right?
-                                              \@r_column_list);
-        foreach my $fk_info_col (@$fk_info) {
-            $fk_info_col->{FK_NAME} = $fk_name;
-            push @ret_data, $fk_info_col;
-        }
-    }
-            
     my $sponge = DBI->connect("DBI:Sponge:", '','')
         or return $dbh->DBI::set_err($DBI::err, "DBI::Sponge: $DBI::errstr");
 
     my @returned_names = qw( FK_NAME UK_TABLE_NAME UK_COLUMN_NAME FK_TABLE_NAME FK_COLUMN_NAME );
     my $table = $pk_table || $fk_table;
     my $returned_sth = $sponge->prepare("foreign_key_info $table", {
-        rows => [ map { [ @{$_}{@returned_names} ] } @ret_data ],
+        rows => [ map { [ @{$_}{@returned_names} ] } @returned_fk_info ],
         NUM_OF_FIELDS => scalar @returned_names,
         NAME => \@returned_names,
     }) or return $dbh->DBI::set_err($sponge->err(), $sponge->errstr());
