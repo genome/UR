@@ -3519,6 +3519,31 @@ sub ur_data_type_for_data_source_data_type {
 }
 
 
+sub _vendor_data_type_for_ur_data_type {
+    return ( TEXT        => 'VARCHAR',
+             STRING      => 'VARCHAR',
+             INTEGER     => 'INTEGER',
+             DECIMAL     => 'INTEGER',
+             NUMBER      => 'FLOAT',
+             BOOLEAN     => 'INTEGER',
+             DATETIME    => 'DATETIME',
+             TIMESTAMP   => 'TIMESTAMP',
+             __default__ => 'VARCHAR',
+         );
+}
+
+sub data_source_type_for_ur_data_type {
+    my($class, $type) = @_;
+
+    if ($type and $type->isa('UR::Value')) {
+        ($type) =~ m/UR::Value::(\w+)/;
+    }
+    my %types = $class->_vendor_data_type_for_ur_data_type();
+    return $types{uc($type)}
+            || $types{__default__};
+}
+
+
 # Given two properties with different 'is', return a 2-element list of
 # SQL functions to apply to perform a comparison in the DB.  0th element
 # gets applied to the left side, 1st element to the right.  This implementation
