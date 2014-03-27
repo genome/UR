@@ -163,8 +163,6 @@ sub create {
     my $bx = $class->define_boolexpr(@_);
     my $id = $bx->value_for_id;
     unless (defined $id) {
-        use Data::Dumper;
-        my $params = { $bx->params_list };
         Carp::confess("No singleton ID class specified for constructor?");
     }
     my $subclass = $class->_resolve_subclass_name_for_id($id);
