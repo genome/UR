@@ -132,8 +132,9 @@ sub setup_classes {
 
 sub load_objects_fill_file {
     my $temp_db_file = File::Temp->new();
-    local $ENV{UR_TEST_FILLDB} = 'dbi:SQLite:dbname='.$temp_db_file->filename;
+    URT::DataSource::SomeSQLite->alternate_db_dsn('dbi:SQLite:dbname='.$temp_db_file->filename);
     _load_objects();
+    URT::DataSource::SomeSQLite->alternate_db_dsn('');
     return $temp_db_file;
 }
 
@@ -188,8 +189,9 @@ sub test_results_db_file {
 
 sub load_objects_fill_dir {
     my $temp_db_dir = File::Temp::tempdir( CLEANUP => 1 );
-    local $ENV{UR_TEST_FILLDB} = 'dbi:SQLite:dbname='.$temp_db_dir;
+    URT::DataSource::SomeSQLite->alternate_db_dsn('dbi:SQLite:dbname='.$temp_db_dir);
     _load_objects();
+    URT::DataSource::SomeSQLite->alternate_db_dsn('');
     return $temp_db_dir;
 }
 

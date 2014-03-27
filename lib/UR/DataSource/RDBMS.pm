@@ -23,6 +23,11 @@ UR::Object::Type->define(
     ],
 
     has_optional => [
+        alternate_db_dsn => {
+            is => 'Text',
+            default_value => 0,
+            doc => 'Set to a DBI dsn to copy all data queried from this datasource to an alternate database',
+        },
         camel_case_table_names => {
             is => 'Boolean',
             default_value => 0,
@@ -1608,10 +1613,10 @@ sub create_iterator_closure_for_rule {
     my $next_db_row;
     my $pending_db_object_data;
 
-    my $ur_test_fill_db = $ENV{'UR_TEST_FILLDB'}
+    my $ur_test_fill_db = $self->alternate_db_dsn
                             &&
                             $self->_create_sub_for_copying_to_alternate_db(
-                                    $ENV{'UR_TEST_FILLDB'},
+                                    $self->alternate_db_dsn,
                                     $query_plan->{loading_templates}
                                 );
 
@@ -1729,7 +1734,13 @@ sub _make_insert_closures_for_prerequsite_tables {
 
     my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
     my $table_object = do {
-        local $ENV{UR_TEST_FILLDB}; # so we don't recurse back in here...
+        # don't want to recurse back in here while querying the data dictionary
+        my $class = ref($self) || $self;
+        my $alternate_db_dsn_subname = join('::',$class, 'alternate_db_dsn');
+        no strict 'refs';
+        no warnings 'redefine';
+        local *$alternate_db_dsn_subname = sub { '' };
+
         my $table_name = $class_meta->table_name;
         $self->refresh_database_metadata_for_table_name($table_name, '__define__')
             unless ($prerequsite_tables_up_to_date{$self}->{$table_name}++);
@@ -1921,7 +1932,7 @@ sub mk_table_for_class_meta {
     my @cols;
     foreach my $prop ( @props ) {
         my $col = $prop->column_name;
-        my $type = $self->data_source_type_for_ur_data_type($prop->data_type),
+        my $type = $self->data_source_type_for_ur_data_type($prop->data_type);
         my $len = $prop->data_length;
         my $nullable = $prop->is_optional;
 
