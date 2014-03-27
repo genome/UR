@@ -155,6 +155,12 @@ sub ur_data_type_for_data_source_data_type {
     return $urtype;
 }
 
+sub _vendor_data_type_for_ur_data_type {
+    return ( BOOLEAN     => 'BOOLEAN',
+             XML         => 'XML',
+             shift->SUPER::_vendor_data_type_for_ur_data_type(),
+            );
+}
 
 sub _alter_sth_for_selecting_blob_columns {
     my($self, $sth, $column_objects) = @_;

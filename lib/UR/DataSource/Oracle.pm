@@ -727,6 +727,16 @@ sub cast_for_data_conversion {
     return @retval;
 }
 
+sub _vendor_data_type_for_ur_data_type {
+    return ( TEXT        => 'VARCHAR2',
+             STRING      => 'VARCHAR2',
+             BOOLEAN      => 'INTEGER',
+             __default__ => 'VARCHAR2',
+             shift->SUPER::_vendor_data_type_for_ur_data_type(),
+            );
+};
+
+
 1;
 
 =pod
