@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 23; 
+use Test::More tests => 35;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -45,6 +45,16 @@ isa_ok($obj, 'URT::SomeSingleton');
 
 is($obj->property_a('hello'), 'hello', 'Setting property_a on URT::SomeSingleton object');
 is($obj->property_a(), 'hello', 'Getting property_a on URT::SomeSingleton object');
+is($obj->{property_a}, 'hello', 'Object key was filled in');
+is(URT::SomeSingleton->property_a(), 'hello', "Getting property via singleton's class");
+
+is(URT::SomeSingleton->property_a('bye'), 'bye', "Setting property_a on URT::SomeSingleton class");
+is($obj->property_a(), 'bye', 'Getting property_a on URT::SomeSingleton object');
+is($obj->{property_a}, 'bye', 'Object key was filled in');
+is(URT::SomeSingleton->property_a(), 'bye', "Getting property via singleton's class");
+
+
+
 
 my $obj2 = URT::SomeSingleton->get();
 ok($obj2, 'Calling get() on URT::SomeSingleton returns an object');
@@ -78,3 +88,21 @@ ok($obj->delete(), 'Delete the URT::ChildSingleton');
 @objs = URT::Parent->get();
 is(scalar(@objs), 2, 'get() via parent class returns 2 objects');
 
+
+
+$co = UR::Object::Type->define(
+    class_name => 'URT::ROSingleton',
+    is => ['UR::Singleton'],
+    has => [
+        property_a => { is => 'String', value => '123abc', is_mutable => 0 },
+    ],
+);
+ok($co, 'Defined URT::ROSingleton class with read-only property');
+$obj = URT::ROSingleton->_singleton_object;
+ok($obj, 'Get the URT::ROSingleton object through _singleton_object()');
+is(URT::ROSingleton->property_a, '123abc', 'read-only property has current value as class method');
+is($obj->property_a, '123abc', 'read-only property has current value as instance method');
+ok(! eval {$obj->property_a('different') }, 'Setting a different value fails');
+like($@,
+    qr(Cannot change read-only property property_a for class URT::ROSingleton),
+    'exception is correct');

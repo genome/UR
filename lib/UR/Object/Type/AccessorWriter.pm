@@ -42,6 +42,13 @@ sub mk_rw_accessor {
         return $r;
     };
 
+    if (_class_is_singleton($class_name)) {
+        my $basic_accessor = $accessor;
+        $accessor = sub {
+            shift->_singleton_object->$basic_accessor(@_);
+        };
+    }
+
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $accessor_name,
@@ -71,12 +78,24 @@ sub mk_ro_accessor {
         return $_[0]->{ $property_name };
     };
 
+    if (_class_is_singleton($class_name)) {
+        my $basic_accessor = $accessor;
+        $accessor = sub {
+            shift->_singleton_object->$basic_accessor(@_);
+        };
+    }
+
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $accessor_name,
         code => $accessor,
     });
 
+}
+
+sub _class_is_singleton {
+    my $class_name = shift;
+    return grep { $_->isa('UR::Singleton') } @{ $class_name->__meta__->{is} };
 }
 
 sub mk_id_based_flex_accessor {
