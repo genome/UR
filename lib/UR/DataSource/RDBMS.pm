@@ -1921,7 +1921,7 @@ sub mk_table_for_class_meta {
     my @cols;
     foreach my $prop ( @props ) {
         my $col = $prop->column_name;
-        my $type = $prop->data_type || 'varchar';
+        my $type = $self->data_source_type_for_ur_data_type($prop->data_type),
         my $len = $prop->data_length;
         my $nullable = $prop->is_optional;
 
