@@ -1743,21 +1743,27 @@ sub _make_insert_closures_for_prerequsite_tables {
             = $loading_template->{column_positions}->[$i];
     }
 
-    my @prerequsite_loaders;
     my $class_name = $class_meta->class_name;
 
     my @fks = $table_object->fk_constraints;
-    foreach my $fk ( @fks ) {
+    return map { $self->_make_prerequsite_insert_closure_for_fk($class_name, \%column_idx_for_column_name, $_) }
+            @fks;
+}
+
+sub _make_prerequsite_insert_closure_for_fk {
+    my($self, $load_class_name, $column_idx_for_column_name, $fk) = @_;
+
         my $pk_class_name = $self->_lookup_fk_target_class_name($fk);
 
         # fks for inheritance are handled inside _resolve_loading_templates_for_alternate_db
-        next if $class_name->isa($pk_class_name);
+        # FIXME - next only if this FK has PK columns linking to PK columns
+        return () if $load_class_name->isa($pk_class_name);
 
         my $pk_class_meta = $pk_class_name->__meta__;
 
         my %pk_to_fk_column_name_map = map { reverse @$_ }
                                        $fk->column_name_map;
-        my @fk_columns = map { $column_idx_for_column_name{$_} }
+        my @fk_columns = map { $column_idx_for_column_name->{$_} }
                          map { $pk_to_fk_column_name_map{$_} }
                          $pk_class_meta->id_property_names;
 
@@ -1766,7 +1772,7 @@ sub _make_insert_closures_for_prerequsite_tables {
             !@fk_columns
         ) {
             Carp::croak(sprintf(q(Couldn't determine column order for inserting prerequsites of %s with foreign key "%s" refering to table %s with columns (%s)),
-                $class_name,
+                $load_class_name,
                 $fk->fk_constraint_name,
                 $fk->r_table_name,
                 join(', ', map { $_->r_column_name } $fk->get_related_column_objects)
@@ -1775,7 +1781,7 @@ sub _make_insert_closures_for_prerequsite_tables {
 
         my $id_resolver = $pk_class_meta->get_composite_id_resolver();
 
-        push @prerequsite_loaders, sub {
+        return sub {
             my($next_db_row) = @_;
             my @id_values = @$next_db_row[@fk_columns];
             my $id = $id_resolver->(@id_values);
@@ -1783,8 +1789,6 @@ sub _make_insert_closures_for_prerequsite_tables {
             # have prerequaites of their own, they'll be loaded in the recursive call
             $pk_class_name->get($id);
         }
-    }
-    return @prerequsite_loaders;
 }
 
 # given a UR::DataSource::RDBMS::FkConstraint, find the table this fk refers to
