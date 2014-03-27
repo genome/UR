@@ -173,7 +173,7 @@ sub create {
         eval '@' . $subclass . "::ISA = ('" . __PACKAGE__ . "')";
     }
         
-    return $subclass->SUPER::create(@_);
+    return $subclass->_concrete_get();
 }
 
 
