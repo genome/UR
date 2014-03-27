@@ -1736,9 +1736,10 @@ sub _make_insert_closures_for_prerequsite_tables {
         $self->_get_table_object($table_name_without_owner, $db_owner);
     };
 
-    my %column_idx_for_property_name;
+    my %column_idx_for_column_name;
     for (my $i = 0; $i < @{ $loading_template->{property_names} }; $i++) {
-        $column_idx_for_property_name{ $loading_template->{property_names}->[$i] }
+        my $column_name = $class_meta->column_for_property( $loading_template->{property_names}->[$i] );
+        $column_idx_for_column_name{ $column_name }
             = $loading_template->{column_positions}->[$i];
     }
 
@@ -1754,14 +1755,12 @@ sub _make_insert_closures_for_prerequsite_tables {
 
         my $pk_class_meta = $pk_class_name->__meta__;
 
-        my %pk_class_id_column_order = map { $_->column_name => $_->is_id }
-                                    $pk_class_meta->direct_id_property_metas;
+        my %pk_to_fk_column_name_map = map { reverse @$_ }
+                                       $fk->column_name_map;
+        my @fk_columns = map { $column_idx_for_column_name{$_} }
+                         map { $pk_to_fk_column_name_map{$_} }
+                         $pk_class_meta->id_property_names;
 
-        my @fk_columns = map { $column_idx_for_property_name{$_} }
-                         map { $class_meta->property_for_column($_) }
-                         map { $_->column_name }
-                         sort { $pk_class_id_column_order{ $a->column_name } <=> $pk_class_id_column_order{ $b->column_name } }
-                         $fk->get_related_column_objects;
         if (grep { !defined } @fk_columns
             or
             !@fk_columns
