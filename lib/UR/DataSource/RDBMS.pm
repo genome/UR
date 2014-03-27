@@ -1753,42 +1753,42 @@ sub _make_insert_closures_for_prerequsite_tables {
 sub _make_prerequsite_insert_closure_for_fk {
     my($self, $load_class_name, $column_idx_for_column_name, $fk) = @_;
 
-        my $pk_class_name = $self->_lookup_fk_target_class_name($fk);
+    my $pk_class_name = $self->_lookup_fk_target_class_name($fk);
 
-        # fks for inheritance are handled inside _resolve_loading_templates_for_alternate_db
-        # FIXME - next only if this FK has PK columns linking to PK columns
-        return () if $load_class_name->isa($pk_class_name);
+    # fks for inheritance are handled inside _resolve_loading_templates_for_alternate_db
+    # FIXME - next only if this FK has PK columns linking to PK columns
+    return () if $load_class_name->isa($pk_class_name);
 
-        my $pk_class_meta = $pk_class_name->__meta__;
+    my $pk_class_meta = $pk_class_name->__meta__;
 
-        my %pk_to_fk_column_name_map = map { reverse @$_ }
-                                       $fk->column_name_map;
-        my @fk_columns = map { $column_idx_for_column_name->{$_} }
-                         map { $pk_to_fk_column_name_map{$_} }
-                         $pk_class_meta->id_property_names;
+    my %pk_to_fk_column_name_map = map { reverse @$_ }
+                                   $fk->column_name_map;
+    my @fk_columns = map { $column_idx_for_column_name->{$_} }
+                     map { $pk_to_fk_column_name_map{$_} }
+                     $pk_class_meta->id_property_names;
 
-        if (grep { !defined } @fk_columns
-            or
-            !@fk_columns
-        ) {
-            Carp::croak(sprintf(q(Couldn't determine column order for inserting prerequsites of %s with foreign key "%s" refering to table %s with columns (%s)),
-                $load_class_name,
-                $fk->fk_constraint_name,
-                $fk->r_table_name,
-                join(', ', map { $_->r_column_name } $fk->get_related_column_objects)
-            ));
-        }
+    if (grep { !defined } @fk_columns
+        or
+        !@fk_columns
+    ) {
+        Carp::croak(sprintf(q(Couldn't determine column order for inserting prerequsites of %s with foreign key "%s" refering to table %s with columns (%s)),
+            $load_class_name,
+            $fk->fk_constraint_name,
+            $fk->r_table_name,
+            join(', ', map { $_->r_column_name } $fk->get_related_column_objects)
+        ));
+    }
 
-        my $id_resolver = $pk_class_meta->get_composite_id_resolver();
+    my $id_resolver = $pk_class_meta->get_composite_id_resolver();
 
-        return sub {
-            my($next_db_row) = @_;
-            my @id_values = @$next_db_row[@fk_columns];
-            my $id = $id_resolver->(@id_values);
-            # here we _do_ want to recurse back in.  That way if these prerequsites
-            # have prerequaites of their own, they'll be loaded in the recursive call
-            $pk_class_name->get($id);
-        }
+    return sub {
+        my($next_db_row) = @_;
+        my @id_values = @$next_db_row[@fk_columns];
+        my $id = $id_resolver->(@id_values);
+        # here we _do_ want to recurse back in.  That way if these prerequsites
+        # have prerequaites of their own, they'll be loaded in the recursive call
+        $pk_class_name->get($id);
+    }
 }
 
 # given a UR::DataSource::RDBMS::FkConstraint, find the table this fk refers to
