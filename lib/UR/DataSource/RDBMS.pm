@@ -1723,25 +1723,17 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
     return (@prerequsites, $inserter);
 }
 
+my %prerequsite_tables_up_to_date;
 sub _make_insert_closures_for_prerequsite_tables {
     my($self, $class_meta, $loading_template) = @_;
 
     my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
-    my @fks;
     my $table_object = do {
         local $ENV{UR_TEST_FILLDB}; # so we don't recurse back in here...
-
-        my $table_object = $self->_get_table_object($table_name_without_owner, $db_owner);
-        unless ($table_object) {
-            $self->generate_schema_for_class_meta($class_meta, 1);
-            $table_object = $self->_get_table_object($table_name_without_owner, $db_owner);
-        }
-        @fks = UR::DataSource::RDBMS::FkConstraint->get(
-                    data_source => $self->_my_data_source_id,
-                    owner => $db_owner,
-                    table_name => $table_name_without_owner);
-        $_->get_related_column_objects() foreach @fks;
-        $table_object;
+        my $table_name = $class_meta->table_name;
+        $self->refresh_database_metadata_for_table_name($table_name, '__define__')
+            unless ($prerequsite_tables_up_to_date{$self}->{$table_name}++);
+        $self->_get_table_object($table_name_without_owner, $db_owner);
     };
 
     my %column_idx_for_property_name;
@@ -1752,6 +1744,8 @@ sub _make_insert_closures_for_prerequsite_tables {
 
     my @prerequsite_loaders;
     my $class_name = $class_meta->class_name;
+
+    my @fks = $table_object->fk_constraints;
     foreach my $fk ( @fks ) {
         my $pk_class_name = $self->_lookup_fk_target_class_name($fk);
 
