@@ -45,6 +45,7 @@ use URT::FakeDBI;
         id_by => 'test_thing_id',
         data_source => 'URT::DataSource::Testing',
         table_name => 'test_thing',
+        id_generator => 'test_thing_seq',
     };
 
 # Fake table/column info for TestThing's table

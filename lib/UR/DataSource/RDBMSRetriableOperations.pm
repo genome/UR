@@ -82,6 +82,9 @@ sub should_retry_operation_after_error {
 sub _db_retry_observer {
     my($self, $aspect, $db_operation, $sql, $dbi_errstr) = @_;
 
+    unless (defined $sql) {
+        $sql = '(no sql)';
+    }
     $self->error_message("SQL failed during $db_operation\nerror: $dbi_errstr\nsql: $sql");
 
     die "DB_RETRY" if $self->should_retry_operation_after_error($sql, $dbi_errstr);
