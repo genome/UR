@@ -11,6 +11,7 @@ class Car {
         make => {
             is => 'Text',
         },
+        codeword => { is => 'Text', is_classwide => 1 },
     ],
 };
 
@@ -40,5 +41,17 @@ $car->make('Ford');
 is($car->make, 'Ford', 'make changed to Ford');
 
 is($observer_ran, 1, 'observer triggered from make change');
+
+
+
+my $classwide_observer_ran = 0;
+$car->add_observer(
+    aspect => 'codeword',
+    callback => sub { $classwide_observer_ran++ },
+);
+
+ok($car->codeword('tomato'),'Change classwide property');
+is($classwide_observer_ran, 1, 'classwide property observer fired');
+
 
 done_testing();
