@@ -1056,12 +1056,18 @@ sub mk_dimension_identifying_accessor {
 
 sub mk_rw_class_accessor
 {
-    my ($self, $class_name, $accessor_name, $column_name, $variable_value) = @_;
+    my ($self, $class_name, $accessor_name, $column_name, $is_transient, $variable_value) = @_;
 
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
             if (@_ > 1) {
-                $variable_value = pop;
+                my $old = $variable_value;
+                $variable_value = $_[0];
+
+                my $different = eval { no warnings; $old ne $variable_value };
+                if ($different or $@ =~ m/has no overloaded magic/) {
+                    $_[0]->__signal_change__( $accessor_name, $old, $variable_value ) unless $is_transient;
+                }
             }
             return $variable_value;
     };
@@ -1079,16 +1085,14 @@ sub mk_ro_class_accessor {
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
         if (@_ > 1) {
-            my $old = $variable_value;
             my $new = $_[1];
 
-            no warnings;
-
-            my $different = eval { no warnings; $old ne $new };
+            my $different = eval { no warnings; $variable_value ne $new };
             if ($different or $@ =~ m/has no overloaded magic/) {
-                Carp::croak("Cannot change read-only class-wide property $accessor_name for class $class_name from $old to $new!");
+                $new = defined($new) ? $new : '(undef)';
+                my $report_variable_value = defined($variable_value) ? $variable_value : '(undef)';
+                Carp::croak("Cannot change read-only class-wide property $accessor_name for class $class_name from $report_variable_value to $new!");
             }
-            return $new;
         }
         return $variable_value;
     };
@@ -1701,11 +1705,11 @@ sub initialize_direct_accessors {
             $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where);
         }        
         elsif ($property_data->{'is_classwide'}) {
-            my $value = $property_data->{'default_value'};
+            my($value, $column_name, $is_transient) = @$property_data{'default_value','column_name','is_transient'};
             if ($property_data->{'is_constant'}) {
-                $self->mk_ro_class_accessor($class_name,$accessor_name,'',$value);
+                $self->mk_ro_class_accessor($class_name,$accessor_name,$column_name,$value);
             } else {
-                $self->mk_rw_class_accessor($class_name,$accessor_name,'',$value);
+                $self->mk_rw_class_accessor($class_name,$accessor_name,$column_name,$is_transient,$value);
             }
         }
         else {        
@@ -1853,7 +1857,7 @@ They need more documentation.
 
 =item mk_rw_class_accessor
 
-  $classobj->mk_rw_class_accessor($class_name, $accessor_name, $column_name, $variable_value);
+  $classobj->mk_rw_class_accessor($class_name, $accessor_name, $column_name, $is_transient, $variable_value);
 
 Creates a read-write accessor called $accessor_name which stores its value 
 in a scalar captured by the accessor's closure.  Since the closure is
