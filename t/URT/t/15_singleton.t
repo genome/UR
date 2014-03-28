@@ -14,7 +14,7 @@ ok($co, 'Defined a parent, non-singleton class');
     
 $co = UR::Object::Type->define(
     class_name => 'URT::SomeSingleton',
-    is => ['URT::Parent','UR::Singleton'],
+    is => ['UR::Singleton', 'URT::Parent'],
     has => [
         property_a => { is => 'String' },
     ],
