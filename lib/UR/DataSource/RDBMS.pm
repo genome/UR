@@ -1728,23 +1728,24 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
     return (@prerequsites, $inserter);
 }
 
-my %prerequsite_tables_up_to_date;
+my %cached_fk_data_for_table;
 sub _make_insert_closures_for_prerequsite_tables {
     my($self, $class_meta, $loading_template) = @_;
 
     my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
-    my $table_object = do {
-        # don't want to recurse back in here while querying the data dictionary
-        my $class = ref($self) || $self;
-        my $alternate_db_dsn_subname = join('::',$class, 'alternate_db_dsn');
-        no strict 'refs';
-        no warnings 'redefine';
-        local *$alternate_db_dsn_subname = sub { '' };
+    $cached_fk_data_for_table{$class_meta->table_name} ||= do {
 
-        my $table_name = $class_meta->table_name;
-        $self->refresh_database_metadata_for_table_name($table_name, '__define__')
-            unless ($prerequsite_tables_up_to_date{$self}->{$table_name}++);
-        $self->_get_table_object($table_name_without_owner, $db_owner);
+        # For each foreign key, bin up all the FK columns by the table this
+        # foreign key points to
+        my %pk_tables;
+        my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('','','','', $db_owner, $table_name_without_owner);
+        while( $fk_sth and my $row = $fk_sth->fetchrow_hashref ) {
+            my $pk_table_name = join('.', @$row{'UK_TABLE_SCHEM','UK_TABLE_NAME'});
+            $pk_tables{$pk_table_name} ||= [];
+
+            push @{ $pk_tables{$pk_table_name} }, { %$row };
+        }
+        \%pk_tables;
     };
 
     my %column_idx_for_column_name;
@@ -1756,15 +1757,14 @@ sub _make_insert_closures_for_prerequsite_tables {
 
     my $class_name = $class_meta->class_name;
 
-    my @fks = $table_object->fk_constraints;
     return map { $self->_make_prerequsite_insert_closure_for_fk($class_name, \%column_idx_for_column_name, $_) }
-            @fks;
+            values %{ $cached_fk_data_for_table{ $class_meta->table_name } };
 }
 
 sub _make_prerequsite_insert_closure_for_fk {
-    my($self, $load_class_name, $column_idx_for_column_name, $fk) = @_;
+    my($self, $load_class_name, $column_idx_for_column_name, $fk_column_list) = @_;
 
-    my $pk_class_name = $self->_lookup_fk_target_class_name($fk);
+    my $pk_class_name = $self->_lookup_fk_target_class_name($fk_column_list);
 
     # fks for inheritance are handled inside _resolve_loading_templates_for_alternate_db
     # FIXME - next only if this FK has PK columns linking to PK columns
@@ -1772,8 +1772,8 @@ sub _make_prerequsite_insert_closure_for_fk {
 
     my $pk_class_meta = $pk_class_name->__meta__;
 
-    my %pk_to_fk_column_name_map = map { reverse @$_ }
-                                   $fk->column_name_map;
+    my %pk_to_fk_column_name_map = map { @$_{'UK_COLUMN_NAME','FK_COLUMN_NAME'} }
+                                   @$fk_column_list;
     my @fk_columns = map { $column_idx_for_column_name->{$_} }
                      map { $pk_to_fk_column_name_map{$_} }
                      $pk_class_meta->id_property_names;
@@ -1784,9 +1784,9 @@ sub _make_prerequsite_insert_closure_for_fk {
     ) {
         Carp::croak(sprintf(q(Couldn't determine column order for inserting prerequsites of %s with foreign key "%s" refering to table %s with columns (%s)),
             $load_class_name,
-            $fk->fk_constraint_name,
-            $fk->r_table_name,
-            join(', ', map { $_->r_column_name } $fk->get_related_column_objects)
+            $fk_column_list->[0]->{FK_NAME},
+            $fk_column_list->[0]->{UK_TABLE_NAME},
+            join(', ', map { $_->{UK_COLUMN_NAME} } @$fk_column_list)
         ));
     }
 
@@ -1805,10 +1805,10 @@ sub _make_prerequsite_insert_closure_for_fk {
 # given a UR::DataSource::RDBMS::FkConstraint, find the table this fk refers to
 # (the table with the pk_columns), then find which class goes with that table.
 sub _lookup_fk_target_class_name {
-    my($self, $fk) = @_;
+    my($self, $fk_column_list) = @_;
 
-    my $pk_owner = $fk->r_owner;
-    my $pk_table_name = $fk->r_table_name;
+    my $pk_owner = $fk_column_list->[0]->{UK_TABLE_SCHEM};
+    my $pk_table_name = $fk_column_list->[0]->{UK_TABLE_NAME};
     my $pk_table_name_with_owner = $pk_owner ? join('.', $pk_owner, $pk_table_name) : $pk_table_name;
     my $pk_class_name = $self->_lookup_class_for_table_name( $pk_table_name_with_owner )
                         || $self->_lookup_class_for_table_name( $pk_table_name );
@@ -1818,8 +1818,8 @@ sub _lookup_fk_target_class_name {
         # try looking up the class on the other side of the FK
         # and determine which property matches this FK
 
-        my $fk_owner = $fk->owner;
-        my $fk_table_name = $fk->table_name;
+        my $fk_owner = $fk_column_list->[0]->{FK_TABLE_SCHEM};
+        my $fk_table_name = $fk_column_list->[0]->{FK_TABLE_NAME};
         my $fk_table_name_with_owner = $fk_owner ? join('.', $fk_owner, $fk_table_name) : $fk_table_name;
 
         my $fk_class_name = $self->_lookup_class_for_table_name( $fk_table_name_with_owner )
@@ -1841,9 +1841,9 @@ sub _lookup_fk_target_class_name {
         Carp::croak(
             sprintf(q(Couldn't determine class with table %s involved in foreign key "%s" from table %s with columns (%s)),
                         $pk_table_name,
-                        $fk->fk_constraint_name,
-                        $fk->table_name,
-                        join(', ', map { $_->column_name } $fk->get_related_column_objects)
+                        $fk_column_list->[0]->{FK_NAME},
+                        $fk_column_list->[0]->{FK_TABLE_NAME},
+                        join(', ', map { $_->{FK_COLUMN_NAME} } @$fk_column_list),
                     ));
     }
     return $pk_class_name;
