@@ -1714,7 +1714,7 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
 
         my $id = $id_resolver->(@$next_db_row);
 
-        unless ($seen_ids{$id}++) {
+        unless (defined($id) and $seen_ids{$id}++) {
             $check_id_exists_sth->execute( @$next_db_row[@id_column_positions]);
             my($count) = @{ $check_id_exists_sth->fetchrow_arrayref() };
             unless ($count) {
@@ -1740,7 +1740,9 @@ sub _make_insert_closures_for_prerequsite_tables {
         my %pk_tables;
         my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('','','','', $db_owner, $table_name_without_owner);
         while( $fk_sth and my $row = $fk_sth->fetchrow_hashref ) {
-            my $pk_table_name = join('.', @$row{'UK_TABLE_SCHEM','UK_TABLE_NAME'});
+            my $pk_table_name = join('.',
+                                    defined($row->{UK_TABLE_SCHEM}) ? $row->{UK_TABLE_SCHEM} : '',
+                                    $row->{UK_TABLE_NAME});
             $pk_tables{$pk_table_name} ||= [];
 
             push @{ $pk_tables{$pk_table_name} }, { %$row };
