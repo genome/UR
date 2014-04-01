@@ -1706,15 +1706,16 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
     my @column_positions = @{$template->{column_positions}};
 
     my $id_resolver = $template->{id_resolver};
+    my $check_id_is_not_null = _create_sub_to_check_if_id_is_not_null(@id_column_positions);
 
     my @prerequsites = $self->_make_insert_closures_for_prerequsite_tables($class_meta, $template);
 
     my $inserter = sub {
         my($next_db_row) = @_;
 
-        my $id = $id_resolver->(@$next_db_row);
+        my $id = $id_resolver->(@$next_db_row[@id_column_positions]);
 
-        unless (defined($id) and $seen_ids{$id}++) {
+        if ($check_id_is_not_null->($next_db_row) and ! $seen_ids{$id}++) {
             $check_id_exists_sth->execute( @$next_db_row[@id_column_positions]);
             my($count) = @{ $check_id_exists_sth->fetchrow_arrayref() };
             unless ($count) {
@@ -1726,6 +1727,19 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
     };
 
     return (@prerequsites, $inserter);
+}
+
+# not a method
+sub _create_sub_to_check_if_id_is_not_null {
+    my(@id_columns) = @_;
+
+    return sub {
+        my $next_db_row = $_[0];
+        foreach my $col ( @id_columns ) {
+            return 1 if defined $next_db_row->[$col];
+        }
+        return 0;
+    };
 }
 
 my %cached_fk_data_for_table;
@@ -1793,14 +1807,16 @@ sub _make_prerequsite_insert_closure_for_fk {
     }
 
     my $id_resolver = $pk_class_meta->get_composite_id_resolver();
+    my $check_id_is_not_null = _create_sub_to_check_if_id_is_not_null(@fk_columns);
 
     return sub {
         my($next_db_row) = @_;
-        my @id_values = @$next_db_row[@fk_columns];
-        my $id = $id_resolver->(@id_values);
-        # here we _do_ want to recurse back in.  That way if these prerequsites
-        # have prerequaites of their own, they'll be loaded in the recursive call
-        $pk_class_name->get($id);
+        if ($check_id_is_not_null->($next_db_row)) {
+            my $id = $id_resolver->(@$next_db_row[@fk_columns]);
+            # here we _do_ want to recurse back in.  That way if these prerequsites
+            # have prerequaites of their own, they'll be loaded in the recursive call
+            $pk_class_name->get($id);
+        }
     }
 }
 
