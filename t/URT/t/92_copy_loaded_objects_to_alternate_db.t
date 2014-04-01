@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 43;
+use Test::More tests => 57;
 use URT::DataSource::SomeSQLite;
 use File::Temp;
 use File::Spec;
@@ -21,9 +21,11 @@ foreach my $no_commit ( 0, 1 ) {
     diag("no_commit $no_commit");
     UR::DBI->no_commit($no_commit);
 
+    diag('sqlite file');
     my $db_file = load_objects_fill_file();
     test_results_db_file($db_file);
 
+    diag('sqlite directory');
     my $db_dir = load_objects_fill_dir();
     test_results_db_dir($db_dir);
 }
@@ -74,6 +76,25 @@ sub fill_primary_db {
     $sth = $dbh->prepare('insert into hangoff (hangoff_id, value, obj_id) values (?,?,?)') || die "prepare hangoff: $DBI::errstr";
     foreach my $row ( [1, 'use', 1], [2, 'ignore', 2], [3, 'keep', 3] ) {
         $sth->execute(@$row) || die "execute obj: $DBI::errstr";
+    }
+    $sth->finish;
+
+
+    # data and data_attribute tables
+    ok($dbh->do('create table data (data_id integer NOT NULL PRIMARY KEY, name varchar)'),
+        'create table data');
+    ok($dbh->do('create table data_attribute (data_id integer, name varchar, value varchar, PRIMARY KEY (data_id, name, value))'),
+        'create table data_attribute');
+    $sth = $dbh->prepare('insert into data (data_id, name) values (?,?)') || die "prepare data: $DBI::errstr";
+    foreach my $row ( [ 1, 'use'], [2, 'ignore'], [3, 'use'] ) {
+        $sth->execute(@$row) || die "execute data: $DBI::errstr";
+    }
+    $sth->finish;
+
+    $sth = $dbh->prepare('insert into data_attribute (data_id, name, value) values (?,?,?)') || die "prepare data_attribute: $DBI::errstr";
+    # data_id 3 has no data_attributes
+    foreach my $row ( [1, 'coolness', 'high'], [1, 'foo', 'bar'], [2, 'coolness', 'low']) {
+        $sth->execute(@$row) || die "execute data_attribute: $DBI::errstr";
     }
     $sth->finish;
 }
@@ -127,6 +148,27 @@ sub setup_classes {
         table_name => 'hangoff',
     );
 
+
+    UR::Object::Type->define(
+        class_name => 'URT::Data',
+        id_by => 'data_id',
+        has => [
+            name => { is => 'String' },
+            attributes => { is => 'URT::DataAttribute', reverse_as => 'data', is_many => 1 },
+        ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'data',
+    );
+
+    UR::Object::Type->define(
+        class_name => 'URT::DataAttribute',
+        id_by => ['data_id', 'name', 'value' ],
+        has => [
+            data => { is => 'URT::Data', id_by => 'data_id' },
+        ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'data_attribute',
+    );
 }
 
 
@@ -147,7 +189,10 @@ sub _load_objects {
 
     ok(scalar(URT::Hangoff->get(value => 'keep')), 'Get hangoff data directly');
 
-    $_->unload() foreach ( qw( URT::Simple URT::Child URT::Obj URT::Hangoff ) );
+    my @got = URT::Data->get(name => 'use', -hints => 'attributes');
+    ok(scalar(@got), 'Get data and and data attributes');
+
+    $_->unload() foreach ( qw( URT::Simple URT::Child URT::Obj URT::Hangoff URT::Data URT::DataAttribute ) );
 }
 
 sub test_results_db_file {
@@ -185,6 +230,22 @@ sub test_results_db_file {
           3 => { hangoff_id => 3, obj_id => 3, value => 'keep'},
          },
         'table hangoff');
+
+    my $data = $dbh->selectall_hashref('select * from data', 'data_id');
+    is_deeply($data,
+        { 1 => { data_id => 1, name => 'use' },
+          3 => { data_id => 3, name => 'use' },
+        },
+        'table data');
+$DB::single=1;
+
+    my $data_attribute = $dbh->selectall_hashref('select * from data_attribute', 'name');
+    is_deeply($data_attribute,
+        { coolness  => { data_id => 1, name => 'coolness', value => 'high' },
+          foo       => { data_id => 1, name => 'foo', value => 'bar' }
+        },
+        'table data_attribute'
+    );
 }
 
 sub load_objects_fill_dir {
