@@ -1708,7 +1708,7 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
     my $id_resolver = $template->{id_resolver};
     my $check_id_is_not_null = _create_sub_to_check_if_id_is_not_null(@id_column_positions);
 
-    my @prerequsites = $self->_make_insert_closures_for_prerequsite_tables($class_meta, $template);
+    my @prerequisites = $self->_make_insert_closures_for_prerequisite_tables($class_meta, $template);
 
     my $inserter = sub {
         my($next_db_row) = @_;
@@ -1726,7 +1726,7 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
         }
     };
 
-    return (@prerequsites, $inserter);
+    return (@prerequisites, $inserter);
 }
 
 # not a method
@@ -1743,7 +1743,7 @@ sub _create_sub_to_check_if_id_is_not_null {
 }
 
 my %cached_fk_data_for_table;
-sub _make_insert_closures_for_prerequsite_tables {
+sub _make_insert_closures_for_prerequisite_tables {
     my($self, $class_meta, $loading_template) = @_;
 
     my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
@@ -1773,11 +1773,11 @@ sub _make_insert_closures_for_prerequsite_tables {
 
     my $class_name = $class_meta->class_name;
 
-    return map { $self->_make_prerequsite_insert_closure_for_fk($class_name, \%column_idx_for_column_name, $_) }
+    return map { $self->_make_prerequisite_insert_closure_for_fk($class_name, \%column_idx_for_column_name, $_) }
             values %{ $cached_fk_data_for_table{ $class_meta->table_name } };
 }
 
-sub _make_prerequsite_insert_closure_for_fk {
+sub _make_prerequisite_insert_closure_for_fk {
     my($self, $load_class_name, $column_idx_for_column_name, $fk_column_list) = @_;
 
     my $pk_class_name = $self->_lookup_fk_target_class_name($fk_column_list);
@@ -1798,7 +1798,7 @@ sub _make_prerequsite_insert_closure_for_fk {
         or
         !@fk_columns
     ) {
-        Carp::croak(sprintf(q(Couldn't determine column order for inserting prerequsites of %s with foreign key "%s" refering to table %s with columns (%s)),
+        Carp::croak(sprintf(q(Couldn't determine column order for inserting prerequisites of %s with foreign key "%s" refering to table %s with columns (%s)),
             $load_class_name,
             $fk_column_list->[0]->{FK_NAME},
             $fk_column_list->[0]->{UK_TABLE_NAME},
@@ -1813,8 +1813,8 @@ sub _make_prerequsite_insert_closure_for_fk {
         my($next_db_row) = @_;
         if ($check_id_is_not_null->($next_db_row)) {
             my $id = $id_resolver->(@$next_db_row[@fk_columns]);
-            # here we _do_ want to recurse back in.  That way if these prerequsites
-            # have prerequaites of their own, they'll be loaded in the recursive call
+            # here we _do_ want to recurse back in.  That way if these prerequisites
+            # have prerequisites of their own, they'll be loaded in the recursive call.
             $pk_class_name->get($id);
         }
     }
