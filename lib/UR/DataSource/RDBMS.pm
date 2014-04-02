@@ -1814,8 +1814,10 @@ sub _make_prerequsite_insert_closure_for_fk {
         if ($check_id_is_not_null->($next_db_row)) {
             my $id = $id_resolver->(@$next_db_row[@fk_columns]);
             # here we _do_ want to recurse back in.  That way if these prerequsites
-            # have prerequaites of their own, they'll be loaded in the recursive call
-            $pk_class_name->get($id);
+            # have prerequaites of their own, they'll be loaded in the recursive call.
+            # We also want to force a DB reload (even if it's already in the object
+            # cache) to trigger saving to the alternate DB.
+            UR::Context->reload($pk_class_name, id => $id);
         }
     }
 }
