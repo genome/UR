@@ -1782,14 +1782,54 @@ sub _make_insert_closures_for_prerequisite_tables {
             values %{ $cached_fk_data_for_table{ $class_meta->table_name } };
 }
 
+# return true if this list of FK columns exists for inheritance:
+# this table's FKs matches the given class' ID properties, and the FK points
+# to every ID property of the parent class
+sub _fk_represents_inheritance {
+    my($load_class_name, $fk_column_list) = @_;
+
+    my $load_class_meta = $load_class_name->__meta__;
+
+    my %is_pk_column_for_class = map { $_ => 1 }
+                                 grep { $_ }
+                                 map { $load_class_meta->column_for_property($_) }
+                                 $load_class_name->__meta__->id_property_names;
+
+    if (scalar(@$fk_column_list) != scalar(values %is_pk_column_for_class)) {
+        # differing number of columns vs ID properties
+        return '';
+    }
+
+    foreach my $fk ( @$fk_column_list ) {
+        return '' unless $is_pk_column_for_class{ $fk->{FK_COLUMN_NAME} };
+    }
+
+    my %checked;
+    foreach my $parent_class_name ( $load_class_meta->inheritance ) {
+        next if ($checked{$parent_class_name}++);
+
+        my $parent_class_meta = eval { $parent_class_name->__meta__ };
+        next unless $parent_class_meta;  # for non-ur classes
+        my @pk_columns_for_parent = grep { $_ }
+                                    map { $parent_class_meta->column_for_property($_) }
+                                    $parent_class_meta->id_property_names;
+        next if (scalar(@$fk_column_list) != scalar(@pk_columns_for_parent));
+
+        foreach my $parent_pk_column ( @pk_columns_for_parent ) {
+            return '' unless $is_pk_column_for_class{ $parent_pk_column };
+        }
+    }
+
+    return 1;
+}
+
 sub _make_prerequisite_insert_closure_for_fk {
     my($self, $load_class_name, $column_idx_for_column_name, $fk_column_list) = @_;
 
     my $pk_class_name = $self->_lookup_fk_target_class_name($fk_column_list);
 
     # fks for inheritance are handled inside _resolve_loading_templates_for_alternate_db
-    # FIXME - next only if this FK has PK columns linking to PK columns
-    return () if $load_class_name->isa($pk_class_name);
+    return () if _fk_represents_inheritance($load_class_name, $fk_column_list);
 
     my $pk_class_meta = $pk_class_name->__meta__;
 
