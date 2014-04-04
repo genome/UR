@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 57;
+use Test::More tests => 66;
 use URT::DataSource::SomeSQLite;
 use File::Temp;
 use File::Spec;
@@ -97,6 +97,15 @@ sub fill_primary_db {
         $sth->execute(@$row) || die "execute data_attribute: $DBI::errstr";
     }
     $sth->finish;
+
+
+    # a table that references itself
+    ok($dbh->do('create table self_reference (sr_id integer NOT NULL PRIMARY KEY, prev_id integer REFERENCES self_reference(sr_id), name varchar)'),
+        'create table self_reference');
+    $sth = $dbh->prepare('insert into self_reference (sr_id, prev_id, name) values (?,?,?)');
+    foreach my $row ( [1, undef, 'use parent'], [2, 1, 'use'], [3, undef, 'ignore parent'], [4, 3, 'ignore']) {
+        $sth->execute(@$row) || die "execute self_reference: $DBI::errstr";
+    }
 }
 
 sub setup_classes {
@@ -169,6 +178,17 @@ sub setup_classes {
         data_source => 'URT::DataSource::SomeSQLite',
         table_name => 'data_attribute',
     );
+
+    UR::Object::Type->define(
+        class_name => 'URT::SelfReferencing',
+        id_by => 'sr_id',
+        has => [
+            prev => { is => 'URT::SelfReferencing', id_by => 'prev_id', is_optional => 1 },
+            name => { is => 'String' },
+        ],
+        data_source  => 'URT::DataSource::SomeSQLite',
+        table_name => 'self_reference',
+    );
 }
 
 
@@ -192,7 +212,9 @@ sub _load_objects {
     my @got = URT::Data->get(name => 'use', -hints => 'attributes');
     ok(scalar(@got), 'Get data and and data attributes');
 
-    $_->unload() foreach ( qw( URT::Simple URT::Child URT::Obj URT::Hangoff URT::Data URT::DataAttribute ) );
+    ok(scalar(URT::SelfReferencing->get(name => 'use')), 'Get object via self-referencing table');
+
+    $_->unload() foreach ( qw( URT::Simple URT::Child URT::Obj URT::Hangoff URT::Data URT::DataAttribute URT::SelfReferencing) );
 }
 
 sub test_results_db_file {
@@ -237,7 +259,6 @@ sub test_results_db_file {
           3 => { data_id => 3, name => 'use' },
         },
         'table data');
-$DB::single=1;
 
     my $data_attribute = $dbh->selectall_hashref('select * from data_attribute', 'name');
     is_deeply($data_attribute,
@@ -246,6 +267,13 @@ $DB::single=1;
         },
         'table data_attribute'
     );
+
+    my $self_referencing = $dbh->selectall_hashref('select * from self_reference', 'name');
+    is_deeply($self_referencing,
+        { 'use parent' => { sr_id => 1, prev_id => undef, name => 'use parent' },
+          use => { sr_id => 2, prev_id => 1, name => 'use' },
+        },
+        'table self_referencing');
 }
 
 sub load_objects_fill_dir {
