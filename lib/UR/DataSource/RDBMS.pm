@@ -1754,6 +1754,11 @@ sub _make_insert_closures_for_prerequisite_tables {
         my %pk_tables;
         my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('','','','', $db_owner, $table_name_without_owner);
         while( $fk_sth and my $row = $fk_sth->fetchrow_hashref ) {
+
+            foreach my $key (qw(UK_TABLE_CAT UK_TABLE_SCHEM UK_TABLE_NAME UK_COLUMN_NAME FK_TABLE_CAT FK_TABLE_SCHEM FK_TABLE_NAME FK_COLUMN_NAME)) {
+                no warnings 'uninitialized';
+                $row->{$key} =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
+            }
             my $pk_table_name = join('.',
                                     defined($row->{UK_TABLE_SCHEM}) ? $row->{UK_TABLE_SCHEM} : '',
                                     $row->{UK_TABLE_NAME});
