@@ -1746,28 +1746,7 @@ my %cached_fk_data_for_table;
 sub _make_insert_closures_for_prerequisite_tables {
     my($self, $class_meta, $loading_template) = @_;
 
-    my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
-    $cached_fk_data_for_table{$class_meta->table_name} ||= do {
-
-        # For each foreign key, bin up all the FK columns by the table this
-        # foreign key points to
-        my %pk_tables;
-        my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('','','','', $db_owner, $table_name_without_owner);
-        while( $fk_sth and my $row = $fk_sth->fetchrow_hashref ) {
-
-            foreach my $key (qw(UK_TABLE_CAT UK_TABLE_SCHEM UK_TABLE_NAME UK_COLUMN_NAME FK_TABLE_CAT FK_TABLE_SCHEM FK_TABLE_NAME FK_COLUMN_NAME)) {
-                no warnings 'uninitialized';
-                $row->{$key} =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
-            }
-            my $pk_table_name = join('.',
-                                    defined($row->{UK_TABLE_SCHEM}) ? $row->{UK_TABLE_SCHEM} : '',
-                                    $row->{UK_TABLE_NAME});
-            $pk_tables{$pk_table_name} ||= [];
-
-            push @{ $pk_tables{$pk_table_name} }, { %$row };
-        }
-        \%pk_tables;
-    };
+    $cached_fk_data_for_table{$class_meta->table_name} ||= $self->_load_fk_data_for_class_meta($class_meta);
 
     my %column_idx_for_column_name;
     for (my $i = 0; $i < @{ $loading_template->{property_names} }; $i++) {
@@ -1780,6 +1759,30 @@ sub _make_insert_closures_for_prerequisite_tables {
 
     return map { $self->_make_prerequisite_insert_closure_for_fk($class_name, \%column_idx_for_column_name, $_) }
             values %{ $cached_fk_data_for_table{ $class_meta->table_name } };
+}
+
+
+sub _load_fk_data_for_class_meta {
+    my($self, $class_meta) = @_;
+
+    my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
+
+    my %pk_tables;
+    my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('','','','', $db_owner, $table_name_without_owner);
+    while( $fk_sth and my $row = $fk_sth->fetchrow_hashref ) {
+
+        foreach my $key (qw(UK_TABLE_CAT UK_TABLE_SCHEM UK_TABLE_NAME UK_COLUMN_NAME FK_TABLE_CAT FK_TABLE_SCHEM FK_TABLE_NAME FK_COLUMN_NAME)) {
+            no warnings 'uninitialized';
+            $row->{$key} =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
+        }
+        my $pk_table_name = join('.',
+                                defined($row->{UK_TABLE_SCHEM}) ? $row->{UK_TABLE_SCHEM} : '',
+                                $row->{UK_TABLE_NAME});
+        $pk_tables{$pk_table_name} ||= [];
+
+        push @{ $pk_tables{$pk_table_name} }, { %$row };
+    }
+    return \%pk_tables;
 }
 
 # return true if this list of FK columns exists for inheritance:
