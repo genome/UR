@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 66;
+use Test::More tests => 80;
 use URT::DataSource::SomeSQLite;
 use File::Temp;
 use File::Spec;
@@ -106,6 +106,20 @@ sub fill_primary_db {
     foreach my $row ( [1, undef, 'use parent'], [2, 1, 'use'], [3, undef, 'ignore parent'], [4, 3, 'ignore']) {
         $sth->execute(@$row) || die "execute self_reference: $DBI::errstr";
     }
+
+    # Entities and relationships
+    ok($dbh->do('create table entity (entity_id integer NOT NULL PRIMARY KEY, name VARCHAR)'),
+        'create entity table');
+    ok($dbh->do('create table relationship (from_entity_id integer NOT NULL REFERENCES entity(entity_id), to_entity_id integer NOT NULL REFERENCES entity(entity_id), label varchar, PRIMARY KEY (from_entity_id, to_entity_id))'),
+        'create entity relationship table');
+    $sth = $dbh->prepare('insert into entity (entity_id, name) values (?,?)');
+    foreach my $row ( [1, 'use parent'], [2, 'ignore parent'], [3, 'use child'], [4, 'ignore child'] ) {
+        $sth->execute(@$row) || die "execute entity insert: $DBI::errstr";
+    }
+    $sth = $dbh->prepare('insert into relationship (from_entity_id, to_entity_id, label) values (?,?,?)');
+    foreach my $row ( [1,3,'use'], [2,4,'ignore']) {
+        $sth->execute(@$row) || die "execute relationship insert: $DBI::errstr";
+    }
 }
 
 sub setup_classes {
@@ -189,6 +203,28 @@ sub setup_classes {
         data_source  => 'URT::DataSource::SomeSQLite',
         table_name => 'self_reference',
     );
+
+    UR::Object::Type->define(
+        class_name => 'URT::Entity',
+        id_by => 'entity_id',
+        has => [
+            name => { is => 'String' },
+        ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'entity',
+    );
+
+    UR::Object::Type->define(
+        class_name => 'URT::Relationship',
+        id_by => ['from_entity_id','to_entity_id'],
+        has => [
+            label => { is => 'String' },
+            from_entity => { is => 'URT::Entity', id_by => 'from_entity_id' },
+            to_entity => { is => 'URT::Entity', id_by => 'to_entity_id' },
+        ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'relationship',
+    );
 }
 
 
@@ -214,7 +250,9 @@ sub _load_objects {
 
     ok(scalar(URT::SelfReferencing->get(name => 'use')), 'Get object via self-referencing table');
 
-    $_->unload() foreach ( qw( URT::Simple URT::Child URT::Obj URT::Hangoff URT::Data URT::DataAttribute URT::SelfReferencing) );
+    ok(scalar(URT::Relationship->get(label => 'use')), 'Get relationship with two PKs');
+
+    $_->unload() foreach ( qw( URT::Simple URT::Child URT::Obj URT::Hangoff URT::Data URT::DataAttribute URT::SelfReferencing URT::Entity URT::Relationship) );
 }
 
 sub test_results_db_file {
@@ -274,6 +312,20 @@ sub test_results_db_file {
           use => { sr_id => 2, prev_id => 1, name => 'use' },
         },
         'table self_referencing');
+
+    my $entities = $dbh->selectall_hashref('select * from entity', 'entity_id');
+    is_deeply($entities,
+        { 1 => { entity_id => 1, name => 'use parent' },
+          3 => { entity_id => 3, name => 'use child' },
+        },
+        'table entity',
+    );
+
+    my $relationships = $dbh->selectall_hashref('select * from relationship', 'from_entity_id');
+    is_deeply($relationships,
+        { 1 => { from_entity_id => 1, to_entity_id => 3, label => 'use'} },
+        'table relationship',
+    );
 }
 
 sub load_objects_fill_dir {

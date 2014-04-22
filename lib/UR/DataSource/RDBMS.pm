@@ -1758,7 +1758,7 @@ sub _make_insert_closures_for_prerequisite_tables {
     my $class_name = $class_meta->class_name;
 
     return map { $self->_make_prerequisite_insert_closure_for_fk($class_name, \%column_idx_for_column_name, $_) }
-            values %{ $cached_fk_data_for_table{ $class_meta->table_name } };
+            @{ $cached_fk_data_for_table{ $class_meta->table_name } };
 }
 
 
@@ -1767,7 +1767,7 @@ sub _load_fk_data_for_class_meta {
 
     my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
 
-    my %pk_tables;
+    my @fk_data;
     my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('','','','', $db_owner, $table_name_without_owner);
     while( $fk_sth and my $row = $fk_sth->fetchrow_hashref ) {
 
@@ -1775,14 +1775,14 @@ sub _load_fk_data_for_class_meta {
             no warnings 'uninitialized';
             $row->{$key} =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
         }
-        my $pk_table_name = join('.',
-                                defined($row->{UK_TABLE_SCHEM}) ? $row->{UK_TABLE_SCHEM} : '',
-                                $row->{UK_TABLE_NAME});
-        $pk_tables{$pk_table_name} ||= [];
+        if (!@fk_data or $row->{ORDINAL_POSITION} == 1) {
+            # part of a new FK
+            push @fk_data, [];
+        }
 
-        push @{ $pk_tables{$pk_table_name} }, { %$row };
+        push @{ $fk_data[-1] }, { %$row };
     }
-    return \%pk_tables;
+    return \@fk_data;
 }
 
 # return true if this list of FK columns exists for inheritance:
