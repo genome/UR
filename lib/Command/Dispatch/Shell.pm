@@ -398,6 +398,11 @@ sub _errors_from_missing_parameters {
                 # on the cmdline to "store" them after execution
                 next;
             }
+            elsif ($property_meta->is_calculated) {
+                # outputs that are calculated don't need to be specified on
+                # the command line
+                next;
+            }
             else {
                 push @error_tags, UR::Object::Tag->create(
                     type => 'invalid',
