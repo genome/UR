@@ -315,7 +315,7 @@ sub _generate_loading_templates_arrayref {
     my @templates;
     my %alias_object_num;
     for my $col_data (@$db_cols) {
-        my ($class_obj, $prop, $table_alias, $object_num, $class_name) = @$col_data;
+        my ($class_obj, $prop, $table_alias, $object_num) = @$col_data;
         unless (defined $object_num) {
             die "No object num for loading template data?!";
         }
@@ -326,7 +326,7 @@ sub _generate_loading_templates_arrayref {
                 object_num => $object_num,
                 table_alias => $table_alias,
                 data_class_name => $class_obj->class_name,
-                final_class_name => $class_name || $class_obj->class_name,
+                final_class_name => $class_obj->class_name,
                 property_names => [],                    
                 column_positions => [],                    
                 id_property_names => undef,
