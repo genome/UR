@@ -1785,13 +1785,16 @@ sub _load_fk_data_for_class_meta {
 
     my @fk_data;
     my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('','','','', $db_owner, $table_name_without_owner);
+    my %seen_fk_names;
     while( $fk_sth and my $row = $fk_sth->fetchrow_hashref ) {
 
         foreach my $key (qw(UK_TABLE_CAT UK_TABLE_SCHEM UK_TABLE_NAME UK_COLUMN_NAME FK_TABLE_CAT FK_TABLE_SCHEM FK_TABLE_NAME FK_COLUMN_NAME)) {
             no warnings 'uninitialized';
             $row->{$key} =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
         }
-        if (!@fk_data or $row->{ORDINAL_POSITION} == 1) {
+        if (!@fk_data or $row->{ORDINAL_POSITION} == 1
+            or ( $row->{FK_NAME} and !$seen_fk_names{ $row->{FK_NAME} }++)
+        ) {
             # part of a new FK
             push @fk_data, [];
         }
