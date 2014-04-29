@@ -7,7 +7,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 
 use UR;
-use Test::More tests => 79;
+use Test::More tests => 84;
 
 # tests parsing of command-line options
 
@@ -20,6 +20,12 @@ class Cmd::Module::V1 {
         opt_number => { is => 'Number', is_optional => 1 },
         optnumber  => { is => 'Number', is_optional => 1 },
     ],
+    has_output => [
+        a_output => {
+            is => 'Number',
+            calculate => q/ return 3 * 2 /,
+        },
+    ],
 };
 
 class Cmd::Module::V2 {
@@ -30,6 +36,12 @@ class Cmd::Module::V2 {
         opt_string => { is => 'String', is_optional => 1 },
         opt_number => { is => 'Number', is_optional => 1 },
         optnumber  => { is => 'Number', is_optional => 1 },
+    ],
+    has_output => [
+        a_output => {
+            is => 'Number',
+            calculate => q/ return 3 * 2 /,
+        },
     ],
 };
 
@@ -166,30 +178,13 @@ foreach my $the_class ( qw( Cmd::Module::V1 Cmd::Module::V2 )) {
               { opt_string => -4},
               'Params are correct');
 
-}
-
-subtest 'calculated output property' => sub {
-    class Cmd::Module::V3 {
-        is => 'Command::V2',
-        has => [
-            a_string => { is => 'String' },
-        ],
-        has_output => [
-            a_number => {
-                is => 'Number',
-                calculate => q/ return 3 * 2 /,
-            },
-        ],
-    };
-    my $the_class = 'Cmd::Module::V3';
-
-    my @args = qw(--a-string=abc);
+    my @args = qw(--a-string=abc --a-number=123);
     my ($class, $params, @errors) = $the_class->resolve_class_and_params_for_argv(@args);
-    is($class,$the_class, 'Parse args got correct class with no a_number parameter');
+    is($class, $the_class, 'Parse args got correct class with no a_number parameter');
     is(scalar(@errors), 0, "Not specifying a_number doesn't fail");
     is_deeply(
         $params,
-        { a_string => 'abc'},
+        { a_string => 'abc', a_number => 123 },
         'Params are correct'
     );
-};
+}
