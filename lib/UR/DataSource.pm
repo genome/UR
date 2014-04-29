@@ -340,10 +340,12 @@ sub _generate_loading_templates_arrayref {
         push @{ $template->{column_positions} }, $pos;
         $pos++;
     }
+
+    # remove joins that resulted in no template, such as when it was to a table-less class
+    @templates = grep { $_ } @templates;
     
     # Post-process the template objects a bit to get the exact id positions.
     for my $template (@templates) {
-        next unless $template;  # This join may have resulted in no template?!
         my @id_property_names;
         for my $id_class_name ($template->{data_class_name}, $template->{data_class_name}->inheritance) {
             my $id_class_obj = UR::Object::Type->get(class_name => $id_class_name);

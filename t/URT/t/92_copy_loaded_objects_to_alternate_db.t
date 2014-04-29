@@ -10,7 +10,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 85;
+use Test::More tests => 91;
 use URT::DataSource::SomeSQLite;
 use File::Temp;
 use File::Spec;
@@ -125,6 +125,23 @@ sub fill_primary_db {
         $sth->execute(@$row) || die "execute relationship insert: $DBI::errstr";
     }
 
+    # subclassable hangoff data
+    ok($dbh->do('create table obj_with_subclassable_hangoff (obj_id integer NOT NULL PRIMARY KEY, name varchar)'),
+        'create table obj_with_subclassable_hangoff');
+    ok($dbh->do('create table subclassable_hangoff (hangoff_id integer NOT NULL PRIMARY KEY, value varchar, obj_id integer REFERENCES obj(obj_id), subclass_name varchar NOT NULL)'),
+        'create table subclassable_hangoff');
+    $sth = $dbh->prepare('insert into obj_with_subclassable_hangoff (obj_id, name) values (?,?)') || die "prepare obj_with_subclassable_hangoff: $DBI::errstr";
+    foreach my $row ( [1, 'use'], [2, 'ignore'], [3, 'keep'] ) {
+        $sth->execute(@$row) || die "execute hangoff: $DBI::errstr";
+    }
+    $sth->finish;
+
+    $sth = $dbh->prepare('insert into subclassable_hangoff (hangoff_id, value, obj_id, subclass_name) values (?,?,?,?)') || die "prepare subclassable_hangoff: $DBI::errstr";
+    foreach my $row ( [1, 'use', 1, 'URT::SubclassedHangoff'], [2, 'ignore', 2, 'URT::SubclassedHangoff'], [3, 'keep', 3, 'URT::SubclassedHangoff'] ) {
+        $sth->execute(@$row) || die "execute obj: $DBI::errstr";
+    }
+    $sth->finish;
+
     ok($dbh->commit(), 'Commit initial database state');
 }
 
@@ -231,6 +248,37 @@ sub setup_classes {
         data_source => 'URT::DataSource::SomeSQLite',
         table_name => 'relationship',
     );
+
+    UR::Object::Type->define(
+        class_name => 'URT::ObjWithSubclassedHangoff',
+        id_by => 'obj_id',
+        has => [
+            name => { is => 'String' },
+            hangoff => { is => 'URT::SubclassedHangoff', reverse_as => 'obj', is_many => 1 },
+            hangoff_value => { via => 'hangoff', to => 'value' },
+        ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'obj_with_subclassable_hangoff',
+    );
+
+    UR::Object::Type->define(
+        class_name => 'URT::SubclassableHangoff',
+        is_abstract => 1,
+        subclassify_by => 'subclass_name',
+        id_by => 'hangoff_id',
+        has => [
+            value => { is => 'String' },
+            obj => { is => 'URT::ObjWithSubclassedHangoff', id_by => 'obj_id' },
+            subclass_name => { is => 'String' },
+        ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'subclassable_hangoff',
+    );
+
+    UR::Object::Type->define(
+        class_name => 'URT::SubclassedHangoff',
+        is => 'URT::SubclassableHangoff',
+    );
 }
 
 
@@ -259,6 +307,9 @@ sub _load_objects {
 
     ok(scalar(URT::Relationship->get(label => 'use')), 'Get relationship with two PKs');
 
+    @got = URT::ObjWithSubclassedHangoff->get(hangoff_value => 'use');
+    ok(scalar(@got), 'Get obj with subclassed hangoff');
+
     # The Obj is a prerequisite of the Hangoff.  Create the Obj with a dummy ID, which won't
     # be inserted to the alternate DB, which means the Hangoff can't be inserted either.
     eval {
@@ -280,7 +331,8 @@ sub _load_objects {
                                 URT::Child URT::Obj URT::Hangoff
                                 URT::Data URT::DataAttribute
                                 URT::SelfReferencing
-                                URT::Entity URT::Relationship ) );
+                                URT::Entity URT::Relationship
+                                URT::ObjWithSubclassedHangoff URT::SubclassableHangoff ) );
 }
 
 sub test_results_db_file {
