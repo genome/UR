@@ -7,7 +7,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 
 use UR;
-use Test::More tests => 78;
+use Test::More tests => 79;
 
 # tests parsing of command-line options
 
@@ -32,8 +32,6 @@ class Cmd::Module::V2 {
         optnumber  => { is => 'Number', is_optional => 1 },
     ],
 };
-
-
 
 # Commands dump errors about missing required properties
 # we don't care about those problems
@@ -170,4 +168,28 @@ foreach my $the_class ( qw( Cmd::Module::V1 Cmd::Module::V2 )) {
 
 }
 
+subtest 'calculated output property' => sub {
+    class Cmd::Module::V3 {
+        is => 'Command::V2',
+        has => [
+            a_string => { is => 'String' },
+        ],
+        has_output => [
+            a_number => {
+                is => 'Number',
+                calculate => q/ return 3 * 2 /,
+            },
+        ],
+    };
+    my $the_class = 'Cmd::Module::V3';
 
+    my @args = qw(--a-string=abc);
+    my ($class, $params, @errors) = $the_class->resolve_class_and_params_for_argv(@args);
+    is($class,$the_class, 'Parse args got correct class with no a_number parameter');
+    is(scalar(@errors), 0, "Not specifying a_number doesn't fail");
+    is_deeply(
+        $params,
+        { a_string => 'abc'},
+        'Params are correct'
+    );
+};
