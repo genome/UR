@@ -1483,18 +1483,31 @@ sub resolve_order_by_clause {
     my @order_by_columns = $query_plan->order_by_column_list;
     return '' unless (@order_by_columns);
 
-    foreach my $col ( @order_by_columns) {
-        if ($col =~ m/^(-|\+)(.*)$/) {
-            $col = $2;
-            if ($1 eq '-') {
-                $col = $col . ' DESC';
-            }
+    my %is_descending;
+    foreach ( @order_by_columns ) {
+        if (m/^(-|\+)(.*)$/) {
+            $_ = $2;
+            $is_descending{$2} = 1;
+        } else {
+            $is_descending{$_} = 0;
         }
     }
-    return  'order by ' . join(', ',@order_by_columns);
+
+    my @order_by_parts = map {
+            $self->_resolve_order_by_clause_for_column($query_plan, $_, $is_descending{$_})
+        }
+        @order_by_columns;
+
+    return  'order by ' . join(', ',@order_by_parts);
 }
 
+sub _resolve_order_by_clause_for_column {
+    my($self, $column_name, $query_plan, $is_descending) = @_;
 
+    return $is_descending
+            ? $column_name . ' DESC'
+            : $column_name;
+}
 sub do_sql {
     my $self = shift;
     my $sql = shift;
