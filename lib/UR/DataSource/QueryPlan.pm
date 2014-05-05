@@ -2321,5 +2321,12 @@ sub _init_remote_cache {
     return $self;
 }
 
+sub order_by_column_list {
+    my $self = shift;
+
+    my $order_by_columns = $self->order_by_columns || [];
+    return @$order_by_columns;
+}
+
 1;
 
