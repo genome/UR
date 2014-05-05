@@ -1480,31 +1480,21 @@ sub _get_sequence_name_for_table_and_column {
 sub resolve_order_by_clause {
     my($self, $query_plan) = @_;
 
-    my @order_by_columns = $query_plan->order_by_column_list;
-    return '' unless (@order_by_columns);
-
-    my %is_descending;
-    foreach ( @order_by_columns ) {
-        if (m/^(-|\+)(.*)$/) {
-            $_ = $2;
-            $is_descending{$2} = 1;
-        } else {
-            $is_descending{$_} = 0;
-        }
-    }
+    my $order_by_columns = $query_plan->order_by_column_list;
+    return '' unless (@$order_by_columns);
 
     my @order_by_parts = map {
-            $self->_resolve_order_by_clause_for_column($query_plan, $_, $is_descending{$_})
+            $self->_resolve_order_by_clause_for_column($_, $query_plan)
         }
-        @order_by_columns;
+        @$order_by_columns;
 
     return  'order by ' . join(', ',@order_by_parts);
 }
 
 sub _resolve_order_by_clause_for_column {
-    my($self, $column_name, $query_plan, $is_descending) = @_;
+    my($self, $column_name, $query_plan) = @_;
 
-    return $is_descending
+    return $query_plan->order_by_column_is_descending($column_name)
             ? $column_name . ' DESC'
             : $column_name;
 }

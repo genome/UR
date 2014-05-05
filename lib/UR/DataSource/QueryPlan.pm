@@ -2324,8 +2324,33 @@ sub _init_remote_cache {
 sub order_by_column_list {
     my $self = shift;
 
-    my $order_by_columns = $self->order_by_columns || [];
-    return @$order_by_columns;
+    $self->_resolve_order_by_and_descending_data();
+    return $self->{_order_by_column_list};
+}
+
+sub _resolve_order_by_and_descending_data {
+    my $self = shift;
+
+    unless ($self->{_order_by_column_list}) {
+        my @order_by_columns = @{ $self->order_by_columns || [] };
+        my %is_descending;
+        foreach ( @order_by_columns ) {
+            if (m/^(-|\+)(.*)$/) {
+                $_ = $2;
+                $is_descending{$2} = 1;
+            }
+        }
+
+        $self->{_order_by_column_list} = \@order_by_columns;
+        $self->{_order_by_column_is_descending} = \%is_descending;
+    }
+}
+
+sub order_by_column_is_descending {
+    my($self, $column_name) = @_;
+
+    $self->_resolve_order_by_and_descending_data();
+    return $self->{_order_by_column_is_descending}->{$column_name};
 }
 
 1;

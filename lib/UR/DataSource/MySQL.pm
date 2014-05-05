@@ -125,7 +125,7 @@ my($self,$sp_name) = @_;
 
 
 sub _resolve_order_by_clause_for_column {
-    my($self, $column_name, $query_plan, $is_descending) = @_;
+    my($self, $column_name, $query_plan) = @_;
 
     my $order_by_column_data = $query_plan->_order_by_property_names;
     my $is_optional;
@@ -136,16 +136,17 @@ sub _resolve_order_by_clause_for_column {
 
     my $column_clause = $column_name;  # default, usual case
     if ($is_optional) {
-        if ($is_descending) {
+        if ($query_plan->order_by_column_is_descending($column_name)) {
             $column_clause = "CASE WHEN $column_name ISNULL THEN 0 ELSE 1 END, $column_name DESC";
         } else {
             $column_clause = "CASE WHEN $column_name ISNULL THEN 1 ELSE 0 END, $column_name";
         }
-    } elsif ($is_descending) {
+    } elsif ($query_plan->order_by_column_is_descending($column_name)) {
         $column_clause = $column_name . ' DESC';
     }
     return $column_clause;
 }
+
 
 
 # FIXME This works on Mysql 4.x (and later?).  Mysql5 has a database called
