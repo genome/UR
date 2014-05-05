@@ -1478,10 +1478,12 @@ sub _get_sequence_name_for_table_and_column {
 }
 
 sub resolve_order_by_clause {
-    my($self,$order_by_columns,$order_by_column_data) = @_;
+    my($self, $query_plan) = @_;
 
-    my @cols = @$order_by_columns;
-    foreach my $col ( @cols) {
+    my @order_by_columns = $query_plan->order_by_column_list;
+    return '' unless (@order_by_columns);
+
+    foreach my $col ( @order_by_columns) {
         if ($col =~ m/^(-|\+)(.*)$/) {
             $col = $2;
             if ($1 eq '-') {
@@ -1489,7 +1491,7 @@ sub resolve_order_by_clause {
             }
         }
     }
-    return  'order by ' . join(', ',@cols);
+    return  'order by ' . join(', ',@order_by_columns);
 }
 
 
@@ -1535,7 +1537,6 @@ sub create_iterator_closure_for_rule {
     my $where_clause                                = $query_plan->{where_clause};
     my $connect_by_clause                           = $query_plan->{connect_by_clause};
     my $group_by_clause                             = $query_plan->{group_by_clause};
-    my $order_by_columns                            = $query_plan->{order_by_columns} || [];
 
     my $sql_params                                  = $query_plan->{sql_params};
     my $filter_specs                                = $query_plan->{filter_specs};
@@ -1566,10 +1567,7 @@ sub create_iterator_closure_for_rule {
     }
 
     # The full SQL statement for the template, besides the filter logic, is built here.    
-    my $order_by_clause;
-    if (@$order_by_columns) {
-        $order_by_clause = $self->resolve_order_by_clause($order_by_columns,$query_plan->_order_by_property_names);
-    }
+    my $order_by_clause = $self->resolve_order_by_clause($query_plan);
 
     my $sql = "\nselect ";
     if ($select_hint) {

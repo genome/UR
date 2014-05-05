@@ -125,10 +125,14 @@ my($self,$sp_name) = @_;
 
 
 sub resolve_order_by_clause {
-    my($self,$order_by_columns,$order_by_column_data) = @_;
+    my($self, $query_plan) = @_;
 
-    my @cols = @$order_by_columns;
-    foreach my $col ( @cols) {
+    my @order_by_columns = $query_plan->order_by_column_list;
+    return '' unless (@order_by_columns);
+
+    my $order_by_column_data = $query_plan->_order_by_property_names;
+
+    foreach my $col ( @order_by_columns) {
         my $is_descending;
         if ($col =~ m/^(-|\+)(.*)$/) {
             $col = $2;
@@ -150,7 +154,7 @@ sub resolve_order_by_clause {
             $col = $col . ' DESC';
         }
     }
-    return  'order by ' . join(', ',@cols);
+    return  'order by ' . join(', ',@order_by_columns);
 }
 
 
