@@ -1321,6 +1321,16 @@ sub _resolve_owner_and_table_from_table_name {
     }
 }
 
+sub _resolve_table_and_column_from_column_name {
+    my($self, $column_name) = @_;
+
+    if ($column_name =~ m/(\w+)\.(\w+)$/) {
+        return ($1, $2);
+    } else {
+        return (undef, $column_name);
+    }
+}
+
 # Derived classes should define a method to return a ref to an array of hash refs
 # describing all the bitmap indicies in the DB.  Each hash ref should contain
 # these keys: table_name, column_name, index_name

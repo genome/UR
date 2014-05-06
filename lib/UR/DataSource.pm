@@ -748,4 +748,9 @@ sub prepare_for_fork { return 1 }
 sub do_after_fork_in_child { return 1 }
 sub finish_up_after_fork { return 1 }
 
+sub _resolve_table_and_column_from_column_name {
+    my($self, $column_name) = @_;
+    # Basic data sources don't know about tables
+    return (undef,$column_name);
+}
 1;
