@@ -1313,6 +1313,7 @@ sub _make_foreign_key_fingerprint {
 sub _resolve_owner_and_table_from_table_name {
     my($self, $table_name) = @_;
 
+    return (undef, undef) unless $table_name;
     if ($table_name =~ m/(\w+)\.(\w+)/) {
         return($1,$2);
     }
