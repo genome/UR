@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 33;
+use Test::More tests => 34;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -196,3 +196,79 @@ is(URT::Uuid_idgen::Child->__meta__->id_generator,
     '-uuid',
     'child SQL-stored class definition has blank is_generator, but inherits parent value uuid');
 
+
+subtest 'property_for_column()' => sub {
+    plan tests => 26;
+
+    my $parent_meta = UR::Object::Type->define(
+        class_name => 'URT::PropForColumnParent',
+        id_by => 'parent_id',
+        has => [
+            foo => { is => 'String' },
+            bar => { is => 'Number', column_name => 'bar_custom' },
+        ],
+        table_name => 'parent_table',
+        data_source => 'URT::DataSource::SomeSQLite',
+    );
+
+    my $child_meta = UR::Object::Type->define(
+        class_name => 'URT::PropForColumnChild',
+        is => 'URT::PropForColumnParent',
+        id_by => 'child_id',
+        has => [
+            foo => { is => 'String' },
+            bar => { is => 'Number', column_name => 'bar' },
+            baz => { is => 'Number' },
+        ],
+        table_name => 'child_table',
+        data_source => 'URT::DataSource::SomeSQLite',
+    );
+
+    my $do_tests = sub {
+        my($class_meta, @tests) = @_;
+
+        for (my $i = 0; $i < @tests; $i += 2) {
+            my($column_name, $expected_property_name) = @tests[$i, $i+1];
+
+            is($class_meta->property_for_column($column_name),
+                $expected_property_name,
+                $class_meta->class_name . " column $column_name");
+        }
+    };
+
+    my @parent_tests = (
+        parent_id => 'parent_id',
+        bogus => undef,
+        bar => undef,
+        bar_custom => 'bar',
+        'parent_table.parent_id' => 'parent_id',
+        'parent_table.bogus' => undef,
+        'parent_table.bar' => undef,
+        'parent_table.bar_custom' => 'bar',
+        'bogus_table.parent_id' => undef,
+    );
+
+    $do_tests->($parent_meta, @parent_tests);
+
+    my @child_tests = (
+        parent_id => 'parent_id',
+        child_id => 'child_id',
+        bogus => undef,
+        foo => 'foo',
+        bar => 'bar',
+        bar_custom  => 'bar',
+        baz => 'baz',
+        'parent_table.parent_id' => 'parent_id',
+        'child_table.parent_id' => undef,
+        'parent_table.child_id' => undef,
+        'child_table.child_id' => 'child_id',
+        'parent_table.bar' => undef,
+        'child_table.bar' => 'bar',
+        'parent_table.bar_custom' => 'bar',
+        'child_table.bar_custom' => undef,
+        'parent_table.baz' => undef,
+        'child_table.baz' => 'baz',
+    );
+
+    $do_tests->($child_meta, @child_tests);
+}
