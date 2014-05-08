@@ -1680,7 +1680,7 @@ sub _create_sub_for_copying_to_alternate_db {
     # it did not save anything to the alternate DB, for example if it
     # is asked to save an object with a dummy ID (< 0).  In that case, no
     # subsequent inserters will be processed for that row
-    return sub {
+    return Sub::Name::subname '__altdb_inserter' => sub {
         foreach my $inserter ( @inserter_for_each_table ) {
             last unless &$inserter;
         }
@@ -1722,7 +1722,8 @@ sub _make_insert_closures_for_loading_template_for_alternate_db {
 
     my @prerequisites = $self->_make_insert_closures_for_prerequisite_tables($class_meta, $template);
 
-    my $inserter = sub {
+    my $object_num = $template->{object_num};
+    my $inserter = Sub::Name::subname "__altdb_inserter_obj${object_num}_${class_name}" => sub {
         my($next_db_row) = @_;
 
         my $id = $id_resolver->(@$next_db_row[@id_column_positions]);
@@ -1877,7 +1878,7 @@ sub _make_prerequisite_insert_closure_for_fk {
     my $id_resolver = $pk_class_meta->get_composite_id_resolver();
     my $check_id_is_not_null = _create_sub_to_check_if_id_is_not_null(@fk_columns);
 
-    return sub {
+    return Sub::Name::subname "__altdb_prereq_inserter_${pk_class_name}" => sub {
         my($next_db_row) = @_;
         if ($check_id_is_not_null->($next_db_row)) {
             my $id = $id_resolver->(@$next_db_row[@fk_columns]);
