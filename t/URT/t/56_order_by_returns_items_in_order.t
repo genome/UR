@@ -97,7 +97,7 @@ is_deeply(\@got, \@expected, 'Returned cached data is as expected')
 # Now, try multiple order bys
 $_->unload foreach @o;
 
-@o = URT::Thing->get('name like' => 'Fred%', -order => ['data','name']);
+@o = URT::Thing->get('name like' => 'Fred%', -order => ['+data','name']);
 
 @got = map { { id => $_->id, name => $_->name, data => $_->data } } @o;
 

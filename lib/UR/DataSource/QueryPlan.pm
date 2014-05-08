@@ -2332,14 +2332,14 @@ sub _resolve_order_by_and_descending_data {
     my $self = shift;
 
     unless ($self->{_order_by_column_list}) {
-        my @order_by_columns = @{ $self->order_by_columns || [] };
         my %is_descending;
-        foreach ( @order_by_columns ) {
-            if (m/^(-|\+)(.*)$/) {
-                $_ = $2;
-                $is_descending{$2} = 1;
-            }
-        }
+        my @order_by_columns =
+                map {
+                    m/^-(.*)/
+                        ? $is_descending{$1} = $1
+                        : $_;
+                }
+                @{ $self->order_by_columns || [] };
 
         $self->{_order_by_column_list} = \@order_by_columns;
         $self->{_order_by_column_is_descending} = \%is_descending;
