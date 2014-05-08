@@ -264,7 +264,7 @@ sub _filter_doc {
     my $doc = <<EOS;
  Filtering:
  ----------
- Restrict which itemes are listed by adding a filter.
+ Restrict which items are listed by adding a filter.
      job=Captain
 
  Quotes are needed only when spaces or special words are involved.
