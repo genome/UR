@@ -1310,7 +1310,7 @@ sub property_for_column {
         my $property_name = $class_object->property_for_column($column_name);
         return $property_name if $property_name;
     }
-    return undef;
+    return;
 }
 
 # Methods for maintaining unique constraints
