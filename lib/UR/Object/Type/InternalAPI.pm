@@ -1268,14 +1268,45 @@ sub property_for_column {
     Carp::croak('must pass a column_name to property_for_column') unless @_;
     my $column_name = shift;
 
-    my($properties,$columns) = @{$self->{'_all_properties_columns'}};
-    for (my $i = 0; $i < @$columns; $i++) {
-        if ($columns->[$i] eq $column_name) {
-            return $properties->[$i];
+    my $data_source = $self->data_source || 'UR::DataSource';
+    my($table_name,$self_table_name);
+    ($table_name, $column_name) = $data_source->_resolve_table_and_column_from_column_name($column_name);
+    (undef, $self_table_name) = $data_source->_resolve_owner_and_table_from_table_name($self->table_name);
+
+    if (! $table_name) {
+        my($properties,$columns) = @{$self->{'_all_properties_columns'}};
+        for (my $i = 0; $i < @$columns; $i++) {
+            if ($columns->[$i] eq $column_name) {
+                return $properties->[$i];
+            }
+        }
+    } elsif ($table_name
+             and
+             $self_table_name
+             and $self_table_name eq $table_name
+    ) {
+        # @$properties and @$columns contain items inherited from parent classes
+        # make sure the property we find with that name goes to this class
+        my $property_name = $self->property_for_column($column_name);
+        return undef unless $property_name;
+        my $prop_meta = $self->property_meta_for_name($property_name);
+        if ($prop_meta->class_name eq $self->class_name
+            and
+            $prop_meta->column_name eq $column_name
+        ) {
+            return $property_name;
         }
     }
 
     for my $class_object ( $self->ancestry_class_metas ) {
+        my $class_object_table_name;
+        (undef, $class_object_table_name)
+            = $data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
+        next if ($table_name
+                and
+                $class_object_table_name
+                and
+                $table_name ne $class_object_table_name);
         my $property_name = $class_object->property_for_column($column_name);
         return $property_name if $property_name;
     }

@@ -209,6 +209,23 @@ sub cast_for_data_conversion {
     return @retval;
 }
 
+sub _resolve_order_by_clause_for_column {
+    my($self, $column_name, $query_plan) = @_;
+
+    my $column_clause = $self->SUPER::_resolve_order_by_clause_for_column($column_name, $query_plan);
+
+    my $query_class_meta = $query_plan->class_name->__meta__;
+    my $property_name = $query_class_meta->property_for_column($column_name);
+    my $property_meta = $query_class_meta->property_meta_for_name($property_name);
+
+    my $is_text_type = $property_meta->is_text;
+    if ($is_text_type) {
+        # Tell the DB to sort the same order as Perl's cmp
+        $column_clause .= q( COLLATE "C");
+    }
+    return $column_clause;
+}
+
 1;
 
 =pod

@@ -41,6 +41,18 @@ sub is_numeric {
     return $self->{'_is_numeric'};
 }
 
+sub is_text {
+    my $self = shift;
+    unless (defined($self->{'_is_text'})) {
+        my $class = $self->_data_type_as_class_name;
+        unless ($class) {
+            return;
+        }
+        $self->{'_is_text'} = $class->isa("UR::Value::Text");
+    }
+    return $self->{'_is_text'};
+}
+
 sub is_valid_storage_for_value {
     my($self, $value) = @_;
 

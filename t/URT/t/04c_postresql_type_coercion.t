@@ -56,10 +56,10 @@ UR::Object::Type->define(
 }
 
 is(get_sql(sub { URT::A->get('creation_date like' => '1999-12-31%') }),
-    q{select A.a_id, A.creation_date, A.some_event_time from A where to_char(A.creation_date, 'YYYY-MM-DD HH24:MI:SS') like ? escape E'\\\\' order by A.a_id},
+    q{select A.a_id, A.creation_date, A.some_event_time from A where to_char(A.creation_date, 'YYYY-MM-DD HH24:MI:SS') like ? escape E'\\\\' order by A.a_id COLLATE "C"},
     "to_char coercion on DateTime column");
 
 is(get_sql(sub { URT::A->get('some_event_time like' => '1970-01-01%') }),
-    q{select A.a_id, A.creation_date, A.some_event_time from A where to_char(A.some_event_time, 'YYYY-MM-DD HH24:MI:SS.US') like ? escape E'\\\\' order by A.a_id},
+    q{select A.a_id, A.creation_date, A.some_event_time from A where to_char(A.some_event_time, 'YYYY-MM-DD HH24:MI:SS.US') like ? escape E'\\\\' order by A.a_id COLLATE "C"},
     "to_char coercion on Timestamp column");
 
