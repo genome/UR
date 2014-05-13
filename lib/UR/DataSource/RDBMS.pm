@@ -23,6 +23,11 @@ UR::Object::Type->define(
     ],
 
     has_optional => [
+        alternate_db_dsn => {
+            is => 'Text',
+            default_value => 0,
+            doc => 'Set to a DBI dsn to copy all data queried from this datasource to an alternate database',
+        },
         camel_case_table_names => {
             is => 'Boolean',
             default_value => 0,
@@ -39,6 +44,11 @@ UR::Object::Type->define(
     valid_signals => ['query', 'query_failed', 'commit_failed', 'do_failed', 'connect_failed', 'sequence_nextval', 'sequence_nextval_failed'],
     doc => 'A logical DBI-based database, independent of prod/dev/testing considerations or login details.',
 );
+
+# A record of objects saved to the database.  It's filled in by _sync_database()
+# and used by the alternate DB saving code.  Objects noted in this hash don't get
+# saved to the alternate DB
+my %objects_in_database_saved_by_this_process;
 
 sub database_exists {
     my $self = shift;
@@ -1620,10 +1630,10 @@ sub create_iterator_closure_for_rule {
     my $next_db_row;
     my $pending_db_object_data;
 
-    my $ur_test_fill_db = $ENV{'UR_TEST_FILLDB'}
+    my $ur_test_fill_db = $self->alternate_db_dsn
                             &&
                             $self->_create_sub_for_copying_to_alternate_db(
-                                    $ENV{'UR_TEST_FILLDB'},
+                                    $self->alternate_db_dsn,
                                     $query_plan->{loading_templates}
                                 );
 
@@ -1667,57 +1677,295 @@ sub _create_sub_for_copying_to_alternate_db {
                 return sub {}
             };
 
-    my @inserter_for_each_table;
-    my $next_db_row;  # this will be filled in by the encompassing sub below
     my @saving_templates = $self->_resolve_loading_templates_for_alternate_db($loading_templates);
-    foreach my $template ( @saving_templates ) {
-        my %seen_ids;  # don't insert the same object more than once
 
-        my $class_name = $template->{data_class_name};
-        my $class_meta = $class_name->__meta__;
+    foreach my $tmpl ( @saving_templates ) {
+        my $class_meta = $tmpl->{data_class_name}->__meta__;
         $ds_type->mk_table_for_class_meta($class_meta, $dbh);
-        my $table_name = $class_meta->table_name;
-        my $columns_string = join(', ',
-                                map { $class_meta->column_for_property($_) }
-                                @{ $template->{property_names} } );
-        my $insert_sql = "insert into $table_name ($columns_string) values ("
-                    . join(',',
-                        map { '?' } @{ $template->{property_names} } )
-                    . ')';
-
-        my $insert_sth = $dbh->prepare($insert_sql)
-            || Carp::croak("Prepare for insert on alternate DB table $table_name failed: ".$dbh->errstr);
-
-        my $check_id_sql = "select count(*) from $table_name where "
-                            . join(' and ',
-                                    map { "$_ = ?" }
-                                    map { $class_meta->column_for_property($_) }
-                                    @{ $template->{id_property_names} });
-        my $check_id_sth = $dbh->prepare($check_id_sql)
-            || Carp::croak("Prepare for check ID select on alternate DB table $table_name failed: ".$dbh->errstr);
-        my @id_column_positions = @{$template->{id_column_positions}};
-
-        my @column_positions = @{$template->{column_positions}};
-
-        my $id_resolver = $template->{id_resolver};
-        push @inserter_for_each_table,
-            sub {
-                my $id = $id_resolver->($next_db_row);
-                unless ($seen_ids{$id}++) {
-                    $check_id_sth->execute( @$next_db_row[@id_column_positions]);
-                    my($count) = @{ $check_id_sth->fetchrow_arrayref() };
-                    unless ($count) {
-                        my @column_values = @$next_db_row[@column_positions];
-                        $insert_sth->execute(@column_values);
-                    }
-                }
-            };
     }
+
+    my @inserter_for_each_table = map { $self->_make_insert_closures_for_loading_template_for_alternate_db($_, $dbh) }
+                                    @saving_templates;
+
+    # Iterate through all the inserters, prerequisites first, for each row
+    # returned from the database.  Each inserter may return false, which means
+    # it did not save anything to the alternate DB, for example if it
+    # is asked to save an object with a dummy ID (< 0).  In that case, no
+    # subsequent inserters will be processed for that row
+    return Sub::Name::subname '__altdb_inserter' => sub {
+        foreach my $inserter ( @inserter_for_each_table ) {
+            last unless &$inserter;
+        }
+    };
+}
+
+sub _make_insert_closures_for_loading_template_for_alternate_db {
+    my($self, $template, $dbh) = @_;
+
+    my %seen_ids;  # don't insert the same object more than once
+
+    my $class_name = $template->{data_class_name};
+    my $class_meta = $class_name->__meta__;
+    my $table_name = $class_meta->table_name;
+    my $columns_string = join(', ',
+                            map { $class_meta->column_for_property($_) }
+                            @{ $template->{property_names} } );
+    my $insert_sql = "insert into $table_name ($columns_string) values ("
+                . join(',',
+                    map { '?' } @{ $template->{property_names} } )
+                . ')';
+
+    my $insert_sth = $dbh->prepare($insert_sql)
+        || Carp::croak("Prepare for insert on alternate DB table $table_name failed: ".$dbh->errstr);
+
+    my $check_id_exists_sql = "select count(*) from $table_name where "
+                        . join(' and ',
+                                map { "$_ = ?" }
+                                map { $class_meta->column_for_property($_) }
+                                @{ $template->{id_property_names} });
+    my $check_id_exists_sth = $dbh->prepare($check_id_exists_sql)
+        || Carp::croak("Prepare for check ID select on alternate DB table $table_name failed: ".$dbh->errstr);
+    my @id_column_positions = @{$template->{id_column_positions}};
+
+    my @column_positions = @{$template->{column_positions}};
+
+    my $id_resolver = $template->{id_resolver};
+    my $check_id_is_not_null = _create_sub_to_check_if_id_is_not_null(@id_column_positions);
+
+    my @prerequisites = $self->_make_insert_closures_for_prerequisite_tables($class_meta, $template);
+
+    my $object_num = $template->{object_num};
+    my $inserter = Sub::Name::subname "__altdb_inserter_obj${object_num}_${class_name}" => sub {
+        my($next_db_row) = @_;
+
+        my $id = $id_resolver->(@$next_db_row[@id_column_positions]);
+
+        return if _object_was_saved_to_database_by_this_process($class_name, $id);
+
+        if ($check_id_is_not_null->($next_db_row) and ! $seen_ids{$id}++) {
+            $check_id_exists_sth->execute( @$next_db_row[@id_column_positions]);
+            my($count) = @{ $check_id_exists_sth->fetchrow_arrayref() };
+            unless ($count) {
+                my @column_values = @$next_db_row[@column_positions];
+                $insert_sth->execute(@column_values)
+                    || Carp::croak("Inserting to alternate DB for $class_name failed");
+            }
+        }
+        return 1;
+    };
+
+    return (@prerequisites, $inserter);
+}
+
+
+
+# not a method
+sub _create_sub_to_check_if_id_is_not_null {
+    my(@id_columns) = @_;
 
     return sub {
-        $next_db_row = shift;
-        $_->() foreach @inserter_for_each_table;
+        my $next_db_row = $_[0];
+        foreach my $col ( @id_columns ) {
+            return 1 if defined $next_db_row->[$col];
+        }
+        return 0;
+    };
+}
+
+my %cached_fk_data_for_table;
+sub _make_insert_closures_for_prerequisite_tables {
+    my($self, $class_meta, $loading_template) = @_;
+
+    $cached_fk_data_for_table{$class_meta->table_name} ||= $self->_load_fk_data_for_class_meta($class_meta);
+
+    my %column_idx_for_column_name;
+    for (my $i = 0; $i < @{ $loading_template->{property_names} }; $i++) {
+        my $column_name = $class_meta->column_for_property( $loading_template->{property_names}->[$i] );
+        $column_idx_for_column_name{ $column_name }
+            = $loading_template->{column_positions}->[$i];
     }
+
+    my $class_name = $class_meta->class_name;
+
+    return map { $self->_make_prerequisite_insert_closure_for_fk($class_name, \%column_idx_for_column_name, $_) }
+            @{ $cached_fk_data_for_table{ $class_meta->table_name } };
+}
+
+
+sub _load_fk_data_for_class_meta {
+    my($self, $class_meta) = @_;
+
+    my ($db_owner, $table_name_without_owner) = $self->_resolve_owner_and_table_from_table_name($class_meta->table_name);
+
+    my @fk_data;
+    my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('','','','', $db_owner, $table_name_without_owner);
+    my %seen_fk_names;
+    while( $fk_sth and my $row = $fk_sth->fetchrow_hashref ) {
+
+        foreach my $key (qw(UK_TABLE_CAT UK_TABLE_SCHEM UK_TABLE_NAME UK_COLUMN_NAME FK_TABLE_CAT FK_TABLE_SCHEM FK_TABLE_NAME FK_COLUMN_NAME)) {
+            no warnings 'uninitialized';
+            $row->{$key} =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
+        }
+        if (!@fk_data or $row->{ORDINAL_POSITION} == 1
+            or ( $row->{FK_NAME} and !$seen_fk_names{ $row->{FK_NAME} }++)
+        ) {
+            # part of a new FK
+            push @fk_data, [];
+        }
+
+        push @{ $fk_data[-1] }, { %$row };
+    }
+    return \@fk_data;
+}
+
+# return true if this list of FK columns exists for inheritance:
+# this table's FKs matches the given class' ID properties, and the FK points
+# to every ID property of the parent class
+sub _fk_represents_inheritance {
+    my($load_class_name, $fk_column_list) = @_;
+
+    my $load_class_meta = $load_class_name->__meta__;
+
+    my %is_pk_column_for_class = map { $_ => 1 }
+                                 grep { $_ }
+                                 map { $load_class_meta->column_for_property($_) }
+                                 $load_class_name->__meta__->id_property_names;
+
+    if (scalar(@$fk_column_list) != scalar(values %is_pk_column_for_class)) {
+        # differing number of columns vs ID properties
+        return '';
+    }
+
+    foreach my $fk ( @$fk_column_list ) {
+        return '' unless $is_pk_column_for_class{ $fk->{FK_COLUMN_NAME} };
+    }
+
+    my %checked;
+    foreach my $parent_class_name ( $load_class_meta->inheritance ) {
+        next if ($checked{$parent_class_name}++);
+
+        my $parent_class_meta = eval { $parent_class_name->__meta__ };
+        next unless $parent_class_meta;  # for non-ur classes
+        my @pk_columns_for_parent = grep { $_ }
+                                    map { $parent_class_meta->column_for_property($_) }
+                                    $parent_class_meta->id_property_names;
+        next if (scalar(@$fk_column_list) != scalar(@pk_columns_for_parent));
+
+        foreach my $parent_pk_column ( @pk_columns_for_parent ) {
+            return '' unless $is_pk_column_for_class{ $parent_pk_column };
+        }
+    }
+
+    return 1;
+}
+
+sub _make_prerequisite_insert_closure_for_fk {
+    my($self, $load_class_name, $column_idx_for_column_name, $fk_column_list) = @_;
+
+    my $pk_class_name = $self->_lookup_fk_target_class_name($fk_column_list);
+
+    # fks for inheritance are handled inside _resolve_loading_templates_for_alternate_db
+    return () if _fk_represents_inheritance($load_class_name, $fk_column_list);
+
+    my $pk_class_meta = $pk_class_name->__meta__;
+
+    my %pk_to_fk_column_name_map = map { @$_{'UK_COLUMN_NAME','FK_COLUMN_NAME'} }
+                                   @$fk_column_list;
+    my @fk_columns = map { $column_idx_for_column_name->{$_} }
+                     map { $pk_to_fk_column_name_map{$_} }
+                     $pk_class_meta->id_property_names;
+
+    if (grep { !defined } @fk_columns
+        or
+        !@fk_columns
+    ) {
+        Carp::croak(sprintf(q(Couldn't determine column order for inserting prerequisites of %s with foreign key "%s" refering to table %s with columns (%s)),
+            $load_class_name,
+            $fk_column_list->[0]->{FK_NAME},
+            $fk_column_list->[0]->{UK_TABLE_NAME},
+            join(', ', map { $_->{UK_COLUMN_NAME} } @$fk_column_list)
+        ));
+    }
+
+    my $id_resolver = $pk_class_meta->get_composite_id_resolver();
+    my $check_id_is_not_null = _create_sub_to_check_if_id_is_not_null(@fk_columns);
+
+    return Sub::Name::subname "__altdb_prereq_inserter_${pk_class_name}" => sub {
+        my($next_db_row) = @_;
+        if ($check_id_is_not_null->($next_db_row)) {
+            my $id = $id_resolver->(@$next_db_row[@fk_columns]);
+
+            return if _object_was_saved_to_database_by_this_process($pk_class_name, $id);
+
+            # here we _do_ want to recurse back in.  That way if these prerequisites
+            # have prerequisites of their own, they'll be loaded in the recursive call.
+            $pk_class_name->get($id);
+        }
+        return 1;
+    }
+}
+
+# not a method
+sub _object_was_saved_to_database_by_this_process {
+    my($class_name, $id) = @_;
+
+    # Fast common case
+    return 1 if exists ($objects_in_database_saved_by_this_process{$class_name})
+                &&
+                exists($objects_in_database_saved_by_this_process{$class_name}->{$id});
+
+    foreach my $saved_class ( keys %objects_in_database_saved_by_this_process ) {
+        next unless ($class_name->isa($saved_class) || $saved_class->isa($class_name));
+        return 1 if exists($objects_in_database_saved_by_this_process{$saved_class}->{$id});
+    }
+    return;
+}
+
+# given a UR::DataSource::RDBMS::FkConstraint, find the table this fk refers to
+# (the table with the pk_columns), then find which class goes with that table.
+sub _lookup_fk_target_class_name {
+    my($self, $fk_column_list) = @_;
+
+    my $pk_owner = $fk_column_list->[0]->{UK_TABLE_SCHEM};
+    my $pk_table_name = $fk_column_list->[0]->{UK_TABLE_NAME};
+    my $pk_table_name_with_owner = $pk_owner ? join('.', $pk_owner, $pk_table_name) : $pk_table_name;
+    my $pk_class_name = $self->_lookup_class_for_table_name( $pk_table_name_with_owner )
+                        || $self->_lookup_class_for_table_name( $pk_table_name );
+
+    unless ($pk_class_name) {
+        # didn't find it.  Maybe the target class isn't loaded yet
+        # try looking up the class on the other side of the FK
+        # and determine which property matches this FK
+
+        my $fk_owner = $fk_column_list->[0]->{FK_TABLE_SCHEM};
+        my $fk_table_name = $fk_column_list->[0]->{FK_TABLE_NAME};
+        my $fk_table_name_with_owner = $fk_owner ? join('.', $fk_owner, $fk_table_name) : $fk_table_name;
+
+        my $fk_class_name = $self->_lookup_class_for_table_name( $fk_table_name_with_owner )
+                            || $self->_lookup_class_for_table_name( $fk_table_name );
+        if ($fk_class_name) {
+            # get all the relation property target classes loaded
+            my @relation_property_metas = grep { $_->id_by and $_->data_type  }
+                                          $fk_class_name->__meta__->properties();
+            foreach my $prop_meta ( @relation_property_metas ) {
+                eval { $prop_meta->data_type->__meta__ };
+            }
+
+            # try looking up again
+            $pk_class_name = $self->_lookup_class_for_table_name( $pk_table_name_with_owner )
+                             || $self->_lookup_class_for_table_name( $pk_table_name );
+        }
+    }
+    unless ($pk_class_name) {
+        Carp::croak(
+            sprintf(q(Couldn't determine class with table %s involved in foreign key "%s" from table %s with columns (%s)),
+                        $pk_table_name,
+                        $fk_column_list->[0]->{FK_NAME},
+                        $fk_column_list->[0]->{FK_TABLE_NAME},
+                        join(', ', map { $_->{FK_COLUMN_NAME} } @$fk_column_list),
+                    ));
+    }
+    return $pk_class_name;
 }
 
 # Given a query plan's loading templates, return a new list of look-alike
@@ -1769,12 +2017,19 @@ sub _resolve_loading_templates_for_alternate_db {
 sub _create_dbh_for_alternate_db {
     my($self, $connect_string) = @_;
 
+    # Support an extension of the connect string to allow user and password.
+    # URI::DB supports these kinds of things, too.
+    $connect_string =~ s/user=(\w+);?//;
+    my $user = $1;
+    $connect_string =~ s/password=(\w+);?//;
+    my $password = $1;
+
     # Don't use $self->default_handle_class here
     # Generally, it'll be UR::DBI, which respects the setting for UR_DBI_NO_COMMIT.
     # Tests are usually run with no-commit on, and we still want to fill the
     # test db in that case
     my $handle_class = 'DBI';
-    $handle_class->connect($connect_string, '', '', { AutoCommit => 1 });
+    $handle_class->connect($connect_string, $user || '', $password || '', { AutoCommit => 1, PrintWarn => 0 });
 }
 
 # Create the table behind this class in the specified database.
@@ -1796,7 +2051,7 @@ sub mk_table_for_class_meta {
     my @cols;
     foreach my $prop ( @props ) {
         my $col = $prop->column_name;
-        my $type = $prop->data_type || 'varchar';
+        my $type = $self->data_source_type_for_ur_data_type($prop->data_type);
         my $len = $prop->data_length;
         my $nullable = $prop->is_optional;
 
@@ -1957,6 +2212,10 @@ sub _sync_database {
         my $class_name = ref($obj);
         $objects_by_class_name{$class_name} ||= [];
         push @{ $objects_by_class_name{$class_name} }, $obj;
+
+        if ($self->alternate_db_dsn) {
+            $objects_in_database_saved_by_this_process{$class_name}->{$obj->id} = 1;
+        }
     }
 
     my $dbh = $self->get_default_handle;
@@ -3391,6 +3650,31 @@ sub ur_data_type_for_data_source_data_type {
         $urtype = $class->SUPER::ur_data_type_for_data_source_data_type($type);
     }
     return $urtype;
+}
+
+
+sub _vendor_data_type_for_ur_data_type {
+    return ( TEXT        => 'VARCHAR',
+             STRING      => 'VARCHAR',
+             INTEGER     => 'INTEGER',
+             DECIMAL     => 'INTEGER',
+             NUMBER      => 'FLOAT',
+             BOOLEAN     => 'INTEGER',
+             DATETIME    => 'DATETIME',
+             TIMESTAMP   => 'TIMESTAMP',
+             __default__ => 'VARCHAR',
+         );
+}
+
+sub data_source_type_for_ur_data_type {
+    my($class, $type) = @_;
+
+    if ($type and $type->isa('UR::Value')) {
+        ($type) =~ m/UR::Value::(\w+)/;
+    }
+    my %types = $class->_vendor_data_type_for_ur_data_type();
+    return $types{uc($type)}
+            || $types{__default__};
 }
 
 

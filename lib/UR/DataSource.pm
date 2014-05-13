@@ -315,7 +315,7 @@ sub _generate_loading_templates_arrayref {
     my @templates;
     my %alias_object_num;
     for my $col_data (@$db_cols) {
-        my ($class_obj, $prop, $table_alias, $object_num, $class_name) = @$col_data;
+        my ($class_obj, $prop, $table_alias, $object_num) = @$col_data;
         unless (defined $object_num) {
             die "No object num for loading template data?!";
         }
@@ -326,7 +326,7 @@ sub _generate_loading_templates_arrayref {
                 object_num => $object_num,
                 table_alias => $table_alias,
                 data_class_name => $class_obj->class_name,
-                final_class_name => $class_name || $class_obj->class_name,
+                final_class_name => $class_obj->class_name,
                 property_names => [],                    
                 column_positions => [],                    
                 id_property_names => undef,
@@ -340,10 +340,12 @@ sub _generate_loading_templates_arrayref {
         push @{ $template->{column_positions} }, $pos;
         $pos++;
     }
+
+    # remove joins that resulted in no template, such as when it was to a table-less class
+    @templates = grep { $_ } @templates;
     
     # Post-process the template objects a bit to get the exact id positions.
     for my $template (@templates) {
-        next unless $template;  # This join may have resulted in no template?!
         my @id_property_names;
         for my $id_class_name ($template->{data_class_name}, $template->{data_class_name}->inheritance) {
             my $id_class_obj = UR::Object::Type->get(class_name => $id_class_name);
