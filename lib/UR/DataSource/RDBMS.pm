@@ -1507,8 +1507,7 @@ sub resolve_order_by_clause {
     my $query_class_meta = $query_plan->class_name->__meta__;
 
     my @order_by_parts = map {
-            my $order_by_property_name = $query_class_meta->property_for_column($_);
-            my $order_by_property_meta = $query_class_meta->property_meta_for_name($order_by_property_name);
+            my $order_by_property_meta = $query_plan->property_meta_for_column($_);
             unless ($order_by_property_meta) {
                 Carp::croak("Cannot resolve property metadata for order-by column '$_' of class "
                             . $query_class_meta->class_name);
