@@ -1298,20 +1298,21 @@ sub property_for_column {
         ) {
             return $property_name;
         }
+
+    } elsif ($table_name) {
+
+        for my $class_object ( $self->ancestry_class_metas ) {
+            my $class_object_table_name;
+            (undef, $class_object_table_name)
+                = $data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
+            next if ($class_object_table_name
+                    and
+                    $table_name ne $class_object_table_name);
+            my $property_name = $class_object->property_for_column($column_name);
+            return $property_name if $property_name;
+        }
     }
 
-    for my $class_object ( $self->ancestry_class_metas ) {
-        my $class_object_table_name;
-        (undef, $class_object_table_name)
-            = $data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
-        next if ($table_name
-                and
-                $class_object_table_name
-                and
-                $table_name ne $class_object_table_name);
-        my $property_name = $class_object->property_for_column($column_name);
-        return $property_name if $property_name;
-    }
     return;
 }
 
