@@ -1311,6 +1311,21 @@ sub property_for_column {
             my $property_name = $class_object->property_for_column($column_name);
             return $property_name if $property_name;
         }
+
+        # This will catch the case where one of the class' table_name is an inline view
+        # and we're asking for something right on that class
+        # The regex is not the best way to exclude other table names, but it's
+        # the best we can do without parsing the SQL
+        my $table_name_re = qr/$table_name/i;
+        for my $class_object ( $self, $self->ancestry_class_metas ) {
+            my $class_object_table_name;
+            next unless ($class_object->table_name
+                        and
+                        $class_object->table_name =~ $table_name_re);
+
+            my $property_name = $class_object->property_for_column($column_name);
+            return $property_name if $property_name;
+        }
     }
 
     return;
