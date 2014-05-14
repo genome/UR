@@ -57,6 +57,8 @@ push @cache_keys, '_property_meta_for_name';
 sub property_meta_for_name {
     my ($self, $property_name) = @_;
 
+    return unless $property_name;
+
     if (index($property_name,'.') != -1) {
         my @chain = split(/\./,$property_name);
         my $last_class_meta = $self;
