@@ -1504,8 +1504,16 @@ sub resolve_order_by_clause {
     my $order_by_columns = $query_plan->order_by_column_list;
     return '' unless (@$order_by_columns);
 
+    my $query_class_meta = $query_plan->class_name->__meta__;
+
     my @order_by_parts = map {
-            $self->_resolve_order_by_clause_for_column($_, $query_plan)
+            my $order_by_property_name = $query_class_meta->property_for_column($_);
+            my $order_by_property_meta = $query_class_meta->property_meta_for_name($order_by_property_name);
+            unless ($order_by_property_meta) {
+                Carp::croak("Cannot resolve property metadata for order-by column '$_' of class "
+                            . $query_class_meta->class_name);
+            }
+            $self->_resolve_order_by_clause_for_column($_, $query_plan, $order_by_property_meta);
         }
         @$order_by_columns;
 
