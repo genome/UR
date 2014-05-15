@@ -1301,27 +1301,20 @@ sub property_for_column {
 
     } elsif ($table_name) {
 
-        for my $class_object ( $self->ancestry_class_metas ) {
+        for my $class_object ( $self, $self->ancestry_class_metas ) {
             my $class_object_table_name;
             (undef, $class_object_table_name)
                 = $data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
-            next if ($class_object_table_name
-                    and
-                    $table_name ne lc($class_object_table_name));
-            my $property_name = $class_object->property_for_column($column_name);
-            return $property_name if $property_name;
-        }
 
-        # This will catch the case where one of the class' table_name is an inline view
-        # and we're asking for something right on that class
-        # The regex is not the best way to exclude other table names, but it's
-        # the best we can do without parsing the SQL
-        for my $class_object ( $self, $self->ancestry_class_metas ) {
-            next unless $class_object->data_source;
-            my($view, $alias) = $class_object->data_source->parse_view_and_alias_from_inline_view($class_object->table_name);
-            next unless ($alias
-                         and
-                         $alias eq $table_name);
+            if ($class_object_table_name
+                and
+                $table_name ne lc($class_object_table_name)
+            ) {
+                (undef, $class_object_table_name) = $class_object->data_source->parse_view_and_alias_from_inline_view($class_object->table_name);
+            }
+            next if (! $class_object_table_name
+                or
+                $table_name ne lc($class_object_table_name));
 
             my $property_name = $class_object->property_for_column($column_name);
             return $property_name if $property_name;
