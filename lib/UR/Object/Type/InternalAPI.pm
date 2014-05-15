@@ -1316,12 +1316,12 @@ sub property_for_column {
         # and we're asking for something right on that class
         # The regex is not the best way to exclude other table names, but it's
         # the best we can do without parsing the SQL
-        my $table_name_re = qr/\Q$table_name\E/i;
         for my $class_object ( $self, $self->ancestry_class_metas ) {
-            my $class_object_table_name;
-            next unless ($class_object->table_name
-                        and
-                        $class_object->table_name =~ $table_name_re);
+            next unless $class_object->data_source;
+            my($view, $alias) = $class_object->data_source->parse_view_and_alias_from_inline_view($class_object->table_name);
+            next unless ($alias
+                         and
+                         $alias eq $table_name);
 
             my $property_name = $class_object->property_for_column($column_name);
             return $property_name if $property_name;

@@ -281,7 +281,7 @@ subtest 'inline view property_for_column()' => sub {
         id_by => 'id',
         has => [ 'prop_a', 'prop_b' ],
         data_source => 'URT::DataSource::SomeSQLite',
-        table_name => '(select id, prop_a, prop_b from class_with_inline_view where id is not null)',
+        table_name => '(select id, prop_a, prop_b from class_with_inline_view where id is not null) class_with_inline_view',
     );
 
     my @tests = (

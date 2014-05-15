@@ -3721,6 +3721,14 @@ sub do_after_fork_in_child {
     return 1;
 }
 
+sub parse_view_and_alias_from_inline_view {
+    my($self, $sql) = @_;
+
+    return $sql =~ m/^(.*)\s+(\w+)\s*$/s
+        ? ($1, $2)
+        : ();
+}
+
 1;
 
 =pod
