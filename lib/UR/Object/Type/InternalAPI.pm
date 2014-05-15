@@ -1307,8 +1307,8 @@ sub property_for_column {
             (undef, $class_object_table_name)
                 = $class_object->data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
 
-            if ($class_object_table_name
-                and
+            if (! $class_object_table_name
+                or
                 $table_name ne lc($class_object_table_name)
             ) {
                 (undef, $class_object_table_name) = $class_object->data_source->parse_view_and_alias_from_inline_view($class_object->table_name);
