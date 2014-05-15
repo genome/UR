@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 34;
+use Test::More tests => 35;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -271,4 +271,32 @@ subtest 'property_for_column()' => sub {
     );
 
     $do_tests->($child_meta, @child_tests);
-}
+};
+
+subtest 'inline view property_for_column()' => sub {
+    plan tests => 6;
+
+    my $class_meta = UR::Object::Type->define(
+        class_name => 'URT::ClassWithInlineView',
+        id_by => 'id',
+        has => [ 'prop_a', 'prop_b' ],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => '(select id, prop_a, prop_b from class_with_inline_view where id is not null) class_with_inline_view',
+    );
+
+    my @tests = (
+        'id' => 'id',
+        'prop_a' => 'prop_a',
+        'bogus' => undef,
+        'class_with_inline_view.prop_a' => 'prop_a',
+        'class_with_inline_view.bogus' => undef,
+        'bogus_table.prop_a' => undef,
+    );
+
+    for (my $i = 0; $i < @tests; $i += 2) {
+        my($column_name, $expected_property_name) = @tests[$i, $i+1];
+        is($class_meta->property_for_column($column_name),
+            $expected_property_name,
+            "column $column_name");
+    }
+};

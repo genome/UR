@@ -848,14 +848,9 @@ sub _get_foreign_key_setting {
 }
 
 sub _resolve_order_by_clause_for_column {
-    my($self, $column_name, $query_plan) = @_;
+    my($self, $column_name, $query_plan, $property_meta) = @_;
 
-    my $order_by_column_data = $query_plan->_order_by_property_names;
-    my $is_optional;
-    if ( $order_by_column_data->{$column_name} ) {
-        my $property_meta = $order_by_column_data->{$column_name}->[1];
-        $is_optional = $property_meta->is_optional;
-    }
+    my $is_optional = $property_meta->is_optional;
 
     my $column_clause = $column_name;  # default, usual case
     if ($is_optional) {

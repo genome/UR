@@ -57,6 +57,8 @@ push @cache_keys, '_property_meta_for_name';
 sub property_meta_for_name {
     my ($self, $property_name) = @_;
 
+    return unless $property_name;
+
     if (index($property_name,'.') != -1) {
         my @chain = split(/\./,$property_name);
         my $last_class_meta = $self;
@@ -1266,7 +1268,7 @@ sub column_for_property {
 sub property_for_column {
     my $self = _object(shift);
     Carp::croak('must pass a column_name to property_for_column') unless @_;
-    my $column_name = shift;
+    my $column_name = lc(shift);
 
     my $data_source = $self->data_source || 'UR::DataSource';
     my($table_name,$self_table_name);
@@ -1276,14 +1278,14 @@ sub property_for_column {
     if (! $table_name) {
         my($properties,$columns) = @{$self->{'_all_properties_columns'}};
         for (my $i = 0; $i < @$columns; $i++) {
-            if ($columns->[$i] eq $column_name) {
+            if (lc($columns->[$i]) eq $column_name) {
                 return $properties->[$i];
             }
         }
     } elsif ($table_name
              and
              $self_table_name
-             and $self_table_name eq $table_name
+             and lc($self_table_name) eq lc($table_name)
     ) {
         # @$properties and @$columns contain items inherited from parent classes
         # make sure the property we find with that name goes to this class
@@ -1292,24 +1294,34 @@ sub property_for_column {
         my $prop_meta = $self->property_meta_for_name($property_name);
         if ($prop_meta->class_name eq $self->class_name
             and
-            $prop_meta->column_name eq $column_name
+            lc($prop_meta->column_name) eq $column_name
         ) {
             return $property_name;
         }
+
+    } elsif ($table_name) {
+
+        for my $class_object ( $self, $self->ancestry_class_metas ) {
+            next unless $class_object->data_source;
+            my $class_object_table_name;
+            (undef, $class_object_table_name)
+                = $class_object->data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
+
+            if (! $class_object_table_name
+                or
+                $table_name ne lc($class_object_table_name)
+            ) {
+                (undef, $class_object_table_name) = $class_object->data_source->parse_view_and_alias_from_inline_view($class_object->table_name);
+            }
+            next if (! $class_object_table_name
+                or
+                $table_name ne lc($class_object_table_name));
+
+            my $property_name = $class_object->property_for_column($column_name);
+            return $property_name if $property_name;
+        }
     }
 
-    for my $class_object ( $self->ancestry_class_metas ) {
-        my $class_object_table_name;
-        (undef, $class_object_table_name)
-            = $data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
-        next if ($table_name
-                and
-                $class_object_table_name
-                and
-                $table_name ne $class_object_table_name);
-        my $property_name = $class_object->property_for_column($column_name);
-        return $property_name if $property_name;
-    }
     return;
 }
 

@@ -1504,8 +1504,15 @@ sub resolve_order_by_clause {
     my $order_by_columns = $query_plan->order_by_column_list;
     return '' unless (@$order_by_columns);
 
+    my $query_class_meta = $query_plan->class_name->__meta__;
+
     my @order_by_parts = map {
-            $self->_resolve_order_by_clause_for_column($_, $query_plan)
+            my $order_by_property_meta = $query_plan->property_meta_for_column($_);
+            unless ($order_by_property_meta) {
+                Carp::croak("Cannot resolve property metadata for order-by column '$_' of class "
+                            . $query_class_meta->class_name);
+            }
+            $self->_resolve_order_by_clause_for_column($_, $query_plan, $order_by_property_meta);
         }
         @$order_by_columns;
 
@@ -3712,6 +3719,14 @@ sub do_after_fork_in_child {
     # now force a reconnect
     $self->get_default_handle();
     return 1;
+}
+
+sub parse_view_and_alias_from_inline_view {
+    my($self, $sql) = @_;
+
+    return $sql =~ m/^(.*?)(?:\s+as)?\s+(\w+)\s*$/s
+        ? ($1, $2)
+        : ();
 }
 
 1;

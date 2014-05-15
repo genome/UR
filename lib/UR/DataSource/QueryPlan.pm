@@ -1003,11 +1003,10 @@ sub _add_join {
 
         @$source_table_and_column_names =
             map {
-                if ($_->[0] =~ /^(.*)\s+(\w+)\s*$/s) {
+                if (my($view, $alias) = $ds->parse_view_and_alias_from_inline_view($_->[0])) {
                     # This "table_name" was actually a bit of SQL with an inline view and an alias
-                    # FIXME - this won't work if they used the optional "as" keyword
-                    $_->[0] = $1;
-                    $_->[2] = $2;
+                    $_->[0] = $view;
+                    $_->[2] = $alias;
                 }
                 $_;
             }
@@ -2351,6 +2350,29 @@ sub order_by_column_is_descending {
 
     $self->_resolve_order_by_and_descending_data();
     return $self->{_order_by_column_is_descending}->{$column_name};
+}
+
+sub property_meta_for_column {
+    my($self, $table_and_column_name) = @_;
+
+    $table_and_column_name = lc($table_and_column_name);
+
+    my $data_source = $self->data_source();
+    my ($table_name, $column_name) = $data_source->_resolve_table_and_column_from_column_name($table_and_column_name);
+
+    if (my $join = $self->_get_alias_join($table_name)) {
+        # The given $table_name was actually a join alias
+        my $foreign_class_meta = $join->foreign_class->__meta__;
+        my $prop_name = $foreign_class_meta->property_for_column($column_name);
+        return $prop_name
+            ? $foreign_class_meta->property_meta_for_name($prop_name)
+            : undef;
+
+    } else {
+        my $class_meta = $self->class_name->__meta__;
+        my $prop_name = $class_meta->property_for_column($table_and_column_name);
+        return $class_meta->property_meta_for_name($prop_name);
+    }
 }
 
 1;
