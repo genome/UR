@@ -1302,9 +1302,10 @@ sub property_for_column {
     } elsif ($table_name) {
 
         for my $class_object ( $self, $self->ancestry_class_metas ) {
+            next unless $class_object->data_source;
             my $class_object_table_name;
             (undef, $class_object_table_name)
-                = $data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
+                = $class_object->data_source->_resolve_owner_and_table_from_table_name($class_object->table_name);
 
             if ($class_object_table_name
                 and
