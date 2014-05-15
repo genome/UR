@@ -1005,7 +1005,6 @@ sub _add_join {
             map {
                 if (my($view, $alias) = $ds->parse_view_and_alias_from_inline_view($_->[0])) {
                     # This "table_name" was actually a bit of SQL with an inline view and an alias
-                    # FIXME - this won't work if they used the optional "as" keyword
                     $_->[0] = $view;
                     $_->[2] = $alias;
                 }

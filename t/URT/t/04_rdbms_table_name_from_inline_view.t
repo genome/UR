@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 4;
+use Test::More tests => 6;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -32,6 +32,7 @@ UR::Object::Type->define(
 my @tests = (
     'URT::NormalTable' => [undef, undef],
     'URT::InlineView' => ['(select foo_id from foo where foo_id is not null)', 'inline_foo'],
+    'URT::InlineViewAs' => ['(select foo_id from foo where foo_id is not null)', 'inline_foo'],
 );
 
 for (my $i = 0; $i < @tests; $i += 2) {
