@@ -1316,7 +1316,7 @@ sub property_for_column {
         # and we're asking for something right on that class
         # The regex is not the best way to exclude other table names, but it's
         # the best we can do without parsing the SQL
-        my $table_name_re = qr/$table_name/i;
+        my $table_name_re = qr/\Q$table_name\E/i;
         for my $class_object ( $self, $self->ancestry_class_metas ) {
             my $class_object_table_name;
             next unless ($class_object->table_name
