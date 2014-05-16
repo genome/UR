@@ -3724,7 +3724,7 @@ sub do_after_fork_in_child {
 sub parse_view_and_alias_from_inline_view {
     my($self, $sql) = @_;
 
-    return $sql =~ m/^(.*?)(?:\s+as)?\s+(\w+)\s*$/s
+    return ($sql and $sql =~ m/^(.*?)(?:\s+as)?\s+(\w+)\s*$/s)
         ? ($1, $2)
         : ();
 }
