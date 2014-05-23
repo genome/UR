@@ -794,7 +794,7 @@ sub _load_db_from_dump_internal {
         # Is it restoring the foreign_keys setting?
         if ($sql =~ m/PRAGMA foreign_keys\s*=\s*(\w+)/) {
             my $value = $1;
-            my $fk_setting = $self->_get_foreign_key_setting();
+            my $fk_setting = $self->_get_foreign_key_setting($dbh);
             if (! defined($fk_setting)) {
                 # This version of SQLite cannot enforce foreign keys.
                 # Print a warning message if they're trying to turn it on.
@@ -836,11 +836,12 @@ sub _cache_foreign_key_setting_from_file {
 # returns undef if this version of SQLite cannot enforce foreign keys
 sub _get_foreign_key_setting {
     my $self = shift;
+    my $dbh = shift;
     my $id = $self->id;
 
     our %foreign_key_setting;
     unless (exists $foreign_key_setting{$id}) {
-        my $dbh = $self->get_default_handle;
+        $dbh ||= $self->get_default_handle;
         my @row = $dbh->selectrow_array('PRAGMA foreign_keys');
         $foreign_key_setting{$id} = $row[0];
     }
