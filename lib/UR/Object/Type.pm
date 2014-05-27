@@ -60,7 +60,7 @@ sub _properties {
             # This will give us most of the functionality. 
             for my $key (keys %extra) {
                 my ($name,$op) = ($key =~ /(\w+)\s*(.*)/);
-                unless (defined $self->class_name->__meta__->{attributes_have}->{$name}) {
+                unless (defined $self->{attributes_have}->{$name}) {
                     die "unknown property $name used to query properties of " . $self->class_name;
                 }
                 if ($op and $op ne '==' and $op ne 'eq') {
