@@ -884,7 +884,7 @@ sub _dump_db_to_file_internal {
     }
 
     my $db_file = $self->server;
-    my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file",'','',{ AutoCommit => 0, RaiseError => 0 });
+    my $dbh = $self->get_default_handle;
     unless ($dbh) {
         Carp::croak("Can't create DB handle for file $db_file: $DBI::errstr");
     }
