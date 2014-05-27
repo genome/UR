@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use UR;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::Exception;
 
 use File::Basename;
@@ -23,3 +23,5 @@ my @p;
 
 lives_ok(sub {@p = $meta->properties(is_blah => 1)});
 is(scalar(@p), 0, "didn't get any properties");
+
+dies_ok(sub {@p = $meta->properties(is_blha => 1)}, qr/unknown property is_blha/);
