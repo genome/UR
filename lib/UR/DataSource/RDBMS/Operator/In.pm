@@ -27,7 +27,8 @@ sub generate_sql_for {
         return;
     }
 
-    my @list = sort @$val;
+    my @list = do { no warnings 'uninitialized';
+                    sort @$val; };
     my $has_null = ( (grep { length($_) == 0 } @list) ? 1 : 0);
     my $wrap = ($has_null or @$val > IN_CLAUSE_SIZE_LIMIT ? 1 : 0);
     my $cnt = 0;
