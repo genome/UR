@@ -3680,8 +3680,9 @@ sub data_source_type_for_ur_data_type {
         ($type) =~ m/UR::Value::(\w+)/;
     }
     my %types = $class->_vendor_data_type_for_ur_data_type();
-    return $types{uc($type)}
-            || $types{__default__};
+    return $type && $types{uc($type)}
+            ? $types{uc($type)}
+            : $types{__default__};
 }
 
 
