@@ -5,7 +5,8 @@ use Test::More;
 
 eval "use XML::LibXML";
 eval "use XML::LibXSLT";
-if ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'}) {
+eval "use XML::Dumper";
+if ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'} && $INC{'XML/Dumper.pm'}) {
     plan tests => 11;
 }
 else {
