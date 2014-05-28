@@ -150,7 +150,9 @@ $test_dbh->configure('prepare_fail', 'prepare fail on commit');
 URT::TestingObject->create(3);
 @events = ();
 @callback_args = ();
+UR::Context->current->dump_error_messages(0);
 ok( ! eval { UR::Context->commit }, 'Commit should fail');
+UR::Context->current->dump_error_messages(1);
 is_deeply(\@events,
     ['signal:commit_failed'],
     'commit_failed signal called');
