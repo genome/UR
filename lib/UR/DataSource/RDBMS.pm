@@ -463,9 +463,9 @@ sub get_connection_debug_info {
     my $handle_class = $self->default_handle_class;
     my @debug_info = (
         "DBI Data Source Name: ", $self->dbi_data_source_name, "\n",
-        "DBI Login: ", $self->login, "\n",
+        "DBI Login: ", $self->login || '' , "\n",
         "DBI Version: ", $DBI::VERSION, "\n",
-        "DBI Error: ", $handle_class->errstr, "\n",
+        "DBI Error: ", $handle_class->errstr || '(no error)', "\n",
     );
     return @debug_info;
 }
