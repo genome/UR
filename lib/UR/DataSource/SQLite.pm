@@ -924,7 +924,7 @@ sub _dump_db_to_file_internal {
                 foreach my $col ( @row ) {
                     if (! defined $col) {
                         $col = 'null';
-                    } elsif ($col =~ m/\D/) {
+                    } elsif ($col =~ m/\D/ or length($col) == 0) {
                         $col = "'" . $col . "'";  # Put quotes around non-numeric stuff
                     }
                 }
