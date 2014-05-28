@@ -1057,7 +1057,7 @@ sub refresh_database_metadata_for_table_name {
                 $data->{$_} =~ s/"|'//g;
             }
 
-            my $constraint_name = $data->{'FK_NAME'};
+            my $constraint_name = $data->{'FK_NAME'} || ''
             my $fk_table_name = $data->{'FK_TABLE_NAME'}
                                 || $data->{'FKTABLE_NAME'};
             my $r_table_name = $data->{'UK_TABLE_NAME'}
