@@ -80,7 +80,7 @@ sub reframe {
 sub __display_name__ {
     my $self = shift;
     my %b = $self->_params_list;
-    my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+    my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Sortkeys(1)->Dump;
     $s =~ s/\n/ /gs;
     $s =~ s/^\s*{//;
     $s =~ s/\}\s*$//;
