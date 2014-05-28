@@ -179,7 +179,8 @@ foreach my $the_class ( qw( Cmd::Module::V1 Cmd::Module::V2 )) {
               'Params are correct');
 
     my @args = qw(--a-string=abc --a-number=123);
-    my ($class, $params, @errors) = $the_class->resolve_class_and_params_for_argv(@args);
+    my @errors;
+    ($class, $params, @errors) = $the_class->resolve_class_and_params_for_argv(@args);
     is($class, $the_class, 'Parse args got correct class with no a_number parameter');
     is(scalar(@errors), 0, "Not specifying a_number doesn't fail");
     is_deeply(
