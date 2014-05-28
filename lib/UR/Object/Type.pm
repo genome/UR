@@ -60,8 +60,7 @@ sub _properties {
             # This will give us most of the functionality. 
             for my $key (keys %extra) {
                 my ($name,$op) = ($key =~ /(\w+)\s*(.*)/);
-                my @have_the_property = grep { $_->can($name) } @$all;
-                if (@have_the_property == 0) {
+                unless (defined $self->{attributes_have}->{$name}) {
                     die "unknown property $name used to query properties of " . $self->class_name;
                 }
                 if ($op and $op ne '==' and $op ne 'eq') {
