@@ -115,7 +115,7 @@ my $bx1 = URT::Person->define_boolexpr(
     'cars-primary_car.engine.size' => 428,
     'cars-primary_car?.is_primary true' => 1,
 );
-is($bx0f->normalize, $bx1->normalize, "flattening works correctly");
+is($bx0f->normalize->id, $bx1->normalize->id, "flattening works correctly");
 
 note("***** REFRAME AND *****");
 
@@ -126,7 +126,7 @@ my $bx2 = URT::Car->define_boolexpr(
     'engine.size' => 428,
     'is_primary true' => 1,
 );
-is($bx1r1->normalize, $bx2->normalize, "reframe works for a one-step property embedding via/to/where");
+is($bx1r1->normalize->id, $bx2->normalize->id, "reframe works for a one-step property embedding via/to/where");
 my $bx1r2 = $bx1->reframe('primary_car.engine');
 my $bx3 = URT::Car::Engine->define_boolexpr(
     'car.owner.is_cool' => 1,
