@@ -25,7 +25,6 @@ requires 'Pod::Simple::Text', '2.02';
 requires 'Sub::Install', '0.924';
 requires 'Sub::Name', '0.04';
 requires 'Sys::Hostname', '1.11';
-requires 'Test::Fork';
 requires 'Text::Diff', '0.35';
 requires 'Text::Glob';
 requires 'YAML';
@@ -33,4 +32,5 @@ requires 'version';
 
 on test => sub {
     requires 'Test::More', '0.98';
-}
+    requires 'Test::Fork';
+};
