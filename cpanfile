@@ -1,3 +1,5 @@
+requires 'perl', 'v5.8.7';
+
 requires 'Carp';
 requires 'Class::AutoloadCAN', '0.03';
 requires 'Class::Autouse', '2.0';
@@ -27,5 +29,4 @@ requires 'Test::Fork';
 requires 'Text::Diff', '0.35';
 requires 'Text::Glob';
 requires 'YAML';
-requires 'perl', 'v5.8.7';
 requires 'version';
