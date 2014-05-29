@@ -30,3 +30,7 @@ requires 'Text::Diff', '0.35';
 requires 'Text::Glob';
 requires 'YAML';
 requires 'version';
+
+on test => sub {
+    requires 'Test::More', '0.98';
+}
