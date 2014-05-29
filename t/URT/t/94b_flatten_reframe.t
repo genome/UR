@@ -1,25 +1,11 @@
 use strict;
 use warnings;
-use Test::More tests=> 19;
+use Test::More tests=> 14;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
 use URT;
-
-my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
-
-ok($dbh, 'got a database handle');
-
-ok($dbh->do('create table PERSON
-            ( person_id int NOT NULL PRIMARY KEY, name varchar, is_cool integer, age integer )'),
-   'created person table');
-ok($dbh->do('create table CAR
-            ( car_id int NOT NULL PRIMARY KEY, color varchar, is_primary int, owner_id integer references PERSON(person_id))'),
-   'created car table');
-ok($dbh->do('create table CAR_ENGINE
-            (engine_id int NOT NULL PRIMARY KEY, car_id integer references CAR(car_id), size number)'),
-   'created car_engine table');
 
 ok(UR::Object::Type->define(
     class_name => 'URT::Person',
@@ -69,36 +55,6 @@ ok(UR::Object::Type->define(
         data_source => 'URT::DataSource::SomeSQLite',
     ),
     "created class for Engine");
-
-# Insert some data
-# Bob and Mike have red cars, Fred and Joe have blue cars.  Frank has no car.  Bob, Joe and Frank are cool
-# Bob also has a yellow car that's his primary car
-my $insert = $dbh->prepare('insert into person values (?,?,?,?)');
-foreach my $row ( [ 11, 'Bob',1, 25 ], [12, 'Fred',0, 30], [13, 'Mike',0, 35],[14,'Joe',1, 40], [15,'Frank', 1, 45] ) {
-    $insert->execute(@$row);
-}
-$insert->finish();
-
-$insert = $dbh->prepare('insert into car values (?,?,?,?)');
-foreach my $row ( [ 1,'red',0,  11], [ 2,'blue',1, 12], [3,'red',1,13],[4,'blue',1,14],[5,'yellow',1,11] ) {
-    $insert->execute(@$row);
-}
-$insert->finish();
-
-$insert = $dbh->prepare('insert into car_engine values (?,?,?)');
-foreach my $row ( [100, 1, 350], [ 200, 2, 400], [300, 3, 428], [400, 4, 429], [500, 5, 289] ) {
-    $insert->execute(@$row);
-}
-$insert->finish();
-
-my $query_count = 0;
-my $query_text = '';
-ok(URT::DataSource::SomeSQLite->create_subscription(
-                    method => 'query',
-                    callback => sub {$query_text = $_[0]; $query_count++}),
-    'created a subscription for query');
-
-#$DB::single = 1;
 
 note("***** FLATTEN AND *****");
 
@@ -212,18 +168,4 @@ my $bx6 = URT::Person->define_boolexpr(
     -hints => ['primary_car']
 );
 my $bx6f = $bx6->flatten;
-
-__END__
-#$DB::single = 1;
-#$ENV{UR_DBI_MONITOR_SQL} = 1;
-my @p6f = URT::Person->get($bx6f);
-my @p6 = URT::Person->get($bx6);
-is("@p6f", "@p6", "got the same objects back after flattening around an optional relationship");
-
-my @p6b = URT::Person->get($bx6f);
-is("@p6", "@p6b", "a repeate of the original query gets the same answer from the context");
-
-my @p6fb = URT::Person->get($bx6f);
-is("@p6f", "@p6fb", "a repeate of the flattened query gets the same answer from the context");
-
 
