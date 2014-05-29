@@ -1,0 +1,170 @@
+{
+   "abstract" : "rich declarative transactional objects",
+   "author" : [
+      "UR was built by the software development team at The Genome Institute"
+   ],
+   "dynamic_config" : 0,
+   "generated_by" : "Minilla/v1.0.0, CPAN::Meta::Converter version 2.141170",
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "UR",
+   "no_index" : {
+      "directory" : [
+         "t",
+         "xt",
+         "inc",
+         "share",
+         "eg",
+         "examples",
+         "author",
+         "builder"
+      ]
+   },
+   "prereqs" : {
+      "configure" : {
+         "requires" : {
+            "CPAN::Meta" : "0",
+            "CPAN::Meta::Prereqs" : "0",
+            "Module::Build" : "0.38"
+         }
+      },
+      "develop" : {
+         "requires" : {
+            "Minilla" : "0",
+            "Test::CPAN::Meta" : "0",
+            "Test::MinimumVersion::Fast" : "0.04",
+            "Test::PAUSE::Permissions" : "0.04",
+            "Test::Pod" : "1.41",
+            "Test::Spellunker" : "v0.2.7"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "Carp" : "0",
+            "Class::AutoloadCAN" : "0.03",
+            "Class::Autouse" : "2.0",
+            "Clone::PP" : "1.02",
+            "DBD::SQLite" : "1.14",
+            "DBI" : "1.601",
+            "Data::Compare" : "0.13",
+            "Data::UUID" : "0.148",
+            "Date::Format" : "0",
+            "Devel::GlobalDestruction" : "0",
+            "File::Basename" : "2.73",
+            "File::Path" : "0",
+            "File::Temp" : "0",
+            "FreezeThaw" : "0.43",
+            "Getopt::Complete" : "0.26",
+            "JSON" : "0",
+            "Lingua::EN::Inflect" : "1.88",
+            "List::MoreUtils" : "0",
+            "MRO::Compat" : "0",
+            "Path::Class" : "0",
+            "Pod::Simple::HTML" : "3.03",
+            "Pod::Simple::Text" : "2.02",
+            "Sub::Install" : "0.924",
+            "Sub::Name" : "0.04",
+            "Sys::Hostname" : "1.11",
+            "Text::Diff" : "0.35",
+            "Text::Glob" : "0",
+            "YAML" : "0",
+            "perl" : "v5.8.7",
+            "version" : "0"
+         }
+      },
+      "test" : {
+         "requires" : {
+            "Test::Fork" : "0",
+            "Test::More" : "0.98"
+         }
+      }
+   },
+   "release_status" : "unstable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/genome/UR/issues"
+      },
+      "homepage" : "https://github.com/genome/UR",
+      "repository" : {
+         "type" : "git",
+         "url" : "git://github.com/genome/UR.git",
+         "web" : "https://github.com/genome/UR"
+      }
+   },
+   "version" : "0.41",
+   "x_contributors" : [
+      "josborne <josborne@watson.wustl.edu>",
+      "thepler <thepler@watson.wustl.edu>",
+      "charris <charris@watson.wustl.edu>",
+      "jweible <jweible@watson.wustl.edu>",
+      "edemello <edemello@watson.wustl.edu>",
+      "jschindl <jschindl@watson.wustl.edu>",
+      "mjohnson <mjohnson@watson.wustl.edu>",
+      "ebelter <ebelter@watson.wustl.edu>",
+      "lcarmich <lcarmich@watson.wustl.edu>",
+      "jwalker <jwalker@watson.wustl.edu>",
+      "gsanders <gsanders@watson.wustl.edu>",
+      "eclark <eclark@watson.wustl.edu>",
+      "adukes <adukes@watson.wustl.edu>",
+      "iferguso <iferguso@watson.wustl.edu>",
+      "ssmith <ssmith@watson.wustl.edu>",
+      "boberkfe <boberkfe@watson.wustl.edu>",
+      "Mark Johnson <mjohnson@linus129.gsc.wustl.edu>",
+      "Ben Oberkfell <boberkfe@ben.local>",
+      "ssmith <ssmith@Scotts-Laptop.local>",
+      "Edward Belter <ebelter@blade8-4-3.(none)>",
+      "Feiyu Du <fdu@vm27.gsc.wustl.edu>",
+      "Edward Belter <ebelter@linus108.gsc.wustl.edu>",
+      "Feiyu Du <fdu@linus252.gsc.wustl.edu>",
+      "ssmith <ssmith@Scottland.local>",
+      "ssmith <ssmith@host194.wifi.epochcoffee.com>",
+      "Robert Long <rlong@linus83.gsc.wustl.edu>",
+      "Robert Long <rlong@vm27.gsc.wustl.edu>",
+      "Thomas Mooney <tmooney@linus208.gsc.wustl.edu>",
+      "Eric Clark <eclark@zerohp.net>",
+      "Thomas Mooney <tmooney@linus2111.gsc.wustl.edu>",
+      "ssmith <ssmith@Scottland-2.local>",
+      "Scott Smith X <ssmith@Scott-Smiths-MacBook-Pro.local>",
+      "eclark <eclark@genome.wustl.edu>",
+      "Anthony Brummett <abrummet@watson.wustl.edu>",
+      "Rob Long <rlong@genome.wustl.edu>",
+      "Adam Dukes <adam.dukes@gmail.com>",
+      "Eddie Belter <ebelter@genome.wuslt.edu>",
+      "Kyung Kim <kkyung@genome.wustl.edu>",
+      "Joshua McMichael <jmcmicha@genome.wustl.edu>",
+      "Jim Weible <jweible@genome.wustl.edu>",
+      "Philip Kimmey <pkimmey@genome.wustl.edu>",
+      "Matt Callaway <mcallawa@genome.wustl.edu>",
+      "Travis Abbott <tabbott@genome.wustl.edu>",
+      "Chris Oliver <coliver@genome.wustl.edu>",
+      "Steven Wallace <swallace@genome.wustl.edu>",
+      "James Koval <jkoval@genome.wustl.edu>",
+      "Gabriel Sanderson <gsanders@genome.wustl.edu>",
+      "Eddie Belter <ebelter@genome.wustl.edu>",
+      "Scott Smith <sakoht@cpan.org>",
+      "Brian Derickson <bdericks@genome.wustl.edu>",
+      "Justin Lolofie <jlolofie@genome.wustl.edu>",
+      "David Morton <davidlmorton@gmail.com>",
+      "Ian Ferguson <iferguso@genome.wustl.edu>",
+      "Neil Bowers <neil@bowers.com>",
+      "Scott Smith <scottsmith1@gmail.com>",
+      "Ben Oberkfell <boberkfe@genome.wustl.edu>",
+      "Jason Walker <jwalker@genome.wustl.edu>",
+      "Thomas Mooney <tmooney@genome.wustl.edu>",
+      "Mark Burnett <mburnett@genome.wustl.edu>",
+      "Scott Smith <ssmith@genome.wustl.edu>",
+      "APipe Tester <apipe-tester@genome.wustl.edu>",
+      "Adam Coffman <acoffman@genome.wustl.edu>",
+      "Susanna Siebert <ssiebert@genome.wustl.edu>",
+      "Anthony Brummett <brummett@gmail.com>",
+      "apregier <aregier@genome.wustl.edu>",
+      "Anthony Brummett <abrummet@genome.wustl.edu>",
+      "Nathaniel Nutter <nnutter@genome.wustl.edu>",
+      "Nathaniel Nutter <iam@nnutter.com>"
+   ]
+}
