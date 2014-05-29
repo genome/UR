@@ -1,6 +1,11 @@
+# Minilla
 /UR-*
 /.build
 !META.json
+
+# Carton
+/local/
+/cpanfile.snapshot
 
 lib/UR/DataSource/Meta.sqlite3
 t/URT/DataSource/Meta.sqlite3
