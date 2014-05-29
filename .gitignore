@@ -1,3 +1,7 @@
+/UR-*
+/.build
+!META.json
+
 lib/UR/DataSource/Meta.sqlite3
 t/URT/DataSource/Meta.sqlite3
 t/Vending/DataSource/Machine.sqlite3
