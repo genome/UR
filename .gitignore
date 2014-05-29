@@ -2,6 +2,7 @@
 /UR-*
 /.build
 !META.json
+/Build
 
 # Carton
 /local/
