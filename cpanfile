@@ -39,6 +39,7 @@ on test => sub {
 };
 
 on develop => sub {
+    requires 'CPAN::Uploader';
     requires 'Minilla';
     requires 'Version::Next';
 };
