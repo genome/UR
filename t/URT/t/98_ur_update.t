@@ -11,6 +11,8 @@ use URT;
 use DBI;
 use IO::Pipe;
 use Test::More;
+use File::Temp;
+use File::Copy;
 
 if ($^O eq 'darwin') {
     plan skip_all => 'known to fail OS X'
@@ -94,6 +96,7 @@ ok($command_obj, "Created a dummy command object for updating the classes");
 
 my $ds_class = 'URT::DataSource::SomeSQLite';  # The datasource we'll be making tables in
 $ds_class->class;
+set_data_dump_path_to_tmp('URT::DataSource::Meta');
 my $dbh = $ds_class->get_default_handle();
 ok($dbh, 'Got database handle');
 
@@ -875,6 +878,27 @@ sub initialize_check_change_data_structures {
     },
 
 };
+}
+
+
+sub set_data_dump_path_to_tmp {
+    my $ds_class = shift;
+    my $ds = $ds_class->_singleton_object();
+
+    my $tmpfh = File::Temp->new( UNLINK => 1, TEMPLATE => 'ur_update_classes_testXXXXXX');
+
+    my $orig_data_dump_path = $ds->_data_dump_path;
+    if (-f $orig_data_dump_path) {
+        File::Copy::copy($orig_data_dump_path, $tmpfh->filename);
+    }
+
+    my $sub = sub { $tmpfh->filename };
+
+    Sub::Install::reinstall_sub({
+        code => $sub,
+        as => '_data_dump_path',
+        into => $ds_class,
+    });
 }
 
 1;

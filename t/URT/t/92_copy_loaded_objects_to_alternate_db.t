@@ -284,6 +284,7 @@ sub setup_classes {
 
 sub load_objects_fill_file {
     my $temp_db_file = File::Temp->new();
+    $temp_db_file->close();
     URT::DataSource::SomeSQLite->alternate_db_dsn('dbi:SQLite:dbname='.$temp_db_file->filename);
     _load_objects();
     URT::DataSource::SomeSQLite->alternate_db_dsn('');

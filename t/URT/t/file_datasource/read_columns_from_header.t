@@ -99,7 +99,8 @@ sub _compare_to_expected {
 
 
 my %files;
-my $files_written = 0;
+my $files_written;
+BEGIN { $files_written = 0 }
 sub _create_data_file {
     my($dir,$rank,$name,$serial) = @_;
 

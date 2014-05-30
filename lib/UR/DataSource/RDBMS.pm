@@ -463,9 +463,9 @@ sub get_connection_debug_info {
     my $handle_class = $self->default_handle_class;
     my @debug_info = (
         "DBI Data Source Name: ", $self->dbi_data_source_name, "\n",
-        "DBI Login: ", $self->login, "\n",
+        "DBI Login: ", $self->login || '' , "\n",
         "DBI Version: ", $DBI::VERSION, "\n",
-        "DBI Error: ", $handle_class->errstr, "\n",
+        "DBI Error: ", $handle_class->errstr || '(no error)', "\n",
     );
     return @debug_info;
 }
@@ -1057,7 +1057,7 @@ sub refresh_database_metadata_for_table_name {
                 $data->{$_} =~ s/"|'//g;
             }
 
-            my $constraint_name = $data->{'FK_NAME'};
+            my $constraint_name = $data->{'FK_NAME'} || '';
             my $fk_table_name = $data->{'FK_TABLE_NAME'}
                                 || $data->{'FKTABLE_NAME'};
             my $r_table_name = $data->{'UK_TABLE_NAME'}
@@ -3680,8 +3680,9 @@ sub data_source_type_for_ur_data_type {
         ($type) =~ m/UR::Value::(\w+)/;
     }
     my %types = $class->_vendor_data_type_for_ur_data_type();
-    return $types{uc($type)}
-            || $types{__default__};
+    return $type && $types{uc($type)}
+            ? $types{uc($type)}
+            : $types{__default__};
 }
 
 

@@ -27,8 +27,9 @@ sub generate_sql_for {
         return;
     }
 
-    my @list = sort @$val;
-    my $has_null = ( (grep { length($_) == 0 } @list) ? 1 : 0);
+    my @list = do { no warnings 'uninitialized';
+                    sort @$val; };
+    my $has_null = _list_contains_null(\@list);
     my $wrap = ($has_null or @$val > IN_CLAUSE_SIZE_LIMIT ? 1 : 0);
     my $cnt = 0;
     my $sql = '';
@@ -48,6 +49,20 @@ sub generate_sql_for {
     $sql .= "\n)\n" if $wrap;
 
     return ($sql);
+}
+
+sub _list_contains_null {
+    my $list = shift;
+
+    foreach my $elt ( @$list ) {
+        if (! defined($elt)
+            or
+            length($elt) == 0
+        ) {
+            return 1;
+        }
+    }
+    return '';
 }
 
 1;

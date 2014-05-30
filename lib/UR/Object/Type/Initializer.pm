@@ -609,8 +609,7 @@ sub _normalize_class_description_impl {
 
     # Flatten and format the property list(s) in the class description.
     # NOTE: we normalize the details at the end of normalizing the class description.
-    my @keys = grep { /has|attributes_have/ } keys %old_class;
-    unshift @keys, qw(id_implied); # we want to hit this first to preserve position_ and is_specified_ keys
+    my @keys = _class_definition_property_keys_in_processing_order(\%old_class);
     foreach my $key ( @keys ) {
         # parse the key to see if we're looking at instance or meta attributes,
         # and take the extra words as additional attribute meta-data.
@@ -948,6 +947,25 @@ sub _normalize_class_description_impl {
     $desc->{meta_class_name} ||= $meta_class_name;
     return $desc;
 }
+
+sub _class_definition_property_keys_in_processing_order {
+    my $class_hashref = shift;
+
+    my @order;
+
+    # we want to hit 'id_implied' first to preserve position_ and is_specified_ keys
+    push(@order, 'id_implied') if exists $class_hashref->{id_implied};
+
+    # 'has' next so is_optional can get set to 0 in case the same property also appears in has_optional
+    push(@order, 'has') if exists $class_hashref->{has};
+
+    # everything else
+    push @order, grep { /has_|attributes_have/ } keys %$class_hashref;
+
+    return @order;
+}
+
+
 
 sub _normalize_property_description1 {
     my $class = shift;

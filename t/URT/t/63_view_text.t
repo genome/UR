@@ -5,8 +5,9 @@ use Test::More;
 
 eval "use XML::LibXML";
 eval "use XML::LibXSLT";
+eval "use XML::Dumper";
 my $TEST_XML = 1;
-unless ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'}) {
+unless ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'} && $INC{'XML/Dumper.pm'}) {
     $TEST_XML = undef;
 }
 

@@ -84,6 +84,7 @@ my $build = $subclass->new(
     # this stuff is hard to install and is only used by some views
     #'XML::LibXML'         => '',
     #'XML::LibXSLT'        => '',
+    #'XML::Dumper'         => '',
   },
   cpan_client => 'cpanm',
   script_files => [ 'bin/ur' ],

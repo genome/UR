@@ -4,12 +4,14 @@ use warnings;
 use Test::More;
 
 BEGIN {
+    eval "use XML::LibXML";
     eval "use XML::LibXSLT";
-    if ($@) {
-        plan skip_all => "Cannot load XML::LibXSLT: $@";
-    } else {
+    eval "use XML::Dumper";
+    if ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'} && $INC{'XML/Dumper.pm'}) {
         plan tests => 5;
         use_ok('UR::Object::View::Default::Xsl',  qw/url_to_type type_to_url/);
+    } else {
+        plan skip_all => "Cannot load XML::LibXSLT: $@";
     }
 }
 

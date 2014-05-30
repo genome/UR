@@ -69,7 +69,7 @@ sub test_arrayref {
     }
 }
 
-sub test_hashref() {
+sub test_hashref {
     my @elements = map { URT::ListElement->get(name => $_) } @ELEMENT_NAMES;
     my $bx_id;
     {

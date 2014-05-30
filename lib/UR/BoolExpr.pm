@@ -80,7 +80,7 @@ sub reframe {
 sub __display_name__ {
     my $self = shift;
     my %b = $self->_params_list;
-    my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Dump;
+    my $s = Data::Dumper->new([\%b])->Terse(1)->Indent(0)->Useqq(1)->Sortkeys(1)->Dump;
     $s =~ s/\n/ /gs;
     $s =~ s/^\s*{//;
     $s =~ s/\}\s*$//;
@@ -477,7 +477,9 @@ sub resolve {
                 if ( $class->_value_is_old_style_operator_and_value($value)) {
                     # the key => { operator => $o, value => $v } syntax
                     # cannot be used with a value type of HASH
-                    $operator = lc($value->{operator});
+                    $operator = defined($value->{operator})
+                                ? lc($value->{operator})
+                                : '';
                     if (exists $value->{escape}) {
                         $operator .= "-" . $value->{escape}
                     }
