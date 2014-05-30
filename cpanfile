@@ -40,4 +40,5 @@ on test => sub {
 
 on develop => sub {
     requires 'Minilla';
+    requires 'Version::Next';
 };
