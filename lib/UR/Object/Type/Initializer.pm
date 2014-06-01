@@ -1,4 +1,3 @@
-
 # This line forces correct deployment by some tools.
 package UR::Object::Type::Initializer;
 
@@ -1227,7 +1226,7 @@ sub _make_minimal_class_from_normalized_class_description {
 
     # only do this when the classes match
     # when they do not match, the super-class has already called this by delegating to the correct subclass
-    $class_name::VERSION = 2.0;
+    $class_name::VERSION = 2.0; # No BumpVersion
 
     my $self =  bless { id => $class_name, %$desc }, $meta_class_name;
 
