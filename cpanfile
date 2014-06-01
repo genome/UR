@@ -40,6 +40,6 @@ on test => sub {
 
 on develop => sub {
     requires 'CPAN::Uploader';
-    requires 'Minilla';
+    requires 'Minilla', '1.1.0';
     requires 'Version::Next';
 };
