@@ -35,12 +35,14 @@
       },
       "develop" : {
          "requires" : {
-            "Minilla" : "0",
+            "CPAN::Uploader" : "0",
+            "Minilla" : "v1.1.0",
             "Test::CPAN::Meta" : "0",
             "Test::MinimumVersion::Fast" : "0.04",
             "Test::PAUSE::Permissions" : "0.04",
             "Test::Pod" : "1.41",
-            "Test::Spellunker" : "v0.2.7"
+            "Test::Spellunker" : "v0.2.7",
+            "Version::Next" : "0"
          }
       },
       "runtime" : {
@@ -164,10 +166,10 @@
       "APipe Tester <apipe-tester@genome.wustl.edu>",
       "Adam Coffman <acoffman@genome.wustl.edu>",
       "Susanna Siebert <ssiebert@genome.wustl.edu>",
-      "Anthony Brummett <brummett@gmail.com>",
       "apregier <aregier@genome.wustl.edu>",
       "Anthony Brummett <abrummet@genome.wustl.edu>",
-      "Nathaniel Nutter <nnutter@genome.wustl.edu>",
-      "Nathaniel Nutter <iam@nnutter.com>"
+      "Anthony Brummett <brummett@gmail.com>",
+      "Nathaniel Nutter <iam@nnutter.com>",
+      "Nathaniel Nutter <nnutter@genome.wustl.edu>"
    ]
 }

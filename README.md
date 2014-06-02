@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/genome/UR.png?branch=master)](https://travis-ci.org/genome/UR)
 # NAME
 
 UR - rich declarative transactional objects
