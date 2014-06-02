@@ -6,7 +6,7 @@ use warnings;
 use Cwd qw(cwd);
 use File::Spec qw();
 
-our $VERSION = '0.03';
+our $VERSION = '0.03'; # No BumpVersion
 
 sub import {
     my $package = shift;
