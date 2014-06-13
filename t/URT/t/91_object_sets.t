@@ -121,6 +121,11 @@ do {
 };
 is($query_count, 1, 'Made one query');  # again, getting the count didn't load the members
 
+do {
+    my @members = members_via_iterator($set);
+    is_deeply([ map { $_->name } @members], $cool_names, 'Got the right members (via member_iterator)');
+};
+
 $query_count = 0;
 $set = URT::Person->define_set();
 ok($set, 'Defined set of all people');
@@ -152,8 +157,11 @@ foreach my $subset ( @subsets ) {
     my $expected_members = $people_by_car_color{$color || ''};
     is(scalar(@members), scalar(@$expected_members), 'Got the expected number of subset members');
     is_deeply([ map { $_->name } @members], $expected_members, 'Their names were correct');
+
+    @members = members_via_iterator($subset);
+    is(scalar(@members), scalar(@$expected_members), 'Got the expected number of subset members (via member_iterator)');
+    is_deeply([ map { $_->name } @members], $expected_members, 'Their names were correct');
 }
-    
 
 $query_count = 0;
 $set = URT::Person->define_set(is_cool => 0);
@@ -308,3 +316,13 @@ do {
 };
 
 done_testing();
+
+sub members_via_iterator {
+    my $set = shift;
+    my $iter = $set->member_iterator();
+    my @members;
+    while (my $m = $iter->next) {
+        push @members, $m;
+    }
+    return @members;
+}
