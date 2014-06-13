@@ -140,6 +140,15 @@ sub members {
     return $self->member_class_name->get($rule);
 }
 
+sub member_iterator {
+    my $self = shift;
+    my $rule = $self->rule;
+    while (@_) {
+        $rule = $rule->add_filter(shift, shift);
+    }
+    return $self->member_class_name->create_iterator($rule);
+}
+
 sub _members_have_changes {
     my $self = shift;
     return 1 if $self->{__members_have_changes};
