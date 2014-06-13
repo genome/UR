@@ -97,8 +97,10 @@ is($count, 0, 'Set count is 0');
 is($query_count, 1, 'Made 1 query');
 
 $query_count = 0;
-my @members = $set->members();
-is(scalar(@members), 0, 'Set has no members');
+do {
+    my @members = $set->members();
+    is(scalar(@members), 0, 'Set has no members');
+};
 is($query_count, 1, 'Made 1 query');  # the above query for count didn't actually retrieve the members
 
 $query_count = 0;
@@ -112,8 +114,10 @@ is($count, 3, '3 people are cool');
 is($query_count, 1, 'Made 1 query');
 
 $query_count = 0;
-@members = $set->members();
-is_deeply([ map { $_->name } @members], ['Bob','Joe','Frank'], 'Got the right members');
+do {
+    my @members = $set->members();
+    is_deeply([ map { $_->name } @members], ['Bob','Joe','Frank'], 'Got the right members');
+};
 is($query_count, 1, 'Made one query');  # again, getting the count didn't load the members
 
 $query_count = 0;
@@ -141,7 +145,7 @@ foreach my $subset ( @subsets ) {
     is($query_count, 0, 'Getting car_colors from subset made no queries');
 
     $query_count = 0;
-    @members = $subset->members();
+    my @members = $subset->members();
     is($query_count, 0, 'Getting members from subset made no queries');
 
     my $expected_members = $people_by_car_color{$color || ''};
