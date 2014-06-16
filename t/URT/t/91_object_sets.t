@@ -97,8 +97,7 @@ is($count, 0, 'Set count is 0');
 is($query_count, 1, 'Made 1 query');
 
 $query_count = 0;
-my @members = $set->members();
-is(scalar(@members), 0, 'Set has no members');
+is(scalar($set->members), undef, 'Set has no members');
 is($query_count, 1, 'Made 1 query');  # the above query for count didn't actually retrieve the members
 
 $query_count = 0;
@@ -112,9 +111,10 @@ is($count, 3, '3 people are cool');
 is($query_count, 1, 'Made 1 query');
 
 $query_count = 0;
-@members = $set->members();
-is_deeply([ map { $_->name } @members], ['Bob','Joe','Frank'], 'Got the right members');
+is_deeply([ map { $_->name } $set->members], [qw(Bob Joe Frank)], 'Got the right members');
 is($query_count, 1, 'Made one query');  # again, getting the count didn't load the members
+is_deeply([ map { $_->name } members_via_iterator($set)], [ map { $_->name } $set->members],
+    'Got the right members (via member_iterator)');
 
 $query_count = 0;
 $set = URT::Person->define_set();
@@ -141,14 +141,17 @@ foreach my $subset ( @subsets ) {
     is($query_count, 0, 'Getting car_colors from subset made no queries');
 
     $query_count = 0;
-    @members = $subset->members();
+    my @members = $subset->members();
     is($query_count, 0, 'Getting members from subset made no queries');
 
     my $expected_members = $people_by_car_color{$color || ''};
     is(scalar(@members), scalar(@$expected_members), 'Got the expected number of subset members');
     is_deeply([ map { $_->name } @members], $expected_members, 'Their names were correct');
+
+    @members = members_via_iterator($subset);
+    is(scalar(@members), scalar(@$expected_members), 'Got the expected number of subset members (via member_iterator)');
+    is_deeply([ map { $_->name } @members], $expected_members, 'Their names were correct');
 }
-    
 
 $query_count = 0;
 $set = URT::Person->define_set(is_cool => 0);
@@ -303,3 +306,13 @@ do {
 };
 
 done_testing();
+
+sub members_via_iterator {
+    my $set = shift;
+    my $iter = $set->member_iterator();
+    my @members;
+    while (my $m = $iter->next) {
+        push @members, $m;
+    }
+    return @members;
+}
