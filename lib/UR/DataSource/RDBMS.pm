@@ -1186,7 +1186,7 @@ sub refresh_database_metadata_for_table_name {
     # and each other DataSource class needs its own implementation
 
     # The above was moved into each data source's class
-    if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($db_table_name)) {
+    if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($db_table_name, $ds_owner)) {
         my %uc = %$uc;   # make a copy we can manipulate in case $uc is shared or read-only
 
         # check for redundant unique constraints
