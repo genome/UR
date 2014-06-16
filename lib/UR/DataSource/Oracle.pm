@@ -150,7 +150,7 @@ sub get_bitmap_index_details_from_data_dictionary {
 
 
 sub get_unique_index_details_from_data_dictionary {
-    my ($self, $table_name) = @_;
+    my ($self, $owner_name, $table_name) = @_;
     my $sql = qq(
         select cc.constraint_name, cc.column_name
         from all_cons_columns cc
@@ -179,8 +179,7 @@ sub get_unique_index_details_from_data_dictionary {
     my $sth = $dbh->prepare($sql);
     return undef unless $sth;
 
-    my($db_owner,$dd_table_name) = $self->_resolve_owner_and_table_from_table_name($table_name);
-    $sth->execute($table_name, $db_owner, $dd_table_name, $db_owner);
+    $sth->execute($table_name, $owner_name, $table_name, $owner_name);
 
     my $ret;
     while (my $data = $sth->fetchrow_hashref()) {
