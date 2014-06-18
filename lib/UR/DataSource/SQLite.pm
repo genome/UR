@@ -647,13 +647,13 @@ sub get_bitmap_index_details_from_data_dictionary {
 
 
 sub get_unique_index_details_from_data_dictionary {
-    my($self, $table_name) = @_;
+    my($self, $owner_name, $table_name) = @_;
 
     my $dbh = $self->get_default_handle();
     return undef unless $dbh;
 
     # First, do a pass looking for unique indexes
-    my $idx_sth = $dbh->prepare(qq(PRAGMA index_list($table_name)));
+    my $idx_sth = $dbh->prepare(qq(PRAGMA $owner_name.index_list($table_name)));
     return undef unless $idx_sth;
 
     $idx_sth->execute();

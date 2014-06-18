@@ -103,7 +103,7 @@ sub get_bitmap_index_details_from_data_dictionary {
 
 
 sub get_unique_index_details_from_data_dictionary {
-    my($self, $table_name) = @_;
+    my($self, $owner_name, $table_name) = @_;
 
     my $sql = qq(
         SELECT c_index.relname, a.attname
@@ -111,7 +111,8 @@ sub get_unique_index_details_from_data_dictionary {
         JOIN pg_catalog.pg_index i ON i.indrelid = c_table.oid
         JOIN pg_catalog.pg_class c_index ON c_index.oid = i.indexrelid
         JOIN pg_catalog.pg_attribute a ON a.attrelid = c_index.oid
-        WHERE c_table.relname = ?
+        JOIN pg_catalog.pg_namespace n ON c_table.relnamespace = n.oid
+        WHERE c_table.relname = ? AND n.nspname = ?
           and (i.indisunique = 't' or i.indisprimary = 't')
           and i.indisvalid = 't'
     );
@@ -123,7 +124,7 @@ sub get_unique_index_details_from_data_dictionary {
     return undef unless $sth;
 
     #my $db_owner = $self->owner();  # We should probably do something with the owner/schema
-    $sth->execute($table_name);
+    $sth->execute($table_name, $owner_name);
 
     my $ret;
     while (my $data = $sth->fetchrow_hashref()) {
