@@ -3,7 +3,7 @@ package UR::DataSource::Filesystem;
 use UR;
 use strict;
 use warnings;
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.41_01"; # UR $VERSION;
 
 use File::Basename;
 use File::Path;

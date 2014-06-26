@@ -2,7 +2,7 @@ package UR::DataSource::QueryPlan;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.41_01"; # UR $VERSION;
 
 # this class is an evolving attempt to formalize
 # the blob of cached value used for query construction

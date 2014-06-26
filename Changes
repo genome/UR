@@ -1,6 +1,8 @@
 Revision history for UR
 
 {{$NEXT}}
+
+0.41_01 2014-06-26T22:00:16Z
         Set objects now have member_iterator() method.
         Data loaded from an RDBMS during the life of a program can be copied
             to an alternate database.
