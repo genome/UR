@@ -117,6 +117,8 @@ referenced.
 Do not use configuration keys that begin with an underscore (C<_>).
 These are reserved for internal use.
 
+=back
+
 =cut
 
 sub config
@@ -178,6 +180,8 @@ sub config
 
 =pod
 
+=over 4
+
 =item check_config
 
   $obj->check_config($key);
@@ -186,6 +190,8 @@ This method checks to see if a value is set.  Unlike config, it does
 not issue a warning if the key is not set.  If the key is not set,
 C<undef> is returned.  If the key has been set, the value of the key
 is returned (which may be C<undef>).
+
+=back
 
 =cut
 
@@ -210,12 +216,16 @@ sub check_config
 
 =pod
 
+=over 4
+
 =item default_config
 
   $class->default_config(%defaults);
 
 This method allows the developer to set configuration values, only if
 they are not already set.
+
+=back
 
 =cut
 
@@ -248,6 +258,8 @@ sub default_config
 
 =pod
 
+=over 4
+
 =item config_file
 
   $rv = $class->config_file(path => $path);
@@ -259,6 +271,8 @@ C<=>, with optional surrounding space.  It currently only handles
 single value values.
 
 The method returns true upon success, C<undef> on failure.
+
+=back
 
 =cut
 
