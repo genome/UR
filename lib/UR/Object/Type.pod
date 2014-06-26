@@ -414,7 +414,11 @@ Returns a list of ID column names for each direct property meta.
 Return lists of property meta objects and their names for properties that
 have no column name.
 
+=back
+
 =head1 METHODS
+
+=over 4
 
 =item property_meta_for_name
 

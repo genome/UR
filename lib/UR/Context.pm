@@ -3763,7 +3763,7 @@ one of three values
 
 =over 2
 
-=item 1.  all
+=item 1. all
 
 This rule is against a class with no filters, meaning it should return every
 member of that class.  It calls C<$class-E<gt>all_objects_loaded> to extract
@@ -3775,11 +3775,16 @@ This rule is against a class and filters by only a single ID, or a list of
 IDs.  The request is fulfilled by plucking the matching objects right out
 of the object cache.
 
-=item 3.
+=item 3. index
 
-The category for any other rule.  This request is fulfilled by getting a
-previously created L<UR::Object::Index> for this rule, or creating a new
-UR::Object::Index, and calling L<UR::Object::Index/all_objects_matching>.
+This rule is against one more more non-id properties.  An index is built
+mapping the filtered properties and their values, and the cached objects
+which have those values.  The request is fulfilled by using the index to
+find objects matching the filter.
+
+=item 4. set intersection
+
+This is a group-by rule and will return a ::Set object.
 
 =back
 

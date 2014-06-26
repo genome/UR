@@ -1023,13 +1023,11 @@ directory, and runs ALL tests under that directory.
 
 =head1 PENDING FEATURES
 
-=over
+=over 4
 
 =item automatic remote execution for tests requiring a distinct hardware platform
 
 =item logging profiling and coverage metrics with each test
-
-=over 4
 
 =back
 
