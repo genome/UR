@@ -9,7 +9,7 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = "0.41"; # UR $VERSION
+our $VERSION = "0.41_01"; # UR $VERSION
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
