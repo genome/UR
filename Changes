@@ -1,6 +1,32 @@
 Revision history for UR
 
 {{$NEXT}}
+        Set objects now have member_iterator() method.
+        Data loaded from an RDBMS during the life of a program can be copied
+            to an alternate database.
+        Use the "C" collation with PostgreSQL when doing an order-by on a
+            text-type column to match how UR will sort cached objects using
+            perl's cmp.
+        Singleton accessors can be called on the class as well as the instance.
+        Class initializer is more strict about what is a valid property name;
+            it must be a valid function name.
+        Added UR::Value::JSON class.  Its "id" is a JSON-encoded string of the
+            instance's properties and values.
+        Added UR::Context::Transaction::eval() and do() functions to wrap
+            software transactions around blocks.
+        Added UR::DataSource::RDBMSRetriableOperations mixin class to allow
+            RDBMSs to control whether failed DB operations should be retried.
+        Added signals for when a data source fails a query or commit, and
+            when the handle is created or disconnected.
+        Added signal to UR::Context for when synchronizing to the datasources
+            has succeeded or failed.
+        Added 'isa' operator to boolean expressions.  Evaluates to true if the
+            attribute isa the given class.
+        Fixed a bug where a Set object's value for an aggregate would be incorrect
+            if cached member objects' values change.
+        Fixed a bug where UR objects frozen in boolean expressions could cause
+            database rows to be deleted when thawed.
+        UR's class browser (ur sys class-browser) is working again.
 
 0.41    2013-03-18
         above.pm now imports symbols into the caller's package
