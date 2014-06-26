@@ -101,7 +101,7 @@
          "web" : "https://github.com/genome/UR"
       }
    },
-   "version" : "0.41_01",
+   "version" : "0.42_01",
    "x_contributors" : [
       "josborne <josborne@watson.wustl.edu>",
       "thepler <thepler@watson.wustl.edu>",

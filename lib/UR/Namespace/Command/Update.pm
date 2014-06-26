@@ -2,7 +2,7 @@ package UR::Namespace::Command::Update;
 use warnings;
 use strict;
 use UR;
-our $VERSION = "0.41_01"; # UR $VERSION;
+our $VERSION = "0.42_01"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
