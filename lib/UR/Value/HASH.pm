@@ -32,7 +32,7 @@ sub to_text {
         next if not defined $hash->{$key} or $hash->{$key} eq '';
         if ( my $ref = ref $hash->{$key} ) {
             if ( $ref ne 'ARRAY' ) {
-                Carp::cluck("Can not convert hash to text. Cannot handle $ref for $key");
+                $self->warning_message("Can not convert hash to text. Cannot handle $ref for $key");
                 return;
             }
             push @tokens, @{$hash->{$key}};

@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 87;
+use Test::More tests => 88;
 require File::Temp;
 
 my $s1 = UR::Value::Text->get('hi there');
@@ -42,8 +42,15 @@ isa_ok($lemac, 'UR::Value::Text');
 is($lemac->id, 'metagenomic composition 16s is awesome', 'Camel case to text for is "MetagenomicComposition16sIsAwesome"');
 is($lemac, $text, 'Got the same UR::Value::Text object back for camel case to text');
 
+$text->dump_warning_messages(0);
+$text->queue_warning_messages(1);
 ok(!$text->to_hash, 'Failed to convert text object "' . $text->id . '"to a hash when does not start with a dash (-)');
 my $text_for_text_to_hash = '-aa foo -b1b -1 bar --c22 baz baz -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   -m';
+like(($text->warning_messages)[0],
+    qr(Can not convert text object with id "metagenomic composition 16s is awesome" to hash),
+    'Got expected error message from failed conversion');
+
+
 my $text_to_hash = UR::Value::Text->get($text_for_text_to_hash);
 ok($text_to_hash, 'Got object for param text');
 my $hash = $text_to_hash->to_hash;
