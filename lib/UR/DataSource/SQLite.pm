@@ -5,6 +5,7 @@ use warnings;
 use IO::Dir;
 use File::Spec;
 use File::Basename;
+use version;
 
 =pod
 
@@ -345,7 +346,9 @@ sub get_table_details_from_data_dictionary {
     my $self = shift;
 
     my $sth = $self->SUPER::get_table_details_from_data_dictionary(@_);
-    if ($DBD::SQLite::VERSION >= 1.26_04 || !$sth) {
+    my $sqlite_version = version->parse($DBD::SQLite::VERSION);
+    my $needed_version = version->parse("1.26_04");
+    if ($sqlite_version >= $needed_version || !$sth) {
         return $sth;
     }
 
