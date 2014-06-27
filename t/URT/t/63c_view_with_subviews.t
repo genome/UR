@@ -10,8 +10,9 @@ our @toolkits = @ARGV;
 
 eval "use XML::LibXML";
 eval "use XML::LibXSLT";
+eval "use XML::Dumper";
 my $TEST_XML = 1;
-unless ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'}) {
+unless ($INC{"XML/LibXML.pm"} && $INC{'XML/LibXSLT.pm'} && $INC{'XML/Dumper.pm'}) {
     $TEST_XML = undef;
 }
 
@@ -117,6 +118,7 @@ for my $obj_aspects_pair ( [$p,\@person_aspects], [$cat_set,\@cat_set_aspects] )
                 $aspect->{perspective} = 'default';
             }
         }
+        diag("Creating view with toolkit $toolkit");
         my $view = $obj->create_view(
             toolkit => $toolkit,
             aspects => $aspects, 
