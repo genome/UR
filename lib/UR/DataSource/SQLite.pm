@@ -968,7 +968,7 @@ sub _create_dbh_for_alternate_db {
 
 sub _db_path_specifies_a_directory {
     my($self, $pathname) = @_;
-    return -d $pathname or $pathname =~ m{/$};
+    return (-d $pathname) || ($pathname =~ m{/$});
 }
 
 sub _assure_schema_exists_for_table {
