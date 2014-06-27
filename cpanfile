@@ -32,6 +32,7 @@ requires 'Text::Diff', '0.35';
 requires 'Text::Glob';
 requires 'YAML';
 requires 'version';
+requires 'Module::Runtime', 'v0.014';
 
 on test => sub {
     requires 'Test::More', '0.98';
