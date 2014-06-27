@@ -67,6 +67,7 @@
             "Lingua::EN::Inflect" : "1.88",
             "List::MoreUtils" : "0",
             "MRO::Compat" : "0",
+            "Module::Runtime" : "v0.14.0",
             "Path::Class" : "0",
             "Plack" : "0",
             "Pod::Simple::HTML" : "3.03",
@@ -101,7 +102,7 @@
          "web" : "https://github.com/genome/UR"
       }
    },
-   "version" : "0.42_01",
+   "version" : "0.42_02",
    "x_contributors" : [
       "josborne <josborne@watson.wustl.edu>",
       "thepler <thepler@watson.wustl.edu>",

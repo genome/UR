@@ -42,7 +42,7 @@ the database is opened.
 =cut
 
 require UR;
-our $VERSION = "0.42_01"; # UR $VERSION;
+our $VERSION = "0.42_02"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::SQLite',

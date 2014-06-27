@@ -2,6 +2,10 @@ Revision history for UR
 
 {{$NEXT}}
 
+0.42_02 2014-06-27T16:54:32Z
+        Eliminate some warnings when running tests
+        Attempt to get e view test to complete when XML is not available
+
 0.42_01 2014-06-26T22:12:56Z
         Bump up the version number so CPAN will accept the upload
 
