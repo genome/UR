@@ -37,6 +37,7 @@ requires 'Module::Runtime', 'v0.014';
 on test => sub {
     requires 'Test::More', '0.98';
     requires 'Test::Fork';
+    requires 'Test::Exception';
 };
 
 on develop => sub {
