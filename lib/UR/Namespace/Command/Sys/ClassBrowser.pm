@@ -22,7 +22,7 @@ use Template;
 use Plack::Request;
 use Class::Inspector;
 
-our $VERSION = "0.42_02"; # UR $VERSION;
+our $VERSION = "0.42_03"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

@@ -85,6 +85,7 @@
       },
       "test" : {
          "requires" : {
+            "Test::Exception" : "0",
             "Test::Fork" : "0",
             "Test::More" : "0.98"
          }
@@ -102,7 +103,7 @@
          "web" : "https://github.com/genome/UR"
       }
    },
-   "version" : "0.42_02",
+   "version" : "0.42_03",
    "x_contributors" : [
       "josborne <josborne@watson.wustl.edu>",
       "thepler <thepler@watson.wustl.edu>",

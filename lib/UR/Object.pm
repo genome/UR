@@ -8,7 +8,7 @@ require UR;
 use Scalar::Util qw(looks_like_number);
 
 our @ISA = ('UR::ModuleBase');
-our $VERSION = "0.42_02"; # UR $VERSION;;
+our $VERSION = "0.42_03"; # UR $VERSION;;
 
 # Base object API
 
