@@ -7,7 +7,7 @@ require UR;
 
 use List::MoreUtils;
 
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Context );
 

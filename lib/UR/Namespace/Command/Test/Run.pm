@@ -12,7 +12,7 @@ use Path::Class; # qw(file dir);
 use DBI;
 use Cwd;
 use UR;
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 use File::Find;
 
 use TAP::Harness;
@@ -1023,13 +1023,11 @@ directory, and runs ALL tests under that directory.
 
 =head1 PENDING FEATURES
 
-=over
+=over 4
 
 =item automatic remote execution for tests requiring a distinct hardware platform
 
 =item logging profiling and coverage metrics with each test
-
-=over 4
 
 =back
 

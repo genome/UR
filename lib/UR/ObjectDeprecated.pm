@@ -5,7 +5,7 @@ package UR::Object;
 use warnings;
 use strict;
 require UR;
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 
 use Data::Dumper;
 use Scalar::Util qw(blessed);
@@ -339,7 +339,7 @@ package UR::ModuleBase;
 
 =pod
 
-=over
+=over 4
 
 =item message_callback
 
@@ -348,6 +348,8 @@ package UR::ModuleBase;
 
 This method returns and optionally sets the subroutine that handles
 messages of a specific type.
+
+=back
 
 =cut
 

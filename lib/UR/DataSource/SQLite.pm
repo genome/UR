@@ -5,6 +5,7 @@ use warnings;
 use IO::Dir;
 use File::Spec;
 use File::Basename;
+use version;
 
 =pod
 
@@ -41,7 +42,7 @@ the database is opened.
 =cut
 
 require UR;
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::SQLite',
@@ -345,7 +346,9 @@ sub get_table_details_from_data_dictionary {
     my $self = shift;
 
     my $sth = $self->SUPER::get_table_details_from_data_dictionary(@_);
-    if ($DBD::SQLite::VERSION >= 1.26_04 || !$sth) {
+    my $sqlite_version = version->parse($DBD::SQLite::VERSION);
+    my $needed_version = version->parse("1.26_04");
+    if ($sqlite_version >= $needed_version || !$sth) {
         return $sth;
     }
 
@@ -965,7 +968,7 @@ sub _create_dbh_for_alternate_db {
 
 sub _db_path_specifies_a_directory {
     my($self, $pathname) = @_;
-    return -d $pathname or $pathname =~ m{/$};
+    return (-d $pathname) || ($pathname =~ m{/$});
 }
 
 sub _assure_schema_exists_for_table {

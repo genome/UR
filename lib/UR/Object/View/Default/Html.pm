@@ -3,7 +3,7 @@ package UR::Object::View::Default::Html;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 use IO::File;
 
 class UR::Object::View::Default::Html {

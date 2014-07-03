@@ -4,7 +4,7 @@
       "UR was built by the software development team at The Genome Institute"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v1.0.0, CPAN::Meta::Converter version 2.141170",
+   "generated_by" : "Minilla/v1.1.0, CPAN::Meta::Converter version 2.141170",
    "license" : [
       "perl_5"
    ],
@@ -67,6 +67,7 @@
             "Lingua::EN::Inflect" : "1.88",
             "List::MoreUtils" : "0",
             "MRO::Compat" : "0",
+            "Module::Runtime" : "v0.14.0",
             "Path::Class" : "0",
             "Plack" : "0",
             "Pod::Simple::HTML" : "3.03",
@@ -84,6 +85,7 @@
       },
       "test" : {
          "requires" : {
+            "Test::Exception" : "0",
             "Test::Fork" : "0",
             "Test::More" : "0.98"
          }
@@ -101,7 +103,7 @@
          "web" : "https://github.com/genome/UR"
       }
    },
-   "version" : "0.41",
+   "version" : "0.43",
    "x_contributors" : [
       "josborne <josborne@watson.wustl.edu>",
       "thepler <thepler@watson.wustl.edu>",
@@ -160,16 +162,16 @@
       "Scott Smith <scottsmith1@gmail.com>",
       "Ben Oberkfell <boberkfe@genome.wustl.edu>",
       "Jason Walker <jwalker@genome.wustl.edu>",
-      "Thomas Mooney <tmooney@genome.wustl.edu>",
       "Mark Burnett <mburnett@genome.wustl.edu>",
       "Scott Smith <ssmith@genome.wustl.edu>",
       "APipe Tester <apipe-tester@genome.wustl.edu>",
       "Adam Coffman <acoffman@genome.wustl.edu>",
       "Susanna Siebert <ssiebert@genome.wustl.edu>",
       "apregier <aregier@genome.wustl.edu>",
-      "Anthony Brummett <abrummet@genome.wustl.edu>",
       "Anthony Brummett <brummett@gmail.com>",
+      "Nathaniel Nutter <nnutter@genome.wustl.edu>",
       "Nathaniel Nutter <iam@nnutter.com>",
-      "Nathaniel Nutter <nnutter@genome.wustl.edu>"
+      "Thomas Mooney <tmooney@genome.wustl.edu>",
+      "Anthony Brummett <abrummet@genome.wustl.edu>"
    ]
 }

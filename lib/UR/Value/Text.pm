@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 require UR;
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::Value::Text',
@@ -65,7 +65,7 @@ sub to_hash {
 
     my $text = $self->id;
     if ( $text !~ m#^-# ) {
-        Carp::cluck('Can not convert text object with id "' . $self->id . '" to hash. Text must start with a dash (-)');
+        $self->warning_message('Can not convert text object with id "' . $self->id . '" to hash. Text must start with a dash (-)');
         return;
     }
 
@@ -76,7 +76,7 @@ sub to_hash {
         my $key = $values[$i];
         $key =~ s/^\-{1,2}//;
         if ( $key eq '' ) {
-            Carp::cluck("Can not convert text ($text) to hash. Found empty dash (-).");
+            $self->warning_message("Can not convert text ($text) to hash. Found empty dash (-).");
             return;
         }
         my $value = $values[$i + 1];

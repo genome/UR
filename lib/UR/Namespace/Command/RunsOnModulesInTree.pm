@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 use UR;
-our $VERSION = "0.41"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
