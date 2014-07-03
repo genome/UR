@@ -8,7 +8,7 @@ require UR;
 use List::MoreUtils qw(first_index);
 use Scalar::Util qw(looks_like_number);
 
-our $VERSION = "0.42_03"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 
 our %meta_classes;
 our $bootstrapping = 1;

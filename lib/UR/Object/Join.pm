@@ -2,7 +2,7 @@ package UR::Object::Join;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.42_03"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object::Property );
 

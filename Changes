@@ -2,17 +2,7 @@ Revision history for UR
 
 {{$NEXT}}
 
-0.42_03 2014-06-30T18:42:50Z
-        03k_rule_for_property_meta_no_properties.t needs Test::Exception
-
-0.42_02 2014-06-27T16:54:32Z
-        Eliminate some warnings when running tests
-        Attempt to get e view test to complete when XML is not available
-
-0.42_01 2014-06-26T22:12:56Z
-        Bump up the version number so CPAN will accept the upload
-
-0.41_01 2014-06-26T22:00:16Z
+0.43 2014-07-03T14:13:27Z
         Set objects now have member_iterator() method.
         Data loaded from an RDBMS during the life of a program can be copied
             to an alternate database.
@@ -39,6 +29,9 @@ Revision history for UR
         Fixed a bug where UR objects frozen in boolean expressions could cause
             database rows to be deleted when thawed.
         UR's class browser (ur sys class-browser) is working again.
+
+0.42    2014-06-26T22:12:56Z
+        Test releases to try out our new release system with minilla
 
 0.41    2013-03-18
         above.pm now imports symbols into the caller's package

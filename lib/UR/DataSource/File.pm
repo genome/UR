@@ -16,7 +16,7 @@ package UR::DataSource::File;
 use UR;
 use strict;
 use warnings;
-our $VERSION = "0.42_03"; # UR $VERSION;
+our $VERSION = "0.43"; # UR $VERSION;
 
 use Fcntl qw(:DEFAULT :flock);
 use Errno qw(EINTR EAGAIN EOPNOTSUPP);
