@@ -1056,7 +1056,7 @@ sub _add_join {
         $self->needs_further_boolexpr_evaluation_after_loading(1);
     }
 
-    my $alias = $self->_get_join_alias($join);
+    my $alias = $self->_get_join_alias($join, $property_name);
 
     unless ($alias) {
         my $alias_num = $self->_alias_count($self->_alias_count+1);
@@ -1077,7 +1077,7 @@ sub _add_join {
         $alias =~ s/\./_/g;
         $alias .= '_' . $alias_num; 
 
-        $self->_set_join_alias($join, $alias);
+        $self->_set_join_alias($join, $property_name, $alias);
 
         if ($foreign_class_object->table_name) {
             my @extra_db_filters;
@@ -1260,16 +1260,16 @@ sub _resolve_table_and_column_data {
 }
 
 sub _set_join_alias {
-    my ($self, $join, $alias) = @_;
-    $self->_join_data->{$join->id}{alias} = $alias;
+    my ($self, $join, $property_name, $alias) = @_;
+    $self->_join_data->{$join->id}{$property_name}{alias} = $alias;
     $self->_alias_data({}) unless $self->_alias_data();
     $self->_alias_data->{$alias}{join_id} = $join->id;
 }
 
 sub _get_join_alias {
-    my ($self,$join) = @_;
+    my ($self,$join,$property_name) = @_;
     $self->_join_data({}) unless $self->_join_data();
-    return $self->_join_data->{$join->id}{alias};
+    return $self->_join_data->{$join->id}{$property_name}{alias};
 }
 
 sub _get_alias_join {
