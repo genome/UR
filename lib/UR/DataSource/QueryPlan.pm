@@ -620,7 +620,7 @@ sub _init_rdbms {
                                 foreign_class => $parent_join_foreign_class_name,
                                 foreign_property_names => \@parent_id_property_names,
                                 is_optional => $is_optional,
-                                id => "${last_class_name}::" . join(',',@last_id_property_names),
+                                id => "${last_class_name}::" . join(',',@last_id_property_names) . ":$property_name",
                             );
                             unshift @joins_for_object, $inheritance_join; 
                             @last_id_property_names = @parent_id_property_names;
