@@ -365,14 +365,9 @@ sub _get_direct_join_linkage {
 
 sub _resolve_join_chain {
     my $self = shift;
-    my $join_label = shift;
-
-    $join_label ||= $self->property_name;
-
     return UR::Object::Join->resolve_chain(
         $self->class_name,
         $self->property_name,
-        $join_label,
     );
 }
 

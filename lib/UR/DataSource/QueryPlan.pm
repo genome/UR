@@ -1439,7 +1439,7 @@ sub _resolve_db_joins_for_inheritance {
 }
 
 sub _resolve_object_join_data_for_property_chain {
-    my ($rule_template, $property_name, $join_label) = @_;
+    my ($rule_template, $property_name) = @_;
     my $class_meta = $rule_template->subject_class_name->__meta__;
     
     my @joins;
@@ -1479,7 +1479,7 @@ sub _resolve_object_join_data_for_property_chain {
     # something non-optional
     $is_optional = 0;
     for my $pmeta (@pmeta) {
-        push @joins, $pmeta->_resolve_join_chain($join_label);
+        push @joins, $pmeta->_resolve_join_chain();
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
