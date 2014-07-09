@@ -1056,7 +1056,7 @@ sub _add_join {
         $self->needs_further_boolexpr_evaluation_after_loading(1);
     }
 
-    my $alias = $self->_get_join_alias($join);
+    my $alias = $self->_get_join_alias($join, $property_name);
 
     unless ($alias) {
         my $alias_num = $self->_alias_count($self->_alias_count+1);
@@ -1077,7 +1077,7 @@ sub _add_join {
         $alias =~ s/\./_/g;
         $alias .= '_' . $alias_num; 
 
-        $self->_set_join_alias($join, $alias);
+        $self->_set_join_alias($join, $property_name, $alias);
 
         if ($foreign_class_object->table_name) {
             my @extra_db_filters;
@@ -1260,16 +1260,16 @@ sub _resolve_table_and_column_data {
 }
 
 sub _set_join_alias {
-    my ($self, $join, $alias) = @_;
-    $self->_join_data->{$join->id}{alias} = $alias;
+    my ($self, $join, $property_name, $alias) = @_;
+    $self->_join_data->{$join->id}{$property_name}{alias} = $alias;
     $self->_alias_data({}) unless $self->_alias_data();
     $self->_alias_data->{$alias}{join_id} = $join->id;
 }
 
 sub _get_join_alias {
-    my ($self,$join) = @_;
+    my ($self,$join,$property_name) = @_;
     $self->_join_data({}) unless $self->_join_data();
-    return $self->_join_data->{$join->id}{alias};
+    return $self->_join_data->{$join->id}{$property_name}{alias};
 }
 
 sub _get_alias_join {
@@ -1439,7 +1439,7 @@ sub _resolve_db_joins_for_inheritance {
 }
 
 sub _resolve_object_join_data_for_property_chain {
-    my ($rule_template, $property_name, $join_label) = @_;
+    my ($rule_template, $property_name) = @_;
     my $class_meta = $rule_template->subject_class_name->__meta__;
     
     my @joins;
@@ -1479,7 +1479,7 @@ sub _resolve_object_join_data_for_property_chain {
     # something non-optional
     $is_optional = 0;
     for my $pmeta (@pmeta) {
-        push @joins, $pmeta->_resolve_join_chain($join_label);
+        push @joins, $pmeta->_resolve_join_chain();
         $is_optional = 1 if $pmeta->is_optional or $pmeta->is_many;
     }
 
