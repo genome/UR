@@ -1424,19 +1424,20 @@ sub prune_object_cache {
     my $deleted_count = 0;
     my $pass = 0;
 
-    # Make a guess about that the target serial number should be
-    # This one goes 10% between the last time we pruned, and the last get serial
-    # and increases by another 10% each attempt
     $cache_size_highwater = 1 if ($cache_size_highwater < 1);
     $cache_size_lowwater = 1 if ($cache_size_lowwater < 1);
-    my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * $cache_size_lowwater / $cache_size_highwater );
-    $target_serial_increment = 1 if ($target_serial_increment < 1);
-    my $target_serial = $cache_last_prune_serial;
-    while ($all_objects_cache_size > $cache_size_lowwater) {
-        $pass++;
 
+    # Instead of sorting object cache by __get_serial, since we are trying to
+    # conserve memory, we pass through the object cache reviewing chunks of older objects
+    # first while working our way through the whole cache.
+    my $target_serial = $cache_last_prune_serial;
+
+    my $serial_range = ($GET_COUNTER - $target_serial);
+    my $max_passes = 10;
+    my $target_serial_increment = int($serial_range / $max_passes) + 1;
+    while ($all_objects_cache_size > $cache_size_lowwater && $target_serial < $GET_COUNTER) {
+        $pass++;
         $target_serial += $target_serial_increment;
-        last if ($target_serial > $GET_COUNTER);
 
         foreach my $class (keys %data_source_for_class) {
             my $objects_for_class = $UR::Context::all_objects_loaded->{$class};
