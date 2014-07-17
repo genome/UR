@@ -1437,7 +1437,6 @@ sub prune_object_cache {
     my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * $cache_size_lowwater / $cache_size_highwater );
     $target_serial_increment = 1 if ($target_serial_increment < 1);
     my $target_serial = $cache_last_prune_serial;
-    CACHE_IS_TOO_BIG:
     while ($all_objects_cache_size > $cache_size_lowwater) {
         $pass++;
 
