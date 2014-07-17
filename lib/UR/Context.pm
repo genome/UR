@@ -1402,7 +1402,6 @@ sub prune_object_cache {
     return unless ($all_objects_cache_size > $cache_size_highwater);
 
     $is_pruning = 1;
-    #$main::did_prune=1;
     my $t1;
     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'} || $ENV{'UR_DEBUG_OBJECT_PRUNING'}) {
         $t1 = Time::HiRes::time();
@@ -1436,7 +1435,6 @@ sub prune_object_cache {
     $cache_size_highwater = 1 if ($cache_size_highwater < 1);
     $cache_size_lowwater = 1 if ($cache_size_lowwater < 1);
     my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * $cache_size_lowwater / $cache_size_highwater );
-    #my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * 0.1);
     $target_serial_increment = 1 if ($target_serial_increment < 1);
     my $target_serial = $cache_last_prune_serial;
     CACHE_IS_TOO_BIG:
