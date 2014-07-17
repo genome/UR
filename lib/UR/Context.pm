@@ -1407,22 +1407,17 @@ sub prune_object_cache {
         $t1 = Time::HiRes::time();
         print STDERR Carp::longmess("MEM PRUNE begin at $t1 ",scalar(localtime($t1)),"\n");
     }
-        
 
     my $index_id_sep = UR::Object::Index->__meta__->composite_id_separator() || "\t";
 
-    my %classes_to_prune;
     my %data_source_for_class = $self->get_data_sources_for_loaded_classes;
-    foreach my $class ( keys %data_source_for_class) {
-        $classes_to_prune{$class} = 0;
-    }
 
     # NOTE: This pokes right into the object cache and futzes with Index IDs directly.
     # We can't get the Index objects though get() because we'd recurse right back into here
     my %indexes_by_class;
     foreach my $idx_id ( keys %{$UR::Context::all_objects_loaded->{'UR::Object::Index'}} ) {
         my $class = substr($idx_id, 0, index($idx_id, $index_id_sep));
-        next unless exists $classes_to_prune{$class};
+        next unless exists $data_source_for_class{$class};
         push @{$indexes_by_class{$class}}, $UR::Context::all_objects_loaded->{'UR::Object::Index'}->{$idx_id};
     }
 
@@ -1443,7 +1438,7 @@ sub prune_object_cache {
         $target_serial += $target_serial_increment;
         last if ($target_serial > $GET_COUNTER);
 
-        foreach my $class (keys %classes_to_prune) {
+        foreach my $class (keys %data_source_for_class) {
             my $objects_for_class = $UR::Context::all_objects_loaded->{$class};
             $indexes_by_class{$class} ||= [];
 
@@ -1473,7 +1468,6 @@ sub prune_object_cache {
 
                     $all_objects_cache_size--;
                     $deleted_count++;
-                    $classes_to_prune{$class}++;
                 }
             }
         }
