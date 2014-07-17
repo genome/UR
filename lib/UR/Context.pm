@@ -1446,24 +1446,17 @@ sub prune_object_cache {
         foreach my $class (keys %classes_to_prune) {
             my $objects_for_class = $UR::Context::all_objects_loaded->{$class};
             $indexes_by_class{$class} ||= [];
-            
+
             foreach my $id ( keys ( %$objects_for_class ) ) {
                 my $obj = $objects_for_class->{$id};
 
-                # Objects marked __strengthen__ed are never purged
                 next if exists $obj->{'__strengthened'};
 
-                # classes with data sources get their objects pruned immediately if
-                # they're marked weakened, or at the usual time (serial is under the
-                # target) if not
-                # Classes without data sources get instances purged if the serial
-                # number is under the target _and_ they're marked weakened
                 if (
-                     ( $data_source_for_class{$class} and exists $obj->{'__weakened'} )
+                     ( exists $obj->{'__weakened'} )
                      or
                      ( exists $obj->{'__get_serial'}
                        and $obj->{'__get_serial'} <= $target_serial
-                       and ($data_source_for_class{$class} or exists $obj->{'__weakened'})
                        and ( ! $obj->__changes__ or ! @{[$obj->__changes__]} )
                      )
                    )
@@ -1477,7 +1470,7 @@ sub prune_object_cache {
 
                     delete $obj->{'__get_serial'};
                     Scalar::Util::weaken($objects_for_class->{$id});
-                    
+
                     $all_objects_cache_size--;
                     $deleted_count++;
                     $classes_to_prune{$class}++;
