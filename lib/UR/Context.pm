@@ -1490,6 +1490,7 @@ sub _object_cache_pruning_report {
 
     my @sorted_counts = sort { $b->[1] <=> $a->[1] }
                         map { [ $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) ] }
+                        grep { !$_->__meta__->is_meta_meta }
                         keys %$UR::Context::all_objects_loaded;
     my $message = '';
     for (my $i = 0; $i < 10 and $i < @sorted_counts; $i++) {
