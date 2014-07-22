@@ -1495,9 +1495,6 @@ sub prune_object_cache {
     if ($all_objects_cache_size > $cache_size_lowwater) {
         Carp::carp "After several passes of pruning the object cache, there are still $all_objects_cache_size objects";
         if ($ENV{'UR_DEBUG_OBJECT_PRUNING'}) {
-            my @sorted_counts = sort { $a->[1] <=> $b->[1] }
-                                map { [ $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) ] }
-                                keys %$UR::Context::all_objects_loaded;
             warn "Top 10 classes by object count:\n" . $self->_object_cache_pruning_report;
         }
     }
