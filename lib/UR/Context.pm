@@ -1445,18 +1445,10 @@ sub prune_object_cache {
 
             foreach my $id ( keys ( %$objects_for_class ) ) {
                 my $obj = $objects_for_class->{$id};
-
-                next if exists $obj->{'__strengthened'};
-
                 if (
-                     ( exists $obj->{'__weakened'} )
-                     or
-                     ( exists $obj->{'__get_serial'}
-                       and $obj->{'__get_serial'} <= $target_serial
-                       and ( ! $obj->__changes__ or ! @{[$obj->__changes__]} )
-                     )
-                   )
-                {
+                    $obj->is_weakened
+                    || $obj->is_prunable && $obj->{__get_serial} && $obj->{__get_serial} <= $target_serial
+                ) {
                     foreach my $index ( @{$indexes_by_class{$class}} ) {
                         $index->weaken_reference_for_object($obj);
                     }
