@@ -190,13 +190,33 @@ caching of data
 
 =item *
 
-the cache grows until you explicitly clear it, or allow the Context to prune
-the cache by setting object count limits explicitly
+the cache grows until you explicitly clear it
 
 =item *
 
 there is CPU overhead checking the cache if you really are always going
 directly to the database
+
+=back
+
+Unloading objects from the cache han be done in several ways
+
+=over 4
+
+=item *
+
+Calling unload() as a class or instance method to unload all objects of a
+class, or one particular object.
+
+=item *
+
+Setting object count limits explicitly with object_cache_size_lowwater() and
+object_cache_size_highwater() in L<UR::Context>
+
+=item *
+
+Creating a L<UR::Context::AutoUnloadPool> instance.  When it goes out of scope,
+all UR Objects loaded during its lifetime will be unloaded.
 
 =back
 
