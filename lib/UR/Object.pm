@@ -632,6 +632,11 @@ sub __weaken__ {
     $self->{'__weakened'} = 1;
 }
 
+sub is_strengthened {
+    my $self = shift;
+    return (exists $self->{__strengthened} && $self->{__strengthened});
+}
+
 sub __strengthen__ {
     # Indicate this object should never be unloaded by the object cache pruner
     my $self = $_[0];
@@ -1320,6 +1325,10 @@ If strengthen() is called on an object, it will effectively be locked in
 the cache, and will not be considered for pruning.
 
 See L<UR::Context> for more information about the pruning mechanism.
+
+=item is_strengthened
+
+Check if an object has been stengthened, C<__stengthen__>.
 
 =item __weaken__
 
