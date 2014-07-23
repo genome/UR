@@ -615,6 +615,11 @@ sub __extend_namespace__ {
 
 # Handling of references within the current process
 
+sub is_weakened {
+    my $self = shift;
+    return (exists $self->{__weakened} && $self->{__weakened});
+}
+
 sub __weaken__ {
     # Mark this object as unloadable by the object cache pruner.
     # If the class has a data source, then a weakened object is dropped
@@ -1323,6 +1328,10 @@ See L<UR::Context> for more information about the pruning mechanism.
 Give a hint to the object cache pruner that this instance is not going to be used
 in the application in the future, and should be removed with preference when
 pruning the cache.
+
+=item is_weakened
+
+Check if an object has been weakened, C<__weaken__>.
 
 =item DESTROY
 
