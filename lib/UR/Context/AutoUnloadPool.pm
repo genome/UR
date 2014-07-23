@@ -70,3 +70,54 @@ sub DESTROY {
 }
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Context::AutoUnloadPool - Automaticaly unload objects when scope ends
+
+=head1 SYNOPSIS
+
+  my $not_unloaded = Some::Class->get(...);
+  do {
+    my $guard = UR::Context::AutoUnloadPool->create();
+    my $object = Some::Class->get(...);  # load an object from the database
+    ...                                  # load more things
+  };  # $guard goes out of scope - unloads objects
+
+=head1 DESCRIPTION
+
+UR Objects retrieved from the database normally live in the object cache for
+the life of the program.  When a UR::Context::AutoUnloadPool is instantiated,
+it tracks every object loaded during its life.  The Pool's destructor calls
+unload() on those objects.
+
+Changed objects and objects loaded before before the Pool is created will not
+get unloaded.
+
+=head1 METHODS
+
+=over 4
+
+=item create
+
+  my $guard = UR::Context::AutoUnloadPool->create();
+
+Creates a Pool object.  All UR Objects loaded from the database during this
+object's lifetime will get unloaded when the Pool goes out of scope.
+
+=item delete
+
+  $guard->delete();
+
+Invalidates the Pool object.  No objects are unloaded.  When the Pool later
+goes out of scope, no objects will be unloaded.
+
+=back
+
+=head1 SEE ALSO
+
+UR::Object, UR::Context
+
+=cut
