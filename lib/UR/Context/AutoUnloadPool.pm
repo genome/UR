@@ -6,7 +6,7 @@ use warnings;
 require UR;
 our $VERSION = "0.43"; # UR $VERSION
 
-# These are plan Perl objects that get garbage collected in the normal way,
+# These are plain Perl objects that get garbage collected in the normal way,
 # not UR::Objects
 
 sub create {
