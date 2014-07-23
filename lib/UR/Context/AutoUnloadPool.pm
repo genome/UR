@@ -6,6 +6,8 @@ use warnings;
 require UR;
 our $VERSION = "0.43"; # UR $VERSION
 
+use Scalar::Util qw();
+
 # These are plain Perl objects that get garbage collected in the normal way,
 # not UR::Objects
 
