@@ -639,10 +639,21 @@ sub is_strengthened {
 
 sub __strengthen__ {
     # Indicate this object should never be unloaded by the object cache pruner
+    # or AutoUnloadPool
     my $self = $_[0];
     delete $self->{'__weakened'};
     $self->{'__strengthened'} = 1;
 }
+
+sub is_prunable {
+    my $self = shift;
+    return 0 if $self->is_strengthened;
+    return 1 if $self->is_weakened;
+    return 0 if $self->__meta__->is_meta;
+    return 0 if $self->{__get_serial} && $self->__changes__ && @{[$self->__changes__]};
+    return 1;
+}
+
 
 sub DESTROY {
     # Handle weak references in the object cache.
