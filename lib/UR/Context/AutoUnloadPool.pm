@@ -34,7 +34,7 @@ sub _attach_observer {
                 callback => sub {
                     my $loaded = shift;
 
-                    return if $loaded->__meta__->is_meta;
+                    return if ! $loaded->is_prunable();
                     $self->_object_was_loaded($loaded);
                 }
             );
