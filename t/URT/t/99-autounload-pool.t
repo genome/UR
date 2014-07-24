@@ -60,7 +60,8 @@ subtest 'call delete on pool' => sub {
 };
 
 subtest 'does not unload meta objects' => sub {
-    plan tests => 2;
+    plan tests => 3;
+    ok(! UR::Object::Type->is_loaded('URT::Thingy'), 'URT::Thingy is not loaded yet');
     do {
         my $unloader = UR::Context::AutoUnloadPool->create();
         URT::Thingy->class;  # Load a class in the URT namespace
