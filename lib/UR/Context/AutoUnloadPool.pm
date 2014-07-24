@@ -61,6 +61,8 @@ sub _unload_objects {
             }
         }
     }
+    delete $self->{pool};
+
     die join("\n", 'The following exceptions happened while unloading:', @unload_exceptions) if @unload_exceptions;
 }
 
