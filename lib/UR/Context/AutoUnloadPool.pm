@@ -11,6 +11,8 @@ use Scalar::Util qw();
 # These are plain Perl objects that get garbage collected in the normal way,
 # not UR::Objects
 
+our @CARP_NOT = qw( UR::Context );
+
 sub create {
     my $class = shift;
     my $self = bless { pool => {} }, $class;
@@ -44,8 +46,16 @@ sub _detach_observer {
     delete($self->{observer})->delete();
 }
 
+sub _is_printing_debug {
+    $ENV{UR_DEBUG_OBJECT_PRUNING} || $ENV{'UR_DEBUG_OBJECT_RELEASE'};
+}
+
 sub _object_was_loaded {
     my($self, $o) = @_;
+    if (_is_printing_debug()) {
+        my($class, $id) = ($o->class, $o->id);
+        print STDERR Carp::shortmess("MEM AUTORELEASE $class id $id loaded in pool $self\n");
+    }
     $self->{pool}->{$o->class}->{$o->id} = undef;
 }
 
@@ -53,13 +63,19 @@ sub _unload_objects {
     my $self = shift;
     return unless $self->{pool};
 
+    print STDERR Carp::shortmess("MEM AUTORELEASE pool $self draining\n") if _is_printing_debug();
+
     my @unload_exceptions;
     foreach my $class_name ( keys %{$self->{pool}} ) {
+        print STDERR "MEM AUTORELEASE class $class_name: " if _is_printing_debug();
+        my $is_subsequent_obj;
         foreach ( $class_name->is_loaded([ keys %{$self->{pool}->{$class_name}} ] ) ) {
+            print STDERR ($is_subsequent_obj++ ? ", " : ''), $_->id if _is_printing_debug();
             unless (eval { $_->unload(); 1; } ) {
                 push @unload_exceptions, $@;
             }
         }
+        print STDERR "\n" if _is_printing_debug();
     }
     delete $self->{pool};
 
