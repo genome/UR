@@ -1402,75 +1402,53 @@ sub prune_object_cache {
     return unless ($all_objects_cache_size > $cache_size_highwater);
 
     $is_pruning = 1;
-    #$main::did_prune=1;
     my $t1;
     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'} || $ENV{'UR_DEBUG_OBJECT_PRUNING'}) {
         $t1 = Time::HiRes::time();
         print STDERR Carp::longmess("MEM PRUNE begin at $t1 ",scalar(localtime($t1)),"\n");
     }
-        
 
     my $index_id_sep = UR::Object::Index->__meta__->composite_id_separator() || "\t";
 
-    my %classes_to_prune;
     my %data_source_for_class = $self->get_data_sources_for_loaded_classes;
-    foreach my $class ( keys %data_source_for_class) {
-        $classes_to_prune{$class} = 0;
-    }
 
     # NOTE: This pokes right into the object cache and futzes with Index IDs directly.
     # We can't get the Index objects though get() because we'd recurse right back into here
     my %indexes_by_class;
     foreach my $idx_id ( keys %{$UR::Context::all_objects_loaded->{'UR::Object::Index'}} ) {
         my $class = substr($idx_id, 0, index($idx_id, $index_id_sep));
-        next unless exists $classes_to_prune{$class};
+        next unless exists $data_source_for_class{$class};
         push @{$indexes_by_class{$class}}, $UR::Context::all_objects_loaded->{'UR::Object::Index'}->{$idx_id};
     }
 
     my $deleted_count = 0;
     my $pass = 0;
 
-    # Make a guess about that the target serial number should be
-    # This one goes 10% between the last time we pruned, and the last get serial
-    # and increases by another 10% each attempt
     $cache_size_highwater = 1 if ($cache_size_highwater < 1);
     $cache_size_lowwater = 1 if ($cache_size_lowwater < 1);
-    my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * $cache_size_lowwater / $cache_size_highwater );
-    #my $target_serial_increment = int(($GET_COUNTER - $cache_last_prune_serial) * 0.1);
-    $target_serial_increment = 1 if ($target_serial_increment < 1);
+
+    # Instead of sorting object cache by __get_serial, since we are trying to
+    # conserve memory, we pass through the object cache reviewing chunks of older objects
+    # first while working our way through the whole cache.
     my $target_serial = $cache_last_prune_serial;
-    CACHE_IS_TOO_BIG:
-    while ($all_objects_cache_size > $cache_size_lowwater) {
+
+    my $serial_range = ($GET_COUNTER - $target_serial);
+    my $max_passes = 10;
+    my $target_serial_increment = int($serial_range / $max_passes) + 1;
+    while ($all_objects_cache_size > $cache_size_lowwater && $target_serial < $GET_COUNTER) {
         $pass++;
-
         $target_serial += $target_serial_increment;
-        last if ($target_serial > $GET_COUNTER);
 
-        foreach my $class (keys %classes_to_prune) {
+        foreach my $class (keys %data_source_for_class) {
             my $objects_for_class = $UR::Context::all_objects_loaded->{$class};
             $indexes_by_class{$class} ||= [];
-            
+
             foreach my $id ( keys ( %$objects_for_class ) ) {
                 my $obj = $objects_for_class->{$id};
-
-                # Objects marked __strengthen__ed are never purged
-                next if exists $obj->{'__strengthened'};
-
-                # classes with data sources get their objects pruned immediately if
-                # they're marked weakened, or at the usual time (serial is under the
-                # target) if not
-                # Classes without data sources get instances purged if the serial
-                # number is under the target _and_ they're marked weakened
                 if (
-                     ( $data_source_for_class{$class} and exists $obj->{'__weakened'} )
-                     or
-                     ( exists $obj->{'__get_serial'}
-                       and $obj->{'__get_serial'} <= $target_serial
-                       and ($data_source_for_class{$class} or exists $obj->{'__weakened'})
-                       and ( ! $obj->__changes__ or ! @{[$obj->__changes__]} )
-                     )
-                   )
-                {
+                    $obj->is_weakened
+                    || $obj->is_prunable && $obj->{__get_serial} && $obj->{__get_serial} <= $target_serial
+                ) {
                     foreach my $index ( @{$indexes_by_class{$class}} ) {
                         $index->weaken_reference_for_object($obj);
                     }
@@ -1480,10 +1458,9 @@ sub prune_object_cache {
 
                     delete $obj->{'__get_serial'};
                     Scalar::Util::weaken($objects_for_class->{$id});
-                    
+
                     $all_objects_cache_size--;
                     $deleted_count++;
-                    $classes_to_prune{$class}++;
                 }
             }
         }
@@ -1498,9 +1475,6 @@ sub prune_object_cache {
     if ($all_objects_cache_size > $cache_size_lowwater) {
         Carp::carp "After several passes of pruning the object cache, there are still $all_objects_cache_size objects";
         if ($ENV{'UR_DEBUG_OBJECT_PRUNING'}) {
-            my @sorted_counts = sort { $a->[1] <=> $b->[1] }
-                                map { [ $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) ] }
-                                keys %$UR::Context::all_objects_loaded;
             warn "Top 10 classes by object count:\n" . $self->_object_cache_pruning_report;
         }
     }
@@ -1516,6 +1490,7 @@ sub _object_cache_pruning_report {
 
     my @sorted_counts = sort { $b->[1] <=> $a->[1] }
                         map { [ $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) ] }
+                        grep { !$_->__meta__->is_meta_meta }
                         keys %$UR::Context::all_objects_loaded;
     my $message = '';
     for (my $i = 0; $i < 10 and $i < @sorted_counts; $i++) {
