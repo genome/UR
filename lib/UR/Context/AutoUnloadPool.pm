@@ -31,6 +31,8 @@ sub _attach_observer {
                 aspect => 'load',
                 callback => sub {
                     my $loaded = shift;
+
+                    return if $loaded->__meta__->is_meta;
                     $self->_object_was_loaded($loaded);
                 }
             );

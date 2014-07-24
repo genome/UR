@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 3;
+use Test::More tests=> 4;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -57,6 +57,17 @@ subtest 'call delete on pool' => sub {
         ok($unloader->delete, 'Delete the auto unloader');
     };
     ok(URT::Thing->is_loaded($kept_id), 'Object was not unloaded');
+};
+
+subtest 'does not unload meta objects' => sub {
+    plan tests => 2;
+    do {
+        my $unloader = UR::Context::AutoUnloadPool->create();
+        URT::Thingy->class;  # Load a class in the URT namespace
+    };
+    ok(UR::Object::Type->is_loaded('URT::Thingy'), 'Class object is still loaded');
+    ok(UR::Object::Property->is_loaded(class_name => 'URT::Thingy', property_name => 'enz_id'),
+        "Class' property object is still loaded");
 };
 
 sub setup_classes {
