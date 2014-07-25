@@ -85,14 +85,6 @@ sub property_diff {
     return $diff;
 }
 
-sub is_prunable {
-    my $self = shift;
-    return 0 if exists $self->{__strengthened};
-    return 1 if exists $self->{__weakened};
-    return 0 if exists $self->{__get_serial} && $self->__changes__ && @{[$self->__changes__]};
-    return 1;
-}
-
 # TODO: make this a context operation
 sub unload {
     my $proto = shift;
