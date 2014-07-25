@@ -69,8 +69,12 @@ sub _unload_objects {
     foreach my $class_name ( keys %{$self->{pool}} ) {
         print STDERR "MEM AUTORELEASE class $class_name: " if _is_printing_debug();
         my $is_subsequent_obj;
-        foreach ( $class_name->is_loaded([ keys %{$self->{pool}->{$class_name}} ] ) ) {
-            print STDERR ($is_subsequent_obj++ ? ", " : ''), $_->id if _is_printing_debug();
+
+        my $objs_for_class = $UR::Context::all_objects_loaded->{$class_name};
+        next unless $objs_for_class;
+        foreach ( @$objs_for_class{ keys %{$self->{pool}->{$class_name}}} ) {
+            next unless $_;
+            print STDERR ($is_subsequent_obj++ ? ", " : ''), $_->id,"\n" if _is_printing_debug();
             unless (eval { $_->unload(); 1; } ) {
                 push @unload_exceptions, $@;
             }
