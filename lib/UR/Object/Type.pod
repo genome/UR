@@ -494,6 +494,15 @@ with the is_many accessor.  For example, the arrayref for the 'cars' accessor
 is 'car_arrayref'.  Returns a false value if the given property name is not
 is_many, or does not exist.
 
+=item adder_name_for_is_many_accessor
+
+  $adder_name = $class_obj->adder_name_for_is_many_accessor($is_many_name);
+
+Returns the method name used to get the adder method that corresponds with
+the is_many accessor.  For example, the adder for the 'cars' accessor is
+'add_car'.  Returns a false value if the given property name is not
+is_many, or does not exist.
+
 =back
 
 =head1 SEE ALSO

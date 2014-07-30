@@ -1426,7 +1426,7 @@ sub mk_object_set_accessors {
         });
     }
 
-    my $add_accessor_name = 'add_' . $singular_name;
+    my $add_accessor_name = $self->adder_name_for_is_many_accessor($plural_name);
     if ($class_name->can($add_accessor_name)) {
         $add_accessor_name = '__' . $add_accessor_name;
     }
