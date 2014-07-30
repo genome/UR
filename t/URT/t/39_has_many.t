@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 23;
+use Test::More tests => 24;
 
 class Animal {
     has => [
@@ -70,6 +70,15 @@ class Animal::Antler {
         animal      => { is => 'Animal', id_by => 'animal_id' },
         pointiness  => { is => 'Number' },
     ],
+};
+
+subtest 'accessor names' => sub {
+    plan tests => 3;
+
+    my $animal_meta = Animal->__meta__;
+    is($animal_meta->singular_accessor_name_for_is_many_accessor('limbs'), 'limb', 'Singular name for limbs');
+    ok(! $animal_meta->singular_accessor_name_for_is_many_accessor('fur'), 'Fur has no singular name');
+    ok(! $animal_meta->singular_accessor_name_for_is_many_accessor('nonsense'), 'Non-existent property has no singular name');
 };
 
 

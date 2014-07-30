@@ -445,6 +445,19 @@ through C<ClassName-E<gt>create()>, and not all of their ID properties were
 specified.  UR::Object::Type has an implementation used by default, but
 other classes can override this if they need special handling.
 
+=item singular_accessor_name_for_is_many_accessor
+
+  $property_name = $class_obj->singular_accessor_name_for_is_many_accessor($is_many_name);
+
+For is_many properties, returns the name of the singular-accessor.  Usually,
+this the singular version of the plural, is_many property's name.  The singular
+accessor accepts key/value pairs as arguments, and is used to filter the
+results of the is_many accessor.  For example, the singular for the 'cars'
+accessor is 'car'.
+
+Returns a false value if the given property name is not is_many, or does not
+exist.
+
 =back
 
 =head1 SEE ALSO

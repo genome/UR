@@ -1711,9 +1711,8 @@ sub initialize_direct_accessors {
             my $singular_name;
             my $plural_name;
             if ($property_data->{is_many}) {
-                require Lingua::EN::Inflect;
                 $plural_name = $accessor_name;
-                $singular_name = Lingua::EN::Inflect::PL_V($plural_name);
+                $singular_name = $self->singular_accessor_name_for_is_many_accessor($accessor_name);
             }
             else {
                 $singular_name = $accessor_name;
