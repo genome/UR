@@ -1669,5 +1669,12 @@ sub iterator_accessor_name_for_is_many_accessor {
     return $singular && "${singular}_iterator";
 }
 
+sub set_accessor_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "${singular}_set";
+}
+
 1;
 

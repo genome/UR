@@ -1334,7 +1334,8 @@ sub mk_object_set_accessors {
         code => $iterator_accessor,
     });
     
-    my $set_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_set' => sub {
+    my $set_name = $self->set_accessor_name_for_is_many_accessor($plural_name);
+    my $set_accessor = Sub::Name::subname $class_name ."::$set_name" => sub {
         my $self = shift;
         my $rule;
         $rule = $rule_resolver->($self) unless (defined $rule_template);
@@ -1350,7 +1351,7 @@ sub mk_object_set_accessors {
     };
     Sub::Install::reinstall_sub({
         into => $class_name,
-        as   => $singular_name . '_set',
+        as   => $set_name,
         code => $set_accessor,
     });
 
