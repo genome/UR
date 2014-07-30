@@ -1676,5 +1676,12 @@ sub set_accessor_name_for_is_many_accessor {
     return $singular && "${singular}_set";
 }
 
+sub rule_accessor_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "__${singular}_rule";
+}
+
 1;
 

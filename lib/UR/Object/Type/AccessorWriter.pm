@@ -1236,7 +1236,8 @@ sub mk_object_set_accessors {
         }
     }
 
-    my $rule_accessor = Sub::Name::subname $class_name ."::__$singular_name" . '_rule' => sub {
+    my $rule_name = $self->rule_accessor_name_for_is_many_accessor($plural_name);
+    my $rule_accessor = Sub::Name::subname $class_name ."::$rule_name" => sub {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         unless ($rule_template) {
@@ -1253,7 +1254,7 @@ sub mk_object_set_accessors {
 
     Sub::Install::reinstall_sub({
         into => $class_name,
-        as   => "__$singular_name" . '_rule',
+        as   => $rule_name,
         code => $rule_accessor,
     });
 
