@@ -1697,5 +1697,12 @@ sub adder_name_for_is_many_accessor {
     return $singular && "add_${singular}";
 }
 
+sub remover_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "remove_${singular}";
+}
+
 1;
 

@@ -1471,7 +1471,7 @@ sub mk_object_set_accessors {
         code => $add_accessor,
     });
 
-    my $remove_accessor_name = 'remove_' . $singular_name;
+    my $remove_accessor_name = $self->remover_name_for_is_many_accessor($plural_name);
     if ($class_name->can($remove_accessor_name)) {
         $remove_accessor_name = '__' . $remove_accessor_name;
     }
