@@ -73,10 +73,12 @@ class Animal::Antler {
 };
 
 subtest 'accessor names' => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     my $animal_meta = Animal->__meta__;
     is($animal_meta->singular_accessor_name_for_is_many_accessor('limbs'), 'limb', 'Singular name for limbs');
+    is($animal_meta->iterator_accessor_name_for_is_many_accessor('limbs'), 'limb_iterator', 'Iterator name for limbs');
+
     ok(! $animal_meta->singular_accessor_name_for_is_many_accessor('fur'), 'Fur has no singular name');
     ok(! $animal_meta->singular_accessor_name_for_is_many_accessor('nonsense'), 'Non-existent property has no singular name');
 };

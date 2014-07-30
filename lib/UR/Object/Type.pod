@@ -458,6 +458,15 @@ accessor is 'car'.
 Returns a false value if the given property name is not is_many, or does not
 exist.
 
+=item iterator_accessor_name_for_is_many_accessor
+
+  $iter_name = $class_obj->iterator_accessor_name_for_is_many_accessor($is_many_name);
+
+Returns the accessor name used to get the UR::Object::Iterator that corresponds
+with the is_many accessor.  For example, the iterator for the 'cars' accessor
+is 'car_iterator'.  Returns a false value if the given property name is not
+is_many, or does not exist.
+
 =back
 
 =head1 SEE ALSO
