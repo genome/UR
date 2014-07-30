@@ -1302,13 +1302,14 @@ sub mk_object_set_accessors {
         code => $list_accessor,
     });
     
-    my $arrayref_accessor = Sub::Name::subname $class_name ."::$singular_name" . '_arrayref' => sub {
+    my $arrayref_name = $self->arrayref_accessor_name_for_is_many_accessor($plural_name);
+    my $arrayref_accessor = Sub::Name::subname $class_name ."::$arrayref_name" => sub {
         return [ $list_accessor->(@_) ];
     };
 
     Sub::Install::reinstall_sub({
         into => $class_name,
-        as   => $singular_name . '_arrayref',
+        as   => $arrayref_name,
         code => $arrayref_accessor,
     });
 

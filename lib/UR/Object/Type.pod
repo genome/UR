@@ -485,6 +485,15 @@ with the is_many accessor.  For example, the rule for the 'cars' accessor
 is '__car_rule'.  Returns a false value if the given property name is not
 is_many, or does not exist.
 
+=item arrayref_accessor_name_for_is_many_accessor
+
+  $arrayref_name = $class_obj->arrayref_accessor_name_for_is_many_accessor($is_many_name);
+
+Returns the accessor name used to get the arrayref of objects that corresponds
+with the is_many accessor.  For example, the arrayref for the 'cars' accessor
+is 'car_arrayref'.  Returns a false value if the given property name is not
+is_many, or does not exist.
+
 =back
 
 =head1 SEE ALSO
