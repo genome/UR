@@ -35,7 +35,7 @@ UR::Context::Process - Impliments a generic interface to the current application
 
 =head1 DESCRIPTION
 
-This module provides methods to set and retreive variaous names
+This module provides methods to set and retrieve various names
 associated with the program and the program version number.
 
 =cut

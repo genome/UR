@@ -226,7 +226,7 @@ sub set_userenv {
 sub get_userenv {
 
     # there are two ways to set these values but this is
-    # the only way to retreive the values after they are set
+    # the only way to retrieve the values after they are set
 
     my ($self, $dbh) = @_;
 
