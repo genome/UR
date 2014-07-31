@@ -462,7 +462,7 @@ exist.
 
   $iter_name = $class_obj->iterator_accessor_name_for_is_many_accessor($is_many_name);
 
-Returns the accessor name used to get the UR::Object::Iterator that corresponds
+Returns the accessor name used to get the L<UR::Object::Iterator> that corresponds
 with the is_many accessor.  For example, the iterator for the 'cars' accessor
 is 'car_iterator'.  Returns a false value if the given property name is not
 is_many, or does not exist.
@@ -471,7 +471,7 @@ is_many, or does not exist.
 
   $set_name = $class_obj->set_accessor_name_for_is_many_accessor($is_many_name);
 
-Returns the accessor name used to get the UR::Object::Set that corresponds
+Returns the accessor name used to get the L<UR::Object::Set> that corresponds
 with the is_many accessor.  For example, the set for the 'cars' accessor
 is 'car_set'.  Returns a false value if the given property name is not
 is_many, or does not exist.
@@ -480,7 +480,7 @@ is_many, or does not exist.
 
   $rule_name = $class_obj->rule_accessor_name_for_is_many_accessor($is_many_name);
 
-Returns the accessor name used to get the UR::BoolExpr that corresponds
+Returns the accessor name used to get the L<UR::BoolExpr> that corresponds
 with the is_many accessor.  For example, the rule for the 'cars' accessor
 is '__car_rule'.  Returns a false value if the given property name is not
 is_many, or does not exist.
@@ -516,7 +516,8 @@ is_many, or does not exist.
 
 =head1 SEE ALSO
 
-L<UR::Object::Property>
+L<UR::Object::Property>, L<UR::Object::Iterator>, L<UR::Object::Set>,
+L<UR::BoolExpr>
 
 =cut
 
