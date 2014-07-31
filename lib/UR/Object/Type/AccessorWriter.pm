@@ -784,11 +784,11 @@ sub mk_indirect_rw_accessor {
     if ($singular_name) {  # True if we're defining an is_many indirect property
         # Add
         my $via_adder;
-        my $add_accessor_name = 'add_' . $singular_name;
-        if ($class_name->can($add_accessor_name)) {
-            $add_accessor_name = '__' . $add_accessor_name;
+        my $adder_method_name = 'add_' . $singular_name;
+        if ($class_name->can($adder_method_name)) {
+            $adder_method_name = '__' . $adder_method_name;
         }
-        my $add_accessor = Sub::Name::subname $class_name . '::' . $add_accessor_name => sub {
+        my $adder_method = Sub::Name::subname $class_name . '::' . $adder_method_name => sub {
             my($self) = shift;
 
 
@@ -807,17 +807,17 @@ sub mk_indirect_rw_accessor {
         };
         Sub::Install::reinstall_sub({
                 into => $class_name,
-                as   => $add_accessor_name,
-                code => $add_accessor,
+                as   => $adder_method_name,
+                code => $adder_method,
             });
 
         # Remove
         my $via_remover;
-        my $remove_accessor_name = 'remove_' . $singular_name;
-        if ($class_name->can($remove_accessor_name)) {
-            $remove_accessor_name = '__' . $remove_accessor_name;
+        my $remover_method_name = 'remove_' . $singular_name;
+        if ($class_name->can($remover_method_name)) {
+            $remover_method_name = '__' . $remover_method_name;
         }
-        my $remove_accessor = Sub::Name::subname $class_name . '::' . $remove_accessor_name => sub {
+        my $remover_method = Sub::Name::subname $class_name . '::' . $remover_method_name => sub {
             my($self) = shift;
 
             $resolve_update_strategy->() unless (defined $update_strategy);
@@ -835,8 +835,8 @@ sub mk_indirect_rw_accessor {
         };
         Sub::Install::reinstall_sub({
                 into => $class_name,
-                as   => $remove_accessor_name,
-                code => $remove_accessor,
+                as   => $remover_method_name,
+                code => $remover_method,
         });
     }
 
@@ -1426,11 +1426,11 @@ sub mk_object_set_accessors {
         });
     }
 
-    my $add_accessor_name = $self->adder_name_for_is_many_accessor($plural_name);
-    if ($class_name->can($add_accessor_name)) {
-        $add_accessor_name = '__' . $add_accessor_name;
+    my $adder_method_name = $self->adder_name_for_is_many_accessor($plural_name);
+    if ($class_name->can($adder_method_name)) {
+        $adder_method_name = '__' . $adder_method_name;
     }
-    my $add_accessor = Sub::Name::subname $class_name . '::' . $add_accessor_name => sub {
+    my $adder_method = Sub::Name::subname $class_name . '::' . $adder_method_name => sub {
         # TODO: this handles only a single item when making objects: support a list of hashrefs
         my $self = shift;
         my $rule;
@@ -1458,7 +1458,7 @@ sub mk_object_set_accessors {
             }
             else { 
                 if (@_ != 1) {
-                    die "$class_name $add_accessor_name expects a single value to add.  Got @_";
+                    die "$class_name $adder_method_name expects a single value to add.  Got @_";
                 }
                 push @{ $self->{$plural_name} ||= [] }, $_[0];
                 return $_[0];
@@ -1467,15 +1467,15 @@ sub mk_object_set_accessors {
     };
     Sub::Install::reinstall_sub({
         into => $class_name,
-        as   => $add_accessor_name,
-        code => $add_accessor,
+        as   => $adder_method_name,
+        code => $adder_method,
     });
 
-    my $remove_accessor_name = $self->remover_name_for_is_many_accessor($plural_name);
-    if ($class_name->can($remove_accessor_name)) {
-        $remove_accessor_name = '__' . $remove_accessor_name;
+    my $remover_method_name = $self->remover_name_for_is_many_accessor($plural_name);
+    if ($class_name->can($remover_method_name)) {
+        $remover_method_name = '__' . $remover_method_name;
     }
-    my $remove_accessor = Sub::Name::subname $class_name . '::' . $remove_accessor_name => sub {
+    my $remover_method = Sub::Name::subname $class_name . '::' . $remover_method_name => sub {
         my $self = shift;
         my $rule;
         $rule = $rule_resolver->($self) unless (defined $rule_template);
@@ -1498,7 +1498,7 @@ sub mk_object_set_accessors {
             }
             my $trans = UR::Context::Transaction->begin;
             @matches = map {
-                $_->delete or die "Error deleting $r_class_name " . $_->id . " for $remove_accessor_name!: " . $_->error_message;
+                $_->delete or die "Error deleting $r_class_name " . $_->id . " for $remover_method_name!: " . $_->error_message;
             } @matches;
             $trans->commit;
             return @matches;
@@ -1545,7 +1545,7 @@ sub mk_object_set_accessors {
                     @{ $self->{$plural_name} ||= [] } = ();
                 }
                 else {
-                    die "$class_name $remove_accessor_name should be called with a specific value.  Params are only usable for ur objects!  Got: @_";
+                    die "$class_name $remover_method_name should be called with a specific value.  Params are only usable for ur objects!  Got: @_";
                 }
             }
         }
@@ -1554,8 +1554,8 @@ sub mk_object_set_accessors {
     # check here
     Sub::Install::reinstall_sub({
         into => $class_name,
-        as   => $remove_accessor_name,
-        code => $remove_accessor,
+        as   => $remover_method_name,
+        code => $remover_method,
     });
 
 }
