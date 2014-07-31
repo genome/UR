@@ -449,14 +449,13 @@ other classes can override this if they need special handling.
 
   $property_name = $class_obj->singular_accessor_name_for_is_many_accessor($is_many_name);
 
-For is_many properties, returns the name of the singular-accessor.  Usually,
+For is_many properties, returns the name of the singular accessor.  Usually,
 this the singular version of the plural, is_many property's name.  The singular
-accessor accepts key/value pairs as arguments, and is used to filter the
+accessor accepts key/value pairs as arguments, which are used to filter the
 results of the is_many accessor.  For example, the singular for the 'cars'
 accessor is 'car'.
 
-Returns a false value if the given property name is not is_many, or does not
-exist.
+Returns a false value if the given property name does not exist or is not is_many.
 
 =item iterator_accessor_name_for_is_many_accessor
 
@@ -464,8 +463,9 @@ exist.
 
 Returns the accessor name used to get the L<UR::Object::Iterator> that corresponds
 with the is_many accessor.  For example, the iterator for the 'cars' accessor
-is 'car_iterator'.  Returns a false value if the given property name is not
-is_many, or does not exist.
+is 'car_iterator'.
+
+Returns a false value if the given property name does not exist or is not is_many.
 
 =item set_accessor_name_for_is_many_accessor
 
@@ -473,8 +473,9 @@ is_many, or does not exist.
 
 Returns the accessor name used to get the L<UR::Object::Set> that corresponds
 with the is_many accessor.  For example, the set for the 'cars' accessor
-is 'car_set'.  Returns a false value if the given property name is not
-is_many, or does not exist.
+is 'car_set'.
+
+Returns a false value if the given property name does not exist or is not is_many.
 
 =item rule_accessor_name_for_is_many_accessor
 
@@ -482,8 +483,9 @@ is_many, or does not exist.
 
 Returns the accessor name used to get the L<UR::BoolExpr> that corresponds
 with the is_many accessor.  For example, the rule for the 'cars' accessor
-is '__car_rule'.  Returns a false value if the given property name is not
-is_many, or does not exist.
+is '__car_rule'.
+
+Returns a false value if the given property name does not exist or is not is_many.
 
 =item arrayref_accessor_name_for_is_many_accessor
 
@@ -491,8 +493,9 @@ is_many, or does not exist.
 
 Returns the accessor name used to get the arrayref of objects that corresponds
 with the is_many accessor.  For example, the arrayref for the 'cars' accessor
-is 'car_arrayref'.  Returns a false value if the given property name is not
-is_many, or does not exist.
+is 'car_arrayref'.
+
+Returns a false value if the given property name does not exist or is not is_many.
 
 =item adder_name_for_is_many_accessor
 
@@ -500,8 +503,9 @@ is_many, or does not exist.
 
 Returns the method name used to get the adder method that corresponds with
 the is_many accessor.  For example, the adder for the 'cars' accessor is
-'add_car'.  Returns a false value if the given property name is not
-is_many, or does not exist.
+'add_car'.
+
+Returns a false value if the given property name does not exist or is not is_many.
 
 =item remover_name_for_is_many_accessor
 
@@ -509,8 +513,9 @@ is_many, or does not exist.
 
 Returns the method name used to get the remover method that corresponds with
 the is_many accessor.  For example, the adder for the 'cars' accessor is
-'remove_car'.  Returns a false value if the given property name is not
-is_many, or does not exist.
+'remove_car'.
+
+Returns a false value if the given property name does not exist or is not is_many.
 
 =back
 
