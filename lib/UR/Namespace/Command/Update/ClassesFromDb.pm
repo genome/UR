@@ -446,19 +446,20 @@ sub _update_database_metadata_objects_for_schema_changes {
     for my $table_name (keys %all_table_names) {
         my $last_actual_ddl_time = $last_ddl_time_for_table_name->{$table_name};
 
-        my $table_object;
         my $last_recorded_ddl_time;
         my $last_object_revision;
 
         my $db_table_name = $current_table_names{$table_name};
 
-        eval {
+        my $table_object = eval {
             #($table_object) = $data_source->get_tables(table_name => $table_name);
 
             # Using the above doesn't account for a table switching databases, which happens.
             # Once the data source is _part_ of the id we'll just have a delete/add, but for now it's an update.
-            $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source->id,
-                                                              table_name => $table_name);
+            my($owner, $name) = $self->_resolve_owner_and_table_from_table_name($table_name);
+            UR::DataSource::RDBMS::Table->get(data_source => $data_source->id,
+                                              owner => $owner,
+                                              table_name => $name);
         };
 
         if ($current_table_names{$table_name} and not $table_object) {
