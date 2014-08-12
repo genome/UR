@@ -450,8 +450,6 @@ sub _update_database_metadata_objects_for_schema_changes {
         my $last_recorded_ddl_time;
         my $last_object_revision;
 
-        # UR always keeps table names stored in upper-case.  Some databases (mysql)
-        # are case sensitive when querying the data dictionary
         my $db_table_name = $current_table_names{$table_name};
 
         eval {
