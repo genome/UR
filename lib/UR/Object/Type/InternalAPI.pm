@@ -1642,6 +1642,67 @@ sub ungenerate {
     delete $INC{$module_name};    
     $self->{'generated'} = 0;
 }
-    
+
+sub singular_accessor_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+    unless (exists $self->{_accessor_singular_names}->{$property_name}) {
+        my $property_meta = $self->property_meta_for_name($property_name) if ($self->generated);
+        if ($bootstrapping  # trust the caller when bootstrapping
+            or
+            ! $self->generated # when called from UR::Object::Type::AccessorWriter and the property isn't created yet
+            or
+            ($property_meta && $property_meta->is_many)
+        ) {
+            require Lingua::EN::Inflect;
+            $self->{_accessor_singular_names}->{$property_name} = Lingua::EN::Inflect::PL_V($property_name);
+        } else {
+            $self->{_accessor_singular_names}->{$property_name} = undef;
+        }
+    }
+    return $self->{_accessor_singular_names}->{$property_name};
+}
+
+sub iterator_accessor_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "${singular}_iterator";
+}
+
+sub set_accessor_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "${singular}_set";
+}
+
+sub rule_accessor_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "__${singular}_rule";
+}
+
+sub arrayref_accessor_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "${singular}_arrayref";
+}
+
+sub adder_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "add_${singular}";
+}
+
+sub remover_name_for_is_many_accessor {
+    my($self, $property_name) = @_;
+
+    my $singular = $self->singular_accessor_name_for_is_many_accessor($property_name);
+    return $singular && "remove_${singular}";
+}
+
 1;
 
