@@ -426,12 +426,15 @@ sub _update_database_metadata_objects_for_schema_changes {
     }
 
     # from the cache of known tables
-    my @previous_table_names = $data_source->get_table_names;
+    my @previous_table_names = map { join('.', $data_source->_resolve_owner_and_table_from_table_name($_)) }
+                                $data_source->get_table_names;
     my %previous_table_names = map { $_ => 1 } @previous_table_names;
 
     # from the database now
     my @current_table_names = $data_source->_get_table_names_from_data_dictionary();
-    my %current_table_names = map { s/"|'//g; $_ => $_ } @current_table_names;
+    my %current_table_names = map { join('.', $data_source->_resolve_owner_and_table_from_table_name($_)) }
+                              map { s/"|'//g; $_ => $_ }
+                              @current_table_names;
 
     my %all_table_names = $table_name
                             ? ( $table_name => 1 )
