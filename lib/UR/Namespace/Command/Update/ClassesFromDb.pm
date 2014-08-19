@@ -433,9 +433,9 @@ sub _update_database_metadata_objects_for_schema_changes {
     my @current_table_names = $data_source->_get_table_names_from_data_dictionary();
     my %current_table_names = map { s/"|'//g; $_ => $_ } @current_table_names;
 
-    my %all_table_names = (%current_table_names, %previous_table_names);
-
-    if($table_name) { %all_table_names = ($table_name => 1) }
+    my %all_table_names = $table_name
+                            ? ( $table_name => 1 )
+                            : ( %current_table_names, %previous_table_names);
 
     my $new_object_revision = $UR::Context::current->now();
 
