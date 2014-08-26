@@ -811,8 +811,6 @@ sub refresh_database_metadata_for_table_name {
 
     $creation_method ||= 'create';
 
-    my $data_source = $self;
-
     my $ur_table_name = $db_table_name;
     my @column_objects;
     my @all_constraints;
@@ -837,19 +835,19 @@ sub refresh_database_metadata_for_table_name {
     #}
 
     # TABLE
-    my $table_sth = $data_source->get_table_details_from_data_dictionary('%', $ds_owner, $db_table_name, "TABLE,VIEW");
+    my $table_sth = $self->get_table_details_from_data_dictionary('%', $ds_owner, $db_table_name, "TABLE,VIEW");
     my $table_data = $table_sth->fetchrow_hashref();
     unless ($table_data && %$table_data) {
-        #$self->error_message("No data for table $table_name in data source $data_source.");
+        #$self->error_message("No data for table $table_name in data source $self.");
         return;
     }
 
 	
-    my $data_source_id = $data_source->_my_data_source_id;
+    my $data_source_id = $self->_my_data_source_id;
 	
 	
 	my $table_object = $self->_get_or_create_table_meta(
-									$data_source,
+									$self,
 									$ur_owner,
 									$ur_table_name,
 									$db_table_name,
@@ -859,10 +857,10 @@ sub refresh_database_metadata_for_table_name {
 
     # COLUMNS
     # mysql databases seem to require you to actually put in the database name in the first arg
-    my $db_name = ($data_source->can('db_name')) ? $data_source->db_name : '%';
-    my $column_sth = $data_source->get_column_details_from_data_dictionary($db_name, $ds_owner, $db_table_name, '%');
+    my $db_name = ($self->can('db_name')) ? $self->db_name : '%';
+    my $column_sth = $self->get_column_details_from_data_dictionary($db_name, $ds_owner, $db_table_name, '%');
     unless ($column_sth) {
-        $self->error_message("Error getting column data for table $db_table_name in data source $data_source.");
+        $self->error_message("Error getting column data for table $db_table_name in data source $self.");
         return;
     }
     my $all_column_data = $column_sth->fetchall_arrayref({});
@@ -935,7 +933,7 @@ sub refresh_database_metadata_for_table_name {
     }
 
 
-    my $bitmap_data = $data_source->get_bitmap_index_details_from_data_dictionary($db_table_name);
+    my $bitmap_data = $self->get_bitmap_index_details_from_data_dictionary($db_table_name);
     for my $index (@$bitmap_data) {
         #push @{ $embed{bitmap_index_names}{$table_object} }, $index->{'index_name'};
 
@@ -965,8 +963,8 @@ sub refresh_database_metadata_for_table_name {
     # constraints on this table against columns in other tables
 
 
-    #my $db_owner = $data_source->owner;
-    my $fk_sth = $data_source->get_foreign_key_details_from_data_dictionary('', $ds_owner, $db_table_name, '', '', '');
+    #my $db_owner = $self->owner;
+    my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('', $ds_owner, $db_table_name, '', '', '');
 
     my %fk;     # hold the fk constraints that this invocation of foreign_key_info created
 
@@ -1042,7 +1040,7 @@ sub refresh_database_metadata_for_table_name {
     # get foreign_key_info the other way
     # constraints on other tables against columns in this table
 
-    my $fk_reverse_sth = $data_source->get_foreign_key_details_from_data_dictionary('', '', '', '', $ds_owner, $db_table_name);
+    my $fk_reverse_sth = $self->get_foreign_key_details_from_data_dictionary('', '', '', '', $ds_owner, $db_table_name);
 
     %fk = ();   # resetting this prevents data_source referencing
     # tables from fouling up their fk objects
@@ -1136,7 +1134,7 @@ sub refresh_database_metadata_for_table_name {
 
     # get primary_key_info
 
-    my $pk_sth = $data_source->get_primary_key_details_from_data_dictionary(undef, $ds_owner, $db_table_name);
+    my $pk_sth = $self->get_primary_key_details_from_data_dictionary(undef, $ds_owner, $db_table_name);
 
     if ($pk_sth) {
         my @new_pk;
@@ -1186,7 +1184,7 @@ sub refresh_database_metadata_for_table_name {
     # and each other DataSource class needs its own implementation
 
     # The above was moved into each data source's class
-    if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($ds_owner, $db_table_name)) {
+    if (my $uc = $self->get_unique_index_details_from_data_dictionary($ds_owner, $db_table_name)) {
         my %uc = %$uc;   # make a copy we can manipulate in case $uc is shared or read-only
 
         # check for redundant unique constraints
