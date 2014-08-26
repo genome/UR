@@ -528,7 +528,7 @@ sub _get_table_names_from_data_dictionary {
         Carp::confess("get_tables does not currently take filters!  FIXME.");
     }    
     my $dbh = $self->get_default_handle;
-    my $owner = $self->owner;    
+    my $owner = $self->owner || '%';
 
     # FIXME  This will fix the immediate problem of getting classes to be created out of 
     # views.  We still need to somehow mark the resulting class as read-only
@@ -536,7 +536,9 @@ sub _get_table_names_from_data_dictionary {
     my $sth = $dbh->table_info("%", $owner, "%", "TABLE,VIEW");
     my @names;
     while (my $row = $sth->fetchrow_hashref) {
-        my $table_name = $row->{TABLE_NAME};
+        my $table_name = $self->owner
+                            ? $row->{TABLE_NAME}
+                            : join('.', @$row{'TABLE_SCHEM','TABLE_NAME'});
         $table_name =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
         next if $self->_ignore_table($table_name);
         push @names, $table_name;
@@ -806,26 +808,17 @@ sub _get_or_create_table_meta {
 }
 
 sub refresh_database_metadata_for_table_name {
-    my ($self,$db_table_name, $creation_method) = @_;
+    my ($self,$qualified_table_name, $creation_method) = @_;
 
     $creation_method ||= 'create';
-
-    my $ur_table_name = $db_table_name;
 
     # this must be on or before the actual data dictionary queries
     my $revision_time = $UR::Context::current->now();
 
     # The class definition can specify a table name as <schema>.<table_name> to override the
     # data source's default schema/owner.
-    my $ds_owner;
-    ($ds_owner,$db_table_name) = $self->_resolve_owner_and_table_from_table_name($db_table_name);
-    my $ur_owner;
-    ($ur_owner, $ur_table_name) = $self->_resolve_owner_and_table_from_table_name($ur_table_name);
-    #my $dd_table_name = $table_name;
-    #if ($table_name =~ m/(\w+)\.(\w+)/) {
-    #    $ds_owner = $1;
-    #    $dd_table_name = $2;
-    #}
+    my($ds_owner,$db_table_name) = $self->_resolve_owner_and_table_from_table_name($qualified_table_name);
+    my($ur_owner, $ur_table_name) = $self->_resolve_owner_and_table_from_table_name($qualified_table_name);
 
     my $data_source_id = $self->_my_data_source_id;
 
