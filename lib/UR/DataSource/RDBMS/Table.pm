@@ -10,7 +10,7 @@ UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::Table',
     is => ['UR::DataSource::RDBMS::Entity'],
     dsmap => 'dd_table',
-    id_properties => [qw/data_source owner table_name/],
+    id_properties => [qw/data_source table_name/],
     properties => [
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
         data_source_obj                  => { type => 'UR::DataSource', id_by => 'data_source'}, 
@@ -64,7 +64,7 @@ sub columns {
     my $self = shift;
 
     my $col_class = $self->_table_column_class;
-    return $col_class->get(data_source => $self->data_source, table_name => $self->table_name, owner => $self->owner);
+    return $col_class->get(data_source => $self->data_source, table_name => $self->table_name);
 }
 
 sub column_names {
@@ -75,7 +75,7 @@ sub primary_key_constraint_columns {
     my $self = shift;
 
     my $pk_class = $self->_pk_constraint_class;
-    my @pks = $pk_class->get(data_source => $self->data_source, table_name  => $self->table_name, owner => $self->owner);
+    my @pks = $pk_class->get(data_source => $self->data_source, table_name  => $self->table_name);
     my @pks_with_rank = map { [ $_->rank, $_ ] } @pks;
     return map { $_->[1] }
            sort { $a->[0] <=> $b->[0] }
@@ -92,7 +92,7 @@ sub fk_constraints {
     my $self = shift;
 
     my $fk_class = $self->_fk_constraint_class;
-    my @fks = $fk_class->get(data_source => $self->data_source, table_name => $self->table_name, owner => $self->owner);
+    my @fks = $fk_class->get(data_source => $self->data_source, table_name => $self->table_name);
     return @fks;
 }
 
@@ -105,7 +105,7 @@ sub ref_fk_constraints {
     my $self = shift;
 
     my $fk_class = $self->_fk_constraint_class;
-    my @fks = $fk_class->get(data_source => $self->data_source, r_table_name => $self->table_name, r_owner => $self->owner);
+    my @fks = $fk_class->get(data_source => $self->data_source, r_table_name => $self->table_name);
     return @fks;
 }
 
@@ -138,7 +138,7 @@ sub unique_constraints {
     my $self = shift;
 
     my $uc_class = $self->_unique_constraint_class;
-    my @c = $uc_class->get( data_source => $self->data_source, table_name => $self->table_name, owner => $self->owner, @_);
+    my @c = $uc_class->get( data_source => $self->data_source, table_name => $self->table_name, @_);
 
     return @c;
 }
@@ -147,7 +147,7 @@ sub bitmap_indexes {
     my $self = shift;
 
     my $bi_class = $self->_bitmap_index_class;
-    my @bi = $bi_class->get(data_source => $self->data_source, table_name => $self->table_name, owner => $self->owner);
+    my @bi = $bi_class->get(data_source => $self->data_source, table_name => $self->table_name);
     return @bi;
 }
 
@@ -161,7 +161,7 @@ sub bitmap_index_names {
 sub handler_class {
     my $self = shift;
 
-    return UR::Object::Type->get(table_name => $self->table_name, owner => $self->owner, @_);
+    return UR::Object::Type->get(table_name => $self->table_name, @_);
 }
 
 sub handler_class_name {

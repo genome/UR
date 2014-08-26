@@ -11,7 +11,7 @@ UR::Object::Type->define(
     is => ['UR::DataSource::RDBMS::Entity'],
     dsmap => 'dd_bitmap_index',
     er_role => '',
-    id_properties => [qw/data_source owner table_name bitmap_index_name/],
+    id_properties => [qw/data_source table_name bitmap_index_name/],
     properties => [
         bitmap_index_name                => { type => 'varchar', len => undef, sql => 'bitmap_index_name' },
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },

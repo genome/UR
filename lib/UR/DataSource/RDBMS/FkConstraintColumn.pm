@@ -11,7 +11,7 @@ UR::Object::Type->define(
     is => ['UR::DataSource::RDBMS::Entity'],
     dsmap => 'dd_fk_constraint_column',
     er_role => 'bridge',
-    id_properties => [qw/data_source owner table_name fk_constraint_name column_name/],
+    id_properties => [qw/data_source table_name fk_constraint_name column_name/],
     properties => [
         column_name                      => { type => 'varchar', len => undef, sql => 'column_name' },
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
@@ -19,7 +19,6 @@ UR::Object::Type->define(
         namespace                        => { calculate_from => [ 'data_source'],
                                               calculate => q( (split(/::/,$data_source))[0] ) },
         fk_constraint_name               => { type => 'varchar', len => undef, sql => 'fk_constraint_name' },
-        owner                            => { type => 'varchar', len => undef, is_optional => 1, sql => 'owner' },
         table_name                       => { type => 'varchar', len => undef, sql => 'table_name' },
         r_column_name                    => { type => 'varchar', len => undef, sql => 'r_column_name' },
         r_table_name                     => { type => 'varchar', len => undef, sql => 'r_table_name' },
