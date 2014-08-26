@@ -842,46 +842,8 @@ sub refresh_database_metadata_for_table_name {
     }
 
     # get primary_key_info
-
-    my $pk_sth = $self->get_primary_key_details_from_data_dictionary(undef, $ds_owner, $db_table_name);
-
-    if ($pk_sth) {
-        my @new_pk;
-        while (my $data = $pk_sth->fetchrow_hashref()) {
-            $data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
-            my $pk = UR::DataSource::RDBMS::PkConstraintColumn->get(
-                table_name  => $ur_table_name,
-                owner       => $ur_owner,
-                data_source => $data_source_id,
-                column_name => $data->{'COLUMN_NAME'},
-            );
-            if ($pk) {
-                # Since the rank/order is pretty much all that might change, we
-                # just delete and re-create these.
-                # It's a no-op at save time if there are no changes.
-                $pk->delete;
-            }
-
-            push @new_pk, [
-                            table_name => $ur_table_name,
-                            data_source => $data_source_id,
-                            owner => $ds_owner,
-                            column_name => $data->{'COLUMN_NAME'},
-                            rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
-                        ];
-            #        $table_object->{primary_key_constraint_name} = $data->{PK_NAME};
-            #        $embed{primary_key_constraint_column_names} ||= {};
-            #        $embed{primary_key_constraint_column_names}{$table_object} ||= [];
-            #        push @{ $embed{primary_key_constraint_column_names}{$table_object} }, $data->{COLUMN_NAME};
-        }
-
-        for my $data (@new_pk) {
-            my $pk = UR::DataSource::RDBMS::PkConstraintColumn->$creation_method(@$data);
-            unless ($pk) {
-                $self->error_message("Failed to create primary key @$data");
-                return;
-            }
-        }			
+    if ($self->_update_primary_key_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object)) {
+        $data_was_changed_for_this_table = 1;
     }
 
     ## Get the unique constraints
@@ -1304,6 +1266,51 @@ sub _update_foreign_key_metadata_for_refresh {
         }
     }
 
+    return $data_was_changed_for_this_table;
+}
+
+sub _update_primary_key_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object) = @_;
+
+    my $data_was_changed_for_this_table = 0;
+    my $data_source_id = $self->_my_data_source_id;
+
+    my $pk_sth = $self->get_primary_key_details_from_data_dictionary(undef, $ds_owner, $db_table_name);
+
+    if ($pk_sth) {
+        my @new_pk;
+        while (my $data = $pk_sth->fetchrow_hashref()) {
+            $data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
+            my $pk = UR::DataSource::RDBMS::PkConstraintColumn->get(
+                table_name  => $ur_table_name,
+                owner       => $ur_owner,
+                data_source => $data_source_id,
+                column_name => $data->{'COLUMN_NAME'},
+            );
+            if ($pk) {
+                # Since the rank/order is pretty much all that might change, we
+                # just delete and re-create these.
+                # It's a no-op at save time if there are no changes.
+                $pk->delete;
+            }
+
+            push @new_pk, [
+                            table_name => $ur_table_name,
+                            data_source => $data_source_id,
+                            owner => $ds_owner,
+                            column_name => $data->{'COLUMN_NAME'},
+                            rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
+                        ];
+        }
+
+        for my $data (@new_pk) {
+            my $pk = UR::DataSource::RDBMS::PkConstraintColumn->$creation_method(@$data);
+            unless ($pk) {
+                $self->error_message("Failed to create primary key @$data");
+                return;
+            }
+        }
+    }
     return $data_was_changed_for_this_table;
 }
 
