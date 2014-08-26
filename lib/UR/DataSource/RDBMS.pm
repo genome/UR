@@ -534,12 +534,11 @@ sub _get_table_names_from_data_dictionary {
     # views.  We still need to somehow mark the resulting class as read-only
 
     my $sth = $dbh->table_info("%", $owner, "%", "TABLE,VIEW");
-    my $table_name;
-    $sth->bind_col(3,\$table_name);
     my @names;
-    while ($sth->fetch) {
-        next if $self->_ignore_table($table_name);
+    while (my $row = $sth->fetchrow_hashref) {
+        my $table_name = $row->{TABLE_NAME};
         $table_name =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
+        next if $self->_ignore_table($table_name);
         push @names, $table_name;
     }
     return @names;
