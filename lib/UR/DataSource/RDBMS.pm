@@ -812,7 +812,6 @@ sub refresh_database_metadata_for_table_name {
     $creation_method ||= 'create';
 
     my $ur_table_name = $db_table_name;
-    my @all_constraints;
 
     # this must be on or before the actual data dictionary queries
     my $revision_time = $UR::Context::current->now();
@@ -841,113 +840,15 @@ sub refresh_database_metadata_for_table_name {
         $data_was_changed_for_this_table = 1;
     }
 
-    # get primary_key_info
     if ($self->_update_primary_key_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object)) {
         $data_was_changed_for_this_table = 1;
     }
 
-    ## Get the unique constraints
-    ## Unfortunately, there appears to be no DBI catalog
-    ## method which will find these.  So we have to use
-    ## some custom SQL
-    #
-    # The SQL that used to live here was moved to the UR::DataSource::Oracle
-    # and each other DataSource class needs its own implementation
-
-    # The above was moved into each data source's class
-    if (my $uc = $self->get_unique_index_details_from_data_dictionary($ds_owner, $db_table_name)) {
-        my %uc = %$uc;   # make a copy we can manipulate in case $uc is shared or read-only
-
-        # check for redundant unique constraints
-        # there may be both an index and a constraint
-
-        for my $uc_name_1 ( keys %uc ) {
-
-            my $uc_columns_1 = $uc{$uc_name_1}
-                or next;
-            my $uc_columns_1_serial = join ',', sort @$uc_columns_1;
-
-            for my $uc_name_2 ( keys %uc ) {
-                next if ( $uc_name_2 eq $uc_name_1 );
-                my $uc_columns_2 = $uc{$uc_name_2}
-                    or next;
-                my $uc_columns_2_serial = join ',', sort @$uc_columns_2;
-
-                if ( $uc_columns_2_serial eq $uc_columns_1_serial ) {
-                    delete $uc{$uc_name_1};
-                }
-            }
-        }
-
-        # compare primary key constraints to unique constraints
-        my $pk_columns_serial =
-            join(',',
-                sort map { $_->column_name }
-                    UR::DataSource::RDBMS::PkConstraintColumn->get(
-                        data_source => $data_source_id,
-                        table_name => $ur_table_name,
-                        owner => $ds_owner,
-                    )
-                );
-        for my $uc_name ( keys %uc ) {
-
-            # see if primary key constraint has the same name as
-            # any unique constraints
-            # FIXME - disabling this for now, the Meta DB dosen't track PK constraint names
-            # Isn't it just as goot to check the involved columns?
-            #if ( $table_object->primary_key_constraint_name eq $uc_name ) {
-            #    delete $uc{$uc_name};
-            #    next;
-            #}
-
-            # see if any unique constraints cover the exact same column(s) as
-            # the primary key column(s)
-            my $uc_columns_serial = join ',', sort @{ $uc{$uc_name} };
-
-            if ( $pk_columns_serial eq $uc_columns_serial ) {
-                delete $uc{$uc_name};
-            }
-        }
-
-        # Create new UniqueConstraintColumn objects for the columns that don't exist, and delete the
-        # objects if they don't apply anymore
-        foreach my $uc_name ( keys %uc ) {
-            my %constraint_objs =
-                map { $_->column_name => $_ }
-                UR::DataSource::RDBMS::UniqueConstraintColumn->get(
-                    data_source => $data_source_id,
-                    table_name => $ur_table_name,
-                    owner => $ds_owner || '',
-                    constraint_name => $uc_name,
-                );
-
-            foreach my $col_name ( @{$uc{$uc_name}} ) {
-                if ($constraint_objs{$col_name} ) {
-                    delete $constraint_objs{$col_name};
-                } else {
-                    my $uc = UR::DataSource::RDBMS::UniqueConstraintColumn->$creation_method(
-                        data_source => $data_source_id,
-                        table_name => $ur_table_name,
-                        owner => $ds_owner,
-                        constraint_name => $uc_name,
-                        column_name => $col_name,
-                    );
-                    1;
-                }
-            } 
-            foreach my $obj ( values %constraint_objs ) {
-                $obj->delete();
-            }
-        }
+    if ($self->_update_unique_constraint_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object)) {
+        $data_was_changed_for_this_table = 1;
     }
 
     $table_object->last_object_revision($revision_time) if ($data_was_changed_for_this_table);
-
-    # Now that all columns know their foreign key constraints,
-    # have the column objects resolve the various names
-    # associated with the column.
-
-    #for my $col (@column_objects) { $col->resolve_names }
 
     # Determine the ER type.
     # We have 'validation item', 'entity', and 'bridge'
@@ -1311,6 +1212,101 @@ sub _update_primary_key_metadata_for_refresh {
             }
         }
     }
+    return $data_was_changed_for_this_table;
+}
+
+sub _update_unique_constraint_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object) = @_;
+
+    my $data_was_changed_for_this_table = 0;
+    my $data_source_id = $self->_my_data_source_id;
+
+    if (my $uc = $self->get_unique_index_details_from_data_dictionary($ds_owner, $db_table_name)) {
+        my %uc = %$uc;   # make a copy we can manipulate in case $uc is shared or read-only
+
+        # check for redundant unique constraints
+        # there may be both an index and a constraint
+
+        for my $uc_name_1 ( keys %uc ) {
+
+            my $uc_columns_1 = $uc{$uc_name_1}
+                or next;
+            my $uc_columns_1_serial = join ',', sort @$uc_columns_1;
+
+            for my $uc_name_2 ( keys %uc ) {
+                next if ( $uc_name_2 eq $uc_name_1 );
+                my $uc_columns_2 = $uc{$uc_name_2}
+                    or next;
+                my $uc_columns_2_serial = join ',', sort @$uc_columns_2;
+
+                if ( $uc_columns_2_serial eq $uc_columns_1_serial ) {
+                    delete $uc{$uc_name_1};
+                }
+            }
+        }
+
+        # compare primary key constraints to unique constraints
+        my $pk_columns_serial =
+            join(',',
+                sort map { $_->column_name }
+                    UR::DataSource::RDBMS::PkConstraintColumn->get(
+                        data_source => $data_source_id,
+                        table_name => $ur_table_name,
+                        owner => $ds_owner,
+                    )
+                );
+        for my $uc_name ( keys %uc ) {
+
+            # see if primary key constraint has the same name as
+            # any unique constraints
+            # FIXME - disabling this for now, the Meta DB dosen't track PK constraint names
+            # Isn't it just as goot to check the involved columns?
+            #if ( $table_object->primary_key_constraint_name eq $uc_name ) {
+            #    delete $uc{$uc_name};
+            #    next;
+            #}
+
+            # see if any unique constraints cover the exact same column(s) as
+            # the primary key column(s)
+            my $uc_columns_serial = join ',', sort @{ $uc{$uc_name} };
+
+            if ( $pk_columns_serial eq $uc_columns_serial ) {
+                delete $uc{$uc_name};
+            }
+        }
+
+        # Create new UniqueConstraintColumn objects for the columns that don't exist, and delete the
+        # objects if they don't apply anymore
+        foreach my $uc_name ( keys %uc ) {
+            my %constraint_objs =
+                map { $_->column_name => $_ }
+                UR::DataSource::RDBMS::UniqueConstraintColumn->get(
+                    data_source => $data_source_id,
+                    table_name => $ur_table_name,
+                    owner => $ds_owner || '',
+                    constraint_name => $uc_name,
+                );
+
+            foreach my $col_name ( @{$uc{$uc_name}} ) {
+                if ($constraint_objs{$col_name} ) {
+                    delete $constraint_objs{$col_name};
+                } else {
+                    my $uc = UR::DataSource::RDBMS::UniqueConstraintColumn->$creation_method(
+                        data_source => $data_source_id,
+                        table_name => $ur_table_name,
+                        owner => $ds_owner,
+                        constraint_name => $uc_name,
+                        column_name => $col_name,
+                    );
+                    1;
+                }
+            }
+            foreach my $obj ( values %constraint_objs ) {
+                $obj->delete();
+            }
+        }
+    }
+
     return $data_was_changed_for_this_table;
 }
 
