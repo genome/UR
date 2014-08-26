@@ -12,6 +12,9 @@ our $VERSION = "0.43"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => 'UR::DataSource::Meta',
     is => ['UR::DataSource::SQLite'],
+    has_constant => [
+        owner => { value => 'main' },
+    ],
 );
 
 sub _resolve_class_name_for_table_name_fixups {
