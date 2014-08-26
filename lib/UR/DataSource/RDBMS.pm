@@ -837,189 +837,8 @@ sub refresh_database_metadata_for_table_name {
     # FKs, etc # were changed
     my $data_was_changed_for_this_table = $self->_update_column_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object);
 
-    # Make a note of what FKs exist in the Meta DB involving this table
-    my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
-                                                                  owner       => $ur_owner,
-                                                                  table_name  => $ur_table_name);
-    push @fks_in_meta_db, UR::DataSource::RDBMS::FkConstraint->get(data_source  => $data_source_id,
-                                                                   r_owner      => $ur_owner,
-                                                                   r_table_name => $ur_table_name);
-    my %fks_in_meta_db_by_fingerprint;
-    foreach my $fk ( @fks_in_meta_db ) {
-        my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
-        $fks_in_meta_db_by_fingerprint{$fingerprint} = $fk;
-    }
-
-    # constraints on this table against columns in other tables
-
-
-    #my $db_owner = $self->owner;
-    my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('', $ds_owner, $db_table_name, '', '', '');
-
-    my %fk;     # hold the fk constraints that this invocation of foreign_key_info created
-
-    my @constraints;
-    my %fks_in_real_db;
-    if ($fk_sth) {
-        while (my $data = $fk_sth->fetchrow_hashref()) {
-
-            foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME ) ) {
-                next unless defined($data->{$_});
-                # Postgres puts quotes around things that look like keywords
-                $data->{$_} =~ s/"|'//g;
-            }
-
-            my $constraint_name = $data->{'FK_NAME'};
-            my $fk_table_name = $data->{'FK_TABLE_NAME'}
-                                || $data->{'FKTABLE_NAME'};
-            my $r_table_name = $data->{'UK_TABLE_NAME'}
-                               || $data->{'PKTABLE_NAME'};
-            my $fk_column_name = $data->{'FK_COLUMN_NAME'}
-                                 || $data->{'FKCOLUMN_NAME'};
-            my $r_column_name = $data->{'UK_COLUMN_NAME'}
-                                || $data->{'PKCOLUMN_NAME'};
-
-            # MySQL returns primary key info with foreign_key_info()!?
-            # They show up here with no $r_table_name or $r_column_name
-            next unless ($r_table_name and $r_column_name);
-
-            my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $constraint_name,
-                                                              table_name         => $fk_table_name,
-                                                              owner              => $table_object->{owner},
-                                                              data_source        => $data_source_id,
-                                                              r_table_name       => $r_table_name
-                                                          );
-
-            unless ($fk) {
-                $fk = UR::DataSource::RDBMS::FkConstraint->$creation_method(
-                    fk_constraint_name => $constraint_name,
-                    table_name      => $fk_table_name,
-                    r_table_name    => $r_table_name,
-                    owner           => $table_object->{owner},
-                    r_owner         => $table_object->{owner},
-                    data_source     => $table_object->{data_source},
-                    last_object_revision => $revision_time,
-                );
-
-                $fk{$fk->id} = $fk;
-                $data_was_changed_for_this_table = 1;
-            }
-
-            if ($fk{$fk->id}) {
-                my %fkcol_params = ( fk_constraint_name => $constraint_name,
-                                     table_name      => $fk_table_name,
-                                     column_name     => $fk_column_name,
-                                     r_table_name    => $r_table_name,
-                                     r_column_name   => $r_column_name,
-                                     owner           => $table_object->{owner},
-                                     data_source     => $table_object->{data_source},
-                                   );
-                my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params);
-                unless ($fkcol) {
-                    $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->$creation_method(%fkcol_params);
-                }
-            }
-
-            my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
-            $fks_in_real_db{$fingerprint} = $fk;
-
-            push @constraints, $fk;
-        }
-    }
-
-    # get foreign_key_info the other way
-    # constraints on other tables against columns in this table
-
-    my $fk_reverse_sth = $self->get_foreign_key_details_from_data_dictionary('', '', '', '', $ds_owner, $db_table_name);
-
-    %fk = ();   # resetting this prevents data_source referencing
-    # tables from fouling up their fk objects
-
-
-    if ($fk_reverse_sth) {
-        while (my $data = $fk_reverse_sth->fetchrow_hashref()) {
-
-            foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME PKTABLE_SCHEM FKTABLE_SCHEM UK_TABLE_SCHEM FK_TABLE_SCHEM) ) {
-                next unless defined($data->{$_});
-                # Postgres puts quotes around things that look like keywords
-                $data->{$_} =~ s/"|'//g;
-            }
-
-            my $constraint_name = $data->{'FK_NAME'} || '';
-            my $fk_table_name = $data->{'FK_TABLE_NAME'}
-                                || $data->{'FKTABLE_NAME'};
-            my $r_table_name = $data->{'UK_TABLE_NAME'}
-                               || $data->{'PKTABLE_NAME'};
-            my $fk_column_name = $data->{'FK_COLUMN_NAME'}
-                                 || $data->{'FKCOLUMN_NAME'};
-            my $r_column_name = $data->{'UK_COLUMN_NAME'}
-                                || $data->{'PKCOLUMN_NAME'};
-            my $owner         = $data->{'FK_TABLE_SCHEM'}
-                                || $data->{'FKTABLE_SCHEM'}
-                                || $table_object->owner;
-            my $r_owner       = $data->{'UK_TABLE_SCHEM'}
-                                || $data->{'PKTABLE_SCHEM'}
-                                || $table_object->owner;
-
-            # MySQL returns primary key info with foreign_key_info()?!
-            # They show up here with no $r_table_name or $r_column_name
-            next unless ($r_table_name and $r_column_name);
-
-            my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $constraint_name,
-                                                              table_name         => $fk_table_name,
-                                                              owner              => $owner,
-                                                              r_table_name       => $r_table_name,
-                                                              r_owner            => $r_owner,
-                                                              data_source        => $table_object->{'data_source'},
-                                                          );
-            unless ($fk) {
-                $fk = UR::DataSource::RDBMS::FkConstraint->$creation_method(
-                    fk_constraint_name => $constraint_name,
-                    table_name      => $fk_table_name,
-                    r_table_name    => $r_table_name,
-                    owner           => $owner,
-                    r_owner         => $r_owner,
-                    data_source     => $table_object->{data_source},
-                    last_object_revision => $revision_time,
-                );
-                unless ($fk) {
-                    ##$DB::single = 1;
-                    1;
-                }
-                $fk{$fk->fk_constraint_name} = $fk;
-                $data_was_changed_for_this_table = 1;
-            }
-
-            if ($fk{$fk->fk_constraint_name}) {
-                my %fkcol_params = ( fk_constraint_name => $constraint_name,
-                                     table_name      => $fk_table_name,
-                                     column_name     => $fk_column_name,
-                                     r_table_name    => $r_table_name,
-                                     r_column_name   => $r_column_name,
-                                     owner           => $owner,
-                                     data_source     => $table_object->{data_source},
-                                 );
-                unless ( UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params) ) {
-                    UR::DataSource::RDBMS::FkConstraintColumn->$creation_method(%fkcol_params);
-                }
-            }
-
-
-            my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
-            $fks_in_real_db{$fingerprint} = $fk;
-
-            push @constraints, $fk;
-        }
-    }
-
-    # Find FKs still in the Meta db that don't exist in the real database anymore
-    foreach my $fingerprint ( keys %fks_in_meta_db_by_fingerprint ) {
-        unless ($fks_in_real_db{$fingerprint}) {
-            my $fk = $fks_in_meta_db_by_fingerprint{$fingerprint};
-            my @fk_cols = $fk->get_related_column_objects();
-            $_->delete foreach @fk_cols;
-            $fk->delete;
-        }
+    if ($self->_update_foreign_key_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object)) {
+        $data_was_changed_for_this_table = 1;
     }
 
     # get primary_key_info
@@ -1289,6 +1108,200 @@ sub _update_column_metadata_for_refresh {
         #$self->status_message("Detected column " . $to_delete->column_name . " has gone away.");
         $to_delete->delete;
         $data_was_changed_for_this_table = 1;
+    }
+
+    return $data_was_changed_for_this_table;
+}
+
+sub _update_foreign_key_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object) = @_;
+
+    my $data_was_changed_for_this_table = 0;
+    my $data_source_id = $self->_my_data_source_id;
+
+    # Make a note of what FKs exist in the Meta DB involving this table
+    my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
+                                                                  owner       => $ur_owner,
+                                                                  table_name  => $ur_table_name);
+    push @fks_in_meta_db, UR::DataSource::RDBMS::FkConstraint->get(data_source  => $data_source_id,
+                                                                   r_owner      => $ur_owner,
+                                                                   r_table_name => $ur_table_name);
+    my %fks_in_meta_db_by_fingerprint;
+    foreach my $fk ( @fks_in_meta_db ) {
+        my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+        $fks_in_meta_db_by_fingerprint{$fingerprint} = $fk;
+    }
+
+    # constraints on this table against columns in other tables
+
+
+    #my $db_owner = $self->owner;
+    my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('', $ds_owner, $db_table_name, '', '', '');
+
+    my %fk;     # hold the fk constraints that this invocation of foreign_key_info created
+
+    my @constraints;
+    my %fks_in_real_db;
+    if ($fk_sth) {
+        while (my $data = $fk_sth->fetchrow_hashref()) {
+
+            foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME ) ) {
+                next unless defined($data->{$_});
+                # Postgres puts quotes around things that look like keywords
+                $data->{$_} =~ s/"|'//g;
+            }
+
+            my $constraint_name = $data->{'FK_NAME'};
+            my $fk_table_name = $data->{'FK_TABLE_NAME'}
+                                || $data->{'FKTABLE_NAME'};
+            my $r_table_name = $data->{'UK_TABLE_NAME'}
+                               || $data->{'PKTABLE_NAME'};
+            my $fk_column_name = $data->{'FK_COLUMN_NAME'}
+                                 || $data->{'FKCOLUMN_NAME'};
+            my $r_column_name = $data->{'UK_COLUMN_NAME'}
+                                || $data->{'PKCOLUMN_NAME'};
+
+            # MySQL returns primary key info with foreign_key_info()!?
+            # They show up here with no $r_table_name or $r_column_name
+            next unless ($r_table_name and $r_column_name);
+
+            my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $constraint_name,
+                                                              table_name         => $fk_table_name,
+                                                              owner              => $table_object->{owner},
+                                                              data_source        => $data_source_id,
+                                                              r_table_name       => $r_table_name
+                                                          );
+
+            unless ($fk) {
+                $fk = UR::DataSource::RDBMS::FkConstraint->$creation_method(
+                    fk_constraint_name => $constraint_name,
+                    table_name      => $fk_table_name,
+                    r_table_name    => $r_table_name,
+                    owner           => $table_object->{owner},
+                    r_owner         => $table_object->{owner},
+                    data_source     => $table_object->{data_source},
+                    last_object_revision => $revision_time,
+                );
+
+                $fk{$fk->id} = $fk;
+                $data_was_changed_for_this_table = 1;
+            }
+
+            if ($fk{$fk->id}) {
+                my %fkcol_params = ( fk_constraint_name => $constraint_name,
+                                     table_name      => $fk_table_name,
+                                     column_name     => $fk_column_name,
+                                     r_table_name    => $r_table_name,
+                                     r_column_name   => $r_column_name,
+                                     owner           => $table_object->{owner},
+                                     data_source     => $table_object->{data_source},
+                                   );
+                my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params);
+                unless ($fkcol) {
+                    $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->$creation_method(%fkcol_params);
+                }
+            }
+
+            my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+            $fks_in_real_db{$fingerprint} = $fk;
+
+            push @constraints, $fk;
+        }
+    }
+
+    # get foreign_key_info the other way
+    # constraints on other tables against columns in this table
+
+    my $fk_reverse_sth = $self->get_foreign_key_details_from_data_dictionary('', '', '', '', $ds_owner, $db_table_name);
+
+    %fk = ();   # resetting this prevents data_source referencing
+    # tables from fouling up their fk objects
+
+
+    if ($fk_reverse_sth) {
+        while (my $data = $fk_reverse_sth->fetchrow_hashref()) {
+
+            foreach ( qw( FK_NAME FK_TABLE_NAME FKTABLE_NAME UK_TABLE_NAME PKTABLE_NAME FK_COLUMN_NAME FKCOLUMN_NAME UK_COLUMN_NAME PKCOLUMN_NAME PKTABLE_SCHEM FKTABLE_SCHEM UK_TABLE_SCHEM FK_TABLE_SCHEM) ) {
+                next unless defined($data->{$_});
+                # Postgres puts quotes around things that look like keywords
+                $data->{$_} =~ s/"|'//g;
+            }
+
+            my $constraint_name = $data->{'FK_NAME'} || '';
+            my $fk_table_name = $data->{'FK_TABLE_NAME'}
+                                || $data->{'FKTABLE_NAME'};
+            my $r_table_name = $data->{'UK_TABLE_NAME'}
+                               || $data->{'PKTABLE_NAME'};
+            my $fk_column_name = $data->{'FK_COLUMN_NAME'}
+                                 || $data->{'FKCOLUMN_NAME'};
+            my $r_column_name = $data->{'UK_COLUMN_NAME'}
+                                || $data->{'PKCOLUMN_NAME'};
+            my $owner         = $data->{'FK_TABLE_SCHEM'}
+                                || $data->{'FKTABLE_SCHEM'}
+                                || $table_object->owner;
+            my $r_owner       = $data->{'UK_TABLE_SCHEM'}
+                                || $data->{'PKTABLE_SCHEM'}
+                                || $table_object->owner;
+
+            # MySQL returns primary key info with foreign_key_info()?!
+            # They show up here with no $r_table_name or $r_column_name
+            next unless ($r_table_name and $r_column_name);
+
+            my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $constraint_name,
+                                                              table_name         => $fk_table_name,
+                                                              owner              => $owner,
+                                                              r_table_name       => $r_table_name,
+                                                              r_owner            => $r_owner,
+                                                              data_source        => $table_object->{'data_source'},
+                                                          );
+            unless ($fk) {
+                $fk = UR::DataSource::RDBMS::FkConstraint->$creation_method(
+                    fk_constraint_name => $constraint_name,
+                    table_name      => $fk_table_name,
+                    r_table_name    => $r_table_name,
+                    owner           => $owner,
+                    r_owner         => $r_owner,
+                    data_source     => $table_object->{data_source},
+                    last_object_revision => $revision_time,
+                );
+                unless ($fk) {
+                    ##$DB::single = 1;
+                    1;
+                }
+                $fk{$fk->fk_constraint_name} = $fk;
+                $data_was_changed_for_this_table = 1;
+            }
+
+            if ($fk{$fk->fk_constraint_name}) {
+                my %fkcol_params = ( fk_constraint_name => $constraint_name,
+                                     table_name      => $fk_table_name,
+                                     column_name     => $fk_column_name,
+                                     r_table_name    => $r_table_name,
+                                     r_column_name   => $r_column_name,
+                                     owner           => $owner,
+                                     data_source     => $table_object->{data_source},
+                                 );
+                unless ( UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params) ) {
+                    UR::DataSource::RDBMS::FkConstraintColumn->$creation_method(%fkcol_params);
+                }
+            }
+
+
+            my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
+            $fks_in_real_db{$fingerprint} = $fk;
+
+            push @constraints, $fk;
+        }
+    }
+
+    # Find FKs still in the Meta db that don't exist in the real database anymore
+    foreach my $fingerprint ( keys %fks_in_meta_db_by_fingerprint ) {
+        unless ($fks_in_real_db{$fingerprint}) {
+            my $fk = $fks_in_meta_db_by_fingerprint{$fingerprint};
+            my @fk_cols = $fk->get_related_column_objects();
+            $_->delete foreach @fk_cols;
+            $fk->delete;
+        }
     }
 
     return $data_was_changed_for_this_table;
