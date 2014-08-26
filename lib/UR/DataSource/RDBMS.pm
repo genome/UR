@@ -522,6 +522,13 @@ sub _ignore_table {
 }
 
 
+sub _table_name_to_use_for_metadata_objects {
+    my($self, $schema, $table_name) = @_;
+    return $self->owner
+                ? $table_name
+                : join('.', $schema, $table_name);
+}
+
 sub _get_table_names_from_data_dictionary {
     my $self = shift->_singleton_object;        
     if (@_) {
@@ -536,9 +543,7 @@ sub _get_table_names_from_data_dictionary {
     my $sth = $dbh->table_info("%", $owner, "%", "TABLE,VIEW");
     my @names;
     while (my $row = $sth->fetchrow_hashref) {
-        my $table_name = $self->owner
-                            ? $row->{TABLE_NAME}
-                            : join('.', @$row{'TABLE_SCHEM','TABLE_NAME'});
+        my $table_name = $self->_table_name_to_use_for_metadata_objects(@$row{'TABLE_SCHEM','TABLE_NAME'});
         $table_name =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
         next if $self->_ignore_table($table_name);
         push @names, $table_name;
