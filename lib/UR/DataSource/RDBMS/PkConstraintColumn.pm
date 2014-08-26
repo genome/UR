@@ -11,7 +11,7 @@ UR::Object::Type->define(
     is => ['UR::DataSource::RDBMS::Entity'],
     dsmap => 'dd_pk_constraint_column',
     er_role => '',
-    id_properties => [qw/data_source owner table_name column_name rank/],
+    id_properties => [qw/data_source table_name column_name rank/],
     properties => [
         column_name                      => { type => 'varchar', len => undef, sql => 'column_name' },
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
