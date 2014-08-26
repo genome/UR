@@ -834,26 +834,9 @@ sub refresh_database_metadata_for_table_name {
     #    $dd_table_name = $2;
     #}
 
-    # TABLE
-    my $table_sth = $self->get_table_details_from_data_dictionary('%', $ds_owner, $db_table_name, "TABLE,VIEW");
-    my $table_data = $table_sth->fetchrow_hashref();
-    unless ($table_data && %$table_data) {
-        #$self->error_message("No data for table $table_name in data source $self.");
-        return;
-    }
-
-	
     my $data_source_id = $self->_my_data_source_id;
-	
-	
-	my $table_object = $self->_get_or_create_table_meta(
-									$self,
-									$ur_owner,
-									$ur_table_name,
-									$db_table_name,
-									$creation_method,
-									$table_data,
-									$revision_time);
+
+    my $table_object = $self->_get_or_create_table_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time);
 
     # COLUMNS
     # mysql databases seem to require you to actually put in the database name in the first arg
@@ -1297,6 +1280,27 @@ sub refresh_database_metadata_for_table_name {
         }
     }
 
+    return $table_object;
+}
+
+sub _get_or_create_table_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time) = @_;
+
+    my $table_sth = $self->get_table_details_from_data_dictionary('%', $ds_owner, $db_table_name, "TABLE,VIEW");
+    my $table_data = $table_sth->fetchrow_hashref();
+    unless ($table_data && %$table_data) {
+        #$self->error_message("No data for table $table_name in data source $self.");
+        return;
+    }
+
+    my $table_object = $self->_get_or_create_table_meta(
+                                    $self,
+                                    $ur_owner,
+                                    $ur_table_name,
+                                    $db_table_name,
+                                    $creation_method,
+                                    $table_data,
+                                    $revision_time);
     return $table_object;
 }
 
