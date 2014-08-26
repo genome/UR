@@ -837,20 +837,6 @@ sub refresh_database_metadata_for_table_name {
     # FKs, etc # were changed
     my $data_was_changed_for_this_table = $self->_update_column_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object);
 
-    my $bitmap_data = $self->get_bitmap_index_details_from_data_dictionary($db_table_name);
-    for my $index (@$bitmap_data) {
-        #push @{ $embed{bitmap_index_names}{$table_object} }, $index->{'index_name'};
-
-        my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($index->{'table_name'});
-        my $column_object = UR::DataSource::RDBMS::TableColumn->is_loaded(
-            table_name  => $ds_table,
-            owner       => $ds_owner,
-            data_source => $data_source_id,
-            column_name => $index->{'column_name'},
-        );
-    }
-
-
     # Make a note of what FKs exist in the Meta DB involving this table
     my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
                                                                   owner       => $ur_owner,
