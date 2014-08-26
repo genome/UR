@@ -812,15 +812,10 @@ sub refresh_database_metadata_for_table_name {
     $creation_method ||= 'create';
 
     my $ur_table_name = $db_table_name;
-    my @column_objects;
     my @all_constraints;
 
     # this must be on or before the actual data dictionary queries
     my $revision_time = $UR::Context::current->now();
-
-    # We'll count a table object as changed even if any of the columns,
-    # FKs, etc # were changed
-    my $data_was_changed_for_this_table = 0;
 
     # The class definition can specify a table name as <schema>.<table_name> to override the
     # data source's default schema/owner.
@@ -838,83 +833,9 @@ sub refresh_database_metadata_for_table_name {
 
     my $table_object = $self->_get_or_create_table_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time);
 
-    # COLUMNS
-    # mysql databases seem to require you to actually put in the database name in the first arg
-    my $db_name = ($self->can('db_name')) ? $self->db_name : '%';
-    my $column_sth = $self->get_column_details_from_data_dictionary($db_name, $ds_owner, $db_table_name, '%');
-    unless ($column_sth) {
-        $self->error_message("Error getting column data for table $db_table_name in data source $self.");
-        return;
-    }
-    my $all_column_data = $column_sth->fetchall_arrayref({});
-    unless (@$all_column_data) {
-        $self->error_message("No column data for table $db_table_name in data source $data_source_id");
-        return;
-    }
-
-    my %columns_to_delete = map {$_->column_name, $_}
-                                UR::DataSource::RDBMS::TableColumn->get(
-                                    table_name  => $ur_table_name,
-                                    owner       => $ur_owner,
-                                    data_source => $data_source_id);
-
-
-    for my $column_data (@$all_column_data) {
-
-        #my $id = $table_name . '.' . $column_data->{COLUMN_NAME}
-        $column_data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
-
-        delete $columns_to_delete{$column_data->{'COLUMN_NAME'}};
-
-        my $column_obj = UR::DataSource::RDBMS::TableColumn->get(table_name  => $ur_table_name,
-                                                                 owner       => $ur_owner,
-                                                                 data_source => $data_source_id,
-                                                                 column_name => $column_data->{'COLUMN_NAME'});
-        if ($column_obj) {
-            # Already exists, change the attributes
-            $column_obj->owner($table_object->{owner});
-            $column_obj->data_source($table_object->{data_source});
-            $column_obj->data_type($column_data->{TYPE_NAME});
-            $column_obj->nullable(substr($column_data->{IS_NULLABLE}, 0, 1));
-            $column_obj->data_length($column_data->{COLUMN_SIZE});
-            $column_obj->remarks($column_data->{REMARKS});
-            if ($column_obj->__changes__()) {
-                $column_obj->last_object_revision($revision_time);
-                $data_was_changed_for_this_table = 1;
-            }
-
-        } else {
-            # It's new, create it from scratch
-
-            $column_obj = UR::DataSource::RDBMS::TableColumn->$creation_method(
-                column_name => $column_data->{COLUMN_NAME},
-                table_name  => $ur_table_name,
-                owner       => $table_object->{owner},
-                data_source => $table_object->{data_source},
-
-                data_type   => $column_data->{TYPE_NAME},
-                nullable    => substr($column_data->{IS_NULLABLE}, 0, 1),
-                data_length => $column_data->{COLUMN_SIZE},
-                remarks     => $column_data->{REMARKS},
-                last_object_revision => $revision_time,
-            );
-
-            $data_was_changed_for_this_table = 1;
-        }
-
-        unless ($column_obj) {
-            Carp::confess("Failed to create a column ".$column_data->{'COLUMN_NAME'}." for table $db_table_name");
-        }
-
-        push @column_objects, $column_obj;
-    }
-
-    for my $to_delete (values %columns_to_delete) {
-        #$self->status_message("Detected column " . $to_delete->column_name . " has gone away.");
-        $to_delete->delete;
-        $data_was_changed_for_this_table = 1;
-    }
-
+    # We'll count a table object as changed even if any of the columns,
+    # FKs, etc # were changed
+    my $data_was_changed_for_this_table = $self->_update_column_metadata_for_refresh($ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object);
 
     my $bitmap_data = $self->get_bitmap_index_details_from_data_dictionary($db_table_name);
     for my $index (@$bitmap_data) {
@@ -1302,6 +1223,89 @@ sub _get_or_create_table_metadata_for_refresh {
                                     $table_data,
                                     $revision_time);
     return $table_object;
+}
+
+sub _update_column_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $ur_owner, $ur_table_name, $creation_method, $revision_time, $table_object) = @_;
+
+    my $data_was_changed_for_this_table = 0;
+    my $data_source_id = $self->_my_data_source_id;
+
+    # mysql databases seem to require you to actually put in the database name in the first arg
+    my $db_name = ($self->can('db_name')) ? $self->db_name : '%';
+    my $column_sth = $self->get_column_details_from_data_dictionary($db_name, $ds_owner, $db_table_name, '%');
+    unless ($column_sth) {
+        $self->error_message("Error getting column data for table $db_table_name in data source $self.");
+        return;
+    }
+    my $all_column_data = $column_sth->fetchall_arrayref({});
+    unless (@$all_column_data) {
+        $self->error_message("No column data for table $db_table_name in data source $data_source_id");
+        return;
+    }
+
+    my %columns_to_delete = map {$_->column_name, $_}
+                                UR::DataSource::RDBMS::TableColumn->get(
+                                    table_name  => $ur_table_name,
+                                    owner       => $ur_owner,
+                                    data_source => $data_source_id);
+
+
+    for my $column_data (@$all_column_data) {
+
+        #my $id = $table_name . '.' . $column_data->{COLUMN_NAME}
+        $column_data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
+
+        delete $columns_to_delete{$column_data->{'COLUMN_NAME'}};
+
+        my $column_obj = UR::DataSource::RDBMS::TableColumn->get(table_name  => $ur_table_name,
+                                                                 owner       => $ur_owner,
+                                                                 data_source => $data_source_id,
+                                                                 column_name => $column_data->{'COLUMN_NAME'});
+        if ($column_obj) {
+            # Already exists, change the attributes
+            $column_obj->owner($table_object->{owner});
+            $column_obj->data_source($table_object->{data_source});
+            $column_obj->data_type($column_data->{TYPE_NAME});
+            $column_obj->nullable(substr($column_data->{IS_NULLABLE}, 0, 1));
+            $column_obj->data_length($column_data->{COLUMN_SIZE});
+            $column_obj->remarks($column_data->{REMARKS});
+            if ($column_obj->__changes__()) {
+                $column_obj->last_object_revision($revision_time);
+                $data_was_changed_for_this_table = 1;
+            }
+
+        } else {
+            # It's new, create it from scratch
+
+            $column_obj = UR::DataSource::RDBMS::TableColumn->$creation_method(
+                column_name => $column_data->{COLUMN_NAME},
+                table_name  => $ur_table_name,
+                owner       => $table_object->{owner},
+                data_source => $table_object->{data_source},
+
+                data_type   => $column_data->{TYPE_NAME},
+                nullable    => substr($column_data->{IS_NULLABLE}, 0, 1),
+                data_length => $column_data->{COLUMN_SIZE},
+                remarks     => $column_data->{REMARKS},
+                last_object_revision => $revision_time,
+            );
+
+            $data_was_changed_for_this_table = 1;
+        }
+
+        unless ($column_obj) {
+            Carp::confess("Failed to create a column ".$column_data->{'COLUMN_NAME'}." for table $db_table_name");
+        }
+    }
+
+    for my $to_delete (values %columns_to_delete) {
+        #$self->status_message("Detected column " . $to_delete->column_name . " has gone away.");
+        $to_delete->delete;
+        $data_was_changed_for_this_table = 1;
+    }
+
+    return $data_was_changed_for_this_table;
 }
 
 sub _make_foreign_key_fingerprint {
