@@ -556,7 +556,7 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
     # first, build a data structure to collect columns of the same foreign key together
     my @returned_fk_info;
     if ($fk_table) {
-        @returned_fk_info = $self->_get_foreign_key_details_for_fk_table_name($fk_table);
+        @returned_fk_info = $self->_get_foreign_key_details_for_fk_table_name($fk_schema, $fk_table);
 
     } elsif ($pk_table) {
         # We'll have to loop through each table in the DB and find FKs that reference
@@ -566,7 +566,7 @@ my($self, $pk_catalog, $pk_schema, $pk_table, $fk_catalog, $fk_schema, $fk_table
         TABLE:
         foreach my $table_data ( @tables ) {
             my $from_table = $table_data->{'table_name'};
-            push @returned_fk_info, $self->_get_foreign_key_details_for_fk_table_name($from_table, sub { $_[0]->{table} eq $pk_table });
+            push @returned_fk_info, $self->_get_foreign_key_details_for_fk_table_name($fk_schema, $from_table, sub { $_[0]->{table} eq $pk_table });
         }
     } else {
         Carp::croak("Can't get_foreign_key_details_from_data_dictionary(): either pk_table ($pk_table) or fk_table ($fk_table) are required");
@@ -600,8 +600,11 @@ my %update_delete_action_to_numeric_code = (
 );
 
 sub _get_foreign_key_details_for_fk_table_name {
-    my($self, $fk_table_name, $accept_rows) = @_;
+    my($self, $fk_schema_name, $fk_table_name, $accept_rows) = @_;
     $accept_rows ||= sub { 1 };  # default is accept all
+
+    $fk_schema_name ||= 'main';
+    my $qualified_table_name = join('.', $fk_schema_name, $fk_table_name);
 
     my $dbh = $self->get_default_handle;
     my $fksth = $dbh->prepare("PRAGMA foreign_key_list($fk_table_name)")
@@ -617,6 +620,8 @@ sub _get_foreign_key_details_for_fk_table_name {
         next unless ($accept_rows->($row));
 
         my %fk_info_row = ( FK_TABLE_NAME => $fk_table_name,
+                            FK_TABLE_SCHEM => $fk_schema_name,
+                            UK_TABLE_SCHEM => $fk_schema_name, # SQLite doesn't tell us what attached DB it's from, so we'll guess
                             UPDATE_RULE => $update_delete_action_to_numeric_code{$row->{on_update}},
                             DELETE_RULE => $update_delete_action_to_numeric_code{$row->{on_delete}},
                             ORDINAL_POSITION => $row->{seq} + 1,
