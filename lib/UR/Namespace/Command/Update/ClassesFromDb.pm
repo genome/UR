@@ -583,46 +583,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
     my $namespace = $self->namespace_name;
 
-#    $self->status_message("Using filesystem classes for namespace \"$namespace\" (this may be slow)");
-#    my @material_classes = $namespace->get_material_classes;
-#
-#
-#    $self->status_message("Verifying class/table relationships...");
-#    my %table_ids_used;
-#    for my $class (sort { $a->class_name cmp $b->class_name } @material_classes) {
-#        my $table_name  = $class->table_name;
-#        next unless $table_name;
-#
-#        my $class_name  = $class->class_name;
-#
-#        if (my $prev_class_name = $table_ids_used{$table_name}) {
-#            $self->error_message(
-#                sprintf(
-#                    "C %-40s uses table %-32s, but so does %-40s" . "\n",
-#                    $class_name, $table_name, $prev_class_name
-#                )
-#            );
-#            return;
-#        }
-#
-#        my $data_source = $class->data_source;
-#
-#        my $table = UR::DataSource::RDBMS::Table->get(data_source => $data_source, table_name => $table_name)
-#                    ||
-#                    UR::DataSource::RDBMS::Table::Ghost->get(data_source => $data_source, table_name => $table_name);
-#
-#        unless ($table) {
-#            $self->error_message(
-#                sprintf(
-#                    "C %-32s %-32s is referenced by class %-40s but cannot be found!?" . "\n",
-#                    $data_source, $table_name, $class_name
-#                )
-#            );
-#            return;
-#        }
-#        $table_ids_used{$table_name} = $class;
-#    }
-
     $self->status_message("Updating classes...");
 
     my %dd_changes_by_class = (
@@ -901,15 +861,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                     );
                 }
             }
-
-            #unless ($class->class_name->isa('UR::Entity')) {
-            #    my $inheritance = UR::Object::Inheritance->create(
-            #        class_name => $class->class_name,
-            #        parent_class_name => "UR::Entity",
-            #        inheritance_priority => 0,
-            #    );
-            #    Carp::confess("Failed to generate inheritance link!?") unless $inheritance;
-            #}
         }
     } # next table
 
@@ -926,16 +877,10 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my($ur_data_type, $default_length) = @{ $data_source->ur_data_type_for_data_source_data_type($column->data_type) };
         my $ur_data_length = defined($column->data_length) ? $column->data_length : $default_length;
 
-        #my $class = UR::Object::Type->get(
-        #    data_source => $table->data_source,
-        #    table_name => $table->table_name,
-        #);
-        #my $class = $data_source->get_class_meta_for_table($table);
         my $class = $self->_get_class_meta_for_table_name(data_source => $data_source,
                                                           table_name => $table->table_name);
 
         unless ($class) {
-            ##$DB::single = 1;
             $class = $self->_get_class_meta_for_table_name(data_source => $data_source,
                                                           table_name => $table->table_name);
             Carp::confess("Class object missing for table " . $table->table_name) unless $class;
@@ -1120,18 +1065,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
     $self->status_message("Updating class unique constraints...\n");
 
-    ##$DB::single = 1;
-
     # UNIQUE CONSTRAINT / UNIQUE INDEX -> UNIQUE GROUP (loop table objecs since we have no PK DD objects)
     for my $table (sort $sorter @{ $dd_changes_by_class{'UR::DataSource::RDBMS::Table'} }) {
         # created/updated/unchanged
         # delete and re-create
 
-        #my $class = UR::Object::Type->get(
-        #    data_source => $table->data_source,
-        #    table_name => $table->table_name,
-        #);
-        #my $class = $table->__meta__();
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table->table_name);
         my $class_name = $class->class_name;
