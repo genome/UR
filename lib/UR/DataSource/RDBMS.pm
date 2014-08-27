@@ -2831,12 +2831,13 @@ sub _get_table_object {
 	
     my $table = UR::DataSource::RDBMS::Table->get(
                     table_name => $ds_table,
-                    data_source => $data_source_id)
-                ||
-                UR::DataSource::RDBMS::Table->get(
+                    data_source => $data_source_id);
+    if (! $table and $self->owner) {
+        $table = UR::DataSource::RDBMS::Table->get(
                     table_name => $self->_table_name_to_use_for_metadata_objects($ds_owner, $ds_table),
                     data_source => 'UR::DataSource::Meta');
-
+    }
+    return $table;
 }
 
 sub _alter_sth_for_selecting_blob_columns {
