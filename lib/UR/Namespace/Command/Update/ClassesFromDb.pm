@@ -426,16 +426,19 @@ sub _update_database_metadata_objects_for_schema_changes {
     }
 
     # from the cache of known tables
-    my @previous_table_names = $data_source->get_table_names;
+    my @previous_table_names = map { join('.', $data_source->_resolve_owner_and_table_from_table_name($_)) }
+                                $data_source->get_table_names;
     my %previous_table_names = map { $_ => 1 } @previous_table_names;
 
     # from the database now
     my @current_table_names = $data_source->_get_table_names_from_data_dictionary();
-    my %current_table_names = map { s/"|'//g; $_ => $_ } @current_table_names;
+    my %current_table_names = map { join('.', $data_source->_resolve_owner_and_table_from_table_name($_)) }
+                              map { s/"|'//g; $_ => $_ }
+                              @current_table_names;
 
-    my %all_table_names = (%current_table_names, %previous_table_names);
-
-    if($table_name) { %all_table_names = ($table_name => 1) }
+    my %all_table_names = $table_name
+                            ? ( $table_name => 1 )
+                            : ( %current_table_names, %previous_table_names);
 
     my $new_object_revision = $UR::Context::current->now();
 
@@ -443,49 +446,49 @@ sub _update_database_metadata_objects_for_schema_changes {
     my (@create,@delete,@update);
     my $pattern = '%-42s';
     my ($dsn) = ($data_source->id =~ /^.*::DataSource::(.*?)$/);
-    for my $table_name (keys %all_table_names) {
-        my $last_actual_ddl_time = $last_ddl_time_for_table_name->{$table_name};
+    for my $schema_and_table_name (keys %all_table_names) {
+        my $last_actual_ddl_time = $last_ddl_time_for_table_name->{$schema_and_table_name};
 
-        my $table_object;
         my $last_recorded_ddl_time;
         my $last_object_revision;
 
-        # UR always keeps table names stored in upper-case.  Some databases (mysql)
-        # are case sensitive when querying the data dictionary
-        my $db_table_name = $current_table_names{$table_name};
+        my $db_table_name = $current_table_names{$schema_and_table_name};
 
-        eval {
-            #($table_object) = $data_source->get_tables(table_name => $table_name);
+        my($schema, $table_name);
+        my $table_object = eval {
+            #($table_object) = $data_source->get_tables(table_name => $schema_and_table_name);
 
             # Using the above doesn't account for a table switching databases, which happens.
             # Once the data source is _part_ of the id we'll just have a delete/add, but for now it's an update.
-            $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source->id,
-                                                              table_name => $table_name);
+            ($schema, $table_name) = $data_source->_resolve_owner_and_table_from_table_name($schema_and_table_name);
+            UR::DataSource::RDBMS::Table->get(data_source => $data_source->id,
+                                              owner => $schema,
+                                              table_name => $table_name);
         };
 
-        if ($current_table_names{$table_name} and not $table_object) {
+        if ($current_table_names{$schema_and_table_name} and not $table_object) {
             # new table
-            push @create, $table_name;
+            push @create, $schema_and_table_name;
             $self->status_message(
                 sprintf(
                     "A  $pattern Schema changes " . ($last_actual_ddl_time ? "on $last_actual_ddl_time" : ""),
-                    $dsn . " " . $table_name
+                    $dsn . " " . $schema_and_table_name
                 )
             );
             my $table_object = $data_source->refresh_database_metadata_for_table_name($db_table_name);
             next unless $table_object; 
 
-            $table_object->last_ddl_time($last_ddl_time_for_table_name->{$table_name});
+            $table_object->last_ddl_time($last_ddl_time_for_table_name->{$schema_and_table_name});
         }
-        elsif ($current_table_names{$table_name} and $table_object) {
+        elsif ($current_table_names{$schema_and_table_name} and $table_object) {
             # retained table
             # either we know it changed, or we can't know, so update it anyway
-            if (! exists $last_ddl_time_for_table_name->{$table_name} or
+            if (! exists $last_ddl_time_for_table_name->{$schema_and_table_name} or
                 ! defined $table_object->last_ddl_time or
-                $last_ddl_time_for_table_name->{$table_name} gt $table_object->last_ddl_time
+                $last_ddl_time_for_table_name->{$schema_and_table_name} gt $table_object->last_ddl_time
             ) {
                 my $last_update = $table_object->last_ddl_time || $table_object->last_object_revision;
-                my $this_update = $last_ddl_time_for_table_name->{$table_name} || "<unknown date>";
+                my $this_update = $last_ddl_time_for_table_name->{$schema_and_table_name} || "<unknown date>";
                 my $table_object = $data_source->refresh_database_metadata_for_table_name($db_table_name);
                 unless ($table_object) {
                     ##$DB::single = 1;
@@ -497,32 +500,33 @@ sub _update_database_metadata_objects_for_schema_changes {
                 if (@changes) {
                     $self->status_message(
                         sprintf("U  $pattern Last updated on $last_update.  Newer schema changes on $this_update."
-                            , $dsn . " " . $table_name
+                            , $dsn . " " . $schema_and_table_name
                         )
                     );                        
-                    push @update, $table_name;
+                    push @update, $schema_and_table_name;
                 }
-                $table_object->last_ddl_time($last_ddl_time_for_table_name->{$table_name});
+                $table_object->last_ddl_time($last_ddl_time_for_table_name->{$schema_and_table_name});
             }
         }
-        elsif ($table_object and not $current_table_names{$table_name}) {
+        elsif ($table_object and not $current_table_names{$schema_and_table_name}) {
             # deleted table
-            push @delete, $table_name;
+            push @delete, $schema_and_table_name;
             $self->status_message(
                 sprintf(
                     "D  $pattern Last updated on %s.  Table dropped.",
-                    $dsn . " " . $table_name,
+                    $dsn . " " . $schema_and_table_name,
                     $last_object_revision || "<unknown date>"
                 )
             );
             my $table_object = UR::DataSource::RDBMS::Table->get(
                                        data_source => $data_source->id,
-                                       table_name => $table_name,
+                                       table_name  => $table_name,
+                                       owner       => $schema,
                                    );
             $table_object->delete;
         }
         else {
-            Carp::confess("Unable to categorize table $table_name as new/old/deleted?!");
+            Carp::confess("Unable to categorize table $schema_and_table_name as new/old/deleted?!");
         }
     }
 

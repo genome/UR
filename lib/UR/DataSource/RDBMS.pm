@@ -522,24 +522,34 @@ sub _ignore_table {
 }
 
 
+sub schema_when_updating_classes_from_data_dictionary {
+    return shift->owner;
+}
+sub table_names_include_schema_when_updating_classes_from_data_dictionary { '' }
+
 sub _get_table_names_from_data_dictionary {
     my $self = shift->_singleton_object;        
     if (@_) {
         Carp::confess("get_tables does not currently take filters!  FIXME.");
     }    
     my $dbh = $self->get_default_handle;
-    my $owner = $self->owner;    
+    my $owner = $self->schema_when_updating_classes_from_data_dictionary;
 
     # FIXME  This will fix the immediate problem of getting classes to be created out of 
     # views.  We still need to somehow mark the resulting class as read-only
 
     my $sth = $dbh->table_info("%", $owner, "%", "TABLE,VIEW");
-    my $table_name;
+    my($table_name, $schema_name);
+    $sth->bind_col(2, \$schema_name) if $self->table_names_include_schema_when_updating_classes_from_data_dictionary;
     $sth->bind_col(3,\$table_name);
     my @names;
     while ($sth->fetch) {
         next if $self->_ignore_table($table_name);
         $table_name =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
+        if ($self->table_names_include_schema_when_updating_classes_from_data_dictionary) {
+            $schema_name =~ s/"|'//g;
+            $table_name = "${schema_name}.${table_name}";
+        }
         push @names, $table_name;
     }
     return @names;
@@ -575,9 +585,15 @@ sub get_primary_key_details_from_data_dictionary {
     return shift->_get_whatever_details_from_data_dictionary('primary_key_info',@_);
 }
 
-
 sub get_table_names {
-    map { $_->table_name } shift->get_tables(@_);
+    my $self = shift;
+    my $include_schema_name = $self->table_names_include_schema_when_updating_classes_from_data_dictionary;
+
+    map { $include_schema_name
+            ? join('.', $_->owner, $_->table_name)
+            : $_->table_name
+        }
+        $self->get_tables(@_);
 }
 
 sub get_tables {
@@ -3744,6 +3760,30 @@ This class implements the interface UR uses to query RDBMS databases with
 DBI.  It encapsulates the system's knowledge of classes/properties relation
 to tables/columns, and how to generate SQL to create, retrieve, update and
 delete table rows that represent object instances.
+
+=head1 Configuration
+
+These methods may be overridden in child classes to change the default behavior
+
+=over 4
+
+=item schema_when_updating_classes_from_data_dictionary
+
+By default, the command 'ur update classes-from-db' assumes the data source's
+owner is the schema all the relevant tables live in.  Some deployments have tables
+in a different schema, or across several schemas.  This method should return
+the correct schema as a string, or the string "%" to mean UR should search
+all schemas in the database.
+
+=item table_names_include_schema_when_updating_classes_from_data_dictionary
+
+For deployments having tables in several different schemas within the same
+database, this method should return true to indicate that the class definitions
+generated from 'ur update classes-from-db' should have table names like
+"schema.table" instead of a simple table name.  The default is false which
+generates simple table names.
+
+=back
 
 =head1 SEE ALSO
 
