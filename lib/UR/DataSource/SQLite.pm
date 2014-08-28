@@ -916,7 +916,8 @@ sub _dump_db_to_file_internal {
     $fh->print("BEGIN TRANSACTION;\n");
 
     my @tables = $self->_get_table_names_from_data_dictionary();
-    foreach my $table ( @tables ) {
+    foreach my $qualified_table ( @tables ) {
+        my(undef, $table) = $self->_resolve_owner_and_table_from_table_name($qualified_table);
         my($item_info) = $self->_get_info_from_sqlite_master($table);
         my $creation_sql = $item_info->{'sql'};
         $creation_sql .= ";" unless(substr($creation_sql, -1, 1) eq ";");
@@ -941,7 +942,7 @@ sub _dump_db_to_file_internal {
                         $col = "'" . $col . "'";  # Put quotes around non-numeric stuff
                     }
                 }
-                $fh->printf("INSERT INTO \"%s\" VALUES(%s);\n",
+                $fh->printf("INSERT INTO %s VALUES(%s);\n",
                             $table,
                             join(',', @row));
             }
