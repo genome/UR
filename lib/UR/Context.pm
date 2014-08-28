@@ -975,6 +975,7 @@ sub create_entity {
     my $entity = $self->_construct_object($class, %default_values, %$params, @extra);
     return unless $entity;
     $self->add_change_to_transaction_log($entity, $construction_method);
+    $self->add_change_to_transaction_log($entity, 'load') if $construction_method eq '__define__';
 
     # If a property is calculated + immutable, and it wasn't supplied in the params,
     # that means we need to run the calculation once and store the value in the
@@ -1062,7 +1063,7 @@ sub create_entity {
     }
 
     $entity->__signal_observers__($construction_method);
-    $entity->__signal_change__('load') if $construction_method eq '__define__';
+    $entity->__signal_observers__('load') if $construction_method eq '__define__';
     $entity->{'__get_serial'} = $UR::Context::GET_COUNTER++;
     $UR::Context::all_objects_cache_size++;
     return $entity;
