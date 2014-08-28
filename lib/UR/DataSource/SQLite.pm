@@ -722,8 +722,9 @@ sub commit {
 sub _get_info_from_sqlite_master {
     my($self, $name,$type) = @_;
 
-    my(@where, @exec_values);
+    my($schema, @where, @exec_values);
     if ($name) {
+        ($schema, $name) = $self->_resolve_owner_and_table_from_table_name($name);
         push @where, 'name = ?';
         push @exec_values, $name;
     }
@@ -731,7 +732,11 @@ sub _get_info_from_sqlite_master {
         push @where, 'type = ?';
         push @exec_values, $type;
     }
-    my $sql = 'select * from sqlite_master';
+
+    my $sqlite_master_table = $schema
+                                ? "${schema}.sqlite_master"
+                                : 'sqlite_master';
+    my $sql = "select * from $sqlite_master_table";
     if (@where) {
         $sql .= ' where '.join(' and ', @where);
     }
