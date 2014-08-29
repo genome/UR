@@ -358,7 +358,11 @@ sub _get_display_fields_for_property {
             $via_property_name = $property->to;
         }
         my $via = $property->class_name->__meta__->properties(property_name => $via_property_name);
-        if ($property->is_many ne $via->is_many) {
+        if (! $via) {
+            # maybe via a method??  Safer to use is_many than not
+            push @fields, 'is_many => 1';
+
+        } elsif ($property->is_many ne $via->is_many) {
             push @fields, 'is_many => ' . $property->is_many;
         }
     }
