@@ -623,17 +623,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
 
         my $table = $fk->get_table;
-        # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
-        my $class = 
-            UR::Object::Type->get(
-                data_source_id => $table->data_source,
-                table_name     => $table->table_name,
-            )
-            ||
-            UR::Object::Type::Ghost->get(
-                data_source_id => $table->data_source,
-                table_name     => $table->table_name,
-            );
+        my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
+                                                          table_name  => $table->table_name);
 
         unless ($class) {
             ##$DB::single = 1;
@@ -669,11 +660,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
         my $column_name = $column->column_name;
 
-        # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
-        my $class = UR::Object::Type->get(
-            data_source_id => $table->data_source,
-            table_name     => $table->table_name,
-        );
+        my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
+                                                          table_name  => $table->table_name);
         unless ($class) {
             $self->status_message(sprintf("~ No class found for deleted column %-32s %-32s\n", $table->table_name, $column_name));
             next;
