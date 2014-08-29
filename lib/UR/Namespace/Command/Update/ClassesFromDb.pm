@@ -938,23 +938,29 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 );
             }
 
-            $property = UR::Object::Property->create(
-                class_name     => $class_name,
-                property_name  => $property_name,
-                column_name    => $column_name,
-                data_type      => $ur_data_type,
-                data_length    => $ur_data_length,
-                is_optional    => $column->nullable eq "Y" ? 1 : 0,
-                is_volatile    => 0,
-                doc            => $column->remarks,
-                is_specified_in_module_header => 1, 
-            );
+            local $@;
+            for (my $attempt = 0; $attempt < 3; $attempt++) {
+                $property_name = '_' . $property_name if $attempt;
 
-            no warnings;
+                $property = eval { UR::Object::Property->create(
+                                    class_name     => $class_name,
+                                    property_name  => $property_name,
+                                    column_name    => $column_name,
+                                    data_type      => $ur_data_type,
+                                    data_length    => $ur_data_length,
+                                    is_optional    => $column->nullable eq "Y" ? 1 : 0,
+                                    is_volatile    => 0,
+                                    doc            => $column->remarks,
+                                    is_specified_in_module_header => 1,
+                                )};
+                last if $property;
+            }
+
+            no warnings 'uninitialized';
             $self->status_message(
                 sprintf("A %-40s property %-16s for column %s.%s (%s %s)\n",
                                                         $class_name,
-                                                        $property_name,
+                                                        $property->property_name,
                                                         $table->table_name, 
                                                         $column_name,
                                                         $column->data_type,
@@ -962,10 +968,14 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             );
             
             unless ($property) {
-                Carp::confess(
-                        "Failed to create property $property_name on class $class_name. "
-                        . UR::Object::Property->error_message
-                );
+                if ($@ =~ m/An object of class UR::Object::Property already exists/) {
+                    $self->warning_message("Conflicting property names already exist in class $class_name for column $column_name in table ".$table->table_name);
+                } else {
+                    Carp::confess(
+                            "Failed to create property $property_name on class $class_name. "
+                            . UR::Object::Property->error_message
+                    );
+                }
             }
         }
     } # next column
