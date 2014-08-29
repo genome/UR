@@ -140,8 +140,11 @@ my %ur_data_type_for_vendor_data_type = (
      'SMALLINT'  => ['Integer', undef],
      'BIGINT'    => ['Integer', undef],
      'SERIAL'    => ['Integer', undef],
-     'TEXT'      => ['XmlBlob', undef],
+     'TEXT'      => ['Text', undef],
      'BYTEA'     => ['Blob', undef],
+     'CHARACTER VARYING' => ['Text', undef],
+     'TIMESTAMP WITHOUT TIME ZONE' => ['DateTime', undef],
+     'NUMERIC'   => ['Number', undef],
 
      'DOUBLE PRECISION' => ['Number', undef],
 );
