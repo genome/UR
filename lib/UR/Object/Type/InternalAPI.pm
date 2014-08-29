@@ -1438,6 +1438,7 @@ sub _property_change_callback {
     my($property_obj,$method, $old_val, $new_val) = @_;
 
     return if ($method eq 'load' || $method eq 'unload');
+    return unless ref($property_obj);  # happens when, say, error_message is called on the UR::Object::Property class
 
     my $class_obj = UR::Object::Type->get(class_name => $property_obj->class_name);
     my $property_name = $property_obj->property_name;
