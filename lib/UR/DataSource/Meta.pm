@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS dd_bitmap_index (
     owner varchar,
     table_name varchar NOT NULL,
     bitmap_index_name varchar NOT NULL,
-    PRIMARY KEY (data_source, owner, table_name, bitmap_index_name)
+    PRIMARY KEY (data_source, table_name, bitmap_index_name)
 );
 CREATE TABLE IF NOT EXISTS dd_fk_constraint (
     data_source varchar NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS dd_fk_constraint (
     r_table_name varchar NOT NULL,
     fk_constraint_name varchar NOT NULL,
     last_object_revision timestamp NOT NULL,
-    PRIMARY KEY(data_source, owner, r_owner, table_name, r_table_name, fk_constraint_name)
+    PRIMARY KEY(data_source, table_name, r_table_name, fk_constraint_name)
 );
 CREATE TABLE IF NOT EXISTS dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS dd_fk_constraint_column (
     column_name varchar NOT NULL,
     r_column_name varchar NOT NULL,
 
-    PRIMARY KEY(data_source, owner, table_name, fk_constraint_name, column_name)
+    PRIMARY KEY(data_source, table_name, fk_constraint_name, column_name)
 );
 CREATE TABLE IF NOT EXISTS dd_pk_constraint_column (
     data_source varchar NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS dd_pk_constraint_column (
     table_name varchar NOT NULL,
     column_name varchar NOT NULL,
     rank integer NOT NULL,
-    PRIMARY KEY (data_source,owner,table_name,column_name,rank)
+    PRIMARY KEY (data_source,table_name,column_name,rank)
 );
 CREATE TABLE IF NOT EXISTS dd_table (
      data_source varchar NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS dd_table (
      last_ddl_time timestamp,
      last_object_revision timestamp NOT NULL,
      remarks varchar,
-     PRIMARY KEY(data_source, owner, table_name)
+     PRIMARY KEY(data_source, table_name)
 );
 CREATE TABLE IF NOT EXISTS dd_table_column (
     data_source varchar NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS dd_table_column (
     nullable varchar NOT NULL,
     last_object_revision timestamp NOT NULL,
     remarks varchar,
-    PRIMARY KEY(data_source, owner, table_name, column_name)
+    PRIMARY KEY(data_source, table_name, column_name)
 );
 CREATE TABLE IF NOT EXISTS dd_unique_constraint_column (
     data_source varchar NOT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS dd_unique_constraint_column (
     table_name varchar NOT NULL,
     constraint_name varchar NOT NULL,
     column_name varchar NOT NULL,
-    PRIMARY KEY (data_source,owner,table_name,constraint_name,column_name)
+    PRIMARY KEY (data_source,table_name,constraint_name,column_name)
 );
 EOS
 
