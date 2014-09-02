@@ -753,26 +753,38 @@ sub pprint_section {
     return "$indent_section$section => [\n$section_src$indent_section],\n";
 }
 
-
-sub pprint_subsection {
-    my ($name, @fields) = @_;
+{
     my $indent_name = ' ' x 8;
     my $indent_key  = $indent_name . ' ' x 4;
+    sub pprint_subsection {
+        my ($name, @fields) = @_;
 
-    my $section_src;
-    foreach ( @fields ) { s/^\s+// }
-    if (@fields > 1) {
-        my $line =
-        $indent_name . $name . " => {\n"
-        . $indent_key . join(",\n$indent_key", @fields) . ",\n"
-        . $indent_name . "},\n";
-
-        $section_src = $line;
-    } else {
-        $section_src = $indent_name . $name . " => { " . (defined $fields[0] ? $fields[0] : '') . " },\n";
+        my $section_src;
+        foreach ( @fields ) { s/^\s+// }
+        if (@fields > 1) {
+            $section_src = _pprint_subsection_multi_line($name, @fields);
+        } else {
+            $section_src = _pprint_subsection_one_line($name, @fields);
+        }
+        return $section_src;
     }
-    return $section_src;
-};
+
+    sub _pprint_subsection_one_line {
+        my $name = shift;
+
+        return $indent_name . $name . ' => { '
+                    . (defined $_[0] ? $_[0] : '')
+                    . " },\n";
+    }
+
+    sub _pprint_subsection_multi_line {
+        my $name = shift;
+
+        return $indent_name . $name . " => {\n"
+            . $indent_key . join(",\n$indent_key", @_) . ",\n"
+            . $indent_name . "},\n";
+    }
+}
 
 sub _quoted_value {
     my $value = shift;
