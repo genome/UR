@@ -2824,19 +2824,17 @@ sub _my_data_source_id {
 }
 
 sub _get_table_object {
-	my $self = shift;
-	my ($ds_table, $ds_owner) = @_;
+	my($self, $ds_table) = @_;
 	
     my $data_source_id = $self->_my_data_source_id;
 	
     my $table = UR::DataSource::RDBMS::Table->get(
                     table_name => $ds_table,
-                    data_source => $data_source_id);
-    if (! $table and $self->owner) {
-        $table = UR::DataSource::RDBMS::Table->get(
-                    table_name => $self->_table_name_to_use_for_metadata_objects($ds_owner, $ds_table),
+                    data_source => $data_source_id)
+                ||
+                UR::DataSource::RDBMS::Table->get(
+                    table_name => $ds_table,
                     data_source => 'UR::DataSource::Meta');
-    }
     return $table;
 }
 
