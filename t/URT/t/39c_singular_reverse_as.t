@@ -71,7 +71,7 @@ UR::Object::Type->define(
 );
 
 subtest 'Three Stooges' => sub {
-    plan tests => 7;
+    plan tests => 9;
 
     my $team = Team->get(name => 'Three Stooges');
     my $larry = Member->get(name => 'Larry');
@@ -84,9 +84,11 @@ subtest 'Three Stooges' => sub {
 
     is(Member->get(team => $team, role => 'admin'), $moe, 'got admin member via a team');
     is(Team->get(admin => $moe), $team, 'got team via admin');
+    is(Team->get('admin.name' => $moe->name), $team, 'got team via admin.name');
 
     is(Admin->get(team => $team)->name, 'Moe', 'got alt_admin via a team');
     is(Team->get(alt_admin => $moe), $team, 'got team via alt_admin');
+    is(Team->get('alt_admin.name' => $moe->name), $team, 'got team via alt_admin.name');
 };
 
 subtest q(Who's the Boss?) => sub {
