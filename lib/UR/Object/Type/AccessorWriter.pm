@@ -1299,7 +1299,7 @@ sub mk_object_set_accessors {
             code => $single_accessor,
         });
 
-        # return now for reverse_as byt not is_many
+        # return now for reverse_as but not is_many
         unless ($plural_name) {
             return;
         }
