@@ -15,11 +15,13 @@ use URT::DataSource::SomeSQLite;
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 $dbh->do(q(create table team (id integer PRIMARY KEY, name text)));
 $dbh->do(q(create table member (id integer PRIMARY KEY, name text, team_id text, role text)));
+$dbh->do(q(create table admin (id integer PRIMARY KEY, name text, team_id text)));
 
 $dbh->do(q(insert into team values (1, 'Three Stooges')));
 $dbh->do(q(insert into member values (1, 'Larry', 1, 'member')));
 $dbh->do(q(insert into member values (2, 'Curly', 1, 'member')));
 $dbh->do(q(insert into member values (3, 'Moe',   1, 'admin')));
+$dbh->do(q(insert into admin values (1, 'Moe', 1)));
 
 $dbh->do(q(insert into team values (2, "Who's the Boss?")));
 $dbh->do(q(insert into member values (4, 'Tony Micelli',     2, 'admin')));
@@ -27,6 +29,8 @@ $dbh->do(q(insert into member values (5, 'Angela Bower',     2, 'admin')));
 $dbh->do(q(insert into member values (6, 'Samantha Micelli', 2, 'member')));
 $dbh->do(q(insert into member values (7, 'Jonathan Bower',   2, 'member')));
 $dbh->do(q(insert into member values (8, 'Mona Robinson',    2, 'member')));
+$dbh->do(q(insert into admin values (2, 'Tony Micelli', 2)));
+$dbh->do(q(insert into admin values (3, 'Angela Bower', 2)));
 
 $dbh->commit();
 
@@ -37,6 +41,7 @@ UR::Object::Type->define(
         name => { is => 'Text' },
         members => { is => 'Member', reverse_as => 'team', is_many => 1 },
         admin   => { is => 'Member', reverse_as => 'team', is_many => 0, where => ['role' => 'admin'] },
+        alt_admin => { is => 'Admin', reverse_as => 'team', is_many => 0 },
     ],
     table_name => 'team',
     data_source => 'URT::DataSource::SomeSQLite',
@@ -54,8 +59,19 @@ UR::Object::Type->define(
     data_source => 'URT::DataSource::SomeSQLite',
 );
 
+UR::Object::Type->define(
+    class_name => 'Admin',
+    id_by => 'id',
+    has => [
+        name => { is => 'Text' },
+        team => { is => 'Team', id_by => 'team_id' },
+    ],
+    table_name => 'admin',
+    data_source => 'URT::DataSource::SomeSQLite',
+);
+
 subtest 'Three Stooges' => sub {
-    plan tests => 4;
+    plan tests => 7;
 
     my $team = Team->get(name => 'Three Stooges');
     my $larry = Member->get(name => 'Larry');
@@ -64,15 +80,20 @@ subtest 'Three Stooges' => sub {
 
     cmp_bag([$team->members], [$larry, $curly, $moe], 'got members');
     is($team->admin, $moe, 'got admin');
+    is($team->alt_admin->name, 'Moe', 'got alt_admin');
 
     is(Member->get(team => $team, role => 'admin'), $moe, 'got admin member via a team');
     is(Team->get(admin => $moe), $team, 'got team via admin');
+
+    is(Admin->get(team => $team)->name, 'Moe', 'got alt_admin via a team');
+    is(Team->get(alt_admin => $moe), $team, 'got team via alt_admin');
 };
 
 subtest q(Who's the Boss?) => sub {
-    plan tests => 2;
+    plan tests => 3;
 
     my $team = Team->get(name => q(Who's the Boss?));
     is(scalar(() = $team->members), 5, 'got five members');
     ok(exception { $team->admin }, 'got an exception when trying to get the admin');
+    ok(exception { $team->alt_admin }, 'got an exception when trying to get the alt_admin');
 };
