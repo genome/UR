@@ -625,17 +625,15 @@ sub resolve {
                     $value = [ sort $sorter @$value ];
 
                     # Remove duplicates from the list
-                    if ($operator ne 'between' and $operator ne 'not between') {
-                        my $last = $value;
-                        for (my $i = 0; $i < @$value;) {
-                            if ($last eq $value->[$i]) {
-                                splice(@$value, $i, 1);
-                            }
-                            else {
-                                $last = $value->[$i++];
-                             }
-                         }
-                     }
+                    my $last = $value;
+                    for (my $i = 0; $i < @$value;) {
+                        if ($last eq $value->[$i]) {
+                            splice(@$value, $i, 1);
+                        }
+                        else {
+                            $last = $value->[$i++];
+                        }
+                    }
                     # push @swap_key_pos, $vn-1;
                     # push @swap_key_value, $property_name;
                 }
