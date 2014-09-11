@@ -1236,6 +1236,75 @@ sub mk_object_set_accessors {
         }
     }
 
+    # These will behave specially if the rule does not specify the ID, or all of the ID.
+    my @params_prefix;
+    my $params_prefix_resolved = 0;
+    my $params_prefix_resolver = sub {
+        # handle the case of has-many primitives
+        return unless $r_class_meta;
+
+        my $r_ids = $r_class_meta->property_meta_for_name($reverse_as)->{id_by};
+
+        my $cmeta = UR::Object::Type->get($class_name);
+        my $pmeta = $cmeta->{has}{$plural_name};
+        if (my $specify_by = $pmeta->{specify_by}) {
+            @params_prefix = ($specify_by);
+        }
+        else {
+            # TODO: should this really be an auto-setting of the specify_by meta property?
+            my @id_property_names = $r_class_name->__meta__->id_property_names;
+            @params_prefix =
+                grep {
+                    my $id_property_name = $_;
+                    ( (grep { $id_property_name eq $_ } @$r_ids) ? 0 : 1)
+                }
+                @id_property_names;
+
+            # We only do the special single-value spec when there is one property not specified by the rule.
+            # This is common for a multi-column primary key where all columns reference a parent object, except an index value, etc.
+            @params_prefix = () unless scalar(@params_prefix) == 1;
+        }
+        $params_prefix_resolved = 1;
+    };
+
+    if ($singular_name ne $plural_name) {
+        my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
+            my $self = shift;
+            my $rule;
+            $rule = $rule_resolver->($self) unless (defined $rule_template);
+            if ($rule_template) {
+                $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
+                $params_prefix_resolver->() unless $params_prefix_resolved;
+                unshift @_, @params_prefix if @_ == 1;
+                if (@_) {
+                    return my $obj = $r_class_name->get($rule->params_list,@_);
+                }
+                else {
+                    return my $obj = $r_class_name->get($rule);
+                }
+            }
+            else {
+                return unless $self->{$plural_name};
+                return unless @_;  # Can't compare our list to nothing...
+                if (@_ > 1) {
+                    Carp::croak "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
+                }
+                unless (ref($self->{$plural_name}) eq 'ARRAY') {
+                    Carp::croak("${class_name}::$singular_name($_[0]): $plural_name does not contain an arrayref");
+                }
+                no warnings 'uninitialized';
+                my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name} };
+                return $matches[0] if @matches < 2;
+                return $self->context_return(@matches);
+            }
+        };
+        Sub::Install::reinstall_sub({
+            into => $class_name,
+            as   => $singular_name,
+            code => $single_accessor,
+        });
+    }
+
     my $rule_name = $self->rule_accessor_name_for_is_many_accessor($plural_name);
     my $rule_accessor = Sub::Name::subname $class_name ."::$rule_name" => sub {
         my $self = shift;
@@ -1356,75 +1425,6 @@ sub mk_object_set_accessors {
         as   => $set_name,
         code => $set_accessor,
     });
-
-    # These will behave specially if the rule does not specify the ID, or all of the ID.
-    my @params_prefix;
-    my $params_prefix_resolved = 0;
-    my $params_prefix_resolver = sub {
-        # handle the case of has-many primitives
-        return unless $r_class_meta;
-
-        my $r_ids = $r_class_meta->property_meta_for_name($reverse_as)->{id_by};
-
-        my $cmeta = UR::Object::Type->get($class_name);
-        my $pmeta = $cmeta->{has}{$plural_name};
-        if (my $specify_by = $pmeta->{specify_by}) {
-            @params_prefix = ($specify_by);
-        }
-        else {
-            # TODO: should this really be an auto-setting of the specify_by meta property?
-            my @id_property_names = $r_class_name->__meta__->id_property_names;
-            @params_prefix =
-                grep {
-                    my $id_property_name = $_;
-                    ( (grep { $id_property_name eq $_ } @$r_ids) ? 0 : 1)
-                }
-                @id_property_names;
-
-            # We only do the special single-value spec when there is one property not specified by the rule.
-            # This is common for a multi-column primary key where all columns reference a parent object, except an index value, etc.
-            @params_prefix = () unless scalar(@params_prefix) == 1;
-        }
-        $params_prefix_resolved = 1;
-    };
-
-    if ($singular_name ne $plural_name) {
-        my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
-            my $self = shift;
-            my $rule;
-            $rule = $rule_resolver->($self) unless (defined $rule_template);
-            if ($rule_template) {
-                $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
-                $params_prefix_resolver->() unless $params_prefix_resolved;
-                unshift @_, @params_prefix if @_ == 1;
-                if (@_) {
-                    return my $obj = $r_class_name->get($rule->params_list,@_);
-                }
-                else {
-                    return my $obj = $r_class_name->get($rule);
-                }
-            }
-            else {
-                return unless $self->{$plural_name};
-                return unless @_;  # Can't compare our list to nothing...
-                if (@_ > 1) {
-                    Carp::croak "rule-based selection of single-item accessor not supported.  Instead of single value, got @_";
-                }
-                unless (ref($self->{$plural_name}) eq 'ARRAY') {
-                    Carp::croak("${class_name}::$singular_name($_[0]): $plural_name does not contain an arrayref");
-                }
-                no warnings 'uninitialized';
-                my @matches = grep { $_ eq $_[0]  } @{ $self->{$plural_name} };
-                return $matches[0] if @matches < 2;
-                return $self->context_return(@matches);
-            }
-        };
-        Sub::Install::reinstall_sub({
-            into => $class_name,
-            as   => $singular_name,
-            code => $single_accessor,
-        });
-    }
 
     my $adder_method_name = $self->adder_name_for_is_many_accessor($plural_name);
     if ($class_name->can($adder_method_name)) {
