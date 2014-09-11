@@ -1115,11 +1115,6 @@ sub mk_ro_class_accessor {
 sub mk_object_set_accessors {
     my ($self, $class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where) = @_;
 
-    unless ($plural_name) {
-        # TODO: we can handle a reverse_as when there is only one item.  We're just not coded-to yet.
-        Carp::croak "Bad property description for $class_name $singular_name: expected is_many with reverse_as!";
-    }
-
     # These are set by the resolver closure below, and kept in scope by the other closures
     my $rule_template;
     my $r_class_meta;
@@ -1246,7 +1241,7 @@ sub mk_object_set_accessors {
         my $r_ids = $r_class_meta->property_meta_for_name($reverse_as)->{id_by};
 
         my $cmeta = UR::Object::Type->get($class_name);
-        my $pmeta = $cmeta->{has}{$plural_name};
+        my $pmeta = $plural_name ? $cmeta->{has}{$plural_name} : $cmeta->{has}{$singular_name};
         if (my $specify_by = $pmeta->{specify_by}) {
             @params_prefix = ($specify_by);
         }
@@ -1267,7 +1262,7 @@ sub mk_object_set_accessors {
         $params_prefix_resolved = 1;
     };
 
-    if ($singular_name ne $plural_name) {
+    if (!$plural_name || $singular_name ne $plural_name) {
         my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
             my $self = shift;
             my $rule;
@@ -1303,6 +1298,11 @@ sub mk_object_set_accessors {
             as   => $singular_name,
             code => $single_accessor,
         });
+
+        # return now for reverse_as byt not is_many
+        unless ($plural_name) {
+            return;
+        }
     }
 
     my $rule_name = $self->rule_accessor_name_for_is_many_accessor($plural_name);
