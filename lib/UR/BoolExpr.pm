@@ -728,17 +728,21 @@ sub resolve {
     }
 
     if (@xremove_keys) {
-        my @new;
-        my $next_pos_to_remove = $xremove_keys[0];
-        for (my $n = 0; $n < @keys; $n++) {
-            if (defined $next_pos_to_remove and $n == $next_pos_to_remove) {
-                shift @xremove_keys;
-                $next_pos_to_remove = $xremove_keys[0];
+        my $write_key_idx = 0;
+        for (my($read_key_idx, $xremove_key_idx) = (0,0);
+             $read_key_idx < @keys;
+             $read_key_idx++
+        ) {
+            if ($xremove_key_idx < @xremove_keys
+                and
+                $read_key_idx == $xremove_keys[$xremove_key_idx]
+            ) {
+                $xremove_key_idx++;
                 next;
             }
-            push @new, $keys[$n];
+            $keys[$write_key_idx++] = $keys[$read_key_idx];
         }
-        @keys = @new;
+        $#keys = $write_key_idx-1;
     }
 
     if (@xremove_values) {
@@ -760,18 +764,21 @@ sub resolve {
             }
         }
 
-
-        my @new;
-        my $next_pos_to_remove = $xremove_values[0];
-        for (my $n = 0; $n < @values; $n++) {
-            if (defined $next_pos_to_remove and $n == $xremove_values[0]) {
-                shift @xremove_values;
-                $next_pos_to_remove = $xremove_values[0];
+        my $write_value_idx = 0;
+        for(my($read_value_idx, $xremove_value_idx) = (0,0);
+            $read_value_idx < @values;
+            $read_value_idx++
+        ) {
+            if ($xremove_value_idx < @xremove_values
+                and
+                $read_value_idx == $xremove_values[$xremove_value_idx]
+            ) {
+                $xremove_value_idx++;
                 next;
             }
-            push @new, $values[$n];
+            $values[$write_value_idx++] = $values[$read_value_idx];
         }
-        @values = @new;
+        $#values = $write_value_idx-1;
     }
 
     my $template;
