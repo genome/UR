@@ -542,7 +542,7 @@ sub resolve {
 
     my($kn, $vn, $cn, $complex_values) = (0,0,0,0);
     my ($op,@extra,@xadd_keys,@xadd_values,@xremove_keys,@xremove_values,@extra_key_pos,@extra_value_pos,
-        @swap_key_pos,@swap_key_value,%in_clause_values_are_strings);
+        @swap_key_pos,@swap_key_value);
 
     for my $value (@values) {
         $key = $keys[$kn++];
@@ -806,7 +806,6 @@ sub resolve {
 
     $rule->{template} = $template;
     $rule->{values} = \@values;
-    $rule->{_in_clause_values_are_strings} = \%in_clause_values_are_strings if (keys %in_clause_values_are_strings);
 
     $vn = 0;
     $cn = 0;
