@@ -1,4 +1,4 @@
- 
+
 package UR::Object::Type::AccessorWriter;
 
 package UR::Object::Type;
@@ -177,7 +177,7 @@ sub mk_id_based_flex_accessor {
                 }
                 $id_resolver = $concrete_r_class_meta->get_composite_id_resolver;
             }
-            
+
             # eliminate the old map{} because of side effects with $_
             # when the id_by property happens to be calculated
             #@id = map { $self->$_ } @$id_by;
@@ -197,8 +197,8 @@ sub mk_id_based_flex_accessor {
                 return $id;
             }
             else {
-                if (@_ || $where) { 
-                    # There were additional params passed in 
+                if (@_ || $where) {
+                    # There were additional params passed in
                     return $concrete_r_class_name->get(id => $id, @_, @$where);
                 } else {
                     return $concrete_r_class_name->get($id);
@@ -289,7 +289,7 @@ sub mk_id_based_object_accessor {
                 }
                 $id_resolver = $concrete_r_class_meta->get_composite_id_resolver;
             }
-            
+
             # eliminate the old map{} because of side effects with $_
             # when the id_by property happens to be calculated
             #@id = map { $self->$_ } @$id_by;
@@ -304,8 +304,8 @@ sub mk_id_based_object_accessor {
             if ($concrete_r_class_name eq 'UR::Object') {
                 Carp::carp("Querying by using UR::Object class is deprecated.");
             }
-            if (@_ || $where) { 
-                # There were additional params passed in 
+            if (@_ || $where) {
+                # There were additional params passed in
                 return $concrete_r_class_name->get(id => $id, @_, @$where);
             } else {
                 return $concrete_r_class_name->get($id);
@@ -491,11 +491,11 @@ sub _resolve_bridge_logic_for_indirect_property {
     }
     return ($bridge_collector, $bridge_crosser);
 }
-         
+
 
 sub _is_assignment_value {
     return (
-        @_ == 1 
+        @_ == 1
         and not (ref($_[0]) and Scalar::Util::blessed($_[0]) and $_[0]->isa("UR::BoolExpr"))
     );
 }
@@ -504,7 +504,7 @@ sub mk_indirect_ro_accessor {
     my ($ur_object_type, $class_name, $accessor_name, $via, $to, $where) = @_;
     my @where = ($where ? @$where : ());
     my $full_name = join( '::', $class_name, $accessor_name );
-    my $filterable_accessor_name = 'get_' . $accessor_name;  # FIXME we need a better name for 
+    my $filterable_accessor_name = 'get_' . $accessor_name;  # FIXME we need a better name for
     my $filterable_full_name = join( '::', $class_name, $filterable_accessor_name );
 
     # This is part of an experimental refactoring of indirect accessors.  The goal is to
@@ -585,7 +585,7 @@ sub mk_indirect_ro_accessor {
 
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
-        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_ == 1 and _is_assignment_value(@_); 
+        Carp::croak("Assignment value passed to read-only indirect accessor $accessor_name for class $class_name") if @_ == 1 and _is_assignment_value(@_);
 
         unless ($bridge_collector) {
             ($bridge_collector, $bridge_crosser)
@@ -598,7 +598,7 @@ sub mk_indirect_ro_accessor {
         return $self->context_return(@bridges) if ($to eq '-filter');
 
         my @results = $bridge_crosser->(\@bridges, @_);
-        $self->context_return(@results); 
+        $self->context_return(@results);
     };
 
     unless ($accessor_name) {
@@ -619,7 +619,7 @@ sub mk_indirect_ro_accessor {
         unless ($linking_property->data_type) {
             Carp::croak "Property ${class_name}::${accessor_name}: via refers to a property with no data_type.  Can't process filter";
         }
-        my $final_property = UR::Object::Property->get(class_name => $linking_property->data_type, 
+        my $final_property = UR::Object::Property->get(class_name => $linking_property->data_type,
                                                        property_name => $to);
         unless ($final_property->data_type) {
             Carp::croak "Property ${class_name}::${accessor_name}: to refers to a property with no data_type.  Can't process filter";
@@ -656,7 +656,7 @@ sub mk_indirect_rw_accessor {
     $property_name ||= $accessor_name;
     my @where = ($where ? @$where : ());
     my $full_name = join( '::', $class_name, $accessor_name );
-    
+
     my $update_strategy; # defined the first time we "set" a value through this
     my $adder;
     my $via_property_meta;
@@ -665,15 +665,15 @@ sub mk_indirect_rw_accessor {
 
     my $resolve_update_strategy = sub {
         unless (defined $update_strategy) {
-            # Resolve the strategy.  We need to figure out if $to 
+            # Resolve the strategy.  We need to figure out if $to
             # refers to an id-property.  This is only called once, when the
             # accessor is first used.
-        
+
             # If we reference a remote object, and go to one of its id properties
             # we must do a delete/create instead of property change.  Note that
             # this is only allowed when the remote object has no direct properties
             # which are not id properties.
-        
+
             my $my_property_meta = $class_name->__meta__->property_meta_for_name($property_name);
             unless ($my_property_meta) {
                 Carp::croak("Failed to find property meta for '$property_name' on class $class_name");
@@ -705,7 +705,7 @@ sub mk_indirect_rw_accessor {
         }
         return $update_strategy;
     };
- 
+
     my ($bridge_collector, $bridge_crosser);
     my $accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
@@ -717,7 +717,7 @@ sub mk_indirect_rw_accessor {
 
         my @bridges = $bridge_collector->($self);
 
-        if ( @_ == 1 and _is_assignment_value(@_) ) {            
+        if ( @_ == 1 and _is_assignment_value(@_) ) {
             $resolve_update_strategy->() unless (defined $update_strategy);
 
             if ($update_strategy eq 'change') {
@@ -869,7 +869,7 @@ sub mk_calculation_accessor {
         my $module_name = "UR::Object::Type::AccessorWriter::" . ucfirst(lc($calculation_src));
         eval "use $module_name";
         die $@ if $@;
-        @src = ( 
+        @src = (
             "sub ${class_name}::${accessor_name} {",
             'my $self = $_[0];',
             "${module_name}->calculate(\$self, [" . join(",", map { "'$_'" } @$calculate_from) . "], \@_)",
@@ -877,7 +877,7 @@ sub mk_calculation_accessor {
         );
     }
     else {
-        @src = ( 
+        @src = (
             "sub ${class_name}::${accessor_name} {",
             ($params ? 'my ($self,%params) = @_;' : 'my $self = $_[0];'),
             (map { "my \$$_ = \$self->$_;" } @$calculate_from),
@@ -951,7 +951,7 @@ sub mk_dimension_delegate_accessors {
 
     # Make EAV-like accessors for all of the remote properties
     my $class_name = $self->class_name;
-    
+
     my $full_name = join( '::', $class_name, $other_accessor_name );
     my $other_accessor = Sub::Name::subname $full_name => sub {
         my $self = shift;
@@ -970,7 +970,7 @@ sub mk_dimension_delegate_accessors {
                 # is actually requested by its accessor
                 # (farther below).
                 my $old = $delegate->$other_accessor_name;
-                my $new = shift;                    
+                my $new = shift;
                 my $different = eval { no warnings; $old ne $new };
                 if ($different or $@ =~ m/has no overloaded magic/) {
                     $self->{$accessor_name} = undef;
@@ -1008,7 +1008,7 @@ sub mk_dimension_delegate_accessors {
             }
         }
     };
-    
+
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $other_accessor_name,
@@ -1052,7 +1052,7 @@ sub mk_dimension_identifying_accessor {
         }
         return $_[0]->{ $accessor_name };
     };
-    
+
     Sub::Install::reinstall_sub({
         into => $class_name,
         as   => $accessor_name,
@@ -1109,25 +1109,20 @@ sub mk_ro_class_accessor {
     });
 }
 
-    
+
 
 
 sub mk_object_set_accessors {
     my ($self, $class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where) = @_;
-
-    unless ($plural_name) {
-        # TODO: we can handle a reverse_as when there is only one item.  We're just not coded-to yet.
-        Carp::croak "Bad property description for $class_name $singular_name: expected is_many with reverse_as!";
-    }
 
     # These are set by the resolver closure below, and kept in scope by the other closures
     my $rule_template;
     my $r_class_meta;
     my @property_names;
     my @where = ($where ? @$where : ());
-    
+
     my $rule_resolver = sub {
-        my ($obj) = @_;        
+        my ($obj) = @_;
         my $loading_r_class_error = '';
         if (defined $r_class_name) {
             eval {
@@ -1156,9 +1151,9 @@ sub mk_object_set_accessors {
 
             if (@possible_relationships > 1) {
                 Carp::croak "$class_name has an ambiguous definition for property \"$singular_name\"."
-                    . "  The target class $r_class_name has " . scalar(@possible_relationships) 
+                    . "  The target class $r_class_name has " . scalar(@possible_relationships)
                     . " relationships which reference back to $class_name."
-                    . "  Correct by adding \"reverse_as => X\" to ${class_name}'s \"$singular_name\" definition one of the following values:  " 
+                    . "  Correct by adding \"reverse_as => X\" to ${class_name}'s \"$singular_name\" definition one of the following values:  "
                     . join(",",map { '"' . $_->delegation_name . '"' } @possible_relationships) . ".\n";
             }
             elsif (@possible_relationships == 1) {
@@ -1170,7 +1165,7 @@ sub mk_object_set_accessors {
             }
         }
         if ($reverse_as and ! $r_class_meta) {
-            # we've resolved reverse_as, but there's not r_class_meta?!  
+            # we've resolved reverse_as, but there's not r_class_meta?!
             $self->error_message("Can't resolve reverse relationship $class_name -> $plural_name.  No class metadata for $r_class_name");
             if ($loading_r_class_error) {
                 Carp::croak "While loading $r_class_name: $loading_r_class_error";
@@ -1236,127 +1231,6 @@ sub mk_object_set_accessors {
         }
     }
 
-    my $rule_name = $self->rule_accessor_name_for_is_many_accessor($plural_name);
-    my $rule_accessor = Sub::Name::subname $class_name ."::$rule_name" => sub {
-        my $self = shift;
-        $rule_resolver->($self) unless ($rule_template);
-        unless ($rule_template) {
-            die "no indirect rule available for locally-stored 'has-many' relationship";
-        }
-        if (@_) {
-            my $tmp_rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values); 
-            return $r_class_name->define_boolexpr($tmp_rule->params_list, @_);
-        }
-        else {
-            return $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values); 
-        }
-    };
-
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $rule_name,
-        code => $rule_accessor,
-    });
-
-    my $list_accessor = Sub::Name::subname $class_name ."::$plural_name" => sub {
-        my $self = shift;
-        my $rule;
-        $rule = $rule_resolver->($self) unless (defined $rule_template);
-        if ($rule_template) { 
-            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
-            if (@_) {
-                return $UR::Context::current->query($r_class_name, $rule->params_list,@_);
-            }
-            else {
-                return $UR::Context::current->query($r_class_name, $rule);
-            }
-        }
-        else {
-            if (@_) {
-                if (@_ != 1 or ref($_[0]) ne 'ARRAY' ) {
-                    die "expected a single arrayref when setting a multi-value $class_name $plural_name!  Got @_";
-                }
-                $self->{$plural_name} = [ @{$_[0]} ];
-                return @{$_[0]};
-            }
-            else {
-                return unless $self->{$plural_name};
-                if (ref($self->{$plural_name}) ne 'ARRAY') {
-                    Carp::carp("$class_name with id ".$self->id." does not hold an arrayref in its $plural_name property");
-                    $self->{$plural_name} = [ $self->{$plural_name} ];
-                }
-                return @{ $self->{$plural_name} };
-            }
-        }
-    };
-    
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $plural_name,
-        code => $list_accessor,
-    });
-    
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $singular_name . '_list',
-        code => $list_accessor,
-    });
-    
-    my $arrayref_name = $self->arrayref_accessor_name_for_is_many_accessor($plural_name);
-    my $arrayref_accessor = Sub::Name::subname $class_name ."::$arrayref_name" => sub {
-        return [ $list_accessor->(@_) ];
-    };
-
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $arrayref_name,
-        code => $arrayref_accessor,
-    });
-
-    my $iterator_name = $self->iterator_accessor_name_for_is_many_accessor($plural_name);
-    my $iterator_accessor = Sub::Name::subname $class_name ."::$iterator_name" => sub {
-        my $self = shift;
-        my $rule;
-        $rule = $rule_resolver->($self) unless (defined $rule_template);
-        if ($rule_template) {
-            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
-            if (@_) {
-                return $r_class_name->create_iterator($rule->params_list,@_);
-            } else {
-                return UR::Object::Iterator->create_for_filter_rule($rule);
-            }
-        }
-        else {
-            return UR::Value::Iterator->create_for_value_arrayref($self->{$plural_name} || []);
-        }
-    };
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $iterator_name,
-        code => $iterator_accessor,
-    });
-    
-    my $set_name = $self->set_accessor_name_for_is_many_accessor($plural_name);
-    my $set_accessor = Sub::Name::subname $class_name ."::$set_name" => sub {
-        my $self = shift;
-        my $rule;
-        $rule = $rule_resolver->($self) unless (defined $rule_template);
-        if ($rule_template) {
-            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values) unless (defined $rule);
-            return $r_class_name->define_set($rule->params_list,@_);
-        }
-        else {
-            # this is a bit inside-out, but works for primitives
-            my @members = $self->$plural_name;
-            return UR::Value->define_set(id => \@members);
-        }
-    };
-    Sub::Install::reinstall_sub({
-        into => $class_name,
-        as   => $set_name,
-        code => $set_accessor,
-    });
-
     # These will behave specially if the rule does not specify the ID, or all of the ID.
     my @params_prefix;
     my $params_prefix_resolved = 0;
@@ -1367,20 +1241,20 @@ sub mk_object_set_accessors {
         my $r_ids = $r_class_meta->property_meta_for_name($reverse_as)->{id_by};
 
         my $cmeta = UR::Object::Type->get($class_name);
-        my $pmeta = $cmeta->{has}{$plural_name};
+        my $pmeta = $plural_name ? $cmeta->{has}{$plural_name} : $cmeta->{has}{$singular_name};
         if (my $specify_by = $pmeta->{specify_by}) {
-            @params_prefix = ($specify_by);    
+            @params_prefix = ($specify_by);
         }
         else {
             # TODO: should this really be an auto-setting of the specify_by meta property?
             my @id_property_names = $r_class_name->__meta__->id_property_names;
-            @params_prefix = 
-                grep { 
+            @params_prefix =
+                grep {
                     my $id_property_name = $_;
                     ( (grep { $id_property_name eq $_ } @$r_ids) ? 0 : 1)
                 }
                 @id_property_names;
-            
+
             # We only do the special single-value spec when there is one property not specified by the rule.
             # This is common for a multi-column primary key where all columns reference a parent object, except an index value, etc.
             @params_prefix = () unless scalar(@params_prefix) == 1;
@@ -1388,7 +1262,7 @@ sub mk_object_set_accessors {
         $params_prefix_resolved = 1;
     };
 
-    if ($singular_name ne $plural_name) {
+    if (!$plural_name || $singular_name ne $plural_name) {
         my $single_accessor = Sub::Name::subname $class_name ."::$singular_name" => sub {
             my $self = shift;
             my $rule;
@@ -1424,7 +1298,133 @@ sub mk_object_set_accessors {
             as   => $singular_name,
             code => $single_accessor,
         });
+
+        # return now for reverse_as but not is_many
+        unless ($plural_name) {
+            return;
+        }
     }
+
+    my $rule_name = $self->rule_accessor_name_for_is_many_accessor($plural_name);
+    my $rule_accessor = Sub::Name::subname $class_name ."::$rule_name" => sub {
+        my $self = shift;
+        $rule_resolver->($self) unless ($rule_template);
+        unless ($rule_template) {
+            die "no indirect rule available for locally-stored 'has-many' relationship";
+        }
+        if (@_) {
+            my $tmp_rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
+            return $r_class_name->define_boolexpr($tmp_rule->params_list, @_);
+        }
+        else {
+            return $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values);
+        }
+    };
+
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $rule_name,
+        code => $rule_accessor,
+    });
+
+    my $list_accessor = Sub::Name::subname $class_name ."::$plural_name" => sub {
+        my $self = shift;
+        my $rule;
+        $rule = $rule_resolver->($self) unless (defined $rule_template);
+        if ($rule_template) {
+            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
+            if (@_) {
+                return $UR::Context::current->query($r_class_name, $rule->params_list,@_);
+            }
+            else {
+                return $UR::Context::current->query($r_class_name, $rule);
+            }
+        }
+        else {
+            if (@_) {
+                if (@_ != 1 or ref($_[0]) ne 'ARRAY' ) {
+                    die "expected a single arrayref when setting a multi-value $class_name $plural_name!  Got @_";
+                }
+                $self->{$plural_name} = [ @{$_[0]} ];
+                return @{$_[0]};
+            }
+            else {
+                return unless $self->{$plural_name};
+                if (ref($self->{$plural_name}) ne 'ARRAY') {
+                    Carp::carp("$class_name with id ".$self->id." does not hold an arrayref in its $plural_name property");
+                    $self->{$plural_name} = [ $self->{$plural_name} ];
+                }
+                return @{ $self->{$plural_name} };
+            }
+        }
+    };
+
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $plural_name,
+        code => $list_accessor,
+    });
+
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $singular_name . '_list',
+        code => $list_accessor,
+    });
+
+    my $arrayref_name = $self->arrayref_accessor_name_for_is_many_accessor($plural_name);
+    my $arrayref_accessor = Sub::Name::subname $class_name ."::$arrayref_name" => sub {
+        return [ $list_accessor->(@_) ];
+    };
+
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $arrayref_name,
+        code => $arrayref_accessor,
+    });
+
+    my $iterator_name = $self->iterator_accessor_name_for_is_many_accessor($plural_name);
+    my $iterator_accessor = Sub::Name::subname $class_name ."::$iterator_name" => sub {
+        my $self = shift;
+        my $rule;
+        $rule = $rule_resolver->($self) unless (defined $rule_template);
+        if ($rule_template) {
+            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values) unless (defined $rule);
+            if (@_) {
+                return $r_class_name->create_iterator($rule->params_list,@_);
+            } else {
+                return UR::Object::Iterator->create_for_filter_rule($rule);
+            }
+        }
+        else {
+            return UR::Value::Iterator->create_for_value_arrayref($self->{$plural_name} || []);
+        }
+    };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $iterator_name,
+        code => $iterator_accessor,
+    });
+
+    my $set_name = $self->set_accessor_name_for_is_many_accessor($plural_name);
+    my $set_accessor = Sub::Name::subname $class_name ."::$set_name" => sub {
+        my $self = shift;
+        my $rule;
+        $rule = $rule_resolver->($self) unless (defined $rule_template);
+        if ($rule_template) {
+            $rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names),@where_values) unless (defined $rule);
+            return $r_class_name->define_set($rule->params_list,@_);
+        }
+        else {
+            # this is a bit inside-out, but works for primitives
+            my @members = $self->$plural_name;
+            return UR::Value->define_set(id => \@members);
+        }
+    };
+    Sub::Install::reinstall_sub({
+        into => $class_name,
+        as   => $set_name,
+        code => $set_accessor,
+    });
 
     my $adder_method_name = $self->adder_name_for_is_many_accessor($plural_name);
     if ($class_name->can($adder_method_name)) {
@@ -1447,7 +1447,7 @@ sub mk_object_set_accessors {
                 if (@_ == 1 and $_[0]->isa($r_class_name)) {
                     $obj = $_[0];
                 }
-                else { 
+                else {
                     $obj = $r_class_name->create(@where,@_);
                     unless ($obj) {
                         $self->error_message("Failed to add $singular_name:" . $r_class_name->error_message);
@@ -1456,7 +1456,7 @@ sub mk_object_set_accessors {
                 }
                 push @{ $self->{$plural_name} ||= [] }, $obj;
             }
-            else { 
+            else {
                 if (@_ != 1) {
                     die "$class_name $adder_method_name expects a single value to add.  Got @_";
                 }
@@ -1493,7 +1493,7 @@ sub mk_object_set_accessors {
             }
             else {
                 # the parameters to find objects to remove were passed-in
-                unshift @_, @params_prefix if @_ == 1; # a single "id" is the remainder of the id of the object        
+                unshift @_, @params_prefix if @_ == 1; # a single "id" is the remainder of the id of the object
                 @matches = $r_class_name->get($rule->params_list,@_);
             }
             my $trans = UR::Context::Transaction->begin;
@@ -1505,7 +1505,7 @@ sub mk_object_set_accessors {
         }
         else {
             # direct storage in an arrayref
-            $self->{$plural_name} ||= []; 
+            $self->{$plural_name} ||= [];
             if ($r_class_meta) {
                 # object
                 my @remove;
@@ -1564,14 +1564,14 @@ use Data::Dumper;
 
 sub initialize_direct_accessors {
     my $self = shift;
-    my $class_name = $self->{class_name};    
+    my $class_name = $self->{class_name};
 
     my %id_property_names;
     for my $property_name (@{ $self->{id_by} }) {
         $id_property_names{$property_name} = 1;
-        next if $property_name eq "id";     
+        next if $property_name eq "id";
     }
-    
+
     my %dimensions_by_fk;
     for my $property_name (sort keys %{ $self->{has} }) {
         my $property_data = $self->{has}{$property_name};
@@ -1582,14 +1582,14 @@ sub initialize_direct_accessors {
             }
             if (@$id_by != 1) {
                 die "The id_by specified for dimension $property_name must list a single property name!";
-            }        
-            
+            }
+
             my $dimension_class_name = $property_data->{data_type};
             $dimensions_by_fk{$id_by->[0]} = $dimension_class_name;
-             
+
             my $ref_class_meta = $dimension_class_name->__meta__;
             my %remote_id_properties = map { $_ => 1 } $ref_class_meta->id_property_names;
-            my @non_id_properties = grep { not $remote_id_properties{$_} } $ref_class_meta->all_property_names;        
+            my @non_id_properties = grep { not $remote_id_properties{$_} } $ref_class_meta->all_property_names;
             for my $expected_delegate_property_name (@non_id_properties) {
                 unless ($self->{has}{$expected_delegate_property_name}) {
                     $self->{has}{$expected_delegate_property_name} = {
@@ -1601,12 +1601,12 @@ sub initialize_direct_accessors {
                 }
             }
         }
-    }    
+    }
 
     for my $pname (sort keys %{ $self->{has} }) {
         my $property_name = $pname; # mutable
         my $accessor_name = $pname;
-        
+
         my $property_data = $self->{has}{$property_name};
 
         # handle aliases
@@ -1626,7 +1626,7 @@ sub initialize_direct_accessors {
         my $column_name = $property_data->{column_name};
         my $is_transient = $property_data->{is_transient};
         my $where = $property_data->{where};
-        
+
         do {
             # Handle the case where the software module has an explicit
             # override for one of the accessors.
@@ -1643,7 +1643,7 @@ sub initialize_direct_accessors {
 
         unless ($accessor_name) {
             Carp::croak("No accessor name for property '$property_name' of class $class_name");
-        }        
+        }
 
         my $accessor_type;
         my @calculation_fields = (qw/calculate calc_perl calc_sql calculate_from/);
@@ -1677,9 +1677,9 @@ sub initialize_direct_accessors {
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
             if ($via eq '__self__') {
-                die "aliases should be caught above!"; 
+                die "aliases should be caught above!";
 
-            } 
+            }
             if ($property_data->{is_mutable}) {
                 my $singular_name;
                 if ($property_data->{'is_many'}) {
@@ -1702,7 +1702,7 @@ sub initialize_direct_accessors {
                 $property_data->{is_constant},
                 $property_data->{column_name},
             );
-        } 
+        }
         elsif (my $calculate_sql = $property_data->{'calculate_sql'}) {
             # The data gets filled in by the object loader behind the scenes.
             # To the user, it's a read-only property
@@ -1722,7 +1722,7 @@ sub initialize_direct_accessors {
                 $singular_name = $accessor_name;
             }
             $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where);
-        }        
+        }
         elsif ($property_data->{'is_classwide'}) {
             my($value, $column_name, $is_transient) = @$property_data{'default_value','column_name','is_transient'};
             if ($property_data->{'is_constant'}) {
@@ -1731,7 +1731,7 @@ sub initialize_direct_accessors {
                 $self->mk_rw_class_accessor($class_name,$accessor_name,$column_name,$is_transient,$value);
             }
         }
-        else {        
+        else {
             # Just use key/value pairs in the hash for normal
             # table stuff, and also non-database stuff.
 
@@ -1749,8 +1749,8 @@ sub initialize_direct_accessors {
             }
             $self->$maker($class_name, $accessor_name, $column_name, $property_name,$is_transient);
         }
-    }    
-    
+    }
+
     # right now we just stomp on the default accessors constructed above where they are:
     # 1. the fk behind a dimensional relationships
     # 2. the indirect properties created for the dimensional relationship
@@ -1758,13 +1758,13 @@ sub initialize_direct_accessors {
         my $dimension_class_name = $dimensions_by_fk{$dimension_id};
         my $ref_class_meta = $dimension_class_name->__meta__;
         my %remote_id_properties = map { $_ => 1 } $ref_class_meta->id_property_names;
-        my @non_id_properties = grep { not $remote_id_properties{$_} } $ref_class_meta->all_property_names;        
+        my @non_id_properties = grep { not $remote_id_properties{$_} } $ref_class_meta->all_property_names;
         for my $added_property_name (@non_id_properties) {
             $self->mk_dimension_delegate_accessors($dimension_id,$dimension_class_name, \@non_id_properties, $added_property_name);
         }
         $self->mk_dimension_identifying_accessor($dimension_id,$dimension_class_name, \@non_id_properties);
     }
-    
+
     return 1;
 }
 
@@ -1862,8 +1862,8 @@ Creates a calculated accessor called $accessor_name.  If the $is_constant
 flag is true, then the accessor runs the calculation once, caches the result,
 and returns that result for subseqent calls to the accessor.
 
-$calculation_src can be one of: coderef, string containing Perl code, or 
-the name of a module under UR::Object::Type::AccessorWriter which has a 
+$calculation_src can be one of: coderef, string containing Perl code, or
+the name of a module under UR::Object::Type::AccessorWriter which has a
 method called C<calculate>.  If $calculation_src is empty, then $accessor_name
 must be the name of an already-existing subroutine in the class's namespace.
 
@@ -1878,7 +1878,7 @@ They need more documentation.
 
   $classobj->mk_rw_class_accessor($class_name, $accessor_name, $column_name, $is_transient, $variable_value);
 
-Creates a read-write accessor called $accessor_name which stores its value 
+Creates a read-write accessor called $accessor_name which stores its value
 in a scalar captured by the accessor's closure.  Since the closure is
 inserted into the class's namespace, all instances of the class share the
 same closure (and therefore the same scalar), and the property effectively
