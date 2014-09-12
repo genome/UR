@@ -189,8 +189,6 @@ sub value_id_to_values {
     return @values;
 }
 
-*values_to_value_id_simple = \&values_to_value_id;
-
 package UR::BoolExpr::Util::clonedThing;
 
 sub bless {

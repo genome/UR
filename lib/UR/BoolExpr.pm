@@ -798,7 +798,7 @@ sub resolve {
             );
     }
 
-    my $value_id = ($complex_values ? UR::BoolExpr::Util->values_to_value_id(@values) : UR::BoolExpr::Util->values_to_value_id_simple(@values) );
+    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
 
     my $rule_id = join($UR::BoolExpr::Util::id_sep,$template->{id},$value_id);
 
