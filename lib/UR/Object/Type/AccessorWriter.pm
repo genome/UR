@@ -1342,10 +1342,13 @@ sub mk_object_set_accessors {
         }
         else {
             if (@_) {
-                if (@_ != 1 or ref($_[0]) ne 'ARRAY' ) {
+                if (@_ != 1) {
                     die "expected a single arrayref when setting a multi-value $class_name $plural_name!  Got @_";
+                } elsif ( ref($_[0]) ne 'ARRAY' ) {
+                    $self->{$plural_name} = [ $_[0] ];
+                } else {
+                    $self->{$plural_name} = [ @{$_[0]} ];
                 }
-                $self->{$plural_name} = [ @{$_[0]} ];
                 return $self->context_return(@{ $self->{$plural_name} });
             }
             else {
