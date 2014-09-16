@@ -305,12 +305,12 @@ sub flatten_hard_refs {
     for my $key (keys %params) {
         my $value = $params{$key};
         if (ref($value) and Scalar::Util::blessed($value) and $value->isa("UR::Object")) {
-            my ($property_name,$op) = ($key =~ /^(\S+)\s*(.*)/);
-            
+            my ($property_name, $op) = ($key =~ /^(\S+)\s*(.*)/);
+
             my $value_class_name = $meta->property($property_name)->data_type;
             next unless $value_class_name;
             my $id = $value->id;
-            my $value2 = eval { 
+            my $value2 = eval {
                 $value_class_name->get($id)
             };
             if (not $value2) {
@@ -1266,7 +1266,7 @@ them.  For example:
     name_property in [Bob,Fred,Joe]
 
 Simple expressions may be joined together with the words "and" and "or" to form a more
-complicated expression.  "and" has higher precedence than "or", and parentheses can 
+complicated expression.  "and" has higher precedence than "or", and parentheses can
 surround sub-expressions to indicate the requested precedence.  For example:
     ((prop1 = foo or prop2 = 1) and (prop2 > 10 or prop3 like 'Yo%')) or prop4 in [1,2,3]
 
