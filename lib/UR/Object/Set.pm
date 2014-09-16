@@ -122,13 +122,9 @@ sub get_with_special_parameters {
     my $class = shift;
     my $bx = shift;
     my @params = @_;
-
     my $member_class = $class;
     $member_class =~ s/::Set$//;
-
-    my $rule = UR::BoolExpr->resolve($member_class, $bx->params_list, @params);
-
-    return $class->get($rule->id);
+    return $member_class->define_set($bx->params_list, @params);
 }
 
 sub members {

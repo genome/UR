@@ -301,9 +301,10 @@ sub define_boolexpr {
 sub define_set {
     my $class = shift;
     $class = ref($class) || $class;
-    my $rule = UR::BoolExpr->resolve($class,@_);
+    my $rule = UR::BoolExpr->resolve_normalized($class,@_);
+    my $flattened_rule = $rule->flatten_hard_refs();
     my $set_class = $class . "::Set";
-    return $set_class->get($rule->id);
+    return $set_class->get($flattened_rule->id);
 }
 
 sub add_observer {
