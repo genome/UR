@@ -463,7 +463,8 @@ sub get {
     if ($logic_type eq "And") {
         # TODO: move into subclass
         my @keys = split(/,/,$logic_detail || '');    
-        my @constant_values = UR::BoolExpr::Util->value_id_to_values($constant_value_id) if defined $constant_value_id;;
+        my @constant_values;
+        @constant_values = UR::BoolExpr::Util->value_id_to_values($constant_value_id) if defined $constant_value_id;
         return $sub_class_name->_fast_construct(
             $subject_class_name,
             \@keys,
