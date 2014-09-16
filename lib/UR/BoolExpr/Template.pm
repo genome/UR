@@ -255,7 +255,7 @@ sub get_normalized_template_equivalent {
 
 sub get_rule_for_values {
     my $self = shift;
-    my $value_id = UR::BoolExpr::Util->values_to_value_id(@_);    
+    my $value_id = UR::BoolExpr::Util::values_to_value_id(@_);
     my $rule_id = UR::BoolExpr->__meta__->resolve_composite_id_from_ordered_values($self->id,$value_id);
     my $r = UR::BoolExpr->get($rule_id);
 #
@@ -422,7 +422,7 @@ sub get_by_subject_class_name_logic_type_and_logic_detail {
     my $logic_type = shift;
     my $logic_detail = shift;
 
-    my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(); # intentionally an empty list of values
+    my $constant_value_id = UR::BoolExpr::Util::values_to_value_id(); # intentionally an empty list of values
     return $class->get(join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id));
 }
 
@@ -464,7 +464,7 @@ sub get {
         # TODO: move into subclass
         my @keys = split(/,/,$logic_detail || '');    
         my @constant_values;
-        @constant_values = UR::BoolExpr::Util->value_id_to_values($constant_value_id) if defined $constant_value_id;
+        @constant_values = UR::BoolExpr::Util::value_id_to_values($constant_value_id) if defined $constant_value_id;
         return $sub_class_name->_fast_construct(
             $subject_class_name,
             \@keys,

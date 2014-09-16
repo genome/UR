@@ -26,19 +26,16 @@ our $empty_list = chr(20);      # used for []
 # These are used when there is any sort of complicated data in the rule.
 
 sub values_to_value_id_frozen {
-    my $self = shift;
     my $frozen = FreezeThaw::safeFreeze(@_);
     return "F:" . $frozen;
 }
 
 sub value_id_to_values_frozen {
-    my $self = shift;
     my $value_id = shift;
-    return $self->_fixup_ur_objects_from_thawed_data(FreezeThaw::thaw($value_id));
+    return _fixup_ur_objects_from_thawed_data(FreezeThaw::thaw($value_id));
 }
 
 sub _fixup_ur_objects_from_thawed_data {
-    my $self = shift;
     my @values = @_;
 
     our $seen;
@@ -71,7 +68,7 @@ sub _fixup_ur_objects_from_thawed_data {
             }
 
         }
-        $self->_fixup_ur_objects_from_thawed_data($_);
+        _fixup_ur_objects_from_thawed_data($_);
     };
 
     foreach my $data ( @values ) {
@@ -102,7 +99,6 @@ sub _fixup_ur_objects_from_thawed_data {
 # These are used for the simple common-case rules.
 
 sub values_to_value_id {
-    my $self = shift;
     my $value_id = "O:";
 
     for my $value (@_) {
@@ -123,7 +119,7 @@ sub values_to_value_id {
                         }
                         else {
                             if (ref($value2) or index($value2, $unit_sep) >= 0 or index($value2, $record_sep) >= 0) {
-                                return $self->values_to_value_id_frozen(@_);
+                                return values_to_value_id_frozen(@_);
                             }
                             $value_id .= $value2 . $unit_sep;
                         }
@@ -133,7 +129,7 @@ sub values_to_value_id {
             }
             else {
                 if (ref($value) or index($value,$unit_sep) >= 0 or index($value,$record_sep) >= 0) {
-                    return $self->values_to_value_id_frozen(@_);
+                    return values_to_value_id_frozen(@_);
                 }
                 $value_id .= $value . $record_sep;
             }
@@ -148,7 +144,6 @@ sub values_to_value_id {
 }
 
 sub value_id_to_values {
-    my $self = shift;
     my $value_id = shift;
 
     unless (defined $value_id) {
@@ -158,7 +153,7 @@ sub value_id_to_values {
     my $method_identifier = substr($value_id,0,2);
     $value_id = substr($value_id, 2, length($value_id)-2);    
     if ($method_identifier eq "F:") {
-        return $self->value_id_to_values_frozen($value_id);
+        return value_id_to_values_frozen($value_id);
     }
 
     my @values = ($value_id =~ /(.*?)$record_sep/gs);

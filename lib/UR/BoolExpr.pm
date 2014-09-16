@@ -101,7 +101,7 @@ sub evaluate {
 sub template_and_values {
     my $self = shift;
     my ($template_id, $value_id) = UR::BoolExpr::Type->resolve_ordered_values_from_composite_id($self->id);
-    return (UR::BoolExpr::Template->get($template_id), UR::BoolExpr::Util->value_id_to_values($value_id));
+    return (UR::BoolExpr::Template->get($template_id), UR::BoolExpr::Util::value_id_to_values($value_id));
 }
 
 # Returns true if the rule represents a subset of the things the other
@@ -148,7 +148,7 @@ sub values {
     my $value_id = $self->value_id;
     return unless defined($value_id) and length($value_id);
     my @values;
-    @values = UR::BoolExpr::Util->value_id_to_values($value_id);
+    @values = UR::BoolExpr::Util::value_id_to_values($value_id);
     if (my $hard_refs = $self->{hard_refs}) {
         for my $n (keys %$hard_refs) {
             $values[$n] = $hard_refs->{$n};
@@ -351,7 +351,7 @@ sub resolve_normalized {
 
 sub resolve_for_template_id_and_values {
     my ($class,$template_id, @values)  = @_;
-    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
+    my $value_id = UR::BoolExpr::Util::values_to_value_id(@values);
     my $rule_id = $class->__meta__->resolve_composite_id_from_ordered_values($template_id,$value_id);
     $class->get($rule_id);
 }
@@ -798,7 +798,7 @@ sub resolve {
             );
     }
 
-    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
+    my $value_id = UR::BoolExpr::Util::values_to_value_id(@values);
 
     my $rule_id = join($UR::BoolExpr::Util::id_sep,$template->{id},$value_id);
 
@@ -1128,8 +1128,8 @@ sub _resolve_from_subject_class_name_keys_and_values {
     my @keys            = @{ $params{keys} || [] };
     die "unexpected params: " . Data::Dumper::Dumper(\%params) if %params;
 
-    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
-    my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);
+    my $value_id = UR::BoolExpr::Util::values_to_value_id(@values);
+    my $constant_value_id = UR::BoolExpr::Util::values_to_value_id(@constant_values);
 
     my $template_id = $subject_class_name . '/And/' . join(",",@keys) . "/" . $constant_value_id;
     my $rule_id = join($UR::BoolExpr::Util::id_sep,$template_id,$value_id);

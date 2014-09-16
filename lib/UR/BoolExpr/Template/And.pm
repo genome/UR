@@ -524,7 +524,7 @@ sub _fast_construct {
 
     my $logic_type = 'And';    
     $logic_detail       ||= join(",",@$keys);
-    $constant_value_id  ||= UR::BoolExpr::Util->values_to_value_id(@$constant_values);
+    $constant_value_id  ||= UR::BoolExpr::Util::values_to_value_id(@$constant_values);
    
     my $id = join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id);  
     my $self = $UR::Object::rule_templates->{$id};
@@ -889,7 +889,7 @@ sub _fast_construct {
     # Determine the rule template's ID.
     # The normalizer will store this.  Below, we'll
     # find or create the template for this ID.
-    my $normalized_constant_value_id = (scalar(@constant_values_sorted) ? UR::BoolExpr::Util->values_to_value_id(@constant_values_sorted) : $constant_value_id);
+    my $normalized_constant_value_id = (scalar(@constant_values_sorted) ? UR::BoolExpr::Util::values_to_value_id(@constant_values_sorted) : $constant_value_id);
 
     my @keys_unaliased = $UR::Object::Type::bootstrapping
                             ? @keys_sorted
