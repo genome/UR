@@ -212,7 +212,7 @@ sub is_unique {
                 my $property_set = (ref($property_set) ? $property_set : [$property_set]);
                 my @properties_used_from_constraint =  
                     grep { defined($_) } 
-                    (ref($property_set) ? @$property_meta_hash{@$property_set} : $property_meta_hash->{$property_set});
+                    @$property_meta_hash{@$property_set};
                     
                 if (@properties_used_from_constraint == @$property_set) {
                     # filter imprecise operators
