@@ -676,7 +676,6 @@ sub resolve {
                     if (my $id_class_by = $property_meta->id_class_by) {
                         push @xadd_keys, $id_class_by;
                         push @xadd_values, ref($value);
-                        #print ":: @xkeys\n::@xvalues\n\n";
                     }
                     push @xremove_keys, $kn-1;
                     push @xremove_values, $vn-1;
@@ -695,7 +694,6 @@ sub resolve {
                 }
                 elsif ($value->can($property_name)) {
                     # TODO: stop suporting foo_id => $foo, since you can do foo=>$foo, and foo_id=>$foo->id
-                    #$DB::single = 1;
                     # Carp::cluck("using $property_name => \$obj to get $property_name => \$obj->$property_name is deprecated...");
                     $value = $value->$property_name;
                 }
