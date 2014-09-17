@@ -16,7 +16,6 @@ use URT;
 setup();
 
 my $show = URT::Show->get(name => 'Three Stooges');
-$DB::single = 1;
 is(URT::Actor->define_set(shows => $show)->count, 3);
 is(URT::Actor::Set->get(shows => $show)->count, 3);
 
