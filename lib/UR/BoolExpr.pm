@@ -2,6 +2,7 @@ package UR::BoolExpr;
 use warnings;
 use strict;
 
+use List::MoreUtils qw(uniq);
 use Scalar::Util qw(blessed);
 require UR;
 
@@ -307,30 +308,42 @@ sub flatten_hard_refs {
         if (ref($value) and Scalar::Util::blessed($value) and $value->isa("UR::Object")) {
             my ($property_name, $op) = ($key =~ /^(\S+)\s*(.*)/);
 
-            my $value_class_name = $meta->property($property_name)->data_type;
-            next unless $value_class_name;
-            my $id = $value->id;
+            my $pmeta = $meta->property($property_name);
+            my $final_pmeta = $pmeta->final_property_meta();
+
+            my @data_types = uniq grep { $_ } map { $_->data_type } ($pmeta, $final_pmeta);
+            unless (@data_types) {
+                # this might not be possible at runtime
+                croak sprintf 'unable to determine data type for property: %s', $property_name;
+            }
+
+            my ($data_type) = grep { $value->isa($_) } @data_types;
+            unless ($data_type) {
+                croak sprintf 'value type, %s, is incompatible with: %s', $value->class, join(', ', @data_types);
+            }
+
             my $value2 = eval {
-                $value_class_name->get($id)
+                $data_type->get($value->id)
             };
-            if (not $value2) {
-                next;
+            unless ($value2) {
+                croak sprintf 'unable to retrieve a %s by value ID: %s', $data_type, $value->id;
             }
-            if ($value2 == $value) {
-                # safe to re-represent as .id
-                my $new_key = $property_name . '.id';
-                $new_key .= ' ' . $op if $op;
-                my $new_value = $value->id;
-                delete $params{$key};
-                $params{$new_key} = $new_value;
-                $changes++;
+
+            unless ($value2 eq $value) {
+                croak sprintf 'retrieved duplicate %s with ID, %s,', $data_type, $value->id;
             }
+
+            # safe to re-represent as .id
+            my $new_key = $property_name . '.id';
+            $new_key .= ' ' . $op if $op;
+            delete $params{$key};
+            $params{$new_key} = $value->id;
+            $changes++;
         }
     }
     if ($changes) {
-        return $self->resolve($subject_class_name, %params);
-    }
-    else {
+        return $self->resolve_normalized($subject_class_name, %params);
+    } else {
         return $self;
     }
 }
