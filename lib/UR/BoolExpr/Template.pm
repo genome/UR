@@ -212,7 +212,7 @@ sub is_unique {
                 my $property_set = (ref($property_set) ? $property_set : [$property_set]);
                 my @properties_used_from_constraint =  
                     grep { defined($_) } 
-                    (ref($property_set) ? @$property_meta_hash{@$property_set} : $property_meta_hash->{$property_set});
+                    @$property_meta_hash{@$property_set};
                     
                 if (@properties_used_from_constraint == @$property_set) {
                     # filter imprecise operators
@@ -255,7 +255,7 @@ sub get_normalized_template_equivalent {
 
 sub get_rule_for_values {
     my $self = shift;
-    my $value_id = UR::BoolExpr::Util->values_to_value_id(@_);    
+    my $value_id = UR::BoolExpr::Util::values_to_value_id(@_);
     my $rule_id = UR::BoolExpr->__meta__->resolve_composite_id_from_ordered_values($self->id,$value_id);
     my $r = UR::BoolExpr->get($rule_id);
 #
@@ -422,7 +422,7 @@ sub get_by_subject_class_name_logic_type_and_logic_detail {
     my $logic_type = shift;
     my $logic_detail = shift;
 
-    my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(); # intentionally an empty list of values
+    my $constant_value_id = UR::BoolExpr::Util::values_to_value_id(); # intentionally an empty list of values
     return $class->get(join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id));
 }
 
@@ -463,7 +463,8 @@ sub get {
     if ($logic_type eq "And") {
         # TODO: move into subclass
         my @keys = split(/,/,$logic_detail || '');    
-        my @constant_values = UR::BoolExpr::Util->value_id_to_values($constant_value_id) if defined $constant_value_id;;
+        my @constant_values;
+        @constant_values = UR::BoolExpr::Util::value_id_to_values($constant_value_id) if defined $constant_value_id;
         return $sub_class_name->_fast_construct(
             $subject_class_name,
             \@keys,

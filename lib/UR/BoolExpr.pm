@@ -101,7 +101,7 @@ sub evaluate {
 sub template_and_values {
     my $self = shift;
     my ($template_id, $value_id) = UR::BoolExpr::Type->resolve_ordered_values_from_composite_id($self->id);
-    return (UR::BoolExpr::Template->get($template_id), UR::BoolExpr::Util->value_id_to_values($value_id));
+    return (UR::BoolExpr::Template->get($template_id), UR::BoolExpr::Util::value_id_to_values($value_id));
 }
 
 # Returns true if the rule represents a subset of the things the other
@@ -148,7 +148,7 @@ sub values {
     my $value_id = $self->value_id;
     return unless defined($value_id) and length($value_id);
     my @values;
-    @values = UR::BoolExpr::Util->value_id_to_values($value_id);
+    @values = UR::BoolExpr::Util::value_id_to_values($value_id);
     if (my $hard_refs = $self->{hard_refs}) {
         for my $n (keys %$hard_refs) {
             $values[$n] = $hard_refs->{$n};
@@ -351,7 +351,7 @@ sub resolve_normalized {
 
 sub resolve_for_template_id_and_values {
     my ($class,$template_id, @values)  = @_;
-    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
+    my $value_id = UR::BoolExpr::Util::values_to_value_id(@values);
     my $rule_id = $class->__meta__->resolve_composite_id_from_ordered_values($template_id,$value_id);
     $class->get($rule_id);
 }
@@ -542,7 +542,7 @@ sub resolve {
 
     my($kn, $vn, $cn, $complex_values) = (0,0,0,0);
     my ($op,@extra,@xadd_keys,@xadd_values,@xremove_keys,@xremove_values,@extra_key_pos,@extra_value_pos,
-        @swap_key_pos,@swap_key_value,%in_clause_values_are_strings);
+        @swap_key_pos,@swap_key_value);
 
     for my $value (@values) {
         $key = $keys[$kn++];
@@ -625,17 +625,15 @@ sub resolve {
                     $value = [ sort $sorter @$value ];
 
                     # Remove duplicates from the list
-                    if ($operator ne 'between' and $operator ne 'not between') {
-                        my $last = $value;
-                        for (my $i = 0; $i < @$value;) {
-                            if ($last eq $value->[$i]) {
-                                splice(@$value, $i, 1);
-                            }
-                            else {
-                                $last = $value->[$i++];
-                             }
-                         }
-                     }
+                    my $last = $value;
+                    for (my $i = 0; $i < @$value;) {
+                        if ($last eq $value->[$i]) {
+                            splice(@$value, $i, 1);
+                        }
+                        else {
+                            $last = $value->[$i++];
+                        }
+                    }
                     # push @swap_key_pos, $vn-1;
                     # push @swap_key_value, $property_name;
                 }
@@ -730,17 +728,21 @@ sub resolve {
     }
 
     if (@xremove_keys) {
-        my @new;
-        my $next_pos_to_remove = $xremove_keys[0];
-        for (my $n = 0; $n < @keys; $n++) {
-            if (defined $next_pos_to_remove and $n == $next_pos_to_remove) {
-                shift @xremove_keys;
-                $next_pos_to_remove = $xremove_keys[0];
+        my $write_key_idx = 0;
+        for (my($read_key_idx, $xremove_key_idx) = (0,0);
+             $read_key_idx < @keys;
+             $read_key_idx++
+        ) {
+            if ($xremove_key_idx < @xremove_keys
+                and
+                $read_key_idx == $xremove_keys[$xremove_key_idx]
+            ) {
+                $xremove_key_idx++;
                 next;
             }
-            push @new, $keys[$n];
+            $keys[$write_key_idx++] = $keys[$read_key_idx];
         }
-        @keys = @new;
+        $#keys = $write_key_idx-1;
     }
 
     if (@xremove_values) {
@@ -762,18 +764,21 @@ sub resolve {
             }
         }
 
-
-        my @new;
-        my $next_pos_to_remove = $xremove_values[0];
-        for (my $n = 0; $n < @values; $n++) {
-            if (defined $next_pos_to_remove and $n == $xremove_values[0]) {
-                shift @xremove_values;
-                $next_pos_to_remove = $xremove_values[0];
+        my $write_value_idx = 0;
+        for(my($read_value_idx, $xremove_value_idx) = (0,0);
+            $read_value_idx < @values;
+            $read_value_idx++
+        ) {
+            if ($xremove_value_idx < @xremove_values
+                and
+                $read_value_idx == $xremove_values[$xremove_value_idx]
+            ) {
+                $xremove_value_idx++;
                 next;
             }
-            push @new, $values[$n];
+            $values[$write_value_idx++] = $values[$read_value_idx];
         }
-        @values = @new;
+        $#values = $write_value_idx-1;
     }
 
     my $template;
@@ -793,7 +798,7 @@ sub resolve {
             );
     }
 
-    my $value_id = ($complex_values ? UR::BoolExpr::Util->values_to_value_id(@values) : UR::BoolExpr::Util->values_to_value_id_simple(@values) );
+    my $value_id = UR::BoolExpr::Util::values_to_value_id(@values);
 
     my $rule_id = join($UR::BoolExpr::Util::id_sep,$template->{id},$value_id);
 
@@ -801,7 +806,6 @@ sub resolve {
 
     $rule->{template} = $template;
     $rule->{values} = \@values;
-    $rule->{_in_clause_values_are_strings} = \%in_clause_values_are_strings if (keys %in_clause_values_are_strings);
 
     $vn = 0;
     $cn = 0;
@@ -1124,8 +1128,8 @@ sub _resolve_from_subject_class_name_keys_and_values {
     my @keys            = @{ $params{keys} || [] };
     die "unexpected params: " . Data::Dumper::Dumper(\%params) if %params;
 
-    my $value_id = UR::BoolExpr::Util->values_to_value_id(@values);
-    my $constant_value_id = UR::BoolExpr::Util->values_to_value_id(@constant_values);
+    my $value_id = UR::BoolExpr::Util::values_to_value_id(@values);
+    my $constant_value_id = UR::BoolExpr::Util::values_to_value_id(@constant_values);
 
     my $template_id = $subject_class_name . '/And/' . join(",",@keys) . "/" . $constant_value_id;
     my $rule_id = join($UR::BoolExpr::Util::id_sep,$template_id,$value_id);
