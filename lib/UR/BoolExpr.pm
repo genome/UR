@@ -2,6 +2,8 @@ package UR::BoolExpr;
 use warnings;
 use strict;
 
+use List::MoreUtils qw(uniq);
+use List::Util qw(first);
 use Scalar::Util qw(blessed);
 require UR;
 
@@ -305,32 +307,44 @@ sub flatten_hard_refs {
     for my $key (keys %params) {
         my $value = $params{$key};
         if (ref($value) and Scalar::Util::blessed($value) and $value->isa("UR::Object")) {
-            my ($property_name,$op) = ($key =~ /^(\S+)\s*(.*)/);
-            
-            my $value_class_name = $meta->property($property_name)->data_type;
-            next unless $value_class_name;
-            my $id = $value->id;
-            my $value2 = eval { 
-                $value_class_name->get($id)
+            my ($property_name, $op) = ($key =~ /^(\S+)\s*(.*)/);
+
+            my $pmeta = $meta->property($property_name);
+            my $final_pmeta = $pmeta->final_property_meta();
+
+            my @possible_data_types = uniq grep { $_ } map { $_->data_type } ($pmeta, $final_pmeta);
+            unless (@possible_data_types) {
+                # this might not be possible at runtime
+                croak sprintf 'unable to determine data type for property: %s', $property_name;
+            }
+
+            my $data_type = first { $value->isa($_) } @possible_data_types;
+            unless ($data_type) {
+                croak sprintf 'value type, %s, is incompatible with: %s', $value->class, join(', ', @possible_data_types);
+            }
+
+            my $value2 = eval {
+                $data_type->get($value->id)
             };
-            if (not $value2) {
-                next;
+            unless ($value2) {
+                croak sprintf 'unable to retrieve a %s by value ID: %s', $data_type, $value->id;
             }
-            if ($value2 == $value) {
-                # safe to re-represent as .id
-                my $new_key = $property_name . '.id';
-                $new_key .= ' ' . $op if $op;
-                my $new_value = $value->id;
-                delete $params{$key};
-                $params{$new_key} = $new_value;
-                $changes++;
+
+            unless ($value2 eq $value) {
+                croak sprintf 'retrieved duplicate %s with ID, %s,', $data_type, $value->id;
             }
+
+            # safe to re-represent as .id
+            my $new_key = $property_name . '.id';
+            $new_key .= ' ' . $op if $op;
+            delete $params{$key};
+            $params{$new_key} = $value->id;
+            $changes++;
         }
     }
     if ($changes) {
-        return $self->resolve($subject_class_name, %params);
-    }
-    else {
+        return $self->resolve_normalized($subject_class_name, %params);
+    } else {
         return $self;
     }
 }
@@ -1255,7 +1269,7 @@ them.  For example:
     name_property in [Bob,Fred,Joe]
 
 Simple expressions may be joined together with the words "and" and "or" to form a more
-complicated expression.  "and" has higher precedence than "or", and parentheses can 
+complicated expression.  "and" has higher precedence than "or", and parentheses can
 surround sub-expressions to indicate the requested precedence.  For example:
     ((prop1 = foo or prop2 = 1) and (prop2 > 10 or prop3 like 'Yo%')) or prop4 in [1,2,3]
 
