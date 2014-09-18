@@ -3,6 +3,7 @@ use warnings;
 use strict;
 
 use List::MoreUtils qw(uniq);
+use List::Util qw(first);
 use Scalar::Util qw(blessed);
 require UR;
 
@@ -311,15 +312,15 @@ sub flatten_hard_refs {
             my $pmeta = $meta->property($property_name);
             my $final_pmeta = $pmeta->final_property_meta();
 
-            my @data_types = uniq grep { $_ } map { $_->data_type } ($pmeta, $final_pmeta);
-            unless (@data_types) {
+            my @possible_data_types = uniq grep { $_ } map { $_->data_type } ($pmeta, $final_pmeta);
+            unless (@possible_data_types) {
                 # this might not be possible at runtime
                 croak sprintf 'unable to determine data type for property: %s', $property_name;
             }
 
-            my ($data_type) = grep { $value->isa($_) } @data_types;
+            my $data_type = first { $value->isa($_) } @possible_data_types;
             unless ($data_type) {
-                croak sprintf 'value type, %s, is incompatible with: %s', $value->class, join(', ', @data_types);
+                croak sprintf 'value type, %s, is incompatible with: %s', $value->class, join(', ', @possible_data_types);
             }
 
             my $value2 = eval {
