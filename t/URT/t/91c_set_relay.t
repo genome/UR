@@ -110,11 +110,11 @@ my $bx1 = URT::Person->define_boolexpr(
 my $s1 = URT::Person->define_set($bx1);
 ok($s1, "made an initial set $s1");
 
-my $bx1r1 = $bx1->reframe('primary_car');
+my $bx1r1 = $bx1->reframe('primary_car')->normalize;
 my $s2 = $s1->primary_car_set;
 is($s2->id, $bx1r1->id, "the expected reframed id on related set $s2");
 
-my $bx1r2 = $bx1->reframe('primary_car.engine');
+my $bx1r2 = $bx1->reframe('primary_car.engine')->normalize;
 my $s3 = $s2->engine_set;
 is($s3->id, $bx1r2->id, "the expected reframed id on related set $s3");
 

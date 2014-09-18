@@ -674,26 +674,15 @@ sub resolve {
                     if (my $id_class_by = $property_meta->id_class_by) {
                         push @xadd_keys, $id_class_by;
                         push @xadd_values, ref($value);
-                        #print ":: @xkeys\n::@xvalues\n\n";
                     }
                     push @xremove_keys, $kn-1;
                     push @xremove_values, $vn-1;
                 }
-                # This is disabled here because it is good for get() but not create()
-                # The flatten_hard_refs() method is run before doing a get() to create the same effect.
-                # elsif ($property_meta->is_delegated and not $property_meta->is_many) {
-                #    print STDERR "adding $property_name.id\n";
-                #    push @xadd_keys, $property_name . '.id' . ' ' . $operator;
-                #    push @xadd_values, $value->id;
-                #    push @xremove_keys, $kn-1;
-                #    push @xremove_values, $vn-1;
-                # }
                 elsif ($property_meta->is_valid_storage_for_value($value)) {
                     push @hard_refs, $vn-1, $value;
                 }
                 elsif ($value->can($property_name)) {
                     # TODO: stop suporting foo_id => $foo, since you can do foo=>$foo, and foo_id=>$foo->id
-                    #$DB::single = 1;
                     # Carp::cluck("using $property_name => \$obj to get $property_name => \$obj->$property_name is deprecated...");
                     $value = $value->$property_name;
                 }
