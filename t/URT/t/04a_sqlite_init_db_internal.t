@@ -13,13 +13,13 @@ use URT; # dummy namespace
 my @db_creation_text = (
     q(BEGIN TRANSACTION;),
     q(CREATE TABLE bar (bar_id integer PRIMARY KEY, some_data varchar);),
-    q(INSERT INTO "bar" VALUES(1,'Hi there');),
-    q(INSERT INTO "bar" VALUES(2,'blahblah');),
-    q(INSERT INTO "bar" VALUES(3,null);),
+    q(INSERT INTO bar VALUES(1,'Hi there');),
+    q(INSERT INTO bar VALUES(2,'blahblah');),
+    q(INSERT INTO bar VALUES(3,null);),
     q(CREATE TABLE foo (foo_id_1 integer, foo_id_2 integer, PRIMARY KEY (foo_id_1, foo_id_2));),
-    q(INSERT INTO "foo" VALUES(1,2);),
-    q(INSERT INTO "foo" VALUES(2,3);),
-    q(INSERT INTO "foo" VALUES(4,5);),
+    q(INSERT INTO foo VALUES(1,2);),
+    q(INSERT INTO foo VALUES(2,3);),
+    q(INSERT INTO foo VALUES(4,5);),
     q(COMMIT;),
 );
 if (defined URT::DataSource::SomeSQLite->_singleton_object->_get_foreign_key_setting) {

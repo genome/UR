@@ -101,25 +101,16 @@ my $test_class_definition = q(
     is => 'URT::Parent',
     table_name => 'PARENT_TABLE',
     type_has => [
-        some_new_property => {
-            is => 'Integer',
-            is_optional => 1,
-        },
+        some_new_property => { is => 'Integer', is_optional => 1 },
     ],
     attributes_have => [
-        meta_prop_a => {
-            is => 'Boolean',
-            is_optional => 1,
-        },
+        meta_prop_a => { is => 'Boolean', is_optional => 1 },
         meta_prop_b => { is => 'String' },
     ],
     some_type_meta => [ "foo" ],
     subclassify_by => 'my_subclass_name',
     id_by => [
-        another_id => {
-            is => 'String',
-            doc => 'blahblah',
-        },
+        another_id => { is => 'String', doc => 'blahblah' },
         related => {
             is => 'URT::Related',
             id_by => [ 'parent_id', 'related_id' ],
@@ -128,14 +119,8 @@ my $test_class_definition = q(
         foobaz => { is => 'Integer' },
     ],
     has => [
-        property_0 => {
-            via => '__self__',
-            to => 'property_a',
-        },
-        property_a => {
-            is => 'String',
-            meta_prop_a => 1,
-        },
+        property_0 => { via => '__self__', to => 'property_a' },
+        property_a => { is => 'String', meta_prop_a => 1 },
         property_b => {
             is => 'Integer',
             is_abstract => 1,
@@ -167,10 +152,7 @@ my $test_class_definition = q(
         },
     ],
     has_many => [
-        property_cs => {
-            is => 'String',
-            is_optional => 1,
-        },
+        property_cs => { is => 'String', is_optional => 1 },
         remotes => {
             is => 'URT::Remote',
             reverse_as => 'testobj',

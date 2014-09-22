@@ -157,7 +157,7 @@ is_deeply(\@events,
     ['signal:commit_failed'],
     'commit_failed signal called');
 is_deeply(\@callback_args,
-    [ ['prepare', 'INSERT INTO main.foo (test_id) VALUES (?)', 'prepare fail on commit'] ],
+    [ ['prepare', 'INSERT INTO foo (test_id) VALUES (?)', 'prepare fail on commit'] ],
     'commit_failed given expected args');
 
 
@@ -171,7 +171,7 @@ is_deeply(\@events,
     ['signal:commit_failed'],
     'commit_failed signal called');
 is_deeply(\@callback_args,
-    [ ['execute', 'INSERT INTO main.foo (test_id) VALUES (?)', 'execute fail on commit'] ],
+    [ ['execute', 'INSERT INTO foo (test_id) VALUES (?)', 'execute fail on commit'] ],
     'commit_failed given expected args');
 
 

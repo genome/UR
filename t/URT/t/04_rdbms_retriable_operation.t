@@ -44,25 +44,22 @@ use URT::FakeDBI;
     class TestThing {
         id_by => 'test_thing_id',
         data_source => 'URT::DataSource::Testing',
-        table_name => 'test_thing',
+        table_name => 'main.test_thing',
         id_generator => 'test_thing_seq',
     };
 
 # Fake table/column info for TestThing's table
     UR::DataSource::RDBMS::Table->__define__(
-        table_name => 'test_thing',
-        owner => 'main',
+        table_name => 'main.test_thing',
         data_source => 'URT::DataSource::Testing');
     UR::DataSource::RDBMS::TableColumn->__define__(
         column_name => 'test_thing_id',
         table_name => 'test_thing',
-        owner => 'main',
         data_source => 'URT::DataSource::Testing');
     UR::DataSource::RDBMS::PkConstraintColumn->__define__(
         column_name => 'test_thing_id',
-        table_name => 'test_thing',
+        table_name => 'main.test_thing',
         rank => 1,
-        owner => 'main',
         data_source => 'URT::DataSource::Testing');
 
 #

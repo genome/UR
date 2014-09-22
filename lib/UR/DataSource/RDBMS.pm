@@ -195,11 +195,9 @@ sub generate_schema_for_class_meta {
     }
     else {
         ## print "adding table $table_name\n";
-        my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
         $table = UR::DataSource::RDBMS::Table->$method(
-            table_name  => $ds_table,
+            table_name  => $table_name,
             data_source => $self->_my_data_source_id,
-            owner => $ds_owner,
             remarks => $class_meta->doc,
             er_type => 'entity',
             last_object_revision => $t,
@@ -224,7 +222,6 @@ sub generate_schema_for_class_meta {
             table_name => $table->table_name,
             data_source => $table->data_source,
             namespace => $table->namespace,
-            owner => $table->owner, 
             data_type => $self->object_to_db_type($property->data_type) || 'Text',
             data_length => $property->data_length,
             nullable => $property->is_optional,
@@ -251,11 +248,10 @@ sub generate_schema_for_class_meta {
 
     for my $property ( $class_meta->direct_id_property_metas ) {
 
-        unless (UR::DataSource::RDBMS::PkConstraintColumn->get(table_name => $table->table_name, owner => $table->owner, column_name => $property->column_name, data_source => $table->data_source)) {
+        unless (UR::DataSource::RDBMS::PkConstraintColumn->get(table_name => $table->table_name, column_name => $property->column_name, data_source => $table->data_source)) {
             UR::DataSource::RDBMS::PkConstraintColumn->$method(
                 column_name => $property->column_name,
                 data_source => $table->data_source,
-                owner       => $table->owner,
                 rank        => $property->is_id,
                 table_name  => $table->table_name );
         }
@@ -278,15 +274,11 @@ sub generate_schema_for_class_meta {
 
     for my $fk_to_generate (@fks_to_generate) {
         my ($fk_id, $table_name, $r_table_name, $column_names, $r_column_names) = @$fk_to_generate;
-        my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-        my($ds_r_owner, $ds_r_table) = $self->_resolve_owner_and_table_from_table_name($r_table_name);
         
         my $fk = UR::DataSource::RDBMS::FkConstraint->$method(
             fk_constraint_name => $fk_id,
-            table_name      => $ds_table,
-            r_table_name    => $ds_r_table,
-            owner           => $ds_owner,
-            r_owner         => $ds_owner,
+            table_name      => $table_name,
+            r_table_name    => $r_table_name,
             data_source     => $self->_my_data_source_id,
             last_object_revision => '-',
         );
@@ -300,11 +292,10 @@ sub generate_schema_for_class_meta {
             my $column_name = $column_names->[$n];
             my $r_column_name = $r_column_names->[$n];
             my %fkcol_params = ( fk_constraint_name => $fk_id,
-                                 table_name      => $ds_table,
+                                 table_name      => $table_name,
                                  column_name     => $column_name,
-                                 r_table_name    => $ds_r_table,
+                                 r_table_name    => $r_table_name,
                                  r_column_name   => $r_column_name,
-                                 owner           => $ds_owner,
                                  data_source     => $self->_my_data_source_id,
                                );
 
@@ -522,24 +513,30 @@ sub _ignore_table {
 }
 
 
+sub _table_name_to_use_for_metadata_objects {
+    my($self, $schema, $table_name) = @_;
+    return $self->owner
+                ? $table_name
+                : join('.', $schema, $table_name);
+}
+
 sub _get_table_names_from_data_dictionary {
     my $self = shift->_singleton_object;        
     if (@_) {
         Carp::confess("get_tables does not currently take filters!  FIXME.");
     }    
     my $dbh = $self->get_default_handle;
-    my $owner = $self->owner;    
+    my $owner = $self->owner || '%';
 
     # FIXME  This will fix the immediate problem of getting classes to be created out of 
     # views.  We still need to somehow mark the resulting class as read-only
 
     my $sth = $dbh->table_info("%", $owner, "%", "TABLE,VIEW");
-    my $table_name;
-    $sth->bind_col(3,\$table_name);
     my @names;
-    while ($sth->fetch) {
-        next if $self->_ignore_table($table_name);
+    while (my $row = $sth->fetchrow_hashref) {
+        my $table_name = $self->_table_name_to_use_for_metadata_objects(@$row{'TABLE_SCHEM','TABLE_NAME'});
         $table_name =~ s/"|'//g;  # Postgres puts quotes around entities that look like keywords
+        next if $self->_ignore_table($table_name);
         push @names, $table_name;
     }
     return @names;
@@ -607,12 +604,10 @@ sub get_nullable_foreign_key_columns_for_table {
     for my $fk (@fk){
         my @fk_columns = UR::DataSource::RDBMS::FkConstraintColumn->get(
                              fk_constraint_name => $fk->fk_constraint_name,
-                             owner => $table->owner,
                              data_source => $self->_my_data_source_id);
         for my $fk_col (@fk_columns){
             my $column_obj = UR::DataSource::RDBMS::TableColumn->get(data_source => $self->_my_data_source_id,
                                  table_name => $fk_col->table_name,
-                                 owner => $fk_col->owner,
                                  column_name=> $fk_col->column_name);
             unless ($column_obj) {
                 Carp::croak("Can't find TableColumn metadata object for table name ".$fk_col->table_name." column ".$fk_col->column_name." while processing foreign key constraint named ".$fk->fk_constraint_name);
@@ -670,9 +665,10 @@ sub _method2env {
 
 sub resolve_class_name_for_table_name {
     my $self = shift->_singleton_object;
-    my $table_name = shift;
+    my $qualified_table_name = shift;
     my $relation_type = shift;   # Should be 'TABLE' or 'VIEW'
 
+    my(undef, $table_name) = $self->_resolve_owner_and_table_from_table_name($qualified_table_name);
     # When a table_name conflicts with a reserved word, it ends in an underscore.
     $table_name =~ s/_$//;
 
@@ -765,8 +761,7 @@ sub _get_or_create_table_meta {
 	my $self = shift;
 
 	my ($data_source, 
-		$ur_owner,
-		$ur_table_name,
+		$qualified_table_name,
 		$db_table_name,
 		$creation_method,
 		$table_data,
@@ -774,15 +769,13 @@ sub _get_or_create_table_meta {
 	
         my $data_source_id = $self->_my_data_source_id;	
 	my $table_object = UR::DataSource::RDBMS::Table->get(data_source => $data_source_id,
-	                                                     owner       => $ur_owner,
-	                                                     table_name  => $ur_table_name);
+	                                                     table_name  => $qualified_table_name);
 	if ($table_object) {
 	    # Already exists, update the existing entry
 	    # Instead of deleting and recreating the table object (the old way),
 	    # modify its attributes in-place.  The name can't change but all the other
 	    # stuff might.
 	    $table_object->table_type($table_data->{TABLE_TYPE});
-	    $table_object->owner($table_data->{TABLE_SCHEM});
 	    $table_object->data_source($data_source->class);
 	    $table_object->remarks($table_data->{REMARKS});
 	    $table_object->last_object_revision($revision_time) if ($table_object->__changes__());
@@ -791,9 +784,8 @@ sub _get_or_create_table_meta {
 	    # Create a brand new one from scratch
 
 	    $table_object = UR::DataSource::RDBMS::Table->$creation_method(
-	        table_name => $ur_table_name,
+	        table_name => $qualified_table_name,
 	        table_type => $table_data->{TABLE_TYPE},
-	        owner => $table_data->{TABLE_SCHEM},
 	        data_source => $data_source_id,
 	        remarks => $table_data->{REMARKS},
 	        last_object_revision => $revision_time,
@@ -807,62 +799,93 @@ sub _get_or_create_table_meta {
 }
 
 sub refresh_database_metadata_for_table_name {
-    my ($self,$db_table_name, $creation_method) = @_;
+    my ($self,$qualified_table_name, $creation_method) = @_;
 
     $creation_method ||= 'create';
-
-    my $data_source = $self;
-
-    my $ur_table_name = $db_table_name;
-    my @column_objects;
-    my @all_constraints;
 
     # this must be on or before the actual data dictionary queries
     my $revision_time = $UR::Context::current->now();
 
-    # We'll count a table object as changed even if any of the columns,
-    # FKs, etc # were changed
-    my $data_was_changed_for_this_table = 0;
-
     # The class definition can specify a table name as <schema>.<table_name> to override the
     # data source's default schema/owner.
-    my $ds_owner;
-    ($ds_owner,$db_table_name) = $self->_resolve_owner_and_table_from_table_name($db_table_name);
-    my $ur_owner;
-    ($ur_owner, $ur_table_name) = $self->_resolve_owner_and_table_from_table_name($ur_table_name);
-    #my $dd_table_name = $table_name;
-    #if ($table_name =~ m/(\w+)\.(\w+)/) {
-    #    $ds_owner = $1;
-    #    $dd_table_name = $2;
-    #}
+    my($ds_owner,$db_table_name) = $self->_resolve_owner_and_table_from_table_name($qualified_table_name);
 
-    # TABLE
-    my $table_sth = $data_source->get_table_details_from_data_dictionary('%', $ds_owner, $db_table_name, "TABLE,VIEW");
+    my $data_source_id = $self->_my_data_source_id;
+
+    my $table_object = $self->_get_or_create_table_metadata_for_refresh($ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time);
+    return unless $table_object;
+
+    # We'll count a table object as changed even if any of the columns,
+    # FKs, etc # were changed
+    my $data_was_changed_for_this_table = $self->_update_column_metadata_for_refresh($ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time, $table_object);
+
+    if ($self->_update_foreign_key_metadata_for_refresh($ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time, $table_object)) {
+        $data_was_changed_for_this_table = 1;
+    }
+
+    if ($self->_update_primary_key_metadata_for_refresh($ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time, $table_object)) {
+        $data_was_changed_for_this_table = 1;
+    }
+
+    if ($self->_update_unique_constraint_metadata_for_refresh($ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time, $table_object)) {
+        $data_was_changed_for_this_table = 1;
+    }
+
+    $table_object->last_object_revision($revision_time) if ($data_was_changed_for_this_table);
+
+    # Determine the ER type.
+    # We have 'validation item', 'entity', and 'bridge'
+
+    my $column_count = scalar($table_object->column_names) || 0;
+    my $pk_column_count = scalar($table_object->primary_key_constraint_column_names) || 0;
+    my $constraint_count = scalar($table_object->fk_constraint_names) || 0;
+
+    if ($column_count == 1 and $pk_column_count == 1) {
+        $table_object->er_type('validation item');
+    }
+    else {
+        if ($constraint_count == $column_count) {
+            $table_object->er_type('bridge');
+        }
+        else {
+            $table_object->er_type('entity');
+        }
+    }
+
+    return $table_object;
+}
+
+sub _get_or_create_table_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time) = @_;
+
+    my $table_sth = $self->get_table_details_from_data_dictionary('%', $ds_owner, $db_table_name, "TABLE,VIEW");
     my $table_data = $table_sth->fetchrow_hashref();
     unless ($table_data && %$table_data) {
-        #$self->error_message("No data for table $table_name in data source $data_source.");
+        #$self->error_message("No data for table $table_name in data source $self.");
         return;
     }
 
-	
-    my $data_source_id = $data_source->_my_data_source_id;
-	
-	
-	my $table_object = $self->_get_or_create_table_meta(
-									$data_source,
-									$ur_owner,
-									$ur_table_name,
-									$db_table_name,
-									$creation_method,
-									$table_data,
-									$revision_time);
+    my $table_object = $self->_get_or_create_table_meta(
+                                    $self,
+                                    $qualified_table_name,
+                                    $db_table_name,
+                                    $creation_method,
+                                    $table_data,
+                                    $revision_time);
+    return $table_object;
+}
 
-    # COLUMNS
+sub _update_column_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time, $table_object) = @_;
+
+    my $data_was_changed_for_this_table = 0;
+    my $data_source_id = $self->_my_data_source_id;
+
     # mysql databases seem to require you to actually put in the database name in the first arg
-    my $db_name = ($data_source->can('db_name')) ? $data_source->db_name : '%';
-    my $column_sth = $data_source->get_column_details_from_data_dictionary($db_name, $ds_owner, $db_table_name, '%');
+    my $db_name = ($self->can('db_name')) ? $self->db_name : '%';
+    my $column_sth = $self->get_column_details_from_data_dictionary($db_name, $ds_owner, $db_table_name, '%');
     unless ($column_sth) {
-        $self->error_message("Error getting column data for table $db_table_name in data source $data_source.");
+        $self->error_message("Error getting column data for table $db_table_name in data source $self.");
         return;
     }
     my $all_column_data = $column_sth->fetchall_arrayref({});
@@ -873,8 +896,7 @@ sub refresh_database_metadata_for_table_name {
 
     my %columns_to_delete = map {$_->column_name, $_}
                                 UR::DataSource::RDBMS::TableColumn->get(
-                                    table_name  => $ur_table_name,
-                                    owner       => $ur_owner,
+                                    table_name  => $qualified_table_name,
                                     data_source => $data_source_id);
 
 
@@ -885,13 +907,11 @@ sub refresh_database_metadata_for_table_name {
 
         delete $columns_to_delete{$column_data->{'COLUMN_NAME'}};
 
-        my $column_obj = UR::DataSource::RDBMS::TableColumn->get(table_name  => $ur_table_name,
-                                                                 owner       => $ur_owner,
+        my $column_obj = UR::DataSource::RDBMS::TableColumn->get(table_name  => $qualified_table_name,
                                                                  data_source => $data_source_id,
                                                                  column_name => $column_data->{'COLUMN_NAME'});
         if ($column_obj) {
             # Already exists, change the attributes
-            $column_obj->owner($table_object->{owner});
             $column_obj->data_source($table_object->{data_source});
             $column_obj->data_type($column_data->{TYPE_NAME});
             $column_obj->nullable(substr($column_data->{IS_NULLABLE}, 0, 1));
@@ -907,8 +927,7 @@ sub refresh_database_metadata_for_table_name {
 
             $column_obj = UR::DataSource::RDBMS::TableColumn->$creation_method(
                 column_name => $column_data->{COLUMN_NAME},
-                table_name  => $ur_table_name,
-                owner       => $table_object->{owner},
+                table_name  => $qualified_table_name,
                 data_source => $table_object->{data_source},
 
                 data_type   => $column_data->{TYPE_NAME},
@@ -924,8 +943,6 @@ sub refresh_database_metadata_for_table_name {
         unless ($column_obj) {
             Carp::confess("Failed to create a column ".$column_data->{'COLUMN_NAME'}." for table $db_table_name");
         }
-
-        push @column_objects, $column_obj;
     }
 
     for my $to_delete (values %columns_to_delete) {
@@ -934,28 +951,20 @@ sub refresh_database_metadata_for_table_name {
         $data_was_changed_for_this_table = 1;
     }
 
+    return $data_was_changed_for_this_table;
+}
 
-    my $bitmap_data = $data_source->get_bitmap_index_details_from_data_dictionary($db_table_name);
-    for my $index (@$bitmap_data) {
-        #push @{ $embed{bitmap_index_names}{$table_object} }, $index->{'index_name'};
+sub _update_foreign_key_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time, $table_object) = @_;
 
-        my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($index->{'table_name'});
-        my $column_object = UR::DataSource::RDBMS::TableColumn->is_loaded(
-            table_name  => $ds_table,
-            owner       => $ds_owner,
-            data_source => $data_source_id,
-            column_name => $index->{'column_name'},
-        );
-    }
-
+    my $data_was_changed_for_this_table = 0;
+    my $data_source_id = $self->_my_data_source_id;
 
     # Make a note of what FKs exist in the Meta DB involving this table
     my @fks_in_meta_db = UR::DataSource::RDBMS::FkConstraint->get(data_source => $data_source_id,
-                                                                  owner       => $ur_owner,
-                                                                  table_name  => $ur_table_name);
+                                                                  table_name  => $qualified_table_name);
     push @fks_in_meta_db, UR::DataSource::RDBMS::FkConstraint->get(data_source  => $data_source_id,
-                                                                   r_owner      => $ur_owner,
-                                                                   r_table_name => $ur_table_name);
+                                                                   r_table_name => $qualified_table_name);
     my %fks_in_meta_db_by_fingerprint;
     foreach my $fk ( @fks_in_meta_db ) {
         my $fingerprint = $self->_make_foreign_key_fingerprint($fk);
@@ -964,9 +973,7 @@ sub refresh_database_metadata_for_table_name {
 
     # constraints on this table against columns in other tables
 
-
-    #my $db_owner = $data_source->owner;
-    my $fk_sth = $data_source->get_foreign_key_details_from_data_dictionary('', $ds_owner, $db_table_name, '', '', '');
+    my $fk_sth = $self->get_foreign_key_details_from_data_dictionary('', $ds_owner, $db_table_name, '', '', '');
 
     my %fk;     # hold the fk constraints that this invocation of foreign_key_info created
 
@@ -982,10 +989,12 @@ sub refresh_database_metadata_for_table_name {
             }
 
             my $constraint_name = $data->{'FK_NAME'};
-            my $fk_table_name = $data->{'FK_TABLE_NAME'}
-                                || $data->{'FKTABLE_NAME'};
-            my $r_table_name = $data->{'UK_TABLE_NAME'}
-                               || $data->{'PKTABLE_NAME'};
+            my $fk_table_name = $self->_table_name_to_use_for_metadata_objects(
+                                        $data->{FK_TABLE_SCHEM} || $data->{FKTABLE_SCHEM},
+                                        $data->{'FK_TABLE_NAME'} || $data->{'FKTABLE_NAME'});
+            my $r_table_name = $self->_table_name_to_use_for_metadata_objects(
+                                        $data->{UK_TABLE_SCHEM} || $data->{PKTABLE_SCHEM},
+                                        $data->{'UK_TABLE_NAME'} || $data->{'PKTABLE_NAME'});
             my $fk_column_name = $data->{'FK_COLUMN_NAME'}
                                  || $data->{'FKCOLUMN_NAME'};
             my $r_column_name = $data->{'UK_COLUMN_NAME'}
@@ -997,7 +1006,6 @@ sub refresh_database_metadata_for_table_name {
 
             my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $constraint_name,
                                                               table_name         => $fk_table_name,
-                                                              owner              => $table_object->{owner},
                                                               data_source        => $data_source_id,
                                                               r_table_name       => $r_table_name
                                                           );
@@ -1007,8 +1015,6 @@ sub refresh_database_metadata_for_table_name {
                     fk_constraint_name => $constraint_name,
                     table_name      => $fk_table_name,
                     r_table_name    => $r_table_name,
-                    owner           => $table_object->{owner},
-                    r_owner         => $table_object->{owner},
                     data_source     => $table_object->{data_source},
                     last_object_revision => $revision_time,
                 );
@@ -1023,7 +1029,6 @@ sub refresh_database_metadata_for_table_name {
                                      column_name     => $fk_column_name,
                                      r_table_name    => $r_table_name,
                                      r_column_name   => $r_column_name,
-                                     owner           => $table_object->{owner},
                                      data_source     => $table_object->{data_source},
                                    );
                 my $fkcol = UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params);
@@ -1042,7 +1047,7 @@ sub refresh_database_metadata_for_table_name {
     # get foreign_key_info the other way
     # constraints on other tables against columns in this table
 
-    my $fk_reverse_sth = $data_source->get_foreign_key_details_from_data_dictionary('', '', '', '', $ds_owner, $db_table_name);
+    my $fk_reverse_sth = $self->get_foreign_key_details_from_data_dictionary('', '', '', '', $ds_owner, $db_table_name);
 
     %fk = ();   # resetting this prevents data_source referencing
     # tables from fouling up their fk objects
@@ -1058,20 +1063,16 @@ sub refresh_database_metadata_for_table_name {
             }
 
             my $constraint_name = $data->{'FK_NAME'} || '';
-            my $fk_table_name = $data->{'FK_TABLE_NAME'}
-                                || $data->{'FKTABLE_NAME'};
-            my $r_table_name = $data->{'UK_TABLE_NAME'}
-                               || $data->{'PKTABLE_NAME'};
+            my $fk_table_name = $self->_table_name_to_use_for_metadata_objects(
+                                        $data->{FK_TABLE_SCHEM} || $data->{FKTABLE_SCHEM},
+                                        $data->{'FK_TABLE_NAME'} || $data->{'FKTABLE_NAME'});
+            my $r_table_name = $self->_table_name_to_use_for_metadata_objects(
+                                        $data->{UK_TABLE_SCHEM} || $data->{PKTABLE_SCHEM},
+                                        $data->{'UK_TABLE_NAME'} || $data->{'PKTABLE_NAME'});
             my $fk_column_name = $data->{'FK_COLUMN_NAME'}
                                  || $data->{'FKCOLUMN_NAME'};
             my $r_column_name = $data->{'UK_COLUMN_NAME'}
                                 || $data->{'PKCOLUMN_NAME'};
-            my $owner         = $data->{'FK_TABLE_SCHEM'}
-                                || $data->{'FKTABLE_SCHEM'}
-                                || $table_object->owner;
-            my $r_owner       = $data->{'UK_TABLE_SCHEM'}
-                                || $data->{'PKTABLE_SCHEM'}
-                                || $table_object->owner;
 
             # MySQL returns primary key info with foreign_key_info()?!
             # They show up here with no $r_table_name or $r_column_name
@@ -1079,9 +1080,7 @@ sub refresh_database_metadata_for_table_name {
 
             my $fk = UR::DataSource::RDBMS::FkConstraint->get(fk_constraint_name => $constraint_name,
                                                               table_name         => $fk_table_name,
-                                                              owner              => $owner,
                                                               r_table_name       => $r_table_name,
-                                                              r_owner            => $r_owner,
                                                               data_source        => $table_object->{'data_source'},
                                                           );
             unless ($fk) {
@@ -1089,8 +1088,6 @@ sub refresh_database_metadata_for_table_name {
                     fk_constraint_name => $constraint_name,
                     table_name      => $fk_table_name,
                     r_table_name    => $r_table_name,
-                    owner           => $owner,
-                    r_owner         => $r_owner,
                     data_source     => $table_object->{data_source},
                     last_object_revision => $revision_time,
                 );
@@ -1108,7 +1105,6 @@ sub refresh_database_metadata_for_table_name {
                                      column_name     => $fk_column_name,
                                      r_table_name    => $r_table_name,
                                      r_column_name   => $r_column_name,
-                                     owner           => $owner,
                                      data_source     => $table_object->{data_source},
                                  );
                 unless ( UR::DataSource::RDBMS::FkConstraintColumn->get(%fkcol_params) ) {
@@ -1134,17 +1130,23 @@ sub refresh_database_metadata_for_table_name {
         }
     }
 
-    # get primary_key_info
+    return $data_was_changed_for_this_table;
+}
 
-    my $pk_sth = $data_source->get_primary_key_details_from_data_dictionary(undef, $ds_owner, $db_table_name);
+sub _update_primary_key_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time, $table_object) = @_;
+
+    my $data_was_changed_for_this_table = 0;
+    my $data_source_id = $self->_my_data_source_id;
+
+    my $pk_sth = $self->get_primary_key_details_from_data_dictionary(undef, $ds_owner, $db_table_name);
 
     if ($pk_sth) {
         my @new_pk;
         while (my $data = $pk_sth->fetchrow_hashref()) {
             $data->{'COLUMN_NAME'} =~ s/"|'//g;  # Postgres puts quotes around things that look like keywords
             my $pk = UR::DataSource::RDBMS::PkConstraintColumn->get(
-                table_name  => $ur_table_name,
-                owner       => $ur_owner,
+                table_name  => $qualified_table_name,
                 data_source => $data_source_id,
                 column_name => $data->{'COLUMN_NAME'},
             );
@@ -1156,16 +1158,11 @@ sub refresh_database_metadata_for_table_name {
             }
 
             push @new_pk, [
-                            table_name => $ur_table_name,
+                            table_name => $qualified_table_name,
                             data_source => $data_source_id,
-                            owner => $ds_owner,
                             column_name => $data->{'COLUMN_NAME'},
                             rank => $data->{'KEY_SEQ'} || $data->{'ORDINAL_POSITION'},
                         ];
-            #        $table_object->{primary_key_constraint_name} = $data->{PK_NAME};
-            #        $embed{primary_key_constraint_column_names} ||= {};
-            #        $embed{primary_key_constraint_column_names}{$table_object} ||= [];
-            #        push @{ $embed{primary_key_constraint_column_names}{$table_object} }, $data->{COLUMN_NAME};
         }
 
         for my $data (@new_pk) {
@@ -1174,19 +1171,18 @@ sub refresh_database_metadata_for_table_name {
                 $self->error_message("Failed to create primary key @$data");
                 return;
             }
-        }			
+        }
     }
+    return $data_was_changed_for_this_table;
+}
 
-    ## Get the unique constraints
-    ## Unfortunately, there appears to be no DBI catalog
-    ## method which will find these.  So we have to use
-    ## some custom SQL
-    #
-    # The SQL that used to live here was moved to the UR::DataSource::Oracle
-    # and each other DataSource class needs its own implementation
+sub _update_unique_constraint_metadata_for_refresh {
+    my($self, $ds_owner, $db_table_name, $qualified_table_name, $creation_method, $revision_time, $table_object) = @_;
 
-    # The above was moved into each data source's class
-    if (my $uc = $data_source->get_unique_index_details_from_data_dictionary($ds_owner, $db_table_name)) {
+    my $data_was_changed_for_this_table = 0;
+    my $data_source_id = $self->_my_data_source_id;
+
+    if (my $uc = $self->get_unique_index_details_from_data_dictionary($ds_owner, $db_table_name)) {
         my %uc = %$uc;   # make a copy we can manipulate in case $uc is shared or read-only
 
         # check for redundant unique constraints
@@ -1216,8 +1212,7 @@ sub refresh_database_metadata_for_table_name {
                 sort map { $_->column_name }
                     UR::DataSource::RDBMS::PkConstraintColumn->get(
                         data_source => $data_source_id,
-                        table_name => $ur_table_name,
-                        owner => $ds_owner,
+                        table_name => $qualified_table_name,
                     )
                 );
         for my $uc_name ( keys %uc ) {
@@ -1247,8 +1242,7 @@ sub refresh_database_metadata_for_table_name {
                 map { $_->column_name => $_ }
                 UR::DataSource::RDBMS::UniqueConstraintColumn->get(
                     data_source => $data_source_id,
-                    table_name => $ur_table_name,
-                    owner => $ds_owner || '',
+                    table_name => $qualified_table_name,
                     constraint_name => $uc_name,
                 );
 
@@ -1258,48 +1252,20 @@ sub refresh_database_metadata_for_table_name {
                 } else {
                     my $uc = UR::DataSource::RDBMS::UniqueConstraintColumn->$creation_method(
                         data_source => $data_source_id,
-                        table_name => $ur_table_name,
-                        owner => $ds_owner,
+                        table_name => $qualified_table_name,
                         constraint_name => $uc_name,
                         column_name => $col_name,
                     );
                     1;
                 }
-            } 
+            }
             foreach my $obj ( values %constraint_objs ) {
                 $obj->delete();
             }
         }
     }
 
-    $table_object->last_object_revision($revision_time) if ($data_was_changed_for_this_table);
-
-    # Now that all columns know their foreign key constraints,
-    # have the column objects resolve the various names
-    # associated with the column.
-
-    #for my $col (@column_objects) { $col->resolve_names }
-
-    # Determine the ER type.
-    # We have 'validation item', 'entity', and 'bridge'
-
-    my $column_count = scalar($table_object->column_names) || 0;
-    my $pk_column_count = scalar($table_object->primary_key_constraint_column_names) || 0;
-    my $constraint_count = scalar($table_object->fk_constraint_names) || 0;
-
-    if ($column_count == 1 and $pk_column_count == 1) {
-        $table_object->er_type('validation item');
-    }
-    else {
-        if ($constraint_count == $column_count) {
-            $table_object->er_type('bridge');
-        }
-        else {
-            $table_object->er_type('entity');
-        }
-    }
-
-    return $table_object;
+    return $data_was_changed_for_this_table;
 }
 
 sub _make_foreign_key_fingerprint {
@@ -1419,10 +1385,8 @@ sub _resolve_sequence_name_for_class_name {
         Carp::croak("Could not determine a table name for class $class_name");
     }
 
-    my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
     my $table_meta = UR::DataSource::RDBMS::Table->get(
-                         table_name => $ds_table,
-                         owner => $ds_owner,
+                         table_name => $table_name,
                          data_source => $self->_my_data_source_id);
 
     my $sequence;
@@ -2273,21 +2237,18 @@ sub _sync_database {
                     my $table_name = $change->{table_name};
                     my $id = $change->{id};                    
                     $all_tables{$table_name}++;
-                    my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-					
-					my $table = $self->_get_table_object($ds_table, $ds_owner);
-                    my $fully_qualified_table_name = defined $ds_owner ? join('.', $ds_owner, $ds_table) : $ds_table;
+
                     if ($change->{type} eq 'insert')
                     {
-                        push @{ $insert{$fully_qualified_table_name} }, $change;
+                        push @{ $insert{$table_name} }, $change;
                     }
                     elsif ($change->{type} eq 'update')
                     {
-                        push @{ $update{$fully_qualified_table_name} }, $change;
+                        push @{ $update{$table_name} }, $change;
                     }
                     elsif ($change->{type} eq 'delete')
                     {
-                        push @{ $delete{$fully_qualified_table_name} }, $change;
+                        push @{ $delete{$table_name} }, $change;
                     }
                     else
                     {
@@ -2302,8 +2263,7 @@ sub _sync_database {
 
     my %tables_requiring_lock;
     for my $table_name (keys %all_tables) {
-        my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-		my $table_object = $self->_get_table_object($ds_table, $ds_owner);
+		my $table_object = $self->_get_table_object($table_name);
 
         unless ($table_object) {
             warn "looking up schema for RDBMS table $table_name...\n";
@@ -2326,8 +2286,7 @@ sub _sync_database {
                     next if $column_name eq $last_column_name;
                     my $column_obj = UR::DataSource::RDBMS::TableColumn->get(
                         data_source => $table_object->data_source,
-                        table_name  => $ds_table,
-                        owner       => $ds_owner,
+                        table_name  => $table_name,
                         column_name => $column_name,
                     );
                     if ($column_obj->bitmap_index_names) {
@@ -2349,15 +2308,11 @@ sub _sync_database {
     my %prerequisites;
     my %dependants;
 
-    for my $table_name_from_class (keys %all_tables) {
-        my($ds_owner,$ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name_from_class);
-		
-		my $data_source_id = $self->_my_data_source_id;
-		my $table = $self->_get_table_object($ds_table, $ds_owner);
+    for my $table_name (keys %all_tables) {
+		my $table = $self->_get_table_object($table_name);
 
         my @fk = $table->fk_constraints;
 
-        my $table_name = defined $ds_owner ? join('.', $ds_owner, $ds_table) : $ds_table;
         my $matched_table_name;
         if ($insert{$table_name})
         {
@@ -2403,10 +2358,7 @@ sub _sync_database {
         # Go through the constraints.
         for my $fk (@fk)
         {
-            my $r_table = $fk->r_table_name;
-            my $r_owner = $fk->r_owner;
-
-            my $r_table_name = defined $r_owner ? join('.', $r_owner, $r_table) : $r_table;
+            my $r_table_name = $fk->r_table_name;
 
             # RULES:
             # insert r_table_name       before insert table_name
@@ -2656,10 +2608,7 @@ sub _sync_database {
                 my $tables;
                 my @all_table_names = $class_object->all_table_names;                
                 for my $table_name (@all_table_names) {                    
-                    my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-					
-					my $data_source_id = $self->_my_data_source_id;
-					my $table = $self->_get_table_object($ds_table, $ds_owner);
+					my $table = $self->_get_table_object($table_name);
 					
                     push @$tables, $table;
                     $column_objects_by_class_and_column_name{$class_name} ||= {};             
@@ -2735,8 +2684,7 @@ sub _sync_database {
         $self->debug_message("Locking tables: @tables_requiring_lock.");
         my $max_failed_attempts = 10;
         for my $table_name (@tables_requiring_lock) {
-            my($ds_owner, $ds_table) = $self->_resolve_owner_and_table_from_table_name($table_name);
-			my $table = $self->_get_table_object($ds_table, $ds_owner);
+			my $table = $self->_get_table_object($table_name);
             my $dbh = $table->dbh;
             my $sth = $dbh->prepare("lock table $table_name in exclusive mode");
             my $failed_attempts = 0;
@@ -2876,23 +2824,19 @@ sub _my_data_source_id {
 }
 
 sub _get_table_object {
-	my $self = shift;
-	my ($ds_table, $ds_owner) = @_;
+	my($self, $ds_table) = @_;
 	
     my $data_source_id = $self->_my_data_source_id;
 	
     my $table = UR::DataSource::RDBMS::Table->get(
                     table_name => $ds_table,
-                    owner => $ds_owner,
                     data_source => $data_source_id)
                 ||
                 UR::DataSource::RDBMS::Table->get(
                     table_name => $ds_table,
-                    owner => $ds_owner,
                     data_source => 'UR::DataSource::Meta');
-
+    return $table;
 }
-
 
 sub _alter_sth_for_selecting_blob_columns {
     my($self, $sth, $column_objects) = @_;
@@ -2968,16 +2912,8 @@ sub _id_values_for_primary_key {
     my $class_obj; # = $object_to_save->__meta__;
     foreach my $possible_class_obj ($object_to_save->__meta__->all_class_metas) {
         next unless ($possible_class_obj->table_name);
-        my($class_owner,$class_table) = $self->_resolve_owner_and_table_from_table_name($possible_class_obj->table_name);
-        # Some data sources can (used to?) have NULL owner/schema
-        $class_owner = '' unless defined($class_owner);
-        my $table_obj_owner = $table_obj->owner;
-        $table_obj_owner = '' unless defined ($table_obj_owner);
 
-        if ( $class_owner eq $table_obj_owner
-             and
-             $class_table eq $table_obj->table_name
-           ) {
+        if ( $possible_class_obj->table_name eq $table_obj->table_name ) {
 
             $class_obj = $possible_class_obj;
             last;
@@ -3087,19 +3023,18 @@ sub _default_save_sql_for_object {
     my @commands;
     for my $table_name (@save_table_names)
     {
-        my ($db_owner, $table_name_to_update) = $self->_resolve_owner_and_table_from_table_name($table_name);
         # Get general info on the table we're working-with.                
 
         my $dsn = ref($self) ? $self->_my_data_source_id: $self;  # The data source name
 
-		my $table = $self->_get_table_object($table_name_to_update, $db_owner);
+		my $table = $self->_get_table_object($table_name);
 
         unless ($table) {
             $self->generate_schema_for_class_meta($class_object,1);
             # try again...
-			$table = $self->_get_table_object($table_name_to_update, $db_owner);
+			$table = $self->_get_table_object($table_name);
             unless ($table) {
-                Carp::croak("No table $table_name found for data source $dsn and owner '$db_owner'");
+                Carp::croak("No table $table_name found for data source $dsn");
             }
         }        
 
@@ -3157,8 +3092,7 @@ sub _default_save_sql_for_object {
             if (@non_pk_nullable_fk_columns) {
                 #generate an update statement to set nullable fk columns to null pre delete
                 my $update_sql = "UPDATE ";
-                $update_sql .= "${db_owner}." if ($db_owner);
-                $update_sql .= "$table_name_to_update SET ";
+                $update_sql .= "$table_name SET ";
                 $update_sql .= join(", ", map { "$_=?"} @non_pk_nullable_fk_columns);
                 $update_sql .= " WHERE $where";
                 my @update_values = @values;
@@ -3179,8 +3113,7 @@ sub _default_save_sql_for_object {
 
 
             my $sql = " DELETE FROM ";
-            $sql .= "${db_owner}." if ($db_owner);
-            $sql .= "$table_name_to_update WHERE $where";
+            $sql .= "$table_name WHERE $where";
 
             push @commands, { type         => 'delete',
                               table_name   => $table_name,
@@ -3237,7 +3170,7 @@ sub _default_save_sql_for_object {
                 if (scalar(@changed_cols) != scalar(@changed_values)) {
                    no warnings 'uninitialized';
                    my $mapping = join("\n", map { "  $_ => ".$class_object->property_for_column($_) } @changed_cols);
-                   Carp::croak("Column count mismatch while updating table $table_name_to_update.  "
+                   Carp::croak("Column count mismatch while updating table $table_name.  "
                                . "The table metadata expects to see ".scalar(@changed_cols)
                                . " columns, but ".scalar(@values)." were retrieved from the object of type "
                                . $object_to_save->class . ".\nCurrent column => property mapping:\n$mapping\n"
@@ -3249,8 +3182,7 @@ sub _default_save_sql_for_object {
                 my $where = $self->_matching_where_clause($table, \@all_values);
 
                 my $sql = " UPDATE ";
-                $sql .= "${db_owner}." if ($db_owner);
-                $sql .= "$table_name_to_update SET " . join(",", map { "$_ = ?" } @changed_cols) . " WHERE $where";
+                $sql .= "$table_name SET " . join(",", map { "$_ = ?" } @changed_cols) . " WHERE $where";
 
                 push @commands, { type         => 'update',
                                   table_name   => $table_name,
@@ -3276,8 +3208,7 @@ sub _default_save_sql_for_object {
                                     $class_object->all_property_metas();
 
             my $sql = " INSERT INTO ";
-            $sql .= "${db_owner}." if ($db_owner);
-            $sql .= "$table_name_to_update (" 
+            $sql .= "$table_name (" 
                     . join(",", @changed_cols) 
                     . ") VALUES (" 
                     . join(',', split(//,'?' x scalar(@changed_cols))) . ")";
@@ -3294,7 +3225,7 @@ sub _default_save_sql_for_object {
             if (scalar(@changed_cols) != scalar(@values)) {
                no warnings 'uninitialized';
                my $mapping = join("\n", map { "  $_ => ".$class_object->property_for_column($_) } @changed_cols);
-               Carp::croak("Column count mismatch while inserting into table $table_name_to_update.  "
+               Carp::croak("Column count mismatch while inserting into table $table_name.  "
                            . "The table metadata expects to see ".scalar(@changed_cols)
                            . " columns, but ".scalar(@values)." were retrieved from the object of type "
                            . $object_to_save->class . ".\nCurrent column => property mapping:\n$mapping\n"
@@ -3342,8 +3273,7 @@ sub _default_save_sql_for_object {
                 
 
                     my $update_sql = " UPDATE ";
-                    $update_sql .= "${db_owner}." if ($db_owner);
-                    $update_sql .= "$table_name_to_update SET ". join(",", map { "$_ = ?" } @update_cols) . " WHERE $where";
+                    $update_sql .= "$table_name SET ". join(",", map { "$_ = ?" } @update_cols) . " WHERE $where";
 
                     push @commands, { type         => 'update',
                                       table_name   => $table_name,

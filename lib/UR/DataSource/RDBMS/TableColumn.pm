@@ -11,7 +11,7 @@ UR::Object::Type->define(
     is => ['UR::DataSource::RDBMS::Entity'],
     dsmap => 'dd_table_column',
     er_role => '',
-    id_properties => [qw/data_source owner table_name column_name/],
+    id_properties => [qw/data_source table_name column_name/],
     properties => [
         column_name                      => { type => 'varchar', len => undef, sql => 'column_name' },
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
@@ -49,9 +49,9 @@ sub get_table {
     my $data_source = $self->data_source;
     $data_source or Carp::confess("Can't determine data_source for table $table_name column ".$self->column_name );
     my $table =
-        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $data_source, owner => $self->owner)
+        UR::DataSource::RDBMS::Table->get(table_name => $table_name, data_source => $data_source)
         ||
-        UR::DataSource::RDBMS::Table::Ghost->get(table_name => $table_name, data_source => $data_source, owner => $self->owner);
+        UR::DataSource::RDBMS::Table::Ghost->get(table_name => $table_name, data_source => $data_source);
     return $table;
 }
 
@@ -68,7 +68,6 @@ sub fk_constraints {
 
     my $fk_class = $self->_fk_constraint_class();
     my @fks = $fk_class->get(table_name => $self->table_name,
-                             owner => $self->owner,
                              data_source => $self->data_source);
                        
     return @fks;

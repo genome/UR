@@ -10,7 +10,7 @@ UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS::UniqueConstraintColumn',
     is => ['UR::DataSource::RDBMS::Entity'],
     dsmap => 'dd_unique_constraint_column',
-    id_properties => [qw/data_source owner table_name constraint_name column_name/],
+    id_properties => [qw/data_source table_name constraint_name column_name/],
     properties => [
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
         data_source_obj                  => { type => 'UR::DataSource', id_by => 'data_source'},

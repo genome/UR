@@ -11,7 +11,7 @@ UR::Object::Type->define(
     is => ['UR::DataSource::RDBMS::Entity'],
     dsmap => 'dd_fk_constraint',
     er_role => '',
-    id_properties => [qw/data_source owner r_owner table_name r_table_name fk_constraint_name/],
+    id_properties => [qw/data_source table_name r_table_name fk_constraint_name/],
     properties => [
         data_source                      => { type => 'varchar', len => undef, sql => 'data_source' },
         data_source_obj                  => { type => 'UR::DataSource', id_by => 'data_source'},
@@ -58,7 +58,6 @@ sub get_with_special_params {
     my @objects;
     foreach my $fk ( @fks ) {
         my %fkc_args = ( data_source => $fk->data_source,
-                         owner       => $fk->owner,
                          table_name => $fk->table_name,
                          r_table_name => $fk->r_table_name,
                        );
@@ -98,7 +97,6 @@ sub create {
          
         my $col_class = $self->_fk_constraint_column_class;
         $col_class->create(data_source        => $self->data_source,
-                           owner              => $self->owner,
                            fk_constraint_name => $self->fk_constraint_name,
                            table_name         => $self->table_name,
                            column_name        => $col_name,
@@ -117,7 +115,6 @@ sub get_related_column_objects {
 
     my @fkcs = UR::DataSource::RDBMS::FkConstraintColumn->get(
                   data_source        => $self->data_source,
-                  owner              => $self->owner,
                   table_name         => $self->table_name,
                   r_table_name       => $self->r_table_name,
                   fk_constraint_name => $self->fk_constraint_name,
@@ -148,7 +145,6 @@ my($self,$table_name) = @_;
 
     foreach my $try_class ( $self->_table_classes ) {
         my $table = $try_class->get(data_source => $self->data_source,
-                                    owner => $self->owner,
                                     table_name  => $table_name);
         return $table if $table;
     }

@@ -358,7 +358,11 @@ sub _get_display_fields_for_property {
             $via_property_name = $property->to;
         }
         my $via = $property->class_name->__meta__->properties(property_name => $via_property_name);
-        if ($property->is_many ne $via->is_many) {
+        if (! $via) {
+            # maybe via a method??  Safer to use is_many than not
+            push @fields, 'is_many => 1';
+
+        } elsif ($property->is_many ne $via->is_many) {
             push @fields, 'is_many => ' . $property->is_many;
         }
     }
@@ -749,26 +753,37 @@ sub pprint_section {
     return "$indent_section$section => [\n$section_src$indent_section],\n";
 }
 
-
-sub pprint_subsection {
-    my ($name, @fields) = @_;
+{
     my $indent_name = ' ' x 8;
     my $indent_key  = $indent_name . ' ' x 4;
+    my $max_width = 78;
+    sub pprint_subsection {
+        my ($name, @fields) = @_;
 
-    my $section_src;
-    foreach ( @fields ) { s/^\s+// }
-    if (@fields > 1) {
-        my $line =
-        $indent_name . $name . " => {\n"
-        . $indent_key . join(",\n$indent_key", @fields) . ",\n"
-        . $indent_name . "},\n";
-
-        $section_src = $line;
-    } else {
-        $section_src = $indent_name . $name . " => { " . (defined $fields[0] ? $fields[0] : '') . " },\n";
+        foreach ( @fields ) { s/^\s+// }
+        my $section_src = _pprint_subsection_one_line($name, @fields);
+        if (length($section_src) > $max_width) {
+            $section_src = _pprint_subsection_multi_line($name, @fields);
+        }
+        return $section_src;
     }
-    return $section_src;
-};
+
+    sub _pprint_subsection_one_line {
+        my $name = shift;
+
+        return $indent_name . $name . ' => { '
+                    . join(', ', @_)
+                    . " },\n";
+    }
+
+    sub _pprint_subsection_multi_line {
+        my $name = shift;
+
+        return $indent_name . $name . " => {\n"
+            . $indent_key . join(",\n$indent_key", @_) . ",\n"
+            . $indent_name . "},\n";
+    }
+}
 
 sub _quoted_value {
     my $value = shift;
