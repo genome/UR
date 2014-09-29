@@ -531,7 +531,7 @@ sub _get_table_names_from_data_dictionary {
     # FIXME  This will fix the immediate problem of getting classes to be created out of 
     # views.  We still need to somehow mark the resulting class as read-only
 
-    my $sth = $dbh->table_info("%", $owner, "%", "TABLE,VIEW");
+    my $sth = $self->get_table_details_from_data_dictionary('%', $owner, '%', 'TABLE,VIEW');
     my @names;
     while (my $row = $sth->fetchrow_hashref) {
         my $table_name = $self->_table_name_to_use_for_metadata_objects(@$row{'TABLE_SCHEM','TABLE_NAME'});
