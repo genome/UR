@@ -21,6 +21,9 @@ use UR::Object::Type;
 use URT;
 class URT::DataSource::SomeSQLite {
     is => ['UR::DataSource::SQLite','UR::Singleton'],
+    has_optional_constant => [
+        owner => { value => undef },
+    ],
 };
 
 # "delegate" id to UR::Singleton since Perl 5.8 still uses Depth First Search

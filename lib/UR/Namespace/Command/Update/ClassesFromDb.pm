@@ -433,9 +433,9 @@ sub _update_database_metadata_objects_for_schema_changes {
     my @current_table_names = $data_source->_get_table_names_from_data_dictionary();
     my %current_table_names = map { s/"|'//g; $_ => $_ } @current_table_names;
 
-    my %all_table_names = (%current_table_names, %previous_table_names);
-
-    if($table_name) { %all_table_names = ($table_name => 1) }
+    my %all_table_names = $table_name
+                            ? ( $table_name => 1 )
+                            : ( %current_table_names, %previous_table_names);
 
     my $new_object_revision = $UR::Context::current->now();
 
@@ -450,8 +450,6 @@ sub _update_database_metadata_objects_for_schema_changes {
         my $last_recorded_ddl_time;
         my $last_object_revision;
 
-        # UR always keeps table names stored in upper-case.  Some databases (mysql)
-        # are case sensitive when querying the data dictionary
         my $db_table_name = $current_table_names{$table_name};
 
         eval {
@@ -585,46 +583,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
     my $namespace = $self->namespace_name;
 
-#    $self->status_message("Using filesystem classes for namespace \"$namespace\" (this may be slow)");
-#    my @material_classes = $namespace->get_material_classes;
-#
-#
-#    $self->status_message("Verifying class/table relationships...");
-#    my %table_ids_used;
-#    for my $class (sort { $a->class_name cmp $b->class_name } @material_classes) {
-#        my $table_name  = $class->table_name;
-#        next unless $table_name;
-#
-#        my $class_name  = $class->class_name;
-#
-#        if (my $prev_class_name = $table_ids_used{$table_name}) {
-#            $self->error_message(
-#                sprintf(
-#                    "C %-40s uses table %-32s, but so does %-40s" . "\n",
-#                    $class_name, $table_name, $prev_class_name
-#                )
-#            );
-#            return;
-#        }
-#
-#        my $data_source = $class->data_source;
-#
-#        my $table = UR::DataSource::RDBMS::Table->get(data_source => $data_source, table_name => $table_name)
-#                    ||
-#                    UR::DataSource::RDBMS::Table::Ghost->get(data_source => $data_source, table_name => $table_name);
-#
-#        unless ($table) {
-#            $self->error_message(
-#                sprintf(
-#                    "C %-32s %-32s is referenced by class %-40s but cannot be found!?" . "\n",
-#                    $data_source, $table_name, $class_name
-#                )
-#            );
-#            return;
-#        }
-#        $table_ids_used{$table_name} = $class;
-#    }
-
     $self->status_message("Updating classes...");
 
     my %dd_changes_by_class = (
@@ -665,17 +623,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
 
         my $table = $fk->get_table;
-        # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
-        my $class = 
-            UR::Object::Type->get(
-                data_source_id => $table->data_source,
-                table_name     => $table->table_name,
-            )
-            ||
-            UR::Object::Type::Ghost->get(
-                data_source_id => $table->data_source,
-                table_name     => $table->table_name,
-            );
+        my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
+                                                          table_name  => $table->table_name);
 
         unless ($class) {
             ##$DB::single = 1;
@@ -711,11 +660,8 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         }
         my $column_name = $column->column_name;
 
-        # FIXME should this use $data_source->get_class_meta_for_table($table) instead?
-        my $class = UR::Object::Type->get(
-            data_source_id => $table->data_source,
-            table_name     => $table->table_name,
-        );
+        my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
+                                                          table_name  => $table->table_name);
         unless ($class) {
             $self->status_message(sprintf("~ No class found for deleted column %-32s %-32s\n", $table->table_name, $column_name));
             next;
@@ -903,15 +849,6 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                     );
                 }
             }
-
-            #unless ($class->class_name->isa('UR::Entity')) {
-            #    my $inheritance = UR::Object::Inheritance->create(
-            #        class_name => $class->class_name,
-            #        parent_class_name => "UR::Entity",
-            #        inheritance_priority => 0,
-            #    );
-            #    Carp::confess("Failed to generate inheritance link!?") unless $inheritance;
-            #}
         }
     } # next table
 
@@ -928,16 +865,10 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my($ur_data_type, $default_length) = @{ $data_source->ur_data_type_for_data_source_data_type($column->data_type) };
         my $ur_data_length = defined($column->data_length) ? $column->data_length : $default_length;
 
-        #my $class = UR::Object::Type->get(
-        #    data_source => $table->data_source,
-        #    table_name => $table->table_name,
-        #);
-        #my $class = $data_source->get_class_meta_for_table($table);
         my $class = $self->_get_class_meta_for_table_name(data_source => $data_source,
                                                           table_name => $table->table_name);
 
         unless ($class) {
-            ##$DB::single = 1;
             $class = $self->_get_class_meta_for_table_name(data_source => $data_source,
                                                           table_name => $table->table_name);
             Carp::confess("Class object missing for table " . $table->table_name) unless $class;
@@ -945,7 +876,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
         my $class_name = $class->class_name;
         my $property;
         foreach my $prop_object ( $class->direct_property_metas ) {
-            if (defined $prop_object->column_name and $prop_object->column_name eq $column_name) {
+            if (defined $prop_object->column_name and lc($prop_object->column_name) eq lc($column_name)) {
                 $property = $prop_object;
                 last;
             }
@@ -1007,23 +938,29 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 );
             }
 
-            $property = UR::Object::Property->create(
-                class_name     => $class_name,
-                property_name  => $property_name,
-                column_name    => $column_name,
-                data_type      => $ur_data_type,
-                data_length    => $ur_data_length,
-                is_optional    => $column->nullable eq "Y" ? 1 : 0,
-                is_volatile    => 0,
-                doc            => $column->remarks,
-                is_specified_in_module_header => 1, 
-            );
+            local $@;
+            for (my $attempt = 0; $attempt < 3; $attempt++) {
+                $property_name = '_' . $property_name if $attempt;
 
-            no warnings;
+                $property = eval { UR::Object::Property->create(
+                                    class_name     => $class_name,
+                                    property_name  => $property_name,
+                                    column_name    => $column_name,
+                                    data_type      => $ur_data_type,
+                                    data_length    => $ur_data_length,
+                                    is_optional    => $column->nullable eq "Y" ? 1 : 0,
+                                    is_volatile    => 0,
+                                    doc            => $column->remarks,
+                                    is_specified_in_module_header => 1,
+                                )};
+                last if $property;
+            }
+
+            no warnings 'uninitialized';
             $self->status_message(
                 sprintf("A %-40s property %-16s for column %s.%s (%s %s)\n",
                                                         $class_name,
-                                                        $property_name,
+                                                        $property->property_name,
                                                         $table->table_name, 
                                                         $column_name,
                                                         $column->data_type,
@@ -1031,10 +968,14 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             );
             
             unless ($property) {
-                Carp::confess(
-                        "Failed to create property $property_name on class $class_name. "
-                        . UR::Object::Property->error_message
-                );
+                if ($@ =~ m/An object of class UR::Object::Property already exists/) {
+                    $self->warning_message("Conflicting property names already exist in class $class_name for column $column_name in table ".$table->table_name);
+                } else {
+                    Carp::confess(
+                            "Failed to create property $property_name on class $class_name. "
+                            . UR::Object::Property->error_message
+                    );
+                }
             }
         }
     } # next column
@@ -1122,18 +1063,11 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
 
     $self->status_message("Updating class unique constraints...\n");
 
-    ##$DB::single = 1;
-
     # UNIQUE CONSTRAINT / UNIQUE INDEX -> UNIQUE GROUP (loop table objecs since we have no PK DD objects)
     for my $table (sort $sorter @{ $dd_changes_by_class{'UR::DataSource::RDBMS::Table'} }) {
         # created/updated/unchanged
         # delete and re-create
 
-        #my $class = UR::Object::Type->get(
-        #    data_source => $table->data_source,
-        #    table_name => $table->table_name,
-        #);
-        #my $class = $table->__meta__();
         my $class = $self->_get_class_meta_for_table_name(data_source => $table->data_source,
                                                           table_name => $table->table_name);
         my $class_name = $class->class_name;

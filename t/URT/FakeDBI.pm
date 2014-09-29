@@ -1,4 +1,6 @@
 package URT::FakeDBI;
+use strict;
+use warnings;
 
 # A DBI-like test class we can force failures on
 
