@@ -85,12 +85,12 @@ sub run_tests {
 
     my $nickname = 'Alyosha';
     my $person = $class->create(name => 'Alexei', nicknames => $nickname);
-    is($person->nicknames, $nickname, 'set (and retrieved) a single nickname');
+    cmp_bag([$person->nicknames], [$nickname], 'set (and retrieved) a single nickname');
 
     if($test_updates) {
         $nickname = 'Alex';
         $person->nicknames($nickname);
-        is($person->nicknames, $nickname, 'updated (and retrieved) a single nickname');
+        cmp_bag([$person->nicknames], [$nickname], 'updated (and retrieved) a single nickname');
     }
 
     my @nicknames = qw(Rose Anna Roseanne Annie);

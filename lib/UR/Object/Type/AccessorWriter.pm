@@ -1349,7 +1349,7 @@ sub mk_object_set_accessors {
                 } else {
                     $self->{$plural_name} = [ @{$_[0]} ];
                 }
-                return $self->context_return(@{ $self->{$plural_name} });
+                return @{ $self->{$plural_name} };
             }
             else {
                 return unless $self->{$plural_name};
@@ -1357,7 +1357,7 @@ sub mk_object_set_accessors {
                     Carp::carp("$class_name with id ".$self->id." does not hold an arrayref in its $plural_name property");
                     $self->{$plural_name} = [ $self->{$plural_name} ];
                 }
-                return $self->context_return(@{ $self->{$plural_name} });
+                return @{ $self->{$plural_name} };
             }
         }
     };
