@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More tests => 2;
 use Test::Deep qw(cmp_bag);
 
 use File::Basename;
@@ -25,7 +25,7 @@ UR::Object::Type->define(
     ],
 );
 
-run_tests($class, 1);
+subtest $class => run_tests($class, 1);
 
 $class = 'URT::Person2';
 UR::Object::Type->define(
@@ -73,35 +73,40 @@ UR::Object::Type->define(
     ],
 );
 
-run_tests($class, 0);
+subtest $class => run_tests($class, 0);
 
 sub run_tests {
     my $class = shift;
     my $test_updates = shift;
 
+    return sub {
+        if ($test_updates) {
+            plan tests => 4;
+        } else {
+            plan tests => 2;
+        }
+        my $tx = UR::Context::Transaction->begin();
 
-    diag("Testing with class $class");
-    my $tx = UR::Context::Transaction->begin();
+        my $nickname = 'Alyosha';
+        my $person = $class->create(name => 'Alexei', nicknames => $nickname);
+        cmp_bag([$person->nicknames], [$nickname], 'set (and retrieved) a single nickname');
 
-    my $nickname = 'Alyosha';
-    my $person = $class->create(name => 'Alexei', nicknames => $nickname);
-    is($person->nicknames, $nickname, 'set (and retrieved) a single nickname');
+        if($test_updates) {
+            $nickname = 'Alex';
+            $person->nicknames($nickname);
+            cmp_bag([$person->nicknames], [$nickname], 'updated (and retrieved) a single nickname');
+        }
 
-    if($test_updates) {
-        $nickname = 'Alex';
-        $person->nicknames($nickname);
-        is($person->nicknames, $nickname, 'updated (and retrieved) a single nickname');
+        my @nicknames = qw(Rose Anna Roseanne Annie);
+        my $person2 = $class->create(name => 'Roseanna', nicknames => \@nicknames);
+        cmp_bag([$person2->nicknames], \@nicknames, 'set (and retrieved) several nicknames');
+
+        if($test_updates) {
+            @nicknames = qw(Rosy Anne);
+            $person2->nicknames(\@nicknames);
+            cmp_bag([$person2->nicknames], \@nicknames, 'updated (and retrieved) several nicknames correctly');
+        }
+
+        $tx->rollback();
     }
-
-    my @nicknames = qw(Rose Anna Roseanne Annie);
-    my $person2 = $class->create(name => 'Roseanna', nicknames => \@nicknames);
-    cmp_bag([$person2->nicknames], \@nicknames, 'set (and retrieved) several nicknames');
-
-    if($test_updates) {
-        @nicknames = qw(Rosy Anne);
-        $person2->nicknames(\@nicknames);
-        cmp_bag([$person2->nicknames], \@nicknames, 'updated (and retrieved) several nicknames correctly');
-    }
-
-    $tx->rollback();
 }
