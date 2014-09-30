@@ -662,8 +662,8 @@ sub get_unique_index_details_from_data_dictionary {
 
     my($index_list_fcn, $index_info_fcn) = ('index_list','index_info');
     if ($owner_name) {
-        $index_list_fcn = "${owner_name}.{$index_list_fcn}";
-        $index_info_fcn = "${owner_name}.{$index_info_fcn}";
+        $index_list_fcn = "${owner_name}.${index_list_fcn}";
+        $index_info_fcn = "${owner_name}.${index_info_fcn}";
     }
 
     my $idx_sth = $dbh->prepare(qq(PRAGMA ${index_list_fcn}($table_name)));
