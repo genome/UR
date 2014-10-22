@@ -39,7 +39,7 @@ for my $type (@types) {
         $test_obj->$accessor('%J', 'foo');
     }
     like($warn_msg,
-        qr/Invalid conversion in sprintf/,
+        qr/Invalid conversion in sprintf|Redundant argument in sprintf/,
         "When given an invalid format string, $type throws a warning");
 
     my $file = __FILE__;
