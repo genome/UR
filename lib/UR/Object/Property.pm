@@ -226,7 +226,7 @@ sub _involves_id_property {
 
     if ($self->via) {
         my $via_meta = $self->via_property_meta;
-        return 1 if ($via_meta and $via_meta->_involves_id_property);
+        return 1 if ($via_meta and $via_meta ne $self and $via_meta->_involves_id_property);
 
         if ($self->to) {
             my $to_meta = $self->to_property_meta;
