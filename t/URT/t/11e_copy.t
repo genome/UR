@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 2;
 
 use UR;
 
@@ -39,6 +39,9 @@ my $lakers = Sports::Team->create(name => 'Lakers');
 my $mj = Sports::Player->create(team_id => $lakers->id, name => 'Magic Johnson');
 is_deeply([$lakers->players], [$mj], 'lakers have mj');
 
-my $copied_team = $lakers->copy();
-is_deeply([$copied_team->players], [], 'copied team has no players');
-is($copied_team->name, $lakers->name, 'name was copied');
+subtest 'basic copy' => sub {
+    plan tests => 2;
+    my $copied_team = $lakers->copy();
+    is_deeply([$copied_team->players], [], 'copied team has no players');
+    is($copied_team->name, $lakers->name, 'name was copied');
+};
