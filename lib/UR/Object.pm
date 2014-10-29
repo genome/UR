@@ -28,6 +28,22 @@ sub delete {
     $UR::Context::current->delete_entity(@_);
 }
 
+sub copy {
+    my $self = shift;
+
+    my $meta = $self->__meta__;
+    my @copyable_properties =
+        grep { !$_->is_delegated && !$_->is_id }
+        $meta->properties;
+    my %params = map {
+        my $name = $_->property_name;
+        my $value = $self->$name;
+        defined $value ? ($name => $value) : ();
+    } @copyable_properties;
+
+    return $self->class->create(%params);
+}
+
 
 # Meta API
 
@@ -919,6 +935,13 @@ Should the transaction roll-back, the deleted object will be re-created in the c
 and a fresh reference will later be returnable by get().  See the documentation on L<UR::Context>
 for details on how deleted objects are rememberd and removed later from the database, and how
 deleted objects are re-constructed on STM rollback.
+
+=item copy
+
+  $obj->copy
+
+Copies an existing entity ignoring any delegated or ID properties and returns a
+reference to the copied entity.
 
 =item class
 
