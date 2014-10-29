@@ -939,10 +939,11 @@ deleted objects are re-constructed on STM rollback.
 
 =item copy
 
-  $obj->copy
+  $obj->copy(%overrides)
 
 Copies an existing entity ignoring any delegated or ID properties and returns a
-reference to the copied entity.
+reference to the copied entity.  Additional parameters can be passed to the
+method to override existing value, etc.
 
 =item class
 
