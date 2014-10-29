@@ -30,6 +30,7 @@ sub delete {
 
 sub copy {
     my $self = shift;
+    my %override = @_;
 
     my $meta = $self->__meta__;
     my @copyable_properties =
@@ -41,7 +42,7 @@ sub copy {
         defined $value ? ($name => $value) : ();
     } @copyable_properties;
 
-    return $self->class->create(%params);
+    return $self->class->create(%params, %override);
 }
 
 

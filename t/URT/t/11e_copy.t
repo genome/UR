@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 use UR;
 
@@ -44,4 +44,11 @@ subtest 'basic copy' => sub {
     my $copied_team = $lakers->copy();
     is_deeply([$copied_team->players], [], 'copied team has no players');
     is($copied_team->name, $lakers->name, 'name was copied');
+};
+
+subtest 'basic copy with overrides' => sub {
+    plan tests => 2;
+    my $copied_team = $lakers->copy(name => 'Clippers');
+    is_deeply([$copied_team->players], [], 'copied team has no players');
+    isnt($copied_team->name, $lakers->name, 'name was overrode');
 };
