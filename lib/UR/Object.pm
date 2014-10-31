@@ -951,9 +951,10 @@ deleted objects are re-constructed on STM rollback.
 
   $obj->copy(%overrides)
 
-Copies an existing entity ignoring any delegated or ID properties and returns a
-reference to the copied entity.  Additional parameters can be passed to the
-method to override existing value, etc.
+Copies the existing C<$obj> by copying the values of all direct properties,
+except for ID properties, to a newly created object of the same type.  A list
+of params and values may be provided as overrides to the existing values or to
+specify an ID.
 
 =item class
 
