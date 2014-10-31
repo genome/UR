@@ -28,6 +28,33 @@ sub delete {
     $UR::Context::current->delete_entity(@_);
 }
 
+sub copy {
+    my $self = shift;
+    my %override = @_;
+
+    my $meta = $self->__meta__;
+    my @copyable_properties =
+        grep { !$_->is_delegated && !$_->is_id }
+        $meta->properties;
+
+    my %params;
+    for my $p (@copyable_properties) {
+        my $name = $p->property_name;
+        if ($p->is_many) {
+            if (my @value = $self->$name) {
+                $params{$name} = \@value;
+            }
+        }
+        else {
+            if (defined(my $value = $self->$name)) {
+                $params{$name} = $value;
+            }
+        }
+    }
+
+    return $self->class->create(%params, %override);
+}
+
 
 # Meta API
 
@@ -919,6 +946,15 @@ Should the transaction roll-back, the deleted object will be re-created in the c
 and a fresh reference will later be returnable by get().  See the documentation on L<UR::Context>
 for details on how deleted objects are rememberd and removed later from the database, and how
 deleted objects are re-constructed on STM rollback.
+
+=item copy
+
+  $obj->copy(%overrides)
+
+Copies the existing C<$obj> by copying the values of all direct properties,
+except for ID properties, to a newly created object of the same type.  A list
+of params and values may be provided as overrides to the existing values or to
+specify an ID.
 
 =item class
 
