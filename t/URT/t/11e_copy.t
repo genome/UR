@@ -1,7 +1,9 @@
 use strict;
 use warnings;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
+
+use Test::Deep qw(cmp_bag);
 use Test::UR qw(txtest);
 
 use UR;
@@ -58,4 +60,27 @@ txtest 'basic copy with overrides' => sub {
     my $copied_team = $lakers->copy(name => 'Clippers');
     is_deeply([$copied_team->players], [], 'copied team has no players');
     isnt($copied_team->name, $lakers->name, 'name was overrode');
+};
+
+txtest 'copy is_many properties' => sub {
+    plan tests => 5;
+
+    UR::Object::Type->define(
+        class_name => 'Foo',
+        has_many => [
+            things => { is => 'Text' }
+        ],
+    );
+
+    my $source = Foo->create();
+    $source->things([qw(one two)]);
+    $source->add_thing('three');
+    $source->add_thing('four');
+    cmp_bag([$source->things], [qw(one two three four)]);
+
+    my $copy = $source->copy();
+    is(ref($source->{things}), 'ARRAY', 'things has ARRAY reference type');
+    is(ref($copy->{things}), ref($source->{things}), 'things have same reference type');
+    isnt($copy->{things}, $source->{things}, 'copy did not reuse reference');
+    cmp_bag([$copy->things], [$source->things], 'copy has the same things');
 };

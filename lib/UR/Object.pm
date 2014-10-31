@@ -36,11 +36,21 @@ sub copy {
     my @copyable_properties =
         grep { !$_->is_delegated && !$_->is_id }
         $meta->properties;
-    my %params = map {
-        my $name = $_->property_name;
-        my $value = $self->$name;
-        defined $value ? ($name => $value) : ();
-    } @copyable_properties;
+
+    my %params;
+    for my $p (@copyable_properties) {
+        my $name = $p->property_name;
+        if ($p->is_many) {
+            if (my @value = $self->$name) {
+                $params{$name} = \@value;
+            }
+        }
+        else {
+            if (defined(my $value = $self->$name)) {
+                $params{$name} = $value;
+            }
+        }
+    }
 
     return $self->class->create(%params, %override);
 }
