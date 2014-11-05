@@ -2,7 +2,7 @@ package Command::V2;  # additional methods to produce documentation, TODO: turn 
 use strict;
 use warnings;
 
-use Term::ANSIColor;
+use Term::ANSIColor qw();
 use Pod::Simple::Text;
 require Text::Wrap;
 

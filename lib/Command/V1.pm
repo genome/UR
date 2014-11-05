@@ -7,7 +7,7 @@ use UR;
 use Data::Dumper;
 use File::Basename;
 use Getopt::Long;
-use Term::ANSIColor;
+use Term::ANSIColor qw();
 require Text::Wrap;
 
 our $VERSION = "0.43"; # UR $VERSION;
