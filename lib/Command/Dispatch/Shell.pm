@@ -1031,7 +1031,7 @@ sub _get_user_verification_for_param_value_drilldown {
 
     my @dnames = map {$_->__display_name__} grep { $_->can('__display_name__') } @results;
     my $max_dname_length = @dnames ? length((sort { length($b) <=> length($a) } @dnames)[0]) : 0;
-    my @statuses = map {$_->status} grep { $_->can('status') } @results;
+    my @statuses = map {$_->status || 'missing_status'} grep { $_->can('status') } @results;
     my $max_status_length = @statuses ? length((sort { length($b) <=> length($a) } @statuses)[0]) : 0;
 
     my @results_with_display_name_and_class = map { [ $_->__display_name__, $_->class, $_ ] } @results;
@@ -1054,7 +1054,7 @@ sub _get_user_verification_for_param_value_drilldown {
             $msg .= ' ' . $self->_pad_string($param->__display_name__, $max_dname_length, 'suffix');
             my $status = ' ';
             if ($param->can('status')) {
-                $status = $param->status;
+                $status = $param->status || 'missing_status';
             }
             $msg .= "\t" . $self->_pad_string($status, $max_status_length, 'suffix');
             $msg .= "\t" . $param->class if (@classes > 1);
