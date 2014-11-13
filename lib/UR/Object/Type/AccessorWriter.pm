@@ -378,21 +378,20 @@ sub _resolve_bridge_logic_for_indirect_property {
             while (@collected_where) {
                 my $where_property = shift @collected_where;
                 my $where_value = shift @collected_where;
-                # FIXME Skip stuff like -hints and -order_by until UR::BE::Template->resolve() can handle them
-                next if (substr($where_property, 0, 1) eq '-');
                 if (ref($where_value) eq 'HASH' and $where_value->{'operator'}) {
                     $where_property .= ' ' .$where_value->{'operator'};
                     $where_value = $where_value->{'value'};
                 }
                 push @where_properties, $where_property;
-                push @where_values, $where_value;
+
+                if (substr($where_property, 0, 1) eq '-') {
+                    push @where_properties, $where_value;
+                } else {
+                    push @where_values, $where_value;
+                }
             }
         }
 
-        #my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class,
-        #                                                      @their_join_properties,
-        #                                                      @where_properties,
-        #                                                      -hints => [$via_property_meta->to]);
         my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, @where_properties);
 
         $bridge_collector = sub {
