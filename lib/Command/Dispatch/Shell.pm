@@ -2,6 +2,7 @@ package Command::V2;  # additional methods to dispatch from a command-line
 use strict;
 use warnings;
 
+use IO::File;
 use List::MoreUtils;
 
 # instead of tacking these methods onto general Command::V2 objects
@@ -1106,6 +1107,17 @@ sub _get_user_verification_for_param_value_drilldown {
     }
 }
 
+sub terminal_input_filehandle {
+    my $self = shift;
+
+    my $fh = IO::File->new('/dev/tty', 'r');
+    unless ($fh) {
+        Carp::carp("Couldn't open /dev/tty for terminal input: $!\n    Using STDIN...");
+        $fh = *STDIN;
+    }
+    return $fh;
+}
+
 sub _ask_user_question {
     my $self = shift;
     my $question = shift;
@@ -1126,8 +1138,10 @@ sub _ask_user_question {
         die $self->error_message("Attempting to ask user question but cannot interact with user!");
     }
 
+    my $terminal = $self->terminal_input_filehandle();
+
     alarm($timeout) if ($timeout);
-    chomp($input = <STDIN>);
+    chomp($input = $terminal->getline());
     alarm(0) if ($timeout);
 
     print STDERR "\n";
