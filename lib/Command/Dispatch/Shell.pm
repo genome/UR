@@ -2,6 +2,8 @@ package Command::V2;  # additional methods to dispatch from a command-line
 use strict;
 use warnings;
 
+use List::MoreUtils;
+
 # instead of tacking these methods onto general Command::V2 objects
 # they could be put on the Command::Shell class, which is a wrapper/adaptor Command for translating from
 # command-line shell to purely functional commands.
@@ -366,7 +368,7 @@ sub _errors_from_missing_parameters {
     # work currently and lead to unexpected failures.
     my @property_names;
     if (my $has = $class_meta->{has}) {
-        @property_names = $self->_unique_elements(keys %$has);
+        @property_names = List::MoreUtils::uniq(keys %$has);
     }
     my @property_metas = map { $class_meta->property_meta_for_name($_); } @property_names;
 
@@ -784,7 +786,7 @@ sub resolve_param_value_from_cmdline_text {
     }
     if (@results) {
         # the ALTERNATE_FROM_CLASS stuff leads to non $param_class objects in results
-        @results = $self->_unique_elements(@results);
+        @results = List::MoreUtils::uniq(@results);
         @results = grep { $_->isa($param_class) } @results;
 
         $self->status_message($param_resolve_message . " found " . @results);
@@ -803,7 +805,7 @@ sub resolve_param_value_from_cmdline_text {
         @results = $self->$limit_results_method(@results);
         return unless (@results);
     }
-    @results = $self->_unique_elements(@results);
+    @results = List::MoreUtils::uniq(@results);
     if ($require_user_verify) {
         if (!$pmeta->{'is_many'} && @results > 1) {
             $MESSAGE .= "\n" if ($MESSAGE);
@@ -1040,7 +1042,7 @@ sub _get_user_verification_for_param_value_drilldown {
                sort { $a->[0] cmp $b->[0] }
                @results_with_display_name_and_class;
 
-    my @classes = $self->_unique_elements(map {$_->class} @results);
+    my @classes = List::MoreUtils::uniq(map {$_->class} @results);
 
     my $response;
     my @caller = caller(1);
@@ -1222,15 +1224,6 @@ sub _can_interact_with_user {
         return 0;
     }
 }
-
-sub _unique_elements {
-    my ($self, @list) = @_;
-    my %seen = ();
-    my @unique = grep { ! $seen{$_} ++ } @list;
-    return @unique;
-}
-
-
 
 
 1;
