@@ -39,10 +39,6 @@ UR::Object::Type->define(
     table_name => 'attribs',
 );
 
-my $bx = Attribute->define_boolexpr(thing_id => 'foo', key => 'foo', -order_by => 'rank');
-my $tmpl = $bx->template;
-print "*** Constructed tmpl: ",Data::Dumper::Dumper($tmpl);
-
 subtest 'in database' => sub {
     plan tests => 3;
 
