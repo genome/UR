@@ -402,6 +402,44 @@ sub _resolve_bridge_logic_for_indirect_property {
             return $bridge_class->get($bx);
         };
 
+        # They may have asked for special sorting with -order_by.  In that
+        # case, the bridge objects have been sorted correctly, but the
+        # results, obtained via the bridges, may not be in the same order
+        # after getting them independently.  We'll need to sort the results
+        # in the same order as the bridges
+        my $results_sorter;
+        if (grep { $_ eq '-order' or $_ eq '-order_by' } @bridge_meta_params) {
+            $results_sorter = sub {
+                my($bridges, $results) = @_;
+
+                my %positions;
+                my $idx = 0;
+                foreach my $bridge ( @$bridges ) {
+                    my $value_key = UR::BoolExpr::Util::values_to_value_id(
+                                        map { $bridge->$_ } @my_join_properties
+                                    );
+                    $positions{$value_key} = $idx++;
+                }
+
+                my %result_value_ids;
+                foreach my $result ( @$results ) {
+                    $result_value_ids{$result->id} = UR::BoolExpr::Util::values_to_value_id(
+                                                        map { $result->$_ } @their_join_properties
+                                                    );
+                }
+
+                return sort { $positions{ $result_value_ids{$a->id} }
+                                <=>
+                              $positions{ $result_value_ids{$b->id} } }
+                       @$results;
+            };
+        } else {
+            $results_sorter = sub {
+                my($bridges, $results) = @_;
+                return @$results;
+            };
+        }
+
         if ($to_property_meta->is_delegated and $to_property_meta->via) {
             # It's a "normal" doubly delegated property
             my $second_via_property_meta = $to_property_meta->via_property_meta;
@@ -418,11 +456,26 @@ sub _resolve_bridge_logic_for_indirect_property {
 
                 my $result_property_name = $to_property_meta->to;
 
+                my $results_sorter = sub {
+                    my($bridges, $results) = @_;
+                    my %positions;
+                    my $idx = 0;
+                    foreach my $bridge ( @$bridges ) {
+                        $positions{ $bridge->$my_property_name } = $idx++;
+                    }
+
+                    return map { $_->[1] }
+                           sort { $a->[0] <=> $b->[0] }
+                           map { [ $positions{ $_->$their_property_name }, $_ ] }
+                           @$results;
+                };
+
                 $bridge_crosser = sub {
                     my $bridges = shift;
                     my @linking_values = map { $_->$my_property_name } @$bridges;
                     my $bx = $crosser_template->get_rule_for_values(\@linking_values);
                     my @result_objects = (@_ ? $final_class_name->get($bx->params_list, @_) : $final_class_name->get($bx) );
+                    @result_objects = $results_sorter->($bridges, \@result_objects);
                     return map { $_->$result_property_name } @result_objects;
                 };
             }
@@ -466,7 +519,7 @@ sub _resolve_bridge_logic_for_indirect_property {
                         }
                     }
                 }
-                return @results;
+                return $results_sorter->($bridges, \@results);
             };
         } elsif ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value')) {
             my $result_class = $to_property_meta->data_type;
@@ -484,7 +537,7 @@ sub _resolve_bridge_logic_for_indirect_property {
                 }
 
                 my @results = (@_ ? $result_class->get(id => \@ids, @_) : $result_class->get(\@ids) );
-                return @results;
+                return $results_sorter->($bridges, \@results);
             }
         }
 

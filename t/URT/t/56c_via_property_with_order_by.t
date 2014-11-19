@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 # A thing has many attributes, which are ordered and have names
 UR::Object::Type->define(
@@ -83,4 +83,49 @@ subtest 'in-memory' => sub {
         [1, 2, 4, 6],
         'Got back ordered favorites');
 };
+
+subtest '"to" is via-to' => sub {
+    plan tests => 1;
+
+    UR::Object::Type->define(
+        class_name => 'ViaThing',
+        has_many => [
+            attribs => { is => 'ViaAttribute', reverse_as => 'thing' },
+            favorites => { via => 'attribs', to => 'value', where => [ key => 'favorite', '-order_by' => 'rank' ] },
+        ],
+    );
+    UR::Object::Type->define(
+        class_name => 'ViaValue',
+        has => [ 'value' ],
+    );
+    UR::Object::Type->define(
+        class_name => 'ViaAttribute',
+        has => [
+            thing => { is => 'ViaThing', id_by => 'thing_id' },
+            key => { is => 'String' },
+            value_obj => { is => 'ViaValue', id_by => 'value_obj_id' },
+            value => { via => 'value_obj', to => 'value' },
+            rank => { is => 'Integer' },
+        ]
+    );
+
+    # make a Thing with favorites 1, 2, 4 and 6, ranked in numerical order
+    # but their IDs are not sorted the same as their values/ranks
+    my $thing = ViaThing->create();
+    my @value_objs = map { ViaValue->create(value => $_) } (qw( 4 2 6 1));
+    my @attrib_objs = map { ViaAttribute->create(
+                                    thing_id => $thing->id,
+                                    key => 'favorite',
+                                    value_obj_id => $_->id,
+                                    rank => $_->value,
+                                )
+                            } @value_objs;
+
+    my @favorites = $thing->favorites;
+    is_deeply(\@favorites,
+              [ 1, 2, 4, 6],
+              'Got back ordered favorites',
+            );
+};
+
 
