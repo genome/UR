@@ -370,7 +370,7 @@ sub _resolve_bridge_logic_for_indirect_property {
             ($my_join_properties[$i], $their_join_properties[$i]) = @{ $via_join_properties[$i] };
         }
 
-        my(@where_properties, @where_values);
+        my(@where_properties, @where_values, @bridge_meta_params);
         if ($where or $via_property_meta->where) {
             my @collected_where;
             @collected_where = @$where if ($where);
@@ -378,21 +378,22 @@ sub _resolve_bridge_logic_for_indirect_property {
             while (@collected_where) {
                 my $where_property = shift @collected_where;
                 my $where_value = shift @collected_where;
-                if (ref($where_value) eq 'HASH' and $where_value->{'operator'}) {
-                    $where_property .= ' ' .$where_value->{'operator'};
-                    $where_value = $where_value->{'value'};
-                }
-                push @where_properties, $where_property;
 
-                if (substr($where_property, 0, 1) eq '-') {
-                    push @where_properties, $where_value;
+                if (UR::BoolExpr::Util::is_meta_param($where_property)) {
+                    push @bridge_meta_params, $where_property, $where_value;
+
                 } else {
+                    if (ref($where_value) eq 'HASH' and $where_value->{'operator'}) {
+                        $where_property .= ' ' .$where_value->{'operator'};
+                        $where_value = $where_value->{'value'};
+                    }
+                    push @where_properties, $where_property;
                     push @where_values, $where_value;
                 }
             }
         }
 
-        my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, @where_properties);
+        my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, @where_properties, @bridge_meta_params);
 
         $bridge_collector = sub {
             my $self = shift;
