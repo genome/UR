@@ -66,7 +66,7 @@ sub _flatten {
     while (my $key = shift @old_keys) {
         my $name = $key;
         $name =~ s/ .*//;
-        if (substr($name,0,1) ne '-') {
+        if (! UR::BoolExpr::Util::is_meta_param($name)) {
             my $mdata = $old_property_meta_hash->{$name};
             my ($value_position, $operator) = @$mdata{'value_position','operator'};
             
@@ -265,7 +265,7 @@ sub _reframe {
     while (@old_keys) {
         my $old_key = shift @old_keys;
 
-        if (substr($old_key,0,1) ne '-') {
+        if (! UR::BoolExpr::Util::is_meta_param($old_key)) {
             # a regular property
             my $old_name = $old_key;
             $old_name =~ s/ .*//;
@@ -367,7 +367,7 @@ sub _underlying_keys {
 
 sub get_underlying_rule_templates {
     my $self = shift;
-    my @underlying_keys = grep { substr($_,0,1) eq '-' ? () : ($_) } $self->_underlying_keys();
+    my @underlying_keys = grep { UR::BoolExpr::Util::is_meta_param($_) ? () : ($_) } $self->_underlying_keys();
     my $subject_class_name = $self->subject_class_name;
     return map {                
             UR::BoolExpr::Template::PropertyComparison
@@ -480,8 +480,7 @@ sub params_list_for_values {
         #if (substr($key,0,1) eq "_") {
         #    next;
         #}
-        #elsif (substr($key,0,1) eq '-') {
-        if (substr($key,0,1) eq '-') {
+        if (UR::BoolExpr::Util::is_meta_param($key)) {
             my $value = $constant_values->[$c];
             push @params, $key, $value;        
             $c++;
@@ -560,7 +559,7 @@ sub _fast_construct {
     no warnings; 
     my %check_for_duplicate_rules;
     for (my $n=0; $n < @keys; $n++) {
-        next if (substr($keys[$n],0,1) eq '-');
+        next if UR::BoolExpr::Util::is_meta_param($keys[$n]);
         my $pos = index($keys[$n],' ');
         if ($pos != -1) {
             my $property = substr($keys[$n],0,$pos);
@@ -587,7 +586,7 @@ sub _fast_construct {
     my $property_meta_hash = {};        
     my $property_names = [];
     for my $key (@keys) {
-        if (substr($key,0,1) eq '-') {
+        if (UR::BoolExpr::Util::is_meta_param($key)) {
             $property_meta_hash->{$key} = {
                 name => $key,
                 value_position => $const_pos
@@ -630,7 +629,7 @@ sub _fast_construct {
         my $values_index = -1; # -1 so we can bump it at start of loop
         for (my $key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
             my $key = $keys[$key_pos];
-            if (substr($key, 0, 1) eq '-') {
+            if (UR::BoolExpr::Util::is_meta_param($key)) {
                 # -* are constant value keys and do not need to be changed
                 next;
             } else {
@@ -660,7 +659,7 @@ sub _fast_construct {
                     $id_only = 0;
                 }
             }    
-            elsif (substr($key,0,1) ne '-') {
+            elsif (! UR::BoolExpr::Util::is_meta_param($key)) {
                 $id_only = 0;
                 ## print "non id single property $property on $subject_class\n";
             }
@@ -675,13 +674,13 @@ sub _fast_construct {
         my $id_op;
         for (my $key_pos = 0; $key_pos < $original_key_count; $key_pos++) {
             my $key = $keys[$key_pos];
-            if (substr($key, 0, 1) eq '-') {
+            if (UR::BoolExpr::Util::is_meta_param($key)) {
                 # -* are constant value keys and do not need to be changed
                 next;
             } else {
                 $values_index++;
             }
-            next if substr($key,0,1) eq '-';
+            next if UR::BoolExpr::Util::is_meta_param($key);
 
             my ($property, $op) = ($key =~ /^(.+?)\s+(.*)$/);
             $property ||= $key;
@@ -770,7 +769,7 @@ sub _fast_construct {
     my $cpos = 0;
     for my $key (@keys) {
         $key_positions{$key} ||= [];
-        if (substr($key,0,1) eq '-') {
+        if (UR::BoolExpr::Util::is_meta_param($key)) {
             push @{ $key_positions{$key} }, $cpos++;    
         }
         else {
@@ -799,7 +798,7 @@ sub _fast_construct {
     for my $key (@keys_sorted) {
         my $pos_list = $key_positions{$key};
         my $pos = pop @$pos_list;
-        if (substr($key,0,1) eq '-') {
+        if (UR::BoolExpr::Util::is_meta_param($key)) {
             push @$constant_value_normalized_positions, $pos;
             my $constant_value = $constant_values[$pos];
 
@@ -875,7 +874,7 @@ sub _fast_construct {
     my @ambiguous_keys;
     my @ambiguous_property_names;
     for (my $n=0; $n < @keys; $n++) {
-        next if substr($keys[$n],0,1) eq '-';
+        next if UR::BoolExpr::Util::is_meta_param($keys[$n]);
         my ($property, $op) = ($keys[$n] =~ /^(.+?)\s+(.*)$/);
         $property ||= $keys[$n];
         $op ||= '';
@@ -893,7 +892,7 @@ sub _fast_construct {
 
     my @keys_unaliased = $UR::Object::Type::bootstrapping
                             ? @keys_sorted
-                            : map { $_->[0] = substr($_->[0], 0, 1) eq '-' ? $_->[0] : $subject_class_meta->resolve_property_aliases($_->[0]);
+                            : map { $_->[0] = UR::BoolExpr::Util::is_meta_param($_->[0]) ? $_->[0] : $subject_class_meta->resolve_property_aliases($_->[0]);
                                     join(' ',@$_); }
                                 map { [ split(' ') ] }
                                 @keys_sorted;

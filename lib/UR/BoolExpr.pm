@@ -459,7 +459,7 @@ sub resolve {
             Carp::croak("Can't resolve BoolExpr: undef is an invalid key/property name.  Args were: ".join(', ',@in_params));
         }
 
-        if (substr($key,0,1) eq '-') {
+        if (UR::BoolExpr::Util::is_meta_param($key)) {
             # these are keys whose values live in the rule template
             push @keys, $key;
             push @constant_values, $value;
@@ -560,7 +560,7 @@ sub resolve {
 
     for my $value (@values) {
         $key = $keys[$kn++];
-        if (substr($key,0,1) eq '-') {
+        if (UR::BoolExpr::Util::is_meta_param($key)) {
             $cn++;
             redo;
         }
@@ -815,7 +815,7 @@ sub resolve {
     my @list;
     for my $key (@keys) {
         push @list, $key;
-        if (substr($key,0,1) eq '-') {
+        if (UR::BoolExpr::Util::is_meta_param($key)) {
             push @list, $constant_values[$cn++];
         }
         else {
@@ -855,7 +855,7 @@ sub _params_list {
             my $cn = 0;
             for my $key (@$k) {
                 push @list, $key;
-                if (substr($key,0,1) eq '-') {
+                if (UR::BoolExpr::Util::is_meta_param($key)) {
                     push @list, $c->[$cn++];
                 }
                 else {

@@ -424,10 +424,6 @@ sub get_by_subject_class_name_logic_type_and_logic_detail {
     return $class->get(join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id));
 }
 
-sub _is_meta_param {
-    return substr(shift, 0, 1) eq '-';
-}
-
 # The analogue of resolve in UR::BoolExpr.  @params_list is a list if
 # strings containing properties and operators separated by a space.  For ex: "some_param ="
 sub resolve {
@@ -436,7 +432,7 @@ sub resolve {
     my(@params, @constant_values);
     for (my $i = 0; $i < @params_list; $i++) {
         push @params, $params_list[$i];
-        if (_is_meta_param($params_list[$i])) {
+        if (UR::BoolExpr::Util::is_meta_param($params_list[$i])) {
             push @constant_values, $params_list[++$i];
         }
     }
