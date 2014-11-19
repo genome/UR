@@ -400,34 +400,34 @@ sub _resolve_bridge_logic_for_indirect_property {
             my @my_values = map { $self->$_} @my_join_properties;
             my $bx = $bridge_template->get_rule_for_values(@my_values, @where_values);
             return $bridge_class->get($bx);
-         };
+        };
 
-         if($to_property_meta->is_delegated and $to_property_meta->via) {
-             # It's a "normal" doubly delegated property
-             my $second_via_property_meta = $to_property_meta->via_property_meta;
-             my $final_class_name = $second_via_property_meta->data_type;
+        if ($to_property_meta->is_delegated and $to_property_meta->via) {
+            # It's a "normal" doubly delegated property
+            my $second_via_property_meta = $to_property_meta->via_property_meta;
+            my $final_class_name = $second_via_property_meta->data_type;
 
-             if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
-                 my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
-                 if (@via2_join_properties > 1) {
-                     Carp::carp("via2 join not implemented :(");
-                     return;
-                 }
-                 my($my_property_name,$their_property_name) = @{ $via2_join_properties[0] };
-                 my $crosser_template = UR::BoolExpr::Template->resolve($final_class_name, "$their_property_name in");
+            if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
+                my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
+                if (@via2_join_properties > 1) {
+                    Carp::carp("via2 join not implemented :(");
+                    return;
+                }
+                my($my_property_name,$their_property_name) = @{ $via2_join_properties[0] };
+                my $crosser_template = UR::BoolExpr::Template->resolve($final_class_name, "$their_property_name in");
 
-                 my $result_property_name = $to_property_meta->to;
+                my $result_property_name = $to_property_meta->to;
 
-                 $bridge_crosser = sub {
-                     my $bridges = shift;
-                     my @linking_values = map { $_->$my_property_name } @$bridges;
-                     my $bx = $crosser_template->get_rule_for_values(\@linking_values);
-                     my @result_objects = (@_ ? $final_class_name->get($bx->params_list, @_) : $final_class_name->get($bx) );
-                     return map { $_->$result_property_name } @result_objects;
-                 };
-             }
+                $bridge_crosser = sub {
+                    my $bridges = shift;
+                    my @linking_values = map { $_->$my_property_name } @$bridges;
+                    my $bx = $crosser_template->get_rule_for_values(\@linking_values);
+                    my @result_objects = (@_ ? $final_class_name->get($bx->params_list, @_) : $final_class_name->get($bx) );
+                    return map { $_->$result_property_name } @result_objects;
+                };
+            }
 
-         } elsif ($to_property_meta->id_by and $to_property_meta->id_class_by) {
+        } elsif ($to_property_meta->id_by and $to_property_meta->id_class_by) {
             # Bridging through an 'id_class_by' property
             # bucket the bridge items by the result class and do a get for
             # each of those classes with a listref of IDs
