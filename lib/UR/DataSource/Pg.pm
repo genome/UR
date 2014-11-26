@@ -232,6 +232,22 @@ sub _resolve_order_by_clause_for_column {
     return $column_clause;
 }
 
+sub _assure_schema_exists_for_table {
+    my($self, $table_name, $dbh) = @_;
+
+    $dbh ||= $self->get_default_handle;
+
+    my ($schema_name, undef) = $self->_extract_schema_and_table_name($table_name);
+    if ($schema_name) {
+        my $exists = $dbh->selectrow_array("SELECT schema_name FROM information_schema.schemata WHERE schema_name = ?;",
+            undef, $schema_name);
+        unless ($exists) {
+            $dbh->do("CREATE SCHEMA $schema_name")
+                or Carp::croak("Could not create schema $schema_name: " . $dbh->errstr);
+        }
+    }
+}
+
 1;
 
 =pod
