@@ -128,14 +128,14 @@ sub _resolve_boolexpr {
     }
 
     if (%extra) {
-        $self->error_message( 
+        $self->error_message(
             sprintf(
                 'Cannot list for class %s because some items in the filter or show were not properties of that class: %s',
-                $self->subject_class_name, 
+                $self->subject_class_name,
                 join(', ', keys %extra)
             )
         )
-    } 
+    }
 
     return $bool_expr;
 }
@@ -160,7 +160,7 @@ sub execute {
     my ($ns) = ($subject_class_name =~ /^(.*?)::/);
     eval "use $ns";
     my $subject_class = UR::Object::Type->get($subject_class_name);
-    
+
     # Determine things to show
     my @fields = $self->_resolve_field_list;
 
