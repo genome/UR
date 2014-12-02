@@ -79,7 +79,6 @@ sub sub_command_sort_position { .2 };
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-	#$DB::single = 1;
 
     if (defined($self->csv_delimiter)
         and ($self->csv_delimiter ne $self->__meta__->property_meta_for_name('csv_delimiter')->default_value)
