@@ -585,7 +585,9 @@ sub resolve {
 
         # account for the case where this parameter does
         # not match an actual property
-        if (!exists $subject_class_props->{$property_name} and index($property_name,'.') == -1) {
+        my $base_property_name = $property_name;
+        $base_property_name =~ s/[.-].+//g;
+        if (!exists $subject_class_props->{$base_property_name}) {
             if (substr($property_name,0,1) eq '_') {
                 warn "ignoring $property_name in $subject_class bx construction!"
             }
