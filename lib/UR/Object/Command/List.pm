@@ -9,6 +9,7 @@ use UR;
 use UR::Object::Command::List::Style;
 use List::Util qw(reduce);
 use Command::V2;
+use Carp qw();
 
 our $VERSION = "0.43"; # UR $VERSION;
 
@@ -128,7 +129,7 @@ sub _resolve_boolexpr {
     }
 
     if (%extra) {
-        die(
+        Carp::croak(
             sprintf(
                 'Cannot list for class %s because some items in the filter or show were not properties of that class: %s',
                 $self->subject_class_name,
