@@ -585,7 +585,9 @@ sub resolve {
 
         # account for the case where this parameter does
         # not match an actual property
-        if (!exists $subject_class_props->{$property_name} and index($property_name,'.') == -1) {
+        my $base_property_name = $property_name;
+        $base_property_name =~ s/[.-].+//;
+        if (!exists $subject_class_props->{$base_property_name}) {
             if (substr($property_name,0,1) eq '_') {
                 warn "ignoring $property_name in $subject_class bx construction!"
             }
@@ -946,7 +948,12 @@ sub resolve_for_string {
     push @$tree, '-order_by', [split(',',$order_string) ] if ($order_string);
     push @$tree, '-page',     [split(',',$page_string) ] if ($page_string);
 
-    my $bx = UR::BoolExpr->resolve($subject_class_name, @$tree);
+    my ($bx, @extra);
+    if(wantarray) {
+        ($bx, @extra) = UR::BoolExpr->resolve($subject_class_name, @$tree);
+    } else {
+        $bx = UR::BoolExpr->resolve($subject_class_name, @$tree);
+    }
     unless ($bx) {
         Carp::croak("Can't create BoolExpr on $subject_class_name from params generated from string "
                     . $filter_string . " which parsed as:\n"
@@ -955,7 +962,11 @@ sub resolve_for_string {
     if ($$remaining_strref) {
         Carp::croak("Trailing input after the parsable end of the filter string: '". $$remaining_strref."'");
     }
-    return $bx;
+    if(wantarray) {
+        return ($bx, @extra);
+    } else {
+        return $bx;
+    }
 }
 
 # TODO: these methods need a better home, since they are a cmdline/UI standard

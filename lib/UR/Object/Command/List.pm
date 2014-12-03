@@ -9,6 +9,7 @@ use UR;
 use UR::Object::Command::List::Style;
 use List::Util qw(reduce);
 use Command::V2;
+use Carp qw();
 
 our $VERSION = "0.43"; # UR $VERSION;
 
@@ -79,7 +80,6 @@ sub sub_command_sort_position { .2 };
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-	#$DB::single = 1;
 
     if (defined($self->csv_delimiter)
         and ($self->csv_delimiter ne $self->__meta__->property_meta_for_name('csv_delimiter')->default_value)
@@ -129,14 +129,14 @@ sub _resolve_boolexpr {
     }
 
     if (%extra) {
-        $self->error_message( 
+        Carp::croak(
             sprintf(
                 'Cannot list for class %s because some items in the filter or show were not properties of that class: %s',
-                $self->subject_class_name, 
+                $self->subject_class_name,
                 join(', ', keys %extra)
             )
-        )
-    } 
+        );
+    }
 
     return $bool_expr;
 }
@@ -161,7 +161,7 @@ sub execute {
     my ($ns) = ($subject_class_name =~ /^(.*?)::/);
     eval "use $ns";
     my $subject_class = UR::Object::Type->get($subject_class_name);
-    
+
     # Determine things to show
     my @fields = $self->_resolve_field_list;
 
