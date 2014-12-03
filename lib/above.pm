@@ -51,6 +51,9 @@ sub use_package {
 
     my $xdev = $ENV{ABOVE_DISCOVERY_ACROSS_FILESYSTEM};
     my $cwd = cwd();
+    unless ($cwd) {
+        die "cwd failed: $!";
+    }
     my $dev = _dev($cwd);
     my $abort_crawl = sub {
         my @parts = @_;
