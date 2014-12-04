@@ -19,15 +19,23 @@ our %used_libs;
 BEGIN {
     %used_libs = ($ENV{PERL_USED_ABOVE} ? (map { $_ => 1 } split(":", $ENV{PERL_USED_ABOVE})) : ());
     for my $path (keys %used_libs) {
-        eval "use lib '$path';";
-        die "Failed to use library path '$path' from the environment PERL_USED_ABOVE?: $@" if $@;
+        my $error = do {
+            local $@;
+            eval "use lib '$path';";
+            $@;
+        };
+        die "Failed to use library path '$path' from the environment PERL_USED_ABOVE?: $error" if $error;
     }
 };
 
 sub _caller_use {
     my ($caller, $class) = @_;
-    eval "package $caller; use $class";
-    die $@ if $@;
+    my $error = do {
+        local $@;
+        eval "package $caller; use $class";
+        $@;
+    };
+    die $error if $error;
 }
 
 sub _dev {
@@ -77,8 +85,12 @@ sub use_package {
         while ($path =~ s:/[^/]+/\.\./:/:) { 1 } # simplify
         unless ($used_libs{$path}) {
             print STDERR "Using libraries at $path\n" unless $ENV{PERL_ABOVE_QUIET} or $ENV{COMP_LINE};
-            eval "use lib '$path';";
-            die $@ if $@;
+            my $error = do {
+                local $@;
+                eval "use lib '$path';";
+                $@;
+            };
+            die $error if $error;
             $used_libs{$path} = 1;
             my $env_value = join(":", sort keys %used_libs);
             $ENV{PERL_USED_ABOVE} = $env_value;
