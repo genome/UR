@@ -3,7 +3,7 @@ package above;
 use strict;
 use warnings;
 
-use Cwd qw(cwd);
+use Cwd qw(getcwd);
 use File::Spec qw();
 
 our $VERSION = '0.03'; # No BumpVersion
@@ -50,7 +50,10 @@ sub use_package {
     }
 
     my $xdev = $ENV{ABOVE_DISCOVERY_ACROSS_FILESYSTEM};
-    my $cwd = cwd();
+    my $cwd = getcwd();
+    unless ($cwd) {
+        die "cwd failed: $!";
+    }
     my $dev = _dev($cwd);
     my $abort_crawl = sub {
         my @parts = @_;
