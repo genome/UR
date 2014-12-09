@@ -101,32 +101,12 @@ sub create {
 sub _resolve_boolexpr {
     my $self = shift;
 
-    my ($bool_expr,%extra);
-    eval {
-        ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
-                                   $self->subject_class_name,
-                                   $self->_complete_filter,
-                                   $self->_hint_string,
-                                   $self->order_by,
-                               );
-    };
-    my $error = $@;
-
-    unless ($bool_expr) {
-        eval {
-            ($bool_expr, %extra) = UR::BoolExpr->_old_resolve_for_string(
-                                   $self->subject_class_name,
-                                   $self->_complete_filter,
-                                   $self->_hint_string,
-                                   $self->order_by,
-                           )
-        };
-        if ($bool_expr) {
-            $self->warning_message("Failed to parse your query, but it was recognized by the deprecated filter parser.\n  Try putting quotes around the entire filter expression.\n  Use double quotes if your filter already includes single quotes, and vice-versa.\n  Values containing spaces need quotes around them as well\n  The error from the parser was:\n    $error");
-        } else {
-            die $error if $error;
-        }
-    }
+    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
+        $self->subject_class_name,
+        $self->_complete_filter,
+        $self->_hint_string,
+        $self->order_by,
+    );
 
     if (%extra) {
         Carp::croak(

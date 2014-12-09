@@ -969,45 +969,6 @@ sub resolve_for_string {
     }
 }
 
-# TODO: these methods need a better home, since they are a cmdline/UI standard
-sub _old_filter_regex_for_string {
-    return '^\s*([\w\.\-]+)\s*(\@|\=|!=|=|\>|\<|~|!~|!\:|\:|\blike\b|\bbetween\b|\bin\b)\s*[\'"]?([^\'"]*)[\'"]?\s*$';
-}
-
-# TODO: these methods need a better home, since they are a cmdline/UI standard
-sub _old_resolve_for_string {
-    my ($self, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
-
-    my ($property, $op, $value);
-
-    no warnings;
-
-    my $filter_regex = $self->_old_filter_regex_for_string();
-    my @filters = map {
-        unless (($property, $op, $value) = ($_ =~ /$filter_regex/)) {
-            Carp::croak "Unable to process filter $_\n";
-        }
-        if ($op eq '~') {
-            $op = "like";
-            # If the user asked for 'like', but didn't put in a wildcard, then put wildcards
-            # on each side of the value
-            $value = '%'.$value.'%' if (length($value) and $value !~ m/\%|_/);
-        } elsif ($op eq '!~') {
-            $op = 'not like';
-            $value = '%'.$value.'%' if (length($value) and $value !~ m/\%|_/);
-        }
-
-        [$property, $op, $value]
-    } split(/,/, $filter_string);
-
-    my @hints = split(",",$usage_hints_string);
-    my @order = split(",",$order_string);
-    my @page  = split(",",$page_string);
-
-    use warnings;
-    return __PACKAGE__->_resolve_from_filter_array($subject_class_name, \@filters, \@hints, \@order, \@page);
-}
-
 sub _resolve_from_filter_array {
     my $class = shift;
 
