@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 11;
+use Test::More tests => 12;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -71,8 +71,17 @@ $insert->finish();
 my $class = 'URT::StudyParticipant';
 can_ok($class, (qw(favorite_color nickname participant_id)));
 
+my $got_select;
+URT::DataSource::SomeSQLite->add_observer(
+    aspect => 'query',
+    callback => sub {
+        my($ds, $aspect, $sql) = @_;
+        ($got_select) = ($sql =~ m/SELECT\s+(.+)\s+FROM\s/im);
+    });
+
 my @participants = $class->get();
 is(scalar(@participants), 1, 'got participants');
 isa_ok($participants[0], $class);
 is($participants[0]->name, 'Alice', 'got name of participant');
 is($participants[0]->id, 111, 'got id of participant');
+is($got_select, 'PERSON.name, PERSON.person_id, PERSON.subclass', 'SQL select clause');
