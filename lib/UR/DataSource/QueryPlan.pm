@@ -1391,8 +1391,11 @@ sub _resolve_db_joins_for_inheritance {
 
     my @parent_class_objects  = $class_meta->ancestry_class_metas;
 
+    my %seen;
     for my $co ( $class_meta, @parent_class_objects ) {
         my $class_name = $co->class_name;
+        next if $seen{$class_name}++;
+
         my @id_property_objects = $co->direct_id_property_metas;
         my %id_properties = map { $_->property_name => 1 } @id_property_objects;
         my @id_column_names =
