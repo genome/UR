@@ -218,7 +218,9 @@ sub _generate_class_data_for_loading {
     
     my @all_properties;
     my $first_table_name;
+    my %seen;
     for my $co ( $class_meta, @parent_class_objects ) {
+        next if ($seen{ $co->id })++;
         my $table_name = $co->table_name || '__default__';
         
         $first_table_name ||= $table_name;

@@ -3407,7 +3407,9 @@ sub _generate_class_data_for_loading {
     my $prev_table_name;
     my $prev_id_column_name;
 
+    my %seen;
     for my $co ( $class_meta, @{ $parent_class_data->{parent_class_objects} } ) {   
+        next if $seen{ $co->class_name }++;
         my $table_name = $co->first_table_name;
         next unless $table_name;
 
