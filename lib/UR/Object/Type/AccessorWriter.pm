@@ -402,6 +402,23 @@ sub _resolve_bridge_logic_for_indirect_property {
             return $bridge_class->get($bx);
         };
 
+        my $make_results_sorter = sub {
+            my($bridge_linker, $results_linker) = @_;
+
+            my %bridge_rankings;
+            my $rank = 0;
+            return sub {
+                my($bridges, $results) = @_;
+
+                %bridge_rankings = map { $bridge_linker->() => $rank++ } @$bridges;
+
+                return map { $_->[1] }
+                       sort { $bridge_rankings{ $a->[0] } <=> $bridge_rankings{ $b->[0] } }
+                       map { [ $results_linker->(), $_ ] }
+                       @$results;
+            };
+        };
+
         if ($to_property_meta->is_delegated and $to_property_meta->via) {
             # It's a "normal" doubly delegated property
             my $second_via_property_meta = $to_property_meta->via_property_meta;
@@ -423,19 +440,9 @@ sub _resolve_bridge_logic_for_indirect_property {
                 # results, obtained via the bridges, may not be in the same order
                 # after getting them independently.  We'll need to sort the results
                 # in the same order as the bridges
-                my $results_sorter = sub {
-                    my($bridges, $results) = @_;
-                    my %positions;
-                    my $idx = 0;
-                    foreach my $bridge ( @$bridges ) {
-                        $positions{ $bridge->$my_property_name } = $idx++;
-                    }
-
-                    return map { $_->[1] }
-                           sort { $a->[0] <=> $b->[0] }
-                           map { [ $positions{ $_->$their_property_name }, $_ ] }
-                           @$results;
-                };
+                my $results_sorter = $make_results_sorter->(
+                                        sub { $_->$my_property_name },
+                                        sub { $_->$their_property_name } );
 
                 $bridge_crosser = sub {
                     my $bridges = shift;
@@ -456,29 +463,14 @@ sub _resolve_bridge_logic_for_indirect_property {
 
             # To arrange the final results objects in the same order as their corresponding
             # bridge objects
-            my $results_sorter = sub {
-                my($bridges, $unordered_results) = @_;
-
-                my %positions;
-                my $idx = 0;
-                foreach my $bridge ( @$bridges ) {
-                    my $result_class_meta = $bridge->$result_class_resolver->__meta__;
-                    my $result_id = $result_class_meta->resolve_composite_id_from_ordered_values(
-                                        map { $bridge->$_ } @$bridging_identifiers
-                                    );
-                    $positions{$result_id} = $idx++;
-                }
-
-                # since the results link to the bridges by the results' IDs, we can
-                # place them directly in the right order without worrying about
-                # collisions
-                my @ordered_results;
-                $#ordered_results = @$unordered_results - 1;
-                foreach my $result ( @$unordered_results ) {
-                    $ordered_results[ $positions{ $result->id } ] = $result;
-                }
-                return @ordered_results;
-            };
+            my $results_sorter = $make_results_sorter->(
+                                    sub { my $bridge = $_;
+                                          my $result_class_meta = $bridge->$result_class_resolver->__meta__;
+                                          $result_class_meta->resolve_composite_id_from_ordered_values(
+                                              map { $bridge->$_ } @$bridging_identifiers
+                                          );
+                                    },
+                                    sub { $_->id } );
 
             $bridge_crosser = sub {
                 my $bridges = shift;
@@ -521,31 +513,17 @@ sub _resolve_bridge_logic_for_indirect_property {
 
             # To arrange the final results objects in the same order as their corresponding
             # bridge objects
-            my $results_sorter = sub {
-                my($bridges, $unordered_results) = @_;
-
-                my %positions;
-                my $idx = 0;
-                foreach my $bridge ( @$bridges ) {
-                    my $value_key = UR::BoolExpr::Util::values_to_value_id(
-                                        map { $bridge->$_ } @my_join_properties
-                                    );
-                    $positions{$value_key} = $idx++;
-                }
-
-                # The final results are ordered the same as the bridge objects.
-                # We can place them directly in the list.
-                my @ordered_results;
-                $#ordered_results = @$unordered_results - 1;
-                foreach my $result ( @$unordered_results ) {
-                    my $result_value_id = UR::BoolExpr::Util::values_to_value_id(
-                                                        map { $result->$_ } @their_join_properties
-                                                    );
-                    $ordered_results[ $positions{ $result_value_id } ] = $result;
-                }
-                return @ordered_results;
-            };
-
+            my $results_sorter = $make_results_sorter->(
+                                    sub { my $bridge = $_;
+                                          UR::BoolExpr::Util::values_to_value_id(
+                                              map { $bridge->$_ } @my_join_properties
+                                          );
+                                    },
+                                    sub { my $result = $_;
+                                          UR::BoolExpr::Util::values_to_value_id(
+                                              map { $result->$_ } @their_join_properties
+                                          );
+                                    } );
             $bridge_crosser = sub {
                 my $bridges = shift;
                 my @ids;
