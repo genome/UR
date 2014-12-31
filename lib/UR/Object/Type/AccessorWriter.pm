@@ -410,7 +410,7 @@ sub _resolve_bridge_logic_for_indirect_property {
         my $results_sorter;
         if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
             $results_sorter = sub {
-                my($bridges, $results) = @_;
+                my($bridges, $unordered_results) = @_;
 
                 my %positions;
                 my $idx = 0;
@@ -421,17 +421,17 @@ sub _resolve_bridge_logic_for_indirect_property {
                     $positions{$value_key} = $idx++;
                 }
 
-                my %result_value_ids;
-                foreach my $result ( @$results ) {
-                    $result_value_ids{$result->id} = UR::BoolExpr::Util::values_to_value_id(
+                # The final results are ordered the same as the bridge objects.
+                # We can place them directly in the list.
+                my @ordered_results;
+                $#ordered_results = @$unordered_results - 1;
+                foreach my $result ( @$unordered_results ) {
+                    my $result_value_id = UR::BoolExpr::Util::values_to_value_id(
                                                         map { $result->$_ } @their_join_properties
                                                     );
+                    $ordered_results[ $positions{ $result_value_id } ] = $result;
                 }
-
-                return sort { $positions{ $result_value_ids{$a->id} }
-                                <=>
-                              $positions{ $result_value_ids{$b->id} } }
-                       @$results;
+                return @ordered_results;
             };
         } else {
             $results_sorter = sub {
@@ -464,6 +464,8 @@ sub _resolve_bridge_logic_for_indirect_property {
                         $positions{ $bridge->$my_property_name } = $idx++;
                     }
 
+                    # Can't use the same trick as the default sorter.  Some result
+                    # objects may have the same value for $their_property_name.
                     return map { $_->[1] }
                            sort { $a->[0] <=> $b->[0] }
                            map { [ $positions{ $_->$their_property_name }, $_ ] }

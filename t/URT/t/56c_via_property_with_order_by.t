@@ -56,8 +56,9 @@ subtest 'in database' => sub {
     foreach my $val ( [ 99,  $thing_id, 'favorite', 4, 4 ],
                       [ 100, $thing_id, 'favorite', 2, 2 ],
                       [ 101, $thing_id, 'favorite', 6, 6 ],
-                      [ 102, $thing_id, 'favorite', 1, 1 ],
-                      [ 103, $thing_id, 'name', 1, 'Fred' ],
+                      [ 102, $thing_id, 'favorite', 2, 2 ],
+                      [ 103, $thing_id, 'favorite', 1, 1 ],
+                      [ 104, $thing_id, 'name', 1, 'Fred' ],
     ) {
         $insert->execute(@$val);
     }
@@ -66,7 +67,7 @@ subtest 'in database' => sub {
     my @favorites = $thing->favorites();
     is_deeply(
         \@favorites,
-        [ 1, 2, 4, 6],
+        [ 1, 2, 2, 4, 6],
         'Got back ordered favorites');
 };
 
@@ -75,12 +76,12 @@ subtest 'in-memory' => sub {
 
     my $thing = Thing->create();
     Attribute->create(thing_id => $thing->id, key => 'name', value => 'Bob', rank => 1);
-    Attribute->create(thing_id => $thing->id, key => 'favorite', value => $_, rank => $_) foreach (qw( 4 2 6 1 ));
+    Attribute->create(thing_id => $thing->id, key => 'favorite', value => $_, rank => $_) foreach (qw( 4 2 6 2 1 ));
 
     my @favorites = $thing->favorites();
     is_deeply(
         \@favorites,
-        [1, 2, 4, 6],
+        [1, 2, 2, 4, 6],
         'Got back ordered favorites');
 };
 
@@ -112,7 +113,7 @@ subtest '"to" is via-to' => sub {
     # make a Thing with favorites 1, 2, 4 and 6, ranked in numerical order
     # but their IDs are not sorted the same as their values/ranks
     my $thing = ViaThing->create();
-    my @value_objs = map { ViaValue->create(value => $_) } (qw( 4 2 6 1));
+    my @value_objs = map { ViaValue->create(value => $_) } (qw( 4 2 6 2 1));
     my @attrib_objs = map { ViaAttribute->create(
                                     thing_id => $thing->id,
                                     key => 'favorite',
