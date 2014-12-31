@@ -370,7 +370,7 @@ sub _resolve_bridge_logic_for_indirect_property {
             ($my_join_properties[$i], $their_join_properties[$i]) = @{ $via_join_properties[$i] };
         }
 
-        my(@where_properties, @where_values, @bridge_meta_params);
+        my(@where_properties, @where_values, %bridge_meta_params);
         if ($where or $via_property_meta->where) {
             my @collected_where;
             @collected_where = @$where if ($where);
@@ -380,7 +380,7 @@ sub _resolve_bridge_logic_for_indirect_property {
                 my $where_value = shift @collected_where;
 
                 if (UR::BoolExpr::Util::is_meta_param($where_property)) {
-                    push @bridge_meta_params, $where_property, $where_value;
+                    $bridge_meta_params{$where_property} = $where_value;
 
                 } else {
                     if (ref($where_value) eq 'HASH' and $where_value->{'operator'}) {
@@ -393,7 +393,7 @@ sub _resolve_bridge_logic_for_indirect_property {
             }
         }
 
-        my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, @where_properties, @bridge_meta_params);
+        my $bridge_template = UR::BoolExpr::Template->resolve($bridge_class, @their_join_properties, @where_properties, %bridge_meta_params);
 
         $bridge_collector = sub {
             my $self = shift;
@@ -408,7 +408,7 @@ sub _resolve_bridge_logic_for_indirect_property {
         # after getting them independently.  We'll need to sort the results
         # in the same order as the bridges
         my $results_sorter;
-        if (grep { $_ eq '-order' or $_ eq '-order_by' } @bridge_meta_params) {
+        if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
             $results_sorter = sub {
                 my($bridges, $results) = @_;
 
@@ -475,7 +475,7 @@ sub _resolve_bridge_logic_for_indirect_property {
                     my @linking_values = map { $_->$my_property_name } @$bridges;
                     my $bx = $crosser_template->get_rule_for_values(\@linking_values);
                     my @result_objects = (@_ ? $final_class_name->get($bx->params_list, @_) : $final_class_name->get($bx) );
-                    @result_objects = $results_sorter->($bridges, \@result_objects);
+                    @result_objects = $results_sorter->($bridges, \@result_objects) if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'});
                     return map { $_->$result_property_name } @result_objects;
                 };
             }
