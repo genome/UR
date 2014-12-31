@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 # A thing has many attributes, which are ordered and have names
 UR::Object::Type->define(
@@ -124,9 +124,52 @@ subtest '"to" is via-to' => sub {
 
     my @favorites = $thing->favorites;
     is_deeply(\@favorites,
-              [ 1, 2, 4, 6],
+              [ 1, 2, 2, 4, 6],
               'Got back ordered favorites',
             );
 };
 
+subtest '"to" is id-class-by' => sub {
+    plan tests => 1;
+
+    UR::Object::Type->define(
+        class_name => 'IdClassByThing',
+        has_many => [
+            attribs => { is => 'IdClassByAttribute', reverse_as => 'thing' },
+            favorite_objs => { via => 'attribs', to => 'value_obj', where => [ key => 'favorite', '-order_by' => 'rank' ] },
+        ],
+    );
+    UR::Object::Type->define(
+        class_name => 'IdClassByValue',
+        has => 'value',
+    );
+    UR::Object::Type->define(
+        class_name => 'IdClassByAttribute',
+        has => [
+            thing => { is => 'IdClassByThing', id_by => 'thing_id' },
+            key => { is => 'String' },
+            value_obj => { is => 'IdClassByValue', id_by => 'value_obj_id', id_class_by => 'value_obj_class' },
+            value => { via => 'value_obj', to => 'value' },
+            rank => { is => 'Integer' },
+        ],
+    );
+
+    # make a Thing with favorites 1, 2, 4 and 6, ranked in numerical order
+    # but their IDs are not sorted the same as their values/ranks
+    my $thing = IdClassByThing->create();
+    my @value_objs = map { IdClassByValue->create(value => $_) } ( qw( 4 2 6 2 1));
+    my @attrib_objs = map { IdClassByAttribute->create(
+                                        thing_id => $thing->id,
+                                        key => 'favorite',
+                                        value_obj_id => $_->id,
+                                        value_obj_class => $_->class,
+                                        rank => $_->value,
+                                    )
+                            } @value_objs;
+
+    my @favorite_obj_values = map { $_->value } $thing->favorite_objs;
+    is_deeply(\@favorite_obj_values,
+                [ 1, 2, 2, 4, 6 ],
+                'Got back ordered favorites');
+};
 

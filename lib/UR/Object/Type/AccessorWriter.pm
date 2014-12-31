@@ -489,6 +489,27 @@ sub _resolve_bridge_logic_for_indirect_property {
             my $result_class_resolver = $to_property_meta->id_class_by;
             my $bridging_identifiers = $to_property_meta->id_by;
 
+            my $results_sorter = sub {
+                my($bridges, $unordered_results) = @_;
+
+                my %positions;
+                my $idx = 0;
+                foreach my $bridge ( @$bridges ) {
+                    my $result_class_meta = $bridge->$result_class_resolver->__meta__;
+                    my $result_id = $result_class_meta->resolve_composite_id_from_ordered_values(
+                                        map { $bridge->$_ } @$bridging_identifiers
+                                    );
+                    $positions{$result_id} = $idx++;
+                }
+
+                my @ordered_results;
+                $#ordered_results = @$unordered_results - 1;
+                foreach my $result ( @$unordered_results ) {
+                    $ordered_results[ $positions{ $result->id } ] = $result;
+                }
+                return @ordered_results;
+            };
+
             $bridge_crosser = sub {
                 my $bridges = shift;
                 my %result_class_names_and_ids;
@@ -521,7 +542,8 @@ sub _resolve_bridge_logic_for_indirect_property {
                         }
                     }
                 }
-                return $results_sorter->($bridges, \@results);
+                @results = $results_sorter->($bridges, \@results) if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'});
+                return @results;
             };
         } elsif ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value')) {
             my $result_class = $to_property_meta->data_type;
