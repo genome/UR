@@ -402,44 +402,6 @@ sub _resolve_bridge_logic_for_indirect_property {
             return $bridge_class->get($bx);
         };
 
-        # They may have asked for special sorting with -order_by.  In that
-        # case, the bridge objects have been sorted correctly, but the
-        # results, obtained via the bridges, may not be in the same order
-        # after getting them independently.  We'll need to sort the results
-        # in the same order as the bridges
-        my $results_sorter;
-        if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
-            $results_sorter = sub {
-                my($bridges, $unordered_results) = @_;
-
-                my %positions;
-                my $idx = 0;
-                foreach my $bridge ( @$bridges ) {
-                    my $value_key = UR::BoolExpr::Util::values_to_value_id(
-                                        map { $bridge->$_ } @my_join_properties
-                                    );
-                    $positions{$value_key} = $idx++;
-                }
-
-                # The final results are ordered the same as the bridge objects.
-                # We can place them directly in the list.
-                my @ordered_results;
-                $#ordered_results = @$unordered_results - 1;
-                foreach my $result ( @$unordered_results ) {
-                    my $result_value_id = UR::BoolExpr::Util::values_to_value_id(
-                                                        map { $result->$_ } @their_join_properties
-                                                    );
-                    $ordered_results[ $positions{ $result_value_id } ] = $result;
-                }
-                return @ordered_results;
-            };
-        } else {
-            $results_sorter = sub {
-                my($bridges, $results) = @_;
-                return @$results;
-            };
-        }
-
         if ($to_property_meta->is_delegated and $to_property_meta->via) {
             # It's a "normal" doubly delegated property
             my $second_via_property_meta = $to_property_meta->via_property_meta;
@@ -456,6 +418,11 @@ sub _resolve_bridge_logic_for_indirect_property {
 
                 my $result_property_name = $to_property_meta->to;
 
+                # They may have asked for special sorting with -order_by.  In that
+                # case, the bridge objects have been sorted correctly, but the
+                # results, obtained via the bridges, may not be in the same order
+                # after getting them independently.  We'll need to sort the results
+                # in the same order as the bridges
                 my $results_sorter = sub {
                     my($bridges, $results) = @_;
                     my %positions;
@@ -464,8 +431,6 @@ sub _resolve_bridge_logic_for_indirect_property {
                         $positions{ $bridge->$my_property_name } = $idx++;
                     }
 
-                    # Can't use the same trick as the default sorter.  Some result
-                    # objects may have the same value for $their_property_name.
                     return map { $_->[1] }
                            sort { $a->[0] <=> $b->[0] }
                            map { [ $positions{ $_->$their_property_name }, $_ ] }
@@ -489,6 +454,8 @@ sub _resolve_bridge_logic_for_indirect_property {
             my $result_class_resolver = $to_property_meta->id_class_by;
             my $bridging_identifiers = $to_property_meta->id_by;
 
+            # To arrange the final results objects in the same order as their corresponding
+            # bridge objects
             my $results_sorter = sub {
                 my($bridges, $unordered_results) = @_;
 
@@ -502,6 +469,9 @@ sub _resolve_bridge_logic_for_indirect_property {
                     $positions{$result_id} = $idx++;
                 }
 
+                # since the results link to the bridges by the results' IDs, we can
+                # place them directly in the right order without worrying about
+                # collisions
                 my @ordered_results;
                 $#ordered_results = @$unordered_results - 1;
                 foreach my $result ( @$unordered_results ) {
@@ -549,6 +519,33 @@ sub _resolve_bridge_logic_for_indirect_property {
             my $result_class = $to_property_meta->data_type;
             my $bridging_identifiers = $to_property_meta->id_by;
 
+            # To arrange the final results objects in the same order as their corresponding
+            # bridge objects
+            my $results_sorter = sub {
+                my($bridges, $unordered_results) = @_;
+
+                my %positions;
+                my $idx = 0;
+                foreach my $bridge ( @$bridges ) {
+                    my $value_key = UR::BoolExpr::Util::values_to_value_id(
+                                        map { $bridge->$_ } @my_join_properties
+                                    );
+                    $positions{$value_key} = $idx++;
+                }
+
+                # The final results are ordered the same as the bridge objects.
+                # We can place them directly in the list.
+                my @ordered_results;
+                $#ordered_results = @$unordered_results - 1;
+                foreach my $result ( @$unordered_results ) {
+                    my $result_value_id = UR::BoolExpr::Util::values_to_value_id(
+                                                        map { $result->$_ } @their_join_properties
+                                                    );
+                    $ordered_results[ $positions{ $result_value_id } ] = $result;
+                }
+                return @ordered_results;
+            };
+
             $bridge_crosser = sub {
                 my $bridges = shift;
                 my @ids;
@@ -561,7 +558,8 @@ sub _resolve_bridge_logic_for_indirect_property {
                 }
 
                 my @results = (@_ ? $result_class->get(id => \@ids, @_) : $result_class->get(\@ids) );
-                return $results_sorter->($bridges, \@results);
+                @results = $results_sorter->($bridges, \@results) if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'});
+                return @results;
             }
         }
 
