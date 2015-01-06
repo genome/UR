@@ -507,12 +507,12 @@ sub _resolve_bridge_logic_for_indirect_property {
         } elsif ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value')) {
             my $result_class = $to_property_meta->data_type;
             my $bridging_identifiers = $to_property_meta->id_by;
+            my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
 
             $bridge_crosser = sub {
                 my $bridges = shift;
                 my @ids;
                 foreach my $bridge ( @$bridges ) {
-                    my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
                     my @id = map { $bridge->$_ } @$bridging_identifiers;
                     my $id = $id_resolver->(@id);
 
