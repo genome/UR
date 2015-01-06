@@ -524,16 +524,14 @@ sub _resolve_bridge_logic_for_indirect_property {
                     my $results_sorter = $make_results_sorter->(
                                             $bridges,
                                             sub { my $bridge = $_;
-                                                  UR::BoolExpr::Util::values_to_value_id(
-                                                      map { $bridge->$_ } @my_join_properties
+                                                  $id_resolver->(
+                                                      map { $bridge->$_ } @{ $to_property_meta->id_by }
                                                   );
                                             },
                                             sub { my $result = $_;
-                                                  UR::BoolExpr::Util::values_to_value_id(
-                                                      map { $result->$_ } @their_join_properties
-                                                  );
+                                                  $_->id;
                                             } );
-                    @results = $results_sorter->($bridges, \@results);
+                    @results = $results_sorter->(\@results);
                 }
                 return @results;
             }

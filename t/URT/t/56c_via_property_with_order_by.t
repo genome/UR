@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 # A thing has many attributes, which are ordered and have names
 UR::Object::Type->define(
@@ -173,3 +173,46 @@ subtest '"to" is id-class-by' => sub {
                 'Got back ordered favorites');
 };
 
+subtest '"to" is id-by' => sub {
+    plan tests => 1;
+
+    UR::Object::Type->define(
+        class_name => 'IdByThing',
+        has_many => [
+            attribs => { is => 'IdByAttribute', reverse_as => 'thing' },
+            favorite_objs => { via => 'attribs', to => 'value_obj', where => [ key => 'favorite', '-order_by' => 'rank' ] },
+        ],
+    );
+    UR::Object::Type->define(
+        class_name => 'IdByValue',
+        has => 'value',
+    );
+    UR::Object::Type->define(
+        class_name => 'IdByAttribute',
+        has => [
+            thing => { is => 'IdByThing', id_by => 'thing_id' },
+            key => { is => 'String' },
+            value_obj => { is => 'IdByValue', id_by => 'value_obj_id' },
+            value => { via => 'value_obj', to => 'value' },
+            rank => { is => 'Integer' },
+        ],
+    );
+
+    # make a Thing with favorites 1, 2, 4 and 6, ranked in numerical order
+    # but their IDs are not sorted the same as their values/ranks
+    my $thing = IdByThing->create();
+    my @value_objs = map { IdByValue->create(value => $_) } ( qw( 4 2 6 2 1));
+    my @attrib_objs = map { IdByAttribute->create(
+                                        thing_id => $thing->id,
+                                        key => 'favorite',
+                                        value_obj_id => $_->id,
+                                        rank => $_->value,
+                                    )
+                            } @value_objs;
+
+    my @favorite_obj_values = map { $_->value } $thing->favorite_objs;
+    is_deeply(\@favorite_obj_values,
+                [ 1, 2, 2, 4, 6 ],
+                'Got back ordered favorites');
+
+};
