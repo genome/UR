@@ -417,47 +417,25 @@ sub _resolve_bridge_logic_for_indirect_property {
             };
         };
 
-        if ($to_property_meta->is_delegated and $to_property_meta->via) {
-            # It's a "normal" doubly delegated property
-            my $second_via_property_meta = $to_property_meta->via_property_meta;
-            my $final_class_name = $second_via_property_meta->data_type;
+        if ($to_property_meta->is_delegated) {
 
-            if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
-                my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
-                if (@via2_join_properties > 1) {
-                    Carp::carp("via2 join not implemented :(");
-                    return;
+            my($result_class_resolver, $bridging_identifiers, $final_result_property_name, $result_filtering_property);
+            if ($to_property_meta->via) {
+                # bridges through another via-to property
+                my $second_via_property_meta = $to_property_meta->via_property_meta;
+                my $final_class_name = $second_via_property_meta->data_type;
+                if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
+                    my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
+                    $bridging_identifiers = [ map { $_->[0] } @via2_join_properties ];
+                    $result_filtering_property = $via2_join_properties[0]->[1];
+                    $result_class_resolver = sub { $final_class_name };
+
+                    $final_result_property_name = $to_property_meta->to;
                 }
-                my($my_property_name,$their_property_name) = @{ $via2_join_properties[0] };
-                my $crosser_template = UR::BoolExpr::Template->resolve($final_class_name, "$their_property_name in");
 
-                my $result_property_name = $to_property_meta->to;
-
-                $bridge_crosser = sub {
-                    my $bridges = shift;
-                    my @linking_values = map { $_->$my_property_name } @$bridges;
-                    my $bx = $crosser_template->get_rule_for_values(\@linking_values);
-                    my @result_objects = (@_ ? $final_class_name->get($bx->params_list, @_) : $final_class_name->get($bx) );
-
-                    if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
-                        my $results_sorter = $make_results_sorter->(
-                                                $bridges,
-                                                sub { $_->$my_property_name },
-                                                sub { $_->$their_property_name } );
-                        @result_objects = $results_sorter->(\@result_objects);
-                    }
-                    return map { $_->$result_property_name } @result_objects;
-                };
-            }
-
-        } elsif (($to_property_meta->id_by and $to_property_meta->id_class_by)
-                 or
-                 ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value'))
-        ) {
-
-            my($result_class_resolver, $bridging_identifiers);
-            if ($to_property_meta->id_by) {
+            } elsif ($to_property_meta->id_by) {
                 $bridging_identifiers = $to_property_meta->id_by;
+                $result_filtering_property = 'id';
                 if ($to_property_meta->id_class_by) {
                     # Bridging through an 'id_class_by' property
                     # bucket the bridge items by the result class and do a get for
@@ -503,16 +481,16 @@ sub _resolve_bridge_logic_for_indirect_property {
                 foreach my $result_class ( keys %result_class_names_and_ids ) {
                     if (@_) {
                         if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                            push @results, map { $result_class->get(id => $_, @_) } @{$result_class_names_and_ids{$result_class}};
+                            push @results, map { $result_class->get($result_filtering_property => $_, @_) } @{$result_class_names_and_ids{$result_class}};
                         } else {
-                            push @results, $result_class->get(id => $result_class_names_and_ids{$result_class}, @_);
+                            push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class}, @_);
                         }
                     }
                     else {
                         if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                            push @results, map { $result_class->get($_) } @{$result_class_names_and_ids{$result_class}};
+                            push @results, map { $result_class->get($result_filtering_property => $_) } @{$result_class_names_and_ids{$result_class}};
                         } else {
-                            push @results, $result_class->get($result_class_names_and_ids{$result_class});
+                            push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class});
                         }
                     }
                 }
@@ -524,6 +502,8 @@ sub _resolve_bridge_logic_for_indirect_property {
                                             sub { $_->id } );
                     @results = $results_sorter->(\@results);
                 }
+
+                @results = map { $_->$final_result_property_name } @results if ($to_property_meta->via);
                 return @results;
             };
         }
