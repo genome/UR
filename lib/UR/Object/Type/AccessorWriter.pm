@@ -450,25 +450,50 @@ sub _resolve_bridge_logic_for_indirect_property {
                 };
             }
 
-        } elsif ($to_property_meta->id_by and $to_property_meta->id_class_by) {
-            # Bridging through an 'id_class_by' property
-            # bucket the bridge items by the result class and do a get for
-            # each of those classes with a listref of IDs
-            my $result_class_resolver = $to_property_meta->id_class_by;
-            my $bridging_identifiers = $to_property_meta->id_by;
+        } elsif (($to_property_meta->id_by and $to_property_meta->id_class_by)
+                 or
+                 ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value'))
+        ) {
+
+            my($result_class_resolver);
+            if ($to_property_meta->id_by and $to_property_meta->id_class_by) {
+                # Bridging through an 'id_class_by' property
+                # bucket the bridge items by the result class and do a get for
+                # each of those classes with a listref of IDs
+                my $result_class_resolving_property = $to_property_meta->id_class_by;
+                $result_class_resolver = sub { shift->$result_class_resolving_property };
+
+            } else {
+                # Bridging through a regular id-by property
+                my $result_class = $to_property_meta->data_type;
+                $result_class_resolver = sub { $result_class };
+            }
+
+            my $linking_id_value_for_bridge = do {
+                my %composite_id_resolver_for_class;
+                my $bridging_identifiers = $to_property_meta->id_by;
+
+                sub {
+                    my $bridge = shift;
+                    my @id = map { $bridge->$_ } @$bridging_identifiers;
+
+                    my $result_class = $result_class_resolver->($bridge);
+                    my $id_resolver = $composite_id_resolver_for_class{ $result_class }
+                                        ||= $result_class->__meta__->get_composite_id_resolver;
+
+                    return $id_resolver->(@id);
+                };
+            };
 
             $bridge_crosser = sub {
                 my $bridges = shift;
                 my %result_class_names_and_ids;
 
                 foreach my $bridge ( @$bridges ) {
-                    my $result_class = $bridge->$result_class_resolver;
+                    my $result_class = $result_class_resolver->($bridge);
                     $result_class_names_and_ids{$result_class} ||= [];
 
-                    my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
-                    my @id = map { $bridge->$_ } @$bridging_identifiers;
-                    my $id = $id_resolver->(@id);
-
+                    my $id = $linking_id_value_for_bridge->($bridge);
                     push @{ $result_class_names_and_ids{ $result_class } }, $id;
                 }
 
@@ -493,50 +518,13 @@ sub _resolve_bridge_logic_for_indirect_property {
                 if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
                     my $results_sorter = $make_results_sorter->(
                                             $bridges,
-                                            sub { my $bridge = $_;
-                                                  my $result_class_meta = $bridge->$result_class_resolver->__meta__;
-                                                  $result_class_meta->resolve_composite_id_from_ordered_values(
-                                                      map { $bridge->$_ } @$bridging_identifiers
-                                                  );
-                                            },
+                                            sub { return $linking_id_value_for_bridge->($_) },
                                             sub { $_->id } );
                     @results = $results_sorter->(\@results);
                 }
                 return @results;
             };
-        } elsif ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value')) {
-            my $result_class = $to_property_meta->data_type;
-            my $bridging_identifiers = $to_property_meta->id_by;
-            my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
-
-            $bridge_crosser = sub {
-                my $bridges = shift;
-                my @ids;
-                foreach my $bridge ( @$bridges ) {
-                    my @id = map { $bridge->$_ } @$bridging_identifiers;
-                    my $id = $id_resolver->(@id);
-
-                    push @ids, $id;
-                }
-
-                my @results = (@_ ? $result_class->get(id => \@ids, @_) : $result_class->get(\@ids) );
-                if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
-                    my $results_sorter = $make_results_sorter->(
-                                            $bridges,
-                                            sub { my $bridge = $_;
-                                                  $id_resolver->(
-                                                      map { $bridge->$_ } @{ $to_property_meta->id_by }
-                                                  );
-                                            },
-                                            sub { my $result = $_;
-                                                  $_->id;
-                                            } );
-                    @results = $results_sorter->(\@results);
-                }
-                return @results;
-            }
         }
-
     }
     return ($bridge_collector, $bridge_crosser);
 }
