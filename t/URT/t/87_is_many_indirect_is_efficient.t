@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 13;
+use Test::More tests=> 14;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -143,3 +143,12 @@ $query_count = 0;
 my @prices = $person->car_parts_prices();
 is(scalar(@prices), 4, "person's cars have 4 car_parts with prices");
 is($query_count, 1, 'Made 1 query');
+
+URT::CarParts->unload();
+$query_count = 0;
+my @parts = $person->car_parts;
+my @parts_ids = sort { $a <=> $b }
+                map { $_->id } @parts;
+is_deeply(\@parts_ids,
+          [1, 2, 9, 10],
+          'Got the correct CarParts objects');

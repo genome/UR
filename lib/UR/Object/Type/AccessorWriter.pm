@@ -417,7 +417,7 @@ sub _resolve_bridge_logic_for_indirect_property {
             };
         };
 
-        if ($to_property_meta->is_delegated) {
+        if ($to_property_meta->is_delegated and ! $to_property_meta->reverse_as) {
 
             my($result_class_resolver, $bridge_linking_values, $final_result_property_name, $result_filtering_property);
             if ($to_property_meta->via) {
