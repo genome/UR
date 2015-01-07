@@ -425,12 +425,13 @@ sub _resolve_bridge_logic_for_indirect_property {
                 my $second_via_property_meta = $to_property_meta->via_property_meta;
                 my $final_class_name = $second_via_property_meta->data_type;
                 if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
-                    my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
-                    $bridge_linking_values = [ map { $_->[0] } @via2_join_properties ];
-                    $result_filtering_property = $via2_join_properties[0]->[1];
-                    $result_class_resolver = sub { $final_class_name };
+                    if ( 1 == (my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join)) {
+                        $bridge_linking_values = [ $via2_join_properties[0]->[0] ];
+                        $result_filtering_property = $via2_join_properties[0]->[1];
+                        $result_class_resolver = sub { $final_class_name };
 
-                    $final_result_property_name = $to_property_meta->to;
+                        $final_result_property_name = $to_property_meta->to;
+                    }
                 }
 
             } elsif ($to_property_meta->id_by) {
