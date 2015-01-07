@@ -455,23 +455,25 @@ sub _resolve_bridge_logic_for_indirect_property {
                  ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value'))
         ) {
 
-            my($result_class_resolver);
-            if ($to_property_meta->id_by and $to_property_meta->id_class_by) {
-                # Bridging through an 'id_class_by' property
-                # bucket the bridge items by the result class and do a get for
-                # each of those classes with a listref of IDs
-                my $result_class_resolving_property = $to_property_meta->id_class_by;
-                $result_class_resolver = sub { shift->$result_class_resolving_property };
+            my($result_class_resolver, $bridging_identifiers);
+            if ($to_property_meta->id_by) {
+                $bridging_identifiers = $to_property_meta->id_by;
+                if ($to_property_meta->id_class_by) {
+                    # Bridging through an 'id_class_by' property
+                    # bucket the bridge items by the result class and do a get for
+                    # each of those classes with a listref of IDs
+                    my $result_class_resolving_property = $to_property_meta->id_class_by;
+                    $result_class_resolver = sub { shift->$result_class_resolving_property };
 
-            } else {
-                # Bridging through a regular id-by property
-                my $result_class = $to_property_meta->data_type;
-                $result_class_resolver = sub { $result_class };
+                } else {
+                    # Bridging through a regular id-by property
+                    my $result_class = $to_property_meta->data_type;
+                    $result_class_resolver = sub { $result_class };
+                }
             }
 
             my $linking_id_value_for_bridge = do {
                 my %composite_id_resolver_for_class;
-                my $bridging_identifiers = $to_property_meta->id_by;
 
                 sub {
                     my $bridge = shift;
