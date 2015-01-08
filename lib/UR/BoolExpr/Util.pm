@@ -184,6 +184,11 @@ sub value_id_to_values {
     return @values;
 }
 
+sub is_meta_param {
+    my $param_name = shift;
+    return substr($param_name, 0, 1) eq '-';
+}
+
 package UR::BoolExpr::Util::clonedThing;
 
 sub bless {

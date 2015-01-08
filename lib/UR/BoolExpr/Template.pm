@@ -412,8 +412,6 @@ sub sub_classify {
 
 # flyweight constructor
 # NOTE: this caches outside of the regular system since these are stateless objects
-# NOTE: It's not possible to use this to construct a template with meta-props, like
-# -hints or -order.  To do that, it'll have to also accept constant values as an arg
 sub get_by_subject_class_name_logic_type_and_logic_detail {
     my $class = shift;
     my $subject_class_name = shift;
@@ -421,18 +419,29 @@ sub get_by_subject_class_name_logic_type_and_logic_detail {
                     . ( defined($subject_class_name) ? "'$subject_class_name'" : "(undef)" ) ) unless ($subject_class_name);
     my $logic_type = shift;
     my $logic_detail = shift;
+    my $constant_value_id = shift || UR::BoolExpr::Util::values_to_value_id(); # default is an empty list of values
 
-    my $constant_value_id = UR::BoolExpr::Util::values_to_value_id(); # intentionally an empty list of values
     return $class->get(join('/',$subject_class_name,$logic_type,$logic_detail,$constant_value_id));
 }
-
 
 # The analogue of resolve in UR::BoolExpr.  @params_list is a list if
 # strings containing properties and operators separated by a space.  For ex: "some_param ="
 sub resolve {
     my($class,$subject_class_name, @params_list) = @_;
 
-    return $class->get_by_subject_class_name_logic_type_and_logic_detail($subject_class_name, "And", join(',',@params_list));
+    my(@params, @constant_values);
+    for (my $i = 0; $i < @params_list; $i++) {
+        push @params, $params_list[$i];
+        if (UR::BoolExpr::Util::is_meta_param($params_list[$i])) {
+            push @constant_values, $params_list[++$i];
+        }
+    }
+
+    return $class->get_by_subject_class_name_logic_type_and_logic_detail(
+                        $subject_class_name,
+                        "And",
+                        join(',',@params),
+                        UR::BoolExpr::Util::values_to_value_id(@constant_values));
 }
 
 sub get {
