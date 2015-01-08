@@ -419,14 +419,14 @@ sub _resolve_bridge_logic_for_indirect_property {
 
         if ($to_property_meta->is_delegated and ! $to_property_meta->reverse_as) {
 
-            my($result_class_resolver, $bridge_linking_values, $final_result_property_name, $result_filtering_property);
+            my($result_class_resolver, $bridge_linking_properties, $final_result_property_name, $result_filtering_property);
             if ($to_property_meta->via) {
                 # bridges through another via-to property
                 my $second_via_property_meta = $to_property_meta->via_property_meta;
                 my $final_class_name = $second_via_property_meta->data_type;
                 if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
                     if ( 1 == (my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join)) {
-                        $bridge_linking_values = [ $via2_join_properties[0]->[0] ];
+                        $bridge_linking_properties = [ $via2_join_properties[0]->[0] ];
                         $result_filtering_property = $via2_join_properties[0]->[1];
                         $result_class_resolver = sub { $final_class_name };
 
@@ -435,7 +435,7 @@ sub _resolve_bridge_logic_for_indirect_property {
                 }
 
             } elsif ($to_property_meta->id_by) {
-                $bridge_linking_values = $to_property_meta->id_by;
+                $bridge_linking_properties = $to_property_meta->id_by;
                 $result_filtering_property = 'id';
                 if ($to_property_meta->id_class_by) {
                     # Bridging through an 'id_class_by' property
@@ -456,7 +456,7 @@ sub _resolve_bridge_logic_for_indirect_property {
 
                 sub {
                     my $bridge = shift;
-                    my @id = map { $bridge->$_ } @$bridge_linking_values;
+                    my @id = map { $bridge->$_ } @$bridge_linking_properties;
 
                     my $result_class = $result_class_resolver->($bridge);
                     my $id_resolver = $composite_id_resolver_for_class{ $result_class }
