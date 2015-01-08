@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 14;
+use Test::More tests=> 15;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -147,6 +147,7 @@ is($query_count, 1, 'Made 1 query');
 URT::CarParts->unload();
 $query_count = 0;
 my @parts = $person->car_parts;
+is($query_count, 1, 'Made 1 query getting car_parts for person');
 my @parts_ids = sort { $a <=> $b }
                 map { $_->id } @parts;
 is_deeply(\@parts_ids,

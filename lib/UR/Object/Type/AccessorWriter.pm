@@ -417,7 +417,7 @@ sub _resolve_bridge_logic_for_indirect_property {
             };
         };
 
-        if ($to_property_meta->is_delegated and ! $to_property_meta->reverse_as) {
+        if ($to_property_meta->is_delegated) {
 
             my($result_class_resolver, $bridge_linking_properties, $final_result_property_name, $result_filtering_property);
             if ($to_property_meta->via) {
@@ -449,6 +449,14 @@ sub _resolve_bridge_logic_for_indirect_property {
                     my $result_class = $to_property_meta->data_type;
                     $result_class_resolver = sub { $result_class };
                 }
+
+            } elsif ($to_property_meta->reverse_as) {
+                my @reverse_as_join_properties = $to_property_meta->get_property_name_pairs_for_join;
+                $bridge_linking_properties = [ map { $_->[0] } @reverse_as_join_properties ];
+                $result_filtering_property = $reverse_as_join_properties[0]->[1];
+
+                my $result_class = $to_property_meta->data_type;
+                $result_class_resolver = sub { $result_class };
             }
 
             my $linking_id_value_for_bridge = do {
