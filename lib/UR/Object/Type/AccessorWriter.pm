@@ -418,6 +418,12 @@ sub _resolve_bridge_logic_for_indirect_property {
         };
 
         if ($to_property_meta->is_delegated) {
+            # This property's value is doubly delegated.  The simple thing to
+            # do is to collect the bridge objects, then call the second
+            # delegation method on each bridge in a loop to collect the final
+            # results, which may trigger one query per result.  Depending on
+            # the type of delegation, the final results can be collected with
+            # one query
 
             my($result_class_resolver, $bridge_linking_properties, $final_result_property_name, $result_filtering_property);
             if ($to_property_meta->via) {
