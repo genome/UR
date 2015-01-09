@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -8,13 +8,13 @@ use lib File::Basename::dirname(__FILE__).'/../..';
 # Tests that the code to efficiently load data from double delegated properties
 # works properly when the linkage between classes involves multiple primary keys
 
+use URT;
+
+subtest 'via/reverse-as' => sub {
 # This is essentially the same test as 87_is_many_indirect_is_efficient.t, except
 # that the link between Car and CarPart has a 2-column foreign key.  This means
 # the system needs to perform more than one query to collect the result objects
 
-use URT;
-
-subtest 'via/reverse-as' => sub {
     plan tests => 7;
 
     ok(UR::Object::Type->define(
@@ -112,4 +112,58 @@ subtest 'via/reverse-as' => sub {
     is_deeply(\@parts_ids,
               [1, 2, 9, 10],
               'Got the correct CarParts objects');
+};
+
+subtest 'via/via' => sub {
+    # This is the same as the '"to" is via-to' test in 56c_via_property_with_order_by.t
+    # except for multiple FK properties for value_obj
+    plan tests => 1;
+
+    UR::Object::Type->define(
+        class_name => 'ViaThing',
+        has_many => [
+            attribs => { is => 'ViaAttribute', reverse_as => 'thing' },
+            favorites => { via => 'attribs', to => 'value', where => [ key => 'favorite']},#, '-order_by' => 'rank' ] },
+        ],
+    );
+    UR::Object::Type->define(
+        id_by => ['id1', 'id2'],
+        class_name => 'ViaValue',
+        has => [ 'value' ],
+    );
+    UR::Object::Type->define(
+        class_name => 'ViaAttribute',
+        has => [
+            thing => { is => 'ViaThing', id_by => 'thing_id' },
+            key => { is => 'String' },
+            value_obj => { is => 'ViaValue', id_by => ['value_obj_id', 'value_obj_id2'] },
+            value => { via => 'value_obj', to => 'value' },
+            rank => { is => 'Integer' },
+        ]
+    );
+
+    # make a Thing with favorites 1, 2, 4 and 6, ranked in numerical order
+    # but their IDs are not sorted the same as their values/ranks
+    my $thing = ViaThing->create();
+
+    my @value_objs = do {
+        my $id = 100;
+        map { ViaValue->create(id1 => $id, id2 => $id++, value => $_) } (qw( 4 2 6 2 1));
+    };
+    my @attrib_objs = map { ViaAttribute->create(
+                                    thing_id => $thing->id,
+                                    key => 'favorite',
+                                    value_obj_id => $_->id1,
+                                    value_obj_id2 => $_->id2,
+                                    rank => $_->value,
+                                )
+                            } @value_objs;
+
+    my @favorites = sort { $a <=> $b } $thing->favorites;
+    is_deeply(\@favorites,
+              [ 1, 2, 2, 4, 6],
+              'Got back ordered favorites',
+            );
+
+
 };
