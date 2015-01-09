@@ -466,62 +466,64 @@ sub _resolve_bridge_logic_for_indirect_property {
                 }
             }
 
-            my $linking_id_value_for_bridge = do {
-                my %composite_id_resolver_for_class;
+            if ($result_class_resolver) {
+                my $linking_id_value_for_bridge = do {
+                    my %composite_id_resolver_for_class;
 
-                sub {
-                    my $bridge = shift;
-                    my @id = map { $bridge->$_ } @$bridge_linking_properties;
+                    sub {
+                        my $bridge = shift;
+                        my @id = map { $bridge->$_ } @$bridge_linking_properties;
 
-                    my $result_class = $result_class_resolver->($bridge);
-                    my $id_resolver = $composite_id_resolver_for_class{ $result_class }
-                                        ||= $result_class->__meta__->get_composite_id_resolver;
+                        my $result_class = $result_class_resolver->($bridge);
+                        my $id_resolver = $composite_id_resolver_for_class{ $result_class }
+                                            ||= $result_class->__meta__->get_composite_id_resolver;
 
-                    return $id_resolver->(@id);
+                        return $id_resolver->(@id);
+                    };
                 };
-            };
 
-            $bridge_crosser = sub {
-                my $bridges = shift;
-                my %result_class_names_and_ids;
+                $bridge_crosser = sub {
+                    my $bridges = shift;
+                    my %result_class_names_and_ids;
 
-                foreach my $bridge ( @$bridges ) {
-                    my $result_class = $result_class_resolver->($bridge);
-                    $result_class_names_and_ids{$result_class} ||= [];
+                    foreach my $bridge ( @$bridges ) {
+                        my $result_class = $result_class_resolver->($bridge);
+                        $result_class_names_and_ids{$result_class} ||= [];
 
-                    my $id = $linking_id_value_for_bridge->($bridge);
-                    push @{ $result_class_names_and_ids{ $result_class } }, $id;
-                }
+                        my $id = $linking_id_value_for_bridge->($bridge);
+                        push @{ $result_class_names_and_ids{ $result_class } }, $id;
+                    }
 
-                my @results;
-                foreach my $result_class ( keys %result_class_names_and_ids ) {
-                    if (@_) {
-                        if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                            push @results, map { $result_class->get($result_filtering_property => $_, @_) } @{$result_class_names_and_ids{$result_class}};
-                        } else {
-                            push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class}, @_);
+                    my @results;
+                    foreach my $result_class ( keys %result_class_names_and_ids ) {
+                        if (@_) {
+                            if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
+                                push @results, map { $result_class->get($result_filtering_property => $_, @_) } @{$result_class_names_and_ids{$result_class}};
+                            } else {
+                                push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class}, @_);
+                            }
+                        }
+                        else {
+                            if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
+                                push @results, map { $result_class->get($result_filtering_property => $_) } @{$result_class_names_and_ids{$result_class}};
+                            } else {
+                                push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class});
+                            }
                         }
                     }
-                    else {
-                        if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                            push @results, map { $result_class->get($result_filtering_property => $_) } @{$result_class_names_and_ids{$result_class}};
-                        } else {
-                            push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class});
-                        }
+
+                    if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
+                        my $results_sorter = $make_results_sorter->(
+                                                $bridges,
+                                                sub { return $linking_id_value_for_bridge->($_) },
+                                                sub { $_->id } );
+                        @results = $results_sorter->(\@results);
                     }
-                }
 
-                if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
-                    my $results_sorter = $make_results_sorter->(
-                                            $bridges,
-                                            sub { return $linking_id_value_for_bridge->($_) },
-                                            sub { $_->id } );
-                    @results = $results_sorter->(\@results);
-                }
-
-                @results = map { $_->$final_result_property_name } @results if ($to_property_meta->via);
-                return @results;
-            };
+                    @results = map { $_->$final_result_property_name } @results if ($to_property_meta->via);
+                    return @results;
+                };
+            }
         }
     }
     return ($bridge_collector, $bridge_crosser);
