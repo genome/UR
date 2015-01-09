@@ -457,12 +457,13 @@ sub _resolve_bridge_logic_for_indirect_property {
                 }
 
             } elsif ($to_property_meta->reverse_as) {
-                my @reverse_as_join_properties = $to_property_meta->get_property_name_pairs_for_join;
-                $bridge_linking_properties = [ map { $_->[0] } @reverse_as_join_properties ];
-                $result_filtering_property = $reverse_as_join_properties[0]->[1];
+                if (1 == (my @reverse_as_join_properties = $to_property_meta->get_property_name_pairs_for_join)) {
+                    $bridge_linking_properties = [ map { $_->[0] } @reverse_as_join_properties ];
+                    $result_filtering_property = $reverse_as_join_properties[0]->[1];
 
-                my $result_class = $to_property_meta->data_type;
-                $result_class_resolver = sub { $result_class };
+                    my $result_class = $to_property_meta->data_type;
+                    $result_class_resolver = sub { $result_class };
+                }
             }
 
             my $linking_id_value_for_bridge = do {
