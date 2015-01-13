@@ -6,6 +6,7 @@ package UR::DataSource::RDBMS;
 use strict;
 use warnings;
 use Scalar::Util;
+use List::MoreUtils;
 use File::Basename;
 
 require UR;
@@ -3016,7 +3017,7 @@ sub _default_save_sql_for_object {
     # there is inheritance within the schema.
     my @save_table_names = 
         grep { not /[^\w\.]/ } # remove any views from the list
-        $class_object->all_table_names;
+        List::MoreUtils::uniq($class_object->all_table_names);
 
     @save_table_names = reverse @save_table_names unless ($object_to_save->isa('UR::Entity::Ghost'));
 
@@ -3205,7 +3206,7 @@ sub _default_save_sql_for_object {
                                grep { ! $_->is_transient }
                                grep { ($class_object->table_for_property($_->property_name) || '') eq $table_name }
                                grep { $_->column_name }
-                                    $class_object->all_property_metas();
+                               List::MoreUtils::uniq($class_object->all_property_metas());
 
             my $sql = " INSERT INTO ";
             $sql .= "$table_name (" 
