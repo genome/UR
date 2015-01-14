@@ -50,7 +50,7 @@ subtest 'simple single-id class' => sub {
 
 
 subtest 'dual-id class' => sub {
-    plan tests => 15;
+    plan tests => 19;
 
     my $tc2 = class TestClass2 {
         id_by => ['foo','bar'],
@@ -70,6 +70,13 @@ subtest 'dual-id class' => sub {
     TestClass2->dump_error_messages(0);
     TestClass2->queue_error_messages(1);
     my $error_messages = TestClass2->error_messages_arrayref();
+
+    my $composite_id = join("\t", 'c', 'd');
+    $o = TestClass2->create(id => $composite_id);
+    ok($o, 'Created a TestClass2 object using the composite ID');
+    is($o->foo, 'c', 'First explicit ID property has the right value');
+    is($o->bar, 'd', 'Second explicit ID property has the right value');
+    is($o->id, $composite_id, 'Implicit ID property has the right value');
 
     $o = TestClass2->create(foo => 'qqqq', value => 'blah');
     ok(!$o, "Correctly couldn't create a multi-ID property object without specifying all the IDs");
