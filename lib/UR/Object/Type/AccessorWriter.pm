@@ -507,19 +507,10 @@ sub _resolve_bridge_crosser_for_doubly_delegated_property {
 
             my @results;
             foreach my $result_class ( keys %result_class_names_and_ids ) {
-                if (@_) {
-                    if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                        push @results, map { $result_class->get($result_filtering_property => $_, @_) } @{$result_class_names_and_ids{$result_class}};
-                    } else {
-                        push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class}, @_);
-                    }
-                }
-                else {
-                    if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                        push @results, map { $result_class->get($result_filtering_property => $_) } @{$result_class_names_and_ids{$result_class}};
-                    } else {
-                        push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class});
-                    }
+                if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
+                    push @results, map { $result_class->get($result_filtering_property => $_, @_) } @{$result_class_names_and_ids{$result_class}};
+                } else {
+                    push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class}, @_);
                 }
             }
 
