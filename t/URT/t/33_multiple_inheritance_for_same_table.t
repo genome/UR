@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 12;
+use Test::More tests => 10;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -71,17 +71,38 @@ $insert->finish();
 my $class = 'URT::StudyParticipant';
 can_ok($class, (qw(favorite_color nickname participant_id)));
 
-my $got_select;
-URT::DataSource::SomeSQLite->add_observer(
-    aspect => 'query',
-    callback => sub {
-        my($ds, $aspect, $sql) = @_;
-        ($got_select) = ($sql =~ m/SELECT\s+(.+)\s+FROM\s/im);
-    });
+subtest 'SELECT' => sub {
+    plan tests => 5;
 
-my @participants = $class->get();
-is(scalar(@participants), 1, 'got participants');
-isa_ok($participants[0], $class);
-is($participants[0]->name, 'Alice', 'got name of participant');
-is($participants[0]->id, 111, 'got id of participant');
-is($got_select, 'PERSON.name, PERSON.person_id, PERSON.subclass', 'SQL select clause');
+    my $got_select;
+    URT::DataSource::SomeSQLite->add_observer(
+        aspect => 'query',
+        callback => sub {
+            my($ds, $aspect, $sql) = @_;
+            ($got_select) = ($sql =~ m/SELECT\s+(.+)\s+FROM\s/im);
+        });
+
+    my @participants = $class->get();
+    is(scalar(@participants), 1, 'got participants');
+    isa_ok($participants[0], $class);
+    is($participants[0]->name, 'Alice', 'got name of participant');
+    is($participants[0]->id, 111, 'got id of participant');
+    is($got_select, 'PERSON.name, PERSON.person_id, PERSON.subclass', 'SQL select clause');
+};
+
+subtest 'INSERT' => sub {
+    plan tests => 2;
+
+    my $bob = URT::StudyParticipant->create(name => 'Robert', person_id => '112', nickname => 'Bob');
+    isa_ok($bob, $class);
+    ok(UR::Context->_sync_databases(), 'INSERTed new row to database');
+};
+
+subtest 'UPDATE' => sub {
+    plan tests => 2;
+
+    my $alice = URT::Person->get(name => 'Alice');
+    is($alice->id, 111, 'found existing user');
+    $alice->name('Alicia');
+    ok(UR::Context->_sync_databases(), 'UPDATEd row in database');
+};
