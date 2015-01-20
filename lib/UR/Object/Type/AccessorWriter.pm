@@ -402,145 +402,133 @@ sub _resolve_bridge_logic_for_indirect_property {
             return $bridge_class->get($bx);
         };
 
-        my $make_results_sorter = sub {
-            my($bridges, $bridge_linker, $results_linker) = @_;
-
-            my $rank = 0;
-            my %bridge_rankings = map  { $bridge_linker->() => $rank++ } @$bridges;
-            return sub {
-                my $results = shift;
-
-                return map { $_->[1] }
-                       sort { $bridge_rankings{ $a->[0] } <=> $bridge_rankings{ $b->[0] } }
-                       map { [ $results_linker->(), $_ ] }
-                       @$results;
-            };
-        };
-
-        if ($to_property_meta->is_delegated and $to_property_meta->via) {
-            # It's a "normal" doubly delegated property
-            my $second_via_property_meta = $to_property_meta->via_property_meta;
-            my $final_class_name = $second_via_property_meta->data_type;
-
-            if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
-                my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join;
-                if (@via2_join_properties > 1) {
-                    Carp::carp("via2 join not implemented :(");
-                    return;
-                }
-                my($my_property_name,$their_property_name) = @{ $via2_join_properties[0] };
-                my $crosser_template = UR::BoolExpr::Template->resolve($final_class_name, "$their_property_name in");
-
-                my $result_property_name = $to_property_meta->to;
-
-                $bridge_crosser = sub {
-                    my $bridges = shift;
-                    my @linking_values = map { $_->$my_property_name } @$bridges;
-                    my $bx = $crosser_template->get_rule_for_values(\@linking_values);
-                    my @result_objects = (@_ ? $final_class_name->get($bx->params_list, @_) : $final_class_name->get($bx) );
-
-                    if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
-                        my $results_sorter = $make_results_sorter->(
-                                                $bridges,
-                                                sub { $_->$my_property_name },
-                                                sub { $_->$their_property_name } );
-                        @result_objects = $results_sorter->(\@result_objects);
-                    }
-                    return map { $_->$result_property_name } @result_objects;
-                };
-            }
-
-        } elsif ($to_property_meta->id_by and $to_property_meta->id_class_by) {
-            # Bridging through an 'id_class_by' property
-            # bucket the bridge items by the result class and do a get for
-            # each of those classes with a listref of IDs
-            my $result_class_resolver = $to_property_meta->id_class_by;
-            my $bridging_identifiers = $to_property_meta->id_by;
-
-            $bridge_crosser = sub {
-                my $bridges = shift;
-                my %result_class_names_and_ids;
-
-                foreach my $bridge ( @$bridges ) {
-                    my $result_class = $bridge->$result_class_resolver;
-                    $result_class_names_and_ids{$result_class} ||= [];
-
-                    my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
-                    my @id = map { $bridge->$_ } @$bridging_identifiers;
-                    my $id = $id_resolver->(@id);
-
-                    push @{ $result_class_names_and_ids{ $result_class } }, $id;
-                }
-
-                my @results;
-                foreach my $result_class ( keys %result_class_names_and_ids ) {
-                    if (@_) {
-                        if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                            push @results, map { $result_class->get(id => $_, @_) } @{$result_class_names_and_ids{$result_class}};
-                        } else {
-                            push @results, $result_class->get(id => $result_class_names_and_ids{$result_class}, @_);
-                        }
-                    }
-                    else {
-                        if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
-                            push @results, map { $result_class->get($_) } @{$result_class_names_and_ids{$result_class}};
-                        } else {
-                            push @results, $result_class->get($result_class_names_and_ids{$result_class});
-                        }
-                    }
-                }
-
-                if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
-                    my $results_sorter = $make_results_sorter->(
-                                            $bridges,
-                                            sub { my $bridge = $_;
-                                                  my $result_class_meta = $bridge->$result_class_resolver->__meta__;
-                                                  $result_class_meta->resolve_composite_id_from_ordered_values(
-                                                      map { $bridge->$_ } @$bridging_identifiers
-                                                  );
-                                            },
-                                            sub { $_->id } );
-                    @results = $results_sorter->(\@results);
-                }
-                return @results;
-            };
-        } elsif ($to_property_meta->id_by and $to_property_meta->data_type and not $to_property_meta->data_type->isa('UR::Value')) {
-            my $result_class = $to_property_meta->data_type;
-            my $bridging_identifiers = $to_property_meta->id_by;
-            my $id_resolver = $result_class->__meta__->get_composite_id_resolver;
-
-            $bridge_crosser = sub {
-                my $bridges = shift;
-                my @ids;
-                foreach my $bridge ( @$bridges ) {
-                    my @id = map { $bridge->$_ } @$bridging_identifiers;
-                    my $id = $id_resolver->(@id);
-
-                    push @ids, $id;
-                }
-
-                my @results = (@_ ? $result_class->get(id => \@ids, @_) : $result_class->get(\@ids) );
-                if ($bridge_meta_params{'-order'} || $bridge_meta_params{'-order_by'}) {
-                    my $results_sorter = $make_results_sorter->(
-                                            $bridges,
-                                            sub { my $bridge = $_;
-                                                  $id_resolver->(
-                                                      map { $bridge->$_ } @{ $to_property_meta->id_by }
-                                                  );
-                                            },
-                                            sub { my $result = $_;
-                                                  $_->id;
-                                            } );
-                    @results = $results_sorter->(\@results);
-                }
-                return @results;
-            }
+        if ($to_property_meta->is_delegated
+            and
+            my $doubly_deledated_bridge_crosser = _resolve_bridge_crosser_for_doubly_delegated_property($to_property_meta, \%bridge_meta_params)
+        ) {
+            $bridge_crosser = $doubly_deledated_bridge_crosser;
         }
-
     }
     return ($bridge_collector, $bridge_crosser);
 }
 
+sub _make_results_sorter_for_doubly_delegated_bridge_crosser {
+    my($bridges, $bridge_linker, $results_linker) = @_;
+
+    my $rank = 0;
+    my %bridge_rankings = map  { $bridge_linker->() => $rank++ } @$bridges;
+    return sub {
+        my $results = shift;
+
+        return map { $_->[1] }
+               sort { $bridge_rankings{ $a->[0] } <=> $bridge_rankings{ $b->[0] } }
+               map { [ $results_linker->(), $_ ] }
+               @$results;
+    };
+}
+
+sub _resolve_bridge_crosser_for_doubly_delegated_property {
+    my($to_property_meta, $bridge_meta_params) = @_;
+    # This property's value is doubly delegated.  The simple thing to
+    # do is to collect the bridge objects, then call the second
+    # delegation method on each bridge in a loop to collect the final
+    # results, which may trigger one query per result.  Depending on
+    # the type of delegation, the final results can be collected with
+    # one query
+
+    my($result_class_resolver, $bridge_linking_properties, $final_result_property_name, $result_filtering_property);
+    if ($to_property_meta->via) {
+        # bridges through another via-to property
+        my $second_via_property_meta = $to_property_meta->via_property_meta;
+        my $final_class_name = $second_via_property_meta->data_type;
+        if ($final_class_name and $final_class_name ne 'UR::Value' and $final_class_name->isa('UR::Object')) {
+            if ( 1 == (my @via2_join_properties = $second_via_property_meta->get_property_name_pairs_for_join)) {
+                $bridge_linking_properties = [ $via2_join_properties[0]->[0] ];
+                $result_filtering_property = $via2_join_properties[0]->[1];
+                $result_class_resolver = sub { $final_class_name };
+
+                $final_result_property_name = $to_property_meta->to;
+            }
+        }
+
+    } elsif ($to_property_meta->id_by) {
+        $bridge_linking_properties = $to_property_meta->id_by;
+        $result_filtering_property = 'id';
+        if ($to_property_meta->id_class_by) {
+            # Bridging through an 'id_class_by' property
+            # bucket the bridge items by the result class and do a get for
+            # each of those classes with a listref of IDs
+            my $result_class_resolving_property = $to_property_meta->id_class_by;
+            $result_class_resolver = sub { shift->$result_class_resolving_property };
+
+        } else {
+            # Bridging through a regular id-by property
+            my $result_class = $to_property_meta->data_type;
+            $result_class_resolver = sub { $result_class };
+        }
+
+    } elsif ($to_property_meta->reverse_as) {
+        if (1 == (my @reverse_as_join_properties = $to_property_meta->get_property_name_pairs_for_join)) {
+            $bridge_linking_properties = [ map { $_->[0] } @reverse_as_join_properties ];
+            $result_filtering_property = $reverse_as_join_properties[0]->[1];
+
+            my $result_class = $to_property_meta->data_type;
+            $result_class_resolver = sub { $result_class };
+        }
+    }
+
+    if ($result_class_resolver) {
+        my $linking_id_value_for_bridge = do {
+            my %composite_id_resolver_for_class;
+
+            sub {
+                my $bridge = shift;
+                my @id = map { $bridge->$_ } @$bridge_linking_properties;
+
+                my $result_class = $result_class_resolver->($bridge);
+                my $id_resolver = $composite_id_resolver_for_class{ $result_class }
+                                    ||= $result_class->__meta__->get_composite_id_resolver;
+
+                return $id_resolver->(@id);
+            };
+        };
+
+        return sub {
+            my $bridges = shift;
+            my %result_class_names_and_ids;
+
+            foreach my $bridge ( @$bridges ) {
+                my $result_class = $result_class_resolver->($bridge);
+                $result_class_names_and_ids{$result_class} ||= [];
+
+                my $id = $linking_id_value_for_bridge->($bridge);
+                push @{ $result_class_names_and_ids{ $result_class } }, $id;
+            }
+
+            my @results;
+            foreach my $result_class ( keys %result_class_names_and_ids ) {
+                if($result_class->isa('UR::Value')) { #can't group queries together for UR::Values
+                    push @results, map { $result_class->get($result_filtering_property => $_, @_) } @{$result_class_names_and_ids{$result_class}};
+                } else {
+                    push @results, $result_class->get($result_filtering_property => $result_class_names_and_ids{$result_class}, @_);
+                }
+            }
+
+            if ($bridge_meta_params->{'-order'} || $bridge_meta_params->{'-order_by'}) {
+                my $results_sorter = _make_results_sorter_for_doubly_delegated_bridge_crosser(
+                                        $bridges,
+                                        sub { return $linking_id_value_for_bridge->($_) },
+                                        sub { $_->id } );
+                @results = $results_sorter->(\@results);
+            }
+
+            @results = map { $_->$final_result_property_name } @results if ($to_property_meta->via);
+            return @results;
+        };
+    }
+
+    return;
+}
 
 sub _is_assignment_value {
     return (
