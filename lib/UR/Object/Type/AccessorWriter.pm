@@ -290,16 +290,16 @@ sub mk_id_based_object_accessor {
                 $id_resolver = $concrete_r_class_meta->get_composite_id_resolver;
             }
 
-            # eliminate the old map{} because of side effects with $_
-            # when the id_by property happens to be calculated
-            #@id = map { $self->$_ } @$id_by;
             @id=();
             for my $property_name (@$id_by) {      # no implicit topic
                 my $value = $self->$property_name; # scalar context
                 push @id, $value;
             }
 
-            $id = $id_resolver->(@id);
+            $id = @id > 1
+                    ? $id_resolver->(@id)
+                    : $id[0];
+
             return if not defined $id;
             if ($concrete_r_class_name eq 'UR::Object') {
                 Carp::carp("Querying by using UR::Object class is deprecated.");
