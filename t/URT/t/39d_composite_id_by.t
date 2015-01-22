@@ -4,7 +4,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 # Test that an id-by property using a composite ID for its value can refer
 # to a class with multuple ID properties.
@@ -18,6 +18,9 @@ use Test::More tests => 3;
 
 class Person {
     id_by => ['first_name','last_name'],
+    has => [
+        things => { is => 'Thing', reverse_as => 'owner', is_many => 1 },
+    ],
 };
 Person->__meta__->{'get_composite_id_resolver'} = sub {
     return join(':', map { $_ => shift } qw(first_name last_name));
@@ -32,7 +35,10 @@ class Thing {
 my $person = Person->create(first_name => 'Bob', last_name => 'Smith');
 ok($person, 'Create Person with multiple ID properties');
 
-my $thing = Thing->create(owner_id => $person->id);
-ok($thing, 'Create Thing with owner_id');
+my(@things) = map { Thing->create(owner_id => $person->id) } (1..2);
+is(scalar(@things), 2, 'Create 2 Things with owner_id');
 
-is($thing->owner, $person, "Thing's owner object is the Person object");
+is($things[0]->owner, $person, "Thing's owner object is the Person object");
+is_deeply([ sort { $a->id cmp $b->id } $person->things],
+          \@things,
+          'Got 2 Things owned by Person');

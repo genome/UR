@@ -341,9 +341,13 @@ sub _get_direct_join_linkage {
 
         my @my_id_by = @{ $self->id_by };
         my @their_id_by = @{ $r_class_meta->{'id_by'} };
-        unless (@their_id_by) {
+        if (! @their_id_by
+            or
+            (@my_id_by == 1 and @their_id_by > 1)
+        ) {
             @their_id_by = ( 'id' );
         }
+
         unless (@my_id_by == @their_id_by) {
             Carp::croak("Property '" . $self->property_name . "' of class '" . $self->class_name . "' "
                         . "has " . scalar(@my_id_by) . " id_by elements, while its data_type ("
