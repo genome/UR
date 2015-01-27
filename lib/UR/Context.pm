@@ -2808,7 +2808,7 @@ sub display_invalid_data_for_save {
             # trim it down to the first and last 15 lines
             $datadumper =~ m/^((?:.*\n){15})/;
             $msg .= $1;
-            $datadumper =~ m/((?:.*\n?){3})$/;
+            $datadumper =~ m/((?:.*(?:\n|$)){3})$/;
             $msg .= "[...]\n$1\n";
         } else {
             $msg .= $datadumper;
