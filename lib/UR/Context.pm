@@ -2805,10 +2805,10 @@ sub display_invalid_data_for_save {
         my $datadumper = Data::Dumper::Dumper($obj);
         my $nr_of_lines = $datadumper =~ tr/\n//;
         if ($nr_of_lines > 40) {
-            # trim it down to the first and last 15 lines
+            # trim it down to the first 15 and last 3 lines
             $datadumper =~ m/^((?:.*\n){15})/;
             $msg .= $1;
-            $datadumper =~ m/((?:.*\n?){3})$/;
+            $datadumper =~ m/((?:.*(?:\n|$)){3})$/;
             $msg .= "[...]\n$1\n";
         } else {
             $msg .= $datadumper;
