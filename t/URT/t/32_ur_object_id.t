@@ -52,7 +52,7 @@ subtest 'simple single-id class' => sub {
 subtest 'dual-id class' => sub {
     plan tests => 19;
 
-    my $tc2 = class TestClass2 {
+    class TestClass2 {
         id_by => ['foo','bar'],
         has   => [
             foo   => { is => 'String' },
@@ -65,13 +65,15 @@ subtest 'dual-id class' => sub {
     ok($o, "Created a TestClass2 object with both explicit ID properties");
     is($o->foo, 'aaaa', "First explicit ID property has the right value");
     is($o->bar, 'bbbb', "Second explicit ID property has the right value");
-    is($o->id, join("\t",'aaaa','bbbb'), "Implicit ID property has the right value");
+    is($o->id,
+        TestClass2->__meta__->resolve_composite_id_from_ordered_values('aaaa','bbbb'),
+        "Implicit ID property has the right value");
 
     TestClass2->dump_error_messages(0);
     TestClass2->queue_error_messages(1);
     my $error_messages = TestClass2->error_messages_arrayref();
 
-    my $composite_id = join("\t", 'c', 'd');
+    my $composite_id = TestClass2->__meta__->resolve_composite_id_from_ordered_values('c', 'd');
     $o = TestClass2->create(id => $composite_id);
     ok($o, 'Created a TestClass2 object using the composite ID');
     is($o->foo, 'c', 'First explicit ID property has the right value');
@@ -104,7 +106,8 @@ subtest 'dual-id class' => sub {
     @$error_messages = ();
     $o = TestClass2->create(foo => 'aaaa', bar => 'bbbb', value => '2');
     ok(!$o, "Correctly couldn't create another object with duplicated ID properites");
-    like($error_messages->[0], qr/An object of class TestClass2 already exists with id value 'aaaa\tbbbb'/,
+    my $expected_error_id = TestClass2->__meta__->resolve_composite_id_from_ordered_values('aaaa','bbbb');
+    like($error_messages->[0], qr/An object of class TestClass2 already exists with id value '$expected_error_id'/,
        'The error message was correct');
 };
 
