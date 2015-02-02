@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 12;
+use Test::More tests=> 18;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -25,6 +25,13 @@ is($p1->manufacturer_name, 'Lockheed Martin', 'name is correct');
 
 my @prods = URT::Product->get('genius between' => [1,10]);
 is(scalar(@prods), 1, 'get() with between works');
+
+my $composite_id = join("\t", 1, 2);
+my $m = URT::MultiIdThing->get($composite_id);
+ok($m, 'Got MultiIdThing by composite ID');
+is($m->id1, 1, 'id1 value');
+is($m->id2, 2, 'id2 value');
+is($m->value, 'test value', 'value value');
  
 
 sub create_tables_and_classes {
@@ -35,6 +42,11 @@ sub create_tables_and_classes {
     ok($dbh->do('create table PRODUCT
                 ( prod_id int NOT NULL PRIMARY KEY, name varchar, genius integer, manufacturer_name varchar, sc varchar)'),
        'created product table');
+
+    ok($dbh->do('create table MULTI_ID_THING
+                ( id1 int NOT NULL, id2 int NOT NULL, value varchar, PRIMARY KEY (id1, id2))'),
+        'created multi id thing table');
+    $dbh->do(q(insert into MULTI_ID_THING values (1, 2, 'test value')));
 
     ok(UR::Object::Type->define(
             class_name => 'URT::Product',
@@ -59,5 +71,14 @@ sub create_tables_and_classes {
             is => 'URT::Product',
         ),
         "Created class for TheSubclass");
+
+    ok(UR::Object::Type->define(
+            class_name => 'URT::MultiIdThing',
+            table_name => 'MULTI_ID_THING',
+            id_by => ['id1','id2'],
+            has => ['value'],
+            data_source => 'URT::DataSource::SomeSQLite',
+        ),
+        'Created class for MultiIdThing');
 }
 
