@@ -1,5 +1,6 @@
 package CdExample::Cd;
 use strict;
+use warnings;
 use CdExample;
         
 class CdExample::Cd {

@@ -1,5 +1,6 @@
 package Vending::Command::Service::Show::Money;
 use strict;
+use warnings;
 
 class Vending::Command::Service::Show::Money {
     is_abstract => 1,

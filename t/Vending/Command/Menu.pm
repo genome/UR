@@ -1,5 +1,6 @@
 package Vending::Command::Menu;
 use strict;
+use warnings;
 
 class Vending::Command::Menu {
     is => ['UR::Object::Command::List', 'Vending::Command' ],

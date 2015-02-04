@@ -2,6 +2,7 @@
 
 package CmdTest;
 use strict;
+use warnings;
 use Command::Tree;
 
 class CmdTest { is => 'Command::Tree', doc => 'test suite test command tree' };

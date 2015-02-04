@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use above 'Vending';
 
 # Requires a 3-table database join (COIN, CONTENT and CONTENT_TYPE), plus a

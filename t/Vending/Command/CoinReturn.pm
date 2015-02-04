@@ -1,5 +1,6 @@
 package Vending::Command::CoinReturn;
 use strict;
+use warnings;
 
 class Vending::Command::CoinReturn {
     is => 'Vending::Command::Outputter',

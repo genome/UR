@@ -1,5 +1,6 @@
 package Testing::Something;
 use strict;
+use warnings;
 
 class Testing::Something {
     id_by => [

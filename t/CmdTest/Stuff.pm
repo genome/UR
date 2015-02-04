@@ -1,5 +1,6 @@
 package CmdTest::Stuff;
 use strict;
+use warnings;
 
 class CmdTest::Stuff {
     has => [

@@ -1,5 +1,6 @@
 package Testing::Something::SubClass2;
 use strict;
+use warnings;
 
 class Testing::Something::SubClass2 {
     is => 'Testing::Something',
