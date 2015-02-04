@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 
 package CmdTest;
+use strict;
 use Command::Tree;
 
 class CmdTest { is => 'Command::Tree', doc => 'test suite test command tree' };

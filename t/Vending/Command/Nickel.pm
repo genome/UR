@@ -1,4 +1,5 @@
 package Vending::Command::Nickel;
+use strict;
 
 class Vending::Command::Nickel {
     is => 'Vending::Command::InsertMoney',

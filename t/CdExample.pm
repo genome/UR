@@ -1,4 +1,5 @@
 package CdExample;
+use strict;
 use UR;
 
 class CdExample {

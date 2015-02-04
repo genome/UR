@@ -1,3 +1,4 @@
+use strict;
 use Time::HiRes; 
 
 my $n_props = shift(@ARGV) || 5;

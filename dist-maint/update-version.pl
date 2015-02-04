@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+use strict;
 my $new = shift;
 die "please supply the new version number N.NN\n" unless $new;
 my $old = shift;

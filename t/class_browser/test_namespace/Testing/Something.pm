@@ -1,4 +1,5 @@
 package Testing::Something;
+use strict;
 
 class Testing::Something {
     id_by => [

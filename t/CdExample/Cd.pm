@@ -1,4 +1,5 @@
 package CdExample::Cd;
+use strict;
 use CdExample;
         
 class CdExample::Cd {

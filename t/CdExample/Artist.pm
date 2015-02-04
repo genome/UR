@@ -1,5 +1,6 @@
 
 package CdExample::Artist;
+use strict;
 use CdExample;
 
 class CdExample::Artist {

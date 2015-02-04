@@ -1,5 +1,6 @@
 package Testing;
 
+use strict;
 use UR;
 
 class Testing {

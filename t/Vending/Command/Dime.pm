@@ -1,4 +1,5 @@
 package Vending::Command::Dime;
+use strict;
 
 class Vending::Command::Dime {
     is => 'Vending::Command::InsertMoney',
