@@ -393,6 +393,7 @@ sub send_notification_to_observers {
     $sig_depth++;
     if (@matches > 1) {
         no warnings;
+        # sort by priority
         @matches = sort { $a->[2] <=> $b->[2] } @matches;
     };
     
