@@ -398,13 +398,9 @@ sub send_notification_to_observers {
     };
     
     foreach my $callback_info (@matches) {
-        my ($callback, $note) = @$callback_info;
+        my ($callback, $note, undef, $id, $once) = @$callback_info;
+        UR::Observer->get($id)->delete() if $once;
         $callback->($subject, $property, @data);
-    }
-
-    # delete once observers
-    foreach ( grep { $_->[4] } @matches ) {
-        UR::Observer->get($_->[3])->delete();
     }
 
     $sig_depth--;

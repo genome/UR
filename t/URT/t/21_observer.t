@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 41;
+use Test::More tests => 42;
 
 UR::Object::Type->define(
     class_name => 'URT::Parent',
@@ -189,6 +189,35 @@ subtest 'once observers' => sub {
     is($parent_observer_fired, 0, '"once" observer on URT::Parent was not fired');
     is($person_observer_fired, 0, '"once" observer on URT::Person was not fired');
 };
+
+subtest 'once observer is removed before callback run' => sub {
+    plan tests => 5;
+
+    my $obj = URT::Person->create(first_name => 'bob', last_name => 'schmoe');
+    my $callback_run = 0;
+    our $in_observer = 0;
+    my $observer = $obj->add_observer(aspect => 'first_name',
+                                      once => 1,
+                                      callback => sub {
+                                          my($obj, $aspect, $old, $new) = @_;
+                                          local $in_observer = $in_observer + 1;
+                                          die "recursive call to observer" if $in_observer > 1;
+                                          $obj->$aspect($new . $new);  # double up the new value
+                                          $callback_run++;
+                                      }
+                                    );
+    $obj->first_name('changed');
+    is($obj->first_name, 'changedchanged', 'Observer modified the new value');
+    is($callback_run, 1, 'callback was run once');
+    isa_ok($observer, 'UR::DeletedRef', 'Observer is deleted');
+
+
+    $callback_run = 0;
+    $obj->first_name('bob');
+    is($obj->first_name, 'bob', 'Changed value back');
+    is($callback_run, 0, 'Callback was not run');
+};
+
 
 sub get_change_count {
     my @c = map { scalar($_->__changes__) } URT::Person->get;
