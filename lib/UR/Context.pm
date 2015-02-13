@@ -401,6 +401,12 @@ sub send_notification_to_observers {
         my ($callback, $note) = @$callback_info;
         $callback->($subject, $property, @data);
     }
+
+    # delete once observers
+    foreach ( grep { $_->[4] } @matches ) {
+        UR::Observer->get($_->[3])->delete();
+    }
+
     $sig_depth--;
 
     return scalar(@matches);

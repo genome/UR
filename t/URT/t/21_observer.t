@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 40;
+use Test::More tests => 41;
 
 UR::Object::Type->define(
     class_name => 'URT::Parent',
@@ -155,6 +155,40 @@ is_deeply($observations,
           'Callbacks were fired');
 is(get_change_count(), $change_count + 1, '1 change recorded');
 
+
+subtest 'once observers' => sub {
+    plan tests => 12;
+
+    my($parent_observer_fired, $person_observer_fired) = (0,0);
+    ok(my $person_obs = URT::Person->add_observer(aspect => 'last_name', once => 1, callback => sub { $person_observer_fired++ } ),
+        'Add once observer to "last_name" aspect of URT::Person');
+    ok(my $parent_obs = URT::Parent->add_observer(aspect => 'last_name', once => 1, callback => sub { $parent_observer_fired++ } ),
+        'Add once observer to "last_name" aspect of URT::Parent');
+
+    $observations = {};
+    ok($p1->last_name('once'), 'changed person 1');
+    is_deeply($observations,
+              { 'URT::Person' => { '' => 1, 'last_name' => 1 },
+                'URT::Parent' => { '' => 1, 'last_name' => 1 },
+              },
+              'Regular callbacks were fired') or diag explain $observations;
+    is($parent_observer_fired, 1, '"once" observer on URT::Parent was fired');
+    is($person_observer_fired, 1, '"once" observer on URT::Person was fired');
+
+    isa_ok($person_obs, 'UR::DeletedRef', 'Person observer is deleted');
+    isa_ok($parent_obs, 'UR::DeletedRef', 'Parent observer is deleted');
+
+    ($parent_observer_fired, $person_observer_fired) = (0,0);
+    $observations = {};
+    ok($p1->last_name('once again'), 'changed person 1');
+    is_deeply($observations,
+              { 'URT::Person' => { '' => 1, 'last_name' => 1 },
+                'URT::Parent' => { '' => 1, 'last_name' => 1 },
+              },
+              'Regular callbacks were fired') or diag explain $observations;
+    is($parent_observer_fired, 0, '"once" observer on URT::Parent was not fired');
+    is($person_observer_fired, 0, '"once" observer on URT::Person was not fired');
+};
 
 sub get_change_count {
     my @c = map { scalar($_->__changes__) } URT::Person->get;
