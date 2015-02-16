@@ -207,7 +207,7 @@ Sub::Install::reinstall_sub({
     as => 'age',
     #code => sub { $age_accessor_called = 1; goto &$original_age_accessor }
     code => sub { $age_accessor_called = 1;
-                    diag(Carp::cluck("Age accessor:"));
+                    diag(Carp::longmess("\nAge accessor:"));
                   goto &$original_age_accessor }
 });
 
@@ -251,14 +251,18 @@ $t = UR::Context::Transaction->begin();
     is($aggr_query_count, 0, 'count did not trigger query');
 
     $aggr_query_count = 0;
-diag("**** Before sum failure!!!");
     is($cool_person_set->sum('age'), 110, 'Get sum(age)');
-diag("**** After sum");
     is($aggr_query_count, 0, 'sum did not trigger query');
     is($age_accessor_called, 0, '"age" accessor was not called');
 
     $aggr_query_count = 0;
+UR::DBI::monitor_sql(1);
+$ENV{UR_CONTEXT_MONITOR_QUERY} = 1;
+diag("**** Before min(sum) failure!!!");
     is($cool_person_set->min('age'), 25, 'Minimum age is 25');
+diag("**** After min(sum)");
+$ENV{UR_CONTEXT_MONITOR_QUERY} = 0;
+UR::DBI::monitor_sql(0);
     is($age_accessor_called, 0, "'age' accessor was not called");  # ran in the DB
     is($aggr_query_count, 1, 'Did one aggregate query');
     is(scalar(@{[URT::Person->is_loaded]}), 1, 'Still, one Person object is loaded');
@@ -356,6 +360,7 @@ ok($t->rollback(), 'Rollback changes');
 END {
     diag("Module versions:");
     foreach my $path ( keys %INC ) {
+        next if $path =~ m#^UR/#;
         (my $mod = $path) =~  s/\//::/g;
         $mod =~ s/\.pm$//;
 
