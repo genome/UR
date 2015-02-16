@@ -469,16 +469,25 @@ sub _create_import_iterator_for_underlying_context {
     # instead of making just one import iterator, we make one per loading template
     # we then have our primary iterator use these to fabricate objects for each db row
     my @object_fabricators;
+my $logit = $main::printit
+                ? sub { my $msg = shift; print STDERR $msg,"\n" }
+                : sub {};
+$logit->(sprintf("**** group_by is [%s]\n    aggr [%s]",
+                join(', ', $group_by ? @$group_by : ()),
+                join(', ',$aggregate ? @$aggregate: ())));
     if ($group_by) {
+$logit->("in group_by section");
         # returning sets for each sub-group instead of instance objects...
         my $division_point = scalar(@$group_by)-1;
         my $subset_template = $rule_template->_template_for_grouped_subsets();
         my $set_class = $class_name . '::Set';
         my @aggregate_properties = ($aggregate ? @$aggregate : ());
         unshift(@aggregate_properties, 'count') unless (grep { $_ eq 'count' } @aggregate_properties);
+$logit->("aggregate_props ".join(', ', @aggregate_properties));
 
         my $fab_subref = sub {
             my $row = $_[0];
+$logit->("in fab_subref() row: ".join(', ', @$row));
             my @group_values = @$row[0..$division_point];
             my $ss_rule = $subset_template->get_rule_for_values(@values, @group_values);
             my $set = $set_class->get($ss_rule->id);
@@ -487,6 +496,7 @@ sub _create_import_iterator_for_underlying_context {
             }
             my $aggregates = $set->{__aggregates} ||= {};
             @$aggregates{@aggregate_properties} = @$row[$division_point+1..$#$row];
+$logit->("Returning set: ".Data::Dumper::Dumper($set));
             return $set;
         };
 

@@ -202,7 +202,7 @@ my $t = UR::Context::Transaction->begin();
 # Fab up a method wrapper so we can tell if the accessor is called
 my $original_age_accessor = \&URT::Person::age;
 my $age_accessor_called = 0;
-my $printit = 0;
+our $printit = 0;
 Sub::Install::reinstall_sub({
     into => 'URT::Person',
     as => 'age',
