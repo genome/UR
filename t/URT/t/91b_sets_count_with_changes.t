@@ -205,7 +205,10 @@ my $age_accessor_called = 0;
 Sub::Install::reinstall_sub({
     into => 'URT::Person',
     as => 'age',
-    code => sub { $age_accessor_called = 1; goto &$original_age_accessor }
+    #code => sub { $age_accessor_called = 1; goto &$original_age_accessor }
+    code => sub { $age_accessor_called = 1;
+                    diag(Carp::cluck("Age accessor:"));
+                  goto &$original_age_accessor }
 });
 
 my $original_name_accessor = \&URT::Person::name;
@@ -248,7 +251,9 @@ $t = UR::Context::Transaction->begin();
     is($aggr_query_count, 0, 'count did not trigger query');
 
     $aggr_query_count = 0;
+diag("**** Before sum failure!!!");
     is($cool_person_set->sum('age'), 110, 'Get sum(age)');
+diag("**** After sum");
     is($aggr_query_count, 0, 'sum did not trigger query');
     is($age_accessor_called, 0, '"age" accessor was not called');
 
@@ -347,3 +352,16 @@ ok($t->rollback(), 'Rollback changes');
     ok(URT::Person->create(is_cool => 0, name => 'Porky Pig', age => 60), 'Create a new uncool person');
     $check_aggrs->();
 }
+
+END {
+    diag("Module versions:");
+    foreach my $path ( keys %INC ) {
+        (my $mod = $path) =~  s/\//::/g;
+        $mod =~ s/\.pm$//;
+
+        my $ver = eval "\$${mod}::VERSION";
+        no warnings 'uninitialized';
+        diag("$mod: $ver");
+    }
+}
+        
