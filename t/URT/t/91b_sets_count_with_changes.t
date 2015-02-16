@@ -202,12 +202,13 @@ my $t = UR::Context::Transaction->begin();
 # Fab up a method wrapper so we can tell if the accessor is called
 my $original_age_accessor = \&URT::Person::age;
 my $age_accessor_called = 0;
+my $printit = 0;
 Sub::Install::reinstall_sub({
     into => 'URT::Person',
     as => 'age',
     #code => sub { $age_accessor_called = 1; goto &$original_age_accessor }
     code => sub { $age_accessor_called = 1;
-                    diag(Carp::longmess("\nAge accessor:"));
+                    diag(Carp::longmess("\nAge accessor:")) if $printit;
                   goto &$original_age_accessor }
 });
 
@@ -256,13 +257,15 @@ $t = UR::Context::Transaction->begin();
     is($age_accessor_called, 0, '"age" accessor was not called');
 
     $aggr_query_count = 0;
-UR::DBI::monitor_sql(1);
-$ENV{UR_CONTEXT_MONITOR_QUERY} = 1;
+UR::DBI->monitor_sql(1);
+UR::Context->current->monitor_query(1);
 diag("**** Before min(sum) failure!!!");
+$printit = 1;
     is($cool_person_set->min('age'), 25, 'Minimum age is 25');
 diag("**** After min(sum)");
-$ENV{UR_CONTEXT_MONITOR_QUERY} = 0;
-UR::DBI::monitor_sql(0);
+UR::Context->current->monitor_query(0);
+UR::DBI->monitor_sql(0);
+$printit = 0;
     is($age_accessor_called, 0, "'age' accessor was not called");  # ran in the DB
     is($aggr_query_count, 1, 'Did one aggregate query');
     is(scalar(@{[URT::Person->is_loaded]}), 1, 'Still, one Person object is loaded');
