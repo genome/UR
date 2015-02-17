@@ -149,6 +149,12 @@ sub _members_have_changes {
     my $self = shift;
     return 1 if $self->{__members_have_changes};
     my $rule = $self->rule;
+if ($main::printit) {
+foreach my $member ( $self->member_class_name->is_loaded ) {
+next unless $rule->evaluate($member);
+next unless $member->__changes__(@_);
+print STDERR "member has changes to ",join(', ', @_),Data::Dumper::Dumper($member);
+}}
     return any { $rule->evaluate($_) && $_->__changes__(@_) } $self->member_class_name->is_loaded;
 }
 
