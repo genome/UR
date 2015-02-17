@@ -149,7 +149,7 @@ sub _members_have_changes {
     my $self = shift;
     return 1 if $self->{__members_have_changes};
     my $rule = $self->rule;
-print STDERR "\n\n\n################### in _members_have_changes()\n" if $main::printit;
+print STDERR "\n\n\n################### in _members_have_changes() use PP is ",$ENV{LIST_MOREUTILS_PP} ? 'on' : 'off' ,"\n" if $main::printit;
 if ($main::printit) {
 printf STDERR " ### There are %d %s loaded\n\n",
     scalar(() = $self->member_class_name->is_loaded),
@@ -161,7 +161,10 @@ print STDERR "### obj ",$member->id, " has changes to ",join(', ',@_),"?\n";
 next unless $member->__changes__(@_);
 print STDERR "### yes!\n",Data::Dumper::Dumper($member);
 }}
-    return any { $rule->evaluate($_) && $_->__changes__(@_) } $self->member_class_name->is_loaded;
+    return any {
+                Carp::cluck('######## in _members_have_changes block') if $main::printit;
+                $rule->evaluate($_) && $_->__changes__(@_);
+             } $self->member_class_name->is_loaded;
 }
 
 sub subset {
