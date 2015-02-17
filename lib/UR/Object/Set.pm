@@ -148,8 +148,10 @@ sub member_iterator {
 sub _members_have_changes {
     my $self = shift;
     return 1 if $self->{__members_have_changes};
+
+    my @property_names = @_;
     my $rule = $self->rule;
-    return any { $rule->evaluate($_) && $_->__changes__(@_) } $self->member_class_name->is_loaded;
+    return any { $rule->evaluate($_) && $_->__changes__(@property_names) } $self->member_class_name->is_loaded;
 }
 
 sub subset {
