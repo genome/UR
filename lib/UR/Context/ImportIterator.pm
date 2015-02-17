@@ -473,8 +473,8 @@ my $logit = $main::printit
                 ? sub { my $msg = shift; print STDERR $msg,"\n" }
                 : sub {};
 $logit->(sprintf("**** group_by is [%s]\n    aggr [%s]",
-                join(', ', $group_by ? @$group_by : ()),
-                join(', ',$aggregate ? @$aggregate: ())));
+                join(', ', $group_by ? @$group_by : ('-undef-')),
+                join(', ',$aggregate ? @$aggregate: ('-undef-'))));
     if ($group_by) {
 $logit->("in group_by section");
         # returning sets for each sub-group instead of instance objects...
