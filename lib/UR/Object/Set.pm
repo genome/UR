@@ -149,7 +149,22 @@ sub _members_have_changes {
     my $self = shift;
     return 1 if $self->{__members_have_changes};
     my $rule = $self->rule;
-    return any { $rule->evaluate($_) && $_->__changes__(@_) } $self->member_class_name->is_loaded;
+print STDERR "\n\n\n################### in _members_have_changes() use PP is ",$ENV{LIST_MOREUTILS_PP} ? 'on' : 'off' ,"\n" if $main::printit;
+if ($main::printit) {
+printf STDERR " ### There are %d %s loaded\n\n",
+    scalar(() = $self->member_class_name->is_loaded),
+    $self->member_class_name;
+foreach my $member ( $self->member_class_name->is_loaded ) {
+print STDERR "### obj ",$member->id, " evaluates?\n";
+next unless $rule->evaluate($member);
+print STDERR "### obj ",$member->id, " has changes to ",join(', ',@_),"?\n";
+next unless $member->__changes__(@_);
+print STDERR "### yes!\n",Data::Dumper::Dumper($member);
+}}
+    return any {
+                Carp::cluck('######## in _members_have_changes block') if $main::printit;
+                $rule->evaluate($_) && $_->__changes__(@_);
+             } $self->member_class_name->is_loaded;
 }
 
 sub subset {
@@ -204,7 +219,9 @@ sub __aggregate__ {
 
     # If there are no member-class objects with changes, we can just interrogate the DB
     if (! exists($cache->{$f})) {
+print STDERR "cache for $f does not exist\n" if $main::printit;
         if ($not_ds_expressable or $self->_members_have_changes(@$aggr_properties)) {
+print STDERR "\n!!! not ds express: $not_ds_expressable\n  have changes? ",$self->_members_have_changes(@$aggr_properties),"\n\n" if $main::printit;
             my $fname;
             my @fargs;
             if ($f =~ /^(\w+)\((.*)\)$/) {
@@ -219,6 +236,7 @@ sub __aggregate__ {
             $self->{__aggregates}->{$f} = $self->$local_method(@fargs);
 
         } else {
+print STDERR "\n!!! can do DB aggregate query!\n\n" if $main::printit;
             my $rule = $self->rule->add_filter(-aggregate => [$f])->add_filter(-group_by => []);
             UR::Context->current->get_objects_for_class_and_rule(
                   $self->member_class_name,
@@ -378,6 +396,8 @@ sub CAN {
                 my $self = shift;
                 my $f = $method;
                 my @aggr_properties = @_;
+print STDERR "in __aggregate_${method}__, aggr_properties ",join(', ',@aggr_properties),"\n" if $main::printit;
+# make sure @aggr_properties is column names and not property names
                 if (@aggr_properties) {
                     $f .= '(' . join(',',@aggr_properties) . ')';
                 }
