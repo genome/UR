@@ -149,11 +149,17 @@ sub _members_have_changes {
     my $self = shift;
     return 1 if $self->{__members_have_changes};
     my $rule = $self->rule;
+print STDERR "\n\n\n################### in _members_have_changes()\n" if $main::printit;
 if ($main::printit) {
+printf STDERR " ### There are %d %s loaded\n\n",
+    scalar(() = $self->member_class_name->is_loaded),
+    $self->member_class_name;
 foreach my $member ( $self->member_class_name->is_loaded ) {
+print STDERR "### obj ",$member->id, " evaluates?\n";
 next unless $rule->evaluate($member);
+print STDERR "### obj ",$member->id, " has changes to ",join(', ',@_),"?\n";
 next unless $member->__changes__(@_);
-print STDERR "member has changes to ",join(', ', @_),Data::Dumper::Dumper($member);
+print STDERR "### yes!\n",Data::Dumper::Dumper($member);
 }}
     return any { $rule->evaluate($_) && $_->__changes__(@_) } $self->member_class_name->is_loaded;
 }
