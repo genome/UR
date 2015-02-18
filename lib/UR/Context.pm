@@ -393,13 +393,16 @@ sub send_notification_to_observers {
     $sig_depth++;
     if (@matches > 1) {
         no warnings;
+        # sort by priority
         @matches = sort { $a->[2] <=> $b->[2] } @matches;
     };
     
     foreach my $callback_info (@matches) {
-        my ($callback, $note) = @$callback_info;
+        my ($callback, $note, undef, $id, $once) = @$callback_info;
+        UR::Observer->get($id)->delete() if $once;
         $callback->($subject, $property, @data);
     }
+
     $sig_depth--;
 
     return scalar(@matches);

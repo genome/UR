@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 40;
+use Test::More tests => 42;
 
 UR::Object::Type->define(
     class_name => 'URT::Parent',
@@ -154,6 +154,69 @@ is_deeply($observations,
           },
           'Callbacks were fired');
 is(get_change_count(), $change_count + 1, '1 change recorded');
+
+
+subtest 'once observers' => sub {
+    plan tests => 12;
+
+    my($parent_observer_fired, $person_observer_fired) = (0,0);
+    ok(my $person_obs = URT::Person->add_observer(aspect => 'last_name', once => 1, callback => sub { $person_observer_fired++ } ),
+        'Add once observer to "last_name" aspect of URT::Person');
+    ok(my $parent_obs = URT::Parent->add_observer(aspect => 'last_name', once => 1, callback => sub { $parent_observer_fired++ } ),
+        'Add once observer to "last_name" aspect of URT::Parent');
+
+    $observations = {};
+    ok($p1->last_name('once'), 'changed person 1');
+    is_deeply($observations,
+              { 'URT::Person' => { '' => 1, 'last_name' => 1 },
+                'URT::Parent' => { '' => 1, 'last_name' => 1 },
+              },
+              'Regular callbacks were fired') or diag explain $observations;
+    is($parent_observer_fired, 1, '"once" observer on URT::Parent was fired');
+    is($person_observer_fired, 1, '"once" observer on URT::Person was fired');
+
+    isa_ok($person_obs, 'UR::DeletedRef', 'Person observer is deleted');
+    isa_ok($parent_obs, 'UR::DeletedRef', 'Parent observer is deleted');
+
+    ($parent_observer_fired, $person_observer_fired) = (0,0);
+    $observations = {};
+    ok($p1->last_name('once again'), 'changed person 1');
+    is_deeply($observations,
+              { 'URT::Person' => { '' => 1, 'last_name' => 1 },
+                'URT::Parent' => { '' => 1, 'last_name' => 1 },
+              },
+              'Regular callbacks were fired') or diag explain $observations;
+    is($parent_observer_fired, 0, '"once" observer on URT::Parent was not fired');
+    is($person_observer_fired, 0, '"once" observer on URT::Person was not fired');
+};
+
+subtest 'once observer is removed before callback run' => sub {
+    plan tests => 5;
+
+    my $obj = URT::Person->create(first_name => 'bob', last_name => 'schmoe');
+    my $callback_run = 0;
+    our $in_observer = 0;
+    my $observer = $obj->add_observer(aspect => 'first_name',
+                                      once => 1,
+                                      callback => sub {
+                                          my($obj, $aspect, $old, $new) = @_;
+                                          local $in_observer = $in_observer + 1;
+                                          die "recursive call to observer" if $in_observer > 1;
+                                          $obj->$aspect($new . $new);  # double up the new value
+                                          $callback_run++;
+                                      }
+                                    );
+    $obj->first_name('changed');
+    is($obj->first_name, 'changedchanged', 'Observer modified the new value');
+    is($callback_run, 1, 'callback was run once');
+    isa_ok($observer, 'UR::DeletedRef', 'Observer is deleted');
+
+
+    $callback_run = 0;
+    $obj->first_name('bob');
+    is($obj->first_name, 'bob', 'Changed value back');
+    is($callback_run, 0, 'Callback was not run');
+};
 
 
 sub get_change_count {

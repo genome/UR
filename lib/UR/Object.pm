@@ -1213,6 +1213,8 @@ Adds an observer to an object, monitoring one or more of its properties for chan
 
 The specified callback is fired upon property changes which match the observation request.
 
+See L<UR::Observer> for details.
+
 =item create_mock
 
  $mock = SomeClass->create_mock(

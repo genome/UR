@@ -18,6 +18,7 @@ UR::Object::Type->define(
         aspect          => { is => 'String', is_optional => 1 },
         priority        => { is => 'Number', is_optional => 1, default_value => 1 },
         note            => { is => 'String', is_optional => 1 },
+        once            => { is => 'Boolean', is_optional => 1, default_value => 0 },
     ],
     is_transactional => 1,
 );
@@ -92,7 +93,7 @@ sub _create_or_define {
     my ($subscription, $delete_subscription);
 
     $self->_insert_record_into_all_change_subscriptions($subject_class_name, $aspect, $subject_id,
-                                                        [$callback, $self->note, $self->priority, $self->id]);
+                                                        [$callback, $self->note, $self->priority, $self->id, $self->once]);
 
     return $self;
 }
@@ -325,6 +326,12 @@ passed four parameters: $self, $aspect, $old_value, $new_value.  In this case,
 $self is the object that is changing, not the UR::Observer instance (unless,
 of course, you have created an observer on UR::Observer).  The return value of
 the callback is ignored.
+
+=item once
+
+If the 'once' attribute is true, the observer is deleted immediately after
+the callback is run.  This has the effect of running the callback only once,
+no matter how many times the observer condition is triggered.
 
 =item note
 
