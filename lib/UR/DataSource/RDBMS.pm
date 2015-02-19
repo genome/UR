@@ -2981,7 +2981,7 @@ sub _lookup_class_for_table_name {
 
 
 sub _default_save_sql_for_object {
-    my $self = shift;        
+    my $self = shift;
     my $object_to_save = shift;
     my %params = @_;
 
@@ -2989,29 +2989,9 @@ sub _default_save_sql_for_object {
 
     my $class_object = $object_to_save->__meta__;
 
-    # This object may have uncommitted changes already saved.  
-    # If so, work from the last saved data.
-    # Normally, we go with the last committed data.
-
-    my $compare_version = ($object_to_save->{'db_saved_uncommitted'} ? 'db_saved_uncommitted' : 'db_committed');
-
     # Determine what the overall save action for the object is,
     # and get a specific change summary if we're doing an update.
-
-    my ($action,$change_summary);
-    if ($object_to_save->isa('UR::Object::Ghost'))
-    {
-        $action = 'delete';
-    }                    
-    elsif ($object_to_save->{$compare_version})
-    {
-        $action = 'update';
-        $change_summary = $object_to_save->property_diff($object_to_save->{$compare_version});         
-    }
-    else
-    {
-        $action = 'insert';
-    }
+    my ($action,$change_summary) = UR::Context->current->_change_summary_for_saving_object($object_to_save);
 
     # Handle each table.  There is usually only one, unless,
     # there is inheritance within the schema.

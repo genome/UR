@@ -2681,6 +2681,31 @@ sub clear_cache {
     1;
 }
 
+sub _change_summary_for_saving_object {
+    my($self, $object_to_save) = @_;
+
+    # This object may have uncommitted changes already saved.
+    # If so, work from the last saved data.
+    # Normally, we go with the last committed data.
+    my $compare_version = ($object_to_save->{'db_saved_uncommitted'} ? 'db_saved_uncommitted' : 'db_committed');
+
+    my ($action,$change_summary);
+    if ($object_to_save->isa('UR::Object::Ghost'))
+    {
+        $action = 'delete';
+    }
+    elsif ($object_to_save->{$compare_version})
+    {
+        $action = 'update';
+        $change_summary = $object_to_save->property_diff($object_to_save->{$compare_version});
+    }
+    else
+    {
+        $action = 'insert';
+    }
+
+    return($action, $change_summary);
+}
 
 our $IS_SYNCING_DATABASE = 0;
 sub _sync_databases {
