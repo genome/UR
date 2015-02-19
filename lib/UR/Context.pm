@@ -2689,6 +2689,16 @@ sub clear_cache {
     1;
 }
 
+sub _get_changed_objects_for_sync_databases {
+    my $self = shift;
+
+    return (
+        $self->all_objects_loaded('UR::Object::Ghost'),
+        grep { $_->__changes__ } $self->all_objects_loaded('UR::Object')
+        #UR::Util->mapreduce_grep(sub { $_[0]->__changes__ },$self->all_objects_loaded('UR::Object'))
+    );
+}
+
 sub _change_summary_for_saving_object {
     my($self, $object_to_save) = @_;
 
@@ -2743,11 +2753,7 @@ sub _sync_databases {
     }
 
     # Determine what has changed.
-    my @changed_objects = (
-        $self->all_objects_loaded('UR::Object::Ghost'),
-        grep { $_->__changes__ } $self->all_objects_loaded('UR::Object')
-        #UR::Util->mapreduce_grep(sub { $_[0]->__changes__ },$self->all_objects_loaded('UR::Object'))
-    );
+    my @changed_objects = $self->_get_changed_objects_for_sync_databases();
 
     return 1 unless (@changed_objects);
 
