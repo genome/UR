@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use URT::DataSource::SomeSQLite;
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
@@ -15,6 +15,7 @@ ok($dbh, 'Got DB handle');
 my $existing_obj_id = 99;
 &setup_classes_and_db();
 
+my($created_obj_id, $created_obj_name);
 subtest create => sub {
     plan tests => 6;
 
@@ -26,6 +27,7 @@ subtest create => sub {
 
     my $internal_obj = URT::NamedThing->create(name => 'created');
     ok($internal_obj, 'Create object in transaction');
+    ($created_obj_id, $created_obj_name) = ($internal_obj->id, $internal_obj->name);
 
     ok($trans->commit(), 'commit() transaction');
 
@@ -52,6 +54,28 @@ subtest delete => sub {
     ok($trans->commit(), 'commit transaction');
     ok(! get_row_from_db_with_id($existing_obj_id), 'Object is deleted');
 };
+
+subtest change => sub {
+    plan tests => 6;
+
+    is_deeply(get_row_from_db_with_id($created_obj_id),
+            [ $created_obj_id, $created_obj_name ],
+            'Object previously created and saved is still in DB');
+    ok(my $obj = URT::NamedThing->get($created_obj_id), 'Got object previously created and saved');
+
+    my $trans = UR::Context::SyncableTransaction->begin();
+    ok($trans, 'begin syncable transaction');
+
+    my $altered_name = $created_obj_name . '_foo';
+    ok($obj->name($altered_name), 'Change name');
+
+    ok($trans->commit(), 'Commit transaction');
+
+    is_deeply(get_row_from_db_with_id($created_obj_id),
+            [ $created_obj_id, $altered_name ],
+            'Name is changed in DB');
+};
+
 
 sub get_row_from_db_with_id {
     my $id = shift;
