@@ -2557,6 +2557,14 @@ sub commit {
     }
     $self->__signal_change__('commit',1);
 
+    $self->_after_commit();
+
+    return 1;
+}
+
+sub _after_commit {
+    my $self = shift;
+
     foreach ( $self->all_objects_loaded('UR::Object') ) {
         delete $_->{'_change_count'};
     }
