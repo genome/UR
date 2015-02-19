@@ -6,12 +6,13 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 use URT::DataSource::SomeSQLite;
 
 my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 ok($dbh, 'Got DB handle');
 
+my $existing_obj_id = 99;
 &setup_classes_and_db();
 
 subtest create => sub {
@@ -37,6 +38,20 @@ subtest create => sub {
     ok(! $row, 'Object external to transaction was not saved');
 };
 
+subtest delete => sub {
+    plan tests => 5;
+
+    ok(get_row_from_db_with_id($existing_obj_id), 'Object exists in db');
+
+    my $trans = UR::Context::SyncableTransaction->begin();
+    ok($trans, 'begin syncable transaction');
+
+    my $obj = URT::NamedThing->get($existing_obj_id);
+    ok($obj->delete, 'delete object');
+
+    ok($trans->commit(), 'commit transaction');
+    ok(! get_row_from_db_with_id($existing_obj_id), 'Object is deleted');
+};
 
 sub get_row_from_db_with_id {
     my $id = shift;
@@ -51,7 +66,7 @@ sub setup_classes_and_db {
     ok( $dbh->do("create table named_thing (named_thing_id integer PRIMARY KEY, name varchar NOT NULL)"),
         'Created named_thing table');
 
-    $dbh->do("insert into named_thing values(99, 'bob')");
+    $dbh->do("insert into named_thing values($existing_obj_id, 'bob')");
     ok($dbh->commit(), 'DB commit');
 
     UR::Object::Type->define(
