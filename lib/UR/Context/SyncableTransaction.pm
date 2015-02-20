@@ -81,7 +81,6 @@ sub _get_changed_objects_for_sync_databases {
 
     my $created = $change_data->{'++created++'};
     foreach my $class ( keys %$created ) {
-$DB::single=1;
         my @ids = keys %{ $created->{$class} };
         push @objects, $class->get(\@ids);
     }
