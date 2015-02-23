@@ -387,24 +387,30 @@ sub _normalize_class_description {
     return $desc;
 }
 
-sub _normalize_class_description_impl {
-    my $class = shift;
-    my %old_class = @_;
+sub _canonicalize_class_params {
+    my($params, $mappings) = @_;
 
-    if (exists $old_class{extra}) {
-        %old_class = (%{delete $old_class{extra}}, %old_class);
+    my %canon_params;
+
+    for my $mapping ( @$mappings ) {
+        my ($primary_field_name, @alternate_field_names) = @$mapping;
+        my @all_fields = ($primary_field_name, @alternate_field_names);
+        my @values = grep { defined($_) } delete @$params{@all_fields};
+        if (@values > 1) {
+            Carp::confess(
+                "Multiple values in for field "
+                . join("/", @all_fields)
+            );
+        }
+        elsif (@values == 1) {
+            $canon_params{$primary_field_name} = $values[0];
+        }
     }
 
-    my $class_name = delete $old_class{class_name};
+    return %canon_params;
+}
 
-    my %new_class = (
-        class_name      => $class_name,
-        is_singleton    => $UR::Object::Type::defaults{'is_singleton'},
-        is_final        => $UR::Object::Type::defaults{'is_final'},
-        is_abstract     => $UR::Object::Type::defaults{'is_abstract'},
-    );
-
-    for my $mapping (
+our @CLASS_DESCRIPTION_KEY_MAPPINGS = (
         [ class_name            => qw//],
         [ type_name             => qw/english_name/],
         [ is                    => qw/inheritance extends isa is_a/],
@@ -438,20 +444,25 @@ sub _normalize_class_description_impl {
         [ subclassify_by_version => qw//],
         [ meta_class_name        => qw//],
         [ valid_signals          => qw//],
-    ) {        
-        my ($primary_field_name, @alternate_field_names) = @$mapping;                
-        my @all_fields = ($primary_field_name, @alternate_field_names);
-        my @values = grep { defined($_) } delete @old_class{@all_fields};
-        if (@values > 1) {
-            Carp::confess(
-                "Multiple values in class definition for $class_name for field "
-                . join("/", @all_fields)
-            );
-        }
-        elsif (@values == 1) {
-            $new_class{$primary_field_name} = $values[0];
-        }
+);
+
+sub _normalize_class_description_impl {
+    my $class = shift;
+    my %old_class = @_;
+
+    if (exists $old_class{extra}) {
+        %old_class = (%{delete $old_class{extra}}, %old_class);
     }
+
+    my $class_name = delete $old_class{class_name};
+
+    my %new_class = (
+        class_name      => $class_name,
+        is_singleton    => $UR::Object::Type::defaults{'is_singleton'},
+        is_final        => $UR::Object::Type::defaults{'is_final'},
+        is_abstract     => $UR::Object::Type::defaults{'is_abstract'},
+        _canonicalize_class_params(\%old_class, \@CLASS_DESCRIPTION_KEY_MAPPINGS),
+    );
 
     if (my $pp = $new_class{subclass_description_preprocessor}) {
         if (!ref($pp)) {
