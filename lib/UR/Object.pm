@@ -6,6 +6,7 @@ use strict;
 require UR;
 
 use Scalar::Util qw(looks_like_number);
+use List::MoreUtils qw(any);
 
 our @ISA = ('UR::ModuleBase');
 our $VERSION = "0.43"; # UR $VERSION;;
@@ -93,6 +94,11 @@ sub __self__ {
     else {
         return;
     }
+}
+
+sub does {
+    my($self, $role_name) = @_;
+    any { $role_name eq $_ } @{ $self->__meta__->roles };
 }
 
 

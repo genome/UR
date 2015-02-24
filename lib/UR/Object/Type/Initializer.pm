@@ -7,6 +7,8 @@ use strict;
 use warnings;
 require UR;
 
+use UR::Util;
+
 BEGIN {
     # Perl 5.10 did not require mro in order to call get_mro but it looks
     # like that was "fixed" in newer version.
@@ -360,6 +362,8 @@ sub _normalize_class_description {
         }
     }
 
+    $class->compose_roles($desc) unless $bootstrapping;
+
     # we previously handled property meta extensions when normalizing the property
     # now we merely save unrecognized things
     # this is now done afterward so that parent classes can preprocess their subclasses descriptions before extending
@@ -528,6 +532,7 @@ sub _normalize_class_description_impl {
     }
 
     _ensure_arrayref(\%new_class, 'valid_signals');
+    _ensure_arrayref(\%new_class, 'roles');
 
     for my $field (qw/is id_by has relationships constraints/) {
         next unless exists $new_class{$field};
@@ -817,6 +822,7 @@ sub _process_class_definition_property_keys {
     my($old_class, $new_class) = @_;
 
     my($class_name, $instance_properties, $meta_properties) = @$new_class{'class_name', 'has','attributes_have'};
+    $class_name ||= $new_class->{role_name};  # This is used by role construction, too
 
     # Flatten and format the property list(s) in the class description.
     # NOTE: we normalize the details at the end of normalizing the class description.
@@ -975,6 +981,86 @@ sub _process_class_definition_property_keys {
             }
         }
 
+    }
+}
+
+sub compose_roles {
+    my($class, $desc) = @_;
+
+    my $class_name = $desc->{class_name};
+
+    return unless ($desc->{roles} and @{ $desc->{roles} });
+    my @role_objs = map { UR::Role->get($_) } @{ $desc->{roles} };
+    return unless @role_objs;
+
+    my %added_property_source = map { $_ => "class $class_name" } keys %{ $desc->{has} };
+
+    my(%properties_to_add, %meta_properties_to_add);
+    foreach my $role ( @role_objs ) {
+        my $role_properties = $role->has;
+        while( my($property_name, $prop_definition) = each( %$role_properties )) {
+            if (my $conflict = $added_property_source{$property_name}) {
+                Carp::croak(sprintf('Cannot compose role %s: Property %s conflicts with property in %s',
+                                    $role->role_name, $property_name, $conflict));
+            }
+
+            $added_property_source{$property_name} = 'role '.$role->role_name;
+            $properties_to_add{$property_name} = $prop_definition;
+        }
+
+        foreach my $meta_prop_name ( $role->meta_properties_to_compose_into_classes ) {
+            next unless $role->$meta_prop_name;
+            if ($desc->{$meta_prop_name}) {
+                Carp::croak('Cannot compose role ' . $role->role_name
+                            . ": Meta property $meta_prop_name is specified in the class definition and in the role");
+            }
+            if (exists $meta_properties_to_add{$meta_prop_name}) {
+                Carp::croak('Cannot compose role ' . $role->role_name
+                            . ": Meta property $meta_prop_name is already specified in another role for this class");
+            }
+            $meta_properties_to_add{$meta_prop_name} = $role->$meta_prop_name;
+        }
+    }
+
+    _import_methods_from_roles($class_name, \@role_objs);
+
+    my @meta_prop_names = keys %meta_properties_to_add;
+    @$desc{@meta_prop_names} = @meta_properties_to_add{@meta_prop_names};
+
+    my @property_names = keys %properties_to_add;
+     @{$desc->{has}}{@property_names} = @properties_to_add{@property_names};
+}
+
+sub _import_methods_from_roles {
+    my($class_name, $roles) = @_;
+
+    my $this_class_methods = UR::Util::coderefs_for_package($class_name);
+
+    my(%all_imported_methods, %method_sources);
+    foreach my $role ( @$roles ) {
+        my $this_role_methods = $role->methods;
+        my @this_role_method_names = keys( %$this_role_methods );
+        my @conflicting = grep { ! exists($this_class_methods->{$_}) }  # not a conflict if the class overrides
+                          grep { defined }
+                          @all_imported_methods{ @this_role_method_names };
+
+        if (@conflicting) {
+            my $plural = scalar(@conflicting) > 1 ? 's' : '';
+            Carp::croak('Cannot compose role ', $role->role_name
+                        . ": method${plural} conflicts with those defined in other roles\n\t"
+                        . join("\n\t", join('::', map { ( $method_sources{$_}, $_ ) } @conflicting))
+                        . "\n");
+        }
+        @method_sources{ @this_role_method_names } = ($role->role_name) x @this_role_method_names;
+        @all_imported_methods{ @this_role_method_names } = @$this_role_methods{ @this_role_method_names };
+    }
+
+    foreach my $name ( keys %all_imported_methods ) {
+        Sub::Install::install_sub({
+            code => $all_imported_methods{$name},
+            as => $name,
+            into => $class_name,
+        });
     }
 }
 

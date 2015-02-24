@@ -289,6 +289,7 @@ UR::Object::Type->define(
         # UR::Namespaces are singletons referenced through their name
         namespace_meta                  => { is => 'UR::Namespace', id_by => 'namespace' },
         is                              => { is => 'ARRAY', is_mutable => 0, doc => 'List of the parent class names' },
+        roles                           => { is => 'ARRAY', is_mutable => 0, is_optional => 1, doc => 'List of the roles consumed by this class' },
 
         # linking to the direct parents, and the complete ancestry
         parent_class_metas              => { is => 'UR::Object::Type', id_by => 'is',
@@ -431,6 +432,7 @@ require Command;
 
 $UR::initialized = 1;
 
+require UR::Role;
 require UR::Change;
 require UR::Context::Root;
 require UR::Context::Process;
