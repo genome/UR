@@ -694,6 +694,26 @@ sub use_package_optimistically {
     return $INC{$file};
 }
 
+# return a hashref of subroutine names => coderefs
+sub coderefs_for_package {
+    my $package = shift;
+
+    my %stash = do {
+        no strict 'refs';
+        my $stash_name = $package . '::';
+        %$stash_name;
+    };
+
+    my %subs;
+    foreach my $name ( keys %stash ) {
+        my $glob = $stash{$name};
+        next unless my $coderef = *$glob{CODE};
+        $subs{$name} = $coderef;
+    }
+    return \%subs;
+}
+
+
 1;
 
 =pod
