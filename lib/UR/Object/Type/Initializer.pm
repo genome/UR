@@ -410,10 +410,8 @@ sub _canonicalize_class_params {
     return %canon_params;
 }
 
-our @CLASS_DESCRIPTION_KEY_MAPPINGS = (
-        [ class_name            => qw//],
-        [ type_name             => qw/english_name/],
-        [ is                    => qw/inheritance extends isa is_a/],
+our @CLASS_DESCRIPTION_KEY_MAPPINGS_COMMON_TO_CLASSES_AND_ROLES = (
+        [ roles                 => qw//],
         [ is_abstract           => qw/abstract/],
         [ is_final              => qw/final/],
         [ is_singleton          => qw//],
@@ -429,7 +427,6 @@ our @CLASS_DESCRIPTION_KEY_MAPPINGS = (
         [ namespace             => qw//],
         [ schema_name           => qw//],
         [ data_source_id        => qw/data_source instance/],
-        [ table_name            => qw/sql dsmap/],
         [ select_hint            => qw/query_hint/],
         [ join_hint             => qw//],
         [ subclassify_by        => qw/sub_classification_property_name/],
@@ -444,6 +441,14 @@ our @CLASS_DESCRIPTION_KEY_MAPPINGS = (
         [ subclassify_by_version => qw//],
         [ meta_class_name        => qw//],
         [ valid_signals          => qw//],
+);
+
+my @CLASS_DESCRIPTION_KEY_MAPPINGS = (
+        @CLASS_DESCRIPTION_KEY_MAPPINGS_COMMON_TO_CLASSES_AND_ROLES,
+        [ class_name            => qw//],
+        [ type_name             => qw/english_name/],
+        [ is                    => qw/inheritance extends isa is_a/],
+        [ table_name            => qw/sql dsmap/],
 );
 
 sub _normalize_class_description_impl {
