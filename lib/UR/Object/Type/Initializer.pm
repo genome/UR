@@ -617,164 +617,7 @@ sub _normalize_class_description_impl {
                     . ")");
     }
 
-    # Flatten and format the property list(s) in the class description.
-    # NOTE: we normalize the details at the end of normalizing the class description.
-    my @keys = _class_definition_property_keys_in_processing_order(\%old_class);
-    foreach my $key ( @keys ) {
-        # parse the key to see if we're looking at instance or meta attributes,
-        # and take the extra words as additional attribute meta-data.
-        my @added_property_meta;
-        my $properties;
-        if ($key =~ /has/) {
-            @added_property_meta =
-                grep { $_ ne 'has' } split(/[_-]/,$key);
-            $properties = $instance_properties;
-        }
-        elsif ($key =~ /attributes_have/) {
-            @added_property_meta =
-                grep { $_ ne 'attributes' and $_ ne 'have' } split(/[_-]/,$key);
-            $properties = $meta_properties;
-        }
-        elsif ($key eq 'id_implied') {
-            # these are additions to the regular "has" list from complex identity properties
-            $properties = $instance_properties;
-        }
-        else {
-            die "Odd key $key?";
-        }
-        @added_property_meta = map { 'is_' . $_ => 1 } @added_property_meta;
-
-        # the property data can be a string, array, or hash as they come in
-        # convert string, hash and () into an array
-        my $property_data = delete $old_class{$key};
-
-        my @tmp;
-        if (!ref($property_data)) {
-            if (defined($property_data)) {
-                @tmp  = split(/\s+/, $property_data);
-            }
-            else {
-                @tmp = ();
-            }
-        }
-        elsif (ref($property_data) eq 'HASH') {
-            @tmp = map {
-                    ($_ => $property_data->{$_})
-                } sort keys %$property_data;
-        }
-        elsif (ref($property_data) eq 'ARRAY') {
-            @tmp = @$property_data;
-        }
-        else {
-            die "Unrecognized data $property_data appearing as property list!";
-        }
-
-        # process the array of property specs
-        my $pos = 0;
-        while (my $name = shift @tmp) {
-            my $params;
-            if (ref($tmp[0])) {
-                $params = shift @tmp;
-                unless (ref($params) eq 'HASH') {
-                    my $seen_type = ref($params);
-                    Carp::confess("class $class_name property $name has a $seen_type reference instead of a hashref describing its meta-attributes!");
-                }
-                %$params = (@added_property_meta, %$params) if @added_property_meta;
-            }
-            else {
-                $params = { @added_property_meta };
-            }
-
-            unless (exists $params->{'position_in_module_header'}) {
-                $params->{'position_in_module_header'} = $pos++;
-            }
-            unless (exists $params->{is_specified_in_module_header}) {
-                $params->{is_specified_in_module_header} = $class_name . '::' . $key;
-            }
-
-            # Indirect properties can mention the same property name more than once.  To
-            # avoid stomping over existing property data with this other property data,
-            # merge the new info into the existing hash.  Otherwise, the new property name
-            # gets an empty hash of info
-            if ($properties->{$name}) {
-                # this property already exists, but is also implied by some other property which added it to the end of the listed
-                # extend the existing definition
-                foreach my $key ( keys %$params ) {
-                    next if ($key eq 'is_specified_in_module_header' || $key eq 'position_in_module_header');
-                    # once a property gets set to is_optional => 0, it stays there, even if it's later set to 1
-                    next if ($key eq 'is_optional'
-                             and
-                             exists($properties->{$name}->{'is_optional'})
-                             and
-                             defined($properties->{$name}->{'is_optional'})
-                             and
-                             $properties->{$name}->{'is_optional'} == 0);
-                    $properties->{$name}->{$key} = $params->{$key};
-                }
-                $params = $properties->{$name};
-            } else {
-                $properties->{$name} = $params;
-            }
-
-            # a single calculate_from can be a simple string, convert to a listref
-            if (my $calculate_from = $params->{'calculate_from'}) {
-                $params->{'calculate_from'} = [ $calculate_from ] unless (ref($calculate_from) eq 'ARRAY');
-            }
-
-            if (my $id_by = $params->{id_by}) {
-                $id_by = [ $id_by ] unless ref($id_by) eq 'ARRAY';
-                my @id_by_names;
-                while (@$id_by) {
-                    my $id_name = shift @$id_by;
-                    my $params2;
-                    if (ref($id_by->[0])) {
-                        $params2 = shift @$id_by;
-                    }
-                    else {
-                        $params2 = {};
-                    }
-                    for my $p (@UR::Object::Type::meta_id_ref_shared_properties) {
-                        if (exists $params->{$p}) {
-                            $params2->{$p} = $params->{$p};
-                        }
-                    }
-                    $params2->{implied_by} = $name;
-                    $params2->{is_specified_in_module_header} = 0;
-
-                    push @id_by_names, $id_name;
-                    push @tmp, $id_name, $params2;
-                }
-                $params->{id_by} = \@id_by_names;
-            }
-
-            if (my $id_class_by = $params->{'id_class_by'}) {
-                if (ref $id_class_by) {
-                    Carp::croak("Cannot initialize class $class_name: "
-                                . "Property $name has an 'id_class_by' that is not a plain string");
-                }
-                push @tmp, $id_class_by, { implied_by => $name, is_specified_in_module_header => 0 };
-            }
-
-        } # next property in group
-
-        # id-by properties' metadata can influence the id-ed-by property metadata
-        for my $pdata (values %$properties) {
-            next unless $pdata->{id_by};
-            for my $id_property (@{ $pdata->{id_by} }) {
-                my $id_pdata = $properties->{$id_property};
-                for my $p (@UR::Object::Type::meta_id_ref_shared_properties) {
-                    if (exists $id_pdata->{$p} xor exists $pdata->{$p}) {
-                        # if one or the other specifies a value, copy it to the one that's missing
-                        $id_pdata->{$p} = $pdata->{$p} = $id_pdata->{$p} || $pdata->{$p};
-                    } elsif (!exists $id_pdata->{$p} and !exists $pdata->{$p} and exists $UR::Object::Property::defaults{$p}) {
-                        # if neither has a value, use the default for both
-                        $id_pdata->{$p} = $pdata->{$p} = $UR::Object::Property::defaults{$p};
-                    }
-                }
-            }
-        }
-
-    } # next group of properties
+    _process_class_definition_property_keys(\%old_class, \%new_class);
 
     # NOT ENABLED YET
     if (0) {
@@ -958,6 +801,172 @@ sub _normalize_class_description_impl {
     return $desc;
 }
 
+sub _process_class_definition_property_keys {
+    my($old_class, $new_class) = @_;
+
+    my($class_name, $instance_properties, $meta_properties) = @$new_class{'class_name', 'has','attributes_have'};
+
+    # Flatten and format the property list(s) in the class description.
+    # NOTE: we normalize the details at the end of normalizing the class description.
+    my @keys = _class_definition_property_keys_in_processing_order($old_class);
+    foreach my $key ( @keys ) {
+        # parse the key to see if we're looking at instance or meta attributes,
+        # and take the extra words as additional attribute meta-data.
+        my @added_property_meta;
+        my $properties;
+        if ($key =~ /has/) {
+            @added_property_meta =
+                grep { $_ ne 'has' } split(/[_-]/,$key);
+            $properties = $instance_properties;
+        }
+        elsif ($key =~ /attributes_have/) {
+            @added_property_meta =
+                grep { $_ ne 'attributes' and $_ ne 'have' } split(/[_-]/,$key);
+            $properties = $meta_properties;
+        }
+        elsif ($key eq 'id_implied') {
+            # these are additions to the regular "has" list from complex identity properties
+            $properties = $instance_properties;
+        }
+        else {
+            die "Odd key $key?";
+        }
+        @added_property_meta = map { 'is_' . $_ => 1 } @added_property_meta;
+
+        # the property data can be a string, array, or hash as they come in
+        # convert string, hash and () into an array
+        my $property_data = delete $old_class->{$key};
+
+        my @tmp;
+        if (!ref($property_data)) {
+            if (defined($property_data)) {
+                @tmp  = split(/\s+/, $property_data);
+            }
+            else {
+                @tmp = ();
+            }
+        }
+        elsif (ref($property_data) eq 'HASH') {
+            @tmp = map {
+                    ($_ => $property_data->{$_})
+                } sort keys %$property_data;
+        }
+        elsif (ref($property_data) eq 'ARRAY') {
+            @tmp = @$property_data;
+        }
+        else {
+            die "Unrecognized data $property_data appearing as property list!";
+        }
+
+        # process the array of property specs
+        my $pos = 0;
+        while (my $name = shift @tmp) {
+            my $params;
+            if (ref($tmp[0])) {
+                $params = shift @tmp;
+                unless (ref($params) eq 'HASH') {
+                    my $seen_type = ref($params);
+                    Carp::confess("class $class_name property $name has a $seen_type reference instead of a hashref describing its meta-attributes!");
+                }
+                %$params = (@added_property_meta, %$params) if @added_property_meta;
+            }
+            else {
+                $params = { @added_property_meta };
+            }
+
+            unless (exists $params->{'position_in_module_header'}) {
+                $params->{'position_in_module_header'} = $pos++;
+            }
+            unless (exists $params->{is_specified_in_module_header}) {
+                $params->{is_specified_in_module_header} = $class_name . '::' . $key;
+            }
+
+            # Indirect properties can mention the same property name more than once.  To
+            # avoid stomping over existing property data with this other property data,
+            # merge the new info into the existing hash.  Otherwise, the new property name
+            # gets an empty hash of info
+            if ($properties->{$name}) {
+                # this property already exists, but is also implied by some other property which added it to the end of the listed
+                # extend the existing definition
+                foreach my $key ( keys %$params ) {
+                    next if ($key eq 'is_specified_in_module_header' || $key eq 'position_in_module_header');
+                    # once a property gets set to is_optional => 0, it stays there, even if it's later set to 1
+                    next if ($key eq 'is_optional'
+                             and
+                             exists($properties->{$name}->{'is_optional'})
+                             and
+                             defined($properties->{$name}->{'is_optional'})
+                             and
+                             $properties->{$name}->{'is_optional'} == 0);
+                    $properties->{$name}->{$key} = $params->{$key};
+                }
+                $params = $properties->{$name};
+            } else {
+                $properties->{$name} = $params;
+            }
+
+            # a single calculate_from can be a simple string, convert to a listref
+            if (my $calculate_from = $params->{'calculate_from'}) {
+                $params->{'calculate_from'} = [ $calculate_from ] unless (ref($calculate_from) eq 'ARRAY');
+            }
+
+            if (my $id_by = $params->{id_by}) {
+                $id_by = [ $id_by ] unless ref($id_by) eq 'ARRAY';
+                my @id_by_names;
+                while (@$id_by) {
+                    my $id_name = shift @$id_by;
+                    my $params2;
+                    if (ref($id_by->[0])) {
+                        $params2 = shift @$id_by;
+                    }
+                    else {
+                        $params2 = {};
+                    }
+                    for my $p (@UR::Object::Type::meta_id_ref_shared_properties) {
+                        if (exists $params->{$p}) {
+                            $params2->{$p} = $params->{$p};
+                        }
+                    }
+                    $params2->{implied_by} = $name;
+                    $params2->{is_specified_in_module_header} = 0;
+
+                    push @id_by_names, $id_name;
+                    push @tmp, $id_name, $params2;
+                }
+                $params->{id_by} = \@id_by_names;
+            }
+
+            if (my $id_class_by = $params->{'id_class_by'}) {
+                if (ref $id_class_by) {
+                    Carp::croak("Cannot initialize class $class_name: "
+                                . "Property $name has an 'id_class_by' that is not a plain string");
+                }
+                push @tmp, $id_class_by, { implied_by => $name, is_specified_in_module_header => 0 };
+            }
+
+        } # next property in group
+
+        # id-by properties' metadata can influence the id-ed-by property metadata
+        for my $pdata (values %$properties) {
+            next unless $pdata->{id_by};
+            for my $id_property (@{ $pdata->{id_by} }) {
+                my $id_pdata = $properties->{$id_property};
+                for my $p (@UR::Object::Type::meta_id_ref_shared_properties) {
+                    if (exists $id_pdata->{$p} xor exists $pdata->{$p}) {
+                        # if one or the other specifies a value, copy it to the one that's missing
+                        $id_pdata->{$p} = $pdata->{$p} = $id_pdata->{$p} || $pdata->{$p};
+                    } elsif (!exists $id_pdata->{$p} and !exists $pdata->{$p} and exists $UR::Object::Property::defaults{$p}) {
+                        # if neither has a value, use the default for both
+                        $id_pdata->{$p} = $pdata->{$p} = $UR::Object::Property::defaults{$p};
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+# Return the order to process the has, has_optional, has_constant, etc keys
 sub _class_definition_property_keys_in_processing_order {
     my $class_hashref = shift;
 
