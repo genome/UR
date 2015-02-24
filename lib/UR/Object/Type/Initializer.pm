@@ -522,16 +522,7 @@ sub _normalize_class_description_impl {
         $new_class{'doc'} = undef;
     }
 
-    if ($new_class{'valid_signals'}) {
-        if (!ref($new_class{'valid_signals'})) {
-            # If it's a plain string, wrap it into an arrayref
-            $new_class{'valid_signals'} = [ $new_class{'valid_signals'} ];
-        } elsif (ref($new_class{'valid_signals'}) ne 'ARRAY') {
-            Carp::confess("The 'valid_signals' metadata for class $class_name must be an arrayref");
-        }
-    } else {
-        $new_class{'valid_signals'} = [];
-    }
+    _ensure_arrayref(\%new_class, 'valid_signals');
 
     for my $field (qw/is id_by has relationships constraints/) {
         next unless exists $new_class{$field};
@@ -799,6 +790,22 @@ sub _normalize_class_description_impl {
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $desc->{meta_class_name} ||= $meta_class_name;
     return $desc;
+}
+
+sub _ensure_arrayref {
+    my($new_class, $key) = @_;
+
+    if ($new_class->{$key}) {
+        if (!ref($new_class->{$key})) {
+            # If it's a plain string, wrap it into an arrayref
+            $new_class->{$key} = [ $new_class->{$key} ];
+        } elsif (ref($new_class->{$key}) ne 'ARRAY') {
+            my $class_name = $new_class->{class_name};
+            Carp::confess("The '$key' metadata for class $class_name must be an arrayref");
+        }
+    } else {
+        $new_class->{$key} = [];
+    }
 }
 
 sub _process_class_definition_property_keys {
