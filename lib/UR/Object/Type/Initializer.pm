@@ -977,7 +977,9 @@ sub compose_roles {
     my $class_name = $desc->{class_name};
 
     return unless ($desc->{roles} and @{ $desc->{roles} });
-    my @role_objs = map { UR::Role->get($_) } @{ $desc->{roles} };
+    my @role_objs = map
+                        { UR::Role->get($_) || Carp::croak("Role '$_' not found") }
+                        @{ $desc->{roles} };
     return unless @role_objs;
 
     $class->_validate_role_requirements($desc);

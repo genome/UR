@@ -9,7 +9,7 @@ use lib File::Basename::dirname(__FILE__).'/../..';
 use URT;
 
 subtest basic => sub {
-    plan tests => 9;
+    plan tests => 10;
 
     role URT::BasicRole {
         has => [
@@ -37,6 +37,15 @@ subtest basic => sub {
     foreach my $method ( qw( required_property role_property regular_property role_method required_method ) ) {
         ok($o->$method, "call $method");
     }
+
+    throws_ok
+        {
+            class URT::ClassWithBogusRole {
+                roles => ['Bogus'],
+            }
+        }
+        qr(Role 'Bogus' not found),
+        'Could not create class with a bogus role';
 };
 
 subtest 'multiple roles' => sub {
