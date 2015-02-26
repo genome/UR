@@ -984,7 +984,7 @@ sub compose_roles {
 
     my %added_property_source = map { $_ => "class $class_name" } keys %{ $desc->{has} };
 
-    my(%properties_to_add, %meta_properties_to_add);
+    my(%properties_to_add, %meta_properties_to_add, %source_for_meta_properties_to_add);
     foreach my $role ( @role_objs ) {
         my @role_property_names = $role->property_names;
         foreach my $property_name ( @role_property_names ) {
@@ -999,16 +999,18 @@ sub compose_roles {
         }
 
         foreach my $meta_prop_name ( $role->meta_properties_to_compose_into_classes ) {
-            next unless $role->$meta_prop_name;
+            next unless defined $role->$meta_prop_name;
             if ($desc->{$meta_prop_name}) {
                 Carp::croak('Cannot compose role ' . $role->role_name
                             . ": Meta property $meta_prop_name is specified in the class definition and in the role");
             }
             if (exists $meta_properties_to_add{$meta_prop_name}) {
                 Carp::croak('Cannot compose role ' . $role->role_name
-                            . ": Meta property $meta_prop_name is already specified in another role for this class");
+                            . ": Meta property $meta_prop_name is already specified in another role for this class"
+                            . " ($source_for_meta_properties_to_add{$meta_prop_name})");
             }
             $meta_properties_to_add{$meta_prop_name} = $role->$meta_prop_name;
+            $source_for_meta_properties_to_add{$meta_prop_name} = $role->role_name;
         }
     }
 
