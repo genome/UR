@@ -713,6 +713,28 @@ sub coderefs_for_package {
     return \%subs;
 }
 
+# Given a key in a hashref, if the value is a scalar, wrap it in an arrayref
+# used by the class initializer to allow some keys in a class definition to
+# be specified as simple scalars that are normalized to be an arrayref.
+# Returns false if the value isn't an arrayref or scalar.
+sub ensure_arrayref {
+    my($new_class, $key) = @_;
+
+    if ($new_class->{$key}) {
+        if (!ref($new_class->{$key})) {
+            # If it's a plain string, wrap it into an arrayref
+            $new_class->{$key} = [ $new_class->{$key} ];
+        } elsif (ref($new_class->{$key}) ne 'ARRAY') {
+            my $class_name = $new_class->{class_name};
+            return 0;
+        }
+    } else {
+        $new_class->{$key} = [];
+    }
+    return 1;
+}
+
+
 
 1;
 
