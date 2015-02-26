@@ -1,6 +1,7 @@
 use strict;
 use warnings;
-use Test::More tests=> 2;
+use Test::More tests=> 3;
+use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -65,4 +66,76 @@ subtest 'multiple roles' => sub {
     foreach my $method_name ( qw( first_method second_method class_method ) ) {
         ok(URT::ClassWithMultipleRoles->can($method_name), "Can $method_name");
     }
+};
+
+subtest requires => sub {
+    plan tests => 5;
+
+    role URT::RequiresPropertyRole {
+        has => [ 'role_property' ],
+        requires => ['required_property'],
+    };
+
+    throws_ok
+        {
+            class URT::RequiresPropertyClass {
+                has => [ 'foo' ],
+                roles => 'URT::RequiresPropertyRole',
+            }
+        }
+        qr/missing required property or method 'required_property'/,
+        'Omitting a required property throws an exception';
+
+
+
+    role URT::RequiresPropertyAndMethodRole {
+        requires => ['required_method', 'required_property' ],
+    };
+
+    sub URT::RequiresPropertyAndMethodHasMethod::required_method { 1 }
+    throws_ok
+        {
+            class URT::RequiresPropertyAndMethodHasMethod {
+                has => ['foo'],
+                roles => 'URT::RequiresPropertyAndMethodRole',
+            }
+        }
+        qr/missing required property or method 'required_property'/,
+        'Omitting a required property throws an exception';
+
+
+    throws_ok
+        {
+            class URT::RequiresPropertyAndMethodHasProperty {
+                has => ['required_property'],
+                roles => 'URT::RequiresPropertyAndMethodRole',
+            }
+        }
+        qr/missing required property or method 'required_method'/,
+        'Omitting a required method throws an exception';
+
+
+    sub URT::RequiesPropertyAndMethodHasBoth::required_method { 1 }
+    lives_ok
+        {
+            class URT::RequiesPropertyAndMethodHasBoth {
+                has => ['required_property'],
+                roles => 'URT::RequiresPropertyAndMethodRole',
+            }
+        }
+        'Created class satisfying requirements';
+
+    role URT::RequiresPropertyFromOtherRole {
+        requires => ['role_property'],
+    };
+
+    lives_ok
+        {
+            class URT::RequiresBothRoles {
+                has => ['required_property'],
+                roles => ['URT::RequiresPropertyRole', 'URT::RequiresPropertyFromOtherRole'],
+            }
+        }
+        'Created class with role requiring method from other role';
+
 };

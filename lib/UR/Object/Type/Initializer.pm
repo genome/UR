@@ -1023,6 +1023,29 @@ sub compose_roles {
      @{$desc->{has}}{@property_names} = @properties_to_add{@property_names};
 }
 
+sub _validate_role_requirements {
+    my($self, $desc) = @_;
+
+    my $class_name = $desc->{class_name};
+    my %found_properties_and_methods = map { $_ => 1 } keys %{ $desc->{has} };
+
+    foreach my $role_name ( @{ $desc->{roles} } ) {
+        my $role = UR::Role->get($role_name);
+        foreach my $requirement ( @{ $role->requires } ) {
+            unless ($found_properties_and_methods{ $requirement } ||= $class_name->can($requirement)) {
+                my $role_name = $role->role_name;
+                Carp::croak("Cannot compose role $role_name: missing required property or method '$requirement'");
+            }
+        }
+
+        # Properties and methods from this role can satisfy requirements for later roles
+        foreach my $name ( $role->property_names, $role->method_names ) {
+            $found_properties_and_methods{$name} = 1;
+        }
+    }
+
+}
+
 sub _import_methods_from_roles {
     my($class_name, $roles) = @_;
 

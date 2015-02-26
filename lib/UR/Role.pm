@@ -31,7 +31,12 @@ sub property_data {
 
 sub property_names {
     my $self = shift;
-    return keys %{ $self->{has} };
+    return keys %{ $self->has };
+}
+
+sub method_names {
+    my $self = shift;
+    return keys %{ $self->methods };
 }
 
 sub meta_properties_to_compose_into_classes {
@@ -71,6 +76,10 @@ sub _normalize_role_description {
         attributes_have => {},
         UR::Object::Type::_canonicalize_class_params($old_role, \@ROLE_DESCRIPTION_KEY_MAPPINGS),
     };
+
+    unless (UR::Util::ensure_arrayref($new_role, 'requires')) {
+        Carp::croak("The 'requires' metadata for role $role_name must be an arrayref");
+    }
 
     # UR::Object::Type::_normalize_class_description_impl() copies these over before
     # processing the properties.  We need to, too
