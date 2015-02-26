@@ -1,5 +1,7 @@
 package Testing::Color;
 
+use strict;
+use warnings;
 use Testing;
 
 class Testing::Color {
