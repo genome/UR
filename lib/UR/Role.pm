@@ -116,6 +116,11 @@ sub _get_property_desc_from_ur_object_type {
         $definition{$key} = $prop_meta->$method;
     }
 
+    # For any UR::Object::Type properties that are required or have a default value,
+    # those don't apply to Roles
+    $definition{is_optional} = 1;
+    delete $definition{default_value};
+
     return \%definition;
 }
 
