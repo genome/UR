@@ -993,12 +993,15 @@ sub compose_roles {
     my @role_objs = map { UR::Role->get($_) } @{ $desc->{roles} };
     return unless @role_objs;
 
+    $class->_validate_role_requirements($desc);
+
     my %added_property_source = map { $_ => "class $class_name" } keys %{ $desc->{has} };
 
     my(%properties_to_add, %meta_properties_to_add);
     foreach my $role ( @role_objs ) {
-        my $role_properties = $role->has;
-        while( my($property_name, $prop_definition) = each( %$role_properties )) {
+        my @role_property_names = $role->property_names;
+        foreach my $property_name ( @role_property_names ) {
+            my $prop_definition = $role->property_data($property_name);
             if (my $conflict = $added_property_source{$property_name}) {
                 Carp::croak(sprintf('Cannot compose role %s: Property %s conflicts with property in %s',
                                     $role->role_name, $property_name, $conflict));

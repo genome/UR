@@ -24,6 +24,16 @@ UR::Object::Type->define(
     is_transactional => 0,
 );
 
+sub property_data {
+    my($self, $property_name) = @_;
+    return $self->has->{$property_name};
+}
+
+sub property_names {
+    my $self = shift;
+    return keys %{ $self->{has} };
+}
+
 sub meta_properties_to_compose_into_classes {
     return qw( is_abstract is_final is_singleton
                composite_id_separator id_generator valid_signals 
