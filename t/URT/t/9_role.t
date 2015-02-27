@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 3;
+use Test::More tests=> 4;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -147,4 +147,63 @@ subtest requires => sub {
         }
         'Created class with role requiring method from other role';
 
+};
+
+subtest 'conflict property' => sub {
+    plan tests => 5;
+
+    role URT::ConflictPropertyRole1 {
+        has => [
+            conflict_property => { is => 'RoleProperty' },
+        ],
+    };
+    role URT::ConflictPropertyRole2 {
+        has => [
+            other_property => { is => 'Int' },
+            conflict_property => { is => 'RoleProperty' },
+        ],
+    };
+    throws_ok
+        {
+            class URT::ConflictPropertyClass {
+                roles => ['URT::ConflictPropertyRole1', 'URT::ConflictPropertyRole2'],
+            }
+        }
+        qr/Cannot compose role URT::ConflictPropertyRole2: Property 'conflict_property' conflicts with property in role URT::ConflictPropertyRole1/,
+        'Composing two roles with the same property throws exception';
+
+
+    throws_ok
+        {
+            class URT::ConflictPropertyClassWithProperty {
+                has => ['conflict_property'],
+                roles => ['URT::ConflictPropertyRole1', 'URT::ConflictPropertyRole2'],
+            }
+        }
+        qr/Cannot compose role URT::ConflictPropertyRole2: Property 'conflict_property' conflicts with property in role URT::ConflictPropertyRole1/,
+        'Composing two roles with the same property throws exception even if class has override property';
+
+    sub URT::ConflictPropertyClassWithMethod::conflict_property { 1 }
+    throws_ok
+        {
+            class URT::ConflictPropertyClassWithMethod {
+                roles => ['URT::ConflictPropertyRole1', 'URT::ConflictPropertyRole2'],
+            }
+        }
+        qr/Cannot compose role URT::ConflictPropertyRole2: Property 'conflict_property' conflicts with property in role URT::ConflictPropertyRole1/,
+        'Composing two roles with the same property throws exception even if class has override method';
+
+
+    lives_ok
+        {
+            class URT::ConflictPropertyClassWithProperty {
+                has => [
+                    conflict_property => { is => 'ClassProperty' },
+                ],
+                roles => ['URT::ConflictPropertyRole1'],
+            }
+        }
+        'Composed role into class sharing property name';
+    my $prop_meta = URT::ConflictPropertyClassWithProperty->__meta__->property('conflict_property');
+    is($prop_meta->data_type, 'ClassProperty', 'Class gets the class-defined property');
 };

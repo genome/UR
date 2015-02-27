@@ -984,24 +984,29 @@ sub compose_roles {
 
     $class->_validate_role_requirements($desc);
 
-    my %added_property_source = map { $_ => "class $class_name" } keys %{ $desc->{has} };
+    my $properties_from_class = $desc->{has};
 
-    my(%properties_to_add, %meta_properties_to_add, %source_for_meta_properties_to_add);
+    my(%properties_to_add, %meta_properties_to_add, %source_for_properties_to_add, %source_for_meta_properties_to_add);
     foreach my $role ( @role_objs ) {
         my @role_property_names = $role->property_names;
         foreach my $property_name ( @role_property_names ) {
             my $prop_definition = $role->property_data($property_name);
-            if (my $conflict = $added_property_source{$property_name}) {
-                Carp::croak(sprintf('Cannot compose role %s: Property %s conflicts with property in %s',
+            if (my $conflict = $source_for_properties_to_add{$property_name}) {
+                Carp::croak(sprintf(q(Cannot compose role %s: Property '%s' conflicts with property in role %s),
                                     $role->role_name, $property_name, $conflict));
             }
 
-            $added_property_source{$property_name} = 'role '.$role->role_name;
+            $source_for_properties_to_add{$property_name} = $role->role_name;
+
+            next if exists $properties_from_class->{$property_name};
+
             $properties_to_add{$property_name} = $prop_definition;
         }
 
         foreach my $meta_prop_name ( $role->meta_properties_to_compose_into_classes ) {
+            next if exists $desc->{$meta_prop_name};
             next unless defined $role->$meta_prop_name;
+
             if ($desc->{$meta_prop_name}) {
                 Carp::croak('Cannot compose role ' . $role->role_name
                             . ": Meta property $meta_prop_name is specified in the class definition and in the role");
