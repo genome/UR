@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 4;
+use Test::More tests=> 5;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -206,4 +206,36 @@ subtest 'conflict property' => sub {
         'Composed role into class sharing property name';
     my $prop_meta = URT::ConflictPropertyClassWithProperty->__meta__->property('conflict_property');
     is($prop_meta->data_type, 'ClassProperty', 'Class gets the class-defined property');
+};
+
+subtest 'conflict methods' => sub {
+    plan tests => 4;
+
+    sub URT::ConflictMethodRole1::conflict_method { }
+    role URT::ConflictMethodRole1 { };
+
+    sub URT::ConflictMethodRole2::conflict_method { }
+    role URT::ConflictMethodRole2 { };
+
+    throws_ok
+        {
+            class URT::ConflictMethodClassMissingMethod {
+                roles => ['URT::ConflictMethodRole1', 'URT::ConflictMethodRole2'],
+            }
+        }
+        qr/Cannot compose role URT::ConflictMethodRole2: method conflicts with those defined in other roles\s+URT::ConflictMethodRole1::conflict_method/s,
+        'Composing two roles with the same method throws exception';
+
+
+    our $class_method_called = 0;
+    sub URT::ConflictMethodClassHasMethod::conflict_method { $class_method_called++; 1; }
+    lives_ok
+        {
+            class URT::ConflictMethodClassHasMethod {
+                roles => ['URT::ConflictMethodRole1', 'URT::ConflictMethodRole2'],
+            }
+        }
+        'Composed two roles with the same method into class with same method';
+    ok(URT::ConflictMethodClassHasMethod->conflict_method, 'Called conflict_method on the class');
+    is($class_method_called, 1, 'Correct method was called');
 };

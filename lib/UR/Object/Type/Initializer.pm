@@ -1063,8 +1063,8 @@ sub _import_methods_from_roles {
         my $this_role_methods = $role->methods;
         my @this_role_method_names = keys( %$this_role_methods );
         my @conflicting = grep { ! exists($this_class_methods->{$_}) }  # not a conflict if the class overrides
-                          grep { defined }
-                          @all_imported_methods{ @this_role_method_names };
+                          grep { exists $all_imported_methods{$_} }
+                          @this_role_method_names;
 
         if (@conflicting) {
             my $plural = scalar(@conflicting) > 1 ? 's' : '';
@@ -1073,10 +1073,12 @@ sub _import_methods_from_roles {
                         . join("\n\t", join('::', map { ( $method_sources{$_}, $_ ) } @conflicting))
                         . "\n");
         }
+
         @method_sources{ @this_role_method_names } = ($role->role_name) x @this_role_method_names;
         @all_imported_methods{ @this_role_method_names } = @$this_role_methods{ @this_role_method_names };
     }
 
+    delete @all_imported_methods{ keys %$this_class_methods };  # Don't import roles' methods already defined on the class
     foreach my $name ( keys %all_imported_methods ) {
         Sub::Install::install_sub({
             code => $all_imported_methods{$name},
