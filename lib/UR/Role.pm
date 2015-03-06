@@ -141,3 +141,44 @@ sub _introspect_methods {
 }
 
 1;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+UR::Role - Roles in UR, an alternative to inheritance
+
+=head1 SYNOPSIS
+
+  package My::Role;
+  role My::Role {
+      has => [
+          role_property => { is => 'String' },
+          another_prop  => { is => 'Integer' },
+      },
+      requires => ['class_method'],
+  };
+  sub role_method { ... }
+
+
+  package My::Class;
+  class My::Class {
+      has => [
+          class_property => { is => 'Integer ' },
+      ],
+      roles => ['My::Role'],
+  };
+  sub class_method { ... }
+
+  my $obj = My::Class->new();
+  $obj->does('My::Role');  # true
+
+=head1 DESCRIPTION
+
+Roles are used to encapsulate a piece of behavior to be used in other classes.
+They have properties and methods that get melded into any class that composes
+them.  A Role can require any composing class to implement a list of methods.
+
+=cut
