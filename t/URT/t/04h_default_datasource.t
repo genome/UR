@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -116,4 +116,35 @@ subtest 'save' => sub {
     is_deeply([ sort @committed_ids ],
        [2, 3],
        'Proper objects were committed');
+};
+
+subtest 'failure syncing' => sub {
+    plan tests => 6;
+
+    class URT::FailSync {
+        data_source => 'UR::DataSource::Default',
+    };
+
+    sub URT::FailSync::__save__ {
+        die "failed during save";
+    };
+
+    my $should_fail_during_rollback = 0;
+    *URT::FailSync::__rollback__= sub {
+        die "failed during rollback" if $should_fail_during_rollback;
+        1;
+    };
+
+    my $obj = URT::FailSync->create(id => 1);
+    local $@;
+    ok(! eval { UR::Context->current->commit() }, 'failed in commit');
+
+    like($@, qr/failed during save/, 'Exception message includes message from __save__');
+    unlike($@, qr/failed during rollback/, 'Exception message does not include message from __commit__');
+
+    $should_fail_during_rollback = 1;
+    ok(! eval { UR::Context->current->commit() }, 'failed in commit second time');
+
+    like($@, qr/failed during save/, 'Exception message includes message from __save__');
+    like($@, qr/failed during rollback/, 'Exception message includes message from __commit__');
 };

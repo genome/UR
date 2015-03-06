@@ -90,40 +90,48 @@ sub _sync_database {
 
     my %class_can_save;
     my @saved;
-    eval {
-        for my $obj (@$changed_objects) {
-            my $obj_class = $obj->class;
-            unless (exists $class_can_save{$obj_class}) {
-                $class_can_save{$obj_class} = $obj->can('__save__');
+    my $err = do {
+        local $@;
+        eval {
+            for my $obj (@$changed_objects) {
+                my $obj_class = $obj->class;
+                unless (exists $class_can_save{$obj_class}) {
+                    $class_can_save{$obj_class} = $obj->can('__save__');
+                }
+                if ($class_can_save{$obj_class}) {
+                    push @saved, $obj;
+                    $obj->__save__;
+                }
             }
-            if ($class_can_save{$obj_class}) {
-                push @saved, $obj;
-                $obj->__save__;
-            }
-        }
+        };
+        $@;
     };
 
-    if ($@) {
-        my $err = $@;
+    if ($err) {
         my @failed_rollback;
-        while (my $obj = shift @saved) {
-            eval {
-                $obj->__rollback__;
-            };
-            if ($@) {
-                push @failed_rollback, $obj;
+        do {
+            my $rollback_error;
+            while (my $obj = shift @saved) {
+                local $@;
+                eval {
+                    $obj->__rollback__;
+                };
+                if ($@) {
+                    $rollback_error = $@;
+                    push @failed_rollback, $obj;
+                }
             }
-        }
-        if (@failed_rollback) {
-            print Data::Dumper::Dumper("Failed Rollback:", \@failed_rollback);
-            die "Failed to save, and ERRORS DURING ROLLBACK:\n$err\n $@\n";
-        }
-        die $@;
+            if (@failed_rollback) {
+                print Data::Dumper::Dumper("Failed Rollback:", \@failed_rollback);
+                Carp::croak "Failed to save, and ERRORS DURING ROLLBACK:\n$err\n $rollback_error\n";
+            }
+        };
+        die $err;
     }
 
 
     my @failed_commit;
-    unless ($@) {
+    unless ($err) {
         # all saves worked, commit
         while (my $obj = shift @saved) {
             eval {
