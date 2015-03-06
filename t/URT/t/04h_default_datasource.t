@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -160,4 +160,54 @@ subtest 'failure syncing' => sub {
     like($error_message_during_commit,
          qr/Rollback failed:.*'id' => 1/s,
         'error_message() mentions the object failed rollback');
+
+    UR::Context->current->rollback; # throw away errored objects
+};
+
+subtest 'sync all before committing' => sub {
+    plan tests => 4;
+
+    class URT::SyncThenCommit {
+        data_source => 'UR::DataSource::Default',
+    };
+
+    my @objs = map { URT::SyncThenCommit->create(id => $_) } qw(1 2 3);
+
+    my @synced_ids;
+    my @committed_ids;
+    *URT::SyncThenCommit::__save__ = sub {
+        my $obj = shift;
+        push @synced_ids, $obj->id;
+        if (@committed_ids) {
+            ok(0, 'Some objects were committed before all were synced')
+                or diag explain @committed_ids;
+        }
+    };
+
+    *URT::SyncThenCommit::__commit__ = sub {
+        my $obj = shift;
+        push @committed_ids, $obj->id;
+    };
+
+    UR::Context->current->add_observer(
+        aspect => 'sync_databases',
+        once => 1,
+        callback => sub {
+            is_deeply([ sort @synced_ids ],
+                      [ qw(1 2 3) ],
+                      'Synced all objects');
+            is(scalar(@committed_ids), 0, 'No objects are committed yet');
+        },
+    );
+    UR::Context->current->add_observer(
+        aspect => 'commit',
+        once => 1,
+        callback => sub {
+            is_deeply([ sort @committed_ids ],
+                      [ qw(1 2 3) ],
+                      'Committed all objects');
+        },
+    );
+
+    ok(UR::Context->current->commit, 'commit');
 };

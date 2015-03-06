@@ -79,17 +79,16 @@ sub _map_fields {
     return @pos;
 }
 
-# Nothing to be done for commit and rollback
+# Nothing to be done for rollback
 sub rollback { 1;}
-sub commit   { 1; }
 
+my @saved_objects;
 sub _sync_database {
     my $self = shift;
     my %params = @_;
     my $changed_objects = $params{changed_objects};
 
     my %class_can_save;
-    my @saved;
     my $err = do {
         local $@;
         eval {
@@ -99,7 +98,7 @@ sub _sync_database {
                     $class_can_save{$obj_class} = $obj->can('__save__');
                 }
                 if ($class_can_save{$obj_class}) {
-                    push @saved, $obj;
+                    push @saved_objects, $obj;
                     $obj->__save__;
                 }
             }
@@ -111,7 +110,7 @@ sub _sync_database {
         my @failed_rollback;
         do {
             my $rollback_error;
-            while (my $obj = shift @saved) {
+            while (my $obj = shift @saved_objects) {
                 local $@;
                 eval {
                     $obj->__rollback__;
@@ -129,18 +128,28 @@ sub _sync_database {
         die $err;
     }
 
+    return 1;
+}
 
+sub commit {
     my @failed_commit;
-    unless ($err) {
-        # all saves worked, commit
-        while (my $obj = shift @saved) {
-            eval {
-                $obj->__commit__;
-            };
-            if ($@) {
-                push @failed_commit, $@ => $obj;
-            }
+    while (my $obj = shift @saved_objects) {
+        local $@;
+        eval {
+            $obj->__commit__;
         };
+        if ($@) {
+            push @failed_commit, $@ => $obj;
+        }
+    }
+
+    if (@failed_commit) {
+        my @failure_messages;
+        for (my $i = 0; $i < @failed_commit; $i += 2) {
+            my($exception, $obj) = @failed_commit[$i .. $i+1];
+            push @failure_messages, "$exception: ".Data::Dumper::Dumper($obj);
+        }
+        Carp::croak "Commit failed:\n" . join("\n", @failure_messages);
     }
 
     return 1;
