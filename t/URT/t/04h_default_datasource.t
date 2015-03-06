@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -78,3 +78,42 @@ subtest 'load list' => sub {
     is(scalar(@p2), 2, "got two objects as expected");
 };
 
+subtest 'save' => sub {
+    plan tests => 5;
+
+    class URT::DefaultSave {
+        has => [qw/nose tail/],
+        data_source => 'UR::DataSource::Default',
+    };
+
+    my @saved_ids;
+    *URT::DefaultSave::__save__ = sub {
+        my $self = shift;
+        push @saved_ids, $self->id;
+    };
+
+    my @committed_ids;
+    *URT::DefaultSave::__commit__ = sub {
+        my $self = shift;
+        push @committed_ids, $self->id;
+    };
+
+    # fake loading objects from the data source by defining them
+    my $unchanged = URT::DefaultSave->__define__(id => 1, nose => 'black', tail => 'fluffy');
+    my $will_change = URT::DefaultSave->__define__(id => 2, nose => 'short', tail => 'blue');
+
+    # Make some changes
+    ok($will_change->tail('black'), 'change existing object');
+    my $new_obj = URT::DefaultSave->create(id => 3, nose => 'medium', tail => 'smooth');
+    ok($new_obj, 'created new object');
+
+    ok(UR::Context->current->commit, 'commit changes');
+
+    is_deeply([ sort @saved_ids ],
+       [2, 3],
+       'Proper objects were saved');
+
+    is_deeply([ sort @committed_ids ],
+       [2, 3],
+       'Proper objects were committed');
+};
