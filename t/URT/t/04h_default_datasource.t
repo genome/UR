@@ -119,7 +119,7 @@ subtest 'save' => sub {
 };
 
 subtest 'failure syncing' => sub {
-    plan tests => 6;
+    plan tests => 7;
 
     class URT::FailSync {
         data_source => 'UR::DataSource::Default',
@@ -142,9 +142,22 @@ subtest 'failure syncing' => sub {
     like($@, qr/failed during save/, 'Exception message includes message from __save__');
     unlike($@, qr/failed during rollback/, 'Exception message does not include message from __commit__');
 
+    my $error_message_during_commit;
+    UR::DataSource::Default->dump_error_messages(0);
+    UR::DataSource::Default->add_observer(
+        aspect => 'error_message',
+        once => 1,
+        callback => sub {
+            my($self, $aspect, $message) = @_;
+            $error_message_during_commit = $message;
+        },
+    );
     $should_fail_during_rollback = 1;
     ok(! eval { UR::Context->current->commit() }, 'failed in commit second time');
 
     like($@, qr/failed during save/, 'Exception message includes message from __save__');
     like($@, qr/failed during rollback/, 'Exception message includes message from __commit__');
+    like($error_message_during_commit,
+         qr/Rollback failed:.*'id' => 1/s,
+        'error_message() mentions the object failed rollback');
 };

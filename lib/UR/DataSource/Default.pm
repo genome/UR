@@ -122,7 +122,7 @@ sub _sync_database {
                 }
             }
             if (@failed_rollback) {
-                print Data::Dumper::Dumper("Failed Rollback:", \@failed_rollback);
+                $self->error_message('Rollback failed: ' . Data::Dumper::Dumper(\@failed_rollback));
                 Carp::croak "Failed to save, and ERRORS DURING ROLLBACK:\n$err\n $rollback_error\n";
             }
         };
