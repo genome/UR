@@ -977,9 +977,19 @@ sub compose_roles {
     my $class_name = $desc->{class_name};
 
     return unless ($desc->{roles} and @{ $desc->{roles} });
-    my @role_objs = map
-                        { UR::Role->get($_) || Carp::croak("Role '$_' not found") }
-                        @{ $desc->{roles} };
+    my(@role_objs, $exception);
+    do {
+        local $@;
+        eval {
+            @role_objs = map
+                            { UR::Role->_dynamically_load_role($_) }
+                            @{ $desc->{roles} };
+        };
+        $exception = $@;
+    };
+    if ($exception) {
+        Carp::croak("Cannot apply role(s) to class $class_name: $exception");
+    }
     return unless @role_objs;
 
     $class->_validate_role_requirements($desc);

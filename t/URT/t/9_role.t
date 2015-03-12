@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 5;
+use Test::More tests=> 6;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -44,7 +44,7 @@ subtest basic => sub {
                 roles => ['Bogus'],
             }
         }
-        qr(Role 'Bogus' not found),
+        qr(Cannot dynamically load role 'Bogus': No module exists with that name\.),
         'Could not create class with a bogus role';
 };
 
@@ -238,4 +238,24 @@ subtest 'conflict methods' => sub {
         'Composed two roles with the same method into class with same method';
     ok(URT::ConflictMethodClassHasMethod->conflict_method, 'Called conflict_method on the class');
     is($class_method_called, 1, 'Correct method was called');
+};
+
+subtest 'dynamic loading' => sub {
+    plan tests => 4;
+
+    sub URT::DynamicLoading::required_class_method { 1 }
+    my $class =  class URT::DynamicLoading {
+        has => ['required_class_param'],
+        roles => ['URT::TestRole'],
+    };
+    ok($class, 'Created class with dynamically loaded role');
+    ok($class->role_method, 'called role_method on the class');
+
+    throws_ok { class URT::DynamicLoadingFail1 { roles => 'URT::NotExistant' } }
+        qr/Cannot dynamically load role 'URT::NotExistant': No module exists with that name\./,
+        'Defining class with non-existant role throws exception';
+
+    throws_ok { class URT::DynamicLoadingFail2 { roles => 'URT::Thingy' } }
+        qr/Cannot dynamically load role 'URT::Thingy': The module loaded but did not define a role\./,
+        'Defing a class with a class name used as a role throws exception';
 };

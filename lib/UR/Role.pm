@@ -50,10 +50,13 @@ sub meta_properties_to_compose_into_classes {
 sub define {
     my $class = shift;
     my $desc = $class->_normalize_role_description(@_);
-    my $role_name = delete $desc->{role_name};
-    my $role = UR::Role->create(role_name => $role_name);
-    $role->$_($desc->{$_}) foreach keys %$desc;
-    $role->_introspect_methods();
+
+    unless ($desc->{role_name}) {
+        Carp::croak(q('role_name' is a required parameter for defining a role));
+    }
+
+    my $methods = _introspect_methods($desc->{role_name});
+    my $role = UR::Role->__define__(%$desc, methods => $methods);
     return $role;
 }
 
@@ -134,10 +137,27 @@ sub _get_property_desc_from_ur_object_type {
 }
 
 sub _introspect_methods {
-    my $role = shift;
+    my $role_name = shift;
 
-    my $subs = UR::Util::coderefs_for_package($role->role_name);
-    $role->methods($subs);
+    return UR::Util::coderefs_for_package($role_name);
+}
+
+sub _dynamically_load_role {
+    my($class, $role_name) = @_;
+
+    if (my $already_exists = $class->is_loaded($role_name)) {
+        return $already_exists;
+    }
+
+    if (UR::Util::use_package_optimistically($role_name)) {
+        if (my $role = $class->is_loaded($role_name)) {
+            return $role;
+        } else {
+            die qq(Cannot dynamically load role '$role_name': The module loaded but did not define a role.\n);
+        }
+    } else {
+        die qq(Cannot dynamically load role '$role_name': No module exists with that name.\n);
+    }
 }
 
 1;
