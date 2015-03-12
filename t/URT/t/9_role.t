@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 6;
+use Test::More tests=> 7;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -258,4 +258,40 @@ subtest 'dynamic loading' => sub {
     throws_ok { class URT::DynamicLoadingFail2 { roles => 'URT::Thingy' } }
         qr/Cannot dynamically load role 'URT::Thingy': The module loaded but did not define a role\./,
         'Defing a class with a class name used as a role throws exception';
+};
+
+subtest 'inherits from class with role' => sub {
+    plan tests => 5;
+
+    role ParentClassRole {
+        has => ['parent_role_param'],
+    };
+    sub ParentClass::parent_class_method { 1 }
+    class ParentClass {
+        roles => ['ParentClassRole'],
+        has => ['parent_class_param'],
+    };
+
+    class ChildClass {
+        is => 'ParentClass',
+    };
+
+    role GrandchildClassRole {
+        has => ['grandchild_role_param'],
+        requires => ['parent_class_param', 'parent_class_method'],
+    };
+
+    class GrandchildClass {
+        is => 'ChildClass',
+        roles => ['GrandchildClassRole'],
+    };
+
+    my $o = GrandchildClass->create(parent_class_param => 1,
+                                    parent_role_param => 1,
+                                    grandchild_role_param => 1);
+    ok($o, 'Create object');
+    ok($o->can('grandchild_role_param'), 'can grandchild_role_param');
+    ok($o->can('parent_role_param'), 'can parent_role_param');
+    ok($o->does('GrandchildClassRole'), 'does GrandchildClassRole');
+    ok($o->does('ParentClassRole'), 'does ParentClassRole');
 };

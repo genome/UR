@@ -98,7 +98,11 @@ sub __self__ {
 
 sub does {
     my($self, $role_name) = @_;
-    any { $role_name eq $_ } @{ $self->__meta__->roles };
+
+    my @roles = map { @{ $_->roles } }
+                $self->__meta__->all_class_metas();
+
+    any { $role_name eq $_ } @roles;
 }
 
 

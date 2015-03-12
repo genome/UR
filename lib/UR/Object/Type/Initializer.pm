@@ -1049,7 +1049,9 @@ sub _validate_role_requirements {
     foreach my $role_name ( @{ $desc->{roles} } ) {
         my $role = UR::Role->get($role_name);
         foreach my $requirement ( @{ $role->requires } ) {
-            unless ($found_properties_and_methods{ $requirement } ||= $class_name->can($requirement)) {
+            unless ($found_properties_and_methods{ $requirement }
+                        ||= _class_desc_lineage_has_method_or_property($desc, $requirement))
+            {
                 my $role_name = $role->role_name;
                 Carp::croak("Cannot compose role $role_name: missing required property or method '$requirement'");
             }
@@ -1061,6 +1063,32 @@ sub _validate_role_requirements {
         }
     }
 
+    return 1;
+}
+
+sub _class_desc_lineage_has_method_or_property {
+    my($desc, $requirement) = @_;
+
+    my $class_name = $desc->{class_name};
+    if (my $can = $class_name->can($requirement)) {
+        return $can;
+    }
+
+    my @is = @{ $desc->{is} };
+    my %seen;
+    while(my $parent = shift @is) {
+        next if $seen{$parent}++;
+
+        if (my $can = $parent->can($requirement)) {
+            return $can;
+        }
+
+        my $parent_meta = $parent->__meta__;
+        if (my $prop_meta = $parent_meta->property($requirement)) {
+            return $prop_meta;
+        }
+    }
+    return;
 }
 
 sub _import_methods_from_roles {
