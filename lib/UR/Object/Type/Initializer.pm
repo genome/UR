@@ -705,7 +705,6 @@ sub _normalize_class_description_impl {
     }
 
     # allow parent classes to adjust the description in systematic ways
-    my $desc = \%new_class;
     my @additional_property_meta_attributes;
     unless ($bootstrapping) {
         for my $parent_class_name (@{ $new_class{is} }) {
@@ -756,8 +755,8 @@ sub _normalize_class_description_impl {
     }
 
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
-    $desc->{meta_class_name} ||= $meta_class_name;
-    return $desc;
+    $new_class{meta_class_name} ||= $meta_class_name;
+    return \%new_class;
 }
 
 sub _normalize_property_descriptions_during_normalize_class_description {
