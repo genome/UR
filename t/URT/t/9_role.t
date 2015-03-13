@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 7;
+use Test::More tests=> 8;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -294,4 +294,43 @@ subtest 'inherits from class with role' => sub {
     ok($o->can('parent_role_param'), 'can parent_role_param');
     ok($o->does('GrandchildClassRole'), 'does GrandchildClassRole');
     ok($o->does('ParentClassRole'), 'does ParentClassRole');
+};
+
+subtest 'role property saves to DB' => sub {
+    plan tests => 10;
+
+    my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
+    ok($dbh->do(q(CREATE TABLE savable (id INTEGER NOT NULL PRIMARY KEY, class_property TEXT, role_property TEXT))),
+        'Create table');
+    ok($dbh->do(q(INSERT INTO savable VALUES (1, 'class', 'role'))),
+        'Insert row');
+
+    role SavablePropertyRole {
+        has => ['role_property'],
+    };
+    class SavableToDb {
+        roles => 'SavablePropertyRole',
+        id_by => 'id',
+        has => ['class_property'],
+        data_source => 'URT::DataSource::SomeSQLite',
+        table_name => 'savable',
+    };
+
+    foreach my $prop ( qw( class_property role_property ) ) {
+        ok(SavableToDb->can($prop), "SavableToDb can $prop");
+    }
+
+    my $got = SavableToDb->get(1);
+    ok($got, 'Get object from DB');
+    is($got->class_property, 'class', 'class_property value');
+    is($got->role_property, 'role', 'role_property value');
+
+    my $saved = SavableToDb->create(id => 2, class_property => 'saved_class', role_property => 'saved_role');
+    ok($saved, 'Create object');
+    ok(UR::Context->commit(), 'commit');
+
+    my $row = $dbh->selectrow_hashref('SELECT * from savable where id = 2');
+    is_deeply($row,
+              { id => 2, class_property => 'saved_class', role_property => 'saved_role' },
+              'saved to the DB');
 };

@@ -103,6 +103,7 @@ sub _complete_property_descriptions {
     foreach my $property_name ( keys %$properties ) {
         my $old_property = $properties->{$property_name};
         my %new_property = UR::Object::Type->_normalize_property_description1($property_name, $old_property, $role_desc);
+        delete $new_property{class_name};  # above normalizer fills this in as undef
         $properties->{$property_name} = \%new_property;
     }
 }

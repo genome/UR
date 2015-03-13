@@ -364,6 +364,8 @@ sub _normalize_class_description {
 
     $class->compose_roles($desc) unless $bootstrapping;
 
+    $class->_normalize_property_descriptions_during_normalize_class_description($desc);
+
     # we previously handled property meta extensions when normalizing the property
     # now we merely save unrecognized things
     # this is now done afterward so that parent classes can preprocess their subclasses descriptions before extending
@@ -713,9 +715,6 @@ sub _normalize_class_description_impl {
             }
         }
     }
-
-
-    __PACKAGE__->_normalize_property_descriptions_during_normalize_class_description(\%new_class);
 
     unless ($bootstrapping) {
         # cascade extra meta attributes from the parent downward
