@@ -49,6 +49,8 @@ sub execute {
     my $self = shift;
     my $class = $self->classname;
 
+    local $@;
+
     eval {
         require Getopt::Complete;
         require Getopt::Complete::Cache;
@@ -66,7 +68,6 @@ sub execute {
     (my $module_path) = Getopt::Complete::Cache->module_and_cache_paths_for_package($class, 1);
     my $cache_path = $module_path . ".opts";
 
-    local $@;
     eval {
         if (-s $cache_path) {
             rename($cache_path, "$cache_path.bak");
