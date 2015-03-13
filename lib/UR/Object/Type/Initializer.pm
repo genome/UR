@@ -716,14 +716,6 @@ sub _normalize_class_description_impl {
     }
 
     unless ($bootstrapping) {
-        # cascade extra meta attributes from the parent downward
-        for my $parent_class_name (@{ $new_class{is} }) {
-            my $parent_class = $parent_class_name->__meta__;
-            if (my $parent_meta_properties = $parent_class->{attributes_have}) {
-                #push @additional_property_meta_attributes, %$parent_meta_properties;
-            }
-        }
-
         %$meta_properties = (%$meta_properties, @additional_property_meta_attributes);
 
         # Inheriting from an abstract class that subclasses with a subclassify_by means that
