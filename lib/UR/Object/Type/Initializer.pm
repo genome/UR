@@ -183,6 +183,9 @@ sub __define__ {
             );
         }
     }
+
+    $self->_inform_roles_of_new_class();
+
     return $self;
 }
 
@@ -1511,6 +1514,15 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
     }
 
     return 1;
+}
+
+sub _inform_roles_of_new_class {
+    my $self = shift;
+
+    foreach my $role_name ( @{ $self->{roles} } ) {
+        next unless $role_name->can('__import__');
+        $role_name->__import__($self);
+    }
 }
 
 sub _complete_class_meta_object_definitions {

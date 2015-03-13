@@ -140,7 +140,9 @@ sub _get_property_desc_from_ur_object_type {
 sub _introspect_methods {
     my $role_name = shift;
 
-    return UR::Util::coderefs_for_package($role_name);
+    my $subs = UR::Util::coderefs_for_package($role_name);
+    delete $subs->{__import__};  # don't allow __import__ to be exported to a class's namespace
+    return $subs;
 }
 
 sub _dynamically_load_role {

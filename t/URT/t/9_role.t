@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 8;
+use Test::More tests=> 9;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -333,4 +333,45 @@ subtest 'role property saves to DB' => sub {
     is_deeply($row,
               { id => 2, class_property => 'saved_class', role_property => 'saved_role' },
               'saved to the DB');
+};
+
+subtest 'role import function' => sub {
+    plan tests => 8;
+
+    my($import_called, @import_args) = (0, ());
+    *RoleWithImport::__import__  = sub { $import_called++; @import_args = @_ };
+    role RoleWithImport { };
+    sub RoleWithImport::another_method { 1 }
+
+    is($import_called, 0, '__import__ was not called after defining role');
+
+    class ClassWithImport {
+        roles => ['RoleWithImport'],
+    };
+    is($import_called, 1, '__import__ called when role is used');
+    is_deeply(\@import_args,
+              [ 'RoleWithImport', ClassWithImport->__meta__ ],
+              '__import__called with role name and class meta as args');
+    ok(! defined(&ClassWithImport::__import__), '__import__ was not imported into the class namespace');
+
+
+    $import_called = 0;
+    @import_args = ();
+    class AnotherClassWithImport {
+        roles => ['RoleWithImport'],
+    };
+    is($import_called, 1, '__import__ called when role is used again');
+    is_deeply(\@import_args,
+              [ 'RoleWithImport', AnotherClassWithImport->__meta__ ],
+              '__import__called with role name and class meta as args');
+    ok(! defined(&ClassWithImport::__import__), '__import__ was not imported into the class namespace');
+
+
+    $import_called = 0;
+    @import_args = ();
+    class ChildClassWithImport {
+        is => 'ClassWithImport',
+    };
+
+    is($import_called, 0, '__import__ was not called when a child class is defined');
 };
