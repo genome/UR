@@ -78,14 +78,12 @@ sub execute {
         $self->status_message("Generating " . $self->output . " file for $class.");
         $self->status_message("This may take some time and may generate harmless warnings...");
 
-        my $fh;
-        $fh = IO::File->new('>' . $self->output) || die "Cannot create file at " . $self->output . "\n";
+        my $fh = IO::File->new('>' . $self->output)
+            or die "Cannot create file at " . $self->output . "\n";
 
-        if ($fh) {
-            my $src = Data::Dumper::Dumper($class->resolve_option_completion_spec());
-            $src =~ s/^\$VAR1/\$$class\:\:OPTS_SPEC/;
-            $fh->print($src);
-        }
+        my $src = Data::Dumper::Dumper($class->resolve_option_completion_spec());
+        $src =~ s/^\$VAR1/\$$class\:\:OPTS_SPEC/;
+        $fh->print($src);
     };
 
     if (-s $cache_path) {
