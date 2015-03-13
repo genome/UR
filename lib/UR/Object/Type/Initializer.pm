@@ -702,14 +702,6 @@ sub _normalize_class_description_impl {
         $new_class{is} = \@base_classes;
     }
 
-    # normalize the data behind the property descriptions
-    my @property_names = keys %$instance_properties;
-    for my $property_name (@property_names) {
-        my %old_property = %{ $instance_properties->{$property_name} };
-        my %new_property = $class->_normalize_property_description1($property_name, \%old_property, \%new_class);
-        %new_property = $class->_normalize_property_description2(\%new_property, \%new_class);
-        $instance_properties->{$property_name} = \%new_property;
-    }
     # allow parent classes to adjust the description in systematic ways
     my $desc = \%new_class;
     my @additional_property_meta_attributes;
@@ -722,44 +714,8 @@ sub _normalize_class_description_impl {
         }
     }
 
-    # Find 'via' properties where the to is '-filter' and rewrite them to
-    # copy some attributes from the source property
-    # This feels like a hack, but it makes other parts of the system easier by
-    # not having to deal with -filter
-    foreach my $property_name ( @property_names ) {
-        my $property_data = $instance_properties->{$property_name};
-        if ($property_data->{'to'} && $property_data->{'to'} eq '-filter') {
-            my $via = $property_data->{'via'};
-            my $via_property_data = $instance_properties->{$via};
-            unless ($via_property_data) {
-                Carp::croak "Cannot initialize class $class_name: Property '$property_name' filters '$via', but there is no property '$via'.";
-            }
 
-            $property_data->{'data_type'} = $via_property_data->{'data_type'};
-            $property_data->{'reverse_as'} = $via_property_data->{'reverse_as'};
-            if ($via_property_data->{'where'}) {
-                unshift @{$property_data->{'where'}}, @{$via_property_data->{'where'}};
-            }
-        }
-    }
-
-    # Catch a mistake in the class definition where a property is 'via'
-    # something, and its 'to' is the same as the via's reverse_as.  This
-    # ends up being a circular definition and generates junk SQL
-    foreach my $property_name ( @property_names ) {
-        my $property_data = $instance_properties->{$property_name};
-        my $via = $property_data->{'via'};
-        my $to  = $property_data->{'to'};
-        if (defined($via) and defined($to)) {
-            my $via_property_data = $instance_properties->{$via};
-            next unless ($via_property_data and $via_property_data->{'reverse_as'});
-            if ($via_property_data->{'reverse_as'} eq $to) {
-                Carp::croak("Cannot initialize class $class_name: Property '$property_name' defines "
-                            . "an incompatible relationship.  Its 'to' is the same as reverse_as for property '$via'");
-            }
-        }
-    }
-
+    __PACKAGE__->_normalize_property_descriptions_during_normalize_class_description(\%new_class);
 
     unless ($bootstrapping) {
         # cascade extra meta attributes from the parent downward
@@ -803,6 +759,61 @@ sub _normalize_class_description_impl {
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $desc->{meta_class_name} ||= $meta_class_name;
     return $desc;
+}
+
+sub _normalize_property_descriptions_during_normalize_class_description {
+    my($class, $new_class) = @_;
+
+    my $instance_properties = $new_class->{has};
+
+    # normalize the data behind the property descriptions
+    my @property_names = keys %$instance_properties;
+    for my $property_name (@property_names) {
+        my %old_property = %{ $instance_properties->{$property_name} };
+        my %new_property = $class->_normalize_property_description1($property_name, \%old_property, $new_class);
+        %new_property = $class->_normalize_property_description2(\%new_property, $new_class);
+        $instance_properties->{$property_name} = \%new_property;
+    }
+
+    # Find 'via' properties where the to is '-filter' and rewrite them to
+    # copy some attributes from the source property
+    # This feels like a hack, but it makes other parts of the system easier by
+    # not having to deal with -filter
+    foreach my $property_name ( @property_names ) {
+        my $property_data = $instance_properties->{$property_name};
+        if ($property_data->{'to'} && $property_data->{'to'} eq '-filter') {
+            my $via = $property_data->{'via'};
+            my $via_property_data = $instance_properties->{$via};
+            unless ($via_property_data) {
+                my $class_name = $new_class->{class_name};
+                Carp::croak "Cannot initialize class $class_name: Property '$property_name' filters '$via', but there is no property '$via'.";
+            }
+
+            $property_data->{'data_type'} = $via_property_data->{'data_type'};
+            $property_data->{'reverse_as'} = $via_property_data->{'reverse_as'};
+            if ($via_property_data->{'where'}) {
+                unshift @{$property_data->{'where'}}, @{$via_property_data->{'where'}};
+            }
+        }
+    }
+
+    # Catch a mistake in the class definition where a property is 'via'
+    # something, and its 'to' is the same as the via's reverse_as.  This
+    # ends up being a circular definition and generates junk SQL
+    foreach my $property_name ( @property_names ) {
+        my $property_data = $instance_properties->{$property_name};
+        my $via = $property_data->{'via'};
+        my $to  = $property_data->{'to'};
+        if (defined($via) and defined($to)) {
+            my $via_property_data = $instance_properties->{$via};
+            next unless ($via_property_data and $via_property_data->{'reverse_as'});
+            if ($via_property_data->{'reverse_as'} eq $to) {
+                my $class_name = $new_class->{class_name};
+                Carp::croak("Cannot initialize class $class_name: Property '$property_name' defines "
+                            . "an incompatible relationship.  Its 'to' is the same as reverse_as for property '$via'");
+            }
+        }
+    }
 }
 
 sub _process_class_definition_property_keys {
