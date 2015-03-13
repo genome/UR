@@ -65,23 +65,28 @@ sub execute {
 
     (my $module_path) = Getopt::Complete::Cache->module_and_cache_paths_for_package($class, 1);
     my $cache_path = $module_path . ".opts";
-    if (-s $cache_path) {
-        rename($cache_path, "$cache_path.bak");
-    }
-    unless ($self->output) {
-        $self->output($cache_path);
-    }
-    $self->status_message("Generating " . $self->output . " file for $class.");
-    $self->status_message("This may take some time and may generate harmless warnings...");
 
-    my $fh;
-    $fh = IO::File->new('>' . $self->output) || die "Cannot create file at " . $self->output . "\n";
+    local $@;
+    eval {
+        if (-s $cache_path) {
+            rename($cache_path, "$cache_path.bak");
+        }
+        unless ($self->output) {
+            $self->output($cache_path);
+        }
+        $self->status_message("Generating " . $self->output . " file for $class.");
+        $self->status_message("This may take some time and may generate harmless warnings...");
 
-    if ($fh) {
-        my $src = Data::Dumper::Dumper($class->resolve_option_completion_spec());
-        $src =~ s/^\$VAR1/\$$class\:\:OPTS_SPEC/;
-        $fh->print($src);
-    }
+        my $fh;
+        $fh = IO::File->new('>' . $self->output) || die "Cannot create file at " . $self->output . "\n";
+
+        if ($fh) {
+            my $src = Data::Dumper::Dumper($class->resolve_option_completion_spec());
+            $src =~ s/^\$VAR1/\$$class\:\:OPTS_SPEC/;
+            $fh->print($src);
+        }
+    };
+
     if (-s $cache_path) {
         $self->status_message("\nOPTS_SPEC file created at $cache_path");
         unlink("$cache_path.bak");
