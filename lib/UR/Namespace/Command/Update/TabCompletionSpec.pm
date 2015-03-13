@@ -78,7 +78,7 @@ sub execute {
         $self->status_message("Generating " . $self->output . " file for $class.");
         $self->status_message("This may take some time and may generate harmless warnings...");
 
-        my $fh = IO::File->new('>' . $self->output)
+        my $fh = IO::File->new($self->output, 'w')
             or die "Cannot create file at " . $self->output . "\n";
 
         my $src = Data::Dumper::Dumper($class->resolve_option_completion_spec());
