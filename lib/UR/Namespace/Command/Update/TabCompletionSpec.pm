@@ -48,7 +48,7 @@ sub is_sub_command_delegator { 0; }
 sub execute {
     my $self = shift;
     my $class = $self->classname;
-   
+
     eval {
         require Getopt::Complete;
         require Getopt::Complete::Cache;
@@ -76,7 +76,7 @@ sub execute {
 
     my $fh;
     $fh = IO::File->new('>' . $self->output) || die "Cannot create file at " . $self->output . "\n";
-    
+
     if ($fh) {
         my $src = Data::Dumper::Dumper($class->resolve_option_completion_spec());
         $src =~ s/^\$VAR1/\$$class\:\:OPTS_SPEC/;
