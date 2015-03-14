@@ -6,6 +6,7 @@ use warnings;
 use UR;
 our $VERSION = "0.43"; # UR $VERSION;
 use IO::File;
+use POSIX qw(ENOENT);
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -69,9 +70,11 @@ sub execute {
     my $cache_path = $module_path . ".opts";
 
     eval {
-        if (-s $cache_path) {
-            rename($cache_path, "$cache_path.bak");
+        my $rename_ok = rename($cache_path, "$cache_path.bak");
+        if (!$rename_ok && $! != ENOENT) {
+            die "failed to rename file: $!: $cache_path";
         }
+
         unless ($self->output) {
             $self->output($cache_path);
         }
