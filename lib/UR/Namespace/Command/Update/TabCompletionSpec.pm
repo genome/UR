@@ -91,14 +91,17 @@ sub execute {
 
     if (-s $cache_path) {
         $self->status_message("\nOPTS_SPEC file created at $cache_path");
-        unlink("$cache_path.bak");
+        unlink("$cache_path.bak")
+            or $self->error_message("failed to remove backup file: $!");
     } else {
         if (-s "$cache_path.bak") {
             $self->error_message("$cache_path is 0 bytes, reverting to previous");
-            rename("$cache_path.bak", $cache_path);
+            rename("$cache_path.bak", $cache_path)
+                or $self->error_message("failed to restore file: $!");
         } else {
             $self->error_message("$cache_path is 0 bytes and no backup exists, removing file");
-            unlink($cache_path);
+            unlink($cache_path)
+                or $self->error_message("failed to remove file: $!");
         }
     }
 }
