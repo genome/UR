@@ -994,19 +994,23 @@ sub _load {
     }
 
     # Check the filesystem.  The file may create its metadata object.
-    eval "use $class_name";
-    unless ($@) {
+    my $exception = do {
+        local $@;
+        eval "use $class_name";
+        $@;
+    };
+    unless ($exception) {
         # If the above module was loaded, and is an UR::Object,
         # this will find the object.  If not, it will return nothing.
         $class_obj = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
         return $class_obj if $class_obj;
     }
-    if ($@) {
+    if ($exception) {
         # We need to handle $@ here otherwise we'll see
         # "Can't locate UR/Object/Type/Ghost.pm in @INC" error.
         # We want to fall through "in the right circumstances".
         (my $module_path = $class_name . '.pm') =~ s/::/\//g;
-        Carp::croak("Error while autoloading with 'use $class_name': $@") unless ($@ =~ /Can't locate $module_path in \@INC/);
+        Carp::croak("Error while autoloading with 'use $class_name': $exception") unless ($exception =~ /Can't locate $module_path in \@INC/);
         # FIXME: I think other conditions here will result in silent errors.
     }
 
