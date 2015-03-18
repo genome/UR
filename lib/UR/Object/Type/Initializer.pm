@@ -367,8 +367,6 @@ sub _normalize_class_description {
 
     $class->compose_roles($desc) unless $bootstrapping;
 
-    $class->_normalize_property_descriptions_during_normalize_class_description($desc);
-
     # we previously handled property meta extensions when normalizing the property
     # now we merely save unrecognized things
     # this is now done afterward so that parent classes can preprocess their subclasses descriptions before extending
@@ -718,6 +716,8 @@ sub _normalize_class_description_impl {
         }
     }
 
+    __PACKAGE__->_normalize_property_descriptions_during_normalize_class_description(\%new_class);
+
     unless ($bootstrapping) {
         %$meta_properties = (%$meta_properties, @additional_property_meta_attributes);
 
@@ -1042,6 +1042,8 @@ sub compose_roles {
 
     my @property_names = keys %properties_to_add;
      @{$desc->{has}}{@property_names} = @properties_to_add{@property_names};
+
+    $class->_normalize_property_descriptions_during_normalize_class_description($desc);
 }
 
 sub _validate_role_requirements {
