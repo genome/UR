@@ -1003,9 +1003,26 @@ sub compose_roles {
 
     $class->_validate_role_requirements($desc);
 
+    my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
+    my $meta_properties_to_add = _collect_meta_properties_from_roles($desc, @role_objs);
+
+    _import_methods_from_roles($desc->{class_name}, \@role_objs);
+
+    my @meta_prop_names = keys %$meta_properties_to_add;
+    @$desc{@meta_prop_names} = @$meta_properties_to_add{@meta_prop_names};
+
+    my @property_names = keys %$properties_to_add;
+     @{$desc->{has}}{@property_names} = @$properties_to_add{@property_names};
+
+    $class->_normalize_property_descriptions_during_normalize_class_description($desc);
+}
+
+sub _collect_properties_from_roles {
+    my($desc, @role_objs) = @_;
+
     my $properties_from_class = $desc->{has};
 
-    my(%properties_to_add, %meta_properties_to_add, %source_for_properties_to_add, %source_for_meta_properties_to_add);
+    my(%properties_to_add, %source_for_properties_to_add);
     foreach my $role ( @role_objs ) {
         my @role_property_names = $role->property_names;
         foreach my $property_name ( @role_property_names ) {
@@ -1021,7 +1038,15 @@ sub compose_roles {
 
             $properties_to_add{$property_name} = $prop_definition;
         }
+    }
+    return \%properties_to_add;
+}
 
+sub _collect_meta_properties_from_roles {
+    my($desc, @role_objs) = @_;
+
+    my(%meta_properties_to_add, %source_for_meta_properties_to_add);
+    foreach my $role ( @role_objs ) {
         foreach my $meta_prop_name ( $role->meta_properties_to_compose_into_classes ) {
             next if exists $desc->{$meta_prop_name};
             next unless defined $role->$meta_prop_name;
@@ -1039,16 +1064,7 @@ sub compose_roles {
             $source_for_meta_properties_to_add{$meta_prop_name} = $role->role_name;
         }
     }
-
-    _import_methods_from_roles($desc->{class_name}, \@role_objs);
-
-    my @meta_prop_names = keys %meta_properties_to_add;
-    @$desc{@meta_prop_names} = @meta_properties_to_add{@meta_prop_names};
-
-    my @property_names = keys %properties_to_add;
-     @{$desc->{has}}{@property_names} = @properties_to_add{@property_names};
-
-    $class->_normalize_property_descriptions_during_normalize_class_description($desc);
+    return \%meta_properties_to_add;
 }
 
 sub _validate_role_requirements {
