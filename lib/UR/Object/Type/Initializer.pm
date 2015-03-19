@@ -975,26 +975,31 @@ sub _process_class_definition_property_keys {
     }
 }
 
-sub compose_roles {
-    my($class, $desc) = @_;
+sub _dynamically_load_roles_for_class_desc {
+    my($desc) = @_;
 
-    my $class_name = $desc->{class_name};
-
-    return unless ($desc->{roles} and @{ $desc->{roles} });
-    my(@role_objs, $exception);
+    my(@role_objs, $last_role, $exception);
     do {
         local $@;
         eval {
             @role_objs = map
-                            { UR::Role->_dynamically_load_role($_) }
+                            { $last_role = $_ and UR::Role->_dynamically_load_role($_) }
                             @{ $desc->{roles} };
         };
         $exception = $@;
     };
     if ($exception) {
-        Carp::croak("Cannot apply role(s) to class $class_name: $exception");
+        my $class_name = $desc->{class_name};
+        Carp::croak("Cannot apply role $last_role to class $class_name: $exception");
     }
-    return unless @role_objs;
+    return @role_objs;
+}
+
+sub compose_roles {
+    my($class, $desc) = @_;
+
+    return unless ($desc->{roles} and @{ $desc->{roles} });
+    my @role_objs = _dynamically_load_roles_for_class_desc($desc);
 
     $class->_validate_role_requirements($desc);
 
@@ -1035,7 +1040,7 @@ sub compose_roles {
         }
     }
 
-    _import_methods_from_roles($class_name, \@role_objs);
+    _import_methods_from_roles($desc->{class_name}, \@role_objs);
 
     my @meta_prop_names = keys %meta_properties_to_add;
     @$desc{@meta_prop_names} = @meta_properties_to_add{@meta_prop_names};
