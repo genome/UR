@@ -145,6 +145,51 @@ sub _introspect_methods {
     return $subs;
 }
 
+# Called by UR::Object::Type::Initializer::compose_roles to apply a role name
+# to a partially constructed class description
+sub _apply_roles_to_class_desc {
+    my($class, $desc) = @_;
+    if (ref($class) or ref($desc) ne 'HASH') {
+        Carp::croak('_apply_roles_to_class_desc() must be called as a class method on a basic class description');
+    }
+
+    return unless ($desc->{roles} and @{ $desc->{roles} });
+    my @role_objs = $class->_dynamically_load_roles_for_class_desc($desc);
+
+    $class->_validate_role_requirements($desc);
+
+    my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
+    my $meta_properties_to_add = _collect_meta_properties_from_roles($desc, @role_objs);
+
+    _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
+
+    my @meta_prop_names = keys %$meta_properties_to_add;
+    @$desc{@meta_prop_names} = @$meta_properties_to_add{@meta_prop_names};
+
+    my @property_names = keys %$properties_to_add;
+     @{$desc->{has}}{@property_names} = @$properties_to_add{@property_names};
+}
+
+sub _dynamically_load_roles_for_class_desc {
+    my($class, $desc) = @_;
+
+    my(@role_objs, $last_role, $exception);
+    do {
+        local $@;
+        eval {
+            @role_objs = map
+                            { $last_role = $_ and $class->_dynamically_load_role($_) }
+                            @{ $desc->{roles} };
+        };
+        $exception = $@;
+    };
+    if ($exception) {
+        my $class_name = $desc->{class_name};
+        Carp::croak("Cannot apply role $last_role to class $class_name: $exception");
+    }
+    return @role_objs;
+}
+
 sub _dynamically_load_role {
     my($class, $role_name) = @_;
 
@@ -162,6 +207,143 @@ sub _dynamically_load_role {
         die qq(Cannot dynamically load role '$role_name': No module exists with that name.\n);
     }
 }
+
+sub _collect_properties_from_roles {
+    my($desc, @role_objs) = @_;
+
+    my $properties_from_class = $desc->{has};
+
+    my(%properties_to_add, %source_for_properties_to_add);
+    foreach my $role ( @role_objs ) {
+        my @role_property_names = $role->property_names;
+        foreach my $property_name ( @role_property_names ) {
+            my $prop_definition = $role->property_data($property_name);
+            if (my $conflict = $source_for_properties_to_add{$property_name}) {
+                Carp::croak(sprintf(q(Cannot compose role %s: Property '%s' conflicts with property in role %s),
+                                    $role->role_name, $property_name, $conflict));
+            }
+
+            $source_for_properties_to_add{$property_name} = $role->role_name;
+
+            next if exists $properties_from_class->{$property_name};
+
+            $properties_to_add{$property_name} = $prop_definition;
+        }
+    }
+    return \%properties_to_add;
+}
+
+sub _collect_meta_properties_from_roles {
+    my($desc, @role_objs) = @_;
+
+    my(%meta_properties_to_add, %source_for_meta_properties_to_add);
+    foreach my $role ( @role_objs ) {
+        foreach my $meta_prop_name ( $role->meta_properties_to_compose_into_classes ) {
+            next if exists $desc->{$meta_prop_name};
+            next unless defined $role->$meta_prop_name;
+
+            if ($desc->{$meta_prop_name}) {
+                Carp::croak('Cannot compose role ' . $role->role_name
+                            . ": Meta property $meta_prop_name is specified in the class definition and in the role");
+            }
+            if (exists $meta_properties_to_add{$meta_prop_name}) {
+                Carp::croak('Cannot compose role ' . $role->role_name
+                            . ": Meta property $meta_prop_name is already specified in another role for this class"
+                            . " ($source_for_meta_properties_to_add{$meta_prop_name})");
+            }
+            $meta_properties_to_add{$meta_prop_name} = $role->$meta_prop_name;
+            $source_for_meta_properties_to_add{$meta_prop_name} = $role->role_name;
+        }
+    }
+    return \%meta_properties_to_add;
+}
+
+sub _validate_role_requirements {
+    my($class, $desc) = @_;
+
+    my $class_name = $desc->{class_name};
+    my %found_properties_and_methods = map { $_ => 1 } keys %{ $desc->{has} };
+
+    foreach my $role_name ( @{ $desc->{roles} } ) {
+        my $role = $class->get($role_name);
+        foreach my $requirement ( @{ $role->requires } ) {
+            unless ($found_properties_and_methods{ $requirement }
+                        ||= _class_desc_lineage_has_method_or_property($desc, $requirement))
+            {
+                my $role_name = $role->role_name;
+                Carp::croak("Cannot compose role $role_name: missing required property or method '$requirement'");
+            }
+        }
+
+        # Properties and methods from this role can satisfy requirements for later roles
+        foreach my $name ( $role->property_names, $role->method_names ) {
+            $found_properties_and_methods{$name} = 1;
+        }
+    }
+
+    return 1;
+}
+
+sub _class_desc_lineage_has_method_or_property {
+    my($desc, $requirement) = @_;
+
+    my $class_name = $desc->{class_name};
+    if (my $can = $class_name->can($requirement)) {
+        return $can;
+    }
+
+    my @is = @{ $desc->{is} };
+    my %seen;
+    while(my $parent = shift @is) {
+        next if $seen{$parent}++;
+
+        if (my $can = $parent->can($requirement)) {
+            return $can;
+        }
+
+        my $parent_meta = $parent->__meta__;
+        if (my $prop_meta = $parent_meta->property($requirement)) {
+            return $prop_meta;
+        }
+    }
+    return;
+}
+
+sub _import_methods_from_roles_into_namespace {
+    my($class_name, $roles) = @_;
+
+    my $this_class_methods = UR::Util::coderefs_for_package($class_name);
+
+    my(%all_imported_methods, %method_sources);
+    foreach my $role ( @$roles ) {
+        my $this_role_methods = $role->methods;
+        my @this_role_method_names = keys( %$this_role_methods );
+        my @conflicting = grep { ! exists($this_class_methods->{$_}) }  # not a conflict if the class overrides
+                          grep { exists $all_imported_methods{$_} }
+                          @this_role_method_names;
+
+        if (@conflicting) {
+            my $plural = scalar(@conflicting) > 1 ? 's' : '';
+            Carp::croak('Cannot compose role ', $role->role_name
+                        . ": method${plural} conflicts with those defined in other roles\n\t"
+                        . join("\n\t", join('::', map { ( $method_sources{$_}, $_ ) } @conflicting))
+                        . "\n");
+        }
+
+        @method_sources{ @this_role_method_names } = ($role->role_name) x @this_role_method_names;
+        @all_imported_methods{ @this_role_method_names } = @$this_role_methods{ @this_role_method_names };
+    }
+
+    delete @all_imported_methods{ keys %$this_class_methods };  # Don't import roles' methods already defined on the class
+    foreach my $name ( keys %all_imported_methods ) {
+        Sub::Install::install_sub({
+            code => $all_imported_methods{$name},
+            as => $name,
+            into => $class_name,
+        });
+    }
+}
+
 
 1;
 

@@ -428,11 +428,11 @@ UR::Object::Type->define(
 require UR::Context;
 UR::Object::Type->initialize_bootstrap_classes;
 
+require UR::Role;
 require Command;
 
 $UR::initialized = 1;
 
-require UR::Role;
 require UR::Change;
 require UR::Context::Root;
 require UR::Context::Process;
