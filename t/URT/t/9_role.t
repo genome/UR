@@ -9,7 +9,7 @@ use lib File::Basename::dirname(__FILE__).'/../..';
 use URT;
 
 subtest basic => sub {
-    plan tests => 10;
+    plan tests => 12;
 
     role URT::BasicRole {
         has => [
@@ -46,6 +46,14 @@ subtest basic => sub {
         }
         qr(Cannot dynamically load role 'Bogus': No module exists with that name\.),
         'Could not create class with a bogus role';
+
+    throws_ok { URT::BasicRole->create() }
+        qr(Can't locate object method "create" via package "URT::BasicRole"),
+        'Trying to create() a role by package name throws an exception';
+
+    throws_ok { URT::BasicRole->get() }
+        qr(Can't locate object method "get" via package "URT::BasicRole"),
+        'Trying to get() a role by package name throws an exception';
 };
 
 subtest 'multiple roles' => sub {
