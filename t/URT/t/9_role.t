@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 9;
+use Test::More tests=> 10;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -374,4 +374,32 @@ subtest 'role import function' => sub {
     };
 
     is($import_called, 0, '__import__ was not called when a child class is defined');
+};
+
+subtest 'excludes' => sub {
+    plan tests => 3;
+
+    role Excluded { };
+    role Excluder { excludes => ['Excluded'] };
+    role NotExcluded { };
+
+    lives_ok
+        {
+            class ExcludeClassWorks { roles => ['Excluder', 'NotExcluded'] };
+        }
+        'Define class with exclusion role not triggered';
+
+    throws_ok
+        {
+            class ExcludeClass { roles => ['Excluded', 'Excluder'] };
+        }
+        qr(Cannot compose role Excluded into class ExcludeClass: Role Excluder excludes it),
+        'Composing class with excluded role throws exception';
+
+    throws_ok
+        {
+            class ExcludeClass2 { roles => ['Excluder', 'Excluded'] };
+        }
+        qr(Cannot compose role Excluded into class ExcludeClass2: Role Excluder excludes it),
+        'Composing excluded roles in the other order also throws exception';
 };

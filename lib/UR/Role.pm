@@ -18,6 +18,7 @@ UR::Object::Type->define(
         roles       => { is => 'ARRAY', doc => 'List of other role names composed into this role' },
         requires    => { is => 'ARRAY', doc => 'List of properties required of consuming classes' },
         attributes_have => { is => 'HASH', doc => 'Meta-attributes for properites' },
+        excludes    => { is => 'ARRAY', doc => 'List of Role names that cannot compose with this role' },
         map { $_ => _get_property_desc_from_ur_object_type($_) }
                                 meta_properties_to_compose_into_classes(),
     ],
@@ -65,6 +66,7 @@ our @ROLE_DESCRIPTION_KEY_MAPPINGS = (
     [ role_name             => qw// ],
     [ methods               => qw// ],
     [ requires              => qw// ],
+    [ excludes              => qw// ],
 );
 
 sub _normalize_role_description {
@@ -80,8 +82,10 @@ sub _normalize_role_description {
         UR::Object::Type::_canonicalize_class_params($old_role, \@ROLE_DESCRIPTION_KEY_MAPPINGS),
     };
 
-    unless (UR::Util::ensure_arrayref($new_role, 'requires')) {
-        Carp::croak("The 'requires' metadata for role $role_name must be an arrayref");
+    foreach my $key (qw( requires excludes ) ) {
+        unless (UR::Util::ensure_arrayref($new_role, $key)) {
+            Carp::croak("The '$key' metadata for role $role_name must be an arrayref");
+        }
     }
 
     # UR::Object::Type::_normalize_class_description_impl() copies these over before
@@ -156,6 +160,7 @@ sub _apply_roles_to_class_desc {
     return unless ($desc->{roles} and @{ $desc->{roles} });
     my @role_objs = $class->_dynamically_load_roles_for_class_desc($desc);
 
+    $class->_validate_role_exclusions($desc);
     $class->_validate_role_requirements($desc);
 
     my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
@@ -281,6 +286,28 @@ sub _validate_role_requirements {
         }
     }
 
+    return 1;
+}
+
+sub _validate_role_exclusions {
+    my($class, $desc) = @_;
+
+    my %role_names = map { $_ => $_ } @{ $desc->{roles} };
+    foreach my $role ( map { $class->get($_) } @{ $desc->{roles} } ) {
+
+        my @conflicts = grep { defined }
+                            @role_names{ @{ $role->excludes } };
+        if (@conflicts) {
+            my $class_name = $desc->{class_name};
+            my $plural = @conflicts > 1 ? 's' : '';
+            Carp::croak(sprintf('Cannot compose role%s %s into class %s: Role %s excludes %s',
+                                $plural,
+                                join(', ', @conflicts),
+                                $desc->{class_name},
+                                $role->role_name,
+                                $plural ? 'them' : 'it'));
+        }
+    }
     return 1;
 }
 
