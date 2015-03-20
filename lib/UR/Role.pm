@@ -14,6 +14,7 @@ UR::Object::Type->define(
     has => [
         role_name   => { is => 'Text', doc => 'Package name identifying the role' },
         methods     => { is => 'HASH', doc => 'Map of method names and coderefs' },
+        overloads   => { is => 'HASH', doc => 'Map of overload keys and coderefs' },
         has         => { is => 'ARRAY', doc => 'List of properties and their definitions' },
         roles       => { is => 'ARRAY', doc => 'List of other role names composed into this role' },
         requires    => { is => 'ARRAY', doc => 'List of properties required of consuming classes' },
@@ -57,7 +58,8 @@ sub define {
     }
 
     my $methods = _introspect_methods($desc->{role_name});
-    my $role = UR::Role->__define__(%$desc, methods => $methods);
+    my $overloads = _introspect_overloads($desc->{role_name});
+    my $role = UR::Role->__define__(%$desc, methods => $methods, overloads => $overloads);
     return $role;
 }
 
@@ -141,12 +143,45 @@ sub _get_property_desc_from_ur_object_type {
     return \%definition;
 }
 
+{
+    my @overload_ops;
+    sub _all_overload_ops {
+        @overload_ops = map { split /\s+/ } values(%overload::ops) unless @overload_ops;
+        @overload_ops;
+    }
+}
+
 sub _introspect_methods {
     my $role_name = shift;
 
     my $subs = UR::Util::coderefs_for_package($role_name);
     delete $subs->{__import__};  # don't allow __import__ to be exported to a class's namespace
+    delete @$subs{ map { "($_" } ( _all_overload_ops, ')', '(' ) };
     return $subs;
+}
+
+sub _introspect_overloads {
+    my $role_name = shift;
+
+    return {} unless overload::Overloaded($role_name);
+
+    my %overloads;
+    my $stash = do {
+        no strict 'refs';
+        \%{$role_name . '::'};
+    };
+    foreach my $op ( _all_overload_ops ) {
+        my $op_key = $op eq 'fallback' ? ')' : $op;
+        my $overloaded = $stash->{'(' . $op_key};
+
+        if ($overloaded) {
+            my $subref = *{$overloaded}{CODE};
+            $overloads{$op} = $subref eq \&overload::nil
+                                ? ${*{$overloaded}{SCALAR}} # overridden with string method name
+                                : $subref; # overridden with a subref
+        }
+    }
+    return \%overloads;
 }
 
 # Called by UR::Object::Type::Initializer::compose_roles to apply a role name
@@ -165,8 +200,10 @@ sub _apply_roles_to_class_desc {
 
     my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
     my $meta_properties_to_add = _collect_meta_properties_from_roles($desc, @role_objs);
+    my $overloads_to_add = _collect_overloads_from_roles($desc, @role_objs);
 
     _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
+    _apply_overloads_to_namespace($desc->{class_name}, $overloads_to_add);
 
     my @meta_prop_names = keys %$meta_properties_to_add;
     @$desc{@meta_prop_names} = @$meta_properties_to_add{@meta_prop_names};
@@ -237,6 +274,31 @@ sub _collect_properties_from_roles {
     }
     return \%properties_to_add;
 }
+
+sub _collect_overloads_from_roles {
+    my($desc, @role_objs) = @_;
+
+    my $overloads_from_class = _introspect_overloads($desc->{class_name});
+
+    my(%overloads_to_add, %source_for_overloads_to_add);
+    foreach my $role ( @role_objs ) {
+        my $role_name = $role->role_name;
+        my $overloads_this_role = $role->overloads;
+        while( my($op, $impl) = each(%$overloads_this_role)) {
+            if (my $conflict = $source_for_overloads_to_add{$op}) {
+                Carp::croak("Cannot compose role $role_name: Overload $op conflicts with overload in role $conflict");
+            }
+            $source_for_overloads_to_add{$op} = $role_name;
+
+            next if exists $overloads_from_class->{$op};
+
+            $overloads_to_add{$op} = $impl;
+        }
+    }
+    return \%overloads_to_add;
+}
+
+
 
 sub _collect_meta_properties_from_roles {
     my($desc, @role_objs) = @_;
@@ -369,6 +431,34 @@ sub _import_methods_from_roles_into_namespace {
             into => $class_name,
         });
     }
+}
+
+sub _apply_overloads_to_namespace {
+    my($class_name, $overloads) = @_;
+
+    my(%cooked_overloads);
+    while( my($op, $impl) = each %$overloads) {
+        $cooked_overloads{$op} = ref $impl
+                                    ? sprintf(q($overloads->{'%s'}), $op)
+                                    : qq('$impl');
+    }
+
+    my $string = "package $class_name;\n"
+                 . 'use overload '
+                 . join(",\n\t", map { sprintf(q('%s' => %s), $_, $cooked_overloads{$_}) } keys %cooked_overloads)
+                 . ';';
+
+    my $exception;
+    do {
+        local $@;
+        eval $string;
+        $exception = $@;
+    };
+
+    if ($exception) {
+        Carp::croak("Failed to apply overloads to package $class_name: $exception");
+    }
+    return 1;
 }
 
 

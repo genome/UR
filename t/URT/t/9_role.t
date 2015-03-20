@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 10;
+use Test::More tests=> 12;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -374,6 +374,82 @@ subtest 'role import function' => sub {
     };
 
     is($import_called, 0, '__import__ was not called when a child class is defined');
+};
+
+subtest 'basic overloading' => sub {
+    plan tests => 5;
+
+    package OverloadingAddRole;
+    use overload '+' => '_add_return_zero';
+    our $add_called = 0;
+    sub OverloadingAddRole::_add_return_zero {
+        my($self, $other) = @_;
+        $add_called++;
+        return 0;
+    }
+    role OverloadingAddRole { };
+
+    package OverloadingSubRole;
+    use overload '-' => \&OverloadingRole::_sub_return_zero;
+    our $sub_called = 0;
+    sub OverloadingRole::_sub_return_zero {
+        my($self, $other) = @_;
+        $sub_called++;
+        return 0;
+    }
+    role OverloadingSubRole { };
+
+    package main;
+    class OverloadingClass {
+        roles => [qw( OverloadingAddRole OverloadingSubRole )],
+    };
+
+    my $o = OverloadingClass->create();
+    ok(defined($o), 'Create object from class with overloading role');
+    is($o + 1, 0, 'Adding to object returns overloaded value');
+    is($OverloadingAddRole::add_called, 1, 'overloaded add called');
+
+    is($o - 1, 0, 'Adding to object returns overloaded value');
+    is($OverloadingSubRole::sub_called, 1, 'overloaded subtract called');
+};
+
+subtest 'overload conflict' => sub {
+    plan tests => 5;
+
+    package OverloadConflict1;
+    use overload '+' => '_foo';
+    role OverloadConflict1 { };
+    sub OverloadConflict1::_foo { }
+
+    package OverloadConflict2;
+    use overload '+' => '_bar';
+    role OverloadConflict2 { };
+    sub OverloadConflict1::_bar { }
+
+    package main;
+    throws_ok { class OverloadConflictClass {
+                    roles => [qw( OverloadConflict1 OverloadConflict2 )],
+                } }
+        qr(Cannot compose role OverloadConflict2: Overload \+ conflicts with overload in role OverloadConflict1),
+        'Roles with conflicting overrides cannot be composed together';
+
+
+    package OverloadConflictResolvedClass;
+    our $overload_called = 0;
+    use overload '+' => sub { $overload_called++; return 'Overloaded' };
+
+    package main;
+    lives_ok
+        {
+            class OverloadConflictResolvedClass {
+                roles => [qw( OverloadConflict1 OverloadConflict2 )],
+        } }
+        'Class with overrides composes both roles with overrides';
+
+    my $o = OverloadConflictResolvedClass->create();
+    ok(defined($o), 'Created instance');
+    is($o + 1, 'Overloaded', 'overloaded method called');
+    is($OverloadConflictResolvedClass::overload_called, 1, 'overload method called once');
 };
 
 subtest 'excludes' => sub {
