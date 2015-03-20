@@ -976,7 +976,7 @@ sub create_entity {
     }
 
     my $entity = $self->_construct_object($class, %default_values, %$params, @extra);
-    return unless $entity;
+    return unless defined $entity;
     $self->add_change_to_transaction_log($entity, $construction_method);
     $self->add_change_to_transaction_log($entity, 'load') if $construction_method eq '__define__';
 
