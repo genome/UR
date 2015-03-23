@@ -7,6 +7,9 @@ use UR;
 use UR::Object::Type::InternalAPI;
 use UR::Util;
 
+use Carp;
+our @CARP_NOT = qw(UR::Object::Type);
+
 UR::Object::Type->define(
     class_name => 'UR::Role',
     doc => 'Object representing a role',
