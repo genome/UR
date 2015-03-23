@@ -438,7 +438,7 @@ subtest 'overload conflict' => sub {
     throws_ok { class OverloadConflictClass {
                     roles => [qw( OverloadConflict1 OverloadConflict2 )],
                 } }
-        qr(Cannot compose role OverloadConflict2: Overload \+ conflicts with overload in role OverloadConflict1),
+        qr(Cannot compose role OverloadConflict2: Overload '\+' conflicts with overload in role OverloadConflict1),
         'Roles with conflicting overrides cannot be composed together';
 
 

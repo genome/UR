@@ -289,7 +289,7 @@ sub _collect_overloads_from_roles {
         my $overloads_this_role = $role->overloads;
         while( my($op, $impl) = each(%$overloads_this_role)) {
             if (my $conflict = $source_for_overloads_to_add{$op}) {
-                Carp::croak("Cannot compose role $role_name: Overload $op conflicts with overload in role $conflict");
+                Carp::croak("Cannot compose role $role_name: Overload '$op' conflicts with overload in role $conflict");
             }
             $source_for_overloads_to_add{$op} = $role_name;
 
