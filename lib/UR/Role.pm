@@ -100,7 +100,6 @@ sub _normalize_role_description {
     UR::Object::Type::_process_class_definition_property_keys($old_role, $new_role);
     _complete_property_descriptions($new_role);
     
-    $new_role->{methods} = UR::Util::coderefs_for_package($role_name);
     return $new_role;
 }
 
