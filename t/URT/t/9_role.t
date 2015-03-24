@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 12;
+use Test::More tests=> 13;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -419,6 +419,83 @@ subtest 'basic overloading' => sub {
 
     is($o - 1, 0, 'Adding to object returns overloaded value');
     is($OverloadingSubRole::sub_called, 1, 'overloaded subtract called');
+};
+
+subtest 'overload fallback' => sub {
+    plan tests => 6;
+
+    package RoleWithOverloadFallbackFalse;
+    use overload '+' => 'add_overload',
+                fallback => 0;
+    role RoleWithOverloadFallbackFalse { };
+    sub add_overload { }
+
+    package AnotherRoleWithOverloadFallbackFalse;
+    use overload '-' => 'sub_overload',
+                fallback => 0;
+    role AnotherRoleWithOverloadFallbackFalse { };
+    sub sub_overload { }
+
+    package RoleWithOverloadFallbackTrue;
+    use overload '*' => 'mul_overload',
+                fallback => 1;
+    role RoleWithOverloadFallbackTrue { };
+    sub mul_overload { }
+
+    package AnotherRoleWithOverloadFallbackTrue;
+    use overload '/' => 'div_overload',
+                fallback => 1;
+    role AnotherRoleWithOverloadFallbackTrue { };
+    sub div_overload { }
+
+    package RoleWithOverloadFallbackUndef;
+    use overload '""' => 'str_overload',
+                fallback => undef;
+    role RoleWithOverloadFallbackUndef { };
+    sub str_overload { }
+
+    package AnotherRoleWithOverloadFallbackUndef;
+    use overload '%' => 'mod_overload';
+    role AnotherRoleWithOverloadFallbackUndef { };
+    sub mod_overload { }
+
+    package main;
+    lives_ok {
+        class ClassWithMatchingFallbackFalse {
+            roles => ['RoleWithOverloadFallbackFalse', 'AnotherRoleWithOverloadFallbackFalse'],
+        } }
+        'Composed two classes with overload fallback false';
+
+    lives_ok {
+        class ClassWithMatchingFallbackTrue {
+            roles => ['RoleWithOverloadFallbackTrue', 'AnotherRoleWithOverloadFallbackTrue'],
+        } }
+        'Composed two classes with overload fallback true';
+
+    lives_ok {
+        class ClassWithMatchingFallbackUndef {
+            roles => ['RoleWithOverloadFallbackUndef', 'AnotherRoleWithOverloadFallbackUndef'],
+        }}
+        'Composed wto classes with overload fallback undef';
+
+    lives_ok {
+        class ClassWithOneFallbackFalse {
+            roles => ['RoleWithOverloadFallbackFalse', 'RoleWithOverloadFallbackUndef'],
+        }}
+        'Composed one role with fallback false and one fallback undef';
+
+    lives_ok {
+        class ClassWithOneFallbackTrue {
+            roles => ['RoleWithOverloadFallbackTrue', 'RoleWithOverloadFallbackUndef'],
+        }}
+        'Composed one role with fallback true and one fallback undef';
+
+    throws_ok {
+        class ClassWithConflictFallback {
+            roles => ['RoleWithOverloadFallbackFalse', 'RoleWithOverloadFallbackTrue'],
+        }}
+        qr(fallback value '1' conflicts with fallback value 'FALSE' in role RoleWithOverloadFallbackFalse),
+        'Overload fallback conflict throws exception';
 };
 
 subtest 'overload conflict' => sub {

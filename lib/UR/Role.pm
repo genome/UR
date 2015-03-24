@@ -284,10 +284,15 @@ sub _collect_overloads_from_roles {
     my $overloads_from_class = _introspect_overloads($desc->{class_name});
 
     my(%overloads_to_add, %source_for_overloads_to_add);
+    my $fallback_validator = _create_fallback_validator();
+
     foreach my $role ( @role_objs ) {
         my $role_name = $role->role_name;
         my $overloads_this_role = $role->overloads;
+
+        $fallback_validator->($role_name, $overloads_this_role->{fallback});
         while( my($op, $impl) = each(%$overloads_this_role)) {
+            next if ($op eq 'fallback');
             if (my $conflict = $source_for_overloads_to_add{$op}) {
                 Carp::croak("Cannot compose role $role_name: Overload '$op' conflicts with overload in role $conflict");
             }
@@ -298,9 +303,37 @@ sub _collect_overloads_from_roles {
             $overloads_to_add{$op} = $impl;
         }
     }
+
+    my $fallback = $fallback_validator->();
+    $overloads_to_add{fallback} = $fallback if defined $fallback;
     return \%overloads_to_add;
 }
 
+sub _create_fallback_validator {
+    my($fallback, $fallback_set_in);
+
+    return sub {
+        unless (@_) {
+            # no args, return current value
+            return $fallback;
+        }
+
+        my($role_name, $value) = @_;
+        if (defined($value) and !defined($fallback)) {
+            $fallback = $value;
+            $fallback_set_in = $role_name;
+            return 1;
+        }
+        return 1 unless (defined($fallback) and defined ($value));
+        return 1 unless ($fallback xor $value);
+
+        Carp::croak(sprintf(q(Cannot compose role %s: fallback value '%s' conflicts with fallback value '%s' in role %s),
+                                $role_name,
+                                $value ? $value : defined($value) ? 'FALSE' : 'UNDEF',
+                                $fallback ? $fallback : defined($fallback) ? 'FALSE' : 'UNDEF',
+                                $fallback_set_in));
+    };
+}
 
 
 sub _collect_meta_properties_from_roles {
