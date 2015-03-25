@@ -10,6 +10,8 @@ use UR::Util;
 use Carp;
 our @CARP_NOT = qw(UR::Object::Type);
 
+Class::Autouse->sugar(\&_define_role);
+
 UR::Object::Type->define(
     class_name => 'UR::Role',
     doc => 'Object representing a role',
@@ -502,6 +504,29 @@ sub _apply_overloads_to_namespace {
     return 1;
 }
 
+sub _define_role {
+    my($role_name, $func, @params) = @_;
+
+    if (defined($func) and $func eq "role" and @params > 1 and $role_name ne "UR::Role") {
+        my @role_params;
+        if (@params == 2 and ref($params[1]) eq 'HASH') {
+            @role_params = %{ $params[1] };
+        }
+        elsif (@params == 2 and ref($params[1]) eq 'ARRAY') {
+            @role_params = @{ $params[1] };
+        }
+        else {
+            @role_params = @params[1..$#params];
+        }
+        my $role = UR::Role->define(role_name => $role_name, @role_params);
+        unless ($role) {
+            Carp::croak "error defining role $role_name!";
+        }
+        return sub { $role_name };
+    } else {
+        return;
+    }
+}
 
 1;
 

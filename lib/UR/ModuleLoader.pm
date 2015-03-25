@@ -40,23 +40,6 @@ sub define_class {
         }
         return sub { $class };
     }
-    elsif (defined($func) and $func eq "role" and @params > 1 and $class ne "UR::Role") {
-        my @role_params;
-        if (@params == 2 and ref($params[1]) eq 'HASH') {
-            @role_params = %{ $params[1] };
-        }
-        elsif (@params == 2 and ref($params[1]) eq 'ARRAY') {
-            @role_params = @{ $params[1] };
-        }
-        else {
-            @role_params = @params[1..$#params];
-        }
-        my $class_meta = UR::Role->define(role_name => $class, @role_params);
-        unless ($class_meta) {
-            Carp::croak "error defining role $class!";
-        }
-        return sub { $class };
-    }
 
     else {
         return;
