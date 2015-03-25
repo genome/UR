@@ -1128,9 +1128,8 @@ sub _normalize_property_description1 {
     }
 
     if ($new_property{data_type}) {
-        if (my ($length) = ($new_property{data_type} =~ /\((\d+)\)$/)) {
+        if (my (undef, $length) = $new_property{data_type} =~ m/(\s*)\((\d+)\)$/) {
             $new_property{data_length} = $length;
-            $new_property{data_type} =~ s/\(\d+\)$//;
         }
         if ($new_property{data_type} =~ m/[^\w:]/) {
             Carp::croak("Can't initialize class $class_name: Property '" . $new_property{property_name}

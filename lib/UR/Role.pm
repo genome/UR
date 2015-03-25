@@ -45,7 +45,7 @@ sub method_names {
 }
 
 sub meta_properties_to_compose_into_classes {
-    return qw( is_abstract is_final is_singleton
+    return qw( is_abstract is_final is_singleton doc
                composite_id_separator id_generator valid_signals 
                subclassify_by subclass_description_preprocessor sub_classification_method_name
                sub_classification_meta_class_name
@@ -207,8 +207,12 @@ sub _apply_roles_to_class_desc {
     _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
     _apply_overloads_to_namespace($desc->{class_name}, $overloads_to_add);
 
+    my $valid_signals = delete $meta_properties_to_add->{valid_signals};
     my @meta_prop_names = keys %$meta_properties_to_add;
     @$desc{@meta_prop_names} = @$meta_properties_to_add{@meta_prop_names};
+    if ($valid_signals) {
+        push @{$desc->{valid_signals}}, @$valid_signals;
+    };
 
     my @property_names = keys %$properties_to_add;
      @{$desc->{has}}{@property_names} = @$properties_to_add{@property_names};
@@ -341,20 +345,22 @@ sub _collect_meta_properties_from_roles {
     my(%meta_properties_to_add, %source_for_meta_properties_to_add);
     foreach my $role ( @role_objs ) {
         foreach my $meta_prop_name ( $role->meta_properties_to_compose_into_classes ) {
-            next if exists $desc->{$meta_prop_name};
+            next if (defined $desc->{$meta_prop_name} and $meta_prop_name ne 'valid_signals');
             next unless defined $role->$meta_prop_name;
 
-            if ($desc->{$meta_prop_name}) {
-                Carp::croak('Cannot compose role ' . $role->role_name
-                            . ": Meta property $meta_prop_name is specified in the class definition and in the role");
+            if ($meta_prop_name ne 'valid_signals') {
+                if (exists $meta_properties_to_add{$meta_prop_name}) {
+                    Carp::croak(sprintf(q(Cannot compose role %s: Meta property '%s' conflicts with meta property from role %s),
+                                        $role->role_name,
+                                        $meta_prop_name,
+                                        $source_for_meta_properties_to_add{$meta_prop_name}));
+                }
+                $meta_properties_to_add{$meta_prop_name} = $role->$meta_prop_name;
+                $source_for_meta_properties_to_add{$meta_prop_name} = $role->role_name;
+            } else {
+                $meta_properties_to_add{valid_signals} ||= [];
+                push @{ $meta_properties_to_add{valid_signals} }, @{ $role->valid_signals };
             }
-            if (exists $meta_properties_to_add{$meta_prop_name}) {
-                Carp::croak('Cannot compose role ' . $role->role_name
-                            . ": Meta property $meta_prop_name is already specified in another role for this class"
-                            . " ($source_for_meta_properties_to_add{$meta_prop_name})");
-            }
-            $meta_properties_to_add{$meta_prop_name} = $role->$meta_prop_name;
-            $source_for_meta_properties_to_add{$meta_prop_name} = $role->role_name;
         }
     }
     return \%meta_properties_to_add;

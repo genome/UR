@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 13;
+use Test::More tests=> 16;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -563,4 +563,79 @@ subtest 'excludes' => sub {
         }
         qr(Cannot compose role Excluded into class ExcludeClass2: Role Excluder excludes it),
         'Composing excluded roles in the other order also throws exception';
+};
+
+subtest 'class meta attribs' => sub {
+    plan tests => 5;
+
+    role RoleWithMetaAttribs {
+        data_source => 'URT::DataSource::SomeSQLite',
+        doc => 'doc from role',
+        id_generator => 'generate_id_from_role',
+        valid_signals => ['role_signal'],
+    };
+    lives_ok
+        {
+            class ClassGetsMetaAttribsFromRole {
+                roles => ['RoleWithMetaAttribs'],
+            }
+        }
+        'Define class using role which defines class meta attribs';
+
+    my $meta = ClassGetsMetaAttribsFromRole->__meta__;
+    is($meta->data_source_id, 'URT::DataSource::SomeSQLite', 'data source');
+    is($meta->doc, 'doc from role', 'doc');
+    is($meta->id_generator, 'generate_id_from_role', 'id_generator');
+    is_deeply($meta->valid_signals, ['role_signal'], 'valid_signals');
+};
+
+subtest 'class overrides some meta attribs in role' => sub {
+    plan tests => 5;
+
+    lives_ok
+        {
+            class ClassOverridesSomeAttribs {
+                roles => ['RoleWithMetaAttribs'],
+                id_generator => 'generate_id_from_class',
+            }
+        }
+        'Define class that overrides some meta attribs in role';
+
+    my $meta = ClassOverridesSomeAttribs->__meta__;
+    is($meta->data_source_id, 'URT::DataSource::SomeSQLite', 'data source');
+    is($meta->doc, 'doc from role', 'doc');
+    is($meta->id_generator, 'generate_id_from_class', 'id_generator');
+    is_deeply($meta->valid_signals, ['role_signal'], 'valid_signals');
+};
+
+subtest 'roles with meta attrib conflicts' => sub {
+    plan tests => 6;
+
+    role AnotherRoleWithMetaAttribs {
+        id_generator => 'generate_id_from_other_role',
+    };
+
+    throws_ok
+        {
+            class ClassComposesConflictingMetaAttrbRoles {
+                roles => ['RoleWithMetaAttribs', 'AnotherRoleWithMetaAttribs'],
+            }
+        }
+        qr(Meta property 'id_generator' conflicts with meta property from role RoleWithMetaAttribs),
+        'Composing roles with conflicting class meta attribs throws exception';
+
+    lives_ok
+        {
+            class ClassOverridesConflictingMetaAttrbRoles {
+                roles => ['RoleWithMetaAttribs', 'AnotherRoleWithMetaAttribs'],
+                id_generator => 'generate_id_from_class',
+            }
+        }
+        'Compose roles with conflicting meta attribs, class overrides conflict';
+
+    my $meta = ClassOverridesConflictingMetaAttrbRoles->__meta__;
+    is($meta->data_source_id, 'URT::DataSource::SomeSQLite', 'data source');
+    is($meta->doc, 'doc from role', 'doc');
+    is($meta->id_generator, 'generate_id_from_class', 'id_generator');
+    is_deeply($meta->valid_signals, ['role_signal'], 'valid_signals');
 };
