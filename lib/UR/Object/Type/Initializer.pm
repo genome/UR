@@ -358,14 +358,15 @@ sub initialize_bootstrap_classes
 sub _normalize_class_description {
     my $class = shift;
     my $desc = $class->_normalize_class_description_impl(@_);
+
+    $class->compose_roles($desc) unless $bootstrapping;
+
     unless ($bootstrapping) {
         for my $parent_class_name (@{ $desc->{is} }) {
             my $parent_class = $parent_class_name->__meta__;
             $desc = $parent_class->_preprocess_subclass_description($desc);
         }
     }
-
-    $class->compose_roles($desc) unless $bootstrapping;
 
     # we previously handled property meta extensions when normalizing the property
     # now we merely save unrecognized things
