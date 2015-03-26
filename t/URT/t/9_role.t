@@ -1,12 +1,13 @@
 use strict;
 use warnings;
-use Test::More tests=> 16;
+use Test::More tests=> 17;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
 use URT;
+use UR::Role;
 
 subtest basic => sub {
     plan tests => 12;
@@ -640,3 +641,34 @@ subtest 'roles with meta attrib conflicts' => sub {
     is($meta->id_generator, 'generate_id_from_class', 'id_generator');
     is_deeply($meta->valid_signals, ['class_signal','role_signal'], 'valid_signals');
 };
+
+subtest 'deferred value in class definition' => sub {
+    plan tests => 3;
+
+    role RoleWithDeferredValue {
+        has => [
+            role_prop => { is => defer 'other_type', len => 2 },
+        ],
+    };
+
+    throws_ok
+        {
+            class ClassDeferredValueNotSpecified { roles => 'RoleWithDeferredValue' };
+        }
+        qr(missing required property or method 'other_type'),
+        'Composing role with deferred value without specifying its value throws exception';
+
+    class TheOtherType { };
+    sub ClassDeferredValue::other_type { 'TheOtherType' }
+
+    lives_ok
+        {
+            class ClassDeferredValue { roles => 'RoleWithDeferredValue' };
+        }
+        'Created class with deferred value role';
+
+    is(ClassDeferredValue->__meta__->property('role_prop')->data_type,
+        'TheOtherType',
+        'Deferred value was filled in for property data_type');
+};
+
