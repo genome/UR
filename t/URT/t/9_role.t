@@ -629,6 +629,7 @@ subtest 'roles with meta attrib conflicts' => sub {
             class ClassOverridesConflictingMetaAttrbRoles {
                 roles => ['RoleWithMetaAttribs', 'AnotherRoleWithMetaAttribs'],
                 id_generator => 'generate_id_from_class',
+                valid_signals => ['class_signal'],
             }
         }
         'Compose roles with conflicting meta attribs, class overrides conflict';
@@ -637,5 +638,5 @@ subtest 'roles with meta attrib conflicts' => sub {
     is($meta->data_source_id, 'URT::DataSource::SomeSQLite', 'data source');
     is($meta->doc, 'doc from role', 'doc');
     is($meta->id_generator, 'generate_id_from_class', 'id_generator');
-    is_deeply($meta->valid_signals, ['role_signal'], 'valid_signals');
+    is_deeply($meta->valid_signals, ['class_signal','role_signal'], 'valid_signals');
 };
