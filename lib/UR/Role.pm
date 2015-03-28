@@ -652,7 +652,7 @@ an attempt to override them.
 An exception is thrown if multiple Roles are composed together that
 define the same subroutine name unless the composing class's namespace also
 has a subroutine with the same name.  The class is expected to implement
-whatever behavior is required, mbaybe by calling one role's method or the
+whatever behavior is required, maybe by calling one role's method or the
 other, both methods, neither, or anything else.
 
 To call a function in a role, the function's fully qualified name, including
