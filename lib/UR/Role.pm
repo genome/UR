@@ -691,10 +691,10 @@ This happens after the class is completely constructed.
 
 =head2 Deferred Values
 
-A Role definition may contain DeferredValue objects to act as placeholders
-for values to be filled in when the role is composed into a class.  These
-values are resolved at composition time by calling the named function on
-the composing class.  For example:
+A Role definition may contain L<UR::Role::DeferredValue> objects to act as
+placeholders for values to be filled in when the role is composed into a
+class.  These values are resolved at composition time by calling the named
+function on the composing class.  For example:
 
   use UR::Role;
   role ObjectDisplayer {
@@ -713,5 +713,9 @@ system calls the method C<ShowCars-E<gt>target_type()> to obtain the value
 'Car' for the data_type of property 'target_object'.
 
 UR::Role exports the function C<defer> to create these DeferredValue objects.
+
+=head1 SEE ALSO
+
+L<UR>, L<UR::Object::Type::Initializer>, L<UR::Role::DeferredValue>
 
 =cut
