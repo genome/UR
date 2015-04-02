@@ -10,7 +10,7 @@ use URT;
 use UR::Role;
 
 subtest basic => sub {
-    plan tests => 12;
+    plan tests => 13;
 
     role URT::BasicRole {
         has => [
@@ -55,6 +55,10 @@ subtest basic => sub {
     throws_ok { URT::BasicRole->get() }
         qr(Can't locate object method "get" via package "URT::BasicRole"),
         'Trying to get() a role by package name throws an exception';
+
+    throws_ok { role URT::RoleWithIs { is => 'Bogus' } }
+        qr(Bad Role defninition for URT::RoleWithIs.  Unrecognized properties:\s+is => Bogus),
+        '"is" is not valid in a Role definition';
 };
 
 subtest 'multiple roles' => sub {

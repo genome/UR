@@ -68,7 +68,14 @@ sub define {
 
     my $methods = _introspect_methods($desc->{role_name});
     my $overloads = _introspect_overloads($desc->{role_name});
+
+    my $extra = delete $desc->{extra};
     my $role = UR::Role->__define__(%$desc, methods => $methods, overloads => $overloads);
+
+    if ($extra and %$extra) {
+        $role->UR::Object::Type::_apply_extra_attrs_to_class_or_role($extra);
+    }
+
     return $role;
 }
 
@@ -92,6 +99,10 @@ sub _normalize_role_description {
         attributes_have => {},
         UR::Object::Type::_canonicalize_class_params($old_role, \@ROLE_DESCRIPTION_KEY_MAPPINGS),
     };
+
+    # The above call to _canonicalize_class_params removed recognized keys.  Anything
+    # left over wasn't recognized
+    $new_role->{extra} = $old_role;
 
     foreach my $key (qw( requires excludes ) ) {
         unless (UR::Util::ensure_arrayref($new_role, $key)) {
