@@ -1450,6 +1450,7 @@ sub prune_object_cache {
 
             foreach my $id ( keys ( %$objects_for_class ) ) {
                 my $obj = $objects_for_class->{$id};
+                next unless defined $obj;  # object with this ID does not exist
                 if (
                     $obj->is_weakened
                     || $obj->is_prunable && $obj->{__get_serial} && $obj->{__get_serial} <= $target_serial
