@@ -1660,21 +1660,7 @@ sub _complete_class_meta_object_definitions {
     }
 
     if (my $extra = $self->{extra}) {
-        # some class characteristics may be only present in subclasses of UR::Object
-        # we handle these at this point, since the above is needed for bootstrapping
-        my %still_not_found;
-        for my $key (sort keys %$extra) {
-            if ($self->can($key)) {
-                $self->$key($extra->{$key});
-            }
-            else {
-                $still_not_found{$key} = $extra->{$key};
-            }
-        }
-        if (%still_not_found) {
-            $DB::single = 1;
-            Carp::confess("BAD CLASS DEFINITION for $class_name.  Unrecognized properties: " . Data::Dumper::Dumper(%still_not_found));
-        }
+        $self->_apply_extra_attrs_to_class_or_role($extra);
     }
 
     $self->__signal_change__("load");
@@ -1704,6 +1690,36 @@ sub _complete_class_meta_object_definitions {
 
     # return the new class object
     return $self;
+}
+
+sub _apply_extra_attrs_to_class_or_role {
+    my($self, $extra) = @_;
+
+    if ($extra) {
+        # some class characteristics may be only present in subclasses of UR::Object
+        # we handle these at this point, since the above is needed for bootstrapping
+        my %still_not_found;
+        for my $key (sort keys %$extra) {
+            if ($self->can($key)) {
+                $self->$key($extra->{$key});
+            }
+            else {
+                $still_not_found{$key} = $extra->{$key};
+            }
+        }
+        if (%still_not_found) {
+            my $kind = $self->isa('UR::Object::Type')
+                        ? 'Class'
+                        : 'Role';
+            my $name = $self->id;
+
+            $DB::single = 1;
+            Carp::croak("Bad $kind defninition for $name.  Unrecognized properties:\n\t"
+                            . join("\n\t", join(' => ', map { ($_, $still_not_found{$_}) } keys %still_not_found)));
+        }
+    }
+
+
 }
 
 # write the module from the existing data in the class object
