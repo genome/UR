@@ -861,6 +861,7 @@ sub generate_support_class_for_extension {
         delete $class_params{id_generator};
         delete $class_params{id};
         delete $class_params{is};
+        delete $class_params{roles};
 
         my $attributes_have = UR::Util::deep_copy($subject_class_obj->{attributes_have});
         my $class_props = UR::Util::deep_copy($subject_class_obj->{has});    
