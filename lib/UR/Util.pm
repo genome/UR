@@ -705,9 +705,10 @@ sub coderefs_for_package {
     };
 
     my %subs;
+    local $@;
     foreach my $name ( keys %stash ) {
         my $glob = $stash{$name};
-        next unless my $coderef = *$glob{CODE};
+        next unless my $coderef = eval { *$glob{CODE} };  # constants are SCALAR refs, not typeglobs
         $subs{$name} = $coderef;
     }
     return \%subs;
