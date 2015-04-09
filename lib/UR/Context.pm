@@ -991,8 +991,8 @@ sub create_entity {
     $self->add_change_to_transaction_log($entity, 'load') if $construction_method eq '__define__';
 
     for my $property_name ( keys %default_value_requires_call ) {
-        my $method_name = $default_value_requires_call{$property_name};
-        my $value = $entity->$method_name;
+        my $method = $default_value_requires_call{$property_name};
+        my $value = $method->($entity);
         $entity->$property_name($value);
     }
 

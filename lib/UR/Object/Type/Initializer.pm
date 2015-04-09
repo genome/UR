@@ -1097,8 +1097,17 @@ sub _normalize_property_description1 {
             $new_property{default_from} = '__default_' . $new_property{property_name} . '__';
         }
 
-        unless ($class_name->can($new_property{default_from})) {
-            die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has default_from specified as '$new_property{default_from}' but method does not exist.);
+        my $ref = ref $new_property{default_from};
+        if ($ref and $ref ne 'CODE') {
+            die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has default_from specified as a $ref ref but it must be a method name or coderef.);
+        }
+
+        unless ($ref) {
+            my $method = $class_name->can($new_property{default_from});
+            unless ($method) {
+                die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has default_from specified as '$new_property{default_from}' but method does not exist.);
+            }
+            $new_property{default_from} = $method;
         }
     }
 

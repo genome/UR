@@ -9,7 +9,7 @@ use Test::Fatal qw(exception);
 use UR qw();
 
 subtest 'class initialization' => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     subtest 'default_value and default_from are incompatible' => sub {
         plan tests => 2;
@@ -71,6 +71,25 @@ subtest 'class initialization' => sub {
         $exception = exception { UR::Object::Type->define(%thing) };
         ok(!$exception, 'did not get an exception when trying to use `default_from` with method defined')
             or diag $exception;
+    };
+
+    subtest 'default_from supports coderef' => sub {
+        plan tests => 2;
+        my %thing = (
+            class_name => 'URT::Thing',
+            has => [
+                name => {
+                    is => 'String',
+                    default_from => sub { 'some name' },
+                },
+            ],
+        );
+        my $exception = exception { UR::Object::Type->define(%thing) };
+        ok(!$exception, 'did not get an exception when trying to use `default_from` with method defined')
+            or diag $exception;
+
+        my $thing = URT::Thing->create();
+        is($thing->name, 'some name', 'got default name');
     };
 };
 
