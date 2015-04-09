@@ -662,6 +662,7 @@ sub create_entity {
         my %set_properties;
         my %default_values;
         my %default_value_requires_query;
+        my %default_value_requires_call;
         my %immutable_properties;
         my @deep_copy_default_values;
 
@@ -697,6 +698,10 @@ sub create_entity {
                         push @deep_copy_default_values, $name;
                     }
                     $default_values{$name} = $default_value; 
+                }
+
+                if ($prop->default_from) {
+                    $default_value_requires_call{$name} = $prop->default_from;
                 }
     
                 if ($prop->is_many) {
@@ -745,6 +750,7 @@ sub create_entity {
             \%default_values,
             (@deep_copy_default_values ? \@deep_copy_default_values : undef),
             \%default_value_requires_query,
+            \%default_value_requires_call,
         ];
     }
     
@@ -762,6 +768,7 @@ sub create_entity {
         $initial_default_values,
         $deep_copy_default_values,
         $default_value_requires_query,
+        $initial_default_value_requires_call,
     ) = @$memo;
 
     # The old way of automagic subclassing...
@@ -806,6 +813,13 @@ sub create_entity {
         }
         $rule = UR::BoolExpr->resolve_normalized($class, %$params, id => $id);
         $params = { $rule->params_list }; ;
+    }
+
+    my %default_value_requires_call = %$initial_default_value_requires_call;
+    for my $name (keys %$initial_default_value_requires_call) {
+        if ($params->{$name}) {
+            delete $default_value_requires_call{$name};
+        }
     }
 
     # handle postprocessing default values
@@ -979,6 +993,12 @@ sub create_entity {
     return unless $entity;
     $self->add_change_to_transaction_log($entity, $construction_method);
     $self->add_change_to_transaction_log($entity, 'load') if $construction_method eq '__define__';
+
+    for my $property_name ( keys %default_value_requires_call ) {
+        my $method_name = $default_value_requires_call{$property_name};
+        my $value = $entity->$method_name;
+        $entity->$property_name($value);
+    }
 
     # If a property is calculated + immutable, and it wasn't supplied in the params,
     # that means we need to run the calculation once and store the value in the
