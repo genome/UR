@@ -816,11 +816,7 @@ sub create_entity {
     }
 
     my %default_value_requires_call = %$initial_default_value_requires_call;
-    for my $name (keys %$initial_default_value_requires_call) {
-        if ($params->{$name}) {
-            delete $default_value_requires_call{$name};
-        }
-    }
+    delete @default_value_requires_call{ keys %$params };
 
     # handle postprocessing default values
     
