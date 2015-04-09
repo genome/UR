@@ -333,6 +333,13 @@ created.  If used on a property that is 'via' another property (see the
 Indirect Properties section below), it can trigger creation of a referent
 object.
 
+=item default_from
+
+The name of an instance method used to resolve a default value during object
+creation.  The instance method will be called immediately after UR creates the
+initial entity so the method will have access to other parameters used during
+creation.
+
 =item is_mutable
 
 A flag indicating that this property can be changed. It is the default state
