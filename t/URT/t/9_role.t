@@ -247,7 +247,7 @@ subtest 'conflict methods' => sub {
                 roles => ['URT::ConflictMethodRole1'],
             }
         }
-        qr/Cannot compose role URT::ConflictMethodRole1: method conflicts with methods defined in the class.  Did you forget to add the 'overrides' attribute\?\s+conflict_method/,
+        qr/Cannot compose role URT::ConflictMethodRole1: Method name conflicts with class URT::ConflictMethodClassHasMethod: conflict_method\s+Did you forget to add the 'Overrides' attribute\?/,
         'Composing a role with conflicting method in the class throws exception';
 };
 
@@ -274,7 +274,7 @@ subtest 'conflict methods with overrides' => sub {
                 roles => ['URT::ConflictMethodOverrideRole1', 'URT::ConflictMethodOverrideRole2'],
             }
         }
-        qr/Cannot compose role URT::ConflictMethodOverrideRole2: method conflicts with methods defined in the class.  Did you forget to add the 'overrides' attribute\?\s+conflict_method/,
+        qr/Cannot compose role URT::ConflictMethodOverrideRole2: Method name conflicts with class URT::ConflictMethodClassOverridesRole1: conflict_method\s+Did you forget to add the 'Overrides' attribute\?/,
         'Class declaring override for one role but not the other throws exception';
 
     lives_ok

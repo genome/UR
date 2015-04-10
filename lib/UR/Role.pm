@@ -231,6 +231,7 @@ sub _apply_roles_to_class_desc {
 
     $class->_validate_role_exclusions($desc);
     $class->_validate_role_requirements($desc);
+    $class->_validate_class_desc_overrides($desc, @role_objs);
 
     my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
     my $meta_properties_to_add = _collect_meta_properties_from_roles($desc, @role_objs);
@@ -448,6 +449,32 @@ sub _validate_role_exclusions {
     return 1;
 }
 
+sub _validate_class_desc_overrides {
+    my($class, $desc, @roles) = @_;
+
+    my $class_name = $desc->{class_name};
+    my $this_class_methods = UR::Util::coderefs_for_package($class_name);
+
+    foreach my $role ( @roles ) {
+        my $role_name = $role->role_name;
+        my $this_role_methods = $role->methods;
+        my @this_role_method_names = keys( %$this_role_methods );
+
+        my @conflict_methods = grep { ! _coderef_overrides_package($this_class_methods->{$_}, $role_name) }
+                                       grep { exists $this_class_methods->{$_} }
+                                       @this_role_method_names;
+        if (@conflict_methods) {
+            my $plural = scalar(@conflict_methods) > 1 ? 's' : '';
+            my $conflicts = scalar(@conflict_methods) > 1 ? 'conflict' : 'conflicts';
+            Carp::croak("Cannot compose role $role_name: "
+                        . "Method name${plural} $conflicts with class $class_name: "
+                        . join(', ', @conflict_methods)
+                        . "\nDid you forget to add the 'Overrides' attribute?\t");
+        }
+    }
+    return 1;
+}
+
 sub _class_desc_lineage_has_method_or_property {
     my($desc, $requirement) = @_;
 
@@ -483,28 +510,16 @@ sub _import_methods_from_roles_into_namespace {
         my $this_role_methods = $role->methods;
         my @this_role_method_names = keys( %$this_role_methods );
 
-        my @class_failed_to_override = grep { ! _coderef_overrides_package($this_class_methods->{$_}, $role->role_name) }
-                                       grep { exists $this_class_methods->{$_} }
-                                       @this_role_method_names;
-        if (@class_failed_to_override) {
-            my $plural = scalar(@class_failed_to_override) > 1 ? 's' : '';
-            my $conflicts = scalar(@class_failed_to_override) > 1 ? 'conflict' : 'conflicts';
-            Carp::croak('Cannot compose role ' . $role->role_name
-                        . ": method${plural} $conflicts with methods defined in the class.  "
-                        . "Did you forget to add the 'overrides' attribute?\n\t"
-                        . join(', ', @class_failed_to_override));
-        }
-
         my @conflicting = grep { ! exists($this_class_methods->{$_}) }  # not a conflict if the class overrides
                           grep { exists $all_imported_methods{$_} }
                           @this_role_method_names;
 
         if (@conflicting) {
             my $plural = scalar(@conflicting) > 1 ? 's' : '';
-            Carp::croak('Cannot compose role ', $role->role_name
-                        . ": method${plural} conflicts with those defined in other roles\n\t"
-                        . join("\n\t", join('::', map { ( $method_sources{$_}, $_ ) } @conflicting))
-                        . "\n");
+            my $conflicts = scalar(@conflicting) > 1 ? 'conflict' : 'conflicts';
+            Carp::croak('Cannot compose role ' . $role->role_name
+                        . ": method${plural} $conflicts with those defined in other roles\n\t"
+                        . join("\n\t", join('::', map { ( $method_sources{$_}, $_ ) } @conflicting)));
         }
 
         @method_sources{ @this_role_method_names } = ($role->role_name) x @this_role_method_names;
