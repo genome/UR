@@ -26,10 +26,10 @@ sub import_support_functions_to_package {
 
 
 my %modify_attribute_handlers = (
-    CODE => { overrides => \&modify_code_overrides },
+    CODE => { Overrides => \&modify_code_overrides },
 );
 my %fetch_attribute_handlers = (
-    CODE => { overrides => \&fetch_code_overrides },
+    CODE => { Overrides => \&fetch_code_overrides },
 );
 
 sub _modify_attribute_handler {
