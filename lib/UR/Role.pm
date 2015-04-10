@@ -6,8 +6,10 @@ use warnings;
 use UR;
 use UR::Object::Type::InternalAPI;
 use UR::Util;
+use UR::AttributeHandlers;
 
 use Scalar::Util qw(blessed);
+use List::MoreUtils qw(any);
 use Carp;
 our @CARP_NOT = qw(UR::Object::Type);
 
@@ -480,6 +482,19 @@ sub _import_methods_from_roles_into_namespace {
     foreach my $role ( @$roles ) {
         my $this_role_methods = $role->methods;
         my @this_role_method_names = keys( %$this_role_methods );
+
+        my @class_failed_to_override = grep { ! _coderef_overrides_package($this_class_methods->{$_}, $role->role_name) }
+                                       grep { exists $this_class_methods->{$_} }
+                                       @this_role_method_names;
+        if (@class_failed_to_override) {
+            my $plural = scalar(@class_failed_to_override) > 1 ? 's' : '';
+            my $conflicts = scalar(@class_failed_to_override) > 1 ? 'conflict' : 'conflicts';
+            Carp::croak('Cannot compose role ' . $role->role_name
+                        . ": method${plural} $conflicts with methods defined in the class.  "
+                        . "Did you forget to add the 'overrides' attribute?\n\t"
+                        . join(', ', @class_failed_to_override));
+        }
+
         my @conflicting = grep { ! exists($this_class_methods->{$_}) }  # not a conflict if the class overrides
                           grep { exists $all_imported_methods{$_} }
                           @this_role_method_names;
@@ -504,6 +519,13 @@ sub _import_methods_from_roles_into_namespace {
             into => $class_name,
         });
     }
+}
+
+sub _coderef_overrides_package {
+    my($coderef, $package) = @_;
+
+    my @overrides = UR::AttributeHandlers::get_overrides_for_coderef($coderef);
+    return any { $_ eq $package } @overrides;
 }
 
 sub _apply_overloads_to_namespace {
@@ -661,10 +683,18 @@ an attempt to override them.
 =head3 Method conflicts
 
 An exception is thrown if multiple Roles are composed together that
-define the same subroutine name unless the composing class's namespace also
-has a subroutine with the same name.  The class is expected to implement
-whatever behavior is required, maybe by calling one role's method or the
-other, both methods, neither, or anything else.
+define the same subroutine, or if the composing class defines the same
+subroutine as any of the roles.
+
+If the class wants to override a subroutine defined in one of its roles,
+the override must be declared with the "Overload" attribute.
+
+  sub overridden_method : Overrides(My::Role, Other::Role) { ... }
+
+All the conflicting role names must be listed in the override, separated by
+commas.  The class woll probably implement whatever behavior is required,
+maybe by calling one role's method or the other, both methods, neither,
+or anything else.
 
 To call a function in a role, the function's fully qualified name, including
 the role's package, must be used.

@@ -96,4 +96,12 @@ sub fetch_code_overrides {
                     join(', ', @{ $stored_attributes{$coderef}->{overrides} }));
 }
 
+sub get_overrides_for_coderef {
+    my($ref) = @_;
+    return( exists($stored_attributes{$ref}) && exists($stored_attributes{$ref}->{overrides})
+                ? @{ $stored_attributes{$ref}->{overrides} }
+                : ()
+            );
+}
+
 1;

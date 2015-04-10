@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 18;
+use Test::More tests=> 19;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -222,7 +222,7 @@ subtest 'conflict property' => sub {
 };
 
 subtest 'conflict methods' => sub {
-    plan tests => 4;
+    plan tests => 2;
 
     sub URT::ConflictMethodRole1::conflict_method { }
     role URT::ConflictMethodRole1 { };
@@ -240,17 +240,68 @@ subtest 'conflict methods' => sub {
         'Composing two roles with the same method throws exception';
 
 
-    our $class_method_called = 0;
-    sub URT::ConflictMethodClassHasMethod::conflict_method { $class_method_called++; 1; }
-    lives_ok
+    sub URT::ConflictMethodClassHasMethod::conflict_method { 1; }
+    throws_ok
         {
             class URT::ConflictMethodClassHasMethod {
-                roles => ['URT::ConflictMethodRole1', 'URT::ConflictMethodRole2'],
+                roles => ['URT::ConflictMethodRole1'],
             }
         }
-        'Composed two roles with the same method into class with same method';
-    ok(URT::ConflictMethodClassHasMethod->conflict_method, 'Called conflict_method on the class');
-    is($class_method_called, 1, 'Correct method was called');
+        qr/Cannot compose role URT::ConflictMethodRole1: method conflicts with methods defined in the class.  Did you forget to add the 'overrides' attribute\?\s+conflict_method/,
+        'Composing a role with conflicting method in the class throws exception';
+};
+
+subtest 'conflict methods with overrides' => sub {
+    plan tests => 5;
+
+    sub URT::ConflictMethodOverrideRole1::conflict_method { 0; }
+    role URT::ConflictMethodOverrideRole1 { };
+
+    sub URT::ConflictMethodOverrideRole2::conflict_method { 0; }
+    role URT::ConflictMethodOverrideRole2 { };
+
+    do {
+        package URT::ConflictMethodClassOverridesRole1;
+        use URT;
+        our $class_method_called = 0;
+        sub URT::ConflictMethodClassOverridesRole1::conflict_method : Overrides(URT::ConflictMethodOverrideRole1)
+            { $class_method_called++; 1 }
+    };
+
+    throws_ok
+        {
+            class URT::ConflictMethodClassOverridesRole1 {
+                roles => ['URT::ConflictMethodOverrideRole1', 'URT::ConflictMethodOverrideRole2'],
+            }
+        }
+        qr/Cannot compose role URT::ConflictMethodOverrideRole2: method conflicts with methods defined in the class.  Did you forget to add the 'overrides' attribute\?\s+conflict_method/,
+        'Class declaring override for one role but not the other throws exception';
+
+    lives_ok
+        {
+            class URT::ConflictMethodClassOverridesRole1 {
+                roles => ['URT::ConflictMethodOverrideRole1'],
+            }
+        }
+        'Class declares override for composing class';
+    ok(URT::ConflictMethodClassOverridesRole1->conflict_method, 'Called conflict_method on the class');
+    is($URT::ConflictMethodClassOverridesRole1::class_method_called, 1, 'Correct method was called');
+
+
+    do {
+        package URT::ConflictMethodClassOverridesBothRoles;
+        use URT;
+        sub URT::ConflictMethodClassOverridesBothRoles::conflict_method : Overrides(URT::ConflictMethodOverrideRole1, URT::ConflictMethodOverrideRole2)
+            { 1 }
+    };
+
+    lives_ok
+        {
+            class URT::ConflictMethodClassOverridesBothRoles {
+                roles => ['URT::ConflictMethodOverrideRole1', 'URT::ConflictMethodOverrideRole2'],
+            }
+        }
+        'Class conflict method declares overrides for both roles';
 };
 
 subtest 'dynamic loading' => sub {
