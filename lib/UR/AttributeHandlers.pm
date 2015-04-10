@@ -45,18 +45,17 @@ sub _fetch_attribute_handler {
 }
 
 sub _decompose_attr {
-    my $raw_attr = shift;
+    my($raw_attr) = @_;
     my($attr, $params_str) = $raw_attr =~ m/^(\w+)(?:\((.*)\))$/;
     my @params = split(/\s*,\s*/, $params_str);
     return ($attr, @params);
 }
 
 sub modify_attributes {
-    my $package = shift;
-    my $ref = shift;
+    my($package, $ref, @raw_attrs) = @_;
 
     my @not_recognized;
-    foreach my $raw_attr ( @_ ) {
+    foreach my $raw_attr ( @raw_attrs ) {
         my($attr, @params) = _decompose_attr($raw_attr);
         if (my $handler = _modify_attribute_handler($ref, $attr)) {
             $handler->($package, $ref, $attr, @params);
