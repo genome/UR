@@ -702,12 +702,12 @@ define the same subroutine, or if the composing class defines the same
 subroutine as any of the roles.
 
 If the class wants to override a subroutine defined in one of its roles,
-the override must be declared with the "Overload" attribute.
+the override must be declared with the "Overrides" attribute.
 
   sub overridden_method : Overrides(My::Role, Other::Role) { ... }
 
 All the conflicting role names must be listed in the override, separated by
-commas.  The class woll probably implement whatever behavior is required,
+commas.  The class will probably implement whatever behavior is required,
 maybe by calling one role's method or the other, both methods, neither,
 or anything else.
 
