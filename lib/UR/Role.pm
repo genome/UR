@@ -242,12 +242,24 @@ sub _apply_roles_to_class_desc {
     _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
     _apply_overloads_to_namespace($desc->{class_name}, $overloads_to_add);
 
+
+    _merge_role_meta_properties_into_class_desc($desc, $meta_properties_to_add);
+    _merge_role_properties_into_class_desc($desc, $properties_to_add);
+}
+
+sub _merge_role_meta_properties_into_class_desc {
+    my($desc, $meta_properties_to_add) = @_;
+
     my $valid_signals = delete $meta_properties_to_add->{valid_signals};
     my @meta_prop_names = keys %$meta_properties_to_add;
     @$desc{@meta_prop_names} = @$meta_properties_to_add{@meta_prop_names};
     if ($valid_signals) {
         push @{$desc->{valid_signals}}, @$valid_signals;
     };
+}
+
+sub _merge_role_properties_into_class_desc {
+    my($desc, $properties_to_add) = @_;
 
     my @property_names = keys %$properties_to_add;
      @{$desc->{has}}{@property_names} = @$properties_to_add{@property_names};
