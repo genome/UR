@@ -1013,7 +1013,7 @@ sub _normalize_property_description1 {
         [ constraint_name                 => qw//],
         [ data_length                     => qw/len/],
         [ data_type                       => qw/type is isa is_a/],
-        [ default_from                    => qw//],
+        [ calculated_default              => qw//],
         [ default_value                   => qw/default value/],
         [ valid_values                    => qw//],
         [ example_values                  => qw//],
@@ -1088,26 +1088,26 @@ sub _normalize_property_description1 {
         }
     }
 
-    if ($new_property{default_value} && $new_property{default_from}) {
-        die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has both default_value and default_from specified.);
+    if ($new_property{default_value} && $new_property{calculated_default}) {
+        die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has both default_value and calculated_default specified.);
     }
 
-    if ($new_property{default_from}) {
-        if ($new_property{default_from} eq 1) {
-            $new_property{default_from} = '__default_' . $new_property{property_name} . '__';
+    if ($new_property{calculated_default}) {
+        if ($new_property{calculated_default} eq 1) {
+            $new_property{calculated_default} = '__default_' . $new_property{property_name} . '__';
         }
 
-        my $ref = ref $new_property{default_from};
+        my $ref = ref $new_property{calculated_default};
         if ($ref and $ref ne 'CODE') {
-            die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has default_from specified as a $ref ref but it must be a method name or coderef.);
+            die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has calculated_default specified as a $ref ref but it must be a method name or coderef.);
         }
 
         unless ($ref) {
-            my $method = $class_name->can($new_property{default_from});
+            my $method = $class_name->can($new_property{calculated_default});
             unless ($method) {
-                die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has default_from specified as '$new_property{default_from}' but method does not exist.);
+                die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has calculated_default specified as '$new_property{calculated_default}' but method does not exist.);
             }
-            $new_property{default_from} = $method;
+            $new_property{calculated_default} = $method;
         }
     }
 

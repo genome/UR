@@ -356,7 +356,7 @@ UR::Object::Type->define(
         column_name                     => { is => 'Text', len => 256, is_optional => 1 },
         data_length                     => { is => 'Text', len => 32, is_optional => 1 },
         data_type                       => { is => 'Text', len => 256, is_optional => 1 },
-        default_from                    => { is_optional => 1 },
+        calculated_default              => { is_optional => 1 },
         default_value                   => { is_optional => 1 },
         valid_values                    => { is => 'ARRAY', is_optional => 1, },
         example_values                  => { is => 'ARRAY', is_optional => 1, doc => 'example valid values; used to generate help text for Commands' },

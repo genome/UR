@@ -333,16 +333,16 @@ created.  If used on a property that is 'via' another property (see the
 Indirect Properties section below), it can trigger creation of a referent
 object.
 
-=item default_from
+=item calculated_default
 
 A name of an instance method or a code ref to be used to resolve a default
 value during object creation.  The instance method will be called immediately
 after UR creates the initial entity so the method will have access to other
 parameters used during creation.
 
-Specifying C<default_from E<gt> 1> is equivalent to,
+Specifying C<calculated_default E<gt> 1> is equivalent to,
 
-  default_from => '__default_' . $prop_name . '__'
+  calculated_default => '__default_' . $prop_name . '__'
 
 and is meant to establish a naming convention without requiring it.
 

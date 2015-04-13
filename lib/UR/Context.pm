@@ -700,8 +700,8 @@ sub create_entity {
                     $default_values{$name} = $default_value; 
                 }
 
-                if ($prop->default_from) {
-                    $default_value_requires_call{$name} = $prop->default_from;
+                if ($prop->calculated_default) {
+                    $default_value_requires_call{$name} = $prop->calculated_default;
                 }
     
                 if ($prop->is_many) {
