@@ -6,6 +6,9 @@ package UR::DataSource::Meta;
 use strict;
 use warnings;
 
+use version;
+use DBD::SQLite;
+
 use UR;
 our $VERSION = "0.43"; # UR $VERSION;
 
@@ -159,6 +162,19 @@ sub generate_for_namespace {
     IO::File->new(">$meta_db_file")->print($UR::DataSource::Meta::METADATA_DB_SQL);
     
     return ($meta_datasource, $meta_db_file);
+}
+
+sub _dbi_connect_args {
+    my $self = shift;
+
+    my @connection = $self->SUPER::_dbi_connect_args(@_);
+
+    if(version->parse($DBD::SQLite::VERSION) >= version->parse('1.38_01')) {
+        my $connect_attr = $connection[3] ||= {};
+        $connect_attr->{sqlite_use_immediate_transaction} = 0;
+    }
+
+    return @connection;
 }
 
 1;
