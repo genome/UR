@@ -333,6 +333,19 @@ created.  If used on a property that is 'via' another property (see the
 Indirect Properties section below), it can trigger creation of a referent
 object.
 
+=item calculated_default
+
+A name of an instance method or a code ref to be used to resolve a default
+value during object creation.  The instance method will be called immediately
+after UR creates the initial entity so the method will have access to other
+parameters used during creation.
+
+Specifying C<calculated_default E<gt> 1> is equivalent to,
+
+  calculated_default => '__default_' . $prop_name . '__'
+
+and is meant to establish a naming convention without requiring it.
+
 =item is_mutable
 
 A flag indicating that this property can be changed. It is the default state
