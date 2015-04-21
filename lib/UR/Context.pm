@@ -419,7 +419,7 @@ sub query {
         no warnings;
         if (exists $UR::Context::all_objects_loaded->{$_[0]}) {
             my $is_monitor_query = $self->monitor_query;
-            if (my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}) {
+            if (defined(my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]})) {
                 # Matched the class and ID directly - pull it right out of the cache
                 if ($is_monitor_query) {
                     $self->_log_query_for_rule($_[0], undef, Carp::shortmess("QUERY: class $_[0] by ID $_[1]"));
