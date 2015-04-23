@@ -207,6 +207,8 @@ sub execute {
                                  join(',', map { "'$_'" } @properties) .
                                  ': ' . $problem->desc);
         }
+        my $command_name = $self->command_name;
+        $self->error_message("Please see '$command_name --help' for more information.");
         $self->delete() if $was_called_as_class_method;
         return;
     }

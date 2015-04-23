@@ -138,11 +138,6 @@ sub _execute_delegate_class_with_params {
 
     my $rv = $command_object->execute($params);
 
-    unless ($rv) {
-        my $command_name = $command_object->command_name;
-        $command_object->error_message("Please see '$command_name --help' for more information.");
-    }
-
     if ($command_object->__errors__) {
         $command_object->delete;
     }
