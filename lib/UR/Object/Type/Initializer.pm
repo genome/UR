@@ -1145,7 +1145,7 @@ sub _normalize_property_description2 {
     my %new_property = %$property_data;
     my %new_class = %$class_data;
 
-    if (grep { $_ ne 'is_calculated' && /calc/ } keys %new_property) {
+    if (grep { $_ ne 'is_calculated' && $_ ne 'calculated_default' && /calc/ } keys %new_property) {
         $new_property{is_calculated} = 1;
     }
 
