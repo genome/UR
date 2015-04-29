@@ -1380,7 +1380,7 @@ sub mk_object_set_accessors {
         else {
             if (@_) {
                 if (@_ != 1) {
-                    Carp::croak "expected a single arrayref when setting a multi-value $class_name $plural_name!  Got @_";
+                    Carp::croak "expected a single arrayref when setting a multi-value $class_name $plural_name!  Got " . scalar(@_) . " args";
                 } elsif ( ref($_[0]) ne 'ARRAY' ) {
                     $self->{$plural_name} = [ $_[0] ];
                 } else {
@@ -1498,7 +1498,7 @@ sub mk_object_set_accessors {
             }
             else {
                 if (@_ != 1) {
-                    Carp::croak "$class_name $adder_method_name expects a single value to add.  Got @_";
+                    Carp::croak "$class_name $adder_method_name expects a single value to add.  Got " . scalar(@_) . " args";
                 }
                 push @{ $self->{$plural_name} ||= [] }, $_[0];
                 return $_[0];
@@ -1578,14 +1578,14 @@ sub mk_object_set_accessors {
                         }
                         $n++;
                     }
-                    Carp::croak("Failed to find item @_ in $class_name $plural_name (@{$self->{$plural_name}})!";
+                    Carp::croak("Failed to find item $_[0] in $class_name $plural_name.   Object has " . scalar(@{$self->{$plural_name}}) . " values: ".join(', ', @{$self->{$plural_name}}));
                 }
                 elsif (@_ == 0) {
                     # remove all if no params are specified
                     @{ $self->{$plural_name} ||= [] } = ();
                 }
                 else {
-                    Carp::croak("$class_name $remover_method_name should be called with a specific value.  Params are only usable for ur objects!  Got: @_";
+                    Carp::croak("$class_name $remover_method_name should be called with zero or one arg, got ".scalar(@_));
                 }
             }
         }
