@@ -213,7 +213,20 @@ sub execute {
         return;
     }
 
-    my $result = $self->_execute_body(@_);
+    my $result = eval { $self->_execute_body(@_); };
+    my $error = $@;
+    if ($error or not $result) {
+        my %error_data;
+
+        $error_data{die_message} = defined($error) ? $error:'';
+        $error_data{error_message} = defined($self->error_message) ? $self->error_message:'';
+        $error_data{error_package} = defined($self->error_package) ? $self->error_package:'';
+        $error_data{error_file} = defined($self->error_file) ? $self->error_file:'';
+        $error_data{error_subroutine} = defined($self->error_subroutine) ? $self->error_subroutine:'';
+        $error_data{error_line} = defined($self->error_line) ? $self->error_line:'';
+        $self->__signal_observers__('error_die', %error_data);
+        die $error if $error;
+    }
 
     $self->is_executed(1);
     $self->result($result);
