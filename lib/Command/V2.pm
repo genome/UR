@@ -149,15 +149,7 @@ sub is_sub_command_delegator {
     return;
 }
 
-sub shortcut {
-    my $self = shift;
-    return unless $self->can('_shortcut_body');
-
-    my $result = $self->_shortcut_body;
-    $self->result($result);
-
-    return $result;
-}
+sub shortcut { Command::V1::shortcut(@_) }
 
 sub execute { Command::V1::execute(@_) }
 
