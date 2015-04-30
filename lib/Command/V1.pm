@@ -300,6 +300,7 @@ sub create {
     return unless $self;
 
     # set non-optional boolean flags to false.
+    # TODO: rename that property meta method if it is not ONLY used for shell args
     for my $property_meta ($self->_shell_args_property_meta) {
         my $property_name = $property_meta->property_name;
         if (!$property_meta->is_optional and !defined($self->$property_name)) {
