@@ -979,7 +979,7 @@ sub _process_class_definition_property_keys {
 sub compose_roles {
     my($class, $desc) = @_;
 
-    UR::Role->_apply_roles_to_class_desc($desc);
+    UR::Role::Prototype->_apply_roles_to_class_desc($desc);
     $class->_normalize_property_descriptions_during_normalize_class_description($desc);
 }
 
