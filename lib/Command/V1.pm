@@ -131,8 +131,7 @@ sub execute {
         return;
     }
 
-    my $result;
-    eval { $result = $self->_execute_body(@_); };
+    my $result = eval { $self->_execute_body(@_); };
     my $error = $@;
     if ($error or not $result) {
         my %error_data;
