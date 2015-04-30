@@ -155,6 +155,10 @@ sub execute {
 
 sub _execute_body {
     # default implementation in the base class
+
+    # Override "execute" or "_execute_body" to implement the body of the command.
+    # See above for details of internal implementation.
+
     my $self = shift;
     my $class = ref($self) || $self;
     if ($class eq __PACKAGE__) {
