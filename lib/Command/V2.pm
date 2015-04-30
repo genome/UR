@@ -115,26 +115,7 @@ sub _init_subclass {
     return 1;
 }
 
-sub create {
-    my $class = shift;
-    my ($rule,%extra) = $class->define_boolexpr(@_);
-    my @params_list = $rule->params_list;
-    my $self = $class->SUPER::create(@params_list, %extra);
-    return unless $self;
-
-    # set non-optional boolean flags to false.
-    # TODO: rename that property meta method if it is not ONLY used for shell args
-    for my $property_meta ($self->_shell_args_property_meta) {
-        my $property_name = $property_meta->property_name;
-        if (!$property_meta->is_optional and !defined($self->$property_name)) {
-            if (defined $property_meta->data_type and $property_meta->data_type =~ /Boolean/i) {
-                $self->$property_name(0);
-            }
-        }
-    }    
-    
-    return $self;
-}
+sub create { Command::V1::create(@_) }
 
 sub __errors__ {
     my ($self,@property_names) = @_;
