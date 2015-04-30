@@ -102,7 +102,7 @@ sub does {
     my @roles = map { @{ $_->roles } }
                 $self->__meta__->all_class_metas();
 
-    any { $role_name eq $_ } @roles;
+    any { $role_name eq $_->role_name } @roles;
 }
 
 

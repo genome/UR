@@ -10,7 +10,7 @@ use URT;
 use UR::Role;
 
 subtest basic => sub {
-    plan tests => 13;
+    plan tests => 19;
 
     role URT::BasicRole {
         has => [
@@ -29,10 +29,20 @@ subtest basic => sub {
 
     sub URT::BasicClass::required_method { 1 }
 
-    ok(URT::BasicClass->__meta__, 'BasicClass exists');
+    my $class_meta = URT::BasicClass->__meta__;
+    ok($class_meta, 'BasicClass exists');
     ok(URT::BasicClass->does('URT::BasicRole'), 'BasicClass does() BasicRole');
     ok(! URT::BasicClass->does('URT::BasicClass'), "BasicClass doesn't() BasicClass");
     ok(! URT::BasicClass->does('Garbage'), "BasicClass doesn't() Garbage");
+
+    my $role_instances = $class_meta->roles;
+    is(scalar(@$role_instances), 1, 'Class has 1 roles');
+    my $role_instance = $role_instances->[0];
+    isa_ok($role_instance, 'UR::Role::Instance');
+    is($role_instance->role_name, 'URT::BasicRole', 'Role instance role_name');
+    is($role_instance->role_prototype, UR::Role::Prototype->get('URT::BasicRole'), 'Role instance role_prototype');
+    is($role_instances->[0]->class_name, 'URT::BasicClass', 'Role instance class_name');
+    is($role_instance->class_meta, $class_meta, 'Role instance class_meta');
 
     my $o = URT::BasicClass->create(required_property => 1, role_property => 1, regular_property => 1);
     foreach my $method ( qw( required_property role_property regular_property role_method required_method ) ) {

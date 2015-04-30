@@ -234,12 +234,23 @@ sub _apply_roles_to_class_desc {
 
     UR::Role::DeferredValue->apply_deferred_values_in_struct($desc->{class_name}, [ $properties_to_add, $meta_properties_to_add, $overloads_to_add ]);
 
+    _save_role_instances_to_class_desc($desc, @role_objs);
+
     _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
     _apply_overloads_to_namespace($desc->{class_name}, $overloads_to_add);
 
 
     _merge_role_meta_properties_into_class_desc($desc, $meta_properties_to_add);
     _merge_role_properties_into_class_desc($desc, $properties_to_add);
+}
+
+sub _save_role_instances_to_class_desc {
+    my($desc, @role_prototypes) = @_;
+
+    my $class_name = $desc->{class_name};
+    my @instances = map { UR::Role::Instance->create(role_name => $_->role_name, class_name => $class_name) }
+                        @role_prototypes;
+    $desc->{roles} = \@instances;
 }
 
 sub _merge_role_meta_properties_into_class_desc {
@@ -263,11 +274,11 @@ sub _merge_role_properties_into_class_desc {
 sub _dynamically_load_roles_for_class_desc {
     my $desc = shift;
 
-    my(@role_objs, $last_role, $exception);
+    my(@role_prototypes, $last_role, $exception);
     do {
         local $@;
         eval {
-            @role_objs = map
+            @role_prototypes = map
                             { $last_role = $_ and _dynamically_load_role($_) }
                             @{ $desc->{roles} };
         };
@@ -277,7 +288,7 @@ sub _dynamically_load_roles_for_class_desc {
         my $class_name = $desc->{class_name};
         Carp::croak("Cannot apply role $last_role to class $class_name: $exception");
     }
-    return @role_objs;
+    return @role_prototypes;
 }
 
 sub _dynamically_load_role {
