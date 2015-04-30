@@ -11,6 +11,8 @@ use Getopt::Long;
 use Command::View::DocMethods;
 use Command::Dispatch::Shell;
 
+require Command::V1;
+
 our $VERSION = "0.43"; # UR $VERSION;
 
 our $entry_point_class;
@@ -176,64 +178,7 @@ sub shortcut {
     return $result;
 }
 
-sub execute {
-    # This is a wrapper for real execute() calls.
-    # All execute() methods are turned into _execute_body at class init, 
-    # so this will get direct control when execute() is called. 
-    my $self = shift;
-
-    #TODO handle calls to SUPER::execute() from another execute().    
-
-    # handle calls as a class method
-    my $was_called_as_class_method = 0;
-    if (ref($self)) {
-        if ($self->is_executed) {
-            Carp::confess("Attempt to re-execute an already executed command.");
-        }
-    }
-    else {
-        # called as class method
-        # auto-create an instance and execute it
-        $self = $self->create(@_);
-        return unless $self;
-        $was_called_as_class_method = 1;
-    }
-
-    # handle __errors__ objects before execute
-    if (my @problems = $self->__errors__) {
-        for my $problem (@problems) {
-            my @properties = $problem->properties;
-            $self->error_message("Property " .
-                                 join(',', map { "'$_'" } @properties) .
-                                 ': ' . $problem->desc);
-        }
-        my $command_name = $self->command_name;
-        $self->error_message("Please see '$command_name --help' for more information.");
-        $self->delete() if $was_called_as_class_method;
-        return;
-    }
-
-    my $result = eval { $self->_execute_body(@_); };
-    my $error = $@;
-    if ($error or not $result) {
-        my %error_data;
-
-        $error_data{die_message} = defined($error) ? $error:'';
-        $error_data{error_message} = defined($self->error_message) ? $self->error_message:'';
-        $error_data{error_package} = defined($self->error_package) ? $self->error_package:'';
-        $error_data{error_file} = defined($self->error_file) ? $self->error_file:'';
-        $error_data{error_subroutine} = defined($self->error_subroutine) ? $self->error_subroutine:'';
-        $error_data{error_line} = defined($self->error_line) ? $self->error_line:'';
-        $self->__signal_observers__('error_die', %error_data);
-        die $error if $error;
-    }
-
-    $self->is_executed(1);
-    $self->result($result);
-
-    return $self if $was_called_as_class_method;
-    return $result;
-}
+sub execute { Command::V1::execute(@_) }
 
 sub _execute_body {    
     # default implementation in the base class
