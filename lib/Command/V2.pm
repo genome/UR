@@ -153,20 +153,7 @@ sub shortcut { Command::V1::shortcut(@_) }
 
 sub execute { Command::V1::execute(@_) }
 
-sub _execute_body {    
-    # default implementation in the base class
-
-    # Override "execute" or "_execute_body" to implement the body of the command.
-    # See above for details of internal implementation.
-
-    my $self = shift;
-    my $class = ref($self) || $self;
-    if ($class eq __PACKAGE__) {
-        die "The execute() method is not defined for $_[0]!";
-    }
-    return 1;
-}
-
+sub _execute_body { Command::V1::_execute_body(@_) }
 
 sub exit_code_for_return_value {
     my $self = shift;
