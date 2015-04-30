@@ -155,25 +155,7 @@ sub execute { Command::V1::execute(@_) }
 
 sub _execute_body { Command::V1::_execute_body(@_) }
 
-sub exit_code_for_return_value {
-    my $self = shift;
-    my $return_value = shift;
-
-    # Translates a true/false value from the command module's execute()
-    # from Perl (where positive means success), to shell (where 0 means success)
-    # Also, execute() could return a negative value; this is converted to
-    # positive and used as the shell exit code.  NOTE: This means execute()
-    # returning 0 and -1 mean the same thing
-
-    if (! $return_value) {
-        $return_value = 1;
-    } elsif ($return_value < 0) {
-        $return_value = 0 - $return_value;
-    } else {
-        $return_value = 0 
-    }
-    return $return_value;
-}
+sub exit_code_for_return_value { Command::V1::exit_code_for_return_value(@_) }
 
 sub _wrapper_has {
     my ($class, $new_class_base) = @_;
