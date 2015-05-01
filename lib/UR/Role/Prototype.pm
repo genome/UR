@@ -8,6 +8,8 @@ use UR::Object::Type::InternalAPI;
 use UR::Util;
 use UR::AttributeHandlers;
 
+use Sub::Name qw();
+use Sub::Install qw();
 use Scalar::Util qw(blessed);
 use List::MoreUtils qw(any);
 use Carp;
@@ -72,6 +74,8 @@ sub define {
     if ($extra and %$extra) {
         $role->UR::Object::Type::_apply_extra_attrs_to_class_or_role($extra);
     }
+
+    $role->_inject_instance_constructor_into_namespace();
 
     return $role;
 }
@@ -224,8 +228,8 @@ sub _apply_roles_to_class_desc {
     return unless ($desc->{roles} and @{ $desc->{roles} });
     my @role_objs = _dynamically_load_roles_for_class_desc($desc);
 
-    _validate_role_exclusions($desc);
-    _validate_role_requirements($desc);
+    _validate_role_exclusions($desc, @role_objs);
+    _validate_role_requirements($desc, @role_objs);
     _validate_class_desc_overrides($desc, @role_objs);
 
     my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
@@ -248,8 +252,8 @@ sub _save_role_instances_to_class_desc {
     my($desc, @role_prototypes) = @_;
 
     my $class_name = $desc->{class_name};
-    my @instances = map { UR::Role::Instance->create(role_name => $_->role_name, class_name => $class_name) }
-                        @role_prototypes;
+    my @instances = map { $_->instantiate_role_instance($class_name) }
+                    @role_prototypes;
     $desc->{roles} = \@instances;
 }
 
@@ -274,19 +278,32 @@ sub _merge_role_properties_into_class_desc {
 sub _dynamically_load_roles_for_class_desc {
     my $desc = shift;
 
-    my(@role_prototypes, $last_role, $exception);
-    do {
-        local $@;
-        eval {
-            @role_prototypes = map
-                            { $last_role = $_ and _dynamically_load_role($_) }
-                            @{ $desc->{roles} };
-        };
-        $exception = $@;
-    };
-    if ($exception) {
-        my $class_name = $desc->{class_name};
-        Carp::croak("Cannot apply role $last_role to class $class_name: $exception");
+    my @role_prototypes;
+    foreach my $role ( @{ $desc->{roles} } ) {
+        my $prototype_with_params;
+        if (ref($role) and $role->isa('UR::Role::PrototypeWithParams')) {
+            $prototype_with_params = $role;
+
+        } elsif (ref($role) and $role->isa('UR::Role::Prototype')) {
+            $prototype_with_params = $role->role_name->create();
+
+        } elsif (!ref($role)) {
+            my($role_prototype, $exception);
+            do {
+                local $@;
+                eval { $role_prototype = _dynamically_load_role($role) };
+                $exception = $@;
+            };
+            if ($exception) {
+                Carp::croak("Cannot apply role $role to class ".$desc->{class_name}.": $exception");
+            }
+            $prototype_with_params = $role->create();
+
+        } else {
+            Carp::croak("Cannot apply role $role to class ".$desc->{class_name}.": Expected a role name, or a UR::Role::PrototypeWithParams or UR::Role::Prototype instance");
+        }
+
+        push @role_prototypes, $prototype_with_params;
     }
     return @role_prototypes;
 }
@@ -420,13 +437,12 @@ sub _collect_meta_properties_from_roles {
 }
 
 sub _validate_role_requirements {
-    my $desc = shift;
+    my($desc, @role_objs) = @_;
 
     my $class_name = $desc->{class_name};
     my %found_properties_and_methods = map { $_ => 1 } keys %{ $desc->{has} };
 
-    foreach my $role_name ( @{ $desc->{roles} } ) {
-        my $role = __PACKAGE__->get($role_name);
+    foreach my $role ( @role_objs ) {
         foreach my $requirement ( @{ $role->requires } ) {
             unless ($found_properties_and_methods{ $requirement }
                         ||= _class_desc_lineage_has_method_or_property($desc, $requirement))
@@ -446,10 +462,10 @@ sub _validate_role_requirements {
 }
 
 sub _validate_role_exclusions {
-    my $desc = shift;
+    my($desc, @role_objs) = @_;
 
     my %role_names = map { $_ => $_ } @{ $desc->{roles} };
-    foreach my $role ( map { __PACKAGE__->get($_) } @{ $desc->{roles} } ) {
+    foreach my $role ( @role_objs ) {
 
         my @conflicts = grep { defined }
                             @role_names{ @{ $role->excludes } };
@@ -616,6 +632,22 @@ sub _define_role {
 sub defer($) {
     Carp::croak('defer takes only a single argument') unless (@_ == 1);
     return UR::Role::DeferredValue->create(id => shift);
+}
+
+sub _inject_instance_constructor_into_namespace {
+    my $self = shift;
+
+    my $package = $self->role_name;
+    my $full_name = join('::', $package, 'create');
+    my $sub = Sub::Name::subname $full_name => sub {
+        my($class, %params) = @_;
+        return UR::Role::PrototypeWithParams->create(prototype => $self, role_params => \%params);
+    };
+    Sub::Install::reinstall_sub({
+        into => $package,
+        as => 'create',
+        code => $sub,
+    });
 }
 
 1;

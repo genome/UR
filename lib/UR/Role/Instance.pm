@@ -12,6 +12,7 @@ UR::Object::Type->define(
         role_prototype => { is => 'UR::Role::Prototype', id_by => 'role_name' },
         class_name => { is => 'Test', doc => 'Class this role instance is composed into' },
         class_meta => { is => 'UR::Object::Type', id_by => 'class_name' },
+        role_params => { is => 'HASH', doc => 'Parameters used when this role was composed', is_optional => 1 },
     ],
 );
 

@@ -9,6 +9,7 @@ use UR::Util;
 use UR::AttributeHandlers;
 
 use UR::Role::Prototype;
+use UR::Role::PrototypeWithParams;
 use UR::Role::Instance;
 
 use Scalar::Util qw(blessed);
