@@ -938,21 +938,27 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
                 );
             }
 
-            local $@;
+            my $create_exception;
             for (my $attempt = 0; $attempt < 3; $attempt++) {
                 $property_name = '_' . $property_name if $attempt;
 
-                $property = eval { UR::Object::Property->create(
-                                    class_name     => $class_name,
-                                    property_name  => $property_name,
-                                    column_name    => $column_name,
-                                    data_type      => $ur_data_type,
-                                    data_length    => $ur_data_length,
-                                    is_optional    => $column->nullable eq "Y" ? 1 : 0,
-                                    is_volatile    => 0,
-                                    doc            => $column->remarks,
-                                    is_specified_in_module_header => 1,
-                                )};
+                $create_exception = do {
+                    local $@;
+                    eval {
+                        $property = UR::Object::Property->create(
+                            class_name     => $class_name,
+                            property_name  => $property_name,
+                            column_name    => $column_name,
+                            data_type      => $ur_data_type,
+                            data_length    => $ur_data_length,
+                            is_optional    => $column->nullable eq "Y" ? 1 : 0,
+                            is_volatile    => 0,
+                            doc            => $column->remarks,
+                            is_specified_in_module_header => 1,
+                        );
+                    };
+                    $@;
+                };
                 last if $property;
             }
 
@@ -968,7 +974,7 @@ sub  _update_class_metadata_objects_to_match_database_metadata_changes {
             );
             
             unless ($property) {
-                if ($@ =~ m/An object of class UR::Object::Property already exists/) {
+                if ($create_exception =~ m/An object of class UR::Object::Property already exists/) {
                     $self->warning_message("Conflicting property names already exist in class $class_name for column $column_name in table ".$table->table_name);
                 } else {
                     Carp::confess(

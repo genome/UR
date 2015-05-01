@@ -50,18 +50,24 @@ sub execute {
     my $self = shift;
     my $class = $self->classname;
 
-    local $@;
-
-    eval {
-        require Getopt::Complete;
-        require Getopt::Complete::Cache;
+    my $req_exception = do {
+        local $@;
+        eval {
+            require Getopt::Complete;
+            require Getopt::Complete::Cache;
+        };
+        $@;
     };
-    if ($@) {
+    if ($req_exception) {
         die "Errors using Getopt::Complete.  Do you have Getopt::Complete installed?  If not try 'cpanm Getopt::Complete'";
     }
 
-    eval "use above '$class';";
-    if ($@) {
+    my $use_exception = do {
+        local $@;
+        eval "use above '$class';";
+        $@;
+    };
+    if ($use_exception) {
         $self->error_message("Unable to use above $class.\n$@");
         return;
     }
