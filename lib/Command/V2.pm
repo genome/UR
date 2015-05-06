@@ -11,8 +11,6 @@ use Getopt::Long;
 use Command::View::DocMethods;
 use Command::Dispatch::Shell;
 
-require Command::V1;
-
 our $VERSION = "0.43"; # UR $VERSION;
 
 our $entry_point_class;
@@ -20,7 +18,7 @@ our $entry_point_bin;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'Command',
+    is => ['Command', 'Command::Common'],
     is_abstract => 1,
     subclass_description_preprocessor => 'Command::V2::_preprocess_subclass_description',
     attributes_have => [
@@ -115,8 +113,6 @@ sub _init_subclass {
     return 1;
 }
 
-sub create { Command::V1::create(@_) }
-
 sub __errors__ {
     my ($self,@property_names) = @_;
     my @errors1 =($self->SUPER::__errors__);
@@ -148,14 +144,6 @@ sub __errors__ {
 sub is_sub_command_delegator {
     return;
 }
-
-sub shortcut { Command::V1::shortcut(@_) }
-
-sub execute { Command::V1::execute(@_) }
-
-sub _execute_body { Command::V1::_execute_body(@_) }
-
-sub exit_code_for_return_value { Command::V1::exit_code_for_return_value(@_) }
 
 sub _wrapper_has {
     my ($class, $new_class_base) = @_;
