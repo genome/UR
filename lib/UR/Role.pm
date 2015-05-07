@@ -8,6 +8,7 @@ use UR::Object::Type::InternalAPI;
 use UR::Util;
 use UR::AttributeHandlers;
 
+use UR::Role::Param;
 use UR::Role::Prototype;
 use UR::Role::PrototypeWithParams;
 use UR::Role::Instance;

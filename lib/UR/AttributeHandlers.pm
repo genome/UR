@@ -10,6 +10,7 @@ our @CARP_NOT = qw(UR::Namespace);
 my %support_functions = (
     MODIFY_CODE_ATTRIBUTES => \&modify_attributes,
     FETCH_CODE_ATTRIBUTES => \&fetch_attributes,
+    MODIFY_SCALAR_ATTRIBUTES => \&modify_attributes,
 );
 
 sub import_support_functions_to_package {
@@ -27,6 +28,7 @@ sub import_support_functions_to_package {
 
 my %modify_attribute_handlers = (
     CODE => { Overrides => \&modify_code_overrides },
+    SCALAR => { RoleParam => \&modify_scalar_role_property },
 );
 my %fetch_attribute_handlers = (
     CODE => { Overrides => \&fetch_code_overrides },
@@ -87,6 +89,12 @@ sub modify_code_overrides {
 
     my $list = $stored_attributes{$coderef}->{overrides} ||= [];
     push @$list, @params;
+}
+
+sub modify_scalar_role_property {
+    my($package, $scalar_ref, $attr, $name) = @_;
+
+    $$scalar_ref = UR::Role::Param->new(name => $name, role_name => $package, varref => $scalar_ref);
 }
 
 sub fetch_code_overrides {
