@@ -25,6 +25,11 @@ sub create {
     return bless $self, $class;
 }
 
+sub __role__ {
+    my $self = shift;
+    return $self;
+}
+
 sub instantiate_role_instance {
     my($self, $class_name) = @_;
     my %create_args = ( role_name => $self->role_name, class_name => $class_name );

@@ -55,7 +55,7 @@ subtest basic => sub {
                 roles => ['Bogus'],
             }
         }
-        qr(Cannot dynamically load role 'Bogus': No module exists with that name\.),
+        qr(Cannot apply role Bogus to class URT::ClassWithBogusRole: Can't locate object method "__role__" via package "Bogus"),
         'Could not create class with a bogus role';
 
     throws_ok { URT::BasicRole->get() }
@@ -322,11 +322,11 @@ subtest 'dynamic loading' => sub {
     ok($class->role_method, 'called role_method on the class');
 
     throws_ok { class URT::DynamicLoadingFail1 { roles => 'URT::NotExistant' } }
-        qr/Cannot dynamically load role 'URT::NotExistant': No module exists with that name\./,
+        qr/Cannot apply role URT::NotExistant to class URT::DynamicLoadingFail1: Can't locate object method "__role__" via package "URT::NotExistant"/,
         'Defining class with non-existant role throws exception';
 
     throws_ok { class URT::DynamicLoadingFail2 { roles => 'URT::Thingy' } }
-        qr/Cannot dynamically load role 'URT::Thingy': The module loaded but did not define a role\./,
+        qr/Cannot apply role URT::Thingy to class URT::DynamicLoadingFail2: URT::Thingy was auto-generated successfully but cannot find method __role__ /,
         'Defing a class with a class name used as a role throws exception';
 };
 

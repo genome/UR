@@ -226,7 +226,7 @@ sub _apply_roles_to_class_desc {
     }
 
     return unless ($desc->{roles} and @{ $desc->{roles} });
-    my @role_objs = _dynamically_load_roles_for_class_desc($desc);
+    my @role_objs = _role_prototypes_with_params_for_class_desc($desc);
 
     _validate_role_exclusions($desc, @role_objs);
     _validate_role_requirements($desc, @role_objs);
@@ -275,55 +275,24 @@ sub _merge_role_properties_into_class_desc {
      @{$desc->{has}}{@property_names} = @$properties_to_add{@property_names};
 }
 
-sub _dynamically_load_roles_for_class_desc {
+sub _role_prototypes_with_params_for_class_desc {
     my $desc = shift;
 
     my @role_prototypes;
-    foreach my $role ( @{ $desc->{roles} } ) {
-        my $prototype_with_params;
-        if (ref($role) and $role->isa('UR::Role::PrototypeWithParams')) {
-            $prototype_with_params = $role;
-
-        } elsif (ref($role) and $role->isa('UR::Role::Prototype')) {
-            $prototype_with_params = $role->role_name->create();
-
-        } elsif (!ref($role)) {
-            my($role_prototype, $exception);
-            do {
-                local $@;
-                eval { $role_prototype = _dynamically_load_role($role) };
-                $exception = $@;
-            };
-            if ($exception) {
-                Carp::croak("Cannot apply role $role to class ".$desc->{class_name}.": $exception");
-            }
-            $prototype_with_params = $role->create();
-
-        } else {
-            Carp::croak("Cannot apply role $role to class ".$desc->{class_name}.": Expected a role name, or a UR::Role::PrototypeWithParams or UR::Role::Prototype instance");
+    foreach my $role_name ( @{ $desc->{roles} } ) {
+        my $role;
+        my $exception = do {
+            local $@;
+            $role = eval { $role_name->__role__ };
+            $@;
+        };
+        unless ($role) {
+            my $class_name = $desc->{class_name};
+            Carp::croak("Cannot apply role $role_name to class $class_name: $exception");
         }
-
-        push @role_prototypes, $prototype_with_params;
+        push @role_prototypes, $role;
     }
     return @role_prototypes;
-}
-
-sub _dynamically_load_role {
-    my $role_name = shift;
-
-    if (my $already_exists = __PACKAGE__->is_loaded($role_name)) {
-        return $already_exists;
-    }
-
-    if (UR::Util::use_package_optimistically($role_name)) {
-        if (my $role = __PACKAGE__->is_loaded($role_name)) {
-            return $role;
-        } else {
-            die qq(Cannot dynamically load role '$role_name': The module loaded but did not define a role.\n);
-        }
-    } else {
-        die qq(Cannot dynamically load role '$role_name': No module exists with that name.\n);
-    }
 }
 
 sub _collect_properties_from_roles {
@@ -647,6 +616,12 @@ sub _inject_instance_constructor_into_namespace {
         into => $package,
         as => 'create',
         code => $sub,
+    });
+
+    Sub::Install::reinstall_sub({
+        into => $package,
+        as => '__role__',
+        code => sub { $package->create() },
     });
 }
 

@@ -7,6 +7,7 @@ require UR;
 our $VERSION = "0.43"; # UR $VERSION;
 
 Class::Autouse->autouse(\&dynamically_load_class);
+Class::Autouse->autouse(\&dynamically_load_role);
 Class::Autouse->sugar(\&define_class);
 
 our @CARP_NOT = qw(Class::Autouse);
@@ -79,7 +80,7 @@ sub dynamically_load_class {
     }
 
     return if $loading{$class};
-    local %loading = ( %loading, class => 1 );
+    local %loading = ( %loading, $class => 1 );
 
     # Attempt to get a class object, loading it as necessary (probably).
     # TODO: this is a non-standard accessor
@@ -112,6 +113,35 @@ sub dynamically_load_class {
 
     return 1;
 };
+
+sub dynamically_load_role {
+    my($role_name, $func, @params) = @_;
+
+    return unless _should_dynamically_load_package($role_name);
+
+    return if $loading{$role_name};
+    local %loading = ( %loading, $role_name => 1 );
+
+    # The module may have actually been loaded by dynamically_load_class(),
+    # but failed the check for class-ness
+    if (UR::Role::Prototype->is_loaded($role_name)
+        &&
+        $role_name->can($func)
+    ) {
+        return 1;
+    }
+
+    if (UR::Util::use_package_optimistically($role_name)) {
+        if (UR::Role::Prototype->is_loaded($role_name)
+            &&
+            $role_name->can($func)
+        ) {
+            return 1;
+        }
+    }
+
+    return;
+}
 
 1;
 
