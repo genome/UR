@@ -11,15 +11,10 @@ Class::Autouse->sugar(\&define_class);
 
 our @CARP_NOT = qw(Class::Autouse);
 
-my %loading;
-
 sub define_class {
     my ($class,$func,@params) = @_;
     return unless $UR::initialized;
     return unless $Class::Autouse::ORIGINAL_CAN->("UR::Object::Type","get");
-
-    #return if $loading{$class};    
-    #$loading{$class} = 1;
 
     # Handle the special case of defining a new class
     # This lets us have the effect of a UNIVERSAL::class method, w/o mucking with UNIVERSAL
@@ -46,8 +41,8 @@ sub define_class {
     }
 }
 
-sub dynamically_load_class {
-    my ($class,$func,@params) = @_;
+sub _should_dynamically_load_package {
+    my $package = shift;
     # Don't even try to load unless we're done boostrapping somewhat.
     return unless $UR::initialized;
     return unless $Class::Autouse::ORIGINAL_CAN->("UR::Object::Type","get");
@@ -57,33 +52,39 @@ sub dynamically_load_class {
     # We refuse explicitly to handle top-level namespaces below anyway, and this will keep us from 
     # slowing down other modules just to fail late.
 
-    my ($namespace) = ($class =~ /^(.*?)::/);
+    my ($namespace) = ($package =~ /^(.*?)::/);
     return unless $namespace;
+
+    unless ($namespace->isa("UR::Namespace")) {
+        return;
+    }
+
+    unless ($namespace->should_dynamically_load_class($package)) {
+        return;
+    }
+
+    return $namespace;
+}
+
+our %loading;
+
+sub dynamically_load_class {
+    my ($class,$func,@params) = @_;
+
+    return unless my $namespace = _should_dynamically_load_package($class);
 
     if (defined($func) and $func eq "class" and @params > 1 and $class ne "UR::Object::Type") {
         # a "class" statement caught by the above define_class call
         return;
     }
 
-    unless ($namespace->isa("UR::Namespace")) {
-        return;
-    }
-
-    # TODO: this isn't safe against exceptions
-    # Instead, localize %loading with a copy of the previous %loading plus one class
-    return if $loading{$class};    
-    $loading{$class} = 1;
-
-    unless ($namespace->should_dynamically_load_class($class)) {
-        delete $loading{$class};
-        return;
-    }
+    return if $loading{$class};
+    local %loading = ( %loading, class => 1 );
 
     # Attempt to get a class object, loading it as necessary (probably).
     # TODO: this is a non-standard accessor
     my $meta = $namespace->get_member_class($class);
     unless ($meta) {
-        delete $loading{$class};
         return;
     }
 
@@ -98,8 +99,6 @@ sub dynamically_load_class {
             Carp::confess("failed to auto-generate $class");
         }
     }
-
-    delete $loading{$class};
 
     # Return a descriptive error message for the caller.
     my $fref;
