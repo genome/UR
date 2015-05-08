@@ -240,6 +240,7 @@ sub _apply_roles_to_class_desc {
     UR::Role::DeferredValue->apply_deferred_values_in_struct($desc->{class_name}, [ $properties_to_add, $meta_properties_to_add, $overloads_to_add ]);
 
     _save_role_instances_to_class_desc($desc, @role_objs);
+    _assert_all_role_params_are_bound_to_values($desc, @role_objs);
     do { $_->prototype->add_class_name($desc->{class_name}) } foreach @role_objs;
 
     UR::Role::Param->replace_unbound_params_in_struct_with_values(
@@ -262,6 +263,24 @@ sub _save_role_instances_to_class_desc {
                     @role_prototypes;
     $desc->{roles} = \@instances;
 }
+
+sub _assert_all_role_params_are_bound_to_values {
+    my($desc, @role_instances) = @_;
+
+    foreach my $instance ( @role_instances ) {
+        my $role_name = $instance->role_name;
+        my %expected_params = map { $_ => 1 }
+                              UR::Role::Param->param_names_for_role($role_name);
+        my $got_params = $instance->role_params;
+        if (my @missing = grep { ! exists($got_params->{$_}) } keys %expected_params) {
+            Carp::croak("Role $role_name expects values for these params: ",join(', ', @missing));
+        }
+        if (my @extra = grep { ! exists($expected_params{$_}) } keys %$got_params) {
+            Carp::croak("Role $role_name does not recognize these params: ",join(', ', @extra));
+        }
+    }
+}
+
 
 sub _merge_role_meta_properties_into_class_desc {
     my($desc, $meta_properties_to_add) = @_;
