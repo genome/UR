@@ -197,6 +197,41 @@ The class metadata object composing the role.
 
 This happens after the class is completely constructed.
 
+=head2 Parameterized Roles
+
+Scalar variables with the C<RoleParam> attribute are designated as role
+params.  Values can be supplied when a role composes the role as a means to
+provide more flexibility and genericity for a role.
+
+  package ObjectDisplayer;
+  use ProjectNamespace;
+
+  our $target_type : RoleParam(target_type);
+  role ObjectDisplayer {
+      has => [
+          target_object => { is => $target_type },
+      ],
+  };
+
+  package ShowCars;
+  class ShowCars {
+      roles => [ ObjectDisplayer->create(target_type => 'Car' ],
+  };
+
+When the role is composed, the call to C<create()> in the class definition
+creates a L<UR::Role::Instance> to represent the ObjectDisplayer role being
+composed into the ShowCars class with the params C<{ target_type => 'car' }>.
+Values for the role param values in the role definition are swapped out with
+the provided values as the role's properties are composed into the class.
+
+At run-time, these role param variables are tied with the L<UR::Role::Param>
+class.  Its C<FETCH> method searches the call stack for the first function
+whose invocant composes the role where the variable's value is being fetched
+from.  The proper param value is returned.
+
+An exception is thrown if a class composes a role and either provides unknown
+role params or omits values for existing params.
+
 =head2 Deferred Values
 
 A Role definition may contain L<UR::Role::DeferredValue> objects to act as
@@ -224,6 +259,6 @@ UR::Role exports the function C<defer> to create these DeferredValue objects.
 
 =head1 SEE ALSO
 
-L<UR>, L<UR::Object::Type::Initializer>, L<UR::Role::DeferredValue>
+L<UR>, L<UR::Object::Type::Initializer>, L<UR::Role::DeferredValue>, L<UR::Role::Instance>, L<UR::Role::Param>
 
 =cut

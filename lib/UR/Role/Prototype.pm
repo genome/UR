@@ -795,31 +795,6 @@ The class metadata object composing the role.
 
 This happens after the class is completely constructed.
 
-=head2 Deferred Values
-
-A Role definition may contain L<UR::Role::DeferredValue> objects to act as
-placeholders for values to be filled in when the role is composed into a
-class.  These values are resolved at composition time by calling the named
-function on the composing class.  For example:
-
-  use UR::Role;
-  role ObjectDisplayer {
-      has => [
-          target_object => { is => defer 'target_type' },
-      ]
-  };
-
-  class ShowCars {
-      roles => ['ObjectDisplayer'],
-  };
-  sub ShowCars::target_type { 'Car' }
-
-When the 'target_object' property is composed into the ShowCars class, the
-system calls the method C<ShowCars-E<gt>target_type()> to obtain the value
-'Car' for the data_type of property 'target_object'.
-
-UR::Role exports the function C<defer> to create these DeferredValue objects.
-
 =head1 SEE ALSO
 
 L<UR>, L<UR::Object::Type::Initializer>, L<UR::Role::DeferredValue>
