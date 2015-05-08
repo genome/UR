@@ -119,8 +119,6 @@ sub _normalize_role_description {
     UR::Object::Type::_process_class_definition_property_keys($old_role, $new_role);
     _complete_property_descriptions($new_role);
 
-    _add_deferred_values_to_required($new_role);
-    
     return $new_role;
 }
 
@@ -134,17 +132,6 @@ sub _complete_property_descriptions {
         my %new_property = UR::Object::Type->_normalize_property_description1($property_name, $old_property, $role_desc);
         delete $new_property{class_name};  # above normalizer fills this in as undef
         $properties->{$property_name} = \%new_property;
-    }
-}
-
-sub _add_deferred_values_to_required {
-    my $role_desc = shift;
-
-    my @deferred = grep { $_->id ne 'class' }
-                    UR::Role::DeferredValue->search_for_deferred_values_in_struct($role_desc);
-    if (@deferred) {
-        $role_desc->{requires} ||= [];
-        push @{$role_desc->{requires}}, map { $_->id } @deferred;
     }
 }
 
@@ -236,8 +223,6 @@ sub _apply_roles_to_class_desc {
     my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
     my $meta_properties_to_add = _collect_meta_properties_from_roles($desc, @role_objs);
     my $overloads_to_add = _collect_overloads_from_roles($desc, @role_objs);
-
-    UR::Role::DeferredValue->apply_deferred_values_in_struct($desc->{class_name}, [ $properties_to_add, $meta_properties_to_add, $overloads_to_add ]);
 
     _save_role_instances_to_class_desc($desc, @role_objs);
     _assert_all_role_params_are_bound_to_values($desc, @role_objs);
@@ -621,11 +606,6 @@ sub _define_role {
     } else {
         return;
     }
-}
-
-sub defer($) {
-    Carp::croak('defer takes only a single argument') unless (@_ == 1);
-    return UR::Role::DeferredValue->create(id => shift);
 }
 
 sub _inject_instance_constructor_into_namespace {

@@ -18,9 +18,6 @@ use List::MoreUtils qw(any);
 use Carp;
 our @CARP_NOT = qw(UR::Object::Type);
 
-use Exporter 'import';
-our @EXPORT = qw(defer);
-
 Class::Autouse->sugar(\&_define_role);
 
 sub _define_role {
@@ -45,11 +42,6 @@ sub _define_role {
     } else {
         return;
     }
-}
-
-sub defer($) {
-    Carp::croak('defer takes only a single argument') unless (@_ == 1);
-    return UR::Role::DeferredValue->create(id => shift);
 }
 
 1;
@@ -232,33 +224,8 @@ from.  The proper param value is returned.
 An exception is thrown if a class composes a role and either provides unknown
 role params or omits values for existing params.
 
-=head2 Deferred Values
-
-A Role definition may contain L<UR::Role::DeferredValue> objects to act as
-placeholders for values to be filled in when the role is composed into a
-class.  These values are resolved at composition time by calling the named
-function on the composing class.  For example:
-
-  use UR::Role;
-  role ObjectDisplayer {
-      has => [
-          target_object => { is => defer 'target_type' },
-      ]
-  };
-
-  class ShowCars {
-      roles => ['ObjectDisplayer'],
-  };
-  sub ShowCars::target_type { 'Car' }
-
-When the 'target_object' property is composed into the ShowCars class, the
-system calls the method C<ShowCars-E<gt>target_type()> to obtain the value
-'Car' for the data_type of property 'target_object'.
-
-UR::Role exports the function C<defer> to create these DeferredValue objects.
-
 =head1 SEE ALSO
 
-L<UR>, L<UR::Object::Type::Initializer>, L<UR::Role::DeferredValue>, L<UR::Role::Instance>, L<UR::Role::Param>
+L<UR>, L<UR::Object::Type::Initializer>, L<UR::Role::Instance>, L<UR::Role::Param>
 
 =cut
