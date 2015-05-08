@@ -35,21 +35,11 @@ sub FETCH {
     my $self = shift;
     my $param_name = $self->name;
 
-    # show stack
-    for (my $f = 0; my @caller = caller($f); $f++) {
-        printf("Caller $f: package %s in %s() at %s:%d\n",
-                    @caller[0, 3, 1, 2])
-    }
-
-    #my($role_name) = caller(1);
-    my @caller = caller(1);
-    my $role_name = $caller[0];
-print "Fetching value for $param_name in $role_name\n";
-    my $role_instance = $self->_search_for_invocant_role_instance($role_name);
+    my $role_instance = $self->_search_for_invocant_role_instance();
     unless ($role_instance) {
         Carp::confess("Role param '$param_name' is not bound to a value in this call frame");
     }
-    my $params = $role_instance->_get_role_params_for_package($role_name);
+    my $params = $role_instance->role_params();
     return $params->{$param_name};
 }
 
@@ -60,24 +50,35 @@ sub STORE {
 }
 
 sub _search_for_invocant_role_instance {
-    my($self, $role_name) = @_;
+    my $self = shift;
 
     local $@;
-    my $role_instance;
     for (my $frame = 1; ; $frame++) {
-        my $invocant = do {
+        my($role_package, $invocant) = do {
             package DB;
             my @caller = caller($frame);
-            last unless @caller;
-            eval { $DB::args[0] };
+            last unless $caller[3];
+            my($function_package) = $caller[3] =~ m/^(.*)::\w+$/;
+            next unless $function_package;
+            eval { ($function_package, $DB::args[0]) };
         };
-        my $invocant_class = blessed($invocant) || (! ref($invocant) && $invocant);
+        my $invocant_class = blessed($invocant) || (!ref($invocant) && $invocant);
         next unless $invocant_class;
 
-        $role_instance = UR::Role::Instance->get(role_name => $role_name, 'class_name isa' => $invocant_class);
-        last if $role_instance;
+        my $role_instance = UR::Role::Instance->get(role_name => $role_package, 'class_name isa' => $invocant_class);
+        return $role_instance if $role_instance;
     }
-    return $role_instance;
+    return;
+}
+
+sub clone_self {
+    # used by Clone:PP (UR::Util::deep_copy), to prevent recursing into
+    # these Param objects.  Otherwise, the cloning done when a Role's
+    # property data is cloned before merging it into the class would point
+    # this object's varref to an anonymous scalar other than the original
+    # variable with The RoleParam attribute, and the cloning process doesn't
+    # properly re-tie the RoleParam variables afterward.
+    return $_[0];
 }
 
 sub param_names_for_role {

@@ -21,6 +21,7 @@ UR::Object::Type->define(
     id_by => 'role_name',
     has => [
         role_name   => { is => 'Text', doc => 'Package name identifying the role' },
+        class_names => { is => 'Text', is_many => 1, doc => 'Class names composing this role' },
         methods     => { is => 'HASH', doc => 'Map of method names and coderefs' },
         overloads   => { is => 'HASH', doc => 'Map of overload keys and coderefs' },
         has         => { is => 'ARRAY', doc => 'List of properties and their definitions' },
@@ -239,6 +240,11 @@ sub _apply_roles_to_class_desc {
     UR::Role::DeferredValue->apply_deferred_values_in_struct($desc->{class_name}, [ $properties_to_add, $meta_properties_to_add, $overloads_to_add ]);
 
     _save_role_instances_to_class_desc($desc, @role_objs);
+    do { $_->prototype->add_class_name($desc->{class_name}) } foreach @role_objs;
+
+    UR::Role::Param->replace_unbound_params_in_struct_with_values(
+            [ $properties_to_add, $meta_properties_to_add, $overloads_to_add ],
+            @role_objs);
 
     _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
     _apply_overloads_to_namespace($desc->{class_name}, $overloads_to_add);
@@ -317,7 +323,7 @@ sub _collect_properties_from_roles {
             $properties_to_add{$property_name} = $prop_definition;
         }
     }
-    return \%properties_to_add;
+    return UR::Util::deep_copy(\%properties_to_add);
 }
 
 sub _collect_overloads_from_roles {
@@ -402,7 +408,7 @@ sub _collect_meta_properties_from_roles {
             }
         }
     }
-    return \%meta_properties_to_add;
+    return UR::Util::deep_copy(\%meta_properties_to_add);
 }
 
 sub _validate_role_requirements {
