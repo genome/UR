@@ -10,7 +10,6 @@ use UR::AttributeHandlers;
 
 use Sub::Name qw();
 use Sub::Install qw();
-use Scalar::Util qw(blessed);
 use List::MoreUtils qw(any);
 use Carp;
 our @CARP_NOT = qw(UR::Object::Type);
