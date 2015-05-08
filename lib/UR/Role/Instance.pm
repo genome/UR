@@ -17,3 +17,37 @@ UR::Object::Type->define(
 );
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Role::Instance - Represents a role composed with a class with a set of params
+
+=head1 DESCRIPTION
+
+When a class composes one or more roles, the role names given in the class
+description are converted to UR::Role::Instance objects as the class is
+constructed.  These are returned by the class' C<roles()> method.
+
+=head2 Methods
+
+=over 4
+
+=item role_name()
+
+Returns the name of the role
+
+=item class_name()
+
+Returns the name of the class composing the role
+
+=item role_params()
+
+Returns a hashref of role params used when the class composed the role
+
+=back
+
+=head1 SEE ALSO
+
+L<UR::Role>, L<UR::Role::Prototype>

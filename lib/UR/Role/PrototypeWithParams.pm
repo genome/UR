@@ -61,3 +61,39 @@ foreach my $accessor_name ( qw( role_name methods overloads has requires attribu
 }
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Role::PrototypeWithParams - Binds a set of params to a role
+
+=head1 DESCRIPTION
+
+Objects of this class are returned when calling C<create()> on a role's class.
+They exist temporarily as a class is being defined as a means of binding a
+set of role params to a L<UR::Role::Prototype> to use in the C<roles> section
+of a class description.  See the "Parameterized Roles" section in L<UR::Role>.
+
+=head2 Methods
+
+=over 4
+
+=item create(prototype => $role_proto, role_params => $hashref)
+
+The constructor.  Both arguments are required.
+
+=item __role__()
+
+Returns itself.  Used by the role composition mechanism to trigger autoloading
+the role's module when role names are given as strings in a class definition.
+
+=item instantiate_role_instance($class_name)
+
+Return a L<UR::Role::Instance> object.
+
+=back
+
+=head1 SEE ALSO
+
+L<UR::Role>, L<UR::Role::Prototype>, L<UR::Role::Instance>

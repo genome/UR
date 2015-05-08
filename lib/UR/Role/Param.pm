@@ -143,3 +143,58 @@ sub _visit_params_with_values_in_struct {
 }
 
 1;
+
+=pod
+
+=head1 NAME
+
+UR::Role::Param - Role parameters as package variables
+
+=head1 SYNOPSIS
+
+  package ProjectNamespace::LoggingRole;
+  use ProjectNamespace;
+
+  our $logging_object : RoleParam(logging_obejct);
+  role ProjectNamespace::SomeParameterizedRole { };
+
+  sub log {
+      my($self, $message) = @_;
+      $logging_object->log($message);
+  }
+
+  package ThingThatLogs;
+  my $logger = create_a_logging_object();
+  class ThingThatLogs {
+      roles => [ ProjectNamespace::SomeParameterizedRole->create(logging_object => $logger) ],
+  };
+
+=head1 DESCRIPTION
+
+Roles can be configured by declaring variabls with the C<RoleParam> attribute.
+These variables aquire values by calling C<create()> on the role's name and
+giving values for all the role's parameters.  More information about declaring
+and using these parameters is described in the "Parameterized Roles" section of
+L<UR::Role>.
+
+When the variables are initially declared, their value is initialized to a
+reference to a UR::Role::Param.  This represents a placeholder value to be
+filled in later.  The value may be used in a role definition or in any
+subroutine.
+
+When the role is composed into a class, the placeholder values are replaced
+with the actual values given in the C<create()> call on the role's name.  The
+original RoleParam variable is then tied to the UR::Role::Param class; it's
+C<FETCH> method returns the proper value by searching the call stack for the
+first method whose invocant class has composed the role where the FETCH
+originated from.  It returns the value given when the role was composed
+into the class.
+
+These role param variables are read-only.
+
+Each variable with the RoleParam attribute becomes a required argument when
+the role is instantiated .
+
+=head1 SEE ALSO
+
+L<UR::Role>, L<UR::Role::Prototype>, L<UR::Role::Instance>

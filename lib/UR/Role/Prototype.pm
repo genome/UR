@@ -637,145 +637,75 @@ __END__
 
 =head1 NAME
 
-UR::Role - Roles in UR, an alternative to inheritance
-
-=head1 SYNOPSIS
-
-  package My::Role;
-  role My::Role {
-      has => [
-          role_property => { is => 'String' },
-          another_prop  => { is => 'Integer' },
-      },
-      requires => ['class_method'],
-      excludes => ['Bad::Role'],
-  };
-  sub role_method { ... }
-
-
-  package My::Class;
-  class My::Class {
-      has => [
-          class_property => { is => 'Integer ' },
-      ],
-      roles => ['My::Role'],
-  };
-  sub class_method { ... }
-
-  my $obj = My::Class->new();
-  $obj->does('My::Role');  # true
+UR::Role::Prototype - Implementation for defining and composing roles
 
 =head1 DESCRIPTION
 
-Roles are used to encapsulate a piece of behavior to be used in other classes.
-They have properties and methods that get melded into any class that composes
-them.  A Role can require any composing class to implement a list of methods
-or properties.
+Basic info about using roles is described in the documentation for L<UR::Role>.
 
-Roles are not classes.  They can not be instantiated or inherited from.  They
-are composed into a class by listing their names in the C<roles> attribute of
-a class definition.
+When a role is defined using the C<role> keyword, it creates a L<UR::Role::Prototype>
+instance.  Role prototypes represent an uncomposed role.  They have most of the
+same properties as L<UR::Object::Type> instances.
 
-=head2 Defining a Role
-
-Roles are defined with the C<role> keyword.  Their definition looks very
-similar to a class definition as described in L<UR::Object::Type::Initializer>.
-In particular, Roles have a C<has> section to define properties, and accept
-many class-meta attributes such as 'id_generator', 'valid_signals', and 'doc'.
-
-Roles may implement operator overloading via the 'use overload' mechanism.
-
-Roles also have unique atributes to declare restrictions on their use.
+=head2 Methods
 
 =over 4
 
-=item requires
+=item property_data($property_name)
 
-A listref of property and method names that must appear in any class composing
-the Role.  Properties and methods defined in other roles or parent classes
-can satisfy a requirement.
+Returns a hashref of property data about the named property.
 
-=item excludes
+=item property_names()
 
-A listref of Role names that may not be composed together with this Role.
-This is useful to declare incompatibilities between roles.
+Returns a list of all the properties in the role's C<has>.
 
-=back
+=item method_names()
 
-=head2 Composing a Role
+Returns a list of all the function names in the role's namespace.
 
-Compose one or more Roles into a class using the 'roles' attribute in a class
-definition.
+=item define(%role_definition)
 
-  class My::Class {
-      roles => ['My::Role', 'Other::Role'],
-      is => ['Parent::Class'],
-      has => ['prop_a','prop_b'],
-  };
+Define a role and return the role prototype.
 
-Properties and meta-attributes from the Roles get copied into the composing
-class.  Subroutines defined in the Roles' namespaces are imported into the
-class's namespace.  Operator overloads defined in the Roles are applied to
-the class.
+=item role_name()
 
-=head3 Property and meta-attribute conflicts
+Return the name of the role.
 
-An exception is thrown if multiple Roles are composed together that define
-the same property, even if the composing class defines the same property in
-an attempt to override them.
+=item class_names()
 
-=head3 Method conflicts
+Returns a list of the names of the classes composing this role.
 
-An exception is thrown if multiple Roles are composed together that
-define the same subroutine, or if the composing class defines the same
-subroutine as any of the roles.
+=item requires()
 
-If the class wants to override a subroutine defined in one of its roles,
-the override must be declared with the "Overrides" attribute.
+Returns an arrayref of strings.  These strings must exist in composing classes,
+either as properties or methods.
 
-  sub overridden_method : Overrides(My::Role, Other::Role) { ... }
+=item excludes()
 
-All the conflicting role names must be listed in the override, separated by
-commas.  The class will probably implement whatever behavior is required,
-maybe by calling one role's method or the other, both methods, neither,
-or anything else.
-
-To call a function in a role, the function's fully qualified name, including
-the role's package, must be used.
-
-=head3 Overload conflicts
-
-Like with method conflicts, an exception is thrown if multiple Roles are
-composed together that overload the same operator unless the composing
-class also overloads that same operator.
-
-An exception is also thrown if composed roles define incompatible 'fallback'
-behavior.  If a role does not specify 'fallback', or explicity sets it to
-C<undef>, it is compatible with other values.  A Role that sets its 'fallback'
-value to true or false is only compatible with other roles' values of undef
-or the same true or false value.
-
-=head2 __import__
-
-Each time a Role is composed into a class, its C<__import__()> method is
-called.  C<__import__()> is passed two arguments:
-
-=over 4
-
-=item *
-
-The name of the role
-
-=item *
-
-The class metadata object composing the role.
+Returns an arrayref of role names that may not be composed with this role.
 
 =back
 
-This happens after the class is completely constructed.
+=head2 Role namespace methods
+
+When a role is defined, these methods are injected into the role's namespace
+
+=item create(%params)
+
+Return a L<UR::Role::PrototypeWithParams> object representing this role with
+a set of params immediately before it is composed into a class.  See the
+section on Parameterized Roles in L<UR::Role>.
+
+=item __role__()
+
+Calls the above C<create()> method with no arguments.  This is used by the
+role composition mechanism to trigger autoloading the role's module when role
+names are given as strings in a class definition.
+
+=back
 
 =head1 SEE ALSO
 
-L<UR>, L<UR::Object::Type::Initializer>, L<UR::Role::DeferredValue>
+L<UR>, L<UR::Object::Type::Initializer>, L<UR::Role::Instance>, L<UR::Role::PrototypeWithParams>
 
 =cut
