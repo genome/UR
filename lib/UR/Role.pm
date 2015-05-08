@@ -20,6 +20,11 @@ our @CARP_NOT = qw(UR::Object::Type);
 
 Class::Autouse->sugar(\&_define_role);
 
+sub define {
+    my $class = shift;
+    UR::Role::Prototype->define(@_);
+}
+
 sub _define_role {
     my($role_name, $func, @params) = @_;
 
