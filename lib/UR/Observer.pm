@@ -1,4 +1,3 @@
-
 package UR::Observer;
 
 use strict;
@@ -38,50 +37,96 @@ sub __define__ {
     $class->_create_or_define('__define__', @_);
 }
 
+my @required_params_for_register = qw(aspect callback note once priority subject_class_name subject_id id);
+
 sub _create_or_define {
     my $class = shift;
     my $method = shift;
     my %params = @_;
 
     my $callback = delete $params{callback};
-    unless ($callback) {
-        $class->error_message("'callback' is a required parameter for creating UR::Observer objects");
-        return;
-    }
 
-    my $subject_class_name = $params{subject_class_name};
-    my $subject_class_meta = eval { $subject_class_name->__meta__ };
-    if ($@) {
-        $class->error_message("Can't create observer with subject_class_name '$subject_class_name': Can't get class metadata for class '$subject_class_name': $@");
-        return;
-    }
-    unless ($subject_class_meta) {
-        $class->error_message("Class $subject_class_name cannot be the subject class for an observer because there is no class metadata");
-        return;
-    }
-
-    my $aspect = $params{aspect};
-    my $subject_id = $params{subject_id};
-    unless ($subject_class_meta->_is_valid_signal($aspect)) {
-        if ($subject_class_name->can('validate_subscription') and ! $subject_class_name->validate_subscription($aspect, $subject_id, $callback)) {
-            $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
-            return;
+    my $self = UR::Context::Transaction::do {
+        my $inner_self;
+        if ($method eq 'create') {
+            $inner_self = $class->SUPER::create(%params);
+        } elsif ($method eq '__define__') {
+            $inner_self = $class->SUPER::__define__(%params);
+        } else {
+            Carp::croak('Instantiating a UR::Observer with some method other than create() or __define__() is not supported');
         }
-    }
-
-    my $self;
-    if ($method eq 'create') {
-        $self = $class->SUPER::create(%params);
-    } elsif ($method eq '__define__') {
-        $self = $class->SUPER::__define__(%params);
-    } else {
-        Carp::croak('Instantiating a UR::Observer with some method other than create() or __define__() is not supported');
-    }
-    $self->{callback} = $callback;
-    $self->_insert_record_into_all_change_subscriptions($self->subject_class_name, $self->aspect, $self->subject_id,
-                                                        [$callback, $self->note, $self->priority, $self->id, $self->once]);
+        $inner_self->{callback} = $callback;
+        $inner_self->register_callback(map { $_ => $inner_self->$_ } @required_params_for_register);
+        return $inner_self;
+    };
 
     return $self;
+}
+
+
+{
+    my @has_defaults = qw(aspect note once priority subject_class_name subject_id);
+    my %defaults =
+        map {
+            $_ => __PACKAGE__->__meta__->{has}->{$_}->{default_value}
+        }
+        grep {
+            exists __PACKAGE__->__meta__->{has}->{$_}
+            && exists __PACKAGE__->__meta__->{has}->{$_}->{default_value}
+        } @has_defaults;
+    sub register_callback {
+        my $class = shift;
+        my %params = @_;
+
+        unless (defined $params{id}) {
+            $params{id} = UR::Object::Type->autogenerate_new_object_id_uuid;
+        }
+
+        my @missing_params = grep { not exists $params{$_} } @required_params_for_register;
+        if (@missing_params) {
+            Carp::croak('missing required params: ' . join(', ', @missing_params));
+        }
+
+        my @undef_params = grep { not defined $params{$_} } @required_params_for_register;
+        if (@undef_params) {
+            Carp::croak('undefined params: ' . join(', ', @undef_params));
+        }
+
+        my %values = %defaults;
+        %values = map { $_ => delete $params{$_} } @required_params_for_register;
+
+        my @bad_params = keys %params;
+        if (@bad_params) {
+            Carp::croak('invalid params: ' . join(', ', @bad_params));
+        }
+
+        my $subject_class_name = $values{subject_class_name};
+        my $subject_class_meta = eval { $subject_class_name->__meta__ };
+        if ($@) {
+            $class->error_message("Can't create observer with subject_class_name '$subject_class_name': Can't get class metadata for class '$subject_class_name': $@");
+            return;
+        }
+        unless ($subject_class_meta) {
+            $class->error_message("Class $subject_class_name cannot be the subject class for an observer because there is no class metadata");
+            return;
+        }
+
+        my $aspect = $values{aspect};
+        my $subject_id = $values{subject_id};
+        unless ($subject_class_meta->_is_valid_signal($aspect)) {
+            if ($subject_class_name->can('validate_subscription') and ! $subject_class_name->validate_subscription($aspect, $subject_id, $values{callback})) {
+                $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
+                return;
+            }
+        }
+
+        $class->_insert_record_into_all_change_subscriptions(
+            @values{qw(subject_class_name aspect subject_id)},
+            [@values{qw(callback note priority id once)}],
+        );
+
+        return $values{id};
+    }
 }
 
 
