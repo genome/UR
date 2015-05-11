@@ -2855,32 +2855,16 @@ sub _reverse_all_changes {
     @UR::Context::Transaction::change_log = ();
     $UR::Context::Transaction::log_all_changes = 0;
     $UR::Context::current = $UR::Context::process;
-    
-    # aggregate the objects to be deleted
-    # this prevents cirucularity, since some objects 
-    # can seem re-reversible (like ghosts)
-    my %_delete_objects;
-    my @all_subclasses_loaded = sort UR::Object->__meta__->subclasses_loaded;
-    for my $class_name (@all_subclasses_loaded) { 
-        next unless $class_name->can('__meta__');
-        next if $class_name->isa("UR::Value");
 
-        my @objects_this_class = $self->all_objects_loaded_unsubclassed($class_name);
-        next unless @objects_this_class;
-        
-        $_delete_objects{$class_name} = \@objects_this_class;
+    my @objects =
+        map { $self->all_objects_loaded_unsubclassed($_) }
+        grep { $_->__meta__->is_transactional }
+        grep { ! $_->isa('UR::Value') }
+        sort UR::Object->__meta__->subclasses_loaded();
+
+    for my $object (@objects) {
+        $object->__rollback__();
     }
-    
-    # do the reverses
-    for my $class_name (keys %_delete_objects) {
-        my $co = $class_name->__meta__;
-        next unless $co->is_transactional;
-
-        my $objects_this_class = $_delete_objects{$class_name};
-        for my $object (@$objects_this_class) {
-            $object->__rollback__();
-        }
-    } # next class
 
     return 1;
 }
