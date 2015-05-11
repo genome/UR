@@ -341,12 +341,9 @@ sub initialize_bootstrap_classes
     }
     $bootstrapping = 0;
 
-    # It should be safe to set up callbacks now.
-    # __define__ instead of create() so a subsequent rollback won't remove the observer
-    # and since we're in bootstrapping time, we have to supply an ID.  The UUID generator
-    # doesn't require any outside info, so it's safe to use
-    UR::Observer->__define__(
-        id => UR::Object::Type->autogenerate_new_object_id_uuid,
+    # It should be safe to set up callbacks now.  register_callback() instead
+    # of create() so a subsequent rollback won't remove the observer.
+    UR::Observer->register_callback(
         subject_class_name => 'UR::Object::Property',
         subject_id => '',
         aspect => '',
