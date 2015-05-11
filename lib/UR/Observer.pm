@@ -43,19 +43,15 @@ sub __define__ {
 sub _create_or_define {
     my $class = shift;
     my $method = shift;
+    my %params = @_;
 
-    my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);
-    my $callback = delete $extra{callback};
+    my $callback = delete $params{callback};
     unless ($callback) {
         $class->error_message("'callback' is a required parameter for creating UR::Observer objects");
         return;
     }
-    if (%extra) {
-        $class->error_message("Cannot create observer.  Class $class has no property ".join(',',keys %extra));
-        return;
-    }
 
-    my $subject_class_name = $rule->value_for('subject_class_name');
+    my $subject_class_name = $params{subject_class_name};
     my $subject_class_meta = eval { $subject_class_name->__meta__ };
     if ($@) {
         $class->error_message("Can't create observer with subject_class_name '$subject_class_name': Can't get class metadata for class '$subject_class_name': $@");
@@ -66,8 +62,8 @@ sub _create_or_define {
         return;
     }
 
-    my $aspect = $rule->value_for('aspect');
-    my $subject_id = $rule->value_for('subject_id');
+    my $aspect = $params{aspect};
+    my $subject_id = $params{subject_id};
     unless ($subject_class_meta->_is_valid_signal($aspect)) {
         if ($subject_class_name->can('validate_subscription') and ! $subject_class_name->validate_subscription($aspect, $subject_id, $callback)) {
             $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
@@ -81,9 +77,9 @@ sub _create_or_define {
 
     my $self;
     if ($method eq 'create') {
-        $self = $class->SUPER::create($rule);
+        $self = $class->SUPER::create(%params);
     } elsif ($method eq '__define__') {
-        $self = $class->SUPER::__define__($rule->params_list);
+        $self = $class->SUPER::__define__(%params);
     } else {
         Carp::croak('Instantiating a UR::Observer with some method other than create() or __define__() is not supported');
     }
