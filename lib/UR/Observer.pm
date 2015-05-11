@@ -16,8 +16,6 @@ UR::Object::Type->define(
         priority           => { is => 'Number',  is_optional => 1, default_value => 1  },
         note               => { is => 'String',  is_optional => 1, default_value => '' },
         once               => { is => 'Boolean', is_optional => 1, default_value => 0  },
-
-        subject_class      => { is => 'UR::Object::Type', id_by => 'subject_class_name' },
         subject            => { is => 'UR::Object', id_by => 'subject_id', id_class_by => 'subject_class_name' },
     ],
     is_transactional => 1,
