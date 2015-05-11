@@ -212,7 +212,7 @@ UR::Observer - bind callbacks to object changes
     );
 
     $observer2 = UR::Observer->create(
-        subject_class => 'Acme::Rocket',
+        subject_class_name => 'Acme::Rocket',
         subject_id    => $rocket->id,
         aspect => 'fuel_level',
         callback =>
