@@ -1475,7 +1475,8 @@ sub _property_change_callback {
         &_id_property_change_callback($property_obj, $change);
     }
 
-    if (exists $class_obj->{'has'}->{$property_name}->{$method}) {
+    if (exists $class_obj->{'has'}->{$property_name}
+        && exists $class_obj->{'has'}->{$property_name}->{$method}) {
         $class_obj->{'has'}->{$property_name}->{$method} = $new_val;
 
     } 

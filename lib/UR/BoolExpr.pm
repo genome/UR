@@ -615,8 +615,10 @@ sub resolve {
                     $is_many = $property_meta->is_many;
                 }
                 else {
-                    $data_type = $subject_class_meta->{has}{$property_name}{data_type};
-                    $is_many = $subject_class_meta->{has}{$property_name}{is_many};
+                    if (exists $subject_class_meta->{has}{$property_name}) {
+                        $data_type = $subject_class_meta->{has}{$property_name}{data_type};
+                        $is_many = $subject_class_meta->{has}{$property_name}{is_many};
+                    }
                 }
                 $data_type ||= '';
 
