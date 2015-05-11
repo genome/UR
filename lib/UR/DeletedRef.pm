@@ -61,6 +61,10 @@ sub AUTOLOAD {
     Carp::croak("Attempt to use a reference to an object which has been deleted.  A call was made to method '$method'\nRessurrect it first.\n" . Dumper($_[0]));
 }
 
+sub __rollback__ {
+    return 1;
+}
+
 sub DESTROY {
     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
         print STDERR "MEM DESTROY deletedref $_[0]\n";

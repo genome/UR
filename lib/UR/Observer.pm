@@ -221,6 +221,11 @@ sub delete {
     $self->SUPER::delete();
 }
 
+sub __rollback__ {
+    my $self = shift;
+    return UR::Observer::delete($self);
+}
+
 sub get_with_special_parameters {
     my($class,$rule,%extra) = @_;
 

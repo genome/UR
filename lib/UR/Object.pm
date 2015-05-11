@@ -685,6 +685,45 @@ sub is_prunable {
 }
 
 
+sub __rollback__ {
+    my $self = shift;
+
+    my $saved = $self->{db_saved_uncommitted} || $self->{db_committed};
+    unless ($saved) {
+        return UR::Object::delete($self);
+    }
+
+    my $meta = $self->__meta__;
+
+    my $should_rollback = sub {
+        my $property_meta = shift;
+        return ! (
+            defined $property_meta->is_id
+            || ! defined $property_meta->column_name
+            || $property_meta->is_delegated
+            || $property_meta->is_legacy_eav
+            || ! $property_meta->is_mutable
+            || $property_meta->is_transient
+            || $property_meta->is_constant
+        );
+    };
+    my @rollback_properties_names =
+        map { $_->property_name }
+        grep { $should_rollback->($_) }
+        map { $meta->property_meta_for_name($_) }
+        $meta->all_property_names;
+
+    # Existing object.  Undo all changes since last sync, or since load
+    # occurred when there have been no syncs.
+    foreach my $property_name ( @rollback_properties_names ) {
+        $self->$property_name($saved->{$property_name});
+    }
+    delete $self->{'_change_count'};
+
+    return $self;
+}
+
+
 sub DESTROY {
     # Handle weak references in the object cache.
     my $obj = shift;

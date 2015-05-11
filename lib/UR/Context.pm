@@ -2877,90 +2877,9 @@ sub _reverse_all_changes {
         next unless $co->is_transactional;
 
         my $objects_this_class = $_delete_objects{$class_name};
-
-        if ($class_name->isa("UR::Object::Ghost")) {
-            # ghose placeholder for a deleted object
-            for my $object (@$objects_this_class) {
-                # revive ghost object
-    
-                my $ghost_copy = eval("no strict; no warnings; " . Data::Dumper::Dumper($object));
-                if ($@) {
-                    Carp::confess("Error re-constituting ghost object: $@");
-                }
-                my($saved_data, $saved_key);
-                if (exists $ghost_copy->{'db_saved_uncommitted'} ) {
-                    $saved_data = $ghost_copy->{'db_saved_uncommitted'};
-                } elsif (exists $ghost_copy->{'db_committed'} ) {
-                    $saved_data = $ghost_copy->{'db_committed'};
-                } else {
-                    next; # This shouldn't happen?!
-                }
-
-                my $new_object = $object->live_class->UR::Object::create(
-                    %$saved_data
-                );
-                $new_object->{db_committed} = $ghost_copy->{db_committed} if (exists $ghost_copy->{'db_committed'});
-                $new_object->{db_saved_uncommitted} = $ghost_copy->{db_saved_uncommitted} if (exists $ghost_copy->{'db_saved_uncommitted'});
-                unless ($new_object) {
-                    Carp::confess("Failed to re-constitute $object!");
-                }
-                next;
-            }
+        for my $object (@$objects_this_class) {
+            $object->__rollback__();
         }
-        else {
-            # non-ghost regular entity
-
-            # find property_names (that have columns)
-            # todo: switch to check persist
-            my %property_names = map { $_->property_name => $_ }
-                                 grep { defined $_->column_name }
-                                 map { $co->property_meta_for_name($_) }
-                                 $co->all_property_names;
-
-             for my $object (@$objects_this_class) {
-                # find columns which make up the primary key
-                # convert to a hash where property => 1
-                my @id_property_names = $co->all_id_property_names;
-                my %id_props = map {($_, 1)} @id_property_names;
-        
-                
-                my $saved = $object->{db_saved_uncommitted} || $object->{db_committed};
-                
-                if ($saved) {
-                    # Existing object.  Undo all changes since last sync, 
-                    # or since load occurred when there have been no syncs.
-                    foreach my $property_name ( keys %property_names ) {
-                        # only do this if the column is not part of the
-                        # primary key
-                        my $property_meta = $property_names{$property_name};
-                        next if ($id_props{$property_name} ||
-                                 $property_meta->is_delegated ||
-                                 $property_meta->is_legacy_eav ||
-                                 ! $property_meta->is_mutable ||
-                                 $property_meta->is_transient ||
-                                 $property_meta->is_constant);
-                        $object->$property_name($saved->{$property_name});
-                    }
-                    delete $object->{'_change_count'};
-                }
-                elsif ($object->isa('UR::DeletedRef')) {
-                    # DeletedRefs can appear if un-doing some items causes others in @$objects_this_class
-                    # to get deleted because of observers of their own.  Skip these
-                    1;
-                }
-                else {
-                    # Object not in database, get rid of it.
-                    # Because we only go back to the last sync not (not last commit),
-                    # this no longer has to worry about rolling back an uncommitted database save which may have happened.
-                    if ($object->isa('UR::Observer')) {
-                        UR::Observer::delete($object);  # Observers have some state that needs to get cleaned up
-                    } else {
-                        UR::Object::delete($object);
-                    }
-                }
-
-            } # next non-ghost object
-        } 
     } # next class
 
     return 1;
