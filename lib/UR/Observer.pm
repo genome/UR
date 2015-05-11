@@ -10,15 +10,15 @@ our $VERSION = "0.43"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     has => [
-        subject_class   => { is => 'UR::Object::Type', id_by => 'subject_class_name' },
-        subject_id      => { is => 'SCALAR', is_optional => 1 },
-        subject         => { is => 'UR::Object', 
-                                calculate_from => ['subject_class_name','subject_id'],
-                                calculate => '$subject_class_name->get($subject_id)' },
-        aspect          => { is => 'String', is_optional => 1 },
-        priority        => { is => 'Number', is_optional => 1, default_value => 1 },
-        note            => { is => 'String', is_optional => 1 },
-        once            => { is => 'Boolean', is_optional => 1, default_value => 0 },
+        subject_class_name => { is => 'Text',    is_optional => 1, default_value => '' },
+        subject_id         => { is => 'SCALAR',  is_optional => 1, default_value => '' },
+        aspect             => { is => 'String',  is_optional => 1, default_value => '' },
+        priority           => { is => 'Number',  is_optional => 1, default_value => 1  },
+        note               => { is => 'String',  is_optional => 1, default_value => '' },
+        once               => { is => 'Boolean', is_optional => 1, default_value => 0  },
+
+        subject_class      => { is => 'UR::Object::Type', id_by => 'subject_class_name' },
+        subject            => { is => 'UR::Object', id_by => 'subject_id', id_class_by => 'subject_class_name' },
     ],
     is_transactional => 1,
 );
@@ -71,10 +71,6 @@ sub _create_or_define {
         }
     }
 
-    if (!defined($subject_class_name) or $subject_class_name eq 'UR::Object') { $subject_class_name = '' }; # This was part of the old API, not sure why it's still here?!
-    if (!defined ($aspect)) { $aspect = '' };
-    if (!defined ($subject_id)) { $subject_id = '' };
-
     my $self;
     if ($method eq 'create') {
         $self = $class->SUPER::create(%params);
@@ -84,7 +80,7 @@ sub _create_or_define {
         Carp::croak('Instantiating a UR::Observer with some method other than create() or __define__() is not supported');
     }
     $self->{callback} = $callback;
-    $self->_insert_record_into_all_change_subscriptions($subject_class_name, $aspect, $subject_id,
+    $self->_insert_record_into_all_change_subscriptions($self->subject_class_name, $self->aspect, $self->subject_id,
                                                         [$callback, $self->note, $self->priority, $self->id, $self->once]);
 
     return $self;
@@ -93,6 +89,10 @@ sub _create_or_define {
 
 sub _insert_record_into_all_change_subscriptions {
     my($class,$subject_class_name, $aspect,$subject_id, $new_record) = @_;
+
+    if ($subject_class_name eq 'UR::Object') {
+        $subject_class_name = '';
+    };
 
     my $list = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id} ||= [];
     push @$list, $new_record;

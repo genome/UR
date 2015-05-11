@@ -338,9 +338,11 @@ sub add_observer {
     my $self = shift;
     my %params = @_;
 
+    if (ref($self)) {
+        $params{subject_id} = $self->id;
+    }
     my $observer = UR::Observer->create(
         subject_class_name => $self->class,
-        subject_id => (ref($self) ? $self->id : undef),
         %params,
     );
     unless ($observer) {

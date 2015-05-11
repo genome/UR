@@ -217,10 +217,20 @@ sub create_subscription  {
     # parse parameters
     my ($class,$id,$method,$callback,$note,$priority);
 
+    my %translate = (
+        method => 'aspect',
+        id => 'subject_id',
+    );
+    my @param_names = qw(method callback note priority id);
     my %observer_params;
-    @observer_params{'aspect','callback','note','priority','subject_id'} = delete @params{'method','callback','note','priority','id'};
+    for my $name (@param_names) {
+        if (exists $params{$name}) {
+            my $obs_name = $translate{$name} || $name;
+            $observer_params{$obs_name} = delete $params{$name};
+        }
+    }
+
     $observer_params{'subject_class_name'} = $self->class;
-    $observer_params{'priority'} = 1 unless defined $observer_params{'priority'};
     if (!defined $observer_params{'subject_id'} and ref($self)) {
         $observer_params{'subject_id'} = $self->id;
     }

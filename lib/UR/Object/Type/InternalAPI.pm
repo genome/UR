@@ -1591,8 +1591,8 @@ sub _is_valid_signal {
     my $self = shift;
     my $aspect = shift;
 
-    # Undefined attributes indicate that the subscriber wants any changes at all to generate a callback.
-    return 1 if (! defined $aspect);
+    # An aspect of empty string (or undef) means all aspects are being observed.
+    return 1 unless (defined($aspect) or length($aspect));
 
     # All standard creation and destruction methods emit a signal.
     return 1 if ($STANDARD_VALID_SIGNALS{$aspect});
