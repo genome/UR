@@ -88,10 +88,6 @@ sub _create_or_define {
         Carp::croak('Instantiating a UR::Observer with some method other than create() or __define__() is not supported');
     }
     $self->{callback} = $callback;
-
-    my %params = $rule->params_list;
-    my ($subscription, $delete_subscription);
-
     $self->_insert_record_into_all_change_subscriptions($subject_class_name, $aspect, $subject_id,
                                                         [$callback, $self->note, $self->priority, $self->id, $self->once]);
 
