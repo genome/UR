@@ -9,7 +9,7 @@ our $VERSION = "0.43"; # UR $VERSION;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     has => [
-        subject_class_name => { is => 'Text',    is_optional => 1, default_value => '' },
+        subject_class_name => { is => 'Text',    is_optional => 1, default_value => 'UR::Object' },
         subject_id         => { is => 'SCALAR',  is_optional => 1, default_value => '' },
         aspect             => { is => 'String',  is_optional => 1, default_value => '' },
         priority           => { is => 'Number',  is_optional => 1, default_value => 1  },
