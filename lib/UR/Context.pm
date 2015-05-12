@@ -22,6 +22,7 @@ UR::Object::Type->define(
                                       default_value => undef,
                                       doc => 'Flag indicating whether the context must (1), must not (0) or may (undef) query underlying contexts when handling a query'  },
     ],
+    valid_signals => [qw(precommit sync_databases commit prerollback rollback)],
     doc => <<EOS
 The environment in which all data examination and change occurs in UR.  The current context represents the current 
 state of everything, and acts as a manager/intermediary between the current application and underlying database(s).
