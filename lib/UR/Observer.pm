@@ -42,6 +42,7 @@ sub __define__ {
 }
 
 my @required_params_for_register = qw(aspect callback note once priority subject_class_name subject_id id);
+sub required_params_for_register { @required_params_for_register }
 
 sub _create_or_define {
     my $class = shift;
@@ -70,6 +71,7 @@ sub _create_or_define {
 
 {
     my @has_defaults = qw(aspect note once priority subject_class_name subject_id);
+    sub has_defaults { @has_defaults }
     my %defaults =
         map {
             $_ => __PACKAGE__->__meta__->{has}->{$_}->{default_value}
@@ -78,6 +80,7 @@ sub _create_or_define {
             exists __PACKAGE__->__meta__->{has}->{$_}
             && exists __PACKAGE__->__meta__->{has}->{$_}->{default_value}
         } @has_defaults;
+    sub defaults_for_register_callback { %defaults }
     sub register_callback {
         my $class = shift;
         my %params = @_;
