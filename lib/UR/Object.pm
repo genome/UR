@@ -716,11 +716,22 @@ sub __rollback__ {
     # Existing object.  Undo all changes since last sync, or since load
     # occurred when there have been no syncs.
     foreach my $property_name ( @rollback_properties_names ) {
-        $self->$property_name($saved->{$property_name});
+        $self->__rollback_property__($property_name);
     }
+
     delete $self->{'_change_count'};
 
     return $self;
+}
+
+
+sub __rollback_property__ {
+    my ($self, $property_name) = @_;
+    my $saved = $self->{db_saved_uncommitted} || $self->{db_committed};
+    unless ($saved) {
+        Carp::croak(qq(Cannot rollback property '$property_name' because it has no saved state));
+    }
+    return $self->$property_name($saved->{$property_name});
 }
 
 
