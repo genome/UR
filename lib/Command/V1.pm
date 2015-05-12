@@ -40,22 +40,6 @@ eval {
     binmode STDERR, ":utf8";
 };
 
-# Override method in UR::Object to support error_die and error_rv_false
-sub validate_subscription {
-    my $self = shift;
-    my $subscription_property = shift;
-
-    my $retval = $self->SUPER::validate_subscription($subscription_property, @_);
-    return $retval if $retval;
-
-    unless ( defined($subscription_property) and $subscription_property eq 'error_die') {
-        $subscription_property = '(undef)' unless defined ($subscription_property);
-        Carp::croak("Unrecognized subscription aspect '$subscription_property'");
-    }
-
-    return 1;
-}
-
 sub _init_subclass {
     # Each Command subclass has an automatic wrapper around execute().
     # This ensures it can be called as a class or instance method,
