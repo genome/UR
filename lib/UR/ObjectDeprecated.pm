@@ -249,34 +249,14 @@ sub create_subscription  {
     return [@observer_params{'subject_class_name','subject_id','aspect','callback','note'}];
 }
 
+
 sub validate_subscription
 {
-    return 1;
-
-    my ($self,$subscription_property) = @_;
-
-    Carp::confess("The _create_object and _delete_object signals are no longer emitted!") 
-        if defined($subscription_property) 
-            and ($subscription_property eq '_create_object' or $subscription_property eq '_delete_object');
-
-    # Undefined attributes indicate that the subscriber wants any changes at all to generate a callback.
-    return 1 if (!defined($subscription_property));
-
-    # All standard creation and destruction methods emit a signal.
-    return 1 if ($subscription_property =~ /^(create|delete|commit|rollback|load|unload|load_external)$/);
-
-    # A defined attribute in our property list indicates the caller wants callbacks from our properties.
-    my $class_object = $self->__meta__;
-    for my $property ($class_object->all_property_names)
-    {
-        return 1 if $property eq $subscription_property;
-    }
-
-    return 1 if ($class_object->_is_valid_signal($subscription_property));
-
-    # Bad subscription request.
+    # Everything is invalid unless you make it valid by implenting
+    # validate_subscription on your class.  (Or use the new API.)
     return;
 }
+
 
 sub inform_subscription_cancellation
 {
