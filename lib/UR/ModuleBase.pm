@@ -759,6 +759,9 @@ $create_subs_for_message_type = sub {
         into => $class,
         as => $logger_subname,
     });
+
+    # "Register" the message type as a valid signal.
+    $UR::Object::Type::STANDARD_VALID_SIGNALS{$logger_subname} = 1;
 };
 
 sub _carp_sprintf {

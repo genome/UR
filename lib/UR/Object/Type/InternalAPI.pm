@@ -1581,13 +1581,9 @@ sub __signal_change__ {
     return @rv;
 }
 
-our %STANDARD_VALID_SIGNALS = ( create        => 1,
-                                'delete'      => 1,
-                                commit        => 1,
-                                rollback      => 1,
-                                load          => 1,
-                                unload        => 1,
-                                load_external => 1 );
+my @default_valid_signals = qw(create delete commit rollback load unload load_external subclass_loaded);
+our %STANDARD_VALID_SIGNALS;
+@STANDARD_VALID_SIGNALS{@default_valid_signals} = (1) x @default_valid_signals;
 sub _is_valid_signal {
     my $self = shift;
     my $aspect = shift;
