@@ -707,7 +707,7 @@ sub __rollback__ {
             || $property_meta->is_constant
         );
     };
-    my @rollback_properties_names =
+    my @rollback_property_names =
         map { $_->property_name }
         grep { $should_rollback->($_) }
         map { $meta->property_meta_for_name($_) }
@@ -715,7 +715,7 @@ sub __rollback__ {
 
     # Existing object.  Undo all changes since last sync, or since load
     # occurred when there have been no syncs.
-    foreach my $property_name ( @rollback_properties_names ) {
+    foreach my $property_name ( @rollback_property_names ) {
         $self->__rollback_property__($property_name);
     }
 
