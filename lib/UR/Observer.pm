@@ -3,7 +3,11 @@ package UR::Observer;
 use strict;
 use warnings;
 
-require UR;
+BEGIN {
+    require UR;
+    require UR::Context::Transaction;
+};
+
 our $VERSION = "0.43"; # UR $VERSION;
 
 UR::Object::Type->define(
