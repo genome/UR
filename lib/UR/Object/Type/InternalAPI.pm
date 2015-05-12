@@ -1593,7 +1593,7 @@ sub _is_valid_signal {
     my $aspect = shift;
 
     # An aspect of empty string (or undef) means all aspects are being observed.
-    return 1 unless (defined($aspect) or length($aspect));
+    return 1 unless (defined($aspect) and length($aspect));
 
     # All standard creation and destruction methods emit a signal.
     return 1 if ($STANDARD_VALID_SIGNALS{$aspect});
