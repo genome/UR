@@ -183,6 +183,56 @@ sub subscription {
     shift->{subscription}
 }
 
+sub unregister_callback {
+    my $class = shift;
+    my %params = @_;
+
+    my $id = delete $params{id};
+    unless (defined $id) {
+        Carp::croak('missing required parameter: id');
+    }
+
+    my @undef_params = grep { not defined $params{$_} } keys %params;
+    if (@undef_params) {
+        Carp::croak('undefined params: ' . join(', ', @undef_params));
+    }
+
+    my $aspect = delete $params{aspect};
+    my $subject_class_name = delete $params{subject_class_name};
+    my $subject_id = delete $params{subject_id};
+
+    my @bad_params = keys %params;
+    if (@bad_params) {
+        Carp::croak('invalid params: ' . join(', ', @bad_params));
+    }
+
+    my @subject_class_names = $subject_class_name || keys %{$UR::Context::all_change_subscriptions};
+    for my $subject_class_name (@subject_class_names) {
+        my @aspects = $aspect || keys %{$UR::Context::all_change_subscriptions->{$subject_class_name}};
+        for my $aspect (@aspects) {
+            my @subject_ids = $subject_id || keys %{$UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}};
+            for my $subject_id (@subject_ids) {
+                my $arrayref = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
+                for (my $i = 0; $i < @$arrayref; $i++) {
+                    if ($arrayref->[$i]->[3] eq $id) {
+                        splice(@$arrayref, $i, 1);
+                        if (@$arrayref == 0) {
+                            $arrayref = undef;
+                            delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
+                            if (not keys %{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect} }) {
+                                delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect};
+                            }
+                        }
+                        return 1;
+                    }
+                }
+            }
+        }
+    }
+
+    return;
+}
+
 sub delete {
     my $self = shift;
     #$DB::single = 1;
@@ -195,37 +245,15 @@ sub delete {
     $subject_id         = '' unless (defined $subject_id);
     $aspect             = '' unless (defined $aspect);
 
-    my $arrayref = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
-    if ($arrayref) {
-        my $index = 0;
-        while ($index < @$arrayref) {
-            if ($arrayref->[$index]->[3] eq $self->id) {
-                my $found = splice(@$arrayref,$index,1);
-
-                if (@$arrayref == 0)
-                {
-                    $arrayref = undef;
-
-                    delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
-                    if (keys(%{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect} }) == 0)
-                    {
-                        delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect};
-                    }
-                }
-
-                # old API
-                unless ($subject_class_name eq '' || $subject_class_name->inform_subscription_cancellation($aspect,$subject_id,$self->{'callback'})) {
-                    Carp::confess("Failed to validate requested subscription cancellation for aspect '$aspect' on class $subject_class_name");
-                }
-
-                # Return a ref to the callback removed.  This is "true", but better than true.
-                #return $found;
-                last;
-
-            } else {
-                # Increment only if we did not splice-out a value.
-                $index++;
-            }
+    my $unregistered = $self->unregister_callback(
+        aspect => $aspect,
+        id => $self->id,
+        subject_class_name => $subject_class_name,
+        subject_id => $subject_id,
+    );
+    if ($unregistered) {
+        unless ($subject_class_name eq '' || $subject_class_name->inform_subscription_cancellation($aspect, $subject_id, $self->{'callback'})) {
+            Carp::confess("Failed to validate requested subscription cancellation for aspect '$aspect' on class $subject_class_name");
         }
     }
     $self->SUPER::delete();
