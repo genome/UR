@@ -1569,9 +1569,6 @@ sub value_for_object_property_in_underlying_context {
         Carp::croak(qq(No object found in underlying context));
     }
 
-    unless (exists $saved->{$property_name}) {
-        Carp::croak(qq(No value for property '$property_name' in underlying context));
-    }
     return $saved->{$property_name};
 }
 
