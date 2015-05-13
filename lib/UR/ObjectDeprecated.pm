@@ -252,7 +252,7 @@ sub create_subscription  {
 
 sub validate_subscription
 {
-    # Everything is invalid unless you make it valid by implenting
+    # Everything is invalid unless you make it valid by implementing
     # validate_subscription on your class.  (Or use the new API.)
     return;
 }
