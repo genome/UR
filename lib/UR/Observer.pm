@@ -72,6 +72,7 @@ sub _create_or_define {
 {
     my @has_defaults = qw(aspect note once priority subject_class_name subject_id);
     sub has_defaults { @has_defaults }
+
     my %defaults =
         map {
             $_ => __PACKAGE__->__meta__->{has}->{$_}->{default_value}
@@ -81,63 +82,63 @@ sub _create_or_define {
             && exists __PACKAGE__->__meta__->{has}->{$_}->{default_value}
         } @has_defaults;
     sub defaults_for_register_callback { %defaults }
-    sub register_callback {
-        my $class = shift;
-        my %params = @_;
-
-        unless (defined $params{id}) {
-            $params{id} = UR::Object::Type->autogenerate_new_object_id_uuid;
-        }
-
-        my %values = %defaults;
-        my @specified_params = grep { exists $params{$_} } @required_params_for_register;
-        @values{@specified_params} = map { delete $params{$_} } @specified_params;
-
-        my @bad_params = keys %params;
-        if (@bad_params) {
-            Carp::croak('invalid params: ' . join(', ', @bad_params));
-        }
-
-        my @missing_params = grep { not exists $values{$_} } @required_params_for_register;
-        if (@missing_params) {
-            Carp::croak('missing required params: ' . join(', ', @missing_params));
-        }
-
-        my @undef_values = grep { not defined $values{$_} } keys %values;
-        if (@undef_values) {
-            Carp::croak('undefined values: ' . join(', ', @undef_values));
-        }
-
-        my $subject_class_name = $values{subject_class_name};
-        my $subject_class_meta = eval { $subject_class_name->__meta__ };
-        if ($@) {
-            Carp::croak("Can't create observer with subject_class_name '$subject_class_name': Can't get class metadata for class '$subject_class_name': $@");
-        }
-        unless ($subject_class_meta) {
-            Carp::croak("Class $subject_class_name cannot be the subject class for an observer because there is no class metadata");
-        }
-
-        my $aspect = $values{aspect};
-        my $subject_id = $values{subject_id};
-        unless ($subject_class_meta->_is_valid_signal($aspect)) {
-            my $croak =  sub { Carp::croak("'$aspect' is not a valid aspect for class $subject_class_name") };
-            unless ($subject_class_name->can('validate_subscription')) {
-                $croak->();
-            }
-            unless ($subject_class_name->validate_subscription($aspect, $subject_id, $values{callback})) {
-                $croak->();
-            }
-        }
-
-        $class->_insert_record_into_all_change_subscriptions(
-            @values{qw(subject_class_name aspect subject_id)},
-            [@values{qw(callback note priority id once)}],
-        );
-
-        return $values{id};
-    }
 }
 
+sub register_callback {
+    my $class = shift;
+    my %params = @_;
+
+    unless (defined $params{id}) {
+        $params{id} = UR::Object::Type->autogenerate_new_object_id_uuid;
+    }
+
+    my %values = $class->defaults_for_register_callback();
+    my @specified_params = grep { exists $params{$_} } @required_params_for_register;
+    @values{@specified_params} = map { delete $params{$_} } @specified_params;
+
+    my @bad_params = keys %params;
+    if (@bad_params) {
+        Carp::croak('invalid params: ' . join(', ', @bad_params));
+    }
+
+    my @missing_params = grep { not exists $values{$_} } @required_params_for_register;
+    if (@missing_params) {
+        Carp::croak('missing required params: ' . join(', ', @missing_params));
+    }
+
+    my @undef_values = grep { not defined $values{$_} } keys %values;
+    if (@undef_values) {
+        Carp::croak('undefined values: ' . join(', ', @undef_values));
+    }
+
+    my $subject_class_name = $values{subject_class_name};
+    my $subject_class_meta = eval { $subject_class_name->__meta__ };
+    if ($@) {
+        Carp::croak("Can't create observer with subject_class_name '$subject_class_name': Can't get class metadata for class '$subject_class_name': $@");
+    }
+    unless ($subject_class_meta) {
+        Carp::croak("Class $subject_class_name cannot be the subject class for an observer because there is no class metadata");
+    }
+
+    my $aspect = $values{aspect};
+    my $subject_id = $values{subject_id};
+    unless ($subject_class_meta->_is_valid_signal($aspect)) {
+        my $croak =  sub { Carp::croak("'$aspect' is not a valid aspect for class $subject_class_name") };
+        unless ($subject_class_name->can('validate_subscription')) {
+            $croak->();
+        }
+        unless ($subject_class_name->validate_subscription($aspect, $subject_id, $values{callback})) {
+            $croak->();
+        }
+    }
+
+    $class->_insert_record_into_all_change_subscriptions(
+        @values{qw(subject_class_name aspect subject_id)},
+        [@values{qw(callback note priority id once)}],
+    );
+
+    return $values{id};
+}
 
 sub _insert_record_into_all_change_subscriptions {
     my($class,$subject_class_name, $aspect,$subject_id, $new_record) = @_;
