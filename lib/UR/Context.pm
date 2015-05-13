@@ -1561,6 +1561,21 @@ sub _object_cache_pruning_report {
 }
 
 
+sub value_for_object_property_in_underlying_context {
+    my ($self, $obj, $property_name) = @_;
+
+    my $saved = $obj->{db_saved_uncommitted} || $obj->{db_committed};
+    unless ($saved) {
+        Carp::croak(qq(No object found in underlying context));
+    }
+
+    unless (exists $saved->{$property_name}) {
+        Carp::croak(qq(No value for property '$property_name' in underlying context));
+    }
+    return $saved->{$property_name};
+}
+
+
 # True if the object was loaded from an underlying context and/or datasource, or if the
 # object has been committed to the underlying context
 sub object_exists_in_underlying_context {

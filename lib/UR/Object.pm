@@ -725,23 +725,14 @@ sub __rollback__ {
 }
 
 
-sub __saved_value_for_property__ {
-    my ($self, $property_name) = @_;
-    my $saved = $self->{db_saved_uncommitted} || $self->{db_committed};
-    unless ($saved) {
-        Carp::croak(qq(No saved value for property '$property_name'));
-    }
-    return $saved->{$property_name};
-}
-
-
 sub __rollback_property__ {
     my ($self, $property_name) = @_;
     my $saved = $self->{db_saved_uncommitted} || $self->{db_committed};
     unless ($saved) {
         Carp::croak(qq(Cannot rollback property '$property_name' because it has no saved state));
     }
-    return $self->$property_name($self->__saved_value_for_property__($property_name));
+    my $saved_value = UR::Context->current->value_for_object_property_in_underlying_context($self, $property_name);
+    return $self->$property_name($saved_value);
 }
 
 
