@@ -409,12 +409,12 @@ class.
     my $obj = My::Class->create(prop_a => 1);
     $obj->__signal_observers__('custom');  # not an error
 
-To help catch typos, creating an observer for a non-standard aspect generates
-an error message but not an exception, unless the named aspect is in the
-list of 'valid_signals' in the class metadata.  Nothing in the system will
-trigger these observers, but they can be triggered in your own code using the
-C<__signal_observers()__> class or object method.  Sending a signal for an
-aspect that no observers are watching for is not an error.
+To help catch typos, creating an observer for a non-standard aspect throws an
+exception unless the named aspect is in the list of 'valid_signals' in the
+class metadata.  Nothing in the system will trigger these observers, but they
+can be triggered in your own code using the C<__signal_observers()__> class or
+object method.  Sending a signal for an aspect that no observers are watching
+for is not an error.
 
 =cut
 
