@@ -29,7 +29,7 @@ sub _retriable_operation {
     my $self = UR::Util::object(shift);
     my $code = shift;
 
-    _make_retriable_operation_observer($self);
+    $self->_make_retriable_operation_observer();
 
     RETRY_LOOP:
     for( my $db_retry_sec = $self->retry_sleep_start_sec;
