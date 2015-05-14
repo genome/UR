@@ -147,8 +147,10 @@ subtest 'offset larger than result set' => sub {
     my $expected_line = __LINE__ + 1;
     my @o = URT::Thing->get(thing_id => 5, -offset => 10);
     is(scalar(@o), 0, 'Got back no objects');
-    is($warning_message,
-        '-offset is larger than the result list at ' . __FILE__ . " line $expected_line\n",
+
+    my $file = __FILE__;
+    like($warning_message,
+        qr(-offset is larger than the result list at $file line $expected_line),
         'Warning message was as expected');
 };
 
