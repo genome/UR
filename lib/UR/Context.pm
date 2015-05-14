@@ -1868,8 +1868,7 @@ sub _prune_obj_list_for_limit_and_offset {
 
     my $limit = $tmpl->limit;
     my $offset = $tmpl->offset || 0;
-    splice(@$obj_list, 0, $offset);
-    $#$obj_list = ($limit-1);
+    @$obj_list = splice(@$obj_list, $offset, $limit);
 }
 
 

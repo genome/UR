@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 5;
+use Test::More tests=> 6;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -126,6 +126,17 @@ sub _main_test {
         is_deeply($ids, [79,80], 'Got the right objects back');
     };
 }
+
+subtest 'limit larger than result set' => sub {
+    plan tests => 2;
+
+    # All objects are already cached in memory at this point
+    my $object_id = 5;
+    my @o = URT::Thing->get(thing_id => $object_id, -limit => 10);
+    is(scalar(@o), 1, 'got one object back');
+    my $ids = get_ids(@o);
+    is_deeply($ids, [ $object_id ], 'Got the right object back');
+};
 
 
 
