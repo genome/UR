@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 6;
+use Test::More tests=> 7;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -138,9 +138,19 @@ subtest 'limit larger than result set' => sub {
     is_deeply($ids, [ $object_id ], 'Got the right object back');
 };
 
+subtest 'offset larger than result set' => sub {
+    plan tests => 2;
 
+    my $warning_message;
+    local $SIG{__WARN__} = sub { $warning_message = shift };
 
-
+    my $expected_line = __LINE__ + 1;
+    my @o = URT::Thing->get(thing_id => 5, -offset => 10);
+    is(scalar(@o), 0, 'Got back no objects');
+    is($warning_message,
+        '-offset is larger than the result list at ' . __FILE__ . " line $expected_line\n",
+        'Warning message was as expected');
+};
 
 sub get_ids {
     my @list = map { $_->id} @_;

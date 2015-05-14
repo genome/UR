@@ -1866,9 +1866,15 @@ sub _exception_for_multi_objects_in_scalar_context {
 sub _prune_obj_list_for_limit_and_offset {
     my($self, $obj_list, $tmpl) = @_;
 
-    my $limit = $tmpl->limit;
+    my $limit = defined($tmpl->limit) ? $tmpl->limit : $#$obj_list;
     my $offset = $tmpl->offset || 0;
-    @$obj_list = splice(@$obj_list, $offset, $limit);
+
+    if ($offset > @$obj_list) {
+        Carp::carp('-offset is larger than the result list');
+        @$obj_list = ();
+    } else {
+        @$obj_list = splice(@$obj_list, $offset, $limit);
+    }
 }
 
 
