@@ -2716,6 +2716,24 @@ sub clear_cache {
     1;
 }
 
+sub _order_data_sources_for_saving {
+    my @data_sources = @_;
+
+    my %can_savepoint = map { $_->id => $_->can_savepoint } @data_sources;
+    my %classes = map { $_->id => $_->class } @data_sources;
+    my %is_default = map { $_->id => $_->isa('UR::DataSource::Default') ? -1 : 0 } @data_sources;  # Default data sources go last
+
+    return
+        sort {
+            $is_default{$a->id} <=> $is_default{$b->id}
+            ||
+            $can_savepoint{$a->id} <=> $can_savepoint{$b->id}
+            ||
+            $classes{$a->id} cmp $classes{$b->id}
+        }
+        @data_sources;
+}
+
 
 our $IS_SYNCING_DATABASE = 0;
 sub _sync_databases {
@@ -2773,19 +2791,9 @@ sub _sync_databases {
         push @{ $ds_objects{$data_source_id}->{'changed_objects'} }, $obj;
     }
 
-    my @ds_with_can_savepoint_and_class = map { [ $ds_objects{$_}->{'ds_obj'}->can_savepoint,
-                                                  $ds_objects{$_}->{'ds_obj'}->class,
-                                                  $_
-                                                ] }
-                                          keys %ds_objects;
     my @ds_in_order =
-        map { $_->[2] }
-        sort {
-            ( $a->[0] <=> $b->[0] )
-            ||
-            ( $a->[1] cmp $b->[1] )
-        }
-        @ds_with_can_savepoint_and_class;
+        map { $_->id }
+        _order_data_sources_for_saving(map { $_->{ds_obj} } values(%ds_objects));
 
     # save on each in succession
     my @done;
@@ -2905,13 +2913,18 @@ sub _commit_databases {
     }
     $IS_COMMITTING_DATABASE = 0;
 
-    unless ($class->_for_each_data_source("commit")) {
-        if ($class->error_message eq "PARTIAL commit") {
-            die "FRAGMENTED DISTRIBUTED TRANSACTION\n"
-                . Data::Dumper::Dumper($UR::Context::all_objects_loaded)
-        }
-        else {
-            die "FAILED TO COMMIT!: " . $class->error_message;
+    my @ds_in_order = _order_data_sources_for_saving($UR::Context::current->all_objects_loaded('UR::DataSource'));
+    my @committed;
+    foreach my $ds ( @ds_in_order ) {
+        if ($ds->commit) {
+            push @committed, $ds;
+        } else {
+            my $message = 'Data source ' . $ds->get_name . ' failed to commit: ' . join("\n\t", $ds->error_messages);
+            if (@committed) {
+                $message .= "\nThese data sources were successfully committed, resulting in a FRAGMENTED DISTRIBUTED TRANSACTION: "
+                            . join(', ', map { $_->get_name } @committed);
+            }
+            Carp::croak($message);
         }
     }
 

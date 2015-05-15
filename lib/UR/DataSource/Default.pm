@@ -79,60 +79,77 @@ sub _map_fields {
     return @pos;
 }
 
-# Nothing to be done for commit and rollback
+# Nothing to be done for rollback
 sub rollback { 1;}
-sub commit   { 1; }
 
+my @saved_objects;
 sub _sync_database {
     my $self = shift;
     my %params = @_;
     my $changed_objects = $params{changed_objects};
 
     my %class_can_save;
-    my @saved;
-    eval {
-        for my $obj (@$changed_objects) {
-            my $obj_class = $obj->class;
-            unless (exists $class_can_save{$obj_class}) {
-                $class_can_save{$obj_class} = $obj->can('__save__');
-            }
-            if ($class_can_save{$obj_class}) {
-                push @saved, $obj;
-                $obj->__save__;
-            }
-        }
-    };
-
-    if ($@) {
-        my $err = $@;
-        my @failed_rollback;
-        while (my $obj = shift @saved) {
-            eval {
-                $obj->__rollback__;
-            };
-            if ($@) {
-                push @failed_rollback, $obj;
-            }
-        }
-        if (@failed_rollback) {
-            print Data::Dumper::Dumper("Failed Rollback:", \@failed_rollback);
-            die "Failed to save, and ERRORS DURING ROLLBACK:\n$err\n $@\n";
-        }
-        die $@;
-    }
-
-
-    my @failed_commit;
-    unless ($@) {
-        # all saves worked, commit
-        while (my $obj = shift @saved) {
-            eval {
-                $obj->__commit__;
-            };
-            if ($@) {
-                push @failed_commit, $@ => $obj;
+    my $err = do {
+        local $@;
+        eval {
+            for my $obj (@$changed_objects) {
+                my $obj_class = $obj->class;
+                unless (exists $class_can_save{$obj_class}) {
+                    $class_can_save{$obj_class} = $obj->can('__save__');
+                }
+                if ($class_can_save{$obj_class}) {
+                    push @saved_objects, $obj;
+                    $obj->__save__;
+                }
             }
         };
+        $@;
+    };
+
+    if ($err) {
+        my @failed_rollback;
+        do {
+            my $rollback_error;
+            while (my $obj = shift @saved_objects) {
+                local $@;
+                eval {
+                    $obj->__rollback__;
+                };
+                if ($@) {
+                    $rollback_error = $@;
+                    push @failed_rollback, $obj;
+                }
+            }
+            if (@failed_rollback) {
+                $self->error_message('Rollback failed: ' . Data::Dumper::Dumper(\@failed_rollback));
+                Carp::croak "Failed to save, and ERRORS DURING ROLLBACK:\n$err\n $rollback_error\n";
+            }
+        };
+        die $err;
+    }
+
+    return 1;
+}
+
+sub commit {
+    my @failed_commit;
+    while (my $obj = shift @saved_objects) {
+        local $@;
+        eval {
+            $obj->__commit__;
+        };
+        if ($@) {
+            push @failed_commit, $@ => $obj;
+        }
+    }
+
+    if (@failed_commit) {
+        my @failure_messages;
+        for (my $i = 0; $i < @failed_commit; $i += 2) {
+            my($exception, $obj) = @failed_commit[$i .. $i+1];
+            push @failure_messages, "$exception: ".Data::Dumper::Dumper($obj);
+        }
+        Carp::croak "Commit failed:\n" . join("\n", @failure_messages);
     }
 
     return 1;
