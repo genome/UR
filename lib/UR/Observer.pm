@@ -1,24 +1,25 @@
-
 package UR::Observer;
 
 use strict;
 use warnings;
 
-require UR;
+BEGIN {
+    require UR;
+    require UR::Context::Transaction;
+};
+
 our $VERSION = "0.43"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     has => [
-        subject_class   => { is => 'UR::Object::Type', id_by => 'subject_class_name' },
-        subject_id      => { is => 'SCALAR', is_optional => 1 },
-        subject         => { is => 'UR::Object', 
-                                calculate_from => ['subject_class_name','subject_id'],
-                                calculate => '$subject_class_name->get($subject_id)' },
-        aspect          => { is => 'String', is_optional => 1 },
-        priority        => { is => 'Number', is_optional => 1, default_value => 1 },
-        note            => { is => 'String', is_optional => 1 },
-        once            => { is => 'Boolean', is_optional => 1, default_value => 0 },
+        subject_class_name => { is => 'Text',    is_optional => 1, default_value => 'UR::Object' },
+        subject_id         => { is => 'SCALAR',  is_optional => 1, default_value => '' },
+        aspect             => { is => 'String',  is_optional => 1, default_value => '' },
+        priority           => { is => 'Number',  is_optional => 1, default_value => 1  },
+        note               => { is => 'String',  is_optional => 1, default_value => '' },
+        once               => { is => 'Boolean', is_optional => 1, default_value => 0  },
+        subject            => { is => 'UR::Object', id_by => 'subject_id', id_class_by => 'subject_class_name' },
     ],
     is_transactional => 1,
 );
@@ -40,67 +41,111 @@ sub __define__ {
     $class->_create_or_define('__define__', @_);
 }
 
+my @required_params_for_register = qw(aspect callback note once priority subject_class_name subject_id id);
+sub required_params_for_register { @required_params_for_register }
+
 sub _create_or_define {
     my $class = shift;
     my $method = shift;
+    my %params = @_;
 
-    my ($rule,%extra) = UR::BoolExpr->resolve($class,@_);
-    my $callback = delete $extra{callback};
-    unless ($callback) {
-        $class->error_message("'callback' is a required parameter for creating UR::Observer objects");
-        return;
-    }
-    if (%extra) {
-        $class->error_message("Cannot create observer.  Class $class has no property ".join(',',keys %extra));
-        return;
-    }
+    my $callback = delete $params{callback};
 
-    my $subject_class_name = $rule->value_for('subject_class_name');
-    my $subject_class_meta = eval { $subject_class_name->__meta__ };
-    if ($@) {
-        $class->error_message("Can't create observer with subject_class_name '$subject_class_name': Can't get class metadata for class '$subject_class_name': $@");
-        return;
-    }
-    unless ($subject_class_meta) {
-        $class->error_message("Class $subject_class_name cannot be the subject class for an observer because there is no class metadata");
-        return;
-    }
-
-    my $aspect = $rule->value_for('aspect');
-    my $subject_id = $rule->value_for('subject_id');
-    unless ($subject_class_meta->_is_valid_signal($aspect)) {
-        if ($subject_class_name->can('validate_subscription') and ! $subject_class_name->validate_subscription($aspect, $subject_id, $callback)) {
-            $class->error_message("'$aspect' is not a valid aspect for class $subject_class_name");
-            return;
+    my $self = UR::Context::Transaction::do {
+        my $inner_self;
+        if ($method eq 'create') {
+            $inner_self = $class->SUPER::create(%params);
+        } elsif ($method eq '__define__') {
+            $inner_self = $class->SUPER::__define__(%params);
+        } else {
+            Carp::croak('Instantiating a UR::Observer with some method other than create() or __define__() is not supported');
         }
-    }
-
-    if (!defined($subject_class_name) or $subject_class_name eq 'UR::Object') { $subject_class_name = '' }; # This was part of the old API, not sure why it's still here?!
-    if (!defined ($aspect)) { $aspect = '' };
-    if (!defined ($subject_id)) { $subject_id = '' };
-
-    my $self;
-    if ($method eq 'create') {
-        $self = $class->SUPER::create($rule);
-    } elsif ($method eq '__define__') {
-        $self = $class->SUPER::__define__($rule->params_list);
-    } else {
-        Carp::croak('Instantiating a UR::Observer with some method other than create() or __define__() is not supported');
-    }
-    $self->{callback} = $callback;
-
-    my %params = $rule->params_list;
-    my ($subscription, $delete_subscription);
-
-    $self->_insert_record_into_all_change_subscriptions($subject_class_name, $aspect, $subject_id,
-                                                        [$callback, $self->note, $self->priority, $self->id, $self->once]);
+        $inner_self->{callback} = $callback;
+        $inner_self->register_callback(map { $_ => $inner_self->$_ } @required_params_for_register);
+        return $inner_self;
+    };
 
     return $self;
 }
 
 
+{
+    my @has_defaults = qw(aspect note once priority subject_class_name subject_id);
+    sub has_defaults { @has_defaults }
+
+    my %defaults =
+        map {
+            $_ => __PACKAGE__->__meta__->{has}->{$_}->{default_value}
+        }
+        grep {
+            exists __PACKAGE__->__meta__->{has}->{$_}
+            && exists __PACKAGE__->__meta__->{has}->{$_}->{default_value}
+        } @has_defaults;
+    sub defaults_for_register_callback { %defaults }
+}
+
+sub register_callback {
+    my $class = shift;
+    my %params = @_;
+
+    unless (defined $params{id}) {
+        $params{id} = UR::Object::Type->autogenerate_new_object_id_uuid;
+    }
+
+    my %values = $class->defaults_for_register_callback();
+    my @specified_params = grep { exists $params{$_} } @required_params_for_register;
+    @values{@specified_params} = map { delete $params{$_} } @specified_params;
+
+    my @bad_params = keys %params;
+    if (@bad_params) {
+        Carp::croak('invalid params: ' . join(', ', @bad_params));
+    }
+
+    my @missing_params = grep { not exists $values{$_} } @required_params_for_register;
+    if (@missing_params) {
+        Carp::croak('missing required params: ' . join(', ', @missing_params));
+    }
+
+    my @undef_values = grep { not defined $values{$_} } keys %values;
+    if (@undef_values) {
+        Carp::croak('undefined values: ' . join(', ', @undef_values));
+    }
+
+    my $subject_class_name = $values{subject_class_name};
+    my $subject_class_meta = eval { $subject_class_name->__meta__ };
+    if ($@) {
+        Carp::croak("Can't create observer with subject_class_name '$subject_class_name': Can't get class metadata for class '$subject_class_name': $@");
+    }
+    unless ($subject_class_meta) {
+        Carp::croak("Class $subject_class_name cannot be the subject class for an observer because there is no class metadata");
+    }
+
+    my $aspect = $values{aspect};
+    my $subject_id = $values{subject_id};
+    unless ($subject_class_meta->_is_valid_signal($aspect)) {
+        my $croak =  sub { Carp::croak("'$aspect' is not a valid aspect for class $subject_class_name") };
+        unless ($subject_class_name->can('validate_subscription')) {
+            $croak->();
+        }
+        unless ($subject_class_name->validate_subscription($aspect, $subject_id, $values{callback})) {
+            $croak->();
+        }
+    }
+
+    $class->_insert_record_into_all_change_subscriptions(
+        @values{qw(subject_class_name aspect subject_id)},
+        [@values{qw(callback note priority id once)}],
+    );
+
+    return $values{id};
+}
+
 sub _insert_record_into_all_change_subscriptions {
     my($class,$subject_class_name, $aspect,$subject_id, $new_record) = @_;
+
+    if ($subject_class_name eq 'UR::Object') {
+        $subject_class_name = '';
+    };
 
     my $list = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id} ||= [];
     push @$list, $new_record;
@@ -138,6 +183,56 @@ sub subscription {
     shift->{subscription}
 }
 
+sub unregister_callback {
+    my $class = shift;
+    my %params = @_;
+
+    my $id = delete $params{id};
+    unless (defined $id) {
+        Carp::croak('missing required parameter: id');
+    }
+
+    my @undef_params = grep { not defined $params{$_} } keys %params;
+    if (@undef_params) {
+        Carp::croak('undefined params: ' . join(', ', @undef_params));
+    }
+
+    my $aspect = delete $params{aspect};
+    my $subject_class_name = delete $params{subject_class_name};
+    my $subject_id = delete $params{subject_id};
+
+    my @bad_params = keys %params;
+    if (@bad_params) {
+        Carp::croak('invalid params: ' . join(', ', @bad_params));
+    }
+
+    my @subject_class_names = $subject_class_name || keys %{$UR::Context::all_change_subscriptions};
+    for my $subject_class_name (@subject_class_names) {
+        my @aspects = $aspect || keys %{$UR::Context::all_change_subscriptions->{$subject_class_name}};
+        for my $aspect (@aspects) {
+            my @subject_ids = $subject_id || keys %{$UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}};
+            for my $subject_id (@subject_ids) {
+                my $arrayref = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
+                for (my $i = 0; $i < @$arrayref; $i++) {
+                    if ($arrayref->[$i]->[3] eq $id) {
+                        splice(@$arrayref, $i, 1);
+                        if (@$arrayref == 0) {
+                            $arrayref = undef;
+                            delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
+                            if (not keys %{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect} }) {
+                                delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect};
+                            }
+                        }
+                        return 1;
+                    }
+                }
+            }
+        }
+    }
+
+    return;
+}
+
 sub delete {
     my $self = shift;
     #$DB::single = 1;
@@ -150,40 +245,23 @@ sub delete {
     $subject_id         = '' unless (defined $subject_id);
     $aspect             = '' unless (defined $aspect);
 
-    my $arrayref = $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
-    if ($arrayref) {
-        my $index = 0;
-        while ($index < @$arrayref) {
-            if ($arrayref->[$index]->[3] eq $self->id) {
-                my $found = splice(@$arrayref,$index,1);
-
-                if (@$arrayref == 0)
-                {
-                    $arrayref = undef;
-
-                    delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect}->{$subject_id};
-                    if (keys(%{ $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect} }) == 0)
-                    {
-                        delete $UR::Context::all_change_subscriptions->{$subject_class_name}->{$aspect};
-                    }
-                }
-
-                # old API
-                unless ($subject_class_name eq '' || $subject_class_name->inform_subscription_cancellation($aspect,$subject_id,$self->{'callback'})) {
-                    Carp::confess("Failed to validate requested subscription cancellation for aspect '$aspect' on class $subject_class_name");
-                }
-
-                # Return a ref to the callback removed.  This is "true", but better than true.
-                #return $found;
-                last;
-
-            } else {
-                # Increment only if we did not splice-out a value.
-                $index++;
-            }
+    my $unregistered = $self->unregister_callback(
+        aspect => $aspect,
+        id => $self->id,
+        subject_class_name => $subject_class_name,
+        subject_id => $subject_id,
+    );
+    if ($unregistered) {
+        unless ($subject_class_name eq '' || $subject_class_name->inform_subscription_cancellation($aspect, $subject_id, $self->{'callback'})) {
+            Carp::confess("Failed to validate requested subscription cancellation for aspect '$aspect' on class $subject_class_name");
         }
     }
     $self->SUPER::delete();
+}
+
+sub __rollback__ {
+    my $self = shift;
+    return UR::Observer::delete($self);
 }
 
 sub get_with_special_parameters {
@@ -222,7 +300,7 @@ UR::Observer - bind callbacks to object changes
     );
 
     $observer2 = UR::Observer->create(
-        subject_class => 'Acme::Rocket',
+        subject_class_name => 'Acme::Rocket',
         subject_id    => $rocket->id,
         aspect => 'fuel_level',
         callback =>
@@ -359,12 +437,12 @@ class.
     my $obj = My::Class->create(prop_a => 1);
     $obj->__signal_observers__('custom');  # not an error
 
-To help catch typos, creating an observer for a non-standard aspect generates
-an error message but not an exception, unless the named aspect is in the
-list of 'valid_signals' in the class metadata.  Nothing in the system will
-trigger these observers, but they can be triggered in your own code using the
-C<__signal_observers()__> class or object method.  Sending a signal for an
-aspect that no observers are watching for is not an error.
+To help catch typos, creating an observer for a non-standard aspect throws an
+exception unless the named aspect is in the list of 'valid_signals' in the
+class metadata.  Nothing in the system will trigger these observers, but they
+can be triggered in your own code using the C<__signal_observers()__> class or
+object method.  Sending a signal for an aspect that no observers are watching
+for is not an error.
 
 =cut
 

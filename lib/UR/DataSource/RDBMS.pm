@@ -3485,29 +3485,6 @@ sub _generate_class_data_for_loading {
 
     return $class_data;
 }
-        
-# We're overriding the method in UR::Object because we support 2 more
-# event types: connect and query
-sub validate_subscription {
-    my $self = shift;
-    my $subscription_property = shift;
-
-    my $retval = $self->SUPER::validate_subscription($subscription_property,@_);
-    return $retval if $retval;
-
-    unless ( defined($subscription_property)
-             and
-             ( #$subscription_property eq 'connect'
-               #or
-               $subscription_property eq 'query'
-             )
-    ) {
-        $subscription_property = '(undef)' unless defined ($subscription_property);
-        Carp::croak("Unrecognized subscription aspect '$subscription_property'");
-    }
-
-    return 1;
-}
 
 sub _select_clause_for_table_property_data {
     my $self = shift;

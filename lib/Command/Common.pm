@@ -8,6 +8,7 @@ use UR;
 # Once roles exist this should probably be a role.
 class Command::Common {
     is_abstract => 1,
+    valid_signals => [qw(error_die)],
 };
 
 sub create {

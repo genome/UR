@@ -180,37 +180,39 @@ sub rollback {
         die "Parent transaction $parent is not below this one on the stack $open_transaction_stack[-2]?";
     }
 
-    # Reverse each change, starting from the most recent, and
-    # ending with the creation of the transaction object itself.
-    local $log_all_changes = 0;
+    {
+        # Reverse each change, starting from the most recent, and
+        # ending with the creation of the transaction object itself.
+        local $log_all_changes = 0;
 
 
-    $self->__signal_change__('rollback', 1);
-    my @changes_to_undo = reverse $self->get_changes();
-    my $transaction_change = pop @changes_to_undo;
-    my $transaction = $transaction_change->changed_class_name->get($transaction_change->changed_id);
-    unless ($self == $transaction && $transaction_change->changed_aspect eq 'create') {
-        die "First change was not the creation of this transaction!";
-    }
-    for my $change (@changes_to_undo) {
-        if ($change == $changes_to_undo[0]) {
-            # the transaction reverses itself in its own context,
-            # but the removal of the transaction itself happens in the parent context
-            $UR::Context::current = $parent;
+        $self->__signal_change__('rollback', 1);
+        my @changes_to_undo = reverse $self->get_changes();
+        my $transaction_change = pop @changes_to_undo;
+        my $transaction = $transaction_change->changed_class_name->get($transaction_change->changed_id);
+        unless ($self == $transaction && $transaction_change->changed_aspect eq 'create') {
+            die "First change was not the creation of this transaction!";
+        }
+        for my $change (@changes_to_undo) {
+            if ($change == $changes_to_undo[0]) {
+                # the transaction reverses itself in its own context,
+                # but the removal of the transaction itself happens in the parent context
+                $UR::Context::current = $parent;
+            }
+
+            $change->undo;
+            $change->delete;
         }
 
-        $change->undo;
-        $change->delete;
-    }
-
-    for my $change (@changes_to_undo) {
-        unless($change->isa('UR::DeletedRef')) {
-            Carp::confess("Failed to undo a change during transaction rollback.");
+        for my $change (@changes_to_undo) {
+            unless($change->isa('UR::DeletedRef')) {
+                Carp::confess("Failed to undo a change during transaction rollback.");
+            }
         }
-    }
 
-    $transaction_change->undo;
-    $transaction_change->delete;
+        $transaction_change->undo;
+        $transaction_change->delete;
+    }
 
     $#change_log = $begin_point-1;
 
@@ -220,6 +222,9 @@ sub rollback {
     }
 
     pop @open_transaction_stack;
+    unless (@open_transaction_stack) {
+        $log_all_changes = 0;
+    }
     $UR::Context::current = $parent;
 
     return 1;
@@ -258,6 +263,9 @@ sub commit {
         $self->__signal_change__('commit',0);
     }
     pop @open_transaction_stack;
+    unless (@open_transaction_stack) {
+        $log_all_changes = 0;
+    }
 
     $UR::Context::current = $self->parent;
     return 1;
@@ -272,10 +280,7 @@ sub changes_can_be_saved {
     # TODO: limit to objects that changed within transaction as to not duplicate
     # error checking unnecessarily.
 
-    my @changed_objects = (
-        $self->all_objects_loaded('UR::Object::Ghost'),
-        grep { $_->__changes__ } $self->all_objects_loaded('UR::Object')
-    );
+    my @changed_objects = map { $_->changed_class_name->get($_->changed_id) } $self->get_changes();
 
     # This is primarily to catch custom validity logic in class overrides.
     my @invalid = grep { $_->__errors__ } @changed_objects;

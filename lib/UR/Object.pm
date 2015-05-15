@@ -338,9 +338,11 @@ sub add_observer {
     my $self = shift;
     my %params = @_;
 
+    if (ref($self)) {
+        $params{subject_id} = $self->id;
+    }
     my $observer = UR::Observer->create(
         subject_class_name => $self->class,
-        subject_id => (ref($self) ? $self->id : undef),
         %params,
     );
     unless ($observer) {
@@ -680,6 +682,57 @@ sub is_prunable {
     return 0 if $self->__meta__->is_meta;
     return 0 if $self->{__get_serial} && $self->__changes__ && @{[$self->__changes__]};
     return 1;
+}
+
+
+sub __rollback__ {
+    my $self = shift;
+
+    my $saved = $self->{db_saved_uncommitted} || $self->{db_committed};
+    unless ($saved) {
+        return UR::Object::delete($self);
+    }
+
+    my $meta = $self->__meta__;
+
+    my $should_rollback = sub {
+        my $property_meta = shift;
+        return ! (
+            defined $property_meta->is_id
+            || ! defined $property_meta->column_name
+            || $property_meta->is_delegated
+            || $property_meta->is_legacy_eav
+            || ! $property_meta->is_mutable
+            || $property_meta->is_transient
+            || $property_meta->is_constant
+        );
+    };
+    my @rollback_property_names =
+        map { $_->property_name }
+        grep { $should_rollback->($_) }
+        map { $meta->property_meta_for_name($_) }
+        $meta->all_property_names;
+
+    # Existing object.  Undo all changes since last sync, or since load
+    # occurred when there have been no syncs.
+    foreach my $property_name ( @rollback_property_names ) {
+        $self->__rollback_property__($property_name);
+    }
+
+    delete $self->{'_change_count'};
+
+    return $self;
+}
+
+
+sub __rollback_property__ {
+    my ($self, $property_name) = @_;
+    my $saved = $self->{db_saved_uncommitted} || $self->{db_committed};
+    unless ($saved) {
+        Carp::croak(qq(Cannot rollback property '$property_name' because it has no saved state));
+    }
+    my $saved_value = UR::Context->current->value_for_object_property_in_underlying_context($self, $property_name);
+    return $self->$property_name($saved_value);
 }
 
 

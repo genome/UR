@@ -11,7 +11,7 @@ use Test::More tests => 42;
 UR::Object::Type->define(
     class_name => 'URT::Parent',
     is_abstract => 1,
-    valid_signals => ['something_else'],
+    valid_signals => [qw(last_name something_else)],
 );
 
 UR::Object::Type->define(
