@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::Fatal qw(exception);
 
 use UR qw();
@@ -116,4 +116,23 @@ subtest 'dynamic default values' => sub {
     is($thing2->name, $foo, 'thing2 default name was resolved');
 
     isnt($thing1->name, $thing2->name, 'things have different names');
+};
+
+subtest 'with classwide property' => sub {
+        plan tests => 2;
+        my %thing = (
+            class_name => 'URT::ThingWithClasswide',
+            has => [
+                name => {
+                    is => 'String',
+                    is_classwide => 1,
+                    calculated_default => sub { 'some name' },
+                },
+            ],
+        );
+        my $exception = exception { UR::Object::Type->define(%thing) };
+        ok(!$exception, 'did not get an exception when trying to use `calculated_default` with method defined')
+            or diag $exception;
+
+        is(URT::ThingWithClasswide->name, 'some name', 'got default name');
 };
