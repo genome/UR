@@ -19,6 +19,34 @@ UR::Object::Type->define(
     is_transactional => 1,
 );
 
+sub changed_object {
+    my $self = shift;
+    my $changed_obj;
+    my $changed_aspect = $self->changed_aspect;
+    if ($changed_aspect eq "delete" or $changed_aspect eq "unload") {
+        my $undo_data = $self->undo_data;
+        unless (defined $undo_data) {
+            $undo_data = '';
+        }
+        $changed_obj = eval "no strict; no warnings; " . $undo_data;
+        my $error = $@;
+        bless($changed_obj, 'UR::DeletedRef') if (ref $changed_obj); # changed class so that UR::Object::DESTROY is not called on a "fake" UR::Object
+        if ($error) {
+            Carp::confess("Error reconstructing $changed_aspect data for @_: $error");
+        }
+    }
+    else {
+        $changed_obj = $self->changed_class_name->get($self->changed_id);
+    }
+
+    if (defined $changed_obj) {
+        return $changed_obj;
+    }
+    else {
+        return;
+    }
+}
+
 sub undo {
     my $self = shift;
     my $changed_class_name = $self->changed_class_name;
@@ -52,19 +80,8 @@ sub undo {
         }
     }
 
-    my $changed_obj;
-    if ($changed_aspect eq "delete" or $changed_aspect eq "unload") {
-        $undo_data = '' unless defined $undo_data;
-        $changed_obj = eval "no strict; no warnings; " . $undo_data;
-        bless($changed_obj, 'UR::DeletedRef') if (ref $changed_obj); # changed class so that UR::Object::DESTROY is not called on a "fake" UR::Object
-        if ($@) {
-            Carp::confess("Error reconstructing $changed_aspect data for @_: $@");
-        }
-        return unless $changed_obj;
-    }
-    else {
-        $changed_obj = $changed_class_name->get($changed_id);
-    }
+    my $changed_obj = $self->changed_object();
+    return unless $changed_obj;
     # TODO: if no changed object, die?
 
 
