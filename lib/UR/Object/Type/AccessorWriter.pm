@@ -1105,7 +1105,7 @@ sub mk_rw_class_accessor
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
             if (@_ > 1) {
                 my $old = $variable_value;
-                $variable_value = $_[0];
+                $variable_value = $_[1];
 
                 my $different = eval { no warnings; $old ne $variable_value };
                 if ($different or $@ =~ m/has no overloaded magic/) {
