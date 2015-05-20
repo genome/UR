@@ -119,14 +119,18 @@ subtest 'dynamic default values' => sub {
 };
 
 subtest 'with classwide property' => sub {
-        plan tests => 2;
+        plan tests => 6;
         my %thing = (
             class_name => 'URT::ThingWithClasswide',
-            has => [
+            has_classwide => [
                 name => {
                     is => 'String',
-                    is_classwide => 1,
+                    is_constant => 1,
                     calculated_default => sub { 'some name' },
+                },
+                rank => {
+                    is => 'String',
+                    calculated_default => sub { 'private' },
                 },
             ],
         );
@@ -135,4 +139,13 @@ subtest 'with classwide property' => sub {
             or diag $exception;
 
         is(URT::ThingWithClasswide->name, 'some name', 'got default name');
+        is(URT::ThingWithClasswide->rank, 'private', 'got default rank');
+
+        $exception = exception {; URT::ThingWithClasswide->name('foo') };
+        like($exception,
+            qr/Cannot change read-only class-wide property/,
+            'Got exception trying to change read-only classwide property');
+
+        ok(URT::ThingWithClasswide->rank('general'), 'Changed rank');
+        is(URT::ThingWithClasswide->rank, 'general', 'rank property changed');
 };

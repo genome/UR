@@ -1099,7 +1099,11 @@ sub mk_dimension_identifying_accessor {
 
 sub mk_rw_class_accessor
 {
-    my ($self, $class_name, $accessor_name, $column_name, $is_transient, $variable_value) = @_;
+    my ($self, $class_name, $accessor_name, $column_name, $is_transient, $variable_value, $calc_default) = @_;
+
+    if (!defined($variable_value) and defined($calc_default)) {
+        $variable_value = $calc_default->();
+    }
 
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
@@ -1123,7 +1127,11 @@ sub mk_rw_class_accessor
 }
 
 sub mk_ro_class_accessor {
-    my($self, $class_name, $accessor_name, $column_name, $variable_value) = @_;
+    my($self, $class_name, $accessor_name, $column_name, $variable_value, $calc_default) = @_;
+
+    if (!defined($variable_value) and defined($calc_default)) {
+        $variable_value = $calc_default->();
+    }
 
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
@@ -1764,11 +1772,12 @@ sub initialize_direct_accessors {
             $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where);
         }
         elsif ($property_data->{'is_classwide'}) {
-            my($value, $column_name, $is_transient) = @$property_data{'default_value','column_name','is_transient'};
+            my($value, $column_name, $is_transient, $calc_default)
+                = @$property_data{'default_value','column_name','is_transient', 'calculated_default'};
             if ($property_data->{'is_constant'}) {
-                $self->mk_ro_class_accessor($class_name,$accessor_name,$column_name,$value);
+                $self->mk_ro_class_accessor($class_name,$accessor_name,$column_name,$value, $calc_default);
             } else {
-                $self->mk_rw_class_accessor($class_name,$accessor_name,$column_name,$is_transient,$value);
+                $self->mk_rw_class_accessor($class_name,$accessor_name,$column_name,$is_transient,$value, $calc_default);
             }
         }
         else {
