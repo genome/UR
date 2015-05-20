@@ -1101,10 +1101,6 @@ sub mk_rw_class_accessor
 {
     my ($self, $class_name, $accessor_name, $column_name, $is_transient, $variable_value, $calc_default) = @_;
 
-    if (!defined($variable_value) and defined($calc_default)) {
-        $variable_value = $calc_default->();
-    }
-
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
             if (@_ > 1) {
@@ -1115,7 +1111,10 @@ sub mk_rw_class_accessor
                 if ($different or $@ =~ m/has no overloaded magic/) {
                     $_[0]->__signal_change__( $accessor_name, $old, $variable_value ) unless $is_transient;
                 }
+            } elsif (defined $calc_default) {
+                $variable_value = $calc_default->();
             }
+            undef $calc_default;
             return $variable_value;
     };
     Sub::Install::reinstall_sub({
@@ -1129,10 +1128,6 @@ sub mk_rw_class_accessor
 sub mk_ro_class_accessor {
     my($self, $class_name, $accessor_name, $column_name, $variable_value, $calc_default) = @_;
 
-    if (!defined($variable_value) and defined($calc_default)) {
-        $variable_value = $calc_default->();
-    }
-
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
         if (@_ > 1) {
@@ -1144,7 +1139,10 @@ sub mk_ro_class_accessor {
                 my $report_variable_value = defined($variable_value) ? $variable_value : '(undef)';
                 Carp::croak("Cannot change read-only class-wide property $accessor_name for class $class_name from $report_variable_value to $new!");
             }
+        } elsif (defined $calc_default) {
+            $variable_value = $calc_default->();
         }
+        undef $calc_default;
         return $variable_value;
     };
     Sub::Install::reinstall_sub({
