@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use Test::More tests => 5;
+use Test::Exception;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -119,47 +120,45 @@ subtest 'save' => sub {
 };
 
 subtest 'failure syncing' => sub {
-    plan tests => 7;
+    plan tests => 3;
 
     class URT::FailSync {
         data_source => 'UR::DataSource::Default',
     };
 
-    sub URT::FailSync::__save__ {
-        die "failed during save";
+    do {
+        local *URT::FailSync::__save__ = sub {
+            die "failed during save";
+        };
+
+        my $should_fail_during_rollback = 0;
+        local *URT::FailSync::__rollback__= sub {
+            die "failed during rollback" if $should_fail_during_rollback;
+        };
+
+        my $obj = URT::FailSync->create(id => 1);
+        throws_ok { UR::Context->current->commit() }
+            qr/failed during save/,
+            'Failed in commit';
+
+        my $error_message_during_commit;
+        UR::DataSource::Default->dump_error_messages(0);
+        UR::DataSource::Default->add_observer(
+            aspect => 'error_message',
+            once => 1,
+            callback => sub {
+                my($self, $aspect, $message) = @_;
+                $error_message_during_commit = $message;
+            },
+        );
+        $should_fail_during_rollback = 1;
+        throws_ok { UR::Context->current->commit() }
+            qr/Failed to save, and ERRORS DURING ROLLBACK:\s+failed during save.*failed during rollback/s,
+            'Failed in commit second time';
+        like($error_message_during_commit,
+             qr/Rollback failed:.*'id' => 1/s,
+            'error_message() mentions the object failed rollback');
     };
-
-    my $should_fail_during_rollback = 0;
-    *URT::FailSync::__rollback__= sub {
-        die "failed during rollback" if $should_fail_during_rollback;
-        1;
-    };
-
-    my $obj = URT::FailSync->create(id => 1);
-    local $@;
-    ok(! eval { UR::Context->current->commit() }, 'failed in commit');
-
-    like($@, qr/failed during save/, 'Exception message includes message from __save__');
-    unlike($@, qr/failed during rollback/, 'Exception message does not include message from __commit__');
-
-    my $error_message_during_commit;
-    UR::DataSource::Default->dump_error_messages(0);
-    UR::DataSource::Default->add_observer(
-        aspect => 'error_message',
-        once => 1,
-        callback => sub {
-            my($self, $aspect, $message) = @_;
-            $error_message_during_commit = $message;
-        },
-    );
-    $should_fail_during_rollback = 1;
-    ok(! eval { UR::Context->current->commit() }, 'failed in commit second time');
-
-    like($@, qr/failed during save/, 'Exception message includes message from __save__');
-    like($@, qr/failed during rollback/, 'Exception message includes message from __commit__');
-    like($error_message_during_commit,
-         qr/Rollback failed:.*'id' => 1/s,
-        'error_message() mentions the object failed rollback');
 
     UR::Context->current->rollback; # throw away errored objects
 };
