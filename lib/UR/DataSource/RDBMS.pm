@@ -1491,6 +1491,24 @@ sub _resolve_order_by_clause_for_column {
             ? $column_name . ' DESC'
             : $column_name;
 }
+
+sub resolve_limit_offset_clause {
+    my($self, $query_plan) = @_;
+
+    my $limit = defined($query_plan->limit)
+                    ? sprintf('limit %d', $query_plan->limit)
+                    : '';
+    my $offset = $query_plan->offset
+                    ? sprintf('offset %d', $query_plan->offset)
+                    : '';
+
+    if ($limit && $offset) {
+        return join(' ', $limit, $offset);
+    } else {
+        return $limit || $offset;
+    }
+}
+
 sub do_sql {
     my $self = shift;
     my $sql = shift;
@@ -1565,6 +1583,8 @@ sub create_iterator_closure_for_rule {
     # The full SQL statement for the template, besides the filter logic, is built here.    
     my $order_by_clause = $self->resolve_order_by_clause($query_plan);
 
+    my $limit_offset_clause = $self->resolve_limit_offset_clause($query_plan);
+
     my $sql = "\nselect ";
     if ($select_hint) {
         my $hint = '';
@@ -1580,6 +1600,7 @@ sub create_iterator_closure_for_rule {
     $sql .= "\n$connect_by_clause" if $connect_by_clause;
     $sql .= "\n$group_by_clause" if $group_by_clause;
     $sql .= "\n$order_by_clause" if $order_by_clause;
+    $sql .= "\n$limit_offset_clause" if $limit_offset_clause;
 
     $self->__signal_change__('query',$sql);
 
