@@ -186,6 +186,15 @@ sub _is_subset_of_limit_offset {
     return 1 unless ($self->offset or defined($self->limit)
                     or $other_template->offset or defined($other_template->limit));
 
+    # need to do a more comprehensive filter match.  If one or both templates
+    # has -limit and/or -offset, then the filters on both templates must match
+    # exactly.  Otherwise, one result set could include objects that were
+    # skipped because of the other's offset or limit
+    my @my_filters = map { $_ . $self->operator_for($_) } $self->_property_names;
+    my @other_filters = map { $_ . $other_template->operator_for($_) } $other_template->_property_names;
+    my($both, $only_my, $only_other) = UR::Util::intersect_lists(\@my_filters, \@other_filters);
+    return undef if (@$only_my or @$only_other);
+
     my $my_offset = $self->offset || 0;
     my $my_limit = $self->limit;
     my $other_offset = $other_template->offset || 0;

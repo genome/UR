@@ -113,7 +113,7 @@ ok(! $r2->is_subset_of($r1), 'Rules on unrelated classes with same filters is no
 
 
 subtest 'limit and offset' => sub {
-    plan tests => 21;
+    plan tests => 23;
 
     my $r1 = URT::Item->define_boolexpr(-limit => 5);
     ok($r1->is_subset_of($r1), 'no filters with limit is subset of itself');
@@ -166,4 +166,10 @@ subtest 'limit and offset' => sub {
     $r2 = URT::Item->define_boolexpr(name => 'Bob', -offset => 10, -limit => 5);
     ok(!$r1->is_subset_of($r2), 'bx with disjoint ranges is not subset');
     ok(!$r2->is_subset_of($r1), 'bx with disjoint ranges is not subset');
+
+
+    $r1 = URT::Item->define_boolexpr('score >' => 10, -limit => 5);
+    $r2 = URT::Item->define_boolexpr(-limit => 5);
+    ok(! $r1->is_subset_of($r2), 'bx with filter and limit is not subset of no filter with limit');
+    ok(! $r2->is_subset_of($r1), 'bx with limit is not subset of filter and limit');
 };
