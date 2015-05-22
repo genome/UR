@@ -711,7 +711,6 @@ sub _lapl_data_for_delegation_data {
 
     my %tmpl_and_rules;
 
-#$DB::single=1;
     foreach my $delegation_data ( @$delegation_data_list ) {
         my $value_sources = $delegation_data->[0];
         my $rule_tmpl  = $delegation_data->[1];
