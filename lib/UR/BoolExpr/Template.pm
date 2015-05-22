@@ -164,16 +164,16 @@ sub is_subset_of {
     }
 
     my %operators = map { $_ => $self->operator_for($_) } $self->_property_names;
-    my $operators_match = 1;
+    my $is_subset = 1;
     foreach my $prop ( $other_template->_property_names ) {
         unless (exists $operators{$prop}) {
-            $operators_match = 0;
+            $is_subset = 0;
             last;
         }
-        $operators_match = undef if ($operators{$prop} ne $other_template->operator_for($prop));
+        $is_subset = undef if ($operators{$prop} ne $other_template->operator_for($prop));
     }
-    $cached_subset_data->{$other_template_id} = $operators_match;
-    return $operators_match;
+    $cached_subset_data->{$other_template_id} = $is_subset;
+    return $is_subset;
 }
 
 
