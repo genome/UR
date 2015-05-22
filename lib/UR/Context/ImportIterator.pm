@@ -384,7 +384,6 @@ sub _create_import_iterator_for_underlying_context {
     my $group_by    = $rule_template->group_by;
     my $order_by    = $rule_template->order_by;
     my $aggregate   = $rule_template->aggregate;
-    my $limit       = $rule_template->limit;
 
     if (my $sub_typing_property) {
         # When the rule has a property specified which indicates a specific sub-type, catch this and re-call
