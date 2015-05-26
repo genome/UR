@@ -239,7 +239,7 @@ sub _create {
                 )
             ) {
                 # db object sorts first
-                # If we deleted it from memorym the DB would not have given it back.
+                # If we deleted it from memory the DB would not have given it back.
                 # So it either failed to match the BX now, or one of the order-by parameters changed
                 if ($next_obj_underlying_context->__changes__) {
                      
