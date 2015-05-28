@@ -44,7 +44,7 @@ subtest 'get from cache' => sub {
 };
 
 sub _main_test {
-    plan tests => 8;
+    plan tests => 10;
 
     subtest 'get with limit' => sub {
         plan tests => 2;
@@ -132,6 +132,44 @@ sub _main_test {
         is(scalar(@o), 2,'Got 2 things with iterator');
         my $ids = get_ids(@o);
         is_deeply($ids, [79,80], 'Got the right objects back');
+    };
+
+    subtest 'with newly created object' => sub {
+        plan tests => 5;
+
+        UR::Context::Transaction::do {
+            my $new_obj = URT::Thing->create(thing_id => 0, idx => 1);
+            ok($new_obj, 'create new object that sorts first');
+            my @o = URT::Thing->get(idx => 1, -limit => 1);
+            is(scalar(@o), 1, 'Got one object with idx => 1 -limit => 1');
+            is($o[0]->id, $new_obj->id, 'was the new object');
+
+            @o = URT::Thing->get(idx => 1, -offset => 1);
+            is(scalar(@o), 1, 'Got one object with idx => 1 -offset => 1');
+            is($o[0]->id, 1, 'was the DB object');
+            return;  # return false to roll back the transaction
+        };
+    };
+
+    subtest 'with changed object' => sub {
+        plan tests => 2;
+
+        UR::Context::Transaction::do {
+            my $changed_obj1 = URT::Thing->get(9);
+            $changed_obj1->idx(99);
+
+            my $changed_obj2 = URT::Thing->get(99);
+            $changed_obj2->idx(1);
+
+            my @o = URT::Thing->get('idx <=' => 10, -order => 'idx', -limit => 5);
+            my $ids = get_ids(@o);
+            is_deeply($ids, [ 1, 99, 2, 3, 4], 'Changed objects and get() with limit');
+
+            @o = URT::Thing->get('idx <=', => 10, -order => 'idx', -offset => 5);
+            $ids = get_ids(@o);
+            is_deeply($ids, [5, 6, 7, 8, 10], 'Changed objects and get() with offset');
+            return; # return false to roll back the transaction
+        };
     };
 }
 
