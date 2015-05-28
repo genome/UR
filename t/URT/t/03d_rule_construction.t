@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 7;
+use Test::More tests => 13;
 use Data::Dumper;
 
 class URT::Item {
@@ -47,7 +47,7 @@ my $test_obj = URT::Item->create(name => 'blah', group => 'cool', foo => 'foo', 
 
 
 foreach my $class_name ( qw( URT::Item URT::FancyItem ) ) {
-    foreach my $meta_params ( [], [-group_by => ['bar']] ) {
+    foreach my $meta_params ( [], [-group_by => ['bar']], [-order => ['bar']], [-limit => 5], [-offset => 5] ) {
 
         my $meta_params_as_string = _meta_params_as_string($meta_params);
         subtest "class $class_name with meta params $meta_params_as_string" => sub {
@@ -58,7 +58,8 @@ foreach my $class_name ( qw( URT::Item URT::FancyItem ) ) {
             ok(! $bx->is_id_only, 'Rule with no filters is not is_id_only');
             ok(! $tmpl->is_id_only, 'Rule template with no filters is not is_id_only');
             ok(! $tmpl->is_partial_id, 'Rule template with no filters is not is_partial_id');
-            ok($tmpl->matches_all, 'Rule template with no filters is matches_all');
+            my $is_matches_all = (! $meta_params->[0] or ($meta_params->[0] ne '-limit' and $meta_params->[0] ne '-offset'));
+            is($tmpl->matches_all, $is_matches_all, 'Rule template matches_all with no filters');
 
             $bx = $class_name->define_boolexpr(name => 'blah', @$meta_params);
             $tmpl = $bx->template;
@@ -177,9 +178,14 @@ subtest operators => sub {
 sub _meta_params_as_string {
     my $params = shift;
 
-    return @$params
-                ? sprintf("%s => [ %s ]",
+    unless ( @$params ) {
+        return "[]"
+    }
+
+    return sprintf('%s => [ %s ]',
                     $params->[0],
-                    join(', ', map { qq('$_') } @{$params->[1]}))
-                : "[]";
+                    ref($params->[1]) eq 'ARRAY'
+                        ? join(', ', map { qq('$_') } @{$params->[1]})
+                        : $params->[1]
+                    );
 }

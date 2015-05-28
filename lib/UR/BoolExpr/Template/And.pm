@@ -866,8 +866,12 @@ sub _fast_construct {
         }
     }
 
-    my $matches_all = scalar(@keys_sorted) == scalar(@constant_values);
-    $id_only = 0 if ($matches_all);
+    my $matches_all;
+    do {
+        my $is_no_filters = (scalar(@keys_sorted) == scalar(@constant_values));
+        $id_only = 0 if ($is_no_filters);
+        $matches_all = ($is_no_filters && ! (defined($limit) or $offset));
+    };
 
     # these are used to rapidly turn a bx used for querying into one
     # suitable for object construction
