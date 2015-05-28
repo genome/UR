@@ -450,6 +450,11 @@ sub help_options {
             $default_value = "\nDefault value $default_value if not specified";
         }
 
+        my $calculated_default = $property_meta->calculated_default;
+        if (defined $calculated_default) {
+            $default_value = sprintf("\nDefault value is calculated, value will be '%s' if not specified", $calculated_default->());
+        }
+
         push @data, [$param_name, $param_type, $doc, $default_value];
         if ($param_type eq 'Boolean') {
             push @data, ['no'.$param_name, $param_type, "Make $param_name 'false'" ];
