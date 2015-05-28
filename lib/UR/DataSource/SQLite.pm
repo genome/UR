@@ -885,6 +885,14 @@ sub _resolve_order_by_clause_for_column {
     return $column_clause;
 }
 
+sub _resolve_limit_value_from_query_plan {
+    my($self, $query_plan) = @_;
+    my $limit = $query_plan->limit;
+    return (!defined($limit) and $query_plan->offset)
+            ? -1
+            : $limit;
+}
+
 
 sub _dump_db_to_file_internal {
     my $self = shift;

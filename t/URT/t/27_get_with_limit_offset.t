@@ -11,7 +11,7 @@ my $dbh = URT::DataSource::SomeSQLite->get_default_handle;
 
 ok($dbh, 'Got a database handle');
 
-ok($dbh->do('create table thing ( thing_id integer not null primary key, name varchar )'),
+ok($dbh->do('create table thing ( thing_id integer not null primary key, idx integer )'),
    'created node table');
 
 my $sth = $dbh->prepare('insert into thing values (?,?)');
@@ -26,7 +26,7 @@ UR::Object::Type->define(
         'thing_id' => { is => 'Integer' },
     ],
     has => [
-        name => { is => 'Text' },
+        idx => { is => 'Integer' },
     ],
     data_source => 'URT::DataSource::SomeSQLite',
     table_name => 'thing',
@@ -44,7 +44,7 @@ subtest 'get from cache' => sub {
 };
 
 sub _main_test {
-    plan tests => 7;
+    plan tests => 8;
 
     subtest 'get with limit' => sub {
         plan tests => 2;
@@ -62,6 +62,14 @@ sub _main_test {
         is(scalar(@o), 5, 'Got 5 things with filter and limit');
         my $ids = get_ids(@o);
         is_deeply($ids, [11..15], 'Got the right objects back');
+    };
+
+    subtest 'get with offset and filter' => sub {
+        plan tests => 2;
+        my @o = URT::Thing->get('thing_id <=' => 10, -offset => 5);
+        is(scalar(@o), 5, 'Got 5 things with filter and offset');
+        my $ids = get_ids(@o);
+        is_deeply($ids, [6 .. 10], 'Got the right objects back');
     };
     
     subtest 'get with limit, offset and filter' => sub {
