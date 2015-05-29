@@ -358,6 +358,9 @@ sub db_to_object_type {
 # FIXME - shouldn't this be a property of the class instead of a method?
 sub does_support_joins { 1 } 
 
+# Most RDBMSs support limit/offset selects
+sub does_support_limit_offset { 1 }
+
 sub get_class_meta_for_table {
     my $self = shift;
     my $table = shift;
@@ -1594,7 +1597,8 @@ sub create_iterator_closure_for_rule {
     # The full SQL statement for the template, besides the filter logic, is built here.    
     my $order_by_clause = $self->resolve_order_by_clause($query_plan);
 
-    my $limit_offset_clause = $self->resolve_limit_offset_clause($query_plan);
+    my $limit_offset_clause;
+    $limit_offset_clause = $self->resolve_limit_offset_clause($query_plan) if $self->does_support_limit_offset;
 
     my $sql = "\nselect ";
     if ($select_hint) {

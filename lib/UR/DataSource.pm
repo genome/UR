@@ -56,6 +56,12 @@ sub table_and_column_names_are_upper_case { 0; }
 # join within irs own code
 sub does_support_joins { 0; }
 
+# Many data sources do not support limit and offset.
+sub does_support_limit_offset {
+    #my($self, $query_plan) = @_;
+    0
+}
+
 # Most datasources do not support recursive queries
 # Oracle and Postgres do, but in different ways
 # For data sources without support, it'll have to do multiple queries

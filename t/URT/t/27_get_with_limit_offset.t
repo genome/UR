@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 7;
+use Test::More tests=> 8;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -40,6 +40,12 @@ subtest 'get from DB' => sub {
 subtest 'get from cache' => sub {
     my @o = URT::Thing->get();  # To get everything into the cache
 
+    _main_test();
+};
+
+subtest 'get without DB-supported limit/offset' => sub {
+    local *URT::DataSource::SomeSQLite::does_support_limit_offset = sub { 0 };
+    $_->unload foreach URT::Thing->is_loaded();
     _main_test();
 };
 

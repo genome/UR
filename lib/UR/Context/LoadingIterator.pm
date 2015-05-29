@@ -73,7 +73,9 @@ sub _create {
     my $db_results_should_be_complete = 1;
 
     if (($offset or defined($limit))
-        and (any { $_->__changes__ } @$cached)
+        and ( ! $data_source->does_support_limit_offset($normalized_rule)
+              or any { $_->__changes__ } @$cached
+            )
     ) {
         # If there are any cached objects, then the asked-for offset may not necessarily
         # be the offset that applies to data in the database.  And since the offset is not

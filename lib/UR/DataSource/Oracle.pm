@@ -17,6 +17,22 @@ sub owner { shift->_singleton_object->login }
 
 sub can_savepoint { 1 }  # Oracle supports savepoints inside transactions
 
+sub does_support_limit_offset {
+    my($self, $bx) = @_;
+
+    my $tmpl = $bx->template;
+    return $template->offset
+        ? 0
+        : 1;
+}
+
+sub resolve_limit_offset_clause {
+    my($self, $query_plan) = @_;
+
+    my $limit = $self->_resolve_limit_value_from_query_plan($query_plan);
+    return sprintf('where rownum <= %d', $limit);
+}
+
 sub does_support_recursive_queries { 'connect by' };
 
 sub set_savepoint {
