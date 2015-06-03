@@ -806,6 +806,10 @@ sub resolve_param_value_from_cmdline_text {
         if (!$pmeta->{'is_many'} && @results > 1) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .= "'$param_name' expects only one result.";
+
+            if ($ENV{UR_NO_REQUIRE_USER_VERIFY}) {
+                die "$MESSAGE\n";
+            }
         }
         @results = $self->_get_user_verification_for_param_value($param_name, @results);
     }
