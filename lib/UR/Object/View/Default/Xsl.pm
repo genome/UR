@@ -18,6 +18,7 @@ class UR::Object::View::Default::Xsl {
         rest_variable => { value => '/rest', is_deprecated => 1 },
         desired_perspective => { },
         xsl_path => {
+            is_optional => 1,
             doc => 'web relative path starting with / where the xsl ' .
                    'is located when serving from a web service'
         },
