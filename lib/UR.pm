@@ -745,8 +745,8 @@ XML::Simple
 
 =head1 AUTHORS
 
-UR was built by the software development team at The Genome Institute
-at Washington University School of Medicine (Richard K. Wilson, PI).
+UR was built by the software development team at the McDonnell Genome Institute
+at the Washington University School of Medicine (Richard K. Wilson, PI).
 
 Incarnations of it run laboratory automation and analysis systems
 for high-throughput genomics.
