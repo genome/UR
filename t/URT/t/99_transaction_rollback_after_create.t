@@ -4,7 +4,7 @@ use warnings;
 use UR;
 
 use Test::More tests => 3;
-use Test::UR qw(txtest);
+use UR::Test qw(txtest);
 
 UR::Object::Type->define(
     class_name => 'Car',

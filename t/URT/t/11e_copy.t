@@ -4,7 +4,7 @@ use warnings;
 use Test::More tests => 3;
 
 use Test::Deep qw(cmp_bag);
-use Test::UR qw(txtest);
+use UR::Test qw(txtest);
 
 use UR;
 
