@@ -1,3 +1,19 @@
+libur-perl (0.44-1) unstable; urgency=low
+
+  * Added UR::Context::AutoUnloadPool - a mechanism for automatically unloading objects when a leaving a scope.
+  * Added methods to UR::Object::Type to introspect methods names relating to is_many properties.
+  * The MetaDB no longer tracks owner/schema.  Classes using tables not in the default schema should have their table_name listed as "schema.table".
+  * Added copy() constructor to UR::Object
+  * Removed old, deprecated filter parser for turning text into a UR::BoolExpr within UR::Object::Command::List
+  * Meta-params like -order_by are now allowed in a delegated property's where clase.
+  * Retrieving values for doubly-delegated properties is more efficient.
+  * An id-by delegated property can point to a class with multiple ID properties.  The linking value is the composite ID.
+  * Observers now have a 'once' property.  Setting it to true ensures the callback will only ever fire one time.  The Observer is deleted.
+  * Properties can have a 'calculated_default' subref.  Works like default_value, but the return value from the subref is the default value rather than have a hardcoded default.
+  * Fixes to work with newer versions of SQLite Added __rollback__() to UR::Object, called when the base Context rolls-back.  Subclasses can override this to provide special behavior during rollback.  The override should also call SUPER::__rollback__().
+
+ -- Anthony Brummett <brummett@cpan.org>  Fri, 19 Jun 2015 09:30:00 -600
+
 libur-perl (0.43-1) unstable; urgency=low
 
   * Set objects now have member_iterator() method.
