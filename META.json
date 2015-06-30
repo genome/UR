@@ -85,7 +85,9 @@
       },
       "test" : {
          "requires" : {
+            "Test::Deep" : "0",
             "Test::Exception" : "0",
+            "Test::Fatal" : "0",
             "Test::Fork" : "0",
             "Test::More" : "0.98"
          }
@@ -103,7 +105,7 @@
          "web" : "https://github.com/genome/UR"
       }
    },
-   "version" : "0.43",
+   "version" : "0.44",
    "x_contributors" : [
       "josborne <josborne@watson.wustl.edu>",
       "thepler <thepler@watson.wustl.edu>",
@@ -156,7 +158,6 @@
       "Scott Smith <sakoht@cpan.org>",
       "Brian Derickson <bdericks@genome.wustl.edu>",
       "Justin Lolofie <jlolofie@genome.wustl.edu>",
-      "David Morton <davidlmorton@gmail.com>",
       "Ian Ferguson <iferguso@genome.wustl.edu>",
       "Neil Bowers <neil@bowers.com>",
       "Scott Smith <scottsmith1@gmail.com>",
@@ -164,14 +165,17 @@
       "Jason Walker <jwalker@genome.wustl.edu>",
       "Mark Burnett <mburnett@genome.wustl.edu>",
       "Scott Smith <ssmith@genome.wustl.edu>",
-      "APipe Tester <apipe-tester@genome.wustl.edu>",
       "Adam Coffman <acoffman@genome.wustl.edu>",
       "Susanna Siebert <ssiebert@genome.wustl.edu>",
       "apregier <aregier@genome.wustl.edu>",
-      "Anthony Brummett <brummett@gmail.com>",
-      "Nathaniel Nutter <nnutter@genome.wustl.edu>",
+      "David Morton <davidlmorton@gmail.com>",
+      "David Morton <davidlmorton@users.noreply.github.com>",
+      "Sebastian Heil <(none)>",
+      "APipe Tester <apipe-tester@genome.wustl.edu>",
+      "nnutter <nnutter@genome.wustl.edu>",
       "Nathaniel Nutter <iam@nnutter.com>",
-      "Thomas Mooney <tmooney@genome.wustl.edu>",
+      "Thomas B. Mooney <tmooney@genome.wustl.edu>",
+      "Anthony Brummett <brummett@gmail.com>",
       "Anthony Brummett <abrummet@genome.wustl.edu>"
    ]
 }
