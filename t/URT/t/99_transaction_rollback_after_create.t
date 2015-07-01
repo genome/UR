@@ -18,6 +18,7 @@ UR::Object::Type->define(
 is(scalar(() = Car->get()), 0, 'no cars before txtest');
 
 txtest 'confirm rollback works' => sub {
+    plan tests => 1;
     Car->create(name => 'Christine');
     is(scalar(() = Car->get()), 1, 'got one car inside txtest');
 };
