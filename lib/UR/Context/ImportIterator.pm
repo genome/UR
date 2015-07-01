@@ -800,6 +800,8 @@ sub _create_import_iterator_for_underlying_context {
 
         my $retval = $next_object_to_return;
         $next_object_to_return = $primary_object_for_next_db_row;
+        $next_object_to_return->__is_buffered(1) if ($next_object_to_return && $next_object_to_return->isa('UR::Object'));
+        $retval->__is_buffered(0) if ($retval && $retval->isa('UR::Object'));
         return $retval;
     };
 
