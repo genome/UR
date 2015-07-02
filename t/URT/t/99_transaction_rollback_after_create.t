@@ -4,7 +4,9 @@ use warnings;
 use UR;
 
 use Test::More tests => 3;
-use UR::Test qw(txtest);
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT::Test qw(txtest);
 
 UR::Object::Type->define(
     class_name => 'Car',

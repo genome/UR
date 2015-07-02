@@ -1,4 +1,4 @@
-package UR::Test;
+package URT::Test;
 
 use strict;
 use warnings;
