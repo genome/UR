@@ -1,11 +1,12 @@
 package UR::Test;
-use base 'Test::Builder::Module';
 
 use strict;
 use warnings;
 
 use Exporter 'import';
 our @EXPORT_OK = qw(txtest);
+
+use base 'Test::Builder::Module';
 
 sub txtest {
     my ($name, $subtests, @args) = @_;
