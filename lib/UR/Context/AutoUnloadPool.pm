@@ -75,7 +75,7 @@ sub _unload_objects {
         foreach ( @$objs_for_class{ keys %{$self->{pool}->{$class_name}}} ) {
             next unless $_;
             print STDERR ($is_subsequent_obj++ ? ", " : ''), $_->id,"\n" if _is_printing_debug();
-            unless (eval { $_->unload(); 1; } ) {
+            unless (eval { _unload_single_object($_); } ) {
                 push @unload_exceptions, $@;
             }
         }
@@ -85,6 +85,14 @@ sub _unload_objects {
 
     die join("\n", 'The following exceptions happened while unloading:', @unload_exceptions) if @unload_exceptions;
 }
+
+sub _unload_single_object {
+    my $obj = shift;
+
+    $obj->unload;
+    return 1;
+}
+
 
 sub DESTROY {
     local $@;
