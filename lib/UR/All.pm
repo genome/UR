@@ -3,7 +3,7 @@ package UR::All;
 use strict;
 use warnings;
 
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 BEGIN { require above; };
 use UR;
@@ -204,7 +204,6 @@ use UR::Service::RPC::Message;
 use UR::Service::RPC::Server;
 use UR::Service::RPC::TcpConnectionListener;
 use UR::Singleton;
-use UR::Test;
 use UR::Util;
 use UR::Value;
 use UR::Value::ARRAY;

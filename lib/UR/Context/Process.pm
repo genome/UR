@@ -42,7 +42,7 @@ associated with the program and the program version number.
 
 package UR::Context::Process;
 
-our $VERSION = "0.43"; # UR $VERSION;;
+our $VERSION = "0.44"; # UR $VERSION;;
 
 require 5.006_000;
 
