@@ -74,7 +74,9 @@ sub _unload_objects {
         next unless $objs_for_class;
         foreach ( @$objs_for_class{ keys %{$self->{pool}->{$class_name}}} ) {
             next unless $_;
+            next if $_->__is_buffered;
             print STDERR ($is_subsequent_obj++ ? ", " : ''), $_->id,"\n" if _is_printing_debug();
+            local $@;
             unless (eval { $_->unload(); 1; } ) {
                 push @unload_exceptions, $@;
             }

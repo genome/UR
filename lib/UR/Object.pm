@@ -645,6 +645,23 @@ sub __extend_namespace__ {
 
 # Handling of references within the current process
 
+# A flag set/cleared by the Import Iterator to indicate whether this object is
+# being buffered and hasn't been returned to the user yet.  The AutoUnloadPool
+# will skip unloading buffered objects.
+sub __is_buffered {
+    my $self = shift;
+    if (@_) {
+        my $val = shift;
+        if ($val) {
+            $self->{__buffered} = $val;
+        } else {
+            delete $self->{__buffered};
+        }
+    }
+    return $self->{__buffered};
+}
+
+
 sub is_weakened {
     my $self = shift;
     return (exists $self->{__weakened} && $self->{__weakened});

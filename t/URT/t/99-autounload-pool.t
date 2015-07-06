@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 4;
+use Test::More tests=> 5;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -71,18 +71,48 @@ subtest 'does not unload meta objects' => sub {
         "Class' property object is still loaded");
 };
 
+subtest 'with iterator' => sub {
+    URT::Thing->unload();
+    URT::Related->unload();
+
+    plan tests => 5;
+
+    my $iter = URT::Thing->create_iterator();
+    for (my $expected = 1; $expected <= 5; $expected++) {
+        my $unloader = UR::Context::AutoUnloadPool->create();
+        my $obj = $iter->next();
+        is($obj->id, $expected, "Got Thing ID $expected")
+            || diag("Fetched object ID is ".$obj->id);
+    }
+};
+
 sub setup_classes {
     my $generic_loader = sub {
         my($class_name, $rule, $expected_headers) = @_;
-        my $value;
-        foreach my $prop ( $rule->template->_property_names ) {
-            if ($value = $rule->value_for($prop)) {
-                last;
-            }
-        }
 
-        my @value = ($value) x scalar(@$expected_headers);
-        return ($expected_headers, [ \@value ]);
+        if ($rule->template->_property_names) {
+            # get() with filters
+            my $value;
+            foreach my $prop ( $rule->template->_property_names ) {
+                if ($value = $rule->value_for($prop)) {
+                    last;
+                }
+            }
+
+            my @value = ($value) x scalar(@$expected_headers);
+            return ($expected_headers, [ \@value ]);
+
+        } else {
+            # get() with no filters
+            # return a closure that will start at '1' and go up.
+            my $value = 0;
+            my $value_width = scalar(@$expected_headers);
+            my $iterator = sub {
+                $value++;
+                return [ ($value) x $value_width ];
+            };
+            return ($expected_headers, $iterator);
+        }
     };
 
     class URT::Related {
