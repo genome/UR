@@ -742,18 +742,19 @@ sub DESTROY {
 
     # $destroy_should_clean_up_all_objects_loaded will be true if either light_cache is on, or
     # the cache_size_highwater mark is a valid value
+    my($class, $id) = (ref($obj), $obj->{id});
+
     if ($UR::Context::destroy_should_clean_up_all_objects_loaded) {
-        my $class = ref($obj);
-        my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$obj->{id}};
+        my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$id};
         if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
-            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$obj->{id}!" unless $obj eq $obj_from_cache;
-            $UR::Context::all_objects_loaded->{$class}{$obj->{id}} = $obj;
+            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless $obj eq $obj_from_cache;
+            $UR::Context::all_objects_loaded->{$class}{$id} = $obj;
             print "KEEPING $obj.  Found $obj .\n";
             return;
         }
         else {
             if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-                print STDERR "MEM DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+                print STDERR "MEM DESTROY object $obj class $class if $id\n";
             }
             $obj->unload();
             return $obj->SUPER::DESTROY();
@@ -761,7 +762,7 @@ sub DESTROY {
     }
     else {
         if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-            print STDERR "MEM DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+            print STDERR "MEM DESTROY object $obj class $class id $id\n";
         }
         $obj->SUPER::DESTROY();
     }
