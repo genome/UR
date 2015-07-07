@@ -13,10 +13,15 @@ use Scalar::Util qw();
 
 our @CARP_NOT = qw( UR::Context );
 
+my $pool_count = 0;
+sub _pool_count { $pool_count }
+
 sub create {
     my $class = shift;
     my $self = bless { pool => {} }, $class;
     $self->_attach_observer();
+    $pool_count++;
+    UR::Context::manage_objects_may_go_out_of_scope();
     return $self;
 }
 
@@ -24,6 +29,9 @@ sub delete {
     my $self = shift;
     delete $self->{pool};
     $self->_detach_observer();
+    $pool_count--;
+    UR::Context::manage_objects_may_go_out_of_scope();
+    return 1;
 }
 
 sub _attach_observer {
@@ -101,6 +109,8 @@ sub DESTROY {
     return unless ($self->{pool});
     $self->_detach_observer();
     $self->_unload_objects();
+    $pool_count--;
+    UR::Context::manage_objects_may_go_out_of_scope();
 }
 
 1;

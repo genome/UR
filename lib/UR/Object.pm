@@ -740,11 +740,11 @@ sub DESTROY {
     # Handle weak references in the object cache.
     my $obj = shift;
 
-    # $destroy_should_clean_up_all_objects_loaded will be true if either light_cache is on, or
+    # objects_may_go_out_of_scope will be true if either light_cache is on, or
     # the cache_size_highwater mark is a valid value
     my($class, $id) = (ref($obj), $obj->{id});
 
-    if ($UR::Context::destroy_should_clean_up_all_objects_loaded) {
+    if (UR::Context::objects_may_go_out_of_scope()) {
         my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$id};
         if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
             die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless $obj eq $obj_from_cache;
