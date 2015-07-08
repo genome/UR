@@ -73,25 +73,18 @@ sub _unload_objects {
 
     print STDERR Carp::shortmess("MEM AUTORELEASE pool $self draining\n") if _is_printing_debug();
 
-    my @unload_exceptions;
     foreach my $class_name ( keys %{$self->{pool}} ) {
-        print STDERR "MEM AUTORELEASE class $class_name: " if _is_printing_debug();
-        my $is_subsequent_obj;
-
+        if (_is_printing_debug()) {
+            printf STDERR "MEM AUTORELEASE class $class_name: %s\n",
+                            join(', ', values %{ $self->{pool}->{$class_name}} );
+        }
         my $objs_for_class = $UR::Context::all_objects_loaded->{$class_name};
         next unless $objs_for_class;
-        foreach ( @$objs_for_class{ keys %{$self->{pool}->{$class_name}}} ) {
-            next unless $_;
-            print STDERR ($is_subsequent_obj++ ? ", " : ''), $_->id,"\n" if _is_printing_debug();
-            unless (eval { _unload_single_object($_); } ) {
-                push @unload_exceptions, $@;
-            }
-        }
-        print STDERR "\n" if _is_printing_debug();
+        my @objs_to_release = grep { ! $_->__changes__ }
+                              @$objs_for_class{ keys %{$self->{pool}->{$class_name}}};
+        UR::Context->current->_weaken_references_for_objects(\@objs_to_release);
     }
     delete $self->{pool};
-
-    die join("\n", 'The following exceptions happened while unloading:', @unload_exceptions) if @unload_exceptions;
 }
 
 sub _unload_single_object {

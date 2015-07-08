@@ -1482,6 +1482,7 @@ sub prune_object_cache {
         $pass++;
         $target_serial += $target_serial_increment;
 
+        my @objects_to_prune;
         foreach my $class (keys %data_source_for_class) {
             my $objects_for_class = $UR::Context::all_objects_loaded->{$class};
             $indexes_by_class{$class} ||= [];
@@ -1493,21 +1494,15 @@ sub prune_object_cache {
                     $obj->is_weakened
                     || $obj->is_prunable && $obj->{__get_serial} && $obj->{__get_serial} <= $target_serial
                 ) {
-                    foreach my $index ( @{$indexes_by_class{$class}} ) {
-                        $index->weaken_reference_for_object($obj);
-                    }
                     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
                         print STDERR "MEM PRUNE object $obj class $class id $id\n";
                     }
-
-                    delete $obj->{'__get_serial'};
-                    Scalar::Util::weaken($objects_for_class->{$id});
-
-                    $all_objects_cache_size--;
+                    push @objects_to_prune, $obj;
                     $deleted_count++;
                 }
             }
         }
+        $self->_weaken_references_for_objects(\@objects_to_prune);
     }
     $is_pruning = 0;
 
@@ -1523,6 +1518,24 @@ sub prune_object_cache {
         }
     }
     return 1;
+}
+
+sub _weaken_references_for_objects {
+    my($self, $obj_list) = @_;
+
+    Carp::croak('Argument to _weaken_references_to_objects must be an arrayref')
+        unless ref($obj_list) eq 'ARRAY';
+
+    my %indexes_by_class;
+    foreach my $obj ( @$obj_list) {
+        my $class = $obj->class;
+        $indexes_by_class{ $class } ||= [ UR::Object::Index->get(indexed_class_name => $class) ];
+
+        $_->weaken_reference_for_object($obj) foreach @{ $indexes_by_class{ $class }};
+        delete $obj->{__get_serial};
+        Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$obj->id});
+        $all_objects_cache_size--;
+    }
 }
 
 
