@@ -87,19 +87,6 @@ sub _unload_objects {
     delete $self->{pool};
 }
 
-sub _unload_single_object {
-    my $obj = shift;
-
-    if ($obj->is_prunable) {
-        my($class,$id) = ($obj->class, $obj->id);
-        my @indexes = UR::Object::Index->get(indexed_class_name => $class);
-        do { $_->weaken_reference_for_object($obj) } foreach @indexes;
-        Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$id});
-    }
-    return 1;
-}
-
-
 sub DESTROY {
     local $@;
 
