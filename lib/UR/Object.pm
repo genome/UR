@@ -5,7 +5,7 @@ use strict;
 
 require UR;
 
-use Scalar::Util qw(looks_like_number);
+use Scalar::Util qw(looks_like_number refaddr isweak);
 
 our @ISA = ('UR::ModuleBase');
 our $VERSION = "0.43"; # UR $VERSION;;
@@ -744,7 +744,15 @@ sub DESTROY {
     # the cache_size_highwater mark is a valid value
     my($class, $id) = (ref($obj), $obj->{id});
 
-    if (UR::Context::objects_may_go_out_of_scope()) {
+    if (isweak($UR::Context::all_objects_loaded->{$class}{$id})
+        and
+        refaddr($UR::Context::all_objects_loaded->{$class}{$id}) == refaddr($obj)
+    ) {
+        # This object was dropped by the cache pruner or an AutoUnloadPool
+        $obj->unload();
+        return $obj->SUPER::DESTROY();
+    }
+    elsif (UR::Context::objects_may_go_out_of_scope()) {
         my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$id};
         if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
             die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless $obj eq $obj_from_cache;
