@@ -6,7 +6,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 24;
+use Test::More tests => 25;
 
 class URT::Item {
     id_by => [qw/name group/],
@@ -112,3 +112,64 @@ ok(! $r1->is_subset_of($r2), 'Rules on unrelated classes with same filters is no
 ok(! $r2->is_subset_of($r1), 'Rules on unrelated classes with same filters is not a subset');
 
 
+subtest 'limit and offset' => sub {
+    plan tests => 23;
+
+    my $r1 = URT::Item->define_boolexpr(-limit => 5);
+    ok($r1->is_subset_of($r1), 'no filters with limit is subset of itself');
+    my $r2 = URT::Item->define_boolexpr();
+    ok($r1->is_subset_of($r2), 'no filters with limit is subset of no filters');
+    ok(!$r2->is_subset_of($r1), 'no filters is not a subset of no filters with limit');
+
+
+    $r1 = URT::Item->define_boolexpr(name => 'Bob', -limit => 5);
+    ok($r1->is_subset_of($r1), 'filters with limit is subset of itself');
+    $r2 = URT::Item->define_boolexpr(name => 'Bob');
+    ok($r1->is_subset_of($r2), 'filters with limit is subset of same filters without limit');
+    ok(!$r2->is_subset_of($r1), 'filters without limit is not a subset of filters with limit');
+
+
+    $r1 = URT::Item->define_boolexpr(-offset => 5);
+    ok($r1->is_subset_of($r1), 'no filters with offset is subset of itself');
+    $r2 = URT::Item->define_boolexpr();
+    ok($r1->is_subset_of($r2), 'no filters with offset is subset of no filters');
+    ok(!$r2->is_subset_of($r1), 'no filters is not a subset of no filters with offset');
+
+
+    $r1 = URT::Item->define_boolexpr(name => 'Bob', -offset => 5);
+    ok($r1->is_subset_of($r1), 'filters with offset is subset of itself');
+    $r2 = URT::Item->define_boolexpr(name => 'Bob');
+    ok($r1->is_subset_of($r2), 'filters with offset is subset of same filters without offset');
+    ok(!$r2->is_subset_of($r1), 'filters without offset is not a subset of filters with offset');
+
+
+    $r1 = URT::Item->define_boolexpr(name => 'Bob', -offset => 5, -limit => 5);
+    ok($r1->is_subset_of($r1), 'filters with limit and offset is subset of itself');
+    $r2 = URT::Item->define_boolexpr(name => 'Bob');
+    ok($r1->is_subset_of($r2), 'filters with offset and limit is subset of same filters without limit and offset');
+    ok(!$r2->is_subset_of($r1), 'filters without offset and limit is not subset of same filters with limit and offset');
+
+
+    $r1 = URT::Item->define_boolexpr(name => 'Bob', -offset => 5, -limit => 5);
+    $r2 = URT::Item->define_boolexpr(name => 'Bob', -offset => 1, -limit => 10);
+    ok($r1->is_subset_of($r2), 'bx with encompassed range is subset');
+    ok(!$r2->is_subset_of($r1), 'bx with encompassing range is not subset');
+
+
+    $r1 = URT::Item->define_boolexpr(name => 'Bob', -offset => 1, -limit => 5);
+    $r2 = URT::Item->define_boolexpr(name => 'Bob', -offset => 2, -limit => 5);
+    ok(!$r1->is_subset_of($r2), 'bx with overlapping but not encompassing range is not subset');
+    ok(!$r2->is_subset_of($r1), 'bx with overlapping but not encompassing range is not subset');
+
+
+    $r1 = URT::Item->define_boolexpr(name => 'Bob', -offset => 1, -limit => 5);
+    $r2 = URT::Item->define_boolexpr(name => 'Bob', -offset => 10, -limit => 5);
+    ok(!$r1->is_subset_of($r2), 'bx with disjoint ranges is not subset');
+    ok(!$r2->is_subset_of($r1), 'bx with disjoint ranges is not subset');
+
+
+    $r1 = URT::Item->define_boolexpr('score >' => 10, -limit => 5);
+    $r2 = URT::Item->define_boolexpr(-limit => 5);
+    ok(! $r1->is_subset_of($r2), 'bx with filter and limit is not subset of no filter with limit');
+    ok(! $r2->is_subset_of($r1), 'bx with limit is not subset of filter and limit');
+};

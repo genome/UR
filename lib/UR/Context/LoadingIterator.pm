@@ -5,6 +5,8 @@ use warnings;
 
 use UR::Context;
 
+use List::MoreUtils qw(any);
+
 our $VERSION = "0.44"; # UR $VERSION;
 
 # A helper package for UR::Context to handling queries which require loading
@@ -66,6 +68,41 @@ my %all_loading_iterators;
 sub _create {
     my($class, $cached, $context, $normalized_rule, $data_source, $this_get_serial ) = @_;
 
+    my $limit = $normalized_rule->template->limit;
+    my $offset = $normalized_rule->template->offset;
+    my $db_results_should_be_complete = 1;
+
+    if (($offset or defined($limit))
+        and ( ! $data_source->does_support_limit_offset($normalized_rule)
+              or any { $_->__changes__ } @$cached
+            )
+    ) {
+        # If there are any cached objects, then the asked-for offset may not necessarily
+        # be the offset that applies to data in the database.  And since the offset is not
+        # meaningful, neither is the limit.  Consider a query matching these objects with
+        # limit => 2, offset => 1
+        # In memory: 1 2
+        # In DB    :     3 4 5 6
+        # The result should be (2, 3).  If we kept the -offset in the DB's SQL, we would
+        # have missed object 3.
+        # Similarly, if any DB rows exist as objects with changed data, then rows returnd
+        # from the DB might not be included in the results, and the supplied -limit could
+        # keep us from reading rows that should be returned
+        my %filters = $normalized_rule->params_list;
+        delete @filters{'-limit', '-offset'};
+        $normalized_rule = UR::BoolExpr->resolve_normalized($normalized_rule->subject_class_name, %filters);
+        $db_results_should_be_complete = 0;
+
+    } elsif ($offset) {
+        # Also apply the offset to the list of cached objects.
+        if ($offset > @$cached) {
+            @$cached = ();
+        } else {
+            splice(@$cached, 0, $offset);
+        }
+        undef($offset); # Now don't have to deal with offset below in the iterator
+    }
+
     my $underlying_context_iterator = $context->_create_import_iterator_for_underlying_context(
               $normalized_rule, $data_source, $this_get_serial);
 
@@ -116,9 +153,6 @@ sub _create {
         }
         return;
     };
-
-    my $limit = $normalized_rule->template->limit;
-    my $offset = $normalized_rule->template->offset;
 
     my $me_loading_iterator_as_string;  # See note below the closure definition
     my $loading_iterator = sub {
@@ -177,8 +211,10 @@ sub _create {
                 # Anything left in this hash when the DB iterator is exhausted are object we expected to
                 # see by now and must be deleted.  If any of these object have changes then
                 # the __merge below will throw an exception
-                foreach my $problem_obj (values(%changed_objects_that_might_be_db_deleted)) {
-                    $context->__merge_db_data_with_existing_object($bx_subject_class, $problem_obj, undef, []);
+                if ($db_results_should_be_complete) {
+                    foreach my $problem_obj (values(%changed_objects_that_might_be_db_deleted)) {
+                        $context->__merge_db_data_with_existing_object($bx_subject_class, $problem_obj, undef, []);
+                    }
                 }
 
             }
@@ -239,7 +275,7 @@ sub _create {
                 )
             ) {
                 # db object sorts first
-                # If we deleted it from memorym the DB would not have given it back.
+                # If we deleted it from memory the DB would not have given it back.
                 # So it either failed to match the BX now, or one of the order-by parameters changed
                 if ($next_obj_underlying_context->__changes__) {
                      

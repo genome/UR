@@ -164,16 +164,56 @@ sub is_subset_of {
     }
 
     my %operators = map { $_ => $self->operator_for($_) } $self->_property_names;
-    my $operators_match = 1;
+    my $is_subset = 1;
     foreach my $prop ( $other_template->_property_names ) {
         unless (exists $operators{$prop}) {
-            $operators_match = 0;
+            $is_subset = 0;
             last;
         }
-        $operators_match = undef if ($operators{$prop} ne $other_template->operator_for($prop));
+        $is_subset = undef if ($operators{$prop} ne $other_template->operator_for($prop));
     }
-    $cached_subset_data->{$other_template_id} = $operators_match;
-    return $operators_match;
+
+    if ($is_subset) {
+        $is_subset = $self->_is_subset_of_limit_offset($other_template);
+    }
+
+    return $cached_subset_data->{$other_template_id} = $is_subset;
+}
+
+sub _is_subset_of_limit_offset {
+    my($self, $other_template) = @_;
+
+    return 1 unless ($self->offset or defined($self->limit)
+                    or $other_template->offset or defined($other_template->limit));
+
+    # need to do a more comprehensive filter match.  If one or both templates
+    # has -limit and/or -offset, then the filters on both templates must match
+    # exactly.  Otherwise, one result set could include objects that were
+    # skipped because of the other's offset or limit
+    my @my_filters = map { $_ . $self->operator_for($_) } $self->_property_names;
+    my @other_filters = map { $_ . $other_template->operator_for($_) } $other_template->_property_names;
+    my($both, $only_my, $only_other) = UR::Util::intersect_lists(\@my_filters, \@other_filters);
+    return undef if (@$only_my or @$only_other);
+
+    my $my_offset = $self->offset || 0;
+    my $my_limit = $self->limit;
+    my $other_offset = $other_template->offset || 0;
+    my $other_limit = $other_template->limit;
+
+    my $is_subset;
+    if (defined($my_limit) and defined($other_limit)) {
+        my $my_last = $my_offset + $my_limit;
+        my $other_last = $other_offset + $other_limit;
+
+        $is_subset = ($my_offset >= $other_offset) && ($my_last <= $other_last);
+
+    } elsif (!defined($my_limit) and defined($other_limit)) {
+        $is_subset = 0;
+
+    } else {
+        $is_subset = $my_offset >= $other_offset;
+    }
+    return $is_subset;
 }
 
 

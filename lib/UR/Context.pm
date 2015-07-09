@@ -3868,9 +3868,10 @@ it can avoid asking the underlying context/datasource for that class' data.
 =head2 all_params_loaded
 
 C<$UR::Context::all_params_loaded> is a two-level hashref.  The first level
-is class names.  The second level is rule (L<UR::BoolExpr>) IDs.  The values
-are how many times that class and rule have been involved in a get().  This
-data is used by L</_loading_was_done_before_with_a_superset_of_this_params_hashref>
+is template (L<UR::BoolExpr::Template>) IDs.  The second level is rule
+(L<UR::BoolExpr>) IDs.  The values are how many times that class and rule
+have been involved in a get().  This data is used by
+L</_loading_was_done_before_with_a_superset_of_this_params_hashref>
 to determine if the requested data will be found in the object cache for
 non-id queries.
 

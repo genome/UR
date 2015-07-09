@@ -13,6 +13,10 @@ class UR::DataSource::QueryPlan {
         rule_template => { is => 'UR::BoolExpr::Template', id_by => ['subject_class_name','logic_type','logic_detail','constant_values_id'] }, 
         data_source   => { is => 'UR::DataSource', id_by => 'data_source_id' },
     ],
+    has => [
+        limit         => { is => 'Integer', via => 'rule_template', to => 'limit' },
+        offset        => { is => 'Integer', via => 'rule_template', to => 'offset' },
+    ],
     has_transient => [
         _is_initialized => { is => 'Boolean' },
 
@@ -276,7 +280,6 @@ sub _init_rdbms {
     my %hints    = map { $_ => 1 } @$hints;
     my $order_by = $rule_template->order_by;
     my $group_by = $rule_template->group_by;
-    my $limit    = $rule_template->limit;
     my $aggregate = $rule_template->aggregate;
     my $recursion_desc = $rule_template->recursion_desc;
 
