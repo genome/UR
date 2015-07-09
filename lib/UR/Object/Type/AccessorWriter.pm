@@ -6,7 +6,7 @@ package UR::Object::Type;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 #use warnings FATAL => 'all';
 
 use Carp ();
@@ -1099,19 +1099,22 @@ sub mk_dimension_identifying_accessor {
 
 sub mk_rw_class_accessor
 {
-    my ($self, $class_name, $accessor_name, $column_name, $is_transient, $variable_value) = @_;
+    my ($self, $class_name, $accessor_name, $column_name, $is_transient, $variable_value, $calc_default) = @_;
 
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
             if (@_ > 1) {
                 my $old = $variable_value;
-                $variable_value = $_[0];
+                $variable_value = $_[1];
 
                 my $different = eval { no warnings; $old ne $variable_value };
                 if ($different or $@ =~ m/has no overloaded magic/) {
                     $_[0]->__signal_change__( $accessor_name, $old, $variable_value ) unless $is_transient;
                 }
+            } elsif (defined $calc_default) {
+                $variable_value = $calc_default->();
             }
+            undef $calc_default;
             return $variable_value;
     };
     Sub::Install::reinstall_sub({
@@ -1123,7 +1126,7 @@ sub mk_rw_class_accessor
 }
 
 sub mk_ro_class_accessor {
-    my($self, $class_name, $accessor_name, $column_name, $variable_value) = @_;
+    my($self, $class_name, $accessor_name, $column_name, $variable_value, $calc_default) = @_;
 
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
@@ -1136,7 +1139,10 @@ sub mk_ro_class_accessor {
                 my $report_variable_value = defined($variable_value) ? $variable_value : '(undef)';
                 Carp::croak("Cannot change read-only class-wide property $accessor_name for class $class_name from $report_variable_value to $new!");
             }
+        } elsif (defined $calc_default) {
+            $variable_value = $calc_default->();
         }
+        undef $calc_default;
         return $variable_value;
     };
     Sub::Install::reinstall_sub({
@@ -1764,11 +1770,12 @@ sub initialize_direct_accessors {
             $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where);
         }
         elsif ($property_data->{'is_classwide'}) {
-            my($value, $column_name, $is_transient) = @$property_data{'default_value','column_name','is_transient'};
+            my($value, $column_name, $is_transient, $calc_default)
+                = @$property_data{'default_value','column_name','is_transient', 'calculated_default'};
             if ($property_data->{'is_constant'}) {
-                $self->mk_ro_class_accessor($class_name,$accessor_name,$column_name,$value);
+                $self->mk_ro_class_accessor($class_name,$accessor_name,$column_name,$value, $calc_default);
             } else {
-                $self->mk_rw_class_accessor($class_name,$accessor_name,$column_name,$is_transient,$value);
+                $self->mk_rw_class_accessor($class_name,$accessor_name,$column_name,$is_transient,$value, $calc_default);
             }
         }
         else {

@@ -81,7 +81,8 @@ my @expected_modules = sort qw(URT/34Baseclass.pm URT/38Primary.pm URT/43Primary
                                URT/34Subclass.pm URT/38Related.pm URT/43Related.pm URT/RAMThingy.pm URT/Vocabulary.pm
                                URT/Context/Testing.pm URT/DataSource/CircFk.pm URT/DataSource/Meta.pm
                                URT/DataSource/SomeFile.pm URT/DataSource/SomeFileMux.pm URT/DataSource/SomeMySQL.pm
-                               URT/DataSource/SomeOracle.pm URT/DataSource/SomePostgreSQL.pm URT/DataSource/SomeSQLite.pm);
+                               URT/DataSource/SomeOracle.pm URT/DataSource/SomePostgreSQL.pm URT/DataSource/SomeSQLite.pm
+                               URT/Test.pm);
 my @modules = sort $cmd->_modules_in_tree();
 # remove modules created by the 'ur update classes-from-db' test that may be running in parallel
 @modules = grep { $_ !~ m/Car.pm|Person.pm|Employee.pm/ } @modules; 
@@ -91,7 +92,8 @@ my @expected_class_names = sort qw(URT::34Baseclass URT::38Primary URT::43Primar
                                    URT::34Subclass URT::38Related URT::43Related URT::RAMThingy URT::Vocabulary
                                    URT::Context::Testing URT::DataSource::CircFk URT::DataSource::Meta
                                    URT::DataSource::SomeFile URT::DataSource::SomeFileMux URT::DataSource::SomeMySQL
-                                   URT::DataSource::SomeOracle URT::DataSource::SomePostgreSQL URT::DataSource::SomeSQLite);
+                                   URT::DataSource::SomeOracle URT::DataSource::SomePostgreSQL URT::DataSource::SomeSQLite
+                                   URT::Test);
 my @class_names = sort $cmd->_class_names_in_tree;
 # remove classes created by the 'ur update classes-from-db' test that may be running in parallel
 @class_names = grep { $_ !~ m/URT::Car|URT::Person|URT::Employee/ } @class_names; 

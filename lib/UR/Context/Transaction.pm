@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 use Carp qw(croak confess shortmess);
 
@@ -280,7 +280,9 @@ sub changes_can_be_saved {
     # TODO: limit to objects that changed within transaction as to not duplicate
     # error checking unnecessarily.
 
-    my @changed_objects = map { $_->changed_class_name->get($_->changed_id) } $self->get_changes();
+    my @changed_objects =
+        grep { ! $_->isa('UR::DeletedRef') }
+        map  { $_->changed_object() } $self->get_changes();
 
     # This is primarily to catch custom validity logic in class overrides.
     my @invalid = grep { $_->__errors__ } @changed_objects;

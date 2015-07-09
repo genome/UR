@@ -2,7 +2,7 @@ package UR::Namespace::Command::Define::Class;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 class UR::Namespace::Command::Define::Class {
     is => 'UR::Namespace::Command::Base',

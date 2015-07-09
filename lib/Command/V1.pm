@@ -10,7 +10,7 @@ use Getopt::Long;
 use Term::ANSIColor qw();
 require Text::Wrap;
 
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -815,8 +815,14 @@ sub help_options {
             $param_type = ucfirst(lc($param_type));
         }
 
-        my $default_value = $property_meta->default_value;
-        if (defined $default_value) {
+        my $default_value;
+        if (defined($default_value = $property_meta->default_value)
+            || defined(my $calculated_default = $property_meta->calculated_default)
+        ) {
+            unless (defined $default_value) {
+                $default_value = $calculated_default->()
+            }
+
             if ($param_type eq 'Boolean') {
                 $default_value = $default_value ? "'true'" : "'false' (--no$param_name)";
             } elsif ($property_meta->is_many && ref($default_value) eq 'ARRAY') {

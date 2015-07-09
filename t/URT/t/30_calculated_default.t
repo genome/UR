@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::Fatal qw(exception);
 
 use UR qw();
@@ -116,4 +116,53 @@ subtest 'dynamic default values' => sub {
     is($thing2->name, $foo, 'thing2 default name was resolved');
 
     isnt($thing1->name, $thing2->name, 'things have different names');
+};
+
+subtest 'with classwide property' => sub {
+        plan tests => 16;
+        my($name_calc_called, $rank_calc_called, $address_calc_called) = (0, 0, 0);
+        my %thing = (
+            class_name => 'URT::ThingWithClasswide',
+            has_classwide => [
+                name => {
+                    is => 'String',
+                    is_constant => 1,
+                    calculated_default => sub { $name_calc_called++; 'some name' },
+                },
+                rank => {
+                    is => 'String',
+                    calculated_default => sub { $rank_calc_called++; 'private' },
+                },
+                address => {
+                    is => 'String',
+                    calculated_default => sub { $address_calc_called++, 'main st' },
+                },
+            ],
+        );
+        my $exception = exception { UR::Object::Type->define(%thing) };
+        ok(!$exception, 'did not get an exception when trying to use `calculated_default` with method defined')
+            or diag $exception;
+
+        is($name_calc_called, 0, 'name calculation not called yet');
+        is($rank_calc_called, 0, 'rank calculation not called yet');
+        is($address_calc_called, 0, 'address calculation not called yet');
+
+        is(URT::ThingWithClasswide->name, 'some name', 'got default name');
+        is($name_calc_called, 1, 'name calculation was called');
+        is(URT::ThingWithClasswide->rank, 'private', 'got default rank');
+        is($rank_calc_called, 1, 'rank calculation was called');
+
+        ok(URT::ThingWithClasswide->address('foo ln'), 'Set address');
+        is(URT::ThingWithClasswide->address, 'foo ln', 'Address property was changes');
+        is($address_calc_called, 0, 'address calculation was not called');
+
+        $exception = exception { URT::ThingWithClasswide->name('foo') };
+        like($exception,
+            qr/Cannot change read-only class-wide property/,
+            'Got exception trying to change read-only classwide property');
+        is($name_calc_called, 1, 'name calculation was not called again');
+
+        ok(URT::ThingWithClasswide->rank('general'), 'Changed rank');
+        is(URT::ThingWithClasswide->rank, 'general', 'rank property changed');
+        is($rank_calc_called, 1, 'name calculation was not called again');
 };

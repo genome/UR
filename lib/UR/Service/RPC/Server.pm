@@ -5,7 +5,7 @@ use IO::Select;
 
 use strict;
 use warnings;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 # We're going to be essentially reimplementing an Event queue here. :(
 
