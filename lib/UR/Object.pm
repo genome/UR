@@ -762,7 +762,7 @@ sub DESTROY {
         }
         else {
             if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-                print STDERR "MEM DESTROY object $obj class $class if $id\n";
+                print STDERR "MEM DESTROY object $obj class $class id $id\n";
             }
             $obj->unload();
             return $obj->SUPER::DESTROY();
