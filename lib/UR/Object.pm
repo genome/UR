@@ -751,7 +751,7 @@ sub DESTROY {
         # This object was dropped by the cache pruner or an AutoUnloadPool
         if (() = $obj->__changes__) {
             print STDERR "MEM DESTROY keeping changed object $class id $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
-            $UR::Context::all_objects_loaded->{$class}{$id} = $obj;
+            $obj->_save_object_from_destruction();
             return;
         } else {
             print STDERR "MEM DESTROY object $obj class $class if $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
@@ -763,7 +763,7 @@ sub DESTROY {
         my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$id};
         if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
             die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless $obj eq $obj_from_cache;
-            $UR::Context::all_objects_loaded->{$class}{$id} = $obj;
+            $obj->_save_object_from_destruction();
             print "KEEPING $obj.  Found $obj .\n";
             return;
         }
@@ -782,6 +782,12 @@ sub DESTROY {
         $obj->SUPER::DESTROY();
     }
 };
+
+sub _save_object_from_destruction {
+    my $obj = shift;
+    my($class, $id) = (ref($obj), $obj->{id});
+    $UR::Context::all_objects_loaded->{$class}{$id} = $obj;
+}
 
 END {
     # Turn off monitoring of the DESTROY handler at application exit.
