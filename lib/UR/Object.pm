@@ -764,7 +764,7 @@ sub DESTROY {
         if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
             die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless refaddr($obj) == refaddr($obj_from_cache);
             $obj->_save_object_from_destruction();
-            print "KEEPING $obj.  Found $obj .\n";
+            print "MEM DESTROY Keeping infrastructure/changed object $obj class $class if $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
             return;
         }
         else {
