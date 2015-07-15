@@ -762,7 +762,7 @@ sub DESTROY {
     elsif (UR::Context::objects_may_go_out_of_scope()) {
         my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$id};
         if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
-            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless $obj eq $obj_from_cache;
+            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless refaddr($obj) == refaddr($obj_from_cache);
             $obj->_save_object_from_destruction();
             print "KEEPING $obj.  Found $obj .\n";
             return;
