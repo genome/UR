@@ -749,8 +749,15 @@ sub DESTROY {
         refaddr($UR::Context::all_objects_loaded->{$class}{$id}) == refaddr($obj)
     ) {
         # This object was dropped by the cache pruner or an AutoUnloadPool
-        $obj->unload();
-        return $obj->SUPER::DESTROY();
+        if (() = $obj->__changes__) {
+            print STDERR "MEM DESTROY keeping changed object $class id $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
+            $UR::Context::all_objects_loaded->{$class}{$id} = $obj;
+            return;
+        } else {
+            print STDERR "MEM DESTROY object $obj class $class if $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
+            $obj->unload();
+            return $obj->SUPER::DESTROY();
+        }
     }
     elsif (UR::Context::objects_may_go_out_of_scope()) {
         my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$id};

@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 5;
+use Test::More tests=> 6;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -40,6 +40,25 @@ subtest 'do not unload changed objects' => sub {
         $changed_thing->changable_prop(1000);
 
         URT::Thing->get($unchanged_id);
+    };
+    ok(URT::Thing->is_loaded($changed_id), 'Changed object did not get unloaded');
+    ok(! URT::Thing->is_loaded($unchanged_id), 'Unchanged object did get unloaded');
+};
+
+subtest 'object destructor does not unload changed objects' => sub {
+    plan tests => 2;
+
+    my $changed_id = 99;
+    my $unchanged_id = 98;
+    do {
+        my $changed_thing;
+        do {
+            my $unloader = UR::Context::AutoUnloadPool->create();
+            $changed_thing = URT::Thing->get($changed_id);
+
+            URT::Thing->get($unchanged_id);
+        };
+        $changed_thing->changable_prop(1000);
     };
     ok(URT::Thing->is_loaded($changed_id), 'Changed object did not get unloaded');
     ok(! URT::Thing->is_loaded($unchanged_id), 'Unchanged object did get unloaded');
