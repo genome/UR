@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 4;
+use Test::More tests=> 6;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -29,21 +29,39 @@ subtest 'normal operation' => sub {
     }
 };
 
-subtest 'exception while unloading' => sub {
+subtest 'do not unload changed objects' => sub {
     plan tests => 2;
 
     my $changed_id = 99;
     my $unchanged_id = 98;
     do {
         my $unloader = UR::Context::AutoUnloadPool->create();
-        my $thing = URT::Thing->get($changed_id);
-        $thing->changable_prop(1000);
+        my $changed_thing = URT::Thing->get($changed_id);
+        $changed_thing->changable_prop(1000);
 
         URT::Thing->get($unchanged_id);
     };
     ok(URT::Thing->is_loaded($changed_id), 'Changed object did not get unloaded');
     ok(! URT::Thing->is_loaded($unchanged_id), 'Unchanged object did get unloaded');
+};
 
+subtest 'object destructor does not unload changed objects' => sub {
+    plan tests => 2;
+
+    my $changed_id = 99;
+    my $unchanged_id = 98;
+    do {
+        my $changed_thing;
+        do {
+            my $unloader = UR::Context::AutoUnloadPool->create();
+            $changed_thing = URT::Thing->get($changed_id);
+
+            URT::Thing->get($unchanged_id);
+        };
+        $changed_thing->changable_prop(1000);
+    };
+    ok(URT::Thing->is_loaded($changed_id), 'Changed object did not get unloaded');
+    ok(! URT::Thing->is_loaded($unchanged_id), 'Unchanged object did get unloaded');
 };
 
 subtest 'call delete on pool' => sub {
@@ -71,18 +89,48 @@ subtest 'does not unload meta objects' => sub {
         "Class' property object is still loaded");
 };
 
+subtest 'with iterator' => sub {
+    URT::Thing->unload();
+    URT::Related->unload();
+
+    plan tests => 5;
+
+    my $iter = URT::Thing->create_iterator();
+    for (my $expected = 1; $expected <= 5; $expected++) {
+        my $unloader = UR::Context::AutoUnloadPool->create();
+        my $obj = $iter->next();
+        is($obj->id, $expected, "Got Thing ID $expected")
+            || diag("Fetched object ID is ".$obj->id);
+    }
+};
+
 sub setup_classes {
     my $generic_loader = sub {
         my($class_name, $rule, $expected_headers) = @_;
-        my $value;
-        foreach my $prop ( $rule->template->_property_names ) {
-            if ($value = $rule->value_for($prop)) {
-                last;
-            }
-        }
+        my $value_width = scalar(@$expected_headers);
 
-        my @value = ($value) x scalar(@$expected_headers);
-        return ($expected_headers, [ \@value ]);
+        if ($rule->template->_property_names) {
+            # get() with filters
+            my $value;
+            foreach my $prop ( $rule->template->_property_names ) {
+                if ($value = $rule->value_for($prop)) {
+                    last;
+                }
+            }
+
+            my @value = ($value) x $value_width;
+            return ($expected_headers, [ \@value ] );
+
+        } else {
+            # get() with no filters
+            # return a closure that will start at '1' and go up
+            my $value = 0;
+            my $iterator = sub {
+                $value++;
+                return [ ($value) x $value_width ];
+            };
+            return ($expected_headers, $iterator);
+        }
     };
 
     class URT::Related {

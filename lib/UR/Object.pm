@@ -5,7 +5,7 @@ use strict;
 
 require UR;
 
-use Scalar::Util qw(looks_like_number);
+use Scalar::Util qw(looks_like_number refaddr isweak);
 
 our @ISA = ('UR::ModuleBase');
 our $VERSION = "0.44"; # UR $VERSION;;
@@ -740,20 +740,36 @@ sub DESTROY {
     # Handle weak references in the object cache.
     my $obj = shift;
 
-    # $destroy_should_clean_up_all_objects_loaded will be true if either light_cache is on, or
+    # objects_may_go_out_of_scope will be true if either light_cache is on, or
     # the cache_size_highwater mark is a valid value
-    if ($UR::Context::destroy_should_clean_up_all_objects_loaded) {
-        my $class = ref($obj);
-        my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$obj->{id}};
+    my($class, $id) = (ref($obj), $obj->{id});
+
+    if (isweak($UR::Context::all_objects_loaded->{$class}{$id})
+        and
+        refaddr($UR::Context::all_objects_loaded->{$class}{$id}) == refaddr($obj)
+    ) {
+        # This object was dropped by the cache pruner or an AutoUnloadPool
+        if (() = $obj->__changes__) {
+            print STDERR "MEM DESTROY keeping changed object $class id $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
+            $obj->_save_object_from_destruction();
+            return;
+        } else {
+            print STDERR "MEM DESTROY object $obj class $class if $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
+            $obj->unload();
+            return $obj->SUPER::DESTROY();
+        }
+    }
+    elsif (UR::Context::objects_may_go_out_of_scope()) {
+        my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$id};
         if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
-            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$obj->{id}!" unless $obj eq $obj_from_cache;
-            $UR::Context::all_objects_loaded->{$class}{$obj->{id}} = $obj;
-            print "KEEPING $obj.  Found $obj .\n";
+            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless refaddr($obj) == refaddr($obj_from_cache);
+            $obj->_save_object_from_destruction();
+            print "MEM DESTROY Keeping infrastructure/changed object $obj class $class if $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
             return;
         }
         else {
             if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-                print STDERR "MEM DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+                print STDERR "MEM DESTROY object $obj class $class id $id\n";
             }
             $obj->unload();
             return $obj->SUPER::DESTROY();
@@ -761,11 +777,17 @@ sub DESTROY {
     }
     else {
         if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-            print STDERR "MEM DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+            print STDERR "MEM DESTROY object $obj class $class id $id\n";
         }
         $obj->SUPER::DESTROY();
     }
 };
+
+sub _save_object_from_destruction {
+    my $obj = shift;
+    my($class, $id) = (ref($obj), $obj->{id});
+    $UR::Context::all_objects_loaded->{$class}{$id} = $obj;
+}
 
 END {
     # Turn off monitoring of the DESTROY handler at application exit.

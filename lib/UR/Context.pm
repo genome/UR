@@ -46,6 +46,7 @@ our $cache_last_prune_serial ||= 0;           # serial number the last time we p
 our $cache_size_highwater;                    # high water mark for cache size.  Start pruning when $all_objects_cache_size goes over
 our $cache_size_lowwater;                     # low water mark for cache size
 our $GET_COUNTER = 1;                         # This is where the serial number for the __get_serial key comes from
+our $light_cache = 0;                         # whether refs in all_objects_loaded should be weak
 
 # For bootstrapping.
 $UR::Context::current = __PACKAGE__;
@@ -77,9 +78,9 @@ sub _initialize_for_current_process {
     $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base->id);
 
     if (exists $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || exists $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'}) {
-        $UR::Context::destroy_should_clean_up_all_objects_loaded = 1;
         $cache_size_highwater = $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'} || 0;
         $cache_size_lowwater = $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || 0;
+        manage_objects_may_go_out_of_scope();
     }
 
 
@@ -92,6 +93,29 @@ sub _initialize_for_current_process {
 
     $initialized = 1;
     return $UR::Context::current;
+}
+
+# whether some UR objects might go out of scope, for example if pruning is on,
+# light cache is on, or an AutoUnloadPool is alive
+my $objects_may_go_out_of_scope = 0;
+sub objects_may_go_out_of_scope {
+    if (@_) {
+        $objects_may_go_out_of_scope = shift;
+    }
+    return $objects_may_go_out_of_scope;
+}
+
+sub manage_objects_may_go_out_of_scope {
+    if ((defined($cache_size_highwater) and $cache_size_highwater > 0)
+        or
+        $light_cache
+        or
+        UR::Context::AutoUnloadPool->_pool_count
+    ) {
+        objects_may_go_out_of_scope(1);
+    } else {
+        objects_may_go_out_of_scope(0);
+    }
 }
 
 
@@ -278,10 +302,10 @@ sub resolve_data_source_for_object {
 
 sub _light_cache {
     if (@_ > 1) {
-        $UR::Context::light_cache = $_[1];
-        $UR::Context::destroy_should_clean_up_all_objects_loaded = $UR::Context::light_cache;
+        $light_cache = $_[1];
+        manage_objects_may_go_out_of_scope();
     }
-    return $UR::Context::light_cache;
+    return $light_cache;
 }
 
 
@@ -1138,7 +1162,7 @@ sub _construct_object {
     $UR::Context::all_objects_loaded->{$class}{$id} = $object;
 
     # If we're using a light cache, weaken the reference.
-    if ($UR::Context::light_cache) { # and substr($class,0,5) ne 'App::') {
+    if ($light_cache) { # and substr($class,0,5) ne 'App::') {
         Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$id});
     }
 
@@ -1371,12 +1395,9 @@ sub object_cache_size_highwater {
                 Carp::confess("Can't set the highwater mark less than or equal to the lowwater mark");
                 return;
             }
-            $UR::Context::destroy_should_clean_up_all_objects_loaded = 1;
             $self->prune_object_cache();
-        } else {
-            # turn it off
-            $UR::Context::destroy_should_clean_up_all_objects_loaded = 0;
         }
+        manage_objects_may_go_out_of_scope();
     }
     return $cache_size_highwater;
 }
@@ -1461,6 +1482,7 @@ sub prune_object_cache {
         $pass++;
         $target_serial += $target_serial_increment;
 
+        my @objects_to_prune;
         foreach my $class (keys %data_source_for_class) {
             my $objects_for_class = $UR::Context::all_objects_loaded->{$class};
             $indexes_by_class{$class} ||= [];
@@ -1472,21 +1494,15 @@ sub prune_object_cache {
                     $obj->is_weakened
                     || $obj->is_prunable && $obj->{__get_serial} && $obj->{__get_serial} <= $target_serial
                 ) {
-                    foreach my $index ( @{$indexes_by_class{$class}} ) {
-                        $index->weaken_reference_for_object($obj);
-                    }
                     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
                         print STDERR "MEM PRUNE object $obj class $class id $id\n";
                     }
-
-                    delete $obj->{'__get_serial'};
-                    Scalar::Util::weaken($objects_for_class->{$id});
-
-                    $all_objects_cache_size--;
+                    push @objects_to_prune, $obj;
                     $deleted_count++;
                 }
             }
         }
+        $self->_weaken_references_for_objects(\@objects_to_prune);
     }
     $is_pruning = 0;
 
@@ -1502,6 +1518,24 @@ sub prune_object_cache {
         }
     }
     return 1;
+}
+
+sub _weaken_references_for_objects {
+    my($self, $obj_list) = @_;
+
+    Carp::croak('Argument to _weaken_references_to_objects must be an arrayref')
+        unless ref($obj_list) eq 'ARRAY';
+
+    my %indexes_by_class;
+    foreach my $obj ( @$obj_list) {
+        my $class = $obj->class;
+        $indexes_by_class{ $class } ||= [ UR::Object::Index->get(indexed_class_name => $class) ];
+
+        $_->weaken_reference_for_object($obj) foreach @{ $indexes_by_class{ $class }};
+        delete $obj->{__get_serial};
+        Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$obj->id});
+        $all_objects_cache_size--;
+    }
 }
 
 
