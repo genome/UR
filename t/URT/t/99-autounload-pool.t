@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 6;
+use Test::More tests=> 7;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -102,6 +102,20 @@ subtest 'with iterator' => sub {
         is($obj->id, $expected, "Got Thing ID $expected")
             || diag("Fetched object ID is ".$obj->id);
     }
+};
+
+subtest 'works with UR::Value objects' => sub {
+    plan tests => 4;
+    ok(! UR::Object::Type->is_loaded('UR::Value::Integer'), 'UR::Value::Integer is not loaded yet.');
+    do {
+        my $unloader = UR::Context::AutoUnloadPool->create();
+        my $integer = UR::Value::Integer->get(23);
+        isa_ok($integer, 'UR::Value', 'got value inside pool');
+    };
+
+    ok( UR::Object::Type->is_loaded('UR::Value::Integer'), 'UR::Value::Integer is loaded now.');
+    my $integer = UR::Value::Integer->get(24);
+    isa_ok($integer, 'UR::Value', 'got value outside pool');
 };
 
 sub setup_classes {
