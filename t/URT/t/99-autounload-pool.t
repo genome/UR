@@ -1,9 +1,10 @@
 use strict;
 use warnings;
-use Test::More tests=> 7;
+use Test::More tests=> 8;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
+use Scalar::Util qw(refaddr);
 
 use URT;
 
@@ -118,6 +119,20 @@ subtest 'works with UR::Value objects' => sub {
     isa_ok($integer, 'UR::Value', 'got value outside pool');
 };
 
+subtest 'works with singletons' => sub {
+    plan tests => 3;
+    ok(! URT::Singleton->is_loaded(), 'no URT::Singleton loaded');
+    my $refaddr;
+    do {
+        my $unloader = UR::Context::AutoUnloadPool->create();
+        my $singleton = URT::Singleton->get();
+        isa_ok($singleton, 'UR::Singleton', 'created a singleton');
+        $refaddr = refaddr($singleton);
+    };
+    my $singleton = URT::Singleton->get();
+    is(refaddr($singleton), $refaddr, 'same singleton instance as before');
+};
+
 sub setup_classes {
     my $generic_loader = sub {
         my($class_name, $rule, $expected_headers) = @_;
@@ -163,4 +178,12 @@ sub setup_classes {
         data_source => 'UR::DataSource::Default',
     };
     *URT::Thing::__load__ = $generic_loader;
+
+    class URT::Singleton {
+        is => 'UR::Singleton',
+        has => [
+            single_value => { is => 'Number' },
+        ],
+        data_source => 'UR::DataSource::Default',
+    };
 }

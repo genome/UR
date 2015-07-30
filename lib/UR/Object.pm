@@ -681,6 +681,7 @@ sub is_prunable {
     return 1 if $self->is_weakened;
     return 0 if $self->__meta__->is_meta;
     return 0 if $self->{__get_serial} && $self->__changes__ && @{[$self->__changes__]};
+    return 0 if $self->isa('UR::Singleton');
     return 1;
 }
 
