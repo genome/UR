@@ -121,7 +121,8 @@ subtest 'works with UR::Value objects' => sub {
 
 subtest 'works with singletons' => sub {
     plan tests => 3;
-    ok(! URT::Singleton->is_loaded(), 'no URT::Singleton loaded');
+    ok(! $URT::Singleton::singleton, 'no URT::Singleton loaded');
+
     my $refaddr;
     do {
         my $unloader = UR::Context::AutoUnloadPool->create();
