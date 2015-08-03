@@ -120,14 +120,15 @@ subtest 'works with UR::Value objects' => sub {
 };
 
 subtest 'works with singletons' => sub {
-    plan tests => 3;
-    ok(! $URT::Singleton::singleton, 'no URT::Singleton loaded');
+    plan tests => 4;
+    ok(!defined $URT::Singleton::singleton, 'no URT::Singleton loaded');
 
     my $refaddr;
     do {
         my $unloader = UR::Context::AutoUnloadPool->create();
         my $singleton = URT::Singleton->get();
         isa_ok($singleton, 'UR::Singleton', 'created a singleton');
+        is($singleton, $URT::Singleton::singleton, 'URT::Singleton loaded');
         $refaddr = refaddr($singleton);
     };
     my $singleton = URT::Singleton->get();
