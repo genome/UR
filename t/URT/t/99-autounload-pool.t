@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 6;
+use Test::More tests=> 8;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
@@ -104,6 +104,34 @@ subtest 'with iterator' => sub {
     }
 };
 
+subtest 'works with UR::Value objects' => sub {
+   plan tests => 4;
+   ok(! UR::Object::Type->is_loaded('UR::Value::Integer'), 'UR::Value::Integer is not loaded yet.');
+    do {
+        my $unloader = UR::Context::AutoUnloadPool->create();
+        my $integer = UR::Value::Integer->get(23);
+        isa_ok($integer, 'UR::Value', 'got value inside pool');
+    };
+
+    ok( UR::Object::Type->is_loaded('UR::Value::Integer'), 'UR::Value::Integer is loaded now.');
+    my $integer = UR::Value::Integer->get(24);
+    isa_ok($integer, 'UR::Value', 'got value outside pool');
+};
+
+subtest 'works with singletons' => sub {
+    plan tests => 4;
+    ok(!defined $URT::Singleton::singleton, 'no URT::Singleton loaded');
+
+    do {
+        my $unloader = UR::Context::AutoUnloadPool->create();
+        my $singleton = URT::Singleton->get();
+        isa_ok($singleton, 'UR::Singleton', 'created a singleton');
+        is($singleton, $URT::Singleton::singleton, 'URT::Singleton loaded');
+    };
+    my $singleton = URT::Singleton->get();
+    ok($singleton, 'reloaded singleton after pool unloaded it');
+};
+
 sub setup_classes {
     my $generic_loader = sub {
         my($class_name, $rule, $expected_headers) = @_;
@@ -149,4 +177,12 @@ sub setup_classes {
         data_source => 'UR::DataSource::Default',
     };
     *URT::Thing::__load__ = $generic_loader;
+
+    class URT::Singleton {
+        is => 'UR::Singleton',
+        has => [
+            single_value => { is => 'Number' },
+        ],
+        data_source => 'UR::DataSource::Default',
+    };
 }
