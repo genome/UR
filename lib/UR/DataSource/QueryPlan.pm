@@ -1546,13 +1546,8 @@ sub _init_light {
         @sql_filters, 
         $prev_table_name, 
         $prev_id_column_name, 
-        $eav_class, 
-        @eav_properties,
-        $eav_cnt, 
-        %pcnt, 
         $pk_used,
         @delegated_properties,    
-        %outer_joins,
         %chain_delegates,
     );
 
@@ -1889,13 +1884,8 @@ sub _init_core {
         @sql_filters, 
         $prev_table_name, 
         $prev_id_column_name, 
-        $eav_class, 
-        @eav_properties,
-        $eav_cnt, 
-        %pcnt, 
         $pk_used,
         @delegated_properties,    
-        %outer_joins,
         %chain_delegates,
     );
 
