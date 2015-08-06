@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::Exception;
 
 use File::Basename;
@@ -77,6 +77,52 @@ subtest 'load list' => sub {
     # the full results.
     my @p2 = URT::DefaultLoaderIter->get(nose => ['long','wet']);
     is(scalar(@p2), 2, "got two objects as expected");
+};
+
+subtest 'join with two default datasources' => sub {
+    plan tests => 6;
+
+    class URT::ThingOne {
+        has => ['id','t1_name'],
+        data_source => 'UR::DataSource::Default',
+    };
+    our $thing_one_loader_called = 0;
+    sub URT::ThingOne::__load__ {
+        my($class, $bx, $headers) = @_;
+        $thing_one_loader_called++;
+        $headers = ['id', 't1_name'],
+        my $body = [ [ 5, 'Bob' ] ];
+        return ($headers, $body);
+    }
+
+    class URT::ThingTwo {
+        has => [
+            name => { is => 'String' },
+            thing_one_id => { is => 'Integer' },
+            thing_one => { is => 'URT::ThingOne', id_by => 'thing_one_id' },
+            thing_one_name => { via => 'thing_one', to => 't1_name' },
+        ],
+        data_source => 'UR::DataSource::Default',
+    };
+    our $thing_two_loader_called = 0;
+    sub URT::ThingTwo::__load__ {
+        my($class, $bx, $headers) = @_;
+        $thing_two_loader_called++;
+        $headers = ['id', 'thing_one_id', 'name'],
+        my $body = [ [ 99, 5, 'Joe' ] ];
+        return ($headers, $body);
+    }
+
+    my $thing_two = URT::ThingTwo->get(thing_one_name => 'Bob');
+    ok($thing_two, 'Loaded ThingTwo');
+    is($thing_one_loader_called, 1, 'ThingOne loader called once');
+    is($thing_two_loader_called, 1, 'ThingTwo loader called once');
+
+    ($thing_one_loader_called, $thing_two_loader_called) = (0,0);
+    my $thing_two_redux = URT::ThingTwo->get('thing_one.t1_name' => 'Bob');
+    ok($thing_two_redux, 'Loaded ThingTwo again');
+    is($thing_one_loader_called, 0, 'ThingOne loader was not called');
+    is($thing_two_loader_called, 1, 'ThingTwo loader called once');
 };
 
 subtest 'save' => sub {
