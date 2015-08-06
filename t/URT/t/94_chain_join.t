@@ -120,9 +120,7 @@ my @p3 = URT::Person->get('primary_car.color' => ['red']);
 is(scalar(@p3), 1, "got one person with a primary car color of red using a property chain and the \"in\" operator");
 
 my $bx5 = URT::Person->define_boolexpr('cars.color' => 'blue', 'cars.engine.size' => '400');
-#print "$bx5";
-#$ENV{UR_DBI_MONITOR_SQL} = 1;
-$DB::single = 1;
+
 my @p5 = URT::Person->get($bx5);
 ok("@p5", "regular query works for " . scalar(@p5) . " objects");
 
