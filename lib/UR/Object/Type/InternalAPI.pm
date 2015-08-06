@@ -207,11 +207,16 @@ sub resolve_property_aliases {
             # there was a problem resolving the chain of properties
             # This happens in the case of an object accessor (is => 'Some::Class') without an id_by
             my @split_names = split(/\./,$property_name);
+            my $name_count = @split_names;
             my $prop_meta = $self->property_meta_for_name(shift @split_names);
             return unless $prop_meta;
             my $foreign_class = $prop_meta->data_type && eval { $prop_meta->data_type->__meta__};
             return unless $foreign_class;
             @property_names = ( $prop_meta->alias_for, $foreign_class->resolve_property_aliases(join('.', @split_names)));
+            unless (@property_names >= $name_count) {
+                Carp::croak("Some parts from property '$property_name' of class ".$self->class_name
+                            . " didn't resolve");
+            }
         }
         $self->{'_resolve_property_aliases'}->{$property_name} = join('.', @property_names);
     }

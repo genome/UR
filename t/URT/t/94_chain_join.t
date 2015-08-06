@@ -1,9 +1,10 @@
 use strict;
 use warnings;
-use Test::More tests=> 14;
+use Test::More tests=> 15;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
+use Test::Exception;
 
 # the initial code is from test 91b, to set-up some joinable data
 
@@ -103,6 +104,10 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
     'Created a subscription for query');
 
 #$DB::single = 1;
+
+throws_ok { URT::Person->define_boolexpr('primary_car.bogus' => 'foo') }
+        qr/Some parts from property 'primary_car.bogus' of class URT::Person didn't resolve/,
+        'Chaining to a non-existent property throws exception';
 
 # chain property equiv
 my $bx1 = URT::Person->define_boolexpr('primary_car.color' => 'red');
