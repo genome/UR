@@ -159,4 +159,15 @@ sub undo {
     return 1;
 }
 
+sub __rollback__ {
+    my $self = shift;
+    my $changed_aspect = $self->changed_aspect;
+    if($changed_aspect eq 'external_change') {
+        $self->undo;
+        $self->delete;
+    } else {
+        return $self->SUPER::__rollback__;
+    }
+}
+
 1;
