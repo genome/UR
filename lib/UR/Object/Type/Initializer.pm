@@ -1406,7 +1406,7 @@ sub _complete_class_meta_object_definitions {
 
     if (not $data_source and $class_name->can("__load__")) {
         # $data_source = UR::DataSource::Default->__define__;
-        $data_source = { is => 'UR::DataSource::Default' };
+        $data_source = $self->{data_source_id} = $self->{db_committed}->{data_source_id} = 'UR::DataSource::Default';
     }
 
     # Create inline data source

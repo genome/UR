@@ -36,7 +36,9 @@ sub data_source {
     my $ds = $self->data_source_id(@_);
     
     return undef unless $ds;
-    my $obj = UR::DataSource->get($ds) || $ds->get();
+    local $@;
+    my $obj = eval { UR::DataSource->get($ds) || $ds->get() };
+
     return $obj;
 }
 
