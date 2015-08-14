@@ -1,9 +1,10 @@
 use strict;
 use warnings;
-use Test::More tests=> 14;
+use Test::More tests=> 15;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
+use Test::Exception;
 
 # the initial code is from test 91b, to set-up some joinable data
 
@@ -104,6 +105,10 @@ ok(URT::DataSource::SomeSQLite->create_subscription(
 
 #$DB::single = 1;
 
+throws_ok { URT::Person->define_boolexpr('primary_car.bogus' => 'foo') }
+        qr/Some parts from property 'primary_car.bogus' of class URT::Person didn't resolve/,
+        'Chaining to a non-existent property throws exception';
+
 # chain property equiv
 my $bx1 = URT::Person->define_boolexpr('primary_car.color' => 'red');
 ok($bx1, "got bx with property chain");
@@ -120,9 +125,7 @@ my @p3 = URT::Person->get('primary_car.color' => ['red']);
 is(scalar(@p3), 1, "got one person with a primary car color of red using a property chain and the \"in\" operator");
 
 my $bx5 = URT::Person->define_boolexpr('cars.color' => 'blue', 'cars.engine.size' => '400');
-#print "$bx5";
-#$ENV{UR_DBI_MONITOR_SQL} = 1;
-$DB::single = 1;
+
 my @p5 = URT::Person->get($bx5);
 ok("@p5", "regular query works for " . scalar(@p5) . " objects");
 

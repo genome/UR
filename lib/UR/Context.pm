@@ -847,7 +847,6 @@ sub create_entity {
     
     my %default_values = %$initial_default_values;
     
-    #for my $name (qw//) {
     for my $name (keys %$default_value_requires_query) {
         my @id_by;
         if (my $id_by = $property_objects->{$name}->id_by) {
