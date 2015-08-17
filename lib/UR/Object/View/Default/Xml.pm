@@ -13,8 +13,8 @@ class UR::Object::View::Default::Xml {
     has_constant => [
         toolkit     => { value => 'xml' },
     ],
-    has => [
-        _xml_doc    => { is => 'XML::LibXML::Document', doc => 'The LibXML document used to create the content for this view', is_transient => 1 }
+    has_optional_transient => [
+        _xml_doc    => { is => 'XML::LibXML::Document', doc => 'The LibXML document used to create the content for this view', },
     ],
 };
 
