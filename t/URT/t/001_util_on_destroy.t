@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__).'/../..';
 
 sub dummy { eval{} };
 
-plan tests => 3;
+plan tests => 4;
 use UR;
 
 subtest basic => sub {
@@ -46,4 +46,15 @@ subtest exception => sub {
     my $exception = $@;
     is($x, 4, "value is updated after the sentry goes out of scope during thrown exception");
     ok($@, "exception is passed through even thogh the sentry does an eval internally: $@");
+};
+
+subtest cancel => sub {
+    plan tests => 2;
+
+    my $x = 1;
+    do {
+        my $sentry = UR::Util::on_destroy { $x = 2; };
+        ok($sentry->cancel(), 'Cancel sentry');
+    };
+    is($x, 1, 'Cancelled sentry did not run');
 };

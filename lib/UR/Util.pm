@@ -22,6 +22,7 @@ sub on_destroy(&) {
 # used only by the above sub
 # the local $@ ensures that we this does not stomp on thrown exceptions
 sub UR::Util::CallOnDestroy::DESTROY { local $@; shift->(); }
+sub UR::Util::CallOnDestroy::cancel { my $self = shift; bless $self, 'UR::Util::DontCallOnDestroy' }
 
 sub d {
     Data::Dumper->new([@_])->Terse(1)->Indent(0)->Useqq(1)->Dump;
