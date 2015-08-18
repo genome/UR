@@ -2611,18 +2611,22 @@ sub commit {
 
     $self->__signal_change__('precommit');
 
-    unless ($self->_sync_databases) {
+    my $sync_cleanup = UR::Util::on_destroy {
         $self->__signal_observers__('sync_databases', 0);
         $self->__signal_change__('commit',0);
-        return;
-    }
+    };
+    return unless $self->_sync_databases;
+    $sync_cleanup->cancel();
 
     $self->__signal_observers__('sync_databases', 1);
 
-    unless ($self->_commit_databases) {
+    my $commit_cleanup = UR::Util::on_destroy {
         $self->__signal_change__('commit',0);
+    };
+    unless ($self->_commit_databases) {
         die "Application failure during commit!";
     }
+    $commit_cleanup->cancel();
     $self->__signal_change__('commit',1);
 
     foreach ( $self->all_objects_loaded('UR::Object') ) {
