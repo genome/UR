@@ -6,7 +6,7 @@ use Sub::Name;
 use Scalar::Util;
 
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 use UR::Context::ImportIterator;
 use UR::Context::ObjectFabricator;
@@ -22,6 +22,7 @@ UR::Object::Type->define(
                                       default_value => undef,
                                       doc => 'Flag indicating whether the context must (1), must not (0) or may (undef) query underlying contexts when handling a query'  },
     ],
+    valid_signals => [qw(precommit sync_databases commit prerollback rollback)],
     doc => <<EOS
 The environment in which all data examination and change occurs in UR.  The current context represents the current 
 state of everything, and acts as a manager/intermediary between the current application and underlying database(s).
@@ -45,6 +46,7 @@ our $cache_last_prune_serial ||= 0;           # serial number the last time we p
 our $cache_size_highwater;                    # high water mark for cache size.  Start pruning when $all_objects_cache_size goes over
 our $cache_size_lowwater;                     # low water mark for cache size
 our $GET_COUNTER = 1;                         # This is where the serial number for the __get_serial key comes from
+our $light_cache = 0;                         # whether refs in all_objects_loaded should be weak
 
 # For bootstrapping.
 $UR::Context::current = __PACKAGE__;
@@ -76,9 +78,9 @@ sub _initialize_for_current_process {
     $UR::Context::process = UR::Context::Process->_create_for_current_process(parent_id => $UR::Context::base->id);
 
     if (exists $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || exists $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'}) {
-        $UR::Context::destroy_should_clean_up_all_objects_loaded = 1;
         $cache_size_highwater = $ENV{'UR_CONTEXT_CACHE_SIZE_HIGHWATER'} || 0;
         $cache_size_lowwater = $ENV{'UR_CONTEXT_CACHE_SIZE_LOWWATER'} || 0;
+        manage_objects_may_go_out_of_scope();
     }
 
 
@@ -91,6 +93,29 @@ sub _initialize_for_current_process {
 
     $initialized = 1;
     return $UR::Context::current;
+}
+
+# whether some UR objects might go out of scope, for example if pruning is on,
+# light cache is on, or an AutoUnloadPool is alive
+my $objects_may_go_out_of_scope = 0;
+sub objects_may_go_out_of_scope {
+    if (@_) {
+        $objects_may_go_out_of_scope = shift;
+    }
+    return $objects_may_go_out_of_scope;
+}
+
+sub manage_objects_may_go_out_of_scope {
+    if ((defined($cache_size_highwater) and $cache_size_highwater > 0)
+        or
+        $light_cache
+        or
+        UR::Context::AutoUnloadPool->_pool_count
+    ) {
+        objects_may_go_out_of_scope(1);
+    } else {
+        objects_may_go_out_of_scope(0);
+    }
 }
 
 
@@ -277,10 +302,10 @@ sub resolve_data_source_for_object {
 
 sub _light_cache {
     if (@_ > 1) {
-        $UR::Context::light_cache = $_[1];
-        $UR::Context::destroy_should_clean_up_all_objects_loaded = $UR::Context::light_cache;
+        $light_cache = $_[1];
+        manage_objects_may_go_out_of_scope();
     }
-    return $UR::Context::light_cache;
+    return $light_cache;
 }
 
 
@@ -419,7 +444,7 @@ sub query {
         no warnings;
         if (exists $UR::Context::all_objects_loaded->{$_[0]}) {
             my $is_monitor_query = $self->monitor_query;
-            if (my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]}) {
+            if (defined(my $obj = $UR::Context::all_objects_loaded->{$_[0]}->{$_[1]})) {
                 # Matched the class and ID directly - pull it right out of the cache
                 if ($is_monitor_query) {
                     $self->_log_query_for_rule($_[0], undef, Carp::shortmess("QUERY: class $_[0] by ID $_[1]"));
@@ -662,6 +687,7 @@ sub create_entity {
         my %set_properties;
         my %default_values;
         my %default_value_requires_query;
+        my %default_value_requires_call;
         my %immutable_properties;
         my @deep_copy_default_values;
 
@@ -697,6 +723,10 @@ sub create_entity {
                         push @deep_copy_default_values, $name;
                     }
                     $default_values{$name} = $default_value; 
+                }
+
+                if ($prop->calculated_default) {
+                    $default_value_requires_call{$name} = $prop->calculated_default;
                 }
     
                 if ($prop->is_many) {
@@ -745,6 +775,7 @@ sub create_entity {
             \%default_values,
             (@deep_copy_default_values ? \@deep_copy_default_values : undef),
             \%default_value_requires_query,
+            \%default_value_requires_call,
         ];
     }
     
@@ -762,6 +793,7 @@ sub create_entity {
         $initial_default_values,
         $deep_copy_default_values,
         $default_value_requires_query,
+        $initial_default_value_requires_call,
     ) = @$memo;
 
     # The old way of automagic subclassing...
@@ -808,11 +840,13 @@ sub create_entity {
         $params = { $rule->params_list }; ;
     }
 
+    my %default_value_requires_call = %$initial_default_value_requires_call;
+    delete @default_value_requires_call{ keys %$params };
+
     # handle postprocessing default values
     
     my %default_values = %$initial_default_values;
     
-    #for my $name (qw//) {
     for my $name (keys %$default_value_requires_query) {
         my @id_by;
         if (my $id_by = $property_objects->{$name}->id_by) {
@@ -980,6 +1014,12 @@ sub create_entity {
     $self->add_change_to_transaction_log($entity, $construction_method);
     $self->add_change_to_transaction_log($entity, 'load') if $construction_method eq '__define__';
 
+    for my $property_name ( keys %default_value_requires_call ) {
+        my $method = $default_value_requires_call{$property_name};
+        my $value = $method->($entity);
+        $entity->$property_name($value);
+    }
+
     # If a property is calculated + immutable, and it wasn't supplied in the params,
     # that means we need to run the calculation once and store the value in the
     # object as a read-only attribute
@@ -1121,7 +1161,7 @@ sub _construct_object {
     $UR::Context::all_objects_loaded->{$class}{$id} = $object;
 
     # If we're using a light cache, weaken the reference.
-    if ($UR::Context::light_cache) { # and substr($class,0,5) ne 'App::') {
+    if ($light_cache) { # and substr($class,0,5) ne 'App::') {
         Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$id});
     }
 
@@ -1354,12 +1394,9 @@ sub object_cache_size_highwater {
                 Carp::confess("Can't set the highwater mark less than or equal to the lowwater mark");
                 return;
             }
-            $UR::Context::destroy_should_clean_up_all_objects_loaded = 1;
             $self->prune_object_cache();
-        } else {
-            # turn it off
-            $UR::Context::destroy_should_clean_up_all_objects_loaded = 0;
         }
+        manage_objects_may_go_out_of_scope();
     }
     return $cache_size_highwater;
 }
@@ -1444,31 +1481,27 @@ sub prune_object_cache {
         $pass++;
         $target_serial += $target_serial_increment;
 
+        my @objects_to_prune;
         foreach my $class (keys %data_source_for_class) {
             my $objects_for_class = $UR::Context::all_objects_loaded->{$class};
             $indexes_by_class{$class} ||= [];
 
             foreach my $id ( keys ( %$objects_for_class ) ) {
                 my $obj = $objects_for_class->{$id};
+                next unless defined $obj;  # object with this ID does not exist
                 if (
                     $obj->is_weakened
                     || $obj->is_prunable && $obj->{__get_serial} && $obj->{__get_serial} <= $target_serial
                 ) {
-                    foreach my $index ( @{$indexes_by_class{$class}} ) {
-                        $index->weaken_reference_for_object($obj);
-                    }
                     if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
                         print STDERR "MEM PRUNE object $obj class $class id $id\n";
                     }
-
-                    delete $obj->{'__get_serial'};
-                    Scalar::Util::weaken($objects_for_class->{$id});
-
-                    $all_objects_cache_size--;
+                    push @objects_to_prune, $obj;
                     $deleted_count++;
                 }
             }
         }
+        $self->_weaken_references_for_objects(\@objects_to_prune);
     }
     $is_pruning = 0;
 
@@ -1484,6 +1517,24 @@ sub prune_object_cache {
         }
     }
     return 1;
+}
+
+sub _weaken_references_for_objects {
+    my($self, $obj_list) = @_;
+
+    Carp::croak('Argument to _weaken_references_to_objects must be an arrayref')
+        unless ref($obj_list) eq 'ARRAY';
+
+    my %indexes_by_class;
+    foreach my $obj ( @$obj_list) {
+        my $class = $obj->class;
+        $indexes_by_class{ $class } ||= [ UR::Object::Index->get(indexed_class_name => $class) ];
+
+        $_->weaken_reference_for_object($obj) foreach @{ $indexes_by_class{ $class }};
+        delete $obj->{__get_serial};
+        Scalar::Util::weaken($UR::Context::all_objects_loaded->{$class}->{$obj->id});
+        $all_objects_cache_size--;
+    }
 }
 
 
@@ -1540,6 +1591,18 @@ sub _object_cache_pruning_report {
         }
     }
     return $message;
+}
+
+
+sub value_for_object_property_in_underlying_context {
+    my ($self, $obj, $property_name) = @_;
+
+    my $saved = $obj->{db_saved_uncommitted} || $obj->{db_committed};
+    unless ($saved) {
+        Carp::croak(qq(No object found in underlying context));
+    }
+
+    return $saved->{$property_name};
 }
 
 
@@ -1849,10 +1912,15 @@ sub _exception_for_multi_objects_in_scalar_context {
 sub _prune_obj_list_for_limit_and_offset {
     my($self, $obj_list, $tmpl) = @_;
 
-    my $limit = $tmpl->limit;
+    my $limit = defined($tmpl->limit) ? $tmpl->limit : $#$obj_list;
     my $offset = $tmpl->offset || 0;
-    splice(@$obj_list, 0, $offset);
-    $#$obj_list = ($limit-1);
+
+    if ($offset > @$obj_list) {
+        Carp::carp('-offset is larger than the result list');
+        @$obj_list = ();
+    } else {
+        @$obj_list = splice(@$obj_list, $offset, $limit);
+    }
 }
 
 
@@ -2681,6 +2749,24 @@ sub clear_cache {
     1;
 }
 
+sub _order_data_sources_for_saving {
+    my @data_sources = @_;
+
+    my %can_savepoint = map { $_->id => $_->can_savepoint } @data_sources;
+    my %classes = map { $_->id => $_->class } @data_sources;
+    my %is_default = map { $_->id => $_->isa('UR::DataSource::Default') ? -1 : 0 } @data_sources;  # Default data sources go last
+
+    return
+        sort {
+            $is_default{$a->id} <=> $is_default{$b->id}
+            ||
+            $can_savepoint{$a->id} <=> $can_savepoint{$b->id}
+            ||
+            $classes{$a->id} cmp $classes{$b->id}
+        }
+        @data_sources;
+}
+
 
 our $IS_SYNCING_DATABASE = 0;
 sub _sync_databases {
@@ -2738,19 +2824,9 @@ sub _sync_databases {
         push @{ $ds_objects{$data_source_id}->{'changed_objects'} }, $obj;
     }
 
-    my @ds_with_can_savepoint_and_class = map { [ $ds_objects{$_}->{'ds_obj'}->can_savepoint,
-                                                  $ds_objects{$_}->{'ds_obj'}->class,
-                                                  $_
-                                                ] }
-                                          keys %ds_objects;
     my @ds_in_order =
-        map { $_->[2] }
-        sort {
-            ( $a->[0] <=> $b->[0] )
-            ||
-            ( $a->[1] cmp $b->[1] )
-        }
-        @ds_with_can_savepoint_and_class;
+        map { $_->id }
+        _order_data_sources_for_saving(map { $_->{ds_obj} } values(%ds_objects));
 
     # save on each in succession
     my @done;
@@ -2838,113 +2914,16 @@ sub _reverse_all_changes {
     @UR::Context::Transaction::change_log = ();
     $UR::Context::Transaction::log_all_changes = 0;
     $UR::Context::current = $UR::Context::process;
-    
-    # aggregate the objects to be deleted
-    # this prevents cirucularity, since some objects 
-    # can seem re-reversible (like ghosts)
-    my %_delete_objects;
-    my @all_subclasses_loaded = sort UR::Object->__meta__->subclasses_loaded;
-    for my $class_name (@all_subclasses_loaded) { 
-        next unless $class_name->can('__meta__');
-        next if $class_name->isa("UR::Value");
 
-        my @objects_this_class = $self->all_objects_loaded_unsubclassed($class_name);
-        next unless @objects_this_class;
-        
-        $_delete_objects{$class_name} = \@objects_this_class;
+    my @objects =
+        map { $self->all_objects_loaded_unsubclassed($_) }
+        grep { $_->__meta__->is_transactional }
+        grep { ! $_->isa('UR::Value') }
+        sort UR::Object->__meta__->subclasses_loaded();
+
+    for my $object (@objects) {
+        $object->__rollback__();
     }
-    
-    # do the reverses
-    for my $class_name (keys %_delete_objects) {
-        my $co = $class_name->__meta__;
-        next unless $co->is_transactional;
-
-        my $objects_this_class = $_delete_objects{$class_name};
-
-        if ($class_name->isa("UR::Object::Ghost")) {
-            # ghose placeholder for a deleted object
-            for my $object (@$objects_this_class) {
-                # revive ghost object
-    
-                my $ghost_copy = eval("no strict; no warnings; " . Data::Dumper::Dumper($object));
-                if ($@) {
-                    Carp::confess("Error re-constituting ghost object: $@");
-                }
-                my($saved_data, $saved_key);
-                if (exists $ghost_copy->{'db_saved_uncommitted'} ) {
-                    $saved_data = $ghost_copy->{'db_saved_uncommitted'};
-                } elsif (exists $ghost_copy->{'db_committed'} ) {
-                    $saved_data = $ghost_copy->{'db_committed'};
-                } else {
-                    next; # This shouldn't happen?!
-                }
-
-                my $new_object = $object->live_class->UR::Object::create(
-                    %$saved_data
-                );
-                $new_object->{db_committed} = $ghost_copy->{db_committed} if (exists $ghost_copy->{'db_committed'});
-                $new_object->{db_saved_uncommitted} = $ghost_copy->{db_saved_uncommitted} if (exists $ghost_copy->{'db_saved_uncommitted'});
-                unless ($new_object) {
-                    Carp::confess("Failed to re-constitute $object!");
-                }
-                next;
-            }
-        }
-        else {
-            # non-ghost regular entity
-
-            # find property_names (that have columns)
-            # todo: switch to check persist
-            my %property_names = map { $_->property_name => $_ }
-                                 grep { defined $_->column_name }
-                                 map { $co->property_meta_for_name($_) }
-                                 $co->all_property_names;
-
-             for my $object (@$objects_this_class) {
-                # find columns which make up the primary key
-                # convert to a hash where property => 1
-                my @id_property_names = $co->all_id_property_names;
-                my %id_props = map {($_, 1)} @id_property_names;
-        
-                
-                my $saved = $object->{db_saved_uncommitted} || $object->{db_committed};
-                
-                if ($saved) {
-                    # Existing object.  Undo all changes since last sync, 
-                    # or since load occurred when there have been no syncs.
-                    foreach my $property_name ( keys %property_names ) {
-                        # only do this if the column is not part of the
-                        # primary key
-                        my $property_meta = $property_names{$property_name};
-                        next if ($id_props{$property_name} ||
-                                 $property_meta->is_delegated ||
-                                 $property_meta->is_legacy_eav ||
-                                 ! $property_meta->is_mutable ||
-                                 $property_meta->is_transient ||
-                                 $property_meta->is_constant);
-                        $object->$property_name($saved->{$property_name});
-                    }
-                    delete $object->{'_change_count'};
-                }
-                elsif ($object->isa('UR::DeletedRef')) {
-                    # DeletedRefs can appear if un-doing some items causes others in @$objects_this_class
-                    # to get deleted because of observers of their own.  Skip these
-                    1;
-                }
-                else {
-                    # Object not in database, get rid of it.
-                    # Because we only go back to the last sync not (not last commit),
-                    # this no longer has to worry about rolling back an uncommitted database save which may have happened.
-                    if ($object->isa('UR::Observer')) {
-                        UR::Observer::delete($object);  # Observers have some state that needs to get cleaned up
-                    } else {
-                        UR::Object::delete($object);
-                    }
-                }
-
-            } # next non-ghost object
-        } 
-    } # next class
 
     return 1;
 }
@@ -2967,13 +2946,18 @@ sub _commit_databases {
     }
     $IS_COMMITTING_DATABASE = 0;
 
-    unless ($class->_for_each_data_source("commit")) {
-        if ($class->error_message eq "PARTIAL commit") {
-            die "FRAGMENTED DISTRIBUTED TRANSACTION\n"
-                . Data::Dumper::Dumper($UR::Context::all_objects_loaded)
-        }
-        else {
-            die "FAILED TO COMMIT!: " . $class->error_message;
+    my @ds_in_order = _order_data_sources_for_saving($UR::Context::current->all_objects_loaded('UR::DataSource'));
+    my @committed;
+    foreach my $ds ( @ds_in_order ) {
+        if ($ds->commit) {
+            push @committed, $ds;
+        } else {
+            my $message = 'Data source ' . $ds->get_name . ' failed to commit: ' . join("\n\t", $ds->error_messages);
+            if (@committed) {
+                $message .= "\nThese data sources were successfully committed, resulting in a FRAGMENTED DISTRIBUTED TRANSACTION: "
+                            . join(', ', map { $_->get_name } @committed);
+            }
+            Carp::croak($message);
         }
     }
 
@@ -3917,9 +3901,10 @@ it can avoid asking the underlying context/datasource for that class' data.
 =head2 all_params_loaded
 
 C<$UR::Context::all_params_loaded> is a two-level hashref.  The first level
-is class names.  The second level is rule (L<UR::BoolExpr>) IDs.  The values
-are how many times that class and rule have been involved in a get().  This
-data is used by L</_loading_was_done_before_with_a_superset_of_this_params_hashref>
+is template (L<UR::BoolExpr::Template>) IDs.  The second level is rule
+(L<UR::BoolExpr>) IDs.  The values are how many times that class and rule
+have been involved in a get().  This data is used by
+L</_loading_was_done_before_with_a_superset_of_this_params_hashref>
 to determine if the requested data will be found in the object cache for
 non-id queries.
 

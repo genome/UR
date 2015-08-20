@@ -29,7 +29,7 @@ sub _retriable_operation {
     my $self = UR::Util::object(shift);
     my $code = shift;
 
-    _make_retriable_operation_observer();
+    $self->_make_retriable_operation_observer();
 
     RETRY_LOOP:
     for( my $db_retry_sec = $self->retry_sleep_start_sec;
@@ -56,17 +56,17 @@ sub _retriable_operation {
 
 
 {
-    my @retry_observers;
+    my %retry_observers;
     sub _make_retriable_operation_observer {
-        unless (@retry_observers) {
-            @retry_observers = map {
-                __PACKAGE__->add_observer(
+        my $self = shift;
+        unless ($retry_observers{$self->class}++) {
+            for (qw(query_failed commit_failed do_failed connect_failed sequence_nextval_failed)) {
+                $self->add_observer(
                     aspect => $_,
                     priority => 99999, # Super low priority to fire last
                     callback => \&_db_retry_observer,
                 );
             }
-            qw(query_failed commit_failed do_failed connect_failed sequence_nextval_failed);
         }
     }
 }

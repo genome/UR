@@ -9,7 +9,7 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = "0.43"; # UR $VERSION
+our $VERSION = "0.44"; # UR $VERSION
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
@@ -357,6 +357,7 @@ UR::Object::Type->define(
         column_name                     => { is => 'Text', len => 256, is_optional => 1 },
         data_length                     => { is => 'Text', len => 32, is_optional => 1 },
         data_type                       => { is => 'Text', len => 256, is_optional => 1 },
+        calculated_default              => { is_optional => 1 },
         default_value                   => { is_optional => 1 },
         valid_values                    => { is => 'ARRAY', is_optional => 1, },
         example_values                  => { is => 'ARRAY', is_optional => 1, doc => 'example valid values; used to generate help text for Commands' },
@@ -474,7 +475,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.43
+This document describes UR version 0.44
 
 =head1 SYNOPSIS
 
@@ -746,8 +747,8 @@ XML::Simple
 
 =head1 AUTHORS
 
-UR was built by the software development team at The Genome Institute
-at Washington University School of Medicine (Richard K. Wilson, PI).
+UR was built by the software development team at the McDonnell Genome Institute
+at the Washington University School of Medicine (Richard K. Wilson, PI).
 
 Incarnations of it run laboratory automation and analysis systems
 for high-throughput genomics.
@@ -795,7 +796,7 @@ for high-throughput genomics.
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (C) 2002-2011 Washington University in St. Louis, MO.
+Copyright (C) 2002-2015 Washington University in St. Louis, MO.
 
 This sofware is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.

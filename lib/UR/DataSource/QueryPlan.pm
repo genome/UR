@@ -2,7 +2,7 @@ package UR::DataSource::QueryPlan;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 # this class is an evolving attempt to formalize
 # the blob of cached value used for query construction
@@ -12,6 +12,10 @@ class UR::DataSource::QueryPlan {
     id_by => [ 
         rule_template => { is => 'UR::BoolExpr::Template', id_by => ['subject_class_name','logic_type','logic_detail','constant_values_id'] }, 
         data_source   => { is => 'UR::DataSource', id_by => 'data_source_id' },
+    ],
+    has => [
+        limit         => { is => 'Integer', via => 'rule_template', to => 'limit' },
+        offset        => { is => 'Integer', via => 'rule_template', to => 'offset' },
     ],
     has_transient => [
         _is_initialized => { is => 'Boolean' },
@@ -276,7 +280,6 @@ sub _init_rdbms {
     my %hints    = map { $_ => 1 } @$hints;
     my $order_by = $rule_template->order_by;
     my $group_by = $rule_template->group_by;
-    my $limit    = $rule_template->limit;
     my $aggregate = $rule_template->aggregate;
     my $recursion_desc = $rule_template->recursion_desc;
 
@@ -1543,13 +1546,8 @@ sub _init_light {
         @sql_filters, 
         $prev_table_name, 
         $prev_id_column_name, 
-        $eav_class, 
-        @eav_properties,
-        $eav_cnt, 
-        %pcnt, 
         $pk_used,
         @delegated_properties,    
-        %outer_joins,
         %chain_delegates,
     );
 
@@ -1836,7 +1834,6 @@ sub _init_core {
 
     my @parent_class_objects                = @{ $class_data->{parent_class_objects} };
     my @all_properties                      = @{ $class_data->{all_properties} };
-#    my $first_table_name                    = $class_data->{first_table_name};
     my $sub_classification_meta_class_name  = $class_data->{sub_classification_meta_class_name};
     my $subclassify_by    = $class_data->{subclassify_by};
     
@@ -1844,14 +1841,6 @@ sub _init_core {
     my @id_properties                       = @{ $class_data->{id_properties} };   
     my $id_property_sorter                  = $class_data->{id_property_sorter};    
     
-#    my $order_by_clause                     = $class_data->{order_by_clause};
-    
-#    my @lob_column_names                    = @{ $class_data->{lob_column_names} };
-#    my @lob_column_positions                = @{ $class_data->{lob_column_positions} };
-    
-#    my $query_config                        = $class_data->{query_config}; 
-#    my $post_process_results_callback       = $class_data->{post_process_results_callback};
-
     my $sub_typing_property                 = $class_data->{sub_typing_property};
     my $class_table_name                    = $class_data->{class_table_name};
     
@@ -1895,13 +1884,8 @@ sub _init_core {
         @sql_filters, 
         $prev_table_name, 
         $prev_id_column_name, 
-        $eav_class, 
-        @eav_properties,
-        $eav_cnt, 
-        %pcnt, 
         $pk_used,
         @delegated_properties,    
-        %outer_joins,
         %chain_delegates,
     );
 
@@ -1911,11 +1895,6 @@ sub _init_core {
         }
     }
     for my $co ( $class_meta, @parent_class_objects ) {
-#        my $table_name = $co->table_name;
-#        next unless $table_name;
-
-#        $first_table_name ||= $table_name;
-
         my $class_name = $co->class_name;
         
         last if ( ($class_name eq 'UR::Object') or (not $class_name->isa("UR::Object")) );
@@ -1934,21 +1913,6 @@ sub _init_core {
             map { $_->column_name }
             @id_property_objects;
         
-#        if ($prev_table_name)
-#        {
-#            # die "Database-level inheritance cannot be used with multi-value-id classes ($class_name)!" if @id_property_objects > 1;
-#            Carp::confess("No table for class $co->{class_name}") unless $table_name; 
-#            push @sql_joins,
-#                $table_name =>
-#                    {
-#                        $id_property_objects[0]->column_name => { 
-#                            link_table_name => $prev_table_name, 
-#                            link_column_name => $prev_id_column_name 
-#                        }
-#                    };
-#            delete $filters{ $id_property_objects[0]->property_name } if $pk_used;
-#        }
-
         for my $property_name (sort keys %filters)
         {
             my $property = UR::Object::Property->get(class_name => $class_name, property_name => $property_name);
@@ -1959,18 +1923,6 @@ sub _init_core {
 
             delete $filters{$property_name};
             $pk_used = 1 if $id_properties{ $property_name };
-
-#            if ($property->can("expr_sql")) {
-#                my $expr_sql = $property->expr_sql;
-#                push @sql_filters, 
-#                    $table_name => 
-#                        { 
-#                            # cheap hack of putting a whitespace differentiates 
-#                            # from a regular column below
-#                            " " . $expr_sql => { operator => $operator, value_position => $value_position }
-#                        };
-#                next;
-#            }
 
             if ($property->is_legacy_eav) {
                 die "Old GSC EAV can be handled with a via/to/where/is_mutable=1";
@@ -1994,7 +1946,6 @@ sub _init_core {
             }
         }
         
-#        $prev_table_name = $table_name;
         $prev_id_column_name = $id_property_objects[0]->column_name;
         
     } # end of inheritance loop
@@ -2186,10 +2137,6 @@ sub _init_core {
 
         my $operator       = $rule_template->operator_for($property_name);
         my $value_position = $rule_template->value_position_for_property_name($property_name);                
-        #push @sql_filters, 
-        #    $final_table_name_with_alias => { 
-        #        $sql_lvalue => { operator => $operator, value_position => $value_position } 
-        #    };
     } # next delegated property
     
     for my $property_meta_array (@all_properties) {

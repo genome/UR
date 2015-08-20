@@ -5,11 +5,11 @@ use strict;
 
 require UR;
 
-use Scalar::Util qw(looks_like_number);
+use Scalar::Util qw(looks_like_number refaddr isweak);
 use List::MoreUtils qw(any);
 
 our @ISA = ('UR::ModuleBase');
-our $VERSION = "0.43"; # UR $VERSION;;
+our $VERSION = "0.44"; # UR $VERSION;;
 
 # Base object API
 
@@ -348,9 +348,11 @@ sub add_observer {
     my $self = shift;
     my %params = @_;
 
+    if (ref($self)) {
+        $params{subject_id} = $self->id;
+    }
     my $observer = UR::Observer->create(
         subject_class_name => $self->class,
-        subject_id => (ref($self) ? $self->id : undef),
         %params,
     );
     unless ($observer) {
@@ -693,24 +695,91 @@ sub is_prunable {
 }
 
 
+sub __rollback__ {
+    my $self = shift;
+
+    my $saved = $self->{db_saved_uncommitted} || $self->{db_committed};
+    unless ($saved) {
+        return UR::Object::delete($self);
+    }
+
+    my $meta = $self->__meta__;
+
+    my $should_rollback = sub {
+        my $property_meta = shift;
+        return ! (
+            defined $property_meta->is_id
+            || ! defined $property_meta->column_name
+            || $property_meta->is_delegated
+            || $property_meta->is_legacy_eav
+            || ! $property_meta->is_mutable
+            || $property_meta->is_transient
+            || $property_meta->is_constant
+        );
+    };
+    my @rollback_property_names =
+        map { $_->property_name }
+        grep { $should_rollback->($_) }
+        map { $meta->property_meta_for_name($_) }
+        $meta->all_property_names;
+
+    # Existing object.  Undo all changes since last sync, or since load
+    # occurred when there have been no syncs.
+    foreach my $property_name ( @rollback_property_names ) {
+        $self->__rollback_property__($property_name);
+    }
+
+    delete $self->{'_change_count'};
+
+    return $self;
+}
+
+
+sub __rollback_property__ {
+    my ($self, $property_name) = @_;
+    my $saved = $self->{db_saved_uncommitted} || $self->{db_committed};
+    unless ($saved) {
+        Carp::croak(qq(Cannot rollback property '$property_name' because it has no saved state));
+    }
+    my $saved_value = UR::Context->current->value_for_object_property_in_underlying_context($self, $property_name);
+    return $self->$property_name($saved_value);
+}
+
+
 sub DESTROY {
     # Handle weak references in the object cache.
     my $obj = shift;
 
-    # $destroy_should_clean_up_all_objects_loaded will be true if either light_cache is on, or
+    # objects_may_go_out_of_scope will be true if either light_cache is on, or
     # the cache_size_highwater mark is a valid value
-    if ($UR::Context::destroy_should_clean_up_all_objects_loaded) {
-        my $class = ref($obj);
-        my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$obj->{id}};
+    my($class, $id) = (ref($obj), $obj->{id});
+
+    if (isweak($UR::Context::all_objects_loaded->{$class}{$id})
+        and
+        refaddr($UR::Context::all_objects_loaded->{$class}{$id}) == refaddr($obj)
+    ) {
+        # This object was dropped by the cache pruner or an AutoUnloadPool
+        if (() = $obj->__changes__) {
+            print STDERR "MEM DESTROY keeping changed object $class id $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
+            $obj->_save_object_from_destruction();
+            return;
+        } else {
+            print STDERR "MEM DESTROY object $obj class $class if $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
+            $obj->unload();
+            return $obj->SUPER::DESTROY();
+        }
+    }
+    elsif (UR::Context::objects_may_go_out_of_scope()) {
+        my $obj_from_cache = delete $UR::Context::all_objects_loaded->{$class}{$id};
         if ($obj->__meta__->is_meta_meta or @{[$obj->__changes__]}) {
-            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$obj->{id}!" unless $obj eq $obj_from_cache;
-            $UR::Context::all_objects_loaded->{$class}{$obj->{id}} = $obj;
-            print "KEEPING $obj.  Found $obj .\n";
+            die "Object found in all_objects_loaded does not match destroyed ref/id! $obj/$id!" unless refaddr($obj) == refaddr($obj_from_cache);
+            $obj->_save_object_from_destruction();
+            print "MEM DESTROY Keeping infrastructure/changed object $obj class $class if $id\n" if $ENV{'UR_DEBUG_OBJECT_RELEASE'};
             return;
         }
         else {
             if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-                print STDERR "MEM DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+                print STDERR "MEM DESTROY object $obj class $class id $id\n";
             }
             $obj->unload();
             return $obj->SUPER::DESTROY();
@@ -718,11 +787,17 @@ sub DESTROY {
     }
     else {
         if ($ENV{'UR_DEBUG_OBJECT_RELEASE'}) {
-            print STDERR "MEM DESTROY object $obj class ",$obj->class," id ",$obj->id,"\n";
+            print STDERR "MEM DESTROY object $obj class $class id $id\n";
         }
         $obj->SUPER::DESTROY();
     }
 };
+
+sub _save_object_from_destruction {
+    my $obj = shift;
+    my($class, $id) = (ref($obj), $obj->{id});
+    $UR::Context::all_objects_loaded->{$class}{$id} = $obj;
+}
 
 END {
     # Turn off monitoring of the DESTROY handler at application exit.

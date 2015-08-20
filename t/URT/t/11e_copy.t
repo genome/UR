@@ -3,8 +3,10 @@ use warnings;
 
 use Test::More tests => 3;
 
+use File::Basename;
+use lib File::Basename::dirname(__FILE__)."/../..";
+use URT::Test qw(txtest);
 use Test::Deep qw(cmp_bag);
-use Test::UR qw(txtest);
 
 use UR;
 

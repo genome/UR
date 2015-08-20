@@ -10,7 +10,7 @@ package UR::Object::Ghost;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 sub _init_subclass {
     my $class_name = pop;
@@ -25,6 +25,34 @@ sub _init_subclass {
 sub create { Carp::croak('Cannot create() ghosts.') };
 
 sub delete { Carp::croak('Cannot delete() ghosts.') };
+
+sub __rollback__ {
+    my $self = shift;
+
+    # revive ghost object
+
+    my $ghost_copy = eval("no strict; no warnings; " . Data::Dumper::Dumper($self));
+    if ($@) {
+        Carp::confess("Error re-constituting ghost object: $@");
+    }
+    my($saved_data, $saved_key);
+    if (exists $ghost_copy->{'db_saved_uncommitted'} ) {
+        $saved_data = $ghost_copy->{'db_saved_uncommitted'};
+    } elsif (exists $ghost_copy->{'db_committed'} ) {
+        $saved_data = $ghost_copy->{'db_committed'};
+    } else {
+        return; # This shouldn't happen?!
+    }
+
+    my $new_object = $self->live_class->UR::Object::create(%$saved_data);
+    $new_object->{db_committed} = $ghost_copy->{db_committed} if (exists $ghost_copy->{'db_committed'});
+    $new_object->{db_saved_uncommitted} = $ghost_copy->{db_saved_uncommitted} if (exists $ghost_copy->{'db_saved_uncommitted'});
+    unless ($new_object) {
+        Carp::confess("Failed to re-constitute $self!");
+    }
+
+    return $new_object;
+}
 
 sub _load {
     shift->is_loaded(@_);

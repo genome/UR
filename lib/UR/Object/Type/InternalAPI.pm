@@ -3,7 +3,7 @@ use warnings;
 use strict;
 
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 use Sys::Hostname;
 use Cwd;
@@ -36,7 +36,9 @@ sub data_source {
     my $ds = $self->data_source_id(@_);
     
     return undef unless $ds;
-    my $obj = UR::DataSource->get($ds) || $ds->get();
+    local $@;
+    my $obj = eval { UR::DataSource->get($ds) || $ds->get() };
+
     return $obj;
 }
 
@@ -207,11 +209,16 @@ sub resolve_property_aliases {
             # there was a problem resolving the chain of properties
             # This happens in the case of an object accessor (is => 'Some::Class') without an id_by
             my @split_names = split(/\./,$property_name);
+            my $name_count = @split_names;
             my $prop_meta = $self->property_meta_for_name(shift @split_names);
             return unless $prop_meta;
             my $foreign_class = $prop_meta->data_type && eval { $prop_meta->data_type->__meta__};
             return unless $foreign_class;
             @property_names = ( $prop_meta->alias_for, $foreign_class->resolve_property_aliases(join('.', @split_names)));
+            unless (@property_names >= $name_count) {
+                Carp::croak("Some parts from property '$property_name' of class ".$self->class_name
+                            . " didn't resolve");
+            }
         }
         $self->{'_resolve_property_aliases'}->{$property_name} = join('.', @property_names);
     }
@@ -995,19 +1002,23 @@ sub _load {
     }
 
     # Check the filesystem.  The file may create its metadata object.
-    eval "use $class_name";
-    unless ($@) {
+    my $exception = do {
+        local $@;
+        eval "use $class_name";
+        $@;
+    };
+    unless ($exception) {
         # If the above module was loaded, and is an UR::Object,
         # this will find the object.  If not, it will return nothing.
         $class_obj = $UR::Context::current->get_objects_for_class_and_rule($class,$rule,0);
         return $class_obj if $class_obj;
     }
-    if ($@) {
+    if ($exception) {
         # We need to handle $@ here otherwise we'll see
         # "Can't locate UR/Object/Type/Ghost.pm in @INC" error.
         # We want to fall through "in the right circumstances".
         (my $module_path = $class_name . '.pm') =~ s/::/\//g;
-        Carp::croak("Error while autoloading with 'use $class_name': $@") unless ($@ =~ /Can't locate $module_path in \@INC/);
+        Carp::croak("Error while autoloading with 'use $class_name': $exception") unless ($exception =~ /Can't locate $module_path in \@INC/);
         # FIXME: I think other conditions here will result in silent errors.
     }
 
@@ -1472,7 +1483,8 @@ sub _property_change_callback {
         &_id_property_change_callback($property_obj, $change);
     }
 
-    if (exists $class_obj->{'has'}->{$property_name}->{$method}) {
+    if (exists $class_obj->{'has'}->{$property_name}
+        && exists $class_obj->{'has'}->{$property_name}->{$method}) {
         $class_obj->{'has'}->{$property_name}->{$method} = $new_val;
 
     } 
@@ -1577,19 +1589,15 @@ sub __signal_change__ {
     return @rv;
 }
 
-our %STANDARD_VALID_SIGNALS = ( create        => 1,
-                                'delete'      => 1,
-                                commit        => 1,
-                                rollback      => 1,
-                                load          => 1,
-                                unload        => 1,
-                                load_external => 1 );
+my @default_valid_signals = qw(create delete commit rollback load unload load_external subclass_loaded);
+our %STANDARD_VALID_SIGNALS;
+@STANDARD_VALID_SIGNALS{@default_valid_signals} = (1) x @default_valid_signals;
 sub _is_valid_signal {
     my $self = shift;
     my $aspect = shift;
 
-    # Undefined attributes indicate that the subscriber wants any changes at all to generate a callback.
-    return 1 if (! defined $aspect);
+    # An aspect of empty string (or undef) means all aspects are being observed.
+    return 1 unless (defined($aspect) and length($aspect));
 
     # All standard creation and destruction methods emit a signal.
     return 1 if ($STANDARD_VALID_SIGNALS{$aspect});

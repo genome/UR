@@ -5,7 +5,8 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use UR;
-use Test::More tests => 88;
+use Scalar::Util qw(refaddr);
+use Test::More tests => 89;
 require File::Temp;
 
 my $s1 = UR::Value::Text->get('hi there');
@@ -261,4 +262,16 @@ do {
 
     is_deeply($o->thing_arrayref, [5, 6, 7, 8],
         'items not remove by Value::Iterator');
+};
+
+subtest q(regression test for UR::Value::Text->get('')) => sub {
+    plan tests => 4;
+
+    my $s1 = UR::Value::Text->get('');
+    isa_ok($s1, 'UR::Value::Text', 'got an');
+    is($s1->id, '', 'it has the correct id');
+
+    my $s2 = UR::Value::Text->get('');
+    isa_ok($s2, 'UR::Value::Text', 'got another');
+    is(refaddr($s1), refaddr($s2), 'they are the same object');
 };

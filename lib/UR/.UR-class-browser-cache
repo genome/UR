@@ -587,7 +587,8 @@ $cache_data = {
                                                                                                                                 'data' => {
                                                                                                                                             'file' => 'V1.pm',
                                                                                                                                             'is' => [
-                                                                                                                                                      'Command'
+                                                                                                                                                      'Command',
+                                                                                                                                                      'Command::Common'
                                                                                                                                                     ],
                                                                                                                                             'name' => 'Command::V1',
                                                                                                                                             'relpath' => 'Command/V1.pm'
@@ -720,7 +721,8 @@ $cache_data = {
                                                                                                                                 'data' => {
                                                                                                                                             'file' => 'V2.pm',
                                                                                                                                             'is' => [
-                                                                                                                                                      'Command'
+                                                                                                                                                      'Command',
+                                                                                                                                                      'Command::Common'
                                                                                                                                                     ],
                                                                                                                                             'name' => 'Command::V2',
                                                                                                                                             'relpath' => 'Command/V2.pm'
@@ -740,6 +742,22 @@ $cache_data = {
                                                                                       'id' => 'Command',
                                                                                       'name' => 'Command'
                                                                                     }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                'Command::Common' => bless( {
+                                                                                              'children' => {
+                                                                                                              'Command::V1' => {},
+                                                                                                              'Command::V2' => {}
+                                                                                                            },
+                                                                                              'data' => {
+                                                                                                          'file' => 'Common.pm',
+                                                                                                          'is' => [
+                                                                                                                    'UR::Object'
+                                                                                                                  ],
+                                                                                                          'name' => 'Command::Common',
+                                                                                                          'relpath' => 'Command/Common.pm'
+                                                                                                        },
+                                                                                              'id' => 'Command__Common',
+                                                                                              'name' => 'Command::Common'
+                                                                                            }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
                                                                 'UR::BoolExpr' => bless( {
                                                                                            'children' => {},
                                                                                            'data' => {
@@ -2062,7 +2080,7 @@ $cache_data = {
                                                                                                                                                                          'children' => {},
                                                                                                                                                                          'data' => {
                                                                                                                                                                                      'file' => 'UR.pm',
-                                                                                                                                                                                     'id' => '/var/lib/jenkins/jobs/Update_UR_Tab_Completion_and_Class_Cache/workspace/lib/UR.pm',
+                                                                                                                                                                                     'id' => '/gscmnt/gc7008/info/jenkins/workspace/Update_UR_Tab_Completion_and_Class_Cache/lib/UR.pm',
                                                                                                                                                                                      'is' => [
                                                                                                                                                                                                'UR::Namespace'
                                                                                                                                                                                              ],
@@ -2554,6 +2572,7 @@ $cache_data = {
                                               }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
                 'by_class_name' => {
                                      'Command' => {},
+                                     'Command::Common' => {},
                                      'Command::Tree' => {},
                                      'Command::V1' => {},
                                      'Command::V2' => {},
@@ -5961,11 +5980,14 @@ $cache_data = {
                                                 'relpath' => 'UR.pm'
                                               }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' )
               };
+$cache_data->{'by_class_inh_tree'}{'children'}{'Command::Common'}{'children'}{'Command::V1'} = $cache_data->{'by_class_inh_tree'}{'children'}{'Command'}{'children'}{'Command::V1'};
+$cache_data->{'by_class_inh_tree'}{'children'}{'Command::Common'}{'children'}{'Command::V2'} = $cache_data->{'by_class_inh_tree'}{'children'}{'Command'}{'children'}{'Command::V2'};
 $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Object::View'}{'children'}{'UR::Object::View::Default::Text'}{'children'}{'UR::Value::View::Default::Text'}{'children'}{'UR::Value::View::Default::Xml'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Object::View'}{'children'}{'UR::Object::View::Default::Text'}{'children'}{'UR::Object::View::Default::Xml'}{'children'}{'UR::Value::View::Default::Xml'};
 $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Singleton'}{'children'}{'UR::Context::Root'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Context'}{'children'}{'UR::Context::Root'};
 $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Singleton'}{'children'}{'UR::DataSource::Default'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::DataSource'}{'children'}{'UR::DataSource::Default'};
 $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Singleton'}{'children'}{'UR::DataSource::RDBMS'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::DataSource'}{'children'}{'UR::DataSource::RDBMS'};
 $cache_data->{'by_class_name'}{'Command'} = $cache_data->{'by_class_inh_tree'}{'children'}{'Command'}{'data'};
+$cache_data->{'by_class_name'}{'Command::Common'} = $cache_data->{'by_class_inh_tree'}{'children'}{'Command::Common'}{'data'};
 $cache_data->{'by_class_name'}{'Command::Tree'} = $cache_data->{'by_class_inh_tree'}{'children'}{'Command'}{'children'}{'Command::V2'}{'children'}{'Command::Tree'}{'data'};
 $cache_data->{'by_class_name'}{'Command::V1'} = $cache_data->{'by_class_inh_tree'}{'children'}{'Command'}{'children'}{'Command::V1'}{'data'};
 $cache_data->{'by_class_name'}{'Command::V2'} = $cache_data->{'by_class_inh_tree'}{'children'}{'Command'}{'children'}{'Command::V2'}{'data'};

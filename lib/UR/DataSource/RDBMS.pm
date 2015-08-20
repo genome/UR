@@ -10,7 +10,7 @@ use List::MoreUtils;
 use File::Basename;
 
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::RDBMS',
@@ -357,6 +357,9 @@ sub db_to_object_type {
 
 # FIXME - shouldn't this be a property of the class instead of a method?
 sub does_support_joins { 1 } 
+
+# Most RDBMSs support limit/offset selects
+sub does_support_limit_offset { 1 }
 
 sub get_class_meta_for_table {
     my $self = shift;
@@ -1491,6 +1494,35 @@ sub _resolve_order_by_clause_for_column {
             ? $column_name . ' DESC'
             : $column_name;
 }
+
+sub _resolve_limit_value_from_query_plan {
+    my($self, $query_plan) = @_;
+    return $query_plan->limit;
+}
+
+sub _resolve_offset_value_from_query_plan {
+    my($self, $query_plan) = @_;
+    return $query_plan->offset;
+}
+
+sub resolve_limit_offset_clause {
+    my($self, $query_plan) = @_;
+
+    my $limit_value = $self->_resolve_limit_value_from_query_plan($query_plan);
+    my $limit = defined($limit_value)
+                    ? sprintf('limit %d', $limit_value)
+                    : '';
+    my $offset = $self->_resolve_offset_value_from_query_plan($query_plan)
+                    ? sprintf('offset %d', $query_plan->offset)
+                    : '';
+
+    if ($limit && $offset) {
+        return join(' ', $limit, $offset);
+    } else {
+        return $limit || $offset;
+    }
+}
+
 sub do_sql {
     my $self = shift;
     my $sql = shift;
@@ -1565,6 +1597,9 @@ sub create_iterator_closure_for_rule {
     # The full SQL statement for the template, besides the filter logic, is built here.    
     my $order_by_clause = $self->resolve_order_by_clause($query_plan);
 
+    my $limit_offset_clause;
+    $limit_offset_clause = $self->resolve_limit_offset_clause($query_plan) if $self->does_support_limit_offset;
+
     my $sql = "\nselect ";
     if ($select_hint) {
         my $hint = '';
@@ -1580,6 +1615,7 @@ sub create_iterator_closure_for_rule {
     $sql .= "\n$connect_by_clause" if $connect_by_clause;
     $sql .= "\n$group_by_clause" if $group_by_clause;
     $sql .= "\n$order_by_clause" if $order_by_clause;
+    $sql .= "\n$limit_offset_clause" if $limit_offset_clause;
 
     $self->__signal_change__('query',$sql);
 
@@ -3484,29 +3520,6 @@ sub _generate_class_data_for_loading {
     };
 
     return $class_data;
-}
-        
-# We're overriding the method in UR::Object because we support 2 more
-# event types: connect and query
-sub validate_subscription {
-    my $self = shift;
-    my $subscription_property = shift;
-
-    my $retval = $self->SUPER::validate_subscription($subscription_property,@_);
-    return $retval if $retval;
-
-    unless ( defined($subscription_property)
-             and
-             ( #$subscription_property eq 'connect'
-               #or
-               $subscription_property eq 'query'
-             )
-    ) {
-        $subscription_property = '(undef)' unless defined ($subscription_property);
-        Carp::croak("Unrecognized subscription aspect '$subscription_property'");
-    }
-
-    return 1;
 }
 
 sub _select_clause_for_table_property_data {

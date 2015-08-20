@@ -3,7 +3,7 @@ package UR::Namespace::Command::Define::Namespace;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 use IO::File;
 
 UR::Object::Type->define(

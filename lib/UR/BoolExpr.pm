@@ -10,7 +10,7 @@ require UR;
 use Carp;
 our @CARP_NOT = ('UR::Context');
 
-our $VERSION = "0.43"; # UR $VERSION;;
+our $VERSION = "0.44"; # UR $VERSION;;
 
 # readable stringification
 use overload ('""' => '__display_name__');
@@ -615,8 +615,10 @@ sub resolve {
                     $is_many = $property_meta->is_many;
                 }
                 else {
-                    $data_type = $subject_class_meta->{has}{$property_name}{data_type};
-                    $is_many = $subject_class_meta->{has}{$property_name}{is_many};
+                    if (exists $subject_class_meta->{has}{$property_name}) {
+                        $data_type = $subject_class_meta->{has}{$property_name}{data_type};
+                        $is_many = $subject_class_meta->{has}{$property_name}{is_many};
+                    }
                 }
                 $data_type ||= '';
 

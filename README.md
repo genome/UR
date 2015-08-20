@@ -5,7 +5,7 @@ UR - rich declarative transactional objects
 
 # VERSION
 
-This document describes UR version 0.43
+This document describes UR version 0.44
 
 # SYNOPSIS
 
@@ -274,8 +274,8 @@ XML::Simple
 
 # AUTHORS
 
-UR was built by the software development team at The Genome Institute
-at Washington University School of Medicine (Richard K. Wilson, PI).
+UR was built by the software development team at the McDonnell Genome Institute
+at the Washington University School of Medicine (Richard K. Wilson, PI).
 
 Incarnations of it run laboratory automation and analysis systems
 for high-throughput genomics.
@@ -323,7 +323,7 @@ for high-throughput genomics.
 
 # LICENCE AND COPYRIGHT
 
-Copyright (C) 2002-2011 Washington University in St. Louis, MO.
+Copyright (C) 2002-2015 Washington University in St. Louis, MO.
 
 This sofware is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.

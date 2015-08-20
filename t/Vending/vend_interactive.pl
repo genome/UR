@@ -1,5 +1,7 @@
 #!/gsc/bin/perl
 
+use strict;
+use warnings;
 use above 'Vending';
 
 my $machine = Vending::Machine->get();

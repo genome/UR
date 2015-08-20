@@ -3,7 +3,7 @@ package UR::Object::View::Default::Xsl;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 use IO::File;
 
 use XML::LibXML;
@@ -18,6 +18,7 @@ class UR::Object::View::Default::Xsl {
         rest_variable => { value => '/rest', is_deprecated => 1 },
         desired_perspective => { },
         xsl_path => {
+            is_optional => 1,
             doc => 'web relative path starting with / where the xsl ' .
                    'is located when serving from a web service'
         },
