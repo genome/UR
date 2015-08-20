@@ -3,6 +3,8 @@ package UR::Role::PrototypeWithParams;
 use strict;
 use warnings;
 
+our $VERSION = "0.44"; # UR $VERSION;;
+
 # A plain-perl class to represent a role prototype bound to a set of params.
 # It exists ephemerally as a class is composing its roles when using this
 # syntax:

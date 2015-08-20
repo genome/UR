@@ -18,6 +18,8 @@ use List::MoreUtils qw(any);
 use Carp;
 our @CARP_NOT = qw(UR::Object::Type);
 
+our $VERSION = "0.44"; # UR $VERSION;;
+
 Class::Autouse->sugar(\&_define_role);
 
 sub define {

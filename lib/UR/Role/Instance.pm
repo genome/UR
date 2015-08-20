@@ -3,6 +3,8 @@ package UR::Role::Instance;
 use strict;
 use warnings;
 
+our $VERSION = "0.44"; # UR $VERSION;;
+
 UR::Object::Type->define(
     class_name => 'UR::Role::Instance',
     doc => 'Instance of a role composed into a class',

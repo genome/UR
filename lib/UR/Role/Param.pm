@@ -6,6 +6,8 @@ use warnings;
 use Carp qw();
 use Scalar::Util qw(blessed);
 
+our $VERSION = "0.44"; # UR $VERSION;;
+
 my %all_params;
 
 sub _constructor {
