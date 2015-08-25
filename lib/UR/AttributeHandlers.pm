@@ -51,7 +51,9 @@ sub _fetch_attribute_handler {
 sub _decompose_attr {
     my($raw_attr) = @_;
     my($attr, $params_str) = $raw_attr =~ m/^(\w+)(?:\((.*)\))$/;
-    my @params = split(/\s*,\s*/, $params_str);
+
+    my @params = defined($params_str) ? split(/\s*,\s*/, $params_str) : ();
+    $attr = $raw_attr unless defined $attr;
     return ($attr, @params);
 }
 
@@ -96,6 +98,9 @@ sub modify_code_overrides {
 sub modify_scalar_role_property {
     my($package, $scalar_ref, $attr, $name) = @_;
 
+    unless ($name) {
+        Carp::croak('RoleParam attribute requires a name in parens. For example: my $var : RoleParam(var)');
+    }
     $$scalar_ref = UR::Role::Param->new(name => $name, role_name => $package, varref => $scalar_ref);
 }
 
