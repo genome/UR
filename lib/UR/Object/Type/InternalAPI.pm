@@ -1017,8 +1017,9 @@ sub _load {
         # "Can't locate UR/Object/Type/Ghost.pm in @INC" error.
         # We want to fall through "in the right circumstances".
         (my $module_path = $class_name . '.pm') =~ s/::/\//g;
-        Carp::croak("Error while autoloading with 'use $class_name': $exception") unless ($exception =~ /Can't locate $module_path in \@INC/);
-        # FIXME: I think other conditions here will result in silent errors.
+        unless ($exception =~ /Can't locate $module_path in \@INC/) {
+            die "Error while autoloading with 'use $class_name': $exception";
+        }
     }
 
     # Parse the specified class name to check for a suffix.
@@ -1046,7 +1047,15 @@ sub _load {
         # which would fire recursively for three extensions of
         # Acme::Equipment.
         my $full_base_class_name = $prefix . ($base ? "::" . $base : "");
-        my $base_class_obj = eval { $full_base_class_name->__meta__ };
+        my $base_class_obj;
+        my $exception = do {
+            local $@;
+            $base_class_obj = eval { $full_base_class_name->__meta__ };
+            $@;
+        };
+        if ($exception && $exception =~ m/^Error while autoloading/) {
+            die $exception;
+        }
 
         if ($base_class_obj)
         {
