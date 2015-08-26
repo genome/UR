@@ -173,11 +173,12 @@ sub _get_property_desc_from_ur_object_type {
     }
 }
 
+my @DONT_EXPORT_THESE_SUBS_TO_CLASSES = qw(__import__ FETCH_CODE_ATTRIBUTES MODIFY_CODE_ATTRIBUTES MODIFY_SCALAR_ATTRIBUTES);
 sub _introspect_methods {
     my $role_name = shift;
 
     my $subs = UR::Util::coderefs_for_package($role_name);
-    delete $subs->{__import__};  # don't allow __import__ to be exported to a class's namespace
+    delete @$subs{@DONT_EXPORT_THESE_SUBS_TO_CLASSES};  # don't allow __import__ to be exported to a class's namespace
     delete @$subs{ map { "($_" } ( _all_overload_ops, ')', '(' ) };
     return $subs;
 }
