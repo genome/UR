@@ -6,7 +6,7 @@ use warnings;
 use Scalar::Util;
 use UR::Context;
 
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 # A helper package for UR::Context to keep track of the subrefs used
 # to create objects from database data
@@ -711,7 +711,6 @@ sub _lapl_data_for_delegation_data {
 
     my %tmpl_and_rules;
 
-#$DB::single=1;
     foreach my $delegation_data ( @$delegation_data_list ) {
         my $value_sources = $delegation_data->[0];
         my $rule_tmpl  = $delegation_data->[1];

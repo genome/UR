@@ -15,7 +15,7 @@ BEGIN {
     }
 };
 
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 use Carp ();
 use Sub::Name ();
@@ -341,13 +341,17 @@ sub initialize_bootstrap_classes
     }
     $bootstrapping = 0;
 
-    # It should be safe to set up callbacks now.
-    # __define__ instead of create() so a subsequent rollback won't remove the observer
-    # and since we're in bootstrapping time, we have to supply an ID.  The UUID generator
-    # doesn't require any outside info, so it's safe to use
-    UR::Observer->__define__(id => UR::Object::Type->autogenerate_new_object_id_uuid,
-                             subject_class_name => 'UR::Object::Property',
-                             callback => \&UR::Object::Type::_property_change_callback);
+    # It should be safe to set up callbacks now.  register_callback() instead
+    # of create() so a subsequent rollback won't remove the observer.
+    UR::Observer->register_callback(
+        subject_class_name => 'UR::Object::Property',
+        subject_id => '',
+        aspect => '',
+        priority => 1,
+        note => '',
+        once => 0,
+        callback => \&UR::Object::Type::_property_change_callback,
+    );
 }
 
 sub _normalize_class_description {
@@ -1013,6 +1017,7 @@ sub _normalize_property_description1 {
         [ constraint_name                 => qw//],
         [ data_length                     => qw/len/],
         [ data_type                       => qw/type is isa is_a/],
+        [ calculated_default              => qw//],
         [ default_value                   => qw/default value/],
         [ valid_values                    => qw//],
         [ example_values                  => qw//],
@@ -1087,6 +1092,29 @@ sub _normalize_property_description1 {
         }
     }
 
+    if ($new_property{default_value} && $new_property{calculated_default}) {
+        die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has both default_value and calculated_default specified.);
+    }
+
+    if ($new_property{calculated_default}) {
+        if ($new_property{calculated_default} eq 1) {
+            $new_property{calculated_default} = '__default_' . $new_property{property_name} . '__';
+        }
+
+        my $ref = ref $new_property{calculated_default};
+        if ($ref and $ref ne 'CODE') {
+            die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has calculated_default specified as a $ref ref but it must be a method name or coderef.);
+        }
+
+        unless ($ref) {
+            my $method = $class_name->can($new_property{calculated_default});
+            unless ($method) {
+                die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has calculated_default specified as '$new_property{calculated_default}' but method does not exist.);
+            }
+            $new_property{calculated_default} = $method;
+        }
+    }
+
     if ($new_property{id_by} && $new_property{reverse_as}) {
         die qq(Can't initialize class $class_name: Property '$new_property{property_name}' has both id_by and reverse_as specified.);
     }
@@ -1121,7 +1149,7 @@ sub _normalize_property_description2 {
     my %new_property = %$property_data;
     my %new_class = %$class_data;
 
-    if (grep { $_ ne 'is_calculated' && /calc/ } keys %new_property) {
+    if (grep { $_ ne 'is_calculated' && $_ ne 'calculated_default' && /calc/ } keys %new_property) {
         $new_property{is_calculated} = 1;
     }
 
@@ -1378,7 +1406,7 @@ sub _complete_class_meta_object_definitions {
 
     if (not $data_source and $class_name->can("__load__")) {
         # $data_source = UR::DataSource::Default->__define__;
-        $data_source = { is => 'UR::DataSource::Default' };
+        $data_source = $self->{data_source_id} = $self->{db_committed}->{data_source_id} = 'UR::DataSource::Default';
     }
 
     # Create inline data source

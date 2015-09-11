@@ -8,7 +8,7 @@ package UR::Context;
 use strict;
 use warnings;
 
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 
 # A wrapper around the method of the same name in UR::DataSource::* to iterate over the
@@ -200,6 +200,7 @@ sub _create_secondary_loading_closures {
             my %foreign_property_name_map;
             my @this_property_joins = $property->_resolve_join_chain();
             foreach my $join ( @this_property_joins ) {
+                last if ($join->{foreign_class}->isa('UR::Value') and $join eq $this_property_joins[-1]);
                 my @source_names = @{$join->{'source_property_names'}};
                 my @foreign_names = @{$join->{'foreign_property_names'}};
                 @foreign_property_name_map{@foreign_names} = @source_names;
@@ -216,10 +217,17 @@ sub _create_secondary_loading_closures {
                         my $column_position = $tmpl->{'column_positions'}->[$i];
                         # What are the types involved?
                         my $primary_query_column_name = $foreign_property_name_map{$property_name};
-                        my $primary_property_meta = UR::Object::Property->get(class_name => $primary_template->{'class_name'},
-                                                                              property_name => $primary_query_column_name);
-                        my $secondary_property_meta = UR::Object::Property->get(class_name => $secondary_template->{'class_name'},
-                                                                                property_name => $property_name);
+                        my $primary_property_class_meta = $primary_template->{'class_name'}->__meta__;
+                        my $primary_property_meta = $primary_property_class_meta->property_meta_for_name($primary_query_column_name);
+                        unless ($primary_property_meta) {
+                            Carp::croak("Can't resolve property metadata for property '$primary_query_column_name' of class ".$primary_template->{'class_name'});
+                        }
+
+                        my $secondary_class_meta = $secondary_template->{'class_name'}->__meta__;
+                        my $secondary_property_meta = $secondary_class_meta->property_meta_for_name($property_name);
+                        unless ($secondary_property_meta) {
+                            Carp::croak("Can't resolve property metadata for property '$property_name' of class ".$secondary_template->{'class_name'});
+                        }
 
                         my $comparison_type;
                         if ($primary_property_meta->is_numeric && $secondary_property_meta->is_numeric) {
@@ -384,7 +392,6 @@ sub _create_import_iterator_for_underlying_context {
     my $group_by    = $rule_template->group_by;
     my $order_by    = $rule_template->order_by;
     my $aggregate   = $rule_template->aggregate;
-    my $limit       = $rule_template->limit;
 
     if (my $sub_typing_property) {
         # When the rule has a property specified which indicates a specific sub-type, catch this and re-call

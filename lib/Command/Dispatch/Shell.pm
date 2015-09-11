@@ -138,11 +138,6 @@ sub _execute_delegate_class_with_params {
 
     my $rv = $command_object->execute($params);
 
-    unless ($rv) {
-        my $command_name = $command_object->command_name;
-        $command_object->error_message("Please see '$command_name --help' for more information.");
-    }
-
     if ($command_object->__errors__) {
         $command_object->delete;
     }
@@ -811,6 +806,10 @@ sub resolve_param_value_from_cmdline_text {
         if (!$pmeta->{'is_many'} && @results > 1) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .= "'$param_name' expects only one result.";
+
+            if ($ENV{UR_NO_REQUIRE_USER_VERIFY}) {
+                die "$MESSAGE\n";
+            }
         }
         @results = $self->_get_user_verification_for_param_value($param_name, @results);
     }

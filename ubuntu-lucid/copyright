@@ -1,5 +1,5 @@
 Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=135
-Maintainer: UR was built by the software development team at the Genome Institute
+Maintainer: UR was built by the software development team at the McDonnell Genome Institute
 Source: http://search.cpan.org/dist/UR/
 Name: UR
 DISCLAIMER: This copyright info was automatically extracted 
@@ -12,7 +12,7 @@ DISCLAIMER: This copyright info was automatically extracted
  with this file.
 
 Files: *
-Copyright: UR was built by the software development team at the Genome Institute
+Copyright: UR was built by the software development team at the McDonnell Genome Institute
 License: Artistic or GPL-3+
 
 License: Artistic

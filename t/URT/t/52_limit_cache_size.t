@@ -6,7 +6,7 @@ use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
 
-use Test::More tests => 23;
+use Test::More tests => 25;
 use URT::DataSource::SomeSQLite;
 
 &setup_classes_and_db();
@@ -22,6 +22,11 @@ my $thing = URT::Thing->get(thing_id => 1);
 ok($thing, 'Got thing_id 1');
 
 is( &count_things_in_cache(), 1, 'There is one object in the cache');
+
+# Ask for an object that doesn't exist
+my $not_thing = URT::Thing->get(thing_id => 99999);
+ok(! $not_thing, 'get() for object that does not exist');
+is( &count_things_in_cache(), 1, 'Still one object in the cache');
 
 # We'll hold on to these, too
 my @keep_datas = $thing->datas();
@@ -156,7 +161,7 @@ sub count_things_in_cache {
 #        foreach (values %{$UR::Context::all_objects_loaded->{$c}} ) {
 #            print "\tid ",$_->id,"\n";
 #        }
-        $count += scalar(values %{$UR::Context::all_objects_loaded->{$c}});
+        $count += scalar(grep { defined } values %{$UR::Context::all_objects_loaded->{$c}});
     }
     return $count;
 }

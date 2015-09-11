@@ -42,7 +42,7 @@ the database is opened.
 =cut
 
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::SQLite',
@@ -883,6 +883,14 @@ sub _resolve_order_by_clause_for_column {
         $column_clause = $column_name . ' DESC';
     }
     return $column_clause;
+}
+
+sub _resolve_limit_value_from_query_plan {
+    my($self, $query_plan) = @_;
+    my $limit = $query_plan->limit;
+    return (!defined($limit) and $query_plan->offset)
+            ? -1
+            : $limit;
 }
 
 

@@ -1,3 +1,45 @@
+libur-perl (0.44-1) unstable; urgency=low
+
+  * Added UR::Context::AutoUnloadPool - a mechanism for automatically unloading objects when a leaving a scope.
+  * Added methods to UR::Object::Type to introspect methods names relating to is_many properties.
+  * The MetaDB no longer tracks owner/schema.  Classes using tables not in the default schema should have their table_name listed as "schema.table".
+  * Added copy() constructor to UR::Object
+  * Removed old, deprecated filter parser for turning text into a UR::BoolExpr within UR::Object::Command::List
+  * Meta-params like -order_by are now allowed in a delegated property's where clase.
+  * Retrieving values for doubly-delegated properties is more efficient.
+  * An id-by delegated property can point to a class with multiple ID properties.  The linking value is the composite ID.
+  * Observers now have a 'once' property.  Setting it to true ensures the callback will only ever fire one time.  The Observer is deleted.
+  * Properties can have a 'calculated_default' subref.  Works like default_value, but the return value from the subref is the default value rather than have a hardcoded default.
+  * Fixes to work with newer versions of SQLite Added __rollback__() to UR::Object, called when the base Context rolls-back.  Subclasses can override this to provide special behavior during rollback.  The override should also call SUPER::__rollback__().
+
+ -- Anthony Brummett <brummett@cpan.org>  Fri, 19 Jun 2015 09:30:00 -600
+
+libur-perl (0.43-1) unstable; urgency=low
+
+  * Set objects now have member_iterator() method.
+  * Data loaded from an RDBMS during the life of a program can be copied to an alternate database.
+  * Use the "C" collation with PostgreSQL when doing an order-by on a text-type column to match how UR will sort cached objects using perl's cmp.
+  * Singleton accessors can be called on the class as well as the instance.
+  * Class initializer is more strict about what is a valid property name; it must be a valid function name.
+  * Added UR::Value::JSON class.  Its "id" is a JSON-encoded string of the instance's properties and values.
+  * Added UR::Context::Transaction::eval() and do() functions to wrap software transactions around blocks.
+  * Added UR::DataSource::RDBMSRetriableOperations mixin class to allow RDBMSs to control whether failed DB operations should be retried.
+  * Added signals for when a data source fails a query or commit, and when the handle is created or disconnected.
+  * Added signal to UR::Context for when synchronizing to the datasources has succeeded or failed.
+  * Added 'isa' operator to boolean expressions.  Evaluates to true if the attribute isa the given class.
+  * Fixed a bug where a Set object's value for an aggregate would be incorrect if cached member objects' values change.
+  * Fixed a bug where UR objects frozen in boolean expressions could cause database rows to be deleted when thawed.
+  * UR's class browser (ur sys class-browser) is working again.
+
+ -- Anthony Brummett <brummett@cpan.org>  Thu, 3 Jul 2014 13:08:00 -600
+
+
+libur-perl (0.42-1) unstable; urgency=low
+
+  * Test releases to try out our new release system with minilla
+
+ -- Anthony Brummett <brummett@cpan.org>  Thu, 26 Jun 2014 13:08:00 -600
+
 libur-perl (0.41-1) unstable; urgency=low
 
   * above.pm now imports symbols into the caller's package

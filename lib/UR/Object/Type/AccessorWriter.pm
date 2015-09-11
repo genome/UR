@@ -6,7 +6,7 @@ package UR::Object::Type;
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 #use warnings FATAL => 'all';
 
 use Carp ();
@@ -889,7 +889,7 @@ sub mk_calculation_accessor {
     if (not defined $calculation_src or $calculation_src eq '') {
         $accessor = \&{ $class_name . '::' . $accessor_name };
         unless ($accessor) {
-            die "$accessor_name not defined in $class_name!  Define it, or specify a calculate => sub{} or calculate => \$perl_src in the class definition.";
+            Carp::croak "$accessor_name not defined in $class_name!  Define it, or specify a calculate => sub{} or calculate => \$perl_src in the class definition.";
         }
     }
     elsif (ref($calculation_src) eq 'CODE') {
@@ -1099,19 +1099,22 @@ sub mk_dimension_identifying_accessor {
 
 sub mk_rw_class_accessor
 {
-    my ($self, $class_name, $accessor_name, $column_name, $is_transient, $variable_value) = @_;
+    my ($self, $class_name, $accessor_name, $column_name, $is_transient, $variable_value, $calc_default) = @_;
 
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
             if (@_ > 1) {
                 my $old = $variable_value;
-                $variable_value = $_[0];
+                $variable_value = $_[1];
 
                 my $different = eval { no warnings; $old ne $variable_value };
                 if ($different or $@ =~ m/has no overloaded magic/) {
                     $_[0]->__signal_change__( $accessor_name, $old, $variable_value ) unless $is_transient;
                 }
+            } elsif (defined $calc_default) {
+                $variable_value = $calc_default->();
             }
+            undef $calc_default;
             return $variable_value;
     };
     Sub::Install::reinstall_sub({
@@ -1123,7 +1126,7 @@ sub mk_rw_class_accessor
 }
 
 sub mk_ro_class_accessor {
-    my($self, $class_name, $accessor_name, $column_name, $variable_value) = @_;
+    my($self, $class_name, $accessor_name, $column_name, $variable_value, $calc_default) = @_;
 
     my $full_accessor_name = $class_name . "::" . $accessor_name;
     my $accessor = Sub::Name::subname $full_accessor_name => sub {
@@ -1136,7 +1139,10 @@ sub mk_ro_class_accessor {
                 my $report_variable_value = defined($variable_value) ? $variable_value : '(undef)';
                 Carp::croak("Cannot change read-only class-wide property $accessor_name for class $class_name from $report_variable_value to $new!");
             }
+        } elsif (defined $calc_default) {
+            $variable_value = $calc_default->();
         }
+        undef $calc_default;
         return $variable_value;
     };
     Sub::Install::reinstall_sub({
@@ -1249,7 +1255,7 @@ sub mk_object_set_accessors {
             }
             $rule_template = $tmp_rule->template;
             unless ($rule_template) {
-                die "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
+                Carp::croak "Error generating rule template to handle indirect relationship $class_name $singular_name referencing $r_class_name!";
             }
             return $tmp_rule;
         }
@@ -1347,7 +1353,7 @@ sub mk_object_set_accessors {
         my $self = shift;
         $rule_resolver->($self) unless ($rule_template);
         unless ($rule_template) {
-            die "no indirect rule available for locally-stored 'has-many' relationship";
+            Carp::croak "No indirect rule available for locally-stored 'has-many' relationship";
         }
         if (@_) {
             my $tmp_rule = $rule_template->get_rule_for_values((map { $self->$_ } @property_names), @where_values);
@@ -1380,7 +1386,7 @@ sub mk_object_set_accessors {
         else {
             if (@_) {
                 if (@_ != 1) {
-                    die "expected a single arrayref when setting a multi-value $class_name $plural_name!  Got @_";
+                    Carp::croak "expected a single arrayref when setting a multi-value $class_name $plural_name!  Got " . scalar(@_) . " args";
                 } elsif ( ref($_[0]) ne 'ARRAY' ) {
                     $self->{$plural_name} = [ $_[0] ];
                 } else {
@@ -1498,7 +1504,7 @@ sub mk_object_set_accessors {
             }
             else {
                 if (@_ != 1) {
-                    die "$class_name $adder_method_name expects a single value to add.  Got @_";
+                    Carp::croak "$class_name $adder_method_name expects a single value to add.  Got " . scalar(@_) . " args";
                 }
                 push @{ $self->{$plural_name} ||= [] }, $_[0];
                 return $_[0];
@@ -1527,7 +1533,7 @@ sub mk_object_set_accessors {
             if (@_ == 1 and ref($_[0])) {
                 # the object to remove was passed-in
                 unless ($rule->evaluate($_[0])) {
-                    die "object " . $_[0]->__display_name__ . " is not a member of the $singular_name set!";
+                    Carp::croak "Object " . $_[0]->__display_name__ . " is not a member of the $singular_name set!";
                 }
                 @matches = ($_[0]);
             }
@@ -1538,7 +1544,7 @@ sub mk_object_set_accessors {
             }
             my $trans = UR::Context::Transaction->begin;
             @matches = map {
-                $_->delete or die "Error deleting $r_class_name " . $_->id . " for $remover_method_name!: " . $_->error_message;
+                $_->delete or Carp::croak "Error deleting $r_class_name " . $_->id . " for $remover_method_name!: " . $_->error_message;
             } @matches;
             $trans->commit;
             return @matches;
@@ -1573,19 +1579,19 @@ sub mk_object_set_accessors {
                     for my $value (@{ $self->{$plural_name} }) {
                         if ($value eq $_[0]) {
                             $removed = splice(@{ $self->{$plural_name} }, $n, 1);
-                            die unless $removed eq $value;
+                            Carp::croak("Internal object inconsistency removing value '$value'.  Value '$removed' was removed instead!?") unless $removed eq $value;
                             return $removed;
                         }
                         $n++;
                     }
-                    die "Failed to find item @_ in $class_name $plural_name (@{$self->{$plural_name}})!";
+                    Carp::croak("Failed to find item $_[0] in $class_name $plural_name.   Object has " . scalar(@{$self->{$plural_name}}) . " values: ".join(', ', @{$self->{$plural_name}}));
                 }
                 elsif (@_ == 0) {
                     # remove all if no params are specified
                     @{ $self->{$plural_name} ||= [] } = ();
                 }
                 else {
-                    die "$class_name $remover_method_name should be called with a specific value.  Params are only usable for ur objects!  Got: @_";
+                    Carp::croak("$class_name $remover_method_name should be called with zero or one arg, got ".scalar(@_));
                 }
             }
         }
@@ -1618,10 +1624,10 @@ sub initialize_direct_accessors {
         if ($property_data->{is_dimension}) {
             my $id_by = $property_data->{id_by};
             unless ($id_by) {
-                die "No id_by specified for dimension $property_name?";
+                Carp::croak "No id_by specified for dimension $property_name?";
             }
             if (@$id_by != 1) {
-                die "The id_by specified for dimension $property_name must list a single property name!";
+                Carp::croak "The id_by specified for dimension $property_name must list a single property name!";
             }
 
             my $dimension_class_name = $property_data->{data_type};
@@ -1717,7 +1723,7 @@ sub initialize_direct_accessors {
         elsif (my $via = $property_data->{via}) {
             my $to = $property_data->{to} || $property_data->{property_name};
             if ($via eq '__self__') {
-                die "aliases should be caught above!";
+                Carp::croak "aliases should be caught above!";
 
             }
             if ($property_data->{is_mutable}) {
@@ -1764,11 +1770,12 @@ sub initialize_direct_accessors {
             $self->mk_object_set_accessors($class_name, $singular_name, $plural_name, $reverse_as, $r_class_name, $where);
         }
         elsif ($property_data->{'is_classwide'}) {
-            my($value, $column_name, $is_transient) = @$property_data{'default_value','column_name','is_transient'};
+            my($value, $column_name, $is_transient, $calc_default)
+                = @$property_data{'default_value','column_name','is_transient', 'calculated_default'};
             if ($property_data->{'is_constant'}) {
-                $self->mk_ro_class_accessor($class_name,$accessor_name,$column_name,$value);
+                $self->mk_ro_class_accessor($class_name,$accessor_name,$column_name,$value, $calc_default);
             } else {
-                $self->mk_rw_class_accessor($class_name,$accessor_name,$column_name,$is_transient,$value);
+                $self->mk_rw_class_accessor($class_name,$accessor_name,$column_name,$is_transient,$value, $calc_default);
             }
         }
         else {

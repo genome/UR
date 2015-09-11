@@ -6,7 +6,7 @@ package UR::Namespace::Command::Update::SchemaDiagram;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

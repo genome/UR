@@ -1,4 +1,6 @@
 package Vending::Command::InsertMoney;
+use strict;
+use warnings;
 
 class Vending::Command::InsertMoney {
     is => 'Vending::Command',

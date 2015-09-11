@@ -1,5 +1,7 @@
 package UR::Service::WebServer::Server;
 
+use strict;
+use warnings;
 use base 'HTTP::Server::PSGI';
 
 # Override new because the default constructor doesn't accept a 'port' argument of

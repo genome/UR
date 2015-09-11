@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 require UR;
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => 'UR::DataSource::MySQL',
@@ -35,6 +35,33 @@ sub owner { shift->_singleton_object->login }
 sub _default_sql_like_escape_string { undef };  # can't do an 'escape' clause with the 'like' operator
 
 sub can_savepoint { 1;} 
+
+sub does_support_limit_offset {
+    my($self, $bx) = @_;
+
+    my $tmpl = $bx->template;
+    if ($tmpl->offset and !defined($tmpl->limit)) {
+        return 0;  # Can't have offset without limit
+    } else {
+        return 1;
+    }
+}
+
+sub resolve_limit_offset_clause {
+    my($self, $query_plan) = @_;
+
+    my $limit = $self->_resolve_limit_value_from_query_plan($query_plan);
+    my $offset = $self->_resolve_offset_value_from_query_plan($query_plan);
+
+    if (defined($limit) and $offset) {
+        return sprintf('limit %d, %d', $offset, $limit);
+    } elsif (defined $limit) {
+        return sprintf('limit %d', $limit);
+    } else {
+        return '';
+    }
+}
+
 
 *_init_created_dbh = \&init_created_handle;
 sub init_created_handle

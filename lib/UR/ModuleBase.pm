@@ -43,7 +43,7 @@ a formal UR class.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.43"; # UR $VERSION;;
+our $VERSION = "0.44"; # UR $VERSION;;
 
 # set up module
 use Carp;
@@ -759,6 +759,9 @@ $create_subs_for_message_type = sub {
         into => $class,
         as => $logger_subname,
     });
+
+    # "Register" the message type as a valid signal.
+    $UR::Object::Type::STANDARD_VALID_SIGNALS{$logger_subname} = 1;
 };
 
 sub _carp_sprintf {

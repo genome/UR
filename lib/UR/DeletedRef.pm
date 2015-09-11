@@ -13,7 +13,7 @@ BEGIN {
     };
 };
 
-our $VERSION = "0.43"; # UR $VERSION;
+our $VERSION = "0.44"; # UR $VERSION;
 
 our $all_objects_deleted = {};
 
@@ -59,6 +59,10 @@ sub AUTOLOAD {
     my $method = $AUTOLOAD;
     $method =~ s/^.*:://g;
     Carp::croak("Attempt to use a reference to an object which has been deleted.  A call was made to method '$method'\nRessurrect it first.\n" . Dumper($_[0]));
+}
+
+sub __rollback__ {
+    return 1;
 }
 
 sub DESTROY {
