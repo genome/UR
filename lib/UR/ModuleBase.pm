@@ -406,7 +406,7 @@ yet.
 =cut
 
 my $create_subs_for_message_type;  # filled in lower down
-my @message_types = qw(error status warning debug usage);
+my @message_types = qw(error status warning debug usage fatal);
 sub message_types
 {
     my $self = shift;
@@ -430,6 +430,7 @@ my %default_messaging_settings;
 $default_messaging_settings{dump_error_messages} = 1;
 $default_messaging_settings{dump_warning_messages} = 1;
 $default_messaging_settings{dump_status_messages} = 1;
+$default_messaging_settings{dump_fatal_messages} = 1;
 
 #
 # Implement error_mesage/warning_message/status_message in a way
