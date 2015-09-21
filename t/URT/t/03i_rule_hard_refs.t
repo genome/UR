@@ -9,7 +9,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use Data::Dumper;
 use IO::Handle;
 
@@ -61,3 +61,27 @@ subtest 'array and hash refs work as boolexpr values' => sub {
     }
 };
 
+subtest 'multiple coderefs can be used as values' => sub {
+    plan tests => 5;
+
+    # FreezeThaw::copyContents (called by thaw()) couldn't handle a data structure
+    # with multiple references to the same coderef
+
+    class URT::ItemWithCoderefs {
+        has => [
+            code_a => { is => 'CODE' },
+            code_b => { is => 'CODE' },
+            code_c => { is => 'CODE' },
+        ],
+    };
+
+    my $the_sub = sub { 1 };
+    my $rule = URT::ItemWithCoderefs->define_boolexpr(code_a => $the_sub, code_b => $the_sub, code_c => $the_sub);
+    ok($rule, 'Created rule with multiple of the same coderef');
+    foreach my $key ( qw( code_a code_b code_c ) ) {
+        is($rule->value_for($key), $the_sub, "retrieve coderef for $key");
+    }
+
+    my $obj = URT::ItemWithCoderefs->create(code_a => $the_sub, code_b => $the_sub, code_c => $the_sub);
+    ok($obj, 'Created object with multiple of the same coderef')
+}
