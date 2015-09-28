@@ -3,12 +3,16 @@
 use strict;
 use warnings;
 
-use Test::More tests => 1;
+use constant NUM_TESTS => 5;
+
+use Test::More tests => NUM_TESTS;
 use Test::Exception;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
+
+use List::Util qw(shuffle);
 
 use URT; # dummy namespace
 
@@ -19,6 +23,7 @@ my @data_sources = qw(UR::DataSource::Default URT::DataSource::SomeSQLite URT::D
 #Other DataSources should be sorted on name
 my @expected_order = @data_sources[2,1,3,0];
 
-my @ordered_data_sources = UR::Context::_order_data_sources_for_saving(@data_sources);
-
-is_deeply(\@ordered_data_sources, \@expected_order, 'datasources are ordered as expected');
+for (1..NUM_TESTS) {
+    my @ordered_data_sources = UR::Context::_order_data_sources_for_saving(shuffle @data_sources);
+    is_deeply(\@ordered_data_sources, \@expected_order, 'datasources are ordered as expected');
+}
