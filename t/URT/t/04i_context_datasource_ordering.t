@@ -16,7 +16,7 @@ use List::Util qw(shuffle);
 
 use URT; # dummy namespace
 
-my @data_sources = qw(UR::DataSource::Default URT::DataSource::SomeSQLite URT::DataSource::SomeFile URT::DataSource::SomeOracle);
+my @data_sources = map { $_->get() } qw(UR::DataSource::Default URT::DataSource::SomeSQLite URT::DataSource::SomeFile URT::DataSource::SomeOracle);
 
 #Default DataSource must be last
 #Oracle can_savepoint, so its DataSource should come after the others
