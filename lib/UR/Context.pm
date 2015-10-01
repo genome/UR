@@ -2754,7 +2754,7 @@ sub _order_data_sources_for_saving {
 
     my %can_savepoint = map { $_->id => $_->can_savepoint } @data_sources;
     my %classes = map { $_->id => $_->class } @data_sources;
-    my %is_default = map { $_->id => $_->isa('UR::DataSource::Default') ? -1 : 0 } @data_sources;  # Default data sources go last
+    my %is_default = map { $_->id => $_->isa('UR::DataSource::Default') ? 1 : 0 } @data_sources;  # Default data sources go last
 
     return
         sort {
