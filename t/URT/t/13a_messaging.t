@@ -47,6 +47,19 @@ for my $type (qw/error warning status/) {
                     my $queue_flag = "queue_" . $type . "_messages";
                     $c->$queue_flag(@$do_queue);
 
+                    my $test_sending_message = sub {
+                        my($messaging_args, $expected_message) = @_;
+                        my $ok_message = "$type setting works for args: ",join(', ', @$messaging_args);
+                        my $message_line = __LINE__ + 1;    # The messaging sub will be called on the next line
+                        is($c->$accessor(@$messaging_args), $expected_message,       $ok_message);
+                        $buffer = $stderr_twin->getline;
+                        is($buffer,
+                            ($c->$dump_flag ? "${msg_prefix}$expected_message\n" : undef),
+                            ($c->$dump_flag ?  "got message" : "no dump")
+                          );
+                        return $message_line;
+                    };
+
                     my $list_accessor = $accessor . "s";
 
                     is($c->$accessor(),         undef ,         "$type starts unset");
@@ -60,10 +73,7 @@ for my $type (qw/error warning status/) {
                     ok($c->$cb_register($callback_sub), "can set callback");
                     is($c->$cb_register(), $callback_sub, 'can get callback');
 
-                    my $message_line = __LINE__ + 1;    # The messaging sub will be called on the next line
-                    is($c->$accessor("error%d", 1), "error1",       "$type setting works");
-                    $buffer = $stderr_twin->getline;
-                    is($buffer, ($c->$dump_flag ? "${msg_prefix}error1\n" : undef), ($c->$dump_flag ?  "got message 1" : "no dump") );
+                    my $message_line = $test_sending_message->(['error%d', 1], 'error1');
 
                     my %source_info = $c->$msg_source_sub();
                     is_deeply(\%source_info,
@@ -83,9 +93,7 @@ for my $type (qw/error warning status/) {
                     $buffer = $stderr_twin->getline;
                     is($buffer, undef, "no dump");
 
-                    is($c->$accessor("error2"), "error2",       "$type resetting works");
-                    $buffer = $stderr_twin->getline;
-                    is($buffer, ($c->$dump_flag ? "${msg_prefix}error2\n" : undef), ($c->$dump_flag ?  "got message 2" : "no dump") );
+                    $test_sending_message->(['error2'],'error2');
 
                     is($cb_msg_count, 2, "$type callback fired");
 
@@ -127,9 +135,7 @@ for my $type (qw/error warning status/) {
                     );
 
                     $c->$cb_register(sub { $_[1] .= "foo"});
-                    $c->$accessor("altered");
-                    $buffer = $stderr_twin->getline();
-                    is($buffer, ($c->$dump_flag ? "${msg_prefix}alteredfoo\n" : undef), ($c->$dump_flag ?  "got altered message" : "no dump") );
+                    $test_sending_message->(['altered'], 'alteredfoo');
                     is_deeply(
                         [$c->$list_accessor],
                         ($c->$queue_flag ? ["error1","error2","alteredfoo"] : []),
