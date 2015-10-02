@@ -396,7 +396,7 @@ With no arguments, this method returns all the types of messages that
 this class handles.  With arguments, it adds a new type to the
 list.
 
-Standard message types are error, status, warning, debug and usage.
+Standard message types are fatal, error, status, warning, debug and usage.
 
 Note that the addition of new types is not fully supported/implemented
 yet.
@@ -478,6 +478,9 @@ returned.  If the message is C<undef> then no message is printed or queued, and
 the next time error_message is run as an accessor, it will return
 undef.
 
+Note that C<fatal_message()> will throw an exception at the point it appears
+in the program.  This exception, like others, is trappable bi C<eval>.
+
 =item dump_error_messages
 
     $obj->dump_error_messages(0);
@@ -486,6 +489,10 @@ undef.
 Get or set the flag which controls whether messages sent via C<error_message()>
 is printed to the terminal.  This flag defaults to true for warning and error
 messages, and false for others.
+
+Note that C<fatal_message()> messages and exceptions do not honor the value of
+C<dump_fatal_messages()>, and always print their message and throw their
+exception unless trapped with an C<eval>.
 
 =item queue_error_messages
 
