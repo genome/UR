@@ -7,7 +7,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 use UR::Namespace::Command::Old::DiffRewrite;
 
@@ -23,7 +23,9 @@ socketpair($UR::ModuleBase::stderr,$stderr_twin, AF_UNIX, SOCK_STREAM, PF_UNSPEC
 $UR::ModuleBase::stderr->autoflush(1);
 $stderr_twin->blocking(0);
 
-for my $type (qw/error warning status/) {
+my $filename = __FILE__;
+
+for my $type (qw/fatal error warning status/) {
     subtest "$type message" => sub {
         plan tests => 9;
 
@@ -50,13 +52,24 @@ for my $type (qw/error warning status/) {
                     my $test_sending_message = sub {
                         my($messaging_args, $expected_message) = @_;
                         my $ok_message = "$type setting works for args: ",join(', ', @$messaging_args);
-                        my $message_line = __LINE__ + 1;    # The messaging sub will be called on the next line
-                        is($c->$accessor(@$messaging_args), $expected_message,       $ok_message);
-                        $buffer = $stderr_twin->getline;
-                        is($buffer,
-                            ($c->$dump_flag ? "${msg_prefix}$expected_message\n" : undef),
-                            ($c->$dump_flag ?  "got message" : "no dump")
-                          );
+                        my $message_line;
+                        if ($type eq 'fatal') {
+                            my $got_die_message;
+                            local $SIG{__DIE__} = sub { $got_die_message = shift };
+                            $message_line = __LINE__ + 1;
+                            eval { $c->$accessor(@$messaging_args) };
+                            my $expected_die_message = "FATAL: $expected_message at $filename line $message_line\n";
+                            is($got_die_message, $expected_die_message, $ok_message);
+                            is($@, $expected_die_message, "(exception) $ok_message");
+                        } else {
+                            $message_line = __LINE__ + 1;    # The messaging sub will be called on the next line
+                            is($c->$accessor(@$messaging_args), $expected_message,       $ok_message);
+                            $buffer = $stderr_twin->getline;
+                            is($buffer,
+                                ($c->$dump_flag ? "${msg_prefix}$expected_message\n" : undef),
+                                ($c->$dump_flag ?  "got message" : "no dump")
+                              );
+                        }
                         return $message_line;
                     };
 

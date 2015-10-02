@@ -751,9 +751,6 @@ $create_subs_for_message_type = sub {
             # If the callback set $msg to undef with "$_[1] = undef", then they didn't want the message
             # processed further
             if (defined $msg) {
-
-                $self->$messaging_action($msg);
-
                 if ($self->$should_queue_messages()) {
                     my $a = $self->$messages_arrayref();
                     push @$a, $msg;
@@ -764,6 +761,9 @@ $create_subs_for_message_type = sub {
                 $self->$message_file($file);
                 $self->$message_line($line);
                 $self->$message_subroutine($subroutine);
+
+                $self->$messaging_action($msg);
+
             }
         }
 
