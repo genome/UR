@@ -700,6 +700,17 @@ $create_subs_for_message_type = sub {
     my $message_line        = "${type}_line";
     my $message_subroutine  = "${type}_subroutine";
 
+    my $messaging_action = $type eq 'fatal'
+                            ? sub { Carp::croak($message_text_prefix . $_[1]) }
+                            : sub {
+                                my($self, $msg) = @_;
+                                if (my $fh = $self->$should_dump_messages()) {
+                                    $fh = $$default_fh unless (ref $fh);
+
+                                    $fh->print($message_text_prefix . $msg . "\n");
+                                }
+                            };
+
     my $logger_subname = "${type}_message";
     my $logger_subref = Sub::Name::subname "${class}::${logger_subname}" => sub {
         my $self = shift;
@@ -734,11 +745,7 @@ $create_subs_for_message_type = sub {
             # processed further
             if (defined $msg) {
 
-                if (my $fh = $self->$should_dump_messages()) {
-                    $fh = $$default_fh unless (ref $fh);
-
-                    $fh->print($message_text_prefix . $msg . "\n");
-                }
+                $self->$messaging_action($msg);
 
                 if ($self->$should_queue_messages()) {
                     my $a = $self->$messages_arrayref();
