@@ -515,6 +515,47 @@ sub fork
     return $pid;
 }
 
+=pod
+
+=over
+
+=item commit
+    $bool = UR::Context::Process->commit;
+
+Commits the top-level transaction by saving all object changes to the
+program's data sources.
+
+=back
+
+=cut
+
+sub commit {
+    my $self = shift;
+    ref($self) || Carp::croak('commit() must be called as an instance method, not a class method');
+
+    $self->__signal_change__('precommit');
+
+    unless ($self->_sync_databases) {
+        $self->__signal_observers__('sync_databases', 0);
+        $self->__signal_change__('commit',0);
+        return;
+    }
+
+    $self->__signal_observers__('sync_databases', 1);
+
+    unless ($self->_commit_databases) {
+        $self->__signal_change__('commit',0);
+        die "Application failure during commit!";
+    }
+    $self->__signal_change__('commit',1);
+
+    foreach ( $self->all_objects_loaded('UR::Object') ) {
+        delete $_->{'_change_count'};
+    }
+
+    return 1;
+}
+
 
 =pod
 
