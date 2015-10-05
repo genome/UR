@@ -255,6 +255,11 @@ sub commit {
         return;
     }
 
+    foreach my $change ( $self->get_changes ) {
+        next if $change->isa('UR::DeletedRef');
+        $change->delete();
+    }
+
     $self->state("committed");
     if ($self->state eq 'committed') {
         $self->__signal_change__('commit',1);
@@ -262,6 +267,7 @@ sub commit {
     else {
         $self->__signal_change__('commit',0);
     }
+
     pop @open_transaction_stack;
     unless (@open_transaction_stack) {
         $log_all_changes = 0;
@@ -282,7 +288,9 @@ sub changes_can_be_saved {
 
     my @changed_objects =
         grep { ! $_->isa('UR::DeletedRef') }
-        map  { $_->changed_object() } $self->get_changes();
+        map  { $_->changed_object() }
+        grep { ! $_->isa('UR::DeletedRef') }
+        $self->get_changes();
 
     # This is primarily to catch custom validity logic in class overrides.
     my @invalid = grep { $_->__errors__ } @changed_objects;
