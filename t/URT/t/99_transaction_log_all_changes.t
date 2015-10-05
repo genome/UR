@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 use_ok('UR::Context::Transaction');
 
@@ -43,6 +43,21 @@ subtest 'undos are not fired by top-level context after software tx completes' =
     );
 
     $tx->commit();
+    UR::Context->rollback();
+    ok('finished');
+};
+
+subtest 'undos are not fired after top-level tx conpletes' => sub {
+    plan tests => 1;
+
+    my $shouldnt_be_called = sub { ok(0, 'undo callback called') };
+
+    my $foo = UR::Value->get(1);
+    UR::Context::Transaction->log_change(
+        $foo, 'UR::Value', 1, 'external_change', $shouldnt_be_called
+    );
+
+    UR::Context->commit();
     UR::Context->rollback();
     ok('finished');
 };

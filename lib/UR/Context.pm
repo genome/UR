@@ -2625,6 +2625,8 @@ sub commit {
     }
     $self->__signal_change__('commit',1);
 
+    $_->delete foreach UR::Change->get();
+
     foreach ( $self->all_objects_loaded('UR::Object') ) {
         delete $_->{'_change_count'};
     }
