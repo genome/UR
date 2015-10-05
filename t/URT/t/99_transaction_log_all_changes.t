@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use_ok('UR::Context::Transaction');
 
@@ -62,4 +62,20 @@ subtest 'undos are not fired after top-level tx commits' => sub {
     UR::Context->commit();      # Both of these are the top-level transaction
     UR::Context->rollback();
     is($cb_was_called, 0, 'external change was not undone in rollback');
+};
+
+subtest 'undos are not fired twice if the top-level tx rolls back twice' => sub {
+    plan tests => 1;
+
+    my $cb_was_called = 0;
+    my $cb = sub { $cb_was_called++ };
+
+    my $foo = UR::Value->get(1);
+    UR::Context::Transaction->log_change(
+        $foo, 'UR::Value', 1, 'external_change', $cb,
+    );
+
+    UR::Context->rollback();    # Both of these are the top-level transaction
+    UR::Context->rollback();
+    is($cb_was_called, 1, 'external change was undone only once in rollback');
 };
