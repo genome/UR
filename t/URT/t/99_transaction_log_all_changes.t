@@ -43,7 +43,7 @@ subtest 'undos are fired by top-level context even if software tx commits' => su
         $foo, 'UR::Value', 1, 'external_change', $cb,
     );
 
-    UR::Context->commit();      # $tx is the current transaction
+    $tx->commit();      # $tx is the current transaction
     UR::Context->rollback();    # this is the top-level transaction
     is($cb_was_called, 1, 'external change was undone when top-level transaction was rolled back');
 };

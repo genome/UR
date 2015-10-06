@@ -2603,15 +2603,34 @@ sub has_changes {
 }
 
 sub commit {
-    my $self;
-    if (@_) {
-        $self = shift;
-        ref($self) && Carp::croak('UR::Context->commit() must be called as a class method, not an instance method');
-    } else {
-        Carp::carp 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless @_;
+    Carp::carp 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless @_;
+
+    my $self = shift;
+    $self = UR::Context->current() unless ref $self;
+
+    $self->__signal_change__('precommit');
+
+    unless ($self->_sync_databases) {
+        $self->__signal_observers__('sync_databases', 0);
+        $self->__signal_change__('commit',0);
+        return;
     }
-    $self = UR::Context->current();
-    $self->commit();
+
+    $self->__signal_observers__('sync_databases', 1);
+
+    unless ($self->_commit_databases) {
+        $self->__signal_change__('commit',0);
+        die "Application failure during commit!";
+    }
+    $self->__signal_change__('commit',1);
+
+    $_->delete foreach UR::Change->get();
+
+    foreach ( $self->all_objects_loaded('UR::Object') ) {
+        delete $_->{'_change_count'};
+    }
+
+    return 1;
 }
 
 sub rollback {
