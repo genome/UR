@@ -2603,7 +2603,6 @@ sub has_changes {
 }
 
 sub commit {
-
     Carp::carp 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless @_;
 
     my $self = shift;
@@ -2624,6 +2623,8 @@ sub commit {
         die "Application failure during commit!";
     }
     $self->__signal_change__('commit',1);
+
+    $_->delete foreach UR::Change->get();
 
     foreach ( $self->all_objects_loaded('UR::Object') ) {
         delete $_->{'_change_count'};
