@@ -4,6 +4,7 @@ use warnings;
 use IO::Socket;
 use Data::Dumper;
 use File::Basename;
+use Carp;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
@@ -24,6 +25,8 @@ $UR::ModuleBase::stderr->autoflush(1);
 $stderr_twin->blocking(0);
 
 my $filename = __FILE__;
+
+my $croak_ending_string = determine_croak_message_ending_string();
 
 for my $type (qw/fatal error warning status/) {
     subtest "$type message" => sub {
@@ -58,7 +61,7 @@ for my $type (qw/fatal error warning status/) {
                             local $SIG{__DIE__} = sub { $got_die_message = shift };
                             $message_line = __LINE__ + 1;
                             eval { $c->$accessor(@$messaging_args) };
-                            my $expected_die_message = "FATAL: $expected_message at $filename line $message_line\n";
+                            my $expected_die_message = "FATAL: $expected_message at $filename line $message_line${croak_ending_string}";
                             is($got_die_message, $expected_die_message, $ok_message);
                             is($@, $expected_die_message, "(exception) $ok_message");
                         } else {
@@ -187,6 +190,14 @@ for my $type (qw/fatal error warning status/) {
 
         }
     };
+}
+
+# Later versions of Carp::croak put a period at the end of the exception
+# message.  Earlier versions have no period
+sub determine_croak_message_ending_string {
+    eval { Carp::croak "test" };
+    my($maybe_period) = $@ =~ m/test at \S+ line \d+(\.?)/;
+    return "$maybe_period\n";
 }
 
 1;
