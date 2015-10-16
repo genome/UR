@@ -637,7 +637,7 @@ sub sorter {
             }
         }
 
-        no warnings;   # don't print a warning about undef values ...alow them to be treated as 0 or '' 
+        no warnings 'uninitialized';
         $sorter = $self->{_sorter}{$key} ||= sub($$) {
 
             for (my $n = 0; $n < @properties; $n++) {
