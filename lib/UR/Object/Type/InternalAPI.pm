@@ -590,9 +590,6 @@ sub id_property_sorter {
 }
 
 sub sorter {
-    #TODO: make this take +/- indications of ascending/descending
-    #TODO: make it into a closure for speed
-    #TODO: there are possibilities of it sorting different than a DB on mixed numbers and alpha data
     my ($self,@properties) = @_;
     push @properties, $self->id_property_names;
     my $key = join("__",@properties);
