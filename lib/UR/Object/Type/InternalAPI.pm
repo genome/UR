@@ -620,7 +620,8 @@ sub sorter {
 
             my ($pmeta,@extra) = $class_meta->_concrete_property_meta_for_class_and_name($property);
             if(@extra) {
-                $pmeta = $class_meta->property($property); #a composite property (typically ID)
+                # maybe a composite property (typically ID), or a chained property (prop.other_prop)
+                $pmeta = $class_meta->property_meta_for_name($property);
             }
 
             if ($pmeta) {
