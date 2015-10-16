@@ -608,20 +608,10 @@ sub sorter {
                 push @is_descending, 0;
             }
 
-            my $class_meta;
-            if ($self->isa("UR::Object::Set::Type")) {
-                # If we're a set, we want to examine the property of our members.
-                my $subject_class = $self->class_name;
-                $subject_class =~ s/::Set$//g;
-                $class_meta = $subject_class->__meta__;#->property($property);
-            } else {
-                $class_meta = $self;
-            }
-
-            my ($pmeta,@extra) = $class_meta->_concrete_property_meta_for_class_and_name($property);
+            my ($pmeta,@extra) = $self->_concrete_property_meta_for_class_and_name($property);
             if(@extra) {
                 # maybe a composite property (typically ID), or a chained property (prop.other_prop)
-                $pmeta = $class_meta->property_meta_for_name($property);
+                $pmeta = $self->property_meta_for_name($property);
             }
 
             if ($pmeta) {
