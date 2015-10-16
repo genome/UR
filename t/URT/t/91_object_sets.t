@@ -150,7 +150,7 @@ subtest 'subsets' => sub {
         subtest "subset with car_color $subset_color_name" => sub {
             plan tests => 7;
 
-            my $query_count = 0;
+            $query_count = 0;
             my @colors = $subset->car_colors;
             is(scalar(@colors), 1, "one color returned") or diag "@colors";
             my $color = shift @colors;
@@ -158,7 +158,7 @@ subtest 'subsets' => sub {
 
             $query_count = 0;
             my @members = $subset->members();
-            is($query_count, 0, 'Getting members from subset made no queries');
+            is($query_count, 1, 'Getting members from subset made one query');
 
             my $expected_members = $people_by_car_color{$color || ''};
             is(scalar(@members), scalar(@$expected_members), 'Got the expected number of subset members');
