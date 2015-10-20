@@ -590,9 +590,6 @@ sub id_property_sorter {
 }
 
 sub sorter {
-    #TODO: make this take +/- indications of ascending/descending
-    #TODO: make it into a closure for speed
-    #TODO: there are possibilities of it sorting different than a DB on mixed numbers and alpha data
     my ($self,@properties) = @_;
     push @properties, $self->id_property_names;
     my $key = join("__",@properties);
@@ -608,19 +605,10 @@ sub sorter {
                 push @is_descending, 0;
             }
 
-            my $class_meta;
-            if ($self->isa("UR::Object::Set::Type")) {
-                # If we're a set, we want to examine the property of our members.
-                my $subject_class = $self->class_name;
-                $subject_class =~ s/::Set$//g;
-                $class_meta = $subject_class->__meta__;#->property($property);
-            } else {
-                $class_meta = $self;
-            }
-
-            my ($pmeta,@extra) = $class_meta->_concrete_property_meta_for_class_and_name($property);
+            my ($pmeta,@extra) = $self->_concrete_property_meta_for_class_and_name($property);
             if(@extra) {
-                $pmeta = $class_meta->property($property); #a composite property (typically ID)
+                # maybe a composite property (typically ID), or a chained property (prop.other_prop)
+                $pmeta = $self->property_meta_for_name($property);
             }
 
             if ($pmeta) {
@@ -636,7 +624,7 @@ sub sorter {
             }
         }
 
-        no warnings;   # don't print a warning about undef values ...alow them to be treated as 0 or '' 
+        no warnings 'uninitialized';
         $sorter = $self->{_sorter}{$key} ||= sub($$) {
 
             for (my $n = 0; $n < @properties; $n++) {

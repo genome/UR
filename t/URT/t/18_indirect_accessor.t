@@ -18,7 +18,8 @@ UR::Object::Type->define(
         id      => { type => "Number" },
         name    => { type => "String" },
         company => { type => "String" },
-    ]
+    ],
+    id_generator => sub { our $boss_seq; ++$boss_seq; },
 );
 
 UR::Object::Type->define(
