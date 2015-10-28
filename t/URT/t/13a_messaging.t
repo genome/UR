@@ -12,7 +12,7 @@ use Test::More tests => 4;
 
 use UR::Namespace::Command::Old::DiffRewrite;
 
-my $c = "UR::Namespace::Command::Old::DiffRewrite";
+my $test_class = "UR::Namespace::Command::Old::DiffRewrite";
 
 # The messaging methods print to the filehandle $Command::stderr, which defaults
 # to STDERR.  Redefine it so the messages are printed to a filehandle we
@@ -47,10 +47,10 @@ for my $type (qw/fatal error warning status/) {
                 subtest "queue: $subtest_do_queue, dump: $subtest_do_dump" => sub {
 
                     my $dump_flag = "dump_" . $type . "_messages";
-                    $c->$dump_flag(@$do_dump);
+                    $test_class->$dump_flag(@$do_dump);
 
                     my $queue_flag = "queue_" . $type . "_messages";
-                    $c->$queue_flag(@$do_queue);
+                    $test_class->$queue_flag(@$do_queue);
 
                     my $test_sending_message = sub {
                         my($messaging_args, $expected_message) = @_;
@@ -60,17 +60,17 @@ for my $type (qw/fatal error warning status/) {
                             my $got_die_message;
                             local $SIG{__DIE__} = sub { $got_die_message = shift };
                             $message_line = __LINE__ + 1;
-                            eval { $c->$accessor(@$messaging_args) };
+                            eval { $test_class->$accessor(@$messaging_args) };
                             my $expected_die_message = "FATAL: $expected_message at $filename line $message_line${croak_ending_string}";
                             is($got_die_message, $expected_die_message, $ok_message);
                             is($@, $expected_die_message, "(exception) $ok_message");
                         } else {
                             $message_line = __LINE__ + 1;    # The messaging sub will be called on the next line
-                            is($c->$accessor(@$messaging_args), $expected_message,       $ok_message);
+                            is($test_class->$accessor(@$messaging_args), $expected_message,       $ok_message);
                             $buffer = $stderr_twin->getline;
                             is($buffer,
-                                ($c->$dump_flag ? "${msg_prefix}$expected_message\n" : undef),
-                                ($c->$dump_flag ?  "got message" : "no dump")
+                                ($test_class->$dump_flag ? "${msg_prefix}$expected_message\n" : undef),
+                                ($test_class->$dump_flag ?  "got message" : "no dump")
                               );
                         }
                         return $message_line;
@@ -78,7 +78,7 @@ for my $type (qw/fatal error warning status/) {
 
                     my $list_accessor = $accessor . "s";
 
-                    is($c->$accessor(),         undef ,         "$type starts unset");
+                    is($test_class->$accessor(),         undef ,         "$type starts unset");
                     $buffer = $stderr_twin->getline;
                     is($buffer, undef, "no message");
 
@@ -86,12 +86,12 @@ for my $type (qw/fatal error warning status/) {
                     my $cb_msg_count = 0;
                     my @cb_args;
                     my $callback_sub = sub { @cb_args = @_; $cb_msg_count++;};
-                    ok($c->$cb_register($callback_sub), "can set callback");
-                    is($c->$cb_register(), $callback_sub, 'can get callback');
+                    ok($test_class->$cb_register($callback_sub), "can set callback");
+                    is($test_class->$cb_register(), $callback_sub, 'can get callback');
 
                     my $message_line = $test_sending_message->(['error%d', 1], 'error1');
 
-                    my %source_info = $c->$msg_source_sub();
+                    my %source_info = $test_class->$msg_source_sub();
                     is_deeply(\%source_info,
                               { $accessor => 'error1',
                                 $type.'_package' => 'main',
@@ -102,10 +102,10 @@ for my $type (qw/fatal error warning status/) {
 
                     is($cb_msg_count, 1, "$type callback fired");
                     is_deeply(
-                        \@cb_args,    [$c, "error1"],       "$type callback got correct args"
+                        \@cb_args,    [$test_class, "error1"],       "$type callback got correct args"
                     );
 
-                    is($c->$accessor(),         "error1",       "$type returns");
+                    is($test_class->$accessor(),         "error1",       "$type returns");
                     $buffer = $stderr_twin->getline;
                     is($buffer, undef, "no dump");
 
@@ -113,67 +113,67 @@ for my $type (qw/fatal error warning status/) {
 
                     is($cb_msg_count, 2, "$type callback fired");
 
-                    is($c->$accessor(),         "error2",       "$type returns");
+                    is($test_class->$accessor(),         "error2",       "$type returns");
                     is_deeply(
-                        \@cb_args,    [$c, "error2"],       "$type callback got correct args"
+                        \@cb_args,    [$test_class, "error2"],       "$type callback got correct args"
                     );
 
                     is_deeply(
-                        [$c->$list_accessor],
-                        ($c->$queue_flag ? ["error1","error2"] : []),
-                        ($c->$queue_flag ? "$type list is correct" : "$type list is correctly empty")
+                        [$test_class->$list_accessor],
+                        ($test_class->$queue_flag ? ["error1","error2"] : []),
+                        ($test_class->$queue_flag ? "$type list is correct" : "$type list is correctly empty")
                     );
 
-                    is($c->$accessor(undef),    undef ,         "undef message sent to $type");
+                    is($test_class->$accessor(undef),    undef ,         "undef message sent to $type");
 
                     is($cb_msg_count, 3, "$type callback fired");
 
                     $buffer = $stderr_twin->getline;
                     is($buffer, undef, 'Setting undef message results in no output');
 
-                    is($c->$accessor(),         undef ,         "$type still has the previous message");
+                    is($test_class->$accessor(),         undef ,         "$type still has the previous message");
                     is_deeply(
-                        \@cb_args,    [$c, undef],       "$type callback got correct args"
+                        \@cb_args,    [$test_class, undef],       "$type callback got correct args"
                     );
 
                     is_deeply(
-                        [$c->$list_accessor],
-                        ($c->$queue_flag ? ["error1","error2"] : []),
-                        ($c->$queue_flag ? "$type list is correct" : "$type list is correctly empty")
+                        [$test_class->$list_accessor],
+                        ($test_class->$queue_flag ? ["error1","error2"] : []),
+                        ($test_class->$queue_flag ? "$type list is correct" : "$type list is correctly empty")
                     );
 
                     my $listref_accessor = $list_accessor . "_arrayref";
-                    my $listref = $c->$listref_accessor();
+                    my $listref = $test_class->$listref_accessor();
                     is_deeply(
                         $listref,
-                        ($c->$queue_flag ? ['error1','error2'] : []),
+                        ($test_class->$queue_flag ? ['error1','error2'] : []),
                         "$type listref is correct"
                     );
 
-                    $c->$cb_register(sub { $_[1] .= "foo"});
+                    $test_class->$cb_register(sub { $_[1] .= "foo"});
                     $test_sending_message->(['altered'], 'alteredfoo');
                     is_deeply(
-                        [$c->$list_accessor],
-                        ($c->$queue_flag ? ["error1","error2","alteredfoo"] : []),
-                        ($c->$queue_flag ? "$type list is correct" : "$type list is correctly empty")
+                        [$test_class->$list_accessor],
+                        ($test_class->$queue_flag ? ["error1","error2","alteredfoo"] : []),
+                        ($test_class->$queue_flag ? "$type list is correct" : "$type list is correctly empty")
                     );
 
-                    $c->$cb_register(undef);  # Unset the callback
+                    $test_class->$cb_register(undef);  # Unset the callback
 
-                    is($c->$accessor(undef),    undef ,         "undef message sent to $type message");
+                    is($test_class->$accessor(undef),    undef ,         "undef message sent to $type message");
                     is($cb_msg_count, 3, "$type callback correctly didn't get fired");
                     $buffer = $stderr_twin->getline();
                     is($buffer, undef, 'Setting undef message results in no output');
                     is_deeply(
-                        [$c->$list_accessor],
-                        ($c->$queue_flag ? ["error1","error2","alteredfoo"] : []),
-                        ($c->$queue_flag ? "$type list is correct" : "$type list is correctly empty")
+                        [$test_class->$list_accessor],
+                        ($test_class->$queue_flag ? ["error1","error2","alteredfoo"] : []),
+                        ($test_class->$queue_flag ? "$type list is correct" : "$type list is correctly empty")
                     );
 
-                    if ($c->$queue_flag) {
+                    if ($test_class->$queue_flag) {
                         $listref->[2] = "something else";
                         is_deeply(
-                            [$c->$list_accessor],
+                            [$test_class->$list_accessor],
                             ["error1","error2","something else"],
                             "$type list is correct after changing via the listref"
                         );
@@ -181,7 +181,7 @@ for my $type (qw/fatal error warning status/) {
 
                         @$listref = ();
                         is_deeply(
-                            [$c->$list_accessor],   [],    "$type list cleared out as expected"
+                            [$test_class->$list_accessor],   [],    "$type list cleared out as expected"
                         );
                     }
                     done_testing();
