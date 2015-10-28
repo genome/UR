@@ -8,11 +8,12 @@ use Carp;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__).'/../..';
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use UR::Namespace::Command::Old::DiffRewrite;
 
 my $test_class = "UR::Namespace::Command::Old::DiffRewrite";
+my $test_class_parent = 'UR::Namespace::Command::Base';
 
 # The messaging methods print to the filehandle $Command::stderr, which defaults
 # to STDERR.  Redefine it so the messages are printed to a filehandle we
@@ -191,6 +192,41 @@ for my $type (qw/fatal error warning status/) {
         }
     };
 }
+
+subtest 'set message on instance, but retrieve via its class' => sub {
+    plan tests => 6;
+
+    $_->dump_error_messages(0) foreach ($test_class, $test_class_parent);
+    $_->queue_error_messages(1) foreach ($test_class, $test_class_parent);
+
+    my $o1 = $test_class->create(namespace_name => 'URT');
+    my $o2 = $test_class->create(namespace_name => 'URT');
+
+    my $message_to_obj1 = 'message to object 1';
+    ok($o1->error_message($message_to_obj1), 'send message to first object instance');
+
+    my $message_to_obj2 = 'message to object 2';
+    ok($o2->error_message($message_to_obj2), 'send message to second object instance');
+
+    my $message_to_class = 'message to class';
+    ok($test_class->error_message($message_to_class), 'send message to class');
+
+    my $message_to_parent_class = 'message to parent class';
+    ok($test_class_parent->error_message($message_to_parent_class), 'send message to parent class');
+
+    my @messages = $test_class->error_messages();
+    is_deeply(\@messages,
+            [ $message_to_class, $message_to_obj1, $message_to_obj2 ],
+            'Got messages back from the class, including instances');
+
+    @messages = $test_class_parent->error_messages();
+    is_deeply(\@messages,
+            [ $message_to_parent_class, $message_to_class, $message_to_obj1, $message_to_obj2 ],
+            'Got messages back from the parent class, including instances');
+
+    $_->dump_error_messages(1) foreach ($test_class, $test_class_parent);
+    $_->queue_error_messages(0) foreach ($test_class, $test_class_parent);
+};
 
 # Later versions of Carp::croak put a period at the end of the exception
 # message.  Earlier versions have no period
