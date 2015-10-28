@@ -22,6 +22,7 @@ class URT::Note {
     has_optional => [
         body_text          => { is => 'Text', len => 1000 },
     ],
+    id_generator => sub { our $note_seq; ++$note_seq },
 };
 
 class URT::Notable {

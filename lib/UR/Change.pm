@@ -65,7 +65,7 @@ sub undo {
     # Allow reversal of those methods to indirectly reverse ghost changes.
     if ($changed_class_name =~ /::Ghost/) {
         if ($changed_aspect !~ /^(create|delete)(_object|)$/) {
-            Carp::confess("Unlogged change on ghost? @_");
+            Carp::confess("Unlogged change on ghost? $self");
         }
         return 1;
     }
@@ -122,10 +122,10 @@ sub undo {
         if ($changed_obj->isa('UR::Context::Transaction')) {
             UR::Object::unload($changed_obj);
         } else {
-            Carp::confess();
+            Carp::confess(q(Cannot undo 'commit' on a non-software transaction));
         }
     } elsif ($changed_aspect eq "rollback") {
-        Carp::confess();
+        Carp::confess(q(Cannot undo 'rollback'));
     } elsif ($changed_aspect eq 'rewrite_module_header') {
         my $VAR1;
         eval $undo_data;
@@ -157,6 +157,17 @@ sub undo {
     $changed_obj->{'_change_count'} = 0 if ($changed_obj->{'_change_count'} and $changed_obj->{'_change_count'} < 0);
 
     return 1;
+}
+
+sub __rollback__ {
+    my $self = shift;
+    my $changed_aspect = $self->changed_aspect;
+    if($changed_aspect eq 'external_change') {
+        $self->undo;
+        $self->delete;
+    } else {
+        return $self->SUPER::__rollback__;
+    }
 }
 
 1;

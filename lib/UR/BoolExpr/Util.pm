@@ -32,7 +32,30 @@ sub values_to_value_id_frozen {
 
 sub value_id_to_values_frozen {
     my $value_id = shift;
+    no warnings 'redefine';
+    local *FreezeThaw::copyContents = \&_FreezeThaw__copyContents;
     return _fixup_ur_objects_from_thawed_data(FreezeThaw::thaw($value_id));
+}
+
+# FreezeThaw::thaw calls copyContents when thawing out a data structure it's seen before to
+# copy the contents from an already thawed version into a to-be-thawed container.
+# But this doesn't work for code references, since it can't reconstitute it.  Luckily, if
+# it's been frozen with safeFreeze, then $first and $second both point to the correct
+# coderef and there's nothing to do.
+my $original_FreezeThaw__copyContents = \&FreezeThaw::copyContents;
+sub _FreezeThaw__copyContents {
+    my($first, $second) = @_;
+
+    goto &$original_FreezeThaw__copyContents if (reftype($first) ne 'CODE' or reftype($second) ne 'CODE');
+
+    if (refaddr($first) != refaddr($second)) {
+        my $ref = reftype($second);
+        Carp::croak("Don't know how to copyContents of type `$ref'");
+    }
+    if (ref($second) ne ref($first)) {
+        bless $_[0], ref $second; # Rebless
+    }
+    return $first;
 }
 
 sub _fixup_ur_objects_from_thawed_data {

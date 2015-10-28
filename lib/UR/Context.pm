@@ -2603,7 +2603,6 @@ sub has_changes {
 }
 
 sub commit {
-
     Carp::carp 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless @_;
 
     my $self = shift;
@@ -2624,6 +2623,8 @@ sub commit {
         die "Application failure during commit!";
     }
     $self->__signal_change__('commit',1);
+
+    $_->delete foreach UR::Change->get();
 
     foreach ( $self->all_objects_loaded('UR::Object') ) {
         delete $_->{'_change_count'};
@@ -2754,7 +2755,7 @@ sub _order_data_sources_for_saving {
 
     my %can_savepoint = map { $_->id => $_->can_savepoint } @data_sources;
     my %classes = map { $_->id => $_->class } @data_sources;
-    my %is_default = map { $_->id => $_->isa('UR::DataSource::Default') ? -1 : 0 } @data_sources;  # Default data sources go last
+    my %is_default = map { $_->id => $_->isa('UR::DataSource::Default') ? 1 : 0 } @data_sources;  # Default data sources go last
 
     return
         sort {

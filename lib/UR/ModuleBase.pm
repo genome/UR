@@ -396,7 +396,7 @@ With no arguments, this method returns all the types of messages that
 this class handles.  With arguments, it adds a new type to the
 list.
 
-Standard message types are error, status, warning, debug and usage.
+Standard message types are fatal, error, status, warning, debug and usage.
 
 Note that the addition of new types is not fully supported/implemented
 yet.
@@ -406,7 +406,7 @@ yet.
 =cut
 
 my $create_subs_for_message_type;  # filled in lower down
-my @message_types = qw(error status warning debug usage);
+my @message_types = qw(error status warning debug usage fatal);
 sub message_types
 {
     my $self = shift;
@@ -430,6 +430,7 @@ my %default_messaging_settings;
 $default_messaging_settings{dump_error_messages} = 1;
 $default_messaging_settings{dump_warning_messages} = 1;
 $default_messaging_settings{dump_status_messages} = 1;
+$default_messaging_settings{dump_fatal_messages} = 1;
 
 #
 # Implement error_mesage/warning_message/status_message in a way
@@ -477,6 +478,9 @@ returned.  If the message is C<undef> then no message is printed or queued, and
 the next time error_message is run as an accessor, it will return
 undef.
 
+Note that C<fatal_message()> will throw an exception at the point it appears
+in the program.  This exception, like others, is trappable bi C<eval>.
+
 =item dump_error_messages
 
     $obj->dump_error_messages(0);
@@ -485,6 +489,10 @@ undef.
 Get or set the flag which controls whether messages sent via C<error_message()>
 is printed to the terminal.  This flag defaults to true for warning and error
 messages, and false for others.
+
+Note that C<fatal_message()> messages and exceptions do not honor the value of
+C<dump_fatal_messages()>, and always print their message and throw their
+exception unless trapped with an C<eval>.
 
 =item queue_error_messages
 
@@ -699,6 +707,17 @@ $create_subs_for_message_type = sub {
     my $message_line        = "${type}_line";
     my $message_subroutine  = "${type}_subroutine";
 
+    my $messaging_action = $type eq 'fatal'
+                            ? sub { Carp::croak($message_text_prefix . $_[1]) }
+                            : sub {
+                                my($self, $msg) = @_;
+                                if (my $fh = $self->$should_dump_messages()) {
+                                    $fh = $$default_fh unless (ref $fh);
+
+                                    $fh->print($message_text_prefix . $msg . "\n");
+                                }
+                            };
+
     my $logger_subname = "${type}_message";
     my $logger_subref = Sub::Name::subname "${class}::${logger_subname}" => sub {
         my $self = shift;
@@ -732,13 +751,6 @@ $create_subs_for_message_type = sub {
             # If the callback set $msg to undef with "$_[1] = undef", then they didn't want the message
             # processed further
             if (defined $msg) {
-
-                if (my $fh = $self->$should_dump_messages()) {
-                    $fh = $$default_fh unless (ref $fh);
-
-                    $fh->print($message_text_prefix . $msg . "\n");
-                }
-
                 if ($self->$should_queue_messages()) {
                     my $a = $self->$messages_arrayref();
                     push @$a, $msg;
@@ -749,6 +761,9 @@ $create_subs_for_message_type = sub {
                 $self->$message_file($file);
                 $self->$message_line($line);
                 $self->$message_subroutine($subroutine);
+
+                $self->$messaging_action($msg);
+
             }
         }
 
