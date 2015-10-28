@@ -54,7 +54,7 @@ for my $type (qw/fatal error warning status/) {
 
                     my $test_sending_message = sub {
                         my($messaging_args, $expected_message) = @_;
-                        my $ok_message = "$type setting works for args: ",join(', ', @$messaging_args);
+                        my $ok_message = "$type setting works for args: ".join(', ', @$messaging_args);
                         my $message_line;
                         if ($type eq 'fatal') {
                             my $got_die_message;
