@@ -674,23 +674,17 @@ $create_subs_for_message_type = sub {
     my $array_subname = "${type}_messages";
     my $array_subref = Sub::Name::subname "${class}::${array_subname}" => sub {
         my $self = shift;
-        if (ref $self) {
-            my $a = $get_setting->($self, $messages_arrayref);
-            return $a ? @$a : ();
-        } else {
-            my %seen;
-            my @all_messages;
-            foreach my $subclass_name ( $self, $self->__meta__->subclasses_loaded ) {
-                next if $seen{$subclass_name}++;
-                my $a = $get_setting->($subclass_name, $messages_arrayref);
-                push @all_messages, $a ? @$a : ();
-            }
-            foreach my $instance ( $self->is_loaded() ) {
-                my $a = $get_setting->($instance, $messages_arrayref);
-                push @all_messages, $a ? @$a : ();
-            }
-            return @all_messages;
+        my @search = ref($self)
+                        ? $self
+                        : ( $self, $self->__meta__->subclasses_loaded, $self->is_loaded() );
+        my %seen;
+        my @all_messages;
+        foreach my $thing ( @search ) {
+            next if $seen{$thing}++;
+            my $a = $get_setting->($thing, $messages_arrayref);
+            push @all_messages, $a ? @$a : ();
         }
+        return @all_messages;
     };
     Sub::Install::install_sub({
         code => $array_subref,
