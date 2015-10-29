@@ -6,6 +6,7 @@ use strict;
 require UR;
 
 use Scalar::Util qw(looks_like_number refaddr isweak);
+use List::MoreUtils qw(any);
 
 our @ISA = ('UR::ModuleBase');
 our $VERSION = "0.44"; # UR $VERSION;;
@@ -93,6 +94,15 @@ sub __self__ {
     else {
         return;
     }
+}
+
+sub does {
+    my($self, $role_name) = @_;
+
+    my @roles = map { @{ $_->roles } }
+                $self->__meta__->all_class_metas();
+
+    any { $role_name eq $_->role_name } @roles;
 }
 
 

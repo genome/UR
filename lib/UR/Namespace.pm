@@ -5,6 +5,7 @@ use warnings;
 use File::Find;
 
 require UR;
+use UR::AttributeHandlers;
 our $VERSION = "0.44"; # UR $VERSION;
 
 UR::Object::Type->define(
@@ -32,6 +33,18 @@ UR::Object::Type->define(
     ],
     doc => 'The class for a singleton module representing a UR namespace.',
 );
+
+sub import {
+    my $class = shift;
+    return if ($class eq 'UR' or $class eq __PACKAGE__);
+
+    my $calling_package;
+    for(my $i = 0; ($calling_package) = caller($i); $i++) {
+        last unless (substr($calling_package, 0, 4) eq 'UR::');
+    }
+    return unless $calling_package;
+    UR::AttributeHandlers::import_support_functions_to_package($calling_package);
+}
 
 sub get_member_class {
     my $self = shift;

@@ -7,6 +7,8 @@ use strict;
 use warnings;
 require UR;
 
+use UR::Util;
+
 BEGIN {
     # Perl 5.10 did not require mro in order to call get_mro but it looks
     # like that was "fixed" in newer version.
@@ -181,6 +183,9 @@ sub __define__ {
             );
         }
     }
+
+    $self->_inform_roles_of_new_class();
+
     return $self;
 }
 
@@ -357,6 +362,9 @@ sub initialize_bootstrap_classes
 sub _normalize_class_description {
     my $class = shift;
     my $desc = $class->_normalize_class_description_impl(@_);
+
+    $class->compose_roles($desc) unless $bootstrapping;
+
     unless ($bootstrapping) {
         for my $parent_class_name (@{ $desc->{is} }) {
             my $parent_class = $parent_class_name->__meta__;
@@ -391,27 +399,31 @@ sub _normalize_class_description {
     return $desc;
 }
 
-sub _normalize_class_description_impl {
-    my $class = shift;
-    my %old_class = @_;
+sub _canonicalize_class_params {
+    my($params, $mappings) = @_;
 
-    if (exists $old_class{extra}) {
-        %old_class = (%{delete $old_class{extra}}, %old_class);
+    my %canon_params;
+
+    for my $mapping ( @$mappings ) {
+        my ($primary_field_name, @alternate_field_names) = @$mapping;
+        my @all_fields = ($primary_field_name, @alternate_field_names);
+        my @values = grep { defined($_) } delete @$params{@all_fields};
+        if (@values > 1) {
+            Carp::confess(
+                "Multiple values in for field "
+                . join("/", @all_fields)
+            );
+        }
+        elsif (@values == 1) {
+            $canon_params{$primary_field_name} = $values[0];
+        }
     }
 
-    my $class_name = delete $old_class{class_name};
+    return %canon_params;
+}
 
-    my %new_class = (
-        class_name      => $class_name,
-        is_singleton    => $UR::Object::Type::defaults{'is_singleton'},
-        is_final        => $UR::Object::Type::defaults{'is_final'},
-        is_abstract     => $UR::Object::Type::defaults{'is_abstract'},
-    );
-
-    for my $mapping (
-        [ class_name            => qw//],
-        [ type_name             => qw/english_name/],
-        [ is                    => qw/inheritance extends isa is_a/],
+our @CLASS_DESCRIPTION_KEY_MAPPINGS_COMMON_TO_CLASSES_AND_ROLES = (
+        [ roles                 => qw//],
         [ is_abstract           => qw/abstract/],
         [ is_final              => qw/final/],
         [ is_singleton          => qw//],
@@ -427,7 +439,6 @@ sub _normalize_class_description_impl {
         [ namespace             => qw//],
         [ schema_name           => qw//],
         [ data_source_id        => qw/data_source instance/],
-        [ table_name            => qw/sql dsmap/],
         [ select_hint            => qw/query_hint/],
         [ join_hint             => qw//],
         [ subclassify_by        => qw/sub_classification_property_name/],
@@ -442,20 +453,33 @@ sub _normalize_class_description_impl {
         [ subclassify_by_version => qw//],
         [ meta_class_name        => qw//],
         [ valid_signals          => qw//],
-    ) {        
-        my ($primary_field_name, @alternate_field_names) = @$mapping;                
-        my @all_fields = ($primary_field_name, @alternate_field_names);
-        my @values = grep { defined($_) } delete @old_class{@all_fields};
-        if (@values > 1) {
-            Carp::confess(
-                "Multiple values in class definition for $class_name for field "
-                . join("/", @all_fields)
-            );
-        }
-        elsif (@values == 1) {
-            $new_class{$primary_field_name} = $values[0];
-        }
+);
+
+my @CLASS_DESCRIPTION_KEY_MAPPINGS = (
+        @CLASS_DESCRIPTION_KEY_MAPPINGS_COMMON_TO_CLASSES_AND_ROLES,
+        [ class_name            => qw//],
+        [ type_name             => qw/english_name/],
+        [ is                    => qw/inheritance extends isa is_a/],
+        [ table_name            => qw/sql dsmap/],
+);
+
+sub _normalize_class_description_impl {
+    my $class = shift;
+    my %old_class = @_;
+
+    if (exists $old_class{extra}) {
+        %old_class = (%{delete $old_class{extra}}, %old_class);
     }
+
+    my $class_name = delete $old_class{class_name};
+
+    my %new_class = (
+        class_name      => $class_name,
+        is_singleton    => $UR::Object::Type::defaults{'is_singleton'},
+        is_final        => $UR::Object::Type::defaults{'is_final'},
+        is_abstract     => $UR::Object::Type::defaults{'is_abstract'},
+        _canonicalize_class_params(\%old_class, \@CLASS_DESCRIPTION_KEY_MAPPINGS),
+    );
 
     if (my $pp = $new_class{subclass_description_preprocessor}) {
         if (!ref($pp)) {
@@ -515,15 +539,10 @@ sub _normalize_class_description_impl {
         $new_class{'doc'} = undef;
     }
 
-    if ($new_class{'valid_signals'}) {
-        if (!ref($new_class{'valid_signals'})) {
-            # If it's a plain string, wrap it into an arrayref
-            $new_class{'valid_signals'} = [ $new_class{'valid_signals'} ];
-        } elsif (ref($new_class{'valid_signals'}) ne 'ARRAY') {
-            Carp::confess("The 'valid_signals' metadata for class $class_name must be an arrayref");
+    foreach my $key ( qw(valid_signals roles) ) {
+        unless (UR::Util::ensure_arrayref(\%new_class, $key)) {
+            Carp::croak("The '$key' metadata for class $class_name must be an arrayref");
         }
-    } else {
-        $new_class{'valid_signals'} = [];
     }
 
     for my $field (qw/is id_by has relationships constraints/) {
@@ -610,9 +629,200 @@ sub _normalize_class_description_impl {
                     . ")");
     }
 
+    _process_class_definition_property_keys(\%old_class, \%new_class);
+
+    # NOT ENABLED YET
+    if (0) {
+        # done processing direct properties of this process
+        # extend %$instance_properties with properties of the parent classes
+        my @parent_class_names = @{ $new_class{is} };
+        for my $parent_class_name (@parent_class_names) {
+            my $parent_class_meta = $parent_class_name->__meta__;
+            die "no meta for $parent_class_name while initializing $class_name?" unless $parent_class_meta;
+            my $parent_normalized_properties = $parent_class_meta->{has};
+            for my $parent_property_name (keys %$parent_normalized_properties) {
+                my $parent_property_data = $parent_normalized_properties->{$parent_property_name};
+                my $inherited_copy = $instance_properties->{$parent_property_name};
+                unless ($inherited_copy) {
+                    $inherited_copy = UR::Util::deep_copy($parent_property_data);
+                }
+                $inherited_copy->{class_name} = $class_name;
+                my $override = $inherited_copy->{overrides_class_names} ||= [];
+                push @$override, $parent_property_data->{class_name};
+            }
+        }
+    }
+
+    if (($new_class{data_source_id} and not ref($new_class{data_source_id})) and not $new_class{schema_name}) {
+        my $s = $new_class{data_source_id};
+        $s =~ s/^.*::DataSource:://;
+        $new_class{schema_name} = $s;
+    }
+
+    if (%old_class) {
+        # this should have all been deleted above
+        # we actually process it later, since these may be related to parent classes extending
+        # the class definition
+        $new_class{extra} = \%old_class;
+    };
+
+    # ensure parent classes are loaded
+    unless ($bootstrapping) {
+        my @base_classes = map { ref($_) ? @$_ : $_ } $new_class{is};
+        for my $parent_class_name (@base_classes) {
+            # ensure the parent classes are fully processed
+            no warnings;
+            unless ($parent_class_name->can("__meta__")) {
+                __PACKAGE__->use_module_with_namespace_constraints($parent_class_name);
+                Carp::croak("Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@") if $@;
+            }
+            unless ($parent_class_name->can("__meta__")) {
+                if ($ENV{'HARNESS_ACTIVE'}) {
+                    Carp::confess("Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name.  Does class $parent_class_name exist, and is it loaded?\n  The entire list of base classes was ".join(', ', @base_classes));
+                }
+                Carp::croak("Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name.  Does class $parent_class_name exist, and is it loaded?");
+            }
+            my $parent_class = $parent_class_name->__meta__;
+            unless ($parent_class) {
+                Carp::carp("No class metadata object for $parent_class_name");
+                next;
+            }
+
+            # the the parent classes indicate version, if needed
+            if ($parent_class->{'subclassify_by_version'} and not $parent_class_name =~ /::Ghost/) {
+                unless ($class_name =~ /^${parent_class_name}::V\d+/) {
+                    my $ns = $parent_class_name;
+                    $ns =~ s/::.*//;
+                    my $version;
+                    if ($ns and $ns->can("component_version")) {
+                        $version = $ns->component_version($class);
+                    }
+                    unless ($version) {
+                        $version = '1';
+                    }
+                    $parent_class_name = $parent_class_name . '::V' . $version;
+                    eval "use $parent_class_name";
+                    Carp::confess("Error using versioned module $parent_class_name!:\n$@") if $@;
+                    redo;
+                }
+            }
+        }
+        $new_class{is} = \@base_classes;
+    }
+
+    # allow parent classes to adjust the description in systematic ways
+    my @additional_property_meta_attributes;
+    unless ($bootstrapping) {
+        for my $parent_class_name (@{ $new_class{is} }) {
+            my $parent_class = $parent_class_name->__meta__;
+            if (my $parent_meta_properties = $parent_class->{attributes_have}) {
+                push @additional_property_meta_attributes, %$parent_meta_properties;
+            }
+        }
+    }
+
+    __PACKAGE__->_normalize_property_descriptions_during_normalize_class_description(\%new_class);
+
+    unless ($bootstrapping) {
+        %$meta_properties = (%$meta_properties, @additional_property_meta_attributes);
+
+        # Inheriting from an abstract class that subclasses with a subclassify_by means that
+        # this class' property named by that subclassify_by is actually a constant equal to this
+        # class' class name
+        PARENT_CLASS:
+        foreach my $parent_class_name ( @{ $new_class{'is'} }) {
+            my $parent_class_meta = $parent_class_name->__meta__();
+            foreach my $ancestor_class_meta ( $parent_class_meta->all_class_metas ) {
+                if (my $subclassify_by = $ancestor_class_meta->subclassify_by) {
+                    if (not $instance_properties->{$subclassify_by}) {
+                        my %old_property = (
+                            property_name => $subclassify_by,
+                            default_value => $class_name,
+                            is_constant => 1,
+                            is_classwide => 1,
+                            is_specified_in_module_header => 0,
+                            column_name => '',
+                            implied_by => $parent_class_meta->class_name . '::subclassify_by',
+                        );
+                        my %new_property = $class->_normalize_property_description1($subclassify_by, \%old_property, \%new_class);
+                        my %new_property2 = $class->_normalize_property_description2(\%new_property, \%new_class);
+                        $instance_properties->{$subclassify_by} = \%new_property2;
+                        last PARENT_CLASS;
+                    }
+                }
+            }
+        }
+    }
+
+    my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
+    $new_class{meta_class_name} ||= $meta_class_name;
+    return \%new_class;
+}
+
+sub _normalize_property_descriptions_during_normalize_class_description {
+    my($class, $new_class) = @_;
+
+    my $instance_properties = $new_class->{has};
+
+    # normalize the data behind the property descriptions
+    my @property_names = keys %$instance_properties;
+    for my $property_name (@property_names) {
+        my %old_property = %{ $instance_properties->{$property_name} };
+        my %new_property = $class->_normalize_property_description1($property_name, \%old_property, $new_class);
+        %new_property = $class->_normalize_property_description2(\%new_property, $new_class);
+        $instance_properties->{$property_name} = \%new_property;
+    }
+
+    # Find 'via' properties where the to is '-filter' and rewrite them to
+    # copy some attributes from the source property
+    # This feels like a hack, but it makes other parts of the system easier by
+    # not having to deal with -filter
+    foreach my $property_name ( @property_names ) {
+        my $property_data = $instance_properties->{$property_name};
+        if ($property_data->{'to'} && $property_data->{'to'} eq '-filter') {
+            my $via = $property_data->{'via'};
+            my $via_property_data = $instance_properties->{$via};
+            unless ($via_property_data) {
+                my $class_name = $new_class->{class_name};
+                Carp::croak "Cannot initialize class $class_name: Property '$property_name' filters '$via', but there is no property '$via'.";
+            }
+
+            $property_data->{'data_type'} = $via_property_data->{'data_type'};
+            $property_data->{'reverse_as'} = $via_property_data->{'reverse_as'};
+            if ($via_property_data->{'where'}) {
+                unshift @{$property_data->{'where'}}, @{$via_property_data->{'where'}};
+            }
+        }
+    }
+
+    # Catch a mistake in the class definition where a property is 'via'
+    # something, and its 'to' is the same as the via's reverse_as.  This
+    # ends up being a circular definition and generates junk SQL
+    foreach my $property_name ( @property_names ) {
+        my $property_data = $instance_properties->{$property_name};
+        my $via = $property_data->{'via'};
+        my $to  = $property_data->{'to'};
+        if (defined($via) and defined($to)) {
+            my $via_property_data = $instance_properties->{$via};
+            next unless ($via_property_data and $via_property_data->{'reverse_as'});
+            if ($via_property_data->{'reverse_as'} eq $to) {
+                my $class_name = $new_class->{class_name};
+                Carp::croak("Cannot initialize class $class_name: Property '$property_name' defines "
+                            . "an incompatible relationship.  Its 'to' is the same as reverse_as for property '$via'");
+            }
+        }
+    }
+}
+
+sub _process_class_definition_property_keys {
+    my($old_class, $new_class) = @_;
+
+    my($class_name, $instance_properties, $meta_properties) = @$new_class{'class_name', 'has','attributes_have'};
+    $class_name ||= $new_class->{role_name};  # This is used by role construction, too
+
     # Flatten and format the property list(s) in the class description.
     # NOTE: we normalize the details at the end of normalizing the class description.
-    my @keys = _class_definition_property_keys_in_processing_order(\%old_class);
+    my @keys = _class_definition_property_keys_in_processing_order($old_class);
     foreach my $key ( @keys ) {
         # parse the key to see if we're looking at instance or meta attributes,
         # and take the extra words as additional attribute meta-data.
@@ -639,7 +849,7 @@ sub _normalize_class_description_impl {
 
         # the property data can be a string, array, or hash as they come in
         # convert string, hash and () into an array
-        my $property_data = delete $old_class{$key};
+        my $property_data = delete $old_class->{$key};
 
         my @tmp;
         if (!ref($property_data)) {
@@ -767,190 +977,17 @@ sub _normalize_class_description_impl {
             }
         }
 
-    } # next group of properties
-
-    # NOT ENABLED YET
-    if (0) {
-        # done processing direct properties of this process
-        # extend %$instance_properties with properties of the parent classes
-        my @parent_class_names = @{ $new_class{is} };
-        for my $parent_class_name (@parent_class_names) {
-            my $parent_class_meta = $parent_class_name->__meta__;
-            die "no meta for $parent_class_name while initializing $class_name?" unless $parent_class_meta;
-            my $parent_normalized_properties = $parent_class_meta->{has};
-            for my $parent_property_name (keys %$parent_normalized_properties) {
-                my $parent_property_data = $parent_normalized_properties->{$parent_property_name};
-                my $inherited_copy = $instance_properties->{$parent_property_name};
-                unless ($inherited_copy) {
-                    $inherited_copy = UR::Util::deep_copy($parent_property_data);
-                }
-                $inherited_copy->{class_name} = $class_name;
-                my $override = $inherited_copy->{overrides_class_names} ||= [];
-                push @$override, $parent_property_data->{class_name};
-            }
-        }
     }
-
-    if (($new_class{data_source_id} and not ref($new_class{data_source_id})) and not $new_class{schema_name}) {
-        my $s = $new_class{data_source_id};
-        $s =~ s/^.*::DataSource:://;
-        $new_class{schema_name} = $s;
-    }
-
-    if (%old_class) {
-        # this should have all been deleted above
-        # we actually process it later, since these may be related to parent classes extending
-        # the class definition
-        $new_class{extra} = \%old_class;
-    };
-
-    # ensure parent classes are loaded
-    unless ($bootstrapping) {
-        my @base_classes = map { ref($_) ? @$_ : $_ } $new_class{is};
-        for my $parent_class_name (@base_classes) {
-            # ensure the parent classes are fully processed
-            no warnings;
-            unless ($parent_class_name->can("__meta__")) {
-                __PACKAGE__->use_module_with_namespace_constraints($parent_class_name);
-                Carp::croak("Class $class_name cannot initialize because of errors using parent class $parent_class_name: $@") if $@;
-            }
-            unless ($parent_class_name->can("__meta__")) {
-                if ($ENV{'HARNESS_ACTIVE'}) {
-                    Carp::confess("Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name.  Does class $parent_class_name exist, and is it loaded?\n  The entire list of base classes was ".join(', ', @base_classes));
-                }
-                Carp::croak("Class $class_name cannot initialize because of errors using parent class $parent_class_name.  Failed to find static method '__meta__' on $parent_class_name.  Does class $parent_class_name exist, and is it loaded?");
-            }
-            my $parent_class = $parent_class_name->__meta__;
-            unless ($parent_class) {
-                Carp::carp("No class metadata object for $parent_class_name");
-                next;
-            }
-
-            # the the parent classes indicate version, if needed
-            if ($parent_class->{'subclassify_by_version'} and not $parent_class_name =~ /::Ghost/) {
-                unless ($class_name =~ /^${parent_class_name}::V\d+/) {
-                    my $ns = $parent_class_name;
-                    $ns =~ s/::.*//;
-                    my $version;
-                    if ($ns and $ns->can("component_version")) {
-                        $version = $ns->component_version($class);
-                    }
-                    unless ($version) {
-                        $version = '1';
-                    }
-                    $parent_class_name = $parent_class_name . '::V' . $version;
-                    eval "use $parent_class_name";
-                    Carp::confess("Error using versioned module $parent_class_name!:\n$@") if $@;
-                    redo;
-                }
-            }
-        }
-        $new_class{is} = \@base_classes;
-    }
-
-    # normalize the data behind the property descriptions
-    my @property_names = keys %$instance_properties;
-    for my $property_name (@property_names) {
-        my %old_property = %{ $instance_properties->{$property_name} };
-        my %new_property = $class->_normalize_property_description1($property_name, \%old_property, \%new_class);
-        %new_property = $class->_normalize_property_description2(\%new_property, \%new_class);
-        $instance_properties->{$property_name} = \%new_property;
-    }
-    # allow parent classes to adjust the description in systematic ways
-    my $desc = \%new_class;
-    my @additional_property_meta_attributes;
-    unless ($bootstrapping) {
-        for my $parent_class_name (@{ $new_class{is} }) {
-            my $parent_class = $parent_class_name->__meta__;
-            if (my $parent_meta_properties = $parent_class->{attributes_have}) {
-                push @additional_property_meta_attributes, %$parent_meta_properties;
-            }
-        }
-    }
-
-    # Find 'via' properties where the to is '-filter' and rewrite them to
-    # copy some attributes from the source property
-    # This feels like a hack, but it makes other parts of the system easier by
-    # not having to deal with -filter
-    foreach my $property_name ( @property_names ) {
-        my $property_data = $instance_properties->{$property_name};
-        if ($property_data->{'to'} && $property_data->{'to'} eq '-filter') {
-            my $via = $property_data->{'via'};
-            my $via_property_data = $instance_properties->{$via};
-            unless ($via_property_data) {
-                Carp::croak "Cannot initialize class $class_name: Property '$property_name' filters '$via', but there is no property '$via'.";
-            }
-
-            $property_data->{'data_type'} = $via_property_data->{'data_type'};
-            $property_data->{'reverse_as'} = $via_property_data->{'reverse_as'};
-            if ($via_property_data->{'where'}) {
-                unshift @{$property_data->{'where'}}, @{$via_property_data->{'where'}};
-            }
-        }
-    }
-
-    # Catch a mistake in the class definition where a property is 'via'
-    # something, and its 'to' is the same as the via's reverse_as.  This
-    # ends up being a circular definition and generates junk SQL
-    foreach my $property_name ( @property_names ) {
-        my $property_data = $instance_properties->{$property_name};
-        my $via = $property_data->{'via'};
-        my $to  = $property_data->{'to'};
-        if (defined($via) and defined($to)) {
-            my $via_property_data = $instance_properties->{$via};
-            next unless ($via_property_data and $via_property_data->{'reverse_as'});
-            if ($via_property_data->{'reverse_as'} eq $to) {
-                Carp::croak("Cannot initialize class $class_name: Property '$property_name' defines "
-                            . "an incompatible relationship.  Its 'to' is the same as reverse_as for property '$via'");
-            }
-        }
-    }
-
-
-    unless ($bootstrapping) {
-        # cascade extra meta attributes from the parent downward
-        for my $parent_class_name (@{ $new_class{is} }) {
-            my $parent_class = $parent_class_name->__meta__;
-            if (my $parent_meta_properties = $parent_class->{attributes_have}) {
-                #push @additional_property_meta_attributes, %$parent_meta_properties;
-            }
-        }
-
-        %$meta_properties = (%$meta_properties, @additional_property_meta_attributes);
-
-        # Inheriting from an abstract class that subclasses with a subclassify_by means that
-        # this class' property named by that subclassify_by is actually a constant equal to this
-        # class' class name
-        PARENT_CLASS:
-        foreach my $parent_class_name ( @{ $new_class{'is'} }) {
-            my $parent_class_meta = $parent_class_name->__meta__();
-            foreach my $ancestor_class_meta ( $parent_class_meta->all_class_metas ) {
-                if (my $subclassify_by = $ancestor_class_meta->subclassify_by) {
-                    if (not $instance_properties->{$subclassify_by}) {
-                        my %old_property = (
-                            property_name => $subclassify_by,
-                            default_value => $class_name,
-                            is_constant => 1,
-                            is_classwide => 1,
-                            is_specified_in_module_header => 0,
-                            column_name => '',
-                            implied_by => $parent_class_meta->class_name . '::subclassify_by',
-                        );
-                        my %new_property = $class->_normalize_property_description1($subclassify_by, \%old_property, \%new_class);
-                        my %new_property2 = $class->_normalize_property_description2(\%new_property, \%new_class);
-                        $instance_properties->{$subclassify_by} = \%new_property2;
-                        last PARENT_CLASS;
-                    }
-                }
-            }
-        }
-    }
-
-    my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
-    $desc->{meta_class_name} ||= $meta_class_name;
-    return $desc;
 }
 
+sub compose_roles {
+    my($class, $desc) = @_;
+
+    UR::Role::Prototype->_apply_roles_to_class_desc($desc);
+    $class->_normalize_property_descriptions_during_normalize_class_description($desc);
+}
+
+# Return the order to process the has, has_optional, has_constant, etc keys
 sub _class_definition_property_keys_in_processing_order {
     my $class_hashref = shift;
 
@@ -1120,11 +1157,13 @@ sub _normalize_property_description1 {
     }
 
     if ($new_property{data_type}) {
-        if (my ($length) = ($new_property{data_type} =~ /\((\d+)\)$/)) {
+        if (my (undef, $length) = $new_property{data_type} =~ m/(\s*)\((\d+)\)$/) {
             $new_property{data_length} = $length;
-            $new_property{data_type} =~ s/\(\d+\)$//;
         }
-        if ($new_property{data_type} =~ m/[^\w:]/) {
+        if ($new_property{data_type} =~ m/[^\w:]/
+            and
+            (!ref($new_property{data_type}) or !$new_property{data_type}->isa('UR::Role::Param'))
+        ) {
             Carp::croak("Can't initialize class $class_name: Property '" . $new_property{property_name}
                         . "' has metadata for is/data_type that does not look like a class name ($new_property{data_type})");
         }
@@ -1358,6 +1397,16 @@ sub _inform_all_parent_classes_of_newly_loaded_subclass {
     }
 
     return 1;
+}
+
+sub _inform_roles_of_new_class {
+    my $self = shift;
+
+    foreach my $role_obj ( @{ $self->{roles} } ) {
+        my $package = $role_obj->role_name;
+        next unless my $import = $package->can('__import__');
+        $import->($package, $self);
+    }
 }
 
 sub _complete_class_meta_object_definitions {
@@ -1640,21 +1689,7 @@ sub _complete_class_meta_object_definitions {
     }
 
     if (my $extra = $self->{extra}) {
-        # some class characteristics may be only present in subclasses of UR::Object
-        # we handle these at this point, since the above is needed for bootstrapping
-        my %still_not_found;
-        for my $key (sort keys %$extra) {
-            if ($self->can($key)) {
-                $self->$key($extra->{$key});
-            }
-            else {
-                $still_not_found{$key} = $extra->{$key};
-            }
-        }
-        if (%still_not_found) {
-            $DB::single = 1;
-            Carp::confess("BAD CLASS DEFINITION for $class_name.  Unrecognized properties: " . Data::Dumper::Dumper(%still_not_found));
-        }
+        $self->_apply_extra_attrs_to_class_or_role($extra);
     }
 
     $self->__signal_change__("load");
@@ -1684,6 +1719,36 @@ sub _complete_class_meta_object_definitions {
 
     # return the new class object
     return $self;
+}
+
+sub _apply_extra_attrs_to_class_or_role {
+    my($self, $extra) = @_;
+
+    if ($extra) {
+        # some class characteristics may be only present in subclasses of UR::Object
+        # we handle these at this point, since the above is needed for bootstrapping
+        my %still_not_found;
+        for my $key (sort keys %$extra) {
+            if ($self->can($key)) {
+                $self->$key($extra->{$key});
+            }
+            else {
+                $still_not_found{$key} = $extra->{$key};
+            }
+        }
+        if (%still_not_found) {
+            my $kind = $self->isa('UR::Object::Type')
+                        ? 'Class'
+                        : 'Role';
+            my $name = $self->id;
+
+            $DB::single = 1;
+            Carp::croak("Bad $kind defninition for $name.  Unrecognized properties:\n\t"
+                            . join("\n\t", join(' => ', map { ($_, $still_not_found{$_}) } keys %still_not_found)));
+        }
+    }
+
+
 }
 
 # write the module from the existing data in the class object
