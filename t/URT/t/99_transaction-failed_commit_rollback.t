@@ -16,6 +16,14 @@ UR::Object::Type->define(
     ],
 );
 
+sub Circle::__errors__ {
+    my $tag = UR::Object::Tag->create (
+        type => 'invalid',
+        properties => ['test_property'],
+        desc => 'intentional error for test',
+    );
+    return ($tag);
+}
 
 # Create a Circle
 my $circle = Circle->create();
@@ -35,15 +43,6 @@ subtest 'fail to commit then rollback' => sub {
     $circle->radius($new_radius);
     is($circle->radius, $new_radius, "circle radius changed to new radius");
 
-    *Circle::__errors__ = sub {
-        my $tag = UR::Object::Tag->create (
-            type => 'invalid',
-            properties => ['test_property'],
-            desc => 'intentional error for test',
-        );
-        return ($tag);
-    };
-
     $transaction->dump_error_messages(0);
     $transaction->queue_error_messages(1);
 
@@ -60,6 +59,5 @@ subtest 'fail to commit then rollback' => sub {
     is($transaction->rollback, 1, 'rollback succeeded');
     is($circle->radius, $old_radius, 'circle radius was rolled back due to forced __errors__');
 };
-
 
 1;
