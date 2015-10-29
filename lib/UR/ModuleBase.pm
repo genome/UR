@@ -525,6 +525,10 @@ with undef as the argument.
 If the queue_error_messages flag is on, then this method returns the entire list
 of queued messages.
 
+When called as an instance method, it returns the errors queued only on that
+object.  When called as a class method, it returns the errors queued on that
+class, all it's subclasses, and all instances of that class or subclasses.
+
 =item error_messages_arrayref
 
     $listref = $obj->error_messages_arrayref();
