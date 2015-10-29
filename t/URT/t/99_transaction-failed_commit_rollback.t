@@ -53,10 +53,7 @@ subtest 'fail to commit then rollback' => sub {
     is(scalar(@messages), 2, 'commit generated 2 error messages');
     my $circleid = $circle->id;
     is($messages[0], 'Invalid data for save!', 'First error text is correct');
-    #like($msgobj[1]->text,
-    #     qr(Circle identified by $circleid has problem on\nINVALID: property 'test_property': intentional error for test)m,
-    #     'Error message text is correct');
-   like($messages[1],
+    like($messages[1],
         qr(Circle identified by $circleid has problems on\s+INVALID: property 'test_property': intentional error for test),
         'Error message text is correct');
 
