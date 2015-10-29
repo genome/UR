@@ -4,7 +4,7 @@ use warnings;
 use UR;
 use IO::File;
 
-use Test::More tests => 11;
+use Test::More tests => 3;
 
 UR::Object::Type->define(
     class_name => 'Circle',
@@ -23,7 +23,9 @@ ok($circle->isa('Circle'), 'create a circle');
 ok($circle->radius == 1, 'default radius is 1');
 
 
-{
+subtest 'fail to commit then rollback' => sub {
+    plan tests => 9;
+
     my $transaction = UR::Context::Transaction->begin;
     isa_ok($transaction, 'UR::Context::Transaction');
 
@@ -60,7 +62,7 @@ ok($circle->radius == 1, 'default radius is 1');
 
     is($transaction->rollback, 1, 'rollback succeeded');
     is($circle->radius, $old_radius, 'circle radius was rolled back due to forced __errors__');
-}
+};
 
 
 1;
