@@ -415,6 +415,16 @@ objects.  As all activity to objects occurs in some kind of transaction
 context, the newly created transaction exists within whatever context was
 current before the call to begin().
 
+  $t = UR::Context::Transaction->begin(commit_validator => sub { ... });
+
+A validation function may be assigned with the C<commit_validator> property.
+When the transaction is committed, this function is called.  The commit
+proceeds if this function returns a true value.  The default function,
+C<changes_can_be_saved> requires that all objects changed within the
+transaction be valid, ie. that C<$obj->__errors__()> returns an empty list.
+The validation function is passed one argument: the transaction object
+being committed.
+
 =back
 
 =head1 METHODS
@@ -426,7 +436,16 @@ current before the call to begin().
   $t->commit();
 
 Causes all objects with changes to save those changes back to the underlying
-context.  
+context.
+
+If the validation function (specified with the C<commit_validator> param when
+the transaction was created with C<begin()>) returns false, the changes are
+not committed to the encompassing context, C<commit()> returns false and this
+transaction remains in effect.
+
+Returns true if all the transaction's changes are committed to the encompassing
+Context.  This transaction object then becomes invalid, and its state will be
+'committed'.
 
 =item rollback
 
@@ -436,6 +455,9 @@ Causes all objects with changes to have those changes reverted to their
 state when the transaction began.  Classes with properties whose meta-property
 is_transactional => 0 are not tracked within a transaction and will not be
 reverted.
+
+After C<rollback()>, this transaction becomes invalid, and the object will become
+a L<UR::DeletedRef>.
 
 =item delete
 
