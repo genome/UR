@@ -1977,6 +1977,32 @@ $cache_data = {
                                                                                            'id' => 'UR__Observer',
                                                                                            'name' => 'UR::Observer'
                                                                                          }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                'UR::Role::Instance' => bless( {
+                                                                                                 'children' => {},
+                                                                                                 'data' => {
+                                                                                                             'file' => 'Instance.pm',
+                                                                                                             'is' => [
+                                                                                                                       'UR::Object'
+                                                                                                                     ],
+                                                                                                             'name' => 'UR::Role::Instance',
+                                                                                                             'relpath' => 'UR/Role/Instance.pm'
+                                                                                                           },
+                                                                                                 'id' => 'UR__Role__Instance',
+                                                                                                 'name' => 'UR::Role::Instance'
+                                                                                               }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                'UR::Role::Prototype' => bless( {
+                                                                                                  'children' => {},
+                                                                                                  'data' => {
+                                                                                                              'file' => 'Prototype.pm',
+                                                                                                              'is' => [
+                                                                                                                        'UR::Object'
+                                                                                                                      ],
+                                                                                                              'name' => 'UR::Role::Prototype',
+                                                                                                              'relpath' => 'UR/Role/Prototype.pm'
+                                                                                                            },
+                                                                                                  'id' => 'UR__Role__Prototype',
+                                                                                                  'name' => 'UR::Role::Prototype'
+                                                                                                }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
                                                                 'UR::Service::JsonRpcServer' => bless( {
                                                                                                          'children' => {},
                                                                                                          'data' => {
@@ -2728,6 +2754,8 @@ $cache_data = {
                                      'UR::Object::View::Toolkit' => {},
                                      'UR::Object::View::Toolkit::Text' => {},
                                      'UR::Observer' => {},
+                                     'UR::Role::Instance' => {},
+                                     'UR::Role::Prototype' => {},
                                      'UR::Service::JsonRpcServer' => {},
                                      'UR::Service::RPC::Executer' => {},
                                      'UR::Service::RPC::Message' => {},
@@ -3940,6 +3968,27 @@ $cache_data = {
                                                                                         'name' => 'Observer',
                                                                                         'relpath' => 'UR::Observer'
                                                                                       }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                 'Role' => bless( {
+                                                                                    'children' => {
+                                                                                                    'Instance' => bless( {
+                                                                                                                           'children' => {},
+                                                                                                                           'data' => {},
+                                                                                                                           'id' => 'Instance',
+                                                                                                                           'name' => 'Instance',
+                                                                                                                           'relpath' => 'UR::Role::Instance'
+                                                                                                                         }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                    'Prototype' => bless( {
+                                                                                                                            'children' => {},
+                                                                                                                            'data' => {},
+                                                                                                                            'id' => 'Prototype',
+                                                                                                                            'name' => 'Prototype',
+                                                                                                                            'relpath' => 'UR::Role::Prototype'
+                                                                                                                          }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' )
+                                                                                                  },
+                                                                                    'id' => 'Role',
+                                                                                    'name' => 'Role',
+                                                                                    'relpath' => 'UR::Role'
+                                                                                  }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
                                                                  'Service' => bless( {
                                                                                        'children' => {
                                                                                                        'JsonRpcServer' => bless( {
@@ -5616,6 +5665,27 @@ $cache_data = {
                                                                                           'name' => 'Observer.pm',
                                                                                           'relpath' => 'UR/Observer.pm'
                                                                                         }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                'Role' => bless( {
+                                                                                   'children' => {
+                                                                                                   'Instance.pm' => bless( {
+                                                                                                                             'children' => {},
+                                                                                                                             'data' => {},
+                                                                                                                             'id' => 'Instance.pm',
+                                                                                                                             'name' => 'Instance.pm',
+                                                                                                                             'relpath' => 'UR/Role/Instance.pm'
+                                                                                                                           }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                   'Prototype.pm' => bless( {
+                                                                                                                              'children' => {},
+                                                                                                                              'data' => {},
+                                                                                                                              'id' => 'Prototype.pm',
+                                                                                                                              'name' => 'Prototype.pm',
+                                                                                                                              'relpath' => 'UR/Role/Prototype.pm'
+                                                                                                                            }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' )
+                                                                                                 },
+                                                                                   'id' => 'Role',
+                                                                                   'name' => 'Role',
+                                                                                   'relpath' => 'UR/Role'
+                                                                                 }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
                                                                 'Service' => bless( {
                                                                                       'children' => {
                                                                                                       'JsonRpcServer.pm' => bless( {
@@ -6137,6 +6207,8 @@ $cache_data->{'by_class_name'}{'UR::Object::View::Static::Html'} = $cache_data->
 $cache_data->{'by_class_name'}{'UR::Object::View::Toolkit'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Singleton'}{'children'}{'UR::Object::View::Toolkit'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Object::View::Toolkit::Text'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Singleton'}{'children'}{'UR::Object::View::Toolkit'}{'children'}{'UR::Object::View::Toolkit::Text'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Observer'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Observer'}{'data'};
+$cache_data->{'by_class_name'}{'UR::Role::Instance'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Instance'}{'data'};
+$cache_data->{'by_class_name'}{'UR::Role::Prototype'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Prototype'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Service::JsonRpcServer'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::JsonRpcServer'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Service::RPC::Executer'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Executer'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Service::RPC::Message'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Message'}{'data'};
@@ -6324,6 +6396,8 @@ $cache_data->{'by_class_name_tree'}{'children'}{'Object'}{'children'}{'View'}{'c
 $cache_data->{'by_class_name_tree'}{'children'}{'Object'}{'children'}{'View'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Object::View'}{'data'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Object'}{'data'} = $cache_data->{'by_class_name'}{'UR::Object'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Observer'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Observer'}{'data'};
+$cache_data->{'by_class_name_tree'}{'children'}{'Role'}{'children'}{'Instance'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Instance'}{'data'};
+$cache_data->{'by_class_name_tree'}{'children'}{'Role'}{'children'}{'Prototype'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Prototype'}{'data'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Service'}{'children'}{'JsonRpcServer'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::JsonRpcServer'}{'data'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Service'}{'children'}{'RPC'}{'children'}{'Executer'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Executer'}{'data'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Service'}{'children'}{'RPC'}{'children'}{'Message'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Message'}{'data'};
@@ -6512,6 +6586,8 @@ $cache_data->{'by_directory_tree'}{'children'}{'Object'}{'children'}{'View'}{'ch
 $cache_data->{'by_directory_tree'}{'children'}{'Object'}{'children'}{'View.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Object::View'}{'data'};
 $cache_data->{'by_directory_tree'}{'children'}{'Object.pm'}{'data'} = $cache_data->{'by_class_name'}{'UR::Object'};
 $cache_data->{'by_directory_tree'}{'children'}{'Observer.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Observer'}{'data'};
+$cache_data->{'by_directory_tree'}{'children'}{'Role'}{'children'}{'Instance.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Instance'}{'data'};
+$cache_data->{'by_directory_tree'}{'children'}{'Role'}{'children'}{'Prototype.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Prototype'}{'data'};
 $cache_data->{'by_directory_tree'}{'children'}{'Service'}{'children'}{'JsonRpcServer.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::JsonRpcServer'}{'data'};
 $cache_data->{'by_directory_tree'}{'children'}{'Service'}{'children'}{'RPC'}{'children'}{'Executer.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Executer'}{'data'};
 $cache_data->{'by_directory_tree'}{'children'}{'Service'}{'children'}{'RPC'}{'children'}{'Message.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Message'}{'data'};
