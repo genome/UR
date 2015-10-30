@@ -27,6 +27,7 @@ sub mk_rw_accessor {
             # The accessors may compare undef and an empty
             # string.  For speed, we turn warnings off rather
             # than add extra code to make the warning disappear.
+            local $@;
             my $different = eval { no warnings;  $old ne $new };
             if ($different or $@ =~ m/has no overloaded magic/)
             {
@@ -35,11 +36,7 @@ sub mk_rw_accessor {
             }
             return $new;
         }
-        my $r = eval { $_[0]->{ $property_name } };
-        if ($@) {
-            Carp::confess("Exception while processing property $property_name: $@");
-        }
-        return $r;
+        $_[0]->{ $property_name }
     };
 
     if (_class_is_singleton($class_name)) {
@@ -67,8 +64,13 @@ sub mk_ro_accessor {
             my $old = $_[0]->{ $property_name};
             my $new = $_[1];
 
-            my $different = eval { no warnings;  $old ne $new };
-            if ($different or $@ =~ m/has no overloaded magic/)
+            my $different;
+            my $exception = do {
+                local $@;
+                $different = eval { no warnings;  $old ne $new };
+                $@;
+            };
+            if ($different or $exception =~ m/has no overloaded magic/)
             {
                 Carp::croak("Cannot change read-only property $accessor_name for class $class_name!"
                 . "  Failed to update " . $_[0]->__display_name__ . " property: $property_name from $old to $new");
@@ -132,7 +134,10 @@ sub mk_id_based_flex_accessor {
                     Carp::croak("Can't call method \"id\" without a package or object reference.  Expected an object as parameter to '$accessor_name', not the value '$object_value'");
                 }
 
-                my $r_class_meta = eval { $concrete_r_class_name->__meta__ };
+                my $r_class_meta = do {
+                    local $@;
+                    eval { $concrete_r_class_name->__meta__ };
+                };
                 unless ($r_class_meta) {
                     Carp::croak("Can't get metadata for class $concrete_r_class_name.  Is it a UR class?");
                 }
@@ -244,7 +249,10 @@ sub mk_id_based_object_accessor {
                     Carp::croak("Can't call method \"id\" without a package or object reference.  Expected an object as parameter to '$accessor_name', not the value '$object_value'");
                 }
 
-                my $r_class_meta = eval { $concrete_r_class_name->__meta__ };
+                my $r_class_meta = do {
+                    local $@;
+                    eval { $concrete_r_class_name->__meta__ };
+                };
                 unless ($r_class_meta) {
                     Carp::croak("Can't get metadata for class $concrete_r_class_name.  Is it a UR class?");
                 }
@@ -357,7 +365,10 @@ sub _resolve_bridge_logic_for_indirect_property {
     ) {
         my $bridge_class = $via_property_meta->data_type;
 
-        my @via_join_properties = eval { $via_property_meta->get_property_name_pairs_for_join };
+        my @via_join_properties = do {
+            local $@;
+            eval { $via_property_meta->get_property_name_pairs_for_join };
+        };
         if (! @via_join_properties) {
             # this can happen if the properties aren't linked together as expected.
             # For example, a property involved in a many-to-many relationship, but is
@@ -760,13 +771,17 @@ sub mk_indirect_rw_accessor {
             if ($update_strategy eq 'change') {
                 if (@bridges == 0) {
                     #print "adding via $adder @where :::> $to @_\n";
-                    @bridges = eval { $self->$adder(@where, $to => $_[0]) };
-                    if ($@) {
+                    my $exception = do {
+                        local $@;
+                        @bridges = eval { $self->$adder(@where, $to => $_[0]) };
+                        $@;
+                    };
+                    if ($exception) {
                         my $r_class_meta = $r_class_name->__meta__;
                         my $property_meta = $r_class_meta->property($to);
                         if ($property_meta) {
                             # Re-throw the original exception
-                            die $@;
+                            die $exception;
                         } else {
                             Carp::croak("Couldn't create a new object through indirect property "
                                         . "'$accessor_name' on $class_name.  'to' is $to which is not a property on $r_class_name.");
@@ -904,8 +919,12 @@ sub mk_calculation_accessor {
     elsif ($calculation_src =~ /^[^\:\W]+$/) {
         # built-in formula like 'sum' or 'product'
         my $module_name = "UR::Object::Type::AccessorWriter::" . ucfirst(lc($calculation_src));
-        eval "use $module_name";
-        die $@ if $@;
+        my $exception = do {
+            local $@;
+            eval "use $module_name";
+            $@;
+        };
+        die $exception if $exception;
         @src = (
             "sub ${class_name}::${accessor_name} {",
             'my $self = $_[0];',
@@ -928,13 +947,17 @@ sub mk_calculation_accessor {
         if (@src) {
             my $src = join("\n",@src);
             #print ">>$src<<\n";
-            eval $src;
-            if ($@) {
-                Carp::croak "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$@\n";
+            my $exception = do {
+                local $@;
+                eval $src;
+                $@;
+            };
+            if ($exception) {
+                Carp::croak "ERROR IN CALCULATED PROPERTY SOURCE: $class_name $accessor_name\n$exception\n";
             }
             $accessor = \&{ $class_name . '::' . $accessor_name };
             unless ($accessor) {
-                Cqrp::confess("Failed to generate code body for calculated property ${class_name}::${accessor_name}!");
+                Carp::confess("Failed to generate code body for calculated property ${class_name}::${accessor_name}!");
             }
         }
         else {
@@ -1008,8 +1031,13 @@ sub mk_dimension_delegate_accessors {
                 # (farther below).
                 my $old = $delegate->$other_accessor_name;
                 my $new = shift;
-                my $different = eval { no warnings; $old ne $new };
-                if ($different or $@ =~ m/has no overloaded magic/) {
+                my $different;
+                my $exception = do {
+                    local $@;
+                    $different = eval { no warnings; $old ne $new };
+                    $@;
+                };
+                if ($different or $exception =~ m/has no overloaded magic/) {
                     $self->{$accessor_name} = undef;
                     for my $property (@$non_id_properties) {
                         if ($property eq $other_accessor_name) {
@@ -1032,8 +1060,13 @@ sub mk_dimension_delegate_accessors {
                 # set
                 my $old = $self->{ $other_accessor_name };
                 my $new = shift;
-                my $different = eval { no warnings; $old ne $new };
-                if ($different or $@ =~ m/has no overloaded magic/) {
+                my $different;
+                my $exception = do {
+                    local $@;
+                    $different = eval { no warnings; $old ne $new };
+                    $@;
+                };
+                if ($different or $exception =~ m/has no overloaded magic/) {
                     $self->{ $other_accessor_name } = $new;
                     $self->__signal_change__( $other_accessor_name, $old, $new ) unless $is_transient;
                 }
@@ -1070,8 +1103,13 @@ sub mk_dimension_identifying_accessor {
         if (@_ > 1) {
             my $old = $_[0]->{ $accessor_name };
             my $new = $_[1];
-            my $different = eval { no warnings; $old ne $new };
-            if ($different or $@ =~ m/has no overloaded magic/) {
+            my $different;
+            my $exception = do {
+                local $@;
+                $different = eval { no warnings; $old ne $new };
+                $@;
+            };
+            if ($different or $exception =~ m/has no overloaded magic/) {
                 $_[0]->{ $accessor_name } = $new;
                 $_[0]->__signal_change__( $accessor_name, $old, $new ) unless $is_transient;
             }
@@ -1107,8 +1145,13 @@ sub mk_rw_class_accessor
                 my $old = $variable_value;
                 $variable_value = $_[1];
 
-                my $different = eval { no warnings; $old ne $variable_value };
-                if ($different or $@ =~ m/has no overloaded magic/) {
+                my $different;
+                my $exception = do {
+                    local $@;
+                    $different = eval { no warnings; $old ne $variable_value };
+                    $@;
+                };
+                if ($different or $exception =~ m/has no overloaded magic/) {
                     $_[0]->__signal_change__( $accessor_name, $old, $variable_value ) unless $is_transient;
                 }
             } elsif (defined $calc_default) {
@@ -1133,8 +1176,13 @@ sub mk_ro_class_accessor {
         if (@_ > 1) {
             my $new = $_[1];
 
-            my $different = eval { no warnings; $variable_value ne $new };
-            if ($different or $@ =~ m/has no overloaded magic/) {
+            my $different;
+            my $exception = do{
+                local $@;
+                $different = eval { no warnings; $variable_value ne $new };
+                $@;
+            };
+            if ($different or $exception =~ m/has no overloaded magic/) {
                 $new = defined($new) ? $new : '(undef)';
                 my $report_variable_value = defined($variable_value) ? $variable_value : '(undef)';
                 Carp::croak("Cannot change read-only class-wide property $accessor_name for class $class_name from $report_variable_value to $new!");
@@ -1168,21 +1216,25 @@ sub mk_object_set_accessors {
         my ($obj) = @_;
         my $loading_r_class_error = '';
         if (defined $r_class_name) {
-            eval {
-                $r_class_meta = UR::Object::Type->is_loaded($r_class_name);
-                unless ($r_class_meta or __PACKAGE__->use_module_with_namespace_constraints($r_class_name)) {
-                    # Don't die yet.  The named class may not have a file associated with it
-                    $loading_r_class_error = "Couldn't load class $r_class_name: $@";
-                    $@ = '';
-                }
+            my $exception = do {
+                local $@;
+                eval {
+                    $r_class_meta = UR::Object::Type->is_loaded($r_class_name);
+                    unless ($r_class_meta or __PACKAGE__->use_module_with_namespace_constraints($r_class_name)) {
+                        # Don't die yet.  The named class may not have a file associated with it
+                        $loading_r_class_error = "Couldn't load class $r_class_name: $@";
+                        $@ = '';
+                    }
 
-                unless ($r_class_meta) {
-                    $r_class_name->class;
-                    $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
-                }
+                    unless ($r_class_meta) {
+                        $r_class_name->class;
+                        $r_class_meta = UR::Object::Type->get(class_name => $r_class_name);
+                    }
+                };
+                $@;
             };
-            if ($@) {
-                $loading_r_class_error .= "Couldn't get class object for $r_class_name: $@";
+            if ($exception) {
+                $loading_r_class_error .= "Couldn't get class object for $r_class_name: $exception";
             }
         }
         if ($r_class_meta and not $reverse_as) {
