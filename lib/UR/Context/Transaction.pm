@@ -7,6 +7,11 @@ require UR;
 our $VERSION = "0.44"; # UR $VERSION;
 
 use Carp qw(croak confess shortmess);
+use constant TRANSACTION_STATE_OPEN => 'open';
+use constant TRANSACTION_STATE_COMMITTED => 'committed';
+
+use Exporter qw(import);
+our @EXPORT_OK = qw(TRANSACTION_STATE_OPEN TRANSACTION_STATE_COMMITTED);
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -14,7 +19,7 @@ UR::Object::Type->define(
     has => [
         begin_point     => { is => 'Integer' },
         end_point       => { is => 'Integer', is_optional => 1},  # FIXME is this ever used anywhere?
-        state           => { is => 'Text' }, # open, committed, rolled-back
+        state           => { is => 'Text', valid_values => [TRANSACTION_STATE_OPEN, TRANSACTION_STATE_COMMITTED] },
     ],
     is_transactional => 1,
 );
@@ -45,7 +50,7 @@ sub begin {
     my $self = $class->create(
         id => $id,
         begin_point => $begin_point,
-        state => "open",
+        state => TRANSACTION_STATE_OPEN,
         parent => $last_trans,
         @_
     );
@@ -147,7 +152,7 @@ sub rollback {
         }
     }
 
-    if ($self->state ne "open") {
+    if ($self->state ne TRANSACTION_STATE_OPEN) {
         Carp::confess("Cannot rollback a transaction that is " . $self->state . ".")
     }
 
@@ -241,7 +246,7 @@ sub commit {
         }
     }
 
-    if ($self->state ne "open") {
+    if ($self->state ne TRANSACTION_STATE_OPEN) {
         Carp::confess("Cannot commit a transaction that is " . $self->state . ".")
     }
 
@@ -251,12 +256,13 @@ sub commit {
     }
     $self->__signal_change__('precommit');
 
-    unless ($self->changes_can_be_saved) {
+    my $validator = $self->commit_validator;
+    unless ($self->$validator()) {
         return;
     }
 
-    $self->state("committed");
-    if ($self->state eq 'committed') {
+    $self->state(TRANSACTION_STATE_COMMITTED);
+    if ($self->state eq TRANSACTION_STATE_COMMITTED) {
         $self->__signal_change__('commit',1);
     }
     else {
@@ -470,6 +476,11 @@ If the BLOCK throws an exception, it will be caught, the software transaction
 rolled back, and the exception will be re-thrown with die().
 
 =back
+
+=head1 EXPORTS
+
+This module can export constants that match the valid values of the C<state>
+property: TRANSACTION_STATE_OPEN and TRANSACTION_STATE_COMMITTED
 
 =head1 SEE ALSO
 
