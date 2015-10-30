@@ -316,11 +316,11 @@ sub eval_or_do {
         $class->debug_message(shortmess('Rolling back transaction'));
         $class->debug_message($eval_error) if ($eval_error);
         unless($tx->rollback()) {
-            die 'failed to rollback transaction';
+            Carp::croak 'failed to rollback transaction';
         }
     } else {
         unless($tx->commit()) {
-            die 'failed to commit transaction';
+            Carp::croak 'failed to commit transaction';
         }
     }
 
