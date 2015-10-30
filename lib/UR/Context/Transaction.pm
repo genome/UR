@@ -20,6 +20,8 @@ UR::Object::Type->define(
         begin_point     => { is => 'Integer' },
         end_point       => { is => 'Integer', is_optional => 1},  # FIXME is this ever used anywhere?
         state           => { is => 'Text', valid_values => [TRANSACTION_STATE_OPEN, TRANSACTION_STATE_COMMITTED] },
+        commit_validator => { default_value => 'changes_can_be_saved',
+                              doc => 'validation function used before commit() can succeed' },
     ],
     is_transactional => 1,
 );
@@ -36,6 +38,10 @@ sub delete {
 
 sub begin {
     my $class = shift;
+    my %params = @_;
+
+    delete @params{'begin_point', 'end_point', 'state'}; # These are set within this function
+
     my $id = $last_transaction_id++;
 
     my $begin_point = @change_log;
@@ -52,7 +58,7 @@ sub begin {
         begin_point => $begin_point,
         state => TRANSACTION_STATE_OPEN,
         parent => $last_trans,
-        @_
+        %params,
     );
 
     unless ($self) {

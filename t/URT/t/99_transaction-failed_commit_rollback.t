@@ -4,7 +4,9 @@ use warnings;
 use UR;
 use IO::File;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
+
+use UR::Context::Transaction qw(TRANSACTION_STATE_COMMITTED);
 
 UR::Object::Type->define(
     class_name => 'Circle',
@@ -32,7 +34,7 @@ ok($circle->radius == 1, 'default radius is 1');
 
 
 subtest 'fail to commit then rollback' => sub {
-    plan tests => 9;
+    plan tests => 10;
 
     my $transaction = UR::Context::Transaction->begin;
     isa_ok($transaction, 'UR::Context::Transaction');
@@ -57,7 +59,24 @@ subtest 'fail to commit then rollback' => sub {
         'Error message text is correct');
 
     is($transaction->rollback, 1, 'rollback succeeded');
-    is($circle->radius, $old_radius, 'circle radius was rolled back due to forced __errors__');
+    is($circle->radius, $old_radius, 'circle radius was rolled back');
+
+    isa_ok($transaction, 'UR::DeletedRef', 'transaction obj is now a deleted ref');
+};
+
+subtest 'transaction can ignore errors on commit' => sub {
+    plan tests => 5;
+
+    my $transaction = UR::Context::Transaction->begin(commit_validator => sub { 1 });
+    ok($transaction, 'Begin trans');
+
+    my $orig_radius = $circle->radius;
+    ok(my $new_radius = $circle->radius($orig_radius + 1), 'change radius');
+
+    ok($transaction->commit, 'commit transaction');
+
+    is($circle->radius, $new_radius, 'radius remains new value after commit');
+    is($transaction->state, TRANSACTION_STATE_COMMITTED, 'transaction state is committed');
 };
 
 1;
