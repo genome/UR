@@ -323,8 +323,11 @@ sub flatten_hard_refs {
                 croak sprintf 'value type, %s, is incompatible with: %s', $value->class, join(', ', @possible_data_types);
             }
 
-            my $value2 = eval {
-                $data_type->get($value->id)
+            my $value2 = do {
+                local $@;
+                eval {
+                    $data_type->get($value->id)
+                };
             };
             unless ($value2) {
                 croak sprintf 'unable to retrieve a %s by value ID: %s', $data_type, $value->id;
@@ -542,9 +545,14 @@ sub resolve {
     # this next section uses class metadata
     # it should be moved into the normalization layer
 
-    my $subject_class_meta = eval { $subject_class->__meta__ };
-    if ($@) {
-        Carp::croak("Can't get class metadata for $subject_class.  Is it a valid class name?\nErrors were: $@");
+    my $subject_class_meta;
+    my $exception = do {
+        local $@;
+        $subject_class_meta = eval { $subject_class->__meta__ };
+        $@;
+    };
+    if ($exception) {
+        Carp::croak("Can't get class metadata for $subject_class.  Is it a valid class name?\nErrors were: $exception");
     }
     unless ($subject_class_meta) {
         Carp::croak("No class metadata for $subject_class?!");
@@ -932,9 +940,13 @@ sub resolve_for_string {
     my ($class, $subject_class_name, $filter_string, $usage_hints_string, $order_string, $page_string) = @_;
 
     unless ($LOADED_BXPARSE) {
-        eval { require UR::BoolExpr::BxParser };
-        if ($@) {
-            Carp::croak("resolve_for_string() can't load UR::BoolExpr::BxParser: $@");
+        my $exception = do {
+            local $@;
+            eval { require UR::BoolExpr::BxParser };
+            $@;
+        };
+        if ($exception) {
+            Carp::croak("resolve_for_string() can't load UR::BoolExpr::BxParser: $exception");
         }
         $LOADED_BXPARSE=1;
     }
