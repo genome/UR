@@ -23,13 +23,13 @@ UR::Object::Type->define(
     has => [
         role_name   => { is => 'Text', doc => 'Package name identifying the role' },
         class_names => { is => 'Text', is_many => 1, doc => 'Class names composing this role' },
-        methods     => { is => 'HASH', doc => 'Map of method names and coderefs' },
-        overloads   => { is => 'HASH', doc => 'Map of overload keys and coderefs' },
+        methods     => { is => 'HASH', doc => 'Map of method names and coderefs', default => {} },
+        overloads   => { is => 'HASH', doc => 'Map of overload keys and coderefs', default => {} },
         has         => { is => 'ARRAY', doc => 'List of properties and their definitions' },
-        roles       => { is => 'ARRAY', doc => 'List of other role names composed into this role' },
-        requires    => { is => 'ARRAY', doc => 'List of properties required of consuming classes' },
+        roles       => { is => 'ARRAY', doc => 'List of other role names composed into this role', default => [] },
+        requires    => { is => 'ARRAY', doc => 'List of properties required of consuming classes', default => [] },
         attributes_have => { is => 'HASH', doc => 'Meta-attributes for properites' },
-        excludes    => { is => 'ARRAY', doc => 'List of Role names that cannot compose with this role' },
+        excludes    => { is => 'ARRAY', doc => 'List of Role names that cannot compose with this role', default => [] },
         map { $_ => _get_property_desc_from_ur_object_type($_) }
                                 meta_properties_to_compose_into_classes(),
     ],
