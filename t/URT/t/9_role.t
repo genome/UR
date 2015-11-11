@@ -228,7 +228,7 @@ subtest 'conflict property' => sub {
 };
 
 subtest 'conflict methods' => sub {
-    plan tests => 2;
+    plan tests => 3;
 
     sub URT::ConflictMethodRole1::conflict_method { }
     role URT::ConflictMethodRole1 { };
@@ -253,12 +253,25 @@ subtest 'conflict methods' => sub {
                 roles => ['URT::ConflictMethodRole1'],
             }
         }
-        qr/Cannot compose role URT::ConflictMethodRole1: Method name conflicts with class URT::ConflictMethodClassHasMethod: conflict_method\s+Did you forget to add the 'Overrides' attribute\?/,
+        qr/Cannot compose role URT::ConflictMethodRole1: Method name conflicts with class URT::ConflictMethodClassHasMethod:\s+conflict_method \(from URT::ConflictMethodClassHasMethod\)\s+Did you forget to add the 'Overrides' attribute\?/,
         'Composing a role with conflicting method in the class throws exception';
+
+
+    sub URT::ParentClassHasConflictMethod::conflict_method { 1 }
+    class URT::ParentClassHasConflictMethod { };
+    throws_ok
+        {
+            class URT::ConflictMethodParentHasMethod {
+                is => 'URT::ParentClassHasConflictMethod',
+                roles => ['URT::ConflictMethodRole1'],
+            }
+        }
+        qr/Cannot compose role URT::ConflictMethodRole1: Method name conflicts with class URT::ConflictMethodParentHasMethod:\s+conflict_method \(from URT::ParentClassHasConflictMethod\)\s+Did you forget to add the 'Overrides' attribute\?/,
+        'Composing a role with method conflicting a parent class throws exception';
 };
 
 subtest 'conflict methods with overrides' => sub {
-    plan tests => 5;
+    plan tests => 6;
 
     sub URT::ConflictMethodOverrideRole1::conflict_method { 0; }
     role URT::ConflictMethodOverrideRole1 { };
@@ -280,7 +293,7 @@ subtest 'conflict methods with overrides' => sub {
                 roles => ['URT::ConflictMethodOverrideRole1', 'URT::ConflictMethodOverrideRole2'],
             }
         }
-        qr/Cannot compose role URT::ConflictMethodOverrideRole2: Method name conflicts with class URT::ConflictMethodClassOverridesRole1: conflict_method\s+Did you forget to add the 'Overrides' attribute\?/,
+        qr/Cannot compose role URT::ConflictMethodOverrideRole2: Method name conflicts with class URT::ConflictMethodClassOverridesRole1:\s+conflict_method \(from URT::ConflictMethodClassOverridesRole1\)\s+Did you forget to add the 'Overrides' attribute\?/,
         'Class declaring override for one role but not the other throws exception';
 
     lives_ok
@@ -308,6 +321,23 @@ subtest 'conflict methods with overrides' => sub {
             }
         }
         'Class conflict method declares overrides for both roles';
+
+    do {
+        sub URT::ConflictMethodParentNoOverride::conflict_method { }
+        class URT::ConflictMethodParentNoOverride { };
+
+        package URT::ConflictMethodClassDoesOverride;
+        use URT;
+        sub URT::ConflictMethodClassDoesOverride::conflict_method : Overrides(URT::ConflictMethodOverrideRole1) { }
+    };
+    lives_ok
+        {
+            class URT::ConflictMethodClassDoesOverride {
+                is => ['URT::ConflictMethodParentNoOverride'],
+                roles => ['URT::ConflictMethodOverrideRole1'],
+            }
+        }
+        'Class declared override even though parent did not';
 };
 
 subtest 'dynamic loading' => sub {

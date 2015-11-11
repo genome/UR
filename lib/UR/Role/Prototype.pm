@@ -468,23 +468,38 @@ sub _validate_class_desc_overrides {
     my($desc, @roles) = @_;
 
     my $class_name = $desc->{class_name};
-    my $this_class_methods = UR::Util::coderefs_for_package($class_name);
+    my %this_class_methods = map { %{ UR::Util::coderefs_for_package($_) } }
+                                (@{$desc->{is}}, $class_name);
 
     foreach my $role ( @roles ) {
         my $role_name = $role->role_name;
         my $this_role_methods = $role->methods;
         my @this_role_method_names = keys( %$this_role_methods );
 
-        my @conflict_methods = grep { ! _coderef_overrides_package($this_class_methods->{$_}, $role_name) }
-                                       grep { exists $this_class_methods->{$_} }
-                                       @this_role_method_names;
+        my %method_is_overridden;
+        my @conflict_methods = grep { ! ($method_is_overridden{$_} ||= _coderef_overrides_package($this_class_methods{$_}, $role_name)) }
+                               grep { exists $this_class_methods{$_} }
+                                   @this_role_method_names;
         if (@conflict_methods) {
             my $plural = scalar(@conflict_methods) > 1 ? 's' : '';
             my $conflicts = scalar(@conflict_methods) > 1 ? 'conflict' : 'conflicts';
+
+            my %conflicting_sources;
+            CONFLICTING_METHOD_NAME:
+            foreach my $conflicting_method_name ( @conflict_methods ) {
+                foreach my $source_class_name ( $class_name, @{$desc->{is}} ) {
+                    if ($source_class_name->can($conflicting_method_name)) {
+                        $conflicting_sources{$conflicting_method_name} = $source_class_name;
+                        next CONFLICTING_METHOD_NAME;
+                    }
+                }
+                $conflicting_sources{$conflicting_method_name} = '<unknown>';
+            }
             Carp::croak("Cannot compose role $role_name: "
-                        . "Method name${plural} $conflicts with class $class_name: "
-                        . join(', ', @conflict_methods)
-                        . "\nDid you forget to add the 'Overrides' attribute?\t");
+                        . "Method name${plural} $conflicts with class $class_name:\n"
+                        . join("\n", map { sprintf("\t%s (from %s)\n", $_, $conflicting_sources{$_}) }
+                                        keys %conflicting_sources)
+                        . "Did you forget to add the 'Overrides' attribute?");
         }
     }
     return 1;
