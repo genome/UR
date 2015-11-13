@@ -30,6 +30,11 @@ UR::Object::Type->define(
         requires    => { is => 'ARRAY', doc => 'List of properties required of consuming classes' },
         attributes_have => { is => 'HASH', doc => 'Meta-attributes for properites' },
         excludes    => { is => 'ARRAY', doc => 'List of Role names that cannot compose with this role' },
+        method_modifiers => { is => 'UR::Role::MethodModifier',
+                              is_many => 1,
+                              doc => q(List of 'before', 'after' and 'around' method modifiers),
+                              reverse_as => 'role'
+                            },
         map { $_ => _get_property_desc_from_ur_object_type($_) }
                                 meta_properties_to_compose_into_classes(),
     ],
@@ -225,6 +230,7 @@ sub _apply_roles_to_class_desc {
     my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
     my $meta_properties_to_add = _collect_meta_properties_from_roles($desc, @role_objs);
     my $overloads_to_add = _collect_overloads_from_roles($desc, @role_objs);
+    my $method_modifiers_to_add = _collect_method_modifiers_from_roles($desc, @role_objs);
 
     _save_role_instances_to_class_desc($desc, @role_objs);
     _assert_all_role_params_are_bound_to_values($desc, @role_objs);
@@ -236,7 +242,7 @@ sub _apply_roles_to_class_desc {
 
     _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
     _apply_overloads_to_namespace($desc->{class_name}, $overloads_to_add);
-
+    _apply_method_modifiers_to_namespace($desc, $method_modifiers_to_add);
 
     _merge_role_meta_properties_into_class_desc($desc, $meta_properties_to_add);
     _merge_role_properties_into_class_desc($desc, $properties_to_add);
@@ -361,6 +367,28 @@ sub _collect_overloads_from_roles {
     my $fallback = $fallback_validator->();
     $overloads_to_add{fallback} = $fallback if defined $fallback;
     return \%overloads_to_add;
+}
+
+sub _collect_method_modifiers_from_roles {
+    my($desc, @role_objs) = @_;
+
+    my $class_name = $desc->{class_name};
+    my @all_modifiers = map { $_->method_modifiers } @role_objs;
+
+    my $isa = join('::', $class_name, 'ISA');
+    no strict 'refs';
+    local @$isa = (@$isa, @{$desc->{is}});
+    use strict 'refs';
+
+    foreach my $mod ( @all_modifiers ) {
+        unless ($class_name->can($mod->name)) {
+            my $role_name = $mod->role->role_name;
+            my $type = $mod->type;
+            my $subname = $mod->name;
+            Carp::croak(qq(Cannot compose role $role_name: Cannot apply '$type' method modifier: Method "$subname" not found via class $class_name));
+        }
+    }
+    return \@all_modifiers;
 }
 
 sub _create_fallback_validator {
@@ -584,6 +612,22 @@ sub _apply_overloads_to_namespace {
         Carp::croak("Failed to apply overloads to package $class_name: $exception");
     }
     return 1;
+}
+
+sub _apply_method_modifiers_to_namespace {
+    my($desc, $modifiers_list) = @_;
+
+    my $class_name = $desc->{class_name};
+
+    my $isa = join('::', $class_name, 'ISA');
+    no strict 'refs';
+    local @$isa = (@$isa, @{$desc->{is}});
+    use strict 'refs';
+
+    foreach my $mod ( @$modifiers_list ) {
+        $mod->apply_to_package($class_name);
+    }
+    1;
 }
 
 sub _define_role {

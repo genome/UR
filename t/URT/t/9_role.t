@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests=> 19;
+use Test::More tests=> 22;
 use Test::Exception;
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -820,4 +820,145 @@ subtest 'parameterized role' => sub {
         }
         qr(RoleParam attribute requires a name in parens),
         'Omitting name from RoleParam attribute throws exception';
+};
+
+subtest 'method modifier before' => sub {
+    no warnings 'once';
+    plan tests => 7;
+    my @results;
+    do {
+        package RoleWithBeforeModifier;
+        use UR::Role qw(before);
+        role RoleWithBeforeModifier { };
+        before test_sub => sub {
+            my $str = join(',', @_);
+            push @results, "before:$str";
+            return undef;
+        };
+
+        package ClassWithBeforeModifier;
+        *ClassWithBeforeModifier::test_sub = sub {
+            my $str = join(',',@_);
+            push @results, "test_sub:$str";
+            return 1;
+        };
+        class ClassWithBeforeModifier { roles => 'RoleWithBeforeModifier' };
+    };
+
+    throws_ok
+        { class ClassWithoutTestSub { roles => 'RoleWithBeforeModifier' } }
+        qr/Method "test_sub" not found via class ClassWithoutTestSub/,
+        'Consuming role modifying non-existent method throws exception';
+
+    my $rv = ClassWithBeforeModifier->test_sub('foo');
+    is($rv, 1, 'sub return value');
+    is_deeply(\@results,
+              ['before:ClassWithBeforeModifier,foo', 'test_sub:ClassWithBeforeModifier,foo'],
+              'before modifer');
+
+
+    @results = ();
+    class ChildClassWithBeforeModifier {
+        is => 'ClassWithBeforeModifier',
+        roles => 'RoleWithBeforeModifier',
+    };
+    is(ChildClassWithBeforeModifier->test_sub('bar'), 1, 'child class sub return value');
+    is_deeply(\@results,
+              ['before:ChildClassWithBeforeModifier,bar',  # twice because it's wrapped in
+               'before:ChildClassWithBeforeModifier,bar',  # both parent and child classes
+               'test_sub:ChildClassWithBeforeModifier,bar',
+              ],
+              'before modifer');
+
+
+    @results = ();
+    class ParentClassWithMethodToOverride { };
+    *ParentClassWithMethodToOverride::test_sub = sub {
+        my $str = join(',', @_);
+        push @results, "parent_test_sub:$str";
+        2;
+    };
+    class ChildClassWithoutMethod {
+        is => 'ParentClassWithMethodToOverride',
+        roles => 'RoleWithBeforeModifier',
+    };
+    is(ChildClassWithoutMethod->test_sub('baz'), 2, 'child class with inherited method return value');
+    is_deeply(\@results,
+              ['before:ChildClassWithoutMethod,baz', 'parent_test_sub:ChildClassWithoutMethod,baz'],
+              'before modifier on inherited method');
+};
+
+subtest 'method modifier after' => sub {
+    plan tests => 8;
+    my @results;
+    my($wantarray_modifier, $wantarray_test_sub);
+    do {
+        package RoleWithAfterModifier;
+        use UR::Role qw(after);
+        role RoleWithAfterModifier { };
+        after test_sub => sub {
+            my $rv = shift || '<undef>';
+            my $str = join(',',@_);
+            push @results, "after:$rv:$str";
+            $wantarray_modifier = wantarray();
+            return undef;
+        };
+
+        package ClassWithAfterModifier;
+        *ClassWithAfterModifier::test_sub = sub {
+            my $str = join(',',@_);
+            push @results, "test_sub:$str";
+            $wantarray_test_sub = wantarray();
+            return 1;
+        };
+        class ClassWithAfterModifier { roles => 'RoleWithAfterModifier' };
+    };
+
+    my $rv = ClassWithAfterModifier->test_sub('foo');
+    is($rv, 1, 'sub return value');
+    is($wantarray_modifier, '', 'scalar modifier wantarray');
+    is($wantarray_test_sub, '', 'scalar test_sub wantarray');
+    is_deeply(\@results,
+              ['test_sub:ClassWithAfterModifier,foo', 'after:1:ClassWithAfterModifier,foo'],
+              'after modifier');
+
+    my @rv = ClassWithAfterModifier->test_sub();
+    is($wantarray_modifier, 1, 'list modifier wantarray');
+    is($wantarray_test_sub, 1, 'list test_sub wantarray');
+
+    ClassWithAfterModifier->test_sub();
+    is($wantarray_modifier, undef, 'list modifier wantarray');
+    is($wantarray_test_sub, undef, 'list test_sub wantarray');
+};
+
+subtest 'method modifier around' => sub {
+    plan tests => 2;
+    my @results;
+    do {
+        package RoleWithAroundModifier;
+        use UR::Role qw(around);
+        role RoleWithAroundModifier { };
+        around test_sub => sub {
+            my $orig = shift;
+            my $str = join(',',@_);
+            push @results, "pre:$str";
+            $orig->('multiple','params');
+            push @results, "post:$str";
+            undef;
+        };
+
+        package ClassWithAroundModifier;
+        *ClassWithAroundModifier::test_sub = sub {
+            my $str = join(',', @_);
+            push @results, "test_sub:$str";
+            return 1;
+        };
+        class ClassWithAroundModifier { roles => 'RoleWithAroundModifier' };
+    };
+
+    my $rv = ClassWithAroundModifier->test_sub('foo');
+    is($rv, undef, 'sub return value');
+    is_deeply(\@results,
+              ['pre:ClassWithAroundModifier,foo', 'test_sub:multiple,params', 'post:ClassWithAroundModifier,foo'],
+              'around modifier');
 };

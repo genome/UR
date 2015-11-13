@@ -15,8 +15,13 @@ use UR::Role::Instance;
 
 use Scalar::Util qw(blessed);
 use List::MoreUtils qw(any);
+use Sub::Install;
+use Sub::Name;
 use Carp;
 our @CARP_NOT = qw(UR::Object::Type);
+
+use Exporter qw(import);
+our @EXPORT_OK = qw(before after around);
 
 our $VERSION = "0.44"; # UR $VERSION;;
 
@@ -49,6 +54,28 @@ sub _define_role {
     } else {
         return;
     }
+}
+
+foreach my $type ( qw(before after around) ) {
+    my $modifier_class = join('::', 'UR::Role::MethodModifier', ucfirst($type));
+
+    my $sub = Sub::Name::subname $type => sub {
+        my $subname = shift;
+        my $code = shift;
+
+        my $package = caller;
+        my $b = $modifier_class->create(
+            role_name => $package,
+            name => $subname,
+            code => $code,
+        );
+        $code;
+    };
+    Sub::Install::install_sub({
+        into => __PACKAGE__,
+        as => $type,
+        code => $sub,
+    });
 }
 
 1;
