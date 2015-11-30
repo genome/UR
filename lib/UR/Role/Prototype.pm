@@ -23,13 +23,13 @@ UR::Object::Type->define(
     has => [
         role_name   => { is => 'Text', doc => 'Package name identifying the role' },
         class_names => { is => 'Text', is_many => 1, doc => 'Class names composing this role' },
-        methods     => { is => 'HASH', doc => 'Map of method names and coderefs' },
-        overloads   => { is => 'HASH', doc => 'Map of overload keys and coderefs' },
+        methods     => { is => 'HASH', doc => 'Map of method names and coderefs', default => {} },
+        overloads   => { is => 'HASH', doc => 'Map of overload keys and coderefs', default => {} },
         has         => { is => 'ARRAY', doc => 'List of properties and their definitions' },
-        roles       => { is => 'ARRAY', doc => 'List of other role names composed into this role' },
-        requires    => { is => 'ARRAY', doc => 'List of properties required of consuming classes' },
+        roles       => { is => 'ARRAY', doc => 'List of other role names composed into this role', default => [] },
+        requires    => { is => 'ARRAY', doc => 'List of properties required of consuming classes', default => [] },
         attributes_have => { is => 'HASH', doc => 'Meta-attributes for properites' },
-        excludes    => { is => 'ARRAY', doc => 'List of Role names that cannot compose with this role' },
+        excludes    => { is => 'ARRAY', doc => 'List of Role names that cannot compose with this role', default => [] },
         map { $_ => _get_property_desc_from_ur_object_type($_) }
                                 meta_properties_to_compose_into_classes(),
     ],
@@ -468,23 +468,38 @@ sub _validate_class_desc_overrides {
     my($desc, @roles) = @_;
 
     my $class_name = $desc->{class_name};
-    my $this_class_methods = UR::Util::coderefs_for_package($class_name);
+    my %this_class_methods = map { %{ UR::Util::coderefs_for_package($_) } }
+                                (@{$desc->{is}}, $class_name);
 
     foreach my $role ( @roles ) {
         my $role_name = $role->role_name;
         my $this_role_methods = $role->methods;
         my @this_role_method_names = keys( %$this_role_methods );
 
-        my @conflict_methods = grep { ! _coderef_overrides_package($this_class_methods->{$_}, $role_name) }
-                                       grep { exists $this_class_methods->{$_} }
-                                       @this_role_method_names;
+        my %method_is_overridden;
+        my @conflict_methods = grep { ! ($method_is_overridden{$_} ||= _coderef_overrides_package($this_class_methods{$_}, $role_name)) }
+                               grep { exists $this_class_methods{$_} }
+                                   @this_role_method_names;
         if (@conflict_methods) {
             my $plural = scalar(@conflict_methods) > 1 ? 's' : '';
             my $conflicts = scalar(@conflict_methods) > 1 ? 'conflict' : 'conflicts';
+
+            my %conflicting_sources;
+            CONFLICTING_METHOD_NAME:
+            foreach my $conflicting_method_name ( @conflict_methods ) {
+                foreach my $source_class_name ( $class_name, @{$desc->{is}} ) {
+                    if ($source_class_name->can($conflicting_method_name)) {
+                        $conflicting_sources{$conflicting_method_name} = $source_class_name;
+                        next CONFLICTING_METHOD_NAME;
+                    }
+                }
+                $conflicting_sources{$conflicting_method_name} = '<unknown>';
+            }
             Carp::croak("Cannot compose role $role_name: "
-                        . "Method name${plural} $conflicts with class $class_name: "
-                        . join(', ', @conflict_methods)
-                        . "\nDid you forget to add the 'Overrides' attribute?\t");
+                        . "Method name${plural} $conflicts with class $class_name:\n"
+                        . join("\n", map { sprintf("\t%s (from %s)\n", $_, $conflicting_sources{$_}) }
+                                        keys %conflicting_sources)
+                        . "Did you forget to add the 'Overrides' attribute?");
         }
     }
     return 1;

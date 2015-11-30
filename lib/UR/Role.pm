@@ -149,8 +149,8 @@ an attempt to override them.
 =head3 Method conflicts
 
 An exception is thrown if multiple Roles are composed together that
-define the same subroutine, or if the composing class defines the same
-subroutine as any of the roles.
+define the same subroutine, or if the composing class (or any of its parent
+classes) defines the same subroutine as any of the roles.
 
 If the class wants to override a subroutine defined in one of its roles,
 the override must be declared with the "Overrides" attribute.
