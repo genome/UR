@@ -5,9 +5,6 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 
-use File::Spec;
-use File::Temp;
-use IO::File;
 use Test::More tests => 6;
 use Test::Exception;
 
