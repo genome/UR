@@ -178,7 +178,7 @@ sub _get_property_desc_from_ur_object_type {
     }
 }
 
-my @DONT_EXPORT_THESE_SUBS_TO_CLASSES = qw(__import__ FETCH_CODE_ATTRIBUTES MODIFY_CODE_ATTRIBUTES MODIFY_SCALAR_ATTRIBUTES);
+my @DONT_EXPORT_THESE_SUBS_TO_CLASSES = qw(__import__ FETCH_CODE_ATTRIBUTES MODIFY_CODE_ATTRIBUTES MODIFY_SCALAR_ATTRIBUTES before after around);
 sub _introspect_methods {
     my $role_name = shift;
 
