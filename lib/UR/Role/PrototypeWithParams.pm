@@ -52,7 +52,7 @@ foreach my $accessor_name ( qw( prototype role_params ) ) {
 # accessors that delegate to the role prototype
 foreach my $accessor_name ( qw( role_name methods overloads has requires attributes_have excludes
                                 property_names property_data method_names
-                                meta_properties_to_compose_into_classes ),
+                                meta_properties_to_compose_into_classes method_modifiers ),
                             UR::Role::Prototype::meta_properties_to_compose_into_classes()
 ) {
     my $sub = sub {

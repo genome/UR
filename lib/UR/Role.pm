@@ -15,8 +15,13 @@ use UR::Role::Instance;
 
 use Scalar::Util qw(blessed);
 use List::MoreUtils qw(any);
+use Sub::Install;
+use Sub::Name;
 use Carp;
 our @CARP_NOT = qw(UR::Object::Type);
+
+use Exporter qw(import);
+our @EXPORT_OK = qw(before after around);
 
 our $VERSION = "0.44"; # UR $VERSION;;
 
@@ -49,6 +54,28 @@ sub _define_role {
     } else {
         return;
     }
+}
+
+foreach my $type ( qw(before after around) ) {
+    my $modifier_class = join('::', 'UR::Role::MethodModifier', ucfirst($type));
+
+    my $sub = Sub::Name::subname $type => sub {
+        my $subname = shift;
+        my $code = shift;
+
+        my $package = caller;
+        my $b = $modifier_class->create(
+            role_name => $package,
+            name => $subname,
+            code => $code,
+        );
+        $code;
+    };
+    Sub::Install::install_sub({
+        into => __PACKAGE__,
+        as => $type,
+        code => $sub,
+    });
 }
 
 1;
@@ -230,6 +257,79 @@ from.  The proper param value is returned.
 
 An exception is thrown if a class composes a role and either provides unknown
 role params or omits values for existing params.
+
+=head2 Method Modifiers
+
+Roles can hook into methods defined in consuming classes by using the "before",
+"after" and "around" method modifiers.
+
+  use UR;
+  package RoleWithModifiers;
+  use UR::Role qw(before after);
+  role RoleWithModifiers { };
+  before 'do_something' => sub {
+      my($self, @params) = @_;
+      print "Calling do_something with params ",join(',',@params),"\n";
+  };
+  after 'do_something' => sub {
+      my($rv, $self, @params) = @_;
+      print "Result from do_something: $rv\n";
+  };
+  around 'do_something' => sub {
+      my($orig, $self, @params) = @_;
+      print "Wrapped call to do_something params ",join(',',@params),"\n";
+      my $rv = $self->$orig(@params);
+      print "The wrapped call to do_something returned $rv\n";
+      return 123;
+  };
+
+  package ClassUsingRole;
+  class ClassUsingRole { roles => 'RoleWithModifiers' };
+  sub do_something {
+      print "In original do_something\n";
+      return 'abc';
+  }
+
+  my $rv = ClassUsingRole->create()->do_something();
+  print "The call to do_something returned $rv\n";
+
+Running this code will generate the following output:
+
+  Wrapped call to do_something params
+  Calling do_something with params
+  In original do_something
+  Result from do_something: abc
+  The wrapped call to do_something returned abc
+  The call to do_something returned 123
+
+Method modifiers are applied in the order they appear in the role's
+implementation.
+
+=over 4
+
+=item before(@params)
+
+A C<before> modifier runs before the named method. It receives all the
+arguments and C<wantarray> context as the original method call.  It cannot
+affect the parameters to the original method call, and its return value is
+ignored.
+
+=item after($rv, @params)
+
+The first argument to an C<after> modifier is the return value of the original
+method call, the remaining arguments and C<wantarray> context are the same as
+the original method call.  If the original method was called in list context,
+then C<$rv> will be an arrayref containing the list of return values.  This
+modifier's return value is ignored.
+
+=item around($orig, @params)
+
+An C<around> modifier is run in place of the original method, and receives
+a coderef of the original method as its first argument.  Around modifiers
+can munge arguments and return values, and control when and whether the
+original method is called.
+
+=back
 
 =head1 SEE ALSO
 
