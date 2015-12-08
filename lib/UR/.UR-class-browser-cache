@@ -1990,6 +1990,59 @@ $cache_data = {
                                                                                                  'id' => 'UR__Role__Instance',
                                                                                                  'name' => 'UR::Role::Instance'
                                                                                                }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                'UR::Role::MethodModifier' => bless( {
+                                                                                                       'children' => {
+                                                                                                                       'UR::Role::MethodModifier::After' => bless( {
+                                                                                                                                                                     'children' => {},
+                                                                                                                                                                     'data' => {
+                                                                                                                                                                                 'file' => 'After.pm',
+                                                                                                                                                                                 'is' => [
+                                                                                                                                                                                           'UR::Role::MethodModifier'
+                                                                                                                                                                                         ],
+                                                                                                                                                                                 'name' => 'UR::Role::MethodModifier::After',
+                                                                                                                                                                                 'relpath' => 'UR/Role/MethodModifier/After.pm'
+                                                                                                                                                                               },
+                                                                                                                                                                     'id' => 'UR__Role__MethodModifier__After',
+                                                                                                                                                                     'name' => 'UR::Role::MethodModifier::After'
+                                                                                                                                                                   }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                                       'UR::Role::MethodModifier::Around' => bless( {
+                                                                                                                                                                      'children' => {},
+                                                                                                                                                                      'data' => {
+                                                                                                                                                                                  'file' => 'Around.pm',
+                                                                                                                                                                                  'is' => [
+                                                                                                                                                                                            'UR::Role::MethodModifier'
+                                                                                                                                                                                          ],
+                                                                                                                                                                                  'name' => 'UR::Role::MethodModifier::Around',
+                                                                                                                                                                                  'relpath' => 'UR/Role/MethodModifier/Around.pm'
+                                                                                                                                                                                },
+                                                                                                                                                                      'id' => 'UR__Role__MethodModifier__Around',
+                                                                                                                                                                      'name' => 'UR::Role::MethodModifier::Around'
+                                                                                                                                                                    }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                                       'UR::Role::MethodModifier::Before' => bless( {
+                                                                                                                                                                      'children' => {},
+                                                                                                                                                                      'data' => {
+                                                                                                                                                                                  'file' => 'Before.pm',
+                                                                                                                                                                                  'is' => [
+                                                                                                                                                                                            'UR::Role::MethodModifier'
+                                                                                                                                                                                          ],
+                                                                                                                                                                                  'name' => 'UR::Role::MethodModifier::Before',
+                                                                                                                                                                                  'relpath' => 'UR/Role/MethodModifier/Before.pm'
+                                                                                                                                                                                },
+                                                                                                                                                                      'id' => 'UR__Role__MethodModifier__Before',
+                                                                                                                                                                      'name' => 'UR::Role::MethodModifier::Before'
+                                                                                                                                                                    }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' )
+                                                                                                                     },
+                                                                                                       'data' => {
+                                                                                                                   'file' => 'MethodModifier.pm',
+                                                                                                                   'is' => [
+                                                                                                                             'UR::Object'
+                                                                                                                           ],
+                                                                                                                   'name' => 'UR::Role::MethodModifier',
+                                                                                                                   'relpath' => 'UR/Role/MethodModifier.pm'
+                                                                                                                 },
+                                                                                                       'id' => 'UR__Role__MethodModifier',
+                                                                                                       'name' => 'UR::Role::MethodModifier'
+                                                                                                     }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
                                                                 'UR::Role::Prototype' => bless( {
                                                                                                   'children' => {},
                                                                                                   'data' => {
@@ -2755,6 +2808,10 @@ $cache_data = {
                                      'UR::Object::View::Toolkit::Text' => {},
                                      'UR::Observer' => {},
                                      'UR::Role::Instance' => {},
+                                     'UR::Role::MethodModifier' => {},
+                                     'UR::Role::MethodModifier::After' => {},
+                                     'UR::Role::MethodModifier::Around' => {},
+                                     'UR::Role::MethodModifier::Before' => {},
                                      'UR::Role::Prototype' => {},
                                      'UR::Service::JsonRpcServer' => {},
                                      'UR::Service::RPC::Executer' => {},
@@ -3977,6 +4034,35 @@ $cache_data = {
                                                                                                                            'name' => 'Instance',
                                                                                                                            'relpath' => 'UR::Role::Instance'
                                                                                                                          }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                    'MethodModifier' => bless( {
+                                                                                                                                 'children' => {
+                                                                                                                                                 'After' => bless( {
+                                                                                                                                                                     'children' => {},
+                                                                                                                                                                     'data' => {},
+                                                                                                                                                                     'id' => 'After',
+                                                                                                                                                                     'name' => 'After',
+                                                                                                                                                                     'relpath' => 'UR::Role::MethodModifier::After'
+                                                                                                                                                                   }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                                                                 'Around' => bless( {
+                                                                                                                                                                      'children' => {},
+                                                                                                                                                                      'data' => {},
+                                                                                                                                                                      'id' => 'Around',
+                                                                                                                                                                      'name' => 'Around',
+                                                                                                                                                                      'relpath' => 'UR::Role::MethodModifier::Around'
+                                                                                                                                                                    }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                                                                 'Before' => bless( {
+                                                                                                                                                                      'children' => {},
+                                                                                                                                                                      'data' => {},
+                                                                                                                                                                      'id' => 'Before',
+                                                                                                                                                                      'name' => 'Before',
+                                                                                                                                                                      'relpath' => 'UR::Role::MethodModifier::Before'
+                                                                                                                                                                    }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' )
+                                                                                                                                               },
+                                                                                                                                 'data' => {},
+                                                                                                                                 'id' => 'MethodModifier',
+                                                                                                                                 'name' => 'MethodModifier',
+                                                                                                                                 'relpath' => 'UR::Role::MethodModifier'
+                                                                                                                               }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
                                                                                                     'Prototype' => bless( {
                                                                                                                             'children' => {},
                                                                                                                             'data' => {},
@@ -5674,6 +5760,41 @@ $cache_data = {
                                                                                                                              'name' => 'Instance.pm',
                                                                                                                              'relpath' => 'UR/Role/Instance.pm'
                                                                                                                            }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                   'MethodModifier' => bless( {
+                                                                                                                                'children' => {
+                                                                                                                                                'After.pm' => bless( {
+                                                                                                                                                                       'children' => {},
+                                                                                                                                                                       'data' => {},
+                                                                                                                                                                       'id' => 'After.pm',
+                                                                                                                                                                       'name' => 'After.pm',
+                                                                                                                                                                       'relpath' => 'UR/Role/MethodModifier/After.pm'
+                                                                                                                                                                     }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                                                                'Around.pm' => bless( {
+                                                                                                                                                                        'children' => {},
+                                                                                                                                                                        'data' => {},
+                                                                                                                                                                        'id' => 'Around.pm',
+                                                                                                                                                                        'name' => 'Around.pm',
+                                                                                                                                                                        'relpath' => 'UR/Role/MethodModifier/Around.pm'
+                                                                                                                                                                      }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                                                                'Before.pm' => bless( {
+                                                                                                                                                                        'children' => {},
+                                                                                                                                                                        'data' => {},
+                                                                                                                                                                        'id' => 'Before.pm',
+                                                                                                                                                                        'name' => 'Before.pm',
+                                                                                                                                                                        'relpath' => 'UR/Role/MethodModifier/Before.pm'
+                                                                                                                                                                      }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' )
+                                                                                                                                              },
+                                                                                                                                'id' => 'MethodModifier',
+                                                                                                                                'name' => 'MethodModifier',
+                                                                                                                                'relpath' => 'UR/Role/MethodModifier'
+                                                                                                                              }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
+                                                                                                   'MethodModifier.pm' => bless( {
+                                                                                                                                   'children' => {},
+                                                                                                                                   'data' => {},
+                                                                                                                                   'id' => 'MethodModifier.pm',
+                                                                                                                                   'name' => 'MethodModifier.pm',
+                                                                                                                                   'relpath' => 'UR/Role/MethodModifier.pm'
+                                                                                                                                 }, 'UR::Namespace::Command::Sys::ClassBrowser::TreeItem' ),
                                                                                                    'Prototype.pm' => bless( {
                                                                                                                               'children' => {},
                                                                                                                               'data' => {},
@@ -6208,6 +6329,10 @@ $cache_data->{'by_class_name'}{'UR::Object::View::Toolkit'} = $cache_data->{'by_
 $cache_data->{'by_class_name'}{'UR::Object::View::Toolkit::Text'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Singleton'}{'children'}{'UR::Object::View::Toolkit'}{'children'}{'UR::Object::View::Toolkit::Text'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Observer'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Observer'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Role::Instance'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Instance'}{'data'};
+$cache_data->{'by_class_name'}{'UR::Role::MethodModifier'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'data'};
+$cache_data->{'by_class_name'}{'UR::Role::MethodModifier::After'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::After'}{'data'};
+$cache_data->{'by_class_name'}{'UR::Role::MethodModifier::Around'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::Around'}{'data'};
+$cache_data->{'by_class_name'}{'UR::Role::MethodModifier::Before'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::Before'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Role::Prototype'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Prototype'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Service::JsonRpcServer'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::JsonRpcServer'}{'data'};
 $cache_data->{'by_class_name'}{'UR::Service::RPC::Executer'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Executer'}{'data'};
@@ -6397,6 +6522,10 @@ $cache_data->{'by_class_name_tree'}{'children'}{'Object'}{'children'}{'View'}{'d
 $cache_data->{'by_class_name_tree'}{'children'}{'Object'}{'data'} = $cache_data->{'by_class_name'}{'UR::Object'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Observer'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Observer'}{'data'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Role'}{'children'}{'Instance'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Instance'}{'data'};
+$cache_data->{'by_class_name_tree'}{'children'}{'Role'}{'children'}{'MethodModifier'}{'children'}{'After'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::After'}{'data'};
+$cache_data->{'by_class_name_tree'}{'children'}{'Role'}{'children'}{'MethodModifier'}{'children'}{'Around'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::Around'}{'data'};
+$cache_data->{'by_class_name_tree'}{'children'}{'Role'}{'children'}{'MethodModifier'}{'children'}{'Before'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::Before'}{'data'};
+$cache_data->{'by_class_name_tree'}{'children'}{'Role'}{'children'}{'MethodModifier'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'data'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Role'}{'children'}{'Prototype'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Prototype'}{'data'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Service'}{'children'}{'JsonRpcServer'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::JsonRpcServer'}{'data'};
 $cache_data->{'by_class_name_tree'}{'children'}{'Service'}{'children'}{'RPC'}{'children'}{'Executer'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Executer'}{'data'};
@@ -6587,6 +6716,10 @@ $cache_data->{'by_directory_tree'}{'children'}{'Object'}{'children'}{'View.pm'}{
 $cache_data->{'by_directory_tree'}{'children'}{'Object.pm'}{'data'} = $cache_data->{'by_class_name'}{'UR::Object'};
 $cache_data->{'by_directory_tree'}{'children'}{'Observer.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Observer'}{'data'};
 $cache_data->{'by_directory_tree'}{'children'}{'Role'}{'children'}{'Instance.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Instance'}{'data'};
+$cache_data->{'by_directory_tree'}{'children'}{'Role'}{'children'}{'MethodModifier'}{'children'}{'After.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::After'}{'data'};
+$cache_data->{'by_directory_tree'}{'children'}{'Role'}{'children'}{'MethodModifier'}{'children'}{'Around.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::Around'}{'data'};
+$cache_data->{'by_directory_tree'}{'children'}{'Role'}{'children'}{'MethodModifier'}{'children'}{'Before.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'children'}{'UR::Role::MethodModifier::Before'}{'data'};
+$cache_data->{'by_directory_tree'}{'children'}{'Role'}{'children'}{'MethodModifier.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::MethodModifier'}{'data'};
 $cache_data->{'by_directory_tree'}{'children'}{'Role'}{'children'}{'Prototype.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Role::Prototype'}{'data'};
 $cache_data->{'by_directory_tree'}{'children'}{'Service'}{'children'}{'JsonRpcServer.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::JsonRpcServer'}{'data'};
 $cache_data->{'by_directory_tree'}{'children'}{'Service'}{'children'}{'RPC'}{'children'}{'Executer.pm'}{'data'} = $cache_data->{'by_class_inh_tree'}{'children'}{'UR::Service::RPC::Executer'}{'data'};
