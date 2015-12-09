@@ -193,7 +193,7 @@ subtest requires => sub {
 };
 
 subtest 'conflict property' => sub {
-    plan tests => 8;
+    plan tests => 9;
 
     role URT::ConflictPropertyRole1 {
         has => [
@@ -261,6 +261,20 @@ subtest 'conflict property' => sub {
     $prop_meta = URT::ConflictPropertyClassWithIdProperty->__meta__->property('conflict_property');
     is($prop_meta->data_type, 'ClassProperty', 'Class gets the class-defined property');
     ok($prop_meta->is_id, 'property is an id-by property');
+
+    role URT::ConflictProperty::RoleWithIdProperty {
+        id_by => 'role_id_property',
+    };
+    throws_ok
+        {
+            class URT::ConflictProperty::ClassRedefinesIdPropertyAsNonId {
+                has => ['role_id_property'],
+                roles => ['URT::ConflictProperty::RoleWithIdProperty'],
+            }
+        }
+        qr(Cannot compose role URT::ConflictProperty::RoleWithIdProperty: Property 'role_id_property' was declared as a normal property in class URT::ConflictProperty::ClassRedefinesIdPropertyAsNonId, but as an ID property in the role),
+        'Composing role with ID property into class as non-ID property fails';
+
 };
 
 subtest 'conflict methods' => sub {

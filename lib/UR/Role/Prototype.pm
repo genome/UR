@@ -332,9 +332,23 @@ sub _role_prototypes_with_params_for_class_desc {
 sub _collect_id_property_names_from_roles {
     my($desc, @role_objs) = @_;
 
+    my %class_id_by_properties = map { $_ => 1 } @{ $desc->{id_by} };
+    my %class_property_is_id_by = map { $_ => $class_id_by_properties{$_} }
+                                  keys %{ $desc->{has} };
+
     my @property_names_to_add;
     foreach my $role ( @role_objs ) {
         my @role_id_property_names = $role->id_by_property_names;
+
+        my @conflict = grep { exists($class_property_is_id_by{$_}) and ! $class_property_is_id_by{$_} }
+                       @role_id_property_names;
+        if (@conflict) {
+            Carp::croak(sprintf(q(Cannot compose role %s: Property '%s' was declared as a normal property in class %s, but as an ID property in the role),
+                                $role->role_name,
+                                join(q(', '), @conflict),
+                                $desc->{class_name},
+                        ));
+        }
         push @property_names_to_add, @role_id_property_names;
     }
     return \@property_names_to_add;
