@@ -46,7 +46,7 @@ sub property_data {
     return $self->has->{$property_name};
 }
 
-sub property_names {
+sub has_property_names {
     my $self = shift;
     return keys %{ $self->has };
 }
@@ -320,7 +320,7 @@ sub _collect_properties_from_roles {
 
     my(%properties_to_add, %source_for_properties_to_add);
     foreach my $role ( @role_objs ) {
-        my @role_property_names = $role->property_names;
+        my @role_property_names = $role->has_property_names;
         foreach my $property_name ( @role_property_names ) {
             my $prop_definition = $role->property_data($property_name);
             if (my $conflict = $source_for_properties_to_add{$property_name}) {
@@ -462,7 +462,7 @@ sub _validate_role_requirements {
         }
 
         # Properties and methods from this role can satisfy requirements for later roles
-        foreach my $name ( $role->property_names, $role->method_names ) {
+        foreach my $name ( $role->has_property_names, $role->method_names ) {
             $found_properties_and_methods{$name} = 1;
         }
     }
@@ -717,9 +717,9 @@ same properties as L<UR::Object::Type> instances.
 
 Returns a hashref of property data about the named property.
 
-=item property_names()
+=item has_property_names()
 
-Returns a list of all the properties in the role's C<has>.
+Returns a list of all the properties named in the role's C<has>.
 
 =item method_names()
 
