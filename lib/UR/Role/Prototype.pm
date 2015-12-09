@@ -128,6 +128,8 @@ sub _normalize_role_description {
     # processing the properties.  We need to, too
     @$old_role{'has', 'attributes_have'} = @$new_role{'has','attributes_have'};
     @$new_role{'has','attributes_have'} = ( {}, {} );
+    UR::Object::Type::_massage_field_into_arrayref($new_role, 'id_by');
+    UR::Object::Type::_normalize_id_property_data($old_role, $new_role);
     UR::Object::Type::_process_class_definition_property_keys($old_role, $new_role);
     _complete_property_descriptions($new_role);
 
@@ -233,6 +235,7 @@ sub _apply_roles_to_class_desc {
     _validate_role_requirements($desc, @role_objs);
     _validate_class_desc_overrides($desc, @role_objs);
 
+    my $id_property_names_to_add = _collect_id_property_names_from_roles($desc, @role_objs);
     my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
     my $meta_properties_to_add = _collect_meta_properties_from_roles($desc, @role_objs);
     my $overloads_to_add = _collect_overloads_from_roles($desc, @role_objs);
@@ -243,7 +246,7 @@ sub _apply_roles_to_class_desc {
     do { $_->prototype->add_class_name($desc->{class_name}) } foreach @role_objs;
 
     UR::Role::Param->replace_unbound_params_in_struct_with_values(
-            [ $properties_to_add, $meta_properties_to_add, $overloads_to_add ],
+            [ $id_property_names_to_add, $properties_to_add, $meta_properties_to_add, $overloads_to_add ],
             @role_objs);
 
     _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
@@ -251,6 +254,7 @@ sub _apply_roles_to_class_desc {
     _apply_method_modifiers_to_namespace($desc, $method_modifiers_to_add);
 
     _merge_role_meta_properties_into_class_desc($desc, $meta_properties_to_add);
+    _merge_role_id_property_names_into_class_desc($desc, $id_property_names_to_add);
     _merge_role_properties_into_class_desc($desc, $properties_to_add);
 }
 
@@ -299,6 +303,12 @@ sub _merge_role_properties_into_class_desc {
      @{$desc->{has}}{@property_names} = @$properties_to_add{@property_names};
 }
 
+sub _merge_role_id_property_names_into_class_desc {
+    my($desc, $id_properties_to_add) = @_;
+
+    push @{$desc->{id_by}}, @$id_properties_to_add;
+}
+
 sub _role_prototypes_with_params_for_class_desc {
     my $desc = shift;
 
@@ -317,6 +327,17 @@ sub _role_prototypes_with_params_for_class_desc {
         push @role_prototypes, $role;
     }
     return @role_prototypes;
+}
+
+sub _collect_id_property_names_from_roles {
+    my($desc, @role_objs) = @_;
+
+    my @property_names_to_add;
+    foreach my $role ( @role_objs ) {
+        my @role_id_property_names = $role->id_by_property_names;
+        push @property_names_to_add, @role_id_property_names;
+    }
+    return \@property_names_to_add;
 }
 
 sub _collect_properties_from_roles {
