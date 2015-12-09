@@ -576,35 +576,7 @@ sub _normalize_class_description_impl {
         $id_properties = $new_class{id_by};
     }
 
-    # Transform the id properties into a list of raw ids,
-    # and move the property definitions into "id_implied"
-    # where present so they can be processed below.
-    my $property_rank = 0;
-    do {
-        my @replacement;
-        my $pos = 0;
-        for (my $n = 0; $n < @$id_properties; $n++) {
-            my $name = $id_properties->[$n];
-
-            my $data = $id_properties->[$n+1];
-            if (ref($data)) {
-                $old_class{id_implied}->{$name} ||= $data;
-                if (my $obj_ids = $data->{id_by}) {
-                    push @replacement, (ref($obj_ids) ? @$obj_ids : ($obj_ids));
-                }
-                else {
-                    push @replacement, $name;
-                }
-                $n++;
-            }
-            else {
-                $old_class{id_implied}->{$name} ||= {};
-                push @replacement, $name;
-            }
-            $old_class{id_implied}->{$name}->{'position_in_module_header'} = $pos++;
-        }
-        @$id_properties = @replacement;
-    };
+    _normalize_id_property_data(\%old_class, \%new_class);
 
     if (@$id_properties > 1
         and grep {$_ eq 'id'} @$id_properties)
@@ -743,6 +715,40 @@ sub _normalize_class_description_impl {
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $new_class{meta_class_name} ||= $meta_class_name;
     return \%new_class;
+}
+
+# Transform the id properties into a list of raw ids,
+# and move the property definitions into "id_implied"
+# where present so they can be processed below.
+sub _normalize_id_property_data {
+    my($old_class_desc, $new_class_desc) = @_;
+
+    my $id_properties = $new_class_desc->{id_by};
+    my $property_rank = 0;
+    my @replacement;
+    my $pos = 0;
+
+    for(my $n = 0; $n < @$id_properties; $n++) {
+        my $name = $id_properties->[$n];
+
+        my $data = $id_properties->[$n+1];
+        if (ref($data)) {
+            $old_class_desc->{id_implied}->{$name} ||= $data;
+            if (my $obj_ids = $data->{id_by}) {
+                push @replacement, (ref($obj_ids) ? @$obj_ids : ($obj_ids));
+            }
+            else {
+                push @replacement, $name;
+            }
+            $n++;
+        }
+        else {
+            $old_class_desc->{id_implied}->{$name} ||= {};
+            push @replacement, $name;
+        }
+        $old_class_desc->{id_implied}->{$name}->{'position_in_module_header'} = $pos++;
+    }
+    @$id_properties = @replacement;
 }
 
 # Given several different kinds of input, convert it into an arrayref
