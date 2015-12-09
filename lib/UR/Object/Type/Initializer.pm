@@ -545,23 +545,9 @@ sub _normalize_class_description_impl {
         }
     }
 
+    # Later code expects these to be listrefs
     for my $field (qw/is id_by has relationships constraints/) {
-        next unless exists $new_class{$field};
-        my $reftype = ref($new_class{$field});
-        if (! $reftype) {
-            # It's a plain string, wrap it in an arrayref
-            $new_class{$field} = [ $new_class{$field} ];
-        } elsif ($reftype eq 'HASH') {
-            # Later code expects it to be a listref - convert it
-            my @params_as_list;
-            foreach my $attr_name ( keys (%{$new_class{$field}}) ) {
-                push @params_as_list, $attr_name;
-                push @params_as_list, $new_class{$field}->{$attr_name};
-            }
-            $new_class{$field} = \@params_as_list;
-        } elsif ($reftype ne 'ARRAY') {
-            die "Class $class_name cannot initialize because its $field section is not a string, arrayref or hashref";
-        }
+        _massage_field_into_arrayref(\%new_class, $field);
     }
 
 
@@ -757,6 +743,30 @@ sub _normalize_class_description_impl {
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $new_class{meta_class_name} ||= $meta_class_name;
     return \%new_class;
+}
+
+# Given several different kinds of input, convert it into an arrayref
+sub _massage_field_into_arrayref {
+    my($class_desc, $field_name) = @_;
+
+    my $value = $class_desc->{$field_name};
+    my $reftype = ref $value;
+    if (! exists $class_desc->{$field_name}) {
+        $class_desc->{$field_name} = [];
+
+    } elsif (! $reftype) {
+        # It's a plain string, wrap it in an arrayref
+        $class_desc->{$field_name} = [ $value ];
+
+    } elsif ($reftype eq 'HASH') {
+        # Later code expects it to be a listref - convert it
+        $class_desc->{$field_name} = [ %$value ];
+
+    } elsif ($reftype ne 'ARRAY') {
+        my $class_name = $class_desc->{class_name};
+        Carp::croak "$class_name cannot initialize because its $field_name section is not a string, arrayref or hashref";
+
+    }
 }
 
 sub _normalize_property_descriptions_during_normalize_class_description {
