@@ -21,6 +21,7 @@ UR::Object::Type->define(
     doc => 'Object representing a role',
     id_by => 'role_name',
     has => [
+        id_by       => { is => 'ARRAY', doc => 'List of ID properties and their definitions' },
         role_name   => { is => 'Text', doc => 'Package name identifying the role' },
         class_names => { is => 'Text', is_many => 1, doc => 'Class names composing this role' },
         methods     => { is => 'HASH', doc => 'Map of method names and coderefs', default => {} },
@@ -49,6 +50,11 @@ sub property_data {
 sub has_property_names {
     my $self = shift;
     return keys %{ $self->has };
+}
+
+sub id_by_property_names {
+    my $self = shift;
+    return @{ $self->id_by };
 }
 
 sub method_names {
@@ -720,6 +726,10 @@ Returns a hashref of property data about the named property.
 =item has_property_names()
 
 Returns a list of all the properties named in the role's C<has>.
+
+=item id_by_property_names()
+
+Returns a list of all the properties named in the roles's C<id_by>.
 
 =item method_names()
 
