@@ -274,7 +274,7 @@ Roles can hook into methods defined in consuming classes by using the "before",
 
   use UR;
   package RoleWithModifiers;
-  use UR::Role qw(before after);
+  use UR::Role qw(before after around);
   role RoleWithModifiers { };
   before 'do_something' => sub {
       my($self, @params) = @_;
