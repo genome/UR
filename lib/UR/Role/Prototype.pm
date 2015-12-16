@@ -220,6 +220,7 @@ sub _apply_roles_to_class_desc {
         Carp::croak('_apply_roles_to_class_desc() must be called as a class method on a basic class description');
     }
 
+    _validate_class_method_overrides_consumed_roles($desc);
     return unless ($desc->{roles} and @{ $desc->{roles} });
     my @role_objs = _role_prototypes_with_params_for_class_desc($desc);
 
@@ -487,6 +488,29 @@ sub _validate_role_exclusions {
                                 $desc->{class_name},
                                 $role->role_name,
                                 $plural ? 'them' : 'it'));
+        }
+    }
+    return 1;
+}
+
+sub _validate_class_method_overrides_consumed_roles {
+    my $desc = shift;
+
+    my $class_name = $desc->{class_name};
+    my %this_class_role_names = $desc->{roles}
+                                ? map { ref($_) ? ($_->role_name => 1) : ($_ => 1) }
+                                    @{$desc->{roles}}
+                                : ();
+    my $this_class_methods = UR::Util::coderefs_for_package($class_name);
+    while (my($method_name, $subref) = each %$this_class_methods) {
+        my @overrides = UR::AttributeHandlers::get_overrides_for_coderef($subref);
+        next unless (@overrides);
+
+        my @missing_role_names = grep { ! exists $this_class_role_names{$_} }
+                                 @overrides;
+        if (@missing_role_names) {
+            Carp::croak("Class method '$method_name' declares Overrides for roles the class does not consume: "
+                        . join(', ', @missing_role_names));
         }
     }
     return 1;
