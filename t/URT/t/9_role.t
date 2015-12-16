@@ -271,7 +271,7 @@ subtest 'conflict methods' => sub {
 };
 
 subtest 'conflict methods with overrides' => sub {
-    plan tests => 8;
+    plan tests => 9;
 
     sub URT::ConflictMethodOverrideRole1::conflict_method { 0; }
     role URT::ConflictMethodOverrideRole1 { };
@@ -338,6 +338,21 @@ subtest 'conflict methods with overrides' => sub {
             }
         }
         'Class declared override even though parent did not';
+
+
+    role URT::RoleWithPropertyOverriddenInClass {
+        has => ['a_property'],
+    };
+    lives_ok
+        {
+            package URT::ClassUsesRoleAndOverridesPropertyWithMethod;
+            use URT;
+            sub a_property : Overrides(URT::RoleWithPropertyOverriddenInClass) { }
+            class URT::ClassUsesRoleAndOverridesPropertyWithMethod {
+                roles => ['URT::RoleWithPropertyOverriddenInClass'],
+            }
+        }
+       'Class can declare method to override a role property';
 
     throws_ok
         {

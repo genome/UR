@@ -564,7 +564,7 @@ sub _validate_class_desc_overrides {
                         . "Did you forget to add the 'Overrides' attribute?");
         }
 
-        my @missing_methods = grep { ! $role_name->can($_) }
+        my @missing_methods = grep { ! exists $this_role_methods->{$_} and ! exists $role->has->{$_} }
                               @{$overridden_methods_by_role{$role_name}};
         if (@missing_methods) {
             my $plural = scalar(@missing_methods) > 1 ? 's' : '';
