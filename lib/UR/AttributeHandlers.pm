@@ -73,14 +73,14 @@ sub modify_attributes {
     return @not_recognized;
 }
 
-my %stored_attributes;
+my %stored_attributes_by_ref;
 
 sub fetch_attributes {
     my($package, $ref) = @_;
 
     my $reftype = attributes::reftype($ref);
     my @attrs;
-    foreach my $attr ( keys %{ $stored_attributes{$ref} } ) {
+    foreach my $attr ( keys %{ $stored_attributes_by_ref{$ref} } ) {
         if (my $handler = _fetch_attribute_handler($ref, $attr)) {
             push @attrs, $handler->($package, $ref);
         }
@@ -91,7 +91,7 @@ sub fetch_attributes {
 sub modify_code_overrides {
     my($package, $coderef, $attr, @params) = @_;
 
-    my $list = $stored_attributes{$coderef}->{overrides} ||= [];
+    my $list = $stored_attributes_by_ref{$coderef}->{overrides} ||= [];
     push @$list, @params;
 }
 
@@ -108,13 +108,13 @@ sub fetch_code_overrides {
     my($package, $coderef) = @_;
 
     return sprintf('overrides(%s)',
-                    join(', ', @{ $stored_attributes{$coderef}->{overrides} }));
+                    join(', ', @{ $stored_attributes_by_ref{$coderef}->{overrides} }));
 }
 
 sub get_overrides_for_coderef {
     my($ref) = @_;
-    return( exists($stored_attributes{$ref}) && exists($stored_attributes{$ref}->{overrides})
-                ? @{ $stored_attributes{$ref}->{overrides} }
+    return( exists($stored_attributes_by_ref{$ref}) && exists($stored_attributes_by_ref{$ref}->{overrides})
+                ? @{ $stored_attributes_by_ref{$ref}->{overrides} }
                 : ()
             );
 }
