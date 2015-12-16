@@ -271,7 +271,7 @@ subtest 'conflict methods' => sub {
 };
 
 subtest 'conflict methods with overrides' => sub {
-    plan tests => 6;
+    plan tests => 7;
 
     sub URT::ConflictMethodOverrideRole1::conflict_method { 0; }
     role URT::ConflictMethodOverrideRole1 { };
@@ -338,6 +338,18 @@ subtest 'conflict methods with overrides' => sub {
             }
         }
         'Class declared override even though parent did not';
+
+    throws_ok
+        {
+            package URT::ClassDeclaresOverrideForNonExistantMethod;
+            use URT;
+            sub bogus : Overrides(URT::ConflictMethodOverrideRole1) { }
+            class URT::ClassDeclaresOverrideForNonExistantMethod {
+                roles => ['URT::ConflictMethodOverrideRole1'],
+            };
+        }
+        qr(Cannot compose role URT::ConflictMethodOverrideRole1: Class method 'bogus' declares it Overrides non-existant method in the role),
+        'Overriding a non-existant method throws an exception';
 };
 
 subtest 'dynamic loading' => sub {
