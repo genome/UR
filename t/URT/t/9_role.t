@@ -271,7 +271,7 @@ subtest 'conflict methods' => sub {
 };
 
 subtest 'conflict methods with overrides' => sub {
-    plan tests => 6;
+    plan tests => 9;
 
     sub URT::ConflictMethodOverrideRole1::conflict_method { 0; }
     role URT::ConflictMethodOverrideRole1 { };
@@ -338,6 +338,43 @@ subtest 'conflict methods with overrides' => sub {
             }
         }
         'Class declared override even though parent did not';
+
+
+    role URT::RoleWithPropertyOverriddenInClass {
+        has => ['a_property'],
+    };
+    lives_ok
+        {
+            package URT::ClassUsesRoleAndOverridesPropertyWithMethod;
+            use URT;
+            sub a_property : Overrides(URT::RoleWithPropertyOverriddenInClass) { }
+            class URT::ClassUsesRoleAndOverridesPropertyWithMethod {
+                roles => ['URT::RoleWithPropertyOverriddenInClass'],
+            }
+        }
+       'Class can declare method to override a role property';
+
+    throws_ok
+        {
+            package URT::ClassDeclaresOverrideForNonExistantMethod;
+            use URT;
+            sub bogus : Overrides(URT::ConflictMethodOverrideRole1) { }
+            class URT::ClassDeclaresOverrideForNonExistantMethod {
+                roles => ['URT::ConflictMethodOverrideRole1'],
+            };
+        }
+        qr(Cannot compose role URT::ConflictMethodOverrideRole1: Class method 'bogus' declares it Overrides non-existant method in the role),
+        'Overriding a non-existant method throws an exception';
+
+    throws_ok
+        {
+            package URT::ClassDeclaresOverrideForNonConsumedRole;
+            use URT;
+            sub bogus : Overrides(URT::ClassDeclaresOverride__RoleDoesNotExist) { }
+            class URT::ClassDeclaresOverrideForNonConsumedRole { };
+        }
+        qr(Class method 'bogus' declares Overrides for roles the class does not consume: URT::ClassDeclaresOverride__RoleDoesNotExist),
+        'Class Overriding a role it does not consume throws an exception';
 };
 
 subtest 'dynamic loading' => sub {

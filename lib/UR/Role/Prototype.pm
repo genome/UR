@@ -220,6 +220,7 @@ sub _apply_roles_to_class_desc {
         Carp::croak('_apply_roles_to_class_desc() must be called as a class method on a basic class description');
     }
 
+    _validate_class_method_overrides_consumed_roles($desc);
     return unless ($desc->{roles} and @{ $desc->{roles} });
     my @role_objs = _role_prototypes_with_params_for_class_desc($desc);
 
@@ -492,12 +493,45 @@ sub _validate_role_exclusions {
     return 1;
 }
 
+sub _validate_class_method_overrides_consumed_roles {
+    my $desc = shift;
+
+    my $class_name = $desc->{class_name};
+    my %this_class_role_names = $desc->{roles}
+                                ? map { ref($_) ? ($_->role_name => 1) : ($_ => 1) }
+                                    @{$desc->{roles}}
+                                : ();
+    my $this_class_methods = UR::Util::coderefs_for_package($class_name);
+    while (my($method_name, $subref) = each %$this_class_methods) {
+        my @overrides = UR::AttributeHandlers::get_overrides_for_coderef($subref);
+        next unless (@overrides);
+
+        my @missing_role_names = grep { ! exists $this_class_role_names{$_} }
+                                 @overrides;
+        if (@missing_role_names) {
+            Carp::croak("Class method '$method_name' declares Overrides for roles the class does not consume: "
+                        . join(', ', @missing_role_names));
+        }
+    }
+    return 1;
+}
+
 sub _validate_class_desc_overrides {
     my($desc, @roles) = @_;
 
     my $class_name = $desc->{class_name};
     my %this_class_methods = map { %{ UR::Util::coderefs_for_package($_) } }
                                 (@{$desc->{is}}, $class_name);
+
+    my %overridden_methods_by_role;
+    foreach my $method_name ( keys %this_class_methods ) {
+        if (my @role_names = UR::AttributeHandlers::get_overrides_for_coderef($this_class_methods{$method_name})) {
+            foreach my $role_name ( @role_names ) {
+                $overridden_methods_by_role{$role_name} ||= [];
+                push @{$overridden_methods_by_role{$role_name}}, $method_name;
+            }
+        }
+    }
 
     foreach my $role ( @roles ) {
         my $role_name = $role->role_name;
@@ -529,7 +563,17 @@ sub _validate_class_desc_overrides {
                                         keys %conflicting_sources)
                         . "Did you forget to add the 'Overrides' attribute?");
         }
+
+        my @missing_methods = grep { ! exists $this_role_methods->{$_} and ! exists $role->has->{$_} }
+                              @{$overridden_methods_by_role{$role_name}};
+        if (@missing_methods) {
+            my $plural = scalar(@missing_methods) > 1 ? 's' : '';
+            my $method_list = join(q(', '), @missing_methods);
+            Carp::croak("Cannot compose role $role_name: "
+                        . "Class method${plural} '$method_list' declares it Overrides non-existant method in the role.");
+        }
     }
+
     return 1;
 }
 
