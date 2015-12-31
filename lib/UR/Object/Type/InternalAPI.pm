@@ -921,7 +921,7 @@ sub most_specific_subclass_with_table {
 
     foreach my $class_name ( $self->class_name->inheritance ) {
         my $class_obj = UR::Object::Type->get(class_name => $class_name);
-        return 1 if ($class_obj and $class_obj->has_direct_table);
+        return $class_name if ($class_obj and $class_obj->has_direct_table);
     }
     return;
 }
