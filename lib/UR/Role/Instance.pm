@@ -16,6 +16,7 @@ UR::Object::Type->define(
         class_meta => { is => 'UR::Object::Type', id_by => 'class_name' },
         role_params => { is => 'HASH', doc => 'Parameters used when this role was composed', is_optional => 1 },
     ],
+    is_transactional => 0,
 );
 
 1;
