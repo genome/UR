@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 my $dbh = &setup_classes_and_db();
 
@@ -80,6 +80,33 @@ subtest 'or-rule, 2 ways to match the same object' => sub {
     }
     is(scalar(@objs), 1, 'Got one object back from the iterstor');
     is_deeply( [ map { $_->id } @objs], [2], 'Gor the right object ID from the iterator');
+};
+
+subtest peek => sub {
+    plan tests => 8;
+
+    # there are 3 Joes
+    my $iter = URT::Thing->create_iterator(name => 'Joe');
+    my $o1 = $iter->peek;
+    ok($o1, 'peek');
+
+    my $o2 = $iter->peek;
+    is($o1, $o2, 'peek again returns the same obj');
+
+    $o2 = $iter->next();
+    is($o1, $o2, 'next() returns the same obj, again');
+
+    $o2 = $iter->peek();
+    isnt($o1, $o2, 'peek after next() returns a different object');
+
+    my $o3 = $iter->next();
+    is($o2, $o3, 'next() after peek returns the same object');
+
+    $o3 = $iter->next();
+    ok($o3, 'next() returns 3rd object');
+
+    ok(! $iter->peek(), 'peek returns nothing after iter is exhausted');
+    ok(! $iter->next(), 'next returns nothing after iter is exhausted');
 };
 
 sub setup_classes_and_db {

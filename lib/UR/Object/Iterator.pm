@@ -60,8 +60,22 @@ sub _iteration_closure {
 }
 
 
+sub peek {
+    my $self = shift;
+    unless (exists $self->{peek_value}) {
+        $self->{peek_value} = $self->{_iteration_closure}->();
+    }
+    $self->{peek_value};
+}
+
+
 sub next {
-    shift->{_iteration_closure}->(@_);
+    my $self = shift;
+    if (exists $self->{peek_value}) {
+        delete $self->{peek_value};
+    } else {
+        $self->{_iteration_closure}->(@_);
+    }
 }
 
 
@@ -119,6 +133,16 @@ with the $return_closure flag set to true.
 
 Return the next object matching the iterator's rule.  When there are no more
 matching objects, it returns undef.
+
+=item peek
+
+  $obj = $iter->peek();
+
+Return the next object matching the iterator's rule without removing it.  The
+next call to peek() or next() will return the same object.  Returns undef if
+there are no more matching objects.
+
+This is useful to test whether a newly created iterator matched anything.
 
 =back
 
