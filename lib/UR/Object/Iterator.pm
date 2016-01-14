@@ -27,6 +27,16 @@ sub create_for_filter_rule {
     return $self;
 }
 
+sub create_for_list {
+    my $class = shift;
+    my $items = \@_;
+
+    my $code = sub {
+        shift @$items;
+    };
+    my $self = bless { _iteration_closure => $code }, $class;
+    return $self;
+}
 
 sub _iteration_closure {
     my $self = shift;
@@ -58,7 +68,7 @@ sub next {
 sub remaining {
     my $self = shift;
     my @remaining;
-    while (my $o = $self->next ) {
+    while (defined(my $o = $self->next )) {
         push @remaining, $o;
     }
     @remaining;
@@ -111,6 +121,12 @@ obey the normal Perl rules about scoping.
 Creates an iterator object based on the given BoolExpr (rule).  Under the
 hood, it calls get_objects_for_class_and_rule() on the current Context
 with the $return_closure flag set to true.
+
+=item create_for_listref
+
+  $iter = UR::Object::Iterator->create_for_listref( [ $obj1, $obj2, ... ] );
+
+Creates an iterator based on objects contained in the given listref.
 
 =item next
 

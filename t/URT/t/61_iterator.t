@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 my $dbh = &setup_classes_and_db();
 
@@ -122,6 +122,22 @@ subtest remaining => sub {
     is($iter->next, undef, 'calling next() now returns undef');
     @remaining = $iter->remaining;
     is(scalar(@remaining), 0, 'remaining() returns 0 objects');
+};
+
+subtest create_for_list => sub {
+    plan tests => 2;
+
+    my @expected = (
+            URT::Thing->get(2),
+            0,
+            1,
+            URT::Thing->get(6),
+        );
+    my $iter = UR::Object::Iterator->create_for_list(@expected);
+    ok($iter, 'created iterator');
+
+    my @objs = $iter->remaining;
+    is_deeply(\@objs, \@expected, 'got back all the objects');
 };
 
 sub setup_classes_and_db {
