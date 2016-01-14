@@ -55,6 +55,14 @@ sub next {
     }
 }
 
+sub remaining {
+    my $self = shift;
+    my @remaining;
+    while (my $o = $self->next ) {
+        push @remaining, $o;
+    }
+    @remaining;
+}
 
 1;
 
@@ -120,6 +128,13 @@ next call to peek() or next() will return the same object.  Returns undef if
 there are no more matching objects.
 
 This is useful to test whether a newly created iterator matched anything.
+
+=item remaining
+
+  @objs = $iter->remaining();
+
+Return a list of all the objects remaining in the iterator.  The list will be
+empty if there are no more matching objects.
 
 =back
 

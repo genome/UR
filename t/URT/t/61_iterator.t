@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 my $dbh = &setup_classes_and_db();
 
@@ -107,6 +107,21 @@ subtest peek => sub {
 
     ok(! $iter->peek(), 'peek returns nothing after iter is exhausted');
     ok(! $iter->next(), 'next returns nothing after iter is exhausted');
+};
+
+subtest remaining => sub {
+    plan tests => 5;
+
+    my $iter = URT::Thing->create_iterator();
+    ok($iter, 'create iterator matching all objects');
+
+    ok($iter->next, 'Get first object');
+    my @remaining = $iter->remaining;
+    is(scalar(@remaining), 4, 'got all 4 remaining objects');
+
+    is($iter->next, undef, 'calling next() now returns undef');
+    @remaining = $iter->remaining;
+    is(scalar(@remaining), 0, 'remaining() returns 0 objects');
 };
 
 sub setup_classes_and_db {
