@@ -38,6 +38,18 @@ sub create_for_list {
     return $self;
 }
 
+sub map($&) {
+    my($self, $mapper) = @_;
+
+    my $wrapper = sub {
+        local $_ = $self->next;
+        defined($_) ? $mapper->() : $_;
+    };
+
+    return bless { _iteration_closure => $wrapper }, ref($self);
+}
+
+
 sub _iteration_closure {
     my $self = shift;
     if (@_) {
@@ -127,6 +139,15 @@ with the $return_closure flag set to true.
   $iter = UR::Object::Iterator->create_for_listref( [ $obj1, $obj2, ... ] );
 
 Creates an iterator based on objects contained in the given listref.
+
+=item map
+
+  $new_iter = $iter->map(sub { $_ + 1 });
+
+Creates a new iterator based on an existing iterator.  Values returned by this
+new iterator are based on the values of the existing iterator after going
+through a mapping function.  This new iterator will  be exhausted when the
+original iterator is exhausted.
 
 =item next
 

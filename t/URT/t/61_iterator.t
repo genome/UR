@@ -5,7 +5,7 @@ use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
 use lib File::Basename::dirname(__FILE__)."/../..";
 use URT;
-use Test::More tests => 11;
+use Test::More tests => 12;
 
 my $dbh = &setup_classes_and_db();
 
@@ -138,6 +138,20 @@ subtest create_for_list => sub {
 
     my @objs = $iter->remaining;
     is_deeply(\@objs, \@expected, 'got back all the objects');
+};
+
+subtest map => sub {
+    plan tests => 3;
+
+    my $original_iter = URT::Thing->create_iterator(name => 'Bob');
+    ok($original_iter, 'Create iterator for all Bob');
+
+    my $names_iter = $original_iter->map(sub { $_->name });
+    ok($names_iter, 'Create mapping iterator returning names');
+
+    is_deeply([qw( Bob Bob )],
+              [ $names_iter->remaining ],
+              'all values from mapping iterator');
 };
 
 sub setup_classes_and_db {
