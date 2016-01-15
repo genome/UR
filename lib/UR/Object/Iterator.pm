@@ -3,16 +3,15 @@ package UR::Object::Iterator;
 use strict;
 use warnings;
 require UR;
+require UR::Iterator;
 our $VERSION = "0.44"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object );
 
+our @ISA = qw( UR::Iterator );
+
 # These are no longer UR Objects.  They're regular blessed references that
 # get garbage collected in the regular ways
-
-sub create {
-    die "Don't call UR::Object::Iterator->create(), use create_for_filter_rule() instead";
-}
 
 sub create_for_filter_rule {
     my $class = shift;
@@ -25,65 +24,6 @@ sub create_for_filter_rule {
                        _iteration_closure => $code},
                __PACKAGE__;
     return $self;
-}
-
-sub create_for_list {
-    my $class = shift;
-    my $items = \@_;
-
-    my $code = sub {
-        shift @$items;
-    };
-    my $self = bless { _iteration_closure => $code }, $class;
-    return $self;
-}
-
-sub map($&) {
-    my($self, $mapper) = @_;
-
-    my $wrapper = sub {
-        local $_ = $self->next;
-        defined($_) ? $mapper->() : $_;
-    };
-
-    return bless { _iteration_closure => $wrapper }, ref($self);
-}
-
-
-sub _iteration_closure {
-    my $self = shift;
-    if (@_) {
-        return $self->{_iteration_closure} = shift;
-    }
-    $self->{_iteration_closure};
-}
-
-
-sub peek {
-    my $self = shift;
-    unless (exists $self->{peek_value}) {
-        $self->{peek_value} = $self->{_iteration_closure}->();
-    }
-    $self->{peek_value};
-}
-
-
-sub next {
-    my $self = shift;
-    if (exists $self->{peek_value}) {
-        delete $self->{peek_value};
-    } else {
-        $self->{_iteration_closure}->(@_);
-    }
-}
-
-sub remaining {
-    my $self = shift;
-    my @remaining;
-    while (defined(my $o = $self->next )) {
-        push @remaining, $o;
-    }
-    @remaining;
 }
 
 1;
@@ -122,7 +62,7 @@ UR::Object::Iterator instances are normal Perl object references, not
 UR-based objects.  They do not live in the Context's object cache, and
 obey the normal Perl rules about scoping.
 
-=head1 METHODS
+=head1 CONSTRUCTOR
 
 =over 4
 
@@ -134,49 +74,22 @@ Creates an iterator object based on the given BoolExpr (rule).  Under the
 hood, it calls get_objects_for_class_and_rule() on the current Context
 with the $return_closure flag set to true.
 
-=item create_for_listref
+=back
 
-  $iter = UR::Object::Iterator->create_for_listref( [ $obj1, $obj2, ... ] );
-
-Creates an iterator based on objects contained in the given listref.
-
-=item map
-
-  $new_iter = $iter->map(sub { $_ + 1 });
-
-Creates a new iterator based on an existing iterator.  Values returned by this
-new iterator are based on the values of the existing iterator after going
-through a mapping function.  This new iterator will  be exhausted when the
-original iterator is exhausted.
+=head2 Methods inherited from UR::Iterator
 
 =item next
 
-  $obj = $iter->next();
-
-Return the next object matching the iterator's rule.  When there are no more
-matching objects, it returns undef.
+=item map
 
 =item peek
 
-  $obj = $iter->peek();
-
-Return the next object matching the iterator's rule without removing it.  The
-next call to peek() or next() will return the same object.  Returns undef if
-there are no more matching objects.
-
-This is useful to test whether a newly created iterator matched anything.
-
 =item remaining
-
-  @objs = $iter->remaining();
-
-Return a list of all the objects remaining in the iterator.  The list will be
-empty if there are no more matching objects.
 
 =back
 
 =head1 SEE ALSO
 
-UR::Object, UR::Context
+L<UR::Iterator>, L<UR::Object>, L<UR::Context>
 
 =cut
