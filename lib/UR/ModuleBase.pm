@@ -525,6 +525,10 @@ with undef as the argument.
 If the queue_error_messages flag is on, then this method returns the entire list
 of queued messages.
 
+When called as an instance method, it returns the errors queued only on that
+object.  When called as a class method, it returns the errors queued on that
+class, all it's subclasses, and all instances of that class or subclasses.
+
 =item error_messages_arrayref
 
     $listref = $obj->error_messages_arrayref();
@@ -674,8 +678,17 @@ $create_subs_for_message_type = sub {
     my $array_subname = "${type}_messages";
     my $array_subref = Sub::Name::subname "${class}::${array_subname}" => sub {
         my $self = shift;
-        my $a = $get_setting->($self, $messages_arrayref);
-        return $a ? @$a : ();
+        my @search = ref($self)
+                        ? $self
+                        : ( $self, $self->__meta__->subclasses_loaded, $self->is_loaded() );
+        my %seen;
+        my @all_messages;
+        foreach my $thing ( @search ) {
+            next if $seen{$thing}++;
+            my $a = $get_setting->($thing, $messages_arrayref);
+            push @all_messages, $a ? @$a : ();
+        }
+        return @all_messages;
     };
     Sub::Install::install_sub({
         code => $array_subref,
