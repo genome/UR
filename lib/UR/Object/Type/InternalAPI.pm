@@ -896,9 +896,20 @@ sub has_table {
     for my $class_name (@parent_classes) {
         next if $class_name eq "UR::Object";
         my $class_obj = UR::Object::Type->get(class_name => $class_name);
-        if ($class_obj->table_name) {
+        if ($class_obj->has_direct_table) {
             return 1;
         }
+    }
+    return;
+}
+
+sub has_direct_table {
+    my $self = shift;
+    return 1 if $self->table_name;
+
+    if ($self->data_source_id and $self->data_source_id->isa('UR::DataSource::Default')) {
+        my $load_function_name = join('::', $self->class_name, '__load__');
+        return 1 if exists &$load_function_name;
     }
     return;
 }
@@ -910,7 +921,7 @@ sub most_specific_subclass_with_table {
 
     foreach my $class_name ( $self->class_name->inheritance ) {
         my $class_obj = UR::Object::Type->get(class_name => $class_name);
-        return $class_name if ($class_obj && $class_obj->table_name);
+        return $class_name if ($class_obj and $class_obj->has_direct_table);
     }
     return;
 }
@@ -921,7 +932,7 @@ sub most_general_subclass_with_table {
     my @subclass_list = reverse ( $self->class_name, $self->class_name->inheritance );
     foreach my $class_name ( $self->inheritance ) {
         my $class_obj = UR::Object::Type->get(class_name => $class_name);
-        return $class_name if ($class_obj && $class_obj->table_name);
+        return $class_name if ($class_obj && $class_obj->has_direct_table);
     }
     return;
 }
